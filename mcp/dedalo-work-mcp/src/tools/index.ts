@@ -1,17 +1,18 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WorkClient } from '@dedalo/mcp-common';
 import type { ToolContext } from './_shared/register.js';
-import { registerDiscoveryTools } from './discovery.js';
-import { registerRecordsReadTools } from './records_read.js';
-import { registerRecordsWriteTools } from './records_write.js';
-import { registerComponentTools } from './components.js';
-import { registerDiffusionTools } from './diffusion.js';
-import { registerTimeMachineTools } from './time_machine.js';
-import { registerFilesTools } from './files.js';
-import { registerProcessTools } from './process.js';
-import { registerSystemTools } from './system.js';
-import { registerMaintenanceTools } from './maintenance.js';
-import { registerAdminTools } from './admin.js';
+import { registerDiscoveryTools } from './primitives/discovery.js';
+import { registerRecordsReadTools } from './primitives/records_read.js';
+import { registerRecordsWriteTools } from './primitives/records_write.js';
+import { registerComponentTools } from './primitives/components.js';
+import { registerDiffusionTools } from './primitives/diffusion.js';
+import { registerTimeMachineTools } from './primitives/time_machine.js';
+import { registerFilesTools } from './primitives/files.js';
+import { registerProcessTools } from './primitives/process.js';
+import { registerSystemTools } from './primitives/system.js';
+import { registerMaintenanceTools } from './primitives/maintenance.js';
+import { registerAdminTools } from './primitives/admin.js';
+import { registerAgentTools } from './agent/index.js';
 
 /**
  * Register every dedalo-work-mcp tool. Authorisation is enforced by
@@ -29,4 +30,5 @@ export function registerAllTools(server: McpServer, client: WorkClient, ctx: Too
 	registerSystemTools(server, client, ctx);
 	registerMaintenanceTools(server, client, ctx);
 	registerAdminTools(server, client, ctx);
+	registerAgentTools(server, client, ctx);
 }

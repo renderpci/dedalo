@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WorkClient } from '@dedalo/mcp-common';
-import { registerTool, type ToolContext } from './_shared/register.js';
-import { rqo } from './_shared/rqo.js';
-import { TipoSchema, OptionalLangSchema, SectionIdSchema, LocatorSchema } from './_shared/schemas.js';
+import { registerTool, type ToolContext } from '../_shared/register.js';
+import { rqo } from '../_shared/rqo.js';
+import { TipoSchema, OptionalLangSchema, SectionIdSchema, LocatorSchema } from '../_shared/schemas.js';
 
 /**
  * Per-component-type operations (portal, text_area, av, 3d).
@@ -24,7 +24,7 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 		name: 'dedalo_portal_delete_locator',
 		description: 'Remove a locator from a portal component, detaching the linked record.\n' +
 			'Use `dedalo_ontology_glossary` (mode="section") to identify portal components and their target sections.',
-		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Portal: delete locator' },
+		annotations: { tier: 'primitive', readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Portal: delete locator' },
 		inputSchema: z.object({ ...baseRecord, locator: LocatorSchema }),
 		handler: async ({ tipo, section_tipo, section_id, lang, locator }) =>
 			client.call(rqo({ action: 'delete_locator', dd_api: 'dd_component_portal_api', source: { tipo, section_tipo, section_id, lang }, options: { locator }, prevent_lock: false })),

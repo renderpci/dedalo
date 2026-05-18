@@ -85,7 +85,7 @@ export const mcp_client = class mcp_client {
 
 
 
-	async _send_request(method, params={}, is_notification=false) {
+	async _send_request(method, params={}, is_notification=false, _is_retry=false) {
 
 		this._request_id++
 
@@ -116,7 +116,21 @@ export const mcp_client = class mcp_client {
 		})
 
 		if (api_response.result === false) {
-			throw new Error(api_response.msg || 'MCP proxy request failed')
+			const err_msg = api_response.msg || 'MCP proxy request failed'
+			// auto-recover stale session once
+			if (
+				!_is_retry &&
+				this._session_id &&
+				err_msg.includes('No valid MCP session ID provided')
+			) {
+				this._session_id = null
+				this._write_session_id(null)
+				this._initialized = false
+				await this.initialize()
+				await this.send_notification('notifications/initialized')
+				return this._send_request(method, params, is_notification, true)
+			}
+			throw new Error(err_msg)
 		}
 
 		if (api_response.mcp_session_id) {

@@ -223,7 +223,7 @@ export const ai_assistant = class ai_assistant {
 			dtype			: this._config.dtype,
 			device			: this._config.device,
 			fallback_device	: this._config.fallback_device || 'wasm',
-			max_new_tokens	: this._config.max_new_tokens || 2048,
+			max_new_tokens	: this._config.max_new_tokens || 512,
 			thinking		: this._config.thinking || 'none',
 			thinking_options: this._config.thinking_options || ['none']
 		}]
@@ -257,7 +257,7 @@ export const ai_assistant = class ai_assistant {
 				this._config.dtype				= next.dtype || 'q4f16'
 				this._config.device				= next.device || 'webgpu'
 				this._config.fallback_device	= next.fallback_device || 'wasm'
-				this._config.max_new_tokens		= next.max_new_tokens || 2048
+				this._config.max_new_tokens		= next.max_new_tokens || 512
 				this._config.thinking			= next.thinking || 'none'
 				this._config.thinking_options	= Array.isArray(next.thinking_options) ? next.thinking_options : ['none']
 			} else {
@@ -354,41 +354,37 @@ export const ai_assistant = class ai_assistant {
 
 
 
-	_build_system_prompt() {
-
-		const tools_available = this._mcp_tools && this._mcp_tools.length > 0
+	_build_system_prompt(tools_enabled) {
 
 		const prompt = [
-			'You are a Dedalo ontology-aware assistant for cultural heritage management.',
-			'',
-			'ONTOLOGY RULES (critical):',
-			'- Dédalo identifies every section, component, and record by opaque "tipo" codes (e.g. oh1, numisdata6, rsc85).',
-			'- Users speak in natural language (e.g. "Mint", "Oral History", "Name of the informant").',
-			'- NEVER guess or hardcode a tipo. ALWAYS resolve human names to tipos first.',
-			'- Use `dedalo_ontology_glossary` (mode="sections") to get ALL section names→tipos in one call. Call once per session.',
-			'- Use `dedalo_ontology_glossary` (mode="section", section_tipo="...") to inspect a section\'s components and their types.',
-			'- Portal components (with is_portal=true) link to other sections via target_section_tipo. ',
-			'  Navigate portals by: reading the main record → extracting the portal locator → reading the linked record.',
-			'- Use `dedalo_resolve_path` to validate portal paths before cross-section searches.',
-			'- For cross-section search, use `raw_sqo` with multi-hop `path` arrays ($and/q/path format, NOT rules/operator).',
-			'- Every record field has a model (e.g. component_input_text, component_portal, component_date) that determines the data format.',
-			'- Text fields use plain strings. Portal fields use locator arrays: [{section_tipo, section_id}].'
+			'You are a Dédalo assistant.',
+			'Current context: Section=' + (this._context.section_tipo || '?') +
+				' Record=' + (this._context.section_id || '?') +
+				' Component=' + (this._context.component_tipo || 'none') + '.'
 		]
 
-		if (tools_available) {
-			prompt.push('')
-			prompt.push('TOOL CALLING (critical):')
-			prompt.push('- When you need data or actions, you MUST call a tool instead of answering from memory.')
-			prompt.push('- Do NOT say "I will help you" or "Let me look that up" without calling a tool.')
+		if (tools_enabled) {
+			prompt.push(
+				'You have Dédalo tools. Use them directly — do NOT explain what you will do, just call the tool.',
+				'',
+				'describe_section: discover field labels for a section. Accepts section name or tipo.',
+				'get_record: read one record. Accepts section name or tipo.',
+				'search_records_view: search records with label-based filters. Accepts section name or tipo.',
+				'count_records_view: count records. Accepts section name or tipo.',
+				'set_field: write a value. Accepts section name or tipo; field labels are case/accent-insensitive.',
+				'',
+				'For WRITE tasks: call set_field directly. You do NOT need describe_section first.',
+				'For READ tasks on a NEW section: call describe_section first, then get_record or search_records_view.',
+				'For "how many": call count_records_view.',
+				'Confirm before destructive actions. Reply in Markdown.'
+			)
+		} else {
+			prompt.push(
+				'Your ONLY task is to answer the user in plain text using the tool results already in the conversation.',
+				'DO NOT use call: syntax. DO NOT call any tools.',
+				'Output a natural language answer in Markdown.'
+			)
 		}
-
-		prompt.push('')
-		prompt.push('Current context:')
-		prompt.push('- Section: ' + (this._context.section_tipo || 'unknown'))
-		prompt.push('- Record ID: ' + (this._context.section_id || 'unknown'))
-		prompt.push('- Active component: ' + (this._context.component_tipo || 'none'))
-		prompt.push('')
-		prompt.push('Always confirm with the user before performing destructive actions (delete, modify). Format responses in Markdown.')
 
 		return prompt.join('\n')
 	}//end _build_system_prompt
@@ -397,33 +393,7 @@ export const ai_assistant = class ai_assistant {
 
 	_build_few_shot_messages() {
 
-		return [
-			{
-				role	: 'user',
-				content	: 'How many records are in Oral History?'
-			},
-			{
-				role		: 'assistant',
-				content		: null,
-				tool_calls	: [{
-					id			: 'fewshot_0',
-					type		: 'function',
-					function	: {
-						name		: 'dedalo_count_records',
-						arguments	: { section_tipo: 'oh1' }
-					}
-				}]
-			},
-			{
-				role			: 'tool',
-				tool_call_id	: 'fewshot_0',
-				content			: JSON.stringify({ total: 42 })
-			},
-			{
-				role	: 'assistant',
-				content	: 'There are 42 records in the Oral History section.'
-			}
-		]
+		return []
 	}//end _build_few_shot_messages
 
 
@@ -432,24 +402,18 @@ export const ai_assistant = class ai_assistant {
 
 		if (!this._mcp_tools.length) return []
 
-		const allowed_tools = [
-			'dedalo_get_environment',
+		// Tag-driven selection: agent tier tools are always available;
+		// primitive discovery tools are included as fallback when agent
+		// tools for section listing are absent.
+		const primitive_discovery_fallback = [
 			'dedalo_ontology_glossary',
-			'dedalo_list_sections',
-			'dedalo_resolve_ontology',
-			'dedalo_resolve_path',
-			'dedalo_get_section_elements_context',
-			'dedalo_read_record',
-			'dedalo_search_records',
-			'dedalo_count_records',
-			'dedalo_create_record',
-			'dedalo_save_component',
-			'dedalo_delete_record',
-			'dedalo_start'
+			'dedalo_list_sections'
 		]
 
 		const sanitized_tools = this._mcp_tools.filter(function(tool) {
-			return allowed_tools.indexOf(tool.name) !== -1
+			if (tool.annotations && tool.annotations.tier === 'agent') return true
+			if (primitive_discovery_fallback.indexOf(tool.name) !== -1) return true
+			return false
 		}).map(function(tool) {
 			// force the top-level parameters schema to be an object even if the
 			// tool exposes an empty / non-object inputSchema
@@ -464,7 +428,10 @@ export const ai_assistant = class ai_assistant {
 				function	: {
 					name		: tool.name,
 					description	: ai_assistant._tool_description(tool),
-					parameters	: ai_assistant._sanitize_schema(raw)
+					parameters	: ai_assistant._minimize_schema(
+						ai_assistant._sanitize_schema(raw),
+						0
+					)
 				}
 			}
 		})
@@ -479,18 +446,151 @@ export const ai_assistant = class ai_assistant {
 	static _tool_description(tool) {
 
 		const description = tool.description || ''
-		const full_description_tools = [
-			'dedalo_ontology_glossary',
-			'dedalo_resolve_ontology',
-			'dedalo_resolve_path',
-			'dedalo_create_record',
-			'dedalo_save_component',
-			'dedalo_search_records'
-		]
-		const limit = full_description_tools.indexOf(tool.name) !== -1 ? 1200 : 350
-
-		return description.substring(0, limit)
+		// Cap every description at 200 chars. At 34 tools, even 350 chars each
+		// blows the context window; 200 keeps the total tool schema under control.
+		return description.substring(0, 200)
 	}//end _tool_description
+
+
+
+	/**
+	* _EXTRACT_TOOL_RESULT
+	* MCP proxy responses wrap the real payload in {result:{content:[{type:'text',text:'...'}]}}.
+	* This extracts the inner text, strips noisy wrapper fields, and produces
+	* tool-specific compact summaries that stay under the token budget.
+	* @param object tool_result Raw MCP tool result
+	* @param string tool_name Tool name (e.g. 'dedalo_describe_section')
+	* @return string
+	*/
+	static _extract_tool_result(tool_result, tool_name) {
+
+		if (!tool_result || typeof tool_result !== 'object') {
+			return String(tool_result || '')
+		}
+
+		// Dig into the MCP proxy wrapper: result.content[0].text
+		let payload = tool_result
+		if (tool_result.result && typeof tool_result.result === 'object') {
+			const content = tool_result.result.content
+			if (Array.isArray(content) && content.length > 0 && content[0].text) {
+				try {
+					payload = JSON.parse(content[0].text)
+				} catch(e) {
+					payload = content[0].text
+				}
+			} else {
+				payload = tool_result.result
+			}
+		}
+
+		// Normalize: payload may be the parsed object or a raw string
+		let data = payload
+		if (typeof payload === 'string') {
+			try { data = JSON.parse(payload) } catch(e) { data = payload }
+		}
+		if (!data || typeof data !== 'object') {
+			return String(data).substring(0, 800)
+		}
+
+		// Strip wrapper noise
+		delete data.csrf_token
+		delete data.debug
+		delete data.dedalo_last_error
+		const inner = (data.data && typeof data.data === 'object' && data.data.result !== undefined)
+			? data.data.result
+			: data.result !== undefined ? data.result : data
+
+		// Tool-specific compact summaries
+		tool_name = tool_name || ''
+		if (tool_name.indexOf('describe_section') !== -1 && inner && inner.fields) {
+			const fields = Array.isArray(inner.fields) ? inner.fields : []
+			const lines = fields.slice(0, 40).map(function(f) {
+				return f.label + ' (' + f.type + ')'
+			})
+			return 'Section: ' + (inner.section_label || inner.section_tipo || '') + '. Fields: ' + lines.join(', ')
+		}
+		if (tool_name.indexOf('get_record') !== -1 && inner && typeof inner === 'object') {
+			const fields = (inner.fields && typeof inner.fields === 'object') ? inner.fields : inner
+			const pairs = Object.keys(fields).slice(0, 20).map(function(k) {
+				const val = fields[k]
+				const str = Array.isArray(val) ? val.map(function(v) { return v.label || v.ref || JSON.stringify(v) }).join(', ')
+					: String(val)
+				return k + ': ' + str.substring(0, 80)
+			})
+			return (inner.section_label || '') + ' #' + (inner.section_id || '') + ' — ' + pairs.join(' | ')
+		}
+		if (tool_name.indexOf('search_records_view') !== -1) {
+			let records = null
+			let count = null
+			if (Array.isArray(inner)) {
+				records = inner
+				count = inner.length
+			} else if (inner && typeof inner === 'object') {
+				if (Array.isArray(inner.records)) {
+					records = inner.records
+					const pagination_total = (inner.pagination && typeof inner.pagination === 'object')
+						? inner.pagination.total
+						: undefined
+					count = (pagination_total !== undefined) ? pagination_total : inner.records.length
+				} else if (inner.total !== undefined || inner.count !== undefined) {
+					count = (inner.total !== undefined) ? inner.total : inner.count
+				}
+			}
+			if (count !== null) {
+				const preview = records
+					? records.slice(0, 3).map(function(r, i) {
+						return '#' + (i + 1) + ': ' + JSON.stringify(r).substring(0, 120)
+					}).join(' | ')
+					: ''
+				return 'Found ' + count + ' records. ' + preview
+			}
+		}
+		if (tool_name.indexOf('count_records') !== -1 && inner && typeof inner === 'object') {
+			const total = (inner.total !== undefined) ? inner.total : null
+			if (total !== null) {
+				return 'Total: ' + total + ' records in ' + (inner.section_label || inner.section_tipo || 'section') + '.'
+			}
+		}
+		if (tool_name.indexOf('set_field') !== -1 && inner && typeof inner === 'object') {
+			return 'Updated. ' + JSON.stringify(inner).substring(0, 600)
+		}
+
+		// Fallback: compact JSON, no mid-string truncation
+		const json = JSON.stringify(inner)
+		if (json.length <= 1500) return json
+		// If too long, return a summary instead of broken JSON
+		const keys = Object.keys(inner).slice(0, 10)
+		return 'Keys: ' + keys.join(', ') + '. ' + json.substring(0, 1200) + '...[truncated]'
+	}//end _extract_tool_result
+
+
+
+	/**
+	* _NORMALIZE_TOOL_ARGS
+	* Fix common LLM output mismatches before sending to MCP.
+	* Maps ISO-style language codes (e.g. "en", "es") to Dédalo lg-xxx form.
+	* @param string tool_name
+	* @param object args
+	* @return object
+	*/
+	static _normalize_tool_args(tool_name, args) {
+		if (!args || typeof args !== 'object') return args
+		const out = Object.assign({}, args)
+		if (typeof out.lang === 'string') {
+			const v = out.lang.trim().toLowerCase()
+			if (!v.startsWith('lg-')) {
+				const iso2to3 = {
+					'en': 'eng', 'es': 'spa', 'fr': 'fra', 'de': 'deu',
+					'it': 'ita', 'pt': 'por', 'ca': 'cat', 'gl': 'glg',
+					'eu': 'eus', 'nl': 'nld', 'ru': 'rus', 'ja': 'jpn',
+					'zh': 'zho', 'ar': 'ara', 'hi': 'hin', 'ko': 'kor'
+				}
+				const code = iso2to3[v] || v
+				out.lang = 'lg-' + code
+			}
+		}
+		return out
+	}//end _normalize_tool_args
 
 
 
@@ -507,7 +607,51 @@ export const ai_assistant = class ai_assistant {
 	* leaves are coerced to `{ type: 'string' }`.
 	* @param object schema
 	* @return object
+	/**
+	* _MINIMIZE_SCHEMA
+	* Shrinks a JSON schema for tool declarations.
+	* Keeps parameter names, types, and required at the top level.
+	* Nested objects also preserve their property names + types so the
+	* LLM can construct valid filters and sub-objects.
+	* Descriptions, enums, and item schemas beyond one nesting level are dropped.
+	* @param object schema
+	* @param number depth current nesting depth (0 = top level)
+	* @return object
 	*/
+	static _minimize_schema(schema, depth) {
+
+		if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+			return { type: 'string' }
+		}
+
+		const max_depth = 2
+		const allowed_types = ['string', 'number', 'integer', 'boolean', 'object', 'array']
+		let t = (typeof schema.type === 'string' && allowed_types.indexOf(schema.type) !== -1)
+			? schema.type
+			: (schema.properties ? 'object' : (schema.items ? 'array' : 'string'))
+
+		const out = { type: t }
+
+		if (depth === 0 && Array.isArray(schema.required) && schema.required.length > 0) {
+			out.required = schema.required.filter(function(r) { return typeof r === 'string' })
+		}
+
+		if (t === 'object' && depth < max_depth && schema.properties && typeof schema.properties === 'object') {
+			out.properties = {}
+			const keys = Object.keys(schema.properties)
+			for (let i = 0; i < keys.length; i++) {
+				out.properties[keys[i]] = ai_assistant._minimize_schema(schema.properties[keys[i]], depth + 1)
+			}
+		}
+
+		if (t === 'array' && depth < max_depth && schema.items && typeof schema.items === 'object') {
+			out.items = ai_assistant._minimize_schema(schema.items, depth + 1)
+		}
+
+		return out
+	}//end _minimize_schema
+
+
 	static _sanitize_schema(schema) {
 
 		// non-mapping → safe default
@@ -615,6 +759,159 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	* _GENERATE_WITH_API
+	* Streams generation through a generic OpenAI-compatible HTTP API.
+	* Works with any endpoint that follows the /v1/chat/completions streaming
+	* protocol: Ollama, OpenAI, vLLM, localAI, etc.
+	*
+	* @param array messages OpenAI-format message list
+	* @param array tools Tool declarations in OpenAI format
+	* @param number max_new_tokens
+	* @param function on_token Stream callback for text tokens
+	* @param function on_think_token Stream callback for thinking tokens (ignored for API)
+	* @param AbortSignal signal
+	* @return object {full_text, streamed_text, raw_result}
+	*/
+	async _generate_with_api(messages, tools, max_new_tokens, on_token, on_think_token, signal) {
+
+		const url = this._config.api_url
+		if (!url) {
+			throw new Error('api_url not configured')
+		}
+
+		const api_key = this._config.api_key || null
+		const model = this._config.api_model || 'default'
+
+		const body = {
+			model		: model,
+			messages	: messages,
+			stream		: true,
+			max_tokens	: max_new_tokens,
+			temperature	: 0.7
+		}
+		if (tools && tools.length > 0) {
+			body.tools = tools
+		}
+
+		const headers = {
+			'Content-Type': 'application/json'
+		}
+		if (api_key) {
+			headers['Authorization'] = 'Bearer ' + api_key
+		}
+
+		const response = await fetch(url, {
+			method	: 'POST',
+			headers	: headers,
+			body	: JSON.stringify(body),
+			signal	: signal
+		})
+
+		if (!response.ok) {
+			const text = await response.text().catch(function() { return '' })
+			throw new Error('API HTTP ' + response.status + ': ' + text.substring(0, 500))
+		}
+
+		const reader	= response.body.getReader()
+		const decoder	= new TextDecoder()
+		let text		= ''
+		let buffer		= ''
+		const tool_calls_acc = []
+		let done		= false
+
+		while (!done) {
+			const read_result = await reader.read()
+			if (read_result.done) break
+			buffer += decoder.decode(read_result.value, { stream: true })
+
+			// SSE events are separated by double-newline
+			const events = buffer.split('\n\n')
+			buffer = events.pop() || ''
+
+			for (let e = 0; e < events.length; e++) {
+				const lines = events[e].split('\n')
+				for (let l = 0; l < lines.length; l++) {
+					const line = lines[l]
+					if (!line.startsWith('data: ')) continue
+					const data = line.substring(6).trim()
+					if (data === '[DONE]') {
+						done = true
+						break
+					}
+					if (!data) continue
+
+					try {
+						const chunk = JSON.parse(data)
+						
+						const delta = chunk.choices && chunk.choices[0] && chunk.choices[0].delta
+						if (!delta) continue
+
+						if (delta.content) {
+							text += delta.content
+							on_token(delta.content)
+						}
+
+						if (delta.tool_calls) {
+							for (let i = 0; i < delta.tool_calls.length; i++) {
+								const tc = delta.tool_calls[i]
+								const idx = tc.index !== undefined ? tc.index : i
+								if (!tool_calls_acc[idx]) {
+									tool_calls_acc[idx] = {
+										id		: tc.id || ('call_' + idx),
+										type	: 'function',
+										function: { name: '', arguments: '' }
+									}
+								}
+								if (tc.function) {
+									if (tc.function.name) {
+										tool_calls_acc[idx].function.name += tc.function.name
+									}
+									if (tc.function.arguments !== undefined) {
+										tool_calls_acc[idx].function.arguments += tc.function.arguments
+									}
+								}
+							}
+						}
+					} catch (parse_err) {
+						// malformed SSE chunk, skip
+					}
+				}
+			}
+		}
+
+		// Assemble final tool_calls array
+		const tool_calls = tool_calls_acc
+			.filter(function(tc) { return tc && tc.function.name })
+			.map(function(tc) {
+				return {
+					id		: tc.id,
+					type	: tc.type,
+					function: {
+						name		: tc.function.name,
+						arguments	: tc.function.arguments
+					}
+				}
+			})
+
+		// raw_result shape compatible with model_engine.parse_tool_calls path (1)
+		const raw_result = {
+			generated_text: [{
+				role		: 'assistant',
+				content		: text,
+				tool_calls	: tool_calls.length > 0 ? tool_calls : undefined
+			}]
+		}
+
+		return {
+			full_text	: text,
+			streamed_text: text,
+			raw_result	: raw_result
+		}
+	}//end _generate_with_api
+
+
+
 	async _handle_user_message(message) {
 
 		const self = this
@@ -644,9 +941,7 @@ export const ai_assistant = class ai_assistant {
 		let iteration			= 0
 
 		const ontology_context = await self._build_ontology_context_for_message(message)
-
-		const system_prompt	= self._build_system_prompt() + (ontology_context ? '\n\n' + ontology_context : '')
-		const tools			= self._build_tools_for_model()
+		const tools				= self._build_tools_for_model()
 
 		try {
 			while (iteration < max_iterations) {
@@ -656,17 +951,35 @@ export const ai_assistant = class ai_assistant {
 					throw Object.assign(new Error('Aborted'), { name: 'AbortError' })
 				}
 
-				const few_shot = (iteration === 1 && tools.length > 0)
+				// Rebuild system prompt each iteration: tools enabled on first two
+				// turns to allow describe_section → search_records_view chains.
+				const tools_enabled = iteration <= 2 && tools.length > 0
+				const system_prompt = self._build_system_prompt(tools_enabled)
+					+ (ontology_context ? '\n\n' + ontology_context : '')
+
+				// Truncate conversation to last 10 messages to prevent KV cache from
+				// growing unbounded with large tool results. 10 messages ≈ 3–4
+				// tool-answer pairs which is enough for describe→search→get→answer.
+				const trimmed_conversation = self._conversation.slice(-10)
+
+				const few_shot = tools_enabled
 					? self._build_few_shot_messages()
 					: []
 
 				const raw_messages = [
 					{ role: 'system', content: system_prompt },
 					...few_shot,
-					...self._conversation
+					...trimmed_conversation
 				]
 
-				const messages = ai_assistant._normalize_messages_for_model(raw_messages)
+				// On answer-only turns, append an explicit instruction so the model
+				// knows its task is to answer, not to call more tools.
+				if (!tools_enabled) {
+					raw_messages.push({
+						role	: 'user',
+						content	: 'Please answer my previous question based on the tool result provided above. Do not call any tools.'
+					})
+				}
 
 				let stream_started = false
 				const stream_callback = (token_text) => {
@@ -681,16 +994,45 @@ export const ai_assistant = class ai_assistant {
 					self._chat_render.append_thinking_token(token_text)
 				}
 
-				const generation_result = await self._model_engine.generate({
-					messages		: messages,
-					tools			: tools,
-					max_new_tokens	: self._config.max_new_tokens || 2048,
-					signal			: self._abort_controller.signal,
-					on_token		: stream_callback,
-					on_think_token	: think_stream_callback
-				})
+				// Only expose tools on the first iteration. Once a tool has been called
+				// and its result added to the conversation, the model should answer.
+				const tools_for_this_turn = iteration === 1 ? tools : []
 
-				const tool_calls = self._model_engine.parse_tool_calls(generation_result)
+				// Tool-calling turns may need more tokens for complex reasoning;
+				// answer-only turns are capped at 256 to reduce KV cache pressure.
+				const max_new_tokens = tools_for_this_turn.length > 0
+					? (self._config.max_new_tokens || 512)
+					: 256
+
+				// Branch: use external API when a server model is configured;
+				// otherwise use the local WebGPU/WASM model.
+				// When api_url is present ALL turns go through the API; selecting a
+				// local model keeps chat on-device as before.
+				const use_api = !!self._config.api_url
+				const generation_result = use_api
+					? await self._generate_with_api(
+						raw_messages,
+						tools_for_this_turn,
+						max_new_tokens,
+						stream_callback,
+						think_stream_callback,
+						self._abort_controller.signal
+					)
+					: await self._model_engine.generate({
+						messages		: ai_assistant._normalize_messages_for_model(raw_messages),
+						tools			: tools_for_this_turn,
+						max_new_tokens	: max_new_tokens,
+						signal			: self._abort_controller.signal,
+						on_token		: stream_callback,
+						on_think_token	: think_stream_callback
+					})
+
+				// Only parse tool calls when tools were declared for this turn.
+				// On iteration 2+ tools are cleared; any 'call:...' text the model
+				// produces must be treated as regular text, not a tool call.
+				const tool_calls = tools_for_this_turn.length > 0
+					? self._model_engine.parse_tool_calls(generation_result)
+					: []
 
 				if (tool_calls && tool_calls.length > 0) {
 
@@ -708,11 +1050,13 @@ export const ai_assistant = class ai_assistant {
 							if (typeof args_obj === 'string') args_obj = JSON.parse(args_obj)
 						} catch(e) {}
 
+						args_obj = ai_assistant._normalize_tool_args(tool_call.function.name, args_obj)
+
 						const indicator = self._chat_render.add_tool_call(
 							tool_call.function.name, 'calling', args_obj, null
 						)
 
-						const destructive_tools = ['dedalo_delete_record', 'dedalo_save_component']
+						const destructive_tools = ['dedalo_delete_record', 'dedalo_set_field']
 						if (destructive_tools.indexOf(tool_call.function.name) >= 0) {
 							const confirmed = await self._chat_render.confirm_action(
 								t('confirm_action', 'Confirm action') + ': ' + tool_call.function.name
@@ -731,12 +1075,14 @@ export const ai_assistant = class ai_assistant {
 						try {
 							const tool_result = await self._mcp_client.tools_call(
 								tool_call.function.name,
-								tool_call.function.arguments
+								args_obj
 							)
-							const result_payload = (tool_result && tool_result.result && tool_result.result.content) || tool_result
-							const result_text = JSON.stringify(result_payload)
+							const result_text = ai_assistant._extract_tool_result(
+								tool_result,
+								tool_call.function.name
+							)
 
-							self._chat_render.update_tool_call(indicator, 'done', result_payload)
+							self._chat_render.update_tool_call(indicator, 'done', tool_result)
 
 							self._conversation.push({
 								role			: 'tool',
@@ -805,29 +1151,14 @@ export const ai_assistant = class ai_assistant {
 
 			if (!resolved.length && !ambiguous.length) return null
 
-			const lines = [
-				'Ontology pre-resolution context:',
-				'- The following human ontology terms were detected in the user message.',
-				'- Use resolved `section_tipo` values directly when selecting/calling tools.',
-				'- Do not ask the user for a tipo when a unique resolved value is available.'
-			]
-
+			const parts = []
 			if (resolved.length) {
-				lines.push('Resolved section terms:')
-				for (const item of resolved) {
-					lines.push('- ' + item)
-				}
+				parts.push('Resolved: ' + resolved.join('; '))
 			}
-
 			if (ambiguous.length) {
-				lines.push('Ambiguous section terms:')
-				for (const item of ambiguous) {
-					lines.push('- ' + item)
-				}
-				lines.push('For ambiguous terms, ask the user to choose one candidate before making data changes.')
+				parts.push('Ambiguous: ' + ambiguous.join('; '))
 			}
-
-			return lines.join('\n')
+			return parts.length ? parts.join('. ') + '.' : null
 		} catch (err) {
 			console.warn('[ai_assistant] ontology pre-resolution failed:', err)
 			return 'Ontology pre-resolution failed: ' + err.message + '. Use `dedalo_ontology_glossary` or `dedalo_resolve_ontology` before any data tool.'

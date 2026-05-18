@@ -1,9 +1,9 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { WorkClient } from '@dedalo/mcp-common';
-import { registerTool, type ToolContext } from './_shared/register.js';
-import { rqo } from './_shared/rqo.js';
-import { TipoSchema, OptionalLangSchema, ModeSchema } from './_shared/schemas.js';
+import { registerTool, type ToolContext } from '../_shared/register.js';
+import { rqo } from '../_shared/rqo.js';
+import { TipoSchema, OptionalLangSchema, ModeSchema } from '../_shared/schemas.js';
 
 /**
  * Discovery tools — read-only ontology and context introspection.
@@ -13,7 +13,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 		name: 'dedalo_get_environment',
 		description:
 			'Get Dédalo server environment: version, languages, install status, logged user info. Safe pre-auth call. Use this first to verify connectivity.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get environment' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get environment' },
 		inputSchema: z.object({}),
 		handler: async () => client.call(rqo({ action: 'get_environment' })),
 	}, ctx);
@@ -23,7 +23,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 		description:
 			'List all section tipos defined in the ontology. Returns labels, models and configuration. Use this to discover what record types exist.\n' +
 			'For a compact multilingual glossary with portal metadata, prefer `dedalo_ontology_glossary` (mode="sections").',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'List sections' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'List sections' },
 		inputSchema: z.object({ lang: OptionalLangSchema }),
 		handler: async ({ lang }) => client.call(rqo({ action: 'get_ontology_info', source: { model: 'section', lang } })),
 	}, ctx);
@@ -33,7 +33,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 		description:
 			'Get the context for all components within a section_tipo. Returns the complete element list with types, labels and configuration.\n' +
 			'For a lightweight component overview with portal metadata, prefer `dedalo_ontology_glossary` (mode="section").',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get section elements context' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get section elements context' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
 			lang: OptionalLangSchema,
@@ -47,7 +47,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 		name: 'dedalo_get_element_context',
 		description:
 			'Get UI context for a specific element (component or section). Returns structure, permissions, labels and metadata.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get element context' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get element context' },
 		inputSchema: z.object({
 			tipo: TipoSchema,
 			section_tipo: TipoSchema.optional().describe('Parent section tipo. Defaults to `tipo` for self-section lookups.'),
@@ -62,7 +62,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 		name: 'dedalo_start',
 		description:
 			'Bootstrap the Dédalo application context. Returns the start page (menu + initial section) for the current user. Useful as a first call when discovering what is available to the configured user.',
-		annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: true, title: 'Application start' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: false, openWorldHint: true, title: 'Application start' },
 		inputSchema: z.object({
 			tipo: TipoSchema.optional(),
 			mode: ModeSchema.optional(),
@@ -78,7 +78,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			'Use `fuzzy` search_mode for natural-language input (default), or `exact` for precise JSONB term matches. ' +
 			'Returns the section tipo, labels, model, and full component tree. ' +
 			'This is the primary tool for discovering what fields/components a section contains from a human-readable name.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Resolve ontology term' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Resolve ontology term' },
 		inputSchema: z.object({
 			text: z.string().describe('Human-readable text to search for (e.g. "Oral History", "Interview").'),
 			lang: OptionalLangSchema,
@@ -98,7 +98,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			'Structured search of the Dédalo ontology by column values (model, parent, tld, etc.). ' +
 			'Returns matching ontology nodes with their metadata. ' +
 			'Use this to find all sections, components of a specific model, or nodes within a TLD namespace.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Search ontology' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Search ontology' },
 		inputSchema: z.object({
 			model: z.string().optional().describe('Filter by model name (e.g. "section", "component_text_area").'),
 			parent: TipoSchema.optional().describe('Filter by parent tipo.'),
@@ -129,7 +129,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			'annotated metadata for each hop: section→portal→target section→leaf component.\n\n' +
 			'ALWAYS use this before any tool requiring section_tipo or tipo parameters. ' +
 			'Terms are returned in all available languages.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Ontology glossary' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Ontology glossary' },
 		inputSchema: z.object({
 			mode: z.enum(['sections', 'section', 'path']).default('sections')
 				.describe('"sections" = all sections map. "section" = one section\'s components. "path" = resolve relational path.'),
@@ -158,7 +158,7 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 			'The leaf hop includes column_type (string, relation, date, geo, number, media) so you know ' +
 			'what data format to expect.\n\n' +
 			'Use after `dedalo_ontology_glossary` to drill into portal relationships discovered in the component tree.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Resolve relational path' },
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Resolve relational path' },
 		inputSchema: z.object({
 			path: z.array(TipoSchema).min(2)
 				.describe('Array of tipos forming the relational path. Must start with a section tipo, ' +

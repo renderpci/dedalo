@@ -178,3 +178,4 @@ composer.local.lock
 mcp/dedalo-work-mcp/.env
 *.map
 mcp/.env
+.opencode

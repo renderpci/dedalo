@@ -18,6 +18,12 @@ export const TipoSchema = z
 	.regex(/^[a-zA-Z0-9_]+$/, 'tipo must match [a-zA-Z0-9_]+')
 	.describe('Ontology tipo identifier (e.g. `oh1`, `dd1324`). Resolve from human names via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.');
 
+/** Agent section identifier: accepts a human name (e.g. "Cecas") OR a tipo (e.g. "oh1"). */
+export const AgentSectionSchema = z
+	.string()
+	.min(1)
+	.describe('Section name (e.g. "Cecas", "Oral History") or tipo (e.g. "oh1"). The server resolves names automatically.');
+
 /** Dédalo language code. `lg-eng`, `lg-spa`, `lg-nolan` (no-language), etc. */
 export const LangSchema = z
 	.string()

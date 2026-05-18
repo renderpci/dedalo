@@ -382,7 +382,7 @@ export const chat_render = class chat_render {
 			opt.dataset.dtype			= m.dtype || 'q4f16'
 			opt.dataset.device			= m.device || 'webgpu'
 			opt.dataset.fallback_device	= m.fallback_device || 'wasm'
-			opt.dataset.max_new_tokens	= m.max_new_tokens || 2048
+			opt.dataset.max_new_tokens	= m.max_new_tokens || 512
 			opt.dataset.thinking		= m.thinking || 'none'
 			opt.dataset.thinking_options= JSON.stringify(m.thinking_options || ['none'])
 			if (m.model_id === settings.model_id) opt.selected = true

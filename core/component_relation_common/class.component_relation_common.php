@@ -1658,7 +1658,7 @@ class component_relation_common extends component_common {
 	*
 	* @return array|null Pack dictionary list item definitions of structure:
 	*	- section_id (int): item descriptive locator structure.
-	*	- section_tipo (string): layout item descriptive locator structure layout.
+	*	- section_tipo (string): layout item descriptive locator structure layout. 
 	*	- term (string|null): descriptive term primary identifying labels descriptive.
 	*	- typology (string|null): supporting descriptive typology identifiers reference string.
 	*	- typology_section_id (int|null): definitions descriptive typology target structure index.
@@ -1666,15 +1666,19 @@ class component_relation_common extends component_common {
 	*/
 	protected function resolve_map_node_data( object $map_node, int $section_id, string $section_tipo ) : ?array {
 
-		// Ensure the map node has required thesaurus mappings for term and model
-		if(empty($map_node->thesaurus->term) || empty($map_node->thesaurus->model)){
-			debug_log(__METHOD__." thesaurus->term or thesaurus->model not found for section_tipo: $section_tipo", logger::ERROR);
+		// Ensure the map node has required thesaurus mappings for term
+		if(empty($map_node->thesaurus->term)){
+			debug_log(__METHOD__." thesaurus->term not found for section_tipo: $section_tipo", logger::WARNING);
 			return null;
 		}
 
 		// Normalize types to strings (assumes first if array is provided)
 		$term_tipo 	= is_array($map_node->thesaurus->term) ? reset($map_node->thesaurus->term) : $map_node->thesaurus->term;
-		$model_tipo = is_array($map_node->thesaurus->model) ? reset($map_node->thesaurus->model) : $map_node->thesaurus->model;
+		
+		$model_tipo = null;
+		if (!empty($map_node->thesaurus->model)) {
+			$model_tipo = is_array($map_node->thesaurus->model) ? reset($map_node->thesaurus->model) : $map_node->thesaurus->model;
+		}
 
 		// 1. Resolve Term (String)
 		// Fetches the primary text/label for this section node item
@@ -1699,7 +1703,10 @@ class component_relation_common extends component_common {
 		$typology_section_id	= null;
 		$typology_section_tipo	= null;
 
-		$model_model_name = ontology_node::get_model_by_tipo($model_tipo, true);
+		$model_model_name = null;
+		if (!empty($model_tipo)) {
+			$model_model_name = ontology_node::get_model_by_tipo($model_tipo, true);
+		}
 		if($model_model_name) {
 			$typology_component = component_common::get_instance(
 				$model_model_name,

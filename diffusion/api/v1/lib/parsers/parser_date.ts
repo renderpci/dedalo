@@ -246,14 +246,16 @@ export function string_date(data: data_item[] | null, options: parser_options): 
  * Returns null when data is empty or no valid date part is found.
  *
  * @param data    - Array of data items containing date values
- * @param options - { date_mode?: string }
+ * @param options - { date_mode?: string, records_separator?: string, fields_separator?: string }
  * @returns Array with a single data item whose value is the formatted string, or null
  */
 export default function (data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
 
-	const date_mode = (options.date_mode as string) ?? 'date';
+	const date_mode         = (options.date_mode as string)         ?? 'date';
+	const records_separator = (options.records_separator as string) ?? ' | ';
+	const fields_separator  = (options.fields_separator as string)  ?? ', ';
 
 	// Collect one [formatted_string] per date object — parallel to text_format output shape.
 	// merge/auto-completion downstream handles joining across records.
@@ -279,7 +281,7 @@ export default function (data: data_item[] | null, options: parser_options): dat
 						ar_date.push(format_dd_date(date_obj.end as dd_date_part, 'Y-m-d H:i:s'));
 					}
 					if (ar_date.length > 0) {
-						ar_diffusion_items.push({ ...item, value: [ar_date.join(',')] });
+						ar_diffusion_items.push({ ...item, value: [ar_date.join(fields_separator)] });
 					}
 					break;
 				}
