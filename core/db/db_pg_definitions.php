@@ -277,14 +277,15 @@ $ar_index[] = (object)[
 	'info'   => 'Used to search by section_id ordered ascendant.'
 ];
 
-$ar_index[] = (object)[
-	'tables' => ['matrix_activity', 'matrix_time_machine'],
-	'add'    => 'CREATE INDEX IF NOT EXISTS {$table}_section_id_desc_idx ON {$table} USING btree (section_id DESC NULLS LAST);',
-	'drop'   => 'DROP INDEX IF EXISTS {$table}_section_id_desc_idx',
-	'sample' => 'SELECT * FROM matrix WHERE section_id = 5 LIMIT 10',
-	'name'   => 'all_matrix_section_id_desc_idx',
-	'info'   => 'Used to search by section_id ordered descendant.'
-];
+// Is not necessary. x_section_id_idx works backwards
+// $ar_index[] = (object)[
+// 	'tables' => ['matrix_activity', 'matrix_time_machine'],
+// 	'add'    => 'CREATE INDEX IF NOT EXISTS {$table}_section_id_desc_idx ON {$table} USING btree (section_id DESC NULLS LAST);',
+// 	'drop'   => 'DROP INDEX IF EXISTS {$table}_section_id_desc_idx',
+// 	'sample' => 'SELECT * FROM matrix WHERE section_id = 5 LIMIT 10',
+// 	'name'   => 'all_matrix_section_id_desc_idx',
+// 	'info'   => 'Used to search by section_id ordered descendant.'
+// ];
 
 $ar_index[] = (object)[
 	'tables' => $TABLES_MATRIX_NO_ACTIVITY,
@@ -371,9 +372,22 @@ $ar_index[] = (object)[
 	'tables'       => ['matrix_activity'],
 	'add'          => 'CREATE INDEX IF NOT EXISTS {$table}_timestamp_composite_idx ON {$table} ("timestamp", id) INCLUDE (section_tipo, section_id);',
 	'drop'         => 'DROP INDEX IF EXISTS "{$table}_timestamp_composite_idx"',
-	'sample'       => 'SELECT * FROM matrix_activity WHERE ("timestamp" >= date(\'2024-12-04\') AND "timestamp" < date(\'2024-12-05\')) AND relation @> \'{"dd543":[{"section_tipo":"dd128","section_id":"1"}]}\'',
+	'sample'       => 'SELECT * FROM matrix_activity WHERE ("timestamp" >= \'2024-12-04\' AND "timestamp" < \'2024-12-05\') AND relation @> \'{"dd543":[{"section_tipo":"dd128","section_id":"1"}]}\'',
 	'name'         => 'matrix_activity_timestamp_composite_idx',
 	'info'         => 'Used to search by timestamp, ordered id ascendant. Used by diffusion_section_stats:get_interval_raw_activity_data'
+];
+
+// matrix_time_machine + matrix_activity — timestamp (BRIN)
+$ar_index[] = (object)[
+	'tables' => ['matrix_time_machine', 'matrix_activity'],
+	'add'    => 'CREATE INDEX IF NOT EXISTS {$table}_timestamp_date_idx ON {$table} USING brin (DATE("timestamp"));',
+	'drop'   => '
+		DROP INDEX IF EXISTS {$table}_timestamp_idx; -- Intentional remove legacy index
+		DROP INDEX IF EXISTS {$table}_timestamp_date_idx;
+	',
+	'sample' => "SELECT * FROM matrix_time_machine WHERE DATE(\"timestamp\") = '2025-08-18' LIMIT 1",
+	'name'   => 'matrix_time_machine_timestamp_date_idx',
+	'info'   => 'Used to search by date in time machine timestamp column.'
 ];
 
 // matrix_time_machine — tipo + id DESC
@@ -416,19 +430,6 @@ $ar_index[] = (object)[
 	'info'   => 'Used to search by bulk_process_id.'
 ];
 
-// matrix_time_machine + matrix_activity — timestamp (BRIN)
-$ar_index[] = (object)[
-	'tables' => ['matrix_time_machine', 'matrix_activity'],
-	'add'    => 'CREATE INDEX IF NOT EXISTS {$table}_timestamp_date_idx ON {$table} USING brin (DATE("timestamp"));',
-	'drop'   => '
-		DROP INDEX IF EXISTS {$table}_timestamp_idx; -- Intentional remove legacy index
-		DROP INDEX IF EXISTS {$table}_timestamp_date_idx;
-	',
-	'sample' => "SELECT * FROM matrix_time_machine WHERE DATE(\"timestamp\") = '2025-08-18' LIMIT 1",
-	'name'   => 'matrix_time_machine_timestamp_date_idx',
-	'info'   => 'Used to search by date in time machine timestamp column.'
-];
-
 // matrix_time_machine — user_id
 $ar_index[] = (object)[
 	'tables' => ['matrix_time_machine'],
@@ -449,16 +450,6 @@ $ar_index[] = (object)[
 	'info'   => 'Used to search by bulk_process_id with all parameters, section_id, bulk_process_id, section_tipo, tipo and lang.'
 ];
 
-// matrix_langs — hierarchy41 value (lang code)
-$ar_index[] = (object)[
-	'tables' => ['matrix_langs'],
-	'add'    => 'CREATE INDEX IF NOT EXISTS {$table}_hierarchy41_value_idx ON "{$table}" ((string->\'hierarchy41\'->0->>\'value\')); ANALYZE {$table};',
-	'drop'   => 'DROP INDEX IF EXISTS "{$table}_hierarchy41_value_idx"',
-	'sample' => "SELECT * FROM matrix_langs WHERE (string->'hierarchy41'->0->>'value') = 'eng' LIMIT 10",
-	'name'   => 'matrix_langs_hierarchy41_value_idx',
-	'info'   => 'Used to search by hierarchy41 value (lang code) in matrix_langs'
-];
-
 // matrix_time_machine — search default: section_id, section_tipo, tipo, lang, timestamp DESC
 $ar_index[] = (object)[
 	'tables' => ['matrix_time_machine'],
@@ -469,6 +460,15 @@ $ar_index[] = (object)[
 	'info'   => 'Used to search by default parameters: section_id, section_tipo, tipo, lang, timestamp DESC'
 ];
 
+// matrix_langs — hierarchy41 value (lang code)
+$ar_index[] = (object)[
+	'tables' => ['matrix_langs'],
+	'add'    => 'CREATE INDEX IF NOT EXISTS {$table}_hierarchy41_value_idx ON "{$table}" ((string->\'hierarchy41\'->0->>\'value\')); ANALYZE {$table};',
+	'drop'   => 'DROP INDEX IF EXISTS "{$table}_hierarchy41_value_idx"',
+	'sample' => "SELECT * FROM matrix_langs WHERE (string->'hierarchy41'->0->>'value') = 'eng' LIMIT 10",
+	'name'   => 'matrix_langs_hierarchy41_value_idx',
+	'info'   => 'Used to search by hierarchy41 value (lang code) in matrix_langs'
+];
 
 // ── Maintenance ────────────────────────────────────────────────────────────────
 
