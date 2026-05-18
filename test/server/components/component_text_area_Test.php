@@ -1782,12 +1782,12 @@ final class component_text_area_test extends BaseTestCase {
 				.' type: '.gettype($value->result)
 		);
 
-		// 3 Test the $value->result data
+		// 3 Test the $value->result data (v7 format: objects with 'value' property)
 		$this->assertTrue(
-			$value->result[0]==='<p>Test string</p>',
+			is_object($value->result[0]) && $value->result[0]->value==='<p>Test string</p>',
 				'expected value do not match:' . PHP_EOL
-				.' expected: Test string' . PHP_EOL
-				.' value: '.$value->result[0]
+				.' expected: <p>Test string</p>' . PHP_EOL
+				.' value: '.to_string($value->result[0])
 		);
 
 		// Test with JSON input
@@ -1810,12 +1810,12 @@ final class component_text_area_test extends BaseTestCase {
 				.' type: '.gettype($value->result)
 		);
 
-		// 6 Test the $value->result data
+		// 6 Test the $value->result data (v7 format: objects with 'value' property)
 		$this->assertTrue(
-			$value->result[0]==='<p>Test content in <strong>JSON</strong></p>',
+			is_object($value->result[0]) && $value->result[0]->value==='<p>Test content in <strong>JSON</strong></p>',
 				'expected value do not match:' . PHP_EOL
 				.' expected: <p>Test content in <strong>JSON</strong></p>' . PHP_EOL
-				.' value: '.$value->result[0]
+				.' value: '.to_string($value->result[0])
 		);
 	}//end test_conform_import_data
 
