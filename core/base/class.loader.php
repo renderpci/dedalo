@@ -110,6 +110,7 @@ include DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_av_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_info.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_component_3d_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_area_maintenance_api.php';
+include DEDALO_CORE_PATH . '/api/v1/common/class.dd_ontology_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_mcp_api.php';
 // tools
 include DEDALO_TOOLS_PATH . '/tool_common/class.tool_common.php';

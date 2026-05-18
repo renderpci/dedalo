@@ -581,11 +581,11 @@ Returns metadata for all components in a section record.
 }
 ```
 
-## get_ontology_info
+## get_matrix_ontology_locator
 
 ### Purpose
 
-Retrieve ontology type information.
+Retrieve the matrix_ontology locator of the ontology tipo.
 
 ### Accepts
 
@@ -594,18 +594,18 @@ Retrieve ontology type information.
 
 ### Returns
 
-`{ result: { ontology_data }, msg: string }`
+`{ result: { section_tipo, section_id }, msg: string }`
 
 ### Usage
 
-Returns schema/metadata about a specific ontology type or all types if no tipo specified.
+Returns the matrix_ontology locator of the ontology tipo.
 
 ### Example Request
 
 ```json
 {
   "dd_api": "dd_core_api",
-  "action": "get_ontology_info",
+  "action": "get_matrix_ontology_locator",
   "source": {
     "tipo": "rsc167"
   }
@@ -617,21 +617,8 @@ Returns schema/metadata about a specific ontology type or all types if no tipo s
 ```json
 {
   "result": {
-    "tipo": "rsc167",
-    "model": "section",
-    "label": "Resource",
-    "components": [
-      {
-        "tipo": "oh1",
-        "label": "Title",
-        "model": "component_input_text"
-      },
-      {
-        "tipo": "oh2",
-        "label": "Description",
-        "model": "component_text_area"
-      }
-    ]
+    "section_tipo": "rsc0",
+    "section_id": "167"
   },
   "msg": "OK"
 }

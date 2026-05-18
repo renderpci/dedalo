@@ -57,7 +57,7 @@ The endpoint will populate `rqo->options` with `other_field` and the uploaded `f
 Below is a concise index of the v1 API classes (files in `core/api/v1/common`) with the primary actions and a representative RQO + curl example. Descriptions are inferred from class/method names and in-file docblocks.
 
 - `dd_core_api` (core features)
-  - Actions: `start`, `read`, `read_raw`, `create`, `duplicate`, `delete`, `save`, `count`, `get_element_context`, `get_section_elements_context`, `get_indexation_grid`, `get_environment`, `get_page_globals`, `get_js_plain_vars`, `get_lang_labels`, `get_ontology_info`, `test`
+  - Actions: `start`, `read`, `read_raw`, `create`, `duplicate`, `delete`, `save`, `count`, `get_element_context`, `get_section_elements_context`, `get_indexation_grid`, `get_environment`, `get_page_globals`, `get_js_plain_vars`, `get_lang_labels`, `get_matrix_ontology_locator`, `test`
   - Example: start (get initial context)
 
     ```json
@@ -256,7 +256,7 @@ The endpoint will populate `rqo->options` with `other_field` and the uploaded `f
 Below is a concise index of the v1 API classes (files in `core/api/v1/common`) with the primary actions and a representative RQO + curl example. Descriptions are inferred from class/method names and in-file docblocks.
 
 - `dd_core_api` (core features)
-  - Actions: `start`, `read`, `read_raw`, `create`, `duplicate`, `delete`, `save`, `count`, `get_element_context`, `get_section_elements_context`, `get_indexation_grid`, `get_environment`, `get_page_globals`, `get_js_plain_vars`, `get_lang_labels`, `get_ontology_info`, `test`
+  - Actions: `start`, `read`, `read_raw`, `create`, `duplicate`, `delete`, `save`, `count`, `get_element_context`, `get_section_elements_context`, `get_indexation_grid`, `get_environment`, `get_page_globals`, `get_js_plain_vars`, `get_lang_labels`, `get_matrix_ontology_locator`, `test`
   - Example: start (get initial context)
 
     ```json

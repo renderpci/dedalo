@@ -18,17 +18,54 @@ import type { data_item, parser_options } from '../types';
 export function get_first(data: data_item[] | null, options: parser_options): data_item[] | null {
 
 	if (!data || data.length === 0) return null;
+	
+	const lang_seen = new Set<string>();
 	const result: data_item[] = [];
 
 	for (const item of data) {
-		const val = item.value;
-		const final_val = (Array.isArray(val) && val.length > 0) 
-            ? val[0] 
-            : val;
-		result.push({
-			...item,
-			value: final_val
-		});
+		const lang = item.lang ?? '__nolan__';
+		if (!lang_seen.has(lang)) {
+			lang_seen.add(lang);
+			
+			const val = item.value;
+			const final_val = (Array.isArray(val) && val.length > 0) 
+				? val[0] 
+				: val;
+				
+			result.push({
+				...item,
+				value: final_val
+			});
+		}
+	}
+
+	return result.length > 0 ? result : null;
+}
+
+/**
+ * GET_TAIL
+ * Returns all data items except the first one (per language).
+ *
+ * @param data    - Array of data items
+ * @param options - Parser options
+ * @returns Array containing all but the first data item per lang
+ */
+export function get_tail(data: data_item[] | null, options: parser_options): data_item[] | null {
+
+	if (!data || data.length === 0) return null;
+	
+	const lang_seen = new Set<string>();
+	const result: data_item[] = [];
+
+	for (const item of data) {
+		const lang = item.lang ?? '__nolan__';
+		if (lang_seen.has(lang)) {
+			// Already saw the first item for this lang, add to tail
+			result.push(item);
+		} else {
+			// Mark first item seen
+			lang_seen.add(lang);
+		}
 	}
 
 	return result.length > 0 ? result : null;

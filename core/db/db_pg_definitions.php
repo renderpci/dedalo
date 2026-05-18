@@ -152,6 +152,20 @@ $ar_function[] = (object)[
 	'info'   => 'Not used anymore (v6)'
 ];
 
+$ar_function[] = (object)[
+	'add' => "
+		CREATE OR REPLACE FUNCTION jsonb_values_as_text(j jsonb)
+		RETURNS text LANGUAGE sql IMMUTABLE STRICT AS \$\$
+			SELECT string_agg(value, ' ')
+			FROM jsonb_each_text(j)
+		\$\$;
+	",
+	'drop' => 'DROP FUNCTION IF EXISTS jsonb_values_as_text CASCADE',
+	'sample' => "SELECT tipo, term, jsonb_values_as_text(term) AS values_text FROM dd_ontology WHERE term IS NOT NULL LIMIT 5",
+	'name' => 'jsonb_values_as_text',
+	'info' => 'Aggregates all JSONB leaf values of the term column into a single searchable text string. Used by the ontology fuzzy search (similarity + trigram) to match human-readable text across all language keys.'
+];
+
 // ── Constraints ────────────────────────────────────────────────────────────────
 
 $ar_constraint = [];
@@ -259,11 +273,38 @@ $ar_index[] = (object)[
 
 $ar_index[] = (object)[
 	'tables' => ['dd_ontology'],
+	'add'    => 'CREATE INDEX IF NOT EXISTS {$table}_is_main_idx ON {$table} USING btree (is_main ASC NULLS LAST);',
+	'drop'   => 'DROP INDEX IF EXISTS {$table}_is_main_idx',
+	'sample' => 'SELECT * FROM dd_ontology WHERE is_main = true LIMIT 1',
+	'name'   => 'dd_ontology_is_main_idx',
+	'info'   => 'Used to search if the node is a main/root node (tipo = tld + 0), boolean values: true | false'
+];
+
+$ar_index[] = (object)[
+	'tables' => ['dd_ontology'],
 	'add'    => 'CREATE INDEX IF NOT EXISTS {$table}_parent_order_number_idx ON {$table} USING btree (parent COLLATE pg_catalog.default ASC NULLS LAST, order_number ASC NULLS LAST);',
 	'drop'   => 'DROP INDEX IF EXISTS {$table}_parent_order_number_idx',
 	'sample' => "SELECT * FROM dd_ontology WHERE parent = 'tch1' ORDER BY order_number LIMIT 1",
 	'name'   => 'dd_ontology_parent_order_number_idx',
 	'info'   => 'Used to search descriptors by parent and order_number'
+];
+
+$ar_index[] = (object)[
+	'tables' => ['dd_ontology'],
+	'add'    => 'CREATE INDEX IF NOT EXISTS {$table}_term_jsonpath_idx ON {$table} USING gin (term jsonb_path_ops);',
+	'drop'   => 'DROP INDEX IF EXISTS {$table}_term_jsonpath_idx',
+	'sample' => "SELECT tipo FROM dd_ontology WHERE term @? '$.* ? (@ like_regex \"oral\" flag \"i\")' LIMIT 5",
+	'name'   => 'dd_ontology_term_jsonpath_idx',
+	'info'   => 'GIN index on dd_ontology.term using jsonb_path_ops. Powers the JSONPath @? pre-filter phase of fuzzy ontology search, enabling fast regex-like matching across all language keys.'
+];
+
+$ar_index[] = (object)[
+	'tables' => ['dd_ontology'],
+	'add'    => 'CREATE INDEX IF NOT EXISTS {$table}_term_trgm_values_idx ON {$table} USING gin (jsonb_values_as_text(term) gin_trgm_ops);',
+	'drop'   => 'DROP INDEX IF EXISTS {$table}_term_trgm_values_idx',
+	'sample' => "SELECT tipo, similarity(jsonb_values_as_text(term), 'oral') AS score FROM dd_ontology WHERE jsonb_values_as_text(term) % 'oral' ORDER BY score DESC LIMIT 5",
+	'name'   => 'dd_ontology_term_trgm_values_idx',
+	'info'   => 'Trigram GIN index on jsonb_values_as_text(term). Powers the similarity/fuzzy search in dd_ontology_db_manager::search_fuzzy_term(), using the % operator for fast pre-filtering and similarity() for ranking.'
 ];
 
 // ── General (btree on matrix tables) ────────────────────────────────────────────

@@ -583,8 +583,6 @@ class component_iri extends component_common {
 	*/
 	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo=null ) : array {
 
-		$diffusion_data = [];
-
 		// Default diffusion data object
 		$diffusion_data_object = new diffusion_data_object( (object)[
 			'tipo'	=> $this->tipo,
@@ -593,34 +591,29 @@ class component_iri extends component_common {
 			'id'	=> $ddo->id ?? null
 		]);
 
-		$diffusion_data[] = $diffusion_data_object;
-
 		// Resolve the data by default
 			// If the ddo doesn't provide any specific function the component will use a get_url as default.
 			$data = $this->get_data();
 
 			// if the ddo provides a data_slice property, use it to slice the data
-			if(isset($ddo->data_slice)){
+			if(isset($ddo->data_slice) && !empty($data)){
 				$data = array_slice($data, $ddo->data_slice->offset, $ddo->data_slice->length);
 			}
 
 			if(!empty($data)) {
+				$processed_data = [];
 				foreach ($data as $current_data) {
 					if(!empty($current_data)) {
-
-						$current_data->title = $this->resolve_title($current_data);
-
-						$diffusion_data_object = new diffusion_data_object( (object)[
-							'tipo'	=> $this->tipo,
-							'lang'	=> $current_data->lang ?? null,
-							'value'	=> $current_data ?? null,
-							'id'	=> $ddo->id ?? null
-						]);
-
-						$diffusion_data[] = $diffusion_data_object;
+						$cloned_data = clone $current_data;
+						$cloned_data->title = $this->resolve_title($current_data);
+						$processed_data[] = $cloned_data;
 					}
 				}
+
+				$diffusion_data_object->value = $processed_data;
 			}
+
+		$diffusion_data = [$diffusion_data_object];
 
 
 		return $diffusion_data;

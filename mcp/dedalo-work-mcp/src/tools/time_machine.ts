@@ -22,16 +22,4 @@ export function registerTimeMachineTools(server: McpServer, client: WorkClient, 
 			client.call(rqo({ action: 'get_node_data', dd_api: 'dd_ts_api', source: { tipo, section_tipo: tipo, section_id, lang } })),
 	}, ctx);
 
-	registerTool(server, {
-		name: 'dedalo_tm_get_children_data',
-		description: 'Get children data for a Time Machine entry: all child nodes in the version tree.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Time machine: children data' },
-		inputSchema: z.object({
-			tipo: TipoSchema,
-			section_id: SectionIdSchema.describe('Parent Time Machine node identifier.'),
-			lang: OptionalLangSchema,
-		}),
-		handler: async ({ tipo, section_id, lang }) =>
-			client.call(rqo({ action: 'get_children_data', dd_api: 'dd_ts_api', source: { tipo, section_tipo: tipo, section_id, lang } })),
-	}, ctx);
 }

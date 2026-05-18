@@ -32,6 +32,7 @@ abstract class dd_ontology_db_manager {
 		'model_tipo'		=> true,
 		'is_model'			=> true,
 		'is_translatable'	=> true,
+		'is_main'			=> true,
 		'propiedades'		=> true
 	];
 
@@ -50,7 +51,8 @@ abstract class dd_ontology_db_manager {
 	// bool columns to parse
 	public static array $boolean_columns = [
 		'is_model'			=> true,
-		'is_translatable'	=> true
+		'is_translatable'	=> true,
+		'is_main'			=> true
 	];
 
 	// load_cache
@@ -584,11 +586,17 @@ abstract class dd_ontology_db_manager {
 					);
 					return false;
 				}
-				$params[] = $value->value;
+				$param_value = $value->value;
+				if (isset(self::$boolean_columns[$col]) && is_bool($param_value)) {
+					$param_value = ($param_value === true) ? 'true' : 'false';
+				}
+				$params[] = $param_value;
 				$where_clauses[] = pg_escape_identifier($conn, $col) . ' '.$value->operator.' $'.$param_index;
 
 			}else{
-
+				if (isset(self::$boolean_columns[$col])) {
+					$value = ($value === true) ? 'true' : 'false';
+				}
 				$params[] = $value;
 				$where_clauses[] = pg_escape_identifier($conn, $col) . ' = $'.$param_index;
 			}
@@ -653,6 +661,151 @@ abstract class dd_ontology_db_manager {
 
 		return $tipos;
 	}//end search
+
+
+
+	/**
+	 * SEARCH_EXACT_TERM
+	 * Searches dd_ontology by JSONB containment on the term column.
+	 *
+	 * Uses the `@>` operator to match a specific language key and value
+	 * inside the term JSONB object, e.g. `term @> '{"lg-eng":"Oral History"}'`.
+	 *
+	 * @param string $text Exact text to match
+	 * @param string $lang Language code (e.g. 'lg-eng')
+	 * @param string|null $model Optional model name filter
+	 * @param int $limit Max results
+	 * @return array|false Array of tipos, or false on error
+	 */
+	public static function search_exact_term(
+		string $text,
+		string $lang,
+		?string $model = null,
+		bool $is_main = false,
+		int $limit = 50
+	) : array|false {
+
+		$json_search = (object)[
+			'operator' => '@>',
+			'value' => '{"' . $lang . '":"' . $text . '"}'
+		];
+
+		$search_values = [
+			'term' => $json_search
+		];
+
+		if (!empty($model)) {
+			$search_values['model'] = $model;
+		}
+
+		if ($is_main) {
+			$search_values['is_main'] = $is_main;
+		}
+
+		return self::search($search_values, false, $limit);
+	}//end search_exact_term
+
+
+
+	/**
+	 * SEARCH_FUZZY_TERM
+	 * Searches dd_ontology using similarity/trigram matching on the term column.
+	 *
+	 * Two-phase strategy for performance + relevance:
+	 *   Phase 1 — JSONPath pre-filter: `term @? '$.* ? (@ like_regex "pattern" flag "i")'`
+	 *     Uses the GIN index for fast narrowing.
+	 *   Phase 2 — Trigram similarity: `f_unaccent(jsonb_values_as_text(term)) % f_unaccent(text)`
+	 *     Uses the trigram index for true fuzzy matching with accent-insensitivity.
+	 *
+	 * Results are ranked by `similarity()` score (DESC) so the most relevant
+	 * matches appear first.
+	 *
+	 * Relies on:
+	 *   - pg_trgm extension (already installed)
+	 *   - f_unaccent() function (defined in db_pg_definitions.php)
+	 *   - jsonb_values_as_text() function (defined in db_pg_definitions.php)
+	 *   - dd_ontology_term_jsonpath_idx (defined in db_pg_definitions.php)
+	 *   - dd_ontology_term_trgm_values_idx (defined in db_pg_definitions.php)
+	 *
+	 * @param string $text Search text (e.g. "Oral History")
+	 * @param string|null $model Optional model name filter (e.g. 'section')
+	 * @param bool $is_main Optional is_main filter (default false)
+	 * @param int $limit Max results (default 50)
+	 * @return array|false Array of tipos ordered by relevance, or false on error
+	 */
+	public static function search_fuzzy_term(
+		string $text,
+		?string $model = null,
+		bool $is_main = false,
+		int $limit = 50
+	) : array|false {
+
+		$table = self::$table;
+		$conn = DBi::_getConnection();
+
+		// Build JSONPath regex pattern from input text.
+		// Escape special chars for JSONPath like_regex:
+		//   1. Escape backslash and double-quote for JSONPath regex syntax
+		//   2. Escape single quotes for PostgreSQL string literals (double them)
+		$jsonpath_regex = preg_replace('/([\\\\"])/', '\\\\$1', $text);
+		$jsonpath_regex = str_replace("'", "''", $jsonpath_regex);
+
+		$params = [];
+		$param_idx = 1;
+
+		// $1 — the search text for similarity and trigram
+		$params[] = $text;
+		$trigram_param = $param_idx;
+		$param_idx++;
+
+		// Build WHERE clause:
+		//   Phase 1: JSONPath pre-filter (uses GIN index)
+		//     term @? '$.* ? (@ like_regex "pattern" flag "i")'
+		//     The $.* is JSONPath syntax, NOT a pg param placeholder.
+		//   Phase 2: Trigram similarity with accent-insensitive matching
+		//     f_unaccent(jsonb_values_as_text(term)) % f_unaccent($1)
+		//     Uses pg_query_params parameter substitution for the text value.
+		$like_regex_clause = "term @? '\$.* ? (@ like_regex \"" . $jsonpath_regex . "\" flag \"i\")'";
+		$trigram_clause = 'f_unaccent(jsonb_values_as_text(term)) % f_unaccent($' . $trigram_param . ')';
+		$where_parts = [];
+		$where_parts[] = '(' . $like_regex_clause . ' OR ' . $trigram_clause . ')';
+
+		if (!empty($model)) {
+			$params[] = $model;
+			$where_parts[] = 'model = $' . $param_idx;
+			$param_idx++;
+		}
+
+	
+		$params[] = ($is_main === true) ? 'true' : 'false';
+		$where_parts[] = 'is_main = $' . $param_idx;
+		$param_idx++;
+		
+
+		$limit_clause = ($limit > 0) ? ' LIMIT ' . $limit : '';
+
+		$sql = 'SELECT tipo, '
+			. 'similarity(f_unaccent(jsonb_values_as_text(term)), f_unaccent($' . $trigram_param . ')) AS score '
+			. 'FROM "' . $table . '" '
+			. 'WHERE ' . implode(' AND ', $where_parts) . ' '
+			. 'ORDER BY score DESC'
+			. $limit_clause;
+		$result = pg_query_params($conn, $sql, $params);
+
+		if (!$result) {
+			debug_log(__METHOD__
+				. ' Error executing fuzzy search: ' . pg_last_error($conn)
+				. ' SQL: ' . $sql
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// Extract tipo column (first column) from results
+		$tipos = pg_fetch_all_columns($result, 0);
+
+		return $tipos;
+	}//end search_fuzzy_term
 
 
 

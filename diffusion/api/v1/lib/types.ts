@@ -111,7 +111,16 @@ export interface parser_options {
 
 export interface datum_record {
 	section_id: string | number;
-	entries:    Record<string, entry_value[]> | 'delete';
+	fields:     Record<string, field_group[]> | 'delete';
+}
+
+export interface field_group {
+	tipo:          string;
+	lang:          string | null;
+	entries:       Array<{ value: unknown } & Record<string, unknown>>;
+	id:            string | null;
+	section_id?:   string | number | null;
+	section_tipo?: string | null;
 }
 
 export interface entry_value {

@@ -52988,10 +52988,11 @@ function createPublicServer(config4) {
 }
 
 // src/index.ts
+var useHttp = process.argv.includes("--http");
 var logger = import_pino.default({
   level: process.env.LOG_LEVEL ?? "info",
-  transport: { target: "pino-pretty" }
-});
+  transport: useHttp ? { target: "pino-pretty" } : undefined
+}, process.stderr);
 var PUBLIC_API_BASE_URL = process.env.DEDALO_PUBLIC_API_URL ?? "http://localhost";
 var PUBLIC_API_CODE = process.env.DEDALO_PUBLIC_API_CODE ?? "";
 if (!PUBLIC_API_CODE) {
@@ -53011,10 +53012,10 @@ var server = createPublicServer({
   rateLimit: RATE_LIMIT_CAPACITY > 0 ? { capacity: RATE_LIMIT_CAPACITY, refillRateMs: RATE_LIMIT_REFILL_MS } : undefined
 });
 async function main() {
-  const useHttp = process.argv.includes("--http");
+  const useHttp2 = process.argv.includes("--http");
   const portArg = process.argv.findIndex((a) => a === "--port");
   const port = portArg !== -1 && process.argv[portArg + 1] ? parseInt(process.argv[portArg + 1], 10) : 3002;
-  if (useHttp) {
+  if (useHttp2) {
     const transport = new WebStandardStreamableHTTPServerTransport({
       sessionIdGenerator: () => crypto.randomUUID()
     });

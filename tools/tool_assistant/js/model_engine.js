@@ -22,6 +22,8 @@ export const model_engine = class model_engine {
 		this._loaded	= false
 		// per-model fallback: same model_id reloaded on `fallback_device` (e.g. wasm)
 		this._fallback_device = config.fallback_device || 'wasm'
+		// detect model family: 'pipeline' (default), 'qwen35', or 'gemma4'
+		this._model_type = model_engine._detect_model_type(this._model_id)
 	}//end constructor
 
 
@@ -51,14 +53,11 @@ export const model_engine = class model_engine {
 		this._TextStreamer = transformers.TextStreamer
 		this._transformers = transformers
 
-		// detect Qwen3.5 models (use AutoProcessor + direct model API)
-		this._is_qwen35 = this._model_id.indexOf('Qwen3.5') !== -1
-
 		let actual_device = device
-		if (this._is_qwen35) {
-			actual_device = await this._load_qwen35(transformers, device, dtype, on_progress)
-		} else {
+		if (this._model_type === 'pipeline') {
 			actual_device = await this._load_pipeline(transformers, device, dtype, on_progress)
+		} else {
+			actual_device = await this._load_direct(transformers, device, dtype, on_progress)
 		}
 
 		this._device	= actual_device
@@ -67,58 +66,52 @@ export const model_engine = class model_engine {
 
 
 
-	async _load_qwen35(transformers, device, dtype, on_progress) {
+	async _load_direct(transformers, device, dtype, on_progress) {
 
-		const dtype_config = {
-			embed_tokens			: dtype,
-			decoder_model_merged	: dtype
+		const model_class_name	= model_engine._MODEL_CLASS_MAP[this._model_type]
+		const ModelClass		= transformers[model_class_name]
+
+		if (!ModelClass) {
+			throw new Error('Unknown model class "' + model_class_name + '" for model_type "' + this._model_type + '"')
 		}
 
-		console.log('[model_engine] loading Qwen3.5 with dtype config:', JSON.stringify(dtype_config))
+		const dtype_config = model_engine._build_dtype_config(this._model_type, dtype)
+
+		console.log('[model_engine] loading', this._model_type, 'with model class', model_class_name, 'dtype:', JSON.stringify(dtype_config))
+
+		const progress_cb = (progress) => {
+			if (progress.status === 'progress' && progress.progress !== undefined) {
+				on_progress(progress.progress)
+			}
+			if (progress.status === 'done') {
+				on_progress(100)
+			}
+		}
 
 		try {
 			this._processor = await transformers.AutoProcessor.from_pretrained(this._model_id)
-			this._model = await transformers.Qwen3_5ForConditionalGeneration.from_pretrained(
-				this._model_id,
-				{
-					device		: device,
-					dtype		: dtype_config,
-					progress_callback: (progress) => {
-						if (progress.status === 'progress' && progress.progress !== undefined) {
-							on_progress(progress.progress)
-						}
-						if (progress.status === 'done') {
-							on_progress(100)
-						}
-					}
-				}
-			)
+			this._model = await ModelClass.from_pretrained(this._model_id, {
+				device				: device,
+				dtype				: dtype_config,
+				progress_callback	: progress_cb
+			})
 			return device
 		} catch (load_err) {
 			if (device === 'webgpu') {
-				console.warn('[model_engine] Qwen3.5 WebGPU failed, retrying with WASM:', load_err.message)
+				console.warn('[model_engine]', this._model_type, 'WebGPU failed, retrying with WASM:', load_err.message)
+				const wasm_dtype = model_engine._build_dtype_config(this._model_type, 'q4')
 				this._processor = await transformers.AutoProcessor.from_pretrained(this._model_id)
-				this._model = await transformers.Qwen3_5ForConditionalGeneration.from_pretrained(
-					this._model_id,
-					{
-						device		: 'wasm',
-						dtype		: { embed_tokens: 'q4', decoder_model_merged: 'q4' },
-						progress_callback: (progress) => {
-							if (progress.status === 'progress' && progress.progress !== undefined) {
-								on_progress(progress.progress)
-							}
-							if (progress.status === 'done') {
-								on_progress(100)
-							}
-						}
-					}
-				)
+				this._model = await ModelClass.from_pretrained(this._model_id, {
+					device				: 'wasm',
+					dtype				: wasm_dtype,
+					progress_callback	: progress_cb
+				})
 				return 'wasm'
 			} else {
 				throw load_err
 			}
 		}
-	}//end _load_qwen35
+	}//end _load_direct
 
 
 
@@ -162,9 +155,9 @@ export const model_engine = class model_engine {
 
 	async generate(options={}) {
 
-		const is_ready = this._is_qwen35
-			? (this._model && this._processor)
-			: this._pipeline
+		const is_ready = this._model_type === 'pipeline'
+			? !!this._pipeline
+			: !!(this._model && this._processor)
 		if (!is_ready) {
 			throw new Error('Model not loaded. Call load() first.')
 		}
@@ -173,28 +166,45 @@ export const model_engine = class model_engine {
 		const tools				= options.tools || []
 		const max_new_tokens	= options.max_new_tokens || this._config.max_new_tokens || 2048
 		const on_token			= options.on_token || (() => {})
+		const on_think_token	= options.on_think_token || (() => {})
 
 		try {
-			if (this._is_qwen35) {
-				return await this._do_generate_qwen35(messages, tools, max_new_tokens, on_token)
+			if (this._model_type === 'pipeline') {
+				return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token)
 			}
-			return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token)
+			return await this._do_generate_direct(messages, tools, max_new_tokens, on_token, on_think_token)
 		} catch (err) {
-			if (this._device === 'webgpu' && err.message && err.message.indexOf('bad_alloc') !== -1) {
-				console.warn('[model_engine] WebGPU OOM during inference, falling back to WASM')
+			if (this._device === 'webgpu' && model_engine._is_retryable_backend_error(err)) {
+				console.warn('[model_engine] WebGPU inference failed, falling back to WASM:', err.message)
 				try {
 					await this._reload_as_wasm()
-					if (this._is_qwen35) {
-						return await this._do_generate_qwen35(messages, tools, max_new_tokens, on_token)
+					if (this._model_type === 'pipeline') {
+						return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token)
 					}
-					return await this._do_generate_pipeline(messages, tools, max_new_tokens, on_token)
+					return await this._do_generate_direct(messages, tools, max_new_tokens, on_token, on_think_token)
 				} catch (wasm_err) {
-					throw new Error('Model too large for browser memory (WebGPU and WASM both failed). Use a smaller model like Qwen3-0.6B-ONNX.')
+					throw new Error('Model backend failed on WebGPU and fallback device. Use a smaller model or switch device. Last error: ' + wasm_err.message)
 				}
 			}
 			throw err
 		}
 	}//end generate
+
+
+
+	static _is_retryable_backend_error(err) {
+
+		const message = err && err.message
+			? err.message
+			: String(err || '')
+
+		return message.indexOf('bad_alloc') !== -1
+			|| message.indexOf('unaligned accesses') !== -1
+			|| message.indexOf('device lost') !== -1
+			|| message.indexOf('GPU') !== -1
+			|| message.indexOf('allocate memory') !== -1
+			|| message.indexOf('buffer mapping') !== -1
+	}//end _is_retryable_backend_error
 
 
 
@@ -213,13 +223,25 @@ export const model_engine = class model_engine {
 			'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0'
 		)
 
-		this._is_qwen35 = false
+		this._TextStreamer	= transformers.TextStreamer
+		this._transformers	= transformers
 
-		this._pipeline = await transformers.pipeline(
-			'text-generation',
-			this._model_id,
-			{ device: fb_device, dtype: fb_dtype }
-		)
+		if (this._model_type === 'pipeline') {
+			this._pipeline = await transformers.pipeline(
+				'text-generation',
+				this._model_id,
+				{ device: fb_device, dtype: fb_dtype }
+			)
+		} else {
+			const model_class_name	= model_engine._MODEL_CLASS_MAP[this._model_type]
+			const ModelClass		= transformers[model_class_name]
+			const dtype_config		= model_engine._build_dtype_config(this._model_type, fb_dtype)
+			this._processor = await transformers.AutoProcessor.from_pretrained(this._model_id)
+			this._model = await ModelClass.from_pretrained(this._model_id, {
+				device	: fb_device,
+				dtype	: dtype_config
+			})
+		}
 		this._device	= fb_device
 		this._loaded	= true
 	}//end _reload_as_wasm
@@ -235,7 +257,7 @@ export const model_engine = class model_engine {
 
 
 
-	async _do_generate_pipeline(messages, tools, max_new_tokens, on_token) {
+	async _do_generate_pipeline(messages, tools, max_new_tokens, on_token, on_think_token) {
 
 		const generate_options = {
 			max_new_tokens		: max_new_tokens,
@@ -250,7 +272,7 @@ export const model_engine = class model_engine {
 			generate_options.tools = tools
 		}
 
-		const streamed_text	= this._create_streamer(this._pipeline.tokenizer, on_token)
+		const streamed_text	= this._create_streamer(this._pipeline.tokenizer, on_token, on_think_token)
 		generate_options.streamer = streamed_text.streamer
 
 		const result = await this._pipeline(messages, generate_options)
@@ -261,10 +283,10 @@ export const model_engine = class model_engine {
 
 
 
-	async _do_generate_qwen35(messages, tools, max_new_tokens, on_token) {
+	async _do_generate_direct(messages, tools, max_new_tokens, on_token, on_think_token) {
 
 		const tokenizer		= this._processor.tokenizer || this._processor
-		const stream		= this._create_streamer(tokenizer, on_token)
+		const stream		= this._create_streamer(tokenizer, on_token, on_think_token)
 
 		// apply chat template with tools
 		const inputs = tokenizer.apply_chat_template(
@@ -297,14 +319,17 @@ export const model_engine = class model_engine {
 		const decoded		= tokenizer.decode(new_ids[0], { skip_special_tokens: true })
 
 		return this._build_result(stream.get_text(), { generated_text: decoded, raw_output: output_ids })
-	}//end _do_generate_qwen35
+	}//end _do_generate_direct
 
 
 
-	_create_streamer(tokenizer, on_token) {
+	_create_streamer(tokenizer, on_token, on_think_token) {
+
+		const think_cb = on_think_token || function(){}
 
 		// state machine: accumulates raw text and emits only content that is
 		// outside <think>...</think> and <tool_call>...</tool_call> blocks.
+		// Thinking content is forwarded to `think_cb` so the UI can render it.
 		// Uses a small pending buffer to never emit partial tag prefixes.
 		const state = {
 			text		: '',  // full raw stream (used by parse_tool_calls / _build_result)
@@ -357,10 +382,16 @@ export const model_engine = class model_engine {
 				if (state.in_think) {
 					const close = state.pending.indexOf('</think>')
 					if (close === -1) {
-						// drop everything except possible partial closing tag
+						// emit everything that cannot be the start of '</think>'
 						const keep = Math.max(0, state.pending.length - 8)
+						if (keep > 0) {
+							think_cb(state.pending.substring(0, keep))
+						}
 						state.pending = state.pending.substring(keep)
 						return
+					}
+					if (close > 0) {
+						think_cb(state.pending.substring(0, close))
 					}
 					state.pending = state.pending.substring(close + '</think>'.length)
 					state.in_think = false
@@ -425,7 +456,12 @@ export const model_engine = class model_engine {
 			get_text: function() { return state.text },
 			flush: function() {
 				// emit any safely-buffered tail at end of stream
-				if (state.in_think || state.in_tool) {
+				if (state.in_think) {
+					if (state.pending.length > 0) think_cb(state.pending)
+					state.pending = ''
+					return
+				}
+				if (state.in_tool) {
 					state.pending = ''
 					return
 				}
@@ -447,7 +483,10 @@ export const model_engine = class model_engine {
 		} else if (full_text.indexOf('<think>') !== -1) {
 			full_text = ''
 		}
-		full_text = full_text.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '').trim()
+		full_text = full_text
+			.replace(/<tool_call>[\s\S]*?<\/tool_call>/g, '')
+			.replace(/(?:^|\s)call\s*:\s*[a-zA-Z0-9_]+\s*\{[\s\S]*?\}/g, '')
+			.trim()
 
 		if (!full_text) {
 			const generated = Array.isArray(raw_result)
@@ -520,8 +559,60 @@ export const model_engine = class model_engine {
 				}
 			}
 
+			const inline_call_regex = /(?:^|\s)call\s*:\s*([a-zA-Z0-9_]+)\s*(\{[\s\S]*?\})/g
+			while ((match = inline_call_regex.exec(text)) !== null) {
+				const name = match[1]
+				const args = model_engine._parse_relaxed_arguments(match[2])
+				tool_calls.push({
+					id			: 'call_' + tool_calls.length,
+					type		: 'function',
+					function	: {
+						name		: name,
+						arguments	: JSON.stringify(args)
+					}
+				})
+			}
+
 		return tool_calls.length > 0 ? tool_calls : null
 	}//end parse_tool_calls
+
+
+
+	static _parse_relaxed_arguments(raw_arguments) {
+
+		if (!raw_arguments || typeof raw_arguments !== 'string') {
+			return {}
+		}
+
+		try {
+			return JSON.parse(raw_arguments)
+		} catch(e) {}
+
+		const source = raw_arguments.trim().replace(/^\{|\}$/g, '')
+		const args = {}
+		const parts = source.split(/\s*,\s*/)
+
+		for (const part of parts) {
+			if (!part) continue
+			const separator = part.indexOf(':')
+			if (separator === -1) continue
+
+			const key = part.substring(0, separator).trim().replace(/^['"]|['"]$/g, '')
+			let value = part.substring(separator + 1).trim().replace(/^['"]|['"]$/g, '')
+
+			if (!key) continue
+			if (value === 'true') {
+				value = true
+			} else if (value === 'false') {
+				value = false
+			} else if (value === 'null') {
+				value = null
+			}
+			args[key] = value
+		}
+
+		return args
+	}//end _parse_relaxed_arguments
 
 
 
@@ -551,5 +642,33 @@ export const model_engine = class model_engine {
 	}//end get_model_id
 
 
+
+	// ── Static helpers ────────────────────────────────────────────────
+
+	static _MODEL_CLASS_MAP = {
+		qwen35	: 'Qwen3_5ForConditionalGeneration',
+		gemma4	: 'Gemma4ForConditionalGeneration'
+	}
+
+	static _detect_model_type(model_id) {
+		if (model_id.indexOf('Qwen3.5') !== -1 || model_id.indexOf('Qwen3_5') !== -1) return 'qwen35'
+		if (model_id.indexOf('Gemma4') !== -1 || model_id.indexOf('gemma-4') !== -1) return 'gemma4'
+		return 'pipeline'
+	}
+
+	static _build_dtype_config(model_type, dtype) {
+		if (model_type === 'gemma4') {
+			return {
+				embed_tokens			: dtype,
+				vision_encoder			: 'fp16',
+				decoder_model_merged	: dtype
+			}
+		}
+		// qwen35 and future direct-model families
+		return {
+			embed_tokens			: dtype,
+			decoder_model_merged	: dtype
+		}
+	}
 
 }//end model_engine class

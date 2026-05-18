@@ -104,6 +104,7 @@ class v6_to_v7 {
 	 * - 'modelo'       => 'model_tipo'
 	 * - 'esmodelo'     => 'is_model'
 	 * - 'traducible'   => 'is_translatable'
+	 * - 'tld+0'        => 'is_main'
 	 * - 'norden'       => 'order_number'
 	 * - 'relaciones'   => 'relations'
 	 *
@@ -117,6 +118,7 @@ class v6_to_v7 {
 				ADD COLUMN IF NOT EXISTS "model_tipo" character varying(8) NULL,
 				ADD COLUMN IF NOT EXISTS "is_model" boolean NULL,
 				ADD COLUMN IF NOT EXISTS "is_translatable" boolean NULL,
+				ADD COLUMN IF NOT EXISTS "is_main" boolean NULL,
 				ADD COLUMN IF NOT EXISTS "order_number" numeric(4,0) NULL,
 				ADD COLUMN IF NOT EXISTS "relations" jsonb NULL;
 		');
@@ -163,7 +165,8 @@ class v6_to_v7 {
 					model_tipo 		= modelo,
 					order_number	= norden,
 					is_model 		= CASE WHEN esmodelo = \'si\' THEN true ELSE false END,
-					is_translatable	= CASE WHEN traducible = \'si\' THEN true ELSE false END;
+					is_translatable	= CASE WHEN traducible = \'si\' THEN true ELSE false END,
+					is_main			= CASE WHEN "terminoID" = CONCAT(tld, 0) THEN true ELSE false END;
 		');
 
 		$result = matrix_db_manager::exec_sql($sql_query);
@@ -261,7 +264,7 @@ class v6_to_v7 {
 
 		$sql_query = sanitize_query ('
 			CREATE TABLE IF NOT EXISTS "' . static::$table_dd_ontology . '" AS
-				SELECT id, tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, propiedades
+				SELECT id, tipo, parent, term, model, order_number, relations, tld, properties, model_tipo, is_model, is_translatable, is_main, propiedades
 			FROM "' . static::$table_jer_dd . '";
 
 			COMMENT ON TABLE "' . static::$table_dd_ontology . '" IS  \'Active ontology\';
@@ -299,6 +302,7 @@ class v6_to_v7 {
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.model_tipo IS \'Ontology identifier for the node type,  e.g., dd6 = section\';
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.is_model IS \'Boolean to identify if the node is a type of nodes\';
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.is_translatable IS \'Boolean to identify if the node is a multilingual node\';
+			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.is_main IS \'Boolean to identify if the node is a main/root node (tipo = tld + 0)\';
 			COMMENT ON COLUMN ' . static::$table_dd_ontology . '.propiedades IS \'V5 properties, DEPRECATED\';
 
 			-- Optionally drop the old one and rename

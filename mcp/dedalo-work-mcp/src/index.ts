@@ -5,10 +5,10 @@ import { WorkClient, TokenBucketRateLimiter } from '@dedalo/mcp-common';
 import { loadConfig } from './config.js';
 import { createWorkServer } from './server.js';
 
+const useHttp = process.argv.includes('--http');
 const logger = pino({
 	level: process.env.LOG_LEVEL ?? 'info',
-	transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
-});
+}, process.stderr);
 
 let config;
 try {
@@ -26,11 +26,9 @@ const client = new WorkClient({
 
 const limiter = config.rateLimit ? new TokenBucketRateLimiter(config.rateLimit) : null;
 
-const server = createWorkServer({
-	client,
-	logger,
-	limiter,
-});
+let stdioServer: ReturnType<typeof createWorkServer> | null = null;
+const httpServers = new Map<string, ReturnType<typeof createWorkServer>>();
+const httpTransports = new Map<string, WebStandardStreamableHTTPServerTransport>();
 
 // Periodically evict stale rate-limiter buckets to prevent memory leaks.
 if (limiter) {
@@ -55,8 +53,19 @@ function isOriginAllowed(origin: string | null, allowlist: string[]): boolean {
 	return allowlist.includes(origin);
 }
 
+async function isInitializeRequest(req: Request): Promise<boolean> {
+	if (req.method !== 'POST') return false;
+
+	try {
+		const body = await req.clone().json();
+		const messages = Array.isArray(body) ? body : [body];
+		return messages.some((message) => message && message.method === 'initialize');
+	} catch {
+		return false;
+	}
+}
+
 async function main(): Promise<void> {
-	const useHttp = process.argv.includes('--http');
 
 	// Prime CSRF before any tool call so the first request succeeds.
 	try {
@@ -67,11 +76,6 @@ async function main(): Promise<void> {
 	}
 
 	if (useHttp) {
-		const transport = new WebStandardStreamableHTTPServerTransport({
-			sessionIdGenerator: () => crypto.randomUUID(),
-		});
-		await server.connect(transport);
-
 		const { port, host, allowedOrigins } = config!.http;
 		Bun.serve({
 			port,
@@ -90,21 +94,78 @@ async function main(): Promise<void> {
 				if (req.method === 'OPTIONS') {
 					return new Response(null, { status: 204, headers: corsHeaders });
 				}
-				return transport.handleRequest(req);
+
+				const sessionId = req.headers.get('mcp-session-id');
+				let transport = sessionId ? httpTransports.get(sessionId) : undefined;
+
+				if (!transport && await isInitializeRequest(req)) {
+					let newTransport: WebStandardStreamableHTTPServerTransport;
+					let sessionServer: ReturnType<typeof createWorkServer> | null = null;
+					newTransport = new WebStandardStreamableHTTPServerTransport({
+						sessionIdGenerator: () => crypto.randomUUID(),
+						onsessioninitialized: (newSessionId) => {
+							httpTransports.set(newSessionId, newTransport);
+							if (sessionServer) {
+								httpServers.set(newSessionId, sessionServer);
+							}
+						},
+					});
+					newTransport.onclose = () => {
+						const closedSessionId = newTransport.sessionId;
+						if (closedSessionId) {
+							httpTransports.delete(closedSessionId);
+							httpServers.delete(closedSessionId);
+						}
+					};
+
+					sessionServer = createWorkServer({
+						client,
+						logger,
+						limiter,
+					});
+					await sessionServer.connect(newTransport);
+					transport = newTransport;
+				}
+
+				if (!transport) {
+					return new Response(
+						JSON.stringify({
+							jsonrpc: '2.0',
+							error: {
+								code: -32000,
+								message: 'Bad Request: No valid MCP session ID provided',
+							},
+							id: null,
+						}),
+						{ status: 400, headers: { 'Content-Type': 'application/json' } }
+					);
+				}
+
+				const response = await transport.handleRequest(req);
+				return response;
 			},
 			websocket: { open: () => {}, close: () => {}, message: () => {} },
 		});
 		logger.info({ port, host, allowedOrigins }, 'dedalo-work-mcp started on HTTP');
 	} else {
 		const transport = new StdioServerTransport();
-		await server.connect(transport);
+		stdioServer = createWorkServer({
+			client,
+			logger,
+			limiter,
+		});
+		await stdioServer.connect(transport);
 		logger.info('dedalo-work-mcp started on stdio');
 	}
 }
 
 function shutdown(): void {
 	logger.info('Shutting down dedalo-work-mcp...');
-	server.close()
+	const closeTasks = [
+		...Array.from(httpServers.values()).map((server) => server.close()),
+		...(stdioServer ? [stdioServer.close()] : []),
+	];
+	Promise.all(closeTasks)
 		.then(() => {
 			logger.info('Server closed');
 			process.exit(0);

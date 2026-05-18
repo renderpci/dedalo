@@ -31078,7 +31078,7 @@ class WorkClient {
     const res = await this.fetchJson({
       action: "login",
       dd_api: "dd_utils_api",
-      source: { username: u, password: p }
+      options: { username: u, auth: p }
     });
     if (res.result !== true) {
       throw mapDedaloError(res);
@@ -37895,6 +37895,224 @@ var McpZodTypeKind;
   McpZodTypeKind2["Completable"] = "McpCompletable";
 })(McpZodTypeKind || (McpZodTypeKind = {}));
 
+// ../node_modules/.bun/@modelcontextprotocol+sdk@1.29.0/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/uriTemplate.js
+var MAX_TEMPLATE_LENGTH = 1e6;
+var MAX_VARIABLE_LENGTH = 1e6;
+var MAX_TEMPLATE_EXPRESSIONS = 1e4;
+var MAX_REGEX_LENGTH = 1e6;
+
+class UriTemplate {
+  static isTemplate(str) {
+    return /\{[^}\s]+\}/.test(str);
+  }
+  static validateLength(str, max, context) {
+    if (str.length > max) {
+      throw new Error(`${context} exceeds maximum length of ${max} characters (got ${str.length})`);
+    }
+  }
+  get variableNames() {
+    return this.parts.flatMap((part) => typeof part === "string" ? [] : part.names);
+  }
+  constructor(template) {
+    UriTemplate.validateLength(template, MAX_TEMPLATE_LENGTH, "Template");
+    this.template = template;
+    this.parts = this.parse(template);
+  }
+  toString() {
+    return this.template;
+  }
+  parse(template) {
+    const parts = [];
+    let currentText = "";
+    let i = 0;
+    let expressionCount = 0;
+    while (i < template.length) {
+      if (template[i] === "{") {
+        if (currentText) {
+          parts.push(currentText);
+          currentText = "";
+        }
+        const end = template.indexOf("}", i);
+        if (end === -1)
+          throw new Error("Unclosed template expression");
+        expressionCount++;
+        if (expressionCount > MAX_TEMPLATE_EXPRESSIONS) {
+          throw new Error(`Template contains too many expressions (max ${MAX_TEMPLATE_EXPRESSIONS})`);
+        }
+        const expr = template.slice(i + 1, end);
+        const operator = this.getOperator(expr);
+        const exploded = expr.includes("*");
+        const names = this.getNames(expr);
+        const name = names[0];
+        for (const name2 of names) {
+          UriTemplate.validateLength(name2, MAX_VARIABLE_LENGTH, "Variable name");
+        }
+        parts.push({ name, operator, names, exploded });
+        i = end + 1;
+      } else {
+        currentText += template[i];
+        i++;
+      }
+    }
+    if (currentText) {
+      parts.push(currentText);
+    }
+    return parts;
+  }
+  getOperator(expr) {
+    const operators = ["+", "#", ".", "/", "?", "&"];
+    return operators.find((op) => expr.startsWith(op)) || "";
+  }
+  getNames(expr) {
+    const operator = this.getOperator(expr);
+    return expr.slice(operator.length).split(",").map((name) => name.replace("*", "").trim()).filter((name) => name.length > 0);
+  }
+  encodeValue(value, operator) {
+    UriTemplate.validateLength(value, MAX_VARIABLE_LENGTH, "Variable value");
+    if (operator === "+" || operator === "#") {
+      return encodeURI(value);
+    }
+    return encodeURIComponent(value);
+  }
+  expandPart(part, variables) {
+    if (part.operator === "?" || part.operator === "&") {
+      const pairs = part.names.map((name) => {
+        const value2 = variables[name];
+        if (value2 === undefined)
+          return "";
+        const encoded2 = Array.isArray(value2) ? value2.map((v) => this.encodeValue(v, part.operator)).join(",") : this.encodeValue(value2.toString(), part.operator);
+        return `${name}=${encoded2}`;
+      }).filter((pair) => pair.length > 0);
+      if (pairs.length === 0)
+        return "";
+      const separator = part.operator === "?" ? "?" : "&";
+      return separator + pairs.join("&");
+    }
+    if (part.names.length > 1) {
+      const values2 = part.names.map((name) => variables[name]).filter((v) => v !== undefined);
+      if (values2.length === 0)
+        return "";
+      return values2.map((v) => Array.isArray(v) ? v[0] : v).join(",");
+    }
+    const value = variables[part.name];
+    if (value === undefined)
+      return "";
+    const values = Array.isArray(value) ? value : [value];
+    const encoded = values.map((v) => this.encodeValue(v, part.operator));
+    switch (part.operator) {
+      case "":
+        return encoded.join(",");
+      case "+":
+        return encoded.join(",");
+      case "#":
+        return "#" + encoded.join(",");
+      case ".":
+        return "." + encoded.join(".");
+      case "/":
+        return "/" + encoded.join("/");
+      default:
+        return encoded.join(",");
+    }
+  }
+  expand(variables) {
+    let result = "";
+    let hasQueryParam = false;
+    for (const part of this.parts) {
+      if (typeof part === "string") {
+        result += part;
+        continue;
+      }
+      const expanded = this.expandPart(part, variables);
+      if (!expanded)
+        continue;
+      if ((part.operator === "?" || part.operator === "&") && hasQueryParam) {
+        result += expanded.replace("?", "&");
+      } else {
+        result += expanded;
+      }
+      if (part.operator === "?" || part.operator === "&") {
+        hasQueryParam = true;
+      }
+    }
+    return result;
+  }
+  escapeRegExp(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
+  partToRegExp(part) {
+    const patterns = [];
+    for (const name2 of part.names) {
+      UriTemplate.validateLength(name2, MAX_VARIABLE_LENGTH, "Variable name");
+    }
+    if (part.operator === "?" || part.operator === "&") {
+      for (let i = 0;i < part.names.length; i++) {
+        const name2 = part.names[i];
+        const prefix = i === 0 ? "\\" + part.operator : "&";
+        patterns.push({
+          pattern: prefix + this.escapeRegExp(name2) + "=([^&]+)",
+          name: name2
+        });
+      }
+      return patterns;
+    }
+    let pattern;
+    const name = part.name;
+    switch (part.operator) {
+      case "":
+        pattern = part.exploded ? "([^/,]+(?:,[^/,]+)*)" : "([^/,]+)";
+        break;
+      case "+":
+      case "#":
+        pattern = "(.+)";
+        break;
+      case ".":
+        pattern = "\\.([^/,]+)";
+        break;
+      case "/":
+        pattern = "/" + (part.exploded ? "([^/,]+(?:,[^/,]+)*)" : "([^/,]+)");
+        break;
+      default:
+        pattern = "([^/]+)";
+    }
+    patterns.push({ pattern, name });
+    return patterns;
+  }
+  match(uri) {
+    UriTemplate.validateLength(uri, MAX_TEMPLATE_LENGTH, "URI");
+    let pattern = "^";
+    const names = [];
+    for (const part of this.parts) {
+      if (typeof part === "string") {
+        pattern += this.escapeRegExp(part);
+      } else {
+        const patterns = this.partToRegExp(part);
+        for (const { pattern: partPattern, name } of patterns) {
+          pattern += partPattern;
+          names.push({ name, exploded: part.exploded });
+        }
+      }
+    }
+    pattern += "$";
+    UriTemplate.validateLength(pattern, MAX_REGEX_LENGTH, "Generated regex pattern");
+    const regex = new RegExp(pattern);
+    const match = uri.match(regex);
+    if (!match)
+      return null;
+    const result = {};
+    for (let i = 0;i < names.length; i++) {
+      const { name, exploded } = names[i];
+      const value = match[i + 1];
+      const cleanName = name.replace("*", "");
+      if (exploded && value.includes(",")) {
+        result[cleanName] = value.split(",");
+      } else {
+        result[cleanName] = value;
+      }
+    }
+    return result;
+  }
+}
+
 // ../node_modules/.bun/@modelcontextprotocol+sdk@1.29.0/node_modules/@modelcontextprotocol/sdk/dist/esm/shared/toolNameValidation.js
 var TOOL_NAME_REGEX = /^[A-Za-z0-9._-]{1,128}$/;
 function validateToolName(name) {
@@ -38616,6 +38834,22 @@ class McpServer {
     if (this.isConnected()) {
       this.server.sendPromptListChanged();
     }
+  }
+}
+
+class ResourceTemplate {
+  constructor(uriTemplate, _callbacks) {
+    this._callbacks = _callbacks;
+    this._uriTemplate = typeof uriTemplate === "string" ? new UriTemplate(uriTemplate) : uriTemplate;
+  }
+  get uriTemplate() {
+    return this._uriTemplate;
+  }
+  get listCallback() {
+    return this._callbacks.list;
+  }
+  completeCallback(variable) {
+    return this._callbacks.complete?.[variable];
   }
 }
 var EMPTY_OBJECT_JSON_SCHEMA = {
@@ -53107,7 +53341,7 @@ function rqo(opts) {
 }
 
 // src/tools/_shared/schemas.ts
-var TipoSchema = exports_external2.string().min(1).regex(/^[a-zA-Z0-9_]+$/, "tipo must match [a-zA-Z0-9_]+").describe("Ontology tipo identifier (e.g. `oh1`, `dd1324`). Discover via `dedalo_list_sections` or `dedalo_get_ontology_info`.");
+var TipoSchema = exports_external2.string().min(1).regex(/^[a-zA-Z0-9_]+$/, "tipo must match [a-zA-Z0-9_]+").describe("Ontology tipo identifier (e.g. `oh1`, `dd1324`). Resolve from human names via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.");
 var LangSchema = exports_external2.string().regex(/^lg-[a-z]{2,8}$/, "lang must match `lg-xxx`").describe("Dédalo language code (e.g. `lg-eng`, `lg-spa`, `lg-nolan`).");
 var OptionalLangSchema = LangSchema.optional();
 var SectionIdSchema = exports_external2.union([exports_external2.string().min(1), exports_external2.number().int().positive()]).transform((v) => String(v)).describe("Record identifier (section_id) within a section_tipo.");
@@ -53142,25 +53376,16 @@ function registerDiscoveryTools(server, client, ctx) {
   }, ctx);
   registerTool(server, {
     name: "dedalo_list_sections",
-    description: "List all section tipos defined in the ontology. Returns labels, models and configuration. Use this to discover what record types exist.",
+    description: `List all section tipos defined in the ontology. Returns labels, models and configuration. Use this to discover what record types exist.
+` + 'For a compact multilingual glossary with portal metadata, prefer `dedalo_ontology_glossary` (mode="sections").',
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "List sections" },
     inputSchema: exports_external2.object({ lang: OptionalLangSchema }),
     handler: async ({ lang }) => client.call(rqo({ action: "get_ontology_info", source: { model: "section", lang } }))
   }, ctx);
   registerTool(server, {
-    name: "dedalo_get_ontology_info",
-    description: "Query ontology metadata for a specific tipo or model. Returns structure, relationships and configuration. Provide `tipo` for a specific element or `model` to query all elements of that model.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get ontology info" },
-    inputSchema: exports_external2.object({
-      tipo: TipoSchema.optional().describe("Specific tipo to query."),
-      model: exports_external2.string().optional().describe("Model name (e.g. `section`, `component_text_area`, `component_portal`)."),
-      lang: OptionalLangSchema
-    }),
-    handler: async (a) => client.call(rqo({ action: "get_ontology_info", source: a }))
-  }, ctx);
-  registerTool(server, {
     name: "dedalo_get_section_elements_context",
-    description: "Get the context for all components within a section_tipo. Returns the complete element list with types, labels and configuration.",
+    description: `Get the context for all components within a section_tipo. Returns the complete element list with types, labels and configuration.
+` + 'For a lightweight component overview with portal metadata, prefer `dedalo_ontology_glossary` (mode="section").',
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get section elements context" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53182,13 +53407,6 @@ function registerDiscoveryTools(server, client, ctx) {
     handler: async ({ tipo, section_tipo, lang, mode }) => client.call(rqo({ action: "get_element_context", source: { tipo, section_tipo: section_tipo ?? tipo, lang, mode } }))
   }, ctx);
   registerTool(server, {
-    name: "dedalo_get_thesaurus_tree",
-    description: "Get the hierarchical tree for a thesaurus tipo. Returns all terms with parent-child relationships.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get thesaurus tree" },
-    inputSchema: exports_external2.object({ tipo: TipoSchema, lang: OptionalLangSchema }),
-    handler: async ({ tipo, lang }) => client.call(rqo({ action: "get_ontology_info", source: { tipo, lang } }))
-  }, ctx);
-  registerTool(server, {
     name: "dedalo_start",
     description: "Bootstrap the Dédalo application context. Returns the start page (menu + initial section) for the current user. Useful as a first call when discovering what is available to the configured user.",
     annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: true, title: "Application start" },
@@ -53198,6 +53416,84 @@ function registerDiscoveryTools(server, client, ctx) {
       lang: OptionalLangSchema
     }),
     handler: async (a) => client.call(rqo({ action: "start", source: a }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_resolve_ontology",
+    description: 'Resolve an ontology term (e.g. "Oral History", "Interview") to its section structure with all components. ' + "Use `fuzzy` search_mode for natural-language input (default), or `exact` for precise JSONB term matches. " + "Returns the section tipo, labels, model, and full component tree. " + "This is the primary tool for discovering what fields/components a section contains from a human-readable name.",
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Resolve ontology term" },
+    inputSchema: exports_external2.object({
+      text: exports_external2.string().describe('Human-readable text to search for (e.g. "Oral History", "Interview").'),
+      lang: OptionalLangSchema,
+      search_mode: exports_external2.enum(["exact", "fuzzy"]).default("fuzzy").describe('Search mode: "fuzzy" for ILIKE pattern match (flexible), "exact" for JSONB containment (precise).')
+    }),
+    handler: async ({ text, lang, search_mode }) => client.call(rqo({
+      action: "resolve_section",
+      dd_api: "dd_ontology_api",
+      source: { text, lang, mode: search_mode }
+    }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_search_ontology",
+    description: "Structured search of the Dédalo ontology by column values (model, parent, tld, etc.). " + "Returns matching ontology nodes with their metadata. " + "Use this to find all sections, components of a specific model, or nodes within a TLD namespace.",
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Search ontology" },
+    inputSchema: exports_external2.object({
+      model: exports_external2.string().optional().describe('Filter by model name (e.g. "section", "component_text_area").'),
+      parent: TipoSchema.optional().describe("Filter by parent tipo."),
+      tld: exports_external2.string().optional().describe('Filter by TLD/namespace (e.g. "oh", "dd", "tch").'),
+      is_model: exports_external2.boolean().optional().describe("Filter by whether node is a model definition."),
+      is_translatable: exports_external2.boolean().optional().describe("Filter by whether node is translatable."),
+      limit: exports_external2.number().int().min(1).max(500).optional().describe("Max results to return (default 100).")
+    }),
+    handler: async (a) => client.call(rqo({
+      action: "search",
+      dd_api: "dd_ontology_api",
+      source: a
+    }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_ontology_glossary",
+    description: "Get the ontology glossary: a map of human-readable names to Dédalo tipo identifiers with portal relationship metadata. " + `THIS IS THE PRIMARY TOOL for resolving natural language to Dédalo tipos.
+
+` + 'mode="sections": Returns ALL sections as a compact name→tipo dictionary (e.g. "Mint"→numisdata6, "Oral History"→oh1). ' + `Call once per session to build your mental map.
+
+` + `mode="section": Returns one section's full component tree WITH portal metadata. ` + "Portal components include is_portal=true and target_section_tipo showing where they link. " + `Example: oh1 "Oral History" has oh24 "Informant" (portal→rsc197 "Person").
+
+` + 'mode="path": Resolves a relational path like ["oh1","oh24","rsc197","rsc85"] and returns ' + `annotated metadata for each hop: section→portal→target section→leaf component.
+
+` + "ALWAYS use this before any tool requiring section_tipo or tipo parameters. " + "Terms are returned in all available languages.",
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Ontology glossary" },
+    inputSchema: exports_external2.object({
+      mode: exports_external2.enum(["sections", "section", "path"]).default("sections").describe(`"sections" = all sections map. "section" = one section's components. "path" = resolve relational path.`),
+      section_tipo: TipoSchema.optional().describe('Required when mode="section". The section to inspect.'),
+      path: exports_external2.array(TipoSchema).min(2).optional().describe('Required when mode="path". Array of tipos forming the relational path (e.g. ["oh1","oh24","rsc197","rsc85"]).'),
+      lang: OptionalLangSchema
+    }),
+    handler: async ({ mode, section_tipo, path, lang }) => client.call(rqo({
+      action: "get_glossary",
+      dd_api: "dd_ontology_api",
+      source: { mode, section_tipo, path, lang }
+    }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_resolve_path",
+    description: "Resolve a relational path through the Dédalo ontology. Use this to understand cross-section relationships " + `and navigate from a section through portal components to related sections.
+
+` + `Example: path=["oh1","oh24","rsc197","rsc85"] means:
+` + `  oh1 (Oral History) → oh24 (Informant portal) → rsc197 (Person) → rsc85 (Name)
+
+` + "Returns annotated metadata for each hop: tipo, model, term, is_portal, target_section_tipo. " + "The leaf hop includes column_type (string, relation, date, geo, number, media) so you know " + `what data format to expect.
+
+` + "Use after `dedalo_ontology_glossary` to drill into portal relationships discovered in the component tree.",
+    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Resolve relational path" },
+    inputSchema: exports_external2.object({
+      path: exports_external2.array(TipoSchema).min(2).describe("Array of tipos forming the relational path. Must start with a section tipo, " + "followed by portal components and their target sections, ending at the leaf component."),
+      lang: OptionalLangSchema
+    }),
+    handler: async ({ path, lang }) => client.call(rqo({
+      action: "resolve_path",
+      dd_api: "dd_ontology_api",
+      source: { path, lang }
+    }))
   }, ctx);
 }
 
@@ -53220,7 +53516,7 @@ function buildPagination(raw, offset, limit) {
 function registerRecordsReadTools(server, client, ctx) {
   registerTool(server, {
     name: "dedalo_read_record",
-    description: "Read a single record by `section_tipo` + `section_id`. Returns the full record with components rendered for the requested mode.",
+    description: "Read a single record by `section_tipo` + `section_id`. Returns the full record with components rendered for the requested mode.\n" + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.\n" + "Portal components return locators (section_tipo+section_id) not the linked data. To read the linked record, call this tool again with the locator's section_tipo and section_id.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Read record" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53235,10 +53531,14 @@ function registerRecordsReadTools(server, client, ctx) {
   }, ctx);
   registerTool(server, {
     name: "dedalo_search_records",
-    description: 'Search records using the SQO (Search Query Object) DSL. Supports pagination, AND/OR filter trees, ordering, and full-count totals. Provide either `filter` (typed) or `raw_sqo` (escape hatch).\n\nExample filter:\n```json\n{ "operator": "AND", "rules": [ { "path": "oh14", "operator": "contains", "value": "Picasso" } ] }\n```',
+    description: `Search records using the SQO (Search Query Object) DSL. Supports pagination, AND/OR filter trees, ordering, and full-count totals.
+` + "**Resolve `section_tipo` and component `tipo`s first** via `dedalo_ontology_glossary`.\n\n" + 'Simplified single-section filter (`filter` parameter):\n```json\n{ "operator": "AND", "rules": [ { "path": "oh14", "operator": "contains", "value": "Picasso" } ] }\n```\n\n' + "Cross-section filter via portal traversal (use `raw_sqo` for multi-hop paths):\n```json\n" + `{ "filter": { "$and": [{ "q": "Picasso", "path": [
+` + `  { "section_tipo": "oh1", "component_tipo": "oh24" },
+` + `  { "section_tipo": "rsc197", "component_tipo": "rsc85" }
+` + "] }] } }\n```\n\n" + 'Use `dedalo_ontology_glossary` (mode="section") to discover portal components and their target_section_tipo, ' + "or `dedalo_resolve_path` to validate the relational path before searching.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Search records" },
     inputSchema: exports_external2.object({
-      section_tipo: exports_external2.union([TipoSchema, exports_external2.array(TipoSchema).min(1)]).describe("Single section_tipo or array for cross-section search."),
+      section_tipo: exports_external2.union([TipoSchema, exports_external2.array(TipoSchema).min(1)]).describe("Single section_tipo or array for cross-section search. Resolve via `dedalo_ontology_glossary`."),
       lang: OptionalLangSchema,
       limit: PaginationSchema.shape.limit,
       offset: PaginationSchema.shape.offset,
@@ -53270,7 +53570,7 @@ function registerRecordsReadTools(server, client, ctx) {
   }, ctx);
   registerTool(server, {
     name: "dedalo_read_raw",
-    description: "Read raw JSONB data for records without component rendering. Faster than `dedalo_read_record` when only stored values are needed.",
+    description: "Read raw JSONB data for records without component rendering. Faster than `dedalo_read_record` when only stored values are needed.\n" + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Read raw" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53292,7 +53592,8 @@ function registerRecordsReadTools(server, client, ctx) {
   }, ctx);
   registerTool(server, {
     name: "dedalo_count_records",
-    description: "Count records matching an SQO filter. Returns the count without fetching record bodies. Use to determine total pages before searching.",
+    description: `Count records matching an SQO filter. Returns the count without fetching record bodies. Use to determine total pages before searching.
+` + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Count records" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53307,7 +53608,8 @@ function registerRecordsReadTools(server, client, ctx) {
   }, ctx);
   registerTool(server, {
     name: "dedalo_get_indexation_grid",
-    description: "Get the indexation grid for a record. Returns thesaurus terms and their hierarchical relationships, useful for inspecting how a record is classified.",
+    description: `Get the indexation grid for a record. Returns thesaurus terms and their hierarchical relationships, useful for inspecting how a record is classified.
+` + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get indexation grid" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53322,7 +53624,7 @@ function registerRecordsReadTools(server, client, ctx) {
 function registerRecordsWriteTools(server, client, ctx) {
   registerTool(server, {
     name: "dedalo_create_record",
-    description: "Create a new record in the given `section_tipo`. Returns the new section_id.",
+    description: "Create a new record in the given `section_tipo`. Returns the new section_id.\n" + '**Resolve `section_tipo` first** via `dedalo_ontology_glossary` (e.g. "Mint"→numisdata6) or `dedalo_resolve_ontology`.',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: "Create record" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53332,7 +53634,8 @@ function registerRecordsWriteTools(server, client, ctx) {
   }, ctx);
   registerTool(server, {
     name: "dedalo_duplicate_record",
-    description: "Create a copy of an existing record including all component values. Returns the new section_id.",
+    description: `Create a copy of an existing record including all component values. Returns the new section_id.
+` + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.",
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: "Duplicate record" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53343,10 +53646,14 @@ function registerRecordsWriteTools(server, client, ctx) {
   }, ctx);
   registerTool(server, {
     name: "dedalo_save_component",
-    description: "Save a value to a specific component within a record. The `value` shape depends on the component type (text, locator, dato, ...). Inspect with `dedalo_get_element_context` first when in doubt.",
+    description: "Save a value to a specific component within a record. The `value` shape depends on the component type.\n" + '**Resolve both `section_tipo` and `tipo` first** via `dedalo_ontology_glossary` (mode="section") then `dedalo_get_section_elements_context`.\n\n' + `Value formats:
+` + `- Text (component_input_text, component_text_area): plain string
+` + `- Portal (component_portal): array of locators e.g. [{"section_tipo":"rsc197","section_id":"7"}]
+` + `- Select (component_select): array of locator objects
+` + "- Date (component_date): date string in component format",
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "Save component" },
     inputSchema: exports_external2.object({
-      tipo: TipoSchema.describe("Component tipo to save."),
+      tipo: TipoSchema.describe('Component tipo to save. Resolve via `dedalo_ontology_glossary` (mode="section").'),
       section_tipo: TipoSchema,
       section_id: SectionIdSchema,
       lang: OptionalLangSchema,
@@ -53356,7 +53663,8 @@ function registerRecordsWriteTools(server, client, ctx) {
   }, ctx);
   registerTool(server, {
     name: "dedalo_delete_record",
-    description: "Permanently delete a record. This action cannot be undone. The Dédalo user profile must allow delete on the target section.",
+    description: `Permanently delete a record. This action cannot be undone. The Dédalo user profile must allow delete on the target section.
+` + "**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.",
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: "Delete record" },
     inputSchema: exports_external2.object({
       section_tipo: TipoSchema,
@@ -53370,73 +53678,18 @@ function registerRecordsWriteTools(server, client, ctx) {
 // src/tools/components.ts
 function registerComponentTools(server, client, ctx) {
   const baseRecord = {
-    tipo: TipoSchema.describe("Component tipo to operate on."),
+    tipo: TipoSchema.describe('Component tipo to operate on. Resolve via `dedalo_ontology_glossary` (mode="section") or `dedalo_get_section_elements_context`.'),
     section_tipo: TipoSchema,
     section_id: SectionIdSchema,
     lang: OptionalLangSchema
   };
   registerTool(server, {
     name: "dedalo_portal_delete_locator",
-    description: "Remove a locator from a portal component, detaching the linked record.",
+    description: `Remove a locator from a portal component, detaching the linked record.
+` + 'Use `dedalo_ontology_glossary` (mode="section") to identify portal components and their target sections.',
     annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "Portal: delete locator" },
     inputSchema: exports_external2.object({ ...baseRecord, locator: LocatorSchema2 }),
     handler: async ({ tipo, section_tipo, section_id, lang, locator }) => client.call(rqo({ action: "delete_locator", dd_api: "dd_component_portal_api", source: { tipo, section_tipo, section_id, lang }, options: { locator }, prevent_lock: false }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_text_area_get_tags_info",
-    description: "List tags inside a text_area component with metadata and usage.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Text area: get tags info" },
-    inputSchema: exports_external2.object(baseRecord),
-    handler: async ({ tipo, section_tipo, section_id, lang }) => client.call(rqo({ action: "get_tags_info", dd_api: "dd_component_text_area_api", source: { tipo, section_tipo, section_id, lang } }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_text_area_delete_tag",
-    description: "Delete a tag from a text_area component by tag id.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "Text area: delete tag" },
-    inputSchema: exports_external2.object({ ...baseRecord, tag_id: exports_external2.string().min(1).describe("Tag identifier to delete.") }),
-    handler: async ({ tipo, section_tipo, section_id, lang, tag_id }) => client.call(rqo({ action: "delete_tag", dd_api: "dd_component_text_area_api", source: { tipo, section_tipo, section_id, lang }, options: { tag_id }, prevent_lock: false }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_av_get_media_streams",
-    description: "Return audio/video stream metadata: tracks, codecs, subtitles, bitrate.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "AV: get media streams" },
-    inputSchema: exports_external2.object(baseRecord),
-    handler: async ({ tipo, section_tipo, section_id, lang }) => client.call(rqo({ action: "get_media_streams", dd_api: "dd_component_av_api", source: { tipo, section_tipo, section_id, lang } }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_av_download_fragment",
-    description: "Download a specific fragment from an AV resource by fragment id or time range.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "AV: download fragment" },
-    inputSchema: exports_external2.object({ ...baseRecord, fragment: exports_external2.string().min(1).describe("Fragment identifier or time range expression.") }),
-    handler: async ({ tipo, section_tipo, section_id, lang, fragment }) => client.call(rqo({ action: "download_fragment", dd_api: "dd_component_av_api", source: { tipo, section_tipo, section_id, lang }, options: { fragment } }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_av_create_posterframe",
-    description: "Create a posterframe (thumbnail) for an AV resource at a given time position.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "AV: create posterframe" },
-    inputSchema: exports_external2.object({ ...baseRecord, time: exports_external2.number().min(0).describe("Time position in seconds.") }),
-    handler: async ({ tipo, section_tipo, section_id, lang, time: time6 }) => client.call(rqo({ action: "create_posterframe", dd_api: "dd_component_av_api", source: { tipo, section_tipo, section_id, lang }, options: { time: time6 }, prevent_lock: false }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_av_delete_posterframe",
-    description: "Remove the posterframe of an AV resource.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "AV: delete posterframe" },
-    inputSchema: exports_external2.object(baseRecord),
-    handler: async ({ tipo, section_tipo, section_id, lang }) => client.call(rqo({ action: "delete_posterframe", dd_api: "dd_component_av_api", source: { tipo, section_tipo, section_id, lang }, prevent_lock: false }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_3d_move_file",
-    description: "Move a 3D model file to its target directory after upload.",
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true, title: "3D: move file" },
-    inputSchema: exports_external2.object({ ...baseRecord, target_dir: exports_external2.string().min(1).describe("Target directory inside Dédalo media storage.") }),
-    handler: async ({ tipo, section_tipo, section_id, lang, target_dir }) => client.call(rqo({ action: "move_file_to_dir", dd_api: "dd_component_3d_api", source: { tipo, section_tipo, section_id, lang }, options: { target_dir }, prevent_lock: false }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_3d_delete_posterframe",
-    description: "Remove the posterframe of a 3D model component.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "3D: delete posterframe" },
-    inputSchema: exports_external2.object(baseRecord),
-    handler: async ({ tipo, section_tipo, section_id, lang }) => client.call(rqo({ action: "delete_posterframe", dd_api: "dd_component_3d_api", source: { tipo, section_tipo, section_id, lang }, prevent_lock: false }))
   }, ctx);
 }
 
@@ -53448,13 +53701,6 @@ function registerDiffusionTools(server, client, ctx) {
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Diffusion info" },
     inputSchema: exports_external2.object({ tipo: TipoSchema.optional() }),
     handler: async ({ tipo }) => client.call(rqo({ action: "get_diffusion_info", dd_api: "dd_diffusion_api", source: { tipo } }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_diffusion_validate",
-    description: "Validate diffusion data for a section_tipo. Reports missing required fields and broken relations.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Diffusion validate" },
-    inputSchema: exports_external2.object({ section_tipo: TipoSchema }),
-    handler: async ({ section_tipo }) => client.call(rqo({ action: "validate", dd_api: "dd_diffusion_api", source: { tipo: section_tipo, section_tipo } }))
   }, ctx);
   registerTool(server, {
     name: "dedalo_diffusion_ontology_map",
@@ -53488,88 +53734,13 @@ function registerTimeMachineTools(server, client, ctx) {
     }),
     handler: async ({ tipo, section_id, lang }) => client.call(rqo({ action: "get_node_data", dd_api: "dd_ts_api", source: { tipo, section_tipo: tipo, section_id, lang } }))
   }, ctx);
-  registerTool(server, {
-    name: "dedalo_tm_get_children_data",
-    description: "Get children data for a Time Machine entry: all child nodes in the version tree.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Time machine: children data" },
-    inputSchema: exports_external2.object({
-      tipo: TipoSchema,
-      section_id: SectionIdSchema.describe("Parent Time Machine node identifier."),
-      lang: OptionalLangSchema
-    }),
-    handler: async ({ tipo, section_id, lang }) => client.call(rqo({ action: "get_children_data", dd_api: "dd_ts_api", source: { tipo, section_tipo: tipo, section_id, lang } }))
-  }, ctx);
 }
 
 // src/tools/files.ts
-function registerFilesTools(server, client, ctx) {
-  const UploadOptions = exports_external2.object({
-    file_name: exports_external2.string().min(1).describe("Original file name including extension."),
-    key_dir: exports_external2.string().min(1).describe("Sanitised target subdirectory inside Dédalo upload root."),
-    mime_type: exports_external2.string().optional(),
-    size: exports_external2.number().int().nonnegative().optional()
-  }).passthrough();
-  registerTool(server, {
-    name: "dedalo_upload_file",
-    description: "Upload a file to Dédalo. Accepts document, image, audio, and video files. The Dédalo user profile must permit uploads.",
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: "Upload file" },
-    inputSchema: exports_external2.object({ options: UploadOptions }),
-    handler: async ({ options }) => client.call(rqo({ action: "upload", dd_api: "dd_utils_api", options, prevent_lock: false }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_join_chunked_files",
-    description: "Join previously uploaded chunks into a single complete file. Use after a chunked upload.",
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: "Join chunked files" },
-    inputSchema: exports_external2.object({ options: exports_external2.record(exports_external2.string(), exports_external2.unknown()).describe("Options identifying the file and its chunks.") }),
-    handler: async ({ options }) => client.call(rqo({ action: "join_chunked_files_uploaded", dd_api: "dd_utils_api", options, prevent_lock: false }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_list_uploads",
-    description: "List files staged in the upload directory but not yet processed.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "List uploads" },
-    inputSchema: exports_external2.object({ options: exports_external2.record(exports_external2.string(), exports_external2.unknown()).optional() }),
-    handler: async ({ options }) => client.call(rqo({ action: "list_uploaded_files", dd_api: "dd_utils_api", options }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_delete_upload",
-    description: "Delete a staged file that has not yet been processed.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "Delete upload" },
-    inputSchema: exports_external2.object({ options: exports_external2.record(exports_external2.string(), exports_external2.unknown()).describe("Options identifying the file to delete.") }),
-    handler: async ({ options }) => client.call(rqo({ action: "delete_uploaded_file", dd_api: "dd_utils_api", options, prevent_lock: false }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_browse_files",
-    description: "Browse the Dédalo media file system. Returns directory listings and metadata.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Browse files" },
-    inputSchema: exports_external2.object({ options: exports_external2.record(exports_external2.string(), exports_external2.unknown()).optional() }),
-    handler: async ({ options }) => client.call(rqo({ action: "get_dedalo_files", dd_api: "dd_utils_api", options }))
-  }, ctx);
-}
+function registerFilesTools(server, client, ctx) {}
 
 // src/tools/process.ts
-function registerProcessTools(server, client, ctx) {
-  registerTool(server, {
-    name: "dedalo_get_process_status",
-    description: "Get the status of an asynchronous background process by `process_id`. Returns progress, state and messages.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get process status" },
-    inputSchema: exports_external2.object({ process_id: exports_external2.string().min(1) }),
-    handler: async ({ process_id }) => client.call(rqo({ action: "get_process_status", dd_api: "dd_utils_api", source: { process_id } }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_get_process_status_poll",
-    description: "Long-poll variant of get_process_status. Blocks until status changes or the server-side timeout fires.",
-    annotations: { readOnlyHint: true, idempotentHint: false, openWorldHint: true, title: "Poll process status" },
-    inputSchema: exports_external2.object({ process_id: exports_external2.string().min(1) }),
-    handler: async ({ process_id }) => client.call(rqo({ action: "get_process_status_poll", dd_api: "dd_utils_api", source: { process_id } }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_stop_process",
-    description: "Cancel a running asynchronous process by `process_id`.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "Stop process" },
-    inputSchema: exports_external2.object({ process_id: exports_external2.string().min(1) }),
-    handler: async ({ process_id }) => client.call(rqo({ action: "stop_process", dd_api: "dd_utils_api", source: { process_id }, prevent_lock: false }))
-  }, ctx);
-}
+function registerProcessTools(server, client, ctx) {}
 
 // src/tools/system.ts
 function registerSystemTools(server, client, ctx) {
@@ -53588,54 +53759,6 @@ function registerSystemTools(server, client, ctx) {
     handler: async () => client.call(rqo({ action: "get_server_ready_status", dd_api: "dd_utils_api" }))
   }, ctx);
   registerTool(server, {
-    name: "dedalo_get_ontology_update_info",
-    description: "Information about available ontology updates: versions, changelog, status.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Ontology update info" },
-    inputSchema: exports_external2.object({}),
-    handler: async () => client.call(rqo({ action: "get_ontology_update_info", dd_api: "dd_utils_api" }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_get_code_update_info",
-    description: "Information about available code updates: versions, changelog, status.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Code update info" },
-    inputSchema: exports_external2.object({}),
-    handler: async () => client.call(rqo({ action: "get_code_update_info", dd_api: "dd_utils_api" }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_convert_sqo_to_sql",
-    description: "Convert a SQO filter into raw SQL for debugging. Returns the generated query without executing it. Requires global-admin profile in Dédalo.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Convert SQO to SQL" },
-    inputSchema: exports_external2.object({
-      section_tipo: TipoSchema,
-      sqo: exports_external2.record(exports_external2.string(), exports_external2.unknown()).describe("Raw SQO object to translate. Uses the same shape as `dedalo_search_records` filter/sqo input.")
-    }),
-    handler: async ({ section_tipo, sqo }) => client.call(rqo({ action: "convert_search_object_to_sql_query", dd_api: "dd_utils_api", source: { tipo: section_tipo, section_tipo }, options: sqo }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_update_lock_state",
-    description: "Update the lock state of components during editing. Use to release stale locks or to lock components during maintenance.",
-    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true, title: "Update lock state" },
-    inputSchema: exports_external2.object({
-      action: exports_external2.enum(["lock", "unlock"]).describe("Whether to lock or unlock the target component."),
-      locator: LocatorSchema2.describe("Target component locator to lock/unlock.")
-    }),
-    handler: async ({ action, locator }) => client.call(rqo({ action: "update_lock_components_state", dd_api: "dd_utils_api", options: { action, locator }, prevent_lock: false }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_get_login_context",
-    description: "Get the login page context: configured authentication methods and labels. Pre-auth call.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get login context" },
-    inputSchema: exports_external2.object({}),
-    handler: async () => client.call(rqo({ action: "get_login_context", dd_api: "dd_utils_api" }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_get_install_context",
-    description: "Get the installation page context: DB status, system requirements. Pre-auth call.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Get install context" },
-    inputSchema: exports_external2.object({}),
-    handler: async () => client.call(rqo({ action: "get_install_context", dd_api: "dd_utils_api" }))
-  }, ctx);
-  registerTool(server, {
     name: "dedalo_list_user_tools",
     description: "List user tools available to the current logged user. Output reflects the user profile.",
     annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "List user tools" },
@@ -53646,13 +53769,6 @@ function registerSystemTools(server, client, ctx) {
 
 // src/tools/maintenance.ts
 function registerMaintenanceTools(server, client, ctx) {
-  registerTool(server, {
-    name: "dedalo_maintenance_widget_value",
-    description: "Get the current value/state of a maintenance widget without executing anything.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "Maintenance widget value" },
-    inputSchema: exports_external2.object({ widget_name: exports_external2.string().min(1).describe("Maintenance widget name.") }),
-    handler: async ({ widget_name }) => client.call(rqo({ action: "get_widget_value", dd_api: "dd_area_maintenance_api", source: { tipo: widget_name } }))
-  }, ctx);
   registerTool(server, {
     name: "dedalo_maintenance_widget_run",
     description: "Execute a maintenance widget action (statistics, cleanup, recalculation, ...).",
@@ -53690,38 +53806,10 @@ function registerMaintenanceTools(server, client, ctx) {
       prevent_lock: false
     }))
   }, ctx);
-  registerTool(server, {
-    name: "dedalo_maintenance_list_schema_changes",
-    description: "List pending simple schema-change files awaiting application.",
-    annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: "List schema changes" },
-    inputSchema: exports_external2.object({}),
-    handler: async () => client.call(rqo({ action: "get_simple_schema_changes_files", dd_api: "dd_area_maintenance_api" }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_maintenance_apply_schema_changes",
-    description: "Apply pending simple schema-change files. Highly destructive — review with `dedalo_maintenance_list_schema_changes` first.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: "Apply schema changes" },
-    inputSchema: exports_external2.object({ options: exports_external2.record(exports_external2.string(), exports_external2.unknown()).optional() }),
-    handler: async ({ options }) => client.call(rqo({ action: "parse_simple_schema_changes_files", dd_api: "dd_area_maintenance_api", options, prevent_lock: false }))
-  }, ctx);
-  registerTool(server, {
-    name: "dedalo_maintenance_lock_components_actions",
-    description: "Lock or unlock component actions globally during maintenance windows.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "Lock component actions" },
-    inputSchema: exports_external2.object({ action: exports_external2.enum(["lock", "unlock"]).describe("Whether to lock or unlock component actions.") }),
-    handler: async ({ action }) => client.call(rqo({ action: "lock_components_actions", dd_api: "dd_area_maintenance_api", options: { action }, prevent_lock: false }))
-  }, ctx);
 }
 
 // src/tools/admin.ts
 function registerAdminTools(server, client, ctx) {
-  registerTool(server, {
-    name: "dedalo_admin_install",
-    description: "Run the Dédalo installation process. Creates database tables, ontology structures, and default configuration. Requires a Dédalo user with install privileges.",
-    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: "Install" },
-    inputSchema: exports_external2.object({ options: exports_external2.record(exports_external2.string(), exports_external2.unknown()).optional() }),
-    handler: async ({ options }) => client.call(rqo({ action: "install", dd_api: "dd_utils_api", options, prevent_lock: false }))
-  }, ctx);
   registerTool(server, {
     name: "dedalo_admin_change_lang",
     description: "Switch the UI language for the current Dédalo session. Affects subsequent calls that respect `lang`.",
@@ -53746,19 +53834,92 @@ function registerAllTools(server, client, ctx) {
   registerAdminTools(server, client, ctx);
 }
 
+// src/resources/ontology.ts
+function registerOntologyResources(server, client) {
+  server.registerResource("ontology-sections", "dedalo://ontology/sections", {
+    description: "Complete glossary of all Dédalo sections: human-readable names mapped to tipo identifiers. " + "Terms in all available languages. Fetch this at session start to build your ontology map.",
+    mimeType: "application/json"
+  }, async () => {
+    const result = await client.call(rqo({
+      action: "get_glossary",
+      dd_api: "dd_ontology_api",
+      source: { mode: "sections" }
+    }));
+    return {
+      contents: [{
+        uri: "dedalo://ontology/sections",
+        text: JSON.stringify(result, null, 2),
+        mimeType: "application/json"
+      }]
+    };
+  });
+  server.registerResource("ontology-section-detail", new ResourceTemplate("dedalo://ontology/sections/{section_tipo}", {
+    list: async () => {
+      const result = await client.call(rqo({
+        action: "get_glossary",
+        dd_api: "dd_ontology_api",
+        source: { mode: "sections" }
+      }));
+      const sections = result?.result ?? [];
+      return {
+        resources: sections.map((s) => ({
+          uri: `dedalo://ontology/sections/${s.section_tipo}`,
+          name: s.section_tipo,
+          description: typeof s.term === "object" ? Object.values(s.term).join(" / ") : s.term,
+          mimeType: "application/json"
+        }))
+      };
+    },
+    complete: {
+      section_tipo: async (value) => {
+        const result = await client.call(rqo({
+          action: "resolve_term",
+          dd_api: "dd_ontology_api",
+          source: { text: value, mode: "fuzzy", model: "section", limit: 20 }
+        }));
+        const nodes = result?.result ?? [];
+        return nodes.map((n) => n.tipo);
+      }
+    }
+  }), {
+    description: "Full component tree for a specific Dédalo section, including portal metadata (is_portal, target_section_tipo). " + "Use this to discover which components a section has and which portals link to other sections.",
+    mimeType: "application/json"
+  }, async (uri, variables) => {
+    const section_tipo = variables.section_tipo;
+    const result = await client.call(rqo({
+      action: "get_glossary",
+      dd_api: "dd_ontology_api",
+      source: { mode: "section", section_tipo }
+    }));
+    return {
+      contents: [{
+        uri: uri.href,
+        text: JSON.stringify(result, null, 2),
+        mimeType: "application/json"
+      }]
+    };
+  });
+}
+
+// src/resources/index.ts
+function registerAllResources(server, client) {
+  registerOntologyResources(server, client);
+}
+
 // src/server.ts
 function createWorkServer(config4) {
   const { client, logger, limiter } = config4;
-  const server = new McpServer({ name: "dedalo-work-mcp", version: "1.0.0" }, { capabilities: { tools: {} } });
+  const server = new McpServer({ name: "dedalo-work-mcp", version: "1.0.0" }, { capabilities: { tools: {}, resources: {} } });
+  registerAllResources(server, client);
   registerAllTools(server, client, { logger, limiter: limiter ?? null });
   return server;
 }
 
 // src/index.ts
+var useHttp = process.argv.includes("--http");
 var logger = import_pino.default({
-  level: process.env.LOG_LEVEL ?? "info",
-  transport: { target: "pino-pretty" }
-});
+  level: process.env.LOG_LEVEL ?? "info"
+}, process.stderr);
 var config4;
 try {
   config4 = loadConfig(process.env, logger);
@@ -53772,11 +53933,9 @@ var client = new WorkClient({
   autoLogin: true
 });
 var limiter = config4.rateLimit ? new TokenBucketRateLimiter(config4.rateLimit) : null;
-var server = createWorkServer({
-  client,
-  logger,
-  limiter
-});
+var stdioServer = null;
+var httpServers = new Map;
+var httpTransports = new Map;
 if (limiter) {
   const CLEANUP_INTERVAL_MS = 60000;
   const cleanupTimer = setInterval(() => {
@@ -53794,8 +53953,18 @@ function isOriginAllowed(origin, allowlist) {
     return false;
   return allowlist.includes(origin);
 }
+async function isInitializeRequest2(req) {
+  if (req.method !== "POST")
+    return false;
+  try {
+    const body = await req.clone().json();
+    const messages = Array.isArray(body) ? body : [body];
+    return messages.some((message) => message && message.method === "initialize");
+  } catch {
+    return false;
+  }
+}
 async function main() {
-  const useHttp = process.argv.includes("--http");
   try {
     await client.bootstrapCsrf();
     logger.info("CSRF token bootstrapped");
@@ -53803,10 +53972,6 @@ async function main() {
     logger.warn({ err: err.message }, "CSRF bootstrap failed; will retry on first call");
   }
   if (useHttp) {
-    const transport = new WebStandardStreamableHTTPServerTransport({
-      sessionIdGenerator: () => crypto.randomUUID()
-    });
-    await server.connect(transport);
     const { port, host, allowedOrigins } = config4.http;
     Bun.serve({
       port,
@@ -53825,20 +53990,69 @@ async function main() {
         if (req.method === "OPTIONS") {
           return new Response(null, { status: 204, headers: corsHeaders });
         }
-        return transport.handleRequest(req);
+        const sessionId = req.headers.get("mcp-session-id");
+        let transport = sessionId ? httpTransports.get(sessionId) : undefined;
+        if (!transport && await isInitializeRequest2(req)) {
+          let newTransport;
+          let sessionServer = null;
+          newTransport = new WebStandardStreamableHTTPServerTransport({
+            sessionIdGenerator: () => crypto.randomUUID(),
+            onsessioninitialized: (newSessionId) => {
+              httpTransports.set(newSessionId, newTransport);
+              if (sessionServer) {
+                httpServers.set(newSessionId, sessionServer);
+              }
+            }
+          });
+          newTransport.onclose = () => {
+            const closedSessionId = newTransport.sessionId;
+            if (closedSessionId) {
+              httpTransports.delete(closedSessionId);
+              httpServers.delete(closedSessionId);
+            }
+          };
+          sessionServer = createWorkServer({
+            client,
+            logger,
+            limiter
+          });
+          await sessionServer.connect(newTransport);
+          transport = newTransport;
+        }
+        if (!transport) {
+          return new Response(JSON.stringify({
+            jsonrpc: "2.0",
+            error: {
+              code: -32000,
+              message: "Bad Request: No valid MCP session ID provided"
+            },
+            id: null
+          }), { status: 400, headers: { "Content-Type": "application/json" } });
+        }
+        const response = await transport.handleRequest(req);
+        return response;
       },
       websocket: { open: () => {}, close: () => {}, message: () => {} }
     });
     logger.info({ port, host, allowedOrigins }, "dedalo-work-mcp started on HTTP");
   } else {
     const transport = new StdioServerTransport;
-    await server.connect(transport);
+    stdioServer = createWorkServer({
+      client,
+      logger,
+      limiter
+    });
+    await stdioServer.connect(transport);
     logger.info("dedalo-work-mcp started on stdio");
   }
 }
 function shutdown() {
   logger.info("Shutting down dedalo-work-mcp...");
-  server.close().then(() => {
+  const closeTasks = [
+    ...Array.from(httpServers.values()).map((server) => server.close()),
+    ...stdioServer ? [stdioServer.close()] : []
+  ];
+  Promise.all(closeTasks).then(() => {
     logger.info("Server closed");
     process.exit(0);
   }).catch((err) => {

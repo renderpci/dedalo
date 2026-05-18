@@ -41,6 +41,8 @@ des
 test
 !/test
 !/core/widgets/test
+!/mcp/dedalo-work-mcp/test
+!/diffusion/api/v1/test
 *.cache
 .idea
 certs
@@ -175,3 +177,4 @@ security-audit
 composer.local.lock
 mcp/dedalo-work-mcp/.env
 *.map
+mcp/.env

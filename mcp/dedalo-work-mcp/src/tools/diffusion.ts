@@ -18,15 +18,6 @@ export function registerDiffusionTools(server: McpServer, client: WorkClient, ct
 	}, ctx);
 
 	registerTool(server, {
-		name: 'dedalo_diffusion_validate',
-		description: 'Validate diffusion data for a section_tipo. Reports missing required fields and broken relations.',
-		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Diffusion validate' },
-		inputSchema: z.object({ section_tipo: TipoSchema }),
-		handler: async ({ section_tipo }) =>
-			client.call(rqo({ action: 'validate', dd_api: 'dd_diffusion_api', source: { tipo: section_tipo, section_tipo } })),
-	}, ctx);
-
-	registerTool(server, {
 		name: 'dedalo_diffusion_ontology_map',
 		description: 'Return the mapping between Dédalo ontology properties and publication database fields.',
 		annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Diffusion ontology map' },

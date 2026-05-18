@@ -34,7 +34,6 @@ const t = function(key, fallback) {
 export const ai_assistant = class ai_assistant {
 
 
-
 	constructor(options={}) {
 
 		this._config			= Object.assign({}, options.tool_config || {})
@@ -56,6 +55,9 @@ export const ai_assistant = class ai_assistant {
 		this._abort_controller	= null
 		this._is_generating		= false
 		this._context			= {}
+		this._ontology_glossary	= null
+		this._ontology_index		= null
+		this._ontology_loading	= null
 		this._event_tokens		= []
 		this._thread_id			= null
 
@@ -68,6 +70,7 @@ export const ai_assistant = class ai_assistant {
 
 		this._event_tokens.push(
 			event_manager.subscribe('activate_component', (data) => {
+
 				if (data && data.tipo) {
 					this._context.component_tipo	= data.tipo
 					this._context.component_label	= data.label || data.tipo
@@ -353,8 +356,75 @@ export const ai_assistant = class ai_assistant {
 
 	_build_system_prompt() {
 
-		return 'You are a helpful AI assistant inside Dedalo, a cultural heritage management system. You help users search records, navigate the ontology, and perform actions using natural language. /no_think\n\nCurrent context:\n- Section: ' + (this._context.section_tipo || 'unknown') + '\n- Record ID: ' + (this._context.section_id || 'unknown') + '\n- Active component: ' + (this._context.component_tipo || 'none') + '\n\nWhen you need to query or modify Dedalo data, use the available tools. Always confirm with the user before performing destructive actions (delete, modify). Format your responses in Markdown.'
+		const tools_available = this._mcp_tools && this._mcp_tools.length > 0
+
+		const prompt = [
+			'You are a Dedalo ontology-aware assistant for cultural heritage management.',
+			'',
+			'ONTOLOGY RULES (critical):',
+			'- Dédalo identifies every section, component, and record by opaque "tipo" codes (e.g. oh1, numisdata6, rsc85).',
+			'- Users speak in natural language (e.g. "Mint", "Oral History", "Name of the informant").',
+			'- NEVER guess or hardcode a tipo. ALWAYS resolve human names to tipos first.',
+			'- Use `dedalo_ontology_glossary` (mode="sections") to get ALL section names→tipos in one call. Call once per session.',
+			'- Use `dedalo_ontology_glossary` (mode="section", section_tipo="...") to inspect a section\'s components and their types.',
+			'- Portal components (with is_portal=true) link to other sections via target_section_tipo. ',
+			'  Navigate portals by: reading the main record → extracting the portal locator → reading the linked record.',
+			'- Use `dedalo_resolve_path` to validate portal paths before cross-section searches.',
+			'- For cross-section search, use `raw_sqo` with multi-hop `path` arrays ($and/q/path format, NOT rules/operator).',
+			'- Every record field has a model (e.g. component_input_text, component_portal, component_date) that determines the data format.',
+			'- Text fields use plain strings. Portal fields use locator arrays: [{section_tipo, section_id}].'
+		]
+
+		if (tools_available) {
+			prompt.push('')
+			prompt.push('TOOL CALLING (critical):')
+			prompt.push('- When you need data or actions, you MUST call a tool instead of answering from memory.')
+			prompt.push('- Do NOT say "I will help you" or "Let me look that up" without calling a tool.')
+		}
+
+		prompt.push('')
+		prompt.push('Current context:')
+		prompt.push('- Section: ' + (this._context.section_tipo || 'unknown'))
+		prompt.push('- Record ID: ' + (this._context.section_id || 'unknown'))
+		prompt.push('- Active component: ' + (this._context.component_tipo || 'none'))
+		prompt.push('')
+		prompt.push('Always confirm with the user before performing destructive actions (delete, modify). Format responses in Markdown.')
+
+		return prompt.join('\n')
 	}//end _build_system_prompt
+
+
+
+	_build_few_shot_messages() {
+
+		return [
+			{
+				role	: 'user',
+				content	: 'How many records are in Oral History?'
+			},
+			{
+				role		: 'assistant',
+				content		: null,
+				tool_calls	: [{
+					id			: 'fewshot_0',
+					type		: 'function',
+					function	: {
+						name		: 'dedalo_count_records',
+						arguments	: { section_tipo: 'oh1' }
+					}
+				}]
+			},
+			{
+				role			: 'tool',
+				tool_call_id	: 'fewshot_0',
+				content			: JSON.stringify({ total: 42 })
+			},
+			{
+				role	: 'assistant',
+				content	: 'There are 42 records in the Oral History section.'
+			}
+		]
+	}//end _build_few_shot_messages
 
 
 
@@ -364,8 +434,10 @@ export const ai_assistant = class ai_assistant {
 
 		const allowed_tools = [
 			'dedalo_get_environment',
+			'dedalo_ontology_glossary',
 			'dedalo_list_sections',
-			'dedalo_get_ontology_info',
+			'dedalo_resolve_ontology',
+			'dedalo_resolve_path',
 			'dedalo_get_section_elements_context',
 			'dedalo_read_record',
 			'dedalo_search_records',
@@ -376,19 +448,170 @@ export const ai_assistant = class ai_assistant {
 			'dedalo_start'
 		]
 
-		return this._mcp_tools.filter(function(tool) {
+		const sanitized_tools = this._mcp_tools.filter(function(tool) {
 			return allowed_tools.indexOf(tool.name) !== -1
 		}).map(function(tool) {
+			// force the top-level parameters schema to be an object even if the
+			// tool exposes an empty / non-object inputSchema
+			const raw = tool.inputSchema && typeof tool.inputSchema === 'object'
+				? Object.assign({ type: 'object' }, tool.inputSchema)
+				: { type: 'object' }
+			if (!raw.properties || typeof raw.properties !== 'object') {
+				raw.properties = {}
+			}
 			return {
 				type		: 'function',
 				function	: {
 					name		: tool.name,
-					description	: (tool.description || '').substring(0, 200),
-					parameters	: tool.inputSchema || {}
+					description	: ai_assistant._tool_description(tool),
+					parameters	: ai_assistant._sanitize_schema(raw)
 				}
 			}
 		})
+
+		try { console.debug('[ai_assistant] sanitized tools:', JSON.parse(JSON.stringify(sanitized_tools))) } catch (e) {}
+
+		return sanitized_tools
 	}//end _build_tools_for_model
+
+
+
+	static _tool_description(tool) {
+
+		const description = tool.description || ''
+		const full_description_tools = [
+			'dedalo_ontology_glossary',
+			'dedalo_resolve_ontology',
+			'dedalo_resolve_path',
+			'dedalo_create_record',
+			'dedalo_save_component',
+			'dedalo_search_records'
+		]
+		const limit = full_description_tools.indexOf(tool.name) !== -1 ? 1200 : 350
+
+		return description.substring(0, limit)
+	}//end _tool_description
+
+
+
+	/**
+	* _SANITIZE_SCHEMA
+	* Produces a "lowest-common-denominator" JSON schema that BOTH the Qwen and
+	* Gemma chat templates can consume. Gemma 4's template applies the Jinja
+	* filter `upper` to every property's `type` without a guard, so any
+	* missing/non-string `type` raises
+	* "Cannot apply filter 'upper' to UndefinedValue".
+	* Strategy: whitelist only the fields Gemma understands (`type`, `description`,
+	* `properties`, `required`, `items`, `enum`, `nullable`) and ensure every node
+	* recursively has a valid string `type`. Untyped / `anyOf` / `$ref` / `unknown`
+	* leaves are coerced to `{ type: 'string' }`.
+	* @param object schema
+	* @return object
+	*/
+	static _sanitize_schema(schema) {
+
+		// non-mapping → safe default
+		if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
+			return { type: 'string' }
+		}
+
+		const allowed_types = ['string', 'number', 'integer', 'boolean', 'object', 'array', 'null']
+
+		// pick first valid type when schema.type is an array (e.g. ["string", "null"])
+		let inferred_type = null
+		if (typeof schema.type === 'string' && allowed_types.indexOf(schema.type) !== -1) {
+			inferred_type = schema.type
+		} else if (Array.isArray(schema.type)) {
+			for (let i = 0; i < schema.type.length; i++) {
+				if (typeof schema.type[i] === 'string' && schema.type[i] !== 'null' && allowed_types.indexOf(schema.type[i]) !== -1) {
+					inferred_type = schema.type[i]
+					break
+				}
+			}
+		}
+
+		// fallback inference from shape
+		if (!inferred_type) {
+			if (schema.properties && typeof schema.properties === 'object') {
+				inferred_type = 'object'
+			} else if (schema.items) {
+				inferred_type = 'array'
+			} else if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+				inferred_type = typeof schema.enum[0] === 'number' ? 'number' : 'string'
+			} else {
+				inferred_type = 'string'
+			}
+		}
+
+		const out = { type: inferred_type }
+
+		if (typeof schema.description === 'string' && schema.description.length > 0) {
+			out.description = schema.description
+		}
+
+		if (schema.nullable === true) {
+			out.nullable = true
+		}
+
+		if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+			out.enum = schema.enum.slice()
+		}
+
+		if (inferred_type === 'object') {
+			out.properties = {}
+			if (schema.properties && typeof schema.properties === 'object') {
+				const keys = Object.keys(schema.properties)
+				for (let i = 0; i < keys.length; i++) {
+					const k = keys[i]
+					out.properties[k] = ai_assistant._sanitize_schema(schema.properties[k])
+				}
+			}
+			if (Array.isArray(schema.required) && schema.required.length > 0) {
+				out.required = schema.required.filter(function(r) { return typeof r === 'string' })
+			}
+		}
+
+		if (inferred_type === 'array') {
+			out.items = ai_assistant._sanitize_schema(schema.items || {})
+		}
+
+		return out
+	}//end _sanitize_schema
+
+
+
+	/**
+	* _NORMALIZE_MESSAGES_FOR_MODEL
+	* Converts tool_call function arguments from JSON strings to objects.
+	* The Qwen3.5 chat template applies |items to tool_call.arguments,
+	* expecting a dict — a JSON string causes "Unknown StringValue filter: items".
+	* This must be called before passing messages to apply_chat_template.
+	* @param array messages
+	* @return array Normalized messages (shallow copy where needed)
+	*/
+	static _normalize_messages_for_model(messages) {
+
+		return messages.map(function(msg) {
+			if (msg.tool_calls && Array.isArray(msg.tool_calls)) {
+				const patched_calls = msg.tool_calls.map(function(tc) {
+					if (tc.function && typeof tc.function.arguments === 'string') {
+						try {
+							return Object.assign({}, tc, {
+								function: Object.assign({}, tc.function, {
+									arguments: JSON.parse(tc.function.arguments)
+								})
+							})
+						} catch(e) {
+							return tc
+						}
+					}
+					return tc
+				})
+				return Object.assign({}, msg, { tool_calls: patched_calls })
+			}
+			return msg
+		})
+	}//end _normalize_messages_for_model
 
 
 
@@ -397,6 +620,12 @@ export const ai_assistant = class ai_assistant {
 		const self = this
 
 		if (this._is_generating || this._model_loading) return
+
+		// guard: model must be loaded (after a failed load the engine is still unloaded)
+		if (!this._model_engine.is_loaded()) {
+			this._chat_render.add_system_message(t('model_not_ready', 'Model not loaded. Please wait or change settings.'))
+			return
+		}
 
 		this._abort_controller = new AbortController()
 
@@ -414,7 +643,9 @@ export const ai_assistant = class ai_assistant {
 		const max_iterations	= 5
 		let iteration			= 0
 
-		const system_prompt	= self._build_system_prompt()
+		const ontology_context = await self._build_ontology_context_for_message(message)
+
+		const system_prompt	= self._build_system_prompt() + (ontology_context ? '\n\n' + ontology_context : '')
 		const tools			= self._build_tools_for_model()
 
 		try {
@@ -425,10 +656,17 @@ export const ai_assistant = class ai_assistant {
 					throw Object.assign(new Error('Aborted'), { name: 'AbortError' })
 				}
 
-				const messages = [
+				const few_shot = (iteration === 1 && tools.length > 0)
+					? self._build_few_shot_messages()
+					: []
+
+				const raw_messages = [
 					{ role: 'system', content: system_prompt },
+					...few_shot,
 					...self._conversation
 				]
+
+				const messages = ai_assistant._normalize_messages_for_model(raw_messages)
 
 				let stream_started = false
 				const stream_callback = (token_text) => {
@@ -439,12 +677,17 @@ export const ai_assistant = class ai_assistant {
 					self._chat_render.append_token(token_text)
 				}
 
+				const think_stream_callback = (token_text) => {
+					self._chat_render.append_thinking_token(token_text)
+				}
+
 				const generation_result = await self._model_engine.generate({
 					messages		: messages,
 					tools			: tools,
 					max_new_tokens	: self._config.max_new_tokens || 2048,
 					signal			: self._abort_controller.signal,
-					on_token		: stream_callback
+					on_token		: stream_callback,
+					on_think_token	: think_stream_callback
 				})
 
 				const tool_calls = self._model_engine.parse_tool_calls(generation_result)
@@ -536,6 +779,293 @@ export const ai_assistant = class ai_assistant {
 			self._chat_render.show_input()
 		}
 	}//end _handle_user_message
+
+
+
+	async _build_ontology_context_for_message(message) {
+
+		try {
+			const glossary = await this._get_ontology_glossary()
+			const mentions = this._resolve_ontology_mentions(message, glossary)
+			if (!mentions.length) return null
+
+			const resolved = []
+			const ambiguous = []
+
+			for (const mention of mentions) {
+				if (mention.matches.length === 1) {
+					const match = mention.matches[0]
+					resolved.push('"' + mention.label + '" => section_tipo "' + match.section_tipo + '" (' + match.label + ')')
+				} else if (mention.matches.length > 1) {
+					ambiguous.push('"' + mention.label + '": ' + mention.matches.slice(0, 5).map(function(item) {
+						return item.label + ' => ' + item.section_tipo
+					}).join('; '))
+				}
+			}
+
+			if (!resolved.length && !ambiguous.length) return null
+
+			const lines = [
+				'Ontology pre-resolution context:',
+				'- The following human ontology terms were detected in the user message.',
+				'- Use resolved `section_tipo` values directly when selecting/calling tools.',
+				'- Do not ask the user for a tipo when a unique resolved value is available.'
+			]
+
+			if (resolved.length) {
+				lines.push('Resolved section terms:')
+				for (const item of resolved) {
+					lines.push('- ' + item)
+				}
+			}
+
+			if (ambiguous.length) {
+				lines.push('Ambiguous section terms:')
+				for (const item of ambiguous) {
+					lines.push('- ' + item)
+				}
+				lines.push('For ambiguous terms, ask the user to choose one candidate before making data changes.')
+			}
+
+			return lines.join('\n')
+		} catch (err) {
+			console.warn('[ai_assistant] ontology pre-resolution failed:', err)
+			return 'Ontology pre-resolution failed: ' + err.message + '. Use `dedalo_ontology_glossary` or `dedalo_resolve_ontology` before any data tool.'
+		}
+	}//end _build_ontology_context_for_message
+
+
+
+	_resolve_ontology_mentions(message, glossary) {
+
+		if (!message || typeof message !== 'string') return []
+
+		if (!this._ontology_index) {
+			this._ontology_index = this._build_ontology_index(glossary || [])
+		}
+
+		const text = ai_assistant._normalize_label(message)
+		if (!text) return []
+
+		const mentions = []
+		const occupied = []
+		const labels = Array.from(this._ontology_index.keys())
+			.filter(function(label) {
+				return label.length >= 3
+			})
+			.sort(function(a, b) {
+				return b.length - a.length
+			})
+
+		for (const label of labels) {
+			const index = ai_assistant._find_label_in_text(text, label)
+			if (index === -1) continue
+
+			const end = index + label.length
+			const overlaps = occupied.some(function(range) {
+				return index < range.end && end > range.start
+			})
+			if (overlaps) continue
+
+			const matches = this._unique_matches(this._ontology_index.get(label) || [])
+			if (!matches.length) continue
+
+			mentions.push({
+				label	: label,
+				matches	: matches
+			})
+			occupied.push({
+				start	: index,
+				end		: end
+			})
+
+			if (mentions.length >= 8) {
+				break
+			}
+		}
+
+		return mentions
+	}//end _resolve_ontology_mentions
+
+
+
+	static _find_label_in_text(text, label) {
+
+		let index = text.indexOf(label)
+
+		while (index !== -1) {
+			const before = index === 0 ? ' ' : text.charAt(index - 1)
+			const after_index = index + label.length
+			const after = after_index >= text.length ? ' ' : text.charAt(after_index)
+
+			if (!/[a-z0-9]/.test(before) && !/[a-z0-9]/.test(after)) {
+				return index
+			}
+
+			index = text.indexOf(label, index + 1)
+		}
+
+		return -1
+	}//end _find_label_in_text
+
+
+
+	async _get_ontology_glossary() {
+
+		if (this._ontology_glossary) return this._ontology_glossary
+		if (this._ontology_loading) return await this._ontology_loading
+
+		this._ontology_loading = this._mcp_client.tools_call('dedalo_ontology_glossary', {
+			mode: 'sections'
+		}).then((tool_result) => {
+			const structured = this._extract_tool_structured_content(tool_result)
+			const data = structured && structured.data ? structured.data : structured
+			const result = data && data.result ? data.result : data
+			this._ontology_glossary = Array.isArray(result) ? result : []
+			this._ontology_index = this._build_ontology_index(this._ontology_glossary)
+			this._ontology_loading = null
+			return this._ontology_glossary
+		}).catch((err) => {
+			this._ontology_loading = null
+			throw err
+		})
+
+		return await this._ontology_loading
+	}//end _get_ontology_glossary
+
+
+
+	_extract_tool_structured_content(tool_result) {
+
+		const result = tool_result
+			&& tool_result.data
+			&& tool_result.data.result
+			? tool_result.data.result
+			: null
+
+		if (result && result.structuredContent) {
+			return result.structuredContent
+		}
+
+		const content = result && Array.isArray(result.content)
+			? result.content
+			: null
+
+		if (content && content[0] && typeof content[0].text === 'string') {
+			try {
+				return JSON.parse(content[0].text)
+			} catch(e) {}
+		}
+
+		return null
+	}//end _extract_tool_structured_content
+
+
+
+	_build_ontology_index(glossary) {
+
+		const index = new Map()
+
+		for (const section of glossary) {
+			if (!section || !section.section_tipo) continue
+			const labels = ai_assistant._extract_term_labels(section.term)
+			for (const label of labels) {
+				const key = ai_assistant._normalize_label(label)
+				if (!key) continue
+				if (!index.has(key)) index.set(key, [])
+				index.get(key).push({
+					section_tipo	: section.section_tipo,
+					label			: label
+				})
+			}
+		}
+
+		return index
+	}//end _build_ontology_index
+
+
+
+	_match_section_label(label, glossary) {
+
+		if (!this._ontology_index) {
+			this._ontology_index = this._build_ontology_index(glossary || [])
+		}
+
+		const key = ai_assistant._normalize_label(label)
+		if (!key) return []
+
+		const exact = this._ontology_index.get(key)
+		if (exact && exact.length) return this._unique_matches(exact)
+
+		const singular = key.endsWith('s') ? key.substring(0, key.length - 1) : null
+		if (singular) {
+			const singular_matches = this._ontology_index.get(singular)
+			if (singular_matches && singular_matches.length) return this._unique_matches(singular_matches)
+		}
+
+		const matches = []
+		this._ontology_index.forEach(function(items, item_key) {
+			if (item_key.indexOf(key) !== -1 || key.indexOf(item_key) !== -1) {
+				matches.push(...items)
+			}
+		})
+
+		return this._unique_matches(matches)
+	}//end _match_section_label
+
+
+
+	_unique_matches(matches) {
+
+		const seen = new Set()
+		const unique = []
+
+		for (const item of matches) {
+			if (!item || !item.section_tipo || seen.has(item.section_tipo)) continue
+			seen.add(item.section_tipo)
+			unique.push(item)
+		}
+
+		return unique
+	}//end _unique_matches
+
+
+
+	static _extract_term_labels(term) {
+
+		const labels = []
+
+		if (typeof term === 'string') {
+			labels.push(term)
+		} else if (Array.isArray(term)) {
+			for (const item of term) {
+				labels.push(...ai_assistant._extract_term_labels(item))
+			}
+		} else if (term && typeof term === 'object') {
+			const values = Object.values(term)
+			for (const value of values) {
+				labels.push(...ai_assistant._extract_term_labels(value))
+			}
+		}
+
+		return labels.filter(function(label) {
+			return typeof label === 'string' && label.trim().length > 0
+		})
+	}//end _extract_term_labels
+
+
+
+	static _normalize_label(label) {
+
+		return String(label || '')
+			.normalize('NFD')
+			.replace(/[\u0300-\u036f]/g, '')
+			.toLowerCase()
+			.replace(/[_\-]+/g, ' ')
+			.replace(/[^a-z0-9 ]+/g, '')
+			.replace(/\s+/g, ' ')
+			.trim()
+	}//end _normalize_label
 
 
 

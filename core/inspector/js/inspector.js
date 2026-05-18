@@ -285,7 +285,7 @@ export const get_ontology_url = async function (tipo, target) {
 			return `https://dedalo.dev/ontology/${tipo}?lang=${page_globals.dedalo_application_lang}`
 
 		case 'local_ontology':
-			const ontology_info = await data_manager.get_ontology_info(tipo)
+			const ontology_info = await data_manager.get_matrix_ontology_locator(tipo)
 			if (ontology_info) {
 				return `${DEDALO_CORE_URL}/page/?tipo=${ontology_info.section_tipo}&section_id=${ontology_info.section_id}&session_save=false&menu=false`
 			}

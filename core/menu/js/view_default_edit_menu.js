@@ -15,6 +15,50 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {toggle_theme} from '../../page/js/theme.js'
 
+// sync standalone assistant top/height with actual menu wrapper size (accounts for debug_info_bar)
+	const sync_standalone_position = (ac) => {
+		const menu_wrapper = document.querySelector('.menu_wrapper')
+		const menu_h = menu_wrapper ? menu_wrapper.offsetHeight : 0
+		if (menu_h > 0) {
+			ac.style.top = menu_h + 'px'
+			ac.style.height = 'calc(100vh - ' + menu_h + 'px)'
+			ac.style.maxHeight = 'calc(100vh - ' + menu_h + 'px)'
+		}
+	}
+
+// module-level assistant re-parenting on navigation (persists across menu re-renders)
+	let _assistant_nav_subscribed = false
+	if (!_assistant_nav_subscribed) {
+		_assistant_nav_subscribed = true
+		event_manager.subscribe('user_navigation', () => {
+			const ac = document.querySelector('.assistant_container.show')
+			if (!ac) return
+			const try_reparent = (attempts = 0) => {
+				if (attempts > 30) return // max ~3s
+				const ic = document.getElementById('inspector_container')
+				const is_standalone = !ic
+				const desired_parent = ic || document.body
+				ac.classList.toggle('standalone', is_standalone)
+				if (is_standalone) {
+					sync_standalone_position(ac)
+				} else {
+					ac.style.top = ''
+					ac.style.height = ''
+					ac.style.maxHeight = ''
+					ic.classList.add('has_assistant')
+				}
+				if (!ac.parentNode || !ac.parentNode.isConnected || ac.parentNode !== desired_parent) {
+					desired_parent.appendChild(ac)
+				}
+				// always retry a few times — DOM may not be ready yet on first attempts
+				if (attempts < 10) {
+					setTimeout(() => try_reparent(attempts + 1), 150)
+				}
+			}
+			setTimeout(() => try_reparent(), 50)
+		})
+	}
+
 
 
 /**
@@ -324,34 +368,99 @@ const get_content_data_edit = function(self) {
 		})
 		ai_assistant_button.tabIndex = 0
 		ai_assistant_button.setAttribute('role', 'button')
-		// cache for assistant tool context
-			let assistant_tool_context = null
+		// prevent mousedown from propagating to document so the active component is not deactivated
+		ai_assistant_button.addEventListener('mousedown', (e) => {
+			e.stopPropagation()
+		})
+		// assistant panel state (persists across section navigations)
+			let assistant_instance	= null
+			let assistant_container	= null
+			let assistant_visible	= false
 		const ai_assistant_click_handler = async (e) => {
 			e.stopPropagation()
 			try {
-				// fetch user tools from server (first call only, then cached)
-					if (!assistant_tool_context) {
-						const api_response = await data_manager.request({
-							body : {
-								action	: 'user_tools',
-								dd_api	: 'dd_tools_api',
-								options	: {
-									ar_requested_tools : ['tool_assistant']
-								}
-							}
-						})
-						if (api_response.result && Array.isArray(api_response.result)) {
-							assistant_tool_context = api_response.result.find(t => t.name === 'tool_assistant') || false
-						}
+				// find the current inspector_container in the page (edit mode)
+					const inspector_container = document.getElementById('inspector_container')
+					const is_standalone = !inspector_container
+				// toggle off: hide the panel
+					if (assistant_visible) {
+						if (assistant_container) assistant_container.classList.remove('show')
+						if (inspector_container) inspector_container.classList.remove('has_assistant')
+						ai_assistant_button.classList.remove('active')
+						assistant_visible = false
+						return
 					}
-				// if tool not found, user doesn't have permission
-					if (!assistant_tool_context) return
-				// open the tool modal directly
-					const { open_tool } = await import('../../../tools/tool_common/js/tool_common.js')
-					open_tool({
-						tool_context	: assistant_tool_context,
-						caller			: self
-					})
+				// first time: create the panel and init the assistant
+					if (!assistant_container) {
+						// check user has permission to use the tool
+							const api_response = await data_manager.request({
+								body : {
+									action	: 'user_tools',
+									dd_api	: 'dd_tools_api',
+									options	: {
+										ar_requested_tools : ['tool_assistant']
+									}
+								}
+							})
+							if (!api_response.result || !Array.isArray(api_response.result)) return
+							const tool_context = api_response.result.find(t => t.name === 'tool_assistant')
+							if (!tool_context) return
+
+						// build the tool instance to get assistant_config
+							const { get_instance } = await import('../../common/js/instances.js')
+							const instance_options = Object.assign({ caller : self }, tool_context)
+							const tool_instance = await get_instance(instance_options)
+							await tool_instance.build(true)
+
+						// create assistant_container
+						// in edit mode: inside inspector_container; in list mode: standalone fixed panel
+							const container_parent = inspector_container || document.body
+							const container_class = is_standalone
+								? 'assistant_container standalone'
+								: 'assistant_container'
+							assistant_container = ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: container_class,
+								parent			: container_parent
+							})
+						// prevent mousedown from propagating to document so the active component is not deactivated
+							assistant_container.addEventListener('mousedown', (e) => {
+								e.stopPropagation()
+							})
+
+						// init ai_assistant and build chat UI
+							const { ai_assistant } = await import('../../../tools/tool_assistant/js/ai_assistant.js')
+							assistant_instance = new ai_assistant({
+								tool_config	: tool_instance.assistant_config || {},
+								tool_self	: tool_instance
+							})
+							const chat_ui = await assistant_instance.build_chat_ui()
+							assistant_container.appendChild(chat_ui)
+					}
+				// re-attach / re-parent the container if needed
+				// (section navigation recreates inspector_container, or mode changed list↔edit)
+					const desired_parent = inspector_container || document.body
+					const needs_move = !assistant_container.parentNode
+						|| !assistant_container.parentNode.isConnected
+						|| assistant_container.parentNode !== desired_parent
+					if (needs_move) {
+						desired_parent.appendChild(assistant_container)
+					}
+					// update standalone class to match current mode
+					assistant_container.classList.toggle('standalone', is_standalone)
+				// sync top/height with actual menu height (debug_info_bar makes it taller)
+					if (is_standalone) {
+						sync_standalone_position(assistant_container)
+					} else {
+						assistant_container.style.top = ''
+						assistant_container.style.height = ''
+						assistant_container.style.maxHeight = ''
+					}
+				// show the panel
+					assistant_container.classList.add('show')
+					if (inspector_container) inspector_container.classList.add('has_assistant')
+					ai_assistant_button.classList.add('active')
+					assistant_visible = true
 			} catch (err) {
 				console.error('[ai_assistant_click_handler]', err)
 			}

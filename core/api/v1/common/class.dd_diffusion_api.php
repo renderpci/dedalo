@@ -522,8 +522,8 @@ class dd_diffusion_api {
 
 			$is_publishable = $publishable ?? diffusion_utils::is_publishable($locator);
 
-			// Build entries keyed by diffusion_tipo
-			$entries = new stdClass();
+			// Build fields keyed by diffusion_tipo
+			$fields = new stdClass();
 
 			foreach ($combined_ddo_map as $node_tipo => $ddo_map) {
 
@@ -535,12 +535,14 @@ class dd_diffusion_api {
 						if ($rdf_xml !== null) {
 							$first_ddo = reset($ddo_map);
 							$component_tipo = $first_ddo ? ($first_ddo->tipo ?? null) : null;
-							$ddo_value = new stdClass();
-								$ddo_value->tipo  = $component_tipo;
-								$ddo_value->lang  = null;
-								$ddo_value->value = $rdf_xml;
-								$ddo_value->id    = null;
-							$entries->{$node_tipo} = [$ddo_value];
+							// Group RDF as a single field_group
+							$field_group = (object)[
+								'tipo'    => $component_tipo,
+								'lang'    => null,
+								'entries' => [(object)['value' => $rdf_xml]],
+								'id'      => null
+							];
+							$fields->{$node_tipo} = [$field_group];
 						}
 					}
 					continue;
@@ -568,14 +570,43 @@ class dd_diffusion_api {
 					}
 				}
 				if (!empty($all_values) || ($options->include_empty ?? false) === true) {
-					$entries->{$node_tipo} = $all_values;
+					// Group values by shared metadata (tipo, lang, id, section_id, section_tipo)
+					$grouped = [];
+					foreach ($all_values as $item) {
+						$group_key = ($item->tipo ?? '') . '|' . ($item->lang ?? '') . '|' . ($item->id ?? '') . '|' . ($item->section_id ?? '') . '|' . ($item->section_tipo ?? '');
+						if (!isset($grouped[$group_key])) {
+							$field_group = (object)[
+								'tipo'          => $item->tipo ?? null,
+								'lang'          => $item->lang ?? null,
+								'entries'       => [],
+								'id'            => $item->id ?? null
+							];
+							if (isset($item->section_id)) {
+								$field_group->section_id = $item->section_id;
+							}
+							if (isset($item->section_tipo)) {
+								$field_group->section_tipo = $item->section_tipo;
+							}
+							$grouped[$group_key] = $field_group;
+						}
+						// Build entry: value + any extra properties beyond the grouping keys
+						$entry = (object)['value' => $item->value ?? null];
+						$skip_keys = ['tipo','lang','id','value','section_id','section_tipo'];
+						foreach (get_object_vars($item) as $k => $v) {
+							if (!in_array($k, $skip_keys)) {
+								$entry->{$k} = $v;
+							}
+						}
+						$grouped[$group_key]->entries[] = $entry;
+					}
+					$fields->{$node_tipo} = array_values($grouped);
 				}
 			}
 
 			// Structure record output
 			$record_output = (object)[
 				'section_id' => $locator->section_id,
-				'entries'    => (!$is_publishable) ? 'delete' : $entries
+				'fields'     => (!$is_publishable) ? 'delete' : $fields
 			];
 
 			$data[] = $record_output;

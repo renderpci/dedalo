@@ -97,9 +97,13 @@ class dd_mcp_api {
 		];
 
 		// forward stored MCP session ID if available
-		$session_id = $_SESSION['dedalo']['mcp_session_id'] ?? null;
+		$session_id = $rqo->mcp_session_id ?? ($_SESSION['dedalo']['mcp_session_id'] ?? null);
 		if (!empty($session_id)) {
 			$headers[] = 'Mcp-Session-Id: ' . $session_id;
+			if (!isset($_SESSION['dedalo'])) {
+				$_SESSION['dedalo'] = [];
+			}
+			$_SESSION['dedalo']['mcp_session_id'] = $session_id;
 		}
 
 		// execute curl request with header capture
@@ -141,6 +145,7 @@ class dd_mcp_api {
 				$_SESSION['dedalo'] = [];
 			}
 			$_SESSION['dedalo']['mcp_session_id'] = $response_headers['mcp-session-id'];
+			$session_id = $response_headers['mcp-session-id'];
 		}
 
 		// handle non-2xx responses
@@ -160,6 +165,7 @@ class dd_mcp_api {
 					$response->result	= true;
 					$response->msg		= 'OK. MCP server already initialized';
 					$response->data		= $error_data;
+					$response->mcp_session_id = $session_id;
 					return $response;
 				} else {
 					// no session ID — server needs restart
@@ -190,6 +196,9 @@ class dd_mcp_api {
 		$response->result	= true;
 		$response->msg		= 'OK. MCP proxy request done';
 		$response->data		= $mcp_response;
+		if (!empty($session_id)) {
+			$response->mcp_session_id = $session_id;
+		}
 
 		return $response;
 	}//end mcp_proxy

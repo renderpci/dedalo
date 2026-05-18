@@ -4,10 +4,11 @@ import pino from 'pino';
 import { PublicClient, validatePublicAuthConfig } from '@dedalo/mcp-common';
 import { createPublicServer } from './server.js';
 
+const useHttp = process.argv.includes('--http');
 const logger = pino({
   level: process.env.LOG_LEVEL ?? 'info',
-  transport: process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
-});
+  transport: useHttp && process.env.NODE_ENV !== 'production' ? { target: 'pino-pretty' } : undefined,
+}, process.stderr);
 
 const PUBLIC_API_BASE_URL = process.env.DEDALO_PUBLIC_API_URL ?? 'http://localhost';
 const PUBLIC_API_CODE = process.env.DEDALO_PUBLIC_API_CODE ?? '';

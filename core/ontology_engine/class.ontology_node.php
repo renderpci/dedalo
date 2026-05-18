@@ -48,6 +48,7 @@ class ontology_node {
 		*      model_tipo      : "dd6"                 string | null
 		*      is_model        : false                 boolean
 		*      is_translatable : false                 boolean
+		*      is_main         : false                 boolean
 		*      propiedades     : "{}"                  string, data is a object as json stringify // Deprecated used only for compatibility of v5 and v6
 		* }
 		* @var ?object $data
@@ -596,6 +597,21 @@ class ontology_node {
 
 
 	/**
+	 * GET_IS_MAIN
+	 * Returns whether this ontology node is a main/root node.
+	 * Main nodes are identified by tipo = tld + '0' (e.g. 'dd0', 'oh0', 'tch0').
+	 * They represent the root section of each ontology namespace.
+	 * Retrieves from DDBB the column is_main
+	 * @return bool
+	 */
+	public function get_is_main() : bool {
+		$this->load_data();
+		return (bool)($this->data->is_main ?? false);
+	}//end get_is_main
+
+
+
+	/**
 	 * GET_TRANSLATABLE
 	 * Helper that answers if a given tipo is translatable.
 	 *
@@ -775,6 +791,20 @@ class ontology_node {
 
 		$this->data->is_translatable = $is_translatable;
 	}//end set_is_translatable
+
+
+
+	/**
+	 * SET_IS_MAIN
+	 * Sets the `is_main` flag, e.g. true.
+	 * Main nodes have tipo = tld + '0'.
+	 *
+	 * @param bool $is_main
+	 */
+	public function set_is_main( bool $is_main ) : void {
+
+		$this->data->is_main = $is_main;
+	}//end set_is_main
 
 
 

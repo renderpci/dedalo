@@ -93,8 +93,6 @@ bun run ./dedalo-public-mcp/dist/index.js
 | `DEDALO_MCP_HTTP_HOST` | no | `127.0.0.1` | HTTP bind host (loopback by default) |
 | `DEDALO_MCP_ALLOWED_ORIGINS` | no | empty | Comma-separated CORS Origin allowlist |
 
-**Removed in 1.0.0:** `DEDALO_MCP_TOKEN`, `DEDALO_WORK_READ_ONLY`, `DEDALO_WORK_WRITE`, `DEDALO_WORK_ADMIN`. Their presence triggers a deprecation warning and they are otherwise ignored. Authorisation is now exclusively profile-based.
-
 ### `dedalo-public-mcp`
 
 | Variable | Required | Default | Description |
@@ -105,12 +103,12 @@ bun run ./dedalo-public-mcp/dist/index.js
 | `RATE_LIMIT_CAPACITY` | no | `0` | Token-bucket capacity |
 | `RATE_LIMIT_REFILL_MS` | no | `60000` | Refill window (ms) |
 
-## Tool catalogue (`dedalo-work-mcp`, ~50 tools)
+## Tool catalogue (`dedalo-work-mcp`, ~35 tools)
 
 All tools are prefixed `dedalo_*` so they can coexist with other MCP servers. Annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`) describe semantics; **authorisation is decided by Dédalo, not by the annotation**.
 
 ### Discovery (read)
-`dedalo_get_environment`, `dedalo_list_sections`, `dedalo_get_ontology_info`, `dedalo_get_section_elements_context`, `dedalo_get_element_context`, `dedalo_get_thesaurus_tree`, `dedalo_start`
+`dedalo_get_environment`, `dedalo_list_sections`, `dedalo_get_ontology_info`, `dedalo_get_section_elements_context`, `dedalo_get_element_context`, `dedalo_start`
 
 ### Records read (read)
 `dedalo_read_record`, `dedalo_search_records`, `dedalo_read_raw`, `dedalo_count_records`, `dedalo_get_indexation_grid`
@@ -119,28 +117,28 @@ All tools are prefixed `dedalo_*` so they can coexist with other MCP servers. An
 `dedalo_create_record`, `dedalo_duplicate_record`, `dedalo_save_component`, `dedalo_delete_record`
 
 ### Components (mostly mutating)
-`dedalo_portal_delete_locator`, `dedalo_text_area_get_tags_info`, `dedalo_text_area_delete_tag`, `dedalo_av_get_media_streams`, `dedalo_av_download_fragment`, `dedalo_av_create_posterframe`, `dedalo_av_delete_posterframe`, `dedalo_3d_move_file`, `dedalo_3d_delete_posterframe`
+`dedalo_portal_delete_locator`
 
 ### Diffusion
-`dedalo_diffusion_info`, `dedalo_diffusion_validate`, `dedalo_diffusion_ontology_map`, `dedalo_diffusion_run`
+`dedalo_diffusion_info`, `dedalo_diffusion_ontology_map`, `dedalo_diffusion_run`
 
 ### Time Machine (read)
-`dedalo_tm_get_node_data`, `dedalo_tm_get_children_data`
+`dedalo_tm_get_node_data`
 
 ### Files
-`dedalo_upload_file`, `dedalo_join_chunked_files`, `dedalo_list_uploads`, `dedalo_delete_upload`, `dedalo_browse_files`
+_none_
 
 ### Async processes
-`dedalo_get_process_status`, `dedalo_get_process_status_poll`, `dedalo_stop_process`
+_none_
 
 ### System / diagnostics
-`dedalo_get_system_info`, `dedalo_get_server_ready_status`, `dedalo_get_ontology_update_info`, `dedalo_get_code_update_info`, `dedalo_convert_sqo_to_sql`, `dedalo_update_lock_state`, `dedalo_get_login_context`, `dedalo_get_install_context`, `dedalo_list_user_tools`
+`dedalo_get_system_info`, `dedalo_get_server_ready_status`, `dedalo_list_user_tools`
 
 ### Maintenance area
-`dedalo_maintenance_widget_value`, `dedalo_maintenance_widget_run`, `dedalo_maintenance_class_run`, `dedalo_maintenance_modify_counter`, `dedalo_maintenance_list_schema_changes`, `dedalo_maintenance_apply_schema_changes`, `dedalo_maintenance_lock_components_actions`
+`dedalo_maintenance_widget_run`, `dedalo_maintenance_class_run`, `dedalo_maintenance_modify_counter`
 
 ### Admin
-`dedalo_admin_install`, `dedalo_admin_change_lang`
+`dedalo_admin_change_lang`
 
 > `login` and `quit` are **not** registered as tools. The MCP's user is fixed at startup; allowing the agent to switch users would defeat profile-based authorisation. Use distinct MCP instances with distinct users instead.
 

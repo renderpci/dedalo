@@ -1015,13 +1015,13 @@ data_manager.resolve_model = async function(tipo, section_tipo) {
 
 
 /**
-* GET_ONTOLOGY_INFO
+* GET_MATRIX_ONTOLOGY_LOCATOR
 * Request API info about current tipo, resolving
 * section_tipo and section_id from given tipo
 * @param string tipo
 * @return object ontology_info
 */
-data_manager.get_ontology_info = async function(tipo) {
+data_manager.get_matrix_ontology_locator = async function(tipo) {
 
 	// cache from page_globals
 		const cache_key = tipo
@@ -1032,9 +1032,11 @@ data_manager.get_ontology_info = async function(tipo) {
 
 	// load data from API
 		const rqo = {
-			action			: 'get_ontology_info',
+			action			: 'get_matrix_ontology_locator',
 			prevent_lock	: true,
-			tipo			: tipo
+			source :{
+				tipo			: tipo
+			}
 		}
 		const api_response = await data_manager.request({
 			body : rqo
@@ -1048,7 +1050,7 @@ data_manager.get_ontology_info = async function(tipo) {
 
 
 	return ontology_info
-}//end get_ontology_info
+}//end get_matrix_ontology_locator
 
 
 

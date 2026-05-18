@@ -14,16 +14,6 @@ import { LangSchema } from './_shared/schemas.js';
  */
 export function registerAdminTools(server: McpServer, client: WorkClient, ctx: ToolContext): void {
 	registerTool(server, {
-		name: 'dedalo_admin_install',
-		description:
-			'Run the Dédalo installation process. Creates database tables, ontology structures, and default configuration. Requires a Dédalo user with install privileges.',
-		annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Install' },
-		inputSchema: z.object({ options: z.record(z.string(), z.unknown()).optional() }),
-		handler: async ({ options }) =>
-			client.call(rqo({ action: 'install', dd_api: 'dd_utils_api', options, prevent_lock: false })),
-	}, ctx);
-
-	registerTool(server, {
 		name: 'dedalo_admin_change_lang',
 		description:
 			'Switch the UI language for the current Dédalo session. Affects subsequent calls that respect `lang`.',

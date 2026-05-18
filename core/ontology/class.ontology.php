@@ -910,6 +910,7 @@ class ontology {
 				$ontology_node->set_is_model(false);
 				$ontology_node->set_tld($tld);
 				$ontology_node->set_is_translatable(false);
+				$ontology_node->set_is_main(true);
 				$ontology_node->set_relations([
 					(object)['tipo' => 'ontology1'],
 					(object)['tipo' => 'dd1201']
@@ -1056,6 +1057,7 @@ class ontology {
 					$parent_node->set_is_model(false);
 					$parent_node->set_tld($parent_tld);
 					$parent_node->set_is_translatable(false);
+					$parent_node->set_is_main(true);
 					$parent_node->set_relations([
 						(object)['tipo' => 'ontology1'],
 						(object)['tipo' => 'dd1201']
@@ -1658,6 +1660,9 @@ class ontology {
 			$translatable = $overwrite_locator ? self::resolve_translatable($overwrite_locator) : null;
 			$translatable = $translatable ?? self::resolve_translatable($locator);
 			$ontology_node->set_is_translatable($translatable);
+
+		// Is Main
+			$ontology_node->set_is_main($tipo === $tld . '0');
 
 		// Relations
 			$relations = $overwrite_locator ? self::resolve_relations($overwrite_locator) : null;
