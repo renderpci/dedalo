@@ -684,6 +684,22 @@ class tool_export extends tool_common {
 			$first_path	= $current_ddo->path[0];
 			$ddo		= ($first_path->section_tipo===self::$locator->section_tipo) ? $first_path : null;
 
+			// skip if ddo is not a direct child of the row's section_tipo.
+			if ($ddo === null) {
+				// Notify once.
+				static $ddo_null_logged = false;
+				if (!$ddo_null_logged) {
+					debug_log(__METHOD__
+					   .' Ignored empty ddo from first path' . PHP_EOL
+					   .' first_path: ' . to_string($first_path) . PHP_EOL
+					   .' current_ddo: ' . to_string($current_ddo)
+					   , logger::WARNING
+					);
+					$ddo_null_logged = true;
+				}
+				continue;
+			}
+
 			// component. Create the component to get the value of the column
 				$component_tipo = $ddo->component_tipo;
 				if (!isset(self::$ontology_cache[$component_tipo])) {
