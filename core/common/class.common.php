@@ -3498,6 +3498,11 @@ abstract class common {
 							continue;
 						}
 
+					// dd15 section case. Only tool_export is allowed for time machine section
+						if ($this->get_section_tipo()===DEDALO_TIME_MACHINE_SECTION_TIPO && $tool->name!=='tool_export') {
+							continue;
+						}
+
 					if ($requirement_translatable===true) {
 
 						$translatable = ($is_component===true)
