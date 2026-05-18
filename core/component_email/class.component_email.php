@@ -165,6 +165,21 @@ class component_email extends component_string_common {
 				// try to JSON decode (null on not decode)
 				$data_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 
+				// Normalize: ensure array items are objects with 'value' property (v7 format)
+				if (is_array($data_from_json)) {
+					$normalized = [];
+					foreach ($data_from_json as $val) {
+						if (!is_object($val)) {
+							$normalized[] = (object)['value' => $val];
+						}else if (!property_exists($val, 'value')) {
+							$normalized[] = (object)['value' => $val];
+						}else{
+							$normalized[] = $val;
+						}
+					}
+					$data_from_json = $normalized;
+				}
+
 				$response->result	= $data_from_json;
 				$response->msg		= 'OK';
 
