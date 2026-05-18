@@ -297,11 +297,13 @@ class tool_export extends tool_common {
 				foreach ($ar_ddo_map as $current_ddo) {
 					$tipo = $current_ddo->path[0]->component_tipo;
 					$data = $row->relation->{$tipo} ?? null;
-					if (is_array($data)) {
-						$count = count($data);
-						if ($count > ($max_portal_counts[$tipo] ?? 0)) {
-							$max_portal_counts[$tipo] = $count;
-							$needs_full_process = true;
+					if ($data !== null) {
+						$counts = $this->get_nested_array_counts($data, $tipo);
+						foreach ($counts as $path => $count) {
+							if ($count > ($max_portal_counts[$path] ?? 0)) {
+								$max_portal_counts[$path] = $count;
+								$needs_full_process = true;
+							}
 						}
 					}
 				}
@@ -420,6 +422,50 @@ class tool_export extends tool_common {
 			unset($row);
 		}
 	}//end stream_export_grid
+
+
+
+	/**
+	 * GET_NESTED_ARRAY_COUNTS
+	 * Recursively extract the maximum length of any array found in the data structure.
+	 * Returns an array of max lengths indexed by structural path.
+	 * 
+	 * @param mixed $data The data to inspect (array, object, or scalar)
+	 * @param string $path The structural path prefix
+	 * @return array Array of max lengths e.g., ['numisdata163' => 1, 'numisdata163[].rsc139' => 2]
+	 */
+	protected function get_nested_array_counts(mixed $data, string $path = '') : array {
+		$counts = [];
+		if (is_array($data)) {
+			// Track the length of this array
+			$counts[$path] = count($data);
+			// Inspect all elements
+			foreach ($data as $item) {
+				if (is_array($item) || is_object($item)) {
+					// Use '[]' to represent any array element index generically
+					$sub_counts = $this->get_nested_array_counts($item, $path . '[]');
+					foreach ($sub_counts as $k => $v) {
+						if (!isset($counts[$k]) || $v > $counts[$k]) {
+							$counts[$k] = $v;
+						}
+					}
+				}
+			}
+		} elseif (is_object($data)) {
+			// Inspect all properties
+			foreach ($data as $key => $value) {
+				if (is_array($value) || is_object($value)) {
+					$sub_counts = $this->get_nested_array_counts($value, $path . '.' . $key);
+					foreach ($sub_counts as $k => $v) {
+						if (!isset($counts[$k]) || $v > $counts[$k]) {
+							$counts[$k] = $v;
+						}
+					}
+				}
+			}
+		}
+		return $counts;
+	}//end get_nested_array_counts
 
 
 
