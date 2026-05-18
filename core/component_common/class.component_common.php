@@ -4493,18 +4493,45 @@ abstract class component_common extends common {
 			if(empty($import_value)) {
 				$import_value = null;
 			}else{
-				// Log unexpected non-JSON error (should not reach here normally)
-				debug_log(__METHOD__
-					." Unexpected state: non-empty non-JSON value reached error branch". PHP_EOL
-					.' tipo: ' . $this->tipo . PHP_EOL
-					.' section_tipo: ' . $this->section_tipo . PHP_EOL
-					.' section_id: ' . $this->section_id . PHP_EOL
-					.' model: ' . get_called_class() . PHP_EOL
-					.' import_value: ' . to_string($import_value) . PHP_EOL
-					.' column_name: ' . $column_name
-					, logger::WARNING
-				);
+				// Non-JSON non-empty value: wrap into v7 format for components_using_value_property
+				// This handles plain string values from CSV that don't have their own conform_import_data override
+				if (in_array($this->model, self::$components_using_value_property)) {
+					$import_value = [(object)['value' => $import_value]];
+				}else{
+					// For non-value-property components (relations, portals, etc.),
+					// log a warning as plain strings are unexpected for these types
+					debug_log(__METHOD__
+						." Non-JSON non-empty value for non-value-property component". PHP_EOL
+						.' tipo: ' . $this->tipo . PHP_EOL
+						.' section_tipo: ' . $this->section_tipo . PHP_EOL
+						.' section_id: ' . $this->section_id . PHP_EOL
+						.' model: ' . get_called_class() . PHP_EOL
+						.' import_value: ' . to_string($import_value) . PHP_EOL
+						.' column_name: ' . $column_name
+						, logger::WARNING
+					);
+				}
 			}
+		}
+
+		// Normalize: ensure array items are v7-compliant objects
+		if (is_array($import_value)) {
+			$normalized = [];
+			foreach ($import_value as $val) {
+				if (!is_object($val)) {
+					// Wrap plain values into objects with 'value' property for components_using_value_property
+					if (in_array($this->model, self::$components_using_value_property)) {
+						$normalized[] = (object)['value' => $val];
+					}else{
+						// For non-value-property components (locators, etc.), pass through as-is
+						// set_data() will handle wrapping if needed
+						$normalized[] = $val;
+					}
+				}else{
+					$normalized[] = $val;
+				}
+			}
+			$import_value = $normalized;
 		}
 
 		// Convert objects to arrays to ensure compatibility with set_data_lang()
