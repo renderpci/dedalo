@@ -70,7 +70,7 @@ trait search_component_date_tm {
 						$year = $dd_date->get_year();
 						$next_year = (int)$year + 1;
 						$query_object->params   = ['_Q1_' => "$year-01-01", '_Q2_' => "$next_year-01-01"];
-						$query_object->sentence = "(\"timestamp\" >= _Q1_ AND \"timestamp\" < _Q2_)";
+						$query_object->sentence = "(\"timestamp\" >= _Q1_::date AND \"timestamp\" < _Q2_::date)";
 				} elseif ($shape->year && $shape->month && !$shape->day) {
 					// Extract way
 						// $query_object->params   = ['_Q1_' => $year, '_Q2_' => $month];
@@ -88,7 +88,7 @@ trait search_component_date_tm {
 						}
 						$month_str = str_pad((string)$month, 2, '0', STR_PAD_LEFT);
 						$query_object->params   = ['_Q1_' => "$year-$month_str-01", '_Q2_' => $next_month_str];
-						$query_object->sentence = "(\"timestamp\" >= _Q1_ AND \"timestamp\" < _Q2_)";
+						$query_object->sentence = "(\"timestamp\" >= _Q1_::date AND \"timestamp\" < _Q2_::date)";
 				} else {
 					// Full date search (default)
 						// $Q1 = $dd_date->get_dd_timestamp("Y-m-d");
@@ -100,7 +100,7 @@ trait search_component_date_tm {
 						$ts = strtotime($Q1_date);
 						$next_day = date("Y-m-d", strtotime("+1 day", $ts));
 						$query_object->params   = ['_Q1_' => $Q1_date, '_Q2_' => $next_day];
-						$query_object->sentence = "(\"timestamp\" >= _Q1_ AND \"timestamp\" < _Q2_)";
+						$query_object->sentence = "(\"timestamp\" >= _Q1_::date AND \"timestamp\" < _Q2_::date)";
 				}
 				break;
 		}
