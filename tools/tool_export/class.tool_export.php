@@ -279,65 +279,26 @@ class tool_export extends tool_common {
 		$ar_ddo_map	= $this->ar_ddo_map;
 		$db_result	= $this->get_records();
 
-		$start_pass1 = microtime(true);
-		if (SHOW_DEBUG) debug_log(__METHOD__ . " Discovery Pass 1 started", logger::DEBUG);
-
-		// First pass: Process records JUST to collect unique columns.
-		// OPTIMIZATION: We only need to call get_grid_value when we suspect total columns might change (e.g. portals)
+		// Get base columns from the first row only. 
+		// The client will dynamically expand the columns as new data arrives.
 		$ar_columns_obj	= [];
 		$ar_columns_index = [];
-		$max_portal_counts = [];
 
 		$total_count = $db_result->row_count();
-		foreach ($db_result as $row_index => $row) {
-			$needs_full_process = empty($ar_columns_obj); // Always process first row
-
-			// Quick check for portal count increases without full instantiation
-			if (!$needs_full_process) {
-				foreach ($ar_ddo_map as $current_ddo) {
-					$tipo = $current_ddo->path[0]->component_tipo;
-					$data = $row->relation->{$tipo} ?? null;
-					if ($data !== null) {
-						$counts = $this->get_nested_array_counts($data, $tipo);
-						foreach ($counts as $path => $count) {
-							if ($count > ($max_portal_counts[$path] ?? 0)) {
-								$max_portal_counts[$path] = $count;
-								$needs_full_process = true;
-							}
-						}
-					}
+		$first_row = $db_result->fetch_one();
+		if ($first_row) {
+			$ar_row_value = $this->get_grid_value($ar_ddo_map, $first_row);
+			foreach ($ar_row_value->ar_columns_obj as $current_column_obj) {
+				if (!isset($ar_columns_index[$current_column_obj->id])) {
+					$ar_columns_obj[] = $current_column_obj;
+					$ar_columns_index[$current_column_obj->id] = true;
 				}
 			}
-
-			if ($needs_full_process) {
-				$ar_row_value = $this->get_grid_value($ar_ddo_map, $row);
-				foreach ($ar_row_value->ar_columns_obj as $current_column_obj) {
-					if (!isset($ar_columns_index[$current_column_obj->id])) {
-						$ar_columns_obj[] = $current_column_obj;
-						$ar_columns_index[$current_column_obj->id] = true;
-					}
-				}
-				unset($ar_row_value);
-			}
-
-			if ($row_index % 100 === 0) {
-				// Clear internal caches to prevent memory growth during discovery
-				if (class_exists('section_record_instances_cache')) section_record_instances_cache::clear();
-				if (class_exists('component_instances_cache')) component_instances_cache::clear();
-				gc_collect_cycles();
-
-				if (SHOW_DEBUG) {
-					$mem = round(memory_get_usage() / 1024 / 1024, 2);
-					debug_log(__METHOD__ . " Pass 1 progress: $row_index / $total_count | Mem: $mem MB", logger::DEBUG);
-				}
-			}
-			unset($row);
+			// Reset database cursor to the beginning
+			$db_result->seek(0);
 		}
 
-		if (SHOW_DEBUG) debug_log(__METHOD__ . " Discovery Pass 1 finished in " . round(microtime(true) - $start_pass1, 3) . "s", logger::DEBUG);
-
-		// Reset database cursor to the beginning
-		$db_result->seek(0);
+		if (SHOW_DEBUG) debug_log(__METHOD__ . " Discovery Pass 1 removed (optimized to client-side)", logger::DEBUG);
 
 		// Calculate header labels
 		$ar_section_columns_count = sizeof($ar_columns_obj);
