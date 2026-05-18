@@ -3095,6 +3095,59 @@ final class dd_core_api {
 
 
 	/**
+	* GET_ACTIVITY_METRIC
+	* On-demand activity metric for the dashboard timeline graph.
+	* Called by the client when the user selects a time range larger than
+	* the default 1-month pre-loaded data.
+	*
+	* RQO sample:
+	* {
+	*   "action": "get_activity_metric",
+	*   "options": {
+	*     "area_tipo": "oh1",
+	*     "range_days": 90
+	*   }
+	* }
+	*
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function get_activity_metric(object $rqo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		$options		= $rqo->options ?? new stdClass();
+		$area_tipo		= $options->area_tipo ?? null;
+		$range_days		= $options->range_days ?? 30;
+
+		if (empty($area_tipo) || !is_string($area_tipo)) {
+			$response->msg = 'Error: area_tipo is required';
+			$response->errors[] = 'empty area_tipo';
+			return $response;
+		}
+		if (!is_int($range_days) || $range_days < 1) {
+			$range_days = 30;
+		}
+		// Cap at 1 year to prevent unmanageable queries
+		if ($range_days > 365) {
+			$range_days = 365;
+		}
+
+		$data = area_common::get_activity_metric($area_tipo, $range_days);
+
+		$response->result	= true;
+		$response->msg		= 'OK';
+		$response->data		= $data;
+
+		return $response;
+	}//end get_activity_metric
+
+
+
+	/**
 	* TEST
 	* Useful for API testing purposes such as network metrics.
 	* @return object $response

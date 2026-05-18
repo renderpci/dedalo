@@ -2,12 +2,17 @@
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, ts_object */
 /*eslint no-undef: "error"*/
 
+
 // imports
-	import {area} from '../../area/js/area.js'
+    import {area} from '../../area/js/area.js'
+
+
 
 /**
-* AREA_ADMIN. Alias of area
+* AREA_DEVELOPMENT. Alias of area
 */
-export const area_admin = area
+export const area_development = area
+
+
 
 // @license-end

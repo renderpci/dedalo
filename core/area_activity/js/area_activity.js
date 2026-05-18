@@ -6,8 +6,8 @@
 	import {area} from '../../area/js/area.js'
 
 /**
-* AREA_ADMIN. Alias of area
+* AREA_ACTIVITY. Alias of area
 */
-export const area_admin = area
+export const area_activity = area
 
 // @license-end
