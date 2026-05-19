@@ -56,5 +56,5 @@ OK - 32. **tool_indexation** access from Oral History list fails
 OK - 33. **new record** add a mechanish what, on if the creation of new reord fails, check if is because counter is wrong, and if yes, fix it and try again. (MDCAT ISAD case)
 34. **docker** solve root paths and enviromental config for easy implementation
 35. **permissions**: check permissions issues. Admin user works but others don't.
-36. ***tools** download registered tool fix
-37. ***ontology output markdown** Add ttool ontology output to generate comprehensible IA information in MD
+OK - 36. ***tools** download registered tool fix
+37. ***ontology output markdown** Add tool ontology output to generate comprehensible IA information in MD
