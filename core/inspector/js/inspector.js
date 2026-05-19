@@ -304,4 +304,85 @@ export const get_ontology_url = async function (tipo, target) {
 
 
 
+/**
+* GET_RAW_RECORD
+* Fetches the raw database record for the current caller section via API.
+* Builds the request, sends it, and returns the first result on success.
+*
+* @return {Promise<object|false>} The raw record data, or false on error
+*/
+inspector.prototype.get_raw_record = async function () {
+
+	const self = this
+
+	// rqo
+	const rqo = self.get_raw_record_rqo()
+
+	// api request
+	const api_response = await data_manager.request({
+		body : rqo
+	})
+
+	// debug
+	if (SHOW_DEBUG) {
+		console.log('----> tool register read_raw api_response:', api_response);
+	}
+
+	// error case
+	if (api_response.result===false || api_response.error) {
+		console.error('----> ERROR tool register read_raw api_response:', api_response);
+		return false
+	}
+
+	// Get record from data
+	const data = api_response.result[0] || null;
+	if (!data) {
+		console.error('----> ERROR tool register read_raw empty data. api_response:', api_response);
+		return false
+	}
+
+	return data
+}//end get_raw_record
+
+
+
+/**
+* GET_RAW_RECORD_RQO
+* Builds the request query object (RQO) used by get_raw_record().
+* Configures a read_raw action filtered by the caller's section_tipo and section_id.
+*
+* @return {object} The configured RQO with action, options, and sqo
+*/
+inspector.prototype.get_raw_record_rqo = function () {
+
+	const self = this
+
+	const sqo = {
+		section_tipo: [self.caller.section_tipo],
+		limit: 1,
+		filter_by_locators:[{
+			section_tipo	: self.caller.section_tipo,
+			section_id		: self.caller.section_id
+		}]
+	}
+
+	// read from Dédalo API
+	const rqo = {
+		action	: 'read_raw',
+		options	: {
+			type			: 'section',
+			section_tipo	: self.caller.section_tipo,
+			tipo			: self.caller.section_tipo,
+			model			: self.caller.model
+		},
+		sqo		: sqo,
+		pretty_print : true
+	}
+
+
+	return rqo
+}//end get_raw_record_rqo
+
+
+
 // @license-end

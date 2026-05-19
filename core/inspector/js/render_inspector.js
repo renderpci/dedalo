@@ -401,31 +401,11 @@ const get_content_data = function(self) {
 				text_content	: get_label.record || 'View record data',
 				parent			: buttons_bottom_container
 			})
-			const fn_data_link = function(e) {
+			const data_link_click_handler = function(e) {
 				e.stopPropagation()
 				e.preventDefault()
 
-				const sqo = {
-					section_tipo: [self.caller.section_tipo],
-					limit: 1,
-					filter_by_locators:[{
-						section_tipo	: self.caller.section_tipo,
-						section_id		: self.caller.section_id
-					}]
-				}
-
-				// read from Dédalo API
-				const rqo = {
-					action			: 'read_raw',
-					options			: {
-						type			: 'section',
-						section_tipo	: self.caller.section_tipo,
-						tipo			: self.caller.section_tipo,
-						model			: self.caller.model
-					},
-					sqo				: sqo,
-					pretty_print	: true
-				}
+				const rqo = self.get_raw_record_rqo()
 
 				const url = DEDALO_API_URL + '?' + object_to_url_vars({
 					rqo : JSON.stringify(rqo)
@@ -436,8 +416,8 @@ const get_content_data = function(self) {
 					features	: 'new_tab'
 				})
 
-			}//end fn_data_link
-			data_link.addEventListener('mousedown', fn_data_link)
+			}
+			data_link.addEventListener('mousedown', data_link_click_handler)
 
 		// tool register files.	dd1340
 			if (self.section_tipo==='dd1340') {
@@ -447,54 +427,25 @@ const get_content_data = function(self) {
 					text_content	: 'Download register file',
 					parent			: buttons_bottom_container
 				})
-				const fn_register = function(e) {
+				const register_click_handler = async (e) => {
 					e.stopPropagation()
 					e.preventDefault()
 
 					const file_name = 'register.json'
 
 					// confirm action by user
-						if (!confirm(`Download file: ${file_name} ${self.caller.section_id} ?`)) {
-							return false
-						}
-
-					const sqo = {
-						section_tipo: [self.caller.section_tipo],
-						limit: 1,
-						filter_by_locators:[{
-							section_tipo	: self.caller.section_tipo,
-							section_id		: self.caller.section_id
-						}]
+					if (!confirm(`Download file: ${file_name} ${self.caller.section_id} ?`)) {
+						return false
 					}
 
-					// read from Dédalo API
-						const rqo = {
-							action	: 'read_raw',
-							options	: {
-								type			: 'section',
-								section_tipo	: self.caller.section_tipo,
-								tipo			: self.caller.section_tipo,
-								model			: self.caller.model
-							},
-							sqo		: sqo
-						}
-						data_manager.request({
-							body : rqo
-						})
-						.then(function(api_response){
+					const data = await self.get_raw_record()
 
-							// error case
-								if (api_response.result===false || api_response.error) {
-									// alert("An error occurred. " + api_response.error);
-									return
-								}
-
-							// download blob as JSON file
-								const data = api_response.result[0]?.datos || null;
-								download_data(data, file_name)
-						})
-				}//end fn_register
-				register_download.addEventListener('mousedown', fn_register)
+					if(data) {
+						// Download record as JSON file
+						download_data(data, file_name)
+					}
+				}
+				register_download.addEventListener('mousedown', register_click_handler)
 			}//end if (self.section_tipo==='dd1340')
 
 
