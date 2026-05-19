@@ -364,25 +364,7 @@ trait search_component_number_tm {
     * @return object The query object with SQL sentence and params set, or fallback "1=0" on error
     */
     protected static function resolve_number_equal_sql_tm(object $query_object, string $q, object $ctx) : object {
-        // Validate input parameters
-        $q_object = json_decode($q);
-
-        // Check JSON decoding and required properties
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            debug_log(__METHOD__ . " JSON decode error: " . json_last_error_msg(), logger::ERROR);
-            $query_object->params   = [];
-            $query_object->sentence = "1=0"; // Always false
-            return $query_object;
-        }
-
-        if (!isset($q_object->value) || !is_numeric($q_object->value)) {
-            debug_log(__METHOD__ . " Invalid or missing value in query object: " . to_string($q_object), logger::ERROR);
-            $query_object->params   = [];
-            $query_object->sentence = "1=0"; // Always false
-            return $query_object;
-        }
-
-        $q_clean = str_replace(['+', ','], ['', '.'], $q_object->value);
+        $q_clean = str_replace(['+', ','], ['', '.'], $q);
 
         $query_object->params   = ['_Q1_' => $q_clean];
         $query_object->sentence = "{$ctx->table_alias}.{$ctx->column} = _Q1_";
