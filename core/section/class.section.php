@@ -1,5 +1,4 @@
 <?php declare(strict_types=1);
-require_once 'trait.section_v7.php';
 /**
 * CLASS SECTION
 *
@@ -1620,7 +1619,7 @@ class section extends common {
 	}//end get_ar_grouper_models
 
 
-	
+
 
 	/**
 	* GET_PERMISSIONS
