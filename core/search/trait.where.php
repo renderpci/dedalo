@@ -38,7 +38,7 @@ trait where {
 		}else{
 			// Gets current param key (default is 1 and increases by 1 after each use)
 			$placeholder = $this->get_placeholder($ar_section_tipo[0]);
-			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo = ' . $placeholder . ')';
+			$this->sql_obj->main_where[] = '(' . $this->main_section_tipo_alias.'.section_tipo = ' . $placeholder . '::text)';
 		}
 
 		// avoid root user to be include in the results for section users.
