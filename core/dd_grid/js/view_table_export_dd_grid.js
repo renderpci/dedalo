@@ -175,19 +175,35 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 	// fill the data in main section for every portal row, it helps to manage data in spreadsheets
 	const fill_the_gaps = self.config.fill_the_gaps
 
+	// Build an index map: column_id -> [matching cells] for O(1) lookups per column
+	// This replaces the O(columns × cells) filter+find pattern with O(cells) build + O(1) lookups
+	const column_index = new Map();
+	const column_data_len = column_data.length;
+	for (let k = 0; k < column_data_len; k++) {
+		const item = column_data[k];
+		const item_cols = item.ar_columns_obj;
+		const item_cols_len = item_cols.length;
+		for (let m = 0; m < item_cols_len; m++) {
+			const col_id = item_cols[m].id;
+			let bucket = column_index.get(col_id);
+			if (!bucket) {
+				bucket = [];
+				column_index.set(col_id, bucket);
+			}
+			bucket.push(item);
+		}
+	}
+
 	// first we loop all map columns, independently of the data
 	const column_len	= ar_columns_obj.length
 	for (let i = 0; i < column_len; i++) {
 		// specify the current column to be filled
 		const column = ar_columns_obj[i]
-		// find the data of the column
-		// Breakdown option get every column data in different columns_objecs, therefore use a filter instead a find to get all.
-		const ar_column_values = column_data.filter(item => item.ar_columns_obj.find(el => el.id === column.id))
-			? column_data.filter(item => item.ar_columns_obj.find(el => el.id === column.id))
-			: null
+		// find the data of the column using the pre-built index
+		const ar_column_values = column_index.get(column.id) || []
 		// if the column has not data, create a empty column
 		const column_value = (ar_column_values.length)
-			? clone( ar_column_values[0] )
+			? { ...ar_column_values[0], value: ar_column_values[0].value }
 			: {
 				ar_columns_obj	: [column],
 				type			: 'column',
@@ -197,7 +213,7 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 			}
 		// Get the column values and join they into a new value. Used by breakdown option to show every data of its own column
 		// when the breakdown is selected, every data is a column with its own value, therefore is necessary join all values
-		const ar_columns_values_len	= ar_column_values?.length || 0
+		const ar_columns_values_len	= ar_column_values.length
 		if(ar_columns_values_len>1){
 			const ar_values = []
 			for (let j = 0; j < ar_columns_values_len; j++) {
@@ -388,17 +404,23 @@ const render_header_column = function(self, current_data) {
 	const show_tipo_in_label = self.config.show_tipo_in_label || false
 
 	const labels	= []
-	const len		= current_data.ar_columns_obj.ar_labels.length
+	const ar_labels = current_data.ar_columns_obj.ar_labels || []
+	const len		= ar_labels.length
 	for (let i = 0; i < len; i++) {
 		if(i % 2 !== 1){
 			continue
 		}
-		const current_label	= current_data.ar_columns_obj.ar_labels[i] || ''
-		const current_tipo	= current_data.ar_columns_obj.ar_tipos[i]  || ''
+		const current_label	= ar_labels[i] || ''
+		const current_tipo	= (current_data.ar_columns_obj.ar_tipos && current_data.ar_columns_obj.ar_tipos[i]) || ''
 		const label = (show_tipo_in_label === true)
 			? current_label + " ["+current_tipo+"]"
 			: current_label
 		labels.push(label)
+	}
+
+	// fallback for dynamically added columns that don't have ar_labels
+	if (labels.length === 0) {
+		labels.push(current_data.ar_columns_obj.label || '')
 	}
 
 	const th_node = ui.create_dom_element({
