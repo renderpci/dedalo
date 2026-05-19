@@ -1627,11 +1627,18 @@ abstract class component_common extends common {
 		// label
 			$label = $this->get_label();
 
+		// cell_type
+		// Exception for comoponent_section_id. As section_id must be used as int, 
+		// avoid to use the json cell type to render it as int instead an array [3]
+			$cell_type = $this->get_model()==='component_section_id' 
+				? 'section_id' 
+				: 'json';
+
 		// raw_value
 			$raw_value = new dd_grid_cell_object();
 				$raw_value->set_type('column');
 				$raw_value->set_label($label);
-				$raw_value->set_cell_type('json');
+				$raw_value->set_cell_type($cell_type);
 				$raw_value->set_ar_columns_obj([$column_obj]);
 				$raw_value->set_row_count($row_count);
 				$raw_value->set_value($data);
