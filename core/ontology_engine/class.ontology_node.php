@@ -287,7 +287,7 @@ class ontology_node {
 		$term_data = $this->get_term_data();
 
 		// get the lang to be used to get the labels
-		// it call to get_label_lang() to process exceptions as català to valencià, that are the same language.
+		// it call to get_label_lang() to process exceptions as català to valencià, that are used as same language.
 		// if it not set, it will return DEDALO_APPLICATION_LANG
 		$lang = lang::get_label_lang( $lang );
 
@@ -296,8 +296,8 @@ class ontology_node {
 			return null;
 		}
 
-		// lang already exists case
-		if (isset($term_data->{$lang})) {
+		// lang already exists case and is not blank ''
+		if (!empty($term_data->{$lang})) {
 			return $term_data->{$lang};
 		}
 
@@ -306,12 +306,12 @@ class ontology_node {
 
 			// main lang
 			$ontology_lang = DEDALO_STRUCTURE_LANG;
-			if (isset($term_data->{$ontology_lang})) {
+			if (!empty($term_data->{$ontology_lang})) {
 				return $term_data->{$ontology_lang};
 			}
 
 			// fallback to anything
-			foreach ($term_data as $lang => $value) {
+			foreach ($term_data as $value) {
 				if (!empty($value)) {
 					return $value;
 				}
