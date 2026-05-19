@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_dummy */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -56,9 +56,21 @@ render_tool_ontology.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* Render tool body or 'content_data'
-* @param instance self
-* @return HTMLElement content_data
+* Renders the tool body content including:
+* - User info header with TLD and section ID or tipo
+* - Total records indicator
+* - Components container
+* - Process button with API integration
+* - Messages container for API responses
+*
+* Handles two caller types:
+* - Component: Extracts TLD from section_tipo, uses component's section_id
+* - Section: Finds hierarchy data (hierarchy6|ontology7) in datum to get TLD and section_id
+*
+* @param {object} self - Tool instance
+* @param {object} self.caller - Component or section that opened the tool
+* @returns {HTMLElement} content_data - The built content container
+* @throws {Error} When self or self.caller is invalid
 */
 const get_content_data = async function(self) {
 
@@ -81,37 +93,58 @@ const get_content_data = async function(self) {
 		parent			: fragment
 	})
 
+	/**
+	* Extract TLD and section_id from caller based on type
+	* For components: TLD is derived from section_tipo (removing trailing digits)
+	* For sections: TLD comes from hierarchy6 or ontology7 data in datum
+	*/
 	try {
-		// Extract TLD from hierarchy data with error handling
-		const data = self.caller.datum?.data || [];
-		const hierarchy_data = data.find(el =>
-			el.tipo === 'hierarchy6' || el.tipo === 'ontology7'
-		);
 
-		if (!hierarchy_data || !hierarchy_data.entries || !hierarchy_data.entries[0] || !hierarchy_data.entries[0].value) {
-			throw new Error('No valid hierarchy data found');
+		let tld, section_id
+
+		const caller = self.caller
+
+		// Caller could be a section or a component
+		if (caller.type === 'component') {
+			// Component caller case (Tool buttons)
+			// Extract TLD by removing trailing digits: dmm0 => dmm
+			tld = caller.section_tipo.replace(/\d+$/, '')
+			section_id = caller.section_id
+		} else {
+			// Section caller case (Inspector button)
+			const data = caller.datum?.data || []
+			const hierarchy_data = data.find(el =>
+				el.tipo === 'hierarchy6' || el.tipo === 'ontology7'
+			)
+
+			if (!hierarchy_data || !hierarchy_data.entries || !hierarchy_data.entries[0] || !hierarchy_data.entries[0].value) {
+				throw new Error('No valid hierarchy data found');
+			}
+
+			tld = hierarchy_data.entries[0].value
+			section_id = caller.data?.entries?.[0]?.section_id
 		}
 
-		// tld from hierarchy6 - component_input_text - TLD
-		const tld			= hierarchy_data.entries[0].value;
-		const section_id	= self.caller.data?.entries?.[0]?.section_id;
-
-		// Calculate info based on mode
-		const info = self.caller.mode==='edit'
+		// Calculate display info based on caller mode
+		// In edit mode: show TLD + section_id (e.g., "dmm123")
+		// In other modes: show the caller's tipo
+		const info = caller.mode === 'edit'
 			? `${tld}${section_id || ''}`
-			: self.caller.tipo;
+			: caller.tipo
 
 		ui.create_dom_element({
 			element_type	: 'h3',
 			class_name		: 'user_info term_id',
-			inner_html		: info,
+			text_content	: info,
 			parent			: fragment
 		})
 
-		// Calculate total
-		const total = self.caller.mode==='edit'
+		// Calculate total records to process
+		// Edit mode: always 1 record (single item being edited)
+		// Other modes: use caller.total or default to 0
+		const total = caller.mode === 'edit'
 			? 1
-			: (self.caller.total || 0)
+			: (caller.total || 0)
 
 		ui.create_dom_element({
 			element_type	: 'h3',
@@ -125,7 +158,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'h2',
 			class_name		: 'user_info',
-			inner_html		: 'Invalid source (hierarchy6|ontology7)',
+			text_content	: 'Invalid source (hierarchy6|ontology7)',
 			parent			: fragment
 		})
 	}
@@ -133,9 +166,9 @@ const get_content_data = async function(self) {
 	// components container
 	ui.create_dom_element({
 		element_type	: 'div',
-		class_name 		: 'components_container',
-		parent 			: fragment
-	});
+		class_name		: 'components_container',
+		parent			: fragment
+	})
 
 	// buttons container
 	const buttons_container = ui.create_dom_element({
@@ -149,7 +182,7 @@ const get_content_data = async function(self) {
 		element_type	: 'div',
 		class_name		: 'messages_container',
 		parent			: fragment
-	});
+	})
 
 	// button_generate
 	const button_generate = ui.create_dom_element({
@@ -158,23 +191,31 @@ const get_content_data = async function(self) {
 		inner_html		: self.get_tool_label('process') || 'Process',
 		parent			: buttons_container
 	})
-	// click event
+	/**
+	* CLICK_HANDLER
+	* Handles the process button click event.
+	* Manages UI state (spinner, loading class), calls the API method,
+	* and displays success/error messages in the messages container.
+	*
+	* @param {Event} e - Click event
+	* @returns {Promise<void>}
+	*/
 	const click_handler = async (e) => {
-		e.stopPropagation();
+		e.stopPropagation()
 
-		// generating control to avoid duplicate calls
+		// Generating control to avoid duplicate calls
 		if (button_generate.generating) {
 			return
 		}
-		button_generate.generating = true;
+		button_generate.generating = true
 
-		let spinner = null;
+		let spinner = null
 
 		try {
 			// Reset UI state
-			// messages clean
+			// Messages clean
 			[messages_container].map(el => el.classList.remove('error'))
-			// loading
+			// Loading
 			content_data.classList.add('loading')
 			messages_container.innerHTML = ''
 
@@ -185,10 +226,10 @@ const get_content_data = async function(self) {
 				parent			: content_data.parentNode
 			})
 
-			// call API
+			// Call API to process records in dd_ontology
 			const api_response = await self.set_records_in_dd_ontology()
 
-			// user messages
+			// User messages
 			const msg = api_response.msg
 				? (Array.isArray(api_response.msg) ? api_response.msg.join('<br>') : api_response.msg)
 				: 'Unknown error'
@@ -199,43 +240,43 @@ const get_content_data = async function(self) {
 				parent			: messages_container
 			})
 
-			// Handle errors
+			// Handle API errors
 			if (api_response.errors && Array.isArray(api_response.errors) && api_response.errors.length > 0) {
-
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'error',
 					inner_html		: api_response.errors.join('<br>'),
 					parent			: messages_container
-				});
+				})
 			}
 
-			// add error class on result false
-			if (api_response.result==false) {
+			// Add error class on result false
+			if (api_response.result === false) {
 				messages_container.classList.add('error')
-			}else{
+			} else {
 				// Handle success case
 			}
 
 		} catch (error) {
-			console.error('Error in click_handler:', error);
+			console.error('Error in click_handler:', error)
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'error',
 				inner_html		: 'Error: ' + (error.message || 'Unknown error'),
 				parent			: messages_container
-			});
+			})
 			messages_container.classList.add('error')
 		} finally {
 			// Clean up UI state
 			content_data.classList.remove('loading')
 			if (spinner && spinner.parentNode) {
-				spinner.remove();
+				spinner.remove()
 			}
-			button_generate.generating = false;
+			button_generate.generating = false
 		}
 	}
 	button_generate.addEventListener('click', click_handler)
+
 	// focus buttons
 	when_in_dom(button_generate, () => {
 		// Force button to keep focused

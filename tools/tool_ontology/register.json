@@ -1,356 +1,525 @@
 {
-  "label": "Desarrollo de herramientas",
-  "relations": [
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd200"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
-    },
-    {
-      "type": "dd675",
-      "section_id": "1",
-      "section_tipo": "dd153",
-      "from_component_tipo": "dd1337"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1331"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1332"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1333"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1601"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd197"
-    }
-  ],
-  "components": {
-    "dd199": {
-      "inf": "created_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 24,
-              "hour": 21,
-              "time": 65081826865,
-              "year": 2024,
-              "month": 11,
-              "minute": 14,
-              "second": 25
-            }
-          }
-        ]
-      }
-    },
-    "dd201": {
-      "inf": "modified_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 31,
-              "hour": 10,
-              "time": 65098463243,
-              "year": 2025,
-              "month": 5,
-              "minute": 27,
-              "second": 23
-            }
-          }
-        ]
-      }
-    },
-    "dd612": {
-      "inf": "Descripción [component_text_area]",
-      "dato": {
-        "lg-cat": [
-          "<p>Gestiona la transformació de l'ontologia en registres jer_dd</p>"
-        ],
-        "lg-deu": [
-          "<p>Verwaltet die Umwandlung der Ontologie in hier_dd-Datensätze.</p>"
-        ],
-        "lg-ell": [
-          "<p>Διαχειρίζεται τον μετασχηματισμό της οντολογίας σε εγγραφές hier_dd.</p>"
-        ],
-        "lg-eng": [
-          "<p>Handles Ontology transformation to 'jer_dd' records</p>"
-        ],
-        "lg-eus": [
-          "<p>Ontologiaren eraldaketa kudeatzen du 'jer_dd' erregistroetara</p>"
-        ],
-        "lg-fra": [
-          "<p>Gère la transformation de l'ontologie en enregistrements hier_dd.</p>"
-        ],
-        "lg-ita": [
-          "<p>Gestisce la trasformazione dell'ontologia nei record 'jer_dd'</p>"
-        ],
-        "lg-nep": [
-          "<p>'jer_dd' रेकर्डहरूमा ओन्टोलोजी रूपान्तरण ह्यान्डल गर्दछ</p>"
-        ],
-        "lg-por": [
-          "<p>Lida com a transformação da ontologia para registos 'jer_dd'</p>"
-        ],
-        "lg-spa": [
-          "<p>Gestiona la transformación de la ontología en registros jer_dd</p>"
-        ]
-      }
-    },
-    "dd799": {
-      "inf": "Etiqueta [component_input_text]",
-      "dato": {
-        "lg-cat": [
-          "Ontologia"
-        ],
-        "lg-deu": [
-          "Ontologie"
-        ],
-        "lg-ell": [
-          "Οντολογία"
-        ],
-        "lg-eng": [
-          "Ontology"
-        ],
-        "lg-eus": [
-          "Ontologia"
-        ],
-        "lg-fra": [
-          "Ontologie"
-        ],
-        "lg-ita": [
-          "Ontologici"
-        ],
-        "lg-nep": [
-          "ओन्टोलजी"
-        ],
-        "lg-por": [
-          "Ontologia"
-        ],
-        "lg-spa": [
-          "Ontología"
-        ]
-      }
-    },
-    "dd1326": {
-      "inf": "Nombre de la herramienta [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "tool_ontology"
-        ]
-      }
-    },
-    "dd1327": {
-      "inf": "Versión [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "1.0.4"
-        ]
-      }
-    },
-    "dd1328": {
-      "inf": "Versión Dédalo mínima [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "6.4.0"
-        ]
-      }
-    },
-    "dd1335": {
-      "inf": "Propiedades [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "events": [
-              {
-                "type": "keyup",
-                "action": "click",
-                "validate": [
-                  {
-                    "key": "ctrlKey",
-                    "value": true
-                  },
-                  {
-                    "key": "key",
-                    "value": "s"
-                  }
-                ]
-              }
-            ],
-            "open_as": "modal",
-            "windowFeatures": {
-              "width": "40rem"
-            }
-          }
-        ]
-      }
-    },
-    "dd1350": {
-      "inf": "Afecta a tipos: [component_json]",
-      "dato": {
-        "lg-nolan": [
-          [
-            "ontology35",
-            "/^(?!localontology0)[a-z]+0$/"
-          ]
-        ]
-      }
-    },
-    "dd1372": {
-      "inf": "Etiquetas [component_json]",
-      "dato": {
-        "lg-nolan": [
-          [
-            {
-              "lang": "lg-eng",
-              "name": "process",
-              "value": "Process"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "process",
-              "value": "Procesar"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "process",
-              "value": "Procesar"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "process",
-              "value": "Procédé"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "process",
-              "value": "Processo"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "process",
-              "value": "Διαδικασία"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "process",
-              "value": "Prozess"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "export_to_jer_dd",
-              "value": "Export to jer_dd"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "export_to_jer_dd",
-              "value": "Exportar a jer_dd"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "export_to_jer_dd",
-              "value": "Exporta a jer_dd"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "export_to_jer_dd",
-              "value": "Exporter vers jer_dd"
-            },
-            {
-              "lang": "lg-por",
-              "name": "export_to_jer_dd",
-              "value": "Exportar para jer_dd"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "export_to_jer_dd",
-              "value": "Esportatu jer_dd-era"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "export_to_jer_dd",
-              "value": "Esporta in jer_dd"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "export_to_jer_dd",
-              "value": "Εξαγωγή σε jer_dd"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "export_to_jer_dd",
-              "value": "jer_dd मा निर्यात गर्नुहोस्"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "export_to_jer_dd",
-              "value": "Exportieren nach jer_dd"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "process",
-              "value": "प्रक्रिया"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "process",
-              "value": "Prozesua"
-            },
-            {
-              "lang": "lg-por",
-              "name": "process",
-              "value": "प्रक्रिया"
-            }
-          ]
-        ]
-      }
-    },
-    "dd1644": {
-      "inf": "Desarollador [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "Dédalo team"
-        ]
-      }
-    }
-  },
-  "section_id": 31,
-  "created_date": "2024-11-24 21:14:25",
+  "id": "3121",
+  "section_id": "31",
   "section_tipo": "dd1340",
-  "modified_date": "2025-05-31 10:27:23",
-  "diffusion_info": null,
-  "created_by_userID": -1,
-  "section_real_tipo": "dd73",
-  "modified_by_userID": -1
+  "data": {
+    "label": "Tools development",
+    "section_id": 31,
+    "created_date": "2024-11-24 21:14:25",
+    "section_tipo": "dd1340",
+    "modified_date": "2025-01-15 19:34:23",
+    "created_by_user_id": -1,
+    "modified_by_userID": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 2,
+        "type": "dd151",
+        "section_id": "26",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ],
+    "dd1601": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1601"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "<p>Gestiona la transformació de l'ontologia en registres jer_dd</p>"
+      },
+      {
+        "id": 1,
+        "lang": "lg-deu",
+        "value": "<p>Verwaltet die Umwandlung der Ontologie in hier_dd-Datensätze.</p>"
+      },
+      {
+        "id": 1,
+        "lang": "lg-ell",
+        "value": "<p>Διαχειρίζεται τον μετασχηματισμό της οντολογίας σε εγγραφές hier_dd.</p>"
+      },
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "<p>Handles Ontology transformation to 'jer_dd' records</p>"
+      },
+      {
+        "id": 1,
+        "lang": "lg-eus",
+        "value": "<p>Ontologiaren eraldaketa kudeatzen du 'jer_dd' erregistroetara</p>"
+      },
+      {
+        "id": 1,
+        "lang": "lg-fra",
+        "value": "<p>Gère la transformation de l'ontologie en enregistrements hier_dd.</p>"
+      },
+      {
+        "id": 1,
+        "lang": "lg-ita",
+        "value": "<p>Gestisce la trasformazione dell'ontologia nei record 'jer_dd'</p>"
+      },
+      {
+        "id": 1,
+        "lang": "lg-nep",
+        "value": "<p>'jer_dd' रेकर्डहरूमा ओन्टोलोजी रूपान्तरण ह्यान्डल गर्दछ</p>"
+      },
+      {
+        "id": 1,
+        "lang": "lg-por",
+        "value": "<p>Lida com a transformação da ontologia para registos 'jer_dd'</p>"
+      },
+      {
+        "id": 1,
+        "lang": "lg-spa",
+        "value": "<p>Gestiona la transformación de la ontología en registros jer_dd</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Ontologia"
+      },
+      {
+        "id": 1,
+        "lang": "lg-deu",
+        "value": "Ontologie"
+      },
+      {
+        "id": 1,
+        "lang": "lg-ell",
+        "value": "Οντολογία"
+      },
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "Ontology"
+      },
+      {
+        "id": 1,
+        "lang": "lg-eus",
+        "value": "Ontologia"
+      },
+      {
+        "id": 1,
+        "lang": "lg-fra",
+        "value": "Ontologie"
+      },
+      {
+        "id": 1,
+        "lang": "lg-ita",
+        "value": "Ontologici"
+      },
+      {
+        "id": 1,
+        "lang": "lg-nep",
+        "value": "ओन्टोलजी"
+      },
+      {
+        "id": 1,
+        "lang": "lg-por",
+        "value": "Ontologia"
+      },
+      {
+        "id": 1,
+        "lang": "lg-spa",
+        "value": "Ontología"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_ontology"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "1.0.4"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "7.0.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 24,
+          "hour": 21,
+          "time": 65081826865,
+          "year": 2024,
+          "month": 11,
+          "minute": 14,
+          "second": 25
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 19,
+          "hour": 9,
+          "time": 65129564402,
+          "year": 2026,
+          "month": 5,
+          "minute": 40,
+          "second": 2
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "events": [
+            {
+              "type": "keyup",
+              "action": "click",
+              "validate": [
+                {
+                  "key": "ctrlKey",
+                  "value": true
+                },
+                {
+                  "key": "key",
+                  "value": "s"
+                }
+              ]
+            }
+          ],
+          "open_as": "modal",
+          "windowFeatures": {
+            "width": "40rem"
+          }
+        }
+      }
+    ],
+    "dd1350": [
+      {
+        "id": 1,
+        "value": [
+          "ontology16",
+          "ontology17",
+          "ontology18",
+          "ontology19",
+          "ontology35",
+          "/^[a-z]+0$/"
+        ]
+      }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "process",
+            "value": "Process"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "process",
+            "value": "Procesar"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "process",
+            "value": "Procesar"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "process",
+            "value": "Procédé"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "process",
+            "value": "Processo"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "process",
+            "value": "Διαδικασία"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "process",
+            "value": "Prozess"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "export_to_jer_dd",
+            "value": "Export to jer_dd"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "export_to_jer_dd",
+            "value": "Exportar a jer_dd"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "export_to_jer_dd",
+            "value": "Exporta a jer_dd"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "export_to_jer_dd",
+            "value": "Exporter vers jer_dd"
+          },
+          {
+            "lang": "lg-por",
+            "name": "export_to_jer_dd",
+            "value": "Exportar para jer_dd"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "export_to_jer_dd",
+            "value": "Esportatu jer_dd-era"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "export_to_jer_dd",
+            "value": "Esporta in jer_dd"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "export_to_jer_dd",
+            "value": "Εξαγωγή σε jer_dd"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "export_to_jer_dd",
+            "value": "jer_dd मा निर्यात गर्नुहोस्"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "export_to_jer_dd",
+            "value": "Exportieren nach jer_dd"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "process",
+            "value": "प्रक्रिया"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "process",
+            "value": "Prozesua"
+          },
+          {
+            "lang": "lg-por",
+            "name": "process",
+            "value": "प्रक्रिया"
+          }
+        ]
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 1
+      }
+    ],
+    "dd799": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 2
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1350": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1601": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
 }
