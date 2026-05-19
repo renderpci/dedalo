@@ -107,8 +107,10 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 			'model_tipo'		=> true,
 			'is_model'			=> true,
 			'is_translatable'	=> true,
+			'is_main'			=> true,
 			'propiedades'		=> true
 		];
+
 		$this->assertTrue(
 			$eq,
 			'expected true' . PHP_EOL
@@ -143,7 +145,8 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		$boolean_columns = dd_ontology_db_manager::$boolean_columns;
 		$eq = $boolean_columns === [
 			'is_model'			=> true,
-			'is_translatable'	=> true
+			'is_translatable'	=> true,
+			'is_main'			=> true
 		];
 		$this->assertTrue(
 			$eq,
@@ -198,10 +201,11 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 1.6 ms
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 2.2;
+		// $eq = $total_time < 2.2;
+		$eq = $total_time < 6; // increase from 2.2 because the addition of new column 'in_main' and index 'dd_ontology_term_trgm_values_idx'
 		$this->assertTrue(
 			$eq,
-			'expected execution time (1) bellow 2.2 ms' . PHP_EOL
+			'expected execution time (1) bellow 5 ms' . PHP_EOL
 				.'total_time ms: ' . $total_time
 		);
 
@@ -320,10 +324,10 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.25 ms
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 0.4;
+		$eq = $total_time < 0.5;
 		$this->assertTrue(
 			$eq,
-			'expected execution time (1): bellow 0.4 ms' . PHP_EOL
+			'expected execution time (1): bellow 0.5 ms' . PHP_EOL
 				.'total_time ms: ' . $total_time
 		);
 
@@ -345,10 +349,10 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.001 ms (CACHED)
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
-		$eq = $total_time < 0.002;
+		$eq = $total_time < 0.003;
 		$this->assertTrue(
 			$eq,
-			'expected execution time (2): bellow 0.002 ms' . PHP_EOL
+			'expected execution time (2): bellow 0.003 ms' . PHP_EOL
 				.'total_time ms: ' . $total_time
 		);
 

@@ -85,12 +85,14 @@ final class dd_ontology_api_test extends BaseTestCase {
 
 		$this->assertTrue(
 			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
+			'expected running without errors' . PHP_EOL
+				. 'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
 		);
 
 		$this->assertTrue(
 			is_array($response->result),
-			'expected result type is array'
+			'expected result type is array' . PHP_EOL
+				. 'response: ' . to_string($response)
 		);
 
 		$this->assertGreaterThan(
@@ -239,17 +241,31 @@ final class dd_ontology_api_test extends BaseTestCase {
 
 		$this->assertTrue(
 			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
+			'expected running without errors' . PHP_EOL
+				. 'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
 		);
 
-		$this->assertObjectHasProperty('tipo', $response->result, 'node should have tipo');
-		$this->assertObjectHasProperty('model', $response->result, 'node should have model');
-		$this->assertObjectHasProperty('term', $response->result, 'node should have term');
-		$this->assertObjectHasProperty('tld', $response->result, 'node should have tld');
+		$result = $response->result ? $response->result : new stdClass();
+
+		$this->assertObjectHasProperty(
+			'tipo',
+			$result,
+			'node should have tipo' . PHP_EOL
+				. 'response: ' . to_string($response) . PHP_EOL
+				. 'section_model_tipo: ' . to_string($section_model_tipo) . PHP_EOL
+		);
+		$this->assertObjectHasProperty('model', $result, 'node should have model' . PHP_EOL
+				. 'response: ' . to_string($response));
+		$this->assertObjectHasProperty('term', $result, 'node should have term' . PHP_EOL
+				. 'response: ' . to_string($response));
+		$this->assertObjectHasProperty('tld', $result, 'node should have tld' . PHP_EOL
+				. 'response: ' . to_string($response));
+
 		$this->assertEquals(
 			$section_model_tipo,
-			$response->result->tipo,
-			'returned tipo should match requested tipo'
+			$result->tipo,
+			'returned tipo should match requested tipo' . PHP_EOL
+				. 'response: ' . to_string($response)
 		);
 	}//end test_get_node
 
@@ -273,9 +289,10 @@ final class dd_ontology_api_test extends BaseTestCase {
 		$response = dd_ontology_api::get_node($rqo);
 
 		$this->assertContains(
-			'node_not_found',
+			'invalid_tipo',
 			$response->errors,
-			'expected node_not_found error'
+			'expected invalid_tipo error' . PHP_EOL
+				. 'response: ' . to_string($response) . PHP_EOL
 		);
 	}//end test_get_node_invalid_tipo
 
@@ -416,7 +433,7 @@ final class dd_ontology_api_test extends BaseTestCase {
 	*/
 	public function test_api_actions_allowlist(): void {
 
-		$expected_actions = ['resolve_term', 'resolve_section', 'get_node', 'search'];
+		$expected_actions = ['resolve_term', 'resolve_section', 'get_node', 'search','get_glossary','resolve_path'];
 		$actual_actions = dd_ontology_api::API_ACTIONS;
 
 		$this->assertEquals(
