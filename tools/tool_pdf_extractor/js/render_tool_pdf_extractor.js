@@ -192,14 +192,14 @@ const get_content_data = async function(self) {
 					button_submit,
 					icon_gear
 				]
-				elements.map(el => el.classList.add('loading'))
+				elements.forEach(el => el.classList.add('loading'))
 
 			// pdf_data. Extract PDF file text/html
 				const extracted_data_response = await self.get_pdf_data()
 				if(!extracted_data_response || !extracted_data_response.result || extracted_data_response.result===false) {
 
 					// loading css
-					elements.map(el => el.classList.remove('loading'))
+					elements.forEach(el => el.classList.remove('loading'))
 
 					// msg
 					const msg = extracted_data_response.msg || 'Unknown error on get_pdf_data'
@@ -239,7 +239,7 @@ const get_content_data = async function(self) {
 
 			// loading css
 				preview.classList.remove('hide')
-				elements.map(el => el.classList.remove('loading'))
+				elements.forEach(el => el.classList.remove('loading'))
 
 			// show button select
 				button_select.classList.remove('hide')

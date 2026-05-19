@@ -361,7 +361,7 @@ const update_process_status = (options) => {
 	const self			= options.self
 
 	// locks lock_items
-	lock_items.map(el =>{
+	lock_items.forEach(el =>{
 		el.classList.add('loading')
 	})
 
@@ -479,7 +479,7 @@ const update_process_status = (options) => {
 			// is triggered at the reader's closing
 			render_response.done()
 			// unlock lock_items
-			lock_items.map(el =>{
+			lock_items.forEach(el =>{
 				el.classList.remove('loading')
 			})
 

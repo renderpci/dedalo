@@ -214,7 +214,7 @@ const get_content_data = async function(self) {
 		try {
 			// Reset UI state
 			// Messages clean
-			[messages_container].map(el => el.classList.remove('error'))
+			[messages_container].forEach(el => el.classList.remove('error'))
 			// Loading
 			content_data.classList.add('loading')
 			messages_container.innerHTML = ''

@@ -179,7 +179,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 	// hide service_upload elements. To upload again, user must to reload the page
 		dd_request_idle_callback(
 			() => {
-				[self.service_upload.form, self.service_upload.progress_bar_container].map(el => el.classList.add('hide'));
+				[self.service_upload.form, self.service_upload.progress_bar_container].forEach(el => el.classList.add('hide'));
 			}
 		)
 

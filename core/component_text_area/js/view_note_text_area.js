@@ -202,7 +202,7 @@ view_note_text_area.render = async function(self, options) {
 						// if user has enough permissions, activate buttons
 						const permissions = component.permissions || 1
 						if (permissions>1) {
-							[button_delete,button_ok].map(el => el.classList.remove('hide'))
+							[button_delete,button_ok].forEach(el => el.classList.remove('hide'))
 						}
 
 						// activate

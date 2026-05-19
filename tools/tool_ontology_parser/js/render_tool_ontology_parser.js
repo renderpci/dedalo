@@ -128,7 +128,7 @@ const get_content_data = async function(self) {
 					[
 						messages_container
 					]
-					.map(el => el.classList.remove('error'))
+					.forEach(el => el.classList.remove('error'))
 
 				// spinner
 					let spinner
@@ -214,7 +214,7 @@ const get_content_data = async function(self) {
 					[
 						messages_container
 					]
-					.map(el => el.classList.remove('error'))
+					.forEach(el => el.classList.remove('error'))
 
 				// spinner
 					let spinner
