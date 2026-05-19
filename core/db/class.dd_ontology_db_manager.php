@@ -96,16 +96,19 @@ abstract class dd_ontology_db_manager {
 
 			$columns[] = pg_escape_identifier($conn, $col);
 
-			$value = $values->$col ?? null;
+			$default_value = isset(self::$boolean_columns[$col]) ? false : null;
 
-			// Placeholders / Values
-			 if ($value !== null && isset(self::$json_columns[$col])) {
-				// Encode PHP array/object as JSON string
-				$params[]		= json_handler::encode($value);
+			$value = $values?->$col ?? $default_value;
+
+			// Placeholders / Values (type determined by column definition, not runtime value,
+			// to ensure the prepared statement SQL structure is always identical)
+			if (isset(self::$json_columns[$col])) {
+				// Encode PHP array/object as JSON string, or pass null directly
+				$params[]		= ($value !== null) ? json_handler::encode($value) : null;
 				$placeholders[]	= '$' . $param_index . '::jsonb';
-			}else if(is_bool($value)) {
+			}elseif (isset(self::$boolean_columns[$col])) {
 				// Parse boolean values to safe save as t|f
-				$params[]		= $value ? 't' : 'f';
+				$params[]		= is_bool($value) ? ($value ? 't' : 'f') : 'f';
 				$placeholders[]	= '$' . $param_index . '::boolean';
 			}else{
 				$params[]		= $value;
@@ -130,7 +133,7 @@ abstract class dd_ontology_db_manager {
 		// If a previous record with the same value for the 'tipo' column exists:
 		// Update the record using the ON CONFLICT clause.
 		$sql = "
-			INSERT INTO $table (" . implode(', ', $columns) . ")
+			INSERT INTO \"$table\" (" . implode(', ', $columns) . ")
 			VALUES (" . implode(', ', $placeholders) . ")
 			ON CONFLICT ($conflict_column)
 			DO UPDATE SET " . implode(', ', $update_parts) . "
@@ -150,6 +153,15 @@ abstract class dd_ontology_db_manager {
 			}
 			// Set the statement as existing.
 			DBi::$prepared_statements[$stmt_name] = true;
+
+			// debug
+			// if(SHOW_DEBUG) {
+			// 	$debug_sql = debug_prepared_statement($sql, $params, $conn);
+			// 	debug_log(__METHOD__
+			// 		.' debug_sql: ' . PHP_EOL . $debug_sql
+			// 		, logger::WARNING
+			// 	);
+			// }
 		}
 		$result = pg_execute(
 			$conn,
