@@ -397,6 +397,8 @@ tool_export.prototype._init_grid_with_data = async function(data, view, show_tip
 * _UPDATE_HEADER_COLUMNS
 * Dynamically updates the header (data[0]) with any new columns found in the row.
 * Required for breakdown exports where portals can dynamically expand the number of columns.
+* Uses row_data.ar_columns_obj (row-level property) as the authoritative source of columns,
+* rather than iterating cell-level ar_columns_obj which may be incomplete or absent.
 */
 tool_export.prototype._update_header_columns = function(row_data) {
 	const self = this;
@@ -405,87 +407,112 @@ tool_export.prototype._update_header_columns = function(row_data) {
 	const header = self.dd_grid.data[0];
 	if (!header || !header.value || !Array.isArray(header.value)) return;
 
+	// Get column objects from the row-level property (authoritative source).
+	// Each streamed row carries ar_columns_obj with all columns for that row,
+	// set by PHP: $row_grid->set_ar_columns_obj($ar_row_value->ar_columns_obj)
+	const row_columns = Array.isArray(row_data.ar_columns_obj)
+		? row_data.ar_columns_obj
+		: (row_data.ar_columns_obj && typeof row_data.ar_columns_obj === 'object')
+			? [row_data.ar_columns_obj]
+			: [];
+
+	if (row_columns.length === 0) return;
+
+	// Use a persistent Set cached on the instance to avoid rebuilding for every row.
+	// This is critical for performance with thousands of rows.
+	if (!self._header_column_ids) {
+		self._header_column_ids = new Set();
+		for (const header_cell of header.value) {
+			if (header_cell.ar_columns_obj && header_cell.ar_columns_obj.id) {
+				self._header_column_ids.add(header_cell.ar_columns_obj.id);
+			}
+		}
+	}
+	const existing_ids = self._header_column_ids;
+
+	// Fast path: if row has no new columns (common case), skip entirely
+	let has_new = false;
+	for (const col_obj of row_columns) {
+		if (col_obj && col_obj.id && !existing_ids.has(col_obj.id)) {
+			has_new = true;
+			break;
+		}
+	}
+	if (!has_new) return;
+
 	let dom_updated = false;
 
-	if (Array.isArray(row_data.value)) {
-		// Iterate through all cells in the row
-		for (const cell of row_data.value) {
-			if (Array.isArray(cell.ar_columns_obj)) {
-				for (const col_obj of cell.ar_columns_obj) {
-					
-					// Check if col_obj.id is already in header
-					let found = false;
-					for (const header_cell of header.value) {
-						if (header_cell.ar_columns_obj && header_cell.ar_columns_obj.id === col_obj.id) {
-							found = true;
-							break;
-						}
+	for (const col_obj of row_columns) {
+		if (!col_obj || !col_obj.id) continue;
+
+		// Skip if already in header
+		if (existing_ids.has(col_obj.id)) continue;
+
+		// Create a new header cell
+		const new_header_cell = {
+			type		: 'column',
+			cell_type	: 'header',
+			ar_columns_obj	: col_obj,
+			render_label	: true,
+			class_list	: 'caption section'
+		};
+
+		// Find correct insert position
+		let insert_index = header.value.length;
+		const parts = (col_obj.id || '').split('|');
+		if (parts.length > 1) {
+			// Find the last column with the same group
+			for (let i = 0; i < header.value.length; i++) {
+				if (header.value[i].ar_columns_obj && header.value[i].ar_columns_obj.group === col_obj.group) {
+					insert_index = i + 1;
+				}
+			}
+		}
+
+		// Insert into header data
+		header.value.splice(insert_index, 0, new_header_cell);
+		existing_ids.add(col_obj.id);
+		dom_updated = true;
+
+		// Update DOM if table is already rendered.
+		// Note: view_table_dd_grid renders <tr> directly inside <table> (no thead/tbody).
+		// The header row has class "row_header".
+		if (self.dd_grid.node && document.body.contains(self.dd_grid.node)) {
+			const table = self.dd_grid.node.querySelector('table') || self.dd_grid.node;
+			if (table && table.tagName === 'TABLE') {
+				const header_tr = table.querySelector('tr.row_header');
+				if (header_tr) {
+					// Build TH label from ar_labels (same logic as render_header_column)
+					const ar_labels = col_obj.ar_labels || [];
+					const labels = [];
+					for (let i = 0; i < ar_labels.length; i++) {
+						if (i % 2 !== 1) continue;
+						labels.push(ar_labels[i] || '');
+					}
+					const label_text = labels.length > 0
+						? labels.join(' | ')
+						: (col_obj.label || '');
+
+					const th = document.createElement('th');
+					th.innerHTML = label_text;
+
+					// Insert into correct position in header TR
+					const ths = header_tr.querySelectorAll('th');
+					if (insert_index < ths.length) {
+						header_tr.insertBefore(th, ths[insert_index]);
+					} else {
+						header_tr.appendChild(th);
 					}
 
-					if (!found) {
-						// Create a new header cell
-						const new_header_cell = {
-							type: 'column',
-							cell_type: 'header',
-							ar_columns_obj: col_obj,
-							render_label: true,
-							class_list: 'caption section'
-						};
-						
-						// Find correct insert position
-						let insert_index = header.value.length;
-						const parts = (col_obj.id || '').split('|');
-						if (parts.length > 1) {
-							// Find the last column with the same group
-							for (let i = 0; i < header.value.length; i++) {
-								if (header.value[i].ar_columns_obj && header.value[i].ar_columns_obj.group === col_obj.group) {
-									insert_index = i + 1;
-								}
-							}
-						}
-
-						// Insert into header data
-						header.value.splice(insert_index, 0, new_header_cell);
-						dom_updated = true;
-
-						// Update DOM if table is already rendered
-						if (self.dd_grid.node && document.body.contains(self.dd_grid.node)) {
-							const table = self.dd_grid.node.querySelector('table') || self.dd_grid.node;
-							if (table && table.tagName === 'TABLE') {
-								const thead = table.querySelector('thead');
-								if (thead) {
-									const tr = thead.querySelector('tr');
-									if (tr) {
-										// We need to render the TH and insert it
-										const th = document.createElement('th');
-										th.className = 'caption section';
-										th.innerHTML = col_obj.label || '';
-										
-										// Insert into correct position in TR
-										const ths = tr.querySelectorAll('th');
-										if (insert_index < ths.length) {
-											tr.insertBefore(th, ths[insert_index]);
-										} else {
-											tr.appendChild(th);
-										}
-
-										// Also, ALL existing TRs in TBODY need an empty TD at this index!
-										const tbody = table.querySelector('tbody');
-										if (tbody) {
-											const trs = tbody.querySelectorAll('tr');
-											for (const body_tr of trs) {
-												const td = document.createElement('td');
-												const tds = body_tr.querySelectorAll('td');
-												if (insert_index < tds.length) {
-													body_tr.insertBefore(td, tds[insert_index]);
-												} else {
-													body_tr.appendChild(td);
-												}
-											}
-										}
-									}
-								}
-							}
+					// All existing body TRs need an empty TD at this index
+					const all_trs = table.querySelectorAll('tr:not(.row_header)');
+					for (const body_tr of all_trs) {
+						const td = document.createElement('td');
+						const tds = body_tr.querySelectorAll('td');
+						if (insert_index < tds.length) {
+							body_tr.insertBefore(td, tds[insert_index]);
+						} else {
+							body_tr.appendChild(td);
 						}
 					}
 				}
@@ -542,16 +569,36 @@ tool_export.prototype._append_row_to_grid_ui = function(row_data) {
 			// Process rows in batches to avoid blocking the main thread while maintaining high throughput
 			const BATCH_SIZE = 20;
 
+			// Cache table reference and column map outside the loop
+			const table = self.dd_grid.node.querySelector('table') || self.dd_grid.node;
+			if (!table || table.tagName !== 'TABLE') {
+				self._is_processing_queue = false;
+				return;
+			}
+			const header_row = self.dd_grid.data[0];
+
 			while (self._row_queue.length > 0) {
 				// Take a batch of rows
 				const batch = self._row_queue.splice(0, BATCH_SIZE);
 
-				// Apply batch to DOM in a single animation frame
+				// Apply batch to DOM in a single animation frame using DocumentFragment
 				await new Promise(resolve => {
-					requestAnimationFrame(async () => {
-						for (const row of batch) {
-							await self._do_append_row(row);
+					requestAnimationFrame(() => {
+						// Get or rebuild cached column map (invalidated when header changes)
+						if (!self._cached_ar_columns_obj || self._cached_ar_columns_obj_version !== header_row.value.length) {
+							self._cached_ar_columns_obj = header_row.value.map(item => item.ar_columns_obj);
+							self._cached_ar_columns_obj_version = header_row.value.length;
 						}
+
+						const fragment = document.createDocumentFragment();
+						for (const row of batch) {
+							const row_fragment = self._view_table_dd_grid.render_row(
+								self.dd_grid, row, self._cached_ar_columns_obj
+							);
+							fragment.appendChild(row_fragment);
+						}
+						// Single DOM append per batch = single layout reflow
+						table.appendChild(fragment);
 						resolve();
 					});
 				});
@@ -576,7 +623,7 @@ tool_export.prototype._append_row_to_grid_ui = function(row_data) {
 
 /**
 * _DO_APPEND_ROW
-* Actual DOM insertion of a row
+* Actual DOM insertion of a row (used for single-row appends outside batching)
 * @private
 */
 tool_export.prototype._do_append_row = async function(row_data) {

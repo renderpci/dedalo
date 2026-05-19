@@ -304,31 +304,8 @@ class tool_export extends tool_common {
 		$ar_section_columns_count = sizeof($ar_columns_obj);
 		$ar_head_columns = [];
 		for ($i=0; $i < $ar_section_columns_count; $i++) {
-			$column_obj			= $ar_columns_obj[$i];
-			$column_path		= explode('|', $column_obj->id);
-			$column_tipos		= explode('_', $column_path[0]);
-			$column_labels		= [];
-			$column_tipos_len	= sizeof($column_tipos)-1;
-			foreach ($column_tipos as $column_key => $column_tipo) {
-				if(safe_tipo($column_tipo)===false) {
-					// Use non-tipo strings directly as labels (e.g. from widget sub-columns)
-					$column_labels[] = $column_tipo;
-					continue;
-				}
-				if($this->data_format==='dedalo_raw'){
-					$model_name = ontology_node::get_model_by_tipo($column_tipo);
-					$column_labels[] = ($model_name === 'component_section_id') ? 'section_id' : $column_tipo;
-				}else{
-					$column_label = ontology_node::get_term_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
-					if (empty($column_label)) $column_label = $column_tipo;
-					$column_labels[] = (sizeof($column_path)>1 && ($column_key === $column_tipos_len))
-						? $column_label.' '.($column_path[1] + 1)
-						: $column_label;
-				}
-			}
-			$column_obj->ar_labels	= $column_labels;
-			$column_obj->label_tipo	= end($column_tipos);
-			$column_obj->ar_tipos 	= $column_tipos;
+			$column_obj = $ar_columns_obj[$i];
+			$this->compute_column_labels($column_obj);
 
 			$section_grid = new dd_grid_cell_object();
 			$section_grid->set_type('column');
@@ -350,9 +327,21 @@ class tool_export extends tool_common {
 		if (ob_get_level() > 0) @ob_flush();
 		flush();
 
+		// Track which column IDs already have labels computed (from header).
+		// Column objects are fresh stdClass per row, so we cache by ID.
+		$labeled_column_ids = $ar_columns_index; // reuse: already-known IDs from first row
+
 		// Second pass: Stream Rows
 		foreach ($db_result as $row_index => $row) {
 			$ar_row_value = $this->get_grid_value($ar_ddo_map, $row);
+
+			// Compute labels only for NEW column IDs not yet seen
+			foreach ($ar_row_value->ar_columns_obj as $col_obj) {
+				if (!isset($labeled_column_ids[$col_obj->id])) {
+					$this->compute_column_labels($col_obj);
+					$labeled_column_ids[$col_obj->id] = true;
+				}
+			}
 
 			$row_grid = new dd_grid_cell_object();
 			$row_grid->set_type('row');
@@ -542,37 +531,8 @@ class tool_export extends tool_common {
 		// build the header labels
 			for ($i=0; $i < $ar_section_columns_count; $i++) {
 
-				$column_obj			= $ar_columns_obj[$i];
-				$column_path		= explode('|', $column_obj->id);
-				$column_tipos		= explode('_', $column_path[0]);
-				$column_labels		= [];
-				$column_tipos_len	= sizeof($column_tipos)-1;
-				foreach ($column_tipos as $column_key => $column_tipo) {
-					if(safe_tipo($column_tipo)===false) {
-						// Use non-tipo strings directly as labels (e.g. from widget sub-columns)
-						$column_labels[] = $column_tipo;
-						continue;
-					}
-					// set the column name, if the format is Dédalo use the $tipo and section_id
-					// for standard format use the name
-					if($this->data_format==='dedalo_raw'){
-						$model_name = ontology_node::get_model_by_tipo($column_tipo);
-						$column_labels[] = ($model_name === 'component_section_id')
-							? 'section_id'
-							: $column_tipo;
-					}else{
-						$column_label = ontology_node::get_term_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
-						if (empty($column_label)) {
-							$column_label = $column_tipo;
-						}
-						$column_labels[] = (sizeof($column_path)>1 && ($column_key === $column_tipos_len))
-							? $column_label .' '. ($column_path[1]+1)
-							: $column_label;
-					}
-				}
-				$column_obj->ar_labels	= $column_labels;
-				$column_obj->label_tipo	= end($column_tipos);
-				$column_obj->ar_tipos 	= $column_tipos;
+				$column_obj = $ar_columns_obj[$i];
+				$this->compute_column_labels($column_obj);
 
 				// create the grid cell of the section
 					$section_grid = new dd_grid_cell_object();
@@ -837,6 +797,47 @@ class tool_export extends tool_common {
 
 		return $value;
 	}//end get_grid_value
+
+
+
+	/**
+	 * COMPUTE_COLUMN_LABELS
+	 * Computes ar_labels, label_tipo, and ar_tipos for a column object.
+	 * Parses the column id (e.g. "numisdata6_numisdata163_rsc368_rsc139_rsc86|1")
+	 * and resolves each tipo to a human-readable label via ontology.
+	 *
+	 * @param object $column_obj Column object with 'id' property. Modified in place.
+	 * @return void
+	 */
+	protected function compute_column_labels(object $column_obj) : void {
+
+		$column_path		= explode('|', $column_obj->id);
+		$column_tipos		= explode('_', $column_path[0]);
+		$column_labels		= [];
+		$column_tipos_len	= sizeof($column_tipos) - 1;
+
+		foreach ($column_tipos as $column_key => $column_tipo) {
+			if (safe_tipo($column_tipo) === false) {
+				// Use non-tipo strings directly as labels (e.g. from widget sub-columns)
+				$column_labels[] = $column_tipo;
+				continue;
+			}
+			if ($this->data_format === 'dedalo_raw') {
+				$model_name = ontology_node::get_model_by_tipo($column_tipo);
+				$column_labels[] = ($model_name === 'component_section_id') ? 'section_id' : $column_tipo;
+			} else {
+				$column_label = ontology_node::get_term_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
+				if (empty($column_label)) $column_label = $column_tipo;
+				$column_labels[] = (sizeof($column_path) > 1 && ($column_key === $column_tipos_len))
+					? $column_label . ' ' . ($column_path[1] + 1)
+					: $column_label;
+			}
+		}
+
+		$column_obj->ar_labels	= $column_labels;
+		$column_obj->label_tipo	= end($column_tipos);
+		$column_obj->ar_tipos	= $column_tipos;
+	}//end compute_column_labels
 
 
 
