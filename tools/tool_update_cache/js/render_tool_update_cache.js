@@ -107,7 +107,7 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-	// button_apply
+	// button_apply (Update records)
 		const button_apply = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'success button_apply',
@@ -135,6 +135,7 @@ const get_content_data = async function(self) {
 			// loading styles and clean
 				// components_list_container.classList.add('loading')
 				button_apply.classList.add('loading')
+				button_apply.classList.add('button_spinner')
 				// blur button
 				document.activeElement.blur()
 
@@ -144,6 +145,7 @@ const get_content_data = async function(self) {
 			// response failed case
 				if (api_response.result===false) {
 					button_apply.classList.remove('loading')
+					button_apply.classList.remove('button_spinner')
 					response_message.innerHTML = api_response.msg || 'Unknown error. Perhaps a timeout occurred'
 					if (api_response.errors?.length) {
 						alert(api_response.errors.join(' | '));
@@ -577,6 +579,7 @@ const update_process_status = (options) => {
 			render_response.done()
 			// unlocks the button submit
 			button.classList.remove('loading')
+			button.classList.remove('button_spinner')
 			container.classList.remove('loading')
 			components_list_container.classList.remove('loading')
 
