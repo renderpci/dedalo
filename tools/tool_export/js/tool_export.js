@@ -310,7 +310,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 						// This prevents a race condition where rows are added to dd_grid.data
 						// and rendered by both dd_grid.render() and _append_row_to_grid_ui().
 						let wait_cycles = 0;
-						while((!self.dd_grid.node || !document.body.contains(self.dd_grid.node)) && wait_cycles < 100) {
+						while((!self.dd_grid.node || !(self.dd_grid.node instanceof Node) || !document.body.contains(self.dd_grid.node)) && wait_cycles < 100) {
 							await new Promise(r => setTimeout(r, 50));
 							wait_cycles++;
 						}
