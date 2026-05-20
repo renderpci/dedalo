@@ -179,16 +179,16 @@ final class ImageMagick {
 		$extension				= pathinfo($target_file, PATHINFO_EXTENSION);
 		$ar_opaque_extensions	= ['jpg','jpeg'];
 
-		// check if the original image is opaque or transparent (it doesn't check if the image has meta channel)
-		$is_opaque = true;
-		if(!in_array($extension, $ar_opaque_extensions)){
-			$is_opaque = self::is_opaque($source_file);
-		}
-
 		// Valid source file verify
 		if (!file_exists($source_file)) {
 			debug_log(__METHOD__ . " Source file does not exist: $source_file", logger::ERROR);
 			return false;
+		}
+
+		// check if the original image is opaque or transparent (it doesn't check if the image has meta channel)
+		$is_opaque = true;
+		if(!in_array($extension, $ar_opaque_extensions)){
+			$is_opaque = self::is_opaque($source_file);
 		}
 
 		// check if the original image has a meta channel (transparent channel, alpha channel)
@@ -225,7 +225,7 @@ final class ImageMagick {
 			$begin_flags .= isset($density)
 				? '-density '. escapeshellarg((string)$density).' '
 				: '';
-			$begin_flags .= isset($antialias)
+			$begin_flags .= ($antialias === true)
 				? '-antialias '
 				: '';
 
@@ -410,7 +410,7 @@ final class ImageMagick {
 				. " get_layers_file_info command " . PHP_EOL
 				. 'command: ' .to_string($command) . PHP_EOL
 				. 'tiff_format: ' . json_encode($tiff_format)
-				, logger::WARNING
+				, logger::DEBUG
 			);
 
 		// empty case
@@ -469,7 +469,7 @@ final class ImageMagick {
 				. " has_meta_channel command " . PHP_EOL
 				. 'command: ' . $command . PHP_EOL
 				. 'channels: ' . json_encode($string_channels)
-				, logger::WARNING
+				, logger::DEBUG
 			);
 
 			if ($worked_result !== 0 || empty($string_channels)) {
@@ -550,7 +550,7 @@ final class ImageMagick {
 				$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." $color -distort SRT $safe_degrees +repage ". escapeshellarg($target);
 			}
 
-			$result = shell_exec($command);
+			$result = exec($command . ' 2>&1', $output, $worked_result);
 
 		// debug
 			debug_log(__METHOD__
@@ -559,8 +559,18 @@ final class ImageMagick {
 				, logger::DEBUG
 			);
 
+			if ($worked_result !== 0) {
+				debug_log(__METHOD__
+					. ' exec command bad result' . PHP_EOL
+					. ' command: ' . $command . PHP_EOL
+					. ' worked_result: ' . to_string($worked_result) . PHP_EOL
+					. ' output: ' . to_string($output)
+					, logger::WARNING
+				);
+				return null;
+			}
 
-		return $result;
+		return $result ?: null;
 	}//end rotate
 
 
@@ -601,7 +611,7 @@ final class ImageMagick {
 		// command
 		$command = ImageMagick::get_imagemagick_installed_path() ." ". escapeshellarg($source) ." -crop {$geometry} +repage ". escapeshellarg($target);
 
-		$result = shell_exec($command);
+		$result = exec($command . ' 2>&1', $output, $worked_result);
 
 		// debug
 			debug_log(__METHOD__
@@ -610,8 +620,18 @@ final class ImageMagick {
 				, logger::DEBUG
 			);
 
+			if ($worked_result !== 0) {
+				debug_log(__METHOD__
+					. ' exec command bad result' . PHP_EOL
+					. ' command: ' . $command . PHP_EOL
+					. ' worked_result: ' . to_string($worked_result) . PHP_EOL
+					. ' output: ' . to_string($output)
+					, logger::WARNING
+				);
+				return null;
+			}
 
-		return $result;
+		return $result ?: null;
 	}//end crop
 
 
@@ -638,8 +658,8 @@ final class ImageMagick {
 	public static function get_media_attributes( string $file_path ) : ?array {
 
 		// convert image.jpg[1x1+0+0] json:
-			$command		= ImageMagick::get_imagemagick_installed_path() . " ". escapeshellarg($file_path) ." json: ";
-			$exec_result	= shell_exec($command);
+			$command = ImageMagick::get_imagemagick_installed_path() . " ". escapeshellarg($file_path) ." json: ";
+			exec($command . ' 2>&1', $output, $worked_result);
 
 		// debug
 			debug_log(__METHOD__
@@ -647,8 +667,19 @@ final class ImageMagick {
 				, logger::DEBUG
 			);
 
-		$result = !empty($exec_result)
-			? json_decode($exec_result)
+			if ($worked_result !== 0) {
+				debug_log(__METHOD__
+					. ' exec command bad result' . PHP_EOL
+					. ' command: ' . $command . PHP_EOL
+					. ' worked_result: ' . to_string($worked_result) . PHP_EOL
+					. ' output: ' . to_string($output)
+					, logger::WARNING
+				);
+				return null;
+			}
+
+		$result = !empty($output)
+			? json_decode(implode(PHP_EOL, $output))
 			: null;
 
 
@@ -754,11 +785,11 @@ final class ImageMagick {
 		$command_orientation	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format "%[orientation]" ' . escapeshellarg($file_path) .'[0]';
 		$orientation			= shell_exec($command_orientation);
 
-		$commnad_w	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format %w ' . escapeshellarg($file_path) .'[0]';
-		$width		= shell_exec($commnad_w);
+		$command_w	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format %w ' . escapeshellarg($file_path) .'[0]';
+		$width		= shell_exec($command_w);
 
-		$commnad_h	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format %h ' . escapeshellarg($file_path) .'[0]';
-		$height		= shell_exec($commnad_h);
+		$command_h	= ImageMagick::get_imagemagick_identify_path() . ' -quiet -format %h ' . escapeshellarg($file_path) .'[0]';
+		$height		= shell_exec($command_h);
 
 			// Undefined  - 0
 			// Undefined  - [When no metadata]
@@ -784,8 +815,6 @@ final class ImageMagick {
 				case 'TopLeft':	// rotate 0
 				case 'BottomRight': // rotate 180
 				default:
-					$width 	= $width ?? null;
-					$height = $height ?? null;
 					break;
 			}
 
