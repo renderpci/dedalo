@@ -128,6 +128,10 @@ trait search_component_json {
     */
     protected static function dispatch_json_operator_sql(object $query_object, string $q, object $ctx) : object {
 
+        if($ctx->table==='matrix_time_machine') {
+            return self::dispatch_operator_sql_tm($query_object, $q, $ctx);
+        }
+
         // escape q string for JSON Path (double quotes)
         $q_json_path = str_replace('"', '\\"', $q);
 

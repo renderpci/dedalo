@@ -107,4 +107,51 @@ final class component_json_Search_Test extends BaseTestCase {
             ]
         ];
     }
+
+    /**
+     * TM column dd1574 is modeled as component_json but must resolve search SQL like component_input_text.
+     */
+    public function test_matrix_time_machine_dd1574_delegates_to_input_text_resolver() : void {
+        $this->user_login();
+
+        $alias = 'dd623_tm';
+        $base    = [
+            'q'          => 'needle',
+            'q_operator' => null,
+            'path'       => [[
+                'name'            => 'value',
+                'model'           => 'component_json',
+                'section_tipo'    => 'dd623',
+                'component_tipo'   => DEDALO_TIME_MACHINE_COLUMN_DATA,
+            ]],
+            'table_alias'=> $alias,
+            'table'      => 'matrix_time_machine',
+        ];
+
+        $query_json = json_decode(json_encode($base));
+        $query_text = json_decode(json_encode($base));
+
+        $from_json = component_json::resolve_query_object_sql($query_json);
+        $from_text = component_input_text::resolve_query_object_sql($query_text);
+
+        $this->assertNotFalse($from_json);
+
+        $this->assertSame('string', $from_json->type ?? null, 'TM dd1574 search should use string query type');
+
+        $normalize_sentence = static function (string $s) : string {
+            return preg_replace('/\s+/', ' ', trim($s));
+        };
+
+        $this->assertSame(
+            $normalize_sentence((string)$from_text->sentence),
+            $normalize_sentence((string)$from_json->sentence),
+            'SQL sentence must match component_input_text resolver for TM data column'
+        );
+        $this->assertSame(
+            (array)($from_text->params ?? []),
+            (array)($from_json->params ?? [])
+        );
+
+        $this->assertStringContainsString("{$alias}.data", (string)$from_json->sentence);
+    }
 }
