@@ -219,12 +219,8 @@ const get_content_data = async function(self) {
 			content_data.classList.add('loading')
 			messages_container.innerHTML = ''
 
-			// Add spinner
-			spinner = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'spinner',
-				parent			: content_data.parentNode
-			})
+			// Add spinner to the button
+			button_generate.classList.add('button_spinner')
 
 			// Call API to process records in dd_ontology
 			const api_response = await self.set_records_in_dd_ontology()
@@ -268,10 +264,8 @@ const get_content_data = async function(self) {
 			messages_container.classList.add('error')
 		} finally {
 			// Clean up UI state
-			content_data.classList.remove('loading')
-			if (spinner && spinner.parentNode) {
-				spinner.remove()
-			}
+			content_data.classList.remove('loading')			
+			button_generate.classList.remove('button_spinner')
 			button_generate.generating = false
 		}
 	}
