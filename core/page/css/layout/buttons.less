@@ -43,13 +43,15 @@
 .fn_append_icon(@icon_name, @color: @color_grey_3, @opacity:1) {
 
 	--icon-path : url('../../themes/default/icons/@{icon_name}');
+	--button-bg-color : @color;
 
 	&:before {
-		background-color: @color;
+		background-color: var(--button-bg-color, @color);
 		content: ' ';
 		display: inline-block;
 		height: 1em;
-		margin-right: 0.25em;
+		// margin-right: 0.25rem;
+		margin-right: 0.25rem;
 		opacity: @opacity;
 		vertical-align: baseline;
 		width: 1em;
@@ -135,7 +137,7 @@ button {
 	line-height: 1.5;
 	font-size: 1rem;
 	font-weight: 400;
-	margin-right: 0.25em;
+	margin-right: 0.25rem;
 	padding: 0.275rem;
 	padding-left: 0.65rem;
 	padding-right: 0.65rem;
@@ -214,7 +216,7 @@ button {
 		border-color: @color_orange_border;
 		color: @color_white ;
 		&:before {
-			background-color: @color_white  !important;
+			background-color: @color_white !important;
 		}
 		&:hover {
 			background-color: @color_orange_hover_bg;
@@ -226,7 +228,7 @@ button {
 		border-color: @color_info_border;
 		color: @color_white ;
 		&:before {
-			background-color: @color_white  !important;
+			background-color: @color_white !important;
 		}
 		&:hover {
 			background-color: @color_info_hover_bg;
@@ -238,7 +240,7 @@ button {
 		border-color: @color_light_border;
 		color: @color_grey_1;
 		&:before {
-			background-color: @color_grey_1 !important;
+			background-color: var(--button-bg-color, @color_grey_1) !important;
 		}
 		&:hover {
 			background-color: @color_light_hover_bg;
@@ -250,7 +252,7 @@ button {
 		border-color: @color_dark_border;
 		color: @color_white ;
 		&:before {
-			background-color: @color_white  !important;
+			background-color: var(--button-bg-color, @color_white)  !important;
 		}
 		&:hover {
 			background-color: @color_dark_hover_bg;
@@ -602,8 +604,8 @@ button {
 .contenteditable_buttons {
 	display: flex;
 	padding: 0px;
-	border-top-left-radius: 0.25em;
-	border-top-right-radius: 0.25em;
+	border-top-left-radius: 0.25rem;
+	border-top-right-radius: 0.25rem;
 
 	>.button {
 		color: @color_white ;
@@ -614,7 +616,7 @@ button {
 			background-repeat: no-repeat;
 			height: 1em;
 			width: 1em;
-			margin-right: 0.25em;
+			margin-right: 0.25rem;
 			padding-right: 1em;
 			vertical-align: text-bottom;
 		}
@@ -637,6 +639,7 @@ button {
 // button spinner
 button.button_spinner {
 	pointer-events: none !important;
+	--icon-path: null; // remove icon mask
 
 	&::before {
 		content: " ";
@@ -644,13 +647,13 @@ button.button_spinner {
 		background-color: unset !important;
 		height: 1em;
 		width: 1em;
-		margin-right: 0.5em;
+		margin-right: 0.33em;
 		vertical-align: text-bottom;
 
 		// Create a curve at the top
 		border-radius: 50%;
-		border: 1.45px solid @color_white;
-		border-top-color: @color_orange_dedalo;
+		border: 1.45px solid var(--color_white);
+		border-top-color: var(--button-bg-color, --color_orange_dedalo);
 
 		animation: run_spinner 800ms linear infinite;
 	}
