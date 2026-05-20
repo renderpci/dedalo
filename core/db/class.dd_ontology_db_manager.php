@@ -788,11 +788,11 @@ abstract class dd_ontology_db_manager {
 			$param_idx++;
 		}
 
-	
+
 		$params[] = ($is_main === true) ? 'true' : 'false';
 		$where_parts[] = 'is_main = $' . $param_idx;
 		$param_idx++;
-		
+
 
 		$limit_clause = ($limit > 0) ? ' LIMIT ' . $limit : '';
 
