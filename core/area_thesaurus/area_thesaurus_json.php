@@ -75,6 +75,12 @@ if (!isset($this)) { http_response_code(404); exit; }
 			$hierarchy_sections = [];
 			foreach ($full_hierarchy_sections as $hierarchy_data) {
 
+				// area_ontology special case. Full access to global admins. Needed to the full list of search types (dd, rsc, lg, ..)
+				if($this->get_model() === 'area_ontology' && logged_user_is_global_admin()) {
+					$hierarchy_sections[] = $hierarchy_data;
+					continue;
+				}
+
 				// Skip section if target tipo lacks read permission
 				if (common::get_permissions(
 					$hierarchy_data->target_section_tipo,
