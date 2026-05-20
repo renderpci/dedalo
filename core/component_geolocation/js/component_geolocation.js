@@ -6,7 +6,7 @@
 
 // imports
 	import {common} from '../../common/js/common.js'
-	import {clone, get_json_langs} from '../../common/js/utils/index.js'
+	import {clone, get_json_langs, load_style, load_script} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_edit_component_geolocation, render_popup_text, render_color_picker} from '../../component_geolocation/js/render_edit_component_geolocation.js'
@@ -177,19 +177,19 @@ component_geolocation.prototype.load_libs = async function () {
 			//  `
 
 	// leaflet. (!) It's necessary to be fully loaded before 'geoman'
-		common.prototype.load_style(
+		load_style(
 			DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
 		)
-		await common.prototype.load_script(
+		await load_script(
 			DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js',
 			license
 		)
 
 	// geoman
-		common.prototype.load_style(
+		load_style(
 			DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
 		)
-		await common.prototype.load_script(
+		await load_script(
 			DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js',
 			license
 		)
@@ -198,13 +198,13 @@ component_geolocation.prototype.load_libs = async function () {
 		self.json_langs = self.json_langs || await get_json_langs()
 
 	// turf
-		await common.prototype.load_script(
+		await load_script(
 			DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js',
 			license
 		)
 
 	// iro
-		await common.prototype.load_script(
+		await load_script(
 			DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js',
 			license
 		)

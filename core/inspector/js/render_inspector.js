@@ -27,7 +27,8 @@
 		object_to_url_vars,
 		get_tld_from_tipo,
 		get_section_id_from_tipo,
-		clone
+		clone,
+		load_style
 	} from '../../common/js/utils/index.js'
 
 
