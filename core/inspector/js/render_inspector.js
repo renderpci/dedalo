@@ -290,22 +290,30 @@ const get_content_data = function(self) {
 		const inspector_tools			= self.caller.context.tools.filter( el => el.show_in_inspector )
 		const inspector_tools_length	= inspector_tools.length
 		if (inspector_tools_length>0) {
-			const tools_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'tools_container top',
-				parent			: content_data
-			})
+			if(inspector_tools_length > 1) {
+				const tools_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'tools_container top',
+					parent			: content_data
+				})
+			}
 			for (let i = 0; i < inspector_tools_length; i++) {
 				const tool_context = inspector_tools[i]
+				// load tool CSS
+				const tool_css_url = DEDALO_TOOLS_URL + '/' + tool_context.model + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
+				load_style(tool_css_url)
 				// tool_button
+					// bg color. E.g. '--tool_ontology_color'
+					const button_bg_color = `--${tool_context.name}_color`					
 					const tool_button = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'light blank',
 						style			: {
-							'--icon-path' : `url('${tool_context.icon}')`
+							'--icon-path' : `url('${tool_context.icon}')`,
+							'--button-bg-color' : `var(${button_bg_color})`
 						},
-						title			: tool_context.label,
-						parent			: tools_container
+						title  : tool_context.label,
+						parent : inspector_tools_length > 1 ? tools_container : buttons_container
 					})
 					const click_handler = (e) => {
 						e.stopPropagation()
