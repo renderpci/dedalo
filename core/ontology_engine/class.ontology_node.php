@@ -591,7 +591,7 @@ class ontology_node {
 	 */
 	public function get_is_translatable() : bool {
 		$this->load_data();
-		return $this->data->is_translatable ?? false;
+		return (bool)($this->data->is_translatable ?? false);
 	}//end get_is_translatable
 
 
@@ -875,6 +875,10 @@ class ontology_node {
 
 		$tipo = $this->get_tipo();
 
+		if (empty($tipo)) {
+			return false;
+		}
+
 		$result = dd_ontology_db_manager::delete($tipo);
 
 		if($result===false) {
@@ -900,7 +904,7 @@ class ontology_node {
 
 		// cache
 		$cache_uid = $tipo . '_' . $lang . '_' . (int)$fallback;
-		if ($from_cache===true && isset(self::$label_by_tipo_cache[$cache_uid])) {
+		if ($from_cache===true && array_key_exists($cache_uid, self::$label_by_tipo_cache)) {
 			return self::$label_by_tipo_cache[$cache_uid];
 		}
 
@@ -943,7 +947,7 @@ class ontology_node {
 
 		// cache
 		$cache_uid = $tipo;
-		if ($from_cache===true && isset(self::$model_by_tipo_cache[$cache_uid])) {
+		if ($from_cache===true && array_key_exists($cache_uid, self::$model_by_tipo_cache)) {
 			return self::$model_by_tipo_cache[$cache_uid];
 		}
 
@@ -1014,7 +1018,7 @@ class ontology_node {
 
 		$json_search = (object)[
 			'operator' => '@>',
-			'value' => '{"'.DEDALO_STRUCTURE_LANG.'":"'.$model.'"}'
+			'value' => json_encode([DEDALO_STRUCTURE_LANG => $model])
 		];
 
 		// search terms with given model
@@ -1179,8 +1183,9 @@ class ontology_node {
 	public function get_ar_parents_of_this( bool $ksort=true ) : array {
 
 		// static cache
-		if(isset($this->tipo) && isset(self::$ar_parents_of_this_data[$this->tipo])) {
-			return self::$ar_parents_of_this_data[$this->tipo];
+		$cache_key = $this->tipo . '_' . (int)$ksort;
+		if(isset($this->tipo) && array_key_exists($cache_key, self::$ar_parents_of_this_data)) {
+			return self::$ar_parents_of_this_data[$cache_key];
 		}
 
 		$ar_parents_of_this = [];
@@ -1193,7 +1198,7 @@ class ontology_node {
 		$parent_inicial	= $parent;
 		$parent_zero	= 'dd0';
 		do {
-			if( strpos($parent, $parent_zero)===false  ) { // $parent != $parent_zero
+			if( $parent !== $parent_zero ) {
 				$ar_parents_of_this[] = $parent;
 			}
 
@@ -1208,7 +1213,7 @@ class ontology_node {
 		}
 
 		// store cache data
-		self::$ar_parents_of_this_data[$this->tipo] = $ar_parents_of_this;
+		self::$ar_parents_of_this_data[$cache_key] = $ar_parents_of_this;
 
 
 		return $ar_parents_of_this;
@@ -1391,9 +1396,7 @@ class ontology_node {
 		$ontology_node	= ontology_node::get_instance( $section_tipo );
 		$properties		= $ontology_node->get_properties();
 
-		$color = isset($properties->color)
-			? $properties->color
-			: '#b9b9b9'; // default gray
+		$color = $properties->color ?? '#b9b9b9'; // default gray
 
 		return $color;
 	}//end get_color
