@@ -150,7 +150,7 @@ const get_content_data = async function(self) {
 							return null;
 						}
 
-						// store instance to locate on destroy
+						// store instance so that it can be located on destroy page
 						if (!self.ar_instances.includes(current_instance)) {
 							self.ar_instances.push(current_instance)
 						}

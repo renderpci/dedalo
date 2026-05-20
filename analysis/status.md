@@ -58,3 +58,4 @@ OK - 33. **new record** add a mechanish what, on if the creation of new reord fa
 35. **permissions**: check permissions issues. Admin user works but others don't.
 OK - 36. ***tools** download registered tool fix
 37. ***ontology output markdown** Add tool ontology output to generate comprehensible IA information in MD
+38. **activity** Investigate connection with time machine to view users changes in each save action stored in activity

@@ -7,5 +7,12 @@
 if (!isset($this)) { http_response_code(404); exit; }
 // JSON data controller
 
+
+/**
+ * Note that this controller uses the 'area_thesaurus_json' file as if it were its own.
+ */
+
+
+
 // ontology custom config file
 return include dirname(__FILE__, 2) .'/area_thesaurus/area_thesaurus_json.php';

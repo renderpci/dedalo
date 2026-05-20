@@ -76,7 +76,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 			foreach ($full_hierarchy_sections as $hierarchy_data) {
 
 				// area_ontology special case. Full access to global admins. Needed to the full list of search types (dd, rsc, lg, ..)
-				if($this->get_model() === 'area_ontology' && logged_user_is_global_admin()) {
+				if ($this->get_model() === 'area_ontology' && logged_user_is_global_admin()) {
 					$hierarchy_sections[] = $hierarchy_data;
 					continue;
 				}
@@ -156,7 +156,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 
 		// ts_search : hierarchy_terms (search)
 			$hierarchy_terms = $properties->hierarchy_terms ?? null;
-			if(!empty($hierarchy_terms)) {
+			if (!empty($hierarchy_terms)) {
 				$sqo	= $this->get_hierarchy_terms_sqo($hierarchy_terms);
 				$result	= $this->search_thesaurus( $sqo );
 				$item->ts_search = $result;
