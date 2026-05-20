@@ -34,6 +34,7 @@ trait search_component_number_tm {
         $ctx->column = match($ctx->component_tipo) {
             DEDALO_TIME_MACHINE_COLUMN_ID => 'id', // dd1573
             DEDALO_TIME_MACHINE_COLUMN_SECTION_ID => 'section_id', // dd1212
+            DEDALO_TIME_MACHINE_COLUMN_BULK_PROCESS_ID => 'bulk_process_id', // dd1371
             default  => $ctx->column
         };
 
