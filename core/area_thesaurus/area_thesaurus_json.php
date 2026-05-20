@@ -10,6 +10,12 @@ if (!isset($this)) { http_response_code(404); exit; }
 
 
 
+/**
+ * Note that this controller is shared with area_ontology via 'area_ontology_json.php' file
+ */
+
+
+
 // configuration vars
 	$tipo			= $this->get_tipo();
 	$permissions	= common::get_permissions($tipo, $tipo);
@@ -51,8 +57,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 
 	if($options->get_data===true && $permissions>0){
 
-		// hierarchy_sections - get the hierarchy configuration nodes to build the root terms
-			// properties optional values
+		// Resolve hierarchy sections for building root terms
+			// Optional filter values from properties
 			$hierarchy_types_filter		= $properties->hierarchy_types ?? null;
 			$hierarchy_sections_filter	= $properties->hierarchy_sections ?? null;
 
@@ -66,43 +72,66 @@ if (!isset($this)) { http_response_code(404); exit; }
 				$hierarchy_sections_filter, // hierarchy_sections_filter
 				$terms_are_model // terms_are_model bool
 			);
-			$hierarchy_sections = array_values(array_filter(
-				$full_hierarchy_sections,
-				static function (object $hierarchy_data): bool {
+			$hierarchy_sections = [];
+			foreach ($full_hierarchy_sections as $hierarchy_data) {
 
-					// permissions
-					if (common::get_permissions(
-						$hierarchy_data->target_section_tipo,
-						$hierarchy_data->target_section_tipo
-					) < 1) {
-						return false;
-					}
-
-					// active in thesaurus (ontology mode: not filtered in get_hierarchy_sections)
-					if (isset($hierarchy_data->active_in_thesaurus) && $hierarchy_data->active_in_thesaurus === false) {
-						return false;
-					}
-
-					// children_tipo required by client (render_root_term)
-					if (empty($hierarchy_data->children_tipo)) {
-						debug_log('area_thesaurus controller'
-							. " Ignored invalid hierarchy section without children_tipo " . PHP_EOL
-							. ' hierarchy_data: ' . to_string($hierarchy_data)
-							, logger::ERROR
-						);
-						return false;
-					}
-
-					return true;
+				// Skip section if target tipo lacks read permission
+				if (common::get_permissions(
+					$hierarchy_data->target_section_tipo,
+					$hierarchy_data->target_section_tipo
+				) < 1) {
+					continue;
 				}
-			));
+
+				// Skip hierarchies inactive in thesaurus (not pre-filtered in get_hierarchy_sections)
+				if (isset($hierarchy_data->active_in_thesaurus) && $hierarchy_data->active_in_thesaurus === false) {
+					continue;
+				}
+
+				// Skip hierarchy missing children_tipo required by client for render_root_term
+				if (empty($hierarchy_data->children_tipo)) {
+					debug_log('area_thesaurus controller'
+						. " Ignored invalid hierarchy section without children_tipo " . PHP_EOL
+						. ' hierarchy_data: ' . to_string($hierarchy_data)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				// Filter out root terms lacking read permission
+				$safe_root_terms = array_values(array_filter(
+					$hierarchy_data->root_terms ?? [],
+					static function (object $root_data): bool {
+						// permissions
+						if ( common::get_permissions($root_data->section_tipo, $root_data->section_tipo) < 1 ) {
+							return false;
+						}
+						return true;
+					}
+				));
+
+				// Skip hierarchy section if no authorized root terms remain
+				if (empty($safe_root_terms)) {
+					debug_log('area_thesaurus controller'
+						. " Ignored invalid hierarchy section without root terms " . PHP_EOL
+						. ' hierarchy_data: ' . to_string($hierarchy_data)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				// clone to avoid mutating the original object
+				$cloned_data = clone $hierarchy_data;
+				$cloned_data->root_terms = $safe_root_terms;
+				$hierarchy_sections[] = $cloned_data;
+			}//end foreach ($full_hierarchy_sections as $hierarchy_data)
 
 		// typologies
 			$ar_typologies = [];
 			foreach ($hierarchy_sections as $hierarchy_data) {
 
 				if (!isset($ar_typologies[$hierarchy_data->typology_section_id])) {
-					// add unique typology to the list					
+					// add unique typology to the list
 					$typology = new stdClass();
 						$typology->section_id	= $hierarchy_data->typology_section_id;
 						$typology->type			= 'typology';
@@ -113,10 +142,11 @@ if (!isset($this)) { http_response_code(404); exit; }
 				}
 			}
 
-		$item = new stdClass();
-			$item->tipo			= $this->get_tipo();
-			$item->value		= $hierarchy_sections;
-			$item->typologies	= array_values($ar_typologies);
+		// data item
+			$item = new stdClass();
+				$item->tipo			= $this->get_tipo();
+				$item->value		= $hierarchy_sections;
+				$item->typologies	= array_values($ar_typologies);
 
 		// ts_search : hierarchy_terms (search)
 			$hierarchy_terms = $properties->hierarchy_terms ?? null;
