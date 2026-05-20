@@ -594,7 +594,7 @@ trait where {
 
 							$this->sql_obj->where[] = "EXISTS ( SELECT 1
 								FROM jsonb_array_elements({$section_alias}.relation::jsonb->'{$component_filter_tipo}') AS item
-								WHERE item->>'section_id' IN ({$search_placeholders})
+								WHERE (item->>'section_id')::int IN ({$search_placeholders})
 							)";
 						}
 						break;
