@@ -11,6 +11,9 @@
 @menu_box_shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
 
 .menu {
+	// vars
+	--menu_heigth: 2.2rem;
+
 	contain: layout;
 	margin: 0px;
 	padding: 0px;
@@ -21,11 +24,13 @@
 	z-index: 4;
 	background-color: var(--bg_menu);
 	box-shadow: var(--shadow_default);
+	min-height: var(--menu_heigth);
+
+	&.with_debug_info {
+		min-height: calc(var(--menu_heigth) * 2);
+	}
 
 	>.content_data {
-		// vars
-		--menu_heigth: 2.2rem;
-
 		position: relative;
 		width: 100%;
 		display: flex;
@@ -34,6 +39,7 @@
 		font-size: 1rem;
 		color: var(--fg_inverse);
 		line-height: 1.2em;
+		min-height: var(--menu_heigth);
 
 		&.master {
 			background-color: @color_green_ontology;
@@ -113,8 +119,6 @@
 				padding: 0px;
 				margin-left: 0.5rem;
 				z-index: 2;
-
-
 
 				ul {
 					display: none;
