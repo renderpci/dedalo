@@ -61,35 +61,47 @@ if (!isset($this)) { http_response_code(404); exit; }
 			$terms_are_model = $this->build_options->terms_are_model ?? false;
 
 			// get hierarchy sections
-			$hierarchy_sections = $this->get_hierarchy_sections(
+			$full_hierarchy_sections = $this->get_hierarchy_sections(
 				$hierarchy_types_filter, // hierarchy_types_filter
 				$hierarchy_sections_filter, // hierarchy_sections_filter
 				$terms_are_model // terms_are_model bool
 			);
+			$hierarchy_sections = array_values(array_filter(
+				$full_hierarchy_sections,
+				static function (object $hierarchy_data): bool {
+
+					// permissions
+					if (common::get_permissions(
+						$hierarchy_data->target_section_tipo,
+						$hierarchy_data->target_section_tipo
+					) < 1) {
+						return false;
+					}
+
+					// active in thesaurus (ontology mode: not filtered in get_hierarchy_sections)
+					if (isset($hierarchy_data->active_in_thesaurus) && $hierarchy_data->active_in_thesaurus === false) {
+						return false;
+					}
+
+					// children_tipo required by client (render_root_term)
+					if (empty($hierarchy_data->children_tipo)) {
+						debug_log('area_thesaurus controller'
+							. " Ignored invalid hierarchy section without children_tipo " . PHP_EOL
+							. ' hierarchy_data: ' . to_string($hierarchy_data)
+							, logger::ERROR
+						);
+						return false;
+					}
+
+					return true;
+				}
+			));
 
 		// typologies
 			$ar_typologies = [];
 			foreach ($hierarchy_sections as $hierarchy_data) {
 
-				// force temporally !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-				$hierarchy_data->active_in_thesaurus = true;
-
-				// remove the typology of hierarchies that are not active to show it in thesaurus tree
-				if( isset($hierarchy_data->active_in_thesaurus) && $hierarchy_data->active_in_thesaurus === false ){
-					continue;
-				}
-
-				// skip hierarchies without children_tipo
-				if (empty($hierarchy_data->children_tipo)) {
-					debug_log(__METHOD__
-						. " Ignored invalid hierarchy section without children_tipo " . PHP_EOL
-						. ' hierarchy_data: ' . to_string($hierarchy_data)
-						, logger::ERROR
-					);
-					continue;
-				}
-
-				if (!isset($ar_tipologies[$hierarchy_data->typology_section_id])) {
+				if (!isset($ar_typologies[$hierarchy_data->typology_section_id])) {
 					// add unique typology to the list					
 					$typology = new stdClass();
 						$typology->section_id	= $hierarchy_data->typology_section_id;
