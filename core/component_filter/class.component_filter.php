@@ -107,7 +107,10 @@ class component_filter extends component_relation_common {
 			}
 
 
-		return parent::set_data( $final_data );
+		$result = parent::set_data( $final_data );
+
+
+		return $result;
 	}//end set_data
 
 

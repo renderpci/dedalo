@@ -1658,7 +1658,7 @@ class component_relation_common extends component_common {
 	*
 	* @return array|null Pack dictionary list item definitions of structure:
 	*	- section_id (int): item descriptive locator structure.
-	*	- section_tipo (string): layout item descriptive locator structure layout. 
+	*	- section_tipo (string): layout item descriptive locator structure layout.
 	*	- term (string|null): descriptive term primary identifying labels descriptive.
 	*	- typology (string|null): supporting descriptive typology identifiers reference string.
 	*	- typology_section_id (int|null): definitions descriptive typology target structure index.
@@ -1674,7 +1674,7 @@ class component_relation_common extends component_common {
 
 		// Normalize types to strings (assumes first if array is provided)
 		$term_tipo 	= is_array($map_node->thesaurus->term) ? reset($map_node->thesaurus->term) : $map_node->thesaurus->term;
-		
+
 		$model_tipo = null;
 		if (!empty($map_node->thesaurus->model)) {
 			$model_tipo = is_array($map_node->thesaurus->model) ? reset($map_node->thesaurus->model) : $map_node->thesaurus->model;
@@ -2883,7 +2883,7 @@ class component_relation_common extends component_common {
 			}
 
 		// 1 PROJECTS GET
-			// We get current portal filter data (projects) to heritage in the new portal record
+			// We get current portal section filter data (projects) to heritage in the new portal record
 			$section_id				= $this->get_section_id();
 			$component_filter_data	= ($this->is_temporal===true)
 				? null
@@ -2950,9 +2950,6 @@ class component_relation_common extends component_common {
 				);
 				return $response;
 			}
-
-		// Save current component updated data
-			// $this->Save();
 
 		// response OK
 			$response->result			= true;

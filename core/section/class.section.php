@@ -1649,7 +1649,7 @@ class section extends common {
 					$user_id // int
 				);
 
-		// 4. Set defaults project data (dd153)
+		// 4. Set initial project data (dd153)
 			$this->set_projects_to_new_section_record( $section_id, $component_filter_data );
 
 		// 5. Reset caches
