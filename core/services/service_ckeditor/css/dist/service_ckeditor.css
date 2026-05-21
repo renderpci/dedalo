@@ -1,4 +1,3 @@
-/**
 * service_ckeditor
 *
 * Included from main.less file
@@ -7,18 +6,18 @@
   display: flex;
   flex-wrap: wrap;
   position: absolute;
-  background-color: #ffffff;
-  outline: 1px solid #e6e6e6;
+  background-color: var(--color_white);
+  box-shadow: 0px 1px 0px 0px var(--color_grey_13);
   left: 6px;
   top: 6px;
   height: auto;
   padding: 0.05rem;
   width: calc(100% - 12px);
-  z-index: 1;
+  z-index: 3;
 }
 .toolbar_container > .toolbar_button {
-  height: 1.8em;
-  padding: 0.33rem;
+  height: 1.5em;
+  padding: 0.25rem;
   padding-right: 0.33em;
   padding-left: 0.25em;
   border-radius: 0.25em;
@@ -28,13 +27,13 @@
   pointer-events: none;
 }
 .toolbar_container > .toolbar_button:hover {
-  background-color: #dddddd;
+  background-color: var(--color_grey_11);
 }
 .toolbar_container > .toolbar_button:active {
   opacity: 0.6;
 }
 .toolbar_container > .toolbar_button.active {
-  background-color: #dddddd;
+  background-color: var(--color_grey_11);
 }
 .toolbar_container > .toolbar_button.disable {
   opacity: 25%;
@@ -53,7 +52,6 @@
 }
 .toolbar_container .ck-balloon-panel.ck-toolbar-container .ck-toolbar.ck-toolbar_grouping {
   outline: none;
-  padding: 0px !important;
   margin: 0px !important;
   height: 1.7rem;
 }
@@ -85,9 +83,6 @@
   max-height: unset;
   white-space: nowrap;
 }
-.toolbar_container .ck-balloon-panel.ck-toolbar-container .ck-toolbar.ck-toolbar_grouping .ck-icon {
-  height: 19px;
-}
 .toolbar_container .ck-balloon-panel.ck-toolbar-container .ck-toolbar.ck-toolbar_grouping .ck-toolbar__separator {
   height: 16px;
 }
@@ -108,3 +103,168 @@
 .ck-source-editing-area > textarea {
   overflow: auto;
 }
+.ck-content ol,
+.ck-content ul {
+  padding-left: 1.5em;
+}
+.ck-placeholder {
+  opacity: 0.33;
+}
+dd-modal .find_and_replace {
+  background-color: var(--color_grey_15);
+}
+dd-modal .find_and_replace input {
+  margin-bottom: 1px;
+}
+dd-modal .find_and_replace input:focus {
+  background-color: var(--color_mandatory);
+  outline: 1px solid var(--color_orange_dedalo);
+  box-shadow: none;
+}
+dd-modal .find_and_replace .replace_container {
+  padding-top: 1.5em;
+}
+dd-modal .find_and_replace .options_container {
+  display: flex;
+  align-items: center;
+  padding-top: 1.5em;
+  /* toggle-pill-color */
+  /* toggle-pill-color end */
+}
+dd-modal .find_and_replace .options_container .label_match_case {
+  padding-right: 0.3em;
+}
+dd-modal .find_and_replace .options_container .label_whole_words {
+  padding-left: 1em;
+  padding-right: 0.3em;
+}
+dd-modal .find_and_replace .options_container .check input[type="checkbox"] {
+  display: none;
+}
+dd-modal .find_and_replace .options_container .check input[type="checkbox"] + label {
+  display: inline-block;
+  position: relative;
+  width: 3em;
+  height: 1.6em;
+  border-radius: 1em;
+  background: var(--color_grey_13);
+  cursor: pointer;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  user-select: none;
+  -webkit-transition: background 0.1s ease-in-out;
+  transition: background 0.1s ease-in-out;
+}
+dd-modal .find_and_replace .options_container .check input[type="checkbox"] + label:before {
+  content: "";
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  border-radius: 1em;
+  background: var(--color_white);
+  box-shadow: 2px 0px 5px var(--color_grey_10);
+  position: absolute;
+  left: 0.2em;
+  top: 0.2em;
+  -webkit-transition: all 0.2s ease-in-out;
+  transition: all 0.2s ease-in-out;
+}
+dd-modal .find_and_replace .options_container .check input[type="checkbox"]:checked + label {
+  background: var(--color_green_success);
+}
+dd-modal .find_and_replace .options_container .check input[type="checkbox"]:checked + label:before {
+  box-shadow: -2px 0px 5px var(--color_grey_10);
+  left: 1.6em;
+}
+:root[data-theme="dark"] {
+  --ck-color-base-background: var(--color_white);
+  --ck-color-base-text: var(--color_black);
+  --ck-color-base-border: var(--color_grey_11);
+  --ck-color-base-active: var(--color_input_focus);
+  --ck-color-base-active-focus: var(--color_input_focus);
+  --ck-color-base-error: var(--color_danger);
+  --ck-color-toolbar-background: var(--color_white);
+  --ck-color-toolbar-border: var(--color_grey_13);
+  --ck-color-button-default-background: transparent;
+  --ck-color-button-default-hover-background: var(--toolbar_btn_hover_bg);
+  --ck-color-button-default-active-background: var(--toolbar_btn_hover_bg);
+  --ck-color-button-default-disabled-background: transparent;
+  --ck-color-button-default-color: var(--color_black);
+  --ck-color-button-on-background: var(--color_grey_13);
+  --ck-color-button-on-hover-background: var(--color_grey_12);
+  --ck-color-button-on-active-background: var(--color_grey_12);
+  --ck-color-button-on-disabled-background: var(--color_grey_14);
+  --ck-color-button-on-color: var(--color_black);
+  --ck-color-button-save: var(--color_success);
+  --ck-color-button-cancel: var(--color_danger);
+  --ck-color-dropdown-panel-background: var(--color_grey_15);
+  --ck-color-dropdown-panel-border: var(--color_grey_11);
+  --ck-color-input-background: var(--color_grey_16);
+  --ck-color-input-border: var(--color_grey_11);
+  --ck-color-input-text: var(--color_black);
+  --ck-color-input-disabled-background: var(--color_grey_14);
+  --ck-color-input-disabled-border: var(--color_grey_12);
+  --ck-color-input-disabled-text: var(--color_grey_8);
+  --ck-color-labeled-field-label-background: var(--color_white);
+  --ck-color-list-background: var(--color_grey_15);
+  --ck-color-list-button-hover-background: var(--color_grey_13);
+  --ck-color-list-button-on-background: var(--color_grey_12);
+  --ck-color-list-button-on-background-focus: var(--color_grey_11);
+  --ck-color-list-button-on-text: var(--color_black);
+  --ck-color-panel-background: var(--color_grey_15);
+  --ck-color-panel-border: var(--color_grey_11);
+  --ck-color-tooltip-background: var(--color_grey_4);
+  --ck-color-tooltip-text: var(--color_white);
+  --ck-color-engine-placeholder-text: var(--color_grey_8);
+  --ck-color-text: var(--color_black);
+  --ck-color-link-default: var(--color_blue);
+  --ck-color-link-selected-background: var(--color_blue_light);
+  --ck-color-focus-border: var(--color_input_focus);
+  --ck-color-focus-outer-shadow: rgba(74, 158, 255, 0.25);
+  --ck-color-focus-disabled-shadow: transparent;
+  --ck-color-shadow-drop: 0 2px 6px rgba(0, 0, 0, 0.45);
+  --ck-color-shadow-drop-active: 0 3px 9px rgba(0, 0, 0, 0.5);
+  --ck-color-shadow-inner: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  --ck-color-upload-bar-background: var(--color_primary);
+}
+:root[data-theme="dark"] .ck-toolbar .ck-button,
+:root[data-theme="dark"] .ck-toolbar .ck-button .ck-button__icon,
+:root[data-theme="dark"] .ck-toolbar .ck-button .ck-button__icon use,
+:root[data-theme="dark"] .ck-toolbar .ck-button .ck-button__icon use *,
+:root[data-theme="dark"] .ck-toolbar .ck-button .ck-icon,
+:root[data-theme="dark"] .ck-toolbar .ck-button .ck-icon * {
+  color: var(--color_black) !important;
+  fill: var(--color_black) !important;
+  stroke: var(--color_black) !important;
+}
+:root[data-theme="dark"] .ck-toolbar .ck-button .ck-icon {
+  filter: brightness(0) invert(1) !important;
+}
+:root[data-theme="dark"] .ck-source-editing-area > textarea {
+  background-color: var(--color_grey_16);
+  color: var(--color_black);
+}
+:root[data-theme="dark"] .ck-balloon-panel {
+  border-color: var(--color_grey_11);
+}
+:root[data-theme="dark"] .toolbar_button:hover,
+:root[data-theme="dark"] .toolbar_button.active {
+  background-color: var(--toolbar_btn_hover_bg);
+}
+:root[data-theme="dark"] .toolbar_button img {
+  filter: brightness(0) invert(1) !important;
+}
+:root[data-theme="dark"] dd-modal .find_and_replace {
+  background-color: var(--color_grey_15);
+}
+:root[data-theme="dark"] dd-modal .find_and_replace input {
+  background-color: var(--color_grey_16);
+  color: var(--color_black);
+  border-color: var(--color_grey_11);
+}
+/**
+* service_time_machine
+*
+* Included from main.less file
+*/
+.service_time_machine.view_default {

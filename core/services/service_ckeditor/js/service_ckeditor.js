@@ -230,7 +230,7 @@ export const service_ckeditor = function() {
 				// fix the instance
 					self.editor = editor
 
-				// init editor status changes to track isDirty value
+			// init editor status changes to track isDirty value
 					self.init_status_changes()
 
 				// setup_events
