@@ -1017,6 +1017,10 @@
 					pointer-events: none;
 					padding-right: 0.33rem;
 
+					:root[data-theme="dark"] & {
+						background-color: @color_grey_8;
+					}
+
 					&:after {
 						content: 'X';
 						display: block;
@@ -1066,6 +1070,11 @@
 					background-color: @color_white;
 					border-bottom: 0.5px solid @color_grey_5;
 
+					:root[data-theme="dark"] & {
+						// border-bottom: none;
+						border-bottom: 0.5px solid @color_grey_11;
+					}
+
 					// truncate text
 					padding-right: 2.0em;
 					white-space: nowrap;
@@ -1093,6 +1102,36 @@
 						background-position: right 5px bottom @background-top;
 						background-repeat: no-repeat;
 						background-size: 12px;
+
+						:root[data-theme="dark"] & {
+							position: relative;
+							background-color: @color_grey_14;
+							background-image: none;
+
+							&:before {
+								content: '';
+								display: block;
+								pointer-events: none;
+								position: absolute;
+								right: 5px;
+								bottom: @background-top;
+								width: 12px;
+								height: 12px;
+								background-color: @color_grey_6;
+								mask-image: url('../../themes/default/draggable.svg');
+								mask-size: 12px;
+								mask-repeat: no-repeat;
+							}
+
+							&.has_subquery:before {
+								right: calc(1em);
+							}
+
+							&:hover:before,
+							&.has_subquery:hover:after {
+								background-color: #000000;
+							}
+						}
 					}
 
 					// has_subquery
@@ -1106,15 +1145,20 @@
 							display: block;
 							pointer-events: none;
 							position: absolute;
-							background-image: url('../../themes/default/icons/play.svg');
-							background-repeat: no-repeat;
-							background-position: center;
-							background-size: 0.55em;
+							background-color: @color_grey_1;
+							mask-image: url('../../themes/default/icons/play.svg');
+							mask-size: 0.55em;
+							mask-repeat: no-repeat;
+							mask-position: center;
 							width: 1em;
 							height: 1em;
 							right: 0px;
 							top: 0.308rem;
 							cursor: pointer;
+
+							:root[data-theme="dark"] & {
+								background-color: @color_grey_6;
+							}
 						}
 
 						&.active {
