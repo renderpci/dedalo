@@ -25,6 +25,10 @@
 			vertical-align: text-bottom;
 			transition: background-color 0.3s linear;
 
+			:root[data-theme="dark"] & {
+				background-color: @color_grey_10;
+			}
+
 			&:before {
 				content: '';
 				left: 0px;
@@ -32,7 +36,6 @@
 				width: 42px;
 				height: 22px;
 				// background-color: @color_white;
-				background-color: var(--checkbox_bg);
 				border-radius: 11px;
 				transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
 				transition: transform 0.25s linear;
@@ -66,6 +69,10 @@
 
 			&:checked + i {
 				background-color: @color_green_success;
+
+				:root[data-theme="dark"] & {
+					background-color: @color_green_success;
+				}
 			}
 
 			&:checked + i::before {
