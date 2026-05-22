@@ -724,10 +724,10 @@ class diffusion_section_stats extends diffusion {
 				$values->meta->{USER_ACTIVITY_DATE_TIPO}	= [$counter_obj];
 				$values->meta->{USER_ACTIVITY_TOTALS_TIPO}	= [$counter_obj];
 
-			$options = new stdClass();
-				$options->values = $values;
-
-			$section_id	= $section->create_record($options);
+			// create_record
+			$section_id	= $section->create_record((object)[
+				'values' => $values
+			]);
 
 			if (empty($section_id)) {
 				debug_log(__METHOD__

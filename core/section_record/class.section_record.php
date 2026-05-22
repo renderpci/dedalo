@@ -1390,10 +1390,10 @@ class section_record {
 		// create a new blank section record with same the section_tipo that current
 			$section = section::get_instance( $section_tipo );
 			// set the source_data as new value data of the new section
-			$options = new stdClass();
-				$options->values = $source_data;
 			// Create a new section_record
-			$new_section_id	= $section->create_record( $options );
+			$new_section_id	= $section->create_record( (object)[
+				'values' => $source_data
+			]);
 
 			if (empty($new_section_id) || (int)$new_section_id<1) {
 				return false;

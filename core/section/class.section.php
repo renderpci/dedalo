@@ -1518,7 +1518,8 @@ class section extends common {
 	* @param object|null $options = null
 	* {
 	*   component_filter_data : array|null
-	*   values : object|null
+	*   values : object|null,
+	* 	section_id : int|null
 	* }
 	* @return int|null $section_id
 	*/
