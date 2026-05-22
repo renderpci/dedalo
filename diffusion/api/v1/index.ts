@@ -101,7 +101,7 @@ async function run_background_diffusion(
 		// 1. DETERMINE CHUNKING STRATEGY
 		// To process massive diffusions safely without hitting PHP memory limits,
 		// we paginated the query (SQO) with limit/offset batches.
-		const DEFAULT_CHUNK_SIZE = 100;
+		const DEFAULT_CHUNK_SIZE = 1;
 		const options     = request_rqo.options ?? {};
 		const total       = (options as any).total       ?? 0;
 		const chunk_size  = (options as any).chunk_size   ?? DEFAULT_CHUNK_SIZE;
