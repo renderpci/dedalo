@@ -80,13 +80,13 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'label',
-			inner_html		: get_label.bun_engine || 'Bun engine',
+			text_content	: get_label.bun_engine || 'Bun engine',
 			parent			: bun_status_node
 		})
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: bun_status.msg || (bun_status.result === true ? 'Ready' : 'Unavailable'),
+			text_content	: bun_status.msg || (bun_status.result === true ? 'Ready' : 'Unavailable'),
 			parent			: bun_status_node
 		})
 
@@ -101,14 +101,14 @@ const get_content_data = async function(self) {
 			ui.create_dom_element({
 				element_type	: 'h3',
 				class_name		: 'section_name',
-				inner_html		: self.caller.label,
+				text_content	: self.caller.label,
 				parent			: section_info
 			})
 		// section_tipo
 			ui.create_dom_element({
 				element_type	: 'h3',
 				class_name		: 'section_tipo',
-				inner_html		: self.caller.tipo,
+				text_content	: self.caller.tipo,
 				parent			: section_info
 			})
 
@@ -129,14 +129,14 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: '',
-			inner_html		: get_label.levels || 'Levels',
+			text_content	: get_label.levels || 'Levels',
 			parent			: resolve_levels_container
 		})
 		// note about levels
 		const note_about_levels = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'note_about_levels',
-			inner_html		: '?',
+			text_content	: '?',
 			title			: 'info',
 			parent			: resolve_levels_container
 		})
@@ -184,7 +184,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: '',
-			inner_html		: self.get_tool_label('depth_levels') || 'Depth levels to solve',
+			text_content	: self.get_tool_label('depth_levels') || 'Depth levels to solve',
 			parent			: resolve_levels_container
 		})
 
@@ -197,7 +197,7 @@ const get_content_data = async function(self) {
 		const info_div = ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'info_div hide',
-			inner_html		: 'info: ' + JSON.stringify(diffusion_info, null, 2),
+			text_content	: 'info: ' + JSON.stringify(diffusion_info, null, 2),
 			parent			: diffusion_info_container
 		})
 		ui.collapse_toggle_track({
@@ -210,7 +210,7 @@ const get_content_data = async function(self) {
 	// skip_publication_state_check
 		const skip_publication_state_check_label = ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: self.get_tool_label('skip_publication_state_check') || 'Ignore temporarily the publication status when publishing',
+			text_content	: self.get_tool_label('skip_publication_state_check') || 'Ignore temporarily the publication status when publishing',
 			parent			: resolve_levels_container
 		})
 		const skip_publication_state_check_node = ui.create_dom_element({
@@ -252,7 +252,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
-			inner_html		: self.get_tool_label('publish_selected_records', total_label),
+			text_content	: self.get_tool_label('publish_selected_records', total_label),
 			parent			: diffusion_info_container
 		})
 
@@ -322,7 +322,7 @@ export const render_publication_items = function(self) {
 						const publication_item_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'publication_item_label label icon_arrow up',
-							inner_html		: diffusion_element_parent.label,
+							text_content	: diffusion_element_parent.label,
 							parent			: publication_items
 						})
 
@@ -359,13 +359,13 @@ export const render_publication_items = function(self) {
 					// name
 						const name_label = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: get_label.name || 'Name',
+							text_content	: get_label.name || 'Name',
 							class_name		: 'label',
 							parent			: publication_items_grid
 						})
 						const name_value = ui.create_dom_element({
 							element_type	: 'div',
-							inner_html		: node.label,
+							text_content	: node.label,
 							class_name		: 'value',
 							parent			: publication_items_grid
 						})
@@ -373,13 +373,13 @@ export const render_publication_items = function(self) {
 					// type
 						const type_label = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: get_label.type || 'Type',
+							text_content	: get_label.type || 'Type',
 							class_name		: 'label',
 							parent			: publication_items_grid
 						})
 						const type_value = ui.create_dom_element({
 							element_type	: 'div',
-							inner_html		: type || node.model,
+							text_content	: type || node.model,
 							class_name		: 'value',
 							parent			: publication_items_grid
 						})
@@ -387,13 +387,13 @@ export const render_publication_items = function(self) {
 					// diffusion_element
 						const diffusion_element_label = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: 'Diffusion element',
+							text_content	: 'Diffusion element',
 							class_name		: 'label',
 							parent			: publication_items_grid
 						})
 						const diffusion_element_value = ui.create_dom_element({
 							element_type	: 'div',
-							inner_html		: element_tipo,
+							text_content	: element_tipo,
 							class_name		: 'value',
 							parent			: publication_items_grid
 						})
@@ -413,13 +413,13 @@ export const render_publication_items = function(self) {
 					// diffusion_tipo (main node tipo)
 						const diffusion_tipo_label = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: 'Diffusion tipo',
+							text_content	: 'Diffusion tipo',
 							class_name		: 'label',
 							parent			: publication_items_grid
 						})
 						const diffusion_tipo_value = ui.create_dom_element({
 							element_type	: 'div',
-							inner_html		: node.tipo,
+							text_content	: node.tipo,
 							class_name		: 'value',
 							parent			: publication_items_grid
 						})
@@ -440,7 +440,7 @@ export const render_publication_items = function(self) {
 						if (node.connection_status) {
 							ui.create_dom_element({
 								element_type	: 'span',
-								inner_html		: get_label.connection_status || 'Connection status',
+								text_content	: get_label.connection_status || 'Connection status',
 								class_name		: 'label',
 								parent			: publication_items_grid
 							})
@@ -449,7 +449,7 @@ export const render_publication_items = function(self) {
 								: 'fail'
 							ui.create_dom_element({
 								element_type	: 'div',
-								inner_html		: node.connection_status.msg,
+								text_content	: node.connection_status.msg,
 								class_name		: 'value ' + class_status,
 								parent			: publication_items_grid
 							})
@@ -459,14 +459,14 @@ export const render_publication_items = function(self) {
 						if (node.children?.length > 0) {
 							const fields_label = ui.create_dom_element({
 								element_type	: 'span',
-								inner_html		: get_label.fields || 'Fields',
+								text_content	: get_label.fields || 'Fields',
 								class_name		: 'label',
 								parent			: publication_items_grid
 							})
 							const fields_value = ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'value link icon_arrow unselectable',
-								inner_html		: get_label.show || 'Show',
+								text_content	: get_label.show || 'Show',
 								parent			: publication_items_grid
 							})
 							fields_value.addEventListener('click', function(e) {
@@ -486,7 +486,7 @@ export const render_publication_items = function(self) {
 									// field (target)
 										const field_node = ui.create_dom_element({
 											element_type	: 'span',
-											inner_html		: child.label,
+											text_content	: child.label,
 											class_name		: 'fields_grid_value label hide',
 											parent			: publication_items_grid
 										})
@@ -495,7 +495,7 @@ export const render_publication_items = function(self) {
 									// related (Dédalo source)
 										const related_item = ui.create_dom_element({
 											element_type	: 'div',
-											inner_html		: child.related_label || '-',
+											text_content	: child.related_label || '-',
 											class_name		: 'fields_grid_value label link hide',
 											title			: (child.related_tipo || '') + ' - ' + (child.related_model || ''),
 											parent			: publication_items_grid
@@ -520,14 +520,14 @@ export const render_publication_items = function(self) {
 										const model_node = ui.create_dom_element({
 											element_type	: 'span',
 											class_name		: 'fields_grid_value_obs label light hide',
-											inner_html		: child.model + ' | ' + child.tipo,
+											text_content	: child.model + ' | ' + child.tipo,
 											parent			: publication_items_grid
 										})
 										ar_fields_nodes.push(model_node)
 										const related_info_node = ui.create_dom_element({
 											element_type	: 'div',
 											class_name		: 'fields_grid_value_obs label light hide',
-											inner_html		: (child.related_model || '') + ' | ' + (child.related_tipo || ''),
+											text_content	: (child.related_model || '') + ' | ' + (child.related_tipo || ''),
 											parent			: publication_items_grid
 										})
 										ar_fields_nodes.push(related_info_node)
@@ -586,7 +586,7 @@ export const render_container_bottom = function (self, item, lock_items, process
 		const publication_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning publication_button',
-			inner_html		: get_label.publish || 'Publish',
+			text_content	: get_label.publish || 'Publish',
 			parent			: buttons_container
 		})
 		lock_items.push(publication_button)
@@ -644,7 +644,7 @@ export const render_container_bottom = function (self, item, lock_items, process
 				const combine_files_label = ui.create_dom_element({
 					element_type	: 'label',
 					class_name		: 'unselectable',
-					inner_html		: self.get_tool_label('combine_xml_files') || 'Combine XML files',
+					text_content	: self.get_tool_label('combine_xml_files') || 'Combine XML files',
 					parent			: bottom_additions
 				})
 				const combine_files_check_node = ui.create_dom_element({
@@ -1192,7 +1192,7 @@ const render_process_report = function(options) {
 						const button = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'download warning',
-							inner_html		: (get_label[label_key] || fallback_label) + ' ' + name,
+							text_content	: (get_label[label_key] || fallback_label) + ' ' + name,
 							parent			: container
 						})
 						button.addEventListener('click', function(e) {
@@ -1210,7 +1210,7 @@ const render_process_report = function(options) {
 						const button_download = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'download warning',
-							inner_html		: (get_label.download || 'Download') + ' ' + name,
+							text_content	: (get_label.download || 'Download') + ' ' + name,
 							parent			: container
 						})
 						button_download.addEventListener('click', function(e) {
@@ -1233,7 +1233,7 @@ const render_process_report = function(options) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'error',
-				inner_html		: errors.join(' | '),
+				text_content	: errors.join(' | '),
 				parent			: container
 			})
 		}
