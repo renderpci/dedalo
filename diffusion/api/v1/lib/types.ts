@@ -181,7 +181,7 @@ export interface engine_response {
 	result:              boolean;
 	msg:                 string;
 	errors?:             string[];
-	tables?:             { table_name: string; records_affected: number }[];
+	tables?:             { table_name: string; records_affected: number; records_count: number }[];
 	diffusion_data?:     diffusion_file_entry[];
 	consolidated_files?: consolidated_files;
 }

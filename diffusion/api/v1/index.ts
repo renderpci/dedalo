@@ -108,7 +108,8 @@ async function run_background_diffusion(
 		const use_chunks  = total > 0 && total > chunk_size;
 		const chunk_count = use_chunks ? Math.ceil(total / chunk_size) : 1;
 
-		const table_results_map = new Map<string, number>();
+		const table_results_map		= new Map<string, number>();
+		const table_records_count_map	= new Map<string, number>();
 		const errors: string[] = [];
 		let global_counter = 0;
 
@@ -192,9 +193,14 @@ async function run_background_diffusion(
 				try {
 					// Insert/Update target Mariadb table
 					const affected = await insert_table_data(table);
-					
+
 					const prev = table_results_map.get(table.table_name) ?? 0;
 					table_results_map.set(table.table_name, prev + affected);
+
+					// Track unique records (distinct section_ids)
+					const unique_ids = new Set(table.records.map(r => String(r.section_id)));
+					const prev_count = table_records_count_map.get(table.table_name) ?? 0;
+					table_records_count_map.set(table.table_name, prev_count + unique_ids.size);
 
 					const elapsed     = Date.now() - start_time;
 					const record_time = Date.now() - record_start;
@@ -231,7 +237,11 @@ async function run_background_diffusion(
 
 		// Gather summaries
 		const table_results = Array.from(table_results_map.entries()).map(
-			([table_name, records_affected]) => ({ table_name, records_affected })
+			([table_name, records_affected]) => ({
+				table_name,
+				records_affected,
+				records_count: table_records_count_map.get(table_name) ?? 0
+			})
 		);
 
 		const final_result: engine_response = {
