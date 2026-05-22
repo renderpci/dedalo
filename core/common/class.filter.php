@@ -42,9 +42,6 @@ abstract class filter {
 	* GET_USER_PROJECTS
 	* Returns all user active projects from user section data via component_filter_master.
 	*
-	* Includes both directly assigned projects and their recursive children,
-	* deduplicated by section_id + section_tipo key.
-	*
 	* Uses static caching for performance (disabled when SHOW_DEVELOPER is true).
 	*
 	* @param int $user_id The user ID to retrieve projects for
@@ -59,29 +56,25 @@ abstract class filter {
 	* }
 	* ```
 	*/
-	public static function get_user_projects(int $user_id) : array {
+	public static function get_user_projects( int $user_id ) : array {
 
 		// check user_id
-			if (empty($user_id)) {
-				debug_log(__METHOD__
-					. " Invalid empty user id "
-					. to_string($user_id)
-					, logger::ERROR
-				);
-				// throw new Exception("Error Processing Request. Invalid user id", 1);
-				return [];
-			}
-
-		$user_projects = [];
-		$user_projects_keys = [];
+		if (empty($user_id)) {
+			debug_log(__METHOD__
+				. " Invalid empty user id "
+				. to_string($user_id)
+				, logger::ERROR
+			);
+			return [];
+		}
 
 		// cache
-		$use_cache = (SHOW_DEVELOPER!==true);
+		$use_cache = (!defined('SHOW_DEVELOPER') || SHOW_DEVELOPER !== true);
 		if ($use_cache===true && isset(filter::$user_projects_cache[$user_id])) {
 			return filter::$user_projects_cache[$user_id];
 		}
 
-		// filter_master
+		// filter_master. Get user section data about the authorized projects
 		$component_filter_master = component_common::get_instance(
 			'component_filter_master',
 			DEDALO_FILTER_MASTER_TIPO,
@@ -90,30 +83,10 @@ abstract class filter {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$user_projects = $component_filter_master->get_data();
-
-		// children
-		foreach ($user_projects as $current_locator) {
-
-			$children_data = component_relation_children::get_children_recursive(
-				$current_locator->section_id,
-				$current_locator->section_tipo,
-				DEDALO_PROJECTS_CHILDREN_TIPO
-			);
-
-			foreach ($children_data as $child_locator) {
-				// add if not already added
-				$key = $child_locator->section_id .'_'. $child_locator->section_tipo;
-				if(!isset($user_projects_keys[$key])) {
-					$user_projects[] = $child_locator;
-					$user_projects_keys[$key] = true;
-				}
-			}
-		}
+		$user_projects = $component_filter_master->get_data() ?? [];
 
 		// cache
 		filter::$user_projects_cache[$user_id] = $user_projects;
-
 
 		return $user_projects;
 	}//end get_user_projects
