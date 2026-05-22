@@ -22,6 +22,15 @@ class diffusion_chain_processor {
 	private static array $resolved_sections_cache = [];
 
 	/**
+	 * @var array $recursively_resolved Static cache for sections visited during
+	 * recursive chain resolution. Prevents re-visiting the same section in nested
+	 * resolve_chain calls. Separate from $resolved_sections_cache so that
+	 * process_datum still creates top-level datum entries.
+	 * Key format: ["{section_tipo}_{section_id}"] = true
+	 */
+	private static array $recursively_resolved = [];
+
+	/**
 	 * @var array $section_diffusion_map Map of section_tipo => diffusion_tipo within scope
 	 */
 	private static array $section_diffusion_map = [];
@@ -218,7 +227,7 @@ class diffusion_chain_processor {
 			// A. QUEUE: Always queue publishable locators for later diffusion of linked sections.
 			// Unpublishable locators are queued too so they can be marked for deletion.
 			$target_diffusion_tipo = self::get_section_diffusion_node($locator->section_tipo);
-			if ($level > 0 && !empty($target_diffusion_tipo) && $element_model !== 'relation_list') {				
+			if ($level > 0 && !empty($target_diffusion_tipo) && $element_model !== 'relation_list') {
 				$target_level = $level - 1;
 				if ($current_is_publishable === true) {
 					dd_diffusion_api::$publishable_overrides["{$locator->section_tipo}_{$locator->section_id}"] = true;
@@ -239,16 +248,21 @@ class diffusion_chain_processor {
 
 			// B. RECURSION: Resolve child fields if explicitly defined in DDO map for this specific section_tipo
 			// We only recurse if the locator's target section_tipo is explicitly mapped in the whitelist ($valid_sections_tipo).
+			// Guard with depth check ($level > 0) and recursion cache to prevent circular re-resolution.
 			$child_results = [];
-			if ($validated === true) {
-				$child_results = $this->resolve_chain((object)[
-					'ddo_map'      		=> $ddo_map,
-					'parent'       		=> $current_tipo,
-					'section_tipo' 		=> $locator->section_tipo,
-					'section_id'   		=> $locator->section_id,
-					'level'        		=> $level,
-					'is_publishable' 	=> $current_is_publishable
-				]);				
+			if ($validated === true && $level > 0) {
+				$recursion_key = $locator->section_tipo . '_' . $locator->section_id;
+				if (!isset(self::$recursively_resolved[$recursion_key])) {
+					self::$recursively_resolved[$recursion_key] = true;
+					$child_results = $this->resolve_chain((object)[
+						'ddo_map'      		=> $ddo_map,
+						'parent'       		=> $current_tipo,
+						'section_tipo' 		=> $locator->section_tipo,
+						'section_id'   		=> $locator->section_id,
+						'level'        		=> $level - 1,
+						'is_publishable' 	=> $current_is_publishable
+					]);
+				}
 			}
 
 			if (!empty($child_results)) {
@@ -485,6 +499,7 @@ class diffusion_chain_processor {
 	public static function reset_cache(): void {
 		self::$section_diffusion_map = [];
 		self::$resolved_sections_cache = [];
+		self::$recursively_resolved = [];
 		self::$diffusion_element_tipo = null;
 	}
 
