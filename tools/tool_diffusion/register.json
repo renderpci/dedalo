@@ -378,6 +378,406 @@
               "lang": "lg-nep",
               "name": "combine_xml_files",
               "value": "XML फाइलहरू संयोजन गर्नुहोस्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "diffusion_result",
+              "value": "Diffusion result"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "diffusion_result",
+              "value": "Resultado de difusión"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "diffusion_result",
+              "value": "Resultat de difusió"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "diffusion_result",
+              "value": "Résultat de diffusion"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "diffusion_result",
+              "value": "Risultato della diffusione"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "diffusion_result",
+              "value": "Diffusionsergebnis"
+            },
+            {
+              "lang": "lg-por",
+              "name": "diffusion_result",
+              "value": "Resultado da difusão"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "diffusion_result",
+              "value": "Difusioaren emaitza"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "diffusion_result",
+              "value": "Αποτέλεσμα διάχυσης"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "diffusion_result",
+              "value": "प्रसार परिणाम"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "table_name",
+              "value": "Table"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "table_name",
+              "value": "Tabla"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "table_name",
+              "value": "Taula"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "table_name",
+              "value": "Table"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "table_name",
+              "value": "Tabella"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "table_name",
+              "value": "Tabelle"
+            },
+            {
+              "lang": "lg-por",
+              "name": "table_name",
+              "value": "Tabela"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "table_name",
+              "value": "Taula"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "table_name",
+              "value": "Πίνακας"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "table_name",
+              "value": "तालिका"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "records_affected",
+              "value": "Records"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "records_affected",
+              "value": "Registros"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "records_affected",
+              "value": "Registres"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "records_affected",
+              "value": "Enregistrements"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "records_affected",
+              "value": "Record"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "records_affected",
+              "value": "Datensätze"
+            },
+            {
+              "lang": "lg-por",
+              "name": "records_affected",
+              "value": "Registros"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "records_affected",
+              "value": "Erregistroak"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "records_affected",
+              "value": "Εγγραφές"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "records_affected",
+              "value": "रेकोर्डहरू"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "total_time",
+              "value": "Total time"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "total_time",
+              "value": "Tiempo total"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "total_time",
+              "value": "Temps total"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "total_time",
+              "value": "Temps total"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "total_time",
+              "value": "Tempo totale"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "total_time",
+              "value": "Gesamtzeit"
+            },
+            {
+              "lang": "lg-por",
+              "name": "total_time",
+              "value": "Tempo total"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "total_time",
+              "value": "Denbora osoa"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "total_time",
+              "value": "Συνολικός χρόνος"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "total_time",
+              "value": "कुल समय"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "success",
+              "value": "Success"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "success",
+              "value": "Éxito"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "success",
+              "value": "Èxit"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "success",
+              "value": "Succès"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "success",
+              "value": "Successo"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "success",
+              "value": "Erfolg"
+            },
+            {
+              "lang": "lg-por",
+              "name": "success",
+              "value": "Sucesso"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "success",
+              "value": "Arrakasta"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "success",
+              "value": "Επιτυχία"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "success",
+              "value": "सफलता"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "partial_success",
+              "value": "Partial success"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "partial_success",
+              "value": "Éxito parcial"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "partial_success",
+              "value": "Èxit parcial"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "partial_success",
+              "value": "Succès partiel"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "partial_success",
+              "value": "Successo parziale"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "partial_success",
+              "value": "Teilerfolg"
+            },
+            {
+              "lang": "lg-por",
+              "name": "partial_success",
+              "value": "Sucesso parcial"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "partial_success",
+              "value": "Arrakasta partziala"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "partial_success",
+              "value": "Μερική επιτυχία"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "partial_success",
+              "value": "आंशिक सफलता"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "fail",
+              "value": "Fail"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "fail",
+              "value": "Fallo"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "fail",
+              "value": "Error"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "fail",
+              "value": "Échec"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "fail",
+              "value": "Fallimento"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "fail",
+              "value": "Fehlschlag"
+            },
+            {
+              "lang": "lg-por",
+              "name": "fail",
+              "value": "Falha"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "fail",
+              "value": "Huts"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "fail",
+              "value": "Αποτυχία"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "fail",
+              "value": "असफलता"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "rows_total",
+              "value": "Rows"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "rows_total",
+              "value": "Filas"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "rows_total",
+              "value": "Files"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "rows_total",
+              "value": "Lignes"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "rows_total",
+              "value": "Righe"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "rows_total",
+              "value": "Zeilen"
+            },
+            {
+              "lang": "lg-por",
+              "name": "rows_total",
+              "value": "Linhas"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "rows_total",
+              "value": "Errenkadak"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "rows_total",
+              "value": "Γραμμές"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "rows_total",
+              "value": "पङ्क्तिहरू"
             }
           ]
         ]
