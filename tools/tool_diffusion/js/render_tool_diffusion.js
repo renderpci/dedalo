@@ -244,7 +244,7 @@ const get_content_data = async function(self) {
 		fragment.appendChild(publication_items)
 
 	// info_text
-		const total = self.caller.mode==='edit'
+		const total = (self.caller.mode==='edit')
 			? 1
 			: await self.caller.get_total()
 		const locale		= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
