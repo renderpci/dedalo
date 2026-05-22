@@ -42,6 +42,13 @@ class dd_diffusion_api {
 		 */
 		public static array $publishable_overrides = [];
 
+		/**
+		 * @var array|null SQO filter_by_locators to restrict which records
+		 * get top-level datum entries. Non-matching related sections are
+		 * resolved for field values but don't create separate datums.
+		 */
+		public static ?array $sqo_filter_by_locators = null;
+
 
 
 	/**
@@ -148,6 +155,9 @@ class dd_diffusion_api {
 				dump($response, 'response +//////------>');
 				return $response;
 			}
+
+			// Store SQO filter to scope datum entries to only matching records
+			self::$sqo_filter_by_locators = $sqo_data->filter_by_locators ?? null;
 
 			self::process_datum($diffusion_tipo, $db_result, $levels, $options);
 
@@ -515,6 +525,18 @@ class dd_diffusion_api {
 		}
 
 		$data = [];
+
+		// Pre-build the section_tipos restricted by the SQO filter.
+		// Only records matching one of these section_tipos must also match section_id.
+		// Records with other section_tipos (cross-section relations at configured levels) pass freely.
+		$filter_section_tipos = null;
+		if (self::$sqo_filter_by_locators !== null) {
+			$filter_section_tipos = [];
+			foreach (self::$sqo_filter_by_locators as $fl) {
+				$filter_section_tipos[$fl->section_tipo][] = (int)$fl->section_id;
+			}
+		}
+
 		// Process each record and group by section
 		foreach ($iterable_data as $locator) {
 
@@ -525,6 +547,15 @@ class dd_diffusion_api {
 
 			// set the locator as used
 			diffusion_chain_processor::mark_used($locator->section_tipo, intval($locator->section_id));
+
+			// SQO filter: restrict datum entries for the main section_tipo to only
+			// records in the filter. Cross-section relations (different section_tipo
+			// from the filter) pass through freely at the configured levels.
+			if ($filter_section_tipos !== null && isset($filter_section_tipos[$locator->section_tipo])) {
+				if (!in_array(intval($locator->section_id), $filter_section_tipos[$locator->section_tipo], true)) {
+					continue;
+				}
+			}
 
 			$override = self::$publishable_overrides["{$locator->section_tipo}_{$locator->section_id}"] ?? null;
 			$is_publishable = $publishable ?? $override ?? diffusion_utils::is_publishable($locator);
@@ -621,8 +652,11 @@ class dd_diffusion_api {
 
 		$datum_object->set_data($data);
 
-		// ad. to static container
-		self::$datum[] = $datum_object;
+		// Only add to static container if data is non-empty
+		// (filter check in foreach may have skipped all locators)
+		if (!empty($data)) {
+			self::$datum[] = $datum_object;
+		}
 
 		return $datum_object;
 	}
