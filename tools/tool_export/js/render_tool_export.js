@@ -332,8 +332,8 @@ const get_content_data_edit = async function(self) {
 					});
 
 				// styles
-					[activate_all_columns, deactivate_all_columns].map(
-						el => el.classList.add('hide')
+					[activate_all_columns, deactivate_all_columns].forEach(
+						el => el?.classList.add('hide')
 					)
 
 				// spinner add
@@ -346,8 +346,8 @@ const get_content_data_edit = async function(self) {
 					const fill_the_gaps			= fill_the_gaps_check.checked;
 
 				// loading class elements
-					[button_export, components_list_container, selection_list_contaniner, export_buttons_options].map(
-						el => el.classList.add('loading')
+					[button_export, components_list_container, selection_list_contaniner, export_buttons_options].forEach(
+						el => el?.classList.add('loading')
 					)
 
 				// export_grid
@@ -397,13 +397,13 @@ const get_content_data_edit = async function(self) {
 					}
 
 				// hide class remove
-					[activate_all_columns, deactivate_all_columns].map(
-						el => el.classList.remove('hide')
+					[activate_all_columns, deactivate_all_columns].forEach(
+						el => el?.classList.remove('hide')
 					);
 
 				// loading class elements
-					[components_list_container, selection_list_contaniner].map(
-						el => el.classList.remove('loading')
+					[components_list_container, selection_list_contaniner].forEach(
+						el => el?.classList.remove('loading')
 					);
 					// Note: export_buttons_options remains in loading state until stream finishes
 			})

@@ -116,12 +116,14 @@ view_default_edit_menu.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// debug info bar
-		const debug_info_bar = ((typeof SHOW_DEVELOPER !== 'undefined' && SHOW_DEVELOPER===true) || (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG===true))
-			? render_debug_info_bar(self)
-			: null
-		if(debug_info_bar) {
-			wrapper.appendChild( debug_info_bar );
+	// debug info bar. Detect debug info bar and add it to the wrapper
+		const add_debug_info = ((typeof SHOW_DEVELOPER !== 'undefined' && SHOW_DEVELOPER===true) || (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG===true))
+		if(add_debug_info) {
+			wrapper.classList.add('with_debug_info')
+			const debug_info_bar = render_debug_info_bar(self)
+			if(debug_info_bar) {
+				wrapper.appendChild(debug_info_bar)
+			}
 		}
 
 	// events

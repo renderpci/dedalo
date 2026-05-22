@@ -566,7 +566,7 @@ class section extends common {
 
 						// default case
 
-						// When component_filter is called in edit mode, the component check if dato is empty and if is,
+						// When component_filter is called in edit mode, the component check if data is empty and if is,
 						// add default user project and save it
 						// (!) Note that construct component_filter in edit mode, saves default value too. Here, current section is saved again
 						$component_filter = component_common::get_instance(

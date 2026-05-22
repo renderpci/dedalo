@@ -6,6 +6,7 @@
 
 // imports
 	import {common, build_autoload} from '../../common/js/common.js'
+	import {load_style} from '../../common/js/utils/index.js'
 	import {area_common} from '../../area_common/js/area_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -68,7 +69,7 @@ area_maintenance.prototype.init = async function(options) {
 
 	// load additional JS/CSS
 		// highlightjs from https://highlightjs.org/
-		common.prototype.load_style(
+		load_style(
 			DEDALO_ROOT_WEB + '/lib/highlightjs/styles/atom-one-dark.css'
 		)
 

@@ -100,7 +100,8 @@ abstract class common {
 		public ?string $lang = null;
 
 		/**
-		 * Human-readable label for this element. Example: 'component_section_id'.
+		 * Human-readable label for this element. Example: 'When'.
+		 * It comes from the ontology node that corresponds to this tipo.
 		 * Displayed in the UI as the field or section title.
 		 * @var ?string $label
 		 */
@@ -3229,7 +3230,7 @@ abstract class common {
 					continue;
 				}
 
-			// item context add to context
+			// item section context add to global context
 				$item_context = [
 					$dd_section->get_structure_context_simple(
 						$section_permisions,
@@ -3355,7 +3356,7 @@ abstract class common {
 					}
 
 				// item context simple
-					$ddo =$element->get_structure_context_simple(
+					$ddo = $element->get_structure_context_simple(
 						$section_permisions,
 						false // bool add_rqo
 					);

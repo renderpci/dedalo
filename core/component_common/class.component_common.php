@@ -2724,12 +2724,12 @@ abstract class component_common extends common {
 						}
 					}
 
-			$search 	= search::get_instance($sqo);
+			$search = search::get_instance($sqo);
 			// include_negative values to include root user in list
 			if ($include_negative===true) {
 				$search->include_negative = true;
 			}
-			$db_result 	= $search->search();
+			$db_result = $search->search();
 
 		// 2 with all sections, create the list_of values
 			$result = [];

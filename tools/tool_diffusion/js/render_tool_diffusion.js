@@ -836,7 +836,7 @@ const publish_content = async (self, options) => {
 			// is triggered at the reader's closing
 			render_response.done()
 			// unlock lock_items
-			lock_items.map(el =>{
+			lock_items.forEach(el =>{
 				el.classList.remove('loading')
 			})
 			// render_process_report
@@ -870,7 +870,7 @@ const update_process_status = (options) => {
 	const lock_items	= options.lock_items
 
 	// locks lock_items
-	lock_items.map(el =>{
+	lock_items.forEach(el =>{
 		el.classList.add('loading')
 	})
 
@@ -898,7 +898,7 @@ const update_process_status = (options) => {
 
 		if (!stream) {
 			console.error('Error: request_stream did not return a valid stream for process:', process_id);
-			lock_items.map(el => el.classList.remove('loading'))
+			lock_items.forEach(el => el.classList.remove('loading'))
 			return
 		}
 
@@ -1015,7 +1015,7 @@ const update_process_status = (options) => {
 			// is triggered at the reader's closing
 			render_response.done()
 			// unlock lock_items
-			lock_items.map(el =>{
+			lock_items.forEach(el =>{
 				el.classList.remove('loading')
 			})
 			// render_process_report

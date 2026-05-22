@@ -299,7 +299,7 @@ class matrix_db_manager {
 		}
 
 		$select_fields	= '*'; // Select all because is faster than the list of the columns
-		$sql = 'SELECT ' . $select_fields . ' FROM "' . $table . '" WHERE section_id = $1 AND section_tipo = $2 LIMIT 1';
+		$sql = 'SELECT ' . $select_fields . ' FROM "' . $table . '" WHERE section_id = $1 AND section_tipo = $2::text LIMIT 1';
 
 		// exec_search manages prepared statement recycling and error logging
 		$result = self::exec_search($sql, [$section_id, $section_tipo]);

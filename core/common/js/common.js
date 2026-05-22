@@ -5,7 +5,7 @@
 
 
 // imports
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, load_style, load_script} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {delete_instance} from '../../common/js/instances.js'
@@ -1050,127 +1050,6 @@ const get_rqo_test = function(self) {
 
 
 /**
-* LOAD_STYLE
-* @param string src
-* @return promise
-* 	resolve/reject src
-*/
-// pending_styles: tracks in-flight style loads to prevent race conditions
-// (duplicate <link> elements and premature resolves from concurrent calls)
-const pending_styles = new Map();
-
-common.prototype.load_style = function (src) {
-
-	// check if a load is already in-flight for this src
-	const pending = pending_styles.get(src);
-	if (pending) {
-		return pending;
-	}
-
-	const promise = new Promise(function(resolve, reject) {
-
-		// check already loaded
-			const links 	= document.getElementsByTagName('link');
-			const links_len = links.length;
-			for (let i = links_len - 1; i >= 0; i--) {
-				if(links[i].getAttribute('href')===src) {
-					resolve(src);
-					return;
-				}
-			}
-
-		// DOM tag
-			const element 	  = document.createElement('link');
-				  element.rel = 'stylesheet';
-
-			element.addEventListener('load', function(e) {
-				pending_styles.delete(src);
-				resolve(src);
-			});
-
-			element.addEventListener('error', function(e) {
-				pending_styles.delete(src);
-				reject(src);
-			});
-
-			element.href = src;
-
-			document.getElementsByTagName('head')[0].appendChild(element);
-	});
-
-	// register as in-flight before returning
-	pending_styles.set(src, promise);
-
-	return promise;
-}//end load_style
-
-
-
-/**
-* LOAD_SCRIPT
-* @param string src
-* @param string|null content
-* @return promise
-* 	resolve/reject src
-*/
-// pending_scripts: tracks in-flight script loads to prevent race conditions
-// (duplicate <script> elements and premature resolves from concurrent calls)
-const pending_scripts = new Map();
-
-common.prototype.load_script = async function(src, content=null) {
-
-	// check if a load is already in-flight for this src
-	const pending = pending_scripts.get(src);
-	if (pending) {
-		return pending;
-	}
-
-	const promise = new Promise(function(resolve, reject) {
-
-		// check already loaded
-			const scripts 	  = document.getElementsByTagName('script');
-			const scripts_len = scripts.length;
-			for (let i = scripts_len - 1; i >= 0; i--) {
-				if(scripts[i].getAttribute('src')===src) {
-					resolve(src);
-					return;
-				}
-			}
-
-		// DOM tag
-			const element = document.createElement('script');
-			element.setAttribute('defer', 'defer');
-
-			if(content) {
-				// SEC-XSS-004: textContent is the correct way to set script source;
-				// innerHTML triggers the HTML parser unnecessarily.
-				element.textContent = content;
-			}
-
-			element.addEventListener('load', function(e) {
-				pending_scripts.delete(src);
-				resolve(src);
-			});
-
-			element.addEventListener('error', function(e) {
-				pending_scripts.delete(src);
-				reject(src);
-			});
-
-			element.src = src;
-
-			document.head.appendChild(element);
-	});
-
-	// register as in-flight before returning
-	pending_scripts.set(src, promise);
-
-	return promise;
-}//end load_script
-
-
-
-/**
 * GET_COLUMNS
 * Resolve the paths into the request_config_object with all dependencies (portal into portals, portals into sections, etc)
 * and create the columns to be rendered by the section or portals
@@ -1948,12 +1827,12 @@ export const render_tree_data = async function(data, target_node) {
 
 	// css file load
 		const lib_css_file = DEDALO_ROOT_WEB + '/lib/json-view/jsonview.bundle.css'
-		load_promises.push( common.prototype.load_style(lib_css_file) )
+		load_promises.push( load_style(lib_css_file) )
 
 	// js module import
 		// const load_promise = import('../../../lib/json-view/jsonview.bundle.js') // used minified version for now
 		const lib_js_file = DEDALO_ROOT_WEB + '/lib/json-view/jsonview.bundle.js'
-		load_promises.push( common.prototype.load_script(lib_js_file) )
+		load_promises.push( load_script(lib_js_file) )
 
 	// await all promises are done. It not means that lib is available, only started the load
 		await Promise.all(load_promises)

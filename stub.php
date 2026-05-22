@@ -265,17 +265,51 @@ class metrics{
 	public static $db_connection_total_time;
 	public static $db_connection_total_calls_cached;
 };
+// PostgreSQL extension stubs for IDE static analysis (see .vscode/settings.json)
+if (!function_exists('pg_num_rows')) {
+	function pg_num_rows($result): int { return 0; }
+}
+if (!function_exists('pg_fetch_result')) {
+	function pg_fetch_result($result, int $row, string|int $field = 0): string|false { return ''; }
+}
+if (!function_exists('pg_query_params')) {
+	function pg_query_params($connection, string $query, array $params = []): mixed { return false; }
+}
+if (!function_exists('pg_send_query_params')) {
+	function pg_send_query_params($connection, string $query, array $params = []): bool { return false; }
+}
+if (!function_exists('pg_get_result')) {
+	function pg_get_result($connection): mixed { return false; }
+}
+if (!function_exists('pg_query')) {
+	function pg_query($connection, string $query): mixed { return false; }
+}
+if (!function_exists('pg_prepare')) {
+	function pg_prepare($connection, string $stmtname, string $query): mixed { return false; }
+}
+if (!function_exists('pg_execute')) {
+	function pg_execute($connection, string $stmtname, array $params = []): mixed { return false; }
+}
+if (!function_exists('pg_affected_rows')) {
+	function pg_affected_rows($result): int { return 0; }
+}
+if (!function_exists('pg_escape_identifier')) {
+	function pg_escape_identifier($connection, string $identifier): string { return $identifier; }
+}
+if (!function_exists('pg_fetch_all_columns')) {
+	function pg_fetch_all_columns($result, int $column = 0): array { return []; }
+}
 if (!function_exists('pg_fetch_assoc')) {
-	function pg_fetch_assoc(){ return []; }
+	function pg_fetch_assoc($result = null, ?int $row = null, int $result_type = 0): array|false { return []; }
 }
 if (!function_exists('pg_fetch_object')) {
-	function pg_fetch_object(object $result){ return new stdClass(); }
+	function pg_fetch_object($result, ?int $row = null, ?string $class = null, array $constructor_args = [], array $params = []): object|false { return new stdClass(); }
 }
 if (!function_exists('pg_free_result')) {
-	function pg_free_result(object $result){ } : void
+	function pg_free_result($result): bool { return true; }
 }
 if (!function_exists('pg_last_error')) {
-	function pg_last_error(){ return new stdClass(); }
+	function pg_last_error($connection = null): string|false { return ''; }
 }
 
 class ImageMagick {

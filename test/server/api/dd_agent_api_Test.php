@@ -277,6 +277,8 @@ final class dd_agent_api_Test extends BaseTestCase {
 				'expected $and or $or key in SQO filter'
 			);
 		}
+
+		$this->assertIsObject($filter);
 	}//end test_build_sqo_filter_from_label_rules
 
 }//end class dd_agent_api_Test

@@ -6,6 +6,7 @@
 
 // imports
 	import {common} from '../../common/js/common.js'
+	import {load_style} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {events_subscription} from '../../component_input_text/js/events_subscription.js'
 	import {render_edit_component_date} from '../../component_date/js/render_edit_component_date.js'
@@ -92,7 +93,7 @@ component_date.prototype.load_editor = async function() {
 
 			// css file load
 				const lib_css_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.css'
-				load_promises.push( common.prototype.load_style(lib_css_file) )
+				load_promises.push( load_style(lib_css_file) )
 
 			// js module import
 				const js_file_load = import('../../../lib/flatpickr/dist/flatpickr.min.js') // used minified version for now

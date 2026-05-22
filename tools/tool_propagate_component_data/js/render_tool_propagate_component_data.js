@@ -197,6 +197,10 @@ const get_content_data = async function(self) {
 			// loading class
 				content_data.classList.add('loading')
 
+			// button spinner
+				const button = e.target
+				button.classList.add('button_spinner')
+
 			// API request to propagate_component_data
 				self.propagate_component_data(action)
 				.then(function(api_response){
@@ -211,6 +215,13 @@ const get_content_data = async function(self) {
 						local_db_id	: local_db_id,
 						container	: response_message,
 						lock_items	: lock_items
+					})
+
+					// button spinner. Remove on process is done
+					event_manager.subscribe('process_done', (el) => {
+						if (el.pid ===  api_response.pid) {
+							button.classList.remove('button_spinner')
+						}
 					})
 				})
 		}//end click_handler
@@ -305,7 +316,7 @@ const update_process_status = (options) => {
 	const lock_items	= options.lock_items
 
 	// locks lock_items
-	lock_items.map(el =>{
+	lock_items.forEach(el =>{
 		el.classList.add('loading')
 	})
 
@@ -390,8 +401,12 @@ const update_process_status = (options) => {
 			// is triggered at the reader's closing
 			render_response.done()
 			// unlocks the lock_items
-			lock_items.map(el =>{
+			lock_items.forEach(el =>{
 				el.classList.remove('loading')
+			})
+
+			event_manager.publish('process_done', {
+				pid : pid
 			})
 		}
 

@@ -1,27 +1,52 @@
 <?php
 declare(strict_types=1);
 /**
-* CLASS Ffmpeg
-* Manages audiovisual processing actions using FFMPEG library
-*
-*/
+ * CLASS Ffmpeg
+ * Manages audiovisual processing actions using FFMPEG library.
+ *
+ * Provides utility methods to interact with ffmpeg and ffprobe command-line tools
+ * to perform operations on audio and video media files including:
+ * - Querying installed binary paths and version info
+ * - Checking codec and library availability (e.g. libx264)
+ * - Constructing commands for converting media to alternate qualities and formats
+ * - Extracting media attributes, streams, and duration from video or audio files
+ * - Generating poster frames at specific timecodes
+ * - Cutting fragments/clips of audio and video with optional watermark overlays
+ * - Conforming media file headers for web playback (faststart)
+ *
+ * @package Dedalo
+ * @subpackage Core
+ */
 final class Ffmpeg {
 
 
 
-	// ar_settings. Array of settings files
+	/**
+	 * Array of setting file names in the settings directory (without extension)
+	 * @var array $ar_settings
+	 */
 	static protected array $ar_settings = [];
-	// ar_supported_quality_settings. Supported quality's array. Defined quality settings for conversion (in PAL, NTSC, et.)
+
+	/**
+	 * Supported video/audio qualities/resolutions in PAL, NTSC, etc.
+	 * @var array $ar_supported_quality_settings
+	 */
 	static protected array $ar_supported_quality_settings = ['1080','720','576','480','404','240','audio'];
-	// audio_codec. Audio codec resolution. E.g. 'libfdk_aac'
+
+	/**
+	 * Detected/resolved audio codec string (e.g., 'libfdk_aac', 'aac', etc.)
+	 * @var string $audio_codec
+	 */
 	static protected string $audio_codec = '';
 
 
 
 	/**
-	* GET_FFMPEG_INSTALLED_PATH
-	* @return string
-	*/
+	 * GET_FFMPEG_INSTALLED_PATH
+	 * Get the path to the ffmpeg executable from Dédalo configuration.
+	 *
+	 * @return string The binary path defined in DEDALO_AV_FFMPEG_PATH.
+	 */
 	public static function get_ffmpeg_installed_path() : string {
 
 		return DEDALO_AV_FFMPEG_PATH;
@@ -30,9 +55,11 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_FFPROVE_INSTALLED_PATH
-	* @return string
-	*/
+	 * GET_FFPROVE_INSTALLED_PATH
+	 * Get the path to the ffprobe executable from Dédalo configuration.
+	 *
+	 * @return string The binary path defined in DEDALO_AV_FFPROBE_PATH.
+	 */
 	public static function get_ffprove_installed_path() : string {
 
 		return DEDALO_AV_FFPROBE_PATH;
@@ -41,16 +68,19 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_VERSION
-	* Get binary version
-	* @return string
-	*/
+	 * GET_VERSION
+	 * Query the ffmpeg binary to get its version string.
+	 *
+	 * Uses shell_exec to check version information.
+	 *
+	 * @return string The trimmed ffmpeg version string.
+	 */
 	public static function get_version() : string {
 
 		$cmd  = Ffmpeg::get_ffmpeg_installed_path();
 		$cmd .= ' -version | sed -n "s/ffmpeg version \([-0-9.]*\).*/\1/p;" ';
 
-		$version = trim(shell_exec($cmd));
+		$version = trim(shell_exec($cmd) ?? '');
 
 		return $version;
 	}//end get_version
@@ -58,16 +88,19 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_FFPROVE_VERSION
-	* Get binary version
-	* @return string
-	*/
+	 * GET_FFPROVE_VERSION
+	 * Query the ffprobe binary to get its version string.
+	 *
+	 * Uses shell_exec to check version information.
+	 *
+	 * @return string The trimmed ffprobe version string.
+	 */
 	public static function get_ffprove_version() : string {
 
 		$cmd  = Ffmpeg::get_ffprove_installed_path();
 		$cmd .= ' -version | sed -n "s/ffprobe version \([-0-9.]*\).*/\1/p;" ';
 
-		$version = trim(shell_exec($cmd));
+		$version = trim(shell_exec($cmd) ?? '');
 
 		return $version;
 	}//end get_ffprove_version
@@ -75,18 +108,20 @@ final class Ffmpeg {
 
 
 	/**
-	* CHECK_LIB
-	* Checks if given library is installed with ffmpeg
-	* like 'libx264'
-	* @return string
-	*/
+	 * CHECK_LIB
+	 * Checks if a specific library/encoder is enabled/configured in the installed ffmpeg version.
+	 *
+	 * Matches configuration flags like "--enable-libx264" against output of `ffmpeg -version`.
+	 *
+	 * @param string $name Library/encoder name to check (e.g., 'libx264', 'libfdk-aac').
+	 * @return bool True if the library is enabled, false otherwise.
+	 */
 	public static function check_lib( string $name ) : bool {
 
 		$cmd  = Ffmpeg::get_ffmpeg_installed_path();
 		$cmd .= ' -version';
 
-		$version = shell_exec($cmd);
-
+		$version = shell_exec($cmd) ?? '';
 		$search = "--enable-{$name}";
 		preg_match('/' . $search . '/', $version, $output_array);
 
@@ -98,9 +133,11 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_QT_FASTSTART_INSTALLED_PATH
-	* @return string
-	*/
+	 * GET_QT_FASTSTART_INSTALLED_PATH
+	 * Get the path to the qt-faststart executable from Dédalo configuration.
+	 *
+	 * @return string The binary path defined in DEDALO_AV_FASTSTART_PATH.
+	 */
 	public static function get_qt_faststart_installed_path() : string {
 
 		return DEDALO_AV_FASTSTART_PATH;
@@ -109,9 +146,11 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_SETTINGS_PATH
-	* @return string
-	*/
+	 * GET_SETTINGS_PATH
+	 * Get the directory path containing ffmpeg conversion settings files.
+	 *
+	 * @return string The directory path defined in DEDALO_AV_FFMPEG_SETTINGS.
+	 */
 	public static function get_settings_path() : string {
 
 		return DEDALO_AV_FFMPEG_SETTINGS;
@@ -120,10 +159,14 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_AR_SETTINGS
-	* Array list of setting files inside dir '/dedalo/core/media_engine/ffmpeg_settings'
-	* @return array|null $ar_settings
-	*/
+	 * GET_AR_SETTINGS
+	 * Get the list of settings file names available in the ffmpeg settings directory.
+	 *
+	 * Caches results to static protected property `$ar_settings`.
+	 * Ignores '.', '..', '.DS_Store', and directories named 'acc'.
+	 *
+	 * @return array|null Array of settings file names (without extensions), or null on failure.
+	 */
 	public static function get_ar_settings() : ?array {
 
 		if (!empty(Ffmpeg::$ar_settings)) {
@@ -154,14 +197,16 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_SETTING_NAME_FROM_QUALITY
-	* Setting name from quality
-	* @param string $file_path
-	* @param string $quality
-	*
-	* @return string $setting
-	* 	like: '404_pal_16x9'
-	*/
+	 * GET_SETTING_NAME
+	 * Construct the setting name prefix matching the media parameters.
+	 *
+	 * Concatenates quality, media standard (pal/ntsc), and aspect ratio (e.g. '16x9')
+	 * to locate the correct settings configuration file.
+	 *
+	 * @param string $file_path Absolute path to the source media file.
+	 * @param string $quality Quality string (e.g., '404', '720', 'audio').
+	 * @return string Constructed settings name like '404_pal_16x9' or 'audio'.
+	 */
 	public static function get_setting_name( string $file_path, string $quality ) : string {
 
 		$beats = [$quality];
@@ -191,14 +236,16 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_MEDIA_STANDARD
-	*  (PAL / NTSC)
-	* Resolve media standard name calculating fps from current file video header
-	* @see Ffmpeg::get_setting_name_from_quality
-	* @param string $file_path
-	* @return string $standard
-	* 	like 'ntsc' or 'pal'
-	*/
+	 * GET_MEDIA_STANDARD
+	 * Resolve the video broadcast standard (PAL / NTSC) based on video frame rate.
+	 *
+	 * Queries the video stream of the file using ffprobe. Frame rates >= 29 fps
+	 * resolve to 'ntsc', while lower frame rates resolve to 'pal'.
+	 *
+	 * @see Ffmpeg::get_setting_name()
+	 * @param string $file_path Absolute path to the source media file.
+	 * @return string The resolved media standard ('ntsc' or 'pal').
+	 */
 	public static function get_media_standard( string $file_path ) : string {
 
 		// media_streams
@@ -254,11 +301,15 @@ final class Ffmpeg {
 					? $video_stream->r_frame_rate
 					: null);
 			if (!empty($ref)) {
-				// sample: '30000/1001'
-				$beats = explode('/', $ref);
-				if (isset($beats[0], $beats[1]) && intval($beats[1]) > 0) {
-					$ratio	= intval($beats[0]) / intval($beats[1]);
-					$fps	= intval($ratio);
+				if (strpos($ref, '/') !== false) {
+					// sample: '30000/1001'
+					$beats = explode('/', $ref);
+					if (isset($beats[0], $beats[1]) && intval($beats[1]) > 0) {
+						$ratio	= intval($beats[0]) / intval($beats[1]);
+						$fps	= intval($ratio);
+					}
+				} else {
+					$fps = intval($ref);
 				}
 			}
 			switch (true) {
@@ -289,9 +340,14 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_QUALITY_FROM_SETTING
-	* @return string|null $quality
-	*/
+	 * GET_QUALITY_FROM_SETTING
+	 * Extract the raw quality code/resolution from a setting name.
+	 *
+	 * Compares the setting string against `$ar_supported_quality_settings`.
+	 *
+	 * @param string $setting Setting name (e.g., '404_pal_16x9' or 'audio').
+	 * @return string|null Extracted quality string (e.g. '404', 'audio') or null if not matched.
+	 */
 	public static function get_quality_from_setting( string $setting ) : ?string {
 
 		if($setting==='audio') {
@@ -313,16 +369,22 @@ final class Ffmpeg {
 
 
 	/**
-	* BUILD_AV_ALTERNATE_COMMAND
-	* Creates alternative video or audio version with received settings
-	* @param object $options
-	* {
-	* 	setting_name : string,
-	* 	source_file_path : string,
-	* 	target_file_path : string
-	* }
-	* @return object $response
-	*/
+	 * BUILD_AV_ALTERNATE_COMMAND
+	 * Create and write a shell script to generate an alternative audio/video version.
+	 *
+	 * Parses settings variables (bitrate, scale, codecs, etc.) from Dédalo's ffmpeg setting files,
+	 * handles multi-pass video rendering, audio extracting, and qt-faststart optimization.
+	 *
+	 * @param object $options Options object containing:
+	 *                        - string $setting_name Name of the settings file.
+	 *                        - string $source_file_path Path to the source file or directory (DVD structures supported).
+	 *                        - string $target_file_path Destination path for the converted file.
+	 * @return object Standard response object containing:
+	 *                - bool $result True on success, false otherwise.
+	 *                - string $msg Descriptive message.
+	 *                - string $command Generated ffmpeg bash command.
+	 *                - string $sh_file Path to the generated shell script file.
+	 */
 	public static function build_av_alternate_command( object $options ) : object {
 
 		$response = new stdClass();
@@ -420,6 +482,7 @@ final class Ffmpeg {
 							$vob_files[]= $src_file.'/VIDEO_TS/'.$file;
 						}
 					 }
+					 closedir($handle);
 				}
 				if($is_all_ok){
 					//$src_file	= 'concat:$(echo '.$src_file.'/VIDEO_TS/*.VOB|tr \  \|)';
@@ -621,12 +684,15 @@ final class Ffmpeg {
 
 
 	/**
-	* FIND_VIDEO_STREAM
-	* Locates the right stream (track) from the whole
-	* file streams list (usually video and audio tracks)
-	* @param array $media_streams
-	* @return object|null $video_stream
-	*/
+	 * FIND_VIDEO_STREAM
+	 * Locate the primary video stream object from an array of media streams.
+	 *
+	 * Evaluates streams by codec type ('video') and falls back to matching
+	 * video-centric codec names (e.g. starting with 'h26') or dimension existence.
+	 *
+	 * @param array $media_streams Array of stream metadata objects returned by ffprobe.
+	 * @return object|null The matched video stream object, or null if none found.
+	 */
 	public static function find_video_stream( array $media_streams ) : ?object {
 
 		// search by codec_type
@@ -659,11 +725,16 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_ASPECT_RATIO
-	* @param string $source_file
-	* @return string $aspect
-	* 	Like '16x9'
-	*/
+	 * GET_ASPECT_RATIO
+	 * Resolve the aspect ratio of the given video source file.
+	 *
+	 * Extracts width and height from the video stream or parses `display_aspect_ratio`,
+	 * mapping the calculated ratio to common standards ('16x9', '4x3', '5x3', '3x2', '5x4').
+	 * Uses local caching to avoid duplicate ffprobe calls.
+	 *
+	 * @param string $source_file Absolute path to the video file.
+	 * @return string The resolved aspect ratio string (e.g. '16x9', default).
+	 */
 	public static function get_aspect_ratio( string $source_file ) : string {
 
 		// cache
@@ -719,8 +790,8 @@ final class Ffmpeg {
 					$beats	= explode(':', $aspect_ratio);
 					// $aspect	= implode('x', $beats);
 
-					$width	= $beats[0] ?? 0;
-					$height	= $beats[1] ?? 0;
+					$width	= isset($beats[0]) ? (float)$beats[0] : 0.0;
+					$height	= isset($beats[1]) ? (float)$beats[1] : 0.0;
 
 				// debug
 					debug_log(__METHOD__
@@ -805,19 +876,19 @@ final class Ffmpeg {
 
 
 	/**
-	* CREATE POSTERFRAME
-	* Creates an image from the media av at given time code
-	* @param object $options
-	* {
-	* 	timecode : float|string like 102.369217,
-	* 	src_file : string full path to source av file,
-	* 	quality : string current quality used like 'original'
-	* 	posterframe_filepath : string full path to target image file
-	* }
-	* @return bool
-	* 	true: allow to create thumbnail
-	* 	false: disallow to create it (audio files)
-	*/
+	 * CREATE_POSTERFRAME
+	 * Extract a posterframe image from a video file at a given timecode.
+	 *
+	 * Runs ffmpeg command synchronously to capture a single frame as a JPEG image,
+	 * scaling it according to the requested quality ('original', 'thumbnail', or fallback).
+	 *
+	 * @param object $options Options object containing:
+	 *                        - float|string $timecode Seconds offset for extraction (e.g., 102.369).
+	 *                        - string $src_file Path to the source video file.
+	 *                        - string $quality Quality type ('original', 'thumbnail', or other).
+	 *                        - string $posterframe_filepath Target destination path for the extracted image.
+	 * @return bool True if posterframe is generated successfully; false on failure or if it is an audio file.
+	 */
 	public static function create_posterframe( object $options ) : bool {
 
 		// options
@@ -867,8 +938,8 @@ final class Ffmpeg {
 					: '1280x720';
 			}else if ($quality==='thumbnail') {
 				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
-					? floor(4  * DEDALO_IMAGE_THUMB_HEIGHT / 3).'x'.DEDALO_IMAGE_THUMB_HEIGHT
-					: floor(16 * DEDALO_IMAGE_THUMB_HEIGHT / 9).'x'.DEDALO_IMAGE_THUMB_HEIGHT; // default for 16x9
+					? (int)floor(4  * DEDALO_IMAGE_THUMB_HEIGHT / 3).'x'.DEDALO_IMAGE_THUMB_HEIGHT
+					: (int)floor(16 * DEDALO_IMAGE_THUMB_HEIGHT / 9).'x'.DEDALO_IMAGE_THUMB_HEIGHT; // default for 16x9
 			}else{
 				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
 					? '540x404'
@@ -914,11 +985,23 @@ final class Ffmpeg {
 
 
 	/**
-	* BUILD_FRAGMENT
-	* Process a av fragment based on given time codes in and out
-	* @param object $options
-	* @return object $response
-	*/
+	 * BUILD_FRAGMENT
+	 * Cut a sub-clip (fragment) of a media file between in and out timecodes.
+	 *
+	 * Supports optional visual watermark overlay. When watermarked, encodes using
+	 * ffmpeg video overlay filter; otherwise, copies stream directly for efficiency.
+	 *
+	 * @param object $options Options object containing:
+	 *                        - string $source_file_path Path to the source video/audio file.
+	 *                        - string $target_filename Basename for the output file.
+	 *                        - string $fragments_dir_path Destination directory for the fragment.
+	 *                        - float $tc_in_secs Start time in seconds.
+	 *                        - float $tc_out_secs End time in seconds.
+	 *                        - bool $watermark Whether to overlay Dédalo watermark.
+	 * @return object Standard response object containing:
+	 *                - bool $result True on success, false otherwise.
+	 *                - string $msg Result message.
+	 */
 	public static function build_fragment( object $options ) : object {
 
 		$response = new stdClass();
@@ -1030,11 +1113,15 @@ final class Ffmpeg {
 
 
 	/**
-	* CONFORM_HEADER
-	* @param string $source_file_path
-	*  like: '/../dedalo/media/av/404/0/test94_test3_3.mp4'
-	* @return string|null $result
-	*/
+	 * CONFORM_HEADER
+	 * Relocate the MOOV atom metadata to the beginning of an MP4 container.
+	 *
+	 * Runs qt-faststart to enable progressive/streamed web playback,
+	 * preserving the original file as a temporary backup with '_untouched' suffix.
+	 *
+	 * @param string $source_file_path Absolute path to the target video file.
+	 * @return string|null Output of shell command, or null on failure.
+	 */
 	public static function conform_header( string $source_file_path ) : ?string {
 
 		$result = null;
@@ -1047,10 +1134,11 @@ final class Ffmpeg {
 			// source_dir_path. Like /../dedalo/media/av/404/0
 			$source_dir_path	= dirname($source_file_path);
 			$path_info			= pathinfo($source_file_path);
+			$extension			= $path_info['extension'] ?? '';
 			// file_path_temp. Like /../dedalo/media/av/404/0/test94_test3_3_temp.mp4
-			$file_path_temp	= $source_dir_path .'/'. $path_info['filename'] .'_temp.'. $path_info['extension'];
+			$file_path_temp	= $source_dir_path .'/'. $path_info['filename'] .'_temp' . ($extension !== '' ? '.' . $extension : '');
 			// file_path_untouched. Like /../dedalo/media/av/404/0/test94_test3_3_untouched.mp4
-			$file_path_untouched = $source_dir_path .'/'. $path_info['filename'] .'_untouched.'. $path_info['extension'];
+			$file_path_untouched = $source_dir_path .'/'. $path_info['filename'] .'_untouched' . ($extension !== '' ? '.' . $extension : '');
 			// target_file_path. Like /../dedalo/media/av/404/0/test94_test3_3.mp4
 			$target_file_path = $source_file_path; // to the same location than the source (moved previously)
 
@@ -1092,13 +1180,17 @@ final class Ffmpeg {
 
 
 	/**
-	* CONVERT_AUDIO
-	* Transform audio file to default codec
-	* @param object $options
-	* @return string|null $result
-	* 	A string containing the output from the executed command, false if the pipe cannot be established
-	* 	or null if an error occurs or the command produces no output.
-	*/
+	 * CONVERT_AUDIO
+	 * Convert an audio file to the target Dédalo default audio format and codec.
+	 *
+	 * Transcodes the input audio (using configured `$acodec`, 44100 Hz, stereo, 240k)
+	 * and optimizes it using qt-faststart.
+	 *
+	 * @param object $options Options object containing:
+	 *                        - string $uploaded_file_path Input audio file path.
+	 *                        - string $output_file_path Target output file path.
+	 * @return string|null Output of shell command execution, or null on error.
+	 */
 	public static function convert_audio( object $options ) : ?string {
 
 		// options
@@ -1147,11 +1239,17 @@ final class Ffmpeg {
 
 
 	/**
-	* CONVERT_TO_DEDALO_AV
-	* Trans-code any media to dedalo standard quality (usually 404)
-	* Not return nothing, open terminal process and send result to /dev/null
-	* @return string|false|null $result
-	*/
+	 * CONVERT_TO_DEDALO_AV
+	 * Transcode a source video file to the standard Dédalo target resolution (typically 404px height).
+	 *
+	 * Uses yadif filter to deinterlace and scales to fixed height. Can run asynchronously
+	 * in the background (diverting output to /dev/null) or synchronously.
+	 *
+	 * @param string $source_file Path to the input video file.
+	 * @param string $target_file Target path for the transcoded output MP4.
+	 * @param bool $async True to execute asynchronously in background (default), false to wait for completion.
+	 * @return string|null Output result from shell command, or null.
+	 */
 	public static function convert_to_dedalo_av( string $source_file, string $target_file, bool $async=true ) : ?string {
 
 		// ffmpeg_path
@@ -1162,7 +1260,8 @@ final class Ffmpeg {
 		$acodec = Ffmpeg::get_audio_codec();
 
 		$path_parts			= pathinfo($target_file);
-		$temp_target_file	= $path_parts['dirname'] .'/'. $path_parts['filename'] .'_temp.' . $path_parts['extension'];
+		$extension			= $path_parts['extension'] ?? '';
+		$temp_target_file	= $path_parts['dirname'] .'/'. $path_parts['filename'] .'_temp' . ($extension !== '' ? '.' . $extension : '');
 
 		$heigth = DEDALO_AV_QUALITY_DEFAULT; // 404, 240 ..
 
@@ -1195,31 +1294,36 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_MEDIA_ATTRIBUTES
-	* @return object|null $output
-	* 	JSON mixed file info like:
-	* {
-	* 	"format": {
-	* 		"filename": "/../dedalo/media/av/404/rsc35_rsc167_1.mp4",
-	* 		"nb_streams": 3,
-	* 		"nb_programs": 0,
-	* 		"format_name": "mov,mp4,m4a,3gp,3g2,mj2",
-	* 		"format_long_name": "QuickTime / MOV",
-	* 		"start_time": "0.000000",
-	* 		"duration": "172.339000",
-	* 		"size": "22126087",
-	* 		"bit_rate": "1027095",
-	* 		"probe_score": 100,
-	* 		"tags": {
-	* 			"major_brand": "isom",
-	* 			"minor_version": "512",
-	* 			"compatible_brands": "isomiso2avc1mp41",
-	* 			"encoder": "Lavf59.16.100",
-	* 			"creation_time": "2023-10-23T10:00:26.000000Z"
-	* 		}
-	* 	}
-	* }
-	*/
+	 * GET_MEDIA_ATTRIBUTES
+	 * Retrieve metadata properties of a media file via ffprobe.
+	 *
+	 * Executes ffprobe querying format attributes, returning the decoded JSON object.
+	 *
+	 * @param string $source_file Path to the target media file.
+	 * @return object|null Object representing media format metadata, or null on failure.
+	 *  JSON mixed file info like:
+	 * {
+	 * 	"format": {
+	 * 		"filename": "/../dedalo/media/av/404/rsc35_rsc167_1.mp4",
+	 * 		"nb_streams": 3,
+	 * 		"nb_programs": 0,
+	 * 		"format_name": "mov,mp4,m4a,3gp,3g2,mj2",
+	 * 		"format_long_name": "QuickTime / MOV",
+	 * 		"start_time": "0.000000",
+	 * 		"duration": "172.339000",
+	 * 		"size": "22126087",
+	 * 		"bit_rate": "1027095",
+	 * 		"probe_score": 100,
+	 * 		"tags": {
+	 * 			"major_brand": "isom",
+	 * 			"minor_version": "512",
+	 * 			"compatible_brands": "isomiso2avc1mp41",
+	 * 			"encoder": "Lavf59.16.100",
+	 * 			"creation_time": "2023-10-23T10:00:26.000000Z"
+	 * 		}
+	 * 	}
+	 * }
+	 */
 	public static function get_media_attributes( string $source_file ) : ?object {
 
 		$ffprove_path = Ffmpeg::get_ffprove_installed_path();
@@ -1234,13 +1338,14 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_DATE_TIME_ORIGINAL
-	* FFPROBE try to get date from file metadata
-	* @param string $file
-	* 	full file path
-	* @return dd_date|null $dd_date
-	* 	dd_date object
-	*/
+	 * GET_DATE_TIME_ORIGINAL
+	 * Query metadata properties of a media file to retrieve its original creation timestamp.
+	 *
+	 * Extracts creation_time tag using ffprobe and formats it as a dd_date object.
+	 *
+	 * @param string $file Absolute path to the media file.
+	 * @return dd_date|null Resolved dd_date object or null if tag is missing or parsing fails.
+	 */
 	public static function get_date_time_original( string $file ) : ?dd_date {
 
 		$attributes = Ffmpeg::get_media_attributes( $file );
@@ -1263,10 +1368,15 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_MEDIA_STREAMS
-	* @param string $source_file
-	* @return object|null $output
-	*/
+	 * GET_MEDIA_STREAMS
+	 * Retrieve stream-level metadata (tracks) for a given media file via ffprobe.
+	 *
+	 * Executes ffprobe to list all streams (video, audio, etc.), using caching
+	 * to prevent redundant shell invocations for the same path.
+	 *
+	 * @param string $source_file Path to the media file.
+	 * @return object|null Decoded JSON object representing media streams, or null.
+	 */
 	public static function get_media_streams( string $source_file ) : ?object {
 		$start_time=start_time();
 
@@ -1305,9 +1415,14 @@ final class Ffmpeg {
 
 
 	/**
-	* GET_AUDIO_CODEC
-	* @return string $acodec
-	*/
+	 * GET_AUDIO_CODEC
+	 * Resolve the preferred supported audio encoder available in the ffmpeg installation.
+	 *
+	 * Detects presence of 'libfdk_aac' or 'libvo_aacenc' config flags in ffmpeg, falling back to 'aac'.
+	 * Caches resolved encoder name to static protected property `$audio_codec`.
+	 *
+	 * @return string The codec name (e.g. 'libfdk_aac', 'libvo_aacenc', or 'aac').
+	 */
 	public static function get_audio_codec() : string {
 
 		// cache
@@ -1319,7 +1434,7 @@ final class Ffmpeg {
 			$ffmpeg_path = Ffmpeg::get_ffmpeg_installed_path();
 
 		// FFMPEG AUDIO CODEC TEST
-		$ffmpeg_info = shell_exec($ffmpeg_path .' -loglevel error -buildconf');
+		$ffmpeg_info = shell_exec($ffmpeg_path .' -loglevel error -buildconf') ?? '';
 		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {
 			// Version >=3 with libfdk-aac installed
 			$acodec = 'libfdk_aac'; // Note uderscore '_'

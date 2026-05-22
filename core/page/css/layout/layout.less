@@ -686,7 +686,15 @@
 			.block {
 				display: block;
 				padding: 1rem;
+
+				// user_name_info like 'created by user: Root'
+				&.user_name_info {
+					div {
+						display: contents;
+					}
+				}
 			}
+
 		}//end .body
 
 		.iframe_container {

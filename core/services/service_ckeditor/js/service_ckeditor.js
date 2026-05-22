@@ -7,7 +7,7 @@
 // imports
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {common} from '../../../common/js/common.js'
-	import {clone, get_json_langs} from '../../../common/js/utils/index.js'
+	import {clone, get_json_langs, load_script} from '../../../common/js/utils/index.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
 
 
@@ -74,7 +74,7 @@ export const service_ckeditor = function() {
 				// load ckeditor JS file
 					const ckeditor_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/ckeditor.js'
 					load_promises.push(
-						common.prototype.load_script(ckeditor_file)
+						load_script(ckeditor_file)
 					)
 
 				// load and set JSON langs file
@@ -146,7 +146,7 @@ export const service_ckeditor = function() {
 
 			if(lang !== 'en'){
 				const ck_translation_file = DEDALO_ROOT_WEB + '/lib/ckeditor/build/translations/'+lang+'.js'
-				await common.prototype.load_script(ck_translation_file)
+				await load_script(ck_translation_file)
 			}
 
 		// remove loading class of value_container before is changed by ckeditor

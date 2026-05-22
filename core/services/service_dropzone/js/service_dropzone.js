@@ -6,7 +6,7 @@
 
 // import
 	import {data_manager} from '../../../common/js/data_manager.js'
-	import {dd_console} from '../../../common/js/utils/index.js'
+	import {dd_console, load_style, load_script} from '../../../common/js/utils/index.js'
 	import {common} from '../../../common/js/common.js'
 	import {render_edit_service_dropzone} from './render_edit_service_dropzone.js'
 
@@ -73,10 +73,10 @@ service_dropzone.prototype.init = async function(options) {
 		const load_promises = []
 
 		const lib_js_file = DEDALO_ROOT_WEB + '/lib/dropzone/dropzone-min.js'
-		load_promises.push( common.prototype.load_script(lib_js_file) )
+		load_promises.push( load_script(lib_js_file) )
 
 		const lib_css_file = DEDALO_ROOT_WEB + '/lib/dropzone/dropzone.css'
-		load_promises.push( common.prototype.load_style(lib_css_file) )
+		load_promises.push( load_style(lib_css_file) )
 
 		await Promise.all(load_promises).then(async function(response){
 			console.log("dropzone load promise:",response);

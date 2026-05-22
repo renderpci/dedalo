@@ -15,7 +15,8 @@
 		clone,
 		dd_console,
 		printf,
-		open_window
+		open_window,
+		load_style
 		} from '../../../core/common/js/utils/index.js'
 	import {render_error} from './render_tool_common.js'
 
@@ -268,7 +269,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 
 	// load self style
 		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + '/css/' + self.model + '.css' + `?v=${page_globals.dedalo_version}`
-		await common.prototype.load_style(tool_css_url)
+		await load_style(tool_css_url)
 
 	// options
 		// load_ddo_map could be a callback or the default loader function
@@ -695,7 +696,7 @@ const view_modal = async function(options) {
 		const tool_css_url = tool_context.css?.url
 		if(tool_css_url) {
 			// Don't await here. Race conditions are handled
-			common.prototype.load_style(tool_css_url)
+			load_style(tool_css_url)
 		}
 
 	// modal

@@ -142,7 +142,7 @@ final class search_tm_test extends BaseTestCase {
 
 		// Verify order_default contains expected string
 		$this->assertTrue(
-			in_array('id DESC', $sql_obj->order_default),
+			in_array('timestamp DESC', $sql_obj->order_default),
 			'expected sql_obj->order_default to contain "id DESC"'
 		);
 

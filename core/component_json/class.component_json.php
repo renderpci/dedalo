@@ -1,5 +1,6 @@
 <?php declare(strict_types=1);
 include_once 'trait.search_component_json.php';
+include_once 'trait.search_component_json_tm.php';
 /**
 * CLASS COMPONENT_JSON
 * Manages JSON data components in Dédalo.
@@ -30,6 +31,7 @@ class component_json extends component_common {
 
 	// traits. Files added to current class file to split the large code.
 	use search_component_json;
+	use search_component_json_tm;
 
 
 
