@@ -1517,7 +1517,6 @@ class section extends common {
 	* Create new section record in matrix
 	* @param object|null $options = null
 	* {
-	*   component_filter_data : array|null
 	*   values : object|null,
 	* 	section_id : int|null
 	* }
@@ -1532,11 +1531,6 @@ class section extends common {
 		}
 
 		// Options
-			// Project Inheritance. When a new section is created from a component_portal
-			// the main section project is injected into the new section
-			// because the projects from the main section needs to be the same.
-			$component_filter_data = $options->component_filter_data ?? null;
-
 			// values, inject a given values into new section record
 			$values = $options->values ?? null;
 
