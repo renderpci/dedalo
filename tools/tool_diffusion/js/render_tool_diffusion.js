@@ -624,6 +624,7 @@ export const render_container_bottom = function (self, item, lock_items, process
 
 			if (my_process) {
 				update_process_status({
+					self,
 					process_id	: process_id,
 					container	: response_message,
 					lock_items	: lock_items
@@ -840,6 +841,7 @@ const publish_content = async (self, options) => {
 			})
 			// render_process_report
 			render_process_report({
+				self,
 				last_sse_response,
 				container: response_message
 			})
@@ -862,6 +864,7 @@ const publish_content = async (self, options) => {
 */
 const update_process_status = (options) => {
 
+	const self			= options.self
 	const process_id	= options.process_id
 	const container		= options.container
 	const lock_items	= options.lock_items
@@ -1017,6 +1020,7 @@ const update_process_status = (options) => {
 			})
 			// render_process_report
 			render_process_report({
+				self,
 				last_sse_response,
 				container
 			})
@@ -1045,20 +1049,126 @@ const update_process_status = (options) => {
 const render_process_report = function(options) {
 
 	// options
+		const self							= options.self
 		const last_sse_response				= options.last_sse_response || {}
 		const last_update_record_response	= last_sse_response.data?.last_update_record_response
 		const diffusion_data				= last_sse_response.data?.diffusion_data || []
 		const container						= options.container
 
-	// last_update_record_response
-		// {
-		//   "result": true,
-		//   "msg": [
-		// 		"Record updated section_id: 1. Number of references: 8 in levels: 2"
-		//   ],
-		//   "errors": [],
-		//   "class": "sql"
-		// }
+	// Bun SQL diffusion engine result (set at SSE top-level, not in last_update_record_response)
+		const engine_result = last_sse_response.result
+		if (engine_result?.tables) {
+
+			// wrapper
+			const report_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'diffusion_report',
+				parent			: container
+			})
+
+			// helper: get label or fallback to English
+			const label_en = {
+				success          : 'Success',
+				partial_success  : 'Partial success',
+				fail             : 'Fail',
+				table_name       : 'Table',
+				rows_total       : 'Rows',
+				records_affected : 'Records'
+			}
+			const tl = (name) => self?.get_tool_label(name) || label_en[name] || name
+
+			// summary status
+			const ok				= engine_result.result === true
+			const has_errors		= !!(engine_result.errors?.length)
+			const summary_class		= ok
+				? 'success'
+				: has_errors
+					? 'partial'
+					: 'fail'
+			const summary_label		= ok
+				? tl('success')
+				: has_errors
+					? tl('partial_success')
+					: tl('fail')
+			const total_time		= last_sse_response.total_time || ''
+			const summary_msg		= [summary_label, engine_result.msg || ''].filter(Boolean).join(' - ')
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'report_summary ' + summary_class,
+				text_content	: summary_msg + (total_time ? ' (' + total_time + ')' : ''),
+				parent			: report_node
+			})
+
+			// tables grid
+			const grid = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tables_report',
+				parent			: report_node
+			})
+			// headers
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'header table_name',
+				text_content	: tl('table_name'),
+				parent			: grid
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'header rows_total',
+				text_content	: tl('rows_total'),
+				parent			: grid
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'header records_count',
+				text_content	: tl('records_affected'),
+				parent			: grid
+			})
+			// table rows
+			engine_result.tables.forEach((table) => {
+				const total_rows	= table.records_affected || 0
+				const unique_recs	= table.records_count ?? total_rows
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'cell table_name',
+					text_content	: table.table_name || '',
+					parent			: grid
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'cell rows_total' + (total_rows === 0 ? ' zero' : ''),
+					text_content	: String(total_rows),
+					parent			: grid
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'cell records_count' + (unique_recs === 0 ? ' zero' : ''),
+					text_content	: String(unique_recs),
+					parent			: grid
+				})
+			})
+
+			// errors
+			const ar_errors = engine_result.errors || last_sse_response.errors || []
+			if (ar_errors.length) {
+				const error_list = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'error_list',
+					parent			: report_node
+				})
+				ar_errors.forEach((err) => {
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'error_item',
+						text_content	: err,
+						parent			: error_list
+					})
+				})
+			}
+			return true;
+		}
+
+	// last_update_record_response (RDF/XML only)
 		if (!last_update_record_response) {
 			return false
 		}
@@ -1067,10 +1177,6 @@ const render_process_report = function(options) {
 		const type = last_update_record_response.class
 		// cases
 		switch (type) {
-
-			case 'sql':
-				// Nothing specific to do
-				break;
 
 			case 'diffusion_rdf':
 			case 'diffusion_xml': {
