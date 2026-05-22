@@ -15,7 +15,7 @@ final class filter_test extends BaseTestCase {
 
 		$user_id = 1;
 
-		$result = filter::get_user_projects(
+		$result = component_filter_master::get_user_projects(
 			$user_id
 		);
 
@@ -36,7 +36,7 @@ final class filter_test extends BaseTestCase {
 
 		$user_id = 1;
 
-		$result = filter::get_user_authorized_projects_cache_key(
+		$result = component_filter_master::get_user_authorized_projects_cache_key(
 			$user_id,
 			'test52'
 		);
@@ -66,7 +66,7 @@ final class filter_test extends BaseTestCase {
 
 		$user_id = 1;
 
-		$result = filter::clean_cache(
+		$result = component_filter_master::clean_cache(
 			$user_id,
 			'test52'
 		);
@@ -96,7 +96,7 @@ final class filter_test extends BaseTestCase {
 
 		$user_id = 1;
 
-		$result = filter::get_user_authorized_projects(
+		$result = component_filter_master::get_user_authorized_projects(
 			$user_id,
 			'test52'
 		);
@@ -118,7 +118,7 @@ final class filter_test extends BaseTestCase {
 
 		$user_id = 1;
 
-		$result = filter::get_filter_user_records_by_id(
+		$result = component_filter_records::get_user_filter_records(
 			$user_id
 		);
 

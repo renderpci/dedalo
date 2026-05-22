@@ -849,8 +849,8 @@ class security {
 				return true;
 			}
 
-		// user projects (cached by filter::get_user_projects)
-			$user_projects = filter::get_user_projects((int)$user_id);
+		// user projects (cached by component_filter_master::get_user_projects)
+			$user_projects = component_filter_master::get_user_projects((int)$user_id);
 			if (empty($user_projects)) {
 				return false;
 			}

@@ -524,7 +524,7 @@ class indexation_grid {
 		if( false===security::is_global_admin($user_id) ) {
 
 			# USER PROJECTS : All projects that current user can view
-			$ar_user_projects = (array)filter::get_user_projects( $user_id );
+			$ar_user_projects = (array)component_filter_master::get_user_projects( $user_id );
 				#dump($ar_user_projects, ' ar_user_projects ++ '.to_string());
 
 			# Filter

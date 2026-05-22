@@ -1487,12 +1487,6 @@ class section extends common {
 	// 				tools_register::clean_cache();
 	// 				break;
 
-	// 			case DEDALO_SECTION_PROJECTS_TIPO:
-	// 				filter::clean_cache(
-	// 					logged_user_id(), // user id. Current logged user id
-	// 					DEDALO_FILTER_MASTER_TIPO // dd170
-	// 				);
-	// 				break;
 
 	// 			default:
 	// 				// no cache to delete here
@@ -1664,7 +1658,7 @@ class section extends common {
 					break;
 
 				case DEDALO_SECTION_PROJECTS_TIPO:
-					filter::clean_cache(
+					component_filter_master::clean_cache(
 						$user_id, // user id. Current logged user id
 						DEDALO_FILTER_MASTER_TIPO // dd170
 					);
