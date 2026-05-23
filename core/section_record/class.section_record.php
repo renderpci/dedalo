@@ -829,7 +829,7 @@ class section_record {
 
 		// Update the modified section data.
 			$this->update_modified_section_data((object)[
-				'mode' => 'update_data'
+				'mode' => 'update_record'
 			]);
 
 		// debug
@@ -928,6 +928,7 @@ class section_record {
 	/**
 	* GET_MODIFIED_SECTION_SAVE_PATH
 	* Computes metadata save_path items and sets data_instance values.
+	* Delegates data computation to build_modification_data to avoid duplication.
 	* Does NOT save to DB — caller is responsible for calling save_key_data + save_event.
 	* @param string $mode
 	* 	'new_record' | 'update_record'
@@ -936,107 +937,36 @@ class section_record {
 	*/
 	private function get_modified_section_save_path( string $mode ) : array {
 
-		// Skip for activity sections
-		if ($this->section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
-			return [];
-		}
-
-		// Check user logged
 		$user_id = logged_user_id();
-		if( empty($user_id) ) {
-			debug_log(__METHOD__
-				. " ERROR: logged_user_id() is empty. Cannot set created/modified user locator."
-				, logger::ERROR
-			);
+
+		// Pure function returns data_values keyed by column and tipo
+		$data_values = self::build_modification_data(
+			$this->section_tipo,
+			$mode,
+			$user_id
+		);
+
+		// Empty (activity section or no user)
+		if( empty((array)$data_values) ){
 			return [];
 		}
 
-		// Fixed private tipos
-			$metadata_definition = section::get_metadata_definition();
-				$created_by_user	= $metadata_definition->created_by_user; 	// 'tipo'=>'dd200', 'model'=>'component_select'
-				$created_date		= $metadata_definition->created_date; 		// 'tipo'=>'dd199', 'model'=>'component_date'
-				$modified_by_user	= $metadata_definition->modified_by_user; 	// 'tipo'=>'dd197', 'model'=>'component_select'
-				$modified_date		= $metadata_definition->modified_date; 		// 'tipo'=>'dd201', 'model'=>'component_date'
+		// Side effect: set data_instance values from build_modification_data output
+		foreach ($data_values as $column => $column_data) {
+			foreach ($column_data as $tipo => $data) {
+				$this->data_instance->set_key_data($column, $tipo, $data);
+			}
+		}
 
-		// Current user locator
-			$user_locator = new locator();
-				$user_locator->set_id(1); // fixed id
-				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
-				$user_locator->set_section_id($user_id); // logged user
-				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-
-		// Current date
-			$dd_date	= component_date::get_date_now();
-			$date_now 	= new stdClass();
-				$date_now->start	= $dd_date;
-				$date_now->id		= 1; //fixed id
-				$date_now->lang		= DEDALO_DATA_NOLAN;
-
+		// Build save_path items from data_values structure
 		$save_path = [];
-
-		switch ($mode) {
-
-			case 'new_record': // new record
-
-				// Created by user
-					$user_locator->set_from_component_tipo( $created_by_user->tipo );
-					$this->data_instance->set_key_data(
-						'relation',
-						$created_by_user->tipo,
-						[$user_locator]
-					);
-
-				// Creation date
-					$this->data_instance->set_key_data(
-						'date',
-						$created_date->tipo,
-						[$date_now]
-					);
-
-				// Build save_path items
-					$save_path = [
-						(object)[
-							'column' =>'relation',
-							'key' => $created_by_user->tipo
-						],
-						(object)[
-							'column' =>'date',
-							'key' => $created_date->tipo
-						]
-					];
-
-				break;
-
-			case 'update_record': // update_record (record already exists)
-
-				// Modified by user
-					$user_locator->set_from_component_tipo($modified_by_user->tipo);
-					$this->data_instance->set_key_data(
-						'relation',
-						$modified_by_user->tipo,
-						[$user_locator]
-					);
-
-				// Modification date
-					$this->data_instance->set_key_data(
-						'date',
-						$modified_date->tipo,
-						[$date_now]
-					);
-
-				// Build save_path items
-					$save_path = [
-						(object)[
-							'column' =>'relation',
-							'key' => $modified_by_user->tipo
-						],
-						(object)[
-							'column' =>'date',
-							'key' => $modified_date->tipo
-						]
-					];
-
-				break;
+		foreach ($data_values as $column => $column_data) {
+			foreach ($column_data as $tipo => $data) {
+				$save_path[] = (object)[
+					'column' => $column,
+					'key'    => $tipo
+				];
+			}
 		}
 
 		return $save_path;
@@ -1067,6 +997,122 @@ class section_record {
 
 		return $result;
 	}//end update_modified_section_data
+
+
+
+	/**
+	* BUILD_MODIFICATION_DATA
+	* Computes metadata save_path items and data values without side effects.
+	* Pure function that returns both save_path and data_values for the caller to use.
+	* Does NOT save to DB — caller is responsible for calling save_key_data + save_event.
+	* @param string $section_tipo
+	* 	The section tipo
+	* @param string $mode
+	* 	'new_record' | 'update_record'
+	* @param int $user_id
+	* 	The logged user ID
+	* @return object
+	* 	Object containing data to be set, keyed by column and tipo.
+	* 	Returns empty object if section is activity section or user_id is empty.
+	*/
+	public static function build_modification_data( string $section_tipo, string $mode, int $user_id ) : object {
+
+		// Skip for activity sections
+		if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+			return (object)[];
+		}
+
+		// Check user logged
+		if( empty($user_id) ) {
+			debug_log(__METHOD__
+				. " ERROR: user_id is empty. Cannot set created/modified user locator."
+				, logger::ERROR
+			);
+			return (object)[];
+		}
+
+		// Fixed private tipos
+			$metadata_definition = section::get_metadata_definition();
+				$created_by_user	= $metadata_definition->created_by_user; 	// 'tipo'=>'dd200', 'model'=>'component_select'
+				$created_date		= $metadata_definition->created_date; 		// 'tipo'=>'dd199', 'model'=>'component_date'
+				$modified_by_user	= $metadata_definition->modified_by_user; 	// 'tipo'=>'dd197', 'model'=>'component_select'
+				$modified_date		= $metadata_definition->modified_date; 		// 'tipo'=>'dd201', 'model'=>'component_date'
+
+		// Current user locator
+			$user_locator = new locator();
+				$user_locator->set_id(1); // fixed id
+				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
+				$user_locator->set_section_id($user_id); // logged user
+				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+
+		// Current date
+			$dd_date	= component_date::get_date_now();
+			$date_now 	= new stdClass();
+				$date_now->start	= $dd_date;
+				$date_now->id		= 1; // fixed id
+				$date_now->lang		= DEDALO_DATA_NOLAN;
+
+		$data_values = new stdClass();
+
+		switch ($mode) {
+
+			case 'new_record': // new record
+
+				// Created by user
+					$user_locator->set_from_component_tipo( $created_by_user->tipo );
+					$data_values->relation = (object)[
+						$created_by_user->tipo => [$user_locator]
+					];
+
+				// Creation date
+					$data_values->date = (object)[
+						$created_date->tipo => [$date_now]
+					];
+				break;
+
+			case 'update_record': // update_record (record already exists)
+
+				// Modified by user
+					$user_locator->set_from_component_tipo($modified_by_user->tipo);
+					$data_values->relation = (object)[
+						$modified_by_user->tipo => [$user_locator]
+					];
+
+				// Modification date
+					$data_values->date = (object)[
+						$modified_date->tipo => [$date_now]
+					];
+				break;
+		}
+
+		return $data_values;
+	}//end build_modification_data
+
+
+
+	/**
+	* BUILD_METADATA
+	* When section is created at first time, a basic data is set to write into the new section.
+	* @return object $data_values
+	*/
+	public static function build_metadata( string $tipo, ?int $section_id, int $user_id ) : object {
+
+		// section_data
+		$section_data = (object)[
+			'label'					=> (string)ontology_node::get_term_by_tipo($tipo,null,true),
+			'created_date'			=> dd_date::get_timestamp_now_for_db(), // Format 2012-11-05 19:50:44
+			'section_id'			=> $section_id,
+			'section_tipo'			=> $tipo,
+			'diffusion_info'		=> null, // null by default
+			'created_by_user_id'	=> $user_id,
+		];
+
+		$data_values = (object)[
+			'data' => $section_data
+		];
+
+		return $data_values;
+	}//end build_metadata
 
 
 
@@ -1307,19 +1353,33 @@ class section_record {
 		$table = common::get_matrix_table_from_tipo($section_tipo);
 
 		// If section_id is provided, update the record
-		// Set the section_record instance wiht the update values (time and user that made the update)
-		// it is needed to update the record with any kind of data.
-		// if Not set the section modified data the section_record_data will stop to update the section record in the database.
+		// Merge modification metadata (modified_by_user, modified_date) into values
+		// to save a DB connection and execute all section changes in one transaction.
 		// If the section_id is not provided, it is a new record.
 		if( $section_id !== null ) {
 			// set section_record instance
 			$section_record = section_record::get_instance($section_tipo, (int)$section_id);
-				// update modified section data
-				// this is necesary to allow the setion record update in the database
-				$section_record->update_modified_section_data( (object)[
-					'mode' => 'update_record'
-				] );
-				// if values are provided, update the section record
+
+				// build modification data and merge into values
+				$modification_data = section_record::build_modification_data(
+					$section_tipo,
+					'update_record',
+					(int)logged_user_id()
+				);
+				if( $values === null ) {
+					$values = $modification_data;
+				} else {
+					foreach ($modification_data as $column => $column_data) {
+						foreach ($column_data as $tipo => $data) {
+							if( !isset($values->{$column}) ) {
+								$values->{$column} = new stdClass();
+							}
+							$values->{$column}->{$tipo} = $data;
+						}
+					}
+				}
+
+				// set all component data (including modification metadata)
 				if( $values !== null ) {
 					foreach ($values as $column => $column_data) {
 						foreach ($column_data as $tipo => $data) {
@@ -1327,8 +1387,9 @@ class section_record {
 						}
 					}
 				}
+
 				// save the section record
-				// it performs the update in the database
+				// single DB transaction with all changes
 				$section_record->save();
 
 				return $section_record;
@@ -1693,15 +1754,17 @@ class section_record {
 	*/
 	public function set_created_date(string $timestamp) : void {
 
-		$dd_date			= dd_date::get_dd_date_from_timestamp($timestamp);
-		$date_with_format	= $dd_date->get_dd_timestamp(
-			'Y-m-d H:i:s',
-			true
-		);
+		$dd_date	= dd_date::get_dd_date_from_timestamp($timestamp);
+		$date_data	= new stdClass();
+			$date_data->start	= $dd_date;
+			$date_data->id		= 1;
+			$date_data->lang	= DEDALO_DATA_NOLAN;
 
-		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
-		$data_col->created_date = $date_with_format;
-		$this->data_instance->set_column_data('data', $data_col);
+		$this->data_instance->set_key_data(
+			'date',
+			DEDALO_SECTION_INFO_CREATED_DATE, // dd199
+			[$date_data]
+		);
 	}//end set_created_date
 
 
@@ -1715,15 +1778,17 @@ class section_record {
 	*/
 	public function set_modified_date(string $timestamp) : void {
 
-		$dd_date			= dd_date::get_dd_date_from_timestamp($timestamp);
-		$date_with_format	= $dd_date->get_dd_timestamp(
-			'Y-m-d H:i:s',
-			true
-		);
+		$dd_date	= dd_date::get_dd_date_from_timestamp($timestamp);
+		$date_data	= new stdClass();
+			$date_data->start	= $dd_date;
+			$date_data->id		= 1;
+			$date_data->lang	= DEDALO_DATA_NOLAN;
 
-		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
-		$data_col->modified_date = $date_with_format;
-		$this->data_instance->set_column_data('data', $data_col);
+		$this->data_instance->set_key_data(
+			'date',
+			DEDALO_SECTION_INFO_MODIFIED_DATE, // dd201
+			[$date_data]
+		);
 	}//end set_modified_date
 
 
@@ -1734,13 +1799,13 @@ class section_record {
 	*/
 	public function get_created_date() : ?string {
 
-		$data_col		= $this->data_instance->get_column_data('data');
-		$local_value	= isset($data_col->created_date)
-			? dd_date::timestamp_to_date(
-				$data_col->created_date,
-				true // bool full
-			  )
-			: null;
+		$data = $this->data_instance->get_key_data('date', DEDALO_SECTION_INFO_CREATED_DATE);
+		if( empty($data) || !isset($data[0]->start) ) {
+			return null;
+		}
+
+		$dd_date		= new dd_date($data[0]->start);
+		$local_value	= $dd_date->get_dd_timestamp('d-m-Y H:i:s', true);
 
 		return $local_value;
 	}//end get_created_date
@@ -1753,13 +1818,13 @@ class section_record {
 	*/
 	public function get_modified_date() : ?string {
 
-		$data_col		= $this->data_instance->get_column_data('data');
-		$local_value	= isset($data_col->modified_date)
-			? dd_date::timestamp_to_date(
-				$data_col->modified_date,
-				true // bool full
-			  )
-			: null;
+		$data = $this->data_instance->get_key_data('date', DEDALO_SECTION_INFO_MODIFIED_DATE);
+		if( empty($data) || !isset($data[0]->start) ) {
+			return null;
+		}
+
+		$dd_date		= new dd_date($data[0]->start);
+		$local_value	= $dd_date->get_dd_timestamp('d-m-Y H:i:s', true);
 
 		return $local_value;
 	}//end get_modified_date
@@ -1793,10 +1858,18 @@ class section_record {
 	*/
 	public function set_created_by_user_id(int $value) : bool {
 
-		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
-		$data_col->created_by_user = $value;
+		$user_locator = new locator();
+			$user_locator->set_id(1);
+			$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+			$user_locator->set_section_id($value);
+			$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+			$user_locator->set_from_component_tipo(DEDALO_SECTION_INFO_CREATED_BY_USER);
 
-		$this->data_instance->set_column_data('data', $data_col);
+		$this->data_instance->set_key_data(
+			'relation',
+			DEDALO_SECTION_INFO_CREATED_BY_USER,
+			[$user_locator]
+		);
 		return true;
 	}//end set_created_by_user_id
 
@@ -1809,12 +1882,12 @@ class section_record {
 	*/
 	public function get_modified_by_user_id() : ?int {
 
-		$data_col = $this->data_instance->get_column_data('data');
-		$local_value = isset($data_col->modified_by_user)
-			? $data_col->modified_by_user
-			: null;
+		$data = $this->data_instance->get_key_data('relation', DEDALO_SECTION_INFO_MODIFIED_BY_USER);
+		if( empty($data) || !isset($data[0]->section_id) ) {
+			return null;
+		}
 
-		return $local_value;
+		return (int)$data[0]->section_id;
 	}//end get_modified_by_user_id
 
 
@@ -1826,10 +1899,18 @@ class section_record {
 	*/
 	public function set_modified_by_user_id(int $value) : bool {
 
-		$data_col = $this->data_instance->get_column_data('data') ?? new stdClass();
-		$data_col->modified_by_user = $value;
+		$user_locator = new locator();
+			$user_locator->set_id(1);
+			$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
+			$user_locator->set_section_id($value);
+			$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+			$user_locator->set_from_component_tipo(DEDALO_SECTION_INFO_MODIFIED_BY_USER);
 
-		$this->data_instance->set_column_data('data', $data_col);
+		$this->data_instance->set_key_data(
+			'relation',
+			DEDALO_SECTION_INFO_MODIFIED_BY_USER,
+			[$user_locator]
+		);
 		return true;
 	}//end set_modified_by_user_id
 

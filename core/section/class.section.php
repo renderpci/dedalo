@@ -1531,36 +1531,85 @@ class section extends common {
 		}
 
 		// Options
-			// values, inject a given values into new section record
-			$values = $options->values ?? null;
-
-			// section_id, force creation with specific section_id (import processes)
-			$section_id = isset($options->section_id) ? (int)$options->section_id : null;
-
-		// Tipo. Current section tipo
-			$tipo = $this->get_tipo();
-
-		// User id. Current logged user id
-			$user_id = logged_user_id();
-
-		// Column to store section data
-			$data_column_name = $this->get_data_column_name();
-
-		// These processes are for all sections except Activity section
-		// Activity section is the logger section and this process is not correct.
-		// All other sections has Time Machine, uses projects data and uses caches.
-			if( $tipo===DEDALO_ACTIVITY_SECTION_TIPO ) {
+			// values. Inject a given values into new section record
+			$values = ($options && isset($options->values))
+				? clone $options->values
+				: new stdClass();
+			if ( !is_object($values) ) {
 				debug_log(__METHOD__
-					. " Error to create a new section record, this section is an Activity section that can not be handle here! " . PHP_EOL
-					. " section_tipo: " .$tipo
+					. " Values must to be an object " . PHP_EOL
+					. " values type: " . gettype($values)
 					, logger::ERROR
 				);
 				return false;
 			}
 
-		// 1. Create new record
-			// Section record
-			// To create the new record in the DDBB
+			// section_id. Force record creation with specific section_id (import processes)
+			$section_id = ($options && isset($options->section_id)) ? $options->section_id : null;
+			if($section_id !== null && !is_int($section_id)) {
+				debug_log(__METHOD__
+					. " section_id must to be an integer " . PHP_EOL
+					. " section_id type: " . gettype($section_id)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// User id. Current logged user id
+		$user_id = logged_user_id();
+		if ($user_id === null) {
+			debug_log(__METHOD__
+				. " Error: no logged user found. Cannot create section record."
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// Tipo. Current section tipo
+		$tipo = $this->get_tipo();
+
+		// These processes are for all sections except Activity section
+		// Activity section is the logger section and this process is not correct.
+		// All other sections has Time Machine, uses projects data and uses caches.
+		if( $tipo===DEDALO_ACTIVITY_SECTION_TIPO ) {
+			debug_log(__METHOD__
+				. " Error to create a new section record, this section is an Activity section that can not be handle here! " . PHP_EOL
+				. " section_tipo: " .$tipo
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		// 1. Fill the new record data value
+
+			// Section record data
+
+				// metadata. When section is created at first time, a basic data is set to write into the new section.
+				$metadata = section_record::build_metadata(
+					$tipo,
+					$section_id,
+					$user_id
+				);
+				foreach ($metadata as $column_name => $data_item) {
+					$values->{$column_name} = $data_item;
+				}
+
+				// modification_data. Get current user and date to store the modification info
+				$modified_section_data = section_record::build_modification_data(
+					$tipo,
+					'new_record',
+					$user_id
+				);
+				foreach ($modified_section_data as $column_name => $data_item) {
+					foreach ($data_item as $item_tipo => $item_value) {
+						if ( !isset($values->{$column_name}) ) {
+							$values->{$column_name} = new stdClass();
+						}
+						$values->{$column_name}->{$item_tipo} = $item_value;
+					}
+				}
+
+		// 2. Create the new record in the DDBB
 			$section_record	= section_record::create( $tipo, $section_id, $values );
 			if(!$section_record) {
 				debug_log(__METHOD__
@@ -1571,77 +1620,28 @@ class section extends common {
 				);
 				return false;
 			}
-			$section_id	= $section_record->section_id;
+			$section_id	= (int)$section_record->section_id;
 
-			// Check error when new record was created
-			if( $section_id===false ){
-				debug_log(__METHOD__
-					. " Error to create a new section record " . PHP_EOL
-					. " section_tipo: " .$tipo
-					, logger::ERROR
-				);
-
-				return false;
-			}
-			// Store the section record instance
+			// Store the section record instance into section section_records array
 			$this->add_section_record( $section_record );
 
-		// 2. Save section data
-			// Section data
-			// When section is created at first time, a basic data is set to write into the new section.
-			$section_data = (object)[
-				'section_id'			=> (int)$section_id,
-				'section_tipo'			=> (string)$tipo,
-				'label'					=> (string)ontology_node::get_term_by_tipo($tipo,null,true),
-				'created_by_user_id'	=> (int)$user_id,
-				'created_date'			=> dd_date::get_timestamp_now_for_db(), // Format 2012-11-05 19:50:44
-				'diffusion_info'		=> null, // null by default
-			];
-
-			// Save data of the section
-			$saved_data = $section_record->save_column(
-				$data_column_name,
-				$section_data
+		// 3. Log the creation activity
+			logger::$obj['activity']->log_message(
+				'NEW', // string $message
+				logger::INFO, // int $log_level
+				$tipo, // string $tipo_where
+				null, // string $operations
+				[ // associative array
+					'msg'			=> 'Created section record',
+					'section_id'	=> $section_id,
+					'section_tipo'	=> $tipo,
+					'tipo'			=> $tipo,
+					'table'			=> common::get_matrix_table_from_tipo($tipo)
+				],
+				$user_id // int
 			);
 
-			// Check an error saving data into the new record
-			if( $saved_data===false ){
-				debug_log(__METHOD__
-					. " Error to create a new section record " . PHP_EOL
-					. " section_tipo: " .$tipo. PHP_EOL
-					. " section_id: " .$section_id
-					, logger::ERROR
-				);
-
-				return false;
-			}
-
-			// Update modified section data. After set section data, resolve and add creation date and user to current section data
-			$section_record->update_modified_section_data((object)[
-				'mode' => 'new_record'
-			]);
-
-		// 3. Log the creation process
-			// Logger activity
-				logger::$obj['activity']->log_message(
-					'NEW', // string $message
-					logger::INFO, // int $log_level
-					$tipo, // string $tipo_where
-					null, // string $operations
-					[ // associative array datos
-						'msg'			=> 'Created section record',
-						'section_id'	=> $section_id,
-						'section_tipo'	=> $tipo,
-						'tipo'			=> $tipo,
-						'table'			=> common::get_matrix_table_from_tipo($tipo)
-					],
-					$user_id // int
-				);
-
-		// 4. Set initial project data (dd153)
-			$this->set_projects_to_new_section_record( $section_id, $component_filter_data );
-
-		// 5. Reset caches
+		// 4. Reset caches
 			switch ($tipo) {
 
 				case DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO:
@@ -1664,7 +1664,7 @@ class section extends common {
 					break;
 			}
 
-		// 6. Debug
+		// Debug
 			if(SHOW_DEBUG===true) {
 
 				$total_time_ms = exec_time_unit($start_time, 'ms');

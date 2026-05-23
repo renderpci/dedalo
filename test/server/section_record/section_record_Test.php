@@ -1133,4 +1133,365 @@ final class section_record_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_METADATA_CREATED_BY_USER
+	* Tests set_created_by_user_id / get_created_by_user_id roundtrip
+	* @return void
+	*/
+	public function test_metadata_created_by_user() : void {
+
+		if (login::is_logged()===false) {
+			login_test::force_login(TEST_USER_ID);
+		}
+
+		$section = section::get_instance(
+			$this->section_tipo
+		);
+		$section_id = (int)$section->create_record();
+
+		$instance = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+
+		// Override with a different user ID and verify in memory
+		$result = $instance->set_created_by_user_id(TEST_USER_ID);
+		$this->assertTrue($result);
+		$this->assertEquals(TEST_USER_ID, $instance->get_created_by_user_id());
+
+		// Persist and reload
+		$instance->save();
+		unset($instance);
+
+		$instance2 = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+		$this->assertEquals(TEST_USER_ID, $instance2->get_created_by_user_id());
+
+		unset($instance2);
+	}//end test_metadata_created_by_user
+
+
+
+	/**
+	* TEST_METADATA_MODIFIED_BY_USER
+	* Tests set_modified_by_user_id / get_modified_by_user_id roundtrip
+	* @return void
+	*/
+	public function test_metadata_modified_by_user() : void {
+
+		if (login::is_logged()===false) {
+			login_test::force_login(TEST_USER_ID);
+		}
+
+		$section = section::get_instance(
+			$this->section_tipo
+		);
+		$section_id = (int)$section->create_record();
+
+		$instance = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+
+		// Initially null
+		$this->assertNull($instance->get_modified_by_user_id());
+
+		// Set and verify in memory
+		$result = $instance->set_modified_by_user_id(TEST_USER_ID);
+		$this->assertTrue($result);
+		$this->assertEquals(TEST_USER_ID, $instance->get_modified_by_user_id());
+
+		// Persist and reload
+		$instance->save();
+		unset($instance);
+
+		$instance2 = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+		$this->assertEquals(TEST_USER_ID, $instance2->get_modified_by_user_id());
+
+		unset($instance2);
+	}//end test_metadata_modified_by_user
+
+
+
+	/**
+	* TEST_METADATA_CREATED_DATE
+	* Tests set_created_date / get_created_date roundtrip
+	* @return void
+	*/
+	public function test_metadata_created_date() : void {
+
+		if (login::is_logged()===false) {
+			login_test::force_login(TEST_USER_ID);
+		}
+
+		$section = section::get_instance(
+			$this->section_tipo
+		);
+		$section_id = (int)$section->create_record();
+
+		$instance = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+
+		// Override with a known timestamp
+		$timestamp	= '2024-01-15 10:30:00';
+		$expected	= '15-01-2024 10:30:00';
+		$instance->set_created_date($timestamp);
+
+		// Verify in memory
+		$this->assertEquals($expected, $instance->get_created_date());
+
+		// Persist and reload
+		$instance->save();
+		unset($instance);
+
+		$instance2 = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+		$this->assertEquals($expected, $instance2->get_created_date());
+
+		unset($instance2);
+	}//end test_metadata_created_date
+
+
+
+	/**
+	* TEST_METADATA_MODIFIED_DATE
+	* Tests set_modified_date / get_modified_date roundtrip
+	* @return void
+	*/
+	public function test_metadata_modified_date() : void {
+
+		if (login::is_logged()===false) {
+			login_test::force_login(TEST_USER_ID);
+		}
+
+		$section = section::get_instance(
+			$this->section_tipo
+		);
+		$section_id = (int)$section->create_record();
+
+		$instance = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+
+		// Initially null
+		$this->assertNull($instance->get_modified_date());
+
+		// Set a known timestamp
+		$timestamp	= '2025-06-20 14:45:30';
+		$expected	= '20-06-2025 14:45:30';
+		$instance->set_modified_date($timestamp);
+
+		// Verify in memory
+		$this->assertEquals($expected, $instance->get_modified_date());
+
+		// Persist and reload
+		$instance->save();
+		unset($instance);
+
+		$instance2 = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+		$this->assertEquals($expected, $instance2->get_modified_date());
+
+		unset($instance2);
+	}//end test_metadata_modified_date
+
+
+
+	/**
+	* TEST_BUILD_MODIFICATION_DATA
+	* Tests the static pure function build_modification_data
+	* @return void
+	*/
+	public function test_build_modification_data() : void {
+
+		$user_id = TEST_USER_ID;
+
+		// new_record mode
+		$data = section_record::build_modification_data(
+			$this->section_tipo,
+			'new_record',
+			$user_id
+		);
+
+		$this->assertIsObject($data);
+		$this->assertTrue(
+			isset($data->relation->{DEDALO_SECTION_INFO_CREATED_BY_USER}),
+			'expected created_by_user in relation'
+		);
+		$this->assertTrue(
+			isset($data->date->{DEDALO_SECTION_INFO_CREATED_DATE}),
+			'expected created_date in date'
+		);
+		$this->assertEquals(
+			$user_id,
+			$data->relation->{DEDALO_SECTION_INFO_CREATED_BY_USER}[0]->section_id
+		);
+
+		// update_record mode
+		$data2 = section_record::build_modification_data(
+			$this->section_tipo,
+			'update_record',
+			$user_id
+		);
+
+		$this->assertIsObject($data2);
+		$this->assertTrue(
+			isset($data2->relation->{DEDALO_SECTION_INFO_MODIFIED_BY_USER}),
+			'expected modified_by_user in relation'
+		);
+		$this->assertTrue(
+			isset($data2->date->{DEDALO_SECTION_INFO_MODIFIED_DATE}),
+			'expected modified_date in date'
+		);
+		$this->assertEquals(
+			$user_id,
+			$data2->relation->{DEDALO_SECTION_INFO_MODIFIED_BY_USER}[0]->section_id
+		);
+
+		// activity section returns empty
+		$empty = section_record::build_modification_data(
+			DEDALO_ACTIVITY_SECTION_TIPO,
+			'new_record',
+			$user_id
+		);
+		$this->assertEmpty((array)$empty);
+
+		// empty user_id returns empty
+		$empty2 = section_record::build_modification_data(
+			$this->section_tipo,
+			'new_record',
+			0
+		);
+		$this->assertEmpty((array)$empty2);
+	}//end test_build_modification_data
+
+
+
+	/**
+	* TEST_UPDATE_MODIFIED_SECTION_DATA
+	* Tests update_modified_section_data with update_record mode
+	* @return void
+	*/
+	public function test_update_modified_section_data() : void {
+
+		if (login::is_logged()===false) {
+			login_test::force_login(TEST_USER_ID);
+		}
+
+		$section = section::get_instance(
+			$this->section_tipo
+		);
+		$section_id = (int)$section->create_record();
+
+		$instance = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+
+		// Update modification metadata
+		$result = $instance->update_modified_section_data((object)[
+			'mode' => 'update_record'
+		]);
+
+		$this->assertTrue($result);
+
+		// Verify in memory
+		$this->assertEquals(
+			TEST_USER_ID,
+			$instance->get_modified_by_user_id()
+		);
+		$this->assertNotNull($instance->get_modified_date());
+
+		// Persist and reload
+		// save() flushes all data_instance values to DB
+		$instance->save();
+		unset($instance);
+
+		$instance2 = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+
+		$this->assertEquals(
+			TEST_USER_ID,
+			$instance2->get_modified_by_user_id()
+		);
+		$this->assertNotNull($instance2->get_modified_date());
+
+		unset($instance2);
+	}//end test_update_modified_section_data
+
+
+
+	/**
+	* TEST_GET_PERMISSIONS
+	* Tests get_permissions basic behavior
+	* @return void
+	*/
+	public function test_get_permissions() : void {
+
+		if (login::is_logged()===false) {
+			login_test::force_login(TEST_USER_ID);
+		}
+
+		$section = section::get_instance(
+			$this->section_tipo
+		);
+		$section_id = (int)$section->create_record();
+
+		$instance = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+
+		$permissions = $instance->get_permissions();
+
+		// Permissions should be an integer >= 0
+		$this->assertIsInt($permissions);
+		$this->assertGreaterThanOrEqual(0, $permissions);
+
+		unset($instance);
+	}//end test_get_permissions
+
+
+
+	/**
+	* TEST_GET_TABLE
+	* Tests get_table returns a non-empty string
+	* @return void
+	*/
+	public function test_get_table() : void {
+
+		$section = section::get_instance(
+			$this->section_tipo
+		);
+		$section_id = (int)$section->create_record();
+
+		$instance = section_record::get_instance(
+			$this->section_tipo,
+			$section_id
+		);
+
+		$table = $instance->get_table();
+
+		$this->assertIsString($table);
+		$this->assertNotEmpty($table);
+
+		unset($instance);
+	}//end test_get_table
+
+
+
 }//end class section_record_test
