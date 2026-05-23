@@ -5,11 +5,12 @@
 
 
 // import
-	import { event_manager } from '../../../core/common/js/event_manager.js'
 	import { mcp_client } from './mcp_client.js'
 	import { model_engine } from './model_engine.js'
 	import { chat_render } from './chat_render.js'
 	import { conversation_store } from './conversation_store.js'
+	import { client_context } from './client_context.js'
+	import { CLIENT_TOOLS } from './client_tools.js'
 
 
 
