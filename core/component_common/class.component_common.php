@@ -4698,7 +4698,16 @@ abstract class component_common extends common {
 					$section_tipo
 				);
 
-				$component_filter_data = $component_filter->get_data();
+				$data = $component_filter->get_data();
+
+				// Exclude non user projects from the list, only intersections are accepted.
+				$user_projects = component_filter_master::get_user_projects( logged_user_id() );
+				$component_filter_data = [];
+				foreach ($data as $data_entry) {
+					if( locator::in_array_locator($data_entry, $user_projects, ['section_tipo','section_id']) ) {
+						$component_filter_data[] = $data_entry;
+					}
+				}
 			}
 		}
 
