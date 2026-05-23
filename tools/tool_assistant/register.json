@@ -464,6 +464,21 @@
                   "max_new_tokens": 2048,
                   "thinking": "none",
                   "thinking_options": ["none"],
+                  "vision": true,
+                  "vision_max_new_tokens": 256,
+                  "server": true
+                },
+                {
+                  "api_url": "http://127.0.0.1:8000/v1/chat/completions",
+                  "api_key": "1234",
+                  "api_model": "Qwen3.6-35B-A3B-8bit",
+                  "model_id": "server/qwen3.6-35b-a3b-8bit",
+                  "label": "Qwen 3.6 35B A3B MLX 8bit",
+                  "max_new_tokens": 2048,
+                  "thinking": "low",
+                  "thinking_options": ["none"],
+                  "vision": true,
+                  "vision_max_new_tokens": 256,
                   "server": true
                 }
               ],
