@@ -53887,6 +53887,74 @@ function registerRecordAgentTools(server, client, ctx) {
   }, ctx);
 }
 
+// src/tools/agent/search.ts
+function registerSearchAgentTools(server, client, ctx) {
+  registerTool(server, {
+    name: "dedalo_search_records_view",
+    description: "Search records in a section and return them as agent-view shapes. " + 'Use human field labels in filters (e.g. "Title contains Picasso"); ' + "the server resolves labels to tipos automatically. " + `Portal fields are expanded one hop deep.
+
+` + '`section_tipo` accepts a section name (e.g. "Cecas") or tipo (e.g. "oh1").',
+    annotations: {
+      tier: "agent",
+      readOnlyHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+      title: "Search records (agent view)"
+    },
+    inputSchema: exports_external2.object({
+      section_tipo: AgentSectionSchema,
+      lang: OptionalLangSchema,
+      limit: exports_external2.number().int().min(1).max(100).default(10).describe("Max records to return."),
+      offset: exports_external2.number().int().min(0).default(0).describe("Records to skip."),
+      full_count: exports_external2.boolean().default(false).describe("If true, request total matching count (may be slower)."),
+      include_tipos: exports_external2.boolean().default(false).describe("If true, expose raw tipo identifiers in `_meta`."),
+      filter: exports_external2.object({
+        operator: exports_external2.enum(["AND", "OR"]).default("AND"),
+        rules: exports_external2.array(exports_external2.object({
+          field: exports_external2.string().describe('Human label of the field to filter on (e.g. "Title").'),
+          operator: exports_external2.enum(["contains", "eq", "starts_with", "ends_with", "gt", "gte", "lt", "lte"]).default("contains"),
+          value: exports_external2.string().describe("Value to match.")
+        })).min(1)
+      }).optional().describe("Label-based filter rules. Omit to list all records.")
+    }),
+    handler: async ({ section_tipo, lang, limit, offset, full_count, include_tipos, filter }) => client.call(rqo({
+      action: "search_records_view",
+      dd_api: "dd_agent_api",
+      source: { section_tipo, lang, limit, offset, full_count, include_tipos, filter }
+    }))
+  }, ctx);
+  registerTool(server, {
+    name: "dedalo_count_records_view",
+    description: "Count records in a section. Returns the total number of matching records. " + "Supports the same human-label filters as search_records_view. " + 'Use this when the user asks "how many records" or wants a count — ' + `prefer this over search_records_view for count-only questions (cheaper, no payload).
+
+` + '`section_tipo` accepts a section name (e.g. "Cecas") or tipo (e.g. "oh1").',
+    annotations: {
+      tier: "agent",
+      readOnlyHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+      title: "Count records"
+    },
+    inputSchema: exports_external2.object({
+      section_tipo: AgentSectionSchema,
+      lang: OptionalLangSchema,
+      filter: exports_external2.object({
+        operator: exports_external2.enum(["AND", "OR"]).default("AND"),
+        rules: exports_external2.array(exports_external2.object({
+          field: exports_external2.string().describe('Human label of the field to filter on (e.g. "Title").'),
+          operator: exports_external2.enum(["contains", "eq", "starts_with", "ends_with", "gt", "gte", "lt", "lte"]).default("contains"),
+          value: exports_external2.string().describe("Value to match.")
+        })).min(1)
+      }).optional().describe("Label-based filter rules. Omit to count all records.")
+    }),
+    handler: async ({ section_tipo, lang, filter }) => client.call(rqo({
+      action: "count_records",
+      dd_api: "dd_agent_api",
+      source: { section_tipo, lang, filter }
+    }))
+  }, ctx);
+}
+
 
 // src/tools/index.ts
 function registerAllTools(server, client, ctx) {
