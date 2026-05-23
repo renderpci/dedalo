@@ -15,6 +15,23 @@
 
 const PREFS_KEY = 'dedalo_assistant_pref_v1'
 
+// Allow tool-calling on up to this many turns before forcing an answer-only
+// turn. Lets the model chain describe_section → search → get_record → answer
+// while still bounding loops.
+const MAX_TOOL_TURNS = 3
+
+// Max bytes of stringified tool result pushed to the conversation. Mirrors the
+// MCP `_extract_tool_result` budget so client and MCP results contribute
+// comparable amounts to the KV cache.
+const MAX_TOOL_RESULT_BYTES = 4000
+
+// Agent-tier MCP tools missing the `agent` tag still need to surface to the
+// model when no agent-tier section listing is available.
+const PRIMITIVE_DISCOVERY_FALLBACK = ['dedalo_ontology_glossary', 'dedalo_list_sections']
+
+// Destructive MCP tools that require user confirmation before execution.
+const DESTRUCTIVE_TOOLS = ['dedalo_delete_record', 'dedalo_set_field']
+
 /**
  * Localized label helper.
  */
@@ -44,6 +61,8 @@ export const ai_assistant = class ai_assistant {
 		if (prefs.model_id) this._config.model_id = prefs.model_id
 		if (prefs.device) this._config.device = prefs.device
 
+		this._client_context	= new client_context()
+		this._client_tools		= CLIENT_TOOLS
 		this._mcp_client		= new mcp_client()
 		this._model_engine		= new model_engine(this._config)
 		this._chat_render		= new chat_render()
