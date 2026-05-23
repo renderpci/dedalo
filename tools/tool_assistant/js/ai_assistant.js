@@ -716,6 +716,15 @@ export const ai_assistant = class ai_assistant {
 		if (tool_name.indexOf('set_field') !== -1 && inner && typeof inner === 'object') {
 			return 'Updated. ' + JSON.stringify(inner).substring(0, 600)
 		}
+		if (tool_name.indexOf('get_media_url') !== -1 && inner && typeof inner === 'object') {
+			const parts = ['get_media_url result:']
+			if (inner.file_exist && inner.url) {
+				parts.push('url=' + inner.url)
+			} else {
+				parts.push('file_exist=false section=' + (inner.section_tipo||'') + '#' + (inner.section_id||'') + ' component=' + (inner.component_tipo||'') + ' quality=' + (inner.quality||'?'))
+			}
+			return parts.join(' ')
+		}
 
 		// Fallback: compact JSON, no mid-string truncation
 		const json = JSON.stringify(inner)
@@ -741,6 +750,7 @@ export const ai_assistant = class ai_assistant {
 			return null
 		}
 
+		// Same unwrapping logic as _extract_tool_result (format 1 and 2)
 		let payload = tool_result
 		if (tool_result.result && typeof tool_result.result === 'object') {
 			const content = tool_result.result.content
@@ -752,6 +762,15 @@ export const ai_assistant = class ai_assistant {
 				}
 			} else {
 				payload = tool_result.result
+			}
+		} else if (tool_result.data && tool_result.data.result && typeof tool_result.data.result === 'object') {
+			const content = tool_result.data.result.content
+			if (Array.isArray(content) && content.length > 0 && content[0].text) {
+				try {
+					payload = JSON.parse(content[0].text)
+				} catch(e) {
+					payload = content[0].text
+				}
 			}
 		}
 
