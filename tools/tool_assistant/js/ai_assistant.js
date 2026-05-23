@@ -32,7 +32,7 @@ const PRIMITIVE_DISCOVERY_FALLBACK = ['dedalo_ontology_glossary', 'dedalo_list_s
 const PRIMITIVE_WRITE_ALLOWLIST = ['dedalo_create_record']
 
 // Destructive MCP tools that require user confirmation before execution.
-const DESTRUCTIVE_TOOLS = ['dedalo_delete_record', 'dedalo_set_field']
+const DESTRUCTIVE_TOOLS = ['dedalo_delete_record']
 
 /**
  * Localized label helper.
@@ -456,11 +456,6 @@ export const ai_assistant = class ai_assistant {
 
 
 
-	_build_few_shot_messages() {
-
-		return []
-	}//end _build_few_shot_messages
-
 
 
 	_build_tools_for_model() {
@@ -496,6 +491,7 @@ export const ai_assistant = class ai_assistant {
 		const mcp_decls = this._mcp_tools.filter(function(tool) {
 			if (tool.annotations && tool.annotations.tier === 'agent') return true
 			if (PRIMITIVE_DISCOVERY_FALLBACK.indexOf(tool.name) !== -1) return true
+			if (PRIMITIVE_WRITE_ALLOWLIST.indexOf(tool.name) !== -1) return true
 			return false
 		}).map(function(tool) {
 			return toFunctionDecl({
@@ -517,9 +513,8 @@ export const ai_assistant = class ai_assistant {
 	static _tool_description(tool) {
 
 		const description = tool.description || ''
-		// Cap every description at 200 chars. At 34 tools, even 350 chars each
-		// blows the context window; 200 keeps the total tool schema under control.
-		return description.substring(0, 200)
+		// Cap every description at 400 chars to preserve portal/relation guidance.
+		return description.substring(0, 400)
 	}//end _tool_description
 
 
@@ -995,7 +990,7 @@ export const ai_assistant = class ai_assistant {
 	* @param array tools Tool declarations in OpenAI format
 	* @param number max_new_tokens
 	* @param function on_token Stream callback for text tokens
-	* @param function on_think_token Stream callback for thinking tokens (ignored for API)
+	* @param function on_think_token Stream callback for thinking tokens (delta.reasoning / delta.reasoning_content)
 	* @param AbortSignal signal
 	* @return object {full_text, streamed_text, raw_result}
 	*/
@@ -1967,6 +1962,9 @@ export const ai_assistant = class ai_assistant {
 
 
 	_new_conversation() {
+		if (this._is_generating) {
+			this._abort_generation()
+		}
 		this._conversation = []
 		this._thread_id = this._store.create()
 		this._chat_render.clear_messages()
