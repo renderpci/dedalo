@@ -574,6 +574,34 @@ export const client_context = class client_context {
 
 
 
+	/**
+	 * SUMMARIZE_SQO
+	 * Builds a compact, human-readable description of the active search so
+	 * the model can refer to "the current N records" without ever seeing raw
+	 * tipos. Returns null when no section is active.
+	 * @return string|null
+	 */
+	summarize_sqo() {
+
+		const info = this.get_active_sqo()
+		if (!info) return null
+
+		const parts = []
+		parts.push('section=' + info.section_tipo)
+		if (info.total !== null) parts.push('total=' + info.total)
+
+		const filter = info.sqo && info.sqo.filter
+		if (filter && typeof filter === 'object') {
+			// best-effort: count rules without exposing tipos
+			const rules_count = this._count_sqo_rules(filter)
+			if (rules_count > 0) parts.push('filter_rules=' + rules_count)
+		}
+
+		return parts.join(' | ')
+	}//end summarize_sqo
+
+
+
 
 
 }//end client_context class
