@@ -476,7 +476,7 @@
                   "label": "Qwen 3.6 35B A3B MLX 8bit",
                   "max_new_tokens": 2048,
                   "thinking": "low",
-                  "thinking_options": ["none"],
+                  "thinking_options": ["none", "low", "high"],
                   "vision": true,
                   "vision_max_new_tokens": 256,
                   "server": true
