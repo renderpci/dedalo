@@ -361,6 +361,9 @@ export const ai_assistant = class ai_assistant {
 				'  client_read_component_value  — Read one component value by tipo (e.g. numisdata18)',
 				'  client_list_section_data     — List ALL fields and values in this record',
 				'  client_search_loaded_data    — Search text within current record values',
+				'  client_analyze_image         — Describe / transcribe the active image in this record (requires vision api_url)',
+				'  client_get_active_search     — Inspect the current search filter and total',
+				'  client_bulk_image_transcribe — Batch-process images from the active search into a text field (requires vision api_url)',
 				'',
 				'IMPORTANT RULE: When user says "this component" or mentions the active component,',
 				'call client_read_component_value with its tipo. Do NOT call describe_section —',
@@ -485,7 +488,7 @@ export const ai_assistant = class ai_assistant {
 				return { role:'tool', tool_call_id: tool_call.id, content: 'Unknown client tool: ' + name }
 			}
 			try {
-				const result = await client_tool.run(this._client_context, args_obj || {})
+				const result = await client_tool.run(this._client_context, args_obj || {}, this)
 				const content = ai_assistant._stringify_tool_result(result)
 				this._chat_render.update_tool_call(indicator, 'done', result)
 				return { role:'tool', tool_call_id: tool_call.id, content }
@@ -643,6 +646,51 @@ export const ai_assistant = class ai_assistant {
 		const keys = Object.keys(inner).slice(0, 10)
 		return 'Keys: ' + keys.join(', ') + '. ' + json.substring(0, 1200) + '...[truncated]'
 	}//end _extract_tool_result
+
+
+
+	/**
+	* _EXTRACT_TOOL_INNER
+	* Same unwrapping logic as _extract_tool_result but returns the raw inner
+	* object (parsed JSON) instead of a compact string. Useful for batch
+	* pipelines that need to iterate over records or inspect fields.
+	* @param object tool_result Raw MCP tool result
+	* @return object|null
+	*/
+	static _extract_tool_inner(tool_result) {
+
+		if (!tool_result || typeof tool_result !== 'object') {
+			return null
+		}
+
+		let payload = tool_result
+		if (tool_result.result && typeof tool_result.result === 'object') {
+			const content = tool_result.result.content
+			if (Array.isArray(content) && content.length > 0 && content[0].text) {
+				try {
+					payload = JSON.parse(content[0].text)
+				} catch(e) {
+					payload = content[0].text
+				}
+			} else {
+				payload = tool_result.result
+			}
+		}
+
+		let data = payload
+		if (typeof payload === 'string') {
+			try { data = JSON.parse(payload) } catch(e) { data = payload }
+		}
+		if (!data || typeof data !== 'object') {
+			return null
+		}
+
+		const inner = (data.data && typeof data.data === 'object' && data.data.result !== undefined)
+			? data.data.result
+			: data.result !== undefined ? data.result : data
+
+		return (inner && typeof inner === 'object') ? inner : null
+	}//end _extract_tool_inner
 
 
 
@@ -993,6 +1041,302 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	* ANALYZE_IMAGE_URL
+	* Sends a single-turn multimodal request to the configured vision API.
+	* Works with any OpenAI-compatible endpoint that supports image_url content.
+	* @param string url     Public image URL
+	* @param string prompt  Instruction for the vision model
+	* @return string
+	*/
+	async analyze_image_url(url, prompt) {
+
+		if (!url || typeof url !== 'string') {
+			throw new Error('Missing image URL')
+		}
+		if (!this._config.api_url) {
+			throw new Error('No vision endpoint configured. Select a vision-capable server model with api_url.')
+		}
+
+		const messages = [{
+			role	: 'user',
+			content	: [
+				{ type: 'text', text: prompt || 'Describe this image.' },
+				{ type: 'image_url', image_url: { url: url } }
+			]
+		}]
+
+		const max_tokens = this._config.vision_max_new_tokens || this._config.max_new_tokens || 512
+
+		const result = await this._generate_with_api(
+			messages,
+			[], // no tools
+			max_tokens,
+			function() {}, // no-op streaming
+			function() {}, // no-op thinking
+			this._abort_controller ? this._abort_controller.signal : null
+		)
+
+		return result.full_text || ''
+	}//end analyze_image_url
+
+
+
+	/**
+	* _RESOLVE_FIELD_TIPO_BY_LABEL
+	* Matches a human-written field label against the array returned by
+	* dedalo_describe_section. Uses the same normalization as ontology
+	* resolution so "Stamp" matches "stamp" or "estampa".
+	* @param array fields  Array of { tipo, label, type } from describe_section
+	* @param string label  Human label to match
+	* @return string|null
+	*/
+	_resolve_field_tipo_by_label(fields, label) {
+
+		if (!Array.isArray(fields) || !label || typeof label !== 'string') {
+			return null
+		}
+		const normalized = ai_assistant._normalize_label(label)
+		if (!normalized) return null
+
+		// exact match
+		for (let i = 0; i < fields.length; i++) {
+			const f = fields[i]
+			if (!f || !f.tipo) continue
+			const candidates = ai_assistant._extract_term_labels(f.label || f.tipo)
+			for (let j = 0; j < candidates.length; j++) {
+				if (ai_assistant._normalize_label(candidates[j]) === normalized) {
+					return f.tipo
+				}
+			}
+		}
+
+		// partial match
+		for (let i = 0; i < fields.length; i++) {
+			const f = fields[i]
+			if (!f || !f.tipo) continue
+			const candidates = ai_assistant._extract_term_labels(f.label || f.tipo)
+			for (let j = 0; j < candidates.length; j++) {
+				const n = ai_assistant._normalize_label(candidates[j])
+				if (n.indexOf(normalized) !== -1 || normalized.indexOf(n) !== -1) {
+					return f.tipo
+				}
+			}
+		}
+
+		return null
+	}//end _resolve_field_tipo_by_label
+
+
+
+	/**
+	* RUN_BULK_IMAGE_TRANSCRIBE
+	* Batch pipeline: enumerate records from the active SQO, read each image,
+	* call the vision model, and write the result into a target text field.
+	* Asks for ONE batch confirmation before any writes. Emits progress
+	* messages in the chat UI.
+	* @param object ctx   client_context instance
+	* @param object args  { prompt, image_field, target_field, max_records, page_size }
+	* @return string
+	*/
+	async run_bulk_image_transcribe(ctx, args) {
+
+		const prompt		= args.prompt
+		const image_field	= args.image_field
+		const target_field	= args.target_field
+		const max_records	= args.max_records
+		const page_size		= Math.min(args.page_size || 25, 50)
+
+		// 1. Active SQO
+		const sqo_info = ctx.get_active_sqo()
+		if (!sqo_info) {
+			return 'No active search. Open a section list and optionally apply filters first.'
+		}
+
+		const section_tipo	= sqo_info.section_tipo
+		const total			= sqo_info.total || 0
+
+		// 2. Resolve tipos via describe_section
+		let fields = null
+		try {
+			const desc_result = await this._mcp_client.tools_call('dedalo_describe_section', {
+				section_tipo: section_tipo
+			})
+			const inner = ai_assistant._extract_tool_inner(desc_result)
+			fields = (inner && Array.isArray(inner.fields)) ? inner.fields : null
+		} catch (e) {
+			console.error('[ai_assistant] describe_section failed:', e)
+		}
+
+		if (!fields) {
+			return 'Could not resolve section structure. Try again or check the section.'
+		}
+
+		const image_tipo = this._resolve_field_tipo_by_label(fields, image_field)
+		const target_tipo = this._resolve_field_tipo_by_label(fields, target_field)
+
+		if (!image_tipo) {
+			return 'Image field "' + image_field + '" not found in section ' + section_tipo + '.'
+		}
+		if (!target_tipo) {
+			return 'Target field "' + target_field + '" not found in section ' + section_tipo + '.'
+		}
+
+		// 3. Safety cap
+		const limit = Math.min(
+			(max_records !== undefined && max_records !== null) ? max_records : total,
+			total,
+			500
+		)
+		if (limit <= 0) {
+			return 'No records to process (total=' + total + ').'
+		}
+
+		// 4. Batch confirmation
+		const confirmed = await this._chat_render.confirm_action(
+			t('bulk_confirm', 'Batch-process {n} records? Image: {img} → Target: {tgt}')
+				.replace('{n}', limit)
+				.replace('{img}', image_field)
+				.replace('{tgt}', target_field)
+		)
+		if (!confirmed) {
+			return 'Bulk transcription cancelled.'
+		}
+
+		// 5. Set bulk approval to bypass per-record confirms in the main loop
+		this._bulk_approval = {
+			section_tipo	: section_tipo,
+			target_tipo		: target_tipo,
+			expires_at		: Date.now() + 10 * 60 * 1000 // 10 min
+		}
+
+		// 6. Paginate and process
+		const sqo = sqo_info.sqo
+		sqo.limit = page_size
+		sqo.offset = 0
+
+		const results = []
+		let processed = 0
+		let failures = 0
+
+		try {
+			while (processed < limit) {
+				const remaining = limit - processed
+				if (sqo.limit > remaining) {
+					sqo.limit = remaining
+				}
+
+				let records = null
+				try {
+					const search_result = await this._mcp_client.tools_call('dedalo_search_records_view', {
+						section_tipo	: section_tipo,
+						sqo				: sqo
+					})
+					const search_inner = ai_assistant._extract_tool_inner(search_result)
+					if (Array.isArray(search_inner)) {
+						records = search_inner
+					} else if (search_inner && Array.isArray(search_inner.records)) {
+						records = search_inner.records
+					} else {
+						records = []
+					}
+				} catch (e) {
+					console.error('[ai_assistant] search failed at offset', sqo.offset, e)
+					break
+				}
+
+				if (!records || records.length === 0) {
+					break
+				}
+
+				for (let i = 0; i < records.length; i++) {
+					if (processed >= limit) {
+						break
+					}
+
+					const record = records[i]
+					const section_id = (record && (record.section_id !== undefined ? record.section_id : record.id))
+					if (section_id === undefined || section_id === null) {
+						failures++
+						continue
+					}
+
+					// Get media URL
+					let media_url = null
+					try {
+						const media_result = await this._mcp_client.tools_call('dedalo_get_media_url', {
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+							component_tipo	: image_tipo
+						})
+						const media_inner = ai_assistant._extract_tool_inner(media_result)
+						media_url = (media_inner && media_inner.url) ? media_inner.url : null
+					} catch (e) {
+						console.error('[ai_assistant] get_media_url failed for', section_id, e)
+					}
+
+					if (!media_url) {
+						results.push({ section_id: section_id, status: 'no_image' })
+						processed++
+						continue
+					}
+
+					// Analyze
+					let analysis = ''
+					try {
+						analysis = await this.analyze_image_url(media_url, prompt)
+					} catch (e) {
+						if (e.name === 'AbortError') throw e
+						console.error('[ai_assistant] vision failed for', section_id, e)
+						analysis = ''
+					}
+
+					if (!analysis || !analysis.trim()) {
+						results.push({ section_id: section_id, status: 'empty_analysis' })
+						processed++
+						continue
+					}
+
+					// Write
+					try {
+						await this._mcp_client.tools_call('dedalo_set_field', {
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+							component_tipo	: target_tipo,
+							value			: analysis
+						})
+						results.push({ section_id: section_id, status: 'ok' })
+					} catch (e) {
+						console.error('[ai_assistant] set_field failed for', section_id, e)
+						results.push({ section_id: section_id, status: 'write_error' })
+						failures++
+					}
+
+					processed++
+
+					// Progress update every 5 records or on the first
+					if (processed % 5 === 0 || processed === 1) {
+						this._chat_render.add_system_message(
+							t('bulk_progress', 'Bulk progress: {p}/{n} completed.')
+								.replace('{p}', processed)
+								.replace('{n}', limit)
+						)
+					}
+				}
+
+				sqo.offset += page_size
+			}
+		} finally {
+			this._bulk_approval = null
+		}
+
+		const ok_count = results.filter(function(r) { return r.status === 'ok' }).length
+		return 'Bulk transcription finished. ' + ok_count + ' of ' + processed + ' records updated' +
+			(failures > 0 ? ' (' + failures + ' failures).' : '.')
+	}//end run_bulk_image_transcribe
+
+
+
 	async _handle_user_message(message) {
 
 		const self = this
@@ -1137,9 +1481,20 @@ export const ai_assistant = class ai_assistant {
 
 						// Destructive MCP tools require explicit confirmation.
 						if (DESTRUCTIVE_TOOLS.indexOf(tool_call.function.name) >= 0) {
-							const confirmed = await self._chat_render.confirm_action(
-								t('confirm_action', 'Confirm action') + ': ' + tool_call.function.name
-							)
+							let confirmed = false
+							if (self._bulk_approval && self._bulk_approval.expires_at > Date.now()) {
+								const args_section = args_obj && args_obj.section_tipo ? args_obj.section_tipo : null
+								const args_target = args_obj && args_obj.component_tipo ? args_obj.component_tipo : null
+								if (args_section === self._bulk_approval.section_tipo &&
+									(!self._bulk_approval.target_tipo || args_target === self._bulk_approval.target_tipo)) {
+									confirmed = true
+								}
+							}
+							if (!confirmed) {
+								confirmed = await self._chat_render.confirm_action(
+									t('confirm_action', 'Confirm action') + ': ' + tool_call.function.name
+								)
+							}
 							if (!confirmed) {
 								self._conversation.push({
 									role			: 'tool',

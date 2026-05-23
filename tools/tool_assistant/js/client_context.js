@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label*/
+/*global get_label, page_globals, DEDALO_MEDIA_URL, structuredClone*/
 /*eslint no-undef: "error"*/
 
 
@@ -699,6 +699,86 @@ export const client_context = class client_context {
 	}//end get_active_image_url
 
 
+
+	/**
+	 * _RESOLVE_MEDIA_URL
+	 * Extracts the public URL from a loaded media component instance.
+	 * Mirrors the logic used by `view_default_edit_image.js` /
+	 * `render_edit_component_image.js`.
+	 * @param object inst
+	 * @param string|null preferred_quality
+	 * @return object|null
+	 */
+	_resolve_media_url(inst, preferred_quality) {
+
+		const data				= inst.data || {}
+		const entries			= Array.isArray(data.entries) ? data.entries : []
+		const external_source	= data.external_source
+			|| (entries[0] && entries[0].external_source)
+			|| null
+		const extension			= (inst.context && inst.context.features && inst.context.features.extension)
+			|| (entries[0] && entries[0].extension)
+			|| null
+		const files_info		= (entries[0] && Array.isArray(entries[0].files_info))
+			? entries[0].files_info
+			: []
+
+		// case 1: external source — return as-is
+		if (external_source && typeof external_source === 'string' && external_source.length > 0) {
+			return {
+				url				: external_source,
+				tipo			: inst.tipo,
+				label			: inst.label || inst.tipo,
+				model			: inst.model,
+				extension		: extension,
+				quality			: null,
+				external_source	: true
+			}
+		}
+
+		// case 2: dedalo media — pick the best file_info
+		// preference order: requested quality → global default → component default → first available
+		const default_quality = (typeof page_globals !== 'undefined' && page_globals.dedalo_image_quality_default)
+			? page_globals.dedalo_image_quality_default
+			: null
+		const quality_candidates = [preferred_quality, inst.quality, default_quality, '1.5MB', 'original']
+		let file_info = null
+		for (const q of quality_candidates) {
+			if (!q) continue
+			file_info = files_info.find(function(el) {
+				return el && el.file_exist === true && el.quality === q
+					&& (!extension || el.extension === extension)
+			})
+			if (file_info) break
+		}
+		if (!file_info) {
+			// last resort: any existing file
+			file_info = files_info.find(function(el) { return el && el.file_exist === true })
+		}
+		if (!file_info) return null
+
+		// DEDALO_MEDIA_URL is exposed as a global by Dédalo's page bootstrap
+		const base = (typeof DEDALO_MEDIA_URL !== 'undefined' && DEDALO_MEDIA_URL)
+			? DEDALO_MEDIA_URL
+			: ''
+		// Vision APIs require an absolute URL — prepend origin if relative
+		const absolute_base = (base.startsWith('/'))
+			? window.location.origin + base
+			: base
+		// Skip the cache-busting `?t=` suffix used by the UI — irrelevant for
+		// vision endpoints, and some upstreams reject query strings.
+		const url = absolute_base + file_info.file_path
+
+		return {
+			url				: url,
+			tipo			: inst.tipo,
+			label			: inst.label || inst.tipo,
+			model			: inst.model,
+			extension		: file_info.extension,
+			quality			: file_info.quality,
+			external_source	: false
+		}
+	}//end _resolve_media_url
 
 
 
