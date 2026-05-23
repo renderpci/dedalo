@@ -50,11 +50,13 @@ export function registerRecordAgentTools(server: McpServer, client: WorkClient, 
 			'Returns the updated record in agent-view shape.\n\n' +
 			'You do NOT need to call describe_section first — call set_field directly with the field label. ' +
 			'`section_tipo` accepts a section name (e.g. "Cecas") or tipo (e.g. "oh1"). ' +
-			'For portal/link fields, pass an array of { section_tipo, section_id } objects.',
+			'For portal/link fields, pass an array of { section_tipo, section_id } objects.\n\n' +
+			'**Default behavior:** preserves existing data and adds new locators (safe, non-destructive). ' +
+			'Use `clean: true` to replace all data instead.',
 		annotations: {
 			tier: 'agent',
 			readOnlyHint: false,
-			destructiveHint: true,
+			destructiveHint: false,
 			idempotentHint: true,
 			openWorldHint: true,
 			title: 'Set field by label (agent view)',
@@ -65,13 +67,14 @@ export function registerRecordAgentTools(server: McpServer, client: WorkClient, 
 			field: z.string().describe('Human label of the field to update (e.g. "Title").'),
 			value: z.any().describe('New value. For text fields: string. For portals: array of { section_tipo, section_id } objects.'),
 			lang: OptionalLangSchema,
+			clean: z.boolean().default(false).describe('If true, replace all existing data instead of merging. Required for destructive writes.'),
 		}),
-		handler: async ({ section_tipo, section_id, field, value, lang }) =>
+		handler: async ({ section_tipo, section_id, field, value, lang, clean }) =>
 			client.call(
 				rqo({
 					action: 'set_field_by_label',
 					dd_api: 'dd_agent_api',
-					source: { section_tipo, section_id, field, value, lang },
+					source: { section_tipo, section_id, field, value, lang, clean },
 					prevent_lock: false,
 				})
 			),
