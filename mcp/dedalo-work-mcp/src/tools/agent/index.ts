@@ -4,6 +4,7 @@ import type { ToolContext } from '../_shared/register.js';
 import { registerSectionAgentTools } from './section.js';
 import { registerRecordAgentTools } from './record.js';
 import { registerSearchAgentTools } from './search.js';
+import { registerMediaAgentTools } from './media.js';
 
 /**
  * Register agent-tier tools.
@@ -16,4 +17,5 @@ export function registerAgentTools(server: McpServer, client: WorkClient, ctx: T
 	registerSectionAgentTools(server, client, ctx);
 	registerRecordAgentTools(server, client, ctx);
 	registerSearchAgentTools(server, client, ctx);
+	registerMediaAgentTools(server, client, ctx);
 }
