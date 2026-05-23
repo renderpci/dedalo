@@ -428,6 +428,53 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
+	 * _DISPATCH_TOOL
+	 * Routes a single tool call to either a client-side handler (no server
+	 * round-trip) or the MCP proxy. Returns the conversation `tool` message
+	 * to push, and updates the chat indicator.
+	 * @param object tool_call { id, function:{ name, arguments } }
+	 * @param object args_obj  Parsed and normalized arguments
+	 * @param object indicator Chat render indicator handle
+	 * @return object { role:'tool', tool_call_id, content }
+	 */
+	async _dispatch_tool(tool_call, args_obj, indicator) {
+
+		const name = tool_call.function.name
+
+		// Client tools
+		if (name.indexOf('client_') === 0) {
+			const client_tool = this._client_tools.find(function(t) { return t.name === name })
+			if (!client_tool || typeof client_tool.run !== 'function') {
+				this._chat_render.update_tool_call(indicator, 'error', 'Unknown client tool')
+				return { role:'tool', tool_call_id: tool_call.id, content: 'Unknown client tool: ' + name }
+			}
+			try {
+				const result = await client_tool.run(this._client_context, args_obj || {})
+				const content = ai_assistant._stringify_tool_result(result)
+				this._chat_render.update_tool_call(indicator, 'done', result)
+				return { role:'tool', tool_call_id: tool_call.id, content }
+			} catch (err) {
+				this._chat_render.update_tool_call(indicator, 'error', err.message)
+				return { role:'tool', tool_call_id: tool_call.id, content: 'Error: ' + err.message }
+			}
+		}
+
+		// MCP tools
+		try {
+			const tool_result = await this._mcp_client.tools_call(name, args_obj)
+			const content = ai_assistant._extract_tool_result(tool_result, name)
+			this._chat_render.update_tool_call(indicator, 'done', tool_result)
+			return { role:'tool', tool_call_id: tool_call.id, content }
+		} catch (err) {
+			this._chat_render.update_tool_call(indicator, 'error', err.message)
+			return { role:'tool', tool_call_id: tool_call.id, content: 'Error: ' + err.message }
+		}
+	}//end _dispatch_tool
+
+
+
+
+	/**
 	* _EXTRACT_TOOL_RESULT
 	* MCP proxy responses wrap the real payload in {result:{content:[{type:'text',text:'...'}]}}.
 	* This extracts the inner text, strips noisy wrapper fields, and produces
