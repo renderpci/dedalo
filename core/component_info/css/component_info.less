@@ -9,13 +9,22 @@
 		display: contents;
 
 		>.content_value {
-			min-height: 27.65rem;
 			contain: content;
 
-			.loading_message {
-				padding: 1rem;
-   				color: var(--color_grey_10);
+			// used in user section to display 'loading widget..' message while load
+			&.widget_item_user_activity {
+				min-height: 27.65rem;
 
+				.loading_message {
+					padding: 3rem;
+					color: var(--color_grey_10);
+					display: flex;
+					flex-direction: column;
+					gap: 1.25rem;
+					text-align: center;
+					color: var(--color_grey_8);
+					font-size: 0.875rem;
+				}
 			}
 		}
 

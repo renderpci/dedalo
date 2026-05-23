@@ -116,6 +116,7 @@ export const get_content_value = async (i, current_widget, self) => {
 		})
 
 	// widget
+	setTimeout(() => {
 		dd_request_idle_callback(()=>{
 			current_widget.build()
 			.then(async function(){
@@ -135,6 +136,7 @@ export const get_content_value = async (i, current_widget, self) => {
 				loading_message.remove()
 			})
 		})
+	}, 5);
 
 	return content_value
 }//end get_content_value
