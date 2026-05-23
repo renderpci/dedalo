@@ -53955,6 +53955,41 @@ function registerSearchAgentTools(server, client, ctx) {
   }, ctx);
 }
 
+// src/tools/agent/media.ts
+function registerMediaAgentTools(server, client, ctx) {
+  registerTool(server, {
+    name: "dedalo_get_media_url",
+    description: "Resolve the public URL of a media component (image, av, pdf, 3d) on a record. " + "Use this in batch pipelines instead of dedalo_get_record when you only need the file URL " + "(e.g. to send an image to a vision model). " + '`component_tipo` accepts a tipo (e.g. "numisdata18") or a human label (e.g. "Stamp").',
+    annotations: {
+      tier: "agent",
+      readOnlyHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+      title: "Get media URL (agent view)"
+    },
+    inputSchema: exports_external2.object({
+      section_tipo: AgentSectionSchema,
+      section_id: SectionIdSchema,
+      component_tipo: exports_external2.string().describe("Tipo or human label of the media component."),
+      quality: exports_external2.string().optional().describe('Quality key (e.g. "1.5MB", "original", "thumb"). Defaults to component default.'),
+      absolute: exports_external2.boolean().default(true).describe("Return an absolute URL with host. Defaults to true."),
+      lang: OptionalLangSchema
+    }),
+    handler: async ({ section_tipo, section_id, component_tipo, quality, absolute, lang }) => client.call(rqo({
+      action: "get_media_url",
+      dd_api: "dd_agent_api",
+      source: { section_tipo, section_id, component_tipo, quality, absolute, lang }
+    }))
+  }, ctx);
+}
+
+// src/tools/agent/index.ts
+function registerAgentTools(server, client, ctx) {
+  registerSectionAgentTools(server, client, ctx);
+  registerRecordAgentTools(server, client, ctx);
+  registerSearchAgentTools(server, client, ctx);
+  registerMediaAgentTools(server, client, ctx);
+}
 
 // src/tools/index.ts
 function registerAllTools(server, client, ctx) {
@@ -53969,6 +54004,7 @@ function registerAllTools(server, client, ctx) {
   registerSystemTools(server, client, ctx);
   registerMaintenanceTools(server, client, ctx);
   registerAdminTools(server, client, ctx);
+  registerAgentTools(server, client, ctx);
 }
 
 // src/resources/ontology.ts
