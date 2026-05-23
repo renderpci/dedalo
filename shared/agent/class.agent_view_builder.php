@@ -784,7 +784,7 @@ final class agent_view_builder {
 
 			// Link/relation case → expand locators one hop deep.
 			if (in_array($model, self::LINK_MODELS, true)) {
-				$dato = $component->get_dato();
+				$dato = $component->get_data();
 				if (!is_array($dato) || empty($dato)) return null;
 
 				$out = [];
