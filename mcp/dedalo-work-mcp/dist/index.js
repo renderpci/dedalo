@@ -53342,6 +53342,7 @@ function rqo(opts) {
 
 // src/tools/_shared/schemas.ts
 var TipoSchema = exports_external2.string().min(1).regex(/^[a-zA-Z0-9_]+$/, "tipo must match [a-zA-Z0-9_]+").describe("Ontology tipo identifier (e.g. `oh1`, `dd1324`). Resolve from human names via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.");
+var AgentSectionSchema = exports_external2.string().min(1).describe('Section name (e.g. "Cecas", "Oral History") or tipo (e.g. "oh1"). The server resolves names automatically.');
 var LangSchema = exports_external2.string().regex(/^lg-[a-z]{2,8}$/, "lang must match `lg-xxx`").describe("Dédalo language code (e.g. `lg-eng`, `lg-spa`, `lg-nolan`).");
 var OptionalLangSchema = LangSchema.optional();
 var SectionIdSchema = exports_external2.union([exports_external2.string().min(1), exports_external2.number().int().positive()]).transform((v) => String(v)).describe("Record identifier (section_id) within a section_tipo.");
