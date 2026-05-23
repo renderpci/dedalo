@@ -630,6 +630,76 @@ export const client_context = class client_context {
 
 
 
+	/**
+	 * GET_ACTIVE_IMAGE_URL
+	 * Resolves the public URL of an image in the currently loaded record by
+	 * reading directly from a `component_image` / `component_av` instance.
+	 * Does NOT hit the network — only inspects already-loaded `data.entries`.
+	 *
+	 * @param string component_tipo  Optional. Defaults to the active component
+	 *	when it is a media model; otherwise the first media component in the
+	 *	current record.
+	 * @param string quality  Optional. Defaults to page_globals.dedalo_image_quality_default.
+	 * @return object|null { url, tipo, label, model, extension, external_source }
+	 */
+	get_active_image_url(component_tipo, quality) {
+
+		const all = get_all_instances()
+		const { section_tipo, section_id } = this._context
+
+		// candidate filter: media components in current record
+		const is_media_model = function(m) {
+			if (!m) return false
+			return m.indexOf('component_image') === 0
+				|| m.indexOf('component_av') === 0
+		}
+
+		// 1. explicit tipo
+		let target = null
+		if (component_tipo) {
+			for (const inst of all) {
+				if (!this._is_component(inst)) continue
+				if (inst.tipo !== component_tipo) continue
+				if (section_tipo && inst.section_tipo !== section_tipo) continue
+				if (section_id !== null && section_id !== undefined && String(inst.section_id) !== String(section_id)) continue
+				if (!is_media_model(inst.model)) return null
+				target = inst
+				break
+			}
+		}
+
+		// 2. active component (if it's a media model)
+		if (!target) {
+			const active = this.get_active_component()
+			if (active && is_media_model(active.model)) {
+				for (const inst of all) {
+					if (this._match_instance(inst, active.section_tipo, active.section_id, active.tipo)) {
+						target = inst
+						break
+					}
+				}
+			}
+		}
+
+		// 3. first media component in current record
+		if (!target && section_tipo && section_id !== null && section_id !== undefined) {
+			for (const inst of all) {
+				if (!this._is_component(inst)) continue
+				if (!is_media_model(inst.model)) continue
+				if (this._match_instance(inst, section_tipo, section_id, inst.tipo)) {
+					target = inst
+					break
+				}
+			}
+		}
+
+		if (!target) return null
+
+		return this._resolve_media_url(target, quality)
+	}//end get_active_image_url
+
+
+
 
 
 }//end client_context class
