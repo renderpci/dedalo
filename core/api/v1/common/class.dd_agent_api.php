@@ -499,6 +499,7 @@ final class dd_agent_api {
 		$section_id_raw	= $source->section_id ?? null;
 		$field			= $source->field ?? null;
 		$value			= $source->value ?? null;
+		$clean			= !empty($source->clean);
 		$lang			= self::normalise_lang($source->lang ?? DEDALO_DATA_LANG);
 
 		if (empty($section_tipo) || !is_string($section_tipo)) {
@@ -592,12 +593,27 @@ final class dd_agent_api {
 					$response->hint		= (object)['expected_format' => '[{"section_tipo":"rsc197","section_id":7}]'];
 					return $response;
 				}
-				// Portal / relation components: set_data replaces the entire locator
-				// array. Using 'insert' would append rather than replace.
-				$changed_data = (object)[
-					'action'	=> 'set_data',
-					'value'		=> $resolved_value
-				];
+
+				if ($clean) {
+					// Replace all locators entirely
+					$changed_data = (object)[
+						'action'	=> 'set_data',
+						'value'		=> $resolved_value
+					];
+				} else {
+					// Merge with existing data, avoiding duplicates
+					$existing	= $component->get_data() ?? [];
+					$merged		= $existing;
+					foreach ($resolved_value as $new_loc) {
+						if (!locator::in_array_locator($new_loc, $merged)) {
+							$merged[] = $new_loc;
+						}
+					}
+					$changed_data = (object)[
+						'action'	=> 'set_data',
+						'value'		=> $merged
+					];
+				}
 			} else {
 				// Scalar components (text, html, number, date, media):
 				// 'insert' on monovalue components replaces the single value.
@@ -971,6 +987,9 @@ final class dd_agent_api {
 
 		return $response;
 	}//end get_media_url
+
+
+
 
 
 
