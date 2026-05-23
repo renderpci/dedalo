@@ -69,6 +69,24 @@ export const CLIENT_TOOLS = Object.freeze([
 			required	: ['query']
 		},
 		run			: (ctx, args) => ctx.search_loaded_data(args.query)
+	{
+		name		: 'client_get_active_search',
+		description	: 'Inspect the user\'s current search in the section list. Returns the active section, total records, and a compact filter summary. Use this BEFORE client_bulk_image_transcribe to confirm what will be processed.',
+		parameters	: {
+			type		: 'object',
+			properties	: {}
+		},
+		run			: (ctx) => {
+			const info = ctx.get_active_sqo()
+			if (!info) return 'No active search. The user must open a section list (and optionally run a search) first.'
+			return {
+				section_tipo	: info.section_tipo,
+				total			: info.total,
+				summary			: ctx.summarize_sqo()
+			}
+		}
+	},
+
 	}
 
 ])
