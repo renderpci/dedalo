@@ -5,13 +5,21 @@
 
 /**
  * CLIENT_TOOLS
- * Read-only tools that execute entirely in the browser by reading from the
- * component instances registry (instances_map). No server round-trip needed.
+ * Tools that execute mostly in the browser by reading from the component
+ * instances registry (instances_map). Pure-context tools never hit the
+ * network; image tools call the configured vision endpoint plus a small
+ * number of MCP calls.
  *
  * Each tool exposes the same { name, description, parameters } JSON-schema
- * shape as MCP tool declarations, plus a `run(ctx, args)` handler invoked by
- * `ai_assistant._dispatch_tool()`. The model sees both client and MCP tools
- * as identical function declarations; the runtime routes by `client_` prefix.
+ * shape as MCP tool declarations, plus a `run(ctx, args, host)` handler
+ * invoked by `ai_assistant._dispatch_tool()`:
+ *   - ctx  : `client_context` instance (loaded component data, SQO helpers)
+ *   - args : object literal from the model
+ *   - host : the `ai_assistant` instance — exposes mcp_client, chat_render,
+ *           analyze_image_url(), and the bulk-approval slot. Optional; the
+ *           four read-only context tools ignore it.
+ * The model sees both client and MCP tools as identical function declarations;
+ * the runtime routes by `client_` prefix.
  */
 export const CLIENT_TOOLS = Object.freeze([
 
@@ -127,6 +135,39 @@ export const CLIENT_TOOLS = Object.freeze([
 		}
 	},
 
+	{
+		name		: 'client_bulk_image_transcribe',
+		description	: 'For each record in the user\'s current search: read an image field, call the vision model, write the result into a target text field. Asks for ONE batch confirmation before starting. Requires an active section list and a vision-capable api_url. Strictly sequential.',
+		parameters	: {
+			type		: 'object',
+			properties	: {
+				prompt			: {
+					type		: 'string',
+					description	: 'Instruction sent to the vision model for every image (e.g. "describe the stamp in one short paragraph in English").'
+				},
+				image_field		: {
+					type		: 'string',
+					description	: 'Human label of the image component to read (e.g. "Stamp", "Image").'
+				},
+				target_field	: {
+					type		: 'string',
+					description	: 'Human label of the text component to write into (e.g. "Description", "Notes").'
+				},
+				max_records		: {
+					type		: 'number',
+					description	: 'Optional safety cap on the number of records processed. Defaults to the section total.'
+				},
+				page_size		: {
+					type		: 'number',
+					description	: 'Optional pagination page size (1..50). Defaults to 25.'
+				}
+			},
+			required	: ['prompt', 'image_field', 'target_field']
+		},
+		run			: async (ctx, args, host) => {
+			if (!host) return 'Internal error: host not provided to client_bulk_image_transcribe.'
+			return host.run_bulk_image_transcribe(ctx, args)
+		}
 	}
 
 ])
