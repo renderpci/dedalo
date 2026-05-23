@@ -220,8 +220,8 @@ Note: The simplified `filter` parameter only supports single-`path` strings (com
 3. dedalo_create_record({ section_tipo: "numisdata6" })
    → Get: section_id = 42
 
-4. dedalo_save_component({ tipo: "numisdata27", section_tipo: "numisdata6", section_id: "42", value: "123" })
-   → Saved
+4. dedalo_set_field({ section_tipo: "numisdata6", section_id: "42", field: "Number", value: "123" })
+   → Saved (appends by default; use { clean: true } to replace locators fully)
 
 5. Response: "Created mint record #42 with number 123"
 ```
