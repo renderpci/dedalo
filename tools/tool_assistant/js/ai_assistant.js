@@ -1606,19 +1606,19 @@ export const ai_assistant = class ai_assistant {
 
 			const resolved = []
 			const ambiguous = []
+			const resolved_sections = []
 
 			for (const mention of mentions) {
 				if (mention.matches.length === 1) {
 					const match = mention.matches[0]
 					resolved.push('"' + mention.label + '" => section_tipo "' + match.section_tipo + '" (' + match.label + ')')
+					resolved_sections.push(match.section_tipo)
 				} else if (mention.matches.length > 1) {
 					ambiguous.push('"' + mention.label + '": ' + mention.matches.slice(0, 5).map(function(item) {
 						return item.label + ' => ' + item.section_tipo
 					}).join('; '))
 				}
 			}
-
-			if (!resolved.length && !ambiguous.length) return null
 
 			const parts = []
 			if (resolved.length) {
@@ -1627,6 +1627,38 @@ export const ai_assistant = class ai_assistant {
 			if (ambiguous.length) {
 				parts.push('Ambiguous: ' + ambiguous.join('; '))
 			}
+
+			// Fetch field-level structure for up to 2 resolved sections
+			// to expose portal targets and field labels
+			if (resolved_sections.length > 0) {
+				const unique = resolved_sections.filter(function(s, i) {
+					return resolved_sections.indexOf(s) === i
+				}).slice(0, 2)
+
+				const field_parts = []
+				for (const section_tipo of unique) {
+					try {
+						const desc_result = await this._mcp_client.tools_call('dedalo_describe_section', {
+							section_tipo: section_tipo,
+							include_tipos: false
+						})
+						const inner = ai_assistant._extract_tool_inner(desc_result)
+						if (inner && Array.isArray(inner.fields)) {
+							const lines = inner.fields.slice(0, 15).map(function(f) {
+								const target = f.target ? ' portal→' + (f.target.section_label || f.target.tipo || '?') : ''
+								return f.label + ' (' + f.type + target + ')'
+							})
+							field_parts.push(inner.section_label + ' fields: ' + lines.join(', '))
+						}
+					} catch (e) {
+						// skip section detail on failure
+					}
+				}
+				if (field_parts.length) {
+					parts.push('  ' + field_parts.join('.\n  '))
+				}
+			}
+
 			return parts.length ? parts.join('. ') + '.' : null
 		} catch (err) {
 			console.warn('[ai_assistant] ontology pre-resolution failed:', err)
