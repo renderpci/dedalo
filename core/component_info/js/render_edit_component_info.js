@@ -5,6 +5,7 @@
 
 
 // imports
+	import { dd_request_idle_callback } from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_info} from './view_default_edit_info.js'
 	import {view_line_edit_info} from './view_line_edit_info.js'
@@ -100,18 +101,40 @@ export const get_content_value = async (i, current_widget, self) => {
 		: ''
 
 	// content_value
+		const widget_name = current_widget.name || 'unknown'
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: `content_value widget_item_${current_widget.name}` + add_classes
+			class_name		: `content_value widget_item_${widget_name}` + add_classes
+		})
+
+	// loading_message
+		const loading_message = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'loading_message',
+			text_content 	: 'Loading widget..',
+			parent 			: content_value
 		})
 
 	// widget
-		await current_widget.build()
-		const widget_node = await current_widget.render()
-		if (widget_node) {
-			content_value.appendChild(widget_node)
-		}
-
+		dd_request_idle_callback(()=>{
+			current_widget.build()
+			.then(async function(){
+				const widget_node = await current_widget.render()
+				if (widget_node) {
+					widget_node.style.opacity = '0'
+					widget_node.style.transition = 'opacity 0.3s ease-in'
+					content_value.appendChild(widget_node)
+					// force reflow to trigger transition
+					widget_node.offsetHeight
+					widget_node.style.opacity = '1'
+				}
+				loading_message.remove()
+			})
+			.catch((err)=>{
+				console.error('Error rendering widget:', err)
+				loading_message.remove()
+			})
+		})
 
 	return content_value
 }//end get_content_value

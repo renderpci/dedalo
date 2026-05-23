@@ -95,6 +95,11 @@ class component_info extends component_common {
 				// instance the current widget
 					$widget = widget_common::get_instance($widget_options);
 
+				// skip async widgets (they load their data via API on the client)
+					if (method_exists($widget, 'is_async') && $widget->is_async()) {
+						continue;
+					}
+
 				// Widget data
 					$widget_value = $widget->get_data();
 					if (!empty($widget_value)) {
@@ -149,6 +154,11 @@ class component_info extends component_common {
 
 				// instance the current widget
 					$widget = widget_common::get_instance($widget_options);
+
+				// skip async widgets (they load their data via API on the client)
+					if (method_exists($widget, 'is_async') && $widget->is_async()) {
+						continue;
+					}
 
 				// Widget data
 					$widget_value = $widget->get_data_parsed();
