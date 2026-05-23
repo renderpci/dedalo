@@ -54,7 +54,7 @@ export function registerRecordAgentTools(server: McpServer, client: WorkClient, 
 		annotations: {
 			tier: 'agent',
 			readOnlyHint: false,
-			destructiveHint: false,
+			destructiveHint: true,
 			idempotentHint: true,
 			openWorldHint: true,
 			title: 'Set field by label (agent view)',

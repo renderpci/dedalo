@@ -17,7 +17,9 @@ export function registerSectionAgentTools(server: McpServer, client: WorkClient,
 		description:
 			'Get a human-friendly schema for a Dédalo section. ' +
 			'Returns field labels (not tipos), simplified types (text|html|date|number|link|media), ' +
-			'and portal target sections. Use this as the FIRST step before reading or writing any record.\n\n' +
+			'and portal target sections. Use this when you need to discover field labels for an ' +
+			'unfamiliar section; `dedalo_set_field` and `dedalo_get_record` already accept human ' +
+			'labels and do not require this call.\n\n' +
 			'When `include_tipos=true`, the response includes `_meta.field_tipos` with label→tipo ' +
 			'mapping for round-trip writes.\n\n' +
 			'`section_tipo` accepts a section name (e.g. "Cecas", "Oral History") or tipo (e.g. "oh1").',
