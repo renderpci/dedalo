@@ -75,18 +75,22 @@ component_info.prototype.get_widgets = async function() {
 	const datalist	= self.data.datalist || []
 	const value		= self.data.entries || []
 		// self data verification
-		if (!value || value.length===0) {
-			return false
-		}
 		if (!Array.isArray(value)) {
 			console.error('Error. Invalid value (expected array):', value);
 			return false
 		}
-		const value_length = value.length
-		for (let i = 0; i < value_length; i++) {
-			if(!value[i]) {
-				console.error('Error. empty value item received:', i, value);
+		if (value.length>0) {
+			const value_length = value.length
+			for (let i = 0; i < value_length; i++) {
+				if(!value[i]) {
+					console.error('Error. empty value item received:', i, value);
+				}
 			}
+		}
+
+	// initialize ar_instances if not already set
+		if (!self.ar_instances) {
+			self.ar_instances = []
 		}
 
 	const widgets_properties		= self.context.properties.widgets

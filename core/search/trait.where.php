@@ -77,11 +77,11 @@ trait where {
 			return;
 		}
 
-		// Cache optimization to avoid repeated calls to filter::get_filter_user_records_by_id
+		// Cache optimization to avoid repeated calls to component_filter_records::get_user_filter_records
 		if (isset(self::$filter_user_records_cache[$user_id])) {
 			$filter_user_records_by_id = self::$filter_user_records_cache[$user_id];
 		} else {
-			$filter_user_records_by_id = filter::get_filter_user_records_by_id( $user_id );
+			$filter_user_records_by_id = component_filter_records::get_user_filter_records( $user_id );
 			self::$filter_user_records_cache[$user_id] = $filter_user_records_by_id;
 		}
 
@@ -577,7 +577,7 @@ trait where {
 
 						$component_filter_tipo = $ar_component_filter[0];
 
-						$ar_projects = filter::get_user_projects($user_id); // return array of locators
+						$ar_projects = component_filter_master::get_user_projects($user_id); // return array of locators
 						if (empty($ar_projects)) {
 
 							// Invalid filter case

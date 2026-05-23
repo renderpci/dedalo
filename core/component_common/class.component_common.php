@@ -4643,5 +4643,85 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* GET_CURRENT_SECTION_FILTER_DATA
+	* Gets fast project data of current section
+	* Search component filter in current section and get the component data
+	* @return array|null $component_filter_data
+	*/
+	public function get_current_section_filter_data() : ?array {
+
+		// short vars
+			$section_id		= $this->get_section_id();
+			$section_tipo	= $this->get_section_tipo();
+
+		// default value
+			$component_filter_data = null;
+
+		if ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) {
+
+			// Project of projects case : Projects in users section
+
+			$filter_locator = new locator();
+				$filter_locator->set_section_tipo(DEDALO_FILTER_SECTION_TIPO_DEFAULT);
+				$filter_locator->set_section_id($section_id);
+				$filter_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+			$component_filter_data = [$filter_locator];
+
+		}else{
+
+			// Default case
+
+			$ar_search_model	= ['component_filter'];
+			$ar_children_tipo	= section::get_ar_children_tipo_by_model_name_in_section(
+				$section_tipo, // section_tipo
+				$ar_search_model,
+				true, // bool from_cache
+				true, // bool resolve_virtual
+				true, // bool recursive
+				true, // bool search_exact
+				false // array|bool ar_tipo_exclude_elements
+			);
+
+			if (empty($ar_children_tipo[0])) {
+				// throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);
+				debug_log(__METHOD__
+					. " Error Processing Request: 'component_filter' is empty 1 " . PHP_EOL
+					. ' A component filter is needed to use the portals because you need to' . PHP_EOL
+					. '	set a filter value for the new records created in the target section' . PHP_EOL
+					. ' $ar_children_tipo: '.to_string($ar_children_tipo)
+					, logger::ERROR
+				);
+			}else {
+
+				$component_filter_tipo	= $ar_children_tipo[0];
+				$model					= ontology_node::get_model_by_tipo($component_filter_tipo, true);
+				$component_filter		= component_common::get_instance(
+					$model,
+					$component_filter_tipo,
+					$section_id,
+					'edit',
+					DEDALO_DATA_NOLAN,
+					$section_tipo
+				);
+
+				$data = $component_filter->get_data();
+
+				// Exclude non user projects from the list, only intersections are accepted.
+				$user_projects = component_filter_master::get_user_projects( logged_user_id() );
+				$component_filter_data = [];
+				foreach ($data as $data_entry) {
+					if( locator::in_array_locator($data_entry, $user_projects, ['section_tipo','section_id']) ) {
+						$component_filter_data[] = $data_entry;
+					}
+				}
+			}
+		}
+
+		return $component_filter_data;
+	}//end get_current_section_filter_data
+
+
+
 
 }//end class component_common

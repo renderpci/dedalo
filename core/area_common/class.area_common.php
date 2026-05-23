@@ -297,6 +297,28 @@ class area_common extends common  {
 		// Larger ranges are fetched on-demand via API action `get_activity_metric`.
 		$dashboard->activity_30d = $this->metric_activity_30d(30);
 
+		// Per-section `recent_7d` badge: count of activity events in the last 7 days,
+		// derived from the already-computed activity_30d payload (no extra SQL).
+		// Attaches `recent_7d` to each section item for client-side rendering.
+		if (!empty($dashboard->activity_30d) && !empty($dashboard->activity_30d->days)) {
+
+			$ar_days			= $dashboard->activity_30d->days;
+			$recent_window_size	= 7;
+			$recent_days		= array_slice($ar_days, -$recent_window_size);
+
+			$recent_by_section = [];
+			foreach ($recent_days as $day) {
+				$by_section = (array)($day->by_section ?? []);
+				foreach ($by_section as $tipo => $count) {
+					$recent_by_section[$tipo] = ($recent_by_section[$tipo] ?? 0) + (int)$count;
+				}
+			}
+
+			foreach ($dashboard->sections as $section_item) {
+				$section_item->recent_7d = $recent_by_section[$section_item->section_tipo] ?? 0;
+			}
+		}
+
 		return $dashboard;
 	}//end get_dashboard_data
 

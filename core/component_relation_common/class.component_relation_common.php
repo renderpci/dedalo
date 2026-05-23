@@ -1658,7 +1658,7 @@ class component_relation_common extends component_common {
 	*
 	* @return array|null Pack dictionary list item definitions of structure:
 	*	- section_id (int): item descriptive locator structure.
-	*	- section_tipo (string): layout item descriptive locator structure layout. 
+	*	- section_tipo (string): layout item descriptive locator structure layout.
 	*	- term (string|null): descriptive term primary identifying labels descriptive.
 	*	- typology (string|null): supporting descriptive typology identifiers reference string.
 	*	- typology_section_id (int|null): definitions descriptive typology target structure index.
@@ -1674,7 +1674,7 @@ class component_relation_common extends component_common {
 
 		// Normalize types to strings (assumes first if array is provided)
 		$term_tipo 	= is_array($map_node->thesaurus->term) ? reset($map_node->thesaurus->term) : $map_node->thesaurus->term;
-		
+
 		$model_tipo = null;
 		if (!empty($map_node->thesaurus->model)) {
 			$model_tipo = is_array($map_node->thesaurus->model) ? reset($map_node->thesaurus->model) : $map_node->thesaurus->model;
@@ -2883,7 +2883,8 @@ class component_relation_common extends component_common {
 			}
 
 		// 1 PROJECTS GET
-			// We get current portal filter data (projects) to heritage in the new portal record
+			// We get current portal section filter data (projects) to heritage in the new portal record
+			// This exclude non user projects from the list, only intersections are accepted.
 			$section_id				= $this->get_section_id();
 			$component_filter_data	= ($this->is_temporal===true)
 				? null
@@ -2899,31 +2900,66 @@ class component_relation_common extends component_common {
 
 				// Default value is used
 				// Temp section case Use default project here
-				$locator = new locator();
-					$locator->set_section_tipo(DEDALO_SECTION_PROJECTS_TIPO);
-					$locator->set_section_id(DEDALO_DEFAULT_PROJECT);
-				$component_filter_data = [$locator];
+				$default_locator = new locator();
+					$default_locator->set_section_tipo(DEDALO_SECTION_PROJECTS_TIPO);
+					$default_locator->set_section_id(DEDALO_DEFAULT_PROJECT);
+					$default_locator->set_type(DEDALO_RELATION_TYPE_FILTER);
+				$component_filter_data = [$default_locator];
+			}
+
+			// values
+			$values = null;
+			if(!empty($component_filter_data)) {
+
+				// Resolve target section component_filter
+				// This is where we store the inherit projects data
+				$component_filter_model = 'component_filter';
+				$component_filter_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+					$target_section_tipo, // section_tipo
+					[$component_filter_model],
+					true, // bool from_cache
+					true, // bool resolve_virtual
+					true, // bool recursive
+					true, // bool search_exact
+					false // array|bool ar_tipo_exclude_elements
+				)[0] ?? null;
+
+				if ($component_filter_tipo) {
+					// Parse current inherited project data to be usable in target section component_filter
+					$new_filter_data = [];
+					$id = 1;
+					foreach ($component_filter_data as $data_entry) {
+						// Ensure locator instance (DB data is decoded as stdClass)
+						$new_locator = new locator($data_entry);
+						$new_locator->set_from_component_tipo($component_filter_tipo); // Replaces component tipo
+						$new_locator->set_id($id++); // Set new value id starting with 1
+						$new_filter_data[] = $new_locator;
+					}
+					// Build values to insert in the new section record
+					$column_name = section_record_data::get_column_name($component_filter_model); // 'relation' expected
+					$values = (object)[
+						$column_name => (object)[
+							$component_filter_tipo => $new_filter_data
+						]
+					];
+				}
 			}
 
 		// 2 SECTION
 			// Section record . create new empty section in target section tipo
-			// $section_new = section::get_instance(null, $target_section_tipo);
-			// $save_options = new stdClass();
-			// 	$save_options->caller_data				= $this->get_data();
-			// 	$save_options->component_filter_data	= $component_filter_data;
-			// $new_section_id = $section_new->Save( $save_options );
-
 			$section_new = section::get_instance($target_section_tipo);
-			$save_options = new stdClass();
-				$save_options->component_filter_data = $component_filter_data;
-			$new_section_id = $section_new->create_record($save_options);
+
+			// create_record
+			$new_section_id = $section_new->create_record((object)[
+				'values' => $values
+			]);
 
 			if(!$new_section_id || $new_section_id<1) {
 				$msg = "Error on create new section: new section_id is not valid ! ";
 				$response->msg .= $msg;
 				debug_log(__METHOD__
 					." $response->msg " . PHP_EOL
-					.' save_options: ' . to_string($save_options)
+					.' values: ' . to_string($values)
 					, logger::ERROR
 				);
 				return $response;
@@ -2940,6 +2976,16 @@ class component_relation_common extends component_common {
 
 			$added = $this->add_locator_to_data($locator);
 			if ($added!==true) {
+
+				// Rollback: delete the orphaned section record that was already created
+				$section_record_data = section_record_data::get_instance($target_section_tipo, $new_section_id);
+				$section_record = section_record::get_instance(
+					$target_section_tipo,
+					$new_section_id,
+					false // bool cache
+				);
+				$section_record->delete();
+
 				$response->msg .= 'Error add_locator_to_data. New locator is not added !';
 				debug_log(__METHOD__
 					." $response->msg " . PHP_EOL
@@ -2950,9 +2996,6 @@ class component_relation_common extends component_common {
 				);
 				return $response;
 			}
-
-		// Save current component updated data
-			// $this->Save();
 
 		// response OK
 			$response->result			= true;

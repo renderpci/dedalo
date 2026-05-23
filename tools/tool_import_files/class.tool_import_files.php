@@ -828,12 +828,14 @@ class tool_import_files extends tool_common {
 							case 'enumerate':
 
 								$section = section::get_instance( $section_tipo, 'list', false );
-								$creation_options = new stdClass();
-									// Direct numeric case like 1.jpg
-									// First record of current section_id force create record. Next files with same section_id, not.
-									$creation_options->section_id = $file_data['regex']->section_id ?? null;
 
-								$_base_section_id = $section->create_record( $creation_options );
+								// Direct numeric case like 1.jpg
+								// First record of current section_id force create record. Next files with same section_id, not.
+								$target_section_id = $file_data['regex']->section_id ?? null;
+
+								$_base_section_id = $section->create_record((object)[
+									'section_id' => $target_section_id
+								]);
 
 								$section_id = (int)$_base_section_id;
 								break;

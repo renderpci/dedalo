@@ -42,7 +42,6 @@ include DEDALO_CORE_PATH . '/backup/class.backup.php';
 // Common
 include DEDALO_CORE_PATH . '/common/class.common.php';
 include DEDALO_CORE_PATH . '/common/class.lang.php';
-include DEDALO_CORE_PATH . '/common/class.filter.php';
 include DEDALO_CORE_PATH . '/common/class.counter.php';
 include DEDALO_CORE_PATH . '/common/class.label.php';
 include DEDALO_CORE_PATH . '/common/class.exec_.php';

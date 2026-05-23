@@ -100,7 +100,7 @@ class diffusion_section_stats extends diffusion {
 	*         - msg: human-readable status message
 	*         - errors: collected error strings
 	*/
-	public static function update_user_activity_stats( int $user_id ) : object {
+	public static function update_user_activity_stats( int $user_id, int $max_days=0 ) : object {
 		$start_time = start_time();
 
 		debug_log(__METHOD__
@@ -113,9 +113,14 @@ class diffusion_section_stats extends diffusion {
 			$response->msg		= 'Error. Request failed. ';
 			$response->errors	= [];
 
-		// 1 - last saved user activity stats (looks section 'dd1521' in matrix_stats to get the last record)
-		// We look for the last record of the user activity stats to know where to start the process
-			$sql_query  = 'SELECT section_tipo, section_id, data' . PHP_EOL;
+		// 1 - last saved user activity stats (looks section 'dd1521' in matrix_stats).
+		// We look for the most recent record to know which aggregated day was
+		// the last persisted. The signal we need is the AGGREGATED DAY (stored
+		// in the `date` component dd1530), NOT the `created_date` timestamp.
+		// Using created_date here was a bug: it never matches `today` (today is
+		// never saved), so the short-circuit never triggered and the loop kept
+		// re-saving yesterday on every call → duplicate records and wasted work.
+			$sql_query  = 'SELECT section_tipo, section_id, data, "date"' . PHP_EOL;
 			$sql_query .= 'FROM "matrix_stats"' . PHP_EOL;
 			$sql_query .= 'WHERE relation @> $1' . PHP_EOL;
 			$sql_query .= 'ORDER BY id DESC' . PHP_EOL;
@@ -133,103 +138,90 @@ class diffusion_section_stats extends diffusion {
 			$row = pg_fetch_object($matrix_stats_result);
 			pg_free_result($matrix_stats_result);
 
-		// 2 - last activity record of current user
-		// We search activity records of current user from the date of the last saved user activity stats
-			// query params
+		// 2 - tipos for batch aggregation
+			$what_tipo	= logger_backend_activity::$_COMPONENT_WHAT['tipo'];	// dd545
+			$where_tipo	= logger_backend_activity::$_COMPONENT_WHERE['tipo'];	// dd546
+			$when_tipo	= logger_backend_activity::$_COMPONENT_WHEN['tipo'];	// dd547
+			$data_tipo	= logger_backend_activity::$_COMPONENT_DATA['tipo'];	// dd551
+
+		// 3 - last activity record lookups
 			$who_tipo = logger_backend_activity::$_COMPONENT_WHO['tipo']; // dd543
 			$params = [
 				'{"'.$who_tipo.'":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}' // $who_tipo is the who component
 			];
 
-			// placeholders
-			$placeholders = 2; // Start with 2 because $1 is the relation param
-
-			// activity_filter_beginning. Builds a SQL sentence as 'AND date > '2025-03-07''
-			// for filter results in the next query against matrix_activity
+			$placeholders = 2;
 			$filter_sentences = [];
-			$last_saved_data = null;
-			if( !empty($row) ) {
+
+			// Extract the aggregated day from the date component (dd1530).
+			// Stored shape: date column JSONB = {"dd1530":[{"id":1,"start":{"year":Y,"month":M,"day":D,...}}]}
+			$last_aggregated_date = null; // DateTime (midnight) of the last saved day, or null
+			if (!empty($row)) {
 				$section_id		= $row->section_id;
 				$section_tipo	= $row->section_tipo;
 
-				// last saved data. E.g. '2026-05-14 18:10:23'
-				$row_data = isset($row->data) ? json_decode($row->data) : null;
-				$last_saved_data = is_object($row_data)
-					? ($row_data->created_date ?? null)
-					: null;
-
-				// component data way
-					// $model		= ontology_node::get_model_by_tipo(USER_ACTIVITY_DATE_TIPO, true);
-					// $component	= component_common::get_instance(
-					// 	$model,
-					// 	USER_ACTIVITY_DATE_TIPO,
-					// 	$section_id,
-					// 	'list',
-					// 	DEDALO_DATA_NOLAN,
-					// 	$section_tipo
-					// );
-					// $data = $component->get_data();
-					// $current_date = $data[0] ?? null;
-
-					// if (empty($current_date) || !isset($current_date->start)) {
-					// 	debug_log(__METHOD__
-					// 		. " Not valid start date found for user '$user_id'. We will look in all user history." . PHP_EOL
-					// 		. 'current_date: '.to_string($current_date)
-					// 		, logger::WARNING
-					// 	);
-					// }else{
-					// 	$dd_date	= new dd_date($current_date->start);
-					// 	$timestamp	= $dd_date->get_dd_timestamp("Y-m-d");
-
-					// 	// all records after last saved + 1 day
-					// 	$begin			= new DateTime($timestamp);
-					// 	$beginning_date	= $begin->modify('+1 day')->format("Y-m-d");
-
-					// 	$filter = '"timestamp" > $' . $placeholders;
-					// 	$placeholders++;
-
-					// 	$filter_sentences[] = $filter;
-					// 	$params[] = $beginning_date;
-					// }
+				$date_col = isset($row->date) ? json_decode($row->date) : null;
+				$date_entry = $date_col->{USER_ACTIVITY_DATE_TIPO}[0] ?? null;
+				$start = is_object($date_entry) ? ($date_entry->start ?? null) : null;
+				if (is_object($start) && !empty($start->year) && !empty($start->month) && !empty($start->day)) {
+					try {
+						$last_aggregated_date = (new DateTime(sprintf(
+							'%04d-%02d-%02d',
+							(int)$start->year,
+							(int)$start->month,
+							(int)$start->day
+						)))->setTime(0, 0, 0);
+					} catch (\Throwable $e) {
+						debug_log(__METHOD__
+							." Invalid date in last matrix_stats row for user $user_id: ".$e->getMessage()
+							, logger::WARNING
+						);
+					}
+				}
 			}
 
-			// Check for need of update. Only if last saved date is minor that today
-			$today = new DateTime();
-			if($last_saved_data) {
-				$date_last_saved_data = new DateTime($last_saved_data);
-				// Set time to same value for date-only comparison
-				$today->setTime(0, 0, 0);
-				$date_last_saved_data->setTime(0, 0, 0);
-				if( $date_last_saved_data >= $today ) {
-					// Nothing to do. The stats are updated
-					debug_log(__METHOD__
-					   .' User stats are already updated. Ignored action' . PHP_EOL
-					   .' last_saved_data: ' . to_string($last_saved_data)
-					   , logger::WARNING
-					);
-					$response->result	= 0;
-					$response->msg		= 'Stats are already updated';
-					return $response;
-				}
+			// Reference dates (all at midnight for clean date-only comparisons).
+			$today		= (new DateTime())->setTime(0, 0, 0);
+			$yesterday	= (clone $today)->modify('-1 day');
 
-				$params[] = $last_saved_data;
-				$filter_sentences[] = '"timestamp" > date($' . $placeholders.')';
+			// Short-circuit: we already have stats through yesterday — nothing
+			// to persist until tomorrow rolls around.
+			if ($last_aggregated_date !== null && $last_aggregated_date >= $yesterday) {
+				debug_log(__METHOD__
+					.' User stats are already updated through yesterday. Ignored action.' . PHP_EOL
+					.' last_aggregated_date: ' . $last_aggregated_date->format('Y-m-d') . PHP_EOL
+					.' yesterday: ' . $yesterday->format('Y-m-d')
+					, logger::DEBUG
+				);
+				$response->result	= 0;
+				$response->msg		= 'Stats are already updated';
+				return $response;
+			}
+
+			// Set the matrix_activity lower bound to the FIRST day that still
+			// needs aggregation: last_aggregated_date + 1 day. Using `>=` with a
+			// date-only cast guarantees we don't re-aggregate any persisted day
+			// and don't miss any activity from the new day.
+			if ($last_aggregated_date !== null) {
+				$next_day_to_process = (clone $last_aggregated_date)->modify('+1 day')->format('Y-m-d');
+				$params[] = $next_day_to_process;
+				$filter_sentences[] = '"timestamp" >= date($'.$placeholders.')';
 				$placeholders++;
 			}
 
-			// do not include today in any case because it is not yet complete.
-			$end_date = $today->format("Y-m-d");
+			// Upper bound: do not include today (the day is not yet complete).
+			$end_date = $today->format('Y-m-d');
 			$params[] = $end_date;
 			$filter_sentences[] = '"timestamp" < date($'.$placeholders.')';
 			$placeholders++;
 
-			// search first activity record of current user after the starting point
-			$sql_query  = 'SELECT *' . PHP_EOL;
+		// 4 - batch query matrix_activity with JSONB columns (single pass)
+			$sql_query  = 'SELECT section_tipo, section_id, "timestamp",' . PHP_EOL;
+			$sql_query .= '"relation", "string", "date", "misc"' . PHP_EOL;
 			$sql_query .= 'FROM "matrix_activity"' . PHP_EOL;
 			$sql_query .= 'WHERE relation @> $1' . PHP_EOL;
 			$sql_query .= 'AND '.implode(' AND ', $filter_sentences) . PHP_EOL;
-			$sql_query .= 'ORDER BY id ASC' . PHP_EOL;
-			$sql_query .= 'LIMIT 1';
+			$sql_query .= 'ORDER BY id ASC';
 
 			$result = matrix_db_manager::exec_search($sql_query, $params);
 			if ($result===false) {
@@ -237,89 +229,191 @@ class diffusion_section_stats extends diffusion {
 				$response->errors[] = 'failed database execution';
 				return $response;
 			}
-			// get last activity record in raw db format (not processed)
-			$activity_row = pg_fetch_object($result);
-			if (!$activity_row || empty($activity_row->timestamp)) {
-				debug_log(__METHOD__." Skip. Not calculable result found for user $user_id ".to_string($activity_row), logger::WARNING);
-				$response->msg .= 'Skip. Not calculable result found for user '.$user_id;
-				$response->errors[] = 'Skip. Not calculable result found for user '.$user_id;
-				$response->result = true;
-				return $response;
-			}
 
-			// Check dd date object from column 'timestamp' (example: '2024-12-05 09:07:33.248847')
-			// This is a check to validate the timestamp value. If not valid (year is not available), skip the process.
-			$date_value	= dd_date::get_dd_date_from_timestamp( $activity_row->timestamp );
+		// 5 - group by day and aggregate totals in a single pass
+			// day_groups: [ 'Y-m-d' => { what_obj, where_obj, when_obj, publish_obj } ]
+			$day_groups = [];
+			$row_count = 0;
+			while ($activity_row = pg_fetch_object($result)) {
 
-			if (!is_object($date_value) || empty($date_value->year)) {
-				debug_log(__METHOD__
-					." Skip. Not valid date found for user $user_id "
-					, logger::ERROR
-				);
-				$response->msg .= 'Not valid date found for user '.$user_id;
-				$response->errors[] = 'invalid date from activity row: ' .$activity_row->section_id;
-				pg_free_result($result);
-				return $response;
-			}
+				if (empty($activity_row->timestamp)) {
+					continue;
+				}
 
-		// iterate from the beginning, in steps of a day
-			$begin	= new DateTime($activity_row->timestamp);
-			$end	= $today; // remember do not include today because it is not finished yet
-
-			// by day
-			$updated_days = [];
-			for($i = $begin; $i < $end; $i->modify('+1 day')){
-
-				// date_in
-					$current_date	= $i->format("Y-m-d");
-					$date_in		= $current_date;
-
-				// date_out
-					$i_clon		= clone $i;
-					$i_clon->modify('+1 day');
-					$date_out	= $i_clon->format("Y-m-d");
-
-				// interval_raw_activity_data
-				$totals_data = diffusion_section_stats::get_interval_raw_activity_data(
-					$user_id,
-					$date_in,
-					$date_out
-				);
-
-				// if not empty totals_data, add
-				if ($totals_data && count($totals_data)>0) {
-
-					// save_user_activity
-					$save_result = diffusion_section_stats::save_user_activity(
-						$totals_data, // array totals_data
-						$user_id, // int user_id
-						'day', // string type
-						(int)$i->format("Y"), // int year
-						(int)$i->format("m"), // int month
-						(int)$i->format("d") // int day
-					);
-
-					if($save_result===false) {
-						debug_log(__METHOD__
-							." Save user activity failed for user $user_id ". PHP_EOL
-							.' date_in: '.to_string($date_in).PHP_EOL
-							.' date_out: '.to_string($date_out).PHP_EOL
-							.' totals_data: '.to_string($totals_data)
-							, logger::ERROR
-						);
-						continue;
-					}
-
-					// updated_days add
-					$updated_days[] = (object)[
-						'user'	=> $user_id,
-						'date'	=> $i->format("Y-m-d")
+				$day = substr($activity_row->timestamp, 0, 10); // '2025-01-15'
+				if (!isset($day_groups[$day])) {
+					$day_groups[$day] = (object)[
+						'what_obj'		=> new stdClass(),
+						'where_obj'		=> new stdClass(),
+						'when_obj'		=> new stdClass(),
+						'publish_obj'	=> new stdClass()
 					];
 				}
-			}//end for($i = $begin; $i < $end; $i->modify('+1 day'))
+				$group = $day_groups[$day];
+				$row_count++;
 
-		// free result
+				// Decode JSONB columns once per row
+				$relation_col	= isset($activity_row->relation) ? json_decode($activity_row->relation) : null;
+				$string_col		= isset($activity_row->string)   ? json_decode($activity_row->string)   : null;
+				$date_col		= isset($activity_row->date)     ? json_decode($activity_row->date)     : null;
+				$misc_col		= isset($activity_row->misc)     ? json_decode($activity_row->misc)     : null;
+
+				// what (dd545) — component_select in relation column
+				$what_data = $relation_col->{$what_tipo} ?? null;
+				if (!empty($what_data)) {
+					self::build_what($what_data, $group->what_obj);
+				}
+
+				// where (dd546) — component_input_text in string column
+				$where_data = $string_col->{$where_tipo} ?? null;
+				if (!empty($where_data)) {
+
+					$key = $where_data[0]->value ?? null;
+					if (is_array($key)) {
+						$key = $key[0];
+					}
+					if (!empty($key) && is_string($key)) {
+						switch (true) {
+							case ($key==='dd1223'): // last publish
+								$data_data = $misc_col->{$data_tipo} ?? null;
+								$msg = $data_data[0]->value ?? false;
+								if ($msg!==false) {
+									$_section_tipo = $msg->top_tipo ?? $msg->section_tipo ?? false;
+									if ($_section_tipo!==false) {
+										$group->publish_obj->{$_section_tipo} = ($group->publish_obj->{$_section_tipo} ?? 0) + 1;
+									}
+								}
+								break;
+							case ($key==='dd271' || $key==='dd1224' || $key==='dd1225'):
+								break;
+							default:
+								$group->where_obj->{$key} = ($group->where_obj->{$key} ?? 0) + 1;
+								break;
+						}
+					}
+				}
+
+				// when (dd547) — component_date in date column
+				$when_data = $date_col->{$when_tipo} ?? null;
+				if (!empty($when_data) && isset($when_data[0]->start->hour)) {
+					$hour = $when_data[0]->start->hour;
+					$group->when_obj->{$hour} = ($group->when_obj->{$hour} ?? 0) + 1;
+				}
+
+			}//end while ($activity_row = pg_fetch_object($result))
+
 			pg_free_result($result);
+
+			// When no activity found at all in the range, exit cleanly.
+			if ($row_count === 0) {
+				debug_log(__METHOD__
+					." No activity records found for user $user_id in the range. Skipping."
+					, logger::DEBUG
+				);
+				$response->msg		= 'No activity records found';
+				$response->result	= [];
+				return $response;
+			}
+
+		// 6 - save each day's aggregated sumatory
+			// Sort day keys ascending (oldest first) so last_aggregated_date
+			// advances forward correctly for incremental catch-up.
+			$day_keys = array_keys($day_groups);
+			sort($day_keys);
+
+			$updated_days = [];
+			foreach ($day_keys as $day) {
+
+				// max_days cap — limits saves, not loads
+				if ($max_days > 0 && count($updated_days) >= $max_days) {
+					debug_log(__METHOD__
+						." Reached max_days limit ($max_days) for user $user_id. Stopping catch-up."
+						, logger::DEBUG
+					);
+					break;
+				}
+
+				// Parse date parts
+				list($year, $month, $day_num) = explode('-', $day);
+				$year		= (int)$year;
+				$month		= (int)$month;
+				$day_num	= (int)$day_num;
+
+				// Duplicate guard: indexed LIMIT 1 query (fast on large tables)
+				if (self::user_activity_day_exists($user_id, $year, $month, $day_num)) {
+					debug_log(__METHOD__
+						." Skip duplicate save: user $user_id already has stats for $day"
+						, logger::DEBUG
+					);
+					continue;
+				}
+
+				$group = $day_groups[$day];
+
+				// Verticalize accumulator objects into totals_data array
+				$totals_data = [];
+
+				// what
+				foreach ($group->what_obj as $key => $value) {
+					$totals_data[] = (object)[
+						'type'	=> 'what',
+						'tipo'	=> $key,
+						'value'	=> $value,
+						'label'	=> ontology_node::get_term_by_tipo($key)
+					];
+				}
+				// where
+				foreach ($group->where_obj as $key => $value) {
+					$totals_data[] = (object)[
+						'type'	=> 'where',
+						'tipo'	=> $key,
+						'value'	=> $value
+					];
+				}
+				// when
+				foreach ($group->when_obj as $hour => $value) {
+					$totals_data[] = (object)[
+						'type'	=> 'when',
+						'hour'	=> (int)$hour,
+						'value'	=> $value
+					];
+				}
+				// publish
+				foreach ($group->publish_obj as $key => $value) {
+					$totals_data[] = (object)[
+						'type'	=> 'publish',
+						'tipo'	=> $key,
+						'value'	=> $value
+					];
+				}
+
+				if (empty($totals_data)) {
+					continue;
+				}
+
+				// save_user_activity
+				$save_result = diffusion_section_stats::save_user_activity(
+					$totals_data,
+					$user_id,
+					'day',
+					$year,
+					$month,
+					$day_num
+				);
+
+				if ($save_result===false) {
+					debug_log(__METHOD__
+						." Save user activity failed for user $user_id on $day"
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				$updated_days[] = (object)[
+					'user'	=> $user_id,
+					'date'	=> $day
+				];
+			}//end foreach ($day_keys as $day)
 
 		// debug info
 			$memory		= dd_memory_usage();
@@ -361,11 +455,11 @@ class diffusion_section_stats extends diffusion {
 			$when_tipo	= logger_backend_activity::$_COMPONENT_WHEN['tipo'];	// expected dd547
 			$data_tipo	= logger_backend_activity::$_COMPONENT_DATA['tipo'];	// expected dd551
 
-		// models
-			$what_model	= ontology_node::get_model_by_tipo($what_tipo, true);
-			$where_model = ontology_node::get_model_by_tipo($where_tipo, true);
-			$when_model	= ontology_node::get_model_by_tipo($when_tipo, true);
-			$data_model	= ontology_node::get_model_by_tipo($data_tipo, true);
+		// map model → column for JSONB reads
+			$column_what	= section_record_data::get_column_name(logger_backend_activity::$_COMPONENT_WHAT['model_name']);	// relation
+			$column_where	= section_record_data::get_column_name(logger_backend_activity::$_COMPONENT_WHERE['model_name']);	// string
+			$column_when	= section_record_data::get_column_name(logger_backend_activity::$_COMPONENT_WHEN['model_name']);	// date
+			$column_data	= section_record_data::get_column_name(logger_backend_activity::$_COMPONENT_DATA['model_name']);	// misc
 
 		// base objects
 			$what_obj	= new stdClass();
@@ -374,24 +468,13 @@ class diffusion_section_stats extends diffusion {
 			$publish_obj= new stdClass();
 
 		// matrix_activity. Get data from current user in range
-			$sql_query  = 'SELECT section_tipo, section_id' . PHP_EOL;
+		// Select JSONB columns directly to avoid N+1 component instantiation
+			$sql_query  = 'SELECT section_tipo, section_id,' . PHP_EOL;
+			$sql_query .= '"relation", "string", "date", "misc"' . PHP_EOL;
 			$sql_query .= 'FROM "matrix_activity"' . PHP_EOL;
 			$sql_query .= 'WHERE relation @> $3' . PHP_EOL;
-			//$sql_query .= 'AND "timestamp" between date($1) and date($2)' . PHP_EOL;
 			$sql_query .= 'AND "timestamp" >= date($1) AND "timestamp" < date($2)' . PHP_EOL;
 			$sql_query .= 'ORDER BY id ASC';
-
-			// $sql_query  = 'WITH matching_json AS (' . PHP_EOL;
-			// $sql_query .= 'SELECT id, section_tipo, section_id, "timestamp"' . PHP_EOL;
-			// $sql_query .= 'FROM "matrix_activity"' . PHP_EOL;
-			// $sql_query .= 'WHERE relation @> $3' . PHP_EOL;
-			// $sql_query .= 'LIMIT 1' . PHP_EOL;
-			// $sql_query .= ')' . PHP_EOL;
-			// $sql_query .= 'SELECT * FROM "matrix_activity"' . PHP_EOL;
-			// $sql_query .= 'WHERE id IN (SELECT id FROM matching_json)' . PHP_EOL;
-			// $sql_query .= 'AND "timestamp" >= date($1) AND "timestamp" < date($2)' . PHP_EOL;
-			// // $sql_query .= 'AND "timestamp" date($1) and date($2)'. PHP_EOL;
-			// $sql_query .= 'ORDER BY id'. PHP_EOL;
 
 			$result = matrix_db_manager::exec_search($sql_query, [
 				$date_in,
@@ -404,42 +487,29 @@ class diffusion_section_stats extends diffusion {
 				return null;
 			}
 
-		$cache_component = false;
-
 		// iterate found records
 		while ($row = pg_fetch_object($result)) {
 
-			$current_section_id	= $row->section_id;
-			$current_section_tipo = $row->section_tipo;
+			$current_section_id		= $row->section_id;
+			$current_section_tipo	= $row->section_tipo;
 
-			// what (dd545) component_autocomplete
-				$component = component_common::get_instance(
-					$what_model,
-					$what_tipo,
-					$current_section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$current_section_tipo,
-					$cache_component
-				);
-				$what_data = $component->get_data();
-				// update $what_obj adding counters to the object (passed what_obj by reference)
-				self::build_what( $what_data, $what_obj );
+			// Decode JSONB columns once per row instead of creating component instances
+				$relation_col	= isset($row->relation) ? json_decode($row->relation) : null;
+				$string_col		= isset($row->string)   ? json_decode($row->string)   : null;
+				$date_col		= isset($row->date)     ? json_decode($row->date)     : null;
+				$misc_col		= isset($row->misc)     ? json_decode($row->misc)     : null;
 
-			// where (dd546) component_input_text
-				$component = component_common::get_instance(
-					$where_model,
-					$where_tipo,
-					$current_section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$current_section_tipo,
-					$cache_component
-				);
-				$where_data = $component->get_data(); // Like: [{"id":1,"lang":"lg-nolan","value":"dd1223"}]
+			// what (dd545) component_select — stored in relation column
+				$what_data = $relation_col->{$what_tipo} ?? null;
+				if (!empty($what_data)) {
+					self::build_what( $what_data, $what_obj );
+				}
+
+			// where (dd546) component_input_text — stored in string column
+				$where_data = $string_col->{$where_tipo} ?? null;
 				if (!empty($where_data)) {
 
-					$key = $where_data[0]->value; // Like: dd1223
+					$key = $where_data[0]->value ?? null; // Like: dd1223
 					if(is_array($key)) {
 						$key = $key[0];
 						debug_log(__METHOD__
@@ -462,22 +532,12 @@ class diffusion_section_stats extends diffusion {
 						// take care to manage publish cases in different way
 						switch (true) {
 							case ($key==='dd1223'): // last publish
-								// get record msg (dd551) info to calculate published section tipo
-								$component = component_common::get_instance(
-									$data_model,
-									$data_tipo,
-									$current_section_id,
-									'list',
-									DEDALO_DATA_NOLAN,
-									$current_section_tipo,
-									$cache_component
-								);
-								$data_data = $component->get_data();
+								// read misc column directly instead of component_common
+								$data_data = $misc_col->{$data_tipo} ?? null;
 								$msg = $data_data[0]->value ?? false;
 								if ($msg!==false) {
 									$_section_tipo = $msg->top_tipo ?? $msg->section_tipo ?? false;
 									if ($_section_tipo!==false) {
-										// Optimized: use null coalescing operator
 										$publish_obj->{$_section_tipo} = ($publish_obj->{$_section_tipo} ?? 0) + 1;
 									}
 								}
@@ -486,34 +546,23 @@ class diffusion_section_stats extends diffusion {
 								// ignore it ..
 								break;
 							default:
-								// Optimized: use null coalescing operator
 								$where_obj->{$key} = ($where_obj->{$key} ?? 0) + 1;
 								break;
 						}
 					}
 				}//end where
 
-			// when (dd547) component_date
-				$component = component_common::get_instance(
-					$when_model,
-					$when_tipo,
-					$current_section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$current_section_tipo,
-					$cache_component
-				);
-				$when_data = $component->get_data(); // Like: [{"id":1,"start":{"day":26,"hour":12,"time":65098039018,"year":2025,"month":5,"minute":36,"second":58}}]
+			// when (dd547) component_date — stored in date column
+				$when_data = $date_col->{$when_tipo} ?? null;
 				if (!empty($when_data)) {
 
 					if (isset($when_data[0]->start) && isset($when_data[0]->start->hour)) {
 						$hour = $when_data[0]->start->hour;
-						// Optimized: use null coalescing operator
 						$when_obj->{$hour} = ($when_obj->{$hour} ?? 0) + 1;
 					}
 				}//end when
 
-		}//end while ($rows = pg_fetch_assoc($result))
+		}//end while ($row = pg_fetch_object($result))
 
 		// free result
 		pg_free_result($result);
@@ -643,6 +692,51 @@ class diffusion_section_stats extends diffusion {
 
 
 	/**
+	* USER_ACTIVITY_DAY_EXISTS
+	* True when matrix_stats already contains a user_activity record for the
+	* given user/year/month/day combo. Used as a duplicate guard before
+	* `save_user_activity` so we never create a second record for the same day.
+	*
+	* @param int $user_id
+	* @param int $year
+	* @param int $month
+	* @param int $day
+	* @return bool
+	*/
+	public static function user_activity_day_exists(int $user_id, int $year, int $month, int $day) : bool {
+
+		$sql_query  = 'SELECT 1' . PHP_EOL;
+		$sql_query .= 'FROM "matrix_stats"' . PHP_EOL;
+		$sql_query .= 'WHERE relation @> $1' . PHP_EOL;
+		$sql_query .= '  AND ("date"->\''.USER_ACTIVITY_DATE_TIPO.'\'->0->\'start\'->>\'year\')::int  = $2' . PHP_EOL;
+		$sql_query .= '  AND ("date"->\''.USER_ACTIVITY_DATE_TIPO.'\'->0->\'start\'->>\'month\')::int = $3' . PHP_EOL;
+		$sql_query .= '  AND ("date"->\''.USER_ACTIVITY_DATE_TIPO.'\'->0->\'start\'->>\'day\')::int   = $4' . PHP_EOL;
+		$sql_query .= 'LIMIT 1';
+
+		$result = matrix_db_manager::exec_search($sql_query, [
+			'{"'.USER_ACTIVITY_USER_TIPO.'":[{"section_tipo":"'.DEDALO_SECTION_USERS_TIPO.'","section_id":"'.$user_id.'"}]}',
+			(string)$year,
+			(string)$month,
+			(string)$day
+		]);
+		if ($result === false) {
+			debug_log(__METHOD__
+				." Lookup failed (treating as not exists): ".pg_last_error()
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		$exists = (pg_num_rows($result) > 0);
+		pg_free_result($result);
+
+
+		return $exists;
+	}//end user_activity_day_exists
+
+
+
+	/**
 	* SAVE_USER_ACTIVITY
 	* Creates a new record on user activity section and
 	* store all data (user, type, date, totals)
@@ -724,10 +818,10 @@ class diffusion_section_stats extends diffusion {
 				$values->meta->{USER_ACTIVITY_DATE_TIPO}	= [$counter_obj];
 				$values->meta->{USER_ACTIVITY_TOTALS_TIPO}	= [$counter_obj];
 
-			$options = new stdClass();
-				$options->values = $values;
-
-			$section_id	= $section->create_record($options);
+			// create_record
+			$section_id	= $section->create_record((object)[
+				'values' => $values
+			]);
 
 			if (empty($section_id)) {
 				debug_log(__METHOD__
@@ -1092,6 +1186,130 @@ class diffusion_section_stats extends diffusion {
 
 
 	/**
+	* MERGE_RAW_INTO_CANONICAL
+	* Fold a flat array of raw activity items (the shape returned by
+	* `get_interval_raw_activity_data`) into a canonical totals object
+	* `{who, what, where, when, publish}` (the shape returned by
+	* `cross_users_range_data`).
+	*
+	* Used to supplement an aggregated range with extra days that have not
+	* been persisted yet (typically the running day, which is intentionally
+	* never saved by `update_user_activity_stats`).
+	*
+	* @param object|null $canonical
+	* 	Existing canonical totals to merge into. If null, a fresh object is
+	* 	created with empty arrays and a 24-slot pre-filled `when` array.
+	* @param array $raw_items
+	* 	Flat raw items shaped like:
+	* 	  - { type:'what'|'where'|'publish', tipo:string, value:int, label?:string }
+	* 	  - { type:'when', hour:int, value:int }
+	* @param string $lang
+	* 	Language used to resolve labels for new keys. Defaults to DEDALO_DATA_LANG.
+	* @return object Canonical totals object with the raw items folded in.
+	*/
+	public static function merge_raw_into_canonical(?object $canonical, array $raw_items, string $lang=DEDALO_DATA_LANG) : object {
+
+		// initialize a fresh canonical structure when none is provided
+		if ($canonical === null) {
+			$canonical = (object)[
+				'who'		=> [],
+				'what'		=> [],
+				'where'		=> [],
+				'when'		=> [],
+				'publish'	=> []
+			];
+		}
+
+		// ensure every dimension exists as an array (defensive against stale shapes)
+		foreach (['who','what','where','when','publish'] as $dim) {
+			if (!isset($canonical->{$dim}) || !is_array($canonical->{$dim})) {
+				$canonical->{$dim} = [];
+			}
+		}
+
+		// ensure when is fully populated (24 entries indexed by hour) so we can
+		// merge by-hour without index gymnastics
+		$when_by_hour = [];
+		foreach ($canonical->when as $entry) {
+			if (is_object($entry) && isset($entry->key)) {
+				$when_by_hour[(int)$entry->key] = $entry;
+			}
+		}
+		for ($h = 0; $h < 24; $h++) {
+			if (!isset($when_by_hour[$h])) {
+				$when_by_hour[$h] = (object)[
+					'key'	=> $h,
+					'label'	=> str_pad((string)$h, 2, '0', STR_PAD_LEFT),
+					'value'	=> 0
+				];
+			}
+		}
+
+		// build key→entry indexes for O(1) merge
+		$index = [
+			'what'		=> [],
+			'where'		=> [],
+			'publish'	=> []
+		];
+		foreach (['what','where','publish'] as $dim) {
+			foreach ($canonical->{$dim} as $entry) {
+				if (is_object($entry) && isset($entry->key)) {
+					$index[$dim][(string)$entry->key] = $entry;
+				}
+			}
+		}
+
+		// label-resolution cache for new keys
+		$term_cache = [];
+
+		// fold raw items
+		foreach ($raw_items as $item) {
+
+			if (!is_object($item)) continue;
+			$type	= $item->type ?? null;
+			$value	= isset($item->value) ? (int)$item->value : 0;
+			if ($value === 0) continue;
+
+			if ($type === 'when') {
+				$h = isset($item->hour) ? (int)$item->hour : -1;
+				if ($h < 0 || $h > 23) continue;
+				$when_by_hour[$h]->value += $value;
+				continue;
+			}
+
+			if ($type === 'what' || $type === 'where' || $type === 'publish') {
+				$key = $item->tipo ?? null;
+				if (empty($key) || !is_string($key)) continue;
+
+				if (isset($index[$type][$key])) {
+					$index[$type][$key]->value += $value;
+				} else {
+					if (!isset($term_cache[$key])) {
+						$term_cache[$key] = $item->label
+							?? ontology_node::get_term_by_tipo($key, $lang, true, true);
+					}
+					$entry = (object)[
+						'key'	=> $key,
+						'label'	=> $term_cache[$key],
+						'value'	=> $value
+					];
+					$index[$type][$key]	= $entry;
+					$canonical->{$type}[]= $entry;
+				}
+			}
+		}
+
+		// rebuild the when array sorted by hour
+		ksort($when_by_hour);
+		$canonical->when = array_values($when_by_hour);
+
+
+		return $canonical;
+	}//end merge_raw_into_canonical
+
+
+
+	/**
 	* PARSE_TOTALS_FOR_JS
 	* @param object $totals
 	* @param  string $tipo = USER_ACTIVITY_SECTION_TIPO
@@ -1100,13 +1318,6 @@ class diffusion_section_stats extends diffusion {
 	public static function parse_totals_for_js(object $totals, string $tipo=USER_ACTIVITY_SECTION_TIPO) : array {
 
 		$ar_js_obj = [];
-
-		// Working here !
-			debug_log(__METHOD__
-				. " Working here ! "
-				, logger::ERROR
-			);
-			return [];
 
 		// who
 			$title = ontology_node::get_term_by_tipo(logger_backend_activity::$_COMPONENT_WHO['tipo'], DEDALO_DATA_LANG, true, true);

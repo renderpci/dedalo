@@ -14,6 +14,10 @@
 * - Provides section labels from ontology for user interface display
 * - Filters by permission level (value >= 2 required for access)
 * - Sorted alphabetically by section label
+* - Static method for retrieving user record-level filters
+*
+* Static methods:
+* - get_user_filter_records(): Returns record-level access filters for a user
 *
 * Data is stored in the 'misc' column of matrix tables.
 *
@@ -23,6 +27,57 @@
 * @subpackage Core
 */
 class component_filter_records extends component_common {
+
+
+
+	public static array $filter_user_records_by_id_cache = [];
+
+
+
+	/**
+	* GET_USER_FILTER_RECORDS
+	* Returns record-level access filters for the specified user.
+	*
+	* This feature allows restricting user access to specific section records by ID.
+	* Requires DEDALO_FILTER_USER_RECORDS_BY_ID to be enabled in configuration.
+	*
+	* Uses component_filter_records to retrieve the user's assigned record restrictions.
+	* Returns empty array if feature is disabled or user has no restrictions.
+	*
+	* @param int $user_id The user ID to retrieve record filters for
+	* @return array $filter_user_records_by_id Array of locators or empty array
+	*
+	* Sample:
+	* ```php
+	* // Check if user has record-level restrictions
+	* $record_filters = component_filter_records::get_user_filter_records($user_id);
+	* if (!empty($record_filters)) {
+	*     // Apply additional filtering to queries
+	* }
+	* ```
+	*/
+	public static function get_user_filter_records(int $user_id) : array {
+
+		$filter_user_records_by_id = [];
+
+		if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
+
+			$model_name	= 'component_filter_records';
+			$tipo		= DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO;
+			$component	= component_common::get_instance(
+				$model_name,
+				$tipo,
+				$user_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_USERS_TIPO
+			);
+			$filter_user_records_by_id = $component->get_data() ?? [];
+
+		}
+
+		return $filter_user_records_by_id;
+	}//end get_filter_user_records_by_id
 
 
 

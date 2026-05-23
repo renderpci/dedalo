@@ -82,7 +82,7 @@ class component_filter extends component_relation_common {
 			}else{
 
 				// user projects
-				$user_projects = filter::get_user_projects( $user_id );
+				$user_projects = component_filter_master::get_user_projects( $user_id );
 				// actual data in DDBB
 				$current_data = $this->get_data();
 				// filter
@@ -107,7 +107,10 @@ class component_filter extends component_relation_common {
 			}
 
 
-		return parent::set_data( $final_data );
+		$result = parent::set_data( $final_data );
+
+
+		return $result;
 	}//end set_data
 
 
@@ -126,6 +129,8 @@ class component_filter extends component_relation_common {
 		// Data default only can be saved by users than have permissions to save.
 		// Read users can not change component data.
 			$permissions = security::get_section_new_permissions($this->section_tipo);
+			// $section = $this->get_my_section();
+			// $permissions = $section->get_section_permissions();
 			if ($permissions===null) {
 				// no button new found or is not set
 				// get the permissions from current component_filter
@@ -299,7 +304,7 @@ class component_filter extends component_relation_common {
 			if (security::is_global_admin($user_id)===false) {
 
 				// regular user case. We check if project values are allowed to current user
-				$user_projects = filter::get_user_projects($user_id);
+				$user_projects = component_filter_master::get_user_projects($user_id);
 				if (!empty($user_projects)) {
 
 					// check current added project is accessible for current user
@@ -375,26 +380,27 @@ class component_filter extends component_relation_common {
 	* Overwrite component_common method
 	* @return bool
 	*/
-	public function save() : bool {
+	// public function save() : bool {
 
-		// we save normally but we save the result
-			$parent_save_result = parent::save();
+	// 	// activity case logger only, never save project info
+	// 	if( $this->tipo===logger_backend_activity::$_COMPONENT_PROJECTS['tipo'] ) {
+	// 		return true;
+	// 	}
 
-		// activity case logger only
-			if( $this->tipo===logger_backend_activity::$_COMPONENT_PROJECTS['tipo'] ) {
-				return $parent_save_result;
-			}
-
-		// portal case
-		// If the section to which this component belongs has a portal, we will propagate
-		// the changes to all existing resources in the portal of this section (if any)
-			if ($this->run_propagate_filter===true) {
-				$this->propagate_filter();
-			}
+	// 	// we save normally but we save the result
+	// 	$parent_save_result = parent::save();
 
 
-		return $parent_save_result;
-	}//end save
+	// 	// portal case
+	// 	// If the section to which this component belongs has a portal, we will propagate
+	// 	// the changes to all existing resources in the portal of this section (if any)
+	// 	if ($this->run_propagate_filter===true) {
+	// 		$this->propagate_filter();
+	// 	}
+
+
+	// 	return $parent_save_result;
+	// }//end save
 
 
 
@@ -403,64 +409,64 @@ class component_filter extends component_relation_common {
 	* Propagate all current filter data (triggered when save) to children portals.
 	* @return bool
 	*/
-	public function propagate_filter() : bool {
+	// public function propagate_filter() : bool {
 
-		$section_id = $this->get_section_id();
-		$section_tipo = $this->get_section_tipo();
+	// 	$section_id = $this->get_section_id();
+	// 	$section_tipo = $this->get_section_tipo();
 
-		$component_filter_data = $this->get_data();
-		if (empty($component_filter_data)) {
-			debug_log(__METHOD__
-				. " EMPTY DATA ($section_tipo, $section_id) . Nothing to propagate" . PHP_EOL
-				. ' component_filter_data: ' . to_string($component_filter_data)
-				, logger::ERROR
-			);
-			return true;
-		}
+	// 	$component_filter_data = $this->get_data();
+	// 	if (empty($component_filter_data)) {
+	// 		debug_log(__METHOD__
+	// 			. " EMPTY DATA ($section_tipo, $section_id) . Nothing to propagate" . PHP_EOL
+	// 			. ' component_filter_data: ' . to_string($component_filter_data)
+	// 			, logger::ERROR
+	// 		);
+	// 		return true;
+	// 	}
 
-		$data_filter = [];
-		foreach ($component_filter_data as $current_locator) {
-			if (isset($current_locator->section_tipo) && isset($current_locator->section_id)) {
-				$locator = new locator();
-					$locator->set_section_tipo($current_locator->section_tipo);
-					$locator->set_section_id($current_locator->section_id);
-				$data_filter[] = $locator;
-			}else{
-				debug_log(__METHOD__
-					. " IGNORED INVALID LOCATOR ($section_tipo, $section_id) ".to_string($current_locator)
-					, logger::ERROR
-				);
-			}
-		}
+	// 	$data_filter = [];
+	// 	foreach ($component_filter_data as $current_locator) {
+	// 		if (isset($current_locator->section_tipo) && isset($current_locator->section_id)) {
+	// 			$locator = new locator();
+	// 				$locator->set_section_tipo($current_locator->section_tipo);
+	// 				$locator->set_section_id($current_locator->section_id);
+	// 			$data_filter[] = $locator;
+	// 		}else{
+	// 			debug_log(__METHOD__
+	// 				. " IGNORED INVALID LOCATOR ($section_tipo, $section_id) ".to_string($current_locator)
+	// 				, logger::ERROR
+	// 			);
+	// 		}
+	// 	}
 
-		// Locate component_portal in this section.
-		$ar_model_name_required = ['component_portal'];
-		$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
-			$section_tipo,
-			$ar_model_name_required,
-			true, // bool from_cache
-			true, // bool resolve_virtual
-			true, // bool recursive
-			true, // bool search_exact
-			false, // array|bool ar_tipo_exclude_elements
-			null // array|null ar_exclude_models
-		);
-		foreach ($ar_children as $child_tipo) {
-			$component_portal = component_common::get_instance(
-				'component_portal',
-				$child_tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo,
-				false
-			);
-			$component_portal->propagate_filter($data_filter);
-		}
+	// 	// Locate component_portal in this section.
+	// 	$ar_model_name_required = ['component_portal'];
+	// 	$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
+	// 		$section_tipo,
+	// 		$ar_model_name_required,
+	// 		true, // bool from_cache
+	// 		true, // bool resolve_virtual
+	// 		true, // bool recursive
+	// 		true, // bool search_exact
+	// 		false, // array|bool ar_tipo_exclude_elements
+	// 		null // array|null ar_exclude_models
+	// 	);
+	// 	foreach ($ar_children as $child_tipo) {
+	// 		$component_portal = component_common::get_instance(
+	// 			'component_portal',
+	// 			$child_tipo,
+	// 			$section_id,
+	// 			'list',
+	// 			DEDALO_DATA_NOLAN,
+	// 			$section_tipo,
+	// 			false
+	// 		);
+	// 		$component_portal->propagate_filter($data_filter);
+	// 	}
 
 
-		return true;
-	}//end propagate_filter
+	// 	return true;
+	// }//end propagate_filter
 
 
 
@@ -473,7 +479,7 @@ class component_filter extends component_relation_common {
 		$start_time = start_time();
 
 		// ar_projects. Projects authorized to the current logged user
-			$ar_projects = filter::get_user_authorized_projects(
+			$ar_projects = component_filter_master::get_user_authorized_projects(
 				logged_user_id(),
 				$this->tipo
 			);
@@ -750,7 +756,7 @@ class component_filter extends component_relation_common {
 		// (!) Note that only user authorized projects will be added, discarding others
 		// maybe this behavior must be changed in future
 		$user_id		= logged_user_id();
-		$ar_projects	= filter::get_user_authorized_projects($user_id, $this->tipo);
+		$ar_projects	= component_filter_master::get_user_authorized_projects($user_id, $this->tipo);
 
 		$list_value = [];
 		foreach ($ar_projects as $item) {
