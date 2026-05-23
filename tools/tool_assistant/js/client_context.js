@@ -508,6 +508,43 @@ export const client_context = class client_context {
 
 
 
+	/**
+	 * GET_ACTIVE_SECTION
+	 * Finds the topmost loaded section instance, preferring the one that
+	 * matches the current `_context.section_tipo`. Mirrors the pattern used
+	 * by `tool_propagate_component_data` (`section.rqo.sqo` is the source of
+	 * truth for the user's current search).
+	 * @return object|null section instance
+	 */
+	get_active_section() {
+
+		const all = get_all_instances()
+		const section_tipo = this._context.section_tipo
+
+		// prefer exact match with active context
+		if (section_tipo) {
+			for (const inst of all) {
+				if (!inst) continue
+				if (inst.model !== 'section' && inst.model !== 'section_list') continue
+				if (inst.section_tipo === section_tipo || inst.tipo === section_tipo) {
+					return inst
+				}
+			}
+		}
+
+		// fallback: any section instance with a usable SQO
+		for (const inst of all) {
+			if (!inst) continue
+			if (inst.model !== 'section' && inst.model !== 'section_list') continue
+			if (inst.rqo && inst.rqo.sqo) return inst
+		}
+
+		return null
+	}//end get_active_section
+
+
+
+
 }//end client_context class
 
 // @license-end
