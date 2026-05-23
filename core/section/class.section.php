@@ -1514,13 +1514,23 @@ class section extends common {
 
 	/**
 	* CREATE_RECORD
-	* Create new section record in matrix
+	* Creates a new section record in the corresponding matrix database.
+	*
+	* Builds metadata and modification data, inserts the record, logs the creation activity,
+	* and clears relevant caches based on the section tipo.
+	*
+	* Note: Activity sections (`DEDALO_ACTIVITY_SECTION_TIPO`) cannot be created through
+	* this method and will return `false`.
+	*
 	* @param object|null $options = null
-	* {
-	*   values : object|null,
-	* 	section_id : int|null
-	* }
-	* @return int|null $section_id
+	*  Optional configuration object with properties:
+	*  - values : object|null
+	*    Data to inject into the new section record. Must be an object; non-objects are rejected.
+	*  - section_id : int|null
+	*    Force creation with a specific section_id (used in import processes). Must be an integer.
+	*
+	* @return int|false
+	*  The newly created section_id on success, `false` on any error.
 	*/
 	public function create_record( ?object $options=null ) : int|false {
 		$start_time = start_time();
