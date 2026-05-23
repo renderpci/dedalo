@@ -996,9 +996,13 @@ export const ai_assistant = class ai_assistant {
 					throw Object.assign(new Error('Aborted'), { name: 'AbortError' })
 				}
 
-				// Rebuild system prompt each iteration: tools enabled on first two
-				// turns to allow describe_section → search_records_view chains.
-				const tools_enabled = iteration <= 2 && tools.length > 0
+				// Allow tools on the first MAX_TOOL_TURNS iterations to enable
+				// describe_section → search → get_record → answer chains, then
+				// force an answer-only turn.
+				const tools_for_this_turn = iteration <= MAX_TOOL_TURNS && tools.length > 0
+					? tools
+					: []
+				const tools_enabled = tools_for_this_turn.length > 0
 				const system_prompt = self._build_system_prompt(tools_enabled)
 					+ (ontology_context ? '\n\n' + ontology_context : '')
 
@@ -1039,15 +1043,9 @@ export const ai_assistant = class ai_assistant {
 					self._chat_render.append_thinking_token(token_text)
 				}
 
-				// Only expose tools on the first iteration. Once a tool has been called
-				// and its result added to the conversation, the model should answer.
-				const tools_for_this_turn = iteration === 1 ? tools : []
-
 				// Tool-calling turns may need more tokens for complex reasoning;
-				// answer-only turns are capped at 256 to reduce KV cache pressure.
-				const max_new_tokens = tools_for_this_turn.length > 0
-					? (self._config.max_new_tokens || 512)
-					: 256
+				// answer-only turns use the same limit to allow long outputs (e.g. translations).
+				const max_new_tokens = self._config.max_new_tokens || 512
 
 				// Branch: use external API when a server model is configured;
 				// otherwise use the local WebGPU/WASM model.
@@ -1101,8 +1099,8 @@ export const ai_assistant = class ai_assistant {
 							tool_call.function.name, 'calling', args_obj, null
 						)
 
-						const destructive_tools = ['dedalo_delete_record', 'dedalo_set_field']
-						if (destructive_tools.indexOf(tool_call.function.name) >= 0) {
+						// Destructive MCP tools require explicit confirmation.
+						if (DESTRUCTIVE_TOOLS.indexOf(tool_call.function.name) >= 0) {
 							const confirmed = await self._chat_render.confirm_action(
 								t('confirm_action', 'Confirm action') + ': ' + tool_call.function.name
 							)
@@ -1117,31 +1115,8 @@ export const ai_assistant = class ai_assistant {
 							}
 						}
 
-						try {
-							const tool_result = await self._mcp_client.tools_call(
-								tool_call.function.name,
-								args_obj
-							)
-							const result_text = ai_assistant._extract_tool_result(
-								tool_result,
-								tool_call.function.name
-							)
-
-							self._chat_render.update_tool_call(indicator, 'done', tool_result)
-
-							self._conversation.push({
-								role			: 'tool',
-								tool_call_id	: tool_call.id,
-								content			: result_text
-							})
-						} catch (err) {
-							self._chat_render.update_tool_call(indicator, 'error', err.message)
-							self._conversation.push({
-								role			: 'tool',
-								tool_call_id	: tool_call.id,
-								content			: 'Error: ' + err.message
-							})
-						}
+						const tool_msg = await self._dispatch_tool(tool_call, args_obj, indicator)
+						self._conversation.push(tool_msg)
 					}
 
 					self._persist()
@@ -1512,7 +1487,7 @@ export const ai_assistant = class ai_assistant {
 
 
 	destroy() {
-		this._unsubscribe_events()
+		this._client_context.destroy()
 		if (this._model_engine) {
 			this._model_engine.unload()
 		}
