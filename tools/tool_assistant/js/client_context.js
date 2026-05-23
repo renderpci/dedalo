@@ -544,6 +544,37 @@ export const client_context = class client_context {
 
 
 
+	/**
+	 * GET_ACTIVE_SQO
+	 * Returns a *clone* of the current section's SQO so callers can mutate
+	 * pagination (limit/offset) without disturbing the user's UI state.
+	 * Kept off the LLM-visible surface — only the bulk client tools touch it.
+	 * @return object|null { section_tipo, sqo, total }
+	 */
+	get_active_sqo() {
+
+		const section = this.get_active_section()
+		if (!section || !section.rqo || !section.rqo.sqo) return null
+
+		// Structured clone is available in all supported browsers; falls back
+		// to JSON round-trip in case of unsupported types inside the SQO.
+		let sqo_clone
+		try {
+			sqo_clone = structuredClone(section.rqo.sqo)
+		} catch (e) {
+			sqo_clone = JSON.parse(JSON.stringify(section.rqo.sqo))
+		}
+
+		return {
+			section_tipo	: section.section_tipo || section.tipo,
+			sqo				: sqo_clone,
+			total			: typeof section.total === 'number' ? section.total : null
+		}
+	}//end get_active_sqo
+
+
+
+
 
 }//end client_context class
 
