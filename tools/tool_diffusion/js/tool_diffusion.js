@@ -184,8 +184,19 @@ tool_diffusion.prototype.export = function(options) {
 		const diffusion_tipo				= options.diffusion_tipo ?? item?.diffusion_tipo ?? null
 		const section_tipo					= self.caller.section_tipo
 		const section_id					= self.caller.section_id || null
-		const total 						= self.caller.total || null
-		const sqo 							= self.caller.rqo.sqo || {}
+		const caller_mode					= self.caller.mode
+		const total 						= caller_mode === 'edit' ? 1 : (self.caller.total || null)
+
+		const sqo = (caller_mode === 'edit')
+			? {
+				section_tipo 		: [section_tipo],
+				filter_by_locators 	: section_id ? [{ section_tipo : section_tipo, section_id : section_id }] : null,
+				limit 				: 1
+			}
+			: (self.caller.rqo.sqo || {
+				section_tipo 		: [section_tipo],
+				filter_by_locators 	: section_id ? [{ section_tipo : section_tipo, section_id : section_id }] : null
+			})
 		const skip_publication_state_check	= self.skip_publication_state_check
 		const additions_options				= self.additions_options || {}
 
@@ -198,12 +209,7 @@ tool_diffusion.prototype.export = function(options) {
 			dd_api	: 'dd_diffusion_api',
 			action	: 'diffuse',
 			source	: source,
-			sqo 	: sqo
-				? sqo
-				: {
-					section_tipo 		: [section_tipo],
-					filter_by_locators 	: section_id ? [{ section_tipo : section_tipo, section_id : section_id }] : null
-				},
+			sqo 	: sqo,
 			options : {
 				levels							: resolve_levels,
 				skip_publication_state_check	: skip_publication_state_check,

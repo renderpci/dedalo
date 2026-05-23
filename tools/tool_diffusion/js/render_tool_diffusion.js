@@ -80,13 +80,13 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'label',
-			inner_html		: get_label.bun_engine || 'Bun engine',
+			text_content	: get_label.bun_engine || 'Bun engine',
 			parent			: bun_status_node
 		})
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value',
-			inner_html		: bun_status.msg || (bun_status.result === true ? 'Ready' : 'Unavailable'),
+			text_content	: bun_status.msg || (bun_status.result === true ? 'Ready' : 'Unavailable'),
 			parent			: bun_status_node
 		})
 
@@ -101,14 +101,14 @@ const get_content_data = async function(self) {
 			ui.create_dom_element({
 				element_type	: 'h3',
 				class_name		: 'section_name',
-				inner_html		: self.caller.label,
+				text_content	: self.caller.label,
 				parent			: section_info
 			})
 		// section_tipo
 			ui.create_dom_element({
 				element_type	: 'h3',
 				class_name		: 'section_tipo',
-				inner_html		: self.caller.tipo,
+				text_content	: self.caller.tipo,
 				parent			: section_info
 			})
 
@@ -129,14 +129,14 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: '',
-			inner_html		: get_label.levels || 'Levels',
+			text_content	: get_label.levels || 'Levels',
 			parent			: resolve_levels_container
 		})
 		// note about levels
 		const note_about_levels = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'note_about_levels',
-			inner_html		: '?',
+			text_content	: '?',
 			title			: 'info',
 			parent			: resolve_levels_container
 		})
@@ -184,7 +184,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: '',
-			inner_html		: self.get_tool_label('depth_levels') || 'Depth levels to solve',
+			text_content	: self.get_tool_label('depth_levels') || 'Depth levels to solve',
 			parent			: resolve_levels_container
 		})
 
@@ -197,7 +197,7 @@ const get_content_data = async function(self) {
 		const info_div = ui.create_dom_element({
 			element_type	: 'pre',
 			class_name		: 'info_div hide',
-			inner_html		: 'info: ' + JSON.stringify(diffusion_info, null, 2),
+			text_content	: 'info: ' + JSON.stringify(diffusion_info, null, 2),
 			parent			: diffusion_info_container
 		})
 		ui.collapse_toggle_track({
@@ -210,7 +210,7 @@ const get_content_data = async function(self) {
 	// skip_publication_state_check
 		const skip_publication_state_check_label = ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: self.get_tool_label('skip_publication_state_check') || 'Ignore temporarily the publication status when publishing',
+			text_content	: self.get_tool_label('skip_publication_state_check') || 'Ignore temporarily the publication status when publishing',
 			parent			: resolve_levels_container
 		})
 		const skip_publication_state_check_node = ui.create_dom_element({
@@ -244,7 +244,7 @@ const get_content_data = async function(self) {
 		fragment.appendChild(publication_items)
 
 	// info_text
-		const total = self.caller.mode==='edit'
+		const total = (self.caller.mode==='edit')
 			? 1
 			: await self.caller.get_total()
 		const locale		= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
@@ -252,7 +252,7 @@ const get_content_data = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
-			inner_html		: self.get_tool_label('publish_selected_records', total_label),
+			text_content	: self.get_tool_label('publish_selected_records', total_label),
 			parent			: diffusion_info_container
 		})
 
@@ -322,7 +322,7 @@ export const render_publication_items = function(self) {
 						const publication_item_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'publication_item_label label icon_arrow up',
-							inner_html		: diffusion_element_parent.label,
+							text_content	: diffusion_element_parent.label,
 							parent			: publication_items
 						})
 
@@ -359,13 +359,13 @@ export const render_publication_items = function(self) {
 					// name
 						const name_label = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: get_label.name || 'Name',
+							text_content	: get_label.name || 'Name',
 							class_name		: 'label',
 							parent			: publication_items_grid
 						})
 						const name_value = ui.create_dom_element({
 							element_type	: 'div',
-							inner_html		: node.label,
+							text_content	: node.label,
 							class_name		: 'value',
 							parent			: publication_items_grid
 						})
@@ -373,13 +373,13 @@ export const render_publication_items = function(self) {
 					// type
 						const type_label = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: get_label.type || 'Type',
+							text_content	: get_label.type || 'Type',
 							class_name		: 'label',
 							parent			: publication_items_grid
 						})
 						const type_value = ui.create_dom_element({
 							element_type	: 'div',
-							inner_html		: type || node.model,
+							text_content	: type || node.model,
 							class_name		: 'value',
 							parent			: publication_items_grid
 						})
@@ -387,13 +387,13 @@ export const render_publication_items = function(self) {
 					// diffusion_element
 						const diffusion_element_label = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: 'Diffusion element',
+							text_content	: 'Diffusion element',
 							class_name		: 'label',
 							parent			: publication_items_grid
 						})
 						const diffusion_element_value = ui.create_dom_element({
 							element_type	: 'div',
-							inner_html		: element_tipo,
+							text_content	: element_tipo,
 							class_name		: 'value',
 							parent			: publication_items_grid
 						})
@@ -413,13 +413,13 @@ export const render_publication_items = function(self) {
 					// diffusion_tipo (main node tipo)
 						const diffusion_tipo_label = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: 'Diffusion tipo',
+							text_content	: 'Diffusion tipo',
 							class_name		: 'label',
 							parent			: publication_items_grid
 						})
 						const diffusion_tipo_value = ui.create_dom_element({
 							element_type	: 'div',
-							inner_html		: node.tipo,
+							text_content	: node.tipo,
 							class_name		: 'value',
 							parent			: publication_items_grid
 						})
@@ -440,7 +440,7 @@ export const render_publication_items = function(self) {
 						if (node.connection_status) {
 							ui.create_dom_element({
 								element_type	: 'span',
-								inner_html		: get_label.connection_status || 'Connection status',
+								text_content	: get_label.connection_status || 'Connection status',
 								class_name		: 'label',
 								parent			: publication_items_grid
 							})
@@ -449,7 +449,7 @@ export const render_publication_items = function(self) {
 								: 'fail'
 							ui.create_dom_element({
 								element_type	: 'div',
-								inner_html		: node.connection_status.msg,
+								text_content	: node.connection_status.msg,
 								class_name		: 'value ' + class_status,
 								parent			: publication_items_grid
 							})
@@ -459,14 +459,14 @@ export const render_publication_items = function(self) {
 						if (node.children?.length > 0) {
 							const fields_label = ui.create_dom_element({
 								element_type	: 'span',
-								inner_html		: get_label.fields || 'Fields',
+								text_content	: get_label.fields || 'Fields',
 								class_name		: 'label',
 								parent			: publication_items_grid
 							})
 							const fields_value = ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'value link icon_arrow unselectable',
-								inner_html		: get_label.show || 'Show',
+								text_content	: get_label.show || 'Show',
 								parent			: publication_items_grid
 							})
 							fields_value.addEventListener('click', function(e) {
@@ -486,7 +486,7 @@ export const render_publication_items = function(self) {
 									// field (target)
 										const field_node = ui.create_dom_element({
 											element_type	: 'span',
-											inner_html		: child.label,
+											text_content	: child.label,
 											class_name		: 'fields_grid_value label hide',
 											parent			: publication_items_grid
 										})
@@ -495,7 +495,7 @@ export const render_publication_items = function(self) {
 									// related (Dédalo source)
 										const related_item = ui.create_dom_element({
 											element_type	: 'div',
-											inner_html		: child.related_label || '-',
+											text_content	: child.related_label || '-',
 											class_name		: 'fields_grid_value label link hide',
 											title			: (child.related_tipo || '') + ' - ' + (child.related_model || ''),
 											parent			: publication_items_grid
@@ -520,14 +520,14 @@ export const render_publication_items = function(self) {
 										const model_node = ui.create_dom_element({
 											element_type	: 'span',
 											class_name		: 'fields_grid_value_obs label light hide',
-											inner_html		: child.model + ' | ' + child.tipo,
+											text_content	: child.model + ' | ' + child.tipo,
 											parent			: publication_items_grid
 										})
 										ar_fields_nodes.push(model_node)
 										const related_info_node = ui.create_dom_element({
 											element_type	: 'div',
 											class_name		: 'fields_grid_value_obs label light hide',
-											inner_html		: (child.related_model || '') + ' | ' + (child.related_tipo || ''),
+											text_content	: (child.related_model || '') + ' | ' + (child.related_tipo || ''),
 											parent			: publication_items_grid
 										})
 										ar_fields_nodes.push(related_info_node)
@@ -586,7 +586,7 @@ export const render_container_bottom = function (self, item, lock_items, process
 		const publication_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning publication_button',
-			inner_html		: get_label.publish || 'Publish',
+			text_content	: get_label.publish || 'Publish',
 			parent			: buttons_container
 		})
 		lock_items.push(publication_button)
@@ -624,6 +624,7 @@ export const render_container_bottom = function (self, item, lock_items, process
 
 			if (my_process) {
 				update_process_status({
+					self,
 					process_id	: process_id,
 					container	: response_message,
 					lock_items	: lock_items
@@ -643,7 +644,7 @@ export const render_container_bottom = function (self, item, lock_items, process
 				const combine_files_label = ui.create_dom_element({
 					element_type	: 'label',
 					class_name		: 'unselectable',
-					inner_html		: self.get_tool_label('combine_xml_files') || 'Combine XML files',
+					text_content	: self.get_tool_label('combine_xml_files') || 'Combine XML files',
 					parent			: bottom_additions
 				})
 				const combine_files_check_node = ui.create_dom_element({
@@ -840,6 +841,7 @@ const publish_content = async (self, options) => {
 			})
 			// render_process_report
 			render_process_report({
+				self,
 				last_sse_response,
 				container: response_message
 			})
@@ -862,6 +864,7 @@ const publish_content = async (self, options) => {
 */
 const update_process_status = (options) => {
 
+	const self			= options.self
 	const process_id	= options.process_id
 	const container		= options.container
 	const lock_items	= options.lock_items
@@ -1017,6 +1020,7 @@ const update_process_status = (options) => {
 			})
 			// render_process_report
 			render_process_report({
+				self,
 				last_sse_response,
 				container
 			})
@@ -1045,20 +1049,126 @@ const update_process_status = (options) => {
 const render_process_report = function(options) {
 
 	// options
+		const self							= options.self
 		const last_sse_response				= options.last_sse_response || {}
 		const last_update_record_response	= last_sse_response.data?.last_update_record_response
 		const diffusion_data				= last_sse_response.data?.diffusion_data || []
 		const container						= options.container
 
-	// last_update_record_response
-		// {
-		//   "result": true,
-		//   "msg": [
-		// 		"Record updated section_id: 1. Number of references: 8 in levels: 2"
-		//   ],
-		//   "errors": [],
-		//   "class": "sql"
-		// }
+	// Bun SQL diffusion engine result (set at SSE top-level, not in last_update_record_response)
+		const engine_result = last_sse_response.result
+		if (engine_result?.tables) {
+
+			// wrapper
+			const report_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'diffusion_report',
+				parent			: container
+			})
+
+			// helper: get label or fallback to English
+			const label_en = {
+				success          : 'Success',
+				partial_success  : 'Partial success',
+				fail             : 'Fail',
+				table_name       : 'Table',
+				rows_total       : 'Rows',
+				records_affected : 'Records'
+			}
+			const tl = (name) => self?.get_tool_label(name) || label_en[name] || name
+
+			// summary status
+			const ok				= engine_result.result === true
+			const has_errors		= !!(engine_result.errors?.length)
+			const summary_class		= ok
+				? 'success'
+				: has_errors
+					? 'partial'
+					: 'fail'
+			const summary_label		= ok
+				? tl('success')
+				: has_errors
+					? tl('partial_success')
+					: tl('fail')
+			const total_time		= last_sse_response.total_time || ''
+			const summary_msg		= [summary_label, engine_result.msg || ''].filter(Boolean).join(' - ')
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'report_summary ' + summary_class,
+				text_content	: summary_msg + (total_time ? ' (' + total_time + ')' : ''),
+				parent			: report_node
+			})
+
+			// tables grid
+			const grid = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tables_report',
+				parent			: report_node
+			})
+			// headers
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'header table_name',
+				text_content	: tl('table_name'),
+				parent			: grid
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'header rows_total',
+				text_content	: tl('rows_total'),
+				parent			: grid
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'header records_count',
+				text_content	: tl('records_affected'),
+				parent			: grid
+			})
+			// table rows
+			engine_result.tables.forEach((table) => {
+				const total_rows	= table.records_affected || 0
+				const unique_recs	= table.records_count ?? total_rows
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'cell table_name',
+					text_content	: table.table_name || '',
+					parent			: grid
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'cell rows_total' + (total_rows === 0 ? ' zero' : ''),
+					text_content	: String(total_rows),
+					parent			: grid
+				})
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'cell records_count' + (unique_recs === 0 ? ' zero' : ''),
+					text_content	: String(unique_recs),
+					parent			: grid
+				})
+			})
+
+			// errors
+			const ar_errors = engine_result.errors || last_sse_response.errors || []
+			if (ar_errors.length) {
+				const error_list = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'error_list',
+					parent			: report_node
+				})
+				ar_errors.forEach((err) => {
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'error_item',
+						text_content	: err,
+						parent			: error_list
+					})
+				})
+			}
+			return true;
+		}
+
+	// last_update_record_response (RDF/XML only)
 		if (!last_update_record_response) {
 			return false
 		}
@@ -1067,10 +1177,6 @@ const render_process_report = function(options) {
 		const type = last_update_record_response.class
 		// cases
 		switch (type) {
-
-			case 'sql':
-				// Nothing specific to do
-				break;
 
 			case 'diffusion_rdf':
 			case 'diffusion_xml': {
@@ -1086,7 +1192,7 @@ const render_process_report = function(options) {
 						const button = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'download warning',
-							inner_html		: (get_label[label_key] || fallback_label) + ' ' + name,
+							text_content	: (get_label[label_key] || fallback_label) + ' ' + name,
 							parent			: container
 						})
 						button.addEventListener('click', function(e) {
@@ -1104,7 +1210,7 @@ const render_process_report = function(options) {
 						const button_download = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'download warning',
-							inner_html		: (get_label.download || 'Download') + ' ' + name,
+							text_content	: (get_label.download || 'Download') + ' ' + name,
 							parent			: container
 						})
 						button_download.addEventListener('click', function(e) {
@@ -1127,7 +1233,7 @@ const render_process_report = function(options) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'error',
-				inner_html		: errors.join(' | '),
+				text_content	: errors.join(' | '),
 				parent			: container
 			})
 		}

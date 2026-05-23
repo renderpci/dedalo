@@ -253,11 +253,13 @@ const get_table_columns = function(current_data) {
 const get_header_column = function(current_data) {
 
 	const ar_labels		= current_data.ar_columns_obj.ar_labels || []
-	const even_labels	= ar_labels.filter((label, index) => index % 2 === 1)
-	const label			= even_labels.join(' | ')
+	if (ar_labels.length > 0) {
+		const even_labels	= ar_labels.filter((label, index) => index % 2 === 1)
+		return even_labels.join(' | ')
+	}
 
-	// value
-		const value = label
+	// fallback for dynamically added columns that don't have ar_labels
+		const value = current_data.ar_columns_obj.label || ''
 
 	return value
 }//end get_header_column
