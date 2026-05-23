@@ -19,7 +19,7 @@ const PREFS_KEY = 'dedalo_assistant_pref_v1'
 // Allow tool-calling on up to this many turns before forcing an answer-only
 // turn. Lets the model chain describe_section → search → get_record → answer
 // while still bounding loops.
-const MAX_TOOL_TURNS = 3
+const MAX_TOOL_TURNS = 15
 
 // Max bytes of stringified tool result pushed to the conversation. Mirrors the
 // MCP `_extract_tool_result` budget so client and MCP results contribute
