@@ -1116,11 +1116,27 @@ export const ai_assistant = class ai_assistant {
 			throw new Error('No vision endpoint configured. Select a vision-capable server model with api_url.')
 		}
 
+		// Fetch image and convert to base64 (some APIs don't support image_url)
+		const image_resp = await fetch(url)
+		if (!image_resp.ok) {
+			throw new Error('Failed to fetch image: ' + image_resp.status)
+		}
+		const image_blob = await image_resp.blob()
+		const image_b64 = await new Promise(function(resolve, reject) {
+			const reader = new FileReader()
+			reader.onloadend = function() { resolve(reader.result) }
+			reader.onerror = reject
+			reader.readAsDataURL(image_blob)
+		})
+
 		const messages = [{
 			role	: 'user',
 			content	: [
 				{ type: 'text', text: prompt || 'Describe this image.' },
-				{ type: 'image_url', image_url: { url: url } }
+				{
+					type	: 'image_url',
+					image_url: { url: image_b64 }
+				}
 			]
 		}]
 
@@ -1420,7 +1436,7 @@ export const ai_assistant = class ai_assistant {
 		this._is_generating = true
 		this._persist()
 
-		const max_iterations	= 5
+		const max_iterations	= 20
 		let iteration			= 0
 
 		const ontology_context = await self._build_ontology_context_for_message(message)
@@ -1444,18 +1460,13 @@ export const ai_assistant = class ai_assistant {
 				const system_prompt = self._build_system_prompt(tools_enabled)
 					+ (ontology_context ? '\n\n' + ontology_context : '')
 
-				// Truncate conversation to last 10 messages to prevent KV cache from
-				// growing unbounded with large tool results. 10 messages ≈ 3–4
-				// tool-answer pairs which is enough for describe→search→get→answer.
-				const trimmed_conversation = self._conversation.slice(-10)
-
-				const few_shot = tools_enabled
-					? self._build_few_shot_messages()
-					: []
+				// Truncate conversation to last 50 messages to prevent KV cache from
+				// growing unbounded with large tool results. 50 messages ≈ 20+
+				// tool-answer pairs which supports full multi-hop relation workflows.
+				const trimmed_conversation = self._conversation.slice(-50)
 
 				const raw_messages = [
 					{ role: 'system', content: system_prompt },
-					...few_shot,
 					...trimmed_conversation
 				]
 
