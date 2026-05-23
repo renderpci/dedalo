@@ -28,7 +28,8 @@ const MAX_TOOL_RESULT_BYTES = 4000
 
 // Agent-tier MCP tools missing the `agent` tag still need to surface to the
 // model when no agent-tier section listing is available.
-const PRIMITIVE_DISCOVERY_FALLBACK = ['dedalo_ontology_glossary', 'dedalo_list_sections']
+const PRIMITIVE_DISCOVERY_FALLBACK = ['dedalo_ontology_glossary', 'dedalo_list_sections', 'dedalo_resolve_path']
+const PRIMITIVE_WRITE_ALLOWLIST = ['dedalo_create_record']
 
 // Destructive MCP tools that require user confirmation before execution.
 const DESTRUCTIVE_TOOLS = ['dedalo_delete_record', 'dedalo_set_field']
