@@ -602,6 +602,34 @@ export const client_context = class client_context {
 
 
 
+	/**
+	 * _COUNT_SQO_RULES
+	 * Recursively counts leaf rules inside an SQO filter tree ($and/$or arrays
+	 * of rules or nested groups). Best-effort, used only for the summary.
+	 * @param object node
+	 * @return number
+	 */
+	_count_sqo_rules(node) {
+
+		if (!node || typeof node !== 'object') return 0
+		let n = 0
+		for (const key in node) {
+			const value = node[key]
+			if (Array.isArray(value)) {
+				for (const item of value) {
+					if (item && typeof item === 'object' && (item.$and || item.$or)) {
+						n += this._count_sqo_rules(item)
+					} else if (item && typeof item === 'object') {
+						n += 1
+					}
+				}
+			}
+		}
+		return n
+	}//end _count_sqo_rules
+
+
+
 
 
 }//end client_context class
