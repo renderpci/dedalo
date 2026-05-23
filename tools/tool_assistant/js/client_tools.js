@@ -80,6 +80,34 @@ export const CLIENT_TOOLS = Object.freeze([
 	},
 
 	{
+		name		: 'client_analyze_image_url',
+		description	: 'Analyze an arbitrary image URL using the vision model. Works for images from ANY section (not just the current record). Use this when you get an image URL from dedalo_get_media_url for a record in another section. Returns the vision model\'s response as plain text.',
+		parameters	: {
+			type		: 'object',
+			properties	: {
+				url				: {
+					type		: 'string',
+					description	: 'Public image URL to analyze (obtained from dedalo_get_media_url).'
+				},
+				prompt			: {
+					type		: 'string',
+					description	: 'What to ask about the image (e.g. "describe", "identify the people").'
+				}
+			},
+			required	: ['url', 'prompt']
+		},
+		run			: async (ctx, args, host) => {
+			if (!host) return 'Internal error: host not provided.'
+			if (!args.url) return 'Missing url argument.'
+			const text = await host.analyze_image_url(args.url, args.prompt)
+			return {
+				url		: args.url,
+				analysis: text
+			}
+		}
+	},
+
+	{
 		name		: 'client_analyze_image',
 		description	: 'Describe / transcribe / answer questions about an image attached to the CURRENT loaded record. Uses a configured vision-capable model. By default targets the active media component; pass `component_tipo` to pick a specific image field. Returns plain text. Requires a vision-capable api_url.',
 		parameters	: {
