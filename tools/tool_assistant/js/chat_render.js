@@ -556,13 +556,21 @@ export const chat_render = class chat_render {
 	finalize_assistant_message() {
 
 		if (this._current_assistant_node) {
-			this._current_assistant_node.dataset.raw = this._current_assistant_raw
-			this._add_copy_button(this._current_assistant_node)
+			if (this._current_assistant_raw && this._current_assistant_raw.trim()) {
+				this._current_assistant_node.dataset.raw = this._current_assistant_raw
+				this._add_copy_button(this._current_assistant_node)
+			} else {
+				this._current_assistant_node.remove()
+			}
 		}
 		this._current_assistant_node = null
 		this._current_assistant_raw = ''
 		if (this._thoughts_block_node) {
-			this._thoughts_block_node.dataset.raw = this._thoughts_block_raw
+			if (this._thoughts_block_raw && this._thoughts_block_raw.trim()) {
+				this._thoughts_block_node.dataset.raw = this._thoughts_block_raw
+			} else {
+				this._thoughts_block_node.remove()
+			}
 		}
 		this._thoughts_block_node = null
 		this._thoughts_block_body = null
