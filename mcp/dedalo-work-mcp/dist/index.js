@@ -53802,6 +53802,36 @@ function registerAdminTools(server, client, ctx) {
   }, ctx);
 }
 
+// src/tools/agent/section.ts
+function registerSectionAgentTools(server, client, ctx) {
+  registerTool(server, {
+    name: "dedalo_describe_section",
+    description: "Get a human-friendly schema for a Dédalo section. " + "Returns field labels (not tipos), simplified types (text|html|date|number|link|media), " + "and portal target sections. Use this when you need to discover field labels for an " + "unfamiliar section; `dedalo_set_field` and `dedalo_get_record` already accept human " + `labels and do not require this call.
+
+` + "When `include_tipos=true`, the response includes `_meta.field_tipos` with label→tipo " + `mapping for round-trip writes.
+
+` + '`section_tipo` accepts a section name (e.g. "Cecas", "Oral History") or tipo (e.g. "oh1").',
+    annotations: {
+      tier: "agent",
+      readOnlyHint: true,
+      idempotentHint: true,
+      openWorldHint: true,
+      title: "Describe section (agent view)"
+    },
+    inputSchema: exports_external2.object({
+      section_tipo: AgentSectionSchema,
+      lang: OptionalLangSchema,
+      include_tipos: exports_external2.boolean().default(false).describe("If true, expose raw tipo identifiers in `_meta` for power users.")
+    }),
+    handler: async ({ section_tipo, lang, include_tipos }) => client.call(rqo({
+      action: "describe_section",
+      dd_api: "dd_agent_api",
+      source: { section_tipo, lang, include_tipos }
+    }))
+  }, ctx);
+}
+
+
 // src/tools/index.ts
 function registerAllTools(server, client, ctx) {
   registerDiscoveryTools(server, client, ctx);
