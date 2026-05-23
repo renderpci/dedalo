@@ -69,6 +69,46 @@ export const CLIENT_TOOLS = Object.freeze([
 			required	: ['query']
 		},
 		run			: (ctx, args) => ctx.search_loaded_data(args.query)
+	},
+
+	{
+		name		: 'client_analyze_image',
+		description	: 'Describe / transcribe / answer questions about an image attached to the CURRENT loaded record. Uses a configured vision-capable model. By default targets the active media component; pass `component_tipo` to pick a specific image field. Returns plain text. Requires a vision-capable api_url.',
+		parameters	: {
+			type		: 'object',
+			properties	: {
+				prompt			: {
+					type		: 'string',
+					description	: 'What to ask about the image (e.g. "describe in one paragraph", "transcribe the legend").'
+				},
+				component_tipo	: {
+					type		: 'string',
+					description	: 'Optional tipo of the image component. Defaults to the active component or the first image in the record.'
+				},
+				quality			: {
+					type		: 'string',
+					description	: 'Optional Dédalo quality key (e.g. "1.5MB", "original"). Defaults to the page default.'
+				}
+			},
+			required	: ['prompt']
+		},
+		run			: async (ctx, args, host) => {
+			if (!host) return 'Internal error: host not provided to client_analyze_image.'
+
+			const media = ctx.get_active_image_url(args.component_tipo, args.quality)
+			if (!media || !media.url) {
+				return 'No image found in the current record. Open a record that has an image (or pass component_tipo).'
+			}
+
+			const text = await host.analyze_image_url(media.url, args.prompt)
+			return {
+				field			: media.label,
+				url				: media.url,
+				analysis		: text
+			}
+		}
+	},
+
 	{
 		name		: 'client_get_active_search',
 		description	: 'Inspect the user\'s current search in the section list. Returns the active section, total records, and a compact filter summary. Use this BEFORE client_bulk_image_transcribe to confirm what will be processed.',
