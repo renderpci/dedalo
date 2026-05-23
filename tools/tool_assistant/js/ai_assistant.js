@@ -610,9 +610,12 @@ export const ai_assistant = class ai_assistant {
 			return String(tool_result || '')
 		}
 
-		// Dig into the MCP proxy wrapper: result.content[0].text
+		// Dig into the MCP proxy wrapper. Two possible formats:
+		//   1. Direct MCP: tool_result.result = { content: [{ type:'text', text:'...' }] }
+		//   2. PHP proxy:  tool_result = { result:true, data:{ result:{ content: [...] } } }
 		let payload = tool_result
 		if (tool_result.result && typeof tool_result.result === 'object') {
+			// Format 1: result is the MCP response object
 			const content = tool_result.result.content
 			if (Array.isArray(content) && content.length > 0 && content[0].text) {
 				try {
@@ -622,6 +625,23 @@ export const ai_assistant = class ai_assistant {
 				}
 			} else {
 				payload = tool_result.result
+			}
+		} else if (tool_result.data && tool_result.data.result && typeof tool_result.data.result === 'object') {
+			// Format 2: PHP proxy wrapper with boolean result
+			const proxy_result = tool_result.data.result
+			if (proxy_result.isError) {
+				const err_text = (Array.isArray(proxy_result.content) && proxy_result.content[0])
+					? proxy_result.content[0].text
+					: 'Unknown MCP error'
+				return 'MCP error: ' + err_text
+			}
+			const content = proxy_result.content
+			if (Array.isArray(content) && content.length > 0 && content[0].text) {
+				try {
+					payload = JSON.parse(content[0].text)
+				} catch(e) {
+					payload = content[0].text
+				}
 			}
 		}
 
