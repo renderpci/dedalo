@@ -43,28 +43,6 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 	}, ctx);
 
 	registerTool(server, {
-		name: 'dedalo_save_component',
-		description:
-			'Save a value to a specific component within a record. The `value` shape depends on the component type.\n' +
-			'**Resolve both `section_tipo` and `tipo` first** via `dedalo_ontology_glossary` (mode="section") then `dedalo_get_section_elements_context`.\n\n' +
-			'Value formats:\n' +
-			'- Text (component_input_text, component_text_area): plain string\n' +
-			'- Portal (component_portal): array of locators e.g. [{"section_tipo":"rsc197","section_id":"7"}]\n' +
-			'- Select (component_select): array of locator objects\n' +
-			'- Date (component_date): date string in component format',
-		annotations: { tier: 'primitive', readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Save component' },
-		inputSchema: z.object({
-			tipo: TipoSchema.describe('Component tipo to save. Resolve via `dedalo_ontology_glossary` (mode="section").'),
-			section_tipo: TipoSchema,
-			section_id: SectionIdSchema,
-			lang: OptionalLangSchema,
-			value: z.unknown().describe('Value to write. Format depends on the component model.'),
-		}),
-		handler: async ({ tipo, section_tipo, section_id, lang, value }) =>
-			client.call(rqo({ action: 'save', source: { tipo, section_tipo, section_id, lang }, options: { value }, prevent_lock: false })),
-	}, ctx);
-
-	registerTool(server, {
 		name: 'dedalo_delete_record',
 		description:
 			'Permanently delete a record. This action cannot be undone. The Dédalo user profile must allow delete on the target section.\n' +
