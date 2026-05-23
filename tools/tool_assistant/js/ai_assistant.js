@@ -1016,6 +1016,9 @@ export const ai_assistant = class ai_assistant {
 			max_tokens	: max_new_tokens,
 			temperature	: 0.7
 		}
+		if (this._config.thinking && this._config.thinking !== 'none') {
+			body.thinking = this._config.thinking
+		}
 		if (tools && tools.length > 0) {
 			body.tools = tools
 		}
@@ -1099,6 +1102,12 @@ export const ai_assistant = class ai_assistant {
 								}
 							}
 						}
+
+						if (delta.reasoning) {
+							on_think_token(delta.reasoning)
+						} else if (delta.reasoning_content) {
+							on_think_token(delta.reasoning_content)
+						}
 					} catch (parse_err) {
 						// malformed SSE chunk, skip
 					}
@@ -1106,7 +1115,6 @@ export const ai_assistant = class ai_assistant {
 			}
 		}
 
-		// Assemble final tool_calls array
 		const tool_calls = tool_calls_acc
 			.filter(function(tc) { return tc && tc.function.name })
 			.map(function(tc) {
