@@ -330,30 +330,59 @@ export const ai_assistant = class ai_assistant {
 
 	_build_system_prompt(tools_enabled) {
 
-		const prompt = [
-			'You are a Dédalo assistant.',
-			'Current context: Section=' + (this._context.section_tipo || '?') +
-				' Record=' + (this._context.section_id || '?') +
-				' Component=' + (this._context.component_tipo || 'none') + '.'
-		]
+		const ctx		= this._client_context.get_context()
+		const activeVal	= this._client_context.get_active_value()
+		const summary	= tools_enabled ? this._client_context.get_context_summary() : null
+
+		const prompt = ['You are a Dédalo assistant.']
+
+		// Prefer the rich multi-line summary when available; otherwise a single
+		// context line. Never emit both — they overlap.
+		if (summary) {
+			prompt.push('', 'Loaded data in CURRENT record:', summary)
+		} else {
+			prompt.push(
+				'Current context: Section=' + (ctx.section_tipo || '?') +
+				' Record=' + (ctx.section_id || '?') +
+				' Component=' + (ctx.component_tipo || 'none') +
+				(ctx.component_label ? ' (' + ctx.component_label + ')' : '') +
+				(activeVal ? ' = "' + activeVal + '"' : '') + '.'
+			)
+		}
 
 		if (tools_enabled) {
 			prompt.push(
-				'You have Dédalo tools. Use them directly — do NOT explain what you will do, just call the tool.',
 				'',
-				'describe_section: discover field labels for a section. Accepts section name or tipo.',
-				'get_record: read one record. Accepts section name or tipo.',
-				'search_records_view: search records with label-based filters. Accepts section name or tipo.',
-				'count_records_view: count records. Accepts section name or tipo.',
-				'set_field: write a value. Accepts section name or tipo; field labels are case/accent-insensitive.',
+				'--- CLIENT TOOLS (instant, no server call) ---',
+				'These tools read data ALREADY LOADED in your browser for the CURRENT record.',
+				'Use them when the user asks about "this record", "this component", or visible data.',
+				'  client_get_current_context   — Show current section/record/component info',
+				'  client_read_component_value  — Read one component value by tipo (e.g. numisdata18)',
+				'  client_list_section_data     — List ALL fields and values in this record',
+				'  client_search_loaded_data    — Search text within current record values',
 				'',
-				'For WRITE tasks: call set_field directly. You do NOT need describe_section first.',
-				'For READ tasks on a NEW section: call describe_section first, then get_record or search_records_view.',
-				'For "how many": call count_records_view.',
-				'Confirm before destructive actions. Reply in Markdown.'
+				'IMPORTANT RULE: When user says "this component" or mentions the active component,',
+				'call client_read_component_value with its tipo. Do NOT call describe_section —',
+				'that tool is for describing a SECTION, not a component field.',
+				'',
+				'--- MCP SERVER TOOLS (server call needed) ---',
+				'These read/write data on the server. Use them ONLY for data NOT in the current record.',
+				'  describe_section    — Discover section structure (section, not component)',
+				'  get_record          — Read one record from any section',
+				'  search_records_view — Search records with filters',
+				'  count_records_view  — Count records in a section',
+				'  set_field           — Write a value to a field',
+				'',
+				'RULES:',
+				'- For the CURRENT record: use CLIENT tools. NEVER call describe_section or get_record for it.',
+				'- For OTHER records/sections: use MCP tools.',
+				'- For WRITE tasks: call set_field directly.',
+				'- Confirm before destructive actions. Reply in Markdown.'
 			)
+
 		} else {
 			prompt.push(
+				'',
 				'Your ONLY task is to answer the user in plain text using the tool results already in the conversation.',
 				'DO NOT use call: syntax. DO NOT call any tools.',
 				'Output a natural language answer in Markdown.'
