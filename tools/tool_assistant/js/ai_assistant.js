@@ -473,6 +473,30 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _STRINGIFY_TOOL_RESULT
+	 * Coerce any client-tool result into a model-friendly string and cap its
+	 * size so a single tool call cannot blow the KV cache.
+	 * @param any value
+	 * @return string
+	 */
+	static _stringify_tool_result(value) {
+
+		let text
+		if (value === null || value === undefined) {
+			text = '(not found)'
+		} else if (typeof value === 'string') {
+			text = value
+		} else {
+			try { text = JSON.stringify(value) } catch(e) { text = String(value) }
+		}
+		if (text.length > MAX_TOOL_RESULT_BYTES) {
+			text = text.substring(0, MAX_TOOL_RESULT_BYTES) + '…[truncated]'
+		}
+		return text
+	}//end _stringify_tool_result
+
+
 
 	/**
 	* _EXTRACT_TOOL_RESULT
