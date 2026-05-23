@@ -58,55 +58,10 @@ export const ai_assistant = class ai_assistant {
 		this._ontology_glossary	= null
 		this._ontology_index		= null
 		this._ontology_loading	= null
-		this._event_tokens		= []
 		this._thread_id			= null
 
-		this._subscribe_events()
+		this._client_context.update_from_events()
 	}//end constructor
-
-
-
-	_subscribe_events() {
-
-		this._event_tokens.push(
-			event_manager.subscribe('activate_component', (data) => {
-
-				if (data && data.tipo) {
-					this._context.component_tipo	= data.tipo
-					this._context.component_label	= data.label || data.tipo
-					this._context.section_tipo		= data.section_tipo || this._context.section_tipo
-					this._context.section_id		= data.section_id || this._context.section_id
-				}
-			})
-		)
-
-		this._event_tokens.push(
-			event_manager.subscribe('render_instance', (data) => {
-				if (data && (data.model === 'section' || data.model === 'area_section')) {
-					this._context.section_tipo	= data.tipo || this._context.section_tipo
-					this._context.section_id	= data.section_id || this._context.section_id
-				}
-			})
-		)
-
-		this._event_tokens.push(
-			event_manager.subscribe('user_navigation', (data) => {
-				if (data && data.section_tipo) {
-					this._context.section_tipo	= data.section_tipo
-					this._context.section_id	= data.section_id
-				}
-			})
-		)
-	}//end _subscribe_events
-
-
-
-	_unsubscribe_events() {
-		for (const token of this._event_tokens) {
-			event_manager.unsubscribe(token)
-		}
-		this._event_tokens = []
-	}//end _unsubscribe_events
 
 
 
