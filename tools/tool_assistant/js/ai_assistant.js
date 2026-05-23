@@ -403,25 +403,9 @@ export const ai_assistant = class ai_assistant {
 
 	_build_tools_for_model() {
 
-		if (!this._mcp_tools.length) return []
-
-		// Tag-driven selection: agent tier tools are always available;
-		// primitive discovery tools are included as fallback when agent
-		// tools for section listing are absent.
-		const primitive_discovery_fallback = [
-			'dedalo_ontology_glossary',
-			'dedalo_list_sections'
-		]
-
-		const sanitized_tools = this._mcp_tools.filter(function(tool) {
-			if (tool.annotations && tool.annotations.tier === 'agent') return true
-			if (primitive_discovery_fallback.indexOf(tool.name) !== -1) return true
-			return false
-		}).map(function(tool) {
-			// force the top-level parameters schema to be an object even if the
-			// tool exposes an empty / non-object inputSchema
-			const raw = tool.inputSchema && typeof tool.inputSchema === 'object'
-				? Object.assign({ type: 'object' }, tool.inputSchema)
+		const toFunctionDecl = function(tool) {
+			const raw = tool.parameters && typeof tool.parameters === 'object'
+				? Object.assign({ type: 'object' }, tool.parameters)
 				: { type: 'object' }
 			if (!raw.properties || typeof raw.properties !== 'object') {
 				raw.properties = {}
@@ -437,11 +421,33 @@ export const ai_assistant = class ai_assistant {
 					)
 				}
 			}
+		}
+
+		// 1. Client tools — always available, no server call. Routed through the
+		// same sanitizer/minimizer as MCP tools so both chat templates
+		// (Qwen/Gemma) see identical-shape declarations.
+		const client_decls = this._client_tools.map(toFunctionDecl)
+
+		// 2. MCP tools (agent-tier + discovery fallback only)
+		if (!this._mcp_tools.length) return client_decls
+
+		const mcp_decls = this._mcp_tools.filter(function(tool) {
+			if (tool.annotations && tool.annotations.tier === 'agent') return true
+			if (PRIMITIVE_DISCOVERY_FALLBACK.indexOf(tool.name) !== -1) return true
+			return false
+		}).map(function(tool) {
+			return toFunctionDecl({
+				name		: tool.name,
+				description	: tool.description || '',
+				parameters	: tool.inputSchema && typeof tool.inputSchema === 'object'
+					? tool.inputSchema
+					: { type: 'object' }
+			})
 		})
 
-		try { console.debug('[ai_assistant] sanitized tools:', JSON.parse(JSON.stringify(sanitized_tools))) } catch (e) {}
+		try { console.debug('[ai_assistant] sanitized tools:', JSON.parse(JSON.stringify(mcp_decls))) } catch (e) {}
 
-		return sanitized_tools
+		return [...client_decls, ...mcp_decls]
 	}//end _build_tools_for_model
 
 
