@@ -169,6 +169,8 @@ class section_record {
 					[$cache_file1, $cache_file2],
 					''
 				);
+				// Also invalidate per-user tool resolution caches
+				tools_register::clean_cache();
 				break;
 
 			case DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO : // dd996
@@ -179,6 +181,9 @@ class section_record {
 					[$cache_file_name],
 					''
 				);
+				// Also invalidate per-user tool resolution caches (tool_config changed)
+				tools_register::clean_cache();
+				break;
 				break;
 
 			default:

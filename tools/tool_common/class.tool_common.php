@@ -79,7 +79,7 @@ class tool_common {
 		 * Maps user IDs to their accessible tools based on permissions.
 		 * @var array $user_tools_cache
 		 */
-		protected static $user_tools_cache = [];
+		public static $user_tools_cache = [];
 
 
 
