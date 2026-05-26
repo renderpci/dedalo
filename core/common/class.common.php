@@ -3688,7 +3688,7 @@ abstract class common {
 							}//end foreach ($tools_list as $item)
 
 							self::$cache_buttons_tools[$cache_key] = $tools;
-							self::manage_cache_size(self::$cache_buttons_tools)
+							self::manage_cache_size(self::$cache_buttons_tools);
 						}
 					}//end if($model === 'button_import')
 
