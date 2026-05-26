@@ -63,8 +63,27 @@ ProxyPass /diffusion/api/v1/ unix:/tmp/diffusion.sock|http://localhost/ timeout=
 ProxyPassReverse /diffusion/api/v1/ unix:/tmp/diffusion.sock|http://localhost/
 ```
 
+## NGINX Proxy Configuration
+
+```nginx
+# In your server block
+location /diffusion/api/v1/ {
+    proxy_pass http://localhost/;  # Bun listens on the Unix socket via a separate upstream
+    proxy_http_version 1.1;
+    proxy_set_header Connection "";
+    proxy_read_timeout 120s;
+    proxy_send_timeout 120s;
+    keepalive_timeout 120s;
+}
+
+# Upstream using Unix socket
+upstream diffusion {
+    server unix:/tmp/diffusion.sock;
+}
+```
+
 > [!TIP]
-> While Bun's internal 120s timeout and the 2s heartbeat prevent most disconnects, setting an explicit `timeout=120` in Apache provides an additional layer of stability for massive datasets.
+> While Bun's internal 120s timeout and the 2s heartbeat prevent most disconnects, setting an explicit `proxy_read_timeout 120s` in NGINX (or `timeout=120` in Apache) provides an additional layer of stability for massive datasets.
 
 
 ## High Availability & Timeouts
