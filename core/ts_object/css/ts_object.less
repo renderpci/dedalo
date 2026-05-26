@@ -79,7 +79,7 @@
 			background-color: var(--fg_muted);
 
 			&:hover {
-				background-color: @color_success; 
+				background-color: var(--color_orange_dedalo); 
 				border-radius: 3px;
 			}
 		}
@@ -102,7 +102,7 @@
 				background-color: var(--fg_muted);
 
 				&:hover {
-					background-color: @color_blue_3;
+					background-color: var(--color_blue);
 					border-radius: 3px;
 				}
 			}
@@ -164,12 +164,6 @@
 			// edit_button
 			.ts_object_edit {
 
-				&:hover {
-					background-color: @color_purple;
-					border-radius: 3px;
-					filter: invert(100%);
-				}
-
 				 // id number
 				.ts_object_section_id_number {
 					height: @ts_object_line_height;
@@ -199,6 +193,10 @@
 					width: 24px;
 					height: @ts_object_line_height;
 					cursor: pointer;
+
+					&:hover {
+						background-color: var(--color_success);
+					}
 				}
 			}//end ts_object_edit
 		}

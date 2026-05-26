@@ -8,7 +8,7 @@ RQO, SQO, or portal mechanics.
 
 | Tier | Audience | Stability | Examples |
 |---|---|---|---|
-| **Primitive** | Power users / scripts | Wide, may change | `dedalo_search_records`, `dedalo_save_component` |
+| **Primitive** | Power users / scripts | Wide, may change | `dedalo_search_records`, `dedalo_set_field` |
 | **Agent** | LLMs / assistants | Stable, versioned | `dedalo_describe_section`, `dedalo_get_record` |
 
 Primitives expose the full power of Dédalo (raw SQO, tipos, locators).
@@ -143,8 +143,18 @@ filter automatically. Supported operators: `eq`, `lt`, `lte`, `gt`, `gte`,
 4. Check component write permission (>=2)
 5. `security::assert_record_in_user_scope`
 6. For link/portal fields: normalise agent-view refs into Dédalo locators
-7. Instantiate component → `update_data_value` → `save`
+7. Instantiate component → merge/set → `save`
+   - **Default (`clean` omitted):** merges new locators with existing data,
+     skipping duplicates (safe, non-destructive)
+   - **`clean: true`:** replaces all locators entirely
 8. Return updated record view
+
+### Write behaviour by mode
+
+| Component type | Default (`clean` omitted) | `clean: true` |
+|---|---|---|
+| Link / Portal | Append new locators, preserve existing | Replace all locators |
+| Text / Scalar | Replace value (monovalue) | Replace value (same) |
 
 ## In-Browser Assistant
 
@@ -152,7 +162,7 @@ filter automatically. Supported operators: `eq`, `lt`, `lte`, `gt`, `gte`,
 
 - **Tag-driven tool selection** — reads `tool.annotations.tier === 'agent'` instead of a hardcoded whitelist.
 - **System prompt** instructs the model to prefer agent tools.
-- **Destructive confirmation** applied to `dedalo_set_field`.
+- **Destructive confirmation** applied to `dedalo_delete_record` (only).
 - **Few-shot** removed (saves ~400 tokens).
 - **Conversation window** truncated to last 10 messages.
 - **External API** support for server-side LLMs via `_generate_with_api`.

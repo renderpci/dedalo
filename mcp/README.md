@@ -114,7 +114,7 @@ All tools are prefixed `dedalo_*` so they can coexist with other MCP servers. An
 `dedalo_read_record`, `dedalo_search_records`, `dedalo_read_raw`, `dedalo_count_records`, `dedalo_get_indexation_grid`
 
 ### Records write (mutating)
-`dedalo_create_record`, `dedalo_duplicate_record`, `dedalo_save_component`, `dedalo_delete_record`
+`dedalo_create_record`, `dedalo_duplicate_record`, `dedalo_set_field`, `dedalo_delete_record`
 
 ### Components (mostly mutating)
 `dedalo_portal_delete_locator`

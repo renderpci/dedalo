@@ -58,7 +58,8 @@ export function registerSearchAgentTools(server: McpServer, client: WorkClient, 
 		description:
 			'Count records in a section. Returns the total number of matching records. ' +
 			'Supports the same human-label filters as search_records_view. ' +
-			'Use this when the user asks "how many records" or wants a count.\n\n' +
+			'Use this when the user asks "how many records" or wants a count — ' +
+			'prefer this over search_records_view for count-only questions (cheaper, no payload).\n\n' +
 			'`section_tipo` accepts a section name (e.g. "Cecas") or tipo (e.g. "oh1").',
 		annotations: {
 			tier: 'agent',

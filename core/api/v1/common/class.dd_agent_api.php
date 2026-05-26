@@ -33,7 +33,8 @@ final class dd_agent_api {
 		'read_record_view',
 		'search_records_view',
 		'count_records',
-		'set_field_by_label'
+		'set_field_by_label',
+		'get_media_url'
 	];
 
 
@@ -498,6 +499,7 @@ final class dd_agent_api {
 		$section_id_raw	= $source->section_id ?? null;
 		$field			= $source->field ?? null;
 		$value			= $source->value ?? null;
+		$clean			= !empty($source->clean);
 		$lang			= self::normalise_lang($source->lang ?? DEDALO_DATA_LANG);
 
 		if (empty($section_tipo) || !is_string($section_tipo)) {
@@ -591,12 +593,27 @@ final class dd_agent_api {
 					$response->hint		= (object)['expected_format' => '[{"section_tipo":"rsc197","section_id":7}]'];
 					return $response;
 				}
-				// Portal / relation components: set_data replaces the entire locator
-				// array. Using 'insert' would append rather than replace.
-				$changed_data = (object)[
-					'action'	=> 'set_data',
-					'value'		=> $resolved_value
-				];
+
+				if ($clean) {
+					// Replace all locators entirely
+					$changed_data = (object)[
+						'action'	=> 'set_data',
+						'value'		=> $resolved_value
+					];
+				} else {
+					// Merge with existing data, avoiding duplicates
+					$existing	= $component->get_data() ?? [];
+					$merged		= $existing;
+					foreach ($resolved_value as $new_loc) {
+						if (!locator::in_array_locator($new_loc, $merged)) {
+							$merged[] = $new_loc;
+						}
+					}
+					$changed_data = (object)[
+						'action'	=> 'set_data',
+						'value'		=> $merged
+					];
+				}
 			} else {
 				// Scalar components (text, html, number, date, media):
 				// 'insert' on monovalue components replaces the single value.
@@ -809,6 +826,170 @@ final class dd_agent_api {
 
 		return $resolved;
 	}//end resolve_section_identifier
+
+
+
+	/**
+	 * GET_MEDIA_URL
+	 * Return the public URL(s) of a media component for a given record
+	 * without forcing a full agent-view payload. Optimised for batch
+	 * pipelines (e.g. assistant bulk image analysis) where read_record_view
+	 * would be wasteful.
+	 *
+	 * Request:
+	 *   {
+	 *     "action": "get_media_url",
+	 *     "dd_api": "dd_agent_api",
+	 *     "source": {
+	 *       "section_tipo":   "numisdata6",
+	 *       "section_id":     42,
+	 *       "component_tipo": "numisdata18",
+	 *       "quality":        "1.5MB",   // optional
+	 *       "absolute":       true       // optional, default true
+	 *     }
+	 *   }
+	 *
+	 * Response.result:
+	 *   {
+	 *     "url":         "https://.../numisdata18/1.5MB/numisdata18-42.jpg",
+	 *     "quality":     "1.5MB",
+	 *     "extension":   "jpg",
+	 *     "file_exist":  true,
+	 *     "model":       "component_image"
+	 *   }
+	 *
+	 * @param object $rqo
+	 * @return object
+	 */
+	public static function get_media_url( object $rqo ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. get_media_url request failed';
+			$response->errors	= [];
+
+		$source				= $rqo->source ?? new stdClass();
+		$section_tipo		= $source->section_tipo ?? null;
+		$section_id_raw		= $source->section_id ?? null;
+		$component_tipo		= $source->component_tipo ?? null;
+		$quality			= $source->quality ?? null;
+		$absolute			= isset($source->absolute) ? (bool)$source->absolute : true;
+		$lang				= self::normalise_lang($source->lang ?? DEDALO_DATA_LANG);
+
+		if (empty($section_tipo) || !is_string($section_tipo)) {
+			$response->msg		= 'Error. Missing or invalid source.section_tipo';
+			$response->errors[]	= 'missing_section_tipo';
+			return $response;
+		}
+		if ($section_id_raw === null || $section_id_raw === '' || !is_numeric($section_id_raw)) {
+			$response->msg		= 'Error. Missing or invalid source.section_id';
+			$response->errors[]	= 'missing_section_id';
+			return $response;
+		}
+		if (empty($component_tipo) || !is_string($component_tipo)) {
+			$response->msg		= 'Error. Missing or invalid source.component_tipo';
+			$response->errors[]	= 'missing_component_tipo';
+			return $response;
+		}
+		$section_id = (int)$section_id_raw;
+
+		// Resolve human name → tipo (section identifier may be a label).
+		$section_tipo = self::resolve_section_identifier($section_tipo, $lang, $response);
+		if ($section_tipo === false) return $response;
+
+		// Permissions: read (>=1) on the section + per-record scope check.
+		$permissions = common::get_permissions($section_tipo, $section_tipo);
+		if ($permissions < 1) {
+			$response->msg		= "Error. Insufficient permissions to read section '$section_tipo'";
+			$response->errors[]	= 'permissions_denied';
+			return $response;
+		}
+		try {
+			security::assert_record_in_user_scope($section_tipo, $section_id, __METHOD__);
+		} catch (\Throwable $e) {
+			$response->msg		= 'Error. Record not in user scope';
+			$response->errors[]	= 'out_of_scope';
+			return $response;
+		}
+
+		// Resolve the component model. The caller may have passed a tipo or a
+		// human label; we try the label resolver first to mirror set_field_by_label.
+		$descriptor = agent_view_builder::resolve_field($section_tipo, $lang, $component_tipo);
+		if ($descriptor !== null) {
+			$component_tipo = $descriptor->tipo;
+			$model			= $descriptor->model;
+		} else {
+			$model = ontology_node::get_model_by_tipo($component_tipo, true);
+		}
+
+		if (empty($model) || !is_subclass_of($model, 'component_media_common') && $model !== 'component_media_common') {
+			// Accept any descendant of component_media_common (image, av, pdf, 3d).
+			$is_media_model = in_array($model, ['component_image', 'component_av', 'component_pdf', 'component_3d'], true);
+			if (!$is_media_model) {
+				$response->msg		= "Error. Component '$component_tipo' is not a media component (model=$model)";
+				$response->errors[]	= 'not_a_media_component';
+				return $response;
+			}
+		}
+
+		try {
+			$component = component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				$lang,
+				$section_tipo
+			);
+			if ($component === null) {
+				throw new Exception("Could not instantiate media component $component_tipo");
+			}
+		} catch (\Throwable $e) {
+			$response->msg		= 'Error. Component instantiation failed: ' . $e->getMessage();
+			$response->errors[]	= 'component_error';
+			return $response;
+		}
+
+		// Resolve URL via component_media_common::get_url. test_file=true so a
+		// missing original falls back to the Dédalo "0.jpg" placeholder; the
+		// flag default_add=false keeps null for missing files so the caller
+		// can detect absence.
+		try {
+			$resolved_quality = $quality ?: (method_exists($component, 'get_quality') ? $component->get_quality() : null);
+
+			$url = $component->get_url(
+				$resolved_quality,
+				true,      // test_file
+				$absolute, // absolute
+				false      // default_add
+			);
+
+			$extension = method_exists($component, 'get_extension') ? $component->get_extension() : null;
+			$file_exist = $url !== null;
+		} catch (\Throwable $e) {
+			$response->msg		= 'Error. URL resolution failed: ' . $e->getMessage();
+			$response->errors[]	= 'url_error';
+			debug_log(__METHOD__ . ' ' . $e->getMessage(), logger::ERROR);
+			return $response;
+		}
+
+		$response->result = (object)[
+			'url'			=> $url,
+			'quality'		=> $resolved_quality,
+			'extension'		=> $extension,
+			'file_exist'	=> $file_exist,
+			'model'			=> $model,
+			'section_tipo'	=> $section_tipo,
+			'section_id'	=> $section_id,
+			'component_tipo'=> $component_tipo,
+		];
+		$response->msg = 'OK. get_media_url done';
+
+		return $response;
+	}//end get_media_url
+
+
+
 
 
 
