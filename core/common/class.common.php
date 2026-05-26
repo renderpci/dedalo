@@ -3442,29 +3442,32 @@ abstract class common {
 		// autocomplete case. For speed and accessibility, return fixed value here
 			$autocomplete = dd_core_api::$rqo->source->config->autocomplete ?? false;
 			if ($autocomplete) {
-				return [];
+				$this->tools = [];
+				return $this->tools;
+			}
+
+		// user_id
+			$user_id = logged_user_id();
+			if (empty($user_id)) {
+				$this->tools = [];
+				return $this->tools;
 			}
 
 		// cache
 			$use_cache = true;
 			if ($use_cache===true) {
-				$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
+				$cache_key = $user_id . '_' . $this->tipo.'_'.($this->get_section_tipo() ?? '');
 				if (isset(self::$cache_get_tools[$cache_key])) {
 					if(SHOW_DEBUG===true) {
 						// metrics
 						metrics::$get_tools_total_calls_cached++;
 					}
-					return self::$cache_get_tools[$cache_key];
+					$this->tools = self::$cache_get_tools[$cache_key];
+					return $this->tools;
 				}
 			}
 
 		$tools = [];
-
-		// user_id
-			$user_id = logged_user_id();
-			if (empty($user_id)) {
-				return $tools;
-			}
 
 		// user_tools (cached on file cache_user_tools.php)
 			$user_tools	= tool_common::get_user_tools($user_id);
@@ -3548,8 +3551,9 @@ abstract class common {
 				metrics::$get_tools_total_time += $total_time_ms;
 			}
 
+		$this->tools = $tools;
 
-		return $tools;
+		return $this->tools;
 	}//end get_tools
 
 

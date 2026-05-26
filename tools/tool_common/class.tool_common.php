@@ -1124,6 +1124,8 @@ class tool_common {
 		// Will be used later to get resolved user tools config from cache
 		// for example in get_structure_context or get_buttons_context
 			foreach ($user_tools as $tool) {
+				// Clone to avoid mutating the shared all_registered_tools_cache objects by reference
+				$tool = clone $tool;
 				$tool->tool_config = tool_common::get_config($tool->name);
 			}
 
