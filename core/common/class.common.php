@@ -3502,6 +3502,10 @@ abstract class common {
 
 					// diffusion case. Skip non diffusion defined (in Ontology) sections
 						if ($tool->name==='tool_diffusion') {
+							// components are never in the diffusion map, skip the expensive check
+							if ($is_component) {
+								continue;
+							}
 							$have_section_diffusion = diffusion_utils::have_section_diffusion($tipo);
 							if ($have_section_diffusion===false) {
 								continue;
