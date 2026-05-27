@@ -1548,7 +1548,7 @@ abstract class common {
 
 							$specific_tool_config = tool_common::get_tool_configuration(
 								$tool_config_options,
-								$tool_object->tool_config // already cached tool_config value
+								$tool_object->tool_config ?? null // already cached tool_config value
 							);
 
 						// if the configuration was defined, replace the ddo_map of the ontology with it.
