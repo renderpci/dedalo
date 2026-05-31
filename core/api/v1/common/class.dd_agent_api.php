@@ -992,6 +992,81 @@ final class dd_agent_api {
 
 
 
+	/**
+	 * LIST_SECTIONS_INDEX
+	 * Returns a compact index of all sections the current user can read.
+	 * Loaded from the pre-built `ontology_llm_map.json` artifact; falls back
+	 * to a live scan of `dd_ontology` when the file is missing.
+	 *
+	 * Request:
+	 *   {
+	 *     "action": "list_sections_index",
+	 *     "dd_api": "dd_agent_api",
+	 *     "source": { "lang": "lg-eng" }
+	 *   }
+	 *
+	 * Response.result:
+	 *   [
+	 *     {"tipo": "oh1",  "label": {"lg-eng": "Oral History", "lg-spa": "Historia oral"}},
+	 *     {"tipo": "numisdata6", "label": {"lg-eng": "Coin"}},
+	 *     ...
+	 *   ]
+	 *
+	 * @param object $rqo
+	 * @return object
+	 */
+	public static function list_sections_index( object $rqo ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. list_sections_index request failed';
+			$response->errors	= [];
+
+		$source	= $rqo->source ?? new stdClass();
+		$lang	= self::normalise_lang($source->lang ?? DEDALO_DATA_LANG);
+
+		// Load pre-built LLM map
+			$map = self::load_llm_map();
+
+		// Fallback: live scan of dd_ontology
+			if ($map === null) {
+				$section_tipos = dd_ontology_db_manager::search(['model' => 'section'], true);
+				if (!is_array($section_tipos)) {
+					$response->msg		= 'Error. Unable to list sections from ontology';
+					$response->errors[]	= 'db_query_failed';
+					return $response;
+				}
+				$map = [];
+				foreach ($section_tipos as $section_tipo) {
+					$node		= ontology_node::get_instance($section_tipo);
+					$term_data	= $node->get_term_data() ?? new stdClass();
+					$map[]		= (object)['tipo' => $section_tipo, 'label' => $term_data, 'fields' => []];
+				}
+			}
+
+		// Permission filter + build compact index
+			$index = [];
+			foreach ($map as $entry) {
+				$entry		= (object)$entry;
+				$stipo		= $entry->tipo ?? null;
+				if (empty($stipo)) continue;
+
+				$permissions = common::get_permissions($stipo, $stipo);
+				if ($permissions < 1) continue;
+
+				$index[] = (object)[
+					'tipo'	=> $stipo,
+					'label'	=> $entry->label ?? new stdClass(),
+				];
+			}
+
+		$response->result	= $index;
+		$response->msg		= 'OK. list_sections_index done';
+
+		return $response;
+	}//end list_sections_index
+
+
 
 	/**
 	 * GET_SECTION_MAP
