@@ -13,7 +13,7 @@ import { TipoSchema, OptionalLangSchema, SectionIdSchema, LocatorSchema } from '
  */
 export function registerComponentTools(server: McpServer, client: WorkClient, ctx: ToolContext): void {
 	const baseRecord = {
-		tipo: TipoSchema.describe('Component tipo to operate on. Resolve via `dedalo_ontology_glossary` (mode="section") or `dedalo_get_section_elements_context`.'),
+		tipo: TipoSchema.describe('Component tipo to operate on. Resolve via `dedalo_get_section_map`.'),
 		section_tipo: TipoSchema,
 		section_id: SectionIdSchema,
 		lang: OptionalLangSchema,
@@ -23,7 +23,7 @@ export function registerComponentTools(server: McpServer, client: WorkClient, ct
 	registerTool(server, {
 		name: 'dedalo_portal_delete_locator',
 		description: 'Remove a locator from a portal component, detaching the linked record.\n' +
-			'Use `dedalo_ontology_glossary` (mode="section") to identify portal components and their target sections.',
+			'Use `dedalo_get_section_map` to identify portal components (link-type fields) and their target sections.',
 		annotations: { tier: 'primitive', readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: true, title: 'Portal: delete locator' },
 		inputSchema: z.object({ ...baseRecord, locator: LocatorSchema }),
 		handler: async ({ tipo, section_tipo, section_id, lang, locator }) =>
