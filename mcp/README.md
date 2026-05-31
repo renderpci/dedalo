@@ -107,10 +107,43 @@ bun run ./dedalo-public-mcp/dist/index.js
 
 All tools are prefixed `dedalo_*` so they can coexist with other MCP servers. Annotations (`readOnlyHint`, `destructiveHint`, `idempotentHint`) describe semantics; **authorisation is decided by Dédalo, not by the annotation**.
 
-### Discovery (read)
-`dedalo_get_environment`, `dedalo_list_sections`, `dedalo_get_ontology_info`, `dedalo_get_section_elements_context`, `dedalo_get_element_context`, `dedalo_start`
+### Ontology discovery — recommended workflow
 
-### Records read (read)
+```
+1. dedalo_list_sections          → compact [{tipo, label}] for every accessible section
+2. dedalo_get_section_map        → full field map for one section (multilingual labels,
+                                   simplified types, portal targets)
+3. dedalo_describe_section       → same via agent API with single-lang label (alternative)
+```
+
+| Tool | What it returns |
+|------|----------------|
+| `dedalo_list_sections` | Compact `{tipo, label}` index of all sections the user can read. Labels include all available languages. |
+| `dedalo_get_section_map` | Full flat field map for a section: every field's tipo, multilingual labels, simplified type (`text`/`html`/`date`/`number`/`link`/`media`), and portal `target` section_tipo for link fields. Accepts section name in any language or a tipo. |
+
+> **Section map JSON format**
+> ```json
+> {
+>   "tipo": "oh1",
+>   "label": { "lg-eng": "Oral History", "lg-spa": "Historia oral" },
+>   "fields": [
+>     { "tipo": "oh14", "label": { "lg-eng": "Title" }, "type": "text" },
+>     { "tipo": "oh24", "label": { "lg-eng": "Informant" }, "type": "link", "target": "rsc197" }
+>   ]
+> }
+> ```
+> The map is pre-built when the ontology is exported; `get_section_map` falls back to a live build if the artifact is absent.
+
+### Discovery — other primitives (read)
+`dedalo_get_environment`, `dedalo_start`
+
+### Discovery — advanced primitives (read, marked "Advanced" in description)
+`dedalo_get_section_elements_context`, `dedalo_get_element_context`, `dedalo_search_ontology`, `dedalo_resolve_path`
+
+### Agent tier — LLM-friendly verbs (read/write)
+`dedalo_describe_section`, `dedalo_get_record`, `dedalo_search_records_view`, `dedalo_count_records_view`, `dedalo_set_field`, `dedalo_get_media_url`
+
+### Records read (primitive, read)
 `dedalo_read_record`, `dedalo_search_records`, `dedalo_read_raw`, `dedalo_count_records`, `dedalo_get_indexation_grid`
 
 ### Records write (mutating)
@@ -124,12 +157,6 @@ All tools are prefixed `dedalo_*` so they can coexist with other MCP servers. An
 
 ### Time Machine (read)
 `dedalo_tm_get_node_data`
-
-### Files
-_none_
-
-### Async processes
-_none_
 
 ### System / diagnostics
 `dedalo_get_system_info`, `dedalo_get_server_ready_status`, `dedalo_list_user_tools`
