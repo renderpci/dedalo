@@ -413,13 +413,13 @@ class state extends widget_common {
 				);
 
 				// get the list of values
-				$ar_list_of_values = $component->get_ar_list_of_values();
+				$list_of_values = $component->get_list_of_values();
 				// format the list with the widget name and the array key of the ipo
 				$list = array_map(function($item) use($key){
 					$item->widget	= get_class($this);
 					$item->key		= $key;
 					return $item;
-				}, $ar_list_of_values->result ?? []);
+				}, $list_of_values->result ?? []);
 
 				$data_list = [...$data_list, ...$list];
 			}
