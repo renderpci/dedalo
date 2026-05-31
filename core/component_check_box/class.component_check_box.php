@@ -56,10 +56,10 @@ class component_check_box extends component_relation_common {
 	*/
 	public function get_datalist( ?string $lang=DEDALO_DATA_LANG ) : array {
 
-		// Execute get_ar_list_of_values
-		$ar_list_of_values_response = component_common::get_ar_list_of_values($lang, false);
+		// Resolve the option list via the canonical resolver
+		$list_of_values_response = $this->get_list_of_values($lang ?? DEDALO_DATA_LANG, false);
 
-		$datalist = $ar_list_of_values_response->result ?? [];
+		$datalist = $list_of_values_response->result ?? [];
 
 		// Add tool information when the component is component_security_tools (dd1353).
 		// The component_security_tools is built as component_check_box and rendered with view 'view_tools'.

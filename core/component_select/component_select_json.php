@@ -77,7 +77,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 				case 'edit':
 				default:
 					$value = $this->get_data_lang();
-					$list_of_values = $this->get_list_of_values(DEDALO_DATA_LANG, true);
+					$datalist = $this->get_list_of_values(DEDALO_DATA_LANG, true)->result ?? [];
 					break;
 			}
 
@@ -85,9 +85,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 			$item = $this->get_data_item($value);
 
 			// datalist add if exits
-			if (isset($list_of_values) && isset($list_of_values->result)) {
-				$datalist = $list_of_values->result;
-
+			if (isset($datalist)) {
 				$item->datalist = $datalist;
 			}
 
