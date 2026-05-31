@@ -66,21 +66,23 @@ if (!isset($this)) { http_response_code(404); exit; }
 
 				case 'edit':
 				default:
-					$value				= $this->get_data_lang();
-					$ar_list_of_values	= $this->get_ar_list_of_values();
+					$value			= $this->get_data_lang();
+					$list_of_values	= $this->get_list_of_values();
 
 					// check value is contained into list of values
-					if (!empty($value) && !empty($ar_list_of_values->result)) {
+					if (!empty($value) && !empty($list_of_values->result)) {
 
 						$missing_lang = component_select_lang::get_missing_lang(
 							$value[0], // object locator
-							$ar_list_of_values->result // array list_of_values
+							$list_of_values->result // array list_of_values
 						);
 						if (!empty($missing_lang)) {
 							// add missing lang to list (case France (fr) in MURAPA Hierarchy for example)
-							$ar_list_of_values->result[] = $missing_lang;
+							$list_of_values->result[] = $missing_lang;
 						}
 					}
+
+					$datalist = $list_of_values->result;
 					break;
 			}
 
@@ -88,8 +90,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 			$item = $this->get_data_item($value);
 
 			// datalist
-			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
-				$item->datalist = $ar_list_of_values->result;
+			if (isset($datalist)) {
+				$item->datalist = $datalist;
 			}
 
 		// debug

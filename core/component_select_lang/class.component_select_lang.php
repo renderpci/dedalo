@@ -183,12 +183,15 @@ class component_select_lang extends component_relation_common {
 
 
 	/**
-	* GET_AR_LIST_OF_VALUES
+	* GET_LIST_OF_VALUES
+	* Lang-specific option list resolver (overrides the canonical resolver).
+	* Resolves the project default langs as the selectable values instead of
+	* searching a target section.
 	* @param string|null $lang = DEDALO_DATA_LANG
 	* @param bool $include_negative = false
 	* @return object $response
 	*/
-	public function get_ar_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
+	public function get_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
 
 		// datalist. Resolving multiple langs at once
 			$langs_resolved = lang::resolve_multiple(DEDALO_PROJECTS_DEFAULT_LANGS);
@@ -227,7 +230,7 @@ class component_select_lang extends component_relation_common {
 
 
 		return $response;
-	}//end get_ar_list_of_values
+	}//end get_list_of_values
 
 
 
@@ -246,8 +249,8 @@ class component_select_lang extends component_relation_common {
 		}
 
 		$list_value = [];
-		$ar_list_of_values = $this->get_ar_list_of_values(DEDALO_DATA_LANG);
-		foreach ($ar_list_of_values->result as $item) {
+		$list_of_values = $this->get_list_of_values(DEDALO_DATA_LANG);
+		foreach ($list_of_values->result as $item) {
 
 			$locator = $item->value;
 			if ( true===locator::in_array_locator($locator, $data, array('section_id','section_tipo')) ) {
@@ -256,11 +259,11 @@ class component_select_lang extends component_relation_common {
 		}
 
 		// check value is contained into list of values. If not, add as missing lang
-			if (!empty($data) && empty($list_value) && !empty($ar_list_of_values->result)) {
+			if (!empty($data) && empty($list_value) && !empty($list_of_values->result)) {
 
 				$missing_lang = component_select_lang::get_missing_lang(
 					$data[0], // object locator
-					$ar_list_of_values->result // array list_of_values
+					$list_of_values->result // array list_of_values
 				);
 				if (!empty($missing_lang)) {
 					// resolve
