@@ -30,7 +30,108 @@ final class dd_agent_api_Test extends BaseTestCase {
 		$this->assertContains('search_records_view', $actions);
 		$this->assertContains('set_field_by_label', $actions);
 		$this->assertContains('count_records', $actions);
+		$this->assertContains('list_sections_index', $actions);
+		$this->assertContains('get_section_map', $actions);
 	}//end test_actions_allowlist
+
+
+	/**
+	* TEST_LIST_SECTIONS_INDEX_SHAPE
+	* Validates the compact section index envelope: result is an array of
+	* {tipo, label} objects (label being a multilingual map).
+	* @return void
+	*/
+	public function test_list_sections_index_shape() : void {
+
+		$this->user_login();
+
+		$rqo = (object)[
+			'action' => 'list_sections_index',
+			'dd_api' => 'dd_agent_api',
+			'source' => (object)[
+				'lang' => DEDALO_DATA_LANG,
+			],
+		];
+
+		$response = dd_agent_api::list_sections_index($rqo);
+
+		$this->assertIsObject($response);
+		$this->assertTrue($response->result !== false, 'expected success result');
+		$this->assertIsArray($response->result);
+
+		if (count($response->result) > 0) {
+			$entry = $response->result[0];
+			$this->assertObjectHasProperty('tipo', $entry);
+			$this->assertObjectHasProperty('label', $entry);
+			$this->assertIsObject($entry->label);
+		}
+	}//end test_list_sections_index_shape
+
+
+	/**
+	* TEST_GET_SECTION_MAP_SHAPE
+	* Validates the per-section field map envelope: tipo, multilingual
+	* label, and a fields array whose entries carry tipo/label/type.
+	* @return void
+	*/
+	public function test_get_section_map_shape() : void {
+
+		$this->user_login();
+
+		$rqo = (object)[
+			'action' => 'get_section_map',
+			'dd_api' => 'dd_agent_api',
+			'source' => (object)[
+				'section' => self::$section_tipo,
+				'lang' => DEDALO_DATA_LANG,
+			],
+		];
+
+		$response = dd_agent_api::get_section_map($rqo);
+
+		$this->assertIsObject($response);
+		$this->assertTrue($response->result !== false, 'expected success result');
+
+		$result = $response->result;
+		$this->assertObjectHasProperty('tipo', $result);
+		$this->assertObjectHasProperty('label', $result);
+		$this->assertObjectHasProperty('fields', $result);
+		$this->assertSame(self::$section_tipo, $result->tipo);
+		$this->assertIsArray($result->fields);
+
+		if (count($result->fields) > 0) {
+			$field = $result->fields[0];
+			$this->assertObjectHasProperty('tipo', $field);
+			$this->assertObjectHasProperty('label', $field);
+			$this->assertObjectHasProperty('type', $field);
+			$this->assertContains($field->type, ['text', 'html', 'date', 'number', 'link', 'media']);
+		}
+	}//end test_get_section_map_shape
+
+
+	/**
+	* TEST_GET_SECTION_MAP_MISSING_SECTION
+	* A missing section identifier must fail cleanly with an error code.
+	* @return void
+	*/
+	public function test_get_section_map_missing_section() : void {
+
+		$this->user_login();
+
+		$rqo = (object)[
+			'action' => 'get_section_map',
+			'dd_api' => 'dd_agent_api',
+			'source' => (object)[
+				'lang' => DEDALO_DATA_LANG,
+			],
+		];
+
+		$response = dd_agent_api::get_section_map($rqo);
+
+		$this->assertIsObject($response);
+		$this->assertFalse($response->result);
+		$this->assertContains('missing_section', $response->errors ?? []);
+	}//end test_get_section_map_missing_section
 
 
 	/**
