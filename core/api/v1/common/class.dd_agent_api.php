@@ -1106,5 +1106,41 @@ final class dd_agent_api {
 
 
 
+	/**
+	 * LOAD_LLM_MAP
+	 * Loads and decodes the pre-built `ontology_llm_map.json` artifact.
+	 * Returns null when the file does not exist or cannot be decoded.
+	 * @return array|null
+	 */
+	private static function load_llm_map() : ?array {
+
+		// Request-level cache: 0 = not yet attempted, false = attempted+missing, array = loaded.
+		static $cache = 0;
+		if ($cache !== 0) {
+			return ($cache === false) ? null : $cache;
+		}
+
+		try {
+			$io_path = ontology_data_io::get_ontology_io_path();
+			if ($io_path === false) { $cache = false; return null; }
+
+			$file_path = "{$io_path}/ontology_llm_map.json";
+			if (!is_file($file_path)) { $cache = false; return null; }
+
+			$contents = file_get_contents($file_path);
+			if ($contents === false) { $cache = false; return null; }
+
+			$decoded = json_decode($contents);
+			$cache = is_array($decoded) ? $decoded : false;
+			return ($cache === false) ? null : $cache;
+
+		} catch (\Throwable $e) {
+			debug_log(__METHOD__ . ' failed: ' . $e->getMessage(), logger::WARNING);
+			$cache = false;
+			return null;
+		}
+	}//end load_llm_map
+
+
 
 }//end class dd_agent_api
