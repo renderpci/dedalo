@@ -34,7 +34,9 @@ final class dd_agent_api {
 		'search_records_view',
 		'count_records',
 		'set_field_by_label',
-		'get_media_url'
+		'get_media_url',
+		'list_sections_index',
+		'get_section_map'
 	];
 
 
