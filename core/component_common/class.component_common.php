@@ -2401,7 +2401,7 @@ abstract class component_common extends common {
 	* 	Include negative section_id values (like root user -1) in results
 	* @return object $response
 	*/
-	public function get_list_of_values( string $lang, bool $include_negative=false ) : object {
+	public function get_list_of_values( string $lang=DEDALO_DATA_LANG, bool $include_negative=false ) : object {
 
 		$start_time = start_time();
 
@@ -2472,8 +2472,15 @@ abstract class component_common extends common {
 				}
 
 			// cache of the list_of_values, if the list was already calculated, return it
-				$hash_id = isset($dedalo_request_config->sqo->filter)
-					? md5(json_encode($dedalo_request_config->sqo->filter))
+			// hash includes request_config filter and component property filters
+			// (filtered_by_search / filtered_by_search_dynamic) to avoid cache collisions
+			// between filtered and unfiltered resolutions of the same target section.
+				$filter_for_hash = $dedalo_request_config->sqo->filter
+					?? $this->properties->filtered_by_search_dynamic
+					?? $this->properties->filtered_by_search
+					?? null;
+				$hash_id = isset($filter_for_hash)
+					? md5(json_encode($filter_for_hash))
 					: 'full';
 
 				$uid = !empty($ar_sections_tipo)
@@ -2510,6 +2517,13 @@ abstract class component_common extends common {
 								, logger::ERROR
 							);
 						}
+					}elseif (isset($this->properties->filtered_by_search_dynamic) || isset($this->properties->filtered_by_search)) {
+						// component property filters parity (legacy get_ar_list_of_values behavior).
+						// applied only when no request_config fixed_filter is present.
+						$properties_filter = isset($this->properties->filtered_by_search_dynamic)
+							? $this->parse_search_dynamic($this->properties->filtered_by_search_dynamic)
+							: json_decode( json_encode($this->properties->filtered_by_search) );
+						$sqo->set_filter($properties_filter);
 					}
 
 			$search = search::get_instance($sqo);
