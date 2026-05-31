@@ -83,3 +83,18 @@ export interface CountResultView {
 	section_label: string;
 	total: number;
 }
+
+/** One field in a section map (multilingual labels, simplified type). */
+export interface SectionMapField {
+	tipo: string;
+	label: Record<string, string>;
+	type: AgentFieldType;
+	target?: string;
+}
+
+/** Per-section flat map returned by `get_section_map`. */
+export interface SectionMap {
+	tipo: string;
+	label: Record<string, string>;
+	fields: SectionMapField[];
+}
