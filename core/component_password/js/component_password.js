@@ -98,7 +98,7 @@ component_password.prototype.validate_password_format = function (pw, options) {
 			length				: [6, 32],
 			custom				: [ /* regexes and/or functions  (?=.*\d)(?=.*[a-z])(?=.*[A-Z])\w{6,} */ ],
 			badWords			: ["password", "contraseña", "clave","Mynew2Pass5K","dios","micontraseña"],
-			badChars			: ["?"],
+			badChars			: ["&"],
 			badSequenceLength	: 4,
 			noQwertySequences	: false,
 			noSequential		: true
