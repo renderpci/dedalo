@@ -98,6 +98,7 @@ component_password.prototype.validate_password_format = function (pw, options) {
 			length				: [6, 32],
 			custom				: [ /* regexes and/or functions  (?=.*\d)(?=.*[a-z])(?=.*[A-Z])\w{6,} */ ],
 			badWords			: ["password", "contraseña", "clave","Mynew2Pass5K","dios","micontraseña"],
+			badChars			: ["?"],
 			badSequenceLength	: 4,
 			noQwertySequences	: false,
 			noSequential		: true
@@ -143,6 +144,17 @@ component_password.prototype.validate_password_format = function (pw, options) {
 				const response = {
 					result	: false,
 					msg		: "Bad word! \nPlease use a different password"
+				}
+				return response;
+			}
+		}
+
+	// enforce character ban
+		for (i = 0; i < o.badChars.length; i++) {
+			if (pw.indexOf(o.badChars[i]) > -1) {
+				const response = {
+					result	: false,
+					msg		: "Invalid character '" + o.badChars[i] + "'! \nPlease use a different password"
 				}
 				return response;
 			}
