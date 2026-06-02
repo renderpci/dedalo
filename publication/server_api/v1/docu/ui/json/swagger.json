@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.1.1",
-    "title" : "Dédalo V6 Publication Server REST API 1.1.1",
+    "version" : "1.1.2",
+    "title" : "Dédalo V6 Publication Server REST API 1.1.2",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -973,6 +973,98 @@
             "description" : "Successful response",
             "schema" : {
               "$ref" : "#/definitions/response"
+            }
+          }
+        }
+      }
+    },
+    "/text_fragment" : {
+      "post" : {
+        "summary" : "Get text fragments from bibliographic transcriptions",
+        "description" : "Search and extract text fragments from a specified column (default 'transcription') matching the query string. Used typically for bibliographic transcription text fragments. Returns an array of objects with section_id, search term, and extracted fragments.",
+        "parameters" : [ {
+          "$ref" : "#/parameters/code"
+        }, {
+          "$ref" : "#/parameters/db_name"
+        }, {
+          "$ref" : "#/parameters/lang"
+        }, {
+          "name" : "section_id",
+          "in" : "query",
+          "description" : "Section id or comma separated list of section ids to filter records",
+          "type" : "string",
+          "required" : true
+        }, {
+          "name" : "q",
+          "in" : "query",
+          "description" : "String to search in the specified column",
+          "type" : "string",
+          "required" : true
+        }, {
+          "name" : "column",
+          "in" : "query",
+          "description" : "Column name to search into. Default is 'transcription'",
+          "type" : "string",
+          "required" : false,
+          "default" : "transcription"
+        }, {
+          "name" : "table",
+          "in" : "query",
+          "description" : "Table name to query. Default is 'publications'",
+          "type" : "string",
+          "required" : false,
+          "default" : "publications"
+        }, {
+          "name" : "max_chars",
+          "in" : "query",
+          "description" : "Maximum number of characters per fragment. Default is 320",
+          "type" : "integer",
+          "format" : "int",
+          "required" : false,
+          "default" : 320
+        }, {
+          "name" : "max_occurrences",
+          "in" : "query",
+          "description" : "Maximum number of fragment occurrences to extract per record. Default is 1",
+          "type" : "integer",
+          "format" : "int",
+          "required" : false,
+          "default" : 1
+        } ],
+        "tags" : [ "Free" ],
+        "responses" : {
+          "200" : {
+            "description" : "Successful response",
+            "schema" : {
+              "type" : "object",
+              "properties" : {
+                "result" : {
+                  "type" : "array",
+                  "items" : {
+                    "type" : "object",
+                    "properties" : {
+                      "section_id" : {
+                        "type" : "integer",
+                        "description" : "Section id of the record"
+                      },
+                      "search" : {
+                        "type" : "string",
+                        "description" : "Search term used"
+                      },
+                      "fragments" : {
+                        "type" : "array",
+                        "items" : {
+                          "type" : "object"
+                        },
+                        "description" : "Array of extracted text fragments"
+                      }
+                    }
+                  }
+                },
+                "msg" : {
+                  "type" : "string"
+                }
+              }
             }
           }
         }
