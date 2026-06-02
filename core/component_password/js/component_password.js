@@ -80,7 +80,7 @@ export const component_password = function(){
 component_password.prototype.validate_password_format = function (pw, options) {
 
 	// empty case
-		if (pw.length<1) {
+		if (!pw || pw.length < 1) {
 			const response = {
 				result	: true,
 				msg		: "Password is empty. ignored validation"
@@ -105,8 +105,11 @@ component_password.prototype.validate_password_format = function (pw, options) {
 		};
 
 	// set options
-		for (const property in options){
-			o[property] = options[property];
+		const opts = options || {};
+		for (const property in opts) {
+			if (opts.hasOwnProperty(property)) {
+				o[property] = opts[property];
+			}
 		}
 
 	let	re = {
@@ -129,6 +132,7 @@ component_password.prototype.validate_password_format = function (pw, options) {
 
 	// enforce lower/upper/alpha/numeric/special rules
 		for (rule in re) {
+			if (!re.hasOwnProperty(rule)) continue;
 			if ((pw.match(re[rule]) || []).length < o[rule]) {
 				const response = {
 					result	: false,
