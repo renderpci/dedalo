@@ -162,6 +162,7 @@ class install extends common {
 			'rsc',			// Dédalo resources
 			'hierarchy',	// Dédalo hierarchies
 			'ontology',		// Dédalo ontology
+			'ontologytype', // Dédalo ontology types (ontologytype15 is always needed)
 			'localontology',// Dédalo local ontology
 			'lg',			// Dédalo langs
 			'oh',			// Oral History
