@@ -227,6 +227,9 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 		const source_lang_code = dedalo_to_locale(source_lang)
 		const target_lang_code = dedalo_to_locale(target_lang)
 
+	// parse HTML into blocks
+		const blocks = groupBlocksIntoChunks(source_text, 2000)
+	console.log('blocks:', blocks)
 	// transcribe worker
 		const translate_worker = new Worker('../../tools/tool_lang/translators/browser_transformer/browser_transformer.js', {
 			type : 'module'
@@ -276,8 +279,9 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 
 				case 'on_chunk':
 					status_container.classList.remove('loading_status')
+					status_container.innerHTML = self.get_tool_label('procesing')
 
-					accumulated += data
+					accumulated = data
 
 					// show accumulated streaming text in overlay
 					self.target_component.data.value[0] = accumulated
@@ -294,6 +298,8 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 					if (self.streaming_overlay) {
 						self.streaming_overlay.classList.add('hide')
 					}
+					status_container.classList.remove('loading_status')
+					status_container.innerHTML = self.get_tool_label('translation_completed')
 
 					const translated_text = accumulated || data
 
@@ -346,7 +352,7 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 		// init the worker for translation
 		translate_worker.postMessage({
 			options : {
-				sourceText		: source_text,
+				blocks			: blocks,
 				sourceLangCode	: source_lang_code,
 				targetLangCode	: target_lang_code,
 				device			: device
@@ -423,6 +429,61 @@ tool_lang.prototype.automatic_translation_server = async function(translator, so
 		})
 }//end automatic_translation_server
 
+
+
+function splitHtmlByParagraph(html) {
+
+	const parser	= new DOMParser();
+	const doc		= parser.parseFromString(html, 'text/html');
+	const blocks	= [];
+
+	for (const node of doc.body.childNodes) {
+		if (node.nodeType === 1) {
+			blocks.push(node.outerHTML);
+		} else if (node.nodeType === 3) {
+			const text = node.textContent;
+			if (text) blocks.push(text);
+		}
+	}
+
+	if (blocks.length === 0) {
+		blocks.push(html);
+	}
+
+	return blocks;
+}
+
+
+function groupBlocksIntoChunks(html, maxChars = 500) {
+    const blocks = splitHtmlByParagraph(html);
+    const chunks = [];
+    let current = '';
+
+    for (const block of blocks) {
+        // If a single block exceeds the limit, it goes alone
+        if (block.length > maxChars) {
+            if (current) {
+                chunks.push(current);
+                current = '';
+            }
+            chunks.push(block);
+            continue;
+        }
+
+        const candidate = current ? current + '\n' + block : block;
+
+        if (candidate.length <= maxChars) {
+            current = candidate;
+        } else {
+            chunks.push(current);
+            current = block;
+        }
+    }
+
+    if (current) chunks.push(current);
+
+    return chunks;
+}
 
 
 // @license-end
