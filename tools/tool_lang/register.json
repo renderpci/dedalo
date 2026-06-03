@@ -153,11 +153,18 @@
               "value": [
                 {
                   "name": "babel",
+                  "type": "server",
                   "label": "Babel"
                 },
                 {
                   "name": "google_translation",
+                  "type": "server",
                   "label": "Google translator"
+                },
+                {
+                  "name": "browser_transformer",
+                  "type": "browser",
+                  "label": "Local AI translator"
                 }
               ],
               "client": true,
@@ -442,6 +449,56 @@
               "lang": "lg-nep",
               "name": "propagate_marks",
               "value": "अंकहरू प्रचार गर्नुहोस्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "cpu_device",
+              "value": "More compatible, slower."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "cpu_device",
+              "value": "Más compatible, más lento."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "initializing",
+              "value": "Initializing"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "initializing",
+              "value": "Inicializando"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "setting_up",
+              "value": "Setting up"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "setting_up",
+              "value": "Configurando"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "procesing",
+              "value": "Processing"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "procesing",
+              "value": "Procesando"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "translation_completed",
+              "value": "Translation completed."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "translation_completed",
+              "value": "Traducción completada."
             }
           ]
         ]
