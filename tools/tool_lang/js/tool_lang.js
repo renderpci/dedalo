@@ -5,7 +5,7 @@
 
 
 // import
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	import {clone, dd_console, get_json_langs} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
@@ -182,7 +182,183 @@ tool_lang.prototype.build = async function(autoload=false) {
 
 
 /**
-* AUTOMATIC_TRANSLATION
+* AUTOMATIC_TRANSLATION_BROWSER
+* Run translation entirely client-side using a Web Worker with
+* the transformers.js library and the TranslateGemma 4B model
+* @param object options
+* {
+* 	source_lang	: string (like 'lg-eng')
+* 	target_lang	: string (like 'lg-spa')
+* 	device		: string ('webgpu' | 'wasm')
+* 	status_container : HTMLElement
+* }
+* @return promise response
+*/
+tool_lang.prototype.automatic_translation_browser = async function(options) {
+
+	const self = this
+
+	// options
+		const source_lang	= options.source_lang
+		const target_lang	= options.target_lang
+		const device		= options.device || 'webgpu'
+		const status_container = options.status_container
+
+	// source text
+		const source_value = self.main_element.data.value
+		if (!source_value || source_value.length<1) {
+			return Promise.reject('Empty source text')
+		}
+		const source_text = source_value[0]
+
+	// language mapping: convert Dédalo lang codes to locale codes
+		const json_langs = self.json_langs || await get_json_langs() || []
+		self.json_langs = json_langs
+
+		const dedalo_to_locale = (dedalo_lang) => {
+			const lang_obj = json_langs.find(item => item.dd_lang===dedalo_lang)
+			if (!lang_obj || !lang_obj.locale) {
+				return 'en'
+			}
+			const locale = lang_obj.locale
+			return locale.split('-')[0]
+		}
+
+		const source_lang_code = dedalo_to_locale(source_lang)
+		const target_lang_code = dedalo_to_locale(target_lang)
+
+	// transcribe worker
+		const translate_worker = new Worker('../../tools/tool_lang/translators/browser_transformer/browser_transformer.js', {
+			type : 'module'
+		})
+
+	return new Promise(function(resolve, reject){
+
+		status_container.classList.remove('hide')
+		status_container.classList.add('loading_status')
+
+		// show streaming overlay over target component
+		if (self.streaming_overlay) {
+			self.streaming_overlay.classList.remove('hide')
+			self.streaming_overlay_content.innerHTML = ''
+		}
+
+	// accumulated translation text
+	let accumulated = ''
+
+	// Manage the worker answers
+	translate_worker.onmessage = function(e) {
+		const status	= e.data.status
+		const data		= e.data.data
+
+		switch (status) {
+			case 'init':
+
+					const progress	= data.progress
+					const status_text	= data.status
+					const device_text	= data.device
+
+					const procesing_label = device_text==='webgpu' ? 'setting_up' : 'procesing'
+
+					const label = status_text==='ready'
+						? self.get_tool_label( procesing_label )
+						: self.get_tool_label( 'initializing' )
+
+					const loaded = (progress)
+						? ` : ${parseInt(progress).toString().padStart(2, 0)}%`
+						: (status_text==='ready')
+							? ''
+							: ' : 00%'
+					const procesing = `${label}${loaded}`
+					status_container.innerHTML = procesing
+
+					break;
+
+				case 'on_chunk':
+					status_container.classList.remove('loading_status')
+
+					accumulated += data
+
+					// show accumulated streaming text in overlay
+					self.target_component.data.value[0] = accumulated
+					if (self.streaming_overlay_content) {
+						self.streaming_overlay_content.innerHTML = accumulated
+					}
+
+					break;
+
+				case 'end':
+					translate_worker.terminate()
+
+					// hide streaming overlay
+					if (self.streaming_overlay) {
+						self.streaming_overlay.classList.add('hide')
+					}
+
+					const translated_text = accumulated || data
+
+					self.target_component.data.value[0] = translated_text
+
+					// save value to target component
+					self.target_component.save([{
+						action	: 'update',
+						key		: 0,
+						value	: translated_text
+					}])
+					.then(function(){
+						self.target_component.refresh({
+							build_autoload : false
+						})
+					})
+
+					resolve({result: true, msg: 'OK. Translation completed'})
+
+					break;
+
+				case 'error':
+					translate_worker.terminate()
+					status_container.classList.remove('loading_status')
+
+					// hide streaming overlay
+					if (self.streaming_overlay) {
+						self.streaming_overlay.classList.add('hide')
+					}
+
+					let error_msg = data
+					try {
+						const parsed = JSON.parse(data)
+						error_msg = parsed.message || parsed.raw || parsed.name || data
+						console.error('Worker error details:', parsed)
+					} catch(e) {}
+					status_container.innerHTML = `<div class="error">${error_msg}</div>`
+					reject(new Error(error_msg))
+					break;
+			}
+		}
+		translate_worker.onerror = function(e) {
+			const msg = e.message || e.filename || 'Unknown worker error'
+			console.error('Worker error [browser_transformer]:', msg, e)
+			status_container.classList.remove('loading_status')
+			status_container.innerHTML = `<div class="error">${msg}</div>`
+			reject(e)
+		}
+
+		// init the worker for translation
+		translate_worker.postMessage({
+			options : {
+				sourceText		: source_text,
+				sourceLangCode	: source_lang_code,
+				targetLangCode	: target_lang_code,
+				device			: device
+			}
+		})
+	})
+}//end automatic_translation_browser
+
+
+
+/**
+* AUTOMATIC_TRANSLATION_SERVER
 * Call the API to translate the source lang component data to the target lang component data
 * using a online service like babel or Google translator and save the resulting value
 * (!) Tool lang config translator must to be exists in register_tools section
@@ -194,7 +370,7 @@ tool_lang.prototype.build = async function(autoload=false) {
 *
 * @return promise response
 */
-tool_lang.prototype.automatic_translation = async function(translator, source_lang, target_lang, buttons_container) {
+tool_lang.prototype.automatic_translation_server = async function(translator, source_lang, target_lang, buttons_container) {
 
 	const self = this
 
@@ -245,7 +421,7 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 				resolve(response)
 			})
 		})
-}//end automatic_translation
+}//end automatic_translation_server
 
 
 
