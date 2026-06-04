@@ -11,6 +11,7 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_lang} from './render_tool_lang.js'
+	import {tr} from '../../../core/common/js/tr.js'
 
 
 
@@ -227,14 +228,18 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 		const source_lang_code = dedalo_to_locale(source_lang)
 		const target_lang_code = dedalo_to_locale(target_lang)
 
+	// create placeholders for avoid translation of dedalo tags
+		const { safe_source_text, placeholders } = replace_dedalo_tags_with_placeholders(source_text)
+
 	// parse HTML into blocks
-		const blocks = groupBlocksIntoChunks(source_text, 2000)
-	console.log('blocks:', blocks)
+		const blocks = group_blocks_into_chunks(safe_source_text, 1000)
+
 	// transcribe worker
 		const translate_worker = new Worker('../../tools/tool_lang/translators/browser_transformer/browser_transformer.js', {
 			type : 'module'
 		})
 
+	// wrap in a Promise to allow the caller to await completion
 	return new Promise(function(resolve, reject){
 
 		status_container.classList.remove('hide')
@@ -246,25 +251,25 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 			self.streaming_overlay_content.innerHTML = ''
 		}
 
-	// accumulated translation text
-	let accumulated = ''
-
-	// Manage the worker answers
+	// Handle messages sent back from the Web Worker
 	translate_worker.onmessage = function(e) {
-		const status	= e.data.status
-		const data		= e.data.data
+		const status			= e.data.status
+		const data				= e.data.data
+		const remaining			= data.remaining
+		const accumulated_text	= data.accumulated_text
 
 		switch (status) {
+			// model is being downloaded and initialised; show progress percentage
 			case 'init':
 
 					const progress	= data.progress
 					const status_text	= data.status
 					const device_text	= data.device
 
-					const procesing_label = device_text==='webgpu' ? 'setting_up' : 'procesing'
+					const process_label = device_text==='webgpu' ? 'setting_up' : 'procesing'
 
 					const label = status_text==='ready'
-						? self.get_tool_label( procesing_label )
+						? self.get_tool_label( process_label )
 						: self.get_tool_label( 'initializing' )
 
 					const loaded = (progress)
@@ -277,20 +282,22 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 
 					break;
 
+				// translation chunk received; stream result to the target component in real time
 				case 'on_chunk':
 					status_container.classList.remove('loading_status')
-					status_container.innerHTML = self.get_tool_label('procesing')
-
-					accumulated = data
+					const procesing_label = self.get_tool_label('procesing') || 'Procesing'
+					const remaining_label = self.get_tool_label('remaining') || 'remaining'
+					status_container.innerText = `${procesing_label} (${remaining} ${remaining_label})`
 
 					// show accumulated streaming text in overlay
-					self.target_component.data.value[0] = accumulated
+					self.target_component.data.value[0] = accumulated_text
 					if (self.streaming_overlay_content) {
-						self.streaming_overlay_content.innerHTML = accumulated
+						self.streaming_overlay_content.innerHTML = accumulated_text
 					}
 
 					break;
 
+				// all chunks translated; restore placeholders, save, and resolve
 				case 'end':
 					translate_worker.terminate()
 
@@ -301,15 +308,17 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 					status_container.classList.remove('loading_status')
 					status_container.innerHTML = self.get_tool_label('translation_completed')
 
-					const translated_text = accumulated || data
+					const translated_text = accumulated_text || data
 
-					self.target_component.data.value[0] = translated_text
+					const restored_text = restore_placeholders(translated_text, placeholders)
+
+					self.target_component.data.value[0] = restored_text
 
 					// save value to target component
 					self.target_component.save([{
 						action	: 'update',
 						key		: 0,
-						value	: translated_text
+						value	: restored_text
 					}])
 					.then(function(){
 						self.target_component.refresh({
@@ -321,6 +330,7 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 
 					break;
 
+				// worker encountered an error; display message and reject the promise
 				case 'error':
 					translate_worker.terminate()
 					status_container.classList.remove('loading_status')
@@ -341,6 +351,7 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 					break;
 			}
 		}
+		// handle uncaught runtime errors from the worker (e.g. network failures)
 		translate_worker.onerror = function(e) {
 			const msg = e.message || e.filename || 'Unknown worker error'
 			console.error('Worker error [browser_transformer]:', msg, e)
@@ -431,7 +442,83 @@ tool_lang.prototype.automatic_translation_server = async function(translator, so
 
 
 
-function splitHtmlByParagraph(html) {
+/**
+ * Replace Dédalo tags with placeholders to avoid translation
+ *
+ * @param {string} source_text - Full HTML string
+ * @returns {string} - HTML with Dédalo tags replaced by placeholders
+ */
+function replace_dedalo_tags_with_placeholders(source_text) {
+
+	const tags = [
+		'indexIn',
+		'indexOut',
+		'tc',
+		'svg',
+		'geo',
+		'page',
+		'person',
+		'note',
+		'reference',
+		'lang',
+		'html_style'
+	];
+
+	let safe_source_text = source_text;
+	const placeholders = {};
+	let counter = 0;
+	for (let i = 0; i < tags.length; i++) {
+		const tag = tags[i];
+		const pattern = tr.get_mark_pattern(tag);
+
+		safe_source_text = safe_source_text.replace(pattern, (match) => {
+			const key = `{P${counter}}`;
+			placeholders[key] = match;
+			counter++;
+			return key;
+		});
+
+	}
+
+	return { safe_source_text, placeholders };
+}
+
+
+/**
+ * Restore original Dédalo tags from placeholders after translation
+ *
+ * Reverses the placeholder substitution done by replace_dedalo_tags_with_placeholders.
+ * Each placeholder key (e.g. __PLACEHOLDER_0__) is replaced back with its original
+ * Dédalo tag content in the translated text.
+ *
+ * @param {string} translated_text - Translated text containing placeholders
+ * @param {Object} placeholders    - Map of placeholder keys to original Dédalo tag strings
+ * @returns {string}               - Translated text with original Dédalo tags restored
+ */
+function restore_placeholders(translated_text, placeholders) {
+	return Object.entries(placeholders).reduce(
+		(text, [key, original]) => text.replace(key, original),
+		translated_text
+	);
+}
+
+
+
+/**
+ * Split an HTML string into individual top-level blocks.
+ *
+ * Parses the HTML with DOMParser and extracts each direct child
+ * of <body> as a separate block:
+ *   - Element nodes (nodeType 1) → outerHTML (preserves all tags)
+ *   - Text nodes (nodeType 3)    → textContent (bare text, no wrapper)
+ *
+ * This is the first step before chunking and translation. Each block
+ * keeps its own HTML structure so the translator can preserve it.
+ *
+ * @param {string} html - Full HTML string
+ * @returns {string[]}   - Array of HTML fragments / text segments
+ */
+function split_html_by_paragraph(html) {
 
 	const parser	= new DOMParser();
 	const doc		= parser.parseFromString(html, 'text/html');
@@ -439,13 +526,16 @@ function splitHtmlByParagraph(html) {
 
 	for (const node of doc.body.childNodes) {
 		if (node.nodeType === 1) {
+			// Element node (e.g. <p>, <div>) → keep full HTML with tags
 			blocks.push(node.outerHTML);
 		} else if (node.nodeType === 3) {
+			// Bare text node (outside any element) → push as plain string
 			const text = node.textContent;
 			if (text) blocks.push(text);
 		}
 	}
 
+	// Fallback: if the parser produced nothing, treat the whole input as one block
 	if (blocks.length === 0) {
 		blocks.push(html);
 	}
@@ -454,35 +544,60 @@ function splitHtmlByParagraph(html) {
 }
 
 
-function groupBlocksIntoChunks(html, maxChars = 500) {
-    const blocks = splitHtmlByParagraph(html);
-    const chunks = [];
-    let current = '';
+/**
+ * Group HTML blocks into chunks that fit within a character limit.
+ *
+ * Takes the array of blocks from split_html_by_paragraph and merges
+ * adjacent blocks (separated by \n) as long as the combined length
+ * stays under maxChars. This reduces the number of calls to the
+ * translation model while keeping each chunk short enough for the
+ * model's token window and fast inference.
+ *
+ * @param {string|string[]} html     - Raw HTML string OR array of blocks (pre-split)
+ * @param {number}          maxChars - Soft limit per chunk (default 500)
+ * @returns {string[]}               - Array of chunk strings, each ≤ maxChars
+ *
+ * Edge cases:
+ *   - A single block larger than maxChars is pushed on its own (no splitting).
+ *   - Blocks are concatenated with \n so the model sees paragraph boundaries.
+ */
+function group_blocks_into_chunks(html, maxChars = 1000) {
+	const blocks = split_html_by_paragraph(html);
+	const chunks = [];
+	let current = ''; // accumulator for the chunk being built
 
-    for (const block of blocks) {
-        // If a single block exceeds the limit, it goes alone
-        if (block.length > maxChars) {
-            if (current) {
-                chunks.push(current);
-                current = '';
-            }
-            chunks.push(block);
-            continue;
-        }
+	for (const block of blocks) {
+		// Block too large to share a chunk → flush and push solo
+		if (block.length > maxChars) {
+			if (current) {
+				chunks.push(current);
+				current = '';
+			}
+			chunks.push(block);
+			continue;
+		}
 
-        const candidate = current ? current + '\n' + block : block;
+		// attempt to merge this block with the current accumulator using \n as separator
+		const candidate = current 
+			? current + '\n' + block 
+			: block;
 
-        if (candidate.length <= maxChars) {
-            current = candidate;
-        } else {
-            chunks.push(current);
-            current = block;
-        }
-    }
+		if (candidate.length <= maxChars) {
+			// fits within the limit → extend the current chunk
+			current = candidate;
+		} else {
+			// too large → flush the current chunk and start a new one with this block
+			chunks.push(current);
+			current = block;
+		}
+	}
 
-    if (current) chunks.push(current);
+	// flush any remaining accumulated text
+	if (current){
+		chunks.push(current);
+	}
 
-    return chunks;
+	return chunks;
 }
 
 
