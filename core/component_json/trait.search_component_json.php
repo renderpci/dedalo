@@ -98,7 +98,8 @@ trait search_component_json {
         }
 
         // Set defaults on query_object
-		$query_object->type = 'jsonb';
+        // Because the component data schema is heterogeneous, the search is performed as a string.
+		$query_object->type = 'string';
 
         return $ctx;
     }
