@@ -1387,8 +1387,26 @@ class section_record {
 				// set all component data (including modification metadata)
 				if( $values !== null ) {
 					foreach ($values as $column => $column_data) {
-						foreach ($column_data as $tipo => $data) {
-							$section_record->set_component_data($tipo, $column, $data);
+						if ($column === 'data') {
+							// section metadata
+							$section_record->set_column_data($column, $column_data);
+						}else{
+							// components data
+							foreach ($column_data as $tipo => $data) {
+								if ($data!==null && !is_array($data)) {
+									debug_log(__METHOD__
+										.' Invalid data. Ignored column data (non array|null) ' . PHP_EOL
+										.' column '. $column . PHP_EOL
+										.' tipo '. $tipo . PHP_EOL
+										.' data '. json_encode($data, JSON_PRETTY_PRINT) . PHP_EOL
+										.' data type '. gettype($data) . PHP_EOL
+										.' values: ' . json_encode($values, JSON_PRETTY_PRINT)
+										, logger::ERROR
+									);
+									continue;
+								}
+								$section_record->set_component_data($tipo, $column, $data);
+							}
 						}
 					}
 				}
