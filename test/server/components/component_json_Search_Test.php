@@ -125,7 +125,7 @@ final class component_json_Search_Test extends BaseTestCase {
                 'component_tipo'   => DEDALO_TIME_MACHINE_COLUMN_DATA,
             ]],
             'table_alias'=> $alias,
-            'table'      => 'matrix_time_machine',
+            'table'      => 'matrix_time_machine'
         ];
 
         $query_json = json_decode(json_encode($base));
@@ -136,7 +136,14 @@ final class component_json_Search_Test extends BaseTestCase {
 
         $this->assertNotFalse($from_json);
 
-        $this->assertSame('string', $from_json->type ?? null, 'TM dd1574 search should use string query type');
+        $type = $from_json->type ?? null;
+
+        $this->assertSame(
+            'string',
+            $type,
+            'TM dd1574 search should use string query type. ' . gettype($type) . PHP_EOL
+                . json_encode($from_json, JSON_PRETTY_PRINT)
+        );
 
         $normalize_sentence = static function (string $s) : string {
             return preg_replace('/\s+/', ' ', trim($s));
