@@ -86,7 +86,31 @@ async function translateText(translator, text, sourceLangCode, targetLangCode) {
 					type				: 'text',
 					source_lang_code	: sourceLangCode,
 					target_lang_code	: targetLangCode,
-					text				: text
+					text				: `
+					CRITICAL RULE — PRESERVE PLACEHOLDERS EXACTLY:
+					The text contains placeholders like {P1}, {P2}, {P3}, etc.
+					- DO NOT modify, translate, move, add, or remove any character inside them.
+					- DO NOT change { } to < > or any other symbols.
+					- Output them **verbatim** (exactly as they appear in the input).
+					- Treat them as opaque tokens — as if they were a single invisible character.
+					- They ALWAYS start with { followed by a letter P, followed by digits, followed by }.
+					- Treat them as invisible anchors — they are not text, do not touch them.
+					Examples:
+					Input:  "<p>Hola{P5} ¿como estás{P2}{P3}?</p>"
+					Output: "<p>Hello{P5} how are you{P2}{P3}?</p>"
+
+					Input:  "<p>{P1}{P2}Gracias por tu{P3} \"tiempo{p18}\"{P4}.{P68}{p108}</p>{P10}<p>Saludos</p>"
+					Output: "<p>{P1}{P2}Thank for your{P3} \"time{p18}\"{P4}.{P68}{p108}</p>{P10}<p>Regards</p>"
+
+					Input: "<p>.{P424}{P102}{P749}Buenos días, Carme. Muchas gracias...{P750}&nbsp;</p>"
+					Output: "<p>.{P424}{P102}{P749}Good morning, Carme. Thank you very much...{P750}&nbsp;</p>"
+
+					TASK: Translate the text from ${sourceLangCode} to ${targetLangCode}.
+					- Only translate text, never placeholders or HTML tags.
+					- Don't use markdown syntax.
+					- Test your output: Before returning your answer, verify that every {PN} from the input appears  **identically** in the output.
+					
+					\n\nText to translate:${text}`
 				}
 			]
 		}
