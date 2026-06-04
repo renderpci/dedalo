@@ -102,6 +102,17 @@ private function build_component_instance(
 }
 ```
 
+#### Brace Placement
+- Opening curly braces for methods SHOULD be on the same line as the method declaration
+- This is the dominant Dédalo convention (~98% of codebase) and deviates from PSR-12 (which requires next-line)
+- **Preferred**: `public function update_data_version(object $options): object {`
+- **Also acceptable** (especially in newer files):
+  ```php
+  public function update_data_version(object $options): object
+  {
+  ```
+- Do not mix styles within a single file
+
 #### Documentation Standards
 ```php
 /**
