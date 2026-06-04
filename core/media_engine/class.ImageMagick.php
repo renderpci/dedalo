@@ -631,6 +631,18 @@ final class ImageMagick {
 				return null;
 			}
 
+			// Check for error/warning messages even when exit code is 0
+			// ImageMagick may return success (exit code 0) but output warnings for invalid geometry
+			$output_string = to_string($output);
+			if (stripos($output_string, 'ERROR:')!==false || stripos($output_string, 'geometry does not contain image')!==false) {
+				debug_log(__METHOD__
+					. ' ImageMagick reported error/warning despite success exit code' . PHP_EOL
+					. ' output: ' . $output_string
+					, logger::WARNING
+				);
+				return null;
+			}
+
 		return $result ?: null;
 	}//end crop
 
