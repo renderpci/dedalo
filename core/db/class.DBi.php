@@ -154,6 +154,20 @@ abstract class DBi {
 
 
 	/**
+	* INVALIDATE_CONNECTION_CACHE
+	* Clears the cached PostgreSQL connection and resets the validity timer.
+	* Use after external events (e.g. pg_terminate_backend) may have killed
+	* the underlying backend, to force a fresh connection on next call.
+	* @return void
+	*/
+	public static function invalidate_connection_cache() : void {
+		self::$pg_conn_cache = null;
+		self::$pg_conn_valid_until = 0;
+	}//end invalidate_connection_cache
+
+
+
+	/**
 	* GET_CONNECTION_STRING
 	* Builds a DB connection string
 	* @return string $connection_string
