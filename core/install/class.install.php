@@ -177,6 +177,7 @@ class install extends common {
 			'rsc',			// Dédalo resources
 			'hierarchy',	// Dédalo hierarchies
 			'ontology',		// Dédalo ontology
+			'ontologytype', // Dédalo ontology types (ontologytype15 is always needed)
 			'localontology',// Dédalo local ontology
 			'lg',			// Dédalo langs
 			'oh',			// Oral History
@@ -1132,8 +1133,17 @@ class install extends common {
 			$to_clean_tables	= $config->to_clean_tables;
 			$exec				= true;
 
+		// validate connection
+			if ($db_install_conn === false) {
+				$msg = 'Error: Failed to get install database connection';
+				debug_log(__METHOD__.$msg, logger::ERROR);
+				$response->msg = $msg;
+				return $response;
+			}
+
 		// clean matrix and accessory tables
-			$items = array_map(function($table){
+			$sentences = [];
+			foreach ($to_clean_tables as $table) {
 
 				// CLI msg
 				if ( running_in_cli()===true ) {
@@ -1142,19 +1152,45 @@ class install extends common {
 					]);
 				}
 
-				$sql = 'DELETE FROM "'.$table.'"; ALTER SEQUENCE IF EXISTS '.$table.'_id_seq RESTART WITH 1 ;';
-				if ($table==='matrix_activity') {
-					// add special sequence matrix_activity_section_id_seq
-					$sql .= 'ALTER SEQUENCE IF EXISTS matrix_activity_section_id_seq RESTART WITH 1 ;';
+				switch ($table) {
+					case 'matrix_ontology':
+						$ar_sections = array_map(function($tld){
+							return "'{$tld}0'";
+						}, $config->to_preserve_tld);
+						$sql = 'DELETE FROM "' . $table . '" WHERE section_tipo NOT IN (' . implode(',', $ar_sections) . ');';
+						break;
+
+					case 'matrix_ontology_main':
+						$to_preserve_tld = array_map(function($tld){
+							return "'{$tld}'";
+						}, $config->to_preserve_tld);
+						$sql = " DELETE FROM matrix_ontology_main
+						WHERE NOT EXISTS (
+							SELECT 1
+							FROM jsonb_array_elements_text(datos#>'{components,hierarchy6,dato,lg-nolan}') AS tld_value
+							WHERE tld_value IN (" . implode(',', $to_preserve_tld) . ")
+						)
+						OR datos#>'{components,hierarchy6,dato,lg-nolan}' IS NULL
+						OR jsonb_array_length(datos#>'{components,hierarchy6,dato,lg-nolan}') = 0;";
+						break;
+
+					default:
+						$sql = 'DELETE FROM "' . $table . '"; ALTER SEQUENCE IF EXISTS ' . $table . '_id_seq RESTART WITH 1;';
+						if ($table==='matrix_activity') {
+							// add special sequence matrix_activity_section_id_seq
+							$sql .= 'ALTER SEQUENCE IF EXISTS matrix_activity_section_id_seq RESTART WITH 1;';
+						}
+						break;
 				}
-				return $sql;
-			}, $to_clean_tables);
-			$sql = implode(PHP_EOL, $items);
+
+				$sentences[] = $sql;
+			}
+			$sql = implode(PHP_EOL, $sentences);
 			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (clean tables): ".pg_last_error(DBi::_getConnection());
+					$msg = " Error on db execution (clean tables): ".pg_last_error($db_install_conn);
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 					return $response;
