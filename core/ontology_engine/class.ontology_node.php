@@ -90,6 +90,7 @@ class ontology_node {
 		 * @var array $label_by_tipo_cache
 		 */
 		public static array $label_by_tipo_cache = [];
+		const MAX_LABEL_CACHE_SIZE = 5000;
 
 		/**
 		 * Static cache mapping tipos to their model (component/section type) names.
@@ -902,17 +903,6 @@ class ontology_node {
 	 */
 	public static function get_term_by_tipo( string $tipo, ?string $lang=null, bool $from_cache=true, bool $fallback=true ) : ?string {
 
-		// cache
-		$cache_uid = $tipo . '_' . $lang . '_' . (int)$fallback;
-		if ($from_cache===true && array_key_exists($cache_uid, self::$label_by_tipo_cache)) {
-			return self::$label_by_tipo_cache[$cache_uid];
-		}
-
-		// Safe control: prevent big array memory and performance problems
-		if (count(self::$label_by_tipo_cache) > 2000) {
-			self::$label_by_tipo_cache = [];
-		}
-
 		// Verify : In cases such as, for example, when solving the model of a related term that has no model assigned to it, the tipo will be empty.
 		// This is not a mistake but we must avoid resolving it.
 		if(empty($tipo)) {
@@ -921,6 +911,18 @@ class ontology_node {
 
 		// safe lang fallback
 		$lang = $lang ?? DEDALO_DATA_LANG;
+
+		// cache
+		$cache_uid = $tipo . '_' . $lang . '_' . (int)$fallback;
+		if ($from_cache===true && array_key_exists($cache_uid, self::$label_by_tipo_cache)) {
+			return self::$label_by_tipo_cache[$cache_uid];
+		}
+
+		// Safe control: prevent big array memory and performance problems
+		if (count(self::$label_by_tipo_cache) > self::MAX_LABEL_CACHE_SIZE) {
+			// Keep only the most recent entries
+			self::$label_by_tipo_cache = array_slice(self::$label_by_tipo_cache, -self::MAX_LABEL_CACHE_SIZE, null, true);
+		}
 
 		// term object
 		$ontology_node	= ontology_node::get_instance($tipo);
