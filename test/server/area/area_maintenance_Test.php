@@ -142,6 +142,7 @@ final class area_maintenance_test extends BaseTestCase {
 			'export_hierarchy',
 			'lock_components',
 			'make_backup',
+			'move_lang',
 			'move_locator',
 			'move_tld',
 			'move_to_portal',
@@ -190,7 +191,17 @@ final class area_maintenance_test extends BaseTestCase {
 	public function test_register_tools(): void {
 
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		$response = area_maintenance::register_tools();
+
+		// Use widget class instead of area_maintenance
+		$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/register_tools/class.register_tools.php";
+		$this->assertTrue(
+			file_exists($class_file),
+			'expected register_tools widget class file exists'
+		);
+
+		include_once $class_file;
+
+		$response = register_tools::register_tools();
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
@@ -201,6 +212,16 @@ final class area_maintenance_test extends BaseTestCase {
 		$this->assertTrue(
 			count($response->result)>0,
 			'expected result is not empty '
+		);
+
+		// Test API_ACTIONS constant
+		$this->assertTrue(
+			defined('register_tools::API_ACTIONS'),
+			'expected API_ACTIONS constant defined'
+		);
+		$this->assertTrue(
+			in_array('register_tools', register_tools::API_ACTIONS),
+			'expected register_tools in API_ACTIONS'
 		);
 	}//end test_register_tools
 
@@ -284,5 +305,399 @@ final class area_maintenance_test extends BaseTestCase {
 	    }
 
 
+
+
+
+
+	/**
+	* TEST_MOVE_TLD_WIDGET
+	* Test the move_tld widget class
+	* @return void
+	*/
+	public function test_move_tld_widget(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/move_tld/class.move_tld.php";
+		$this->assertTrue(
+			file_exists($class_file),
+			'expected move_tld widget class file exists'
+		);
+
+		include_once $class_file;
+
+		// Test get_value
+		$result = move_tld::get_value();
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected object from get_value'
+		);
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response'
+		);
+		$this->assertTrue(
+			isset($result->result->files),
+			'expected files property in result'
+		);
+
+		// Test API_ACTIONS constant
+		$this->assertTrue(
+			defined('move_tld::API_ACTIONS'),
+			'expected API_ACTIONS constant defined'
+		);
+		$this->assertTrue(
+			in_array('move_tld', move_tld::API_ACTIONS),
+			'expected move_tld in API_ACTIONS'
+		);
+	}//end test_move_tld_widget
+
+
+
+	/**
+	* TEST_MOVE_LOCATOR_WIDGET
+	* Test the move_locator widget class
+	* @return void
+	*/
+	public function test_move_locator_widget(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/move_locator/class.move_locator.php";
+		$this->assertTrue(
+			file_exists($class_file),
+			'expected move_locator widget class file exists'
+		);
+
+		include_once $class_file;
+
+		// Test get_value
+		$result = move_locator::get_value();
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected object from get_value'
+		);
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response'
+		);
+		$this->assertTrue(
+			isset($result->result->files),
+			'expected files property in result'
+		);
+
+		// Test API_ACTIONS constant
+		$this->assertTrue(
+			defined('move_locator::API_ACTIONS'),
+			'expected API_ACTIONS constant defined'
+		);
+		$this->assertTrue(
+			in_array('move_locator', move_locator::API_ACTIONS),
+			'expected move_locator in API_ACTIONS'
+		);
+	}//end test_move_locator_widget
+
+
+
+	/**
+	* TEST_MOVE_TO_PORTAL_WIDGET
+	* Test the move_to_portal widget class
+	* @return void
+	*/
+	public function test_move_to_portal_widget(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/move_to_portal/class.move_to_portal.php";
+		$this->assertTrue(
+			file_exists($class_file),
+			'expected move_to_portal widget class file exists'
+		);
+
+		include_once $class_file;
+
+		// Test get_value
+		$result = move_to_portal::get_value();
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected object from get_value'
+		);
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response'
+		);
+		$this->assertTrue(
+			isset($result->result->files),
+			'expected files property in result'
+		);
+
+		// Test API_ACTIONS constant
+		$this->assertTrue(
+			defined('move_to_portal::API_ACTIONS'),
+			'expected API_ACTIONS constant defined'
+		);
+		$this->assertTrue(
+			in_array('move_to_portal', move_to_portal::API_ACTIONS),
+			'expected move_to_portal in API_ACTIONS'
+		);
+	}//end test_move_to_portal_widget
+
+
+
+	/**
+	* TEST_MOVE_TO_TABLE_WIDGET
+	* Test the move_to_table widget class
+	* @return void
+	*/
+	public function test_move_to_table_widget(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/move_to_table/class.move_to_table.php";
+		$this->assertTrue(
+			file_exists($class_file),
+			'expected move_to_table widget class file exists'
+		);
+
+		include_once $class_file;
+
+		// Test get_value
+		$result = move_to_table::get_value();
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected object from get_value'
+		);
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response'
+		);
+		$this->assertTrue(
+			isset($result->result->files),
+			'expected files property in result'
+		);
+
+		// Test API_ACTIONS constant
+		$this->assertTrue(
+			defined('move_to_table::API_ACTIONS'),
+			'expected API_ACTIONS constant defined'
+		);
+		$this->assertTrue(
+			in_array('move_to_table', move_to_table::API_ACTIONS),
+			'expected move_to_table in API_ACTIONS'
+		);
+	}//end test_move_to_table_widget
+
+
+
+	/**
+	* TEST_MOVE_LANG_WIDGET
+	* Test the move_lang widget class
+	* @return void
+	*/
+	public function test_move_lang_widget(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/move_lang/class.move_lang.php";
+		$this->assertTrue(
+			file_exists($class_file),
+			'expected move_lang widget class file exists'
+		);
+
+		include_once $class_file;
+
+		// Test get_value
+		$result = move_lang::get_value();
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected object from get_value'
+		);
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response'
+		);
+		$this->assertTrue(
+			isset($result->result->files),
+			'expected files property in result'
+		);
+
+		// Test API_ACTIONS constant
+		$this->assertTrue(
+			defined('move_lang::API_ACTIONS'),
+			'expected API_ACTIONS constant defined'
+		);
+		$this->assertTrue(
+			in_array('move_lang', move_lang::API_ACTIONS),
+			'expected move_lang in API_ACTIONS'
+		);
+	}//end test_move_lang_widget
+
+
+
+	/**
+	* TEST_UPDATE_ONTOLOGY_WIDGET
+	* Test the update_ontology widget class
+	* @return void
+	*/
+	public function test_update_ontology_widget(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/update_ontology/class.update_ontology.php";
+		$this->assertTrue(
+			file_exists($class_file),
+			'expected update_ontology widget class file exists'
+		);
+
+		include_once $class_file;
+
+		// Test get_value
+		$result = update_ontology::get_value();
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected object from get_value'
+		);
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response'
+		);
+
+		// Test API_ACTIONS constant
+		$this->assertTrue(
+			defined('update_ontology::API_ACTIONS'),
+			'expected API_ACTIONS constant defined'
+		);
+		$this->assertTrue(
+			in_array('update_ontology', update_ontology::API_ACTIONS),
+			'expected update_ontology in API_ACTIONS'
+		);
+		$this->assertTrue(
+			in_array('export_to_translate', update_ontology::API_ACTIONS),
+			'expected export_to_translate in API_ACTIONS'
+		);
+	}//end test_update_ontology_widget
+
+
+
+	/**
+	* TEST_BUILD_DATABASE_VERSION_WIDGET
+	* Test the build_database_version widget class
+	* @return void
+	*/
+	public function test_build_database_version_widget(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/build_database_version/class.build_database_version.php";
+		$this->assertTrue(
+			file_exists($class_file),
+			'expected build_database_version widget class file exists'
+		);
+
+		include_once $class_file;
+
+		// Test get_value
+		$result = build_database_version::get_value();
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected object from get_value'
+		);
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response'
+		);
+
+		// Test API_ACTIONS constant
+		$this->assertTrue(
+			defined('build_database_version::API_ACTIONS'),
+			'expected API_ACTIONS constant defined'
+		);
+		$this->assertTrue(
+			in_array('build_install_version', build_database_version::API_ACTIONS),
+			'expected build_install_version in API_ACTIONS'
+		);
+	}//end test_build_database_version_widget
+
+
+
+	/**
+	* TEST_UPDATE_DATA_VERSION_WIDGET
+	* Test the update_data_version widget class
+	* @return void
+	*/
+	public function test_update_data_version_widget(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/update_data_version/class.update_data_version.php";
+		$this->assertTrue(
+			file_exists($class_file),
+			'expected update_data_version widget class file exists'
+		);
+
+		include_once $class_file;
+
+		// Test get_value
+		$result = update_data_version::get_value();
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected object from get_value'
+		);
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response'
+		);
+
+		// Test API_ACTIONS constant
+		$this->assertTrue(
+			defined('update_data_version::API_ACTIONS'),
+			'expected API_ACTIONS constant defined'
+		);
+		$this->assertTrue(
+			in_array('update_data_version', update_data_version::API_ACTIONS),
+			'expected update_data_version in API_ACTIONS'
+		);
+	}//end test_update_data_version_widget
+
+
+
+	/**
+	* TEST_CHECK_CONFIG_WIDGET
+	* Test the check_config widget class
+	* @return void
+	*/
+	public function test_check_config_widget(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$class_file = DEDALO_CORE_PATH . "/area_maintenance/widgets/check_config/class.check_config.php";
+		$this->assertTrue(
+			file_exists($class_file),
+			'expected check_config widget class file exists'
+		);
+
+		include_once $class_file;
+
+		// Test get_value
+		$result = check_config::get_value();
+		$this->assertTrue(
+			gettype($result)==='object',
+			'expected object from get_value'
+		);
+		$this->assertTrue(
+			isset($result->result),
+			'expected result property in response'
+		);
+
+		// Test API_ACTIONS constant
+		$this->assertTrue(
+			defined('check_config::API_ACTIONS'),
+			'expected API_ACTIONS constant defined'
+		);
+		$this->assertTrue(
+			is_array(check_config::API_ACTIONS),
+			'expected API_ACTIONS to be array'
+		);
+	}//end test_check_config_widget
 
 }//end class area_maintenance_test

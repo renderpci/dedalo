@@ -67,10 +67,12 @@ move_to_portal.prototype.exec_move_to_portal = async (files_selected) => {
 	const response = await data_manager.request({
 		body : {
 			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
+			action			: 'widget_request',
 			prevent_lock	: true,
 			source			: {
-				action	: 'move_to_portal',
+				type	: 'widget',
+				model	: 'move_to_portal',
+				action	: 'move_to_portal'
 			},
 			options : {
 				background_running	: true, // set run in background CLI

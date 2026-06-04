@@ -67,10 +67,12 @@ move_locator.prototype.exec_move_locator = async (files_selected) => {
 	const response = await data_manager.request({
 		body		: {
 			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
+			action			: 'widget_request',
 			prevent_lock	: true,
 			source			: {
-				action	: 'move_locator',
+				type	: 'widget',
+				model	: 'move_locator',
+				action	: 'move_locator'
 			},
 			options : {
 				background_running	: true, // set run in background CLI

@@ -177,9 +177,15 @@ const render_build_install_version = function (self, value) {
 			// build_install_version
 			const api_response = await self.build_install_version()
 
+			// debug
+			if (SHOW_DEBUG) {
+				console.log('----> build_install_version api_response', api_response);
+			}
+
 			button_process.classList.remove('loading')
 
 			update_process_status(
+				'build_database_version',
 				api_response.pid,
 				api_response.pfile,
 				process_response

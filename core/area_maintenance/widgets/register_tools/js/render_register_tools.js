@@ -156,8 +156,11 @@ const render_content_data = async function(self) {
 				body_response	: body_response,
 				trigger : {
 					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
+					action	: 'widget_request',
+					prevent_lock	: true,
 					source	: {
+						type	: 'widget',
+						model	: 'register_tools',
 						action : 'register_tools'
 					},
 					options	: {}

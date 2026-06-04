@@ -59,12 +59,12 @@ export const build_database_version = function() {
 * @param bool autoload = false
 * @return bool
 */
-build_database_version.prototype.build = async function(autoload=false) {
+build_database_version.prototype.build = async function (autoload = false) {
 
 	const self = this
 
 	// call generic common tool build
-		const common_build = await widget_common.prototype.build.call(this, autoload);
+	const common_build = await widget_common.prototype.build.call(this, autoload);
 
 	try {
 
@@ -89,20 +89,22 @@ build_database_version.prototype.build = async function(autoload=false) {
 */
 build_database_version.prototype.build_install_version = async function () {
 
-	const api_response  = await data_manager.request({
-		body : {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
-			prevent_lock	: true,
-			source			: {
-				action : 'build_install_version',
+	const api_response = await data_manager.request({
+		body: {
+			dd_api: 'dd_area_maintenance_api',
+			action: 'widget_request',
+			prevent_lock: true,
+			source: {
+				type: 'widget',
+				model: 'build_database_version',
+				action: 'build_install_version'
 			},
-			options			: {
-				background_running	: true // set run in background CLI
+			options: {
+				background_running: true // set run in background CLI
 			}
 		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
+		retries: 1, // one try only
+		timeout: 3600 * 1000 // 1 hour waiting response
 	})
 
 
@@ -118,20 +120,23 @@ build_database_version.prototype.build_install_version = async function () {
 */
 build_database_version.prototype.build_recovery_version_file = async function () {
 
-	const api_response  = await data_manager.request({
-		body : {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
-			prevent_lock	: true,
-			source			: {
-				action	: 'build_recovery_version_file',
+	const api_response = await data_manager.request({
+		use_worker: true,
+		body: {
+			dd_api: 'dd_area_maintenance_api',
+			action: 'widget_request',
+			prevent_lock: true,
+			source: {
+				type: 'widget',
+				model: 'build_database_version',
+				action: 'build_recovery_version_file'
 			},
-			options : {
-				background_running	: false // set run in background CLI
+			options: {
+				background_running: false // set run in background CLI
 			}
 		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
+		retries: 1, // one try only
+		timeout: 3600 * 1000 // 1 hour waiting response
 	})
 
 
@@ -148,20 +153,20 @@ build_database_version.prototype.build_recovery_version_file = async function ()
 */
 build_database_version.prototype.restore_dd_ontology_recovery_from_file = async function () {
 
-	const api_response  = await data_manager.request({
-		body : {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
-			prevent_lock	: true,
-			source			: {
-				action : 'restore_dd_ontology_recovery_from_file',
+	const api_response = await data_manager.request({
+		body: {
+			dd_api: 'dd_area_maintenance_api',
+			action: 'class_request',
+			prevent_lock: true,
+			source: {
+				action: 'restore_dd_ontology_recovery_from_file',
 			},
-			options : {
-				background_running	: false // set run in background CLI
+			options: {
+				background_running: false // set run in background CLI
 			}
 		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
+		retries: 1, // one try only
+		timeout: 3600 * 1000 // 1 hour waiting response
 	})
 
 

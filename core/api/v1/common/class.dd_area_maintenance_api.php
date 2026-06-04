@@ -278,7 +278,7 @@ final class dd_area_maintenance_api {
 						$cli_options = new stdClass();
 							$cli_options->class_name	= $class_name;
 							$cli_options->method_name	= $class_method;
-							$cli_options->class_file	= null; // already loaded by loader
+							$cli_options->class_file	= $widget_class_file;
 							$cli_options->params		= $options;
 
 						$fn_result = exec_::request_cli($cli_options);

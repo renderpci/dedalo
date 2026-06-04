@@ -1,76 +1,61 @@
 <?php declare(strict_types=1);
 /**
-* AREA_MAINTENANCE
-* System administrator's area with useful methods to
-* backup, review data, update Ontology, etc.
-* @see API entry point dd_area_maintenance_api.class
-*/
+ * AREA_MAINTENANCE
+ * System administrator's area with useful methods to
+ * backup, review data, update Ontology, etc.
+ * @see API entry point dd_area_maintenance_api.class
+ */
 class area_maintenance extends area_common {
 
 
 
 	/**
-	* SEC-024 / §9.1b: explicit allowlist of methods callable from CLI via
-	* `process_runner.php` (spawned by `exec_::request_cli` when the
-	* `dd_area_maintenance_api::class_request` caller passes
-	* `background_running:true`). Without this constant `process_runner`
-	* falls back to "any public-static method on the class is callable",
-	* exposing every helper on this class to background invocation.
-	*
-	* Only widgets that pass `background_running:true` from JS are listed
-	* (verified by grepping `background_running\s*:\s*true` under
-	* `core/area_maintenance/widgets/`). Synchronous-only widget actions
-	* (e.g. `update_ontology`, `set_maintenance_mode`, `register_tools`)
-	* are intentionally absent — they execute inside the request thread
-	* and never reach `process_runner`.
-	*
-	* @see core/base/process_runner.php
-	* @see core/api/v1/common/class.dd_area_maintenance_api.php
-	*/
+	 * SEC-024 / §9.1b: explicit allowlist of methods callable from CLI via
+	 * `process_runner.php` (spawned by `exec_::request_cli` when the
+	 * `dd_area_maintenance_api::class_request` caller passes
+	 * `background_running:true`). Without this constant `process_runner`
+	 * falls back to "any public-static method on the class is callable",
+	 * exposing every helper on this class to background invocation.
+	 *
+	 * Only widgets that pass `background_running:true` from JS are listed
+	 * (verified by grepping `background_running\s*:\s*true` under
+	 * `core/area_maintenance/widgets/`). Synchronous-only widget actions
+	 * (e.g. `update_ontology`, `set_maintenance_mode`, `register_tools`)
+	 * are intentionally absent — they execute inside the request thread
+	 * and never reach `process_runner`.
+	 *
+	 * @see core/base/process_runner.php
+	 * @see core/api/v1/common/class.dd_area_maintenance_api.php
+	 */
 	public const array BACKGROUND_RUNNABLE = [
-		'build_install_version',
 		'update_data_version',
 		'long_process_stream',
-		'move_tld',
-		'move_to_portal',
-		'move_to_table',
-		'move_lang',
-		'move_locator'
 	];
 
 
 
 	/**
-	* SEC-044: explicit allowlist of methods callable through
-	* `dd_area_maintenance_api::class_request` (synchronous OR async).
-	* Without this constant, `class_request` falls back to "any public-static
-	* method on the class", exposing every helper on this class
-	* (`get_file_constants`, `get_definitions_files`, `set_maintenance_mode`,
-	* `set_recovery_mode`, `restore_dd_ontology_recovery_from_file`, …) to
-	* invocation by anyone with maintenance-area write.
-	*
-	* The list below is derived by grepping `dd_area_maintenance_api` and
-	* `action: 'class_request'` under the area_maintenance widgets JS tree
-	* and `core/component_security_access/`. Adding a new JS caller
-	* requires extending this list; the failure mode is an explicit
-	* `permissions error` response visible in the dev console.
-	*
-	* `widget_request` uses the same gate against the dispatched widget
-	* class's own `API_ACTIONS` (rolled out per-widget in a follow-up).
-	*/
+	 * SEC-044: explicit allowlist of methods callable through
+	 * `dd_area_maintenance_api::class_request` (synchronous OR async).
+	 * Without this constant, `class_request` falls back to "any public-static
+	 * method on the class", exposing every helper on this class
+	 * (`get_file_constants`, `get_definitions_files`, `set_maintenance_mode`,
+	 * `set_recovery_mode`, `restore_dd_ontology_recovery_from_file`, …) to
+	 * invocation by anyone with maintenance-area write.
+	 *
+	 * The list below is derived by grepping `dd_area_maintenance_api` and
+	 * `action: 'class_request'` under the area_maintenance widgets JS tree
+	 * and `core/component_security_access/`. Adding a new JS caller
+	 * requires extending this list; the failure mode is an explicit
+	 * `permissions error` response visible in the dev console.
+	 *
+	 * `widget_request` uses the same gate against the dispatched widget
+	 * class's own `API_ACTIONS` (rolled out per-widget in a follow-up).
+	 */
 	public const array API_ACTIONS = [
-		'build_install_version',
 		'create_test_record',
 		'long_process_stream',
-		'move_lang',
-		'move_locator',
-		'move_tld',
-		'move_to_portal',
-		'move_to_table',
-		'rebuild_lang_files',
-		'register_tools',
-		'update_data_version',
-		'update_ontology'
+		'rebuild_lang_files'
 	];
 
 
@@ -82,273 +67,272 @@ class area_maintenance extends area_common {
 	 * @return array $ar_widgets Widget objects. Each widget has a unique ID, name (string), code snippet in JavaScript.
 	 *	Array of widget objects
 	 */
-	public function get_ar_widgets() : array {
+	public function get_ar_widgets(): array {
 
 		$ar_widgets = [];
 
 		// make_backup *
-			$item = new stdClass();
-				$item->id		= 'make_backup';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('make_backup') ?? 'Make backup';
-			$ar_widgets[] = $this->widget_factory($item);
-
-		// update_ontology *
-			$item = new stdClass();
-				$item->id		= 'update_ontology';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('update_ontology') ?? 'Update Ontology';
-			$ar_widgets[] = $this->widget_factory($item);
-
-		// register_tools *
-			$item = new stdClass();
-				$item->id		= 'register_tools';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('registrar_herramientas');
-			$ar_widgets[] = $this->widget_factory($item);
-
-		// move_tld
-			$item = new stdClass();
-				$item->id		= 'move_tld';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('move_tld') ?? 'Move TLD';
-				$item->value	= (object)[
-					'body' => 'Move TLD defined map items from source (ex. numisdata279) to target (ex. tchi1).<br>
-							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_tld.<br>
-							   Note: this can be a very long process because it has to go through all the records in all the tables.',
-					'files' => area_maintenance::get_definitions_files( 'move_tld' )
-				];
-			$ar_widgets[] = $this->widget_factory($item);
-
-		// move_locator
-			$item = new stdClass();
-				$item->id		= 'move_locator';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('move_locator') ?? 'Move locator';
-				$item->value	= (object)[
-					'body' => 'Move locator defined map items from source (ex. rsc194) to target (ex. rsc197) adding new section_id based in the last section_id of destiny.<br>
-							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_locator.<br>
-							   Note: this can be a very long process because it has to go through all the records in all the tables.',
-					'files' => area_maintenance::get_definitions_files( 'move_locator' )
-				];
-			$ar_widgets[] = $this->widget_factory($item);
-
-		// move_to_portal
-			$item = new stdClass();
-				$item->id		= 'move_to_portal';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('move_to_portal') ?? 'Move to portal';
-				$item->value	= (object)[
-					'body' => 'Move data from a section to another linked section and link together with a portal (e.g. "Use and function" components behind qdp443 to section rsc1340).<br>
-							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_portal.<br>
-							   Note: this can be a very long process because it has to go through all the records in all the tables.',
-					'files' => area_maintenance::get_definitions_files( 'move_to_portal' )
-				];
-			$ar_widgets[] = $this->widget_factory($item);
-
-		// move_to_table
-			$item = new stdClass();
-				$item->id		= 'move_to_table';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('move_to_table') ?? 'Move to table';
-				$item->value	= (object)[
-					'body' => 'Move data from a table to another (e.g. move utoponymy1 to matrix_hierarchy).<br>
-							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_table.<br>',
-					'files' => area_maintenance::get_definitions_files( 'move_to_table' )
-				];
-			$ar_widgets[] = $this->widget_factory($item);
-
-		// move_lang
-			$item = new stdClass();
-				$item->id		= 'move_lang';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('move_lang') ??  'Move LANG';
-				$item->value	= (object)[
-					'body' => 'Convert map items (e.g., hierarchy89) between translatable and non-translatable components (or vice-versa).<br>
-							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_lang.<br>
-							   Note: This process can be very time-consuming, as it iterates through all relevant records in the database.',
-					'files' => area_maintenance::get_definitions_files( 'move_lang' )
-				];
-			$ar_widgets[] = $this->widget_factory($item);
-
-		// build_database_version *
-			$item = new stdClass();
-				$item->id		= 'build_database_version';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('build_database_version') ?? 'Build database version';
-			$ar_widgets[] = $this->widget_factory($item);
-
-		// update_data_version *
-			$item = new stdClass();
-				$item->id		= 'update_data_version';
-				$item->class	= 'success width_100';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('update').' '.label::get_label('data');
-			$ar_widgets[] = $this->widget_factory($item);
-
-		// update_code *
-			$item = new stdClass();
-				$item->id		= 'update_code';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('update') .' '. label::get_label('code');
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'make_backup';
+		$item->type = 'widget';
+		$item->label = label::get_label('make_backup') ?? 'Make backup';
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// check_config *
-			$item = new stdClass();
-				$item->id		= 'check_config';
-				$item->class	= 'success';
-				$item->type		= 'widget';
-				$item->label	= label::get_label('check_config') ?? 'Check config';
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'check_config';
+		$item->class = 'success';
+		$item->type = 'widget';
+		$item->label = label::get_label('check_config') ?? 'Check config';
+		$ar_widgets[] = $this->widget_factory($item);
+
+		// update_ontology *
+		$item = new stdClass();
+		$item->id = 'update_ontology';
+		$item->type = 'widget';
+		$item->label = label::get_label('update_ontology') ?? 'Update Ontology';
+		$ar_widgets[] = $this->widget_factory($item);
+
+		// register_tools *
+		$item = new stdClass();
+		$item->id = 'register_tools';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = label::get_label('registrar_herramientas');
+		$ar_widgets[] = $this->widget_factory($item);
+
+		// move_tld
+		$item = new stdClass();
+		$item->id = 'move_tld';
+		$item->type = 'widget';
+		$item->label = label::get_label('move_tld') ?? 'Move TLD';
+		$item->value = (object) [
+			'body' => 'Move TLD defined map items from source (ex. numisdata279) to target (ex. tchi1).<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_tld.<br>
+							   Note: this can be a very long process because it has to go through all the records in all the tables.',
+			'files' => area_maintenance::get_definitions_files('move_tld')
+		];
+		$ar_widgets[] = $this->widget_factory($item);
+
+		$item = new stdClass();
+		$item->id = 'move_locator';
+		$item->type = 'widget';
+		$item->label = label::get_label('move_locator') ?? 'Move locator';
+		$item->value = (object) [
+			'body' => 'Move locator defined map items from source (ex. rsc194) to target (ex. rsc197) adding new section_id based in the last section_id of destiny.<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_locator.<br>
+							   Note: this can be a very long process because it has to go through all the records in all the tables.',
+			'files' => area_maintenance::get_definitions_files('move_locator')
+		];
+		$ar_widgets[] = $this->widget_factory($item);
+
+		// move_to_portal
+		$item = new stdClass();
+		$item->id = 'move_to_portal';
+		$item->type = 'widget';
+		$item->label = label::get_label('move_to_portal') ?? 'Move to portal';
+		$item->value = (object) [
+			'body' => 'Move data from a section to another linked section and link together with a portal (e.g. "Use and function" components behind qdp443 to section rsc1340).<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_portal.<br>
+							   Note: this can be a very long process because it has to go through all the records in all the tables.',
+			'files' => area_maintenance::get_definitions_files('move_to_portal')
+		];
+		$ar_widgets[] = $this->widget_factory($item);
+
+		// move_to_table
+		$item = new stdClass();
+		$item->id = 'move_to_table';
+		$item->type = 'widget';
+		$item->label = label::get_label('move_to_table') ?? 'Move to table';
+		$item->value = (object) [
+			'body' => 'Move data from a table to another (e.g. move utoponymy1 to matrix_hierarchy).<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_to_table.<br>',
+			'files' => area_maintenance::get_definitions_files('move_to_table')
+		];
+		$ar_widgets[] = $this->widget_factory($item);
+
+		// move_lang
+		$item = new stdClass();
+		$item->id = 'move_lang';
+		$item->type = 'widget';
+		$item->label = label::get_label('move_lang') ?? 'Move LANG';
+		$item->value = (object) [
+			'body' => 'Convert map items (e.g., hierarchy89) between translatable and non-translatable components (or vice-versa).<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files/move_lang.<br>
+							   Note: This process can be very time-consuming, as it iterates through all relevant records in the database.',
+			'files' => area_maintenance::get_definitions_files('move_lang')
+		];
+		$ar_widgets[] = $this->widget_factory($item);
+
+		// build_database_version *
+		$item = new stdClass();
+		$item->id = 'build_database_version';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = label::get_label('build_database_version') ?? 'Build database version';
+		$ar_widgets[] = $this->widget_factory($item);
+
+		// update_data_version *
+		$item = new stdClass();
+		$item->id = 'update_data_version';
+		$item->class = 'success width_100';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = label::get_label('update') . ' ' . label::get_label('data');
+		$ar_widgets[] = $this->widget_factory($item);
+
+		// update_code *
+		$item = new stdClass();
+		$item->id = 'update_code';
+		$item->type = 'widget';
+		$item->label = label::get_label('update') . ' ' . label::get_label('code');
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// export_hierarchy *
-			$item = new stdClass();
-				$item->id		= 'export_hierarchy';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('export_hierarchy') ?? 'Export hierarchy';
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'export_hierarchy';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = label::get_label('export_hierarchy') ?? 'Export hierarchy';
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// publication_api *
-			$item = new stdClass();
-				$item->id		= 'publication_api';
-				$item->type		= 'widget';
-				$item->label	= 'Publication server API';
-				$item->value	= (object)[
-					'dedalo_diffusion_domain'			=> DEDALO_DIFFUSION_DOMAIN,
-					'dedalo_diffusion_resolve_levels'	=> DEDALO_DIFFUSION_RESOLVE_LEVELS,
-					'api_web_user_code_multiple'		=> API_WEB_USER_CODE_MULTIPLE,
-					'dedalo_diffusion_langs'			=> DEDALO_DIFFUSION_LANGS,
-					'diffusion_map'						=> diffusion::get_diffusion_map(
-						DEDALO_DIFFUSION_DOMAIN,
-						true // bool connection_status
-					)
-				];
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'publication_api';
+		$item->type = 'widget';
+		$item->label = 'Publication server API';
+		$item->value = (object) [
+			'dedalo_diffusion_domain' => DEDALO_DIFFUSION_DOMAIN,
+			'dedalo_diffusion_resolve_levels' => DEDALO_DIFFUSION_RESOLVE_LEVELS,
+			'api_web_user_code_multiple' => API_WEB_USER_CODE_MULTIPLE,
+			'dedalo_diffusion_langs' => DEDALO_DIFFUSION_LANGS,
+			'diffusion_map' => diffusion::get_diffusion_map(
+				DEDALO_DIFFUSION_DOMAIN,
+				true // bool connection_status
+			)
+		];
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// add_hierarchy *
-			$item = new stdClass();
-				$item->id		= 'add_hierarchy';
-				$item->type		= 'widget';
-				$item->class	= 'success width_100';
-				$item->label	= label::get_label('instalar') .' '. label::get_label('jerarquias');
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'add_hierarchy';
+		$item->type = 'widget';
+		$item->class = 'success width_100';
+		$item->label = label::get_label('instalar') . ' ' . label::get_label('jerarquias');
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// dedalo_api_test_environment *
-			$item = new stdClass();
-				$item->id		= 'dedalo_api_test_environment';
-				$item->class	= 'green fit width_100';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= 'DÉDALO API TEST ENVIRONMENT';
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'dedalo_api_test_environment';
+		$item->class = 'green fit width_100';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = 'DÉDALO API TEST ENVIRONMENT';
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// sqo_test_environment *
-			$item = new stdClass();
-				$item->id		= 'sqo_test_environment';
-				$item->class	= 'blue fit width_100';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= 'SEARCH QUERY OBJECT TEST ENVIRONMENT';
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'sqo_test_environment';
+		$item->class = 'blue fit width_100';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = 'SEARCH QUERY OBJECT TEST ENVIRONMENT';
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// lock_components *
-			$item = new stdClass();
-				$item->id		= 'lock_components';
-				$item->class	= 'width_100';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= 'Lock components status';
-				$item->value	= (object)[
-					'active_users' => (object)[ // mimic api response object
-						'result'			=> true,
-						'ar_user_actions'	=> []
-					]
-				];
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'lock_components';
+		$item->class = 'width_100';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = 'Lock components status';
+		$item->value = (object) [
+			'active_users' => (object) [ // mimic api response object
+				'result' => true,
+				'ar_user_actions' => []
+			]
+		];
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// php_user *
-			$php_user_info		= system::get_php_user_info();
-			$php_error_log_path	= system::get_error_log_path();
-			$item = new stdClass();
-				$item->id		= 'php_user';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= 'PHP USER';
-				$item->value	= (object)[
-					'info' => $php_user_info,
-					'php_error_log_path' => $php_error_log_path,
-					'php_session_path' => session_save_path()
-				];
-			$ar_widgets[] = $this->widget_factory($item);
+		$php_user_info = system::get_php_user_info();
+		$php_error_log_path = system::get_error_log_path();
+		$item = new stdClass();
+		$item->id = 'php_user';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = 'PHP USER';
+		$item->value = (object) [
+			'info' => $php_user_info,
+			'php_error_log_path' => $php_error_log_path,
+			'php_session_path' => session_save_path()
+		];
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// database_info *
-			$item = new stdClass();
-				$item->id		= 'database_info';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= 'DATABASE INFO';
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'database_info';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = 'DATABASE INFO';
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// environment *
-			$item = new stdClass();
-				$item->id		= 'environment';
-				$item->type		= 'widget';
-				$item->label	= 'Environment';
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'environment';
+		$item->type = 'widget';
+		$item->label = 'Environment';
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// unit_test *
-			$item = new stdClass();
-				$item->id		= 'unit_test';
-				$item->type		= 'widget';
-				$item->label	= 'Unit test area';
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'unit_test';
+		$item->type = 'widget';
+		$item->label = 'Unit test area';
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// sequences_status *
-			$response = db_tasks::check_sequences();
-			$item = new stdClass();
-				$item->id		= 'sequences_status';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= 'DB SEQUENCES STATUS';
-				$item->value	= $response;
-			$ar_widgets[] = $this->widget_factory($item);
+		$response = db_tasks::check_sequences();
+		$item = new stdClass();
+		$item->id = 'sequences_status';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = 'DB SEQUENCES STATUS';
+		$item->value = $response;
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// counters_status *
-			$item = new stdClass();
-				$item->id		= 'counters_status';
-				$item->class	= 'width_100';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= 'DEDALO COUNTERS STATUS';
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'counters_status';
+		$item->class = 'width_100';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = 'DEDALO COUNTERS STATUS';
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// php_info *
-			$item = new stdClass();
-				$item->id		= 'php_info';
-				$item->class	= 'violet fit width_100';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= 'PHP INFO';
-				$item->value	= (object)[
-					'src' => DEDALO_CORE_URL.'/area_maintenance/widgets/php_info/php_info.php'
-				];
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'php_info';
+		$item->class = 'violet fit width_100';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = 'PHP INFO';
+		$item->value = (object) [
+			'src' => DEDALO_CORE_URL . '/area_maintenance/widgets/php_info/php_info.php'
+		];
+		$ar_widgets[] = $this->widget_factory($item);
 
 		// system_info *
-			$item = new stdClass();
-				$item->id		= 'system_info';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= 'SYSTEM INFO';
-				$item->class	= 'width_100';
-				$item->value	= (object)[
-					'src' => DEDALO_CORE_URL.'/area_maintenance/system_info.php'
-				];
-			$ar_widgets[] = $this->widget_factory($item);
+		$item = new stdClass();
+		$item->id = 'system_info';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = 'SYSTEM INFO';
+		$item->class = 'width_100';
+		$item->value = (object) [
+			'src' => DEDALO_CORE_URL . '/area_maintenance/system_info.php'
+		];
+		$ar_widgets[] = $this->widget_factory($item);
 
 
 		return $ar_widgets;
@@ -357,25 +341,25 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* WIDGET_FACTORY
-	* Unified way to create an area-development widget.
-	* @param object $item
-	* @return object $widget
-	*/
-	public function widget_factory(object $item) : object {
+	 * WIDGET_FACTORY
+	 * Unified way to create an area-development widget.
+	 * @param object $item
+	 * @return object $widget
+	 */
+	public function widget_factory(object $item): object {
 
 		$widget = new stdClass();
-			$widget->id			= $item->id;
-			$widget->class		= $item->class ?? null;
-			$widget->type		= 'widget';
-			$widget->tipo		= $item->tipo ?? $this->tipo;
-			$widget->parent		= $item->parent ?? $this->tipo;
-			$widget->label		= $item->label ?? 'Undefined label for: '.$this->tipo;
-			$widget->info		= $item->info ?? null;
-			$widget->body		= $item->body  ?? null;
-			$widget->run		= $item->run ?? [];
-			$widget->trigger	= $item->trigger ?? null;
-			$widget->value		= $item->value ?? null;
+		$widget->id = $item->id;
+		$widget->class = $item->class ?? null;
+		$widget->type = 'widget';
+		$widget->tipo = $item->tipo ?? $this->tipo;
+		$widget->parent = $item->parent ?? $this->tipo;
+		$widget->label = $item->label ?? 'Undefined label for: ' . $this->tipo;
+		$widget->info = $item->info ?? null;
+		$widget->body = $item->body ?? null;
+		$widget->run = $item->run ?? [];
+		$widget->trigger = $item->trigger ?? null;
+		$widget->value = $item->value ?? null;
 
 
 		return $widget;
@@ -384,13 +368,13 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* GET_FILE_CONSTANTS
-	* Get all config file constants using a regex
-	* @param string $file
-	* 	full file path like DEDALO_CONFIG_PATH . '/sample.config.php'
-	* @return array $constants_list
-	*/
-	public static function get_file_constants(string $file) : array {
+	 * GET_FILE_CONSTANTS
+	 * Get all config file constants using a regex
+	 * @param string $file
+	 * 	full file path like DEDALO_CONFIG_PATH . '/sample.config.php'
+	 * @return array $constants_list
+	 */
+	public static function get_file_constants(string $file): array {
 
 		// SEC-069: realpath containment. Every current caller passes a path
 		// built from DEDALO_CONFIG_PATH, but this method is public-static and
@@ -402,7 +386,7 @@ class area_maintenance extends area_common {
 		}
 		$allowed_roots = array_filter([
 			defined('DEDALO_CONFIG_PATH') ? realpath(DEDALO_CONFIG_PATH) : null,
-			defined('DEDALO_CORE_PATH')   ? realpath(DEDALO_CORE_PATH)   : null,
+			defined('DEDALO_CORE_PATH') ? realpath(DEDALO_CORE_PATH) : null,
 		]);
 		$inside = false;
 		foreach ($allowed_roots as $root) {
@@ -412,15 +396,17 @@ class area_maintenance extends area_common {
 			}
 		}
 		if (!$inside) {
-			debug_log(__METHOD__
-				. ' Refused to read file outside allowed roots: '. to_string($file)
-				, logger::ERROR
+			debug_log(
+				__METHOD__
+				. ' Refused to read file outside allowed roots: ' . to_string($file)
+				,
+				logger::ERROR
 			);
 			return [];
 		}
 
 		$input_lines = file_get_contents($real);
-		if(empty($input_lines)) {
+		if (empty($input_lines)) {
 			return [];
 		}
 
@@ -435,11 +421,11 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* CREATE_DB_EXTENSIONS
-	* Force to create the PostgreSQL main extensions
-	* @return object $response
-	*/
-	public static function create_db_extensions() : object {
+	 * CREATE_DB_EXTENSIONS
+	 * Force to create the PostgreSQL main extensions
+	 * @return object $response
+	 */
+	public static function create_db_extensions(): object {
 
 		$response = db_tasks::create_extensions();
 
@@ -449,11 +435,11 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* EXEC_DB_MAINTENANCE
-	* Force to perform a basic PostgreSQL maintenance for indexing
-	* @return object $response
-	*/
-	public static function exec_db_maintenance() : object {
+	 * EXEC_DB_MAINTENANCE
+	 * Force to perform a basic PostgreSQL maintenance for indexing
+	 * @return object $response
+	 */
+	public static function exec_db_maintenance(): object {
 
 		$response = db_tasks::exec_maintenance();
 
@@ -463,65 +449,66 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* LONG_PROCESS_STREAM
-	* Print a sequential number every 1000 milliseconds
-	* Used to test long processes and timeouts issues
-	* @param object $options
-	* {
-	* 	iterations: int,
-	* 	update_rate: int
-	* }
-	* @return object Returns object in CLI mode
-	*/
-	public static function long_process_stream(object $options) : object {
+	 * LONG_PROCESS_STREAM
+	 * Print a sequential number every 1000 milliseconds
+	 * Used to test long processes and timeouts issues
+	 * @param object $options
+	 * {
+	 * 	iterations: int,
+	 * 	update_rate: int
+	 * }
+	 * @return object Returns object in CLI mode
+	 */
+	public static function long_process_stream(object $options): object {
 
 		// options
-			$iterations		= $options->iterations ?? 10;
-			$update_rate	= $options->update_rate ?? 1000;
+		$iterations = $options->iterations ?? 10;
+		$update_rate = $options->update_rate ?? 1000;
 
 		// error_log_path
-			$error_log_path = ini_get('error_log');
+		$error_log_path = ini_get('error_log');
 
-		if (running_in_cli()===true) {
+		if (running_in_cli() === true) {
 
 			// executing from dd_utils_api::get_process_status (area maintenance panel)
 
 			$counter = 0;
-			while(1){
+			while (1) {
 
 				$counter++;
 
-				trigger_error('FAKE ERROR TESTING CLI ERROR LOG ini_get error_log: '.$error_log_path.' - '.$counter.' ');
+				trigger_error('FAKE ERROR TESTING CLI ERROR LOG ini_get error_log: ' . $error_log_path . ' - ' . $counter . ' ');
 
 				// end runner case
-				if ($counter>$iterations) {
-					$result = (object)[
-						'msg'			=> 'Iterations completed ' . $iterations,
-						'iterations'	=> $iterations,
-						'update_rate'	=> $update_rate,
-						'memory'		=> dd_memory_usage()
+				if ($counter > $iterations) {
+					$result = (object) [
+						'msg' => 'Iterations completed ' . $iterations,
+						'iterations' => $iterations,
+						'update_rate' => $update_rate,
+						'memory' => dd_memory_usage()
 					];
 					// return is printed by manager too
 					return $result; // stop the loop here
 				}
 
 				// print notification
-				print_cli((object)[
-					'msg'			=> 'Iteration ' . $counter . ' of ' . $iterations,
-					'iterations'	=> $iterations,
-					'update_rate'	=> $update_rate,
-					'memory'		=> dd_memory_usage()
+				print_cli((object) [
+					'msg' => 'Iteration ' . $counter . ' of ' . $iterations,
+					'iterations' => $iterations,
+					'update_rate' => $update_rate,
+					'memory' => dd_memory_usage()
 				]);
 
 				// sleep process
-				$ms = $update_rate; usleep( (int)$ms * 1000 );
+				$ms = $update_rate;
+				usleep((int) $ms * 1000);
 			}
 
-		}else{
+		} else {
 
 			// direct call version
 
-			$start_time=start_time();
+			$start_time = start_time();
 
 			// session unlock
 			session_write_close();
@@ -533,45 +520,45 @@ class area_maintenance extends area_common {
 			header("Access-Control-Allow-Origin: *");
 			header('X-Accel-Buffering: no'); // nginx buffer control
 
-			$i=0;
-			while(1){
+			$i = 0;
+			while (1) {
 
 				$counter = $i++;
 
-				$data = (object)[
+				$data = (object) [
 					'msg' => '(no cli version) Iteration ' . $counter
 				];
 
-				$output = (object)[
-					'is_running'	=> true,
-					'data'			=> $data,
-					'time'			=> date("Y-m-d H:i:s"),
-					'total_time'	=> exec_time_unit_auto($start_time),
-					'update_rate'	=> $update_rate,
-					'errors'		=> []
+				$output = (object) [
+					'is_running' => true,
+					'data' => $data,
+					'time' => date("Y-m-d H:i:s"),
+					'total_time' => exec_time_unit_auto($start_time),
+					'update_rate' => $update_rate,
+					'errors' => []
 				];
 
 				// debug
-					if(SHOW_DEBUG===true) {
-						error_log('process loop: is_running output: ' .PHP_EOL. json_encode($output) );
-					}
+				if (SHOW_DEBUG === true) {
+					error_log('process loop: is_running output: ' . PHP_EOL . json_encode($output));
+				}
 
 				// output the response JSON string
-					$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
+				$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
 
 				// fix Apache issue where small chunks are not sent correctly over HTTP
-					if ($_SERVER['SERVER_PROTOCOL']==='HTTP/1.1') {
-						$len = strlen($a);
-						if ($len < 4096) {
-							// re-create the output object and the final string
-							$fill_length = 4096 - $len;
-							$output->fill_buffer = $fill_length . str_pad(' ', $fill_length);
-							$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
-						}
+				if ($_SERVER['SERVER_PROTOCOL'] === 'HTTP/1.1') {
+					$len = strlen($a);
+					if ($len < 4096) {
+						// re-create the output object and the final string
+						$fill_length = 4096 - $len;
+						$output->fill_buffer = $fill_length . str_pad(' ', $fill_length);
+						$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
 					}
+				}
 
-					echo $a;
-					echo "\n\n";
+				echo $a;
+				echo "\n\n";
 
 				while (ob_get_level() > 0) {
 					ob_end_flush();
@@ -579,17 +566,18 @@ class area_maintenance extends area_common {
 				flush();
 
 				// break the loop if the client aborted the connection (closed the page)
-				if ( connection_aborted() ) break;
+				if (connection_aborted())
+					break;
 
-				$ms = (int)$update_rate;
-				usleep( $ms * 1000 );
+				$ms = (int) $update_rate;
+				usleep($ms * 1000);
 			}
 
 			// This code is unreachable but required for type safety
 			// to satisfy the object return type declaration
 			$response = new stdClass();
-				$response->result = false;
-				$response->msg = 'Stream ended';
+			$response->result = false;
+			$response->msg = 'Stream ended';
 
 			return $response;
 		}
@@ -598,70 +586,76 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* CREATE_TEST_RECORD
-	* This record it's necessary to run unit_test checks
-	* Table 'matrix_test' must to exists
-	* @return object $response
-	*/
-	public static function create_test_record() : object {
+	 * CREATE_TEST_RECORD
+	 * This record it's necessary to run unit_test checks
+	 * Table 'matrix_test' must to exists
+	 * @return object $response
+	 */
+	public static function create_test_record(): object {
 
 		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
+		$response->result = false;
+		$response->msg = 'Error. Request failed ' . __METHOD__;
 
 		// short vars
-			$db_conn		= DBi::_getConnection();
-			$section_tipo	= 'test3';
-			$table			= 'matrix_test';
+		$db_conn = DBi::_getConnection();
+		$section_tipo = 'test3';
+		$table = 'matrix_test';
 
 		// test data
-			$test_data = file_get_contents( dirname(__FILE__) . '/test_data.json' );
+		$test_data = file_get_contents(dirname(__FILE__) . '/test_data.json');
 
 		// exec SQL
-			// Statement 1: TRUNCATE table
-			$sql1 = 'TRUNCATE TABLE '.$table;
-			$result = pg_query($db_conn, $sql1);
-			if (!$result) {
-				$msg = " Error on TRUNCATE: ".pg_last_error($db_conn);
-				debug_log(__METHOD__
-					. $msg . PHP_EOL
-					. ' SQL: ' . $sql1
-					, logger::ERROR
-				);
-				$response->msg = $msg;
-				return $response;
-			}
+		// Statement 1: TRUNCATE table
+		$sql1 = 'TRUNCATE TABLE ' . $table;
+		$result = pg_query($db_conn, $sql1);
+		if (!$result) {
+			$msg = " Error on TRUNCATE: " . pg_last_error($db_conn);
+			debug_log(
+				__METHOD__
+				. $msg . PHP_EOL
+				. ' SQL: ' . $sql1
+				,
+				logger::ERROR
+			);
+			$response->msg = $msg;
+			return $response;
+		}
 
-			// Statement 2: Reset sequence
-			$sql2 = 'ALTER SEQUENCE '.$table.'_id_seq RESTART WITH 1';
-			$result = pg_query($db_conn, $sql2);
-			if (!$result) {
-				$msg = " Error on ALTER SEQUENCE: ".pg_last_error($db_conn);
-				debug_log(__METHOD__
-					. $msg . PHP_EOL
-					. ' SQL: ' . $sql2
-					, logger::ERROR
-				);
-				$response->msg = $msg;
-				return $response;
-			}
+		// Statement 2: Reset sequence
+		$sql2 = 'ALTER SEQUENCE ' . $table . '_id_seq RESTART WITH 1';
+		$result = pg_query($db_conn, $sql2);
+		if (!$result) {
+			$msg = " Error on ALTER SEQUENCE: " . pg_last_error($db_conn);
+			debug_log(
+				__METHOD__
+				. $msg . PHP_EOL
+				. ' SQL: ' . $sql2
+				,
+				logger::ERROR
+			);
+			$response->msg = $msg;
+			return $response;
+		}
 
-			// Statement 3: INSERT data (using prepared statement for security)
-			$sql3 = 'INSERT INTO '.$table.' ("section_id", "section_tipo", "datos") VALUES ($1, $2, $3)';
-			$result = pg_query_params($db_conn, $sql3, ['1', $section_tipo, $test_data]);
-			if (!$result) {
-				$msg = " Error on INSERT: ".pg_last_error($db_conn);
-				debug_log(__METHOD__
-					. $msg . PHP_EOL
-					. ' SQL: ' . $sql3
-					, logger::ERROR
-				);
-				$response->msg = $msg;
-				return $response;
-			}
+		// Statement 3: INSERT data (using prepared statement for security)
+		$sql3 = 'INSERT INTO ' . $table . ' ("section_id", "section_tipo", "datos") VALUES ($1, $2, $3)';
+		$result = pg_query_params($db_conn, $sql3, ['1', $section_tipo, $test_data]);
+		if (!$result) {
+			$msg = " Error on INSERT: " . pg_last_error($db_conn);
+			debug_log(
+				__METHOD__
+				. $msg . PHP_EOL
+				. ' SQL: ' . $sql3
+				,
+				logger::ERROR
+			);
+			$response->msg = $msg;
+			return $response;
+		}
 
-		$response->result	= true;
-		$response->msg		= 'OK. Request done '.__METHOD__;
+		$response->result = true;
+		$response->msg = 'OK. Request done ' . __METHOD__;
 
 
 		return $response;
@@ -670,34 +664,34 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* REGISTER_TOOLS
-	* Alias of tools_register::import_tools
-	* @return object $response
-	* {
-	*	result: array|false (on success, list of imported tools objects)
-	* 	msg: string
-	* 	errors: array
-	* }
-	*/
-	public static function register_tools() : object {
+	 * REGISTER_TOOLS
+	 * Alias of tools_register::import_tools
+	 * @return object $response
+	 * {
+	 *	result: array|false (on success, list of imported tools objects)
+	 * 	msg: string
+	 * 	errors: array
+	 * }
+	 */
+	public static function register_tools(): object {
 
 		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+		$response->result = false;
+		$response->msg = 'Error. Request failed [' . __METHOD__ . ']';
 
 		// import_tools
-			$response->result = tools_register::import_tools();
+		$response->result = tools_register::import_tools();
 
 		// check results errors
-			$errors = [];
-			if (!empty($response->result)) {
-				foreach ($response->result as $item) {
-					if (!empty($item->errors)) {
-						$errors = array_merge($errors, (array)$item->errors);
-					}
+		$errors = [];
+		if (!empty($response->result)) {
+			foreach ($response->result as $item) {
+				if (!empty($item->errors)) {
+					$errors = array_merge($errors, (array) $item->errors);
 				}
 			}
-			$response->errors = $errors;
+		}
+		$response->errors = $errors;
 
 		$response->msg = empty($errors)
 			? 'OK. Request done successfully'
@@ -710,99 +704,85 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* BUILD_INSTALL_VERSION
-	* Alias of install::build_install_version
-	* @return object $response
-	*/
-	public static function build_install_version() : object {
-
-		// build
-		$response = install::build_install_version();
-
-
-		return $response;
-	}//end build_install_version
-
-
-
-	/**
-	* UPDATE_DATA_VERSION
-	* Updates Dédalo data version.
-	* Allow change components data format or add new tables or index
-	* Triggered by Area Development button 'UPDATE DATA'
-	* Sample: Current data version: 5.8.2 -----> 6.0.0
-	* @param object $options
-	* {
-	*	"updates_checked": {
-	*		"SQL_update_1": true,
-	*		"components_update_1": true,
-	*		"components_update_2": true,
-	*		"components_update_3": true,
-	*		"components_update_4": true,
-	*		"run_scripts_1": true,
-	*		"run_scripts_2": true
-	*	}
-	* }
-	* @return object $response
-	*/
-	public static function update_data_version(object $options) : object {
+	 * UPDATE_DATA_VERSION
+	 * Updates Dédalo data version.
+	 * Allow change components data format or add new tables or index
+	 * Triggered by Area Development button 'UPDATE DATA'
+	 * Sample: Current data version: 5.8.2 -----> 6.0.0
+	 * @param object $options
+	 * {
+	 *	"updates_checked": {
+	 *		"SQL_update_1": true,
+	 *		"components_update_1": true,
+	 *		"components_update_2": true,
+	 *		"components_update_3": true,
+	 *		"components_update_4": true,
+	 *		"run_scripts_1": true,
+	 *		"run_scripts_2": true
+	 *	}
+	 * }
+	 * @return object $response
+	 */
+	public static function update_data_version(object $options): object {
 
 		// options
-			$updates_checked = $options->updates_checked;
+		$updates_checked = $options->updates_checked;
 
 		// set time limit
-			set_time_limit ( 259200 );  // 3 days
+		set_time_limit(259200);  // 3 days
 
 		include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 
 		$response = new stdClass();
-			$response->result	= false;
-			$response->errors	= [];
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+		$response->result = false;
+		$response->errors = [];
+		$response->msg = 'Error. Request failed [' . __METHOD__ . ']';
 
 		// DEDALO_SUPERUSER only
-			if (logged_user_id()!=DEDALO_SUPERUSER) {
-				$response->msg = 'Error. Only Dédalo superuser can do this action';
-				return $response;
-			}
+		if (logged_user_id() != DEDALO_SUPERUSER) {
+			$response->msg = 'Error. Only Dédalo superuser can do this action';
+			return $response;
+		}
 
 		// DEDALO_MAINTENANCE_MODE
-			$maintenance_mode = defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
-				? DEDALO_MAINTENANCE_MODE_CUSTOM
-				: DEDALO_MAINTENANCE_MODE;
-			if ($maintenance_mode!==true) {
-				$response->msg = 'Error. Update data is not allowed if Dédalo is not in maintenance_mode';
-				return $response;
-			}
+		$maintenance_mode = defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
+			? DEDALO_MAINTENANCE_MODE_CUSTOM
+			: DEDALO_MAINTENANCE_MODE;
+		if ($maintenance_mode !== true) {
+			$response->msg = 'Error. Update data is not allowed if Dédalo is not in maintenance_mode';
+			return $response;
+		}
 
 		try {
 
 			// exec update_data_version. return object response
-				$update_data_version_response = update::update_version($updates_checked);
+			$update_data_version_response = update::update_version($updates_checked);
 
 		} catch (Exception $e) {
 
-			debug_log(__METHOD__
+			debug_log(
+				__METHOD__
 				. " Caught exception [update_data_version]: " . PHP_EOL
 				. ' msg: ' . $e->getMessage()
-				, logger::ERROR
+				,
+				logger::ERROR
 			);
 
-			$update_data_version_response = (object)[
-				'result'	=> false,
-				'msg'		=> 'ERROR on update_data_version .Caught exception: ' . $e->getMessage()
+			$update_data_version_response = (object) [
+				'result' => false,
+				'msg' => 'ERROR on update_data_version .Caught exception: ' . $e->getMessage()
 			];
 
 			// log line
-				$update_log_file = DEDALO_CONFIG_PATH . '/update.log';
-				$log_line  = PHP_EOL . date('c') . ' ERROR [Exception] ';
-				$log_line .= PHP_EOL . 'Caught exception: ' . $e->getMessage();
-				file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+			$update_log_file = DEDALO_CONFIG_PATH . '/update.log';
+			$log_line = PHP_EOL . date('c') . ' ERROR [Exception] ';
+			$log_line .= PHP_EOL . 'Caught exception: ' . $e->getMessage();
+			file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
 		}
 
-		$response->result	= $update_data_version_response->result ?? false;
-		$response->msg		= $update_data_version_response->msg ?? 'Error. Request failed ['.__FUNCTION__.']';
-		$response->errors 	= array_merge($response->errors, $update_data_version_response->errors);
+		$response->result = $update_data_version_response->result ?? false;
+		$response->msg = $update_data_version_response->msg ?? 'Error. Request failed [' . __FUNCTION__ . ']';
+		$response->errors = array_merge($response->errors, $update_data_version_response->errors);
 
 
 		return $response;
@@ -811,151 +791,158 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* SET_CONFIG_CORE
-	* This function set a custom maintenance mode. Useful when the root user
-	* do not have access to the config file to edit
-	* @param object $options
-	* @return object $response
-	*/
-	protected static function set_config_core(object $options) : object {
+	 * SET_CONFIG_CORE
+	 * This function set a custom maintenance mode. Useful when the root user
+	 * do not have access to the config file to edit
+	 * @param object $options
+	 * @return object $response
+	 */
+	protected static function set_config_core(object $options): object {
 
 		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
-				$response->errors	= [];
+		$response = new stdClass();
+		$response->result = false;
+		$response->msg = 'Error. Request failed [' . __METHOD__ . ']';
+		$response->errors = [];
 
 		// options
-			$name	= $options->name; // name of the constant like 'MAINTENANCE_MODE_CUSTOM'
-			$value	= $options->value ?? null; // value of the constant like bool 'false'
+		$name = $options->name; // name of the constant like 'MAINTENANCE_MODE_CUSTOM'
+		$value = $options->value ?? null; // value of the constant like bool 'false'
 
 		// user root check. Only root user can set config core inf
-			if (logged_user_id()!==DEDALO_SUPERUSER
-				// && is_ontology_available() // only blocks if no Ontology error was detected (recovery case)
-				&& $name!=='DEDALO_RECOVERY_MODE'
-				&& (!defined('DEDALO_RECOVERY_MODE') || DEDALO_RECOVERY_MODE==false)
-				) {
-				$response->msg = 'Error. only root user can set config_core';
-				return $response;
-			}
+		if (
+			logged_user_id() !== DEDALO_SUPERUSER
+			// && is_ontology_available() // only blocks if no Ontology error was detected (recovery case)
+			&& $name !== 'DEDALO_RECOVERY_MODE'
+			&& (!defined('DEDALO_RECOVERY_MODE') || DEDALO_RECOVERY_MODE == false)
+		) {
+			$response->msg = 'Error. only root user can set config_core';
+			return $response;
+		}
 
 		// value. check valid value type
-			$value_type = gettype($value);
+		$value_type = gettype($value);
 
 		// special parsers
-			switch ($name) {
+		switch ($name) {
 
-				case 'DEDALO_MAINTENANCE_MODE_CUSTOM':
-					// boolean
-					$ar_allow_type = ['boolean'];
-					if (!in_array($value_type, $ar_allow_type)) {
-						$response->msg = 'Error. invalid value type. Only allow boolean';
-						return $response;
-					}
-					$write_value = json_encode( (bool)$value );
-					break;
-
-				case 'DEDALO_RECOVERY_MODE':
-					// boolean
-					$ar_allow_type = ['boolean'];
-					if (!in_array($value_type, $ar_allow_type)) {
-						$response->msg = 'Error. invalid value type. Only allow boolean';
-						return $response;
-					}
-					$write_value = json_encode( (bool)$value );
-					break;
-
-				// Disable (Experimental with serious security implications)
-				case 'DEDALO_NOTIFICATION_CUSTOM':
-					if (logged_user_id()!==DEDALO_SUPERUSER) {
-						$response->msg = 'Error. only root user can set config_core';
-						return $response;
-					}
-					// string|boolean
-					$ar_allow_type = ['boolean','string'];
-					if (!in_array($value_type, $ar_allow_type)) {
-						$response->msg = 'Error. invalid value type. Only allow boolean|string';
-						return $response;
-					}
-					if (is_string($value)) {
-						$msg = safe_xss($value);
-						$write_value = '["msg" => "'.trim($msg).'", "class_name" => "warning"]';
-					}else{
-						$write_value = 'false'; // no true is expected
-					}
-					break;
-
-				default:
-					$response->msg = 'Error. Invalid name';
+			case 'DEDALO_MAINTENANCE_MODE_CUSTOM':
+				// boolean
+				$ar_allow_type = ['boolean'];
+				if (!in_array($value_type, $ar_allow_type)) {
+					$response->msg = 'Error. invalid value type. Only allow boolean';
 					return $response;
-			}
+				}
+				$write_value = json_encode((bool) $value);
+				break;
+
+			case 'DEDALO_RECOVERY_MODE':
+				// boolean
+				$ar_allow_type = ['boolean'];
+				if (!in_array($value_type, $ar_allow_type)) {
+					$response->msg = 'Error. invalid value type. Only allow boolean';
+					return $response;
+				}
+				$write_value = json_encode((bool) $value);
+				break;
+
+			// Disable (Experimental with serious security implications)
+			case 'DEDALO_NOTIFICATION_CUSTOM':
+				if (logged_user_id() !== DEDALO_SUPERUSER) {
+					$response->msg = 'Error. only root user can set config_core';
+					return $response;
+				}
+				// string|boolean
+				$ar_allow_type = ['boolean', 'string'];
+				if (!in_array($value_type, $ar_allow_type)) {
+					$response->msg = 'Error. invalid value type. Only allow boolean|string';
+					return $response;
+				}
+				if (is_string($value)) {
+					$msg = safe_xss($value);
+					$write_value = '["msg" => "' . trim($msg) . '", "class_name" => "warning"]';
+				} else {
+					$write_value = 'false'; // no true is expected
+				}
+				break;
+
+			default:
+				$response->msg = 'Error. Invalid name';
+				return $response;
+		}
 
 		// write_value check
-			if (!is_string($write_value)) {
-				$response->msg = 'Error. invalid value (3)';
-				return $response;
-			}
+		if (!is_string($write_value)) {
+			$response->msg = 'Error. invalid value (3)';
+			return $response;
+		}
 
 		// config_core file (config_core.php)
-			$config		= install::get_config();
-			$file_path	= $config->config_core_file_path;
+		$config = install::get_config();
+		$file_path = $config->config_core_file_path;
 
 		// content string from file
-			$content = file_get_contents($file_path);
+		$content = file_get_contents($file_path);
 
 		// add vars
-		if (strpos($content, $name)===false) {
+		if (strpos($content, $name) === false) {
 
 			// file do not exists or const DEDALO_MAINTENANCE_MODE_CUSTOM it's not defined case
 
 			// line
-			$line = PHP_EOL . "define('$name', ".$write_value.");";
+			$line = PHP_EOL . "define('$name', " . $write_value . ");";
 			// Write the contents to the file,
 			// using the FILE_APPEND flag to append the content to the end of the file
 			// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
-			if(!file_put_contents($file_path, $line, FILE_APPEND | LOCK_EX)) {
+			if (!file_put_contents($file_path, $line, FILE_APPEND | LOCK_EX)) {
 
-				$response->msg = 'Error (2). It\'s not possible set the constant, review the PHP permissions to write in Dédalo directory: '.$file_path;
-				debug_log(__METHOD__
-					. ' ' . $response->msg .PHP_EOL
-					. 'file: '.$file_path
-					, logger::ERROR
+				$response->msg = 'Error (2). It\'s not possible set the constant, review the PHP permissions to write in Dédalo directory: ' . $file_path;
+				debug_log(
+					__METHOD__
+					. ' ' . $response->msg . PHP_EOL
+					. 'file: ' . $file_path
+					,
+					logger::ERROR
 				);
 				return $response;
 			}
 
-			$response->result	= true;
-			$response->msg		= 'All ready';
+			$response->result = true;
+			$response->msg = 'All ready';
 
-			debug_log(__METHOD__
-				." Added config_core line with constant: $name  "
-				, logger::DEBUG
+			debug_log(
+				__METHOD__
+				. " Added config_core line with constant: $name  "
+				,
+				logger::DEBUG
 			);
 
-		}elseif (strpos($content, $name)!==false) {
+		} elseif (strpos($content, $name) !== false) {
 
 			// file and constant exists like 'DEDALO_MAINTENANCE_MODE_CUSTOM'
 
 			// replace line to updated value
 			$content = preg_replace(
-				'/define\(\''.$name.'\',.+\);/',
-				'define(\''.$name.'\', '.$write_value.');',
+				'/define\(\'' . $name . '\',.+\);/',
+				'define(\'' . $name . '\', ' . $write_value . ');',
 				$content
 			);
 			// Write the contents to the file,
 			// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
-			if(!file_put_contents($file_path, $content, LOCK_EX)) {
+			if (!file_put_contents($file_path, $content, LOCK_EX)) {
 				$response->msg = 'Error (3). It\'s not possible set the constant, review the PHP permissions to write in Dédalo directory: ' . $file_path;
-				debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+				debug_log(__METHOD__ . " " . $response->msg, logger::ERROR);
 				return $response;
 			}
 
-			$response->result	= true;
-			$response->msg		= 'All ready';
+			$response->result = true;
+			$response->msg = 'All ready';
 
-			debug_log(__METHOD__
-				." Changed config_core content with constant: $name = '".to_string($value)."' "
-				, logger::DEBUG
+			debug_log(
+				__METHOD__
+				. " Changed config_core content with constant: $name = '" . to_string($value) . "' "
+				,
+				logger::DEBUG
 			);
 		}
 
@@ -966,34 +953,34 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* SET_MAINTENANCE_MODE
-	* Changes Dédalo maintenance mode from true to false or vice-versa
-	* Uses area_maintenance:: set_config_core to overwrite the core_config files
-	* The constant name will be checked in the set_config_core() to allow it, define the constant in this method
-	* Input and output are normalized objects to allow use it from area_maintenance API
-	* @param object $options
-	* {
-	* 	value : bool
-	* }
-	* @return object $response
-	*/
-	public static function set_maintenance_mode( object $options ) : object {
+	 * SET_MAINTENANCE_MODE
+	 * Changes Dédalo maintenance mode from true to false or vice-versa
+	 * Uses area_maintenance:: set_config_core to overwrite the core_config files
+	 * The constant name will be checked in the set_config_core() to allow it, define the constant in this method
+	 * Input and output are normalized objects to allow use it from area_maintenance API
+	 * @param object $options
+	 * {
+	 * 	value : bool
+	 * }
+	 * @return object $response
+	 */
+	public static function set_maintenance_mode(object $options): object {
 
 		// options
-			$value = $options->value;
+		$value = $options->value;
 
 		// check value type
-			if (!is_bool($value)) {
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= 'Error. Request failed';
-					$response->errors	= [];
-				return $response;
-			}
+		if (!is_bool($value)) {
+			$response = new stdClass();
+			$response->result = false;
+			$response->msg = 'Error. Request failed';
+			$response->errors = [];
+			return $response;
+		}
 
-		$response = area_maintenance::set_config_core((object)[
-			'name'	=> 'DEDALO_MAINTENANCE_MODE_CUSTOM',
-			'value'	=> $value
+		$response = area_maintenance::set_config_core((object) [
+			'name' => 'DEDALO_MAINTENANCE_MODE_CUSTOM',
+			'value' => $value
 		]);
 
 
@@ -1003,38 +990,38 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* SET_RECOVERY_MODE
-	* Changes Dédalo recovery mode from true to false or vice-versa
-	* Uses area_recovery::set_config_core to overwrite the core_config files
-	* The constant name will be checked in the set_config_core() to allow it, define the constant in this method
-	* Input and output are normalized objects to allow use it from area_recovery API
-	* Could be changed from area_maintenance check_config widget
-	* or automatically from API start
-	* @see dd_core_api->start
-	* @param object $options
-	* {
-	* 	value : bool
-	* }
-	* @return object $response
-	*/
-	public static function set_recovery_mode( object $options ) : object {
+	 * SET_RECOVERY_MODE
+	 * Changes Dédalo recovery mode from true to false or vice-versa
+	 * Uses area_recovery::set_config_core to overwrite the core_config files
+	 * The constant name will be checked in the set_config_core() to allow it, define the constant in this method
+	 * Input and output are normalized objects to allow use it from area_recovery API
+	 * Could be changed from area_maintenance check_config widget
+	 * or automatically from API start
+	 * @see dd_core_api->start
+	 * @param object $options
+	 * {
+	 * 	value : bool
+	 * }
+	 * @return object $response
+	 */
+	public static function set_recovery_mode(object $options): object {
 
 		// options
-			$value = $options->value;
+		$value = $options->value;
 
 		// check value type
-			if (!is_bool($value)) {
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= 'Error. Request failed';
-					$response->errors	= [];
-				return $response;
-			}
+		if (!is_bool($value)) {
+			$response = new stdClass();
+			$response->result = false;
+			$response->msg = 'Error. Request failed';
+			$response->errors = [];
+			return $response;
+		}
 
 		// set config_core constant value
-		$response = area_maintenance::set_config_core((object)[
-			'name'	=> 'DEDALO_RECOVERY_MODE',
-			'value'	=> $value
+		$response = area_maintenance::set_config_core((object) [
+			'name' => 'DEDALO_RECOVERY_MODE',
+			'value' => $value
 		]);
 
 		// Check for errors before proceeding
@@ -1046,9 +1033,9 @@ class area_maintenance extends area_common {
 		$_ENV['DEDALO_RECOVERY_MODE'] = $value;
 
 		$response = new stdClass();
-			$response->result	= true;
-			$response->msg		= 'OK. Request done successfully';
-			$response->errors	= [];
+		$response->result = true;
+		$response->msg = 'OK. Request done successfully';
+		$response->errors = [];
 
 
 		return $response;
@@ -1057,41 +1044,41 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* SET_NOTIFICATION
-	* Writes the given notification text to config_core
-	* Note that this custom notifications are stored in core_config file
-	* and read from API update_lock_components_state on every component activation/deactivation
-	* The constant name will be checked in the set_config_core() to allow it, define the constant in this method
-	* @param object $options
-	* {
-	* 	value : string
-	* }
-	* @return object $response
-	*/
-	public static function set_notification( object $options ) : object {
+	 * SET_NOTIFICATION
+	 * Writes the given notification text to config_core
+	 * Note that this custom notifications are stored in core_config file
+	 * and read from API update_lock_components_state on every component activation/deactivation
+	 * The constant name will be checked in the set_config_core() to allow it, define the constant in this method
+	 * @param object $options
+	 * {
+	 * 	value : string
+	 * }
+	 * @return object $response
+	 */
+	public static function set_notification(object $options): object {
 
 		// options
-			$value = $options->value;
+		$value = $options->value;
 
 		// check value type
-			if (!is_string($value) && !is_bool($value)) {
-				$response = new stdClass();
-					$response->result	= false;
-					$response->msg		= 'Error. Request failed. value is not string or bool';
-					$response->errors	= [];
-				return $response;
-			}
+		if (!is_string($value) && !is_bool($value)) {
+			$response = new stdClass();
+			$response->result = false;
+			$response->msg = 'Error. Request failed. value is not string or bool';
+			$response->errors = [];
+			return $response;
+		}
 
 		// set config_core constant value
-		area_maintenance::set_config_core((object)[
-			'name'	=> 'DEDALO_NOTIFICATION_CUSTOM',
-			'value'	=> $value
+		area_maintenance::set_config_core((object) [
+			'name' => 'DEDALO_NOTIFICATION_CUSTOM',
+			'value' => $value
 		]);
 
 		$response = new stdClass();
-			$response->result	= true;
-			$response->msg		= 'OK. Request done successfully';
-			$response->errors	= [];
+		$response->result = true;
+		$response->msg = 'OK. Request done successfully';
+		$response->errors = [];
 
 
 		return $response;
@@ -1100,12 +1087,12 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* GET_DEFINITIONS_FILES
-	* Get the list of JSON files in the directory:
-	* 	/dedalo/core/base/transform_definition_files
-	* @return array
-	*/
-	public static function get_definitions_files( string $directory ) : array {
+	 * GET_DEFINITIONS_FILES
+	 * Get the list of JSON files in the directory:
+	 * 	/dedalo/core/base/transform_definition_files
+	 * @return array
+	 */
+	public static function get_definitions_files(string $directory): array {
 
 		// SEC-069: defence-in-depth. All callers pass literal strings from
 		// this fixed set; reject anything else so a future code path that
@@ -1119,41 +1106,47 @@ class area_maintenance extends area_common {
 			'move_lang'
 		];
 		if (!in_array($directory, $allowed_dirs, true)) {
-			debug_log(__METHOD__
+			debug_log(
+				__METHOD__
 				. ' Refused unknown directory: ' . to_string($directory)
-				, logger::ERROR
+				,
+				logger::ERROR
 			);
 			return [];
 		}
 
 		// Realpath confinement against the transform_definition_files root.
-		$root      = DEDALO_CORE_PATH . '/base/transform_definition_files';
+		$root = DEDALO_CORE_PATH . '/base/transform_definition_files';
 		$real_root = realpath($root);
-		$real_dir  = realpath($root . '/' . $directory);
-		if ($real_root === false || $real_dir === false
-			|| strncmp($real_dir, $real_root . DIRECTORY_SEPARATOR, strlen($real_root) + 1) !== 0) {
-			debug_log(__METHOD__
+		$real_dir = realpath($root . '/' . $directory);
+		if (
+			$real_root === false || $real_dir === false
+			|| strncmp($real_dir, $real_root . DIRECTORY_SEPARATOR, strlen($real_root) + 1) !== 0
+		) {
+			debug_log(
+				__METHOD__
 				. ' Refused path outside transform_definition_files root: ' . to_string($directory)
-				, logger::ERROR
+				,
+				logger::ERROR
 			);
 			return [];
 		}
 
 		$files_list = get_dir_files(
-			DEDALO_CORE_PATH . '/base/transform_definition_files/'.$directory,
+			DEDALO_CORE_PATH . '/base/transform_definition_files/' . $directory,
 			['json'],
-			function($el) {
+			function ($el) {
 
-				$path_parts	= pathinfo($el);
-				$basename	= $path_parts['basename'] ?? 'unknown';
-				$content	= file_get_contents($el);
+				$path_parts = pathinfo($el);
+				$basename = $path_parts['basename'] ?? 'unknown';
+				$content = file_get_contents($el);
 				if (!empty($content)) {
 					$content = json_decode($content);
 				}
 
-				return (object)[
-					'file_name'	=> $basename,
-					'content'	=> $content
+				return (object) [
+					'file_name' => $basename,
+					'content' => $content
 				];
 			}
 		);
@@ -1164,555 +1157,223 @@ class area_maintenance extends area_common {
 
 
 
-	/**
-	* MOVE_TLD
-	* Transform Dédalo data from all tables replacing tipos
-	* using selected JSON file map
-	* Is called from widget 'move_tld' as process
-	* @param object $options
-	* {
-	* 	files_selected : array ['finds_numisdata279_to_tchi1.json']
-	* }
-	* @return object $response
-	*/
-	public static function move_tld(object $options) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
-			$response->errors	= [];
-
-		// options
-			$files_selected = $options->files_selected;
-			if (empty($files_selected)) {
-				$response->errors[] = 'empty files_selected';
-				return $response;
-			}
-
-		// files
-			$definitions_files	= area_maintenance::get_definitions_files( 'move_tld' );
-			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
-				return in_array($el->file_name, $files_selected);
-			});
-			if (empty($json_files)) {
-				$response->errors[] = 'json_files not found';
-				return $response;
-			}
-
-			// ar_file_name
-			$ar_file_name = array_values(
-				array_map(function($el){
-					return $el->file_name;
-				}, $json_files)
-			);
-
-		// process changes_in_tipos
-			$ar_tables = [
-				'matrix',
-				'matrix_activities',
-				'matrix_activity',
-				'matrix_counter',
-				'matrix_dataframe',
-				'matrix_dd',
-				'matrix_hierarchy',
-				'matrix_hierarchy_main',
-				'matrix_indexations',
-				'matrix_layout',
-				'matrix_layout_dd',
-				'matrix_list',
-				'matrix_nexus',
-				'matrix_nexus_main',
-				'matrix_notes',
-				'matrix_profiles',
-				'matrix_projects',
-				'matrix_stats',
-				'matrix_time_machine'
-			];
-			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
-			$result = transform_data::changes_in_tipos(
-				$ar_tables,
-				$ar_file_name
-			);
-
-		$response->result	= $result;
-		$response->msg		= ($result===false)
-			? 'Error. changes_in_tipos failed'
-			: 'OK. request done successfully';
-
-
-		return $response;
-	}//end move_tld
 
 
 
 	/**
-	* MOVE_LOCATOR
-	* Transform Dédalo data from all tables replacing tipos
-	* using selected JSON file map
-	* Is called from widget 'move_locator' as process
-	* @param object $options
-	* {
-	* 	files_selected : array ['finds_numisdata279_to_tchi1.json']
-	* }
-	* @return object $response
-	*/
-	public static function move_locator(object $options) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
-			$response->errors	= [];
-
-		// options
-			$files_selected = $options->files_selected;
-			if (empty($files_selected)) {
-				$response->errors[] = 'empty files_selected';
-				return $response;
-			}
-
-		// files
-			$definitions_files	= area_maintenance::get_definitions_files( 'move_locator' );
-			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
-				return in_array($el->file_name, $files_selected);
-			});
-			if (empty($json_files)) {
-				$response->errors[] = 'json_files not found';
-				return $response;
-			}
-
-			// ar_file_name
-			$ar_file_name = array_values(
-				array_map(function($el){
-					return $el->file_name;
-				}, $json_files)
-			);
-
-		// process changes_in_tipos
-			$ar_tables = [
-				'matrix',
-				'matrix_activities',
-				'matrix_activity',
-				'matrix_counter',
-				'matrix_dataframe',
-				'matrix_dd',
-				'matrix_hierarchy',
-				'matrix_hierarchy_main',
-				'matrix_indexations',
-				'matrix_layout',
-				'matrix_layout_dd',
-				'matrix_list',
-				'matrix_nexus',
-				'matrix_nexus_main',
-				'matrix_notes',
-				'matrix_profiles',
-				'matrix_projects',
-				'matrix_stats',
-				'matrix_time_machine'
-			];
-			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
-			$result = transform_data::changes_in_locators(
-				$ar_tables,
-				$ar_file_name
-			);
-
-		$response->result	= $result;
-		$response->msg		= ($result===false)
-			? 'Error. changes_in_locators failed'
-			: 'OK. request done successfully';
-
-
-		return $response;
-	}//end move_locator
-
-
-
-	/**
-	* MOVE_TO_PORTAL
-	* Transform Dédalo data from all tables replacing tipos
-	* using selected JSON file map
-	* Is called from widget 'move_to_portal' as process
-	* @param object $options
-	* {
-	* 	files_selected : array ['finds_numisdata279_to_tchi1.json']
-	* }
-	* @return object $response
-	*/
-	public static function move_to_portal(object $options) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
-			$response->errors	= [];
-
-		// options
-			$files_selected = $options->files_selected;
-			if (empty($files_selected)) {
-				$response->errors[] = 'empty files_selected';
-				return $response;
-			}
-
-		// files
-			$definitions_files	= area_maintenance::get_definitions_files( 'move_to_portal' );
-
-			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
-				return in_array($el->file_name, $files_selected);
-			});
-			if (empty($json_files)) {
-				$response->errors[] = 'json_files not found';
-				return $response;
-			}
-
-			// ar_file_name
-			$ar_file_name = array_values(
-				array_map(function($el){
-					return $el->file_name;
-				}, $json_files)
-			);
-
-
-			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
-			$result = transform_data::portalize_data(
-				$ar_file_name
-			);
-
-		$response->result	= $result;
-		$response->msg		= ($result===false)
-			? 'Error. changes_in_locators failed'
-			: 'OK. request done successfully';
-
-
-		return $response;
-	}//end move_to_portal
-
-
-
-	/**
-	* MOVE_TO_TABLE
-	* Move data from a table to other as `utoponymy1` to `matrix_hierarchy`
-	* using selected JSON file map
-	* Is called from widget 'move_to_table' as process
-	* @param object $options
-	* {
-	* 	files_selected : array ['location_ubication1_to_hierarchy.json']
-	* }
-	* @return object $response
-	*/
-	public static function move_to_table(object $options) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
-			$response->errors	= [];
-
-		// options
-			$files_selected = $options->files_selected;
-			if (empty($files_selected)) {
-				$response->errors[] = 'empty files_selected';
-				return $response;
-			}
-
-		// files
-			$definitions_files	= area_maintenance::get_definitions_files( 'move_to_table' );
-
-			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
-				return in_array($el->file_name, $files_selected);
-			});
-			if (empty($json_files)) {
-				$response->errors[] = 'json_files not found';
-				return $response;
-			}
-
-			// ar_file_name
-			$ar_file_name = array_values(
-				array_map(function($el){
-					return $el->file_name;
-				}, $json_files)
-			);
-
-
-			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
-			$result = transform_data::move_data_between_matrix_tables(
-				$ar_file_name
-			);
-
-		$response->result	= $result;
-		$response->msg		= ($result===false)
-			? 'Error. changes_in_locators failed'
-			: 'OK. request done successfully';
-
-
-		return $response;
-	}//end move_to_table
-
-
-
-	/**
-	* MOVE_LANG
-	* Transform Dédalo data from specific tables defined changing data lang
-	* using selected JSON file map
-	* Is called from widget 'move_lang' as process
-	* @param object $options
-	* {
-	* 	files_selected : array ['change_hierarchy89_to_nolan.json']
-	* }
-	* @return object $response
-	*/
-	public static function move_lang(object $options) : object {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
-			$response->errors	= [];
-
-		// options
-			$files_selected = $options->files_selected;
-			if (empty($files_selected)) {
-				$response->errors[] = 'empty files_selected';
-				return $response;
-			}
-
-		// files
-			$definitions_files	= area_maintenance::get_definitions_files( 'move_lang' );
-			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
-				return in_array($el->file_name, $files_selected);
-			});
-			if (empty($json_files)) {
-				$response->errors[] = 'json_files not found';
-				return $response;
-			}
-
-			// ar_file_name
-			$ar_file_name = array_values(
-				array_map(function($el){
-					return $el->file_name;
-				}, $json_files)
-			);
-
-			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
-			$result = transform_data::change_data_lang(
-				$ar_file_name
-			);
-
-		$response->result	= $result;
-		$response->msg		= ($result===false)
-			? 'Error. changes_in_tipos failed'
-			: 'OK. request done successfully';
-
-
-		return $response;
-	}//end move_lang
-
-
-
-	/**
-	* UPDATE_ONTOLOGY
-	* Is called from area_maintenance widget 'update_ontology' across dd_area_maintenance::class_request
-	* Connect with master server, download ontology files and update local DB and lang files
-	* @param object $options
-	* {
-	*	"server": {
-	*		"name": "Official Dédalo Ontology server",
-	* 		..
-	* 	},
-	* 	"files" : [{
-	*		"section_tipo": "ontology56",
-	*		"tld": "numisdata",
-	*		"url": "http://localhost:8080/dedalo/install/import/ontology/6.4/ontology56_numisdata.copy.gz"
-	*	}],
-	* 	"info": {
-	* 		"date": "2024-12-20T20:54:36+01:00",
-	* 		"host": "localhost:8080",
-	* 		"entity": "monedaiberica",
-	* 		..
-	* 	}
-	* }
-	* @return object $response
-	* {
-	* 	result: bool,
-	* 	msg: string,
-	* 	errors: array
-	* }
-	*/
-	public static function update_ontology(object $options) : object {
+	 * UPDATE_ONTOLOGY
+	 * Is called from area_maintenance widget 'update_ontology' across dd_area_maintenance::class_request
+	 * Connect with master server, download ontology files and update local DB and lang files
+	 * @param object $options
+	 * {
+	 *	"server": {
+	 *		"name": "Official Dédalo Ontology server",
+	 * 		..
+	 * 	},
+	 * 	"files" : [{
+	 *		"section_tipo": "ontology56",
+	 *		"tld": "numisdata",
+	 *		"url": "http://localhost:8080/dedalo/install/import/ontology/6.4/ontology56_numisdata.copy.gz"
+	 *	}],
+	 * 	"info": {
+	 * 		"date": "2024-12-20T20:54:36+01:00",
+	 * 		"host": "localhost:8080",
+	 * 		"entity": "monedaiberica",
+	 * 		..
+	 * 	}
+	 * }
+	 * @return object $response
+	 * {
+	 * 	result: bool,
+	 * 	msg: string,
+	 * 	errors: array
+	 * }
+	 */
+	public static function update_ontology(object $options): object {
 
 		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
-				$response->errors	= [];
+		$response = new stdClass();
+		$response->result = false;
+		$response->msg = 'Error. Request failed [' . __METHOD__ . ']';
+		$response->errors = [];
 
 		// options
-			$files	= $options->files;
-			$info 	= $options->info;
+		$files = $options->files;
+		$info = $options->info;
 
 		// ar_msg
-			$ar_msg = [];
+		$ar_msg = [];
 
 		// db_system_config_verify. Test pgpass file existence and permissions
-			$pgpass_check = system::check_pgpass_file();
-			if ( $pgpass_check===false ) {
-				// error
-				$response->result 	= false;
-				$response->msg 		= 'Invalid .pgpass file, check your configuration';
-				$response->errors[]	= 'Bad .pgpass file';
+		$pgpass_check = system::check_pgpass_file();
+		if ($pgpass_check === false) {
+			// error
+			$response->result = false;
+			$response->msg = 'Invalid .pgpass file, check your configuration';
+			$response->errors[] = 'Bad .pgpass file';
 
-				return $response;
-			}
+			return $response;
+		}
 
 		// download files
-			$files_to_import = [];
-			foreach ($files as $current_file_item) {
+		$files_to_import = [];
+		foreach ($files as $current_file_item) {
 
-				$download_file_response = ontology_data_io::download_remote_ontology_file( $current_file_item->url );
+			$download_file_response = ontology_data_io::download_remote_ontology_file($current_file_item->url);
 
-				$ar_msg[] = $download_file_response->msg;
-				if( !empty($download_file_response->errors) ){
-					$response->errors = array_merge($response->errors, $download_file_response->errors);
-				}
-
-				if($download_file_response->result === true){
-					$files_to_import[] = $current_file_item;
-				}
+			$ar_msg[] = $download_file_response->msg;
+			if (!empty($download_file_response->errors)) {
+				$response->errors = array_merge($response->errors, $download_file_response->errors);
 			}
+
+			if ($download_file_response->result === true) {
+				$files_to_import[] = $current_file_item;
+			}
+		}
 
 		// import ontology sections
-			// import file
-			foreach ($files_to_import as $current_file_item) {
+		// import file
+		foreach ($files_to_import as $current_file_item) {
 
-					if($current_file_item->tld === 'matrix_dd'){
-						// private lists
-						$import_response = ontology_data_io::import_private_lists_from_file( $current_file_item );
-					}else{
-						// main section
-						// create the main section if not exists
-						ontology::add_main_section( $current_file_item );
-						// create dd_ontology node for the main section
-						ontology::create_dd_ontology_ontology_section_node( $current_file_item );
-						// matrix data of regular ontology
-						$import_response = ontology_data_io::import_from_file( $current_file_item );
-					}
-					// add messages and errors
-					if (!empty($import_response->msg)) {
-						$ar_msg[] = $import_response->msg;
-					}
-					if( !empty($import_response->errors) ){
-						$response->errors = array_merge($response->errors, $import_response->errors);
-					}
+			if ($current_file_item->tld === 'matrix_dd') {
+				// private lists
+				$import_response = ontology_data_io::import_private_lists_from_file($current_file_item);
+			} else {
+				// main section
+				// create the main section if not exists
+				ontology::add_main_section($current_file_item);
+				// create dd_ontology node for the main section
+				ontology::create_dd_ontology_ontology_section_node($current_file_item);
+				// matrix data of regular ontology
+				$import_response = ontology_data_io::import_from_file($current_file_item);
 			}
+			// add messages and errors
+			if (!empty($import_response->msg)) {
+				$ar_msg[] = $import_response->msg;
+			}
+			if (!empty($import_response->errors)) {
+				$response->errors = array_merge($response->errors, $import_response->errors);
+			}
+		}
 
 		// update dd_ontology with the imported records
-			foreach ($files_to_import as $current_file_item) {
+		foreach ($files_to_import as $current_file_item) {
 
-				if (!is_object($current_file_item) || !isset($current_file_item->tld, $current_file_item->section_tipo)) {
-					debug_log(__METHOD__
-						. " Ignored file item: Missing 'tld' or 'section_tipo' properties. " . PHP_EOL
-						. ' current_file_item: ' . to_string($current_file_item)
-						, logger::ERROR
-					);
-					continue;
-				}
-
-				// private list, matrix_dd, doesn't process it as dd_ontology nodes
-				if($current_file_item->tld === 'matrix_dd'){
-					continue;
-				}
-
-				$section_tipo = $current_file_item->section_tipo;
-				$sqo = new search_query_object();
-					$sqo->set_section_tipo( [$section_tipo] );
-					$sqo->limit = 0;
-
-				$set_dd_ontology_response = ontology::set_records_in_dd_ontology( $sqo );
-				// add messages and errors
-				if (!empty($set_dd_ontology_response->msg)) {
-					$ar_msg[] = $set_dd_ontology_response->msg;
-				}
-				if(!empty($set_dd_ontology_response->errors)){
-					$response->errors = array_merge($response->errors, $set_dd_ontology_response->errors);
-				}
+			if (!is_object($current_file_item) || !isset($current_file_item->tld, $current_file_item->section_tipo)) {
+				debug_log(
+					__METHOD__
+					. " Ignored file item: Missing 'tld' or 'section_tipo' properties. " . PHP_EOL
+					. ' current_file_item: ' . to_string($current_file_item)
+					,
+					logger::ERROR
+				);
+				continue;
 			}
+
+			// private list, matrix_dd, doesn't process it as dd_ontology nodes
+			if ($current_file_item->tld === 'matrix_dd') {
+				continue;
+			}
+
+			$section_tipo = $current_file_item->section_tipo;
+			$sqo = new search_query_object();
+			$sqo->set_section_tipo([$section_tipo]);
+			$sqo->limit = 0;
+
+			$set_dd_ontology_response = ontology::set_records_in_dd_ontology($sqo);
+			// add messages and errors
+			if (!empty($set_dd_ontology_response->msg)) {
+				$ar_msg[] = $set_dd_ontology_response->msg;
+			}
+			if (!empty($set_dd_ontology_response->errors)) {
+				$response->errors = array_merge($response->errors, $set_dd_ontology_response->errors);
+			}
+		}
 
 		// simple_schema_of_sections. Get current simple schema of sections before update data
 		// Will used to compare with the new schema (after update)
-			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
+		$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
 
 		// post processing tables
-			$ar_tables = ['dd_ontology','matrix_ontology','matrix_ontology_main','matrix_dd'];
-			// optimize tables
-			db_tasks::optimize_tables($ar_tables);
+		$ar_tables = ['dd_ontology', 'matrix_ontology', 'matrix_ontology_main', 'matrix_dd'];
+		// optimize tables
+		db_tasks::optimize_tables($ar_tables);
 
 		// delete all session data except auth
-			if (isset($_SESSION['dedalo']) && is_array($_SESSION['dedalo'])) {
-				foreach ($_SESSION['dedalo'] as $key => $value) {
-					if ($key==='auth') continue;
-					unset($_SESSION['dedalo'][$key]);
-				}
+		if (isset($_SESSION['dedalo']) && is_array($_SESSION['dedalo'])) {
+			foreach ($_SESSION['dedalo'] as $key => $value) {
+				if ($key === 'auth')
+					continue;
+				unset($_SESSION['dedalo'][$key]);
 			}
+		}
 
 		// update javascript labels
-			$ar_langs = DEDALO_APPLICATION_LANGS;
-			foreach ($ar_langs as $lang => $label) {
+		$ar_langs = DEDALO_APPLICATION_LANGS;
+		foreach ($ar_langs as $lang => $label) {
 
-				// direct
-					$write_file = backup::write_lang_file($lang);
-					if ($write_file===false) {
-						$response->errors[]	= 'Error writing write_lang_file of lang: ' . $lang;
-						continue;
-					}
-
-				// debug
-					debug_log(__METHOD__
-						. " Writing lang file " . PHP_EOL
-						. ' lang: ' . to_string($lang)
-						, logger::WARNING
-					);
+			// direct
+			$write_file = backup::write_lang_file($lang);
+			if ($write_file === false) {
+				$response->errors[] = 'Error writing write_lang_file of lang: ' . $lang;
+				continue;
 			}
 
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			logger::$obj['activity']->log_message(
-				'SAVE',
-				logger::INFO,
-				DEDALO_ROOT_TIPO,
-				NULL,
-				[
-					'msg'		=> 'Updated Ontology',
-					'version'	=> ontology_node::get_term_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
-				],
-				logged_user_id() // int
+			// debug
+			debug_log(
+				__METHOD__
+				. " Writing lang file " . PHP_EOL
+				. ' lang: ' . to_string($lang)
+				,
+				logger::WARNING
 			);
+		}
+
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+		logger::$obj['activity']->log_message(
+			'SAVE',
+			logger::INFO,
+			DEDALO_ROOT_TIPO,
+			NULL,
+			[
+				'msg' => 'Updated Ontology',
+				'version' => ontology_node::get_term_by_tipo(DEDALO_ROOT_TIPO, 'lg-spa')
+			],
+			logged_user_id() // int
+		);
 
 		// save_simple_schema_file. Get new simple_schema_of_sections
 		// to compare with the previous scheme and save the changes
-			$save_simple_schema_file_response = hierarchy::save_simple_schema_file((object)[
-				'old_simple_schema_of_sections' => $old_simple_schema_of_sections
-			]);
-			if($save_simple_schema_file_response->result===false){
-				$response->result	= false;
-				$response->msg		= 'Error saving simple_schema_file: '.$save_simple_schema_file_response->msg;
-				$response->errors	= array_merge($response->errors, $save_simple_schema_file_response->errors);
-				return $response;
-			}else{
-				$ar_msg[] = 'OK. Saved a new simple schema changes file: ' . basename($save_simple_schema_file_response->filepath);
-			}
+		$save_simple_schema_file_response = hierarchy::save_simple_schema_file((object) [
+			'old_simple_schema_of_sections' => $old_simple_schema_of_sections
+		]);
+		if ($save_simple_schema_file_response->result === false) {
+			$response->result = false;
+			$response->msg = 'Error saving simple_schema_file: ' . $save_simple_schema_file_response->msg;
+			$response->errors = array_merge($response->errors, $save_simple_schema_file_response->errors);
+			return $response;
+		} else {
+			$ar_msg[] = 'OK. Saved a new simple schema changes file: ' . basename($save_simple_schema_file_response->filepath);
+		}
 
 		// force reset cache of hierarchy tree
-			// delete previous cache files
-			dd_cache::delete_cache_files();
+		// delete previous cache files
+		dd_cache::delete_cache_files();
 
 		// get new Ontology info
-			$ontology_node = ontology_node::get_instance(DEDALO_ROOT_TIPO);
-			$root_info = (object)[
-				'term' => ontology_node::get_term_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, false, false),
-				'properties' => $ontology_node->get_properties()
-			];
+		$ontology_node = ontology_node::get_instance(DEDALO_ROOT_TIPO);
+		$root_info = (object) [
+			'term' => ontology_node::get_term_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, false, false),
+			'properties' => $ontology_node->get_properties()
+		];
 
 		// response
-			$response->result = true;
-			$msg = empty($response->errors)
-				? 'OK. Request done successfully'
-				: 'Warning! Request done with errors';
-			$response->msg = $msg .' '. implode(PHP_EOL, $ar_msg);
-			$response->root_info = $root_info;
+		$response->result = true;
+		$msg = empty($response->errors)
+			? 'OK. Request done successfully'
+			: 'Warning! Request done with errors';
+		$response->msg = $msg . ' ' . implode(PHP_EOL, $ar_msg);
+		$response->root_info = $root_info;
 
 
 		return $response;
@@ -1721,35 +1382,35 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* REBUILD_LANG_FILES
-	* Re-write label lang JS files and deletes the existing lang cache files
-	* It is called from 'Update Ontology' widget
-	* @param object $options
-	* @return object $response
-	*/
-	public static function rebuild_lang_files( object $options ) : object {
+	 * REBUILD_LANG_FILES
+	 * Re-write label lang JS files and deletes the existing lang cache files
+	 * It is called from 'Update Ontology' widget
+	 * @param object $options
+	 * @return object $response
+	 */
+	public static function rebuild_lang_files(object $options): object {
 
 		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
-				$response->errors	= [];
+		$response = new stdClass();
+		$response->result = false;
+		$response->msg = 'Error. Request failed [' . __METHOD__ . ']';
+		$response->errors = [];
 
 		// write_lang_file
-			$ar_langs = DEDALO_APPLICATION_LANGS;
-			foreach ($ar_langs as $lang => $label) {
-				$result = backup::write_lang_file($lang);
-				if ($result!==true) {
-					$response->errors[] = 'Failed write lang file: ' .$lang;
-				}
+		$ar_langs = DEDALO_APPLICATION_LANGS;
+		foreach ($ar_langs as $lang => $label) {
+			$result = backup::write_lang_file($lang);
+			if ($result !== true) {
+				$response->errors[] = 'Failed write lang file: ' . $lang;
 			}
+		}
 
 		// response
-			if(count($response->errors)===0) {
-				$response->result	= true;
-				$response->msg		= 'OK. Request done successfully';
-				$response->updated	= $ar_langs;
-			}
+		if (count($response->errors) === 0) {
+			$response->result = true;
+			$response->msg = 'OK. Request done successfully';
+			$response->updated = $ar_langs;
+		}
 
 
 		return $response;
@@ -1758,12 +1419,12 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* BUILD_RECOVERY_VERSION_FILE
-	* Alias of install::build_recovery_version_file
-	* Creates the recovery file 'dd_ontology_recovery.sql' from current 'dd_ontology' table
-	* @return object $response
-	*/
-	public static function build_recovery_version_file() : object {
+	 * BUILD_RECOVERY_VERSION_FILE
+	 * Alias of install::build_recovery_version_file
+	 * Creates the recovery file 'dd_ontology_recovery.sql' from current 'dd_ontology' table
+	 * @return object $response
+	 */
+	public static function build_recovery_version_file(): object {
 
 		return install::build_recovery_version_file();
 	}//end build_recovery_version_file
@@ -1771,12 +1432,12 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
-	* Alias of install::restore_dd_ontology_recovery_from_file
-	* Source file is a SQL string file located at /dedalo/install/db/dd_ontology_recovery.sql
-	* @return object $response
-	*/
-	public static function restore_dd_ontology_recovery_from_file() : object {
+	 * RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
+	 * Alias of install::restore_dd_ontology_recovery_from_file
+	 * Source file is a SQL string file located at /dedalo/install/db/dd_ontology_recovery.sql
+	 * @return object $response
+	 */
+	public static function restore_dd_ontology_recovery_from_file(): object {
 
 		return install::restore_dd_ontology_recovery_from_file();
 	}//end restore_dd_ontology_recovery_from_file
