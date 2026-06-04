@@ -817,6 +817,14 @@ class install extends common {
 			$config	= self::get_config();
 			$exec	= true;
 
+		// SEC: validate db_install_name — PostgreSQL identifiers are [a-z_][a-z0-9_$]*
+		// Prevents SQL injection via the public static property.
+			if (!preg_match('/^[a-z_][a-z0-9_$]*$/', $config->db_install_name)) {
+				$response->msg = 'Invalid database name: '.$config->db_install_name;
+				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+				return $response;
+			}
+
 		// check if already exists the install database. If yes, ignore clone order and return ok
 			$db_exists = false;
 			$sql = '
@@ -827,7 +835,7 @@ class install extends common {
 			';
 			debug_log(__METHOD__
 				." Executing DB query " . PHP_EOL
-				. $sql
+				. to_string($sql)
 				, logger::WARNING
 			);
 			if ($exec) {
@@ -836,7 +844,7 @@ class install extends common {
 					$msg = " Error on db execution (clone database 0): ".pg_last_error(DBi::_getConnection());
 					debug_log(__METHOD__
 						. $msg . PHP_EOL
-						. $sql
+						. to_string($sql)
 						, logger::ERROR
 					);
 					$response->msg = $msg;
@@ -869,12 +877,6 @@ class install extends common {
 						pg_stat_activity
 					WHERE
 						pg_stat_activity.datname = \''.$config->db_install_name.'\';
-					-- SELECT
-					-- 	pg_terminate_backend (pg_stat_activity.pid)
-					-- FROM
-					-- 	pg_stat_activity
-					-- WHERE
-					-- 	pg_stat_activity.datname = \''.DEDALO_DATABASE_CONN.'\';
 				';
 				debug_log(__METHOD__
 					. " Executing DB query " . PHP_EOL
@@ -887,7 +889,7 @@ class install extends common {
 						$msg = " Error on db execution (clone database 1): ".pg_last_error(DBi::_getConnection());
 						debug_log(__METHOD__
 							. $msg .PHP_EOL
-							. $sql
+							. to_string($sql)
 							, logger::ERROR
 						);
 						$response->msg = $msg;
@@ -902,11 +904,11 @@ class install extends common {
 
 		// drop target database
 			$sql = '
-				DROP DATABASE IF EXISTS '.$config->db_install_name.';
+				DROP DATABASE IF EXISTS "'.$config->db_install_name.'";
 			';
 			debug_log(__METHOD__
 				. " Executing DB query " . PHP_EOL
-				. $sql
+				. to_string($sql)
 				, logger::WARNING
 			);
 			if ($exec) {
@@ -915,7 +917,7 @@ class install extends common {
 					$msg = " Error on db execution (clone database 2): ".pg_last_error($db_conn);
 					debug_log(__METHOD__
 						. $msg .PHP_EOL
-						. $sql
+						. to_string($sql)
 						, logger::ERROR
 					);
 					$response->msg = $msg;
@@ -924,22 +926,122 @@ class install extends common {
 				}
 			}
 
-		// create a new install database with cloned schema and data
+		// terminate the active connections on source database (template)
+		// WARNING: this disconnects ALL sessions on the source (production) DB.
+		// Log the count first so the admin can see the impact.
+			if ($exec) {
+				$count_sql = '
+					SELECT COUNT(*) AS cnt
+					FROM pg_stat_activity
+					WHERE pg_stat_activity.datname = \''.DEDALO_DATABASE_CONN.'\'
+						AND pg_stat_activity.pid <> pg_backend_pid();
+				';
+				$count_result = pg_query($db_conn, $count_sql);
+				if ($count_result) {
+					$count_row = pg_fetch_assoc($count_result);
+					debug_log(__METHOD__
+						. ' Terminating '.($count_row['cnt'] ?? 0).' active sessions on source database "'.DEDALO_DATABASE_CONN.'"'
+						, logger::WARNING
+					);
+				}
+			}
 			$sql = '
-				CREATE DATABASE '.$config->db_install_name.' WITH TEMPLATE '.DEDALO_DATABASE_CONN.' OWNER '.DEDALO_USERNAME_CONN.';
+				SELECT
+					pg_terminate_backend (pg_stat_activity.pid)
+				FROM
+					pg_stat_activity
+				WHERE
+					pg_stat_activity.datname = \''.DEDALO_DATABASE_CONN.'\'
+					AND pg_stat_activity.pid <> pg_backend_pid();
+			';
+			debug_log(__METHOD__
+				. " Executing DB query " . PHP_EOL
+				. to_string($sql)
+				, logger::WARNING
+			);
+			if ($exec) {
+				$result = pg_query($db_conn, $sql);
+				if (!$result) {
+					$msg = " Error on db execution (clone database 2.5): ".pg_last_error($db_conn);
+					debug_log(__METHOD__
+						. $msg .PHP_EOL
+						. to_string($sql)
+						, logger::ERROR
+					);
+					$response->msg = $msg;
+
+					return $response; // return error here !
+				}
+			}
+
+		// the pg_terminate_backend above may have killed the cached
+		// connection (a different session on the same DB); force a
+		// fresh connection on the next DBi::_getConnection() call
+			DBi::invalidate_connection_cache();
+
+		// close the connection attached to the template database
+		// before reconnecting to postgres; otherwise PostgreSQL
+		// sees an open session on the source DB and rejects the clone
+		// Guard: pg_terminate_backend may have already killed this backend,
+		// and PHP pg_connect can reuse the same PgSql\Connection object as
+		// the (now-nulled) cache, so the connection may already be closed.
+			if ($db_conn instanceof PgSql\Connection
+				&& pg_connection_status($db_conn) === PGSQL_CONNECTION_OK) {
+				pg_close($db_conn);
+			}
+
+		// new connection to 'postgres' to create database from template
+		// (the connection must not be attached to the template database)
+			$db_conn = DBi::_getNewConnection(
+				DEDALO_HOSTNAME_CONN,
+				DEDALO_USERNAME_CONN,
+				DEDALO_PASSWORD_CONN,
+				'postgres',
+				DEDALO_DB_PORT_CONN,
+				DEDALO_SOCKET_CONN
+			);
+			if ($db_conn === false) {
+				$response->msg = 'Error: cannot connect to postgres database for clone';
+				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+				return $response;
+			}
+
+		// create a new install database with cloned schema and data
+		// Use double-quoted identifiers (equivalent to quote_ident) for defence-in-depth
+			$sql = '
+				CREATE DATABASE "'.$config->db_install_name.'" WITH TEMPLATE "'.DEDALO_DATABASE_CONN.'" OWNER "'.DEDALO_USERNAME_CONN.'";
 			';
 			if ($exec) {
 				debug_log(__METHOD__
 					. " Executing DB query " . PHP_EOL
-					. $sql
+					. to_string($sql)
 					, logger::WARNING
 				);
-				$result = pg_query($db_conn, $sql);
+
+				// Retry loop: pg_terminate_backend may not take effect immediately,
+				// so PostgreSQL can still report the source DB as "in use".
+				$max_retries = 3;
+				$retry_delay = 1; // seconds
+				$last_error = '';
+				for ($attempt = 1; $attempt <= $max_retries; $attempt++) {
+					$result = pg_query($db_conn, $sql);
+					if ($result) {
+						break;
+					}
+					$last_error = pg_last_error($db_conn);
+					debug_log(__METHOD__
+						. " Attempt $attempt/$max_retries failed: $last_error"
+						, logger::WARNING
+					);
+					if ($attempt < $max_retries) {
+						sleep($retry_delay);
+					}
+				}
 				if (!$result) {
-					$msg = " Error on db execution (clone database 3): ".pg_last_error($db_conn);
+					$msg = " Error on db execution (clone database 3, $max_retries attempts): ".$last_error;
 					debug_log(__METHOD__
 						. $msg .PHP_EOL
-						. $sql
+						. to_string($sql)
 						, logger::ERROR
 					);
 					$response->msg = $msg;
