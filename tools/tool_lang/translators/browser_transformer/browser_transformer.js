@@ -523,53 +523,76 @@ self.onmessage = async (e) => {
 					`Block ${i + 1}/${total_blocks}`
 				);
 
-				// Post-validation: detect missing placeholders
+				// Post-validation: detect missing placeholders and retry up to 3 times
 				let   final_text = translated;
 				const detection  = detect_missing_placeholders(blocks[i], translated);
 
 				if (detection.has_missing) {
 
-					// ── Retry: ask the LLM to fix the missing placeholders ────
+					const MAX_RETRIES = 3;
+
+					// Accumulate every failed attempt so each retry sees the full
+					// mistake history and avoids repeating the same errors
+					const failed_attempts = [{ text: translated, missing: detection.missing }];
+
 					console.warn(
 						`[browser_transformer] Block ${i + 1}: placeholders missing (${detection.missing.join(', ')}). ` +
-						`Retrying translation with corrective prompt.`
+						`Retrying up to ${MAX_RETRIES} times with corrective prompt.`
 					);
 
-					try {
-						const retry_translated = await with_timeout(
-							translate_text(
-								cached_translator,
-								blocks[i],
-								source_lang_code,
-								target_lang_code,
-								{ first_translation: translated, missing: detection.missing }
-							),
-							BLOCK_TIMEOUT_MS,
-							`Block ${i + 1}/${total_blocks} (retry)`
-						);
+					for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
 
-						const retry_detection = detect_missing_placeholders(blocks[i], retry_translated);
+						if (cancelled) break;
 
-						if (!retry_detection.has_missing) {
-							// Retry succeeded — all placeholders present
-							console.log(`[browser_transformer] Block ${i + 1}: retry succeeded, all placeholders preserved.`);
-							final_text = retry_translated;
-						} else {
-							// Retry still has missing placeholders — apply heuristic restoration
+						try {
+							const retry_translated = await with_timeout(
+								translate_text(
+									cached_translator,
+									blocks[i],
+									source_lang_code,
+									target_lang_code,
+									{ failed_attempts }
+								),
+								BLOCK_TIMEOUT_MS,
+								`Block ${i + 1}/${total_blocks} (retry ${attempt}/${MAX_RETRIES})`
+							);
+
+							const retry_detection = detect_missing_placeholders(blocks[i], retry_translated);
+
+							if (!retry_detection.has_missing) {
+								// Retry succeeded — all placeholders present
+								console.log(`[browser_transformer] Block ${i + 1}: retry ${attempt} succeeded, all placeholders preserved.`);
+								final_text = retry_translated;
+								break;
+							}
+
+							// Still missing — record this attempt and try again
+							failed_attempts.push({ text: retry_translated, missing: retry_detection.missing });
+
+							if (attempt < MAX_RETRIES) {
+								console.warn(
+									`[browser_transformer] Block ${i + 1}: retry ${attempt} still missing placeholders (${retry_detection.missing.join(', ')}). ` +
+									`Retrying again.`
+								);
+							} else {
+								// All retries exhausted — fall back to heuristic restoration
+								console.warn(
+									`[browser_transformer] Block ${i + 1}: all ${MAX_RETRIES} retries exhausted, still missing placeholders (${retry_detection.missing.join(', ')}). ` +
+									`Falling back to heuristic restoration.`
+								);
+								final_text = restore_missing_placeholders(blocks[i], retry_translated, retry_detection.missing);
+							}
+
+						} catch (retry_err) {
+							// Retry itself failed (timeout/error) — fall back to heuristic on last attempt
+							const last = failed_attempts[failed_attempts.length - 1];
 							console.warn(
-								`[browser_transformer] Block ${i + 1}: retry still missing placeholders (${retry_detection.missing.join(', ')}). ` +
+								`[browser_transformer] Block ${i + 1}: retry ${attempt} failed (${retry_err?.message || retry_err}). ` +
 								`Falling back to heuristic restoration.`
 							);
-							final_text = restore_missing_placeholders(blocks[i], retry_translated, retry_detection.missing);
+							final_text = restore_missing_placeholders(blocks[i], last.text, last.missing);
+							break;
 						}
-
-					} catch (retry_err) {
-						// Retry itself failed (timeout/error) — fall back to heuristic on first attempt
-						console.warn(
-							`[browser_transformer] Block ${i + 1}: retry failed (${retry_err?.message || retry_err}). ` +
-							`Falling back to heuristic restoration on first attempt.`
-						);
-						final_text = restore_missing_placeholders(blocks[i], translated, detection.missing);
 					}
 				}
 
@@ -629,8 +652,9 @@ self.onmessage = async (e) => {
  * @param {string}   text             - HTML block to translate (may contain <p>, <em>, etc.)
  * @param {string}   sourceLangCode   - Source language locale code (e.g. 'en')
  * @param {string}   targetLangCode   - Target language locale code (e.g. 'es')
- * @param {Object|null} retryContext  - When non-null, sends a corrective retry prompt:
- *   { first_translation: string, missing: string[] }
+ * @param {Object|null} retryContext  - When non-null, sends a corrective retry prompt
+ *   built from the full history of failed attempts:
+ *   { failed_attempts: Array<{ text: string, missing: string[] }> }
  * @returns {string}                  - Model response with translated text
  *
  * Implementation notes:
@@ -656,21 +680,29 @@ async function translate_text(translator, text, sourceLangCode, targetLangCode, 
 	let prompt;
 
 	if (retryContext) {
-		// ── Retry prompt: include first attempt + missing placeholders ──
-		const { first_translation, missing } = retryContext;
+		// ── Retry prompt: include the full history of failed attempts ──
+		const { failed_attempts } = retryContext;
+		const latest_missing = failed_attempts[failed_attempts.length - 1].missing;
+
+		const history_lines = [];
+		failed_attempts.forEach((att, idx) => {
+			history_lines.push(`Attempt ${idx + 1} (incorrect) — missing: ${att.missing.join(', ')}`);
+			history_lines.push(att.text);
+			history_lines.push(``);
+		});
+
 		prompt = [
 			`Translate from ${sourceLangCode} to ${targetLangCode}.`,
-			`CORRECTION REQUEST: Your previous translation was incorrect.`,
-			`The following placeholders were MISSING from your output: ${missing.join(', ')}`,
+			`CORRECTION REQUEST: Your previous translation(s) were incorrect.`,
+			`The following placeholders are STILL MISSING from your output: ${latest_missing.join(', ')}`,
 			`You MUST include every single one of them EXACTLY as shown.`,
 			``,
-			`Your previous (incorrect) translation:`,
-			first_translation,
-			``,
+			`Your previous (incorrect) translation attempts:`,
+			...history_lines,
 			`RULES:`,
 			`1. Keep all HTML tags unchanged.`,
-			`2. Keep ALL placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is. — never modify, translate, or remove them.`,
-			`3. The missing placeholders ${missing.join(', ')} MUST appear in your output.`,
+			`2. Keep ALL placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is — never modify, translate, or remove them.`,
+			`3. The missing placeholders ${latest_missing.join(', ')} MUST appear in your output.`,
 			`4. Do not use markdown.`,
 			`5. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
 			``,
@@ -709,8 +741,16 @@ async function translate_text(translator, text, sourceLangCode, targetLangCode, 
 			`Wrong output: "<p><p>Οι [[5]]οδηγίες του</p>"`,
 			``,
 			`Input: "Si fue desde los años setenta hasta cuándo...? Hasta que pasó[[893]] en [[894]]la Universidad.[[895]] </p><p> </p>"`,
-			`Correct output: "Was it from the seventies until when...? Until it moved[[893]] to [[894]]the University [[895]]?<p> </p>"`,
+			`Correct output: "Was it from the seventies until when...? Until it moved[[893]] to [[894]]the University [[895]] </p><p> </p>"`,
 			`Wrong output: "Was it from the seventies until when...? Until it moved to [[893]]the University [[894]]?</p>"`,
+			``,
+			`Input: "<p> </p><p> </p>"`,
+			`Correct output: "<p> </p><p> </p>"`,
+			`Wrong output: "<p></p>"`,
+			``,
+			`Input: "[[36]] Hola [[37]] [[105]]¿como estás? [[52]]"`,
+			`Correct output: "[[36]] नमस्ते [[37]] [[105]]तिमीलाई कस्तो छ? [[52]]"`,
+			`Wrong output: "[[36] नमस्ते [37]] [[105तिमीलाई कस्तो छ? 52]]"`,
 			``,
 			`Text to translate:`,
 			text
