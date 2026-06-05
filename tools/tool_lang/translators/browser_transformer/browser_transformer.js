@@ -165,39 +165,61 @@ self.onmessage = async (e) => {
  */
 async function translate_text(translator, text, sourceLangCode, targetLangCode) {
 
+	const prompt = [
+		`Translate from ${sourceLangCode} to ${targetLangCode}.`,
+		`RULES:`,
+		`1. Keep all HTML tags unchanged.`,
+		`2. Keep all placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is — never modify, translate, or remove them.`,
+		`3. Do not use markdown.`,
+		`4. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
+		``,
+		`Examples:`,
+		`Input:  "<p>Hola[[5]] ¿como estás[[2]][[3]]?</p>"`,
+		`Correct output: "<p>Hello[[5]] how are you[[2]][[3]]?</p>"`,
+		`Wrong output: "<p>Hello[[9]] how are you[[2]]?</p>"`,
+		``,
+		`Input:  "<p>[[1]][[2]]Gracias por tu[[3]] \"tiempo[[18]]\"[[4]].[[68]][[108]]</p>[[10]]<p>Saludos</p>"`,
+		`Correct output: "<p>[[1]][[2]]Thank for your[[3]] \"time[[18]]\"[[4]].[[68]][[108]]</p>[[10]]<p>Regards</p>"`,
+		`Wrong output: "<p>[[1]]Thank for your[[2]][[3]] \"time[[18 ]]\".[ [68]]</p>[[10]]<p>Regards/p>"`,
+		``,
+		`Input: "<p> </p><p>Hello[[1]], welcome!</p><p> </p>"`,
+		`Correct output: "<p> </p><p>Hola[[1]], ¡bienvenido!</p><p> </p>"`,
+		`Wrong output: "<p>Hola, ¡bienvenido!</p>"`,
+		``,
+		`Input: "<p>[[1]]Hello, [[2]]welcome! new [[8]]eeerew[[35]]</p><p>[[62]]More[[29]] [[84]]text[[438]] [[3]]in[[45]] [[99]]English[[24]]</p>"`,
+		`Correct output: "<p>Hola[[1]], [[2]]¡bienvenido! nuevo [[8]]eeerew[[35]]</p><p>[[62]]Mas[[29]] [[84]]texto[[438]] [[3]]en[[45]] [[99]]inglés[[24]]</p>"`,
+		`Wrong output: "<p>Hola, [[2]]¡bienvenido! nuevo texto</p><p>[[62]]Mas [[29]]texto[[438]] en [[99]]inglés</p>"`,
+		``,
+		`Input: "<p>[[5]]Her directives</p>"`,
+		`Correct output: "<p>[[5]]Οι οδηγίες του</p>"`,
+		`Wrong output: "<p><p>Οι [[5]]οδηγίες του</p>"`,
+		``,
+		`Text to translate:`,
+		text
+	].join('\n');
+
+	// const prompt = [
+	// 	`Translate the following text into **[${targetLangCode}]**.`,
+	// 	'**CRITICAL CONSTRAINTS:**',
+	// 	'1. The text contains placeholders in the format `[[1]]`, `[[88]]`, etc. These are non-translatable constants.',
+	// 	'2. **DO NOT** translate, modify, or remove the placeholders.',
+	// 	'3. **DO NOT** change the numbers inside the placeholders.',
+	// 	'5. **Output ONLY** the translated text without any explanations or introductory remarks.',
+	// 	'6. Keep all HTML tags unchanged.',
+
+	// 	`**Text to translate:**`,
+	// 	`${text}`
+	// ].join('\n');
+
 	const messages = [
 		{
-			role	: 'user',
-			content	: [
+			role    : 'user',
+			content : [
 				{
-					type				: 'text',
-					source_lang_code	: sourceLangCode,
-					target_lang_code	: targetLangCode,
-					text				: `
-					CRITICAL RULE — PRESERVE PLACEHOLDERS EXACTLY:
-					The text contains placeholders like {P1}, {P2}, {P3}, etc.
-					- DO NOT modify, translate, move, add, or remove any character inside them.
-					- DO NOT change { } to < > or any other symbols.
-					- Output them **verbatim** (exactly as they appear in the input).
-					- Treat them as opaque tokens — as if they were a single invisible character.
-					- They ALWAYS start with { followed by a letter P, followed by digits, followed by }.
-					- Treat them as invisible anchors — they are not text, do not touch them.
-					Examples:
-					Input:  "<p>Hola{P5} ¿como estás{P2}{P3}?</p>"
-					Output: "<p>Hello{P5} how are you{P2}{P3}?</p>"
-
-					Input:  "<p>{P1}{P2}Gracias por tu{P3} \"tiempo{p18}\"{P4}.{P68}{p108}</p>{P10}<p>Saludos</p>"
-					Output: "<p>{P1}{P2}Thank for your{P3} \"time{p18}\"{P4}.{P68}{p108}</p>{P10}<p>Regards</p>"
-
-					Input: "<p>.{P424}{P102}{P749}Buenos días, Carme. Muchas gracias...{P750}&nbsp;</p>"
-					Output: "<p>.{P424}{P102}{P749}Good morning, Carme. Thank you very much...{P750}&nbsp;</p>"
-
-					TASK: Translate the text from ${sourceLangCode} to ${targetLangCode}.
-					- Only translate text, never placeholders or HTML tags.
-					- Don't use markdown syntax.
-					- Test your output: Before returning your answer, verify that every {PN} from the input appears  **identically** in the output.
-					
-					\n\nText to translate:${text}`
+					type             : 'text',
+					source_lang_code : sourceLangCode,
+					target_lang_code : targetLangCode,
+					text             : prompt
 				}
 			]
 		}
