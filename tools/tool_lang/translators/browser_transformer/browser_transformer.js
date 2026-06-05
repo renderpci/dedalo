@@ -9,12 +9,16 @@
  * block sequentially, and streams results back as they complete.
  *
  * Communication protocol (postMessage):
- *   Main → Worker:  { options: { blocks[], sourceLangCode, targetLangCode, device } }
+ *   Main → Worker:
+ *     { options: { blocks[], sourceLangCode, targetLangCode, device } }  – start translation
+ *     { cancel: true }                                                  – abort in-progress translation
  *   Worker → Main:
- *     { status: 'init',     data: { progress, status, device, file } }  – model loading
- *     { status: 'on_chunk', data: { accumulated_text, remaining } }      – progress stream
- *     { status: 'end',      data: { accumulated_text } }                 – done
- *     { status: 'error',    data: { message, block, total } | { … } }   – error
+ *     { status: 'init',           data: { progress, status, device, file } }           – model loading
+ *     { status: 'on_chunk',       data: { accumulated_text, remaining } }              – progress stream
+ *     { status: 'on_block_error', data: { message, block, total, accumulated_text, remaining } } – non-fatal block error
+ *     { status: 'end',            data: { accumulated_text } }                        – done
+ *     { status: 'error',          data: { message, name?, stack? } }                  – fatal error
+ *     { status: 'cancelled',      data: { accumulated_text, remaining } }              – cancelled
  *
  * HTML preservation:
  *   The prompt explicitly instructs the model to keep all tags intact.
@@ -30,7 +34,6 @@ import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers
  * Uses q4 quantisation for memory-efficient local inference.
  */
 const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
-//const MODEL_ID			= 'Xenova/nllb-200-distilled-1.3B';
 
 /**
  * Maximum tokens the model may generate per call.
@@ -39,6 +42,27 @@ const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
  */
 const MAX_NEW_TOKENS	= 1024;
 
+/**
+ * Per-block timeout in milliseconds.
+ * If a single block translation exceeds this duration it is treated as a failure.
+ */
+const BLOCK_TIMEOUT_MS	= 120_000;
+
+/**
+ * Cached pipeline instance — reused across multiple translation requests
+ * without re-downloading or re-compiling the model.
+ * @type {Function|null}
+ */
+let cached_translator = null;
+
+/**
+ * Flag set by the main thread to cancel an in-progress translation.
+ * @type {boolean}
+ */
+let cancelled = false;
+
+
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 /**
  * Extract all [[n]] placeholders from a string.
@@ -671,15 +695,15 @@ async function translate_text(translator, text, sourceLangCode, targetLangCode) 
 		}
 	];
 
-	const output		= await translator(messages, {
-		max_new_tokens	: MAX_NEW_TOKENS,	// Enough for one block after chunking
-		do_sample		: false				// Greedy decoding for predictable output
+	const output = await translator(messages, {
+		max_new_tokens : MAX_NEW_TOKENS,
+		do_sample      : false
 	});
 
 	// The model returns the full conversation so far;
 	// grab the assistant's last (newly generated) message.
-	const generated_text	= output[0].generated_text;
-	const last_message		= generated_text[generated_text.length - 1];
+	const generated_text = output[0].generated_text;
+	const last_message   = generated_text[generated_text.length - 1];
 
 	return last_message.content;
 }
