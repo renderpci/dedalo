@@ -449,91 +449,137 @@ function with_timeout(promise, ms, label) {
 }
 
 
+// ── Message handler ────────────────────────────────────────────────────────
+
 self.onmessage = async (e) => {
 
-	const options = e.data.options
+	// ── Cancel command ──────────────────────────────────────────────────
+	if (e.data.cancel) {
+		cancelled = true;
+		return;
+	}
 
-	// ---- 1. Load / initialise the model pipeline ---------------------------
-	// The pipeline is cached after the first call; subsequent calls reuse it.
-	// Quantised to q4 to fit within browser memory limits (~2 GB for GPU).
-	pipeline('text-generation', MODEL_ID, {
-		device	: options.device || 'webgpu',
-		dtype	: 'q4',
+	// ── Validate input ──────────────────────────────────────────────────
+	const options = e.data?.options;
+	if (!options || !Array.isArray(options.blocks) || options.blocks.length === 0) {
+		self.postMessage({
+			status : 'error',
+			data   : { message: 'Invalid or missing options.blocks' }
+		});
+		return;
+	}
 
-		progress_callback: ({ progress, status, file }) => {
-			// Relay download/compile progress to the UI thread
-			self.postMessage({
-				status	: 'init',
-				data	: { progress, status, device: options.device, file }
+	const source_lang_code = options.sourceLangCode || 'en';
+	const target_lang_code = options.targetLangCode || 'es';
+	const device           = options.device || 'webgpu';
+
+	// Reset cancel flag for this run
+	cancelled = false;
+
+	try {
+
+		// ── 1. Load / reuse the model pipeline ───────────────────────────
+		// The pipeline is cached after the first call; subsequent calls reuse it.
+		// Quantised to q4 to fit within browser memory limits (~2 GB for GPU).
+		if (!cached_translator) {
+			cached_translator = await pipeline('text-generation', MODEL_ID, {
+				device : device,
+				dtype  : 'q4',
+				progress_callback: ({ progress, status, file }) => {
+					// Relay download/compile progress to the UI thread
+					self.postMessage({
+						status : 'init',
+						data   : { progress, status, device, file }
+					});
+				}
 			});
 		}
-	})
-	.then(async function(translator) {
 
-		const blocks		= options.blocks;
-		const total_blocks	= blocks.length;
-		const result		= {
-			accumulated_text: '',
-			remaining: total_blocks
+		const blocks        = options.blocks;
+		const total_blocks  = blocks.length;
+		const result        = {
+			accumulated_text : '',
+			remaining        : total_blocks
 		};
 
-		// ---- 2. Translate each block sequentially ----------------------------
+		// ── 2. Translate each block sequentially ─────────────────────────
 		// Blocks are processed one-by-one (not batched) to stream partial
 		// results as soon as each block finishes. This gives the user a
 		// progressive UX instead of a single long wait.
 		for (let i = 0; i < total_blocks; i++) {
 
+			// Check cancel flag between blocks
+			if (cancelled) {
+				self.postMessage({
+					status : 'cancelled',
+					data   : result
+				});
+				return;
+			}
+
 			try {
 
-				const translated = await translate_text(
-					translator,
-					blocks[i],
-					options.sourceLangCode || 'en',
-					options.targetLangCode || 'es'
+				const translated = await with_timeout(
+					translate_text(
+						cached_translator,
+						blocks[i],
+						source_lang_code,
+						target_lang_code
+					),
+					BLOCK_TIMEOUT_MS,
+					`Block ${i + 1}/${total_blocks}`
 				);
 
-				result.accumulated_text += translated;
-				result.remaining 		= total_blocks - (i + 1);
+				// Post-validation: ensure placeholders survived translation
+				const validated = validate_placeholders(blocks[i], translated);
 
-				// ---- 3. Stream partial result to the main thread ---------------
+				result.accumulated_text += validated;
+				result.remaining = total_blocks - (i + 1);
+
+				// ── 3. Stream partial result to the main thread ────────
 				// The UI layer uses `remaining` to show progress like "3 of 8 blocks done"
 				self.postMessage({
-					status	: 'on_chunk',
-					data	: result
+					status : 'on_chunk',
+					data   : result
 				});
 
 			} catch (err) {
 
-				// Per-block error – report which block failed and stop
+				// Non-fatal per-block error — report and continue with remaining blocks
+				console.warn(`[browser_transformer] Block ${i + 1} failed: ${err?.message || err}`);
+
 				self.postMessage({
-					status	: 'error',
-					data	: JSON.stringify({
-						message	: err?.message || '',
-						block	: i + 1,
-						total	: blocks.length
-					})
+					status : 'on_block_error',
+					data   : {
+						message          : err?.message || String(err),
+						block            : i + 1,
+						total            : total_blocks,
+						accumulated_text : result.accumulated_text,
+						remaining        : total_blocks - (i + 1)
+					}
 				});
-				return;
+
+				// Skip this block — accumulated_text stays unchanged
+				result.remaining = total_blocks - (i + 1);
 			}
 		}
 
-		// ---- 4. Signal completion --------------------------------------------
+		// ── 4. Signal completion ────────────────────────────────────────
 		self.postMessage({ status: 'end', data: result });
-	})
-	.catch(function(error) {
 
-		// Pipeline-level error (model load failed, GPU out of memory, etc.)
+	} catch (error) {
+
+		// Fatal error (pipeline load failed, GPU out of memory, etc.)
 		self.postMessage({
-			status	: 'error',
-			data	: JSON.stringify({
-				message	: error?.message || '',
-				name	: error?.name || error?.constructor?.name || '',
-				stack	: error?.stack || '',
-				raw		: String(error)
-			})
+			status : 'error',
+			data   : {
+				message : error?.message || '',
+				name    : error?.name || error?.constructor?.name || '',
+				stack   : error?.stack || ''
+			}
 		});
-	});
-}
+	}
+};
 
 
 /**
