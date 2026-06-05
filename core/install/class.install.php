@@ -215,10 +215,8 @@ class install extends common {
 			'matrix_tools',			// tools register, development and config
 			'matrix_time_machine',	// data versions table
 			'matrix_users',			// users table (user 'root' will be re-created later)
-			'relations',			// search relations table
 			'matrix_dataframe',		// dataframe records (ratings mainly)
 			'matrix_test',			// test table
-			// 'sessions'			// optional sessions table
 		];
 
 		$install_checked_default = [
@@ -656,15 +654,17 @@ class install extends common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
+		$conn = DBi::_getConnection();
+
 		$sql = 'VACUUM ANALYZE';
 		debug_log(__METHOD__
 			." Executing DB query " . PHP_EOL
 			. $sql
 			, logger::WARNING
 		);
-		$result	= pg_query(DBi::_getConnection(), $sql);
+		$result	= pg_query($conn, $sql);
 		if (!$result) {
-			$msg = " Error on db execution (optimize database 0): ".pg_last_error(DBi::_getConnection());
+			$msg = " Error on db execution (optimize database 0): ".pg_last_error($conn);
 			debug_log(__METHOD__
 				. $msg . PHP_EOL
 				. $sql
@@ -804,6 +804,12 @@ class install extends common {
 
 	/**
 	* CLONE_DATABASE
+	* Clones the current Dédalo database into the install database using
+	* CREATE DATABASE WITH TEMPLATE.  This approach requires an exclusive
+	* lock on the source database; any active session (web worker, cron,
+	* psql) blocks the clone with "source database is being accessed by
+	* other users".  For a lock-free alternative see `clone_database_dump()`.
+	*
 	* @param bool $skip_if_exists
 	* @return object $response
 	*/
@@ -816,6 +822,9 @@ class install extends common {
 		// short vars
 			$config	= self::get_config();
 			$exec	= true;
+
+		// new db connection
+			$db_conn = DBi::_getNewConnection();
 
 		// SEC: validate db_install_name — PostgreSQL identifiers are [a-z_][a-z0-9_$]*
 		// Prevents SQL injection via the public static property.
@@ -839,9 +848,9 @@ class install extends common {
 				, logger::WARNING
 			);
 			if ($exec) {
-				$result	= pg_query(DBi::_getConnection(), $sql);
+				$result	= pg_query($db_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (clone database 0): ".pg_last_error(DBi::_getConnection());
+					$msg = " Error on db execution (clone database 0): ".pg_last_error($db_conn);
 					debug_log(__METHOD__
 						. $msg . PHP_EOL
 						. to_string($sql)
@@ -884,9 +893,9 @@ class install extends common {
 					, logger::WARNING
 				);
 				if ($exec) {
-					$result = pg_query(DBi::_getConnection(), $sql);
+					$result = pg_query($db_conn, $sql);
 					if (!$result) {
-						$msg = " Error on db execution (clone database 1): ".pg_last_error(DBi::_getConnection());
+						$msg = " Error on db execution (clone database 1): ".pg_last_error($db_conn);
 						debug_log(__METHOD__
 							. $msg .PHP_EOL
 							. to_string($sql)
@@ -899,7 +908,7 @@ class install extends common {
 				}
 			}
 
-		// new connection
+		// new db connection
 			$db_conn = DBi::_getNewConnection();
 
 		// drop target database
@@ -974,37 +983,37 @@ class install extends common {
 				}
 			}
 
-		// the pg_terminate_backend above may have killed the cached
-		// connection (a different session on the same DB); force a
-		// fresh connection on the next DBi::_getConnection() call
-			DBi::invalidate_connection_cache();
+		// // the pg_terminate_backend above may have killed the cached
+		// // connection (a different session on the same DB); force a
+		// // fresh connection on the next DBi::_getConnection() call
+		// 	DBi::invalidate_connection_cache();
 
-		// close the connection attached to the template database
-		// before reconnecting to postgres; otherwise PostgreSQL
-		// sees an open session on the source DB and rejects the clone
-		// Guard: pg_terminate_backend may have already killed this backend,
-		// and PHP pg_connect can reuse the same PgSql\Connection object as
-		// the (now-nulled) cache, so the connection may already be closed.
-			if ($db_conn instanceof PgSql\Connection
-				&& pg_connection_status($db_conn) === PGSQL_CONNECTION_OK) {
-				pg_close($db_conn);
-			}
+		// // close the connection attached to the template database
+		// // before reconnecting to postgres; otherwise PostgreSQL
+		// // sees an open session on the source DB and rejects the clone
+		// // Guard: pg_terminate_backend may have already killed this backend,
+		// // and PHP pg_connect can reuse the same PgSql\Connection object as
+		// // the (now-nulled) cache, so the connection may already be closed.
+		// 	if ($db_conn instanceof PgSql\Connection
+		// 		&& pg_connection_status($db_conn) === PGSQL_CONNECTION_OK) {
+		// 		pg_close($db_conn);
+		// 	}
 
-		// new connection to 'postgres' to create database from template
-		// (the connection must not be attached to the template database)
-			$db_conn = DBi::_getNewConnection(
-				DEDALO_HOSTNAME_CONN,
-				DEDALO_USERNAME_CONN,
-				DEDALO_PASSWORD_CONN,
-				'postgres',
-				DEDALO_DB_PORT_CONN,
-				DEDALO_SOCKET_CONN
-			);
-			if ($db_conn === false) {
-				$response->msg = 'Error: cannot connect to postgres database for clone';
-				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
-				return $response;
-			}
+		// // new connection to 'postgres' to create database from template
+		// // (the connection must not be attached to the template database)
+		// 	$db_conn = DBi::_getNewConnection(
+		// 		DEDALO_HOSTNAME_CONN,
+		// 		DEDALO_USERNAME_CONN,
+		// 		DEDALO_PASSWORD_CONN,
+		// 		'postgres',
+		// 		DEDALO_DB_PORT_CONN,
+		// 		DEDALO_SOCKET_CONN
+		// 	);
+		// 	if ($db_conn === false) {
+		// 		$response->msg = 'Error: cannot connect to postgres database for clone';
+		// 		debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+		// 		return $response;
+		// 	}
 
 		// create a new install database with cloned schema and data
 		// Use double-quoted identifiers (equivalent to quote_ident) for defence-in-depth
@@ -1061,6 +1070,223 @@ class install extends common {
 
 
 	/**
+	* CLONE_DATABASE_DUMP
+	* Clones the current Dédalo database into the install database using a
+	* pg_dump | psql pipeline instead of CREATE DATABASE WITH TEMPLATE.
+	*
+	* The TEMPLATE approach (see `clone_database()`) requires an exclusive
+	* lock on the source database; any stray connection (web worker, cron,
+	* psql session) blocks the clone with "source database is being accessed
+	* by other users".  This function avoids that problem entirely:
+	* pg_dump reads the source with a consistent MVCC snapshot (no exclusive
+	* lock) and streams the output into a freshly-created target database.
+	*
+	* @param bool $skip_if_exists  If true and the target DB already exists, return success immediately.
+	* @return object $response
+	*/
+	private static function clone_database_dump(bool $skip_if_exists) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		// short vars
+			$config	 = self::get_config();
+			$exec	 = true;
+			$db_conn = DBi::_getConnection();
+
+		// SEC: validate db_install_name — PostgreSQL identifiers are [a-z_][a-z0-9_$]*
+		// Prevents SQL injection via the public static property.
+			if (!preg_match('/^[a-z_][a-z0-9_$]*$/', $config->db_install_name)) {
+				$response->msg = 'Invalid database name: '.$config->db_install_name;
+				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+				return $response;
+			}
+
+		// check if the install database already exists
+		// If yes and skip_if_exists, return success immediately
+			$db_exists = false;
+			$sql = '
+				SELECT EXISTS(
+					SELECT datname FROM pg_catalog.pg_database WHERE datname = \''.$config->db_install_name.'\'
+				);
+			';
+			debug_log(__METHOD__
+				." Executing DB query " . PHP_EOL
+				. to_string($sql)
+				, logger::WARNING
+			);
+			if ($exec) {
+				$result	= pg_query($db_conn, $sql);
+				if (!$result) {
+					$msg = " Error on db execution (clone database dump 0): ".pg_last_error($db_conn);
+					debug_log(__METHOD__
+						. $msg . PHP_EOL
+						. to_string($sql)
+						, logger::ERROR
+					);
+					$response->msg = $msg;
+					return $response;
+				}
+				$rows	= (array)pg_fetch_assoc($result); // 'f' for false, 't' for true
+				$value	= reset($rows);
+				$db_exists = ($value==='t');
+
+				if ($db_exists===true && $skip_if_exists===true) {
+					$response->result	= true;
+					$response->msg		= 'OK. Request done. DDBB already exists. Ignored clone!';
+					debug_log(__METHOD__.' '.$response->msg, logger::WARNING);
+					return $response;
+				}
+			}
+
+		// ── Step 1: terminate connections on the TARGET database (if it exists) ──
+		// Needed before we can DROP it. Only the target, NOT the source.
+			if ($db_exists===true) {
+				$sql = '
+					SELECT pg_terminate_backend(pg_stat_activity.pid)
+					FROM pg_stat_activity
+					WHERE pg_stat_activity.datname = \''.$config->db_install_name.'\'
+						AND pg_stat_activity.pid <> pg_backend_pid();
+				';
+				debug_log(__METHOD__
+					." Executing DB query " . PHP_EOL
+					. to_string($sql)
+					, logger::WARNING
+				);
+				if ($exec) {
+					$result = pg_query($db_conn, $sql);
+					if (!$result) {
+						$msg = " Error on db execution (clone database dump 1): ".pg_last_error($db_conn);
+						debug_log(__METHOD__.$msg.PHP_EOL.to_string($sql), logger::ERROR);
+						$response->msg = $msg;
+						return $response;
+					}
+				}
+			}
+
+		// ── Step 2: drop the target database (if it exists) ──
+		// Connect to 'postgres' maintenance DB — cannot DROP a database
+		// while connected to it.
+			$maint_conn = DBi::_getNewConnection(
+				DEDALO_HOSTNAME_CONN,
+				DEDALO_USERNAME_CONN,
+				DEDALO_PASSWORD_CONN,
+				'postgres',
+				DEDALO_DB_PORT_CONN,
+				DEDALO_SOCKET_CONN
+			);
+			if ($maint_conn === false) {
+				$response->msg = 'Error: cannot connect to postgres maintenance database for clone';
+				debug_log(__METHOD__.' '.$response->msg, logger::ERROR);
+				return $response;
+			}
+
+			if ($db_exists===true) {
+				$sql = 'DROP DATABASE IF EXISTS "'.$config->db_install_name.'";';
+				debug_log(__METHOD__
+					." Executing DB query " . PHP_EOL
+					. to_string($sql)
+					, logger::WARNING
+				);
+				if ($exec) {
+					$result = pg_query($maint_conn, $sql);
+					if (!$result) {
+						$msg = " Error on db execution (clone database dump 2): ".pg_last_error($maint_conn);
+						debug_log(__METHOD__.$msg.PHP_EOL.to_string($sql), logger::ERROR);
+						$response->msg = $msg;
+						return $response;
+					}
+				}
+			}
+
+		// ── Step 3: create the empty target database ──
+			$sql = 'CREATE DATABASE "'.$config->db_install_name.'" OWNER "'.DEDALO_USERNAME_CONN.'";';
+			debug_log(__METHOD__
+				." Executing DB query " . PHP_EOL
+				. to_string($sql)
+				, logger::WARNING
+			);
+			if ($exec) {
+				$result = pg_query($maint_conn, $sql);
+				if (!$result) {
+					$msg = " Error on db execution (clone database dump 3): ".pg_last_error($maint_conn);
+					debug_log(__METHOD__.$msg.PHP_EOL.to_string($sql), logger::ERROR);
+					$response->msg = $msg;
+					return $response;
+				}
+			}
+
+		// close the maintenance connection — no longer needed
+			if ($maint_conn instanceof PgSql\Connection
+				&& pg_connection_status($maint_conn) === PGSQL_CONNECTION_OK) {
+				pg_close($maint_conn);
+			}
+
+		// ── Step 4: pg_dump | psql pipeline — clone data without exclusive lock ──
+		// pg_dump reads the source with a consistent MVCC snapshot; no need to
+		// terminate other sessions on the source database.  The output is piped
+		// directly into psql connected to the newly-created target database.
+		// SEC-041 defence-in-depth: shell-quote every interpolated value.
+			$pg_dump_cmd = DB_BIN_PATH
+				. 'pg_dump '
+				. $config->host_line . ' ' . $config->port_line
+				. ' -U ' . escapeshellarg(DEDALO_USERNAME_CONN)
+				. ' --no-owner --no-privileges'
+				. ' --role=' . escapeshellarg(DEDALO_USERNAME_CONN)
+				. ' ' . escapeshellarg(DEDALO_DATABASE_CONN);
+
+			$psql_cmd = DB_BIN_PATH
+				. 'psql '
+				. $config->host_line . ' ' . $config->port_line
+				. ' -U ' . escapeshellarg(DEDALO_USERNAME_CONN)
+				. ' -d ' . escapeshellarg($config->db_install_name)
+				. ' --echo-errors'
+				. ' -v ON_ERROR_STOP=1';
+
+			$command = $pg_dump_cmd . ' | ' . $psql_cmd;
+
+			debug_log(__METHOD__
+				." Executing terminal DB command " . PHP_EOL
+				. to_string($command)
+				, logger::WARNING
+			);
+			if ($exec) {
+				$output			= null;
+				$result_code	= null;
+				exec($command, $output, $result_code);
+
+				debug_log(__METHOD__
+					." Exec response (clone pipeline)" . PHP_EOL
+					.' result_code: '	. to_string($result_code) . PHP_EOL
+					.' output: '		. to_string($output)
+					, logger::WARNING
+				);
+
+				if ($result_code !== 0) {
+					// psql with ON_ERROR_STOP returns non-zero on any SQL error
+					$msg = " Error on db execution (clone database dump 4): pg_dump|psql pipeline failed with exit code $result_code";
+					debug_log(__METHOD__.$msg.PHP_EOL.to_string($output), logger::ERROR);
+					$response->msg = $msg;
+					return $response;
+				}
+			}
+
+		// invalidate cached connection — the source DB connection may have been
+		// affected by the long-running pipeline; force a fresh one on next use
+			DBi::invalidate_connection_cache();
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
+
+
+		return $response;
+	}//end clone_database_dump
+
+
+
+	/**
 	* CLEAN_ONTOLOGY
 	* @return object $response
 	*/
@@ -1093,9 +1319,9 @@ class install extends common {
 				, logger::WARNING
 			);
 			if ($exec) {
-				$result   = pg_query($db_install_conn, $sql);
+				$result = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (dd_ontology): ".pg_last_error(DBi::_getConnection());
+					$msg = " Error on db execution (dd_ontology): ".pg_last_error($db_install_conn);
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 					return $response;
@@ -1118,7 +1344,7 @@ class install extends common {
 				if ($exec) {
 					$result   = pg_query($db_install_conn, $sql);
 					if (!$result) {
-						$msg = " Error on db execution (matrix_descriptors_dd): ".pg_last_error(DBi::_getConnection());
+						$msg = " Error on db execution (matrix_descriptors_dd): ".pg_last_error($db_install_conn);
 						debug_log(__METHOD__.$msg, logger::ERROR);
 						$response->msg = $msg;
 						return $response;
@@ -1139,7 +1365,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					debug_log(__METHOD__." Error on db execution (re-index ontology tables): ".pg_last_error(DBi::_getConnection()), logger::ERROR);
+					debug_log(__METHOD__." Error on db execution (re-index ontology tables): ".pg_last_error($db_install_conn), logger::ERROR);
 					return $response;
 				}
 			}
@@ -1179,7 +1405,7 @@ class install extends common {
 			if ($exec) {
 				$result   = pg_query($db_install_conn, $sql);
 				if (!$result) {
-					$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
+					$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
 					debug_log(__METHOD__.$msg, logger::ERROR);
 					$response->msg = $msg;
 					return $response;
@@ -1202,7 +1428,7 @@ class install extends common {
 				if ($exec) {
 					$result   = pg_query($db_install_conn, $sql);
 					if (!$result) {
-						$msg = " Error on db execution (main_dd): ".pg_last_error(DBi::_getConnection());
+						$msg = " Error on db execution (main_dd): ".pg_last_error($db_install_conn);
 						debug_log(__METHOD__.$msg, logger::ERROR);
 						$response->msg = $msg;
 						return $response;
@@ -1269,11 +1495,12 @@ class install extends common {
 						$sql = " DELETE FROM matrix_ontology_main
 						WHERE NOT EXISTS (
 							SELECT 1
-							FROM jsonb_array_elements_text(datos#>'{components,hierarchy6,dato,lg-nolan}') AS tld_value
-							WHERE tld_value IN (" . implode(',', $to_preserve_tld) . ")
+							FROM jsonb_array_elements(string->'hierarchy6') AS item
+							WHERE item->>'lang' = 'lg-nolan'
+							AND item->>'value' IN (" . implode(',', $to_preserve_tld) . ")
 						)
-						OR datos#>'{components,hierarchy6,dato,lg-nolan}' IS NULL
-						OR jsonb_array_length(datos#>'{components,hierarchy6,dato,lg-nolan}') = 0;";
+						OR string->'hierarchy6' IS NULL
+						OR jsonb_array_length(string->'hierarchy6') = 0;";
 						break;
 
 					default:
@@ -1290,7 +1517,7 @@ class install extends common {
 			$sql = implode(PHP_EOL, $sentences);
 			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 			if ($exec) {
-				$result   = pg_query($db_install_conn, $sql);
+				$result = pg_query($db_install_conn, $sql);
 				if (!$result) {
 					$msg = " Error on db execution (clean tables): ".pg_last_error($db_install_conn);
 					debug_log(__METHOD__.$msg, logger::ERROR);
@@ -1340,7 +1567,7 @@ class install extends common {
 		// 		if ($exec) {
 		// 			$result   = pg_query($db_install_conn, $sql);
 		// 			if (!$result) {
-		// 				$msg = " Error on db execution (matrix_hierarchy): ".pg_last_error(DBi::_getConnection());
+		// 				$msg = " Error on db execution (matrix_hierarchy): ".pg_last_error($db_install_conn);
 		// 				debug_log(__METHOD__.$msg, logger::ERROR);
 		// 				$response->msg = $msg;
 		// 				return $response;
@@ -1355,7 +1582,7 @@ class install extends common {
 		// 		if ($exec) {
 		// 			$result   = pg_query($db_install_conn, $sql);
 		// 			if (!$result) {
-		// 				debug_log(__METHOD__." Error on db execution (re-index matrix_hierarchy tables): ".pg_last_error(DBi::_getConnection()), logger::ERROR);
+		// 				debug_log(__METHOD__." Error on db execution (re-index matrix_hierarchy tables): ".pg_last_error($db_install_conn), logger::ERROR);
 		// 				return $response;
 		// 			}
 		// 		}
@@ -1382,113 +1609,72 @@ class install extends common {
 			$db_install_conn	= install::get_db_install_conn();
 			$exec				= true;
 
-		$dato = trim('
-			{
-			  "label": "Usuarios",
-			  "relations": [
-				{
-				  "type": "dd151",
-				  "section_id": "1",
-				  "section_tipo": "dd64",
-				  "from_component_tipo": "dd131"
-				},
-				{
-				  "type": "dd151",
-				  "section_id": "-1",
-				  "section_tipo": "dd128",
-				  "from_component_tipo": "dd200"
-				},
-				{
-				  "type": "dd151",
-				  "section_id": "-1",
-				  "section_tipo": "dd128",
-				  "from_component_tipo": "dd197"
-				},
-				{
-				  "type": "dd151",
-				  "section_id": "2",
-				  "section_tipo": "dd64",
-				  "from_component_tipo": "dd244"
-				},
-				{
-				  "type": "dd151",
-				  "section_id": "2",
-				  "section_tipo": "dd234",
-				  "from_component_tipo": "dd1725"
-				}
-			  ],
-			  "components": {
-				"dd132": {
-				  "inf": "User [component_input_text]",
-				  "dato": {
-					"lg-nolan": [
-					  "root"
-					]
-				  }
-				},
-				"dd133": {
-				  "inf": "Password [component_password]",
-				  "dato": {
-					"lg-nolan": null
-				  }
-				},
-				"dd199": {
-				  "inf": "Created date [component_date]",
-				  "dato": {
-					"lg-nolan": [
-					  {
-						"start": {
-						  "day": 30,
-						  "hour": 12,
-						  "time": 64772914091,
-						  "year": 2022,
-						  "month": 9,
-						  "minute": 8,
-						  "second": 11
-						}
-					  }
-					]
-				  }
-				},
-				"dd201": {
-				  "inf": "Modified date [component_date]",
-				  "dato": {
-					"lg-nolan": [
-					  {
-						"start": {
-						  "day": 30,
-						  "hour": 12,
-						  "time": 64772914091,
-						  "year": 2022,
-						  "month": 9,
-						  "minute": 8,
-						  "second": 11
-						}
-					  }
-					]
-				  }
-				}
-			  },
-			  "section_id": 0,
-			  "created_date": "2022-09-30 13:48:31",
-			  "section_tipo": "dd128",
-			  "modified_date": "2022-09-30 13:48:31",
-			  "created_by_userID": -1,
-			  "section_real_tipo": "dd128",
-			  "ar_section_creator": {},
-			  "modified_by_userID": -1
-			}
-		');
+		// v7 schema: data distributed across typed columns
+		// data column: section-level metadata
+		$data = json_encode((object)[
+			'label'             => 'Usuarios',
+			'section_tipo'      => 'dd128',
+			'created_date'      => '2022-09-30 13:48:31',
+			'modified_date'     => '2022-09-30 13:48:31',
+			'created_by_user_id' => -1,
+			'modified_by_user_id' => -1
+		]);
+		// relation column: locators grouped by from_component_tipo
+		$relation = json_encode((object)[
+			'dd131' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '1', 'section_tipo' => 'dd64', 'from_component_tipo' => 'dd131']
+			],
+			'dd200' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '-1', 'section_tipo' => 'dd128', 'from_component_tipo' => 'dd200']
+			],
+			'dd197' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '-1', 'section_tipo' => 'dd128', 'from_component_tipo' => 'dd197']
+			],
+			'dd244' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '2', 'section_tipo' => 'dd64', 'from_component_tipo' => 'dd244']
+			],
+			'dd1725' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '2', 'section_tipo' => 'dd234', 'from_component_tipo' => 'dd1725']
+			]
+		]);
+		// string column: string values (component_input_text, component_password) with id+value+lang wrapper
+		$string = json_encode((object)[
+			'dd132' => [
+				(object)['id' => 1, 'value' => 'root', 'lang' => 'lg-nolan']
+			],
+			'dd133' => [] // password is null by default, set via set_root_pw
+		]);
+		// date column: date values with id property
+		$date = json_encode((object)[
+			'dd199' => [
+				(object)['id' => 1, 'start' => (object)['day' => 30, 'hour' => 12, 'time' => 64772914091, 'year' => 2022, 'month' => 9, 'minute' => 8, 'second' => 11]]
+			],
+			'dd201' => [
+				(object)['id' => 1, 'start' => (object)['day' => 30, 'hour' => 12, 'time' => 64772914091, 'year' => 2022, 'month' => 9, 'minute' => 8, 'second' => 11]]
+			]
+		]);
+		// meta column: counters per component tipo
+		$meta = json_encode((object)[
+			'dd131'  => [(object)['count' => 1]],
+			'dd200'  => [(object)['count' => 1]],
+			'dd197'  => [(object)['count' => 1]],
+			'dd244'  => [(object)['count' => 1]],
+			'dd1725' => [(object)['count' => 1]],
+			'dd132'  => [(object)['count' => 1]],
+			'dd199'  => [(object)['count' => 1]],
+			'dd201'  => [(object)['count' => 1]]
+		]);
 		$sql = '
 			TRUNCATE "matrix_users";
 			ALTER SEQUENCE matrix_users_id_seq RESTART WITH 1;
-			INSERT INTO "matrix_users" ("section_id", "section_tipo", "datos") VALUES (\'-1\', \'dd128\', \''.$dato.'\');
+			INSERT INTO "matrix_users" ("section_id", "section_tipo", "data", "relation", "string", "date", "meta")
+			VALUES (\'-1\', \'dd128\', \''.$data.'\', \''.$relation.'\', \''.$string.'\', \''.$date.'\', \''.$meta.'\');
 		';
 		debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
+				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;
@@ -1533,7 +1719,7 @@ class install extends common {
 		debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 		$result   = pg_query($db_install_conn, $sql);
 		if ($result===false) {
-			$msg = " Error on db execution (create_extensions): ".pg_last_error(DBi::_getConnection());
+			$msg = " Error on db execution (create_extensions): ".pg_last_error($db_install_conn);
 			debug_log(__METHOD__.$msg, logger::ERROR);
 			$response->msg = $msg;
 			return $response;
@@ -1564,97 +1750,64 @@ class install extends common {
 			$db_install_conn	= install::get_db_install_conn();
 			$exec				= true;
 
-		$dato = trim('
-			{
-			  "label": "Proyectos",
-			  "relations": [
-				{
-				  "type": "dd151",
-				  "section_id": "-1",
-				  "section_tipo": "dd128",
-				  "from_component_tipo": "dd200"
-				},
-				{
-				  "type": "dd151",
-				  "section_id": "-1",
-				  "section_tipo": "dd128",
-				  "from_component_tipo": "dd197"
-				}
-			  ],
-			  "components": {
-				"dd155": {
-				  "inf": "Project code [component_input_text]",
-				  "dato": {
-					"lg-nolan": [
-					  "001"
-					]
-				  }
-				},
-				"dd156": {
-				  "inf": "Project (name) [component_input_text]",
-				  "dato": {
-					"lg-eng": [
-					  "General project"
-					]
-				  }
-				},
-				"dd199": {
-				  "inf": "Created date [component_date]",
-				  "dato": {
-					"lg-nolan": [
-					  {
-						"start": {
-						  "day": 15,
-						  "hour": 0,
-						  "time": 64606896000,
-						  "year": 2010,
-						  "month": 2,
-						  "minute": 0,
-						  "second": 0
-						}
-					  }
-					]
-				  }
-				},
-				"dd201": {
-				  "inf": "Modified date [component_date]",
-				  "dato": {
-					"lg-nolan": [
-					  {
-						"start": {
-						  "day": 10,
-						  "hour": 16,
-						  "time": 64890432722,
-						  "year": 2018,
-						  "month": 12,
-						  "minute": 12,
-						  "second": 2
-						}
-					  }
-					]
-				  }
-				}
-			  },
-			  "section_id": 1,
-			  "created_date": "2010-02-15 00:00:00",
-			  "section_tipo": "dd153",
-			  "modified_date": "2018-12-10 16:12:02",
-			  "diffusion_info": null,
-			  "created_by_userID": -1,
-			  "section_real_tipo": "dd153",
-			  "modified_by_userID": -1
-			}
-		');
+		// v7 schema: data distributed across typed columns
+		// data column: section-level metadata
+		$data = json_encode((object)[
+			'label'              => 'Proyectos',
+			'section_tipo'       => 'dd153',
+			'created_date'       => '2010-02-15 00:00:00',
+			'modified_date'      => '2018-12-10 16:12:02',
+			'diffusion_info'     => null,
+			'created_by_user_id' => -1,
+			'modified_by_user_id' => -1
+		]);
+		// relation column: locators grouped by from_component_tipo
+		$relation = json_encode((object)[
+			'dd200' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '-1', 'section_tipo' => 'dd128', 'from_component_tipo' => 'dd200']
+			],
+			'dd197' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '-1', 'section_tipo' => 'dd128', 'from_component_tipo' => 'dd197']
+			]
+		]);
+		// string column: string values (component_input_text) with id+value+lang wrapper
+		$string = json_encode((object)[
+			'dd155' => [
+				(object)['id' => 1, 'value' => '001', 'lang' => 'lg-nolan']
+			],
+			'dd156' => [
+				(object)['id' => 1, 'value' => 'General project', 'lang' => 'lg-eng']
+			]
+		]);
+		// date column: date values with id property
+		$date = json_encode((object)[
+			'dd199' => [
+				(object)['id' => 1, 'start' => (object)['day' => 15, 'hour' => 0, 'time' => 64606896000, 'year' => 2010, 'month' => 2, 'minute' => 0, 'second' => 0]]
+			],
+			'dd201' => [
+				(object)['id' => 1, 'start' => (object)['day' => 10, 'hour' => 16, 'time' => 64890432722, 'year' => 2018, 'month' => 12, 'minute' => 12, 'second' => 2]]
+			]
+		]);
+		// meta column: counters per component tipo
+		$meta = json_encode((object)[
+			'dd200' => [(object)['count' => 1]],
+			'dd197' => [(object)['count' => 1]],
+			'dd155' => [(object)['count' => 1]],
+			'dd156' => [(object)['count' => 1]],
+			'dd199' => [(object)['count' => 1]],
+			'dd201' => [(object)['count' => 1]]
+		]);
 		$sql = '
 			TRUNCATE "matrix_projects";
 			ALTER SEQUENCE matrix_projects_id_seq RESTART WITH 1;
-			INSERT INTO "matrix_projects" ("section_id", "section_tipo", "datos") VALUES (\'1\', \'dd153\', \''.$dato.'\');
+			INSERT INTO "matrix_projects" ("section_id", "section_tipo", "data", "relation", "string", "date", "meta")
+			VALUES (\'1\', \'dd153\', \''.$data.'\', \''.$relation.'\', \''.$string.'\', \''.$date.'\', \''.$meta.'\');
 		';
 		debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
+				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;
@@ -1681,183 +1834,106 @@ class install extends common {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// short vars
-			$config				= self::get_config();
 			$db_install_conn	= install::get_db_install_conn();
 			$exec				= true;
 
-		$dato = trim('
-			{
-			  "label": "Profiles",
-			  "relations": [
-				{
-				  "type": "dd151",
-				  "section_id": "-1",
-				  "section_tipo": "dd128",
-				  "from_component_tipo": "dd200"
-				},
-				{
-				  "type": "dd151",
-				  "section_id": "-1",
-				  "section_tipo": "dd128",
-				  "from_component_tipo": "dd197"
-				}
-			  ],
-			  "components": {
-				"dd199": {
-				  "inf": "Created date [component_date]",
-				  "dato": {
-					"lg-nolan": [
-					  {
-						"start": {
-						  "day": 21,
-						  "hour": 20,
-						  "time": 64803010979,
-						  "year": 2016,
-						  "month": 3,
-						  "minute": 22,
-						  "second": 59
-						}
-					  }
-					]
-				  }
-				},
-				"dd201": {
-				  "inf": "Modified date [component_date]",
-				  "dato": {
-					"lg-nolan": [
-					  {
-						"start": {
-						  "day": 8,
-						  "hour": 14,
-						  "time": 64839364078,
-						  "year": 2017,
-						  "month": 5,
-						  "minute": 27,
-						  "second": 58
-						}
-					  }
-					]
-				  }
-				},
-				"dd237": {
-				  "inf": "Name [component_input_text]",
-				  "dato": {
-					"lg-eng": [
-					  "Admin"
-					]
-				  }
-				},
-				"dd238": {
-				  "inf": "Descripción [component_text_area]",
-				  "dato": {
-					"lg-eng": [
-					  "<p>Admin general</p>"
-					]
-				  }
-				}
-			  },
-			  "section_id": 1,
-			  "created_date": "2016-03-21 20:22:59",
-			  "section_tipo": "dd234",
-			  "modified_date": "2017-05-08 14:27:58",
-			  "diffusion_info": null,
-			  "created_by_userID": -1,
-			  "section_real_tipo": "dd234",
-			  "modified_by_userID": -1
-			}
-		');
-		$dato2 = trim('
-			{
-			  "label": "Profiles",
-			  "relations": [
-				{
-				  "type": "dd151",
-				  "section_id": "-1",
-				  "section_tipo": "dd128",
-				  "from_component_tipo": "dd200"
-				},
-				{
-				  "type": "dd151",
-				  "section_id": "-1",
-				  "section_tipo": "dd128",
-				  "from_component_tipo": "dd197"
-				}
-			  ],
-			  "components": {
-				"dd199": {
-				  "inf": "Created date [component_date]",
-				  "dato": {
-					"lg-nolan": [
-					  {
-						"start": {
-						  "day": 21,
-						  "hour": 20,
-						  "time": 64803011216,
-						  "year": 2016,
-						  "month": 3,
-						  "minute": 26,
-						  "second": 56
-						}
-					  }
-					]
-				  }
-				},
-				"dd201": {
-				  "inf": "Modified date [component_date]",
-				  "dato": {
-					"lg-nolan": [
-					  {
-						"start": {
-						  "day": 8,
-						  "hour": 14,
-						  "time": 64839364078,
-						  "year": 2017,
-						  "month": 5,
-						  "minute": 27,
-						  "second": 58
-						}
-					  }
-					]
-				  }
-				},
-				"dd237": {
-				  "inf": "Name [component_input_text]",
-				  "dato": {
-					"lg-eng": [
-					  "User"
-					]
-				  }
-				},
-				"dd238": {
-				  "inf": "Descripción [component_text_area]",
-				  "dato": {
-					"lg-eng": [
-					  "<p>Generic user</p>"
-					]
-				  }
-				}
-			  },
-			  "section_id": 2,
-			  "created_date": "2016-03-21 20:26:56",
-			  "section_tipo": "dd234",
-			  "modified_date": "2017-05-08 14:27:58",
-			  "diffusion_info": null,
-			  "created_by_userID": -1,
-			  "section_real_tipo": "dd234",
-			  "modified_by_userID": -1
-			}
-		');
+		// v7 schema: data distributed across typed columns
+		// Profile 1: Admin (section_id=1)
+		$data1 = json_encode((object)[
+			'label'              => 'Profiles',
+			'section_tipo'       => 'dd234',
+			'created_date'       => '2016-03-21 20:22:59',
+			'modified_date'      => '2017-05-08 14:27:58',
+			'diffusion_info'     => null,
+			'created_by_user_id' => -1,
+			'modified_by_user_id' => -1
+		]);
+		$relation1 = json_encode((object)[
+			'dd200' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '-1', 'section_tipo' => 'dd128', 'from_component_tipo' => 'dd200']
+			],
+			'dd197' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '-1', 'section_tipo' => 'dd128', 'from_component_tipo' => 'dd197']
+			]
+		]);
+		$string1 = json_encode((object)[
+			'dd237' => [
+				(object)['id' => 1, 'value' => 'Admin', 'lang' => 'lg-eng']
+			],
+			'dd238' => [
+				(object)['id' => 1, 'value' => '<p>Admin general</p>', 'lang' => 'lg-eng']
+			]
+		]);
+		$date1 = json_encode((object)[
+			'dd199' => [
+				(object)['id' => 1, 'start' => (object)['day' => 21, 'hour' => 20, 'time' => 64803010979, 'year' => 2016, 'month' => 3, 'minute' => 22, 'second' => 59]]
+			],
+			'dd201' => [
+				(object)['id' => 1, 'start' => (object)['day' => 8, 'hour' => 14, 'time' => 64839364078, 'year' => 2017, 'month' => 5, 'minute' => 27, 'second' => 58]]
+			]
+		]);
+		$meta1 = json_encode((object)[
+			'dd200' => [(object)['count' => 1]],
+			'dd197' => [(object)['count' => 1]],
+			'dd237' => [(object)['count' => 1]],
+			'dd238' => [(object)['count' => 1]],
+			'dd199' => [(object)['count' => 1]],
+			'dd201' => [(object)['count' => 1]]
+		]);
+
+		// Profile 2: User (section_id=2)
+		$data2 = json_encode((object)[
+			'label'              => 'Profiles',
+			'section_tipo'       => 'dd234',
+			'created_date'       => '2016-03-21 20:26:56',
+			'modified_date'      => '2017-05-08 14:27:58',
+			'diffusion_info'     => null,
+			'created_by_user_id' => -1,
+			'modified_by_user_id' => -1
+		]);
+		$relation2 = json_encode((object)[
+			'dd200' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '-1', 'section_tipo' => 'dd128', 'from_component_tipo' => 'dd200']
+			],
+			'dd197' => [
+				(object)['id' => 1, 'type' => 'dd151', 'section_id' => '-1', 'section_tipo' => 'dd128', 'from_component_tipo' => 'dd197']
+			]
+		]);
+		$string2 = json_encode((object)[
+			'dd237' => [
+				(object)['id' => 1, 'value' => 'User', 'lang' => 'lg-eng']
+			],
+			'dd238' => [
+				(object)['id' => 1, 'value' => '<p>Generic user</p>', 'lang' => 'lg-eng']
+			]
+		]);
+		$date2 = json_encode((object)[
+			'dd199' => [
+				(object)['id' => 1, 'start' => (object)['day' => 21, 'hour' => 20, 'time' => 64803011216, 'year' => 2016, 'month' => 3, 'minute' => 26, 'second' => 56]]
+			],
+			'dd201' => [
+				(object)['id' => 1, 'start' => (object)['day' => 8, 'hour' => 14, 'time' => 64839364078, 'year' => 2017, 'month' => 5, 'minute' => 27, 'second' => 58]]
+			]
+		]);
+		$meta2 = json_encode((object)[
+			'dd200' => [(object)['count' => 1]],
+			'dd197' => [(object)['count' => 1]],
+			'dd237' => [(object)['count' => 1]],
+			'dd238' => [(object)['count' => 1]],
+			'dd199' => [(object)['count' => 1]],
+			'dd201' => [(object)['count' => 1]]
+		]);
 		$sql = '
 			TRUNCATE "matrix_profiles";
 			ALTER SEQUENCE matrix_profiles_id_seq RESTART WITH 1;
-			INSERT INTO "matrix_profiles" ("section_id", "section_tipo", "datos") VALUES (\'1\', \'dd234\', \''.$dato.'\');
-			INSERT INTO "matrix_profiles" ("section_id", "section_tipo", "datos") VALUES (\'2\', \'dd234\', \''.$dato2.'\');
+			INSERT INTO "matrix_profiles" ("section_id", "section_tipo", "data", "relation", "string", "date", "meta") VALUES (\'1\', \'dd234\', \''.$data1.'\', \''.$relation1.'\', \''.$string1.'\', \''.$date1.'\', \''.$meta1.'\');
+			INSERT INTO "matrix_profiles" ("section_id", "section_tipo", "data", "relation", "string", "date", "meta") VALUES (\'2\', \'dd234\', \''.$data2.'\', \''.$relation2.'\', \''.$string2.'\', \''.$date2.'\', \''.$meta2.'\');
 		';
 		debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
+				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;
@@ -1892,25 +1968,22 @@ class install extends common {
 			$section_tipo		= 'test3';
 			$table				= 'matrix_test';
 
-		$dato = trim('
-			{
-			  "relations": [],
-			  "components": {},
-			  "modified_date": "2022-10-07 11:16:43",
-			  "diffusion_info": null,
-			  "modified_by_userID": 1
-			}
-		');
+		// v7 schema: data distributed across typed columns
+		$data = json_encode((object)[
+			'modified_date'      => '2022-10-07 11:16:43',
+			'diffusion_info'     => null,
+			'modified_by_user_id' => 1
+		]);
 		$sql = '
 			TRUNCATE "'.$table.'";
 			ALTER SEQUENCE '.$table.'_id_seq RESTART WITH 1;
-			INSERT INTO "'.$table.'" ("section_id", "section_tipo", "datos") VALUES (\'1\', \''.$section_tipo.'\', \''.$dato.'\');
+			INSERT INTO "'.$table.'" ("section_id", "section_tipo", "data") VALUES (\'1\', \''.$section_tipo.'\', \''.$data.'\');
 		';
 		debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
-				$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
+				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
 				return $response;
@@ -2589,12 +2662,8 @@ class install extends common {
 	* SET_ROOT_PW
 	* This action is fired only in the installation process.
 	* if you want to change the root pw after installation process, you will need to do:
-	* 	1. To change the root pw in the section_id -1 in matrix_ursers table, set it with null data in this way:
-	*		"dd133": {
-	*			"dato": {
-	*			"lg-nolan": null
-	*			}
-	*		}
+	* 	1. To change the root pw in the section_id -1 in matrix_users table, set it with null data in this way:
+	*		string column: {"dd133": []}
 	* 	2. remove the installed status in config/config_auto file.
 	* @param object $options
 	* @return object $response
@@ -2635,24 +2704,20 @@ class install extends common {
 				return $response;
 			}
 
-		// section
-			$section	= section::get_instance(-1, DEDALO_SECTION_USERS_TIPO);
-			$dato		= $section->get_dato();
-			$tipo		= DEDALO_USER_PASSWORD_TIPO;
-			$lang		= DEDALO_DATA_NOLAN;
+		// v7 schema: write password to string column
+			$tipo	= DEDALO_USER_PASSWORD_TIPO;
+			$lang	= DEDALO_DATA_NOLAN;
 
-		// empty component data case
-			if (!isset($dato->components->{$tipo})) {
-				$dato->components->{$tipo}			= new stdClass();
-				$dato->components->{$tipo}->dato	= new stdClass();
-			}
+		// Build v7 string value: [{id, value, lang}]
+			$string_value = json_encode((object)[
+				$tipo => [
+					(object)['id' => 1, 'value' => $password_encripted, 'lang' => $lang]
+				]
+			]);
 
-		// Set dato as array
-			$dato->components->{$tipo}->dato->{$lang} = [$password_encripted];
-
-		// update section full dato. It's saved directly because for security, save data prevents to save section_id < 1
-			$strQuery	= "UPDATE matrix_users SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
-			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( json_handler::encode($dato), -1, DEDALO_SECTION_USERS_TIPO ));
+		// update string column directly. It's saved directly because for security, save data prevents to save section_id < 1
+			$strQuery	= "UPDATE matrix_users SET string = $1 WHERE section_id = $2 AND section_tipo = $3";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $string_value, -1, DEDALO_SECTION_USERS_TIPO ));
 			if($result===false) {
 				$response->msg = 'Error: sorry an error happens on UPDATE record. Data is not saved';
 				debug_log(__METHOD__
@@ -2878,7 +2943,7 @@ class install extends common {
 		// sql_file: dd_ontology_recovery.sql
 			$sql_file = DEDALO_ROOT_PATH . '/install/db/dd_ontology_recovery.sql.gz';
 			if (!file_exists($sql_file)) {
-				$msg = " Error on table restore. File do not exists: ".pg_last_error(DBi::_getConnection());
+				$msg = " Error on table restore. File do not exists";
 				debug_log(__METHOD__
 					. $msg . PHP_EOL
 					. 'sql_file: ' . $sql_file
