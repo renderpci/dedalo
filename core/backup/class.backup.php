@@ -341,14 +341,33 @@ abstract class backup {
 
 	/**
 	* CHECK_REMOTE_SERVER
-	* Exec a curl request wit given data to check current server status
+	* Exec a curl request with given data to check current server status
 	* @return object $response
 	*/
 	public static function check_remote_server() : object {
 
+		if (defined('ONTOLOGY_SERVERS')) {
+			$servers = ONTOLOGY_SERVERS;
+		}else if (defined('STRUCTURE_SERVER_URL') && defined('STRUCTURE_SERVER_CODE')) {
+			$servers = [(object)[
+				'name'	=> 'Old Ontology server config. Define ONTOLOGY_SERVERS ASAP',
+				'url'	=> STRUCTURE_SERVER_URL,
+				'code'	=> STRUCTURE_SERVER_CODE
+			]];
+		}else{
+			$servers = [(object)[
+				'name'	=> 'Invalid ontology server config. Define ONTOLOGY_SERVERS ASAP',
+				'url'	=> '',
+				'code'	=> ''
+			]];
+		}
+		$first_server			= (object)$servers[0];
+		$ontology_server_code	= $first_server->code ?? '';
+		$ontology_server_url	= $first_server->url ?? '';
+
 		// data
 			$data = array(
-				'code'				=> STRUCTURE_SERVER_CODE,
+				'code'				=> $ontology_server_code,
 				'check_connection'	=> true,
 				'dedalo_version'	=> DEDALO_VERSION
 			);
@@ -356,7 +375,7 @@ abstract class backup {
 
 		// curl_request
 			$response = curl_request((object)[
-				'url'				=> STRUCTURE_SERVER_URL,
+				'url'				=> $ontology_server_url,
 				'post'				=> true,
 				'postfields'		=> $data_string,
 				'returntransfer'	=> 1,

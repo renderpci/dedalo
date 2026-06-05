@@ -180,6 +180,7 @@ const render_build_install_version = function (self, value) {
 			button_process.classList.remove('loading')
 
 			update_process_status(
+				'build_install_version',
 				api_response.pid,
 				api_response.pfile,
 				process_response
