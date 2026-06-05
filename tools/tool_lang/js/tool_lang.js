@@ -523,7 +523,7 @@ function replace_dedalo_tags_with_placeholders(source_text) {
  */
 function restore_placeholders(translated_text, placeholders) {
 	return Object.entries(placeholders).reduce(
-		(text, [key, original]) => text.replace(key, original),
+		(text, [key, original]) => text.replaceAll(key, () => original),
 		translated_text
 	);
 }
