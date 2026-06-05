@@ -80,22 +80,35 @@ function extract_placeholders(text) {
 }
 
 /**
- * Validate that every placeholder from the input text is present
- * in the translated output. Attempt automatic restoration for
- * missing or mutated placeholders using offset-based positioning.
+ * Detect missing placeholders in the translated output.
  *
- * WHY: The main thread (tool_lang.js) replaces Dédalo tags like
- * [TC_00:01:25_TC], [index-n-123-data:…:data], [svg-…], etc. with
- * opaque placeholders [[1]], [[2]], [[3]]… before sending blocks to this
- * worker. The prompt instructs the model to keep them verbatim, but LLMs
- * occasionally drop, reorder, or mutate them (e.g. [[5]] → [5] or [[ 5]]).
- * A single lost placeholder breaks the round-trip: restore_placeholders()
- * on the main thread would leave that tag permanently missing from the
- * final HTML, corrupting the record. This function is a defence-in-depth
- * check that catches such errors immediately and attempts a best-effort
- * restoration so the translation can still be used.
+ * Compares placeholders in the input text against those in the output
+ * and returns the list of missing ones, without performing any restoration.
  *
- * RESTORATION STRATEGY (two-pass):
+ * @param {string} input_text    - Original text sent to the model (with placeholders)
+ * @param {string} output_text   - Model's translated text (may have lost placeholders)
+ * @returns {{ missing: string[], has_missing: boolean }}
+ *   - missing: array of placeholder strings absent from the output
+ *   - has_missing: true if any placeholder is missing
+ */
+function detect_missing_placeholders(input_text, output_text) {
+	const input_ph  = extract_placeholders(input_text);
+	const output_ph = extract_placeholders(output_text);
+
+	if (input_ph.length === 0) return { missing: [], has_missing: false };
+
+	const output_set = new Set(output_ph);
+	const missing    = input_ph.filter(p => !output_set.has(p));
+
+	return { missing, has_missing: missing.length > 0 };
+}
+
+/**
+ * Restore missing placeholders in the translated output using
+ * heuristic offset-based positioning.
+ *
+ * This is the fallback when the LLM retry also fails to preserve
+ * all placeholders. It applies two strategies:
  *
  *   Strategy 1 — Anchor + relative-gap positioning (preferred):
  *     For each missing placeholder, find the nearest present neighbor
@@ -105,7 +118,6 @@ function extract_placeholders(text) {
  *       - Gap = 0 (adjacent, e.g. [[34]][[25]]) → insert right next to anchor
  *       - Gap > 0 (separated by text) → scale gap by output/input ratio,
  *         snap to word boundary, and insert there
- *     This handles both clustered and spaced-out placeholders accurately.
  *
  *   Strategy 2 — Absolute offset positioning (fallback):
  *     When no anchor exists, use the missing placeholder's character
@@ -114,60 +126,23 @@ function extract_placeholders(text) {
  *   Placeholders are inserted in reverse offset order so earlier
  *   insertions don't shift the positions of later ones.
  *
- * @param {string} input_text    - Original text sent to the model (with placeholders)
- * @param {string} output_text   - Model's translated text (may have lost placeholders)
+ * @param {string}   input_text  - Original text sent to the model (with placeholders)
+ * @param {string}   output_text - Model's translated text (may have lost placeholders)
+ * @param {string[]} missing    - Array of missing placeholder strings to restore
  * @returns {string}             - Output text with placeholders restored (or unchanged)
- *
- * @example
- *   // All placeholders preserved — no change
- *   validate_placeholders(
- *     '<p>Hello[[1]] world[[2]]</p>',
- *     '<p>Hola[[1]] mundo[[2]]</p>'
- *   )
- *   // → '<p>Hola[[1]] mundo[[2]]</p>'
- *
- * @example
- *   // [[3]] dropped — raw offset restoration (similar length)
- *   // Input offset of [[3]]: 18 (after "Thanks for your")
- *   // Output nearest space to offset 18: after "su" → insert there
- *   validate_placeholders(
- *     '<p>Thanks for your[[3]] time. Regards</p>',
- *     '<p>Gracias por su tiempo. Saludos</p>'
- *   )
- *   // → '<p>Gracias por su[[3]] tiempo. Saludos</p>'
- *
- * @example
- *   // Proportional offset (output much longer than input)
- *   validate_placeholders(
- *     'Hello[[1]] world',
- *     'Bonjour le monde magnifique'
- *   )
- *   // [[1]] at offset 5/16 → proportional target ~5/16*27 ≈ 8
- *   // → 'Bonjour [[1]]le monde magnifique'
- *
- * @example
- *   // Placeholder mutated: [[3]] → [3] — treated as missing, restored
- *   validate_placeholders(
- *     '<p>Text[[3]]</p>',
- *     '<p>Texto[3]</p>'
- *   )
- *   // → '<p>Texto[3][[3]]</p>'  (mutated [3] remains, [[3]] re-added)
  */
-function validate_placeholders(input_text, output_text) {
-	const input_ph  = extract_placeholders(input_text);
-	const output_ph = extract_placeholders(output_text);
+function restore_missing_placeholders(input_text, output_text, missing) {
 
-	if (input_ph.length === 0) return output_text;
-
-	const output_set = new Set(output_ph);
-	const missing    = input_ph.filter(p => !output_set.has(p));
-
-	if (missing.length === 0) return output_text;
+	if (!missing || missing.length === 0) return output_text;
 
 	console.warn(
 		`[browser_transformer] Placeholders missing from translation: ${missing.join(', ')}. ` +
-		`Attempting restoration.`
+		`Applying heuristic restoration.`
 	);
+
+	const input_ph = extract_placeholders(input_text);
+	const output_ph = extract_placeholders(output_text);
+	const output_set = new Set(output_ph);
 
 	// Build ordered list of all input placeholders with their offsets
 	// so we can find neighbors and calculate relative gaps
@@ -198,11 +173,6 @@ function validate_placeholders(input_text, output_text) {
 	for (const { placeholder, input_offset } of to_insert) {
 
 		// ── Strategy 1: Anchor + relative-gap positioning ──────────────
-		// Find the nearest present neighbor in the input, then use the
-		// text gap between them to position the missing placeholder
-		// relative to that anchor in the output.
-		//   - Gap = 0 (adjacent) → insert right next to anchor
-		//   - Gap > 0 (separated by text) → insert at proportional distance
 		const insert_pos = find_anchor_gap_position(
 			placeholder, input_offset, input_ordered,
 			input_text, input_len, output_set, result
@@ -214,7 +184,6 @@ function validate_placeholders(input_text, output_text) {
 		}
 
 		// ── Strategy 2: Absolute offset positioning (fallback) ────────
-		// No anchor found — use hybrid offset heuristic from text start
 		const output_len = result.length;
 		const length_diff_ratio = Math.abs(output_len - input_len) / input_len;
 
@@ -554,10 +523,57 @@ self.onmessage = async (e) => {
 					`Block ${i + 1}/${total_blocks}`
 				);
 
-				// Post-validation: ensure placeholders survived translation
-				const validated = validate_placeholders(blocks[i], translated);
+				// Post-validation: detect missing placeholders
+				let   final_text = translated;
+				const detection  = detect_missing_placeholders(blocks[i], translated);
 
-				result.accumulated_text += validated;
+				if (detection.has_missing) {
+
+					// ── Retry: ask the LLM to fix the missing placeholders ────
+					console.warn(
+						`[browser_transformer] Block ${i + 1}: placeholders missing (${detection.missing.join(', ')}). ` +
+						`Retrying translation with corrective prompt.`
+					);
+
+					try {
+						const retry_translated = await with_timeout(
+							translate_text(
+								cached_translator,
+								blocks[i],
+								source_lang_code,
+								target_lang_code,
+								{ first_translation: translated, missing: detection.missing }
+							),
+							BLOCK_TIMEOUT_MS,
+							`Block ${i + 1}/${total_blocks} (retry)`
+						);
+
+						const retry_detection = detect_missing_placeholders(blocks[i], retry_translated);
+
+						if (!retry_detection.has_missing) {
+							// Retry succeeded — all placeholders present
+							console.log(`[browser_transformer] Block ${i + 1}: retry succeeded, all placeholders preserved.`);
+							final_text = retry_translated;
+						} else {
+							// Retry still has missing placeholders — apply heuristic restoration
+							console.warn(
+								`[browser_transformer] Block ${i + 1}: retry still missing placeholders (${retry_detection.missing.join(', ')}). ` +
+								`Falling back to heuristic restoration.`
+							);
+							final_text = restore_missing_placeholders(blocks[i], retry_translated, retry_detection.missing);
+						}
+
+					} catch (retry_err) {
+						// Retry itself failed (timeout/error) — fall back to heuristic on first attempt
+						console.warn(
+							`[browser_transformer] Block ${i + 1}: retry failed (${retry_err?.message || retry_err}). ` +
+							`Falling back to heuristic restoration on first attempt.`
+						);
+						final_text = restore_missing_placeholders(blocks[i], translated, detection.missing);
+					}
+				}
+
+				result.accumulated_text += final_text;
 				result.remaining = total_blocks - (i + 1);
 
 				// ── 3. Stream partial result to the main thread ────────
@@ -609,11 +625,13 @@ self.onmessage = async (e) => {
 /**
  * Translate a single text block using the loaded model pipeline.
  *
- * @param {Function} translator    - The loaded HuggingFace text-generation pipeline
- * @param {string}   text          - HTML block to translate (may contain <p>, <em>, etc.)
- * @param {string}   sourceLangCode- Source language locale code (e.g. 'en')
- * @param {string}   targetLangCode- Target language locale code (e.g. 'es')
- * @returns {string}               - Model response with translated text
+ * @param {Function} translator       - The loaded HuggingFace text-generation pipeline
+ * @param {string}   text             - HTML block to translate (may contain <p>, <em>, etc.)
+ * @param {string}   sourceLangCode   - Source language locale code (e.g. 'en')
+ * @param {string}   targetLangCode   - Target language locale code (e.g. 'es')
+ * @param {Object|null} retryContext  - When non-null, sends a corrective retry prompt:
+ *   { first_translation: string, missing: string[] }
+ * @returns {string}                  - Model response with translated text
  *
  * Implementation notes:
  *
@@ -633,40 +651,71 @@ self.onmessage = async (e) => {
  *     behave greedily — the same input always produces the same output.
  *     This avoids random tag mutations across runs.
  */
-async function translate_text(translator, text, sourceLangCode, targetLangCode) {
+async function translate_text(translator, text, sourceLangCode, targetLangCode, retryContext=null) {
 
-	const prompt = [
-		`Translate from ${sourceLangCode} to ${targetLangCode}.`,
-		`RULES:`,
-		`1. Keep all HTML tags unchanged.`,
-		`2. Keep all placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is — never modify, translate, or remove them.`,
-		`3. Do not use markdown.`,
-		`4. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
-		``,
-		`Examples:`,
-		`Input:  "<p>Hola[[5]] ¿como estás[[2]][[3]]?</p>"`,
-		`Correct output: "<p>Hello[[5]] how are you[[2]][[3]]?</p>"`,
-		`Wrong output: "<p>Hello[[9]] how are you[[2]]?</p>"`,
-		``,
-		`Input:  "<p>[[1]][[2]]Gracias por tu[[3]] \"tiempo[[18]]\"[[4]].[[68]][[108]]</p>[[10]]<p>Saludos</p>"`,
-		`Correct output: "<p>[[1]][[2]]Thank for your[[3]] \"time[[18]]\"[[4]].[[68]][[108]]</p>[[10]]<p>Regards</p>"`,
-		`Wrong output: "<p>[[1]]Thank for your[[2]][[3]] \"time[[18 ]]\".[ [68]]</p>[[10]]<p>Regards/p>"`,
-		``,
-		`Input: "<p> </p><p>Hello[[1]], welcome!</p><p> </p>"`,
-		`Correct output: "<p> </p><p>Hola[[1]], ¡bienvenido!</p><p> </p>"`,
-		`Wrong output: "<p>Hola, ¡bienvenido!</p>"`,
-		``,
-		`Input: "<p>[[1]]Hello, [[2]]welcome! new [[8]]eeerew[[35]]</p><p>[[62]]More[[29]] [[84]]text[[438]] [[3]]in[[45]] [[99]]English[[24]]</p>"`,
-		`Correct output: "<p>Hola[[1]], [[2]]¡bienvenido! nuevo [[8]]eeerew[[35]]</p><p>[[62]]Mas[[29]] [[84]]texto[[438]] [[3]]en[[45]] [[99]]inglés[[24]]</p>"`,
-		`Wrong output: "<p>Hola, [[2]]¡bienvenido! nuevo texto</p><p>[[62]]Mas [[29]]texto[[438]] en [[99]]inglés</p>"`,
-		``,
-		`Input: "<p>[[5]]Her directives</p>"`,
-		`Correct output: "<p>[[5]]Οι οδηγίες του</p>"`,
-		`Wrong output: "<p><p>Οι [[5]]οδηγίες του</p>"`,
-		``,
-		`Text to translate:`,
-		text
-	].join('\n');
+	let prompt;
+
+	if (retryContext) {
+		// ── Retry prompt: include first attempt + missing placeholders ──
+		const { first_translation, missing } = retryContext;
+		prompt = [
+			`Translate from ${sourceLangCode} to ${targetLangCode}.`,
+			`CORRECTION REQUEST: Your previous translation was incorrect.`,
+			`The following placeholders were MISSING from your output: ${missing.join(', ')}`,
+			`You MUST include every single one of them EXACTLY as shown.`,
+			``,
+			`Your previous (incorrect) translation:`,
+			first_translation,
+			``,
+			`RULES:`,
+			`1. Keep all HTML tags unchanged.`,
+			`2. Keep ALL placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is. — never modify, translate, or remove them.`,
+			`3. The missing placeholders ${missing.join(', ')} MUST appear in your output.`,
+			`4. Do not use markdown.`,
+			`5. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
+			``,
+			`Text to translate:`,
+			text
+		].join('\n');
+	} else {
+		// ── First-attempt prompt ──────────────────────────────────────────
+		prompt = [
+			`Translate from ${sourceLangCode} to ${targetLangCode}.`,
+			`RULES:`,
+			`1. Keep all HTML tags unchanged.`,
+			`2. Keep all placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is — never modify, translate, or remove them.`,
+			`3. Do not use markdown.`,
+			`4. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
+			``,
+			`Examples:`,
+			`Input:  "<p>Hola[[5]] ¿como estás[[2]][[3]]?</p>"`,
+			`Correct output: "<p>Hello[[5]] how are you[[2]][[3]]?</p>"`,
+			`Wrong output: "<p>Hello[[9]] how are you[[2]]?</p>"`,
+			``,
+			`Input:  "<p>[[1]][[2]]Gracias por tu[[3]] \"tiempo[[18]]\"[[4]].[[68]][[108]]</p>[[10]]<p>Saludos</p>"`,
+			`Correct output: "<p>[[1]][[2]]Thank for your[[3]] \"time[[18]]\"[[4]].[[68]][[108]]</p>[[10]]<p>Regards</p>"`,
+			`Wrong output: "<p>[[1]]Thank for your[[2]][[3]] \"time[[18 ]]\".[ [68]]</p>[[10]]<p>Regards/p>"`,
+			``,
+			`Input: "<p> </p><p>Hello[[1]], welcome!</p><p> </p>"`,
+			`Correct output: "<p> </p><p>Hola[[1]], ¡bienvenido!</p><p> </p>"`,
+			`Wrong output: "<p>Hola, ¡bienvenido!</p>"`,
+			``,
+			`Input: "<p>[[1]]Hello, [[2]]welcome! new [[8]]eeerew[[35]]</p><p>[[62]]More[[29]] [[84]]text[[438]] [[3]]in[[45]] [[99]]English[[24]]</p>"`,
+			`Correct output: "<p>Hola[[1]], [[2]]¡bienvenido! nuevo [[8]]eeerew[[35]]</p><p>[[62]]Mas[[29]] [[84]]texto[[438]] [[3]]en[[45]] [[99]]inglés[[24]]</p>"`,
+			`Wrong output: "<p>Hola, [[2]]¡bienvenido! nuevo texto</p><p>[[62]]Mas [[29]]texto[[438]] en [[99]]inglés</p>"`,
+			``,
+			`Input: "<p>[[5]]Her directives</p>"`,
+			`Correct output: "<p>[[5]]Οι οδηγίες του</p>"`,
+			`Wrong output: "<p><p>Οι [[5]]οδηγίες του</p>"`,
+			``,
+			`Input: "Si fue desde los años setenta hasta cuándo...? Hasta que pasó[[893]] en [[894]]la Universidad.[[895]] </p><p> </p>"`,
+			`Correct output: "Was it from the seventies until when...? Until it moved[[893]] to [[894]]the University [[895]]?<p> </p>"`,
+			`Wrong output: "Was it from the seventies until when...? Until it moved to [[893]]the University [[894]]?</p>"`,
+			``,
+			`Text to translate:`,
+			text
+		].join('\n');
+	}
 
 	// const prompt = [
 	// 	`Translate the following text into **[${targetLangCode}]**.`,
