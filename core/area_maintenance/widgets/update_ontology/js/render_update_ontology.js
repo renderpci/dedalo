@@ -139,9 +139,15 @@ const get_content_data_edit = async function(self) {
 					self.events_tokens.push(
 						event_manager.subscribe('ontology_server_select_change', render_handler)
 					)
-
 				},
-				on_submit		: async (e, values) => {
+				on_submit : async (e, values) => {
+
+					const entity = page_globals.dedalo_entity || 'Unknown'
+					const not_allowed = ['master']
+					if(not_allowed.includes(entity)) {
+						alert(`Not allowed action in ${entity} environment`)
+						return
+					}
 
 					// ar_dedalo_prefix_tipos
 						// sample value:
@@ -162,7 +168,7 @@ const get_content_data_edit = async function(self) {
 					// server to be used
 						const server = servers.find(el => el.active === true )
 						if( !server ){
-							alert("Error: any server was selected");
+							alert("Error: No server was selected.");
 							return
 						}
 

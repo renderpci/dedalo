@@ -18,7 +18,7 @@ class update_ontology {
 		// servers
 			if (defined('ONTOLOGY_SERVERS')) {
 				$servers = ONTOLOGY_SERVERS;
-			}else if (defined('STRUCTURE_SERVER_URL')) {
+			}else if (defined('STRUCTURE_SERVER_URL') && defined('STRUCTURE_SERVER_CODE')) {
 				$servers = [(object)[
 					'name'	=> 'Old Ontology server config. Define ONTOLOGY_SERVERS ASAP',
 					'url'	=> STRUCTURE_SERVER_URL,
@@ -41,20 +41,19 @@ class update_ontology {
 			$ontology_servers = [];
 			foreach ($servers as $current_server) {
 				$server = (object)$current_server;
-				$server_ready			= ontology_data_io::check_remote_server( $server );
-				$server->msg			= $server_ready->msg;
-				$server->errors			= $server_ready->errors;
-				$server->response_code	= $server_ready->code;
-				$server->result			= $server_ready->result;
-				$server->code			= $server->code;
-				if($server->code === 'localhost' && $server->result!==false){
-					$server->result->result = true;
-				}
-				$ontology_servers[]		= $server;
+					$server_ready			= ontology_data_io::check_remote_server( $server );
+					$server->msg			= $server_ready->msg;
+					$server->errors			= $server_ready->errors;
+					$server->response_code	= $server_ready->code;
+					$server->result			= $server_ready->result;
+					if($server->code === 'localhost' && is_object($server->result)){
+						$server->result->result = true;
+					}
+				$ontology_servers[] = $server;
 			}
 
 		// tld list
-			$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
+			$DEDALO_PREFIX_TIPOS = (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 			// force to add 'ontology' to the list
 			$DEDALO_PREFIX_TIPOS = array_values(array_unique(
 				array_merge($DEDALO_PREFIX_TIPOS, ['ontology'])

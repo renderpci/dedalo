@@ -10,6 +10,7 @@ include(dirname(__FILE__).'/class.map.php');
 include(dirname(__FILE__).'/class.process_result.php');
 include(dirname(__FILE__).'/class.image.php');
 include(dirname(__FILE__).'/class.notes.php');
+include(dirname(__FILE__).'/class.biblio.php');
 // include(dirname(__FILE__).'/class.DBi.php'); // already included from config
 // shared
 include_once $root_dir . '/shared/class.OptimizeTC.php';
@@ -5576,6 +5577,122 @@ class web_data {
 
 		return null;
 	}//end get_table_thesaurus
+
+
+
+	/**
+	* GET_TEXT_FRAGMENT
+	* Used usually to get bibliographic transcription text fragments
+	* @param object $options
+	* @return object $response
+	*/
+	public static function get_text_fragment( object $options ) : object {
+
+		// options
+			$section_id		= $options->section_id ?? ''; // E.g. '1,2,3'
+			$lang			= $options->lang ?? WEB_CURRENT_LANG_CODE;
+			$q				= $options->q ?? null;
+			$column			= $options->column ?? 'transcription';
+			$table			= $options->table ?? 'publications';
+			$max_chars 		= $options->max_chars ?? 320;
+			$max_occurrences = $options->max_occurrences ?? 1;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed (get_text_fragment)';
+
+		// check vars
+			if(empty($lang) || !self::check_safe_value('lang', $lang)) {
+				$response->msg = 'Error. Invalid lang: '. to_string($lang);
+				return $response;
+			}
+			if (empty($q)) {
+				$response->msg = 'Error. Empty q: '. to_string($q);
+				return $response;
+			}
+			if (empty($section_id) || !self::check_safe_value('section_id', $section_id)) {
+				$response->msg = 'Error. Invalid section_id: '. to_string($section_id);
+				return $response;
+			}
+			if (empty($column) || !self::check_safe_value('ar_fields', $column)) {
+				$response->msg = 'Error. Invalid column: '. to_string($column);
+				return $response;
+			}
+			if (empty($table) || !self::check_safe_value('table', $table)) {
+				$response->msg = 'Error. Invalid table: '. to_string($table);
+				return $response;
+			}
+			if ((int)$max_chars < 1) {
+				$response->msg = 'Error. Invalid max_chars: '. to_string($max_chars);
+				return $response;
+			}
+			if ((int)$max_occurrences < 1) {
+				$response->msg = 'Error. Invalid max_occurrences: '. to_string($max_occurrences);
+				return $response;
+			}
+
+		// $safe_ar_section_id
+			$safe_ar_section_id = [];
+			$ar_section_id = explode(',', $section_id);
+			foreach ($ar_section_id as $current_section_id) {
+				$safe_ar_section_id[] = (int)trim($current_section_id);
+			}
+
+		// data. Raw text
+			$s_options = new stdClass();
+				$s_options->table				= $table;
+				$s_options->ar_fields			= ['section_id',$column];
+				$s_options->lang				= $lang;
+				$s_options->sql_filter			= '`section_id` IN (' . implode(',', $safe_ar_section_id) . ')';
+				$s_options->apply_postprocess	= false; // Avoid clean text on false
+
+			$rows_data = web_data::get_rows_data( $s_options );
+			if ($rows_data->result === false) {
+				$response->result	= false;
+				$response->msg		= 'Error. get_rows_data failed: '. $rows_data->msg;
+				return $response;
+			}
+
+		// extract fragments
+			$data = $rows_data->result ?? [];
+			$result = [];
+			foreach ($data as $row) {
+
+				$current_text = $row[$column] ?? '';
+				$current_section_id = $row['section_id'];
+
+				if(empty($current_text)) {
+					continue;
+				}
+
+				// Sanitize $q for regex usage in biblio::build_fragment
+					$safe_q = preg_quote($q, '/');
+
+				$ar_fragment = biblio::build_fragment((object)[
+					'text' => $current_text,
+					'search' => $safe_q,
+					'max_chars' => (int)$max_chars,
+					'max_occurrences' => (int)$max_occurrences
+				]);
+
+				if (empty($ar_fragment)) {
+					continue;
+				}
+
+				$result[] = [
+					'section_id' => $current_section_id,
+					'search' 	 => $q,
+					'fragments'  => $ar_fragment
+				];
+			}//end foreach ($data as $row)
+
+		// response ok
+			$response->result	= $result;
+			$response->msg		= 'Request done successfully';
+
+		return $response;
+	}//end get_text_fragment
 
 
 
