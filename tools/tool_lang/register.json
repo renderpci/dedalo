@@ -276,24 +276,29 @@
         "lg-nolan": [
           [
             {
-              "lang": "lg-spa",
-              "name": "automatic_translation",
-              "value": "Traducción automática"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "source_lang",
-              "value": "Idioma de origen"
-            },
-            {
               "lang": "lg-eng",
               "name": "automatic_translation",
               "value": "Automatic translation"
             },
             {
-              "lang": "lg-ell",
+              "lang": "lg-spa",
               "name": "automatic_translation",
-              "value": "Αυτόματη μετάφραση"
+              "value": "Traducción automática"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "automatic_translation",
+              "value": "Traduction automatique"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "automatic_translation",
+              "value": "Traduzione automatica"
+            },
+            {
+              "lang": "lg-por",
+              "name": "automatic_translation",
+              "value": "Tradução automática"
             },
             {
               "lang": "lg-cat",
@@ -306,9 +311,49 @@
               "value": "Automatische Übersetzung"
             },
             {
+              "lang": "lg-nep",
+              "name": "automatic_translation",
+              "value": "स्वचालित अनुवाद"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "automatic_translation",
+              "value": "الترجمة الآلية"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "automatic_translation",
+              "value": "Αυτόματη μετάφραση"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "automatic_translation",
+              "value": "Itzulpen automatikoa"
+            },
+            {
               "lang": "lg-eng",
               "name": "source_lang",
               "value": "Source language"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "source_lang",
+              "value": "Idioma de origen"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "source_lang",
+              "value": "Langue source"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "source_lang",
+              "value": "Lingua di origine"
+            },
+            {
+              "lang": "lg-por",
+              "name": "source_lang",
+              "value": "Idioma de origem"
             },
             {
               "lang": "lg-cat",
@@ -316,34 +361,29 @@
               "value": "Idioma d'origen"
             },
             {
-              "lang": "lg-ell",
-              "name": "source_lang",
-              "value": "Γλώσσα πηγής"
-            },
-            {
               "lang": "lg-deu",
               "name": "source_lang",
               "value": "Ausgangssprache"
             },
             {
-              "lang": "lg-deu",
-              "name": "target_lang",
-              "value": "Zielsprache"
+              "lang": "lg-nep",
+              "name": "source_lang",
+              "value": "स्रोत भाषा"
             },
             {
-              "lang": "lg-cat",
-              "name": "target_lang",
-              "value": "Idioma de destinació"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "target_lang",
-              "value": "Idioma de destino"
+              "lang": "lg-ara",
+              "name": "source_lang",
+              "value": "لغة المصدر"
             },
             {
               "lang": "lg-ell",
-              "name": "target_lang",
-              "value": "γλώσσα-στόχος"
+              "name": "source_lang",
+              "value": "Γλώσσα πηγής"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "source_lang",
+              "value": "Jatorrizko hizkuntza"
             },
             {
               "lang": "lg-eng",
@@ -352,88 +392,33 @@
             },
             {
               "lang": "lg-spa",
-              "name": "copy_to_target",
-              "value": "Copiar a destino"
+              "name": "target_lang",
+              "value": "Idioma de destino"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "target_lang",
+              "value": "Langue cible"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "target_lang",
+              "value": "Lingua di destinazione"
+            },
+            {
+              "lang": "lg-por",
+              "name": "target_lang",
+              "value": "Idioma de destino"
             },
             {
               "lang": "lg-cat",
-              "name": "copy_to_target",
-              "value": "Copiar a destí"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "copy_to_target",
-              "value": "Copy to target"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "copy_to_target",
-              "value": "αντιγραφή στον προορισμό"
+              "name": "target_lang",
+              "value": "Idioma de destinació"
             },
             {
               "lang": "lg-deu",
-              "name": "copy_to_target",
-              "value": "zum Ziel kopieren"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "automatic_translation",
-              "value": "Automatic translation"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "automatic_translation",
-              "value": "Traducción automática"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "automatic_translation",
-              "value": "Αυτόματη μετάφραση"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "automatic_translation",
-              "value": "Automatische Übersetzung"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "automatic_translation",
-              "value": "Traducció automàtica"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "propagate_marks",
-              "value": "Propagate marks"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "propagate_marks",
-              "value": "Marken verbreiten"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "propagate_marks",
-              "value": "Διαδώστε σημάδια"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "propagate_marks",
-              "value": "Propagació de marques"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "propagate_marks",
-              "value": "Propagar marcas"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "automatic_translation",
-              "value": "स्वचालित अनुवाद"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "source_lang",
-              "value": "स्रोत भाषा"
+              "name": "target_lang",
+              "value": "Zielsprache"
             },
             {
               "lang": "lg-nep",
@@ -441,14 +426,129 @@
               "value": "लक्षित भाषा"
             },
             {
+              "lang": "lg-ara",
+              "name": "target_lang",
+              "value": "اللغة الهدف"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "target_lang",
+              "value": "γλώσσα-στόχος"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "target_lang",
+              "value": "Helburuko hizkuntza"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "copy_to_target",
+              "value": "Copy to target"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "copy_to_target",
+              "value": "Copiar a destino"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "copy_to_target",
+              "value": "Copier vers la cible"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "copy_to_target",
+              "value": "Copia a destinazione"
+            },
+            {
+              "lang": "lg-por",
+              "name": "copy_to_target",
+              "value": "Copiar para o destino"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "copy_to_target",
+              "value": "Copiar a destí"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "copy_to_target",
+              "value": "zum Ziel kopieren"
+            },
+            {
               "lang": "lg-nep",
               "name": "copy_to_target",
               "value": "लक्ष्यमा प्रतिलिपि गर्नुहोस्"
             },
             {
+              "lang": "lg-ara",
+              "name": "copy_to_target",
+              "value": "نسخ إلى الهدف"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "copy_to_target",
+              "value": "αντιγραφή στον προορισμό"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "copy_to_target",
+              "value": "Helburura kopiatu"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "propagate_marks",
+              "value": "Propagate marks"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "propagate_marks",
+              "value": "Propagar marcas"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "propagate_marks",
+              "value": "Propager les marques"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "propagate_marks",
+              "value": "Propaga marcature"
+            },
+            {
+              "lang": "lg-por",
+              "name": "propagate_marks",
+              "value": "Propagar marcas"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "propagate_marks",
+              "value": "Propagació de marques"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "propagate_marks",
+              "value": "Marken verbreiten"
+            },
+            {
               "lang": "lg-nep",
               "name": "propagate_marks",
               "value": "अंकहरू प्रचार गर्नुहोस्"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "propagate_marks",
+              "value": "نشر العلامات"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "propagate_marks",
+              "value": "Διαδώστε σημάδια"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "propagate_marks",
+              "value": "Markak zabaldu"
             },
             {
               "lang": "lg-eng",
@@ -461,6 +561,51 @@
               "value": "Más compatible, más lento."
             },
             {
+              "lang": "lg-fra",
+              "name": "cpu_device",
+              "value": "Plus compatible, plus lent."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "cpu_device",
+              "value": "Più compatibile, più lento."
+            },
+            {
+              "lang": "lg-por",
+              "name": "cpu_device",
+              "value": "Mais compatível, mais lento."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "cpu_device",
+              "value": "Més compatible, més lent."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "cpu_device",
+              "value": "Kompatibler, langsamer."
+            },
+            {
+              "lang": "lg-nep",
+              "name": "cpu_device",
+              "value": "अधिक अनुकूल, ढिलो।"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "cpu_device",
+              "value": "أكثر توافقًا، أبطأ."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "cpu_device",
+              "value": "Πιο συμβατό, πιο αργό."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "cpu_device",
+              "value": "Bateragarriagoa, motelagoa."
+            },
+            {
               "lang": "lg-eng",
               "name": "initializing",
               "value": "Initializing"
@@ -469,6 +614,51 @@
               "lang": "lg-spa",
               "name": "initializing",
               "value": "Inicializando"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "initializing",
+              "value": "Initialisation"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "initializing",
+              "value": "Inizializzazione"
+            },
+            {
+              "lang": "lg-por",
+              "name": "initializing",
+              "value": "Inicializando"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "initializing",
+              "value": "Inicialitzant"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "initializing",
+              "value": "Initialisiere"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "initializing",
+              "value": "सुरु गर्दै"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "initializing",
+              "value": "جارٍ التهيئة"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "initializing",
+              "value": "Αρχικοποίηση"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "initializing",
+              "value": "Hasten"
             },
             {
               "lang": "lg-eng",
@@ -481,6 +671,51 @@
               "value": "Configurando"
             },
             {
+              "lang": "lg-fra",
+              "name": "setting_up",
+              "value": "Configuration"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "setting_up",
+              "value": "Impostazione"
+            },
+            {
+              "lang": "lg-por",
+              "name": "setting_up",
+              "value": "Configurando"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "setting_up",
+              "value": "Configurant"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "setting_up",
+              "value": "Einrichtung"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "setting_up",
+              "value": "सेट अप गर्दै"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "setting_up",
+              "value": "جارٍ الإعداد"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "setting_up",
+              "value": "Ρύθμιση"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "setting_up",
+              "value": "Konfiguratzen"
+            },
+            {
               "lang": "lg-eng",
               "name": "procesing",
               "value": "Processing"
@@ -491,6 +726,51 @@
               "value": "Procesando"
             },
             {
+              "lang": "lg-fra",
+              "name": "procesing",
+              "value": "Traitement"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "procesing",
+              "value": "Elaborazione"
+            },
+            {
+              "lang": "lg-por",
+              "name": "procesing",
+              "value": "Processando"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "procesing",
+              "value": "Processant"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "procesing",
+              "value": "Verarbeitung"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "procesing",
+              "value": "प्रक्रिया गर्दै"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "procesing",
+              "value": "جارٍ المعالجة"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "procesing",
+              "value": "Επεξεργασία"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "procesing",
+              "value": "Prozesatzen"
+            },
+            {
               "lang": "lg-eng",
               "name": "translation_completed",
               "value": "Translation completed."
@@ -499,6 +779,326 @@
               "lang": "lg-spa",
               "name": "translation_completed",
               "value": "Traducción completada."
+            },
+            {
+              "lang": "lg-fra",
+              "name": "translation_completed",
+              "value": "Traduction terminée."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "translation_completed",
+              "value": "Traduzione completata."
+            },
+            {
+              "lang": "lg-por",
+              "name": "translation_completed",
+              "value": "Tradução concluída."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "translation_completed",
+              "value": "Traducció completada."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "translation_completed",
+              "value": "Übersetzung abgeschlossen."
+            },
+            {
+              "lang": "lg-nep",
+              "name": "translation_completed",
+              "value": "अनुवाद पूरा भयो।"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "translation_completed",
+              "value": "اكتملت الترجمة."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "translation_completed",
+              "value": "Η μετάφραση ολοκληρώθηκε."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "translation_completed",
+              "value": "Itzulpena osatu da."
+            },
+            {
+              "lang": "lg-eng",
+              "name": "remaining",
+              "value": "remaining"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "remaining",
+              "value": "restante"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "remaining",
+              "value": "restant"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "remaining",
+              "value": "restante"
+            },
+            {
+              "lang": "lg-por",
+              "name": "remaining",
+              "value": "restante"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "remaining",
+              "value": "restant"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "remaining",
+              "value": "verbleibend"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "remaining",
+              "value": "बाँकी"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "remaining",
+              "value": "المتبقي"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "remaining",
+              "value": "υπόλοιπο"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "remaining",
+              "value": "geratzen"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "block_error",
+              "value": "Block error"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "block_error",
+              "value": "Error de bloque"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "block_error",
+              "value": "Erreur de bloc"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "block_error",
+              "value": "Errore di blocco"
+            },
+            {
+              "lang": "lg-por",
+              "name": "block_error",
+              "value": "Erro de bloco"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "block_error",
+              "value": "Error de bloc"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "block_error",
+              "value": "Blockfehler"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "block_error",
+              "value": "ब्लक त्रुटि"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "block_error",
+              "value": "خطأ في الكتلة"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "block_error",
+              "value": "Σφάλμα μπλοκ"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "block_error",
+              "value": "Bloke-errorea"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "translation_cancelled",
+              "value": "Translation cancelled"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "translation_cancelled",
+              "value": "Traducción cancelada"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "translation_cancelled",
+              "value": "Traduction annulée"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "translation_cancelled",
+              "value": "Traduzione annullata"
+            },
+            {
+              "lang": "lg-por",
+              "name": "translation_cancelled",
+              "value": "Tradução cancelada"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "translation_cancelled",
+              "value": "Traducció cancel·lada"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "translation_cancelled",
+              "value": "Übersetzung abgebrochen"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "translation_cancelled",
+              "value": "अनुवाद रद्द गरियो"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "translation_cancelled",
+              "value": "تم إلغاء الترجمة"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "translation_cancelled",
+              "value": "Η μετάφραση ακυρώθηκε"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "translation_cancelled",
+              "value": "Itzulpena bertan behera utzi da"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "new_only",
+              "value": "New only"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "new_only",
+              "value": "Solo nuevo"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "new_only",
+              "value": "Nouveau uniquement"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "new_only",
+              "value": "Solo nuovo"
+            },
+            {
+              "lang": "lg-por",
+              "name": "new_only",
+              "value": "Apenas novo"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "new_only",
+              "value": "Només nou"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "new_only",
+              "value": "Nur neu"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "new_only",
+              "value": "नयाँ मात्र"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "new_only",
+              "value": "جديد فقط"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "new_only",
+              "value": "Μόνο νέο"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "new_only",
+              "value": "Berria bakarrik"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "all",
+              "value": "Recreate all"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "all",
+              "value": "Recrear todo"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "all",
+              "value": "Tout recréer"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "all",
+              "value": "Ricrea tutto"
+            },
+            {
+              "lang": "lg-por",
+              "name": "all",
+              "value": "Recriar tudo"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "all",
+              "value": "Recrear tot"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "all",
+              "value": "Alle neu erstellen"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "all",
+              "value": "सबै पुन: सिर्जना गर्नुहोस्"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "all",
+              "value": "إعادة إنشاء الكل"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "all",
+              "value": "Αναδημιουργία όλων"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "all",
+              "value": "Guztiak birsortu"
             }
           ]
         ]
