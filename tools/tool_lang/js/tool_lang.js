@@ -228,8 +228,11 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 		const source_lang_code = dedalo_to_locale(source_lang)
 		const target_lang_code = dedalo_to_locale(target_lang)
 
+	// clean hard code spaces
+	const clean_source_text = source_text.replace(/&nbsp;/g, ' ')
+
 	// create placeholders for avoid translation of dedalo tags
-		const { safe_source_text, placeholders } = replace_dedalo_tags_with_placeholders(source_text)
+		const { safe_source_text, placeholders } = replace_dedalo_tags_with_placeholders(clean_source_text)
 
 	// parse HTML into blocks
 		const blocks = group_blocks_into_chunks(safe_source_text, 1000)
@@ -308,8 +311,8 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 					status_container.classList.remove('loading_status')
 					status_container.innerHTML = self.get_tool_label('translation_completed')
 
-					const translated_text = accumulated_text || data
-
+					const translated_text = accumulated_text ?? String(data)
+					console.log('translated_text', translated_text)
 					const restored_text = restore_placeholders(translated_text, placeholders)
 
 					self.target_component.data.value[0] = restored_text
@@ -330,7 +333,30 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 
 					break;
 
-				// worker encountered an error; display message and reject the promise
+				// non-fatal per-block error; show warning and continue
+				case 'on_block_error':
+					console.warn(`Block ${data.block}/${data.total} failed: ${data.message}`)
+					const block_warn_label = self.get_tool_label('block_error') || 'Block error'
+					status_container.innerHTML = `<div class="warning">${block_warn_label}: ${data.block}/${data.total}</div>`
+
+					// update streaming overlay with partial result so far
+					if (data.accumulated_text && self.streaming_overlay_content) {
+						self.streaming_overlay_content.innerHTML = data.accumulated_text
+					}
+					break;
+
+				// translation cancelled by user
+				case 'cancelled':
+					translate_worker.terminate()
+					status_container.classList.remove('loading_status')
+					if (self.streaming_overlay) {
+						self.streaming_overlay.classList.add('hide')
+					}
+					status_container.innerHTML = self.get_tool_label('translation_cancelled') || 'Translation cancelled'
+					resolve({result: false, msg: 'Translation cancelled'})
+					break;
+
+				// fatal worker error; display message and reject the promise
 				case 'error':
 					translate_worker.terminate()
 					status_container.classList.remove('loading_status')
@@ -340,12 +366,8 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 						self.streaming_overlay.classList.add('hide')
 					}
 
-					let error_msg = data
-					try {
-						const parsed = JSON.parse(data)
-						error_msg = parsed.message || parsed.raw || parsed.name || data
-						console.error('Worker error details:', parsed)
-					} catch(e) {}
+					const error_msg = data.message || data.name || String(data)
+					console.error('Worker error details:', data)
 					status_container.innerHTML = `<div class="error">${error_msg}</div>`
 					reject(new Error(error_msg))
 					break;
@@ -445,6 +467,10 @@ tool_lang.prototype.automatic_translation_server = async function(translator, so
 /**
  * Replace Dédalo tags with placeholders to avoid translation
  *
+ * Uses [[n]] as delimiters. These characters never appear in natural text,
+ * HTML, or JSON, so LLMs are far less likely to interpret them as
+ * syntax and mutate/drop them compared to the previous {Pn} format.
+ *
  * @param {string} source_text - Full HTML string
  * @returns {string} - HTML with Dédalo tags replaced by placeholders
  */
@@ -466,13 +492,13 @@ function replace_dedalo_tags_with_placeholders(source_text) {
 
 	let safe_source_text = source_text;
 	const placeholders = {};
-	let counter = 0;
+	let counter = 1;
 	for (let i = 0; i < tags.length; i++) {
 		const tag = tags[i];
 		const pattern = tr.get_mark_pattern(tag);
 
 		safe_source_text = safe_source_text.replace(pattern, (match) => {
-			const key = `{P${counter}}`;
+			const key = `[[${counter}]]`;
 			placeholders[key] = match;
 			counter++;
 			return key;
@@ -488,7 +514,7 @@ function replace_dedalo_tags_with_placeholders(source_text) {
  * Restore original Dédalo tags from placeholders after translation
  *
  * Reverses the placeholder substitution done by replace_dedalo_tags_with_placeholders.
- * Each placeholder key (e.g. __PLACEHOLDER_0__) is replaced back with its original
+ * Each placeholder key (e.g. ⟦P0⟧) is replaced back with its original
  * Dédalo tag content in the translated text.
  *
  * @param {string} translated_text - Translated text containing placeholders
@@ -579,7 +605,7 @@ function group_blocks_into_chunks(html, maxChars = 1000) {
 
 		// attempt to merge this block with the current accumulator using \n as separator
 		const candidate = current 
-			? current + '\n' + block 
+			? current + block 
 			: block;
 
 		if (candidate.length <= maxChars) {
