@@ -405,6 +405,47 @@ abstract class DBi {
 
 
 	/**
+	* GET_TABLES
+	* Returns the list of user tables in the current Dédalo database (public schema)
+	* @param PgSql\Connection|null $conn Optional connection. Defaults to cached connection
+	* @return array<string>|false List of table names sorted alphabetically, or false on error
+	*/
+	public static function get_tables( ?PgSql\Connection $conn= null ) : array|false {
+
+		$conn = $conn ?? DBi::_getConnection();
+
+		$sql = "
+			SELECT table_name
+			FROM information_schema.tables
+			WHERE table_schema = 'public'
+			AND table_type = 'BASE TABLE'
+			ORDER BY table_name;
+		";
+
+		$result = pg_query($conn, $sql);
+
+		if ($result === false) {
+			debug_log(
+				__METHOD__
+					. " Error. PostgreSQL query failed" . PHP_EOL
+					. 'error: ' . pg_last_error($conn),
+				logger::ERROR
+			);
+			return false;
+		}
+
+		$tables = [];
+		while ($row = pg_fetch_object($result)) {
+			$tables[] = $row->table_name;
+		}
+
+
+		return $tables;
+	}//end get_tables
+
+
+
+	/**
 	* CHECK_COLUMN_EXISTS
 	* Verify is the given column already exists in Dédalo DB
 	* @param string $table
