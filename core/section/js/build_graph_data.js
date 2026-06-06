@@ -61,6 +61,9 @@ export const build_model_map = function(datum) {
 
 	return map
 }//end build_model_map
+
+
+
 /**
 * STRIP_HTML
 * Remove HTML tags from a string.
@@ -75,6 +78,56 @@ const strip_html = function(str) {
 }//end strip_html
 
 
+
+/**
+* GET_TERM_TIPO
+* Find the term (display label) component tipo from a section_map.
+* Iterates all domains and returns the first `term` tipo found.
+* @param object|null section_map
+* @return string|null
+*/
+const get_term_tipo = function(section_map) {
+
+	if (!section_map) return null
+
+	const domains = Object.values(section_map)
+	const domains_len = domains.length
+	for (let i = 0; i < domains_len; i++) {
+		const domain = domains[i]
+		if (domain && domain.term) {
+			return Array.isArray(domain.term) ? domain.term[0] : domain.term
+		}
+	}
+
+	return null
+}//end get_term_tipo
+
+
+
+/**
+* BUILD_SECTION_MAPS
+* Collect section_map entries from datum context items, indexed by section_tipo.
+* Each context item with model==='section' may carry a config.section_map.
+* @param object datum
+* @return object maps keyed by section_tipo
+*/
+export const build_section_maps = function(datum) {
+
+	const maps = {}
+
+	const context = datum?.context || []
+	const context_length = context.length
+	for (let i = 0; i < context_length; i++) {
+		const ctx = context[i]
+		if (!ctx || ctx.model !== 'section') continue
+		const sm = ctx?.section_map
+		if (sm) {
+			maps[ctx.section_tipo] = sm
+		}
+	}
+
+	return maps
+}//end build_section_maps
 
 
 
@@ -118,20 +171,37 @@ const extract_text = function(entries) {
 * RESOLVE_LABEL
 * Find a readable label for a record (section_tipo + section_id) using the
 * non-relation component data items already present in datum.
+* Uses section_map term tipo when available for precise label resolution.
 * Falls back to `section_tipo · section_id` when no literal is found.
 * @param object datum
 * @param string section_tipo
 * @param string section_id
 * @param object model_map
+* @param object section_maps (optional) - section_map indexed by section_tipo
 * @return string
 */
-export const resolve_label = function(datum, section_tipo, section_id, model_map) {
+export const resolve_label = function(datum, section_tipo, section_id, model_map, section_maps) {
 
 	const fallback	= section_tipo + ' · ' + section_id
 	const data		= datum?.data || []
 	const data_length = data.length
 
-	// 1. try to find a readable value from the data items of the target record
+	// 0. try section_map term tipo for precise label resolution
+		const term_tipo = get_term_tipo(section_maps?.[section_tipo])
+		if (term_tipo) {
+			for (let i = 0; i < data_length; i++) {
+				const item = data[i]
+				if (item.section_tipo!==section_tipo || String(item.section_id)!==String(section_id) || item.tipo!==term_tipo) {
+					continue
+				}
+				const label = extract_text(item.entries)
+				if (label) {
+					return label
+				}
+			}
+		}
+
+	// 1. heuristic: first non-relation, non-section_id value
 		for (let i = 0; i < data_length; i++) {
 			const item = data[i]
 			if (item.section_tipo!==section_tipo || String(item.section_id)!==String(section_id)) {
@@ -139,7 +209,6 @@ export const resolve_label = function(datum, section_tipo, section_id, model_map
 			}
 			const ctx	= model_map[item.section_tipo + '_' + item.tipo]
 			const model	= ctx?.model || item.debug_model || ''
-			// skip relation components and structural id components
 			if (RELATION_MODELS.includes(model) || model==='component_section_id') {
 				continue
 			}
@@ -258,12 +327,18 @@ export const datum_to_graph = function(self) {
 
 	const datum			= self.datum
 	const model_map		= build_model_map(datum)
+	const section_maps	= build_section_maps(datum)
+	// also seed root section's section_map from self.context.config
+	const root_sm = self?.context?.config?.section_map
+	if (root_sm) {
+		section_maps[self.section_tipo] = root_sm
+	}
 	const root_tipo		= self.section_tipo
 	const root_id_value	= String(self.section_id)
 	const root_id		= root_tipo + '_' + root_id_value
 
 	// root node
-		const root_label = resolve_label(datum, root_tipo, root_id_value, model_map)
+		const root_label = resolve_label(datum, root_tipo, root_id_value, model_map, section_maps)
 		const nodes = [
 			build_node({
 				section_tipo	: root_tipo,
@@ -287,7 +362,7 @@ export const datum_to_graph = function(self) {
 				nodes.push(build_node({
 					section_tipo	: rel.locator.section_tipo,
 					section_id		: rel.locator.section_id,
-					label			: resolve_label(datum, rel.locator.section_tipo, rel.locator.section_id, model_map)
+					label			: resolve_label(datum, rel.locator.section_tipo, rel.locator.section_id, model_map, section_maps)
 				}))
 			}
 			links.push({
@@ -299,7 +374,7 @@ export const datum_to_graph = function(self) {
 			})
 		}
 
-	return { nodes, links }
+	return { nodes, links, section_maps }
 }//end datum_to_graph
 
 
@@ -365,11 +440,13 @@ export const fetch_section_datum = async function(self, section_tipo, section_id
 * FETCH_NODE_RELATIONS
 * Lazily resolve the relations of a node not yet loaded in the client, using the
 * standard read rqo. Also upgrades the node label if a better literal is found.
+* Merges any new section_maps from fetched datum into the accumulator.
 * @param object self central section instance (rqo template)
 * @param object node graph node to expand
+* @param object section_maps accumulator (mutated in place)
 * @return object { nodes, links } children to add (deduped by caller)
 */
-export const fetch_node_relations = async function(self, node) {
+export const fetch_node_relations = async function(self, node, section_maps) {
 
 	const datum = await fetch_section_datum(self, node.section_tipo, node.section_id)
 	if (!datum) {
@@ -378,9 +455,20 @@ export const fetch_node_relations = async function(self, node) {
 
 	const model_map = build_model_map(datum)
 
+	// merge section_maps from fetched datum
+	const new_maps = build_section_maps(datum)
+	const new_keys = Object.keys(new_maps)
+	const new_keys_len = new_keys.length
+	for (let i = 0; i < new_keys_len; i++) {
+		const key = new_keys[i]
+		if (!section_maps[key]) {
+			section_maps[key] = new_maps[key]
+		}
+	}
+
 	// upgrade node label if it was a fallback
 		if (is_fallback_label(node.label, node.section_tipo)) {
-			const better = resolve_label(datum, node.section_tipo, node.section_id, model_map)
+			const better = resolve_label(datum, node.section_tipo, node.section_id, model_map, section_maps)
 			if (better && !is_fallback_label(better, node.section_tipo)) {
 				node.label = better
 			}
@@ -399,7 +487,7 @@ export const fetch_node_relations = async function(self, node) {
 		nodes.push(build_node({
 			section_tipo	: rel.locator.section_tipo,
 			section_id		: rel.locator.section_id,
-			label			: resolve_label(datum, rel.locator.section_tipo, rel.locator.section_id, model_map)
+			label			: resolve_label(datum, rel.locator.section_tipo, rel.locator.section_id, model_map, section_maps)
 		}))
 		links.push({
 			source			: node.id,
@@ -419,12 +507,14 @@ export const fetch_node_relations = async function(self, node) {
 * UPGRADE_FALLBACK_LABELS
 * For every graph node whose label is still a fallback ("tipo · id"),
 * fetch its section datum and resolve a better label.
+* Merges new section_maps from fetched datums into the accumulator.
 * Calls `update_callback` after each batch so the graph can refresh.
 * @param object self section instance (rqo template)
 * @param array nodes graph.nodes array (mutated in place)
 * @param function update_callback called after labels change
+* @param object section_maps accumulator (mutated in place)
 */
-export const upgrade_fallback_labels = async function(self, nodes, update_callback) {
+export const upgrade_fallback_labels = async function(self, nodes, update_callback, section_maps) {
 
 	// collect unique section_tipos that need resolution
 		const pending = {}
@@ -454,11 +544,22 @@ export const upgrade_fallback_labels = async function(self, nodes, update_callba
 
 			const model_map = build_model_map(datum)
 
+			// merge section_maps from fetched datum
+			const new_maps = build_section_maps(datum)
+			const new_keys = Object.keys(new_maps)
+			const new_keys_len = new_keys.length
+			for (let j = 0; j < new_keys_len; j++) {
+				const key = new_keys[j]
+				if (!section_maps[key]) {
+					section_maps[key] = new_maps[key]
+				}
+			}
+
 			// upgrade every node of this section_tipo
 			const group_length = group.length
 			for (let j = 0; j < group_length; j++) {
 				const node	= group[j]
-				const better	= resolve_label(datum, node.section_tipo, node.section_id, model_map)
+				const better	= resolve_label(datum, node.section_tipo, node.section_id, model_map, section_maps)
 				if (better && !is_fallback_label(better, node.section_tipo)) {
 					node.label = better
 				}
@@ -589,7 +690,7 @@ export const parse_relation_list_response = function(result, root_section_tipo, 
 		const value_parts = []
 		for (let j = 0; j < vals_len; j++) {
 			const v = rec.values[j]
-			const str = (v.value !== null && v.value !== undefined) ? String(v.value) : ''
+			const str = (v.value !== null && v.value !== undefined) ? strip_html(String(v.value)) : ''
 			if (str) {
 				value_parts.push(str)
 			}
@@ -703,7 +804,7 @@ export const fetch_inverse_relations = async function(self, root_section_tipo, r
 		}
 
 		const result = api_response?.result
-console.log('result----------->',result)
+
 		// relation_list returns an object { context, data } directly
 		if (!result || (!result.context && !result.data)) {
 			return { nodes: [], links: [], total, loaded: 0 }

@@ -14,8 +14,10 @@
 		fetch_section_datum,
 		fetch_inverse_relations,
 		build_model_map,
+		build_section_maps,
 		extract_node_fields,
-		upgrade_fallback_labels
+		upgrade_fallback_labels,
+		resolve_label
 	} from './build_graph_data.js'
 
 
@@ -263,12 +265,16 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 		}
 
 	// initial graph data (central record + direct relations) from client datum
-		const graph = datum_to_graph(self)
+		const { nodes: initial_nodes, links: initial_links, section_maps: initial_section_maps } = datum_to_graph(self)
+		const graph = { nodes: initial_nodes, links: initial_links }
+
+	// section_maps accumulator (grows as datums are fetched)
+		const section_maps = initial_section_maps || {}
 
 	// lazily upgrade fallback labels ("tipo · id" → readable label)
 		upgrade_fallback_labels(self, graph.nodes, () => {
 			update()
-		})
+		}, section_maps)
 
 	// dimensions
 		const get_size = () => {
@@ -351,16 +357,16 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 				inverse_total	= result.total
 				inverse_loaded	= result.loaded
 
-				const root_node = graph.nodes.find(n => n.id === root_id) || { id: root_id, x: width / 2, y: height / 2 }
+const root_node = graph.nodes.find(n => n.id === root_id) || { id: root_id, x: width / 2, y: height / 2 }
 
-			add_children(root_node, result)
+				add_children(root_node, result)
 
-			upgrade_fallback_labels(self, result.nodes, () => {
+				upgrade_fallback_labels(self, result.nodes, () => {
+					update()
+				}, section_maps)
+
+				update_more_button()
 				update()
-			})
-
-			update_more_button()
-			update()
 			} catch (error) {
 				console.error('[view_graph_edit_section] toggle_inverse_relations error:', error)
 			} finally {
@@ -408,15 +414,15 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 
 			const root_node = graph.nodes.find(n => n.id === root_id) || { id: root_id, x: width / 2, y: height / 2 }
 
-			add_children(root_node, result)
+add_children(root_node, result)
 
-			upgrade_fallback_labels(self, result.nodes, () => {
-				update()
-			})
-
-			update_more_button()
+		upgrade_fallback_labels(self, result.nodes, () => {
 			update()
-		} catch (error) {
+		}, section_maps)
+
+		update_more_button()
+		update()
+	} catch (error) {
 			console.error('[view_graph_edit_section] load_more_inverse error:', error)
 		} finally {
 			processing.delete('inverse')
@@ -623,12 +629,12 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 			processing.add(node.id)
 			d3.select(this).classed('loading_node', true)
 			try {
-				const result = await fetch_node_relations(self, node)
+				const result = await fetch_node_relations(self, node, section_maps)
 				add_children(node, result)
 				// upgrade fallback labels on new child nodes
 				upgrade_fallback_labels(self, result.nodes, () => {
 					update()
-				})
+				}, section_maps)
 				node.loaded = true
 				node.expanded = true
 				update()
@@ -811,6 +817,16 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 				}
 				if (datum) {
 					const model_map = build_model_map(datum)
+					// merge section_maps from fetched datum
+					const new_maps = build_section_maps(datum)
+					const new_map_keys = Object.keys(new_maps)
+					const new_map_keys_len = new_map_keys.length
+					for (let k = 0; k < new_map_keys_len; k++) {
+						const key = new_map_keys[k]
+						if (!section_maps[key]) {
+							section_maps[key] = new_maps[key]
+						}
+					}
 					const fields = extract_node_fields(datum, node.section_tipo, node.section_id, model_map)
 					// clear loading
 						fields_container.innerHTML = ''
