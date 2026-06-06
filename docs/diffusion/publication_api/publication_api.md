@@ -2258,6 +2258,148 @@ Optional filter to apply at request `string`
 
 This parameter will add a filter to be apply to request. If this filter is not set the request will be apply to all records in the table, but you can limit the search to specific records adding, for example, `section_id = 1`, the q will use to search only in the  transcription of the section_id 1.
 
+### /text_fragment
+
+Method: **POST**
+
+Search and extract text fragments from a specified column (default 'transcription') matching the query string. Used typically for bibliographic transcription text fragments.
+
+Bibliographic records often contain very large texts — sometimes hundreds of pages per publication. Transferring the full text to the client for every record is slow and consumes excessive bandwidth. This endpoint solves the problem by returning only the relevant fragments around the searched term, directly from the server.
+
+**Important:** This is not a direct search endpoint. It requires a previous search (for example via `/records`) to obtain the `section_id` values, which must then be passed to this request. The `section_id` parameter is mandatory and must correspond to records already known from a prior query.
+
+Returns an array of objects with section_id, search term, and extracted fragments.
+
+**Parameters:**
+
+---
+
+#### code
+
+Authorization code `string` **Mandatory**
+see [code](#code)
+
+#### db_name
+
+Database name. If not defined, the default database will be used `string`
+see [db_name](#db_name)
+
+#### lang
+
+Defines the lang of the data.
+see [lang](#lang)
+
+#### section_id
+
+Section id or comma separated list of section ids to filter records. `string` **Mandatory**
+
+#### q
+
+String to search in the specified column. `string` **Mandatory**
+
+#### column
+
+Column name to search into. `string`
+
+Default is 'transcription'.
+
+#### table
+
+Table name to query. `string`
+
+Default is 'publications'.
+
+#### max_chars
+
+Maximum number of characters per fragment. `integer`
+
+Default is 320.
+
+#### max_occurrences
+
+Maximum number of fragment occurrences to extract per record. `integer`
+
+Default is 1.
+
+Response:
+
+```json
+{
+  "result": [
+    {
+      "section_id": 1,
+      "search": "search_term",
+      "fragments": [
+        {
+          "word": "search_term",
+          "page_number": 2,
+          "fragm": ".. some text with <mark>search_term</mark> highlighted .."
+        }
+      ]
+    }
+  ],
+  "msg": "Request done successfully"
+}
+```
+
+#### Example workflow
+
+Step 1 — search for publications containing the word `Bonet` in metadata fields using `/records`:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/records?code=XXX&db_name=my_database&table=publications&sql_filter=title LIKE '%Bonet%'&ar_fields=section_id,title
+```
+
+Response:
+
+```json
+{
+  "result": [
+    { "section_id": 42, "title": "Life and work of Bonet" },
+    { "section_id": 57, "title": "Bonet and the modern architecture" }
+  ],
+  "msg": "Request done successfully"
+}
+```
+
+Step 2 — use the obtained `section_id` values to extract text fragments where `Bonet` appears inside the full transcription via `/text_fragment`:
+
+```api_request
+https://my_domain.org/dedalo/publication/server_api/v1/json/text_fragment?code=XXX&db_name=my_database&section_id=42,57&q=Bonet&column=transcription&table=publications&max_chars=320&max_occurrences=1
+```
+
+Response:
+
+```json
+{
+  "result": [
+    {
+      "section_id": 42,
+      "search": "Bonet",
+      "fragments": [
+        {
+          "word": "Bonet",
+          "page_number": 12,
+          "fragm": ".. the influence of <mark>Bonet</mark> in the European modern movement .."
+        }
+      ]
+    },
+    {
+      "section_id": 57,
+      "search": "Bonet",
+      "fragments": [
+        {
+          "word": "Bonet",
+          "page_number": 5,
+          "fragm": ".. <mark>Bonet</mark> collaborated with several avant-garde architects .."
+        }
+      ]
+    }
+  ],
+  "msg": "Request done successfully"
+}
+```
+
 ## Utils
 
 ### /combi
