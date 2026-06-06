@@ -100,7 +100,7 @@ build_database_version.prototype.build_install_version = async function () {
 				action: 'build_install_version'
 			},
 			options: {
-				background_running: true // set run in background CLI
+				background_running: false // set run in background CLI
 			}
 		},
 		retries: 1, // one try only
