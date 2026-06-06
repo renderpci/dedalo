@@ -13,7 +13,8 @@
 		fetch_node_relations,
 		fetch_section_datum,
 		build_model_map,
-		extract_node_fields
+		extract_node_fields,
+		upgrade_fallback_labels
 	} from './build_graph_data.js'
 
 
@@ -219,6 +220,11 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 
 	// initial graph data (central record + direct relations) from client datum
 		const graph = datum_to_graph(self)
+
+	// lazily upgrade fallback labels ("tipo · id" → readable label)
+		upgrade_fallback_labels(self, graph.nodes, () => {
+			update()
+		})
 
 	// dimensions
 		const get_size = () => {

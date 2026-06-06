@@ -117,22 +117,33 @@ export const resolve_label = function(datum, section_tipo, section_id, model_map
 	const data		= datum?.data || []
 	const data_length = data.length
 
-	for (let i = 0; i < data_length; i++) {
-		const item = data[i]
-		if (item.section_tipo!==section_tipo || String(item.section_id)!==String(section_id)) {
-			continue
+	// 1. try to find a readable value from the data items of the target record
+		for (let i = 0; i < data_length; i++) {
+			const item = data[i]
+			if (item.section_tipo!==section_tipo || String(item.section_id)!==String(section_id)) {
+				continue
+			}
+			const ctx	= model_map[item.section_tipo + '_' + item.tipo]
+			const model	= ctx?.model || item.debug_model || ''
+			// skip relation components and structural id components
+			if (RELATION_MODELS.includes(model) || model==='component_section_id') {
+				continue
+			}
+			const label = extract_text(item.entries)
+			if (label) {
+				return label
+			}
 		}
-		const ctx	= model_map[item.section_tipo + '_' + item.tipo]
-		const model	= ctx?.model || item.debug_model || ''
-		// skip relation components and structural id components
-		if (RELATION_MODELS.includes(model) || model==='component_section_id') {
-			continue
+
+	// 2. try the context section label (e.g. "Cecas", "Bibliografía")
+		const context = datum?.context || []
+		const context_length = context.length
+		for (let i = 0; i < context_length; i++) {
+			const ctx = context[i]
+			if (ctx.section_tipo===section_tipo && ctx.tipo===section_tipo && ctx.label) {
+				return ctx.label
+			}
 		}
-		const label = extract_text(item.entries)
-		if (label) {
-			return label
-		}
-	}
 
 	return fallback
 }//end resolve_label
@@ -387,6 +398,64 @@ export const fetch_node_relations = async function(self, node) {
 
 	return { nodes, links }
 }//end fetch_node_relations
+
+
+
+/**
+* UPGRADE_FALLBACK_LABELS
+* For every graph node whose label is still a fallback ("tipo · id"),
+* fetch its section datum and resolve a better label.
+* Calls `update_callback` after each batch so the graph can refresh.
+* @param object self section instance (rqo template)
+* @param array nodes graph.nodes array (mutated in place)
+* @param function update_callback called after labels change
+*/
+export const upgrade_fallback_labels = async function(self, nodes, update_callback) {
+
+	// collect unique section_tipos that need resolution
+		const pending = {}
+		const nodes_length = nodes.length
+		for (let i = 0; i < nodes_length; i++) {
+			const node = nodes[i]
+			if (is_fallback_label(node.label, node.section_tipo)) {
+				pending[node.section_tipo] = pending[node.section_tipo] || []
+				pending[node.section_tipo].push(node)
+			}
+		}
+
+		const tipos = Object.keys(pending)
+		const tipos_length = tipos.length
+		if (tipos_length===0) return
+		for (let i = 0; i < tipos_length; i++) {
+
+			const section_tipo	= tipos[i]
+			const group		= pending[section_tipo]
+			// fetch datum for the first node of this tipo (same section structure)
+			const sample		= group[0]
+			const datum		= await fetch_section_datum(self, section_tipo, sample.section_id)
+
+			if (!datum) {
+				continue
+			}
+
+			const model_map = build_model_map(datum)
+
+			// upgrade every node of this section_tipo
+			const group_length = group.length
+			for (let j = 0; j < group_length; j++) {
+				const node	= group[j]
+				const better	= resolve_label(datum, node.section_tipo, node.section_id, model_map)
+				if (better && !is_fallback_label(better, node.section_tipo)) {
+					node.label = better
+				}
+			}
+
+			// let the graph refresh after each tipo batch
+			if (typeof update_callback==='function') {
+				update_callback()
+			}
+		}
+}//end upgrade_fallback_labels
 
 
 
