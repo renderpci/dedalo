@@ -627,9 +627,20 @@ section.prototype.build = async function(autoload=false) {
 				// but it's necessary to preserve the specific ddo_map configuration in the new context.
 				// Context is set and changed in section_record.js to get the ddo_map configuration
 				if(!self.context){
-					const context = self.datum?.context?.find(el => el.section_tipo===self.section_tipo) || {}
+					// try matching by tipo first (standard case),
+					// then fall back to model==='section' for area-wrapped sections
+					// where self.tipo (area tipo) differs from the section tipo in datum
+					const context = self.datum?.context?.find(el => el.tipo===self.tipo)
+						|| self.datum?.context?.find(el => el.model==='section')
+						|| {}
 					if (Object.keys(context).length === 0) { // Checks if it's literally an empty object
-						console.error("Context not found for section_tipo:", self.section_tipo, "in self.datum.context:", self.datum?.context);
+						console.error("Context not found for tipo:", self.tipo, "in self.datum.context:", self.datum?.context);
+						// fallback to prevent null crash downstream
+						self.context = {
+							mode			: self.mode || 'edit',
+							section_tipo	: self.section_tipo,
+							tipo			: self.tipo
+						}
 					}else{
 						self.context = context
 					}
