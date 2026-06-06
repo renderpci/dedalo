@@ -442,6 +442,10 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 			try {
 				const result = await fetch_node_relations(self, node)
 				add_children(node, result)
+				// upgrade fallback labels on new child nodes
+				upgrade_fallback_labels(self, result.nodes, () => {
+					update()
+				})
 				node.loaded = true
 				node.expanded = true
 				update()
