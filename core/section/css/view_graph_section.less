@@ -165,6 +165,27 @@
 				font-size: 0.85rem;
 				opacity: 0.6;
 			}
+
+			.graph_inverse_label {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.3rem;
+				cursor: pointer;
+				font-size: 0.85rem;
+
+				.graph_inverse_checkbox {
+					cursor: pointer;
+				}
+
+				.graph_inverse_label_text {
+					opacity: 0.85;
+				}
+			}
+
+			.graph_inverse_more {
+				font-size: 0.75rem;
+				white-space: nowrap;
+			}
 		}
 
 		>.content_data {
@@ -207,12 +228,21 @@
 						stroke: @color_grey_10;
 						stroke-opacity: 0.6;
 						stroke-width: 1.5px;
+
+						&.inverse {
+							stroke-dasharray: 6, 3;
+						}
 					}
 
 					.graph_link_label {
 						font-size: 0.7rem;
 						fill: @color_grey_8;
 						pointer-events: none;
+
+						&.inverse {
+							fill: @color_grey_9;
+							font-style: italic;
+						}
 					}
 
 					.graph_node {
