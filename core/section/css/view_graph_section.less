@@ -145,6 +145,107 @@
 				}
 			}
 		}
-	}//end edit
+	}//end solved
+
+	&.edit {
+
+		// graph toolbar (back to form + hint)
+		.graph_toolbar {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+			padding-bottom: 0.75rem;
+
+			.graph_back_button {
+				white-space: nowrap;
+			}
+
+			.graph_hint {
+				font-size: 0.85rem;
+				opacity: 0.6;
+			}
+		}
+
+		>.content_data.graph_canvas {
+			contain: contain;
+			display: block;
+			width: 100%;
+			height: calc(100vh - 9rem);
+			border: 1px solid @color_grey_12;
+			border-radius: 6px;
+			overflow: hidden;
+			background-color: @color_grey_14;
+
+			&.loading {
+				opacity: 0.6;
+			}
+
+			.graph_empty {
+				padding: 2rem;
+				opacity: 0.6;
+			}
+
+			.svg_content {
+				width: 100%;
+				height: 100%;
+				font: 14px sans-serif;
+				cursor: grab;
+
+				&:active {
+					cursor: grabbing;
+				}
+
+				.graph_link {
+					stroke: @color_grey_10;
+					stroke-opacity: 0.6;
+					stroke-width: 1.5px;
+				}
+
+				.graph_link_label {
+					font-size: 0.7rem;
+					fill: @color_grey_8;
+					pointer-events: none;
+				}
+
+				.graph_node {
+					cursor: pointer;
+
+					circle {
+						stroke: var(--color_white, #fff);
+						stroke-width: 1.5px;
+						transition: r 0.15s ease;
+					}
+
+					text {
+						fill: @color_grey_3;
+						pointer-events: none;
+					}
+
+					&.expandable circle {
+						stroke: @color_hilite;
+						stroke-width: 2.5px;
+					}
+
+					&.expanded circle {
+						stroke: @color_success;
+						stroke-width: 2.5px;
+					}
+
+					&.is_root circle {
+						stroke: @color_hilite;
+						stroke-width: 3px;
+					}
+
+					&.loading_node circle {
+						stroke-dasharray: 3 3;
+					}
+
+					&:hover circle {
+						filter: brightness(1.1);
+					}
+				}
+			}
+		}
+	}//end &.edit
 
 }//end .view_graph_section

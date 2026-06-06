@@ -449,6 +449,12 @@ section.prototype.init = async function(options) {
 				view	: 'default',
 				mode	: 'list',
 				render	: 'view_default_list_section'
+			},
+			{
+				view	: 'graph',
+				mode	: 'edit',
+				render	: 'view_graph_edit_section',
+				path	: './view_graph_edit_section.js'
 			}
 		]
 
