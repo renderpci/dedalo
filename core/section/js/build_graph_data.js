@@ -500,4 +500,216 @@ export const extract_node_fields = function(datum, section_tipo, section_id, mod
 
 
 
+/**
+* PARSE_RELATION_LIST_RESPONSE
+* Transform the relation_list API response into graph nodes and inverse links.
+* The response format is: { context: [...], data: [...] } where context items
+* have {section_tipo, section_label, component_tipo, component_label} and
+* data items alternate between id rows and component value rows per record.
+* @param object result - API response result with context and data
+* @param string root_section_tipo
+* @param string root_section_id
+* @return object { nodes, links }
+*/
+export const parse_relation_list_response = function(result, root_section_tipo, root_section_id) {
+
+	const root_id = root_section_tipo + '_' + root_section_id
+	const nodes	= []
+	const links	= []
+
+	const context	= result?.context || []
+	const data		= result?.data || []
+
+	// build section_label lookup from context
+	const section_labels = {}
+	const component_labels = {}
+	const context_len = context.length
+	for (let i = 0; i < context_len; i++) {
+		const ctx = context[i]
+		if (!ctx) continue
+		if (ctx.section_tipo) {
+			section_labels[ctx.section_tipo] = ctx.section_label || ctx.section_tipo
+		}
+		if (ctx.component_tipo && ctx.component_tipo !== 'id') {
+			component_labels[ctx.section_tipo + '_' + ctx.component_tipo] = ctx.component_label || ctx.component_tipo
+		}
+	}
+
+	// walk data array: group items by record (each record starts with component_tipo==='id')
+	let current_record = null
+	const records = []
+	const data_len = data.length
+	for (let i = 0; i < data_len; i++) {
+		const item = data[i]
+		if (!item) continue
+
+		if (item.component_tipo === 'id') {
+			current_record = {
+				section_tipo	: item.section_tipo,
+				section_id		: String(item.section_id),
+				values			: []
+			}
+			records.push(current_record)
+			continue
+		}
+
+		if (current_record) {
+			current_record.values.push({
+				component_tipo	: item.component_tipo,
+				value			: item.value
+			})
+		}
+	}
+
+	// build nodes and inverse links from each calling record
+	const records_len = records.length
+	for (let i = 0; i < records_len; i++) {
+		const rec = records[i]
+		const tid = rec.section_tipo + '_' + rec.section_id
+
+		// skip self-reference
+		if (tid === root_id) continue
+
+		// collect all value strings from the record for both node label and link label
+		const vals_len = rec.values.length
+		const value_parts = []
+		for (let j = 0; j < vals_len; j++) {
+			const v = rec.values[j]
+			const str = (v.value !== null && v.value !== undefined) ? String(v.value) : ''
+			if (str) {
+				value_parts.push(str)
+			}
+		}
+
+		// node label: all values joined by ' | ', fallback to section label or tipo·id
+		const label = value_parts.length > 0
+			? value_parts.join(' | ')
+			: (section_labels[rec.section_tipo] || (rec.section_tipo + ' · ' + rec.section_id))
+
+		nodes.push(build_node({
+			section_tipo	: rec.section_tipo,
+			section_id		: rec.section_id,
+			label			: label
+		}))
+
+		// inverse link label: all values joined by ' | ', prefixed with '←'
+		const relation_label = value_parts.length > 0
+			? '← ' + value_parts.join(' | ')
+			: '← ' + (section_labels[rec.section_tipo] || rec.section_tipo)
+
+		links.push({
+			source			: tid,
+			target			: root_id,
+			parent_id		: root_id,
+			relation_tipo	: rec.section_tipo,
+			relation_label	: relation_label,
+			is_inverse		: true
+		})
+	}
+
+	return { nodes, links }
+}//end parse_relation_list_response
+
+
+
+/**
+* FETCH_INVERSE_RELATIONS
+* Call the relation_list API to find records that reference the current section record.
+* Returns graph nodes and inverse links, plus total count for pagination.
+* @param object self section instance (rqo template + context with config.relation_list_tipo)
+* @param string root_section_tipo
+* @param string root_section_id
+* @param object options { limit?: number, offset?: number }
+* @return object { nodes, links, total, loaded }
+*/
+export const fetch_inverse_relations = async function(self, root_section_tipo, root_section_id, options={}) {
+
+	const relation_list_tipo = self?.context?.config?.relation_list_tipo
+	if (!relation_list_tipo) {
+		return { nodes: [], links: [], total: 0, loaded: 0 }
+	}
+
+	const limit	= options.limit ?? 50
+	const offset	= options.offset ?? 0
+
+	try {
+		// shared source for both count and data requests
+		const source = {
+			section_tipo	: root_section_tipo,
+			section_id		: root_section_id,
+			tipo			: relation_list_tipo,
+			model			: 'relation_list',
+			action			: 'get_relation_list',
+			mode			: 'edit'
+		}
+
+		// shared sqo filter
+		const filter_by_locators = [{
+			section_tipo	: root_section_tipo,
+			section_id		: root_section_id
+		}]
+
+		// count request (uses the standard count API action)
+		const count_rqo = {
+			action			: 'count',
+			prevent_lock	: true,
+			sqo				: {
+				section_tipo		: ['all'],
+				mode				: 'related',
+				filter_by_locators	: filter_by_locators
+			},
+			source			: source
+		}
+
+		const count_response = await data_manager.request({
+			body : count_rqo
+		})
+
+		const total = count_response?.result?.total ?? 0
+
+		// data request
+		const rqo = {
+			action	: 'read',
+			source	: source,
+			sqo	: {
+				section_tipo		: ['all'],
+				mode				: 'related',
+				limit				: limit,
+				offset				: offset,
+				filter_by_locators	: filter_by_locators
+			}
+		}
+
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+		if (SHOW_DEBUG===true && api_response?.errors?.length) {
+			console.warn('[build_graph_data.fetch_inverse_relations] errors:', api_response.errors)
+		}
+
+		const result = api_response?.result
+console.log('result----------->',result)
+		// relation_list returns an object { context, data } directly
+		if (!result || (!result.context && !result.data)) {
+			return { nodes: [], links: [], total, loaded: 0 }
+		}
+
+		const parsed = parse_relation_list_response(result, root_section_tipo, root_section_id)
+
+		return {
+			nodes	: parsed.nodes,
+			links	: parsed.links,
+			total	: total,
+			loaded	: parsed.nodes.length
+		}
+
+	} catch (error) {
+		console.error('[build_graph_data.fetch_inverse_relations] error:', error)
+		return { nodes: [], links: [], total: 0, loaded: 0 }
+	}
+}//end fetch_inverse_relations
+
+
+
 // @license-end

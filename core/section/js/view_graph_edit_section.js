@@ -12,6 +12,7 @@
 		datum_to_graph,
 		fetch_node_relations,
 		fetch_section_datum,
+		fetch_inverse_relations,
 		build_model_map,
 		extract_node_fields,
 		upgrade_fallback_labels
@@ -56,7 +57,8 @@ view_graph_edit_section.render = async function(self, options) {
 		const fragment = new DocumentFragment()
 
 	// toolbar
-		fragment.appendChild(get_toolbar(self))
+		const { toolbar, inverse_controls } = get_toolbar(self)
+		fragment.appendChild(toolbar)
 
 	// content_data append
 		fragment.appendChild(content_data)
@@ -71,6 +73,9 @@ view_graph_edit_section.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+	// store inverse_controls on self for build_graph to access
+		self.inverse_controls = inverse_controls
+
 
 	return wrapper
 }//end render
@@ -80,8 +85,10 @@ view_graph_edit_section.render = async function(self, options) {
 /**
 * GET_TOOLBAR
 * Toolbar with the action to return to the standard form view.
+* Returns the toolbar element and a reference holder for the inverse controls
+* so they can be updated from build_graph.
 * @param object self
-* @return HTMLElement toolbar
+* @return object { toolbar, inverse_controls }
 */
 const get_toolbar = function(self) {
 
@@ -110,8 +117,43 @@ const get_toolbar = function(self) {
 			parent			: toolbar
 		})
 
+	// inverse relations toggle
+		const has_relation_list_tipo = !!self?.context?.config?.relation_list_tipo
 
-	return toolbar
+		const inverse_controls = {}
+
+		if (has_relation_list_tipo) {
+			const checkbox_id = 'inverse_relations_' + self.id
+
+			const checkbox_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'graph_inverse_label',
+				parent			: toolbar
+			})
+			inverse_controls.checkbox = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				id				: checkbox_id,
+				class_name		: 'graph_inverse_checkbox',
+				parent			: checkbox_label
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'graph_inverse_label_text',
+				inner_html		: get_label.reverse_relations || 'Reverse relations',
+				parent			: checkbox_label
+			})
+
+			inverse_controls.more_button = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light graph_inverse_more',
+				inner_html		: '',
+				style			: { display: 'none' },
+				parent			: toolbar
+			})
+		}
+
+	return { toolbar, inverse_controls }
 }//end get_toolbar
 
 
@@ -205,6 +247,8 @@ const get_content_data = function(self) {
 */
 const build_graph = async function(self, graph_canvas, node_detail) {
 
+	const inverse_controls = self.inverse_controls || {}
+
 	// load d3 lib only when needed
 	// Note: d3.min.js is a UMD bundle that populates globalThis.d3
 	// rather than providing named ESM exports, so import() returns
@@ -280,6 +324,144 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 	// selected node for detail panel
 		let selected_node = null
 
+	// inverse relations state
+		const root_tipo		= self.section_tipo
+		const root_id_value	= String(self.section_id)
+		const root_id		= root_tipo + '_' + root_id_value
+		let inverse_loaded	= 0
+		let inverse_total	= 0
+		const INVERSE_BATCH	= 50
+
+	/**
+	* TOGGLE_INVERSE_RELATIONS
+	* Load or unload reverse relation nodes/links based on checkbox state.
+	*/
+	async function toggle_inverse_relations(show) {
+
+		if (show) {
+			processing.add('inverse')
+			if (inverse_controls.checkbox) {
+				inverse_controls.checkbox.disabled = true
+			}
+			try {
+				const result = await fetch_inverse_relations(self, root_tipo, root_id_value, {
+					limit	: INVERSE_BATCH,
+					offset	: 0
+				})
+				inverse_total	= result.total
+				inverse_loaded	= result.loaded
+
+				const root_node = graph.nodes.find(n => n.id === root_id) || { id: root_id, x: width / 2, y: height / 2 }
+
+			add_children(root_node, result)
+
+			upgrade_fallback_labels(self, result.nodes, () => {
+				update()
+			})
+
+			update_more_button()
+			update()
+			} catch (error) {
+				console.error('[view_graph_edit_section] toggle_inverse_relations error:', error)
+			} finally {
+				processing.delete('inverse')
+				if (inverse_controls.checkbox) {
+					inverse_controls.checkbox.disabled = false
+				}
+			}
+		} else {
+			// remove all inverse links and their orphaned nodes
+			graph.links = graph.links.filter(l => !l.is_inverse)
+			const remaining_node_ids = new Set(graph.links.flatMap(l => [
+				(typeof l.source === 'object' && l.source !== null) ? l.source.id : l.source,
+				(typeof l.target === 'object' && l.target !== null) ? l.target.id : l.target
+			]))
+			remaining_node_ids.add(root_id)
+			graph.nodes = graph.nodes.filter(n => remaining_node_ids.has(n.id) || n.is_root)
+
+			inverse_loaded	= 0
+			inverse_total	= 0
+			update_more_button()
+			update()
+		}
+	}//end toggle_inverse_relations
+
+	/**
+	* LOAD_MORE_INVERSE
+	* Fetch the next batch of inverse relations and merge into the graph.
+	*/
+	async function load_more_inverse() {
+
+		if (processing.has('inverse')) return
+
+		processing.add('inverse')
+		if (inverse_controls.more_button) {
+			inverse_controls.more_button.disabled = true
+		}
+		try {
+			const result = await fetch_inverse_relations(self, root_tipo, root_id_value, {
+				limit	: INVERSE_BATCH,
+				offset	: inverse_loaded
+			})
+			inverse_total	= result.total
+			inverse_loaded	+= result.loaded
+
+			const root_node = graph.nodes.find(n => n.id === root_id) || { id: root_id, x: width / 2, y: height / 2 }
+
+			add_children(root_node, result)
+
+			upgrade_fallback_labels(self, result.nodes, () => {
+				update()
+			})
+
+			update_more_button()
+			update()
+		} catch (error) {
+			console.error('[view_graph_edit_section] load_more_inverse error:', error)
+		} finally {
+			processing.delete('inverse')
+			if (inverse_controls.more_button) {
+				inverse_controls.more_button.disabled = false
+			}
+		}
+	}//end load_more_inverse
+
+	/**
+	* UPDATE_MORE_BUTTON
+	* Show/hide and update the text of the "load more" button for inverse relations.
+	*/
+	function update_more_button() {
+
+		const btn = inverse_controls.more_button
+		if (!btn) return
+
+		const remaining = inverse_total - inverse_loaded
+		if (remaining > 0) {
+			const show_count = Math.min(INVERSE_BATCH, remaining)
+			btn.style.display = ''
+			btn.innerHTML = (get_label.show_more || 'Show') + ' ' + show_count + ' ' + (get_label.more || 'more') + ' (' + remaining + ' ' + (get_label.remaining || 'remaining') + ')'
+		} else {
+			btn.style.display = 'none'
+			btn.innerHTML = ''
+		}
+	}//end update_more_button
+
+	// wire checkbox
+		if (inverse_controls.checkbox) {
+			inverse_controls.checkbox.addEventListener('change', (e) => {
+				e.stopPropagation()
+				toggle_inverse_relations(e.target.checked)
+			})
+		}
+
+	// wire "load more" button
+		if (inverse_controls.more_button) {
+			inverse_controls.more_button.addEventListener('click', (e) => {
+				e.stopPropagation()
+				load_more_inverse()
+			})
+		}
+
 	/**
 	* UPDATE
 	* Rebind selections to the current graph arrays and restart the simulation.
@@ -292,6 +474,7 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 			link_sel = link_sel.enter()
 				.append('line')
 				.classed('graph_link', true)
+				.classed('inverse', d => d.is_inverse === true)
 				.merge(link_sel)
 
 		// link labels
@@ -300,6 +483,7 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 			link_label_sel = link_label_sel.enter()
 				.append('text')
 				.classed('graph_link_label', true)
+				.classed('inverse', d => d.is_inverse === true)
 				.attr('text-anchor', 'middle')
 				.text(d => d.relation_label || '')
 				.merge(link_label_sel)
@@ -337,7 +521,6 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 			node_sel.select('circle')
 				.attr('fill', d => d.is_root ? 'var(--color_hilite, #7092e0)' : color(d.section_tipo))
 			node_sel.selectAll('text')
-				.filter(function(){ return !this.classList.contains('graph_node_label_bg') })
 				.text(d => d.label)
 
 		// restart simulation
