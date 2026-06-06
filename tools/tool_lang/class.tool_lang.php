@@ -85,9 +85,15 @@ class tool_lang extends tool_common {
 			$translated_data = [];
 			foreach ($dato as $key => $value) {
 
-				switch ($translator_name) {
+			switch ($translator_name) {
 
-					case 'google_translation':
+				case 'browser_transformer':
+					$response->msg = "Browser transformer is client-side only. This server path should not be reached.";
+					$response->errors[] = 'Client-side engine called on server';
+					return $response;
+					break;
+
+				case 'google_translation':
 						// Not implemented yet
 						$response->msg = "Sorry. '{$translator_name}' is not implemented yet"; // error msg
 						$response->errors[] = 'Tool not implemented';
