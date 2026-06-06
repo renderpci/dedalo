@@ -47,9 +47,40 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor		= 10;
 
 	// Re-index and vacuum tables
-		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
-			VACUUM FULL VERBOSE ANALYZE public.matrix_ontology;
-		');
+		$alert->command .= "
+			<h2>New browser-based translation engine</h2>
+			<p>
+			This version introduces a new browser-based translation engine (<code>browser_transformer</code>) for <code>tool_lang</code>. If your installation has custom tool configuration, you must add this engine to the <code>translator_engine</code> list in your Tools configuration.
+			</p>
+			<p>
+			<strong>Required configuration:</strong>
+			<pre>{\"name\":\"browser_transformer\",\"type\":\"browser\",\"label\":\"Local AI translator\"}</pre>
+			</p>
+			<p>
+			<strong>Where to update:</strong> Tools Configuration section (<code>dd996</code>), located in the Administration menu.
+			</p>
+			<p>
+			The new <code>browser_transformer</code> engine must be added to the <code>translator_engine</code> list in your Tools configuration in this way.
+			</p>
+			<pre>\"translator_engine\": {
+			\"type\": \"array\",
+			\"value\": [
+			{
+				\"name\": \"babel\",
+				\"type\": \"server\",
+				\"label\": \"Babel\"
+			},
+			{
+				\"name\": \"browser_transformer\",
+				\"type\": \"browser\",
+				\"label\": \"Local AI translator\"
+			}
+			],
+			\"client\": true,
+			\"default\": []
+			}</pre>
+		";
+		$updates->$v->alert_update[] = $alert;
 		
 
 $v=6810; #####################################################################################
