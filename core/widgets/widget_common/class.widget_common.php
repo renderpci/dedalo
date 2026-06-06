@@ -54,7 +54,17 @@ class widget_common {
 		$widget_name	= $options->widget_name;
 		$path			= $options->path;
 
-		include_once DEDALO_WIDGETS_PATH . $path .'/class.'. $widget_name.'.php';
+		$file_path = DEDALO_WIDGETS_PATH . $path .'/class.'. $widget_name.'.php';
+
+		if (!file_exists($file_path)) {
+			throw new Exception("Widget class file not found: $file_path for widget_name: $widget_name, path: $path", 1);
+		}
+
+		include_once $file_path;
+
+		if (!class_exists($widget_name)) {
+			throw new Exception("Widget class '$widget_name' not found in file: $file_path", 1);
+		}
 
 		$instance = new $widget_name($options);
 
