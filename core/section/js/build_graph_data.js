@@ -289,7 +289,7 @@ export const datum_to_graph = function(self) {
 * @param string section_id
 * @return object|null datum
 */
-const fetch_section_datum = async function(self, section_tipo, section_id) {
+export const fetch_section_datum = async function(self, section_tipo, section_id) {
 
 	try {
 		// rqo template from the central section
@@ -387,6 +387,47 @@ export const fetch_node_relations = async function(self, node) {
 
 	return { nodes, links }
 }//end fetch_node_relations
+
+
+
+/**
+* EXTRACT_NODE_FIELDS
+* Collect the displayable field values of a record from its datum.
+* Relation components and section_id are excluded (relations are shown as edges).
+* @param object datum
+* @param string section_tipo
+* @param string section_id
+* @param object model_map
+* @return array fields [{ label, value, tipo }]
+*/
+export const extract_node_fields = function(datum, section_tipo, section_id, model_map) {
+
+	const fields	= []
+	const data		= datum?.data || []
+	const data_length = data.length
+
+	for (let i = 0; i < data_length; i++) {
+		const item = data[i]
+		if (item.section_tipo!==section_tipo || String(item.section_id)!==String(section_id)) {
+			continue
+		}
+		const ctx	= model_map[item.section_tipo + '_' + item.tipo]
+		const model	= ctx?.model || item.debug_model || ''
+		// skip relation components (shown as edges) and structural id
+		if (RELATION_MODELS.includes(model) || model==='component_section_id') {
+			continue
+		}
+		const label	= ctx?.label || item.debug_label || item.tipo
+		const value	= extract_text(item.entries)
+		fields.push({
+			label	: label,
+			value	: value || '—',
+			tipo	: item.tipo
+		})
+	}
+
+	return fields
+}//end extract_node_fields
 
 
 

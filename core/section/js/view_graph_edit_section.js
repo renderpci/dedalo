@@ -10,7 +10,10 @@
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {
 		datum_to_graph,
-		fetch_node_relations
+		fetch_node_relations,
+		fetch_section_datum,
+		build_model_map,
+		extract_node_fields
 	} from './build_graph_data.js'
 
 
@@ -89,7 +92,7 @@ const get_toolbar = function(self) {
 	// back to form
 		const back_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'graph_back_button',
+			class_name		: 'light graph_back_button',
 			inner_html		: get_label.form || get_label.back || 'Form',
 			parent			: toolbar
 		})
@@ -145,7 +148,7 @@ const get_content_data = function(self) {
 
 	const content_data = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'content_data ' + self.mode + ' graph_canvas'
+		class_name		: 'content_data ' + self.mode
 	})
 
 	// empty record case (new / unsaved)
@@ -159,11 +162,26 @@ const get_content_data = function(self) {
 			return content_data
 		}
 
+	// graph canvas (left)
+		const graph_canvas = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'graph_canvas',
+			parent			: content_data
+		})
+
+	// node detail panel (right)
+		const node_detail = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'node_detail',
+			parent			: content_data
+		})
+		content_data.node_detail = node_detail
+
 	// mount d3 when in DOM
-		when_in_dom(content_data, () => {
+		when_in_dom(graph_canvas, () => {
 			dd_request_idle_callback(async () => {
 				try {
-					await build_graph(self, content_data)
+					await build_graph(self, graph_canvas, node_detail)
 				} catch (error) {
 					console.error('[view_graph_edit_section] build_graph error:', error)
 				}
@@ -178,12 +196,13 @@ const get_content_data = function(self) {
 
 /**
 * BUILD_GRAPH
-* Create the D3 force graph and wire up expand/collapse interaction.
+* Create the D3 force graph and wire up expand/collapse + node detail interaction.
 * @param object self
-* @param HTMLElement content_data
+* @param HTMLElement graph_canvas
+* @param HTMLElement node_detail
 * @return promise
 */
-const build_graph = async function(self, content_data) {
+const build_graph = async function(self, graph_canvas, node_detail) {
 
 	// load d3 lib only when needed
 	// Note: d3.min.js is a UMD bundle that populates globalThis.d3
@@ -203,7 +222,7 @@ const build_graph = async function(self, content_data) {
 
 	// dimensions
 		const get_size = () => {
-			const size = content_data.getBoundingClientRect()
+			const size = graph_canvas.getBoundingClientRect()
 			return {
 				width	: size.width || 800,
 				height	: size.height || 600
@@ -251,6 +270,9 @@ const build_graph = async function(self, content_data) {
 
 	// re-entrancy guard for async expansion per node
 		const processing = new Set()
+
+	// selected node for detail panel
+		let selected_node = null
 
 	/**
 	* UPDATE
@@ -305,6 +327,7 @@ const build_graph = async function(self, content_data) {
 			node_sel.classed('is_root', d => d.is_root)
 				.classed('expandable', d => !d.is_root && !d.expanded)
 				.classed('expanded', d => d.expanded && !d.is_root)
+				.classed('selected', d => selected_node && d.id===selected_node.id)
 			node_sel.select('circle')
 				.attr('fill', d => d.is_root ? 'var(--color_hilite, #7092e0)' : color(d.section_tipo))
 			node_sel.selectAll('text')
@@ -370,6 +393,19 @@ const build_graph = async function(self, content_data) {
 		// open record in a new window
 			if (event.ctrlKey || event.metaKey) {
 				open_record_window(node)
+				return
+			}
+
+		// if clicking a different node → select + show detail (no expand/collapse)
+		// if clicking the already-selected node → toggle expand/collapse
+			const was_selected = selected_node && selected_node.id===node.id
+
+			selected_node = node
+			show_node_detail(node)
+			update()
+
+		// toggle expand/collapse only when clicking the already-selected node
+			if (!was_selected) {
 				return
 			}
 
@@ -512,6 +548,136 @@ const build_graph = async function(self, content_data) {
 	}//end prune_if_orphan
 
 	/**
+	* SHOW_NODE_DETAIL
+	* Populate the detail panel with node information.
+	* Metadata is shown immediately; component fields are lazy-fetched.
+	* @param object node
+	*/
+	async function show_node_detail(node) {
+
+		// clear panel
+			node_detail.innerHTML = ''
+
+		// header: label
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'node_label',
+				inner_html		: node.label,
+				parent			: node_detail
+			})
+
+		// meta: section_tipo + section_id (secondary info)
+			const meta = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'node_meta',
+				parent			: node_detail
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'node_meta_item',
+				inner_html		: node.section_tipo + ' · ' + node.section_id,
+				parent			: meta
+			})
+
+		// open record link
+			const open_link = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light node_open_link',
+				inner_html		: get_label.open || 'Open record',
+				parent			: node_detail
+			})
+			open_link.addEventListener('click', (e) => {
+				e.stopPropagation()
+				open_record_window(node)
+			})
+
+		// fields container (lazy)
+			const fields_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'node_fields',
+				parent			: node_detail
+			})
+
+		// loading indicator
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'node_fields_loading',
+				inner_html		: '…',
+				parent			: fields_container
+			})
+
+		// resolve fields
+			try {
+				let datum = null
+				if (node.is_root) {
+					// root node: datum is already in self
+					datum = self.datum
+				} else {
+					// non-root: fetch via API
+					datum = await fetch_section_datum(self, node.section_tipo, node.section_id)
+				}
+				if (datum) {
+					const model_map = build_model_map(datum)
+					const fields = extract_node_fields(datum, node.section_tipo, node.section_id, model_map)
+					// clear loading
+						fields_container.innerHTML = ''
+					const fields_len = fields.length
+					for (let i = 0; i < fields_len; i++) {
+						const field = fields[i]
+						const row = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'node_field',
+							parent			: fields_container
+						})
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'node_field_label',
+							inner_html		: field.label,
+							parent			: row
+						})
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'node_field_value',
+							inner_html		: field.value,
+							parent			: row
+						})
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'node_field_tipo',
+							inner_html		: field.tipo,
+							parent			: row
+						})
+					}
+					if (fields_len===0) {
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'node_fields_empty',
+							inner_html		: get_label.no_data || 'No data',
+							parent			: fields_container
+						})
+					}
+				} else {
+					fields_container.innerHTML = ''
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'node_fields_empty',
+						inner_html		: get_label.no_data || 'No data',
+						parent			: fields_container
+					})
+				}
+			} catch (error) {
+				console.error('[view_graph_edit_section] show_node_detail error:', error)
+				fields_container.innerHTML = ''
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'node_fields_empty',
+					inner_html		: 'Error loading data',
+					parent			: fields_container
+				})
+			}
+	}//end show_node_detail
+
+	/**
 	* OPEN_RECORD_WINDOW
 	* Open a node record in a new edit window.
 	*/
@@ -543,7 +709,16 @@ const build_graph = async function(self, content_data) {
 
 	// first paint
 		update()
-		content_data.appendChild(svg.node())
+		graph_canvas.appendChild(svg.node())
+
+	// click on canvas background deselects node
+		svg.on('click', (event) => {
+			if (event.target===svg.node()) {
+				selected_node = null
+				node_detail.innerHTML = ''
+				update()
+			}
+		})
 
 	if (SHOW_DEBUG===true) {
 		console.log('[view_graph_edit_section] graph built:', graph)
