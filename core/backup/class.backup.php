@@ -326,24 +326,42 @@ abstract class backup {
 	*/
 	public static function check_remote_server() : object {
 
+		if (defined('ONTOLOGY_SERVERS')) {
+			$servers = ONTOLOGY_SERVERS;
+		}else if (defined('STRUCTURE_SERVER_URL') && defined('STRUCTURE_SERVER_CODE')) {
+			$servers = [(object)[
+				'name'	=> 'Old Ontology server config. Define ONTOLOGY_SERVERS ASAP',
+				'url'	=> STRUCTURE_SERVER_URL,
+				'code'	=> STRUCTURE_SERVER_CODE
+			]];
+		}else{
+			$servers = [(object)[
+				'name'	=> 'Invalid ontology server config. Define ONTOLOGY_SERVERS ASAP',
+				'url'	=> '',
+				'code'	=> ''
+			]];
+		}
+		$first_server			= (object)$servers[0];
+		$ontology_server_code	= $first_server->code ?? '';
+		$ontology_server_url	= $first_server->url ?? '';
+
 		// Validate required constants
-		if (!defined('STRUCTURE_SERVER_CODE') || empty(STRUCTURE_SERVER_CODE)) {
+		if (empty($ontology_server_code)) {
 			return (object)[
 				'result' => false,
-				'msg' => 'Error: STRUCTURE_SERVER_CODE is not defined or empty'
+				'msg' => 'Error: ontology_server_code is not defined or empty'
 			];
 		}
-
-		if (!defined('STRUCTURE_SERVER_URL') || empty(STRUCTURE_SERVER_URL)) {
+		if (empty($ontology_server_url)) {
 			return (object)[
 				'result' => false,
-				'msg' => 'Error: STRUCTURE_SERVER_URL is not defined or empty'
+				'msg' => 'Error: ontology_server_url is not defined or empty'
 			];
 		}
 
 		// data
 			$data = array(
-				'code'				=> STRUCTURE_SERVER_CODE,
+				'code'				=> $ontology_server_code,
 				'check_connection'	=> true,
 				'dedalo_version'	=> DEDALO_VERSION ?? 'unknown'
 			);
@@ -351,7 +369,7 @@ abstract class backup {
 
 		// curl_request
 			$response = curl_request((object)[
-				'url'				=> STRUCTURE_SERVER_URL,
+				'url'				=> $ontology_server_url,
 				'post'				=> true,
 				'postfields'		=> $data_string,
 				'returntransfer'	=> 1,

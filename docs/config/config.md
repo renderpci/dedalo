@@ -709,7 +709,7 @@ This parameter configure the cache manager to use. By default the cache manager 
 ```php
 define('DEDALO_CACHE_MANAGER', (object)[
     'manager'  => 'files',
-    'files_path' => '/tmp'
+    'files_path' => DEDALO_SESSIONS_PATH
 ]);
 ```
 

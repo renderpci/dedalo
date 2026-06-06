@@ -168,22 +168,45 @@ const render_build_install_version = function (self, value) {
 				return
 			}
 
+			process_response.replaceChildren()
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info_text',
+				inner_html		: 'Building.. please wait',
+				parent			: process_response
+			})
+
 			// blur button
 			document.activeElement.blur()
 
 			// locks the button submit
-			button_process.classList.add('loading')
+			button_process.classList.add('button_spinner')
 
 			// build_install_version
 			const api_response = await self.build_install_version()
 
-			button_process.classList.remove('loading')
+			// debug
+			if (SHOW_DEBUG) {
+				console.log('----> build_install_version api_response', api_response);
+			}
 
-			update_process_status(
-				api_response.pid,
-				api_response.pfile,
-				process_response
-			)
+			button_process.classList.remove('button_spinner')
+
+			process_response.replaceChildren()
+			ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: '',
+				inner_html		: JSON.stringify(api_response, null, 2),
+				parent			: process_response
+			})
+
+			// background process version
+			// update_process_status(
+			// 	'build_database_version',
+			// 	api_response.pid,
+			// 	api_response.pfile,
+			// 	process_response
+			// )
 		}
 		button_process.addEventListener('click', click_handler)
 

@@ -250,6 +250,14 @@ abstract class common {
 		public static array $cache_get_tools = [];
 
 		/**
+		 * Static cache for resolved button tools context per button.
+		 * Avoids O(N*T) recalculation when same button appears across multiple
+		 * section instances (e.g. portals rendering many records).
+		 * @var array $cache_buttons_tools
+		 */
+		public static array $cache_buttons_tools = [];
+
+		/**
 		 * Dataframe locator of the element that instantiated this one (component, section, area).
 		 * Used for cross-referencing in dataframe and portal contexts.
 		 * @var ?object $caller_dataframe
@@ -360,6 +368,7 @@ abstract class common {
 			self::$ar_related_by_model_data = [];
 			self::$resolved_request_properties_parsed = [];
 			self::$cache_get_tools = [];
+			self::$cache_buttons_tools = [];
 			self::$pdata = null;
 		}
 
@@ -1539,7 +1548,7 @@ abstract class common {
 
 							$specific_tool_config = tool_common::get_tool_configuration(
 								$tool_config_options,
-								$tool_object->tool_config // already cached tool_config value
+								$tool_object->tool_config ?? null // already cached tool_config value
 							);
 
 						// if the configuration was defined, replace the ddo_map of the ontology with it.
@@ -3433,29 +3442,32 @@ abstract class common {
 		// autocomplete case. For speed and accessibility, return fixed value here
 			$autocomplete = dd_core_api::$rqo->source->config->autocomplete ?? false;
 			if ($autocomplete) {
-				return [];
+				$this->tools = [];
+				return $this->tools;
+			}
+
+		// user_id
+			$user_id = logged_user_id();
+			if (empty($user_id)) {
+				$this->tools = [];
+				return $this->tools;
 			}
 
 		// cache
 			$use_cache = true;
 			if ($use_cache===true) {
-				$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
+				$cache_key = $user_id . '_' . $this->tipo.'_'.($this->get_section_tipo() ?? '');
 				if (isset(self::$cache_get_tools[$cache_key])) {
 					if(SHOW_DEBUG===true) {
 						// metrics
 						metrics::$get_tools_total_calls_cached++;
 					}
-					return self::$cache_get_tools[$cache_key];
+					$this->tools = self::$cache_get_tools[$cache_key];
+					return $this->tools;
 				}
 			}
 
 		$tools = [];
-
-		// user_id
-			$user_id = logged_user_id();
-			if (empty($user_id)) {
-				return $tools;
-			}
 
 		// user_tools (cached on file cache_user_tools.php)
 			$user_tools	= tool_common::get_user_tools($user_id);
@@ -3490,6 +3502,10 @@ abstract class common {
 
 					// diffusion case. Skip non diffusion defined (in Ontology) sections
 						if ($tool->name==='tool_diffusion') {
+							// components are never in the diffusion map, skip the expensive check
+							if ($is_component) {
+								continue;
+							}
 							$have_section_diffusion = diffusion_utils::have_section_diffusion($tipo);
 							if ($have_section_diffusion===false) {
 								continue;
@@ -3539,8 +3555,9 @@ abstract class common {
 				metrics::$get_tools_total_time += $total_time_ms;
 			}
 
+		$this->tools = $tools;
 
-		return $tools;
+		return $this->tools;
 	}//end get_tools
 
 
@@ -3612,57 +3629,71 @@ abstract class common {
 						$tools_list	= tool_common::get_user_tools( logged_user_id() );
 
 						$tools = [];
-						foreach ($tools_list as $tool_object) {
 
-							// get the tool_config definition in the ontology
-							// the tool_config has the tool_name to identify the tool
-							// get the definition that match with the current button.
-							$tool_config = isset($button_properties->tool_config->{$tool_object->name})
-								? $button_properties->tool_config->{$tool_object->name}
-								: null;
+						// static cache for button tools context
+						// avoids O(N*T) recalculation when same button appears in multiple section instances
+						$cache_key = logged_user_id() .'_'. $current_button_tipo . '_' . $tipo . '_' . ($this->get_section_tipo() ?? '');
+						if (isset(self::$cache_buttons_tools[$cache_key])) {
 
-							// specific tool config in registered tools or tool configuration
-							// when the tool has a specific properties in the register or in his configuration records
-							// overwrite the ontology properties with them
-							// flow of overwrite: the most specific overwrite the most generic
-							//
-							// configuration -> configuration register -> ontology
-							// 1 if the configuration isset use it
-							// 2 else get the configuration in register, if isset use it
-							// 3 else get the ontology properties
+							$tools = self::$cache_buttons_tools[$cache_key];
 
-							// get the config, get_config check is the specific configuration isset
-							// else get the configuration in register record
-								$tool_config_options = new stdClass();
-									$tool_config_options->tool_name		= $tool_object->name;
-									$tool_config_options->tipo			= $current_button_tipo;
-									$tool_config_options->section_tipo	= $tipo;
+						} else {
 
-								$specific_tool_config = tool_common::get_tool_configuration(
-									$tool_config_options,
-									$tool_object->tool_config // already cached tool_config value
+							foreach ($tools_list as $tool_object) {
+
+								// get the tool_config definition in the ontology
+								// the tool_config has the tool_name to identify the tool
+								// get the definition that match with the current button.
+								$tool_config = isset($button_properties->tool_config->{$tool_object->name})
+									? $button_properties->tool_config->{$tool_object->name}
+									: null;
+
+								// specific tool config in registered tools or tool configuration
+								// when the tool has a specific properties in the register or in his configuration records
+								// overwrite the ontology properties with them
+								// flow of overwrite: the most specific overwrite the most generic
+								//
+								// configuration -> configuration register -> ontology
+								// 1 if the configuration isset use it
+								// 2 else get the configuration in register, if isset use it
+								// 3 else get the ontology properties
+
+								// get the config, get_config check is the specific configuration isset
+								// else get the configuration in register record
+									$tool_config_options = new stdClass();
+										$tool_config_options->tool_name		= $tool_object->name;
+										$tool_config_options->tipo			= $current_button_tipo;
+										$tool_config_options->section_tipo	= $tipo;
+
+									$specific_tool_config = tool_common::get_tool_configuration(
+										$tool_config_options,
+										$tool_object->tool_config // already cached tool_config value
+									);
+
+								// if the configuration was defined, replace the ddo_map of the ontology with it.
+									if( is_object($specific_tool_config) && isset($specific_tool_config->ddo_map) ){
+										if (!isset($tool_config)) {
+											$tool_config = new stdClass();
+										}
+										$tool_config->ddo_map = $specific_tool_config->ddo_map;
+									}
+
+								if(!isset($tool_config)) continue;
+
+								$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo;
+								$tool_context			= tool_common::create_tool_simple_context(
+									$tool_object,
+									$tool_config,
+									$this->tipo,
+									$current_section_tipo
 								);
 
-							// if the configuration was defined, replace the ddo_map of the ontology with it.
-								if( is_object($specific_tool_config) && isset($specific_tool_config->ddo_map) ){
-									if (!isset($tool_config)) {
-										$tool_config = new stdClass();
-									}
-									$tool_config->ddo_map = $specific_tool_config->ddo_map;
-								}
+								$tools[] = $tool_context;
+							}//end foreach ($tools_list as $item)
 
-							if(!isset($tool_config)) continue;
-
-							$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo;
-							$tool_context			= tool_common::create_tool_simple_context(
-								$tool_object,
-								$tool_config,
-								$this->tipo,
-								$current_section_tipo
-							);
-
-							$tools[] = $tool_context;
-						}//end foreach ($tools_list as $item)
+							self::$cache_buttons_tools[$cache_key] = $tools;
+							self::manage_cache_size(self::$cache_buttons_tools);
+						}
 					}//end if($model === 'button_import')
 
 				// button object

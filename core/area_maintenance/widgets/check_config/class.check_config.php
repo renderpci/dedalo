@@ -5,6 +5,13 @@
 */
 class check_config {
 
+	/**
+	 * SEC-044: methods callable through `dd_area_maintenance_api::widget_request`.
+	 * `get_value` is invoked through `get_widget_value` (hard-coded method) and
+	 * therefore not listed here.
+	 */
+	public const API_ACTIONS = [];
+
 
 
 	/**

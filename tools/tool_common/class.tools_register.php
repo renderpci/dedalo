@@ -943,14 +943,40 @@ class tools_register {
 	/**
 	 * CLEAN_CACHE
 	 *
-	 * Purges the tool-related cache files.
+	 * Purges the tool-related cache files for ALL users.
+	 * Also clears in-memory static caches to prevent stale data
+	 * in the current and concurrent requests.
 	 *
 	 * @return bool Success status.
 	 */
 	public static function clean_cache() : bool {
-		return dd_cache::delete_cache_files([
-			self::get_cache_user_tools_file_name()
-		]);
+
+		// Clear static caches immediately to prevent stale data in current request
+			tool_common::$user_tools_cache = [];
+			common::$cache_get_tools = [];
+
+		// Delete all per-user file caches.
+		// File naming convention: {entity}_{user_id}_cache_user_tools.php
+			$base_path = DEDALO_CACHE_MANAGER['files_path'] ?? false;
+			if ($base_path === false || !is_dir($base_path)) {
+				return false;
+			}
+			$pattern = $base_path . '/' . DEDALO_ENTITY . '_*_cache_user_tools.php';
+			$files = glob($pattern);
+			if ($files !== false) {
+				foreach ($files as $file_path) {
+					if (file_exists($file_path)) {
+						$deleted = unlink($file_path);
+						if ($deleted === true) {
+							debug_log(__METHOD__ . " Deleted file $file_path", logger::DEBUG);
+						} else {
+							debug_log(__METHOD__ . " Error deleting file $file_path", logger::ERROR);
+						}
+					}
+				}
+			}
+
+		return true;
 	}
 
 

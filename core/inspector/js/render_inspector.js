@@ -319,9 +319,10 @@ const get_content_data = function(self) {
 	// tools_container. Section tools buttons
 		const inspector_tools			= self.caller.context.tools.filter( el => el.show_in_inspector )
 		const inspector_tools_length	= inspector_tools.length
+		let tools_container				= null
 		if (inspector_tools_length>0) {
 			if(inspector_tools_length > 1) {
-				const tools_container = ui.create_dom_element({
+				tools_container = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'tools_container top',
 					parent			: content_data

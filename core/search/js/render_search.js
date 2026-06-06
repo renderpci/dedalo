@@ -470,14 +470,12 @@ render_search.prototype.render_search_buttons = function(){
 				// exec search command (return promise resolved as bool)
 				await self.exec_search()
 				// toggle filter container if there are results
-				dd_request_idle_callback(async ()=>{
-					const caller = self.caller
-					if (!caller) return
-					const total = await caller.get_total()
-					if(total > 0) {
-						toggle_search_panel(self) // toggle to open from default state close
-					}
-				})
+				const caller = self.caller
+				if (!caller) return
+				const entries = caller.data?.entries || []
+				if(entries.length > 0) {
+					toggle_search_panel(self) // toggle to open from default state close
+				}
 			})
 		}
 		const submit_button = ui.create_dom_element({

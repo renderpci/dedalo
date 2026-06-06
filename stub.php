@@ -311,23 +311,39 @@ if (!function_exists('pg_free_result')) {
 if (!function_exists('pg_last_error')) {
 	function pg_last_error($connection = null): string|false { return ''; }
 }
+if (!function_exists('pg_connection_status')) {
+	function pg_connection_status($connection): int { return 0; }
+}
+if (!defined('PGSQL_CONNECTION_OK')) {
+	define('PGSQL_CONNECTION_OK', 0);
+}
+if (!defined('PGSQL_CONNECTION_BAD')) {
+	define('PGSQL_CONNECTION_BAD', 1);
+}
+if (!function_exists('pg_close')) {
+	function pg_close($connection = null): bool { return true; }
+}
 
 class ImageMagick {
-	public static function get_date_time_original(string $file_path): ?object {}
-	public static function get_imagemagick_pdfinfo_path(): string {}
-	public static function get_version(): string {}
-	public static function get_imagemagick_installed_path(): string {}
-	public static function convert(...$args): mixed {}
+	public static function get_date_time_original(string $file_path): ?object { return null; }
+	public static function get_imagemagick_pdfinfo_path(): string { return ''; }
+	public static function get_version(): string { return ''; }
+	public static function get_imagemagick_installed_path(): string { return ''; }
+	public static function convert(...$args): mixed { return null; }
 }
 class Ffmpeg {
-	public static function get_date_time_original(string $file_path): ?object {}
-	public static function get_ffmpeg_installed_path(): string {}
-	public static function get_version(): string {}
-	public static function get_ffprove_version(): string {}
-	public static function get_ffprove_installed_path(): string {}
-	public static function check_lib(string $lib): bool {}
-	public static function get_setting_name(string $file_path, string $quality): string {}
-	public static function build_fragment(...$args): mixed {}
-	public static function build_av_alternate_command(object $options): object {}
-	public static function create_posterframe(...$args): mixed {}
+	public static function get_date_time_original(string $file_path): ?object { return null; }
+	public static function get_ffmpeg_installed_path(): string { return ''; }
+	public static function get_version(): string { return ''; }
+	public static function get_ffprove_version(): string { return ''; }
+	public static function get_ffprove_installed_path(): string { return ''; }
+	public static function check_lib(string $lib): bool { return false; }
+	public static function get_setting_name(string $file_path, string $quality): string { return ''; }
+	public static function build_fragment(...$args): mixed { return null; }
+	public static function build_av_alternate_command(object $options): object { return new stdClass(); }
+	public static function create_posterframe(...$args): mixed { return null; }
+}
+// PgSql\Connection stub for PHP 8.1+ PostgreSQL extension
+if (!class_exists('PgSql\Connection')) {
+	class_alias('stdClass', 'PgSql\Connection');
 }

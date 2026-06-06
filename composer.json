@@ -14,12 +14,19 @@
         "phpstan/phpstan": "^1.12"
     },
     "scripts": {
-        "phpstan": "phpstan analyse -c phpstan.neon.dist"
+        "phpstan": "phpstan analyse -c phpstan.neon.dist",
+        "post-install-cmd": []
     },
     "extra": {
         "security-notes": {
             "SEC-101": "sweetrdf/easyrdf pinned to ^1.19 (>=1.19.0 <2.0.0). The previous '*' constraint accepted any future major release including a v2 with API breaks. The runtime caller tools/tool_import_rdf/class.tool_import_rdf.php uses the v1 EasyRdf\\Graph API.",
             "SEC-101-followup": "easyrdf is currently in require-dev despite being a runtime dependency of tool_import_rdf. Production deployers running `composer install --no-dev` will be missing it. Moving it to require is a separate functional fix — out of scope here."
         }
-    }
+    },
+    "config": {
+        "platform-check": true,
+        "no-scripts": true,
+        "no-plugins": true
+    },
+    "prefer-stable": true
 }

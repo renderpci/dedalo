@@ -67,10 +67,12 @@ move_tld.prototype.exec_move_tld = async (files_selected) => {
 	const response = await data_manager.request({
 		body : {
 			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
+			action			: 'widget_request',
 			prevent_lock	: true,
 			source			: {
-				action	: 'move_tld',
+				type	: 'widget',
+				model	: 'move_tld',
+				action	: 'move_tld'
 			},
 			options : {
 				background_running	: true, // set run in background CLI

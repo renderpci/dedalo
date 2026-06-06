@@ -103,9 +103,12 @@ update_ontology.prototype.update_ontology = async (options) => {
 		use_worker	: true,
 		body		: {
 			dd_api	: 'dd_area_maintenance_api',
-			action	: 'class_request',
+			action	: 'widget_request',
+			prevent_lock	: true,
 			source	: {
-				action	: 'update_ontology',
+				type	: 'widget',
+				model	: 'update_ontology',
+				action	: 'update_ontology'
 			},
 			options : options
 		},

@@ -311,10 +311,12 @@ const get_content_data = async function(self) {
 			const response = await data_manager.request({
 				body		: {
 					dd_api			: 'dd_area_maintenance_api',
-					action			: 'class_request',
+					action			: 'widget_request',
 					prevent_lock	: true,
 					source			: {
-						action : 'update_data_version',
+						type	: 'widget',
+						model	: 'update_data_version',
+						action : 'update_data_version'
 					},
 					options : {
 						background_running	: true, // set run in background CLI

@@ -645,7 +645,8 @@ button.button_spinner {
 		content: " ";
 		display: inline-block;
 		// background-color: unset !important;
-		background-color: currentColor;
+		background-color: currentColor !important;
+		// background-color: transparent !important;
 		height: 1em;
 		width: 1em;
 		margin-right: 0.33em;
@@ -653,7 +654,8 @@ button.button_spinner {
 
 		// Create a curve at the top
 		border-radius: 50%;
-		border: 1.45px solid var(--color_white);
+		// border: 1.45px solid var(--color_white);
+		border: 1.45px solid var(--color_grey_11);
 		border-top-color: var(--button-bg-color, --color_orange_dedalo);
 
 		animation: run_spinner 800ms linear infinite;
@@ -665,6 +667,9 @@ button.button_spinner {
 		}
 	}
 }
+// button[class*="button_"]::before {
+//     background-color: currentColor !important;
+// }
 
 // dark mode: grey button variant
 :root[data-theme="dark"] .button.grey {

@@ -5,6 +5,15 @@
 */
 class register_tools {
 
+	/**
+	 * SEC-044: methods callable through `dd_area_maintenance_api::widget_request`.
+	 * `get_value` is invoked through `get_widget_value` (hard-coded method) and
+	 * therefore not listed here.
+	 */
+	public const API_ACTIONS = [
+		'register_tools'
+	];
+
 
 
 	/**
@@ -35,6 +44,48 @@ class register_tools {
 
 		return $response;
 	}//end get_value
+
+
+
+	/**
+	 * REGISTER_TOOLS
+	 * Alias of tools_register::import_tools
+	 * @return object $response
+	 * {
+	 *	result: array|false (on success, list of imported tools objects)
+	 * 	msg: string
+	 * 	errors: array
+	 * }
+	 */
+	public static function register_tools(): object
+	{
+
+		$response = new stdClass();
+		$response->result = false;
+		$response->msg = 'Error. Request failed [' . __METHOD__ . ']';
+
+		// import_tools
+		$response->result = tools_register::import_tools();
+
+		// check results errors
+		$errors = [];
+		if (!empty($response->result)) {
+			foreach ($response->result as $item) {
+				if (!empty($item->errors)) {
+					$errors = array_merge($errors, (array) $item->errors);
+				}
+			}
+		}
+		$response->errors = $errors;
+
+		// msg
+		$response->msg = empty($errors)
+			? 'OK. Request done successfully'
+			: 'Warning! Request done with errors';
+
+
+		return $response;
+	}//end register_tools
 
 
 

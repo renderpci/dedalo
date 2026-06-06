@@ -68,10 +68,12 @@ move_to_table.prototype.exec_move_to_table = async (files_selected) => {
 	const response = await data_manager.request({
 		body : {
 			dd_api			: 'dd_area_maintenance_api',
-			action			: 'class_request',
+			action			: 'widget_request',
 			prevent_lock	: true,
 			source			: {
-				action	: 'move_to_table',
+				type	: 'widget',
+				model	: 'move_to_table',
+				action	: 'move_to_table'
 			},
 			options : {
 				background_running	: true, // set run in background CLI
