@@ -61,6 +61,20 @@ export const build_model_map = function(datum) {
 
 	return map
 }//end build_model_map
+/**
+* STRIP_HTML
+* Remove HTML tags from a string.
+* @param string str
+* @return string
+*/
+const strip_html = function(str) {
+
+	if (!str || typeof str !== 'string') return str
+
+	return str.replace(/<[^>]*>/g, '')
+}//end strip_html
+
+
 
 
 
@@ -86,11 +100,11 @@ const extract_text = function(entries) {
 			continue
 		}
 		if (typeof el === 'string' || typeof el === 'number') {
-			parts.push(String(el))
+			parts.push(strip_html(String(el)))
 		}else if (typeof el === 'object') {
 			const value = el.value ?? el.literal ?? el.term ?? el.label ?? null
 			if (value!==null && (typeof value === 'string' || typeof value === 'number')) {
-				parts.push(String(value))
+				parts.push(strip_html(String(value)))
 			}
 		}
 	}
