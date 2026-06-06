@@ -47,38 +47,62 @@ $updates->$v = new stdClass();
 	$updates->$v->update_from_minor		= 10;
 
 	// Re-index and vacuum tables
+	$alert = new stdClass();
+		$alert->notification = 'V '.$v;
+
+		$alert->command = '';
+
 		$alert->command .= "
-			<h2>New browser-based translation engine</h2>
+			<h1>New browser-based translation engine</h1>
 			<p>
-			This version introduces a new browser-based translation engine (<code>browser_transformer</code>) for <code>tool_lang</code>. If your installation has custom tool configuration, you must add this engine to the <code>translator_engine</code> list in your Tools configuration.
+			This version introduces a new browser-based translation engine (<i>browser_transformer</i>) for <i>tool_lang</i> with support of 55 languages. If your installation has custom tool configuration, you must add this engine to the <i>translator_engine</i> list in your Tools configuration.
+			</p>
+			<br>
+			<br>
+			<p>
+			<strong>New tool_lang configuration:</strong>
+			<br>
+			<br>
+			<code>
+			{\"name\":\"browser_transformer\",\"type\":\"browser\",\"label\":\"Local AI translator\"}
+			</code>
+			</p> 
+			<br>
+			<br>
+			<p>
+			<strong>Where to update:</strong> Tools Configuration section (<i>dd996</i>), located in the Administration menu.
 			</p>
 			<p>
-			<strong>Required configuration:</strong>
-			<pre>{\"name\":\"browser_transformer\",\"type\":\"browser\",\"label\":\"Local AI translator\"}</pre>
+			The new <i>browser_transformer</i> engine must be added to the <i>translator_engine</i> list in your Tools configuration in this way.
+			</p>
+			<br>
+			<code>
+				\"translator_engine\": {
+					\"type\": \"array\",
+					\"value\": [
+					{
+						\"name\": \"babel\",
+						\"type\": \"server\",
+						\"label\": \"Babel\"
+					},
+					{
+						\"name\": \"browser_transformer\",
+						\"type\": \"browser\",
+						\"label\": \"Local AI translator\"
+					}
+					],
+					\"client\": true,
+					\"default\": []
+				}
+			</code>
+			<br>
+			<br>
+			<p>
+			<strong>Note:</strong> If you do not have a local configuration with API calls enabled for tool_lang, you can delete the section that defines the custom translator engines in the Tools Configuration section; the default configuration will then work.
 			</p>
 			<p>
-			<strong>Where to update:</strong> Tools Configuration section (<code>dd996</code>), located in the Administration menu.
+			<strong>Note2:</strong> The new <i>browser_transformer</i> engine requires a modern browser with WebAssembly support. Translations uses a local AI model that runs directly in the browser using your resources. Data is not sent to any external server. The process could take long time in low-end devices. Tested in M2 Max with 64GB of shared memory, output speed of ~70 tokens/s (1.000 words takes ~14 seconds).
 			</p>
-			<p>
-			The new <code>browser_transformer</code> engine must be added to the <code>translator_engine</code> list in your Tools configuration in this way.
-			</p>
-			<pre>\"translator_engine\": {
-			\"type\": \"array\",
-			\"value\": [
-			{
-				\"name\": \"babel\",
-				\"type\": \"server\",
-				\"label\": \"Babel\"
-			},
-			{
-				\"name\": \"browser_transformer\",
-				\"type\": \"browser\",
-				\"label\": \"Local AI translator\"
-			}
-			],
-			\"client\": true,
-			\"default\": []
-			}</pre>
 		";
 		$updates->$v->alert_update[] = $alert;
 		
