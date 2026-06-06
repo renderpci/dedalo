@@ -39,6 +39,7 @@ des
 * copy.*
 test
 !/test
+!/core/widgets/test
 *.cache
 .idea
 certs
