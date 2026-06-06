@@ -105,6 +105,11 @@ $updates->$v = new stdClass();
 			</p>
 		";
 		$updates->$v->alert_update[] = $alert;
+
+		// Re-index and vacuum tables
+		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
+			VACUUM FULL VERBOSE ANALYZE public.matrix_ontology;
+		');
 		
 
 $v=6810; #####################################################################################
