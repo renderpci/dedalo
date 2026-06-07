@@ -435,10 +435,11 @@ function find_nearest_boundary(text, target, max_radius = 10) {
  * @returns {Promise}
  */
 function with_timeout(promise, ms, label) {
-	const timer = new Promise((_, reject) =>
-		setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms)
-	);
-	return Promise.race([promise, timer]);
+	let timerId;
+	const timer = new Promise((_, reject) => {
+		timerId = setTimeout(() => reject(new Error(`${label} timed out after ${ms / 1000}s`)), ms);
+	});
+	return Promise.race([promise, timer]).finally(() => clearTimeout(timerId));
 }
 
 
@@ -475,17 +476,49 @@ self.onmessage = async (e) => {
 		// The pipeline is cached after the first call; subsequent calls reuse it.
 		// Quantised to q4 to fit within browser memory limits (~2 GB for GPU).
 		if (!cached_translator) {
-			cached_translator = await pipeline('text-generation', MODEL_ID, {
-				device : device,
-				dtype  : 'q4',
-				progress_callback: ({ progress, status, file }) => {
-					// Relay download/compile progress to the UI thread
+			try {
+				cached_translator = await pipeline('text-generation', MODEL_ID, {
+					device : device,
+					dtype  : 'q4',
+					progress_callback: ({ progress, status, file }) => {
+						// Relay download/compile progress to the UI thread
+						self.postMessage({
+							status : 'init',
+							data   : { progress, status, device, file }
+						});
+					}
+				});
+			} catch (init_error) {
+				// If WebGPU fails (OOM, buffer mapping error, etc.), auto-fallback to WASM/CPU
+				const is_gpu_error = device === 'webgpu' && (
+					/init|webgpu|gpu|buffer|mapping|allocation|out of memory/i.test(
+						init_error?.message || init_error?.name || ''
+					)
+				);
+				if (is_gpu_error) {
 					self.postMessage({
 						status : 'init',
-						data   : { progress, status, device, file }
+						data   : {
+							progress : 0,
+							status   : 'fallback_to_wasm',
+							device   : 'wasm',
+							file     : null
+						}
 					});
+					cached_translator = await pipeline('text-generation', MODEL_ID, {
+						device : 'wasm',
+						dtype  : 'q4',
+						progress_callback: ({ progress, status, file }) => {
+							self.postMessage({
+								status : 'init',
+								data   : { progress, status, device: 'wasm', file }
+							});
+						}
+					});
+				} else {
+					throw init_error;
 				}
-			});
+			}
 		}
 
 		const blocks        = options.blocks;
