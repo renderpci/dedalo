@@ -252,6 +252,12 @@ const get_content_data_edit = async function(self) {
 						console.log("--> copy_to_target target_value:", clone(self.target_component.data.value));
 					}
 
+				// guard: source_value must be an array
+					if (!Array.isArray(source_value)) {
+						console.error('copy_to_target: source_value is not an array', source_value);
+						return;
+					}
+
 				// copy value
 					self.target_component.data.value = source_value
 
@@ -413,10 +419,18 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 					status_container.classList.remove('loading_status')
 					status_container.innerHTML = `<span class="success_text">${msg}</span>`
 				})
+				.catch((error)=>{
+					components_container.classList.remove('loading')
+					console.error('automatic_translation_browser error:', error)
+				})
 			}else{
 				self.automatic_translation_server(translator_name, source_lang, target_lang, automatic_translation_container)
 				.then(()=>{
 					components_container.classList.remove('loading')
+				})
+				.catch((error)=>{
+					components_container.classList.remove('loading')
+					console.error('automatic_translation_server error:', error)
 				})
 			}
 		}
