@@ -33,7 +33,7 @@ class babel {
 			$url		= $options->uri; // DEDALO_TRANSLATOR_URL['babel'];
 
 		// add custom image tags to avoid Apertium change original tags
-			$source_text = trim(TR::addBabelTagsOnTheFly($options->text));
+			$source_text = trim(TR::addBabelTagsOnTheFly($options->text ?? ''));
 
 		// http query vars
 			$fields = [
@@ -115,7 +115,7 @@ class babel {
 		if ($source_lang==='lg-deu') {
 			$source_babel = 'deu';
 			if ($target_lang==='lg-eng') {
-				$target_babel = 'eng';
+			$target_babel = 'eng';
 			}
 		}
 
