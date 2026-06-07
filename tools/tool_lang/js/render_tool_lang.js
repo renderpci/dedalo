@@ -7,7 +7,7 @@
 // imports
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {clone} from '../../../core/common/js/utils/index.js'
+	import {clone, get_json_langs} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -194,6 +194,18 @@ const get_content_data_edit = async function(self) {
 					parent			: right_block
 				})
 				target_component_container.appendChild(target_component_node)
+
+				// streaming overlay
+				self.streaming_overlay = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'streaming_overlay hide',
+					parent			: target_component_container
+				})
+				self.streaming_overlay_content = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'streaming_overlay_content',
+					parent			: self.streaming_overlay
+				})
 			}
 
 	// buttons container
@@ -358,6 +370,13 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 			class_name		: 'automatic_translation_container'
 		})
 
+	// status container
+		const status_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_container hide',
+			parent			: automatic_translation_container
+		})
+
 	// button
 		const button_automatic_translation = ui.create_dom_element({
 			element_type	: 'button',
@@ -371,14 +390,35 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 
 			components_container.classList.add('loading')
 
-			const translator	= self.translator_engine_select.value
-			const source_lang	= source_select_lang.value
-			const target_lang	= target_select_lang.value
+			const translator_name	= self.translator_engine_select.value
+			const source_lang		= source_select_lang.value
+			const target_lang		= target_select_lang.value
 
-			self.automatic_translation(translator, source_lang, target_lang, automatic_translation_container)
-			.then(()=>{
-				components_container.classList.remove('loading')
-			})
+			const engine = translator_engine.find(el => el.name===translator_name)
+			if (engine && engine.type==='browser') {
+
+				const device = self.translator_device_checkbox && self.translator_device_checkbox.checked
+					? 'wasm'
+					: 'webgpu'
+
+				self.automatic_translation_browser({
+					source_lang		: source_lang,
+					target_lang		: target_lang,
+					device			: device,
+					status_container: status_container
+				})
+				.then(()=>{
+					components_container.classList.remove('loading')
+					const msg = self.get_tool_label('translation_completed') || 'Translation completed.'
+					status_container.classList.remove('loading_status')
+					status_container.innerHTML = `<span class="success_text">${msg}</span>`
+				})
+			}else{
+				self.automatic_translation_server(translator_name, source_lang, target_lang, automatic_translation_container)
+				.then(()=>{
+					components_container.classList.remove('loading')
+				})
+			}
 		}
 		button_automatic_translation.addEventListener('click', click_handler)
 
@@ -406,9 +446,79 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 				id		: 'translator_engine_select',
 				value	: self.translator_engine_select.value
 			}, 'status')
+
+			// show/hide configuration based on engine type
+			const selected_engine = translator_engine.find(el => el.name===self.translator_engine_select.value)
+			if (selected_engine && selected_engine.type==='browser') {
+				configuration_container.classList.remove('hide')
+			}else{
+				configuration_container.classList.add('hide')
+			}
 		}
 		self.translator_engine_select.addEventListener('change', change_handler)
 
+	// configuration
+	// open/close the configuration options
+		const show_configuration = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'icon gear',
+			parent			: automatic_translation_container
+		})
+		const show_configuration_click_handler = function (e) {
+			configuration_container.classList.toggle('hide')
+		}
+		show_configuration.addEventListener('click', show_configuration_click_handler)
+
+		const configuration_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'configuration_container hide',
+			parent			: automatic_translation_container
+		})
+
+		// device checkbox
+		const device_container = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'device_container',
+			parent 			: configuration_container
+		})
+
+		const option_label = ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: self.get_tool_label('cpu_device') || 'More compatible, slower.',
+			parent			: device_container
+		})
+
+		const translator_device_checkbox = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox'
+		})
+
+		self.translator_device_checkbox = translator_device_checkbox
+
+		option_label.prepend(translator_device_checkbox)
+
+		const device_id = 'translator_device_checkbox'
+		translator_device_checkbox.addEventListener('change', function(){
+			data_manager.set_local_db_data({
+				id		: device_id,
+				value	: translator_device_checkbox.checked
+			}, 'status')
+		})
+
+		data_manager.get_local_db_data(
+			device_id,
+			'status'
+		).then(function( device_saved ){
+			if(device_saved){
+				translator_device_checkbox.checked = device_saved.value
+			}
+		})
+
+		// initial visibility: show config if the default engine is browser type
+		const initial_engine = translator_engine.find(el => el.name===self.target_translator)
+		if (initial_engine && initial_engine.type==='browser') {
+			configuration_container.classList.remove('hide')
+		}
 
 	return automatic_translation_container
 }//end build_automatic_translation
