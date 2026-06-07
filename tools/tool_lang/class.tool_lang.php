@@ -97,7 +97,7 @@ class tool_lang extends tool_common {
 			}
 			security::assert_tipo_permission($section_tipo, $component_tipo, 2, __METHOD__);
 		// SEC-024 (§9.4): per-record gate.
-			if (!empty($section_id)) {
+			if (isset($section_id) && $section_id !== null) {
 				security::assert_record_in_user_scope(
 					$section_tipo,
 					(int)$section_id,
