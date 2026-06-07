@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -158,18 +158,20 @@ tool_lang.prototype.build = async function(autoload=false) {
 			self.target_lang = (tool_lang_target_lang_object)
 				? tool_lang_target_lang_object.value
 				: self.lang
-			self.target_component = await load_component({
-				self 			: self,
-				model			: main_element_ddo.model,
-				mode			: main_element_ddo.mode,
-				tipo			: main_element_ddo.tipo,
-				section_tipo	: main_element_ddo.section_tipo,
-				section_lang	: main_element_ddo.section_lang,
-				lang			: self.target_lang,
-				type			: main_element_ddo.type,
-				section_id		: main_element_ddo.section_id,
-				id_variant		: 'target_component'
-			})
+			if (main_element_ddo) {
+				self.target_component = await load_component({
+					self 			: self,
+					model			: main_element_ddo.model,
+					mode			: main_element_ddo.mode,
+					tipo			: main_element_ddo.tipo,
+					section_tipo	: main_element_ddo.section_tipo,
+					section_lang	: main_element_ddo.section_lang,
+					lang			: self.target_lang,
+					type			: main_element_ddo.type,
+					section_id		: main_element_ddo.section_id,
+					id_variant		: 'target_component'
+				})
+			}
 
 	} catch (error) {
 		self.error = error
@@ -206,11 +208,20 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 		const status_container = options.status_container
 
 	// source text
-		const source_value = self.main_element.data.value
-		if (!source_value || source_value.length<1) {
+		const raw_value = self.main_element.data.entries || self.main_element.data.value
+		const source_entries = Array.isArray(raw_value)
+			? raw_value
+			: (raw_value ? [raw_value] : [])
+		if (source_entries.length<1) {
 			return Promise.reject('Empty source text')
 		}
-		const source_text = source_value[0]
+		const first_entry = source_entries[0]
+		const source_text = (typeof first_entry==='string')
+			? first_entry
+			: (first_entry?.value || '')
+		if (!source_text) {
+			return Promise.reject('Empty source text')
+		}
 
 	// language mapping: convert Dédalo lang codes to locale codes
 		const json_langs = self.json_langs || await get_json_langs() || []
@@ -229,7 +240,7 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 		const target_lang_code = dedalo_to_locale(target_lang)
 
 	// clean hard code spaces
-	const clean_source_text = source_text.replace(/&nbsp;/g, ' ')
+		const clean_source_text = source_text.replace(/&nbsp;/g, ' ')
 
 	// create placeholders for avoid translation of dedalo tags
 		const { safe_source_text, placeholders } = replace_dedalo_tags_with_placeholders(clean_source_text)
@@ -273,7 +284,9 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 
 					const label = status_text==='ready'
 						? self.get_tool_label( process_label )
-						: self.get_tool_label( 'initializing' )
+						: (status_text==='fallback_to_wasm')
+							? (self.get_tool_label('gpu_unavailable') || 'GPU unavailable, switching to CPU')
+							: self.get_tool_label( 'initializing' )
 
 					const loaded = (progress)
 						? ` : ${parseInt(progress).toString().padStart(2, 0)}%`
@@ -293,6 +306,9 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 					status_container.innerText = `${procesing_label} (${remaining} ${remaining_label})`
 
 					// show accumulated streaming text in overlay
+					if (!self.target_component.data.value) {
+						self.target_component.data.value = []
+					}
 					self.target_component.data.value[0] = accumulated_text
 					if (self.streaming_overlay_content) {
 						self.streaming_overlay_content.innerHTML = accumulated_text
@@ -315,21 +331,58 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 					console.log('translated_text', translated_text)
 					const restored_text = restore_placeholders(translated_text, placeholders)
 
-					self.target_component.data.value[0] = restored_text
+					// Get shared cross-language id from source entry
+					const source_id = (typeof first_entry==='object' && first_entry!==null)
+						? (first_entry.id ?? null)
+						: null
 
-					// save value to target component
-					self.target_component.save([{
+					// Use target's own id if it exists, otherwise fall back to source id
+					const target_entries = self.target_component.data.entries || []
+					const existing_target_id = target_entries.length > 0 && target_entries[0]?.id !== undefined
+						? target_entries[0].id
+						: null
+					const entry_id = existing_target_id ?? source_id
+
+					// Build v7 entry object
+					const entry = (entry_id !== null)
+						? { id: entry_id, value: restored_text }
+						: { value: restored_text }
+
+					// Update legacy value array
+						if (!self.target_component.data.value) {
+							self.target_component.data.value = []
+						}
+						self.target_component.data.value[0] = restored_text
+
+					// Update entries array (v7 data model)
+						if (!self.target_component.data.entries) {
+							self.target_component.data.entries = []
+						}
+						if (self.target_component.data.entries.length === 0) {
+							self.target_component.data.entries.push(entry)
+						} else {
+							self.target_component.data.entries[0] = entry
+						}
+
+					// save value to target component and resolve after save completes
+					const save_item = {
 						action	: 'update',
-						key		: 0,
-						value	: restored_text
-					}])
+						id		: entry_id,
+						value	: entry
+					}
+					self.target_component.save([save_item])
 					.then(function(){
-						self.target_component.refresh({
+						return self.target_component.refresh({
 							build_autoload : false
 						})
 					})
-
-					resolve({result: true, msg: 'OK. Translation completed'})
+					.then(function(){
+						resolve({result: true, msg: 'OK. Translation completed'})
+					})
+					.catch(function(save_error){
+						console.error('Save failed after translation:', save_error)
+						reject(save_error)
+					})
 
 					break;
 
@@ -605,7 +658,7 @@ function group_blocks_into_chunks(html, maxChars = 1000) {
 
 		// attempt to merge this block with the current accumulator using \n as separator
 		const candidate = current 
-			? current + block 
+			? current + '\n' + block 
 			: block;
 
 		if (candidate.length <= maxChars) {
