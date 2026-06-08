@@ -373,7 +373,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 	// status container
 		const status_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'status_container hide',
+			class_name		: 'status_container',
 			parent			: automatic_translation_container
 		})
 
@@ -388,6 +388,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 		button_automatic_translation.addEventListener('click', () => {
 
 			components_container.classList.add('loading')
+			button_automatic_translation.classList.add('button_spinner')
 
 			const translator_name	= self.translator_engine_select.value
 			const source_lang		= source_select_lang.value
@@ -408,6 +409,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 				})
 				.then(()=>{
 					components_container.classList.remove('loading')
+					button_automatic_translation.classList.remove('button_spinner')
 					const msg = self.get_tool_label('translation_completed') || 'Translation completed.'
 					status_container.classList.remove('loading_status')
 					status_container.innerHTML = `<span class="success_text">${msg}</span>`
@@ -416,6 +418,7 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 				self.automatic_translation_server(translator_name, source_lang, target_lang, automatic_translation_container)
 				.then(()=>{
 					components_container.classList.remove('loading')
+					button_automatic_translation.classList.remove('button_spinner')
 				})
 			}
 		})
