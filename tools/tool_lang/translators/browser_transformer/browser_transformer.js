@@ -29,13 +29,20 @@
  *   conversation to start with a user turn.
  */
 
-import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
+//import { pipeline } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0';
+import { pipeline, env } from './lib/transformers.js';
 
 /**
  * ONNX-optimised 4B instruction-tuned translation model.
  * Uses q4 quantisation for memory-efficient local inference.
  */
-const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
+//const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
+
+// Self-hosted model: serve from same origin instead of HuggingFace CDN
+// In browser context, the library uses fetch() with remoteHost + remotePathTemplate
+env.remoteHost			= new URL('./models/', self.location.href).href;
+env.remotePathTemplate	= '{model}/';
+const MODEL_ID			= 'translategemma-text-4b-it-ONNX';
 
 /**
  * Maximum tokens the model may generate per call.
@@ -753,7 +760,8 @@ async function translate_text(translator, text, sourceLangCode, targetLangCode, 
 			`2. Keep all placeholders like [[18]], [[1]], [[5]], [[424]], etc. EXACTLY as-is — never modify, translate, or remove them.`,
 			`3. Preserve any raw HTML tags (e.g. <img>, <span>) exactly as they appear.`,
 			`4. Do not add or remove blank lines.`,
-			`5. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
+			`5. Ensure the translated text was done with the target language: ${targetLangCode}`,
+			`6. Verify every placeholder [[…]] from the input appears IDENTICALLY in your output.`,
 			``,
 			`Examples:`,
 			`Input:  "**Hola[[5]]** ¿como estás[[2]][[3]]?"`,
