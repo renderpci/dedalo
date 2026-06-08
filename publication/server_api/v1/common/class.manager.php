@@ -156,6 +156,12 @@ class manager {
 				$dedalo_data = (object)web_data::get_free_search( $options );
 				break;
 
+			case 'text_fragment':
+				#
+				# Execute data retrieving
+				$dedalo_data = (object)web_data::get_text_fragment( $options );
+				break;
+
 			## FULL ##
 			case 'full_reel':
 				#

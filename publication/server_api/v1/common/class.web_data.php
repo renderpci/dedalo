@@ -10,6 +10,7 @@ include(dirname(__FILE__).'/class.map.php');
 include(dirname(__FILE__).'/class.process_result.php');
 include(dirname(__FILE__).'/class.image.php');
 include(dirname(__FILE__).'/class.notes.php');
+include(dirname(__FILE__).'/class.biblio.php');
 // include(dirname(__FILE__).'/class.DBi.php'); // already included from config
 // shared
 include_once $root_dir . '/shared/class.OptimizeTC.php';
