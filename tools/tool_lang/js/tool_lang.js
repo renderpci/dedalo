@@ -237,6 +237,11 @@ tool_lang.prototype.automatic_translation_browser = async function(options) {
 	// parse HTML into blocks
 		const blocks = group_blocks_into_chunks(safe_source_text, 1000)
 
+	// safe target data
+		if (!self.target_component.data.value) {
+			self.target_component.data.value = []
+		}
+
 	// transcribe worker
 		const translate_worker = new Worker('../../tools/tool_lang/translators/browser_transformer/browser_transformer.js', {
 			type : 'module'
@@ -604,8 +609,8 @@ function group_blocks_into_chunks(html, maxChars = 1000) {
 		}
 
 		// attempt to merge this block with the current accumulator using \n as separator
-		const candidate = current 
-			? current + block 
+		const candidate = current
+			? current + block
 			: block;
 
 		if (candidate.length <= maxChars) {
