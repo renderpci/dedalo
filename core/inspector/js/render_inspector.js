@@ -266,6 +266,36 @@ const get_content_data = function(self) {
 			button_target_section.addEventListener('mousedown', button_target_section_mousedown_handler)
 
 
+		// button_graph . Switch the section to the interactive relations graph view
+			const button_graph = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'light graph',
+				title			: get_label.graph || 'Graph',
+				parent			: buttons_container
+			})
+			const button_graph_click_handler = async (e) => {
+				e.stopPropagation()
+
+				const section = self.caller
+				if (!section || !section.section_id) {
+					return
+				}
+
+				// set graph view (both flags: render_edit_section reads context.view, create_source reads view)
+				section.view = 'graph'
+				if (section.context) {
+					section.context.view = 'graph'
+				}
+
+				// re-render reusing already-loaded client data (no extra API call)
+				await section.refresh({
+					build_autoload	: false,
+					render_level	: 'full'
+				})
+			}
+			button_graph.addEventListener('click', button_graph_click_handler)
+
+
 		// button_diffusion
 			const tool_diffusion = self.caller.tools.find(el => el.name==='tool_diffusion')
 			if (tool_diffusion) {

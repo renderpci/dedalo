@@ -34,7 +34,9 @@ final class dd_agent_api {
 		'search_records_view',
 		'count_records',
 		'set_field_by_label',
-		'get_media_url'
+		'get_media_url',
+		'list_sections_index',
+		'get_section_map'
 	];
 
 
@@ -990,6 +992,231 @@ final class dd_agent_api {
 
 
 
+
+
+	/**
+	 * LIST_SECTIONS_INDEX
+	 * Returns a compact index of all sections the current user can read.
+	 * Loaded from the pre-built `ontology_llm_map.json` artifact; falls back
+	 * to a live scan of `dd_ontology` when the file is missing.
+	 *
+	 * Request:
+	 *   {
+	 *     "action": "list_sections_index",
+	 *     "dd_api": "dd_agent_api",
+	 *     "source": { "lang": "lg-eng" }
+	 *   }
+	 *
+	 * Response.result:
+	 *   [
+	 *     {"tipo": "oh1",  "label": {"lg-eng": "Oral History", "lg-spa": "Historia oral"}},
+	 *     {"tipo": "numisdata6", "label": {"lg-eng": "Coin"}},
+	 *     ...
+	 *   ]
+	 *
+	 * @param object $rqo
+	 * @return object
+	 */
+	public static function list_sections_index( object $rqo ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. list_sections_index request failed';
+			$response->errors	= [];
+
+		$source	= $rqo->source ?? new stdClass();
+		$lang	= self::normalise_lang($source->lang ?? DEDALO_DATA_LANG);
+
+		// Load pre-built LLM map
+			$map = self::load_llm_map();
+
+		// Fallback: live scan of dd_ontology
+			if ($map === null) {
+				$section_tipos = dd_ontology_db_manager::search(['model' => 'section'], true);
+				if (!is_array($section_tipos)) {
+					$response->msg		= 'Error. Unable to list sections from ontology';
+					$response->errors[]	= 'db_query_failed';
+					return $response;
+				}
+				$map = [];
+				foreach ($section_tipos as $section_tipo) {
+					$node		= ontology_node::get_instance($section_tipo);
+					$term_data	= $node->get_term_data() ?? new stdClass();
+					$map[]		= (object)['tipo' => $section_tipo, 'label' => $term_data, 'fields' => []];
+				}
+			}
+
+		// Permission filter + build compact index
+			$index = [];
+			foreach ($map as $entry) {
+				$entry		= (object)$entry;
+				$stipo		= $entry->tipo ?? null;
+				if (empty($stipo)) continue;
+
+				$permissions = common::get_permissions($stipo, $stipo);
+				if ($permissions < 1) continue;
+
+				$index[] = (object)[
+					'tipo'	=> $stipo,
+					'label'	=> $entry->label ?? new stdClass(),
+				];
+			}
+
+		$response->result	= $index;
+		$response->msg		= 'OK. list_sections_index done';
+
+		return $response;
+	}//end list_sections_index
+
+
+
+	/**
+	 * GET_SECTION_MAP
+	 * Returns the full field map for a single section: tipo, multilingual labels
+	 * for the section and every field, simplified types, and portal targets.
+	 *
+	 * Accepts a human-readable section name (any language) or a tipo identifier.
+	 * Served from the pre-built `ontology_llm_map.json`; falls back to a live
+	 * build from `agent_view_builder` when the artifact is missing.
+	 *
+	 * Request:
+	 *   {
+	 *     "action": "get_section_map",
+	 *     "dd_api": "dd_agent_api",
+	 *     "source": {
+	 *       "section": "Oral History",  // name OR tipo e.g. "oh1"
+	 *       "lang":    "lg-eng"          // optional
+	 *     }
+	 *   }
+	 *
+	 * Response.result:
+	 *   {
+	 *     "tipo":   "oh1",
+	 *     "label":  {"lg-eng": "Oral History", "lg-spa": "Historia oral"},
+	 *     "fields": [
+	 *       {"tipo":"oh14","label":{"lg-eng":"Title"},"type":"text"},
+	 *       {"tipo":"oh24","label":{"lg-eng":"Informant"},"type":"link","target":"rsc197"}
+	 *     ]
+	 *   }
+	 *
+	 * @param object $rqo
+	 * @return object
+	 */
+	public static function get_section_map( object $rqo ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. get_section_map request failed';
+			$response->errors	= [];
+
+		$source		= $rqo->source ?? new stdClass();
+		$section	= trim((string)($source->section ?? ''));
+		$lang		= self::normalise_lang($source->lang ?? DEDALO_DATA_LANG);
+
+		if ($section === '') {
+			$response->msg		= 'Error. Missing source.section (section name or tipo)';
+			$response->errors[]	= 'missing_section';
+			return $response;
+		}
+
+		// Resolve identifier → canonical section_tipo
+			$section_tipo = self::resolve_section_identifier($section, $lang, $response);
+			if ($section_tipo === false) return $response;
+
+		// Permission check
+			$permissions = common::get_permissions($section_tipo, $section_tipo);
+			if ($permissions < 1) {
+				$response->msg		= "Error. Insufficient permissions to read section '$section_tipo'";
+				$response->errors[]	= 'permissions_denied';
+				return $response;
+			}
+
+		// Try pre-built LLM map first
+			$map = self::load_llm_map();
+			if (is_array($map)) {
+				foreach ($map as $entry) {
+					$entry = (object)$entry;
+					if (($entry->tipo ?? null) === $section_tipo) {
+						$response->result	= $entry;
+						$response->msg		= 'OK. get_section_map done (from artifact)';
+						return $response;
+					}
+				}
+			}
+
+		// Fallback: live-build from agent_view_builder
+			try {
+				$label_map		= agent_view_builder::section_label_map($section_tipo, $lang);
+				$section_node	= ontology_node::get_instance($section_tipo);
+				$section_term	= $section_node->get_term_data() ?? new stdClass();
+
+				$fields = [];
+				foreach ($label_map->labels as $entry) {
+					$comp_node	= ontology_node::get_instance($entry->tipo);
+					$comp_term	= $comp_node->get_term_data() ?? new stdClass();
+					$field		= (object)[
+						'tipo'	=> $entry->tipo,
+						'label'	=> $comp_term,
+						'type'	=> $entry->type,
+					];
+					if (isset($entry->target)) {
+						$field->target = $entry->target;
+					}
+					$fields[] = $field;
+				}
+
+				$response->result = (object)[
+					'tipo'		=> $section_tipo,
+					'label'		=> $section_term,
+					'fields'	=> $fields,
+				];
+				$response->msg = 'OK. get_section_map done (live build)';
+
+			} catch (\Throwable $e) {
+				$response->msg		= 'Error. ' . $e->getMessage();
+				$response->errors[]	= 'builder_error';
+				debug_log(__METHOD__ . ' ' . $e->getMessage(), logger::ERROR);
+			}
+
+		return $response;
+	}//end get_section_map
+
+
+
+	/**
+	 * LOAD_LLM_MAP
+	 * Loads and decodes the pre-built `ontology_llm_map.json` artifact.
+	 * Returns null when the file does not exist or cannot be decoded.
+	 * @return array|null
+	 */
+	private static function load_llm_map() : ?array {
+
+		// Request-level cache: 0 = not yet attempted, false = attempted+missing, array = loaded.
+		static $cache = 0;
+		if ($cache !== 0) {
+			return ($cache === false) ? null : $cache;
+		}
+
+		try {
+			$io_path = ontology_data_io::get_ontology_io_path();
+			if ($io_path === false) { $cache = false; return null; }
+
+			$file_path = "{$io_path}/ontology_llm_map.json";
+			if (!is_file($file_path)) { $cache = false; return null; }
+
+			$contents = file_get_contents($file_path);
+			if ($contents === false) { $cache = false; return null; }
+
+			$decoded = json_decode($contents);
+			$cache = is_array($decoded) ? $decoded : false;
+			return ($cache === false) ? null : $cache;
+
+		} catch (\Throwable $e) {
+			debug_log(__METHOD__ . ' failed: ' . $e->getMessage(), logger::WARNING);
+			$cache = false;
+			return null;
+		}
+	}//end load_llm_map
 
 
 

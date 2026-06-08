@@ -1,16 +1,18 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
 
 // import
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	import {clone, dd_console, get_json_langs} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_lang} from './render_tool_lang.js'
+	import {tr} from '../../../core/common/js/tr.js'
+	import {html_to_markdown, markdown_to_html, group_markdown_into_chunks} from './markdown_utils.js'
 
 
 
@@ -157,18 +159,20 @@ tool_lang.prototype.build = async function(autoload=false) {
 			self.target_lang = (tool_lang_target_lang_object)
 				? tool_lang_target_lang_object.value
 				: self.lang
-			self.target_component = await load_component({
-				self 			: self,
-				model			: main_element_ddo.model,
-				mode			: main_element_ddo.mode,
-				tipo			: main_element_ddo.tipo,
-				section_tipo	: main_element_ddo.section_tipo,
-				section_lang	: main_element_ddo.section_lang,
-				lang			: self.target_lang,
-				type			: main_element_ddo.type,
-				section_id		: main_element_ddo.section_id,
-				id_variant		: 'target_component'
-			})
+			if (main_element_ddo) {
+				self.target_component = await load_component({
+					self 			: self,
+					model			: main_element_ddo.model,
+					mode			: main_element_ddo.mode,
+					tipo			: main_element_ddo.tipo,
+					section_tipo	: main_element_ddo.section_tipo,
+					section_lang	: main_element_ddo.section_lang,
+					lang			: self.target_lang,
+					type			: main_element_ddo.type,
+					section_id		: main_element_ddo.section_id,
+					id_variant		: 'target_component'
+				})
+			}
 
 	} catch (error) {
 		self.error = error
@@ -182,7 +186,279 @@ tool_lang.prototype.build = async function(autoload=false) {
 
 
 /**
-* AUTOMATIC_TRANSLATION
+* AUTOMATIC_TRANSLATION_BROWSER
+* Run translation entirely client-side using a Web Worker with
+* the transformers.js library and the TranslateGemma 4B model
+* @param object options
+* {
+* 	source_lang	: string (like 'lg-eng')
+* 	target_lang	: string (like 'lg-spa')
+* 	device		: string ('webgpu' | 'wasm')
+* 	status_container : HTMLElement
+* }
+* @return promise response
+*/
+tool_lang.prototype.automatic_translation_browser = async function(options) {
+
+	const self = this
+
+	// options
+		const source_lang	= options.source_lang
+		const target_lang	= options.target_lang
+		const device		= options.device || 'webgpu'
+		const status_container = options.status_container
+
+	// source text
+		const raw_value = self.main_element.data.entries || self.main_element.data.value
+		const source_entries = Array.isArray(raw_value)
+			? raw_value
+			: (raw_value ? [raw_value] : [])
+		if (source_entries.length<1) {
+			return Promise.reject('Empty source text')
+		}
+		const first_entry = source_entries[0]
+		const source_text = (typeof first_entry==='string')
+			? first_entry
+			: (first_entry?.value || '')
+		if (!source_text) {
+			return Promise.reject('Empty source text')
+		}
+
+	// language mapping: convert Dédalo lang codes to locale codes
+		const json_langs = self.json_langs || await get_json_langs() || []
+		self.json_langs = json_langs
+
+		const dedalo_to_locale = (dedalo_lang) => {
+			const lang_obj = json_langs.find(item => item.dd_lang===dedalo_lang)
+			if (!lang_obj || !lang_obj.locale) {
+				return 'en'
+			}
+			const locale = lang_obj.locale
+			return locale.split('-')[0]
+		}
+
+		const source_lang_code = dedalo_to_locale(source_lang)
+		const target_lang_code = dedalo_to_locale(target_lang)
+
+	// clean hard code spaces
+		const clean_source_text = source_text.replace(/&nbsp;/g, ' ')
+
+	// create placeholders for avoid translation of dedalo tags
+		const { safe_source_text, placeholders } = replace_dedalo_tags_with_placeholders(clean_source_text)
+
+	// convert HTML to markdown for LLM
+		const md_source_text = html_to_markdown(safe_source_text)
+
+	// parse markdown into chunks
+		const blocks = group_markdown_into_chunks(md_source_text, 1000)
+
+	// transcribe worker
+		const translate_worker = new Worker('../../tools/tool_lang/translators/browser_transformer/browser_transformer.js', {
+			type : 'module'
+		})
+
+	// wrap in a Promise to allow the caller to await completion
+	return new Promise(function(resolve, reject){
+
+		status_container.classList.remove('hide')
+		status_container.classList.add('loading_status')
+
+		// show streaming overlay over target component
+		if (self.streaming_overlay) {
+			self.streaming_overlay.classList.remove('hide')
+			self.streaming_overlay_content.innerHTML = ''
+		}
+
+	// Handle messages sent back from the Web Worker
+	translate_worker.onmessage = function(e) {
+		const status			= e.data.status
+		const data				= e.data.data
+		const remaining			= data.remaining
+		const accumulated_text	= data.accumulated_text
+
+		switch (status) {
+			// model is being downloaded and initialised; show progress percentage
+			case 'init':
+
+					const progress	= data.progress
+					const status_text	= data.status
+					const device_text	= data.device
+
+					const process_label = device_text==='webgpu' ? 'setting_up' : 'procesing'
+
+					const label = status_text==='ready'
+						? self.get_tool_label( process_label )
+						: (status_text==='fallback_to_wasm')
+							? (self.get_tool_label('gpu_unavailable') || 'GPU unavailable, switching to CPU')
+							: self.get_tool_label( 'initializing' )
+
+					const loaded = (progress)
+						? ` : ${parseInt(progress).toString().padStart(2, 0)}%`
+						: (status_text==='ready')
+							? ''
+							: ' : 00%'
+					const procesing = `${label}${loaded}`
+					status_container.innerHTML = procesing
+
+					break;
+
+				// translation chunk received; stream result to the target component in real time
+				case 'on_chunk':
+					status_container.classList.remove('loading_status')
+					const procesing_label = self.get_tool_label('procesing') || 'Procesing'
+					const remaining_label = self.get_tool_label('remaining') || 'remaining'
+					status_container.innerText = `${procesing_label} (${remaining} ${remaining_label})`
+
+						// show accumulated streaming text in overlay (convert markdown to HTML for display)
+					const html_accumulated = markdown_to_html(accumulated_text)
+					if (!self.target_component.data.value) {
+						self.target_component.data.value = []
+					}
+					self.target_component.data.value[0] = html_accumulated
+					if (self.streaming_overlay_content) {
+						self.streaming_overlay_content.innerHTML = html_accumulated
+					}
+
+					break;
+
+				// all chunks translated; restore placeholders, save, and resolve
+				case 'end':
+					translate_worker.terminate()
+
+					// hide streaming overlay
+					if (self.streaming_overlay) {
+						self.streaming_overlay.classList.add('hide')
+					}
+					status_container.classList.remove('loading_status')
+					status_container.innerHTML = self.get_tool_label('translation_completed')
+
+					const translated_md = accumulated_text ?? String(data)
+					console.log('translated_md', translated_md)
+
+					// Convert markdown back to HTML, then restore Dédalo tag placeholders
+					const translated_html = markdown_to_html(translated_md)
+					const restored_text = restore_placeholders(translated_html, placeholders)
+
+					// Get shared cross-language id from source entry
+					const source_id = (typeof first_entry==='object' && first_entry!==null)
+						? (first_entry.id ?? null)
+						: null
+
+					// Use target's own id if it exists, otherwise fall back to source id
+					const target_entries = self.target_component.data.entries || []
+					const existing_target_id = target_entries.length > 0 && target_entries[0]?.id !== undefined
+						? target_entries[0].id
+						: null
+					const entry_id = existing_target_id ?? source_id
+
+					// Build v7 entry object
+					const entry = (entry_id !== null)
+						? { id: entry_id, value: restored_text }
+						: { value: restored_text }
+
+					// Update legacy value array
+						if (!self.target_component.data.value) {
+							self.target_component.data.value = []
+						}
+						self.target_component.data.value[0] = restored_text
+
+					// Update entries array (v7 data model)
+						if (!self.target_component.data.entries) {
+							self.target_component.data.entries = []
+						}
+						if (self.target_component.data.entries.length === 0) {
+							self.target_component.data.entries.push(entry)
+						} else {
+							self.target_component.data.entries[0] = entry
+						}
+
+					// save value to target component and resolve after save completes
+					const save_item = {
+						action	: 'update',
+						id		: entry_id,
+						value	: entry
+					}
+					self.target_component.save([save_item])
+					.then(function(){
+						return self.target_component.refresh({
+							build_autoload : false
+						})
+					})
+					.then(function(){
+						resolve({result: true, msg: 'OK. Translation completed'})
+					})
+					.catch(function(save_error){
+						console.error('Save failed after translation:', save_error)
+						reject(save_error)
+					})
+
+					break;
+
+				// non-fatal per-block error; show warning and continue
+				case 'on_block_error':
+					console.warn(`Block ${data.block}/${data.total} failed: ${data.message}`)
+					const block_warn_label = self.get_tool_label('block_error') || 'Block error'
+					status_container.innerHTML = `<div class="warning">${block_warn_label}: ${data.block}/${data.total}</div>`
+
+					// update streaming overlay with partial result so far
+					if (data.accumulated_text && self.streaming_overlay_content) {
+						self.streaming_overlay_content.innerHTML = markdown_to_html(data.accumulated_text)
+					}
+					break;
+
+				// translation cancelled by user
+				case 'cancelled':
+					translate_worker.terminate()
+					status_container.classList.remove('loading_status')
+					if (self.streaming_overlay) {
+						self.streaming_overlay.classList.add('hide')
+					}
+					status_container.innerHTML = self.get_tool_label('translation_cancelled') || 'Translation cancelled'
+					resolve({result: false, msg: 'Translation cancelled'})
+					break;
+
+				// fatal worker error; display message and reject the promise
+				case 'error':
+					translate_worker.terminate()
+					status_container.classList.remove('loading_status')
+
+					// hide streaming overlay
+					if (self.streaming_overlay) {
+						self.streaming_overlay.classList.add('hide')
+					}
+
+					const error_msg = data.message || data.name || String(data)
+					console.error('Worker error details:', data)
+					status_container.innerHTML = `<div class="error">${error_msg}</div>`
+					reject(new Error(error_msg))
+					break;
+			}
+		}
+		// handle uncaught runtime errors from the worker (e.g. network failures)
+		translate_worker.onerror = function(e) {
+			const msg = e.message || e.filename || 'Unknown worker error'
+			console.error('Worker error [browser_transformer]:', msg, e)
+			status_container.classList.remove('loading_status')
+			status_container.innerHTML = `<div class="error">${msg}</div>`
+			reject(e)
+		}
+
+		// init the worker for translation
+		translate_worker.postMessage({
+			options : {
+				blocks			: blocks,
+				sourceLangCode	: source_lang_code,
+				targetLangCode	: target_lang_code,
+				device			: device
+			}
+		})
+	})
+}//end automatic_translation_browser
+
+
+
+/**
+* AUTOMATIC_TRANSLATION_SERVER
 * Call the API to translate the source lang component data to the target lang component data
 * using a online service like babel or Google translator and save the resulting value
 * (!) Tool lang config translator must to be exists in register_tools section
@@ -194,7 +470,7 @@ tool_lang.prototype.build = async function(autoload=false) {
 *
 * @return promise response
 */
-tool_lang.prototype.automatic_translation = async function(translator, source_lang, target_lang, buttons_container) {
+tool_lang.prototype.automatic_translation_server = async function(translator, source_lang, target_lang, buttons_container) {
 
 	const self = this
 
@@ -245,7 +521,74 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 				resolve(response)
 			})
 		})
-}//end automatic_translation
+}//end automatic_translation_server
+
+
+
+/**
+ * Replace Dédalo tags with placeholders to avoid translation
+ *
+ * Uses [[n]] as delimiters. These characters never appear in natural text,
+ * HTML, or JSON, so LLMs are far less likely to interpret them as
+ * syntax and mutate/drop them compared to the previous {Pn} format.
+ *
+ * @param {string} source_text - Full HTML string
+ * @returns {string} - HTML with Dédalo tags replaced by placeholders
+ */
+function replace_dedalo_tags_with_placeholders(source_text) {
+
+	const tags = [
+		'indexIn',
+		'indexOut',
+		'tc',
+		'svg',
+		'geo',
+		'page',
+		'person',
+		'note',
+		'reference',
+		'lang'
+	];
+
+	let safe_source_text = source_text;
+	const placeholders = {};
+	let counter = 1;
+	for (let i = 0; i < tags.length; i++) {
+		const tag = tags[i];
+		const pattern = tr.get_mark_pattern(tag);
+
+		safe_source_text = safe_source_text.replace(pattern, (match) => {
+			const key = `[[${counter}]]`;
+			placeholders[key] = match;
+			counter++;
+			return key;
+		});
+
+	}
+
+	return { safe_source_text, placeholders };
+}
+
+
+/**
+ * Restore original Dédalo tags from placeholders after translation
+ *
+ * Reverses the placeholder substitution done by replace_dedalo_tags_with_placeholders.
+ * Each placeholder key (e.g. ⟦P0⟧) is replaced back with its original
+ * Dédalo tag content in the translated text.
+ *
+ * @param {string} translated_text - Translated text containing placeholders
+ * @param {Object} placeholders    - Map of placeholder keys to original Dédalo tag strings
+ * @returns {string}               - Translated text with original Dédalo tags restored
+ */
+function restore_placeholders(translated_text, placeholders) {
+	return Object.entries(placeholders).reduce(
+		(text, [key, original]) => text.replaceAll(key, () => original),
+		translated_text
+	);
+}
+
+
 
 
 

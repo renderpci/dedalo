@@ -2638,8 +2638,8 @@ class component_relation_common extends component_common {
 		}
 
 		$list_value = [];
-		$ar_list_of_values = $this->get_ar_list_of_values(DEDALO_DATA_LANG);
-		foreach ($ar_list_of_values->result as $item) {
+		$list_of_values = $this->get_list_of_values(DEDALO_DATA_LANG);
+		foreach ($list_of_values->result as $item) {
 
 			$locator = $item->value;
 			if ( true===locator::in_array_locator($locator, $data, array('section_id','section_tipo')) ) {

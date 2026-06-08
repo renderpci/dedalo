@@ -17,7 +17,7 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 		name: 'dedalo_create_record',
 		description:
 			'Create a new record in the given `section_tipo`. Returns the new section_id.\n' +
-			'**Resolve `section_tipo` first** via `dedalo_ontology_glossary` (e.g. "Mint"→numisdata6) or `dedalo_resolve_ontology`.',
+			'**Resolve `section_tipo` first** via `dedalo_list_sections` (e.g. "Mint"→numisdata6) then `dedalo_get_section_map`.',
 		annotations: { tier: 'primitive', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: 'Create record' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
@@ -31,7 +31,7 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 		name: 'dedalo_duplicate_record',
 		description:
 			'Create a copy of an existing record including all component values. Returns the new section_id.\n' +
-			'**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
+			'**Resolve `section_tipo` first** via `dedalo_list_sections` then `dedalo_get_section_map`.',
 		annotations: { tier: 'primitive', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true, title: 'Duplicate record' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
@@ -46,7 +46,7 @@ export function registerRecordsWriteTools(server: McpServer, client: WorkClient,
 		name: 'dedalo_delete_record',
 		description:
 			'Permanently delete a record. This action cannot be undone. The Dédalo user profile must allow delete on the target section.\n' +
-			'**Resolve `section_tipo` first** via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.',
+			'**Resolve `section_tipo` first** via `dedalo_list_sections` then `dedalo_get_section_map`.',
 		annotations: { tier: 'primitive', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: true, title: 'Delete record' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,

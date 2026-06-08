@@ -213,10 +213,10 @@ class sections extends common {
 			// ar_section_tipo. If is defined, we done. Else, case 'all' get data to resolve used sections
 				$this->ar_section_tipo = (reset($this->search_query_object->section_tipo)!=='all')
 					? $this->search_query_object->section_tipo
-					: false;
+					: null;
 
 			// calculated
-				if($this->ar_section_tipo===false){
+				if($this->ar_section_tipo===null){
 
 					// force load data
 					$data = $this->get_data();

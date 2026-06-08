@@ -97,7 +97,7 @@ class tool_lang extends tool_common {
 			}
 			security::assert_tipo_permission($section_tipo, $component_tipo, 2, __METHOD__);
 		// SEC-024 (§9.4): per-record gate.
-			if (!empty($section_id)) {
+			if (isset($section_id) && $section_id !== null) {
 				security::assert_record_in_user_scope(
 					$section_tipo,
 					(int)$section_id,
@@ -153,29 +153,35 @@ class tool_lang extends tool_common {
 			$translate = null; // Initialize to prevent undefined variable in debug section
 			foreach ($data_lang as $data_element) {
 
-				switch ($translator_name) {
+			switch ($translator_name) {
 
-					case 'google_translation':
+				case 'browser_transformer':
+					$response->msg = "Browser transformer is client-side only. This server path should not be reached.";
+					$response->errors[] = 'Client-side engine called on server';
+					return $response;
+					break;
+
+				case 'google_translation':
 						// Not implemented yet
 						$response->msg = "Sorry. '{$translator_name}' is not implemented yet"; // error msg
 						$response->errors[] = 'Tool not implemented';
 						return $response;
 
-					case 'babel':
-					default:
-						include_once( dirname(__FILE__) . '/translators/class.babel.php');
-						$translate = babel::translate((object)[
-							'uri'			=> $uri,
-							'key'			=> $key,
-							'source_lang'	=> $source_lang,
-							'target_lang'	=> $target_lang,
-							'text'			=> $data_element->value ?? '',
-						]);
-						$result	= $translate->result;
-						if ($result===false) {
-							$msg = strlen($translate->msg)>512 ? substr($translate->msg, 0, 512).'..' : $translate->msg;
-							$response->msg = $msg; // error msg
-							return $response;
+				case 'babel':
+				default:
+					include_once( dirname(__FILE__) . '/translators/class.babel.php');
+					$translate = babel::translate((object)[
+						'uri'			=> $uri,
+						'key'			=> $key,
+						'source_lang'	=> $source_lang,
+						'target_lang'	=> $target_lang,
+						'text'			=> $data_element->value ?? '',
+					]);
+					$result	= $translate->result;
+					if ($result===false) {
+						$msg = strlen($translate->msg)>512 ? substr($translate->msg, 0, 512).'..' : $translate->msg;
+						$response->msg = $msg; // error msg
+						return $response;
 						}
 						break;
 				}

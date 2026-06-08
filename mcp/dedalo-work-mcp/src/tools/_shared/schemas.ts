@@ -16,7 +16,7 @@ export const TipoSchema = z
 	.string()
 	.min(1)
 	.regex(/^[a-zA-Z0-9_]+$/, 'tipo must match [a-zA-Z0-9_]+')
-	.describe('Ontology tipo identifier (e.g. `oh1`, `dd1324`). Resolve from human names via `dedalo_ontology_glossary` or `dedalo_resolve_ontology`.');
+	.describe('Ontology tipo identifier (e.g. `oh1`, `dd1324`). Resolve from human names via `dedalo_list_sections` then `dedalo_get_section_map`.');
 
 /** Agent section identifier: accepts a human name (e.g. "Cecas") OR a tipo (e.g. "oh1"). */
 export const AgentSectionSchema = z

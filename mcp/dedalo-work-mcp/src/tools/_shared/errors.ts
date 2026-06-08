@@ -14,7 +14,7 @@ function hintFor(code: DedaloErrorCode): string | undefined {
 			return 'CSRF token rejected. Retry the call; the client will fetch a fresh token automatically.';
 		case 'invalid_action':
 		case 'invalid_api_class':
-			return 'The requested action is not exposed on this Dédalo instance. Discover valid actions with `dedalo_get_environment` and `dedalo_get_ontology_info`.';
+			return 'The requested action is not exposed on this Dédalo instance. Discover valid actions with `dedalo_get_environment` and `dedalo_list_sections`.';
 		case 'login_failed':
 			return 'Check DEDALO_WORK_USERNAME and DEDALO_WORK_PASSWORD. The user must exist in Dédalo and be allowed to log in.';
 		case 'maintenance_mode':

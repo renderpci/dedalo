@@ -172,13 +172,11 @@ Options -Indexes
 	# Strip the Proxy request header (CVE-2016-5385 / httpoxy).
 	RequestHeader unset Proxy
 
-	# Content Security Policy (Report-Only — monitor first, enforce later).
-	Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob:; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+	# Content Security Policy (enforced).
+	Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob:; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
 
-	# Enforcing version (uncomment after the Report-Only phase has shown no
-	# first-party violations in telemetry, and comment out the Report-Only
-	# line above):
-	# Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob:; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+	# Report-Only version (for monitoring — swap with enforced line above if needed):
+	# Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob:; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
 </IfModule>
 
 # Legacy header section preserved (commented) for reference.

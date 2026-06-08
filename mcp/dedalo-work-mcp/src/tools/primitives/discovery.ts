@@ -21,18 +21,47 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 	registerTool(server, {
 		name: 'dedalo_list_sections',
 		description:
-			'List all section tipos defined in the ontology. Returns labels, models and configuration. Use this to discover what record types exist.\n' +
-			'For a compact multilingual glossary with portal metadata, prefer `dedalo_ontology_glossary` (mode="sections").',
+			'Return a compact index of all Dédalo sections the current user can read: ' +
+			'tipo identifiers with multilingual labels (all languages). ' +
+			'Use this first to discover what record types exist, then call `dedalo_get_section_map` ' +
+			'on any section to get its full field list.',
 		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'List sections' },
 		inputSchema: z.object({ lang: OptionalLangSchema }),
-		handler: async ({ lang }) => client.call(rqo({ action: 'get_ontology_info', source: { model: 'section', lang } })),
+		handler: async ({ lang }) =>
+			client.call(rqo({ action: 'list_sections_index', dd_api: 'dd_agent_api', source: { lang } })),
+	}, ctx);
+
+	registerTool(server, {
+		name: 'dedalo_get_section_map',
+		description:
+			'Get the full field map for a Dédalo section.\n\n' +
+			'Accepts a section name in any language (e.g. "Oral History", "Historia oral") ' +
+			'or a tipo identifier (e.g. "oh1").\n\n' +
+			'Returns: section tipo, multilingual labels for the section and every field, ' +
+			'simplified type (text/html/date/number/link/media), and portal target section for link fields.\n\n' +
+			'Typical workflow:\n' +
+			'1. `dedalo_list_sections` → pick the section.\n' +
+			'2. `dedalo_get_section_map` → learn field names and tipos.\n' +
+			'3. `dedalo_search_records_view` / `dedalo_get_record` → read data.',
+		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get section field map' },
+		inputSchema: z.object({
+			section: z.string().describe('Section name (any language) or tipo, e.g. "Oral History" or "oh1".'),
+			lang: OptionalLangSchema,
+		}),
+		handler: async ({ section, lang }) =>
+			client.call(rqo({
+				action: 'get_section_map',
+				dd_api: 'dd_agent_api',
+				source: { section, lang },
+			})),
 	}, ctx);
 
 	registerTool(server, {
 		name: 'dedalo_get_section_elements_context',
 		description:
-			'Get the context for all components within a section_tipo. Returns the complete element list with types, labels and configuration.\n' +
-			'For a lightweight component overview with portal metadata, prefer `dedalo_ontology_glossary` (mode="section").',
+			'[Advanced] Get the raw UI context for all components within a section_tipo. ' +
+			'Returns the complete element list with types, labels and configuration. ' +
+			'Prefer `dedalo_get_section_map` for a lighter, LLM-friendly field map.',
 		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get section elements context' },
 		inputSchema: z.object({
 			section_tipo: TipoSchema,
@@ -46,7 +75,8 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 	registerTool(server, {
 		name: 'dedalo_get_element_context',
 		description:
-			'Get UI context for a specific element (component or section). Returns structure, permissions, labels and metadata.',
+			'[Advanced] Get raw UI context for a specific element (component or section). ' +
+			'Returns structure, permissions, labels and metadata.',
 		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Get element context' },
 		inputSchema: z.object({
 			tipo: TipoSchema,
@@ -72,32 +102,11 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 	}, ctx);
 
 	registerTool(server, {
-		name: 'dedalo_resolve_ontology',
-		description:
-			'Resolve an ontology term (e.g. "Oral History", "Interview") to its section structure with all components. ' +
-			'Use `fuzzy` search_mode for natural-language input (default), or `exact` for precise JSONB term matches. ' +
-			'Returns the section tipo, labels, model, and full component tree. ' +
-			'This is the primary tool for discovering what fields/components a section contains from a human-readable name.',
-		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Resolve ontology term' },
-		inputSchema: z.object({
-			text: z.string().describe('Human-readable text to search for (e.g. "Oral History", "Interview").'),
-			lang: OptionalLangSchema,
-			search_mode: z.enum(['exact', 'fuzzy']).default('fuzzy').describe('Search mode: "fuzzy" for ILIKE pattern match (flexible), "exact" for JSONB containment (precise).'),
-		}),
-		handler: async ({ text, lang, search_mode }) =>
-			client.call(rqo({
-				action: 'resolve_section',
-				dd_api: 'dd_ontology_api',
-				source: { text, lang, mode: search_mode } as Record<string, unknown> as any,
-			})),
-	}, ctx);
-
-	registerTool(server, {
 		name: 'dedalo_search_ontology',
 		description:
-			'Structured search of the Dédalo ontology by column values (model, parent, tld, etc.). ' +
+			'[Advanced] Structured search of the Dédalo ontology by column values (model, parent, tld, etc.). ' +
 			'Returns matching ontology nodes with their metadata. ' +
-			'Use this to find all sections, components of a specific model, or nodes within a TLD namespace.',
+			'Use this to find components of a specific model or nodes within a TLD namespace.',
 		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Search ontology' },
 		inputSchema: z.object({
 			model: z.string().optional().describe('Filter by model name (e.g. "section", "component_text_area").'),
@@ -116,48 +125,15 @@ export function registerDiscoveryTools(server: McpServer, client: WorkClient, ct
 	}, ctx);
 
 	registerTool(server, {
-		name: 'dedalo_ontology_glossary',
-		description:
-			'Get the ontology glossary: a map of human-readable names to Dédalo tipo identifiers with portal relationship metadata. ' +
-			'THIS IS THE PRIMARY TOOL for resolving natural language to Dédalo tipos.\n\n' +
-			'mode="sections": Returns ALL sections as a compact name→tipo dictionary (e.g. "Mint"→numisdata6, "Oral History"→oh1). ' +
-			'Call once per session to build your mental map.\n\n' +
-			'mode="section": Returns one section\'s full component tree WITH portal metadata. ' +
-			'Portal components include is_portal=true and target_section_tipo showing where they link. ' +
-			'Example: oh1 "Oral History" has oh24 "Informant" (portal→rsc197 "Person").\n\n' +
-			'mode="path": Resolves a relational path like ["oh1","oh24","rsc197","rsc85"] and returns ' +
-			'annotated metadata for each hop: section→portal→target section→leaf component.\n\n' +
-			'ALWAYS use this before any tool requiring section_tipo or tipo parameters. ' +
-			'Terms are returned in all available languages.',
-		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Ontology glossary' },
-		inputSchema: z.object({
-			mode: z.enum(['sections', 'section', 'path']).default('sections')
-				.describe('"sections" = all sections map. "section" = one section\'s components. "path" = resolve relational path.'),
-			section_tipo: TipoSchema.optional()
-				.describe('Required when mode="section". The section to inspect.'),
-			path: z.array(TipoSchema).min(2).optional()
-				.describe('Required when mode="path". Array of tipos forming the relational path (e.g. ["oh1","oh24","rsc197","rsc85"]).'),
-			lang: OptionalLangSchema,
-		}),
-		handler: async ({ mode, section_tipo, path, lang }) =>
-			client.call(rqo({
-				action: 'get_glossary',
-				dd_api: 'dd_ontology_api',
-				source: { mode, section_tipo, path, lang } as Record<string, unknown> as any,
-			})),
-	}, ctx);
-
-	registerTool(server, {
 		name: 'dedalo_resolve_path',
 		description:
-			'Resolve a relational path through the Dédalo ontology. Use this to understand cross-section relationships ' +
-			'and navigate from a section through portal components to related sections.\n\n' +
+			'[Advanced] Resolve a relational path through the Dédalo ontology. ' +
+			'Use this to understand cross-section relationships and navigate from a section ' +
+			'through portal components to related sections.\n\n' +
 			'Example: path=["oh1","oh24","rsc197","rsc85"] means:\n' +
 			'  oh1 (Oral History) → oh24 (Informant portal) → rsc197 (Person) → rsc85 (Name)\n\n' +
 			'Returns annotated metadata for each hop: tipo, model, term, is_portal, target_section_tipo. ' +
-			'The leaf hop includes column_type (string, relation, date, geo, number, media) so you know ' +
-			'what data format to expect.\n\n' +
-			'Use after `dedalo_ontology_glossary` to drill into portal relationships discovered in the component tree.',
+			'The leaf hop includes column_type so you know what data format to expect.',
 		annotations: { tier: 'primitive', readOnlyHint: true, idempotentHint: true, openWorldHint: true, title: 'Resolve relational path' },
 		inputSchema: z.object({
 			path: z.array(TipoSchema).min(2)

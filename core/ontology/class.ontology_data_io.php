@@ -721,4 +721,121 @@ class ontology_data_io {
 
 
 
+
+	/**
+	* EXPORT_LLM_MAP
+	* Builds a flat, multilingual section→fields map for LLM/agent consumption.
+	*
+	* Each section entry:
+	*   {
+	*     "tipo":   "oh1",
+	*     "label":  {"lg-eng": "Oral History", "lg-spa": "Historia oral"},
+	*     "fields": [
+	*       {"tipo":"oh14","label":{"lg-eng":"Title"},"type":"text"},
+	*       {"tipo":"oh24","label":{"lg-eng":"Informant"},"type":"link","target":"rsc197"}
+	*     ]
+	*   }
+	*
+	* Written to `ontology_llm_map.json` in the versioned IO path.
+	* Called by tool_ontology_parser::export_ontologies() and ::regenerate_ontologies().
+	*
+	* @return object $response
+	*/
+	public static function export_llm_map() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// path to save the file
+			$ontology_io_path = ontology_data_io::set_ontology_io_path();
+			if ($ontology_io_path === false) {
+				$response->msg		= 'Error. Unable to create/access IO directory';
+				$response->errors[]	= 'io_dir_failed';
+				return $response;
+			}
+			$path_file = "{$ontology_io_path}/ontology_llm_map.json";
+
+		// all section tipos from dd_ontology
+			$section_tipos = dd_ontology_db_manager::search(['model' => 'section'], true);
+			if (!is_array($section_tipos)) {
+				$response->msg		= 'Error. Unable to query section tipos from dd_ontology';
+				$response->errors[]	= 'db_query_failed';
+				return $response;
+			}
+
+			$map		= [];
+			$skipped	= [];
+			foreach ($section_tipos as $section_tipo) {
+
+				try {
+					// Section multilang term data (all languages at once)
+					$section_node		= ontology_node::get_instance($section_tipo);
+					$section_term_data	= $section_node->get_term_data() ?? new stdClass();
+
+					// Component map — uses existing logic (EXCLUDED_MODELS, disambiguation,
+					// target resolution, simplified types) for the default lang
+					$label_map = agent_view_builder::section_label_map($section_tipo, DEDALO_DATA_LANG);
+
+					$fields = [];
+					foreach ($label_map->labels as $entry) {
+
+						$comp_node		= ontology_node::get_instance($entry->tipo);
+						$comp_term_data	= $comp_node->get_term_data() ?? new stdClass();
+
+						$field = [
+							'tipo'	=> $entry->tipo,
+							'label'	=> $comp_term_data,
+							'type'	=> $entry->type,
+						];
+						if (isset($entry->target)) {
+							$field['target'] = $entry->target;
+						}
+
+						$fields[] = $field;
+					}
+
+					$map[] = [
+						'tipo'		=> $section_tipo,
+						'label'		=> $section_term_data,
+						'fields'	=> $fields,
+					];
+
+				} catch (\Throwable $e) {
+					// Skip the failing section but keep building the rest.
+					$skipped[] = $section_tipo;
+					debug_log(__METHOD__
+						. " Skipped section '$section_tipo': " . $e->getMessage()
+						, logger::ERROR
+					);
+				}
+			}
+
+		// write to file
+			$data_string = json_encode(
+				$map,
+				JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+			);
+			$saved = file_put_contents($path_file, $data_string);
+			if ($saved === false) {
+				$response->msg		= 'Error. Unable to save ontology_llm_map.json';
+				$response->errors[]	= 'file_write_failed';
+				return $response;
+			}
+
+		$response->result		= true;
+		$response->msg			= 'OK. LLM map exported: ' . count($map) . ' sections'
+			. (empty($skipped) ? '' : ' (' . count($skipped) . ' skipped)');
+		$response->path_file	= $path_file;
+		$response->saved		= $saved;
+		$response->section_count= count($map);
+		$response->skipped		= $skipped;
+
+
+		return $response;
+	}//end export_llm_map
+
+
+
 }//end ontology_data_io

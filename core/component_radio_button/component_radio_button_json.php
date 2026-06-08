@@ -66,8 +66,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 					if ( isset($this->caller_dataframe) ) {
 						// inside dataframe case
 						// dataframe needs the data and the datalist of the component when it's in tm mode to re-build his scenario
-						$value				= $this->get_data_lang();
-						$ar_list_of_values	= $this->get_list_of_values(DEDALO_DATA_LANG);
+						$value		= $this->get_data_lang();
+						$datalist	= $this->get_list_of_values(DEDALO_DATA_LANG)->result ?? [];
 					}else{
 						// regular time machine data case
 						$value = $this->get_list_value();
@@ -75,8 +75,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 					break;
 				case 'edit':
 				default:
-					$value				= $this->get_data_lang();
-					$ar_list_of_values	= $this->get_list_of_values(DEDALO_DATA_LANG);
+					$value		= $this->get_data_lang();
+					$datalist	= $this->get_list_of_values(DEDALO_DATA_LANG)->result ?? [];
 					break;
 			}
 
@@ -84,9 +84,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 			$item = $this->get_data_item($value);
 
 			// datalist add if exits
-			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
-				$datalist = $ar_list_of_values->result;
-
+			if (isset($datalist)) {
 				$item->datalist = $datalist;
 			}
 

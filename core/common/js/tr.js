@@ -117,6 +117,18 @@ export const tr = {
 				reg_ex = /(\<\/?em\>)/g;
 				break;
 
+			case 'i' :
+				reg_ex = /(\<\/?i\>)/g;
+				break;
+			
+			case 'u' :
+				reg_ex = /(\<\/?u\>)/g;
+				break;
+
+			case 'html_style' :
+				reg_ex = /(\<\/?(strong|em|i|u)\>)/g;
+				break;
+
 			case 'apertium-notrans' :
 				reg_ex = /(\<apertium-notrans\>|\<\/apertium-notrans\>)/g;
 				break;

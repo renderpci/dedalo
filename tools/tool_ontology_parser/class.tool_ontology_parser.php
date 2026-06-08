@@ -289,6 +289,13 @@ class tool_ontology_parser extends tool_common {
 					$response->errors = array_merge( $response->errors, $private_list_response->errors ?? [] );
 				}
 
+			// Export LLM map for agent/MCP use
+				$llm_map_response = ontology_data_io::export_llm_map();
+				$ar_msg[] = $llm_map_response->msg;
+				if (!$llm_map_response->result) {
+					$response->errors = array_merge($response->errors, $llm_map_response->errors ?? []);
+				}
+
 			// response
 				$response->result	= empty($response->errors);
 				$response->msg		= $response->result
@@ -335,6 +342,12 @@ class tool_ontology_parser extends tool_common {
 
 		// response
 			$response = ontology::regenerate_records_in_dd_ontology( $selected_ontologies );
+
+		// Rebuild LLM map after ontology regeneration
+			$llm_map_response = ontology_data_io::export_llm_map();
+			if (!$llm_map_response->result) {
+				$response->errors = array_merge($response->errors ?? [], $llm_map_response->errors ?? []);
+			}
 
 		return $response;
 	}//end regenerate_ontologies
