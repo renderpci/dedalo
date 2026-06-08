@@ -21,7 +21,9 @@
  *     { status: 'cancelled',      data: { accumulated_text, remaining } }              – cancelled
  *
  * HTML preservation:
- *   The prompt explicitly instructs the model to keep all tags intact.
+ *   Source HTML is converted to markdown before being sent to the model.
+ *   The prompt instructs the model to keep all markdown syntax and raw
+ *   HTML tags (unsupported tags like <table>) intact.
  *   The system instruction is embedded inside the single user message
  *   (not as a separate system role) because TranslateGemma requires the
  *   conversation to start with a user turn.
@@ -37,10 +39,10 @@ const MODEL_ID			= 'onnx-community/translategemma-text-4b-it-ONNX';
 
 /**
  * Maximum tokens the model may generate per call.
- * Blocks are pre-chunked to ~2000 chars on the main thread,
+ * Blocks are pre-chunked to ~1000 chars on the main thread,
  * so 1024 tokens is typically sufficient for a single block.
  */
-const MAX_NEW_TOKENS	= 1024;
+const MAX_NEW_TOKENS	= 2048;
 
 /**
  * Per-block timeout in milliseconds.
@@ -405,7 +407,7 @@ function find_nearest_boundary(text, target, max_radius = 10) {
 	// If already at a boundary, use it
 	if (clamped === 0 || clamped === len) return clamped;
 	const ch = text[clamped];
-	if (ch === ' ' || ch === '<' || ch === '>') return clamped;
+	if (ch === ' ' || ch === '<' || ch === '>' || ch === '\n' || ch === '[') return clamped;
 
 	// Search outward: ±1, ±2, … up to max_radius
 	for (let d = 1; d <= max_radius; d++) {
@@ -413,13 +415,13 @@ function find_nearest_boundary(text, target, max_radius = 10) {
 		const left = clamped - d;
 		if (left >= 0) {
 			const lc = text[left];
-			if (lc === ' ' || lc === '<' || lc === '>') return left + 1;
+			if (lc === ' ' || lc === '<' || lc === '>' || lc === '\n' || lc === '[') return left + 1;
 		}
 		// Then check right
 		const right = clamped + d;
 		if (right < len) {
 			const rc = text[right];
-			if (rc === ' ' || rc === '<' || rc === '>') return right;
+			if (rc === ' ' || rc === '<' || rc === '>' || rc === '\n' || rc === '[') return right;
 		}
 	}
 
@@ -629,7 +631,7 @@ self.onmessage = async (e) => {
 					}
 				}
 
-				result.accumulated_text += final_text;
+				result.accumulated_text += (result.accumulated_text ? '\n\n' : '') + final_text;
 				result.remaining = total_blocks - (i + 1);
 
 				// ── 3. Stream partial result to the main thread ────────
@@ -682,7 +684,7 @@ self.onmessage = async (e) => {
  * Translate a single text block using the loaded model pipeline.
  *
  * @param {Function} translator       - The loaded HuggingFace text-generation pipeline
- * @param {string}   text             - HTML block to translate (may contain <p>, <em>, etc.)
+ * @param {string}   text             - Markdown block to translate (may contain **, *, #, raw HTML)
  * @param {string}   sourceLangCode   - Source language locale code (e.g. 'en')
  * @param {string}   targetLangCode   - Target language locale code (e.g. 'es')
  * @param {Object|null} retryContext  - When non-null, sends a corrective retry prompt
