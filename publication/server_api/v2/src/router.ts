@@ -3,23 +3,38 @@ import { handleSchema } from './routes/schema';
 import { handleSearch } from './routes/search';
 import { handleAvIndexationFragment } from './routes/av-indexation-fragment';
 import { handleBatch } from './routes/batch';
-import { 
-  handleDocs, 
-  handleSwaggerUI, 
-  handleScalarUI, 
-  handleSwaggerAssets, 
+import {
+  handleDocs,
+  handleSwaggerUI,
+  handleScalarUI,
+  handleSwaggerAssets,
   handleScalarAssets,
-  handleOpenApiSpec 
+  handleOpenApiSpec,
 } from './routes/docs';
 import { handleHealth } from './routes/health';
 import { handleMcpRequest } from './mcp/server';
-import { HttpError } from './middleware/error-handler';
+import { HttpError } from './errors';
 import { validateApiKey } from './security/auth';
 import { checkRateLimit } from './security/rate-limiter';
+import { noContent } from './utils/response';
+
+type RouteHandler = (req: Request) => Promise<Response>;
+
+const routes: Record<string, RouteHandler> = {
+  '/schema': handleSchema,
+  '/search': handleSearch,
+  '/av-indexation-fragment': handleAvIndexationFragment,
+  '/batch': handleBatch,
+  '/docs': handleDocs,
+  '/docs/swagger': handleSwaggerUI,
+  '/docs/scalar': handleScalarUI,
+  '/openapi.yaml': handleOpenApiSpec,
+  '/health': handleHealth,
+  '/favicon.ico': async () => noContent(),
+};
 
 export async function routeRequest(req: Request): Promise<Response> {
   checkRateLimit(req);
-
   await validateApiKey(req);
 
   const url = new URL(req.url);
@@ -40,21 +55,7 @@ export async function routeRequest(req: Request): Promise<Response> {
     return handleScalarAssets(req);
   }
 
-  const routes: Record<string, (req: Request) => Promise<Response>> = {
-    '/schema': handleSchema,
-    '/search': handleSearch,
-    '/av-indexation-fragment': handleAvIndexationFragment,
-    '/batch': handleBatch,
-    '/docs': handleDocs,
-    '/docs/swagger': handleSwaggerUI,
-    '/docs/scalar': handleScalarUI,
-    '/openapi.yaml': handleOpenApiSpec,
-    '/health': handleHealth,
-    '/favicon.ico': async () => new Response(null, { status: 204 }),
-  };
-
   const handler = routes[pathname];
-
   if (!handler) {
     throw new HttpError(404, `Route not found: ${pathname}`);
   }
