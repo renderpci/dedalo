@@ -2,44 +2,62 @@ export interface TableRow {
   [key: string]: string | number | boolean | null;
 }
 
+export interface InterviewRow extends TableRow {
+  id: number;
+  section_id: number;
+  lang: string;
+  code: string;
+  title: string;
+  abstract: string;
+  transcription: string;
+}
+
+export interface AudiovisualRow extends TableRow {
+  id: number;
+  section_id: number;
+  lang: string;
+  rsc35: string;
+  image: string;
+}
+
+export interface InformantRow extends TableRow {
+  id: number;
+  section_id: number;
+  lang: string;
+  name: string;
+  surname: string;
+}
+
+export interface ThesaurusRow extends TableRow {
+  id: number;
+  term_id: string;
+  term: string;
+  scope_note: string;
+  indexation: string;
+  parent: string | null;
+}
+
+export interface PublicationRow extends TableRow {
+  id: number;
+  section_id: number;
+  lang: string;
+  title: string;
+  transcription: string;
+}
+
+export interface ColumnInfo {
+  name: string;
+  type: string;
+}
+
 export interface TableInfo {
   name: string;
-  columns: string[];
+  columns: ColumnInfo[];
   row_count: number;
 }
 
 export interface SchemaResponse {
   tables: TableInfo[];
-}
-
-export interface SearchParams {
-  mode: 'records' | 'fulltext' | 'text-fragment' | 'av-fragment';
-  table: string;
-  db_name?: string;
-  lang?: string;
-  fields?: string;
-  where?: string;
-  order?: string;
-  limit?: number;
-  offset?: number;
-  section_id?: string;
-  resolve_portals?: boolean;
-  q?: string;
-  column?: string;
-  terms?: string;
-  max_characters?: number;
-  max_occurrences?: number;
-}
-
-export interface SearchResult<T = TableRow> {
-  mode: string;
-  data: T[];
-  total: number;
-  limit?: number;
-  offset?: number;
-  query?: string;
-  terms?: string;
-  section_id?: string | number;
 }
 
 export interface TextFragment {
@@ -48,15 +66,22 @@ export interface TextFragment {
   position: number;
 }
 
+export interface MediaInfo {
+  video_url: string;
+  image_url: string;
+  tc_in: number;
+  tc_out: number;
+}
+
+export interface Speaker {
+  name: string;
+  role: string;
+}
+
 export interface AvFragment {
   transcription: string;
-  media: {
-    video_url: string;
-    image_url: string;
-    tc_in: number;
-    tc_out: number;
-  };
-  speakers?: Array<{ name: string; role: string }>;
+  media: MediaInfo;
+  speakers: Speaker[];
 }
 
 export interface Locator {
@@ -71,33 +96,40 @@ export interface Locator {
 export interface AvIndexationFragment {
   locator: Locator;
   transcription: string;
-  media: {
-    video_url: string;
-    image_url: string;
-    tc_in: number;
-    tc_out: number;
-  };
-  speakers?: Array<{ name: string; role: string }>;
-  terms?: Array<{ term_id: string; term: string }>;
+  media: MediaInfo;
+  speakers: Speaker[];
+  terms: Array<{ term_id: string; term: string }>;
 }
 
-export interface BatchQuery {
-  id: string;
-  endpoint: string;
-  params: Record<string, any>;
-}
-
-export interface BatchRequest {
-  queries: BatchQuery[];
+export interface SearchResult<T = TableRow> {
+  mode: string;
+  data: T[];
+  total: number;
+  limit?: number;
+  offset?: number;
+  query?: string;
+  terms?: string;
+  section_id?: number;
+  table?: string;
+  filter?: string;
 }
 
 export interface BatchResult {
   id: string;
   status: number;
-  data?: any;
+  data?: unknown;
   error?: string;
 }
 
 export interface BatchResponse {
   results: BatchResult[];
+}
+
+export interface HealthResponse {
+  status: 'ok' | 'error';
+  database: 'connected' | 'disconnected';
+  uptime: number;
+  timestamp: string;
+  version: string;
+  error?: string;
 }
