@@ -354,8 +354,7 @@ const render_image_node = function(self, file_info, content_value) {
 	// object_node <object type="image/svg+xml" data="image.svg"></object>
 		const object_node = ui.create_dom_element({
 			element_type	: 'object',
-			class_name		: 'image',
-			parent			: image_container
+			class_name		: 'image'
 		})
 		object_node.type	= "image/svg+xml"
 		object_node.url		= url // image URL
@@ -364,6 +363,9 @@ const render_image_node = function(self, file_info, content_value) {
 
 	// lazy load: defer setting object_node.data until the container is near the viewport
 		const load_svg = () => {
+			// append to DOM first so the object load triggers properly
+			image_container.appendChild(object_node)
+
 			if (data.base_svg_url) {
 				// svg file already exists
 				object_node.data = data.base_svg_url + '?t=' + (new Date()).getTime()
