@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3100:3100"
+    environment:
+      - DEPLOYMENT_MODE=standalone
+      - PORT=3100
+      - HOST=0.0.0.0
+      - BASE_PATH=
+      - TRUST_PROXY=false
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_USER=readonly_user
+      - DB_PASSWORD=secret
+      - DB_NAME=dedalo_web
+      - DB_POOL_MIN=2
+      - DB_POOL_MAX=10
+      - DB_QUERY_TIMEOUT=5000
+      - API_KEYS=
+      - RATE_LIMIT_RPM=100
+      - CORS_ORIGIN=*
+      - MAX_BODY_SIZE=65536
+      - MEDIA_BASE_URL=/dedalo/media
+      - MCP_ENABLED=true
+      - MCP_PATH=/mcp
+      - LOG_LEVEL=info
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - dedalo-network
+
+  mariadb:
+    image: mariadb:11
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootsecret
+      - MYSQL_DATABASE=dedalo_web
+      - MYSQL_USER=readonly_user
+      - MYSQL_PASSWORD=secret
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb-data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - dedalo-network
+
+volumes:
+  mariadb-data:
+
+networks:
+  dedalo-network:
+    driver: bridge
