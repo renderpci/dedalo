@@ -1,5 +1,5 @@
 import { config } from '../config';
-import { HttpError } from '../middleware/error-handler';
+import { HttpError } from '../errors';
 
 interface TokenBucket {
   tokens: number;
@@ -7,7 +7,6 @@ interface TokenBucket {
 }
 
 const buckets = new Map<string, TokenBucket>();
-
 const REFILL_INTERVAL = 60000;
 const MAX_TOKENS = config.RATE_LIMIT_RPM;
 
@@ -22,7 +21,9 @@ function getClientIp(req: Request): string {
       return realIp;
     }
   }
-  return 'unknown';
+
+  const ip = (req as any).remoteAddress ?? (req as any).socket?.remoteAddress;
+  return ip || 'anonymous';
 }
 
 function refillBucket(bucket: TokenBucket): void {
@@ -41,10 +42,7 @@ export function checkRateLimit(req: Request): void {
   let bucket = buckets.get(ip);
 
   if (!bucket) {
-    bucket = {
-      tokens: MAX_TOKENS,
-      lastRefill: Date.now(),
-    };
+    bucket = { tokens: MAX_TOKENS, lastRefill: Date.now() };
     buckets.set(ip, bucket);
   }
 
@@ -57,11 +55,24 @@ export function checkRateLimit(req: Request): void {
   bucket.tokens--;
 }
 
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, bucket] of buckets.entries()) {
-    if (now - bucket.lastRefill > REFILL_INTERVAL * 10) {
-      buckets.delete(ip);
+let cleanupInterval: ReturnType<typeof setInterval> | null = null;
+
+export function startRateLimitCleanup(): void {
+  if (cleanupInterval) return;
+  cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [ip, bucket] of buckets.entries()) {
+      if (now - bucket.lastRefill > REFILL_INTERVAL * 10) {
+        buckets.delete(ip);
+      }
     }
+  }, 60000);
+  cleanupInterval.unref?.();
+}
+
+export function stopRateLimitCleanup(): void {
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval);
+    cleanupInterval = null;
   }
-}, 60000);
+}

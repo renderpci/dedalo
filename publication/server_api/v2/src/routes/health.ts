@@ -1,39 +1,33 @@
 import { getPool } from '../db/pool';
+import { json } from '../utils/response';
+import type { HealthResponse } from '../db/types';
 
-export async function handleHealth(req: Request): Promise<Response> {
+const VERSION = '2.1.0';
+
+export async function handleHealth(_req: Request): Promise<Response> {
   try {
     const pool = getPool();
-    const [rows] = await pool.execute('SELECT 1');
+    await pool.execute('SELECT 1');
 
-    return new Response(
-      JSON.stringify({
-        status: 'ok',
-        database: 'connected',
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString(),
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const data: HealthResponse = {
+      status: 'ok',
+      database: 'connected',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      version: VERSION,
+    };
+
+    return json(data);
   } catch (error) {
-    return new Response(
-      JSON.stringify({
-        status: 'error',
-        database: 'disconnected',
-        error: error instanceof Error ? error.message : 'Unknown error',
-        uptime: process.uptime(),
-        timestamp: new Date().toISOString(),
-      }),
-      {
-        status: 503,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
+    const data: HealthResponse = {
+      status: 'error',
+      database: 'disconnected',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+      version: VERSION,
+    };
+
+    return json(data, 503);
   }
 }

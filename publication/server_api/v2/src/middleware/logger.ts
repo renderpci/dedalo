@@ -6,9 +6,10 @@ export function logRequest(req: Request, res: Response, duration: number): void 
   const url = new URL(req.url);
   const method = req.method;
   const status = res.status;
+  const requestId = req.headers.get('x-request-id') || '-';
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
 
-  const message = `${method} ${url.pathname}${url.search} ${status} ${duration}ms ${ip}`;
+  const message = `[${requestId}] ${method} ${url.pathname}${url.search} ${status} ${duration.toFixed(1)}ms ${ip}`;
 
   if (status >= 500) {
     console.error(message);

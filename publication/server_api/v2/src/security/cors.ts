@@ -2,7 +2,6 @@ import { config } from '../config';
 
 export function applyCors(res: Response): Response {
   const headers = new Headers(res.headers);
-
   headers.set('Access-Control-Allow-Origin', config.CORS_ORIGIN);
   headers.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   headers.set('Access-Control-Allow-Headers', 'Content-Type, X-API-Key');

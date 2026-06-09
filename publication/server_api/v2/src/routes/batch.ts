@@ -1,7 +1,7 @@
 import { executeBatch } from '../services/batch.service';
-import type { BatchRequest } from '../db/types';
-import { HttpError } from '../middleware/error-handler';
-import { config } from '../config';
+import { batchRequestSchema } from '../validators';
+import { json } from '../utils/response';
+import { HttpError, ValidationError } from '../errors';
 
 export async function handleBatch(req: Request): Promise<Response> {
   if (req.method !== 'POST') {
@@ -10,25 +10,17 @@ export async function handleBatch(req: Request): Promise<Response> {
 
   const contentType = req.headers.get('content-type');
   if (!contentType || !contentType.includes('application/json')) {
-    throw new HttpError(400, 'Content-Type must be application/json');
+    throw new ValidationError('Content-Type must be application/json');
   }
 
-  const body = await req.json() as BatchRequest;
+  const body = await req.json();
 
-  if (!body.queries || !Array.isArray(body.queries)) {
-    throw new HttpError(400, 'Missing or invalid "queries" array');
+  const parsed = batchRequestSchema.safeParse(body);
+  if (!parsed.success) {
+    const message = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join('; ');
+    throw new ValidationError(message);
   }
 
-  if (body.queries.length > 20) {
-    throw new HttpError(400, 'Maximum 20 queries per batch request');
-  }
-
-  const result = await executeBatch(body);
-
-  return new Response(JSON.stringify(result), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  });
+  const result = await executeBatch(parsed.data);
+  return json(result);
 }

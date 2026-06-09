@@ -1,11 +1,9 @@
 import { apiKeys, isAuthRequired } from '../config';
-import { HttpError } from '../middleware/error-handler';
+import { HttpError } from '../errors';
 import { timingSafeEqual } from 'crypto';
 
 export async function validateApiKey(req: Request): Promise<void> {
-  if (!isAuthRequired) {
-    return;
-  }
+  if (!isAuthRequired) return;
 
   const key = req.headers.get('x-api-key');
 
@@ -16,9 +14,7 @@ export async function validateApiKey(req: Request): Promise<void> {
   const keyBuffer = Buffer.from(key);
   const isValid = apiKeys.some(validKey => {
     const validBuffer = Buffer.from(validKey);
-    if (keyBuffer.length !== validBuffer.length) {
-      return false;
-    }
+    if (keyBuffer.length !== validBuffer.length) return false;
     return timingSafeEqual(keyBuffer, validBuffer);
   });
 
