@@ -13,11 +13,33 @@ info:
     ## Rate Limiting
     Default: 100 requests per minute per IP address.
     
+    ## Filter DSL
+    The `filter` parameter uses a safe DSL format: `field:operator:value`
+    
+    Operators: `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `like`, `in`, `not_in`, `is_null`, `is_not_null`
+    
+    Multiple conditions are comma-separated (AND logic).
+    
+    Examples:
+    - `section_id:eq:1` → `WHERE section_id = 1`
+    - `code:like:OH-%` → `WHERE code LIKE 'OH-%'`
+    - `section_id:in:1|2|3` → `WHERE section_id IN (1, 2, 3)`
+    - `lang:eq:lg-eng,code:like:OH-%` → `WHERE lang = 'lg-eng' AND code LIKE 'OH-%'`
+    
+    ## Order DSL
+    The `order` parameter uses format: `field:direction`
+    
+    Direction: `asc` or `desc` (default: `asc`). Multiple fields are comma-separated.
+    
+    Examples:
+    - `title:asc` → `ORDER BY title ASC`
+    - `title:asc,section_id:desc` → `ORDER BY title ASC, section_id DESC`
+    
     ## Deployment Modes
     - **Apache** (default): Reverse proxy on same machine as Dédalo
     - **Nginx**: Isolated publication server
     - **Standalone**: Direct Bun server
-  version: 2.0.0
+  version: 2.1.0
   contact:
     name: Dédalo Support
     url: https://dedalo.dev
@@ -34,8 +56,9 @@ paths:
     get:
       summary: Get database schema
       description: |
-        Introspect the database structure. Returns available tables, their columns, and row counts.
+        Introspect the database structure. Returns available tables, their columns with types, and row counts.
         Replaces v1's `tables_info`, `publication_schema`, `table_thesaurus`, and `table_thesaurus_map`.
+        Results are cached for 30 seconds.
       operationId: getSchema
       tags:
         - Schema
@@ -56,7 +79,19 @@ paths:
               example:
                 tables:
                   - name: interview
-                    columns: [id, section_id, lang, code, title, abstract]
+                    columns:
+                      - name: id
+                        type: int
+                      - name: section_id
+                        type: int
+                      - name: lang
+                        type: varchar
+                      - name: code
+                        type: varchar
+                      - name: title
+                        type: varchar
+                      - name: transcription
+                        type: longtext
                     row_count: 142
         '500':
           $ref: '#/components/responses/InternalServerError'
@@ -70,7 +105,9 @@ paths:
         - **fulltext**: MariaDB FULLTEXT search with highlighted fragments
         - **text-fragment**: Extract excerpts from large publication texts with page references
         - **av-fragment**: Extract audiovisual interview fragments with video TC and media URLs
-        
+
+        Set `count=true` on any mode to get only the total matching records without data rows.
+
         Replaces v1's `records`, `free_search`, `global_search`, `text_fragment`, and all `thesaurus_*` endpoints.
       operationId: search
       tags:
@@ -97,18 +134,22 @@ paths:
           schema:
             type: string
           example: section_id,code,title
-        - name: where
+        - name: filter
           in: query
-          description: SQL WHERE clause for filtering (records mode)
+          description: |
+            Safe filter DSL (records, count modes). Format: `field:operator:value`, comma-separated.
+            Operators: eq, ne, gt, gte, lt, lte, like, in, not_in, is_null, is_not_null
           schema:
             type: string
-          example: "code LIKE 'OH-%'"
+          example: "code:like:OH-%,lang:eq:lg-eng"
         - name: order
           in: query
-          description: ORDER BY clause
+          description: |
+            Order DSL (records mode). Format: `field:direction`, comma-separated.
+            Direction: asc or desc (default: asc)
           schema:
             type: string
-          example: title ASC
+          example: "title:asc"
         - name: limit
           in: query
           description: Maximum number of results (1-1000)
@@ -137,15 +178,9 @@ paths:
             type: string
             pattern: '^lg-[a-z]{2,5}$'
           example: lg-eng
-        - name: resolve_portals
-          in: query
-          description: Resolve portal references (records mode)
-          schema:
-            type: boolean
-            default: false
         - name: q
           in: query
-          description: Search query (fulltext mode)
+          description: Search query (fulltext, count modes)
           schema:
             type: string
           example: "guerra civil"
@@ -173,9 +208,30 @@ paths:
           schema:
             type: integer
             default: 1
-        - name: db_name
+        - name: count
           in: query
-          description: Database name (for multi-database setups)
+          description: |
+            When true, returns only the total number of matching records without data rows.
+            Works with records and fulltext modes. Applies all filters (filter, section_id, lang, q).
+          schema:
+            type: boolean
+            default: false
+        - name: resolve_relations
+          in: query
+          description: |
+            JSON object mapping column names to target tables for forward relation resolution.
+            Replaces JSON column values (arrays of section_ids) with full row data from the target table.
+            Example: `{"image":"image","informant":"informant"}`
+            Supports dot notation for deep resolution: `{"eventos.documentos":"image"}`
+            Use `"auto"` for link columns that store the table name dynamically.
+          schema:
+            type: string
+        - name: resolve_inverse_relations
+          in: query
+          description: |
+            Resolves the `dd_relations` column to show which records point back to the current one.
+            Pass `true` to auto-load the section_tipo→table mapping from `publication_schema`.
+            Or pass a JSON object mapping section_tipo values to table names, e.g. `{"rsc170":"images","oh1":"interview"}`.
           schema:
             type: string
       responses:
@@ -189,6 +245,7 @@ paths:
                   - $ref: '#/components/schemas/FulltextSearchResult'
                   - $ref: '#/components/schemas/TextFragmentResult'
                   - $ref: '#/components/schemas/AvFragmentResult'
+                  - $ref: '#/components/schemas/CountSearchResult'
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -262,7 +319,7 @@ paths:
       summary: Execute multiple queries in parallel
       description: |
         Execute multiple read operations in a single request. All queries run in parallel.
-        Maximum 20 queries per batch request.
+        Maximum 20 queries per batch request. Query IDs must be unique.
         
         Replaces v1's `combi`.
       operationId: executeBatch
@@ -305,7 +362,7 @@ paths:
   /docs:
     get:
       summary: API documentation
-      description: Interactive OpenAPI documentation UI (Scalar)
+      description: Interactive OpenAPI documentation UI
       operationId: getDocs
       tags:
         - Documentation
@@ -366,8 +423,8 @@ components:
         columns:
           type: array
           items:
-            type: string
-          description: Column names
+            $ref: '#/components/schemas/ColumnInfo'
+          description: Column information including name and data type
         row_count:
           type: integer
           description: Approximate row count
@@ -375,6 +432,19 @@ components:
         - name
         - columns
         - row_count
+
+    ColumnInfo:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Column name
+        type:
+          type: string
+          description: MySQL data type
+      required:
+        - name
+        - type
 
     RecordsSearchResult:
       type: object
@@ -493,6 +563,36 @@ components:
         - data
         - total
 
+    CountSearchResult:
+      type: object
+      description: Response when count=true. Returns total matching records without data rows.
+      properties:
+        mode:
+          type: string
+          description: The search mode used (records or fulltext)
+        table:
+          type: string
+          description: Table name that was queried
+        total:
+          type: integer
+          description: Total number of matching records
+        data:
+          type: array
+          description: Always empty when count=true
+          items:
+            type: object
+          maxItems: 0
+        query:
+          type: string
+          description: Fulltext query (only present in fulltext mode)
+        filter:
+          type: string
+          description: Filter DSL that was applied
+      required:
+        - mode
+        - table
+        - total
+
     AvIndexationFragment:
       type: object
       properties:
@@ -592,7 +692,7 @@ components:
       properties:
         id:
           type: string
-          description: Unique identifier for this query
+          description: Unique identifier for this query (must be unique within batch)
         endpoint:
           type: string
           enum: [/schema, /search, /av-indexation-fragment]
@@ -647,6 +747,9 @@ components:
         timestamp:
           type: string
           format: date-time
+        version:
+          type: string
+          description: API version
         error:
           type: string
       required:
@@ -654,6 +757,7 @@ components:
         - database
         - uptime
         - timestamp
+        - version
 
     ErrorResponse:
       type: object
@@ -662,6 +766,9 @@ components:
           type: string
         status:
           type: integer
+        code:
+          type: string
+          description: Error code for programmatic handling
       required:
         - error
         - status
