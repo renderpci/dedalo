@@ -762,6 +762,10 @@ final class dd_utils_api {
 					$file_mime		= 'application/octet-stream';
 				}
 
+			// Sanitize filename to match what add_file() will search for
+			// This prevents mismatch when add_file() sanitizes tmp_name with sanitize_key_dir()
+				$name = sanitize_key_dir($name);
+
 			// CHECKING
 				$known_mime_types = self::get_known_mime_types();
 				// Check MIME type and find matching entry
@@ -1023,6 +1027,10 @@ final class dd_utils_api {
 
 		// tmp_joined_file
 			$tmp_joined_file = 'tmp_'.$file_data->name;
+
+		// Sanitize filename to match what add_file() will search for
+		// This prevents mismatch when add_file() sanitizes tmp_name with sanitize_key_dir()
+			$tmp_joined_file = sanitize_key_dir($tmp_joined_file);
 
 		// target path of the final file joined
 			$target_path = $file_path .'/'. $tmp_joined_file;
