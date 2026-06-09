@@ -1,17 +1,8 @@
-import { describe, test, expect, beforeAll, afterAll } from 'bun:test';
+import { describe, test, expect, afterAll } from 'bun:test';
 import { getSchema } from '../src/services/schema.service';
-import { getPool, closePool } from '../src/db/pool';
+import { closePool } from '../src/db/pool';
 
 describe('Schema Service', () => {
-  beforeAll(async () => {
-    const pool = getPool();
-    try {
-      await pool.execute('SELECT 1');
-    } catch (error) {
-      console.warn('Database not available, skipping tests');
-    }
-  });
-
   afterAll(async () => {
     await closePool();
   });
@@ -21,7 +12,7 @@ describe('Schema Service', () => {
       const result = await getSchema();
       expect(result).toHaveProperty('tables');
       expect(Array.isArray(result.tables)).toBe(true);
-    } catch (error) {
+    } catch {
       console.warn('Skipping test: database not available');
     }
   });
@@ -31,8 +22,9 @@ describe('Schema Service', () => {
       const result = await getSchema('interview');
       expect(result.tables).toHaveLength(1);
       expect(result.tables[0].name).toBe('interview');
-      expect(result.tables[0].columns).toContain('section_id');
-    } catch (error) {
+      const columnNames = result.tables[0].columns.map(c => c.name);
+      expect(columnNames).toContain('section_id');
+    } catch {
       console.warn('Skipping test: database not available');
     }
   });
