@@ -1,6 +1,9 @@
 import { getPool } from '../db/pool';
 import { config } from '../config';
-import type { Locator, AvIndexationFragment } from '../db/types';
+import { NotFoundError } from '../errors';
+import { COLUMNS } from '../constants';
+import { parseJsonStrings } from '../utils/parse-json';
+import type { Locator, AvIndexationFragment, Speaker } from '../db/types';
 
 export async function getAvIndexationFragment(locator: Locator): Promise<AvIndexationFragment> {
   const { section_id, section_tipo, component_tipo, tag_id, tc_in = 0, tc_out = 0 } = locator;
@@ -9,28 +12,28 @@ export async function getAvIndexationFragment(locator: Locator): Promise<AvIndex
 
   const sql = `
     SELECT
-      i.section_id,
-      i.code,
-      i.title,
+      i.${COLUMNS.SECTION_ID},
+      i.${COLUMNS.CODE},
+      i.${COLUMNS.TITLE},
       i.rsc36 as transcription,
-      a.rsc35 as video,
-      a.image,
-      inf.name,
-      inf.surname
+      a.${COLUMNS.VIDEO} as video,
+      a.${COLUMNS.IMAGE},
+      inf.${COLUMNS.NAME},
+      inf.${COLUMNS.SURNAME}
     FROM interview i
-    LEFT JOIN audiovisual a ON i.section_id = a.section_id
-    LEFT JOIN informant inf ON i.section_id = inf.section_id
-    WHERE i.section_id = ?
+    LEFT JOIN audiovisual a ON i.${COLUMNS.SECTION_ID} = a.${COLUMNS.SECTION_ID}
+    LEFT JOIN informant inf ON i.${COLUMNS.SECTION_ID} = inf.${COLUMNS.SECTION_ID}
+    WHERE i.${COLUMNS.SECTION_ID} = ?
   `;
 
   const [rows] = await pool.execute(sql, [section_id]);
 
-  if ((rows as any[]).length === 0) {
-    throw new Error(`Record not found for section_id: ${section_id}`);
+  if ((rows as unknown[]).length === 0) {
+    throw new NotFoundError(`Record not found for section_id: ${section_id}`);
   }
 
-  const row = (rows as any[])[0];
-  const transcription = row.transcription || '';
+  const row = parseJsonStrings((rows as Record<string, unknown>[])[0]);
+  const transcription = (row.transcription as string) || '';
 
   const fragmentText = extractTranscriptionFragment(transcription, tc_in, tc_out);
 
@@ -42,28 +45,16 @@ export async function getAvIndexationFragment(locator: Locator): Promise<AvIndex
     ? `${config.MEDIA_BASE_URL}/posterframe/${row.image}`
     : '';
 
-  const speakers = row.name || row.surname
+  const speakers: Speaker[] = (row.name || row.surname)
     ? [{ name: `${row.name || ''} ${row.surname || ''}`.trim(), role: 'informant' }]
     : [];
 
   const terms = await getTermsForLocator(section_id, component_tipo, tag_id);
 
   return {
-    locator: {
-      section_id,
-      section_tipo,
-      component_tipo,
-      tag_id,
-      tc_in,
-      tc_out,
-    },
+    locator: { section_id, section_tipo, component_tipo, tag_id, tc_in, tc_out },
     transcription: fragmentText,
-    media: {
-      video_url: videoUrl,
-      image_url: imageUrl,
-      tc_in,
-      tc_out,
-    },
+    media: { video_url: videoUrl, image_url: imageUrl, tc_in, tc_out },
     speakers,
     terms,
   };
@@ -73,8 +64,7 @@ function extractTranscriptionFragment(transcription: string, tcIn: number, tcOut
   if (!transcription) return '';
 
   const tcPattern = /\[tc-(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\]/g;
-  let match;
-  let lastTcIn = 0;
+  let match: RegExpExecArray | null;
   let fragmentStart = 0;
   let fragmentEnd = transcription.length;
 
@@ -84,7 +74,6 @@ function extractTranscriptionFragment(transcription: string, tcIn: number, tcOut
 
     if (currentTcIn <= tcIn && currentTcOut >= tcIn) {
       fragmentStart = match.index;
-      lastTcIn = currentTcIn;
     }
 
     if (currentTcOut >= tcOut && fragmentStart > 0) {
@@ -94,7 +83,6 @@ function extractTranscriptionFragment(transcription: string, tcIn: number, tcOut
   }
 
   let fragment = transcription.slice(fragmentStart, fragmentEnd);
-
   fragment = fragment.replace(/\[tc-[^\]]+\]/g, '');
   fragment = fragment.replace(/\[page-n-\d+\]/g, '');
   fragment = fragment.replace(/\s+/g, ' ').trim();
@@ -105,11 +93,9 @@ function extractTranscriptionFragment(transcription: string, tcIn: number, tcOut
 async function getTermsForLocator(
   sectionId: number,
   componentTipo?: string,
-  tagId?: number
+  tagId?: number,
 ): Promise<Array<{ term_id: string; term: string }>> {
-  if (!componentTipo || !tagId) {
-    return [];
-  }
+  if (!componentTipo || !tagId) return [];
 
   const pool = getPool();
 
@@ -130,12 +116,11 @@ async function getTermsForLocator(
     const pattern = `%"section_id":"${sectionId}"%"tag_id":"${tagId}"%`;
     const [rows] = await pool.execute(sql, [pattern]);
 
-    return (rows as any[]).map(row => ({
+    return (rows as Array<{ term_id: string; term: string }>).map(row => ({
       term_id: row.term_id,
       term: row.term,
     }));
-  } catch (error) {
-    console.warn('Failed to fetch terms for locator:', error);
+  } catch {
     return [];
   }
 }
