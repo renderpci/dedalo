@@ -1,33 +1,30 @@
+import { dbNames } from '../config';
 import { getPool } from '../db/pool';
 import { json } from '../utils/response';
 import type { HealthResponse } from '../db/types';
-
-const VERSION = '2.1.0';
+import { API_VERSION as VERSION } from '../constants';
 
 export async function handleHealth(_req: Request): Promise<Response> {
-  try {
-    const pool = getPool();
-    await pool.execute('SELECT 1');
+  const databases: Record<string, 'connected' | 'error'> = {};
+  let allConnected = true;
 
-    const data: HealthResponse = {
-      status: 'ok',
-      database: 'connected',
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-      version: VERSION,
-    };
+  await Promise.all(dbNames.map(async (db) => {
+    try {
+      await getPool(db).query('SELECT 1');
+      databases[db] = 'connected';
+    } catch {
+      databases[db] = 'error';
+      allConnected = false;
+    }
+  }));
 
-    return json(data);
-  } catch (error) {
-    const data: HealthResponse = {
-      status: 'error',
-      database: 'disconnected',
-      error: error instanceof Error ? error.message : 'Unknown error',
-      uptime: process.uptime(),
-      timestamp: new Date().toISOString(),
-      version: VERSION,
-    };
+  const data: HealthResponse = {
+    status: allConnected ? 'ok' : 'error',
+    databases,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString(),
+    version: VERSION,
+  };
 
-    return json(data, 503);
-  }
+  return json(data, allConnected ? 200 : 503);
 }
