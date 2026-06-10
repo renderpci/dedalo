@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { DEFAULT_LIMIT, DEFAULT_OFFSET, MAX_LIMIT, DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OCCURRENCES, MAX_BATCH_QUERIES } from './constants';
+import { DEFAULT_LIMIT, DEFAULT_OFFSET, MAX_LIMIT, DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OCCURRENCES, MAX_BATCH_QUERIES, DEFAULT_COLUMN } from './constants';
 
 const queryBoolean = z.preprocess((val) => {
   if (typeof val === 'boolean') return val;
@@ -11,73 +11,64 @@ const queryBoolean = z.preprocess((val) => {
   return val;
 }, z.boolean());
 
-const modeEnum = z.enum(['records', 'fulltext', 'text-fragment', 'av-fragment']);
+const langSchema = z.string().regex(/^lg-[a-z]{2,5}$/, 'Expected lg-xx format');
 
-const baseSearchParams = z.object({
-  mode: modeEnum.default('records'),
-  table: z.string().min(1, 'table is required'),
-});
+// limit=0 is allowed: count-only requests skip the data query
+const limitSchema = z.coerce.number().int().min(0).max(MAX_LIMIT).default(DEFAULT_LIMIT);
+const offsetSchema = z.coerce.number().int().min(0).default(DEFAULT_OFFSET);
 
-const recordsParams = baseSearchParams.extend({
-  mode: z.literal('records').default('records'),
+const resolveParams = {
+  resolve_relations: z.string().optional(),
+  resolve_inverse_relations: z.string().optional(),
+};
+
+export const listRecordsQuerySchema = z.object({
   fields: z.string().optional(),
-  filter: z.string().optional(),
-  order: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
-  offset: z.coerce.number().int().min(0).default(DEFAULT_OFFSET),
-  section_id: z.string().optional(),
-  lang: z.string().regex(/^lg-[a-z]{2,5}$/, 'Expected lg-xx format').optional(),
+  sort: z.string().optional(),
+  limit: limitSchema,
+  offset: offsetSchema,
+  lang: langSchema.optional(),
   count: queryBoolean.default(false),
-  resolve_relations: z.string().optional(),
-  resolve_inverse_relations: z.string().optional(),
+  ...resolveParams,
 });
 
-const fulltextParams = baseSearchParams.extend({
-  mode: z.literal('fulltext'),
-  q: z.string().min(1, 'q is required for fulltext mode'),
-  column: z.string().default('transcription'),
-  limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
-  offset: z.coerce.number().int().min(0).default(DEFAULT_OFFSET),
-  count: queryBoolean.default(false),
-  resolve_relations: z.string().optional(),
-  resolve_inverse_relations: z.string().optional(),
+export const getRecordQuerySchema = z.object({
+  fields: z.string().optional(),
+  lang: langSchema.optional(),
+  ...resolveParams,
 });
 
-const textFragmentParams = baseSearchParams.extend({
-  mode: z.literal('text-fragment'),
-  section_id: z.string().min(1, 'section_id is required for text-fragment mode'),
-  terms: z.string().min(1, 'terms is required for text-fragment mode'),
-  column: z.string().default('transcription'),
+export const fulltextQuerySchema = z.object({
+  q: z.string().min(1, 'q is required').max(512),
+  column: z.string().default(DEFAULT_COLUMN),
+  limit: limitSchema,
+  offset: offsetSchema,
+  count: queryBoolean.default(false),
+  ...resolveParams,
+});
+
+export const fragmentsQuerySchema = z.object({
+  terms: z.string().min(1, 'terms is required').max(512),
+  column: z.string().default(DEFAULT_COLUMN),
+  lang: langSchema.optional(),
   max_characters: z.coerce.number().int().min(10).max(5000).default(DEFAULT_MAX_CHARACTERS),
   max_occurrences: z.coerce.number().int().min(1).max(10).default(DEFAULT_MAX_OCCURRENCES),
 });
 
-const avFragmentParams = baseSearchParams.extend({
-  mode: z.literal('av-fragment'),
-  section_id: z.string().min(1, 'section_id is required for av-fragment mode'),
-  terms: z.string().min(1, 'terms is required for av-fragment mode'),
+export const avFragmentsQuerySchema = z.object({
+  terms: z.string().min(1, 'terms is required').max(512),
+  lang: langSchema.optional(),
   max_characters: z.coerce.number().int().min(10).max(5000).default(DEFAULT_MAX_CHARACTERS),
   max_occurrences: z.coerce.number().int().min(1).max(10).default(DEFAULT_MAX_OCCURRENCES),
 });
 
-export const searchParamsSchema = z.discriminatedUnion('mode', [
-  recordsParams,
-  fulltextParams,
-  textFragmentParams,
-  avFragmentParams,
-]);
+export const recordIdSchema = z.coerce.number().int().positive();
 
-export type SearchParams = z.infer<typeof searchParamsSchema>;
-export type RecordsParams = z.infer<typeof recordsParams>;
-export type FulltextParams = z.infer<typeof fulltextParams>;
-export type TextFragmentParams = z.infer<typeof textFragmentParams>;
-export type AvFragmentParams = z.infer<typeof avFragmentParams>;
-
-export const schemaParamsSchema = z.object({
-  table: z.string().optional(),
-});
-
-export type SchemaParams = z.infer<typeof schemaParamsSchema>;
+export type ListRecordsQuery = z.infer<typeof listRecordsQuerySchema>;
+export type GetRecordQuery = z.infer<typeof getRecordQuerySchema>;
+export type FulltextQuery = z.infer<typeof fulltextQuerySchema>;
+export type FragmentsQuery = z.infer<typeof fragmentsQuerySchema>;
+export type AvFragmentsQuery = z.infer<typeof avFragmentsQuerySchema>;
 
 export const avIndexationParamsSchema = z.object({
   section_id: z.coerce.number().int().positive(),
@@ -92,8 +83,13 @@ export type AvIndexationParams = z.infer<typeof avIndexationParamsSchema>;
 
 const batchQuerySchema = z.object({
   id: z.string().min(1),
-  endpoint: z.enum(['/schema', '/search', '/av-indexation-fragment']),
-  params: z.record(z.unknown()),
+  path: z.string().min(1).startsWith('/', 'path must start with "/"'),
+  params: z.record(z.union([
+    z.string(),
+    z.number(),
+    z.boolean(),
+    z.array(z.union([z.string(), z.number(), z.boolean()])),
+  ])).optional(),
 });
 
 export const batchRequestSchema = z.object({

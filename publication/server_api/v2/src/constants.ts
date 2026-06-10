@@ -1,3 +1,4 @@
+export const API_VERSION = '2.1.0';
 export const DEFAULT_TABLE = 'interview';
 export const DEFAULT_COLUMN = 'transcription';
 export const DEFAULT_LIMIT = 100;
@@ -7,6 +8,10 @@ export const MAX_BATCH_QUERIES = 20;
 export const MAX_FRAGMENTS_PER_TERM = 10;
 export const DEFAULT_MAX_CHARACTERS = 320;
 export const DEFAULT_MAX_OCCURRENCES = 1;
+export const VALID_OPERATORS_HINT = 'eq, ne, gt, gte, lt, lte, like, in, not_in, is_null, is_not_null';
+export const MAX_FRAGMENT_TERMS = 10;
+export const MAX_TERM_LENGTH = 64;
+export const MAX_SCAN_LENGTH = 1_000_000;
 
 export const TABLES = {
   INTERVIEW: 'interview',
@@ -38,13 +43,6 @@ export const PUBLICATION_SCHEMA_TABLE = 'publication_schema';
 export const PUBLICATION_SCHEMA_ID = 1;
 export const MAX_RESOLVE_DEPTH = 3;
 export const MAX_RESOLVE_ROWS = 50;
-
-export const SEARCH_MODES = {
-  RECORDS: 'records',
-  FULLTEXT: 'fulltext',
-  TEXT_FRAGMENT: 'text-fragment',
-  AV_FRAGMENT: 'av-fragment',
-} as const;
 
 export const TC_TAG_PATTERN = /\[tc-(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\]/g;
 export const PAGE_TAG_PATTERN = /\[page-n-(\d+)\]/g;

@@ -5,25 +5,31 @@ import { handleError } from './middleware/error-handler';
 import { withTiming } from './middleware/timing';
 import { withRequestId } from './middleware/request-id';
 import { withCompression } from './middleware/compress';
+import { withHttpCache } from './middleware/http-cache';
+import { raceWithTimeout } from './middleware/timeout';
 import { logRequest } from './middleware/logger';
-import { closePool } from './db/pool';
+import { closePools } from './db/pool';
 import { startRateLimitCleanup, stopRateLimitCleanup } from './security/rate-limiter';
 
+// ETag is computed on the uncompressed body (inside withCompression);
+// a 304 short-circuits before compression.
 const handler = withCompression(
   withTiming(
-    withRequestId(async (req: Request): Promise<Response> => {
-      if (req.method === 'OPTIONS') {
-        return handleOptions();
-      }
+    withRequestId(
+      withHttpCache(async (req: Request): Promise<Response> => {
+        if (req.method === 'OPTIONS') {
+          return handleOptions();
+        }
 
-      try {
-        const res = await routeRequest(req);
-        return applyCors(res);
-      } catch (error) {
-        const errorRes = handleError(error);
-        return applyCors(errorRes);
-      }
-    }),
+        try {
+          const res = await raceWithTimeout(req, () => routeRequest(req));
+          return applyCors(res);
+        } catch (error) {
+          const errorRes = handleError(error, req);
+          return applyCors(errorRes);
+        }
+      }),
+    ),
   ),
 );
 
@@ -50,7 +56,7 @@ async function shutdown(): Promise<void> {
   console.log('Shutting down...');
   server.stop();
   stopRateLimitCleanup();
-  await closePool();
+  await closePools();
   process.exit(0);
 }
 
