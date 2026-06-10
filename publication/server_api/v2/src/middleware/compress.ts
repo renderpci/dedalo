@@ -7,6 +7,11 @@ export function withCompression(handler: (req: Request) => Promise<Response>): (
     const acceptEncoding = req.headers.get('accept-encoding') || '';
     const contentType = res.headers.get('content-type') || '';
 
+    // 204/304 have no body by definition
+    if (res.status === 204 || res.status === 304) {
+      return res;
+    }
+
     if (!contentType.includes('application/json') && !contentType.includes('text/')) {
       return res;
     }
