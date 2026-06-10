@@ -1,6 +1,16 @@
 import { z } from 'zod';
 import { DEFAULT_LIMIT, DEFAULT_OFFSET, MAX_LIMIT, DEFAULT_MAX_CHARACTERS, DEFAULT_MAX_OCCURRENCES, MAX_BATCH_QUERIES } from './constants';
 
+const queryBoolean = z.preprocess((val) => {
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'string') {
+    const lower = val.toLowerCase();
+    if (lower === 'true' || lower === '1') return true;
+    if (lower === 'false' || lower === '0' || val === '') return false;
+  }
+  return val;
+}, z.boolean());
+
 const modeEnum = z.enum(['records', 'fulltext', 'text-fragment', 'av-fragment']);
 
 const baseSearchParams = z.object({
@@ -17,7 +27,7 @@ const recordsParams = baseSearchParams.extend({
   offset: z.coerce.number().int().min(0).default(DEFAULT_OFFSET),
   section_id: z.string().optional(),
   lang: z.string().regex(/^lg-[a-z]{2,5}$/, 'Expected lg-xx format').optional(),
-  count: z.coerce.boolean().default(false),
+  count: queryBoolean.default(false),
   resolve_relations: z.string().optional(),
   resolve_inverse_relations: z.string().optional(),
 });
@@ -28,7 +38,7 @@ const fulltextParams = baseSearchParams.extend({
   column: z.string().default('transcription'),
   limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
   offset: z.coerce.number().int().min(0).default(DEFAULT_OFFSET),
-  count: z.coerce.boolean().default(false),
+  count: queryBoolean.default(false),
   resolve_relations: z.string().optional(),
   resolve_inverse_relations: z.string().optional(),
 });

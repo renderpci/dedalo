@@ -78,6 +78,38 @@ describe('searchParamsSchema', () => {
     }
   });
 
+  test('count="false" stays false (not coerced to true)', () => {
+    const result = searchParamsSchema.safeParse({ mode: 'records', table: 'interview', count: 'false' });
+    expect(result.success).toBe(true);
+    if (result.success && result.data.mode === 'records') {
+      expect(result.data.count).toBe(false);
+    }
+  });
+
+  test('count="true" is coerced to true', () => {
+    const result = searchParamsSchema.safeParse({ mode: 'records', table: 'interview', count: 'true' });
+    expect(result.success).toBe(true);
+    if (result.success && result.data.mode === 'records') {
+      expect(result.data.count).toBe(true);
+    }
+  });
+
+  test('count="1" is coerced to true', () => {
+    const result = searchParamsSchema.safeParse({ mode: 'records', table: 'interview', count: '1' });
+    expect(result.success).toBe(true);
+    if (result.success && result.data.mode === 'records') {
+      expect(result.data.count).toBe(true);
+    }
+  });
+
+  test('count="0" is coerced to false', () => {
+    const result = searchParamsSchema.safeParse({ mode: 'records', table: 'interview', count: '0' });
+    expect(result.success).toBe(true);
+    if (result.success && result.data.mode === 'records') {
+      expect(result.data.count).toBe(false);
+    }
+  });
+
   test('validates records mode with resolve_relations', () => {
     const result = searchParamsSchema.safeParse({
       mode: 'records',
