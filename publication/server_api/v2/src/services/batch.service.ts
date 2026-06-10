@@ -1,79 +1,65 @@
-import { search } from './search.service';
-import { getSchema } from './schema.service';
-import { getAvIndexationFragment } from './av-indexation.service';
+import { dispatch } from '../router';
 import { ValidationError } from '../errors';
 import type { BatchResponse, BatchResult } from '../db/types';
 import type { BatchRequest, BatchQuery } from '../validators';
 
+// Batch executes GET data routes only; meta/streaming endpoints are excluded.
+const FORBIDDEN_PREFIXES = ['/batch', '/mcp', '/docs', '/openapi.yaml', '/health', '/favicon.ico'];
+
+function validateBatchPath(path: string): void {
+  if (path.includes('?')) {
+    throw new ValidationError(`Batch path must not contain a query string; use "params" instead: ${path}`);
+  }
+  const normalized = path.toLowerCase();
+  for (const prefix of FORBIDDEN_PREFIXES) {
+    if (normalized === prefix || normalized.startsWith(`${prefix}/`)) {
+      throw new ValidationError(`Endpoint not allowed in batch: ${path}`);
+    }
+  }
+}
+
+function buildQueryString(params: BatchQuery['params']): string {
+  if (!params) return '';
+
+  const searchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (Array.isArray(value)) {
+      for (const item of value) searchParams.append(key, String(item));
+    } else {
+      searchParams.append(key, String(value));
+    }
+  }
+
+  const qs = searchParams.toString();
+  return qs ? `?${qs}` : '';
+}
+
 export async function executeBatch(request: BatchRequest): Promise<BatchResponse> {
-  const results = await Promise.allSettled(
-    request.queries.map(async (query: BatchQuery) => {
+  const results: BatchResult[] = await Promise.all(
+    request.queries.map(async (query: BatchQuery): Promise<BatchResult> => {
       try {
-        const data = await executeSingleQuery(query);
-        return { id: query.id, status: 200, data };
+        validateBatchPath(query.path);
+
+        const res = await dispatch('GET', query.path + buildQueryString(query.params));
+        const body = await res.json().catch(() => undefined);
+
+        if (res.ok) {
+          return { id: query.id, status: res.status, data: body };
+        }
+        return { id: query.id, status: res.status, problem: body };
       } catch (error) {
-        const status = error instanceof Error && 'statusCode' in error
-          ? (error as any).statusCode
-          : 500;
-        return {
-          id: query.id,
-          status,
-          error: error instanceof Error ? error.message : 'Unknown error',
-        };
+        // validateBatchPath failures: surface as an inline problem
+        if (error instanceof ValidationError) {
+          return {
+            id: query.id,
+            status: error.status,
+            problem: { type: error.type, title: error.title, status: error.status, detail: error.detail },
+          };
+        }
+        throw error;
       }
     }),
   );
 
-  return {
-    results: results.map((result: PromiseSettledResult<BatchResult>) => {
-      if (result.status === 'fulfilled') return result.value;
-      return {
-        id: 'unknown',
-        status: 500,
-        error: result.reason?.message || 'Unknown error',
-      };
-    }),
-  };
-}
-
-async function executeSingleQuery(query: BatchQuery): Promise<unknown> {
-  const params = query.params as Record<string, unknown>;
-
-  switch (query.endpoint) {
-    case '/schema':
-      return getSchema(params.table as string | undefined);
-
-    case '/search': {
-      const mode = (params.mode as string) || 'records';
-      return search({
-        mode: mode as any,
-        table: params.table as string,
-        fields: params.fields as string | undefined,
-        filter: params.filter as string | undefined,
-        order: params.order as string | undefined,
-        limit: params.limit as number | undefined,
-        offset: params.offset as number | undefined,
-        section_id: params.section_id as string | undefined,
-        lang: params.lang as string | undefined,
-        q: params.q as string | undefined,
-        column: params.column as string | undefined,
-        terms: params.terms as string | undefined,
-        max_characters: params.max_characters as number | undefined,
-        max_occurrences: params.max_occurrences as number | undefined,
-      } as any);
-    }
-
-    case '/av-indexation-fragment':
-      return getAvIndexationFragment({
-        section_id: params.section_id as number,
-        section_tipo: params.section_tipo as string | undefined,
-        component_tipo: params.component_tipo as string | undefined,
-        tag_id: params.tag_id as number | undefined,
-        tc_in: params.tc_in as number | undefined,
-        tc_out: params.tc_out as number | undefined,
-      });
-
-    default:
-      throw new ValidationError(`Unknown endpoint: ${query.endpoint}`);
-  }
+  return { results };
 }

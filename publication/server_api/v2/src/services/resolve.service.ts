@@ -1,24 +1,25 @@
-import { getPool } from '../db/pool';
+import { dbExecute } from '../db/pool';
 import { validateTableName, validateColumnName } from '../db/query-builder';
 import { parseJsonStrings } from '../utils/parse-json';
 import { ValidationError } from '../errors';
 import { COLUMNS, PUBLICATION_SCHEMA_TABLE, PUBLICATION_SCHEMA_ID, MAX_RESOLVE_DEPTH, MAX_RESOLVE_ROWS } from '../constants';
 import { TTLCache } from '../db/schema-cache';
+import type { RowDataPacket } from 'mysql2/promise';
 
 export type RelationMap = Record<string, string>;
 export type InverseRelationMap = Record<string, string>;
 
 const schemaCache = new TTLCache<InverseRelationMap>(30);
 
-export async function getPublicationSchema(): Promise<InverseRelationMap> {
-  const cached = schemaCache.get('dd_relations');
+export async function getPublicationSchema(db: string): Promise<InverseRelationMap> {
+  const cacheKey = `${db}:dd_relations`;
+  const cached = schemaCache.get(cacheKey);
   if (cached) return cached;
 
   validateTableName(PUBLICATION_SCHEMA_TABLE);
 
   const sql = `SELECT data FROM \`${PUBLICATION_SCHEMA_TABLE}\` WHERE id = ?`;
-  const pool = getPool();
-  const [rows] = await pool.execute(sql, [PUBLICATION_SCHEMA_ID]);
+  const rows = await dbExecute<RowDataPacket[]>(db, sql, [PUBLICATION_SCHEMA_ID]);
 
   const row = (rows as Record<string, unknown>[])[0];
   if (!row || !row.data) {
@@ -31,7 +32,7 @@ export async function getPublicationSchema(): Promise<InverseRelationMap> {
     throw new ValidationError('dd_relations mapping not found in publication_schema');
   }
 
-  schemaCache.set('dd_relations', ddRelations);
+  schemaCache.set(cacheKey, ddRelations);
   return ddRelations;
 }
 
@@ -72,6 +73,7 @@ function parseInverseRelationMap(value: string): InverseRelationMap {
 }
 
 export async function resolveRelations(
+  db: string,
   rows: Record<string, unknown>[],
   relationMapRaw: string,
   depth: number = 0,
@@ -108,6 +110,7 @@ export async function resolveRelations(
 
       try {
         row[column] = await resolveColumn(
+          db,
           cellValue,
           target,
           column,
@@ -124,6 +127,7 @@ export async function resolveRelations(
 }
 
 async function resolveColumn(
+  db: string,
   cellValue: unknown,
   target: string,
   column: string,
@@ -145,7 +149,7 @@ async function resolveColumn(
         const table = String(obj.table);
         const sectionId = Number(obj.section_id);
         validateTableName(table);
-        return fetchRows(table, [sectionId]);
+        return fetchRows(db, table, [sectionId]);
       }
     }
     return cellValue;
@@ -200,7 +204,7 @@ async function resolveColumn(
     sectionIds = sectionIds.slice(0, MAX_RESOLVE_ROWS);
   }
 
-  const resolved = await fetchRowsByIds(table, matchColumn, sectionIds);
+  const resolved = await fetchRowsByIds(db, table, matchColumn, sectionIds);
 
   // Deep resolution: check if there are nested resolve keys for this column
   const childDeepKeys: Record<string, string> = {};
@@ -219,6 +223,7 @@ async function resolveColumn(
         if (!(childField in resolvedRow)) continue;
         try {
           resolvedRow[childField] = await resolveColumn(
+            db,
             resolvedRow[childField],
             childTarget,
             childField,
@@ -236,6 +241,7 @@ async function resolveColumn(
 }
 
 async function fetchRowsByIds(
+  db: string,
   table: string,
   matchColumn: string,
   ids: (number | string)[],
@@ -246,26 +252,27 @@ async function fetchRowsByIds(
     : ids.map(id => String(id));
 
   const sql = `SELECT * FROM \`${table}\` WHERE \`${matchColumn}\` IN (${placeholders})`;
-  const pool = getPool();
-  const [rows] = await pool.execute(sql, params);
+  const rows = await dbExecute<RowDataPacket[]>(db, sql, params);
   return parseJsonStrings(rows as Record<string, unknown>[]);
 }
 
 async function fetchRows(
+  db: string,
   table: string,
   sectionIds: number[],
 ): Promise<Record<string, unknown>[]> {
-  return fetchRowsByIds(table, COLUMNS.SECTION_ID, sectionIds);
+  return fetchRowsByIds(db, table, COLUMNS.SECTION_ID, sectionIds);
 }
 
 export async function resolveInverseRelations(
+  db: string,
   rows: Record<string, unknown>[],
   inverseMapRaw: string | true,
 ): Promise<Record<string, unknown>[]> {
   let inverseMap: InverseRelationMap;
 
   if (inverseMapRaw === true) {
-    inverseMap = await getPublicationSchema();
+    inverseMap = await getPublicationSchema(db);
   } else {
     inverseMap = parseInverseRelationMap(inverseMapRaw);
   }
@@ -305,7 +312,7 @@ export async function resolveInverseRelations(
 
       try {
         validateTableName(targetTable);
-        const fetched = await fetchRows(targetTable, [sectionId]);
+        const fetched = await fetchRows(db, targetTable, [sectionId]);
         resolved.push(...fetched);
       } catch {
         // skip unresolvable locators

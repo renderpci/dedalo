@@ -1,14 +1,13 @@
-import { getPool } from '../db/pool';
+import { dbExecute } from '../db/pool';
 import { config } from '../config';
 import { NotFoundError } from '../errors';
 import { COLUMNS } from '../constants';
 import { parseJsonStrings } from '../utils/parse-json';
 import type { Locator, AvIndexationFragment, Speaker } from '../db/types';
+import type { RowDataPacket } from 'mysql2/promise';
 
-export async function getAvIndexationFragment(locator: Locator): Promise<AvIndexationFragment> {
+export async function getAvIndexationFragment(db: string, locator: Locator): Promise<AvIndexationFragment> {
   const { section_id, section_tipo, component_tipo, tag_id, tc_in = 0, tc_out = 0 } = locator;
-
-  const pool = getPool();
 
   const sql = `
     SELECT
@@ -26,9 +25,9 @@ export async function getAvIndexationFragment(locator: Locator): Promise<AvIndex
     WHERE i.${COLUMNS.SECTION_ID} = ?
   `;
 
-  const [rows] = await pool.execute(sql, [section_id]);
+  const rows = await dbExecute<RowDataPacket[]>(db, sql, [section_id]);
 
-  if ((rows as unknown[]).length === 0) {
+  if (rows.length === 0) {
     throw new NotFoundError(`Record not found for section_id: ${section_id}`);
   }
 
@@ -49,7 +48,7 @@ export async function getAvIndexationFragment(locator: Locator): Promise<AvIndex
     ? [{ name: `${row.name || ''} ${row.surname || ''}`.trim(), role: 'informant' }]
     : [];
 
-  const terms = await getTermsForLocator(section_id, component_tipo, tag_id);
+  const terms = await getTermsForLocator(db, section_id, component_tipo, tag_id);
 
   return {
     locator: { section_id, section_tipo, component_tipo, tag_id, tc_in, tc_out },
@@ -91,13 +90,12 @@ function extractTranscriptionFragment(transcription: string, tcIn: number, tcOut
 }
 
 async function getTermsForLocator(
+  db: string,
   sectionId: number,
   componentTipo?: string,
   tagId?: number,
 ): Promise<Array<{ term_id: string; term: string }>> {
   if (!componentTipo || !tagId) return [];
-
-  const pool = getPool();
 
   try {
     const sql = `
@@ -113,8 +111,9 @@ async function getTermsForLocator(
       LIMIT 10
     `;
 
+    // The pattern is a bound LIKE parameter, not SQL interpolation
     const pattern = `%"section_id":"${sectionId}"%"tag_id":"${tagId}"%`;
-    const [rows] = await pool.execute(sql, [pattern]);
+    const rows = await dbExecute<RowDataPacket[]>(db, sql, [pattern]);
 
     return (rows as Array<{ term_id: string; term: string }>).map(row => ({
       term_id: row.term_id,
