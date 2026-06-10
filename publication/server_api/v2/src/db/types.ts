@@ -101,24 +101,11 @@ export interface AvIndexationFragment {
   terms: Array<{ term_id: string; term: string }>;
 }
 
-export interface SearchResult<T = TableRow> {
-  mode: string;
-  data: T[];
-  total: number;
-  limit?: number;
-  offset?: number;
-  query?: string;
-  terms?: string;
-  section_id?: number;
-  table?: string;
-  filter?: string;
-}
-
 export interface BatchResult {
   id: string;
   status: number;
   data?: unknown;
-  error?: string;
+  problem?: unknown;
 }
 
 export interface BatchResponse {
@@ -127,9 +114,8 @@ export interface BatchResponse {
 
 export interface HealthResponse {
   status: 'ok' | 'error';
-  database: 'connected' | 'disconnected';
+  databases: Record<string, 'connected' | 'error'>;
   uptime: number;
   timestamp: string;
   version: string;
-  error?: string;
 }
