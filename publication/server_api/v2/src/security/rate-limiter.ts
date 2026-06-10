@@ -1,5 +1,5 @@
 import { config } from '../config';
-import { HttpError } from '../errors';
+import { RateLimitError } from '../errors';
 
 interface TokenBucket {
   tokens: number;
@@ -49,7 +49,7 @@ export function checkRateLimit(req: Request): void {
   refillBucket(bucket);
 
   if (bucket.tokens <= 0) {
-    throw new HttpError(429, 'Rate limit exceeded. Try again later.');
+    throw new RateLimitError('Rate limit exceeded. Try again later.');
   }
 
   bucket.tokens--;
@@ -57,16 +57,18 @@ export function checkRateLimit(req: Request): void {
 
 let cleanupInterval: ReturnType<typeof setInterval> | null = null;
 
+export function cleanupStaleBuckets(): void {
+  const now = Date.now();
+  for (const [ip, bucket] of buckets.entries()) {
+    if (now - bucket.lastRefill > REFILL_INTERVAL * 10) {
+      buckets.delete(ip);
+    }
+  }
+}
+
 export function startRateLimitCleanup(): void {
   if (cleanupInterval) return;
-  cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [ip, bucket] of buckets.entries()) {
-      if (now - bucket.lastRefill > REFILL_INTERVAL * 10) {
-        buckets.delete(ip);
-      }
-    }
-  }, 60000);
+  cleanupInterval = setInterval(cleanupStaleBuckets, 60000);
   cleanupInterval.unref?.();
 }
 
