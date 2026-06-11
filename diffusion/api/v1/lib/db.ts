@@ -5,6 +5,7 @@
  */
 
 import mysql from 'mysql2/promise';
+import { get_db_config } from './db_config';
 import type { processed_table } from './types';
 import { generate_batch_upsert, generate_create_table, generate_add_column_sql, generate_delete } from './sql_generator';
 
@@ -30,10 +31,7 @@ export function get_pool(database_name: string): mysql.Pool {
 	}
 
 	const pool = mysql.createPool({
-		socketPath:        process.env.DB_SOCKET   || '/tmp/mysql.sock',
-		user:              process.env.DB_USER     || 'root',
-		password:          process.env.DB_PASSWORD || '',
-		database:          database_name,
+		...get_db_config(database_name),
 		waitForConnections: true,
 		connectionLimit:    10,
 		charset:           'utf8mb4',

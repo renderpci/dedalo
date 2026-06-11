@@ -37,6 +37,7 @@ export interface rqo_options {
 	process_id?:    string;
 	diffusion_element_tipo?: string;
 	diffusion_tipo?:         string;
+	type?:          'sql' | 'rdf' | 'xml' | 'socrata';
 }
 
 
@@ -135,7 +136,7 @@ export interface entry_value {
 
 // Re-used for parser inputs, matches entry_value closely
 export interface data_item {
-	id:    string | null;
+	id?:   string | null;
 	value: any;
 	tipo?: string;
 	lang?: string | null;

@@ -9,6 +9,7 @@
 import mysql from 'mysql2/promise';
 import { statSync, mkdirSync } from 'fs';
 import path from 'path';
+import { get_db_config } from './db_config';
 
 
 
@@ -48,9 +49,7 @@ export async function check_database_exists(database_name: unknown): Promise<che
 	try {
 		// one-shot pool, no database selected (mirrors status.ts check style)
 		pool = mysql.createPool({
-			socketPath:      process.env.DB_SOCKET   || '/tmp/mysql.sock',
-			user:            process.env.DB_USER     || 'root',
-			password:        process.env.DB_PASSWORD || '',
+			...get_db_config(),
 			connectionLimit: 1,
 			connectTimeout:  5_000,
 		});
@@ -128,16 +127,17 @@ export async function backup_database(database_name: string, target_file: string
 		// ensure target directory exists
 		mkdirSync(path.dirname(target_file), { recursive: true, mode: 0o750 });
 
+		const db_config = get_db_config();
 		const bin = process.env.MYSQLDUMP_BIN || 'mysqldump';
 		const args = [
-			`--user=${process.env.DB_USER || 'root'}`,
-			`--socket=${process.env.DB_SOCKET || '/tmp/mysql.sock'}`,
+			`--user=${db_config.user}`,
+			`--socket=${db_config.socketPath}`,
 			`--result-file=${target_file}`,
 			database_name,
 		];
 
 		const proc = Bun.spawn([bin, ...args], {
-			env:    { ...process.env, MYSQL_PWD: process.env.DB_PASSWORD || '' },
+			env:    { ...process.env, MYSQL_PWD: db_config.password },
 			stdout: 'ignore',
 			stderr: 'pipe',
 		});

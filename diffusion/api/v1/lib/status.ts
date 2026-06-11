@@ -9,6 +9,7 @@
  */
 
 import mysql from 'mysql2/promise';
+import { get_db_config } from './db_config';
 
 
 
@@ -109,10 +110,7 @@ async function check_sql_connection(database_name?: string): Promise<status_chec
 
 	try {
 		pool = mysql.createPool({
-			socketPath:        process.env.DB_SOCKET   || '/tmp/mysql.sock',
-			user:              process.env.DB_USER     || 'root',
-			password:          process.env.DB_PASSWORD || '',
-			database:          database_name,
+			...get_db_config(database_name),
 			connectionLimit:   1,
 			connectTimeout:    5_000,
 		});
