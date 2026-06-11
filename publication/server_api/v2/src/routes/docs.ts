@@ -71,58 +71,267 @@ function extractAssetFilename(pathname: string, basePath: string, prefix: string
 
 export async function handleDocs(req: Request): Promise<Response> {
   const basePath = config.BASE_PATH || '';
+  
+  let logoBase64 = '';
+  try {
+    const logoPath = join(import.meta.dir, 'asests', 'dd_coding.png');
+    if (existsSync(logoPath)) {
+      logoBase64 = readFileSync(logoPath).toString('base64');
+    }
+  } catch (e) {
+    console.error('Failed to load logo image', e);
+  }
+
+  const logoContent = logoBase64
+    ? `<img src="data:image/png;base64,${logoBase64}" alt="Dédalo Coding" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 0 15px rgba(247, 138, 28, 0.3));" />`
+    : '';
 
   return html(`<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Dédalo API v2 - Documentation</title>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dédalo API v2 - Documentation</title>
   <style>
+    :root {
+      --bg: #050505;
+      --surface: rgba(255, 255, 255, 0.03);
+      --surface-hover: rgba(255, 255, 255, 0.08);
+      --border: rgba(255, 255, 255, 0.1);
+      --border-hover: rgba(247, 138, 28, 0.5);
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --orange: #F78A1C;
+      --purple: #bc13fe;
+    }
+    
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    
     body {
-      font-family: 'Courier New', Consolas, monospace;
-      background: #1a1a1a;
-      color: #00ff00;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 2rem;
+      background-image: 
+        linear-gradient(rgba(247, 138, 28, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(247, 138, 28, 0.03) 1px, transparent 1px);
+      background-size: 30px 30px;
+      background-position: center center;
     }
-    .container { max-width: 800px; width: 100%; }
-    .header { border: 2px solid #00ff00; padding: 1rem; margin-bottom: 2rem; }
-    .title { font-size: 1.5rem; color: #00ffff; margin-bottom: 0.5rem; }
-    .subtitle { color: #888; font-size: 0.9rem; }
-    .options { display: grid; gap: 1rem; }
+
+    /* Cyber scanline effect */
+    body::before {
+      content: " ";
+      display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      right: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+      z-index: 2;
+      background-size: 100% 2px, 3px 100%;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 900px;
+      width: 100%;
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      gap: 3rem;
+    }
+
+    .header {
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      animation: fadeIn 1s ease-out;
+    }
+
+    .logo-container {
+      width: 240px;
+      height: 160px;
+      margin-bottom: 1rem;
+      position: relative;
+    }
+
+    /* Subtle glow behind the logo */
+    .logo-container::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80%;
+      height: 80%;
+      background: var(--orange);
+      filter: blur(50px);
+      opacity: 0.15;
+      border-radius: 50%;
+      z-index: -1;
+    }
+
+    .title {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: 0.15em;;
+      color: #F78A1C;
+      //text-shadow: 0 0 5px rgba(247, 138, 28, 0.5), 0 0 15px rgba(247, 138, 28, 0.3);
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 10px;
+      height: 1.2em;
+      background-color: var(--orange);
+      vertical-align: middle;
+      margin-left: 5px;
+      animation: blink 1s step-end infinite;
+      box-shadow: 0 0 10px var(--orange);
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+    }
+
     .option {
-      border: 1px solid #00ff00; padding: 1.5rem;
-      text-decoration: none; color: #00ff00;
-      transition: all 0.2s; display: block;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
     }
-    .option:hover { background: #00ff00; color: #1a1a1a; }
-    .option-title { font-size: 1.2rem; margin-bottom: 0.5rem; color: #00ffff; }
-    .option:hover .option-title { color: #1a1a1a; }
-    .option-desc { font-size: 0.85rem; color: #888; }
-    .option:hover .option-desc { color: #333; }
-    .cursor { display: inline-block; animation: blink 1s infinite; }
-    @keyframes blink { 0%, 50% { opacity: 1; } 51%, 100% { opacity: 0; } }
+
+    .option::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg, transparent, rgba(255,255,255,0.05), transparent);
+      transform: translateX(-100%);
+      transition: transform 0.6s;
+    }
+
+    .option:hover {
+      transform: translateY(-5px);
+      border-color: var(--border-hover);
+      background: var(--surface-hover);
+      box-shadow: 0 10px 30px -10px rgba(247, 138, 28, 0.2);
+    }
+
+    .option:hover::before {
+      transform: translateX(100%);
+    }
+
+    .option-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .option-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .option-icon {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--orange);
+    }
+
+    .option-desc {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .tag {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-top: 1.5rem;
+    }
+
+    .tag-swagger {
+      background: rgba(133, 234, 45, 0.1);
+      color: #85ea2d;
+      border: 1px solid rgba(133, 234, 45, 0.2);
+    }
+
+    .tag-scalar {
+      background: rgba(229, 62, 62, 0.1);
+      color: #fc8181;
+      border: 1px solid rgba(229, 62, 62, 0.2);
+    }
+
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    
+    @media (max-width: 600px) {
+      .options { grid-template-columns: 1fr; }
+      .title { font-size: 2rem; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <div class="title">Dédalo Publication API v2<span class="cursor">_</span></div>
-      <div class="subtitle">Read-only REST API for published cultural heritage data</div>
+      <div class="logo-container">
+        ${logoContent}
+      </div>
+      <div class="title">Dédalo API v2</div>
+      <div class="subtitle">> GET /publication/server_api/v2<span class="cursor"></span></div>
     </div>
+    
     <div class="options">
       <a href="${basePath}/docs/swagger" class="option">
-        <div class="option-title">[1] Swagger UI</div>
-        <div class="option-desc">Industry standard OpenAPI documentation with interactive testing</div>
+        <div class="option-header">
+          <div class="option-title">Swagger UI</div>
+          <div class="option-icon">[ 1 ]</div>
+        </div>
+        <div class="option-desc">Industry standard OpenAPI documentation with interactive testing capabilities and comprehensive model schemas.</div>
+        <div class="tag tag-swagger">Interactive Mode</div>
       </a>
+      
       <a href="${basePath}/docs/scalar" class="option">
-        <div class="option-title">[2] Scalar</div>
-        <div class="option-desc">Modern, fast API documentation with beautiful design</div>
+        <div class="option-header">
+          <div class="option-title">Scalar</div>
+          <div class="option-icon">[ 2 ]</div>
+        </div>
+        <div class="option-desc">Modern, fast API reference with a beautiful developer-centric design and excellent code snippet generation.</div>
+        <div class="tag tag-scalar">High Performance</div>
       </a>
     </div>
   </div>
