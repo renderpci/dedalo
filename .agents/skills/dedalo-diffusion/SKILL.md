@@ -32,6 +32,16 @@ Diffusion converts Dédalo work data into publication formats (SQL tables, RDF f
 - **Activity log = THE publication tracking**: section dd1758 (`matrix_activity_diffusion`, PostgreSQL), written via `diffusion_activity_logger::log($section_tipo, $section_id, $element_tipo, $action)`. Components: dd1762 user, dd1761 date, dd1763 locator, dd1764 section_id, dd1765 section_tipo, dd1766 diffusion element, **dd1767 action** (component_select → value-list section dd1774: 1=published, 2=unpublished, 3=unpublish_pending). Every publish (SQL via chain_processor, RDF/Socrata in their update_record) and every delete/unpublish logs here. Query pending rows with `matrix_db_manager::search` using JSONB `@>` on the `relation` column; flip rows in place with `update()`. The legacy per-record metadata writer `update_publication_data()` (dd271/dd1223/dd1224/dd1225 components) was REMOVED — never reintroduce it; the tipo statics remain on `diffusion_utils` only because component_common reads them.
 - **Publication eligibility per record**: `component_publication` (yes/no), checked via `diffusion_utils::is_publishable($locator)`.
 
+## Test architecture (keep it green)
+
+Four layers — run them when touching diffusion code:
+1. **Unit + contract (Bun)**: `bun test` in `diffusion/api/v1` (and `bunx tsc --noEmit`). `test/contract.test.ts` + `test/server/diffusion/wire_contract_Test.php` pin the frozen PHP↔Bun wire contract via golden fixtures in `test/fixtures/contract/` — if either breaks, the contract moved: update BOTH sides deliberately. `test/handler.test.ts` covers the action switch (auth/validation) against the exported `handle_request` (index.ts only starts the server under `import.meta.main`).
+2. **Bun integration** (`test/integration/`): auto-creates/drops MariaDB `web_test_diffusion`; self-skips without server or privilege (`GRANT ALL PRIVILEGES ON \`web_test_diffusion\`.* TO '<user>'@'localhost';`). CI uses a MariaDB service over TCP (`DB_FORCE_TCP=1` in lib/db_config.ts).
+3. **PHP suite**: `cd test/server && ../../vendor/bin/phpunit --testsuite "diffusion"` (+ `api/dd_diffusion_api_Test.php`). Ontology-guarded via `test/server/diffusion/class.diffusion_test_helper.php` — skips with clear messages on databases lacking the diffusion ontology/dd1767. `diffusion_api_client::$endpoint_override` simulates engine outage for the hybrid delete cycle test.
+4. **Acceptance gate**: `php test/acceptance/diffusion_acceptance.php` against the live dev instance (requires the internal token pair configured) — the production-quality sign-off for SQL+RDF.
+
+Bug classes these tests exist to catch (all found real bugs on first run): JSONB containment is TYPE-SENSITIVE — locators serialize section_id as STRING, queries must match (`search_pending_rows`); relation chain values can be scalars, never assume locator objects in chain_processor loops; stale test expectations hide parser contract drift.
+
 ## Working practices
 
 - Bun side: plain TS interfaces (no zod), manual validation; tolerate errno 1146 (table missing) and 1049 (db missing) as no-op success on deletes; tests in `diffusion/api/v1/test/` with bun:test (run `bun test` — `parsers.test.ts` has a known pre-existing failure, ignore it).
