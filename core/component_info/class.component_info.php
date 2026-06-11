@@ -628,7 +628,6 @@ class component_info extends component_common {
 	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*
-	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 

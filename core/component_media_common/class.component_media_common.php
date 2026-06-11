@@ -362,7 +362,7 @@ class component_media_common extends component_common {
 	* @param ?string $diffusion_element_tipo
 	* @return array $diffusion_data
 	*
-	* @see class.diffusion_data.php
+	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
 	* @test false
 	*/
 	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo = null ) : array {

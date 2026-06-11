@@ -165,10 +165,9 @@ class component_geolocation extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE_SOCRATA
 	* Calculate current component diffusion value for target field in socrata
-	* Used for diffusion_mysql to unify components diffusion value call to publish in socrata
+	* Used by diffusion to unify components diffusion value call to publish in socrata
 	* @return object $diffusion_value_socrata
 	*
-	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value_socrata() : ?object {
 
@@ -235,7 +234,6 @@ class component_geolocation extends component_common {
 		*    }
 		* ]
 	* @see ontology publication use in mdcat4091
-	* @see diffusion_sql::build_geolocation_data_geojson
 	* @return string $value
 	* 	Encoded GEOJSON data
 	*/
