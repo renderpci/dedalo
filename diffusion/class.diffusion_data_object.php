@@ -9,15 +9,25 @@
 * resolved value together with the metadata required by exporters
 * (XML, RDF, SQL, JSON, etc.) to format and label the output correctly.
 *
-* The object is typically built in one of two ways:
-* 1. Hydration from a plain object passed to the constructor.
-* 2. Wrapping by diffusion_chain_processor->wrap_into_diffusion_data_object(),
-*    which injects additional metadata (label, term, model, diffusion_tipo).
+* This is the canonical per-field value container of the SQL publish pipeline.
+* It plays two roles (do not conflate them):
+* 1. INNER VALUE ITEM {tipo, lang, value, id} — built by components'
+*    get_diffusion_data() and by diffusion_fn methods. These are the items
+*    flattened into datum entries by dd_diffusion_api::process_datum.
+* 2. CHAIN-PROCESSOR WRAPPER {diffusion_tipo, id, label, term, model, value}
+*    — built by diffusion_chain_processor->wrap_into_diffusion_data_object();
+*    its ->value holds an array of inner value items.
 *
 * Property groups:
 * - Main values     : tipo, lang, value, id — the core payload every exporter needs.
 * - Additional values: diffusion_tipo, label, term, model — contextual metadata
 *   added by the chain processor to help exporters resolve labels and structure.
+* - Dynamic extras set by callers: meta (component_relation_common add_parents),
+*   section_id / section_tipo (record scoping in dd_diffusion_api).
+*
+* (!) The public $errors property is serialized as "errors":[] inside the
+* datum entries the Bun engine receives. It is part of the frozen wire shape:
+* do not remove or privatize it without coordinating a wire-contract change.
 */
 class diffusion_data_object extends stdClass {
 
@@ -43,7 +53,7 @@ class diffusion_data_object extends stdClass {
 	/**
 	* __CONSTRUCT
 	* Hydrates the object from a plain object, routing known keys to their
-	* matching setters. Unknown keys and non-object input are logged as errors.
+	* matching setters. Unknown keys are logged as errors.
 	*
 	* @param object|null $data = null
 	* @return void
@@ -52,23 +62,6 @@ class diffusion_data_object extends stdClass {
 
 		// null case
 		if ( $data===null ) {
-			return;
-		}
-
-		// Reject non-object input with an error log and optional backtrace dump
-		if (!is_object($data)) {
-
-			$msg = " wrong data format. object expected. Given type: ".gettype($data);
-			debug_log(__METHOD__
-				. $msg
-				.' data: ' . to_string($data)
-				, logger::ERROR
-			);
-			if(SHOW_DEBUG===true) {
-				dump(debug_backtrace()[0], $msg);
-			}
-
-			$this->errors[] = $msg;
 			return;
 		}
 
