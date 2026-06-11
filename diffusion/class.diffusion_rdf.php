@@ -208,7 +208,7 @@ class diffusion_rdf {
 
 		// saves publication data
 		if ($pure === false) {
-			diffusion::update_publication_data($section_tipo, $section_id);
+			diffusion_utils::update_publication_data($section_tipo, $section_id);
 		}
 
 		// save file
@@ -632,7 +632,7 @@ class diffusion_rdf {
 				$owl_class_tipo		= reset($ar_owl_class_tipo);
 
 				// max_items. (!) Notice that here we use the user configurable DEDALO_DIFFUSION_RESOLVE_LEVELS value as n items resolve (Example: 1 coins for current type)
-					$max_items = diffusion::get_resolve_levels();
+					$max_items = diffusion_utils::get_resolve_levels();
 
 				// process data locators
 					$data_length = empty($data) ? 0 : count($data);
