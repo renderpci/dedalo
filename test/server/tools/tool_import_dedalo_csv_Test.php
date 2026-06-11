@@ -705,6 +705,268 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 
 
 	/**
+	* BUILD_IMPORT_COLUMNS_MAP
+	* Helper. Builds the ar_columns_map for a simple header list where every
+	* header name matches its component tipo (plus the mandatory section_id column)
+	* @param array $ar_components as [tipo => model]
+	* @return array $ar_columns_map
+	*/
+	private function build_import_columns_map(array $ar_components) : array {
+
+		$ar_columns_map = [
+			(object)[
+				'tipo'			=> 'section_id',
+				'label'			=> '',
+				'model'			=> 'section_id',
+				'column_name'	=> 'section_id',
+				'checked'		=> true,
+				'map_to'		=> 'test102'
+			]
+		];
+		foreach ($ar_components as $tipo => $model) {
+			$ar_columns_map[] = (object)[
+				'tipo'			=> $tipo,
+				'label'			=> $tipo,
+				'model'			=> $model,
+				'column_name'	=> $tipo,
+				'checked'		=> true,
+				'map_to'		=> $tipo
+			];
+		}
+
+		return $ar_columns_map;
+	}//end build_import_columns_map
+
+
+
+	/**
+	* CANONICALIZE_DATA
+	* Helper. Converts a dato to a normalized array form with recursively sorted
+	* object keys, so datos can be compared ignoring property order.
+	* The data is JSON round-tripped first to apply the same serialization used
+	* by the DB storage (e.g. dd_date::jsonSerialize), because in-memory datos
+	* can contain live class instances as dd_date
+	* @param mixed $data
+	* @return mixed
+	*/
+	private function canonicalize_data( $data ) {
+
+		// serialize as the DB storage does (resolves JsonSerializable instances)
+		$data = json_decode( json_encode($data) );
+
+		$sort_keys = null;
+		$sort_keys = function($data) use (&$sort_keys) {
+			if (is_object($data)) {
+				$vars = (array)$data;
+				ksort($vars);
+				$result = [];
+				foreach ($vars as $k => $v) {
+					$result[$k] = $sort_keys($v);
+				}
+				return $result;
+			}
+			if (is_array($data)) {
+				return array_map($sort_keys, $data);
+			}
+			return $data;
+		};
+
+		return $sort_keys($data);
+	}//end canonicalize_data
+
+
+
+	/**
+	* TEST_import_files_raw_export_round_trip
+	* Critical workflow: data exported in 'dedalo_raw' format (dedalo_data wrapper,
+	* produced by component_common::get_raw_value) must re-import producing EXACTLY
+	* the same stored datos. Builds a CSV from the real raw export values of record 1
+	* and verifies every component dato is unchanged after the import.
+	* @return void
+	*/
+	public function test_import_files_raw_export_round_trip() {
+
+		$this->user_login();
+
+		$section_tipo	= 'test3';
+		$section_id		= 1;
+		$file_name		= 'import_round_trip-test3.csv';
+
+		$ar_test_components = [
+			'test52'  => 'component_input_text',
+			'test145' => 'component_date',
+			'test208' => 'component_email',
+			'test100' => 'component_geolocation',
+			'test18'  => 'component_json',
+			'test89'  => 'component_select_lang',
+			'test88'  => 'component_check_box'
+		];
+
+		// snapshot current datos and build the CSV cells from the REAL
+		// raw export values (get_raw_value is the 'dedalo_raw' chokepoint)
+			$snapshots	= [];
+			$header		= ['section_id'];
+			$cells		= [(string)$section_id];
+			foreach ($ar_test_components as $tipo => $model) {
+
+				$component = component_common::get_instance(
+					$model,
+					$tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_LANG,
+					$section_tipo,
+					false
+				);
+				$snapshots[$tipo] = json_encode( $this->canonicalize_data($component->get_data()) );
+
+				$raw_value	= $component->get_raw_value();
+				$cell_data	= $raw_value->value; // ['dedalo_data' => dato] | null
+				$cell_string = is_null($cell_data)
+					? ''
+					: json_encode($cell_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+				$header[]	= $tipo;
+				$cells[]	= $cell_string;
+			}
+
+		// build the CSV file (delimiter ';', RFC 4180 quoting)
+			$quote = function(string $v) : string {
+				return (strpos($v, ';')!==false || strpos($v, '"')!==false || strpos($v, "\n")!==false)
+					? '"'.str_replace('"', '""', $v).'"'
+					: $v;
+			};
+			$csv_content = implode(';', array_map($quote, $header)) . "\n"
+						 . implode(';', array_map($quote, $cells))  . "\n";
+
+			$target_file = tool_import_dedalo_csv::get_files_path() . '/' . $file_name;
+			$this->assertNotFalse(
+				file_put_contents($target_file, $csv_content),
+				'expected round trip CSV file written'
+			);
+
+		// import
+			$options = (object)[
+				'files' => [(object)[
+					'file'					=> $file_name,
+					'section_tipo'			=> $section_tipo,
+					'bulk_process_label'	=> 'import raw export round trip test',
+					'ar_columns_map'		=> $this->build_import_columns_map($ar_test_components)
+				]],
+				'time_machine_save' => false
+			];
+			$response = tool_import_dedalo_csv::import_files($options);
+
+			$file_result = $response->result[0] ?? null;
+			$this->assertTrue(
+				($file_result->result ?? null)===true,
+				'expected file import result true: ' . json_encode($file_result, JSON_PRETTY_PRINT)
+			);
+			$this->assertTrue(
+				empty($file_result->failed_rows),
+				'expected empty failed_rows: ' . json_encode($file_result->failed_rows ?? null, JSON_PRETTY_PRINT)
+			);
+
+		// verify every dato is EXACTLY the same as before the round trip
+			foreach ($ar_test_components as $tipo => $model) {
+
+				$component = component_common::get_instance(
+					$model,
+					$tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_LANG,
+					$section_tipo,
+					false
+				);
+				$this->assertEquals(
+					$snapshots[$tipo],
+					json_encode( $this->canonicalize_data($component->get_data()) ),
+					"round trip dato changed for $tipo ($model)"
+				);
+			}
+
+		// clean
+			tool_import_dedalo_csv::delete_csv_file((object)[
+				'file_name' => $file_name
+			]);
+	}//end test_import_files_raw_export_round_trip
+
+
+
+	/**
+	* TEST_import_files_lang_keyed_object
+	* End to end import of the multi-language lang keyed object format:
+	* {"lg-eng":"...","lg-spa":"..."} saved per lang via set_data_lang
+	* @return void
+	*/
+	public function test_import_files_lang_keyed_object() {
+
+		$this->user_login();
+
+		$file_name = 'import_lang_keyed-test3.csv';
+
+		// CSV with a lang keyed object cell for component_input_text test52
+			$csv_content = 'section_id;test52' . "\n"
+				. '1;"{""lg-eng"":""KeyedHello"",""lg-spa"":""HolaClave""}"' . "\n";
+
+			$target_file = tool_import_dedalo_csv::get_files_path() . '/' . $file_name;
+			$this->assertNotFalse(
+				file_put_contents($target_file, $csv_content),
+				'expected lang keyed CSV file written'
+			);
+
+		// import
+			$options = (object)[
+				'files' => [(object)[
+					'file'					=> $file_name,
+					'section_tipo'			=> 'test3',
+					'bulk_process_label'	=> 'import lang keyed object test',
+					'ar_columns_map'		=> $this->build_import_columns_map([
+						'test52' => 'component_input_text'
+					])
+				]],
+				'time_machine_save' => false
+			];
+			$response = tool_import_dedalo_csv::import_files($options);
+
+			$file_result = $response->result[0] ?? null;
+			$this->assertTrue(
+				($file_result->result ?? null)===true,
+				'expected file import result true: ' . json_encode($file_result, JSON_PRETTY_PRINT)
+			);
+			$this->assertTrue(
+				empty($file_result->failed_rows),
+				'expected empty failed_rows: ' . json_encode($file_result->failed_rows ?? null, JSON_PRETTY_PRINT)
+			);
+
+		// verify both langs saved
+			$component = component_common::get_instance(
+				'component_input_text',
+				'test52',
+				1,
+				'list',
+				DEDALO_DATA_LANG,
+				'test3',
+				false
+			);
+			$data = $component->get_data();
+			$lang_values = [];
+			foreach ($data ?? [] as $item) {
+				$lang_values[$item->lang ?? ''][] = $item->value;
+			}
+			$this->assertContains('KeyedHello', $lang_values['lg-eng'] ?? [], 'expected lg-eng keyed value saved');
+			$this->assertContains('HolaClave', $lang_values['lg-spa'] ?? [], 'expected lg-spa keyed value saved');
+
+		// clean
+			tool_import_dedalo_csv::delete_csv_file((object)[
+				'file_name' => $file_name
+			]);
+	}//end test_import_files_lang_keyed_object
+
+
+
+	/**
 	* TEST_delete_csv_file
 	* 	Execute this function at end to clean temporal file (!)
 	* @return void
