@@ -230,8 +230,18 @@ class diffusion_socrata {
 			$result	= isset($result_obj->error) ? false : true;
 			$msg	= isset($result_obj->message) ? $result_obj->message : to_string($result);
 
-		// saves publication data
-			diffusion_utils::update_publication_data($section_tipo, $section_id);
+		// log publication activity (dd1758: who/when/what/where + action)
+		// replaces the legacy per-record publication metadata components
+		// (update_publication_data, removed in v7)
+			if ($result===true) {
+				include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php';
+				diffusion_activity_logger::log(
+					$section_tipo,
+					(int)$section_id,
+					$diffusion_element_tipo,
+					diffusion_activity_logger::ACTION_PUBLISHED
+				);
+			}
 
 		// response
 			$response->result	= $result;

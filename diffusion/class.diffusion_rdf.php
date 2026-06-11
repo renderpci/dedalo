@@ -206,9 +206,19 @@ class diffusion_rdf {
 			$response->data		= $build_response->data;
 			$response->msg		= array_merge($response->msg, $build_response->msg);
 
-		// saves publication data
+		// log publication activity (dd1758: who/when/what/where + action)
+		// one row per published record, replacing the legacy per-record
+		// publication metadata components (update_publication_data, removed in v7)
 		if ($pure === false) {
-			diffusion_utils::update_publication_data($section_tipo, $section_id);
+			include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php';
+			foreach ($ar_section_id as $published_section_id) {
+				diffusion_activity_logger::log(
+					$section_tipo,
+					(int)$published_section_id,
+					$diffusion_element_tipo,
+					diffusion_activity_logger::ACTION_PUBLISHED
+				);
+			}
 		}
 
 		// save file

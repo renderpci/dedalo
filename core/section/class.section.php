@@ -954,7 +954,7 @@ class section extends common {
 
 	/**
 	* GET_PUBLICATION_DATE
-	* @see class.diffusion definitions for publication_first_tipo, publication_last_tipo, etc.
+	* @see class.diffusion_utils definitions for publication_first_tipo, publication_last_tipo, etc.
 	* @param string $component_tipo
 	* @return string|null $local_date
 	*/
