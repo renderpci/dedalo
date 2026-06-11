@@ -213,6 +213,19 @@ class diffusion_chain_processor {
 
 		foreach ($ar_locators as $locator) {
 
+			// Guard: component diffusion values may contain scalars (non-locator
+			// data); only locator objects can be resolved through the chain.
+			// A TypeError here would abort the whole publish run.
+			if (!is_object($locator) || !isset($locator->section_tipo)) {
+				debug_log(__METHOD__
+					. " Ignored non-locator value in relation chain resolution" . PHP_EOL
+					. ' ddo tipo: ' . to_string($current_tipo) . PHP_EOL
+					. ' value: ' . to_string($locator)
+					, logger::WARNING
+				);
+				continue;
+			}
+
 			// Check publishability of the LINKED section (not the parent section).
 			// $publishable (from diffusion node properties) overrides the live check.
 			$current_is_publishable = $publishable ?? diffusion_utils::is_publishable($locator);

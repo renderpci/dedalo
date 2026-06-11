@@ -359,7 +359,8 @@ class diffusion_delete {
 				$relation = $row_data->relation;
 				foreach ($relation->{diffusion_activity_logger::ACTION_TIPO} ?? [] as $action_locator) {
 					if ((int)$action_locator->section_id===diffusion_activity_logger::ACTION_UNPUBLISH_PENDING) {
-						$action_locator->section_id = diffusion_activity_logger::ACTION_UNPUBLISHED;
+						// string: locators serialize section_id as string (see search_pending_rows)
+						$action_locator->section_id = (string)diffusion_activity_logger::ACTION_UNPUBLISHED;
 					}
 				}
 				matrix_activity_diffusion_db_manager::update(
@@ -393,9 +394,12 @@ class diffusion_delete {
 	*/
 	private static function search_pending_rows(?int $limit) : array {
 
+		// (!) locator objects serialize section_id as STRING in the relation
+		// column; JSONB containment (@>) is type-sensitive, so the value here
+		// must be a string too or the query never matches.
 		$pending_locator = [
 			diffusion_activity_logger::ACTION_TIPO => [[
-				'section_id'	=> diffusion_activity_logger::ACTION_UNPUBLISH_PENDING,
+				'section_id'	=> (string)diffusion_activity_logger::ACTION_UNPUBLISH_PENDING,
 				'section_tipo'	=> diffusion_activity_logger::ACTION_SECTION_TIPO
 			]]
 		];
