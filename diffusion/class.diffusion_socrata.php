@@ -83,7 +83,7 @@ class diffusion_socrata {
 			}
 
 		// table
-			$table_tipo			= diffusion::get_table_tipo($diffusion_element_tipo, $section_tipo);
+			$table_tipo			= diffusion_utils::get_table_tipo($diffusion_element_tipo, $section_tipo);
 			$table_properties	= self::get_table_properties($table_tipo) ?? new stdClass();
 
 		// ar_rows. Build data (array of json_row objects) for each lang
@@ -231,7 +231,7 @@ class diffusion_socrata {
 			$msg	= isset($result_obj->message) ? $result_obj->message : to_string($result);
 
 		// saves publication data
-			diffusion::update_publication_data($section_tipo, $section_id);
+			diffusion_utils::update_publication_data($section_tipo, $section_id);
 
 		// response
 			$response->result	= $result;
@@ -246,6 +246,206 @@ class diffusion_socrata {
 
 		return $response;
 	}//end update_record
+
+
+
+	/**
+	* BUILD_ID
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @param string $lang
+	* @return string $id like 'oh1_1_lg-eng'
+	*/
+	private static function build_id(string $section_tipo, string|int $section_id, string $lang) : string {
+
+		$id = $section_tipo .'_'. $section_id .'_'. $lang ;
+
+		return $id;
+	}//end build_id
+
+
+
+	/**
+	* BUILD_JSON_ROW
+	* Builds one Socrata row object with all field : field_value in given lang.
+	* (Moved from legacy class diffusion, removed in v7)
+	* @param object $options
+	* @return object $json_row
+	*/
+	private function build_json_row(object $options) : stdClass {
+
+		// options
+			$section_tipo			= $options->section_tipo ?? null;
+			$section_id				= $options->section_id ?? null;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
+			$lang					= $options->lang ?? null;
+
+		// fields (v7: resolved from the flat virtual diffusion tree)
+			$ar_fields = diffusion_utils::get_table_fields( $diffusion_element_tipo, $section_tipo );
+
+		// value
+			$row = new stdClass();
+
+				// fixed columns
+					$item = new stdClass();
+						$item->value = self::build_id($section_tipo, $section_id, $lang);
+						$item->model = 'field_text';
+					$row->id = $item;
+
+					$item = new stdClass();
+						$item->value = $section_tipo;
+						$item->model = 'field_text';
+					$row->section_tipo = $item;
+
+					$item = new stdClass();
+						$item->value = $section_id;
+						$item->model = 'field_int';
+					$row->section_id = $item;
+
+					$item = new stdClass();
+						$item->value = $lang;
+						$item->model = 'field_text';
+					$row->lang = $item;
+
+					$item = new stdClass();
+						$item->value = date('Y-m-d H:i:s');
+						$item->model = 'field_date';
+					$row->publish_date = $item;
+
+				// other columns. Resolve each field
+				foreach ($ar_fields as $field) {
+
+					$value = self::get_field_value($field->tipo, $section_tipo, $section_id, $lang, $options);
+
+					$diffusion_model = ontology_node::get_model_by_tipo($field->tipo,true);
+
+					$item = new stdClass();
+						$item->value = $value;
+						$item->model = $diffusion_model;
+
+					// Add value
+					$row->{$field->label} = $item;
+				}
+
+
+		return $row;
+	}//end build_json_row
+
+
+
+	/**
+	* GET_FIELD_VALUE
+	* (Moved from legacy class diffusion, removed in v7)
+	* @param string $tipo
+	*	Tipo of diffusion 'field' like 'oh111'
+	* @param string $section_tipo
+	*	Current working section tipo like 'oh1'
+	* @param int $section_id
+	*	Current section_id like 1
+	* @param string $lang
+	*	Current lang like 'lg-eng'
+	* @param object $request_options
+	*	Is pass-through update record request_options param
+	* @return mixed $field_value
+	*	Is the diffusion value of component called by field. Can be null, array, string, int
+	*/
+	private static function get_field_value(string $tipo, string $section_tipo, $section_id, string $lang, object $request_options) {
+
+		$field_value = null;
+
+		// Diffusion element (current column/field)
+			$diffusion_term		= ontology_node::get_instance($tipo);
+			$properties			= $diffusion_term->get_properties(true);	# Format: {"data_to_be_used": "dato"}
+
+		// Component
+			$ar_related			= common::get_ar_related_by_model('component_', $tipo, false);
+			$component_tipo		= reset($ar_related);
+			$model_name			= ontology_node::get_model_by_tipo($component_tipo,true);
+			$current_component	= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$section_id,
+				'list', // Note that 'list' mode have dato fallback (in section)
+				$lang,
+				$section_tipo,
+				false
+			);
+
+			// dato
+			$dato = (is_object($properties) && property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method))
+				? $current_component->{$properties->get_field_value->get_dato_method}()
+				: $current_component->get_dato();
+
+
+		# switch cases
+			switch (true) {
+
+				case ($model_name==='component_publication'):
+					$field_value = (isset($dato[0]->section_id) && (int)$dato[0]->section_id===NUMERICAL_MATRIX_VALUE_YES) ? true : false;
+					break;
+
+				case (is_object($properties) && property_exists($properties, 'data_to_be_used')):
+					switch ($properties->data_to_be_used) {
+						case 'dato':
+							# Unresolved data
+							$field_value = $dato;
+							break;
+						// NEED TO BE FIXED NEW DATAFRAME
+						case 'ds':
+							$ar_term_ds = [];
+							foreach ((array)$dato as $current_locator) {
+								if (isset($current_locator->ds)) foreach ($current_locator->ds as $ar_locator_ds) {
+									foreach ($ar_locator_ds  as $locator_ds) {
+										$ar_term_ds[] = ts_object::get_term_by_locator($locator_ds, $lang, true);
+									}
+								}
+							}
+							if (!empty($ar_term_ds)) {
+								$field_value = implode('|', $ar_term_ds);
+							}
+							break;
+						// NEED TO BE FIXED NEW DATAFRAME
+						case 'dataframe':
+							$ar_term_dataframe = [];
+							foreach ((array)$dato as $current_locator) {
+								if (isset($current_locator->dataframe)) foreach ($current_locator->dataframe as $locator_dataframe) {
+									$ar_term_dataframe[] = ts_object::get_term_by_locator($locator_dataframe, $lang, true);
+								}
+							}
+							if (!empty($ar_term_dataframe)) {
+								$field_value = implode('|', $ar_term_dataframe);
+							}
+							break;
+						default:
+							debug_log(__METHOD__
+								." INVALID DATA_TO_BE_USED MODE (ignored tipo: $component_tipo) 'data_to_be_used': ".to_string($properties->data_to_be_used)
+								, logger::ERROR
+							);
+							break;
+					}
+					break;
+
+				case (is_object($properties) && property_exists($properties, 'process_dato')):
+					// Process dato with function
+					$options = $request_options;
+						$options->properties		= $properties;
+						$options->tipo				= $tipo;
+						$options->component_tipo	= $component_tipo;
+						$options->section_id		= $section_id;
+
+					$function_name 	= $properties->process_dato;
+					$field_value 	= call_user_func($function_name, $options, $dato);
+					break;
+
+				default:
+					// Set unified diffusion value
+					$field_value = $current_component->get_diffusion_value($lang);
+					break;
+			}//switch (true)
+
+
+		return $field_value;
+	}//end get_field_value
 
 
 
