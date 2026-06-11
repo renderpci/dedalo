@@ -71,6 +71,12 @@ jobs:
         working-directory: test/server
         run: ../../vendor/bin/phpunit --testsuite "contract"
 
+      - name: Run diffusion tests
+        # Ontology-guarded: tests skip cleanly when the install dump lacks
+        # the diffusion ontology (diffusion domain, dd1767/dd1774)
+        working-directory: test/server
+        run: ../../vendor/bin/phpunit --testsuite "diffusion"
+
       - name: Check for breaking signature changes
         run: php dev/signature_tracker/signature-check.php --check
         continue-on-error: true
