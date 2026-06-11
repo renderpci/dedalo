@@ -908,7 +908,12 @@ class component_date extends component_common {
 									// 	$dd_date->set_year((int)$ar_date_parts[1]);
 									// }
 									// Do not resolve date in this case because day without month is not valid
-									$response->errors[] = 'Invalid mdy date format for current_date: ' . to_string($current_date);
+									$failed = new stdClass();
+										$failed->section_id		= $this->section_id;
+										$failed->data			= stripslashes( $import_value );
+										$failed->component_tipo	= $this->get_tipo();
+										$failed->msg			= 'IGNORED: Invalid mdy date format for current_date: ' . to_string($current_date);
+									$response->errors[] = $failed;
 								}
 								// moth, day, year (USA dates) : 04/25/2022
 								elseif($lenght === 3){
@@ -964,8 +969,13 @@ class component_date extends component_common {
 				foreach ($value as $current_date) {
 					foreach ($current_date as $key => $current_dd_date) {
 
+						// only check date properties (skip 'id', 'lang' and other non date properties)
+							if ($key!=='start' && $key!=='end') {
+								continue;
+							}
+
 						// don't check null values
-							if (!is_null($current_dd_date)) {
+							if (is_null($current_dd_date)) {
 								continue;
 							}
 
@@ -985,17 +995,25 @@ class component_date extends component_common {
 								continue;
 							}
 
-						$dd_date = new dd_date($current_dd_date, true);
+						// normalize dd_date instances to plain objects: dd_date properties
+						// are private and would not iterate in the validation constructor
+						$current_date_obj = ($current_dd_date instanceof dd_date)
+							? json_decode(json_encode($current_dd_date))
+							: $current_dd_date;
+
+						$dd_date = new dd_date($current_date_obj, true);
 
 						// errors check
-						if(!empty($dd_date->errors)){
+						// note that dd_date errors property is private: use the getter
+						$dd_date_errors = $dd_date->get_errors();
+						if(!empty($dd_date_errors)){
 
 							$failed = new stdClass();
 								$failed->section_id		= $this->section_id;
 								$failed->data			= stripslashes( $import_value );
 								$failed->component_tipo	= $this->get_tipo();
 								$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-								$failed->errors			= $dd_date->errors;
+								$failed->errors			= $dd_date_errors;
 
 							$response->errors[] = $failed;
 						}
