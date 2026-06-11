@@ -87,6 +87,15 @@ abstract class component_common extends common {
 		public bool $update_diffusion_info_propagate_changes = true;
 
 		/**
+		 * Whether the current import value was wrapped as {"dedalo_data": <dato>}.
+		 * Set by the import tool after unwrap_dedalo_data() and before conform_import_data().
+		 * Allows components as component_json to disambiguate a v7 envelope from a
+		 * literal JSON value with the same shape.
+		 * @var bool $import_data_is_wrapped
+		 */
+		public bool $import_data_is_wrapped = false;
+
+		/**
 		 * Database matrix record ID (primary key of the matrix row).
 		 * Used for direct database operations and Time Machine references.
 		 * @var string|int|null $matrix_id
@@ -1628,11 +1637,23 @@ abstract class component_common extends common {
 			$label = $this->get_label();
 
 		// cell_type
-		// Exception for comoponent_section_id. As section_id must be used as int, 
+		// Exception for comoponent_section_id. As section_id must be used as int,
 		// avoid to use the json cell type to render it as int instead an array [3]
-			$cell_type = $this->get_model()==='component_section_id' 
-				? 'section_id' 
+			$cell_type = $this->get_model()==='component_section_id'
+				? 'section_id'
 				: 'json';
+
+		// dedalo_data wrapper
+		// Raw exported data is wrapped as {"dedalo_data": <dato>} to identify externally
+		// that the value is Dédalo format data and not any other generic value.
+		// The import process unwraps it transparently (see unwrap_dedalo_data).
+		// component_section_id is excluded: it must remain a plain int to be used
+		// as the record key on re-import. Null data is not wrapped (empty export cell).
+		// Note that the wrapper is an associative array because set_value() expects
+		// ?array; it serializes to JSON as the {"dedalo_data": ...} object.
+			if ($cell_type!=='section_id' && $data!==null) {
+				$data = ['dedalo_data' => $data];
+			}
 
 		// raw_value
 			$raw_value = new dd_grid_cell_object();
@@ -4257,6 +4278,58 @@ abstract class component_common extends common {
 
 
 	/**
+	* UNWRAP_DEDALO_DATA
+	* Raw exported data (tool_export 'dedalo_raw' format) is wrapped as:
+	* 	{"dedalo_data": <dato>}
+	* to identify externally that the value is Dédalo format data and not any other
+	* generic value (see get_raw_value).
+	* This method detects the wrapper in an import value and returns the inner dato
+	* re-encoded as JSON string, with a flag indicating whether the value was wrapped.
+	* Un-wrapped values are returned unchanged, so both wrapped and plain v6/v7
+	* import values are accepted.
+	* Called by the import tool before conform_import_data.
+	* @param string $import_value
+	* @return object $response
+	*	- value: string The unwrapped (or original) import value
+	*	- wrapped: bool True when the dedalo_data wrapper was detected and removed
+	*/
+	public static function unwrap_dedalo_data(string $import_value) : object {
+
+		$response = new stdClass();
+			$response->value	= $import_value;
+			$response->wrapped	= false;
+
+		if (json_handler::is_json($import_value)) {
+			$decoded = json_handler::decode($import_value);
+			if (is_object($decoded) && property_exists($decoded, 'dedalo_data')) {
+				$response->value	= json_encode($decoded->dedalo_data, JSON_UNESCAPED_UNICODE);
+				$response->wrapped	= true;
+			}
+		}
+
+		return $response;
+	}//end unwrap_dedalo_data
+
+
+
+	/**
+	* IS_PLAIN_BRACKET_STRING
+	* Check if a string value that is not valid JSON can be admitted as plain text.
+	* Sometimes the value text could be '[Ac]', as numismatic legends; it is admitted,
+	* but if the text begins with '["' or ends with '"]' it is considered a malformed
+	* JSON array of strings and it is not admitted.
+	* Used by conform_import_data implementations.
+	* @param string $value
+	* @return bool
+	*/
+	public static function is_plain_bracket_string(string $value) : bool {
+
+		return !(str_starts_with($value, '["') || str_ends_with($value, '"]'));
+	}//end is_plain_bracket_string
+
+
+
+	/**
 	 * CONFORM_IMPORT_DATA
 	 * Validates and transforms import data from CSV or other sources.
 	 * Handles JSON strings, empty values, and type conversion.
@@ -4300,7 +4373,7 @@ abstract class component_common extends common {
 		}else{
 			// Non-JSON string case
 
-			if(empty($import_value)) {
+			if(empty($import_value) && $import_value!=='0') {
 				$import_value = null;
 			}else{
 				// Non-JSON non-empty value: wrap into v7 format for components_using_value_property
@@ -4324,28 +4397,51 @@ abstract class component_common extends common {
 			}
 		}
 
-		// Normalize: ensure array items are v7-compliant objects
-		if (is_array($import_value)) {
+		// Normalize into the conform contract:
+		// array of v7 items | object keyed by lang ('lg-*') with array values | null
+		$is_value_property_model = in_array($this->model, self::$components_using_value_property);
+		$normalize_items = function(array $items) use($is_value_property_model) : array {
 			$normalized = [];
-			foreach ($import_value as $val) {
-				if (!is_object($val)) {
+			foreach ($items as $val) {
+				if (!is_object($val) && $is_value_property_model) {
 					// Wrap plain values into objects with 'value' property for components_using_value_property
-					if (in_array($this->model, self::$components_using_value_property)) {
-						$normalized[] = (object)['value' => $val];
-					}else{
-						// For non-value-property components (locators, etc.), pass through as-is
-						// set_data() will handle wrapping if needed
-						$normalized[] = $val;
-					}
+					$normalized[] = (object)['value' => $val];
 				}else{
+					// Objects and non-value-property items (locators, etc.) pass through as-is
+					// set_data() will handle wrapping if needed
 					$normalized[] = $val;
 				}
 			}
-			$import_value = $normalized;
+			return $normalized;
+		};
+
+		if (is_array($import_value)) {
+
+			$import_value = $normalize_items($import_value);
+
+		}else if (is_object($import_value)) {
+
+			$first_key = array_key_first( (array)$import_value );
+			if ($first_key!==null && strpos($first_key, 'lg-')===0) {
+				// Multi-language object as {"lg-eng": "My value", "lg-spa": "Mi valor"}
+				// Keep it as object so the import tool can iterate languages calling set_data_lang(),
+				// but normalize every lang value into an array of v7 items
+				foreach ($import_value as $lang => $lang_value) {
+					$ar_lang_value = is_array($lang_value)
+						? $lang_value
+						: [$lang_value];
+					$import_value->$lang = $normalize_items($ar_lang_value);
+				}
+			}else{
+				// Single object item as {"value":"x"} or a locator object. Wrap into an array
+				$item = ($is_value_property_model && !property_exists($import_value, 'value'))
+					? (object)['value' => $import_value]
+					: $import_value;
+				$import_value = [$item];
+			}
 		}
 
-		// Convert objects to arrays to ensure compatibility with set_data_lang()
-		$response->result = is_object($import_value) ? (array)$import_value : $import_value;
+		$response->result = $import_value;
 		$response->msg = 'OK';
 
 		return $response;
