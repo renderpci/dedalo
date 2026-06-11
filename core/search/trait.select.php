@@ -69,6 +69,24 @@ trait select {
 				continue;
 			}
 
+			// Security: $column and $key come from the client SQO and are interpolated
+			// verbatim ($column as a column identifier, $key as a JSONB key inside quotes),
+			// neither of which can be parameterized. Validate before use and skip on failure.
+			if( !search::is_valid_data_column((string)$column) ){
+				debug_log(__METHOD__
+					." Skipped select with invalid column: " . to_string($column)
+					, logger::ERROR
+				);
+				continue;
+			}
+			if( !empty($key) && !search::is_valid_tipo((string)$key) ){
+				debug_log(__METHOD__
+					." Skipped select with invalid key (not a tipo): " . to_string($key)
+					, logger::ERROR
+				);
+				continue;
+			}
+
 			// Create the select for every column
 			// if the definition has key (as ontology tipo) it will be added
 			$sentence = $this->main_section_tipo_alias.'.'.$column; // matrix.section_id

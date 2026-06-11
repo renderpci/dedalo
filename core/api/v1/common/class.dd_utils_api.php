@@ -263,6 +263,11 @@ final class dd_utils_api {
 				? json_handler::decode($options)
 				: $options;
 
+		// SQO security scrub. This endpoint takes the SQO from $rqo->options (not $rqo->sqo),
+		// so it is not covered by the API ingress scrub in index.php. Strip server-only fields
+		// before the client SQO reaches the search pipeline. @see search_query_object::sanitize_client_sqo
+			$sqo = search_query_object::sanitize_client_sqo($sqo);
+
 		// search if not empty
 			if (!empty($sqo)) {
 

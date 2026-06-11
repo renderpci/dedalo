@@ -175,6 +175,19 @@ $rqo->dd_api = $rqo->dd_api ?? 'dd_core_api';
 
 
 
+// SQO security scrub. The HTTP API is the only untrusted SQO source: strip server-only
+// fields (sentence/params/column_sql/table aliases), force parsed=false and coerce
+// limit/offset/total before the SQO reaches the search pipeline.
+// @see search_query_object::sanitize_client_sqo
+if (isset($rqo->sqo)) {
+	$rqo->sqo = search_query_object::sanitize_client_sqo($rqo->sqo);
+}
+if (isset($rqo->options->sqo)) {
+	$rqo->options->sqo = search_query_object::sanitize_client_sqo($rqo->options->sqo);
+}
+
+
+
 // Performance checkpoint: request parsed
 if ($perf_active) {
 	$perf_monitor->checkpoint('request_parsed');
