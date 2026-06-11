@@ -150,6 +150,10 @@ class tools_register {
 			$result   = self::process_tool_directory($current_dir_tool, $basename, $counter);
 
 			if ($result->skipped) {
+				// keep the failure visible in the import report when available
+				if ($result->file_info) {
+					$info_file_processed[] = $result->file_info;
+				}
 				continue;
 			}
 
@@ -260,12 +264,43 @@ class tools_register {
 		$info_object = json_handler::decode(file_get_contents($info_file));
 		if (!$info_object) {
 			debug_log(__METHOD__ . " ERROR. Invalid register.json in: $current_dir_tool", logger::ERROR);
-			$result->skipped = true;
+			$result->skipped	= true;
+			$result->file_info	= (object)[
+				'dir'      => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
+				'name'     => $basename,
+				'version'  => null,
+				'imported' => false,
+				'errors'   => ['Invalid register.json: file is not valid JSON']
+			];
 			return $result;
 		}
 
-		// Handle legacy v6 data format if present
-		$new_info_object = self::convert_register_v6_to_v7(clone $info_object);
+		// Format detection and normalization to the column-keyed v7 section data object:
+		// - legacy v6 matrix dump: top-level 'components'/'relations' keys
+		// - v7 authoring format: top-level 'name' key (see register.schema.json)
+		// - already column-keyed: passed through
+		$new_info_object = (isset($info_object->name) && !isset($info_object->components) && !isset($info_object->data))
+			? self::convert_register_authoring_to_v7($info_object)
+			: self::convert_register_v6_to_v7(clone $info_object);
+
+		// Validate the converted object (one gate for every input format)
+		$validation_errors = self::validate_register($new_info_object, $basename);
+		if (!empty($validation_errors)) {
+			debug_log(__METHOD__
+				. " ERROR. Invalid tool registration for '$basename': " . PHP_EOL
+				. implode(PHP_EOL, $validation_errors)
+				, logger::ERROR
+			);
+			$result->skipped	= true;
+			$result->file_info	= (object)[
+				'dir'      => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
+				'name'     => $basename,
+				'version'  => null,
+				'imported' => false,
+				'errors'   => $validation_errors
+			];
+			return $result;
+		}
 
 		// Local helper for value extraction
 		$get_val = function(object $obj, string $tipo) {
@@ -1064,6 +1099,300 @@ class tools_register {
 
 		return ($result !== false);
 	}
+
+
+	/**
+	 * CONVERT_REGISTER_AUTHORING_TO_V7
+	 *
+	 * Converts the hand-authorable v7 register.json format (flat keys: name,
+	 * version, label, ...; see tools/tool_common/register.schema.json) into the
+	 * column-keyed section data object that update_tool_registry_sections()
+	 * persists — the same shape convert_register_v6_to_v7() emits.
+	 *
+	 * Defaults applied: active=true, show_in_*=false, require_translatable=false,
+	 * always_active=false, affected_tipos=[]. A single-language label is enough;
+	 * the client resolves labels with language fallback.
+	 *
+	 * @param object $json Decoded authoring register.json
+	 * @return object Column-keyed section data object
+	 */
+	public static function convert_register_authoring_to_v7(object $json) : object {
+
+		// base section data object. All standard columns present (update_tool_registry_sections
+		// requires 'data' and 'relation' to be set)
+			$out = (object)[
+				'label'				=> $json->name ?? '',
+				'section_id'		=> null,
+				'section_tipo'		=> DEDALO_REGISTER_TOOLS_SECTION_TIPO,
+				'data'				=> new stdClass(),
+				'relation_search'	=> new stdClass(),
+				'relation'			=> new stdClass(),
+				'string'			=> new stdClass(),
+				'date'				=> new stdClass(),
+				'number'			=> new stdClass(),
+				'geo'				=> new stdClass(),
+				'media'				=> new stdClass(),
+				'iri'				=> new stdClass(),
+				'misc'				=> new stdClass(),
+				'meta'				=> new stdClass()
+			];
+
+		// helper. Assign component items to its resolved column + meta counter
+			$set_component = function(string $tipo, array $items) use ($out) : void {
+				if (empty($items)) {
+					return;
+				}
+				$model	= ontology_node::get_model_by_tipo($tipo, true);
+				$column	= section_record_data::get_column_name($model);
+				$out->{$column}->{$tipo}	= $items;
+				$out->meta->{$tipo}			= [(object)['count' => count($items)]];
+			};
+
+		// helper. Non-translatable string value
+			$string_items = function(?string $value) : array {
+				return ($value===null || $value==='')
+					? []
+					: [(object)['value' => $value, 'id' => 1, 'lang' => DEDALO_DATA_NOLAN]];
+			};
+
+		// helper. Translatable string values from a {lg-xxx: text} object
+			$lang_string_items = function(?object $values) : array {
+				$items = [];
+				if (is_object($values)) {
+					foreach ((array)$values as $lang => $value) {
+						if (is_string($value) && $value!=='') {
+							$items[] = (object)['value' => $value, 'id' => 1, 'lang' => $lang];
+						}
+					}
+				}
+				return $items;
+			};
+
+		// helper. JSON (misc) component value
+			$json_items = function(mixed $value) : array {
+				return ($value===null)
+					? []
+					: [(object)['value' => $value, 'id' => 1]];
+			};
+
+		// helper. Boolean as dd64 (Yes/No) relation locator. section_id 1=yes, 2=no
+			$bool_items = function(string $tipo, bool $value) : array {
+				return [(object)[
+					'type'					=> 'dd151',
+					'section_id'			=> $value===true ? '1' : '2',
+					'section_tipo'			=> 'dd64',
+					'from_component_tipo'	=> $tipo,
+					'id'					=> 1
+				]];
+			};
+
+		// identity strings
+			$set_component(tool_ontology_map::TOOL_NAME,			$string_items($json->name ?? null));
+			$set_component(tool_ontology_map::VERSION,				$string_items($json->version ?? null));
+			$set_component(tool_ontology_map::DEDALO_VERSION_MIN,	$string_items($json->dedalo_version_min ?? null));
+			$set_component(tool_ontology_map::DEVELOPER,			$string_items($json->developer ?? null));
+			$set_component(tool_ontology_map::TOOL_LABEL,			$lang_string_items($json->label ?? null));
+			$set_component(tool_ontology_map::DESCRIPTION,			$lang_string_items($json->description ?? null));
+
+		// boolean flags (defaults: active=true, everything else=false)
+			$set_component(tool_ontology_map::ACTIVE,				$bool_items(tool_ontology_map::ACTIVE,				(bool)($json->active ?? true)));
+			$set_component(tool_ontology_map::SHOW_IN_INSPECTOR,	$bool_items(tool_ontology_map::SHOW_IN_INSPECTOR,	(bool)($json->show_in_inspector ?? false)));
+			$set_component(tool_ontology_map::SHOW_IN_COMPONENT,	$bool_items(tool_ontology_map::SHOW_IN_COMPONENT,	(bool)($json->show_in_component ?? false)));
+			$set_component(tool_ontology_map::REQUIRE_TRANSLATABLE,$bool_items(tool_ontology_map::REQUIRE_TRANSLATABLE,(bool)($json->require_translatable ?? false)));
+			$set_component(tool_ontology_map::ALWAYS_ACTIVE,		$bool_items(tool_ontology_map::ALWAYS_ACTIVE,		(bool)($json->always_active ?? false)));
+
+		// affected models: names resolved against the models section (dd1342)
+			$affected_models = array_values(array_filter((array)($json->affected_models ?? []), 'is_string'));
+			if (!empty($affected_models)) {
+				$locators = self::resolve_affected_model_locators($affected_models);
+				$set_component(tool_ontology_map::AFFECTED_MODELS, $locators);
+			}
+
+		// JSON components (defaults: affected_tipos=[])
+			$set_component(tool_ontology_map::AFFECTED_TIPOS,	$json_items($json->affected_tipos ?? []));
+			$set_component(tool_ontology_map::PROPERTIES,		$json_items($json->properties ?? null));
+			$set_component(tool_ontology_map::LABELS,			$json_items($json->labels ?? null));
+			$set_component(tool_ontology_map::ONTOLOGY,			$json_items($json->ontology ?? null));
+			$set_component(tool_ontology_map::CONFIG,			$json_items($json->config ?? null));
+			$set_component(tool_ontology_map::DEFAULT_CONFIG,	$json_items($json->default_config ?? null));
+
+		return $out;
+	}//end convert_register_authoring_to_v7
+
+
+
+	/**
+	 * RESOLVE_AFFECTED_MODEL_LOCATORS
+	 *
+	 * Resolves component/section model names (e.g. 'component_input_text') to
+	 * relation locators pointing at the models section (dd1342), as stored in
+	 * the affected models component (dd1330).
+	 *
+	 * @param string[] $model_names
+	 * @return object[] Locators. Unresolvable names are skipped with an ERROR log.
+	 */
+	public static function resolve_affected_model_locators(array $model_names) : array {
+
+		$models_section_tipo	= 'dd1342';
+		$model_name_tipo		= 'dd1345';
+
+		$locators	= [];
+		$id			= 1;
+		foreach ($model_names as $model_name) {
+
+			$sqo_data = (object)[
+				'section_tipo'	=> [$models_section_tipo],
+				'filter'		=> (object)[
+					'$and' => [
+						(object)[
+							'q'				=> [$model_name],
+							'q_operator'	=> '=',
+							'path'			=> [
+								(object)[
+									'section_tipo'		=> $models_section_tipo,
+									'component_tipo'	=> $model_name_tipo,
+									'model'				=> 'component_input_text',
+									'name'				=> 'Name'
+								]
+							],
+							'type' => 'jsonb'
+						]
+					]
+				],
+				'select'		=> [],
+				'limit'			=> 1,
+				'full_count'	=> false
+			];
+			$sqo	= new search_query_object($sqo_data);
+			$search	= search::get_instance($sqo);
+			$result	= $search->search();
+			$row	= $result ? $result->fetch_one() : false;
+
+			if (empty($row->section_id)) {
+				debug_log(__METHOD__
+					. " Unresolvable affected model name: '$model_name'. Skipped."
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$locators[] = (object)[
+				'type'					=> 'dd151',
+				'section_id'			=> (string)$row->section_id,
+				'section_tipo'			=> $models_section_tipo,
+				'from_component_tipo'	=> tool_ontology_map::AFFECTED_MODELS,
+				'id'					=> $id++
+			];
+		}
+
+		return $locators;
+	}//end resolve_affected_model_locators
+
+
+
+	/**
+	 * VALIDATE_REGISTER
+	 *
+	 * Validates a CONVERTED (column-keyed) tool registration object, so one
+	 * gate covers v6, v7-authoring and pass-through inputs. Mirror of the
+	 * editor-facing JSON Schema (tools/tool_common/register.schema.json):
+	 * keep both in sync when adding rules.
+	 *
+	 * @param object $info_object Column-keyed section data object
+	 * @param string $basename Tool directory basename; must equal the tool name
+	 * @return string[] Error messages. Empty array = valid.
+	 */
+	public static function validate_register(object $info_object, string $basename) : array {
+
+		$errors = [];
+
+		// helper. Read all items of a component tipo
+			$get_items = function(string $tipo) use ($info_object) : ?array {
+				$model	= ontology_node::get_model_by_tipo($tipo, true);
+				$column	= section_record_data::get_column_name($model);
+				$items	= $info_object->{$column}->{$tipo} ?? null;
+				return is_array($items) ? $items : null;
+			};
+
+		// structure: required columns
+			if (!isset($info_object->data) || !isset($info_object->relation)) {
+				$errors[] = "Invalid structure: missing 'data'/'relation' columns after conversion";
+				return $errors; // unusable; stop here
+			}
+
+		// name
+			$name = $get_items(tool_ontology_map::TOOL_NAME)[0]->value ?? null;
+			if (empty($name) || !is_string($name)) {
+				$errors[] = "Missing required 'name' (tool name, component ".tool_ontology_map::TOOL_NAME.")";
+			} else {
+				if (preg_match('/^tool_[a-z0-9_]+$/', $name) !== 1) {
+					$errors[] = "Invalid tool name '$name': must match ^tool_[a-z0-9_]+$ (snake_case, ASCII)";
+				}
+				if ($name !== $basename) {
+					$errors[] = "Tool name '$name' does not match its directory name '$basename'";
+				}
+			}
+
+		// version
+			$version = $get_items(tool_ontology_map::VERSION)[0]->value ?? null;
+			if (empty($version) || !is_string($version)) {
+				$errors[] = "Missing required 'version'";
+			} elseif (preg_match('/^\d+\.\d+(\.\d+)?([.-][0-9A-Za-z.]+)?$/', $version) !== 1) {
+				$errors[] = "Invalid version '$version': expected semantic version like 1.0.0";
+			}
+
+		// label: at least one language with non-empty value
+			$label_items	= $get_items(tool_ontology_map::TOOL_LABEL) ?? [];
+			$valid_label	= array_find($label_items, function($item) {
+				return is_object($item) && !empty($item->value) && is_string($item->value);
+			});
+			if ($valid_label === null) {
+				$errors[] = "Missing required 'label': at least one language label is required";
+			}
+
+		// JSON components: items must carry a 'value' property when present
+			$json_tipos = [
+				'ontology'			=> tool_ontology_map::ONTOLOGY,
+				'properties'		=> tool_ontology_map::PROPERTIES,
+				'labels'			=> tool_ontology_map::LABELS,
+				'config'			=> tool_ontology_map::CONFIG,
+				'default_config'	=> tool_ontology_map::DEFAULT_CONFIG,
+				'affected_tipos'	=> tool_ontology_map::AFFECTED_TIPOS
+			];
+			foreach ($json_tipos as $field => $tipo) {
+				$items = $get_items($tipo);
+				if ($items === null) {
+					continue; // not present: fine
+				}
+				foreach ($items as $item) {
+					if (!is_object($item) || !property_exists($item, 'value')) {
+						$errors[] = "Invalid '$field' (component $tipo): items must be objects carrying a 'value'";
+						break;
+					}
+				}
+			}
+
+		// relation components: locator sanity when present
+			$relation_tipos = [
+				'affected_models'	=> tool_ontology_map::AFFECTED_MODELS,
+				'active'			=> tool_ontology_map::ACTIVE
+			];
+			foreach ($relation_tipos as $field => $tipo) {
+				$items = $get_items($tipo);
+				if ($items === null) {
+					continue;
+				}
+				foreach ($items as $item) {
+					if (!is_object($item) || empty($item->section_tipo) || !isset($item->section_id)) {
+						$errors[] = "Invalid '$field' (component $tipo): items must be locators with section_tipo/section_id";
+						break;
+					}
+				}
+			}
+
+		return $errors;
+	}//end validate_register
+
 
 
 	/**
