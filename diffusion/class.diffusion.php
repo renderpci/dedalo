@@ -106,7 +106,7 @@ abstract class diffusion  {
 				foreach ($ar_children as $current_children) {
 
 					$ontology_node	= ontology_node::get_instance($current_children);
-					$properties		= $ontology_node->get_propiedades(true);
+					$properties		= $ontology_node->get_properties(true);
 					if (!empty($properties) && property_exists($properties->diffusion, 'class_name') && $properties->diffusion->class_name===$caller_class_name) {
 						return (string)$current_children;
 					}
@@ -220,7 +220,7 @@ abstract class diffusion  {
 			foreach ($ar_diffusion_element_tipo as $diffusion_element_tipo) {
 
 				$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
-				$properties		= $ontology_node->get_propiedades(true);
+				$properties		= $ontology_node->get_properties(true);
 
 				// class name. Class handler to current diffusion element (e.g. diffusion_mysql, diffusion_rdf, diffusion_xml, ..)
 				$diffusion_class_name = isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : null;
@@ -323,54 +323,22 @@ abstract class diffusion  {
 	public static function get_connection_status( object $item ) : ?object {
 
 		$connection_status = null;
-		$conn = null;
 
 		switch ($item->class_name) {
 
 			case 'diffusion_mysql':
-				// check connection
-				try {
-
-					if ($conn===null || $conn===false) {
-						// try again. Note that if there are multiple connections, they must be checked for each database.
-						$conn = DBi::_getConnection_mysql(
-							MYSQL_DEDALO_HOSTNAME_CONN,
-							MYSQL_DEDALO_USERNAME_CONN,
-							MYSQL_DEDALO_PASSWORD_CONN,
-							$item->database_name,
-							MYSQL_DEDALO_DB_PORT_CONN,
-							MYSQL_DEDALO_SOCKET_CONN
-						);
-					}
-
-				} catch (Exception $e) {
-					$conn = false;
-					debug_log(__METHOD__
-						."  Caught exception on connect to MySQL (database_name: $item->database_name): ". PHP_EOL
-						. $e->getMessage()
-						, logger::WARNING
-					);
-				}
-				if ($conn===false) {
-					$connection_status = (object)[
+				// MariaDB checks are a Bun engine responsibility: a single
+				// 'check_database' call covers server reachability + existence
+				$db_available = diffusion_utils::database_exits($item->database_name);
+				$connection_status = $db_available===true
+					? (object)[
+						'result'	=> true,
+						'msg'		=> 'Database is ready.'
+					]
+					: (object)[
 						'result'	=> false,
-						'msg'		=> 'Unable to connect to database '. $item->database_name
+						'msg'		=> 'Database is NOT ready (missing or engine unreachable).'
 					];
-				}else{
-					// check database
-					$db_available = diffusion_mysql::database_exits($item->database_name);
-					if ($db_available===true) {
-						$connection_status = (object)[
-							'result'	=> true,
-							'msg'		=> 'Database is ready.'
-						];
-					}else{
-						$connection_status = (object)[
-							'result'	=> false,
-							'msg'		=> 'Database is NOT ready.'
-						];
-					}
-				}
 				// error log when fails
 					if ($connection_status->result===false) {
 						debug_log(__METHOD__
@@ -682,7 +650,7 @@ abstract class diffusion  {
 
 		// Diffusion element (current column/field)
 			$diffusion_term		= ontology_node::get_instance($tipo);
-			$properties			= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+			$properties			= $diffusion_term->get_properties(true);	# Format: {"data_to_be_used": "dato"}
 			// $diffusion_model	= ontology_node::get_model_by_tipo($tipo,true);
 
 		// Component
@@ -879,45 +847,8 @@ abstract class diffusion  {
 	*/
 	public static function get_table_fields(string $diffusion_element_tipo, string $section_tipo) : array {
 
-		$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
-
-		// table
-		$table = $diffusion_element_tables_map->{$section_tipo}->table ?? null;
-		if (!$table) {
-			debug_log(__METHOD__
-				. " No table available for this section " . PHP_EOL
-				. ' section_tipo: ' . to_string($section_tipo)
-				, logger::WARNING
-			);
-			return [];
-		}
-
-		$ontology_node 	   = ontology_node::get_instance($table);
-		$ar_table_children = $ontology_node->get_ar_children_of_this();
-
-		// Add children from table alias
-		$table_alias_tipo = $diffusion_element_tables_map->{$section_tipo}->from_alias ?? null;
-		if (!empty($table_alias_tipo)) {
-
-			$ontology_node_alias 	 = ontology_node::get_instance($table_alias_tipo);
-			$ar_table_alias_children = $ontology_node_alias->get_ar_children_of_this();
-
-			// Merge all
-			$ar_table_children = array_merge($ar_table_children, $ar_table_alias_children);
-		}
-
-		$ar_table_fields = [];
-		foreach ($ar_table_children as $tipo) {
-
-			$item = new stdClass();
-				$item->tipo 	= $tipo;
-				$item->label 	= ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true);
-
-			$ar_table_fields[] = $item;
-		}
-
-
-		return $ar_table_fields;
+		// v7: resolved from the flat virtual diffusion tree
+		return diffusion_utils::get_table_fields($diffusion_element_tipo, $section_tipo);
 	}//end get_table_fields
 
 
@@ -931,11 +862,8 @@ abstract class diffusion  {
 	*/
 	public static function get_table_tipo( string $diffusion_element_tipo, string $section_tipo ) : ?string {
 
-		$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
-
-		$table_tipo = $diffusion_element_tables_map->{$section_tipo}->table ?? null;
-
-		return $table_tipo;
+		// v7: resolved from the flat virtual diffusion tree (alias tipo preferred)
+		return diffusion_utils::get_table_tipo($diffusion_element_tipo, $section_tipo);
 	}//end get_table_tipo
 
 
@@ -949,7 +877,7 @@ abstract class diffusion  {
 	*/
 	public static function get_table_name( string $diffusion_element_tipo, string $section_tipo ) : ?string {
 
-		$table_tipo = diffusion_sql::get_table_tipo( $diffusion_element_tipo, $section_tipo );
+		$table_tipo = diffusion_utils::get_table_tipo( $diffusion_element_tipo, $section_tipo );
 
 		$table_name = !empty($table_tipo)
 			? ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true)
@@ -1224,171 +1152,17 @@ abstract class diffusion  {
 
 	/**
 	* DELETE_RECORD
+	* v6 compatibility shim. The v7 implementation lives in diffusion_delete,
+	* which resolves targets from the ontology and propagates the deletion to
+	* every diffusion type (SQL via the Bun engine, RDF files, ...).
+	* @see diffusion_delete::delete_record
 	* @param string $section_tipo
 	* @param string|int $section_id
 	* @return object $response
 	*/
 	public static function delete_record(string $section_tipo, string|int $section_id) : object {
 
-		$response = new stdClass();
-			$response->result		= false;
-			$response->msg			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
-			$response->ar_deleted	= [];
-
-		$ar_diffusion_element = self::get_ar_diffusion_map_elements();
-		foreach ($ar_diffusion_element as $diffusion_element) {
-
-			$diffusion_element_tipo	= $diffusion_element->element_tipo;
-			$class_name				= $diffusion_element->class_name;
-
-			switch ($class_name) {
-				case 'diffusion_mysql':
-
-					$database_name = $diffusion_element->database_name;
-
-					$table_name = false;
-
-					// table real
-						$ar_tables_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
-							$diffusion_element_tipo,
-							'table',
-							'children_recursive',
-							true
-						);
-						foreach ($ar_tables_tipo as $table_tipo) {
-							$ar_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
-								$table_tipo,
-								'section',
-								'related',
-								true
-							);
-							if (!isset($ar_section_tipo[0])) {
-								debug_log(__METHOD__." Error. Diffusion section without section relation (1). Please fix this ASAP. Table tipo: ".to_string($table_tipo)." - name: ".ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true), logger::ERROR);
-								continue;
-							}
-
-							$current_section_tipo = $ar_section_tipo[0];
-							if ($current_section_tipo===$section_tipo) {
-								// matched . delete record in current table
-								$table_name = ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true);
-								break; // stop loop
-							}
-						}
-
-					// table alias
-						if ($table_name===false) {
-
-							$ar_tables_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
-								$diffusion_element_tipo,
-								'table_alias',
-								'children_recursive',
-								true
-							);
-							foreach ($ar_tables_tipo as $table_tipo) {
-
-								// direct relation case (used mainly in thesaurus tables)
-									$ar_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
-										$table_tipo,
-										'section',
-										'related',
-										true
-									);
-									if (empty($ar_section_tipo)) {
-										// try to search section in target table
-											$real_table_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
-												$table_tipo,
-												'table',
-												'related',
-												true
-											);
-											if (!empty($real_table_tipo)) {
-												$real_table_tipo = reset($real_table_tipo);
-												$ar_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
-													$real_table_tipo,
-													'section',
-													'related',
-													true
-												);
-											}
-									}
-									if (!isset($ar_section_tipo[0])) {
-										debug_log(__METHOD__." Error. Diffusion section without section relation (2). Please fix this ASAP. Table tipo: ".to_string($table_tipo)." - name: ".ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true), logger::ERROR);
-										continue;
-									}
-
-									$current_section_tipo = $ar_section_tipo[0];
-									if ($current_section_tipo===$section_tipo) {
-										// matched . delete record in current table
-										$table_name = ontology_node::get_term_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true);
-										break; // stop loop
-									}
-							}
-						}
-
-					// delete
-						if ($table_name!==false) {
-							include_once(DEDALO_DIFFUSION_PATH . '/class.'.$class_name.'.php');
-							$result = (bool)diffusion_sql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo);
-							if ($result===true) {
-								$response->result		= true;
-								$response->msg			= "Deleted record successfully ($table_name - $section_id) in db $database_name (all langs)";
-								$response->ar_deleted[]	= (object)[
-									"section_id"				=> $section_id,
-									"section_tipo"				=> $section_tipo,
-									"database_name"				=> $database_name,
-									"table_name"				=> $table_name,
-									"diffusion_element_tipo"	=> $diffusion_element_tipo,
-									"class_name"				=> $class_name
-								];
-								debug_log(__METHOD__
-									. " Record successfully deleted (all langs) " . PHP_EOL
-									. ' table_name: ' . $table_name . PHP_EOL
-									. ' database_name: ' . $database_name . PHP_EOL
-									. ' section_tipo: ' . $section_tipo . PHP_EOL
-									. ' section_id: ' . $section_id . PHP_EOL
-									. ' class_name: ' . $class_name . PHP_EOL
-									, logger::WARNING
-								);
-							}else{
-								$response->msg = "Unable to delete record ($table_name - $section_id). Maybe the record do not exists in MySQL db: '$database_name' table: '$table_name' ";
-								debug_log(__METHOD__
-									. " $response->msg " . PHP_EOL
-									. ' table_name: ' . $table_name . PHP_EOL
-									. ' database_name: ' . $database_name . PHP_EOL
-									. ' section_tipo: ' . $section_tipo . PHP_EOL
-									. ' section_id: ' . $section_id . PHP_EOL
-									. ' class_name: ' . $class_name . PHP_EOL
-									, logger::WARNING
-								);
-							}
-						}
-					break;
-
-				case 'diffusion_rdf':
-					$response->result	= true;
-					$response->msg		= __METHOD__ . ' Ignored delete_record call for diffusion_rdf. Class diffusion_rdf do not provide delete feature';
-					break;
-
-				default:
-					debug_log(__METHOD__
-						." WARNING. Ignored delete_record for class (name not defined for delete) " . PHP_EOL
-						. ' class_name: ' . $class_name
-						, logger::WARNING
-					);
-					break;
-
-			}//end switch ($class_name)
-		}//end foreach ($ar_diffusion_element as $diffusion_element)
-
-		// debug
-			debug_log(__METHOD__
-				." Delete response: " . PHP_EOL
-				. json_encode($response, JSON_PRETTY_PRINT)
-				, logger::DEBUG
-			);
-
-
-		return $response;
+		return diffusion_delete::delete_record($section_tipo, $section_id);
 	}//end delete_record
 
 
@@ -1669,38 +1443,27 @@ abstract class diffusion  {
 
 
 		$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
-		$propiedades	= $ontology_node->get_propiedades(true);
-		$schema_obj		= (is_object($propiedades) && isset($propiedades->publication_schema))
-			? $propiedades->publication_schema
+		$properties		= $ontology_node->get_properties(true);
+		$schema_obj		= (is_object($properties) && isset($properties->publication_schema))
+			? $properties->publication_schema
 			: false;
 
-		// no propiedades configured case
+		// no properties configured case
 			if (empty($schema_obj)) {
 				return $response;
 			}
 
-		$class_name = isset($propiedades->diffusion->class_name) ? $propiedades->diffusion->class_name : false;
+		$class_name = isset($properties->diffusion->class_name) ? $properties->diffusion->class_name : false;
 
 		switch ($class_name) {
 			case 'diffusion_mysql':
-				// databases
-				$databases = ontology_node::get_ar_tipo_by_model_and_relation(
-					$diffusion_element_tipo, // string tipo
-					'database', // string modelo_name
-					'children', // string relation_type
-					false // bool search_exact switch between 'database' or contains 'database' like 'database_alias'
-				);
-				if (isset($databases[0])) {
-					// Loads parent class diffusion
-					// include_once(DEDALO_LIB_BASE_PATH . '/diffusion/class.'.$class_name.'.php');
-					// get_term_by_tipo($tipo, $lang=NULL, $from_cache=false, $fallback=true)
-					$database_name	= ontology_node::get_term_by_tipo($databases[0]);
-
-					// save_table_schema. Use save_table_schema response as this method response
-					$response = (object)diffusion_sql::save_table_schema( $database_name, $schema_obj );
-				}else{
-					$response->msg .= " Database not found in structure for diffusion element: '$diffusion_element_tipo' ";
-				}
+				// v6 schema publication (diffusion_sql::save_table_schema) was removed in v7:
+				// the Bun diffusion engine creates and alters target tables automatically
+				// at publish time from the ontology context (see diffusion/api/v1/lib/sql_generator.ts)
+				$response->result	= true;
+				$response->msg		= "Ignored publication_schema for class_name: '$class_name'. "
+					. "v7 diffusion engine manages table schemas automatically at publish time.";
+				debug_log(__METHOD__ .' '. $response->msg, logger::WARNING);
 				break;
 
 			default:
