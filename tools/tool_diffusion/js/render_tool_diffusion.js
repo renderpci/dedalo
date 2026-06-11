@@ -90,6 +90,58 @@ const get_content_data = async function(self) {
 			parent			: bun_status_node
 		})
 
+	// pending_deletions
+		// Deletions that could not reach one or more diffusion targets when the
+		// record was deleted in the work system (Bun/target down). Loaded async;
+		// shows a retry button when pending rows exist.
+		const pending_deletions_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'pending_deletions hide',
+			parent			: fragment
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			text_content	: self.get_tool_label('pending_deletions') || 'Pending deletions',
+			parent			: pending_deletions_node
+		})
+		const pending_deletions_value = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'value',
+			parent			: pending_deletions_node
+		})
+		const pending_deletions_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'retry_pending_deletions light',
+			text_content	: self.get_tool_label('retry') || 'Retry',
+			parent			: pending_deletions_node
+		})
+		const refresh_pending_deletions = function() {
+			self.retry_pending_deletions({count_only: true})
+			.then(function(response){
+				const pending = response.result?.pending ?? 0
+				if (pending > 0) {
+					pending_deletions_value.textContent = pending
+					pending_deletions_node.classList.remove('hide')
+				}else{
+					pending_deletions_node.classList.add('hide')
+				}
+			})
+		}
+		pending_deletions_button.addEventListener('click', function(e) {
+			e.preventDefault()
+			pending_deletions_button.disabled = true
+			self.retry_pending_deletions({})
+			.then(function(response){
+				pending_deletions_button.disabled = false
+				if (response.msg) {
+					pending_deletions_value.textContent = response.msg
+				}
+				refresh_pending_deletions()
+			})
+		})
+		refresh_pending_deletions()
+
 	// section_info
 		const section_info = ui.create_dom_element({
 			element_type	: 'div',

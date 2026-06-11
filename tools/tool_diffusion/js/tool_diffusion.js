@@ -339,4 +339,53 @@ tool_diffusion.prototype.get_diffusion_status = function(options) {
 
 
 
+/**
+* RETRY_PENDING_DELETIONS
+* Retries delete propagation for records whose deletion could not reach one or
+* more diffusion targets (dd1758 rows with action=unpublish_pending).
+* With options.count_only=true only returns the pending count (badge display).
+* Routed through the Bun API as a pass-through to PHP dd_diffusion_api.
+* @param object options
+* 	{count_only?: bool, limit?: int}
+* @return promise
+*/
+tool_diffusion.prototype.retry_pending_deletions = function(options={}) {
+
+	const self = this
+
+	// source
+		const source = create_source(self, 'retry_pending_deletions')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_diffusion_api',
+			action	: 'retry_pending_deletions',
+			source	: source,
+			options : {
+				count_only	: options.count_only || false,
+				limit		: options.limit || 100
+			}
+		}
+
+	// call to Bun API (pass-through to PHP)
+		return new Promise(function(resolve){
+			data_manager.request({
+				url		: typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
+				body	: rqo
+			})
+			.then(function(response){
+				if(SHOW_DEBUG===true) {
+					console.log('-> retry_pending_deletions API response:', response);
+				}
+				resolve(response)
+			})
+			.catch(function(err){
+				console.error('retry_pending_deletions error:', err)
+				resolve({ result: false, msg: err.message || 'Bun unreachable' })
+			})
+		})
+}//end retry_pending_deletions
+
+
+
 // @license-end
