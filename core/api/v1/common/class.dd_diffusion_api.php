@@ -111,6 +111,7 @@ class dd_diffusion_api {
 			// 0. Reset caches for this request
 			diffusion_chain_processor::reset_cache();
 			diffusion_activity_logger::reset_cache();
+			diffusion_utils::reset_cache();
 			self::$datum = [];
 			self::$datum_unresolved = [];
 			self::$publishable_overrides = [];
@@ -143,16 +144,6 @@ class dd_diffusion_api {
 			}
 
 			// =====================================================
-			// BUILD LANGS
-			// =====================================================
-			$langs = self::build_langs();
-
-			// =====================================================
-			// BUILD MAIN (hierarchy UP to diffusion_domain)
-			// =====================================================
-			$main = self::build_main_hierarchy($diffusion_tipo);
-
-			// =====================================================
 			// BUILD DATUM (one object per section)
 			// =====================================================
 
@@ -165,13 +156,20 @@ class dd_diffusion_api {
 			$diffusion_type = $diffusion_elem_props->diffusion->type ?? null;
 
 			if ($diffusion_type === 'rdf') {
-				// Build langs and main hierarchy before early RDF dispatch
+				// RDF early dispatch: langs + main hierarchy rooted at the diffusion element
 				$langs = self::build_langs();
 				$main  = self::build_main_hierarchy($diffusion_element_tipo);
 				$response = self::diffuse_rdf($diffusion_element_tipo, $main_section_tipo, $db_result, $langs, $main, $options);
-				dump($response, 'response +//////------>');
 				return $response;
 			}
+
+			// =====================================================
+			// BUILD LANGS + MAIN (hierarchy UP to diffusion_domain)
+			// computed after the type dispatch: the RDF branch builds
+			// its own, rooted at the diffusion element
+			// =====================================================
+			$langs = self::build_langs();
+			$main  = self::build_main_hierarchy($diffusion_tipo);
 
 			// Store SQO filter to scope datum entries to only matching records
 			self::$sqo_filter_by_locators = $sqo_data->filter_by_locators ?? null;
@@ -206,9 +204,11 @@ class dd_diffusion_api {
 					}
 				}
 
-				if(SHOW_DEBUG) {
-					dump($diffusion_tipo, "Processing unresolved datum batch [Level: $current_level] -> " . count($unique_locators) . ' locators');
-				}
+				debug_log(__METHOD__
+					. " Processing unresolved datum batch [Level: $current_level] -> " . count($unique_locators) . ' locators' . PHP_EOL
+					. ' diffusion_tipo: ' . $diffusion_tipo
+					, logger::DEBUG
+				);
 
 				self::process_datum($diffusion_tipo, $unique_locators, $current_level, $options);
 			}
@@ -227,8 +227,6 @@ class dd_diffusion_api {
 			$response->errors[] = $e->getMessage();
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
 		}
-
-		dump($response, 'response +//////');
 
 		return $response;
 	}
@@ -313,15 +311,169 @@ class dd_diffusion_api {
 
 	/**
 	 * VALIDATE
-	 * Validates the diffusion configuration for a given node.
+	 * Validates the diffusion ontology configuration against the flat virtual
+	 * diffusion tree. Checks one element (options.diffusion_element_tipo) or
+	 * every element of the diffusion domain when omitted.
+	 *
+	 * Per-element checks:
+	 *  - element resolvable as diffusion_element / diffusion_element_alias
+	 *  - properties->diffusion->type defined and in the known set
+	 *  - at least one section targeted by the element
+	 *  - sql/socrata: database name resolvable from the virtual tree
+	 *  - rdf: properties->diffusion->service_name defined
+	 *  - field nodes: ddo_map is an array when defined; parser entries carry
+	 *    a non-empty 'class::method' fn string
+	 *
+	 * @param object $rqo {
+	 *   action: "validate",
+	 *   options: { diffusion_element_tipo?: string }
+	 * }
+	 * @return object $response {
+	 *   result: bool, msg: string, errors: array,
+	 *   data: [{element_tipo, label, type, result, checks: [{check, result, msg}]}]
+	 * }
 	 */
 	public static function validate(object $rqo): object {
+
 		$response = new stdClass();
-		$response->result = true;
-		$response->msg = 'Validate mapping... (TBD)';
-		// TODO: Implement thorough validation logic
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// SEC: restrict to global admins (full diffusion configuration disclosure)
+		if (security::is_global_admin(logged_user_id()) !== true) {
+			$response->errors[] = 'insufficient permissions';
+			$response->msg = 'Error. Insufficient permissions to validate diffusion configuration.';
+			return $response;
+		}
+
+		$known_types = ['sql','rdf','xml','socrata'];
+
+		// elements to validate: the requested one or all elements of the domain
+		$requested_element_tipo = $rqo->options->diffusion_element_tipo ?? null;
+		$ar_element_tipo = [];
+		if (!empty($requested_element_tipo)) {
+			$ar_element_tipo[] = $requested_element_tipo;
+		}else{
+			foreach (diffusion_utils::get_ar_diffusion_map_elements() as $map_element) {
+				$ar_element_tipo[] = $map_element->element_tipo;
+			}
+		}
+
+		$data			= [];
+		$invalid_count	= 0;
+
+		foreach ($ar_element_tipo as $element_tipo) {
+
+			$checks = [];
+			$add_check = function(string $check, bool $result, string $msg) use (&$checks) : bool {
+				$checks[] = (object)[
+					'check'		=> $check,
+					'result'	=> $result,
+					'msg'		=> $msg
+				];
+				return $result;
+			};
+
+			// 1. element resolvable
+			$resolved	= diffusion_utils::resolve_node_with_alias($element_tipo);
+			$is_element	= ($resolved->model==='diffusion_element' || $resolved->model==='diffusion_element_alias');
+			$add_check('element_resolvable', $is_element, $is_element
+				? "Element '$element_tipo' resolved (model: {$resolved->model})"
+				: "Tipo '$element_tipo' is not a diffusion_element (model: ".to_string($resolved->model).")"
+			);
+
+			// 2. diffusion type
+			$type = $resolved->properties->diffusion->type ?? null;
+			$add_check('diffusion_type', in_array($type, $known_types, true), in_array($type, $known_types, true)
+				? "Diffusion type: '$type'"
+				: "Missing or unknown properties->diffusion->type: ".to_string($type)." (expected one of: ".implode(', ', $known_types).")"
+			);
+
+			// 3. targeted sections
+			$ar_sections = $is_element
+				? diffusion_utils::get_diffusion_sections_from_diffusion_element($element_tipo)
+				: [];
+			$add_check('target_sections', !empty($ar_sections), !empty($ar_sections)
+				? count($ar_sections) . ' section(s) targeted: ' . implode(', ', $ar_sections)
+				: 'No sections targeted by this element (check table/owl:Class section relations)'
+			);
+
+			// 4. type-specific checks
+			if ($type==='sql' || $type==='socrata') {
+				$database_name = diffusion_utils::get_database_name_for_element($element_tipo);
+				$add_check('database', !empty($database_name), !empty($database_name)
+					? "Database: '$database_name'"
+					: 'Unable to resolve database name (define a database or database_alias child)'
+				);
+			}
+			if ($type==='rdf') {
+				$service_name = $resolved->properties->diffusion->service_name ?? null;
+				$add_check('service_name', !empty($service_name), !empty($service_name)
+					? "Service name: '$service_name'"
+					: 'Missing properties->diffusion->service_name (required for RDF file paths)'
+				);
+			}
+
+			// 5. field nodes: ddo_map shape and parser fn strings
+			foreach ($ar_sections as $section_tipo) {
+				$section_node = diffusion_utils::get_section_node_for_element($element_tipo, $section_tipo);
+				foreach ($section_node->children ?? [] as $child) {
+
+					$child_properties = ontology_node::get_instance($child->tipo)->get_properties();
+					if (empty($child_properties)) {
+						continue;
+					}
+
+					// ddo_map must be an array of objects when defined
+					if (isset($child_properties->process->ddo_map) && !is_array($child_properties->process->ddo_map)) {
+						$add_check('ddo_map', false, "Field '{$child->tipo}' ({$child->label}): process->ddo_map is not an array");
+					}
+
+					// parser entries must carry a 'class::method' fn
+					$parser = $child_properties->process->parser ?? null;
+					if ($parser!==null) {
+						$ar_parser = is_array($parser) ? $parser : [$parser];
+						foreach ($ar_parser as $parser_item) {
+							$fn = is_object($parser_item) ? ($parser_item->fn ?? null) : null;
+							if (empty($fn) || !is_string($fn) || !str_contains($fn, '::')) {
+								$add_check('parser_fn', false, "Field '{$child->tipo}' ({$child->label}): invalid parser fn ".to_string($fn)." (expected 'class::method')");
+							}
+						}
+					}
+				}
+			}
+
+			// element result
+			$element_result = true;
+			foreach ($checks as $check) {
+				if ($check->result===false) {
+					$element_result = false;
+					break;
+				}
+			}
+			if (!$element_result) {
+				$invalid_count++;
+			}
+
+			$data[] = (object)[
+				'element_tipo'	=> $element_tipo,
+				'label'			=> $resolved->label,
+				'type'			=> $type,
+				'result'		=> $element_result,
+				'checks'		=> $checks
+			];
+		}//end foreach ($ar_element_tipo as $element_tipo)
+
+		$response->result	= true;
+		$response->msg		= $invalid_count===0
+			? 'OK. ' . count($data) . ' element(s) validated without issues'
+			: 'Warning. ' . $invalid_count . ' of ' . count($data) . ' element(s) have configuration issues';
+		$response->data		= $data;
+
+
 		return $response;
-	}
+	}//end validate
 
 
 	/**
@@ -570,7 +722,7 @@ class dd_diffusion_api {
 		$combined_ddo_map = [];
 		$context = [];
 		foreach ($ar_children as $node_tipo) {
-			$ddo_map = diffusion_data::get_ddo_map($node_tipo, $main_section_tipo);
+			$ddo_map = diffusion_utils::get_ddo_map($node_tipo, $main_section_tipo);
 			$combined_ddo_map[$node_tipo] = $ddo_map;
 
 			// Build context for each node (field definitions)
