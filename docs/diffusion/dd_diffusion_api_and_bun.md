@@ -985,6 +985,24 @@ triggers: the start of every `diffuse()` run (first chunk only), the CLI helper
 internal token), and the tool_diffusion UI retry button
 (`retry_pending_deletions` API action, admin-gated).
 
+### XML diffusion (revived in v7)
+
+XML mirrors the RDF pattern: `diffuse()` early-dispatches `type: 'xml'` to
+`diffuse_xml()`, which runs `diffusion_xml::update_record` per record:
+
+```
+DEDALO_MEDIA_PATH/xml/{service_name}/{section_tipo}_{section_id}.xml
+```
+
+XML elements require `properties->diffusion->service_name` (the `validate`
+action reports missing ones). Unpublishable records get their file removed
+(`unpublished` logged); record deletion propagates via
+`diffusion_xml::delete_record_file` (canonical + legacy flat `/xml/` variants).
+Legacy timestamped files migrate with
+`diffusion/migration/migrate_xml_filenames.php` (`--dry-run` supported).
+The Bun engine consolidates XML downloads with a generic `merge_xml_parts`
+(the RDF merger is rdf:RDF-specific).
+
 ### RDF deterministic filenames
 
 Each record publishes to ONE canonical file, overwritten on re-publish:

@@ -215,6 +215,30 @@ if ($rdf_config===null) {
 }
 
 // -----------------------------------------------------------------
+// 8. XML deterministic file publish + delete (fabricated id)
+// -----------------------------------------------------------------
+$xml_config = null;
+foreach (diffusion_utils::get_ar_diffusion_map_elements() as $element) {
+	if (($element->type ?? null)!=='xml') continue;
+	$sections = diffusion_utils::get_diffusion_sections_from_diffusion_element($element->element_tipo);
+	foreach ($sections as $section_tipo) {
+		if (diffusion_xml::get_record_file_path($element->element_tipo, $section_tipo, 0)!==null) {
+			$xml_config = (object)['element_tipo' => $element->element_tipo, 'section_tipo' => $section_tipo];
+			break 2;
+		}
+	}
+}
+if ($xml_config===null) {
+	skip('XML deterministic file cycle', 'no fully-configured XML element (service_name) — see validate() report');
+}else{
+	$file_info = diffusion_xml::get_record_file_path($xml_config->element_tipo, $xml_config->section_tipo, $FABRICATED_ID);
+	if (!is_dir(dirname($file_info->file_path))) mkdir(dirname($file_info->file_path), 0777, true);
+	file_put_contents($file_info->file_path, '<records/>');
+	$deleted = diffusion_xml::delete_record_file($xml_config->element_tipo, $xml_config->section_tipo, $FABRICATED_ID);
+	check('XML deterministic file delete', $deleted->result===true && !file_exists($file_info->file_path), $file_info->file_name);
+}
+
+// -----------------------------------------------------------------
 // Summary
 // -----------------------------------------------------------------
 $failed = count(array_filter($results, fn($r) => $r['ok']===false));

@@ -32,7 +32,7 @@ import {
 	cancel_process,
 	is_process_cancelled,
 }                                     from './lib/progress_store';
-import { merge_rdf_parts, create_zip } from './lib/rdf_file_utils';
+import { merge_rdf_parts, merge_xml_parts, create_zip } from './lib/rdf_file_utils';
 import { writeFileSync }              from 'fs';
 import path                           from 'path';
 import type {
@@ -506,7 +506,7 @@ async function run_background_rdf_diffusion(
 
 		const date_tag    = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 		const type_label  = diffusion_type === 'xml' ? 'xml' : 'rdf';
-		const merged_name = `diffusion_${type_label}_merged_${date_tag}.rdf`;
+		const merged_name = `diffusion_${type_label}_merged_${date_tag}.${type_label}`;
 		const zip_name    = `diffusion_${type_label}_${date_tag}.zip`;
 		const merged_path = path.join(DEDALO_MEDIA_PATH + sub_path, merged_name);
 		const zip_path    = path.join(DEDALO_MEDIA_PATH + sub_path, zip_name);
@@ -516,8 +516,10 @@ async function run_background_rdf_diffusion(
 		let consolidated_files: { merged_url: string; zip_url: string } | undefined;
 
 		try {
-			// Merge all raw XML parts into one RDF document
-			const merged_content = merge_rdf_parts(raw_xml_parts);
+			// Merge all raw parts into one consolidated document (type-aware)
+			const merged_content = diffusion_type === 'xml'
+				? merge_xml_parts(raw_xml_parts)
+				: merge_rdf_parts(raw_xml_parts);
 			if (merged_content) {
 				writeFileSync(merged_path, merged_content, 'utf8');
 				// Include the merged file itself in the zip

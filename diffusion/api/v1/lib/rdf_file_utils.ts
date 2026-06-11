@@ -86,6 +86,42 @@ export function merge_rdf_parts(raw_parts: string[]): string {
 
 
 
+/**
+ * MERGE_XML_PARTS
+ * Generic XML consolidation: merges per-record XML documents into one
+ * document under the FIRST part's root element. Each part's children
+ * (everything inside its root element) are concatenated.
+ * Single part is returned untouched; empty input returns ''.
+ */
+export function merge_xml_parts(raw_parts: string[]): string {
+	const non_empty = raw_parts.filter(p => p && p.trim().length > 0);
+	if (non_empty.length === 0) return '';
+	if (non_empty.length === 1) return non_empty[0];
+
+	// root element name from the first part (first tag after the XML declaration)
+	const root_match = non_empty[0].match(/<\?xml[^>]*\?>\s*<([A-Za-z_][\w:.-]*)([^>]*)>/) 
+		?? non_empty[0].match(/^\s*<([A-Za-z_][\w:.-]*)([^>]*)>/);
+	if (!root_match) return non_empty.join('\n');
+
+	const root_name  = root_match[1];
+	const root_attrs = root_match[2] ?? '';
+
+	const inner_blocks = non_empty
+		.map(part => {
+			const open  = part.indexOf('<' + root_name);
+			const open_end = part.indexOf('>', open);
+			const close = part.lastIndexOf('</' + root_name + '>');
+			if (open === -1 || close === -1 || open_end === -1 || close <= open_end) return part.trim();
+			return part.slice(open_end + 1, close).trim();
+		})
+		.filter(block => block.length > 0)
+		.join('\n\n');
+
+	return `<?xml version="1.0" encoding="utf-8"?>\n<${root_name}${root_attrs}>\n\n${inner_blocks}\n\n</${root_name}>\n`;
+}
+
+
+
 // =====================================================
 // ZIP
 // =====================================================

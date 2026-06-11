@@ -39,3 +39,38 @@ describe('merge_rdf_parts', () => {
 		expect(merged.match(/<\/rdf:RDF>/g)?.length).toBe(1);
 	});
 });
+
+import { merge_xml_parts } from '../lib/rdf_file_utils';
+
+const XML_A = `<?xml version="1.0" encoding="utf-8"?>
+<records xmlns="http://example.org/ns">
+  <record id="1"><title>One</title></record>
+</records>`;
+
+const XML_B = `<?xml version="1.0" encoding="utf-8"?>
+<records xmlns="http://example.org/ns">
+  <record id="2"><title>Two</title></record>
+</records>`;
+
+describe('merge_xml_parts', () => {
+
+	test('empty input produces empty string', () => {
+		expect(merge_xml_parts([])).toBe('');
+		expect(merge_xml_parts(['', '  '])).toBe('');
+	});
+
+	test('single part is returned untouched', () => {
+		expect(merge_xml_parts([XML_A])).toBe(XML_A);
+	});
+
+	test('multiple parts merge under the first root (attrs preserved)', () => {
+		const merged = merge_xml_parts([XML_A, XML_B]);
+
+		expect(merged).toContain('<?xml version="1.0" encoding="utf-8"?>');
+		expect(merged).toContain('<records xmlns="http://example.org/ns">');
+		expect(merged).toContain('<record id="1">');
+		expect(merged).toContain('<record id="2">');
+		expect(merged.match(/<records/g)?.length).toBe(1);
+		expect(merged.match(/<\/records>/g)?.length).toBe(1);
+	});
+});

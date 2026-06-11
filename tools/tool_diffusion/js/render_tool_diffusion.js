@@ -691,33 +691,9 @@ export const render_container_bottom = function (self, item, lock_items, process
 			class_name		: 'bottom_additions',
 			parent			: buttons_container
 		})
+		// note: XML consolidation (merged file + ZIP) is produced by the Bun
+		// engine like RDF — the old 'combine XML files' post_action was removed
 		switch (item.type) {
-			case 'xml':
-				const combine_files_label = ui.create_dom_element({
-					element_type	: 'label',
-					class_name		: 'unselectable',
-					text_content	: self.get_tool_label('combine_xml_files') || 'Combine XML files',
-					parent			: bottom_additions
-				})
-				const combine_files_check_node = ui.create_dom_element({
-					element_type	: 'input',
-					type			: 'checkbox',
-					class_name		: '',
-					name			: 'combine_files_check',
-					value			: 1
-				})
-				combine_files_label.prepend(combine_files_check_node)
-				// change event
-				const change_handler = (e) => {
-					// post_actions
-					// e.g combine_rendered_files. This is used to merge all rendered XML files nodes
-					// into one single file containing all nodes.
-					self.additions_options.post_actions = e.target.checked
-						? 'diffusion_xml::combine_rendered_files'
-						: null;
-				}
-				combine_files_check_node.addEventListener('change', change_handler)
-				break;
 
 			default:
 

@@ -11,7 +11,7 @@ require_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php');
 * copy is always the single current one, so no registry is needed) and
 * dispatched per diffusion type:
 *  - sql / socrata : one call to the Bun engine (delete_record action)
-*  - rdf           : unlink the published file
+*  - rdf / xml     : unlink the published file (deterministic name)
 *  - others        : not supported yet (extension point)
 *
 * Hybrid model: propagation is attempted immediately; per-element failures
@@ -137,10 +137,11 @@ class diffusion_delete {
 						break;
 
 					case 'rdf':
+					case 'xml':
 						// handled per element below (file path resolved from element + locator)
 						break;
 
-					// EXTENSION POINT: add new diffusion type delete handlers here (xml, ...)
+					// EXTENSION POINT: add new diffusion type delete handlers here
 					default:
 						debug_log(__METHOD__
 							. " Delete propagation not supported for diffusion type '". $element_type ."'. Skipped." . PHP_EOL
@@ -505,6 +506,27 @@ class diffusion_delete {
 
 		return diffusion_rdf::delete_record_file($diffusion_element_tipo, $section_tipo, $section_id);
 	}//end delete_rdf
+
+
+
+	/**
+	* DELETE_XML
+	* Removes the published XML file of a record (deterministic name) and any
+	* legacy timestamped variants. Missing file = idempotent success.
+	* Delegates to diffusion_xml::delete_record_file (single source of truth
+	* for the published file path, shared with the publish flow).
+	*
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return object {result: bool, msg: string, file_path: string|null, deleted_files: array}
+	*/
+	private static function delete_xml(string $diffusion_element_tipo, string $section_tipo, string|int $section_id) : object {
+
+		include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_xml.php';
+
+		return diffusion_xml::delete_record_file($diffusion_element_tipo, $section_tipo, $section_id);
+	}//end delete_xml
 
 
 

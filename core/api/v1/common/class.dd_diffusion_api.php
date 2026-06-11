@@ -155,11 +155,14 @@ class dd_diffusion_api {
 			$diffusion_elem_props = ontology_node::get_instance($diffusion_element_tipo)->get_properties(true);
 			$diffusion_type = $diffusion_elem_props->diffusion->type ?? null;
 
-			if ($diffusion_type === 'rdf') {
-				// RDF early dispatch: langs + main hierarchy rooted at the diffusion element
+			if ($diffusion_type === 'rdf' || $diffusion_type === 'xml') {
+				// RDF/XML early dispatch: file-based formats, langs + main
+				// hierarchy rooted at the diffusion element
 				$langs = self::build_langs();
 				$main  = self::build_main_hierarchy($diffusion_element_tipo);
-				$response = self::diffuse_rdf($diffusion_element_tipo, $main_section_tipo, $db_result, $langs, $main, $options);
+				$response = $diffusion_type === 'rdf'
+					? self::diffuse_rdf($diffusion_element_tipo, $main_section_tipo, $db_result, $langs, $main, $options)
+					: self::diffuse_xml($diffusion_element_tipo, $main_section_tipo, $db_result, $langs, $main, $options);
 				return $response;
 			}
 
@@ -407,11 +410,11 @@ class dd_diffusion_api {
 					: 'Unable to resolve database name (define a database or database_alias child)'
 				);
 			}
-			if ($type==='rdf') {
+			if ($type==='rdf' || $type==='xml') {
 				$service_name = $resolved->properties->diffusion->service_name ?? null;
 				$add_check('service_name', !empty($service_name), !empty($service_name)
 					? "Service name: '$service_name'"
-					: 'Missing properties->diffusion->service_name (required for RDF file paths)'
+					: "Missing properties->diffusion->service_name (required for ".strtoupper($type)." file paths)"
 				);
 			}
 
