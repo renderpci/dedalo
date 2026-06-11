@@ -140,8 +140,13 @@ class tools_register {
 		$info_objects_parsed 	= [];
 		$counter 				= 0;
 
-		// 1. Scan filesystem for valid tool directories
-		$tool_directories = self::get_valid_tool_directories();
+		// 1. Scan filesystem for valid tool directories (all roots).
+		// Shadowed duplicates across roots land in the report as errors.
+		$collisions       = [];
+		$tool_directories = self::get_valid_tool_directories($collisions);
+		foreach ($collisions as $collision) {
+			$info_file_processed[] = $collision;
+		}
 
 		// 2. Process each directory and extract data
 		foreach ($tool_directories as $current_dir_tool) {
@@ -200,38 +205,88 @@ class tools_register {
 	/**
 	 * GET_VALID_TOOL_DIRECTORIES
 	 *
-	 * Scans the DEDALO_TOOLS_PATH and filters for valid tool folders (starting with tool_).
+	 * Scans every tool root (primary DEDALO_TOOLS_PATH plus any
+	 * DEDALO_ADDITIONAL_TOOLS roots, see tool_paths) and filters for valid
+	 * tool folders (starting with tool_).
 	 *
+	 * Collision policy: first-root-wins. A tool directory shadowed by an
+	 * earlier root is skipped and reported through $collisions so the
+	 * Maintenance import report shows it — never a silent override.
+	 *
+	 * @param array $collisions Reference; receives report objects for shadowed duplicates.
 	 * @return array List of absolute paths to valid tool directories.
 	 */
-	private static function get_valid_tool_directories() : array {
-		$ar_tools 	= (array)glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
-		$valid_dirs = [];
+	private static function get_valid_tool_directories(array &$collisions=[]) : array {
 
-		foreach ($ar_tools as $current_dir_tool) {
-			$basename = basename($current_dir_tool);
+		$valid_dirs	= [];
+		$seen		= []; // basename => winning dir
 
-			// System folders to ignore
-			if (in_array($basename, ['tool_common', 'acc'])) {
-				continue;
+		foreach (tool_paths::get_roots() as $root) {
+
+			$ar_tools = (array)glob($root->path . '/*', GLOB_ONLYDIR);
+
+			foreach ($ar_tools as $current_dir_tool) {
+				$basename = basename($current_dir_tool);
+
+				// System folders to ignore
+				if (in_array($basename, ['tool_common', 'acc'])) {
+					continue;
+				}
+
+				// Development template only visible in developer mode
+				if ($basename === 'tool_dev_template' && SHOW_DEVELOPER !== true) {
+					continue;
+				}
+
+				// Pattern check (must follow tool_ naming convention)
+				if (!str_starts_with($basename, 'tool_')) {
+					debug_log(__METHOD__ . " Ignored non-tool directory: $basename", logger::WARNING);
+					continue;
+				}
+
+				// Collision: first-root-wins, reported
+				if (isset($seen[$basename])) {
+					$msg = "Duplicate tool directory '$basename' in '$current_dir_tool' shadowed by '" . $seen[$basename] . "'";
+					debug_log(__METHOD__ . ' ERROR. ' . $msg, logger::ERROR);
+					$collisions[] = (object)[
+						'dir'      => $current_dir_tool,
+						'name'     => $basename,
+						'version'  => null,
+						'imported' => false,
+						'errors'   => [$msg]
+					];
+					continue;
+				}
+
+				$seen[$basename] = $current_dir_tool;
+				$valid_dirs[]    = $current_dir_tool;
 			}
-
-			// Development template only visible in developer mode
-			if ($basename === 'tool_dev_template' && SHOW_DEVELOPER !== true) {
-				continue;
-			}
-
-			// Pattern check (must follow tool_ naming convention)
-			if (!str_starts_with($basename, 'tool_')) {
-				debug_log(__METHOD__ . " Ignored non-tool directory: $basename", logger::WARNING);
-				continue;
-			}
-
-			$valid_dirs[] = $current_dir_tool;
 		}
 
 		return $valid_dirs;
 	}
+
+
+	/**
+	 * STRIP_TOOLS_ROOT
+	 *
+	 * Returns the tool dir path relative to its containing root (for the
+	 * import report 'dir' field), multi-root aware.
+	 *
+	 * @param string $current_dir_tool Absolute tool directory path.
+	 * @return string e.g. '/tool_lang'
+	 */
+	private static function strip_tools_root(string $current_dir_tool) : string {
+
+		foreach (tool_paths::get_roots() as $root) {
+			if (str_starts_with($current_dir_tool, $root->path . DIRECTORY_SEPARATOR)) {
+				return substr($current_dir_tool, strlen($root->path));
+			}
+		}
+
+		return str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool);
+	}//end strip_tools_root
+
 
 
 	/**
@@ -266,7 +321,7 @@ class tools_register {
 			debug_log(__METHOD__ . " ERROR. Invalid register.json in: $current_dir_tool", logger::ERROR);
 			$result->skipped	= true;
 			$result->file_info	= (object)[
-				'dir'      => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
+				'dir'      => self::strip_tools_root($current_dir_tool),
 				'name'     => $basename,
 				'version'  => null,
 				'imported' => false,
@@ -293,7 +348,7 @@ class tools_register {
 			);
 			$result->skipped	= true;
 			$result->file_info	= (object)[
-				'dir'      => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
+				'dir'      => self::strip_tools_root($current_dir_tool),
 				'name'     => $basename,
 				'version'  => null,
 				'imported' => false,
@@ -318,7 +373,7 @@ class tools_register {
 			);
 			$result->skipped	= true;
 			$result->file_info	= (object)[
-				'dir'      => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
+				'dir'      => self::strip_tools_root($current_dir_tool),
 				'name'     => $basename,
 				'version'  => null,
 				'imported' => false,
@@ -421,7 +476,7 @@ class tools_register {
 		$version = $get_val($new_info_object, self::$tipo_version);
 
 		$result->file_info = (object)[
-			'dir'      => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
+			'dir'      => self::strip_tools_root($current_dir_tool),
 			'name'     => $name,
 			'version'  => $version,
 			'warnings' => $warnings
@@ -650,18 +705,13 @@ class tools_register {
 		$m_developer  = ontology_node::get_model_by_tipo(self::$tipo_developer, true);
 		$col_developer = section_record_data::get_column_name($m_developer);
 
-		$files = glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
+		// all roots, first-root-wins (collisions silently skipped here:
+		// this list feeds the development area UI; the import report is
+		// where collisions are surfaced)
+		$files = self::get_valid_tool_directories();
 
 		foreach ($files as $path) {
 			$tool_name = basename($path);
-
-			// Filter for valid tool folders
-			if (!str_starts_with($tool_name, 'tool_') || $tool_name === 'tool_common') {
-				continue;
-			}
-			if ($tool_name === 'tool_dev_template' && SHOW_DEVELOPER !== true) {
-				continue;
-			}
 
 			$item = (object)[
 				'name'              => $tool_name,

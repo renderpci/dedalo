@@ -114,8 +114,26 @@
 		}
 		$requested = $safe_data['file'];
 		$real_requested = realpath($requested);
-		$base_dir = realpath(dirname(__FILE__, 3));
-		if ($real_requested === false || strpos($real_requested, $base_dir) !== 0) {
+		// allowed include roots: the project tree plus any additional tool
+		// roots (DEDALO_ADDITIONAL_TOOLS), canonicalized and policy-checked
+		// by tool_paths (config + loader are already booted at this point)
+		$include_roots = [ realpath(dirname(__FILE__, 3)) ];
+		if (class_exists('tool_paths', false)) {
+			foreach (array_slice(tool_paths::get_roots(), 1) as $additional_root) {
+				$include_roots[] = $additional_root->path;
+			}
+		}
+		$include_ok = false;
+		if ($real_requested !== false) {
+			foreach ($include_roots as $include_root) {
+				if ($include_root !== false
+					&& strpos($real_requested, $include_root . DIRECTORY_SEPARATOR) === 0) {
+					$include_ok = true;
+					break;
+				}
+			}
+		}
+		if (!$include_ok) {
 			debug_log(__METHOD__
 				. " Request file for include is not valid " . PHP_EOL
 				. ' file: ' . to_string($requested)

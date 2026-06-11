@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global page_globals, SHOW_DEBUG, get_label, Promise */
+/*global page_globals, SHOW_DEBUG, get_label, Promise, DEDALO_TOOLS_URLS */
 /*eslint no-undef: "error"*/
 
 
@@ -164,9 +164,16 @@ export const get_instance = async function(options) {
 	// Return a promise that resolves the instance
 	return new Promise(function(resolve) {
 
-		// Determine module path
+		// Determine module path.
+		// Tools living in a DEDALO_ADDITIONAL_TOOLS root are imported by
+		// absolute same-origin URL (DEDALO_TOOLS_URLS map, sent by the server);
+		// primary-root tools keep the historical relative path.
+		// Inlined (instead of utils tool_base_url) to avoid a circular import:
+		// utils/util.js imports this module.
 		const module_path = model.startsWith('tool_')
-		  ? `../../../tools/${model}/js/${model}.js` // tools
+		  ? ((typeof DEDALO_TOOLS_URLS!=='undefined' && DEDALO_TOOLS_URLS && DEDALO_TOOLS_URLS[model])
+			  ? `${DEDALO_TOOLS_URLS[model]}/js/${model}.js` // additional-root tools (absolute URL)
+			  : `../../../tools/${model}/js/${model}.js`) // primary-root tools
 		  : model.startsWith('service_')
 		  ? `../../../core/services/${model}/js/${model}.js` // services
 		  : `../../../core/${model}/js/${model}.js`; // default

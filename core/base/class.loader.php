@@ -127,6 +127,9 @@ include DEDALO_CORE_PATH . '/api/v1/common/class.dd_mcp_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_agent_api.php';
 // tools
 include DEDALO_TOOLS_PATH . '/tool_common/class.tool_common.php';
+// tool_paths is included unconditionally (not autoloaded) because the
+// autoloader itself consults it for multi-root tool resolution
+include DEDALO_TOOLS_PATH . '/tool_common/class.tool_paths.php';
 // Shared
 include DEDALO_SHARED_PATH . '/class.TR.php';
 include DEDALO_SHARED_PATH . '/class.OptimizeTC.php';
@@ -243,8 +246,15 @@ class class_loader {
 			case (str_starts_with($class_name, 'tool')):
 				// classes that live inside tool_common (subsystem infrastructure)
 				$tool_common_classes = ['tools_register','tool_ontology_map','tool_security','tool_paths'];
-				$directory	= in_array($class_name, $tool_common_classes, true) ? 'tool_common' : $class_name;
-				$file_path	= DEDALO_TOOLS_PATH . '/' . $directory . '/class.' . $class_name . '.php';
+				if (in_array($class_name, $tool_common_classes, true)) {
+					$file_path = DEDALO_TOOLS_PATH . '/tool_common/class.' . $class_name . '.php';
+					break;
+				}
+				// multi-root resolution (DEDALO_ADDITIONAL_TOOLS); falls back to
+				// the primary root path when the tool exists in no root so the
+				// historical "file not found" error stays unchanged
+				$file_path = tool_paths::get_tool_class_file($class_name)
+					?? DEDALO_TOOLS_PATH . '/' . $class_name . '/class.' . $class_name . '.php';
 				break;
 
 			// diffusion
@@ -270,6 +280,13 @@ class class_loader {
 			defined('DEDALO_DIFFUSION_PATH') ? realpath(DEDALO_DIFFUSION_PATH) : false,
 			defined('DEDALO_SHARED_PATH')    ? realpath(DEDALO_SHARED_PATH)    : false,
 		]);
+		// additional tools roots (DEDALO_ADDITIONAL_TOOLS), already
+		// realpath-canonicalized and policy-checked by tool_paths
+		if (class_exists('tool_paths', false)) {
+			foreach (array_slice(tool_paths::get_roots(), 1) as $additional_root) {
+				$ok_roots[] = $additional_root->path;
+			}
+		}
 		if ($real_path === false || empty($ok_roots)) {
 			// Fall through — `include` below will error out loudly. We do not
 			// hard-fail here because some unit-test bootstraps use virtual

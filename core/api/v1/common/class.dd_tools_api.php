@@ -160,30 +160,37 @@ final class dd_tools_api {
 				return $response;
 			}
 
-		// load tool class file
-			$class_file = DEDALO_TOOLS_PATH . '/' . $tool_name . '/class.' . $tool_name .'.php';
-			if (!file_exists($class_file)) {
+		// load tool class file (multi-root aware, see tool_paths)
+			$class_file = tool_paths::get_tool_class_file($tool_name);
+			if ($class_file===null || !file_exists($class_file)) {
 				$response->msg = 'Error. tool class_file do not exists. Create a new one in format class.my_tool_name.php ';
 				if(SHOW_DEBUG===true) {
-					$response->msg .= '. file: '.$class_file;
+					$response->msg .= '. file: '.to_string($class_file);
 				}
 				return $response;
 			}
 			// SEC-069 / SEC-084: realpath confinement on top of the
 			// `sanitize_key_dir` + tool registry whitelist above. Refuse to
-			// `require` any file whose canonical path escapes
-			// DEDALO_TOOLS_PATH, even if the constants or symlinks have
-			// been tampered with at the filesystem level.
-			$tools_root = realpath(DEDALO_TOOLS_PATH);
-			$real_tool  = realpath($class_file);
-			if ($tools_root === false
-				|| $real_tool === false
-				|| !str_starts_with($real_tool, $tools_root . DIRECTORY_SEPARATOR)
-			) {
+			// `require` any file whose canonical path escapes the set of
+			// allowed tool roots (primary DEDALO_TOOLS_PATH plus any
+			// DEDALO_ADDITIONAL_TOOLS roots — already canonicalized and
+			// policy-checked by tool_paths::get_roots), even if constants
+			// or symlinks have been tampered with at the filesystem level.
+			$real_tool = realpath($class_file);
+			$confined  = false;
+			if ($real_tool !== false) {
+				foreach (tool_paths::get_roots() as $tools_root) {
+					if ($tools_root->path !== false
+						&& str_starts_with($real_tool, $tools_root->path . DIRECTORY_SEPARATOR)) {
+						$confined = true;
+						break;
+					}
+				}
+			}
+			if (!$confined) {
 				$response->errors[] = 'Tool path confinement failed';
 				debug_log(__METHOD__
-					. ' SEC-084 tool path escapes tools root.' . PHP_EOL
-					. ' tools_root: ' . to_string($tools_root) . PHP_EOL
+					. ' SEC-084 tool path escapes the allowed tool roots.' . PHP_EOL
 					. ' real_tool: ' . to_string($real_tool)
 					, logger::ERROR
 				);

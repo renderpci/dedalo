@@ -6,7 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
-	import {strip_tags} from '../../common/js/utils/index.js'
+	import {strip_tags, tool_base_url} from '../../common/js/utils/index.js'
 	import {get_buttons} from './render_edit_component_check_box.js'
 
 
@@ -257,7 +257,7 @@ const get_input_element = (i, current_value, self) => {
 
 
 	// tool_icon
-		const icon_url	= DEDALO_TOOLS_URL + '/' + tool_name + '/img/icon.svg'
+		const icon_url	= tool_base_url(tool_name) + '/img/icon.svg'
 		const tool_icon	= ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'tool_icon',

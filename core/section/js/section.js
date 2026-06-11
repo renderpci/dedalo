@@ -5,7 +5,7 @@
 
 
 // imports
-	import {clone, url_vars_to_object, object_to_url_vars, dd_console, load_style} from '../../common/js/utils/index.js'
+	import {clone, url_vars_to_object, object_to_url_vars, dd_console, load_style, tool_base_url} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance, get_all_instances} from '../../common/js/instances.js'
@@ -1036,7 +1036,7 @@ section.prototype.load_section_tool_files = function() {
 
 	// css file load
 		const model	= self.config.tool_context.model
-		const url	= DEDALO_TOOLS_URL + '/' + model + '/css/' + model + '.css'
+		const url	= tool_base_url(model) + '/css/' + model + '.css'
 		load_style(url)
 
 	// debug

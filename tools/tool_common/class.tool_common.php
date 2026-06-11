@@ -110,8 +110,8 @@ class tool_common {
 		}
 
 		if (!class_exists($tool_name, false)) {
-			$class_file = DEDALO_TOOLS_PATH . '/' . $tool_name . '/class.' . $tool_name . '.php';
-			if (is_file($class_file)) {
+			$class_file = tool_paths::get_tool_class_file($tool_name);
+			if ($class_file!==null && is_file($class_file)) {
 				try {
 					require_once $class_file;
 				} catch (\Throwable $e) {
@@ -387,13 +387,15 @@ class tool_common {
 		// lang
 			$lang = DEDALO_APPLICATION_LANG;
 
-		// css
+		// css. Multi-root aware: resolved per request (never stored in cache
+		// files), so DEDALO_ADDITIONAL_TOOLS changes apply without staleness
+			$tool_base_url = tool_paths::get_tool_url($name);
 			$css = (object)[
-				'url' => DEDALO_TOOLS_URL . '/' . $name . '/css/' .$name. '.css'
+				'url' => $tool_base_url . '/css/' .$name. '.css'
 			];
 
 		// icon
-			$icon = DEDALO_TOOLS_URL . '/' . $name . '/img/icon.svg';
+			$icon = $tool_base_url . '/img/icon.svg';
 
 		// context
 			$dd_object = new dd_object((object)[
@@ -451,13 +453,14 @@ class tool_common {
 					$tool_label = $tool_object->name ?? 'Unknown';
 				}
 
-			// css
+			// css. Multi-root aware (see tool_paths)
+				$tool_base_url = tool_paths::get_tool_url($tool_object->name);
 				$css = (object)[
-					'url' => DEDALO_TOOLS_URL . '/' . $tool_object->name . '/css/' .$tool_object->name. '.css'
+					'url' => $tool_base_url . '/css/' .$tool_object->name. '.css'
 				];
 
 			// icon
-				$icon = DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
+				$icon = $tool_base_url . '/img/icon.svg';
 
 			// developer
 				$developer = isset($tool_object->developer[0])

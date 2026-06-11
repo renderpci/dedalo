@@ -16,7 +16,8 @@
 		dd_console,
 		printf,
 		open_window,
-		load_style
+		load_style,
+		tool_base_url
 		} from '../../../core/common/js/utils/index.js'
 	import {render_error} from './render_tool_common.js'
 
@@ -268,7 +269,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 		self.status = 'building'
 
 	// load self style
-		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + '/css/' + self.model + '.css' + `?v=${page_globals.dedalo_version}`
+		const tool_css_url = tool_base_url(self.model) + '/css/' + self.model + '.css' + `?v=${page_globals.dedalo_version}`
 		await load_style(tool_css_url)
 
 	// options

@@ -634,6 +634,23 @@
 	// dispatch is then allowed and logged as deprecated.
 	// define('TOOLS_REQUIRE_API_ACTIONS', true);
 
+	// DEDALO_ADDITIONAL_TOOLS (array). Default: none.
+	// Extra tool roots so third-party tools can live OUTSIDE the Dédalo
+	// checkout (surviving git updates, independently versioned).
+	// Each entry needs:
+	//   'path' : absolute filesystem directory containing tool_* folders
+	//   'url'  : same-origin web URL serving that directory (the browser
+	//            loads tool JS modules and CSS from it — configure a web
+	//            server alias or place it inside the document root)
+	// Rules enforced at load (see tool_paths class):
+	//   - the in-repo /tools root always wins on name collisions
+	//   - roots under media/cache/tmp/session dirs or world-writable are refused
+	//   - tools there still require registration (Maintenance > Register tools)
+	//     and per-profile authorization, like any in-repo tool
+	// define('DEDALO_ADDITIONAL_TOOLS', [
+	// 	['path' => '/srv/custom_tools', 'url' => '/custom_tools']
+	// ]);
+
 
 
 // lock_components

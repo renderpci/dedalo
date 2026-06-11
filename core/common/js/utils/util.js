@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global Promise, structuredClone, SHOW_DEBUG, SHOW_DEVELOPER */
+/* global Promise, structuredClone, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL, DEDALO_TOOLS_URLS */
 /*eslint no-undef: "error"*/
 
 
@@ -1134,6 +1134,28 @@ generate_hash.toHex = (input_string) => {
   // Convert to unsigned 32-bit integer and format as hex
   return (hash >>> 0).toString(16).padStart(8, '0');
 };
+
+
+
+/**
+* TOOL_BASE_URL
+* Per-tool base web URL, multi-root aware.
+* Tools living in DEDALO_ADDITIONAL_TOOLS roots are mapped in the
+* DEDALO_TOOLS_URLS global (server: tool_paths::get_additional_tools_url_map);
+* an absent key means the tool lives in the primary tools root.
+* @param {string} model - tool model/name, e.g. 'tool_lang'
+* @return {string} base URL, e.g. '/dedalo/tools/tool_lang' or '/custom_tools/tool_x'
+*/
+export function tool_base_url(model) {
+
+	if (typeof DEDALO_TOOLS_URLS!=='undefined'
+		&& DEDALO_TOOLS_URLS
+		&& DEDALO_TOOLS_URLS[model]) {
+		return DEDALO_TOOLS_URLS[model]
+	}
+
+	return DEDALO_TOOLS_URL + '/' + model
+}//end tool_base_url
 
 
 

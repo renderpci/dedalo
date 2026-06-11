@@ -28,7 +28,8 @@
 		get_tld_from_tipo,
 		get_section_id_from_tipo,
 		clone,
-		load_style
+		load_style,
+		tool_base_url
 	} from '../../common/js/utils/index.js'
 
 
@@ -331,7 +332,7 @@ const get_content_data = function(self) {
 			for (let i = 0; i < inspector_tools_length; i++) {
 				const tool_context = inspector_tools[i]
 				// load tool CSS
-				const tool_css_url = DEDALO_TOOLS_URL + '/' + tool_context.model + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
+				const tool_css_url = tool_base_url(tool_context.model) + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
 				load_style(tool_css_url)
 				// tool_button
 					// bg color. E.g. '--tool_ontology_color'

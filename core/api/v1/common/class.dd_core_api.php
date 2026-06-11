@@ -2941,6 +2941,10 @@ final class dd_core_api {
 			'DEDALO_ROOT_WEB'						=> DEDALO_ROOT_WEB,
 			'DEDALO_MEDIA_URL'						=> DEDALO_MEDIA_URL,
 			'DEDALO_TOOLS_URL'						=> DEDALO_TOOLS_URL,
+			// tool_name => base_url map for tools living in DEDALO_ADDITIONAL_TOOLS
+			// roots only. An absent key = primary root (client keeps its historical
+			// URL building). Exposes only directory names, never filesystem paths.
+			'DEDALO_TOOLS_URLS'						=> tool_paths::get_additional_tools_url_map(),
 			'SHOW_DEBUG'							=> SHOW_DEBUG,
 			'SHOW_DEVELOPER'						=> SHOW_DEVELOPER,
 			'DEVELOPMENT_SERVER'					=> DEVELOPMENT_SERVER,
