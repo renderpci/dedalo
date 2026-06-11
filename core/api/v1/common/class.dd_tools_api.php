@@ -196,7 +196,9 @@ final class dd_tools_api {
 				);
 				return $response;
 			}
-			require_once $class_file;
+			// include the canonical path that was actually validated (avoids a
+			// symlink-swap TOCTOU between realpath() and the include)
+			require_once $real_tool;
 
 		// SEC-024: per-tool method allowlist (API_ACTIONS), enforced by default.
 			// Fail-fast on the allowlist before any reflection on the method.

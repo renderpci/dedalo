@@ -68,6 +68,20 @@ final class tool_paths {
 				continue;
 			}
 
+			// SEC: enforce the same-origin guarantee. The browser imports tool
+			// JS modules from this URL, so a cross-origin URL would execute
+			// third-party code in the Dédalo origin. Require a root-relative
+			// path: starts with single '/' (not '//', which is scheme-relative)
+			// and carries no scheme/host.
+			if ($url[0]!=='/' || str_starts_with($url, '//') || parse_url($url, PHP_URL_HOST)!==null) {
+				debug_log(__METHOD__
+					. ' SEC refused non same-origin DEDALO_ADDITIONAL_TOOLS url'
+					. ' (must be a root-relative path like /custom_tools): ' . $url
+					, logger::ERROR
+				);
+				continue;
+			}
+
 			if (self::root_is_forbidden($real)) {
 				debug_log(__METHOD__
 					. ' SEC refused tools root under web-writable/forbidden directory: ' . $real
