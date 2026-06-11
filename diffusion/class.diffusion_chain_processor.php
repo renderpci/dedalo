@@ -99,7 +99,7 @@ class diffusion_chain_processor {
 	 * Resolves a single DDO node, either getting terminal data or recursing.
 	 * Supports fn property for custom method dispatch:
 	 * - Component methods: "fn": "get_section_id"
-	 * - Class methods: "fn": "diffusion_sql::map_to_terminoID"
+	 * - Class methods: "fn": "diffusion_fn::map_locator_to_section_label"
 	 * 
 	 * @param object $ddo
 	 * @param array $ddo_map
@@ -368,46 +368,6 @@ class diffusion_chain_processor {
 
 
 
-	/**
-	 * BUILD_ENTRIES
-	 * Groups resolved diffusion_data_objects by their DDO id.
-	 * 
-	 * @param array $resolved_data Array of diffusion_data_object
-	 * @return object Object with keys as DDO ids
-	 */
-	public function build_entries(array $resolved_data): object {
-		
-		$entries = new stdClass();
-
-		foreach ($resolved_data as $ddo_res) {
-			// Use id as key if present (preferred for multiple child chains), fallback to node_tipo
-			$key = $ddo_res->id ?? $ddo_res->node_tipo ?? null;
-			if (!$key) continue;
-
-			if (!isset($entries->{$key})) {
-				// First value: keep exactly as obtained
-				$entries->{$key} = $ddo_res;
-			} else {
-				// Merge subsequent values: ensure we have an array
-				$current_value  = $entries->{$key}->value;
-				$incoming_value = $ddo_res->value;
-
-				if (!is_array($current_value)) {
-					$current_value = [$current_value];
-				}
-				
-				if (is_array($incoming_value)) {
-					$current_value = array_merge($current_value, $incoming_value);
-				} else {
-					$current_value[] = $incoming_value;
-				}
-
-				$entries->{$key}->value = $current_value;
-			}
-		}
-
-		return $entries;
-	}
 
 
 
@@ -432,7 +392,7 @@ class diffusion_chain_processor {
 	 * thesaurus lookups, or value transformations) where standard component getters 
 	 * do not suffice for the export format structure.
 	 * 
-	 * @param string $fn Static method identifier string (e.g., "diffusion_sql::map_to_terminoID")
+	 * @param string $fn Static method identifier string (e.g., "diffusion_fn::map_locator_to_section_label")
 	 * @param object $element The Component instance executing within the scope
 	 * @param object $ddo DDO configuration map context
 	 * @return array<diffusion_data_object> Uniform array of resolved output payload items
