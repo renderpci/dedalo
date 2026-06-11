@@ -873,7 +873,15 @@ class tool_import_dedalo_csv extends tool_common {
 										// Use set_data_lang() instead of set_data() to ensure 'lang' property
 										// is assigned on all data items (including pre-existing objects from conform_import_data)
 										$component->set_data_lang( $v_value, $v_key );
-										$component->import_save();
+										$save_result = $component->import_save();
+										if ($save_result===false) {
+											$failed = new stdClass();
+												$failed->section_id		= $section_id;
+												$failed->data			= $v_value;
+												$failed->component_tipo	= $component->get_tipo();
+												$failed->msg			= 'IGNORED: component rejected the data on save (lang: '.$v_key.')';
+											$failed_rows[] = $failed;
+										}
 									}else{
 										debug_log(__METHOD__
 											. " ERROR ON IMPORT VALUE FROM $model_name [$component_tipo]"
@@ -943,7 +951,15 @@ class tool_import_dedalo_csv extends tool_common {
 									}
 
 									// Save of course
-									$component->import_save();
+									$save_result = $component->import_save();
+									if ($save_result===false) {
+										$failed = new stdClass();
+											$failed->section_id		= $section_id;
+											$failed->data			= $conformed_value;
+											$failed->component_tipo	= $component->get_tipo();
+											$failed->msg			= 'IGNORED: component rejected the data on save';
+										$failed_rows[] = $failed;
+									}
 								}else{
 
 									// set dato
@@ -969,8 +985,15 @@ class tool_import_dedalo_csv extends tool_common {
 										}
 
 									// Save of course
-									// Note that $component->save_to_database = false, avoid real save.
-										$component->import_save();
+										$save_result = $component->import_save();
+										if ($save_result===false) {
+											$failed = new stdClass();
+												$failed->section_id		= $section_id;
+												$failed->data			= $conformed_value;
+												$failed->component_tipo	= $component->get_tipo();
+												$failed->msg			= 'IGNORED: component rejected the data on save';
+											$failed_rows[] = $failed;
+										}
 								}
 							}
 							break;
