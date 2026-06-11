@@ -646,7 +646,7 @@ class diffusion_rdf {
 						$current_locator = $data[$i];
 
 						// Check target is publicable
-							$current_is_publicable = diffusion_utils::get_is_publicable($current_locator);
+							$current_is_publicable = diffusion_utils::is_publishable($current_locator);
 							if ($current_is_publicable!==true) {
 								$max_items++;
 								continue;

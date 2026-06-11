@@ -420,7 +420,7 @@ class relation_list extends common {
 					$locator->set_section_id($current_locator->from_section_id);
 
 			// Check target is publishable
-				$current_is_publicable = diffusion::get_is_publicable($locator);
+				$current_is_publicable = diffusion_utils::is_publishable($locator);
 				if ($current_is_publicable!==true) {
 					// debug_log(__METHOD__." + Skipped locator not publishable: ".to_string($locator), logger::DEBUG);
 					continue;
@@ -549,7 +549,7 @@ class relation_list extends common {
 						$custom_locator->set_section_id($current_locator->from_section_id);
 
 					// Check target is publishable
-						$current_is_publicable = diffusion::get_is_publicable($custom_locator);
+						$current_is_publicable = diffusion_utils::is_publishable($custom_locator);
 						if ($current_is_publicable!==true) {
 							debug_log(__METHOD__
 								." + Skipped locator not publishable: " . PHP_EOL
@@ -684,7 +684,7 @@ class relation_list extends common {
 												$filtered_custom_locator->set_section_id($filtered_value->section_id);
 
 											// Check target is publicable
-												$filtered_current_is_publicable = diffusion::get_is_publicable($filtered_custom_locator);
+												$filtered_current_is_publicable = diffusion_utils::is_publishable($filtered_custom_locator);
 												if ($filtered_current_is_publicable!==true) {
 													debug_log(__METHOD__
 														." + Skipped locator not publicable: ". PHP_EOL
@@ -781,7 +781,7 @@ class relation_list extends common {
 						$current_locator->set_section_id($inverse_reference->section_id);
 
 					// Check target is publicable
-					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					$current_is_publicable = diffusion_utils::is_publishable($current_locator);
 					if ($current_is_publicable!==true) {
 						debug_log(__METHOD__
 							." + Skipped locator not publishable: ". PHP_EOL
@@ -807,7 +807,7 @@ class relation_list extends common {
 						$current_locator->set_section_id($inverse_reference->section_id);
 
 					// Check target is publicable
-					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					$current_is_publicable = diffusion_utils::is_publishable($current_locator);
 					if ($current_is_publicable!==true) {
 						debug_log(__METHOD__
 							." + Skipped locator not publishable: ". PHP_EOL
@@ -940,7 +940,7 @@ class relation_list extends common {
 					// foreach ($ar_inverse_references as $current_locator) {
 
 					// 	// Check target is publicable
-					// 	$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					// 	$current_is_publicable = diffusion_utils::is_publishable($current_locator);
 					// 	if ($current_is_publicable!==true) {
 					// 		debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
 					// 		continue;

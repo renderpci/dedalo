@@ -23,15 +23,6 @@ class diffusion_utils {
 
 
     /**
-     * GET_IS_PUBLICABLE
-     * Compatibility wrapper for legacy callers.
-     */
-    public static function get_is_publicable(object $locator): bool {
-
-        return self::is_publishable($locator);
-    }
-
-    /**
      * IS_PUBLISHABLE
      * Locate component_publication in requested locator section and get its boolean value.
      */
