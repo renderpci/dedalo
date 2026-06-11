@@ -85,6 +85,14 @@
 	// Diffusion engine API
 		define('DEDALO_DIFFUSION_PATH', 	DEDALO_ROOT_PATH.'/diffusion');
 		define('DEDALO_DIFFUSION_API_URL',	DEDALO_ROOT_WEB . '/diffusion/api/v1/');
+		// Unix socket of the Bun diffusion engine. Preferred for server-to-server
+		// calls (delete propagation): avoids the Apache round-trip. Set to null
+		// to force HTTP calls through DEDALO_DIFFUSION_API_URL (remote Bun).
+		define('DEDALO_DIFFUSION_SOCKET_PATH', '/tmp/diffusion.sock');
+		// Internal token for server-to-server diffusion calls without a session
+		// (CLI/cron retry of pending deletions). Must match DIFFUSION_INTERNAL_TOKEN
+		// in diffusion/api/v1/.env. Leave empty to disable token auth.
+		define('DEDALO_DIFFUSION_INTERNAL_TOKEN', '');
 
 
 
