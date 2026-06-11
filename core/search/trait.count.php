@@ -82,28 +82,27 @@ trait count {
 
 			// Note that in some cases, such as "relationship search", more than one total is given.
 			// because UNION is used for tables
+			// ($count_result===false already returned above, so it is always a valid result here)
 			$total = 0;
 			$totals_group = [];
-			if ($count_result!==false) {
-				while($row = pg_fetch_assoc($count_result)) {
+			while($row = pg_fetch_assoc($count_result)) {
 
-					// get the total as the sum of all rows
-					$full_count = $row['full_count'] ?? 0;
-					$total = $total + (int)$full_count;
+				// get the total as the sum of all rows
+				$full_count = $row['full_count'] ?? 0;
+				$total = $total + (int)$full_count;
 
-					// group by
-					// get the specific total of the group_by concept (as section_tipo)
-					if( isset($this->sqo->group_by) ){
-						$current_totals_object = new stdClass();
-						$ar_keys = [];
-						foreach($this->sqo->group_by as $current_group){
-							$ar_keys[] = $row[$current_group];
-						}
-						$current_totals_object->key		= $ar_keys;
-						$current_totals_object->value	= (int)$full_count;
-
-						$totals_group[] = $current_totals_object;
+				// group by
+				// get the specific total of the group_by concept (as section_tipo)
+				if( isset($this->sqo->group_by) ){
+					$current_totals_object = new stdClass();
+					$ar_keys = [];
+					foreach($this->sqo->group_by as $current_group){
+						$ar_keys[] = $row[$current_group];
 					}
+					$current_totals_object->key		= $ar_keys;
+					$current_totals_object->value	= (int)$full_count;
+
+					$totals_group[] = $current_totals_object;
 				}
 			}
 
