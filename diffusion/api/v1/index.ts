@@ -17,6 +17,7 @@ import { process_response }           from './lib/diffusion_processor';
 import { insert_table_data }          from './lib/db';
 import { close_all_pools }            from './lib/db';
 import { delete_records, validate_delete_targets } from './lib/delete_handler';
+import { check_database_exists, backup_database } from './lib/db_admin';
 import { check_server_auth }          from './lib/auth';
 import { extract_cookie_header, extract_csrf_token } from './lib/session';
 import {
@@ -967,6 +968,35 @@ const server = Bun.serve({
 					}
 					const delete_result = await delete_records(targets);
 					return Response.json(delete_result);
+				}
+				case 'check_database': {
+					// Server-to-server: PHP asks Bun whether a target MariaDB
+					// database is reachable/exists (MariaDB is a Bun responsibility).
+					const is_auth_check = await check_server_auth(cookie_header, request);
+					if (!is_auth_check) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const check_result = await check_database_exists((body as any).database_name);
+					return Response.json(check_result);
+				}
+				case 'backup_database': {
+					// Server-to-server: PHP asks Bun to dump a target MariaDB
+					// database with mysqldump (MariaDB is a Bun responsibility).
+					const is_auth_backup = await check_server_auth(cookie_header, request);
+					if (!is_auth_backup) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const backup_result = await backup_database(
+						(body as any).database_name,
+						(body as any).target_file
+					);
+					return Response.json(backup_result);
 				}
 				default:
 					return Response.json(
