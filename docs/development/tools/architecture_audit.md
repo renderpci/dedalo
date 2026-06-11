@@ -1,7 +1,10 @@
 # Tools architecture audit & improvement roadmap
 
 !!! info "Scope and status"
-    Internal architecture review of the Dédalo v7 tools subsystem (June 2026). Goal: assess the current design and propose a prioritized roadmap to strengthen it and make tool creation by **external developers** dramatically easier. This is an analysis document — no code changes are implied until each roadmap item is approved.
+    Internal architecture review of the Dédalo v7 tools subsystem (June 2026). Goal: assess the current design and propose a prioritized roadmap to strengthen it and make tool creation by **external developers** dramatically easier.
+
+!!! success "Implementation status (June 2026, branch `tools_architecture`)"
+    The full roadmap below has been **implemented**: A1 (`tool_ontology_map` constants), A2 (v7 register.json + schema + validator), A3 (registration-time checks), A4+A5 (`API_ACTIONS` enforced by default + declarative gates via `tool_security`), B1 (hand-authorable register.json), B2 (production-shaped `tool_dev_template`), B3 (CLI scaffolder `create_tool.php`), B4 (docs: creating_tools, server_contract, js_lifecycle, register_json, security), C1 (`is_available()` delegation, parity-snapshot proven), C2 (JS `tool_request`/`wire_tool`, CSS race fix, error surfacing), C3 (cache orchestrator `invalidate_all_tool_caches` + `get_config_value`), C4 (`DEDALO_ADDITIONAL_TOOLS` multi-root, security-reviewed), C5 (`on_register`/`on_remove` hooks). Deviations from the plan: the two-phase API_ACTIONS deprecation was skipped (default strict immediately — all in-repo tools already declared the constant); the v6 register.json corpus was kept as-is (only `tool_dev_template` ships the v7 exemplar); the "Download register file" UI flow referenced by the old docs did not exist in v7 and was dropped in favor of the scaffolder. The sections below are preserved as the original audit for context.
 
 ## 1. Executive summary
 

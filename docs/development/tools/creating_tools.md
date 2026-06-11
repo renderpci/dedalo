@@ -2,162 +2,168 @@
 
 ## Introduction
 
-Dédalo tools are isolated blocks of code that allow to expand components, sections and areas features.
-Usually, a tool consist of a server class file and some client JS/CSS files. Tools can add their own specific user interface to create a complex interaction and data analysis.
+Dédalo tools are isolated blocks of code that extend components, sections and areas. A tool consists of a server PHP class, client JS/CSS files, and a `register.json` file describing it. Tools can add their own user interface for complex interaction and data analysis.
 
-## Directory and file structure
+This page is the end-to-end tutorial. The companion references are:
 
-All tools are located in the `/tools` directory
+- [register.json reference](register_json.md) — every field of the registration file
+- [Server contract](server_contract.md) — the PHP class contract, API actions, configuration, hooks
+- [JS lifecycle](js_lifecycle.md) — the client tool lifecycle and helpers
+- [Security](security.md) — what the framework enforces and what you must do
 
-Every tool has his own directory named correctly and it will has:
+## 1. Scaffold the tool
 
-- a css directory
-- a js directory
-- a PHP class
-- a register.json file
-- a img directory
+The fastest start is the CLI scaffolder, which copies the reference template (`tools/tool_dev_template`) and renames everything:
+
+``` shell
+php tools/tool_common/cli/create_tool.php \
+    --name=tool_numisdata_import \
+    --label="Numismatic import" \
+    --models=section
+```
+
+Options:
+
+| Option | Description |
+| --- | --- |
+| `--name` | Required. Tool name: `^tool_[a-z0-9_]+$`. Becomes the directory, class and file names |
+| `--label` | Required. Display label (stored as `lg-eng`; add more languages later) |
+| `--models` | Comma-separated affected models, e.g. `section,component_input_text`. Default `section` |
+| `--path` | Target tools root. Default: the in-repo `/tools` directory (see [out-of-repo tools](#out-of-repo-tools)) |
+| `--register` | Register the tool immediately after scaffolding (CLI; requires server shell access) |
+
+You can also copy `tools/tool_dev_template` by hand and rename every `tool_dev_template` occurrence (directory, file names, class name, JS identifiers, register.json).
+
+### Naming rules
+
+- snake_case, lowercase ASCII only, no spaces or accents
+- mandatory `tool_` prefix, then your organization/TLD acronym, then the feature:
+  `tool_numisdata_import` = `tool_` + `numisdata` (org) + `import` (feature)
+- the PHP class is `class.{tool_name}.php` and the class name equals the directory name — this is validated at registration
+
+### Directory layout
 
 ``` shell
 ├── tool_numisdata_import
     ├── class.tool_numisdata_import.php
+    ├── register.json
     ├── css
     │   └── tool_numisdata_import.css
     ├── img
-    │   └── icon.svg
-    ├── js
-    │   ├── index.js
-    │   ├── render_tool_numisdata_import.js
-    │   └── tool_numisdata_import.js
-    └── register.json
+    │   └── icon.svg               # square SVG, ~1024×1024 artboard
+    └── js
+        ├── index.js               # module entry (re-exports the tool)
+        ├── tool_numisdata_import.js
+        └── render_tool_numisdata_import.js
 ```
 
-### Mandatory files
+## 2. Edit register.json
 
-Tool system use a register method to add the tool functionality. The register process will read the `register.json` file of every tool.
+`register.json` is hand-authorable (v7 format) and schema-validated. A minimal valid file:
 
-JavaScript directory need a `index.js` file. This file will be import as module by Dédalo processes.
+``` json
+{
+	"$schema": "../tool_common/register.schema.json",
+	"name": "tool_numisdata_import",
+	"version": "1.0.0",
+	"label": { "lg-eng": "Numismatic import" },
+	"affected_models": ["section"]
+}
+```
 
-`icon.svg` inside `img` directory is a graph file of the tool logo a square svg (vector format only). Usually a 1024x1024px art board.
+One language label is enough — the client falls back across languages. The `$schema` pointer gives you autocomplete and validation in any JSON-schema-aware editor. See the [register.json reference](register_json.md) for all fields (description, properties, labels, config, ontology...).
 
-## Naming the tool
+!!! note "Legacy v6 files"
+    Tools created with Dédalo v6 ship a different register.json (a raw record dump with `components`/`relations` keys). Those keep working — they are converted automatically at registration. New tools must use the v7 format above.
 
-All tools has a unique name that follow this rules:
+## 3. Implement the server class
 
-- The name use a snake_case format.
+The class extends `tool_common` and declares its callable methods in the `API_ACTIONS` allowlist, preferably in **map form** so the framework enforces the permission gate before your code runs:
 
-- All letters in small case.
+``` php
+class tool_numisdata_import extends tool_common {
 
-- The name of the tool must start with 'tool' word following with the tld or institution acronym as 'numisdata' following with the name of the tool as 'importing_specific_files'.
+	public const API_ACTIONS = [
+		'import_file' => ['permission' => 'section', 'min_level' => 2]
+	];
 
-- Name can not contain any spaces, accents or non ASCII chars to prevent future errors with paths.
+	public static function import_file(object $options) : object {
 
-Example:
+		$response = new stdClass();
+			$response->result = false;
+			$response->msg    = 'Error. Request failed';
+			$response->errors = [];
 
-A good name could be 'tool_numisdata_import', where 'tool_' is the mandatory prefix, 'numisdata_' is the mandatory TLD of the institution or promoted and 'import' is the main description of the tool.
+		// your logic here...
 
-A wrong name could be 'my_tool_name' it's not compatible between installations and will be rejected to be shared.
+		$response->result = true;
+		$response->msg    = 'OK';
 
-!!! note "Adding a description name"
-    The name of the description will be set in the label field, where it can be more explicit in explaining what the tool does, such as 'Tool for importing custom Numismatic files'.
+		return $response;
+	}
+}
+```
 
-### Rules to naming files
+Full contract (signatures, background execution, configuration, lifecycle hooks): [Server contract](server_contract.md). Security model: [Security](security.md).
 
-All examples use the fictitious name of : `tool_numisdata_import`
+## 4. Implement the client
 
-1. PHP class.
+The template wires the standard lifecycle for you with `wire_tool` and calls the server through `this.tool_request`:
 
-    PHP class will used the full name of the tool with the `class.` prefix as:
+``` js
+import {tool_common, wire_tool} from '../../tool_common/js/tool_common.js'
+import {render_tool_numisdata_import} from './render_tool_numisdata_import.js'
 
-    > class.tool_numisdata_import.php
+export const tool_numisdata_import = function () { /* instance vars */ }
 
-2. JavaScript files
+wire_tool(tool_numisdata_import, render_tool_numisdata_import)
 
-    The main file will use the full name of the tool as:
+tool_numisdata_import.prototype.do_import = async function() {
+	return this.tool_request({
+		action  : 'import_file',
+		options : { section_tipo: this.caller.section_tipo, file: '...' }
+	})
+}
+```
 
-    > tool_numisdata_import.js
+Lifecycle, `ddo_map`, modal/window modes, labels: [JS lifecycle](js_lifecycle.md).
 
-    Render files will add the prefix `render` to the tool name as:
+## 5. Register the tool
 
-    > render_tool_numisdata_import.js
+Either:
 
-    Is possible to define other render files or views naming it between render word and the tool name as:
+- **UI:** System administration → Maintenance → "Register tools" panel → press the register button. Your tool appears in the list when its directory, register.json and required files are in place.
+- **CLI:** `php tools/tool_common/cli/create_tool.php ... --register`, or any later re-run of the Maintenance registration.
 
-    > render_list_tool_numisdata_import.js
+Registration validates the tool before persisting: register.json structure, name/directory match, semantic version, class file loads and extends `tool_common`, minimum Dédalo version (`dedalo_version_min`), and ontology integrity. Failures appear in the import report with explicit messages — nothing registers silently broken.
 
-3. CSS files
+## 6. Authorize and use
 
-    The css file use the full name of the tool as:
+Grant the tool to user profiles: System administration → Profiles → Tools. Superusers see all registered tools. Tools flagged `always_active` bypass profile authorization.
 
-    > tool_numisdata_import.css
+The tool button now appears on matching elements (per `affected_models` / `affected_tipos` and the `show_in_component` / `show_in_inspector` flags).
 
-    Is possible use LESS or SASS or other languages to create the CSS files. Take account that the final CSS file must be named in the correct way, with the name of the tool.
+## 7. Test
 
-## Creating a new Dédalo tool
+Copy the reference test `test/server/tools/tool_dev_template_Test.php`: it validates your register.json against the schema, your `API_ACTIONS` resolution, and invokes an action directly. Run with:
 
-Tools need a register file that is used to load the configuration, labels and other information to configure the tool inside Dédalo schema.
+``` shell
+cd test/server && ../../vendor/bin/phpunit tools/tool_yourname_Test.php
+```
 
-To create the file, Dédalo has a specific section to facilitate the build process.
+## Out-of-repo tools
 
-The first step is to create a new record in Tools developer section
+Third-party tools can live **outside** the Dédalo checkout (surviving `git pull`, independently versioned). Define in `config.php`:
 
-1. Go to:
+``` php
+define('DEDALO_ADDITIONAL_TOOLS', [
+	['path' => '/srv/custom_tools', 'url' => '/custom_tools']
+]);
+```
 
-    > Development > Tools > [Tools development](https://dedalo.dev/ontology/dd1340)
+- `path`: absolute directory containing `tool_*` folders
+- `url`: same-origin web URL serving that directory (web-server alias) — the browser loads tool JS/CSS from it; cross-origin URLs are refused
 
-    ![Tools development menu](assets/20231012_220243_tool_developer_menu.png)
+The in-repo `/tools` root always wins on name collisions (reported in the import report). Tools in additional roots still require registration and profile authorization, exactly like in-repo tools. Scaffold directly into the root with `--path=/srv/custom_tools`.
 
-2. Fill the fields and configurations
-
-    Fill the needs of the tool information into the correct fields.
-
-    | Field | Description | Comments |
-    | --- | --- | --- |
-    | Active | Active or deactive the tool | |
-    | Tool name | Real name of the tool. Use the prefix 'tool' and underscores to fill words gaps as `tool_numisdata_import` | It need to be exact the name of the tool used in the directory and files as `tool_numisdata_import` |
-    | Label | A description name, a free small text defining de tool name that user can see | The label could be translated and it will use into the modal or other windows to show a title of the tool |
-    | Version | Tool version | To control the version of the code |
-    | Dédalo version minimum | Minimum Dédalo version compatible with the tool| |
-    | Description | A free text description of the tool | It will use to inform to user of the utility of the tool |
-    | Developer | Your name | Used to identify your self, if you need add more than 1 developer, use the (+) button |
-    | Implementation | A technical description of the use and configure of the tool | Use this field to specify the needs to run the tool or the options |
-    | Show in inspector | Defines if the tool will be added into the inspector | Used to general tools |
-    | Show in component | Defines if the tool will be added to the component | Used for tools applied a specific components, the tool will appear when the component is active |
-    | Translatable requirement | Identify if the the tool need a translatable component | If the component is not translatable the tool will not activate when the user active the component |
-    | Active always | The activation no depend of the component or section active as the user name in the menu | |
-    | Affected models | Defines the components that the tool will affect | Other components will not load the tool |
-    | Affected types | Array with the ontology tipo tld of affected component, area or section | In the case than you need to affect only a specific component of the ontology, define it to restring other components with the same model to load the tool |
-    | Ontology | A ontology extension | Some tools need extend the ontology in his way, use the ontology format to attach new nodes to it |
-    | Properties | A extension of the ontology properties | It can use independent of the ontology definition |
-    | Labels | Defines strings with translations to be used into the tool to translate the user interface | Labels can be get into the js with the get_tool_label('my_label') call, this field use a tool to edit the labels with user interface |
-    | Default configuration | Defines a JSON object with the default configuration | It will be changed by the specific configuration into the `tools configuration` section |
-    | Configuration | Defines a JSON object with the full configuration definition | The full options of the tool |
-
-3. Export the register file
-
-    ![download register file](assets/20231012_220645_export_register_file.png){ width="175" align=right }
-
-    When you will done, you will can download the register file pressing the button "Download register file" in inspector
-
-    The file will be downloaded with all configuration definitions, if you need change it or add new configuration, labels, etc, you will repeat the process. Add or change the information, download the file and so on.
-
-4. Adding the register file to the tool directory
-
-    The register.json file will be downloaded. Move this file inside the main directory of your tool.
-
-5. Register the tool
-
-    ![Alt text](<assets/ 20231012_221939_maintenace_menu.png>){ width="175" align=right }
-
-    The final step to activate the tool is register it. Go to:
-
-     > System administration > Maintenance
-
-     Locate the register tool block and see if your tool is in the list, if not, move your tool directory into the /tools directory and ensure that the register file is inside and all required files has a correct name.
-
-    ![Alt text](assets/20231012_222001_register_tools_panel.png){ width="375"}
-
-     Press the  "register tool button".
-
-To help to create new tools we are creating a template/sample tool named [tool_dev_template](https://github.com/renderpci/dedalo/tree/v6_developer/tools/tool_dev_template) to show the basic functionalities.
-
-Done!, now is your time to create an amazing tool!
+Done! Now it is your time to create an amazing tool.
