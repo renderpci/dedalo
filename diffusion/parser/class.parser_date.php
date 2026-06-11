@@ -4,7 +4,7 @@
 * Process the diffusion object date values.
 * It will apply some rules to text values to join, split, cut, etc.
 * All public functions needs to be static.
-* They will called by every diffusion class as: diffusion_xml.php, diffusion_sql.php, etc.
+* They are called by diffusion exporter classes (e.g. diffusion_xml).
 *
 * It can be loaded with `parser_main.php` or alone.
 * Example to load it using properties in `diffusion_element`.
