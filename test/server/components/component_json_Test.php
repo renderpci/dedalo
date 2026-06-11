@@ -526,5 +526,63 @@ final class component_json_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_conform_import_data
+	* @return void
+	*/
+	public function test_conform_import_data() {
+
+		$component = $this->build_component_instance();
+
+		// 1. arbitrary JSON object: the entire value becomes the single monovalue
+		$response = $component->conform_import_data('{"config":{"a":1}}', self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertIsArray($response->result);
+		$this->assertCount(1, $response->result);
+		$this->assertEquals(1, $response->result[0]->value->config->a);
+
+		// 2. arbitrary JSON array
+		$response = $component->conform_import_data('[1,2,3]', self::$tipo);
+		$this->assertTrue(empty($response->errors));
+		$this->assertEquals([1,2,3], $response->result[0]->value);
+
+		// 3. ambiguous un-wrapped envelope: goes ENTIRELY inside value
+		$response = $component->conform_import_data('[{"value":1},{"value":2}]', self::$tipo);
+		$this->assertTrue(empty($response->errors));
+		$this->assertCount(1, $response->result, 'expected single monovalue item');
+		$this->assertIsArray($response->result[0]->value, 'expected the whole array inside value');
+
+		// 4. wrapped envelope (dedalo_data wrapper detected by the import tool)
+		$component->import_data_is_wrapped = true;
+		$response = $component->conform_import_data('[{"value":{"config":{"a":1}},"id":1}]', self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertCount(1, $response->result);
+		$this->assertEquals(1, $response->result[0]->value->config->a);
+		$this->assertEquals(1, $response->result[0]->id);
+
+		// 5. wrapped with invalid envelope (items without value property)
+		$response = $component->conform_import_data('[{"foo":"bar"}]', self::$tipo);
+		$this->assertTrue(!empty($response->errors), 'expected errors for invalid envelope');
+		$component->import_data_is_wrapped = false;
+
+		// 6. legacy lang keyed envelope (old raw export)
+		$response = $component->conform_import_data('{"lg-nolan":[{"value":{"a":1},"id":1}]}', self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertEquals(1, $response->result[0]->value->a);
+
+		// 7. scalar values
+		$response = $component->conform_import_data('42', self::$tipo);
+		$this->assertSame(42, $response->result[0]->value);
+		$response = $component->conform_import_data('hello world', self::$tipo);
+		$this->assertSame('hello world', $response->result[0]->value);
+
+		// 8. empty value clears data
+		$response = $component->conform_import_data('', self::$tipo);
+		$this->assertNull($response->result);
+		$this->assertEquals('OK', $response->msg);
+	}//end test_conform_import_data
+
+
+
 }//end class component_json_test
 
