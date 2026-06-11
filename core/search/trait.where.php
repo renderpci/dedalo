@@ -300,7 +300,19 @@ trait where {
 				}
 
 				// join array_elements as relations
+				// Security: $component_tipo is a client-supplied SQO path value interpolated
+				// verbatim as a JSONB relation key (it cannot be parameterized and must keep
+				// its exact form, so trim_tipo() is not usable here). Validate the tipo format
+				// and fail closed on anything that is not a well-formed ontology tipo.
 				$component_tipo = $path[$key-1]->component_tipo;
+				if (!self::is_valid_tipo((string)$component_tipo)) {
+					debug_log(__METHOD__
+						. " Rejected invalid component_tipo in join path (possible injection attempt) " . PHP_EOL
+						. ' component_tipo: ' . to_string($component_tipo)
+						, logger::ERROR
+					);
+					throw new Exception("Error: invalid component_tipo in search path", 1);
+				}
 				$sql_join .= PHP_EOL . "LEFT JOIN LATERAL jsonb_array_elements({$current_key}.relation->'{$component_tipo}') AS {$t_relation} on true";
 
 				// join table by setion_tipo and section_id matches
@@ -512,7 +524,8 @@ trait where {
 								$sql_filter .= "\n-- filter_users_by_profile_areas -- ";
 							}
 							$sql_filter .= PHP_EOL .'AND '.$section_alias.'.section_id > 0 AND ';
-							$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb OR ' .PHP_EOL;
+							// $user_id is a server-side int (logged_user_id); cast defensively
+							$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.(int)$user_id.'}\'::jsonb OR ' .PHP_EOL;
 							$sql_filter .= '((';
 
 						# PROJECTS FILTER
@@ -545,7 +558,10 @@ trait where {
 									$search_locator->set_section_id($current_project_locator->section_id);
 									$search_locator->set_type($current_project_locator->type);
 
-								$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
+								// Parameterize the jsonb literal instead of inlining it inside a
+								// single-quoted SQL string (json_encode does not escape single quotes).
+								$placeholder = $this->get_placeholder('['.json_encode($search_locator).']');
+								$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>'.$placeholder.'::jsonb';
 							}
 							$sql_filter .= PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
 
@@ -576,6 +592,18 @@ trait where {
 						}
 
 						$component_filter_tipo = $ar_component_filter[0];
+
+						// Security: $component_filter_tipo is interpolated as a JSONB key below.
+						// It is ontology-sourced (server-side), but validate the tipo format for
+						// defense-in-depth before it reaches raw SQL.
+						if (!self::is_valid_tipo((string)$component_filter_tipo)) {
+							debug_log(__METHOD__
+								." Rejected invalid component_filter_tipo " . PHP_EOL
+								.' component_filter_tipo: ' . to_string($component_filter_tipo)
+								, logger::ERROR
+							);
+							return;
+						}
 
 						$ar_projects = component_filter_master::get_user_projects($user_id); // return array of locators
 						if (empty($ar_projects)) {
@@ -627,7 +655,16 @@ trait where {
 		$column_name = isset($query_object->column_name) ? $query_object->column_name : false;
 		if($column_name===false) {
 			debug_log(__METHOD__
-				." Invalid column_name: " . $column_name
+				." Invalid column_name: " . to_string($column_name)
+				, logger::ERROR
+			);
+			return false;
+		}
+		// Security: $column_name is interpolated as a bare SQL identifier (it cannot be
+		// parameterized). Restrict it to real matrix columns. Reject anything else.
+		if (!self::is_valid_data_column((string)$column_name)) {
+			debug_log(__METHOD__
+				." Rejected invalid column_name (not a known matrix column): " . to_string($column_name)
 				, logger::ERROR
 			);
 			return false;
