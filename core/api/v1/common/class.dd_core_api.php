@@ -387,9 +387,14 @@ final class dd_core_api {
 							// structure_context
 							// Using 'get_structure_context_simple' instead 'get_structure_context'
 							// skips the calculation of tools and buttons that are not needed in the current step
+							// (!) request_config is needed when a session SQO must be restored or a
+							// section_id filter must be injected below; the context cache used to make
+							// this work only when warm — now it must be requested explicitly.
+								$add_request_config = (isset($session_key) && isset($_SESSION['dedalo']['config']['sqo'][$session_key]))
+									|| !empty($section_id);
 								$current_context = $section->get_structure_context_simple(
 									1, // permissions
-									false // add_request_config
+									$add_request_config // add_request_config
 								);
 
 							// section_tool config
@@ -2188,7 +2193,11 @@ final class dd_core_api {
 
 						// areas
 							$element = area::get_instance($model, $tipo, $mode);
-							$element->properties = $element->get_properties() ?? new stdClass();
+							// (!) use set_properties (not a direct property write) so the
+							// properties_injected flag fires: the request-specific values
+							// injected below (action, sqo, thesaurus vars) must not be
+							// served from / baked into the shared structure context cache
+							$element->set_properties( $element->get_properties() ?? new stdClass() );
 
 						// thesaurus_mode
 							if (isset($ddo_source->properties->thesaurus_mode)) {

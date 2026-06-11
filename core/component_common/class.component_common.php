@@ -4232,11 +4232,14 @@ abstract class component_common extends common {
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
 		// static cache. The path is ontology-derived: it depends only on the tipos
-		// and the portal origin (from_component_tipo/from_section_tipo)
-			static $order_path_cache = [];
+		// and the portal origin (from_component_tipo/from_section_tipo).
+		// Stored in common::$cache_order_path so common::clear() purges it across
+		// worker requests. A deep copy is returned because subclass overrides
+		// (component_section_id, component_date, component_number) mutate the
+		// path items ($path[0]->column) after calling parent::get_order_path().
 			$cache_key = $component_tipo .'_'. $section_tipo .'_'. ($this->from_component_tipo ?? '') .'_'. ($this->from_section_tipo ?? '');
-			if (isset($order_path_cache[$cache_key])) {
-				return $order_path_cache[$cache_key];
+			if (isset(common::$cache_order_path[$cache_key])) {
+				return unserialize(serialize( common::$cache_order_path[$cache_key] ));
 			}
 
 		// get standard search query path. This get component path downwards
@@ -4257,8 +4260,10 @@ abstract class component_common extends common {
 				]);
 			}
 
-		// cache add
-			$order_path_cache[$cache_key] = $path;
+		// cache add. Store a deep copy so the caller's array (returned below and
+		// possibly mutated by subclass overrides) cannot alter the cached value
+			common::$cache_order_path[$cache_key] = unserialize(serialize($path));
+			common::manage_cache_size(common::$cache_order_path);
 
 		return $path;
 	}//end get_order_path

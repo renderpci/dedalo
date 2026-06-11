@@ -50,9 +50,39 @@ abstract class common {
 	public static function context_key(object $item) : string {
 		$section_tipo = $item->section_tipo ?? '';
 		if (is_array($section_tipo)) {
-			$section_tipo = implode(',', $section_tipo);
+			// json_encode (not implode) so an array value can never collide
+			// with a string value: ['a'] -> '["a"]' stays distinct from 'a'
+			$section_tipo = json_encode($section_tipo);
 		}
 		return ($item->tipo ?? '') .'_'. $section_tipo .'_'. ($item->mode ?? '');
+	}
+
+
+
+	/**
+	* MERGE_UNIQUE_CONTEXT
+	* Appends the given context items to the given context array skipping
+	* items whose identity key (see context_key: tipo+section_tipo+mode)
+	* is already present. First occurrence wins, matching the client
+	* matching criteria and the sections_json dedup behavior.
+	* @param array $ar_context
+	* @param array $ar_items
+	* @return array $ar_context
+	*/
+	public static function merge_unique_context(array $ar_context, array $ar_items) : array {
+		$seen = [];
+		foreach ($ar_context as $context_item) {
+			$seen[ self::context_key($context_item) ] = true;
+		}
+		foreach ($ar_items as $context_item) {
+			$context_item_key = self::context_key($context_item);
+			if (isset($seen[$context_item_key])) {
+				continue;
+			}
+			$seen[$context_item_key] = true;
+			$ar_context[] = $context_item;
+		}
+		return $ar_context;
 	}
 
 
@@ -192,8 +222,9 @@ abstract class common {
 
 		/**
 		 * Whether properties were injected with set_properties() (overriding the
-		 * ontology definition). When true, the structure context core cache is
-		 * bypassed: a cached ontology-derived context would not reflect them.
+		 * ontology definition). When true, the structure context core cache key
+		 * is extended with a hash of the injected properties: a plain
+		 * ontology-derived cache entry would not reflect them.
 		 * @var bool $properties_injected
 		 */
 		public bool $properties_injected = false;
@@ -232,6 +263,13 @@ abstract class common {
 		 * @var array $cache_structure_context
 		 */
 		public static array $cache_structure_context = [];
+
+		/**
+		 * Static cache for resolved component order paths (see component_common::get_order_path).
+		 * Declared here so common::clear() can purge it across worker requests.
+		 * @var array $cache_order_path
+		 */
+		public static array $cache_order_path = [];
 
 		/**
 		 * Static cache mapping section/component tipos to their matrix table names.
@@ -388,6 +426,7 @@ abstract class common {
 		*/
 		public static function clear() : void {
 			self::$cache_structure_context = [];
+			self::$cache_order_path = [];
 			self::$cache_matrix_table_from_tipo = [];
 			self::$cache_tables_with_relations = null;
 			self::$current_main_lang = [];
@@ -1112,8 +1151,8 @@ abstract class common {
 		// Fix properties object|null
 		$this->properties = $properties;
 
-		// mark as injected: structure context must be built fresh for this
-		// instance instead of served from the ontology-derived core cache
+		// mark as injected: the structure context core cache key will include
+		// a hash of these properties instead of serving the ontology-derived entry
 		$this->properties_injected = true;
 
 		return true;
@@ -1387,9 +1426,19 @@ abstract class common {
 
 		// clone. Never expose the cache entry by reference: callers add top-level
 		// properties to the returned context (e.g. target_section_tipo) and would
-		// pollute the cache. Nested core properties (properties, tools, buttons, ...)
-		// remain shared with the cache entry and must be treated as read-only.
+		// pollute the cache.
 			$dd_object = clone $core;
+
+		// properties. Deep clone: known callers mutate nested context properties
+		// (component_relation_*_json set show_interface->button_add=false,
+		// dd_core_api area cases inject thesaurus vars into context properties).
+		// With a shallow clone those writes would land in the shared cache entry
+		// and pollute every later caller of the same key. Other nested core
+		// properties (tools, buttons, section_map) remain shared with the cache
+		// entry and must be treated as read-only.
+			if (is_object($core->properties)) {
+				$dd_object->properties = unserialize(serialize($core->properties));
+			}
 
 		// stamp variant (per-call / per-instance) fields
 			// permissions. Callers inject inherited/capped permissions (see get_subdatum)
@@ -1488,11 +1537,19 @@ abstract class common {
 			// show_interface), tipo, section_tipo, mode, add_request_config and simple.
 			// Per-call / per-instance fields are NOT part of the core (they are stamped
 			// by build_structure_context), so they don't need to be in the key.
-			// Instances with injected properties (set_properties) bypass the cache:
-			// their context does not match the ontology-derived one.
-				$use_cache = ($this->properties_injected===false);
+			// Instances with injected properties (set_properties) extend the key with
+			// a hash of the injected properties: their context does not match the
+			// ontology-derived one, but identical injections (e.g. the same ddo
+			// properties injected on every row of a column) can share one entry.
+				$use_cache = true;
 				if ($use_cache===true) {
-					$ddo_key = (logged_user_id() ?? '').'_'.$tipo.'_'.$section_tipo.'_'.$mode.'_'.(int)$add_request_config.'_'.(int)$simple;
+					$safe_section_tipo = is_array($section_tipo)
+						? json_encode($section_tipo)
+						: $section_tipo;
+					$ddo_key = (logged_user_id() ?? '').'_'.$tipo.'_'.$safe_section_tipo.'_'.$mode.'_'.(int)$add_request_config.'_'.(int)$simple;
+					if ($this->properties_injected===true) {
+						$ddo_key .= '_p'.md5( json_encode($this->properties) );
+					}
 					if (isset(self::$cache_structure_context[$ddo_key])) {
 						if(SHOW_DEBUG===true) {
 							$len = !empty($this->tipo)
@@ -1665,8 +1722,12 @@ abstract class common {
 			}
 
 		// columns_map. Base ontology-derived value; final exposure is gated per call
-		// by build_structure_context() (null when request_config is not requested)
-			$columns_map = $this->get_columns_map();
+		// by build_structure_context() (null when request_config is not requested).
+		// Skip the calculation entirely on add_request_config=false keys: the
+		// stamping always discards it there (add_request_config is part of the key)
+			$columns_map = ($add_request_config===true)
+				? $this->get_columns_map()
+				: null;
 
 		// legacy_model
 			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
@@ -1869,21 +1930,19 @@ abstract class common {
 
 				$section_ddo = $_SESSION['dedalo']['config']['ddo'][$section_tipo];
 
-				if (isset($this->from_parent)) {
-					$current_from_parent = $this->from_parent;
-					$dd_object = array_reduce($section_ddo, function($carry, $item) use($tipo, $section_tipo, $current_from_parent){
-						if ($item->tipo===$tipo && $item->section_tipo===$section_tipo && $item->parent===$current_from_parent) {
-							return $item;
-						}
-						return $carry;
-					});
-				}else{
-					$dd_object = array_reduce($section_ddo, function($carry, $item) use($tipo, $section_tipo){
-						if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
-							return $item;
-						}
-						return $carry;
-					});
+				// last matching item wins (preserves the previous array_reduce
+				// semantics); iterate in reverse and stop on the first match,
+				// as this runs on every context build
+				$current_from_parent = $this->from_parent ?? null;
+				$dd_object = null;
+				$section_ddo = array_values($section_ddo); // ensure list keys
+				for ($i = count($section_ddo)-1; $i >= 0; $i--) {
+					$item = $section_ddo[$i];
+					if ($item->tipo===$tipo && $item->section_tipo===$section_tipo
+						&& ($current_from_parent===null || $item->parent===$current_from_parent)) {
+						$dd_object = $item;
+						break;
+					}
 				}
 				if (!empty($dd_object->parent)) {
 					// set
