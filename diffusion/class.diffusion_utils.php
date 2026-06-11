@@ -183,11 +183,10 @@ class diffusion_utils {
 	 * @see ontology_node::get_ar_tipo_by_model_and_relation() For relation resolution
 	 */
 	/**
-	 * GET_SECTION_DIFFUSION_NODES
+	 * GET_VIRTUAL_DIFFUSION_TREE
 	 * Walks down the virtual diffusion tree (resolving aliases) to find nodes
 	 * that match the specified section_tipo. Preserves the exact alias hierarchy.
 	 *
-	 * @param string $section_tipo The section to find diffusion nodes for
 	 * @return array Array of matching source elements mapped with their alias tree parents
 	 */
 	public static function get_virtual_diffusion_tree() : array {
@@ -892,54 +891,22 @@ class diffusion_utils {
 	public static function get_connection_status( object $item ) : ?object {
 
 		$connection_status = null;
-		$conn = null;
 
 		switch ($item->type) {
 
 			case 'sql':
-				// check connection
-				try {
-
-					if ($conn===null || $conn===false) {
-						// try again. Note that if there are multiple connections, they must be checked for each database.
-						$conn = DBi::_getConnection_mysql(
-							MYSQL_DEDALO_HOSTNAME_CONN,
-							MYSQL_DEDALO_USERNAME_CONN,
-							MYSQL_DEDALO_PASSWORD_CONN,
-							$item->database_name,
-							MYSQL_DEDALO_DB_PORT_CONN,
-							MYSQL_DEDALO_SOCKET_CONN
-						);
-					}
-
-				} catch (Exception $e) {
-					$conn = false;
-					debug_log(__METHOD__
-						."  Caught exception on connect to MySQL (database_name: $item->database_name): ". PHP_EOL
-						. $e->getMessage()
-						, logger::WARNING
-					);
-				}
-				if ($conn===false) {
-					$connection_status = (object)[
+				// MariaDB checks are a Bun engine responsibility: a single
+				// 'check_database' call covers server reachability + existence
+				$db_available = self::database_exits($item->database_name);
+				$connection_status = $db_available===true
+					? (object)[
+						'result'	=> true,
+						'msg'		=> 'Database is ready.'
+					]
+					: (object)[
 						'result'	=> false,
-						'msg'		=> 'Unable to connect to database '. $item->database_name
+						'msg'		=> 'Database is NOT ready (missing or engine unreachable).'
 					];
-				}else{
-					// check database
-					$db_available = diffusion_mysql::database_exits($item->database_name);
-					if ($db_available===true) {
-						$connection_status = (object)[
-							'result'	=> true,
-							'msg'		=> 'Database is ready.'
-						];
-					}else{
-						$connection_status = (object)[
-							'result'	=> false,
-							'msg'		=> 'Database is NOT ready.'
-						];
-					}
-				}
 				// error log when fails
 					if ($connection_status->result===false) {
 						debug_log(__METHOD__
@@ -957,6 +924,37 @@ class diffusion_utils {
 
 		return $connection_status;
 	}//end get_connection_status
+
+
+
+	/**
+	* DATABASE_EXITS
+	* Check if target MariaDB database exists.
+	* MariaDB management is a Bun engine responsibility: PHP never connects
+	* to MariaDB directly — this method asks the Bun API ('check_database').
+	* @param string $database_name
+	* @return bool
+	*/
+	public static function database_exits( string $database_name ) : bool {
+
+		$response = diffusion_api_client::call((object)[
+			'action'		=> 'check_database',
+			'database_name'	=> $database_name
+		]);
+
+		if (empty($response->result)) {
+			debug_log(__METHOD__
+				. " Unable to check database through diffusion engine" . PHP_EOL
+				. ' database_name: ' . $database_name . PHP_EOL
+				. ' msg: ' . to_string($response->msg ?? null)
+				, logger::WARNING
+			);
+			return false;
+		}
+
+
+		return (bool)($response->exists ?? false);
+	}//end database_exits
 
 
 
@@ -1047,9 +1045,121 @@ class diffusion_utils {
 
 
 	/**
+	* ELEMENT_PATH_MATCHES
+	* Checks if a virtual-tree path item is the given diffusion element.
+	* Path items hold the virtual (alias-aware) tipo; callers may pass either
+	* the alias tipo or the resolved real element tipo, so both are matched.
+	* @param object $path_item Virtual tree path item {tipo, model, label, type?}
+	* @param string $diffusion_element_tipo
+	* @return bool
+	*/
+	private static function element_path_matches( object $path_item, string $diffusion_element_tipo ) : bool {
+
+		if ($path_item->model!=='diffusion_element' && $path_item->model!=='diffusion_element_alias') {
+			return false;
+		}
+
+		if ($path_item->tipo===$diffusion_element_tipo) {
+			return true;
+		}
+
+		// alias path item: match against the resolved real element tipo
+		if ($path_item->model==='diffusion_element_alias') {
+			$resolved = self::resolve_node_with_alias($path_item->tipo);
+			if (($resolved->real_tipo ?? null)===$diffusion_element_tipo) {
+				return true;
+			}
+		}
+
+		return false;
+	}//end element_path_matches
+
+
+
+	/**
+	* GET_SECTION_NODE_FOR_ELEMENT
+	* Resolves the published artifact node of a given diffusion element and
+	* section from the v7 flat virtual diffusion tree: the table/table_alias
+	* node for SQL elements, the owl:Class node for RDF, etc.
+	* The returned node is the flat virtual object produced by
+	* get_section_diffusion_nodes: {tipo, model, label, parents, children}.
+	* @param string $diffusion_element_tipo Alias or real element tipo
+	* @param string $section_tipo
+	* @return object|null
+	*/
+	public static function get_section_node_for_element( string $diffusion_element_tipo, string $section_tipo ) : ?object {
+
+		$nodes = self::get_section_diffusion_nodes($section_tipo);
+		foreach ($nodes as $node) {
+			foreach ($node->parents ?? [] as $path_item) {
+				if ($path_item->model!=='diffusion_element' && $path_item->model!=='diffusion_element_alias') {
+					continue;
+				}
+				// first element found in the path decides this node's element
+				if (self::element_path_matches($path_item, $diffusion_element_tipo)) {
+					return $node;
+				}
+				break;
+			}
+		}
+
+		return null;
+	}//end get_section_node_for_element
+
+
+
+	/**
+	* GET_DATABASE_NAME_FOR_ELEMENT
+	* Resolves the target database name of a diffusion element from the v7
+	* flat virtual diffusion tree: the node with model 'database' (or
+	* 'database_alias' — alias label wins) whose parents path contains the
+	* element. E.g. {"tipo":"oh88","model":"database","label":"web_default"}
+	* resolves to 'web_default'.
+	* @param string $diffusion_element_tipo Alias or real element tipo
+	* @return string|null $database_name
+	*/
+	public static function get_database_name_for_element( string $diffusion_element_tipo ) : ?string {
+
+		$virtual_tree = self::get_virtual_diffusion_tree();
+		foreach ($virtual_tree as $vnode) {
+			if ($vnode->model!=='database' && $vnode->model!=='database_alias') {
+				continue;
+			}
+			foreach ($vnode->parents ?? [] as $path_item) {
+				if (self::element_path_matches($path_item, $diffusion_element_tipo)) {
+					return $vnode->label;
+				}
+			}
+		}
+
+		return null;
+	}//end get_database_name_for_element
+
+
+
+	/**
+	* GET_TABLE_TIPO
+	* Resolve the table tipo (alias preferred) of given diffusion element and
+	* section, using the v7 flat virtual diffusion tree (the virtual node tipo
+	* is already the alias tipo when the table is aliased).
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @return string|null $table_tipo
+	*/
+	public static function get_table_tipo( string $diffusion_element_tipo, string $section_tipo ) : ?string {
+
+		$node = self::get_section_node_for_element($diffusion_element_tipo, $section_tipo);
+
+		return $node->tipo ?? null;
+	}//end get_table_tipo
+
+
+
+	/**
 	* GET_TABLE_FIELDS
-	* Resolve all fields of a 'table' element inside a given 'diffusion_element'
-	* Uses diffusion MYSQL tables model
+	* Resolve all fields of a 'table' element inside a given 'diffusion_element',
+	* using the v7 flat virtual diffusion tree. The section node children are
+	* already merged alias + real (alias overrides win).
 	* @param string $diffusion_element_tipo
 	* @param string $section_tipo
 	* @return array $ar_table_fields
@@ -1057,39 +1167,23 @@ class diffusion_utils {
 	*/
 	public static function get_table_fields(string $diffusion_element_tipo, string $section_tipo) : array {
 
-		$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
-
-		// table
-		$table = $diffusion_element_tables_map->{$section_tipo}->table ?? null;
-		if (!$table) {
+		$node = self::get_section_node_for_element($diffusion_element_tipo, $section_tipo);
+		if ($node===null) {
 			debug_log(__METHOD__
 				. " No table available for this section " . PHP_EOL
+				. ' diffusion_element_tipo: ' . to_string($diffusion_element_tipo) . PHP_EOL
 				. ' section_tipo: ' . to_string($section_tipo)
 				, logger::WARNING
 			);
 			return [];
 		}
 
-		$ontology_node 	   = ontology_node::get_instance($table);
-		$ar_table_children = $ontology_node->get_ar_children_of_this();
-
-		// Add children from table alias
-		$table_alias_tipo = $diffusion_element_tables_map->{$section_tipo}->from_alias ?? null;
-		if (!empty($table_alias_tipo)) {
-
-			$ontology_node_alias 	 = ontology_node::get_instance($table_alias_tipo);
-			$ar_table_alias_children = $ontology_node_alias->get_ar_children_of_this();
-
-			// Merge all
-			$ar_table_children = array_merge($ar_table_children, $ar_table_alias_children);
-		}
-
 		$ar_table_fields = [];
-		foreach ($ar_table_children as $tipo) {
+		foreach ($node->children ?? [] as $child) {
 
 			$item = new stdClass();
-				$item->tipo 	= $tipo;
-				$item->label 	= ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true);
+				$item->tipo 	= $child->tipo;
+				$item->label 	= $child->label;
 
 			$ar_table_fields[] = $item;
 		}
