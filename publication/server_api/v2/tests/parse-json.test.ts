@@ -74,4 +74,27 @@ describe('parseJsonStrings', () => {
     const result = parseJsonStrings(undefined);
     expect(result).toBeUndefined();
   });
+
+  test('mutates the row in place and returns the same reference', () => {
+    const row = { id: 1, data: '["a","b"]' } as Record<string, unknown>;
+    const result = parseJsonStrings(row);
+    expect(result).toBe(row); // same object, not a rebuilt copy
+    expect(row.data).toEqual(['a', 'b']); // original was mutated
+  });
+
+  test('mutates objects nested inside array elements in place', () => {
+    const rows = [{ id: 1, meta: '{"inner":["x","y"]}' }] as Record<string, unknown>[];
+    const result = parseJsonStrings(rows);
+    expect(result).toBe(rows);
+    expect(result[0]).toBe(rows[0]);
+    expect(rows[0].meta).toEqual({ inner: ['x', 'y'] });
+  });
+
+  test('does not re-parse JSON nested within an already-parsed value', () => {
+    // value within parsed JSON that itself looks like JSON stays a string,
+    // matching a single JSON.parse pass
+    const row = { id: 1, data: '{"raw":"[1,2]"}' } as Record<string, unknown>;
+    const result = parseJsonStrings(row);
+    expect(result.data).toEqual({ raw: '[1,2]' });
+  });
 });

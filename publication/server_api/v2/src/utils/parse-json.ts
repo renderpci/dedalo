@@ -1,27 +1,32 @@
+// Recursively parses JSON-string columns (Dédalo stores JSON in TEXT columns,
+// which mysql2 returns as strings) into real objects/arrays. Rows are freshly
+// fetched and owned by the caller, so this mutates them in place to avoid
+// rebuilding an object per row/value. Output is identical to a rebuild.
 export function parseJsonStrings<T>(data: T): T {
-  if (data === null || data === undefined) return data;
+  if (data === null || typeof data !== 'object') return data;
 
   if (Array.isArray(data)) {
-    return data.map(item => parseJsonStrings(item)) as T;
+    const arr = data as unknown[];
+    for (let i = 0; i < arr.length; i++) {
+      arr[i] = parseJsonStrings(arr[i]);
+    }
+    return data;
   }
 
-  if (typeof data === 'object') {
-    const result: Record<string, unknown> = {};
-    for (const key in data) {
-      const value = (data as Record<string, unknown>)[key];
-      if (typeof value === 'string' && isJsonLike(value)) {
+  const obj = data as Record<string, unknown>;
+  for (const key in obj) {
+    const value = obj[key];
+    if (typeof value === 'string') {
+      if (isJsonLike(value)) {
         try {
-          result[key] = JSON.parse(value);
+          obj[key] = JSON.parse(value);
         } catch {
-          result[key] = value;
+          // leave the original string on parse failure
         }
-      } else if (typeof value === 'object' && value !== null) {
-        result[key] = parseJsonStrings(value);
-      } else {
-        result[key] = value;
       }
+    } else if (typeof value === 'object' && value !== null) {
+      parseJsonStrings(value); // recurse in place
     }
-    return result as T;
   }
 
   return data;
