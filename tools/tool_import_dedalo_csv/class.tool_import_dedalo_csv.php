@@ -10,6 +10,25 @@
 * - Validation of component tipos against ontology definitions
 * - Progress tracking and error reporting for large batch operations
 *
+* Accepted cell formats (handled by every component conform_import_data):
+* - dedalo_data wrapper: {"dedalo_data": <dato>} as produced by tool_export 'dedalo_raw'
+*   format. Unwrapped transparently before conforming (see component_common::unwrap_dedalo_data).
+* - v7 dato (canonical): JSON array of objects, e.g. [{"value":"hello"}] for text/number/email,
+*   [{"start":{"year":2023}}] for dates, [{"iri":"https://..."}] for iri, locators for relations,
+*   [{"lat":39.46,"lon":-0.37}] for geolocation.
+* - v6 dato (legacy, auto-normalized): JSON array of plain values, e.g. ["hello"] or [104,-75.35].
+* - Multi-language JSON object: {"lg-eng":[...],"lg-spa":[...]} saved per lang via set_data_lang().
+* - Flat strings: plain text, numbers, emails ('a@b.com | c@d.com'), dates ('2023/10/26<>2023/10/27'),
+*   uris ('label, https://... | https://...'), relation section_id lists ('1,4,6'),
+*   geolocation coordinates ('lat, lon[, zoom[, alt]]'), lang codes ('lg-spa, lg-eng').
+* The 'id' and 'lang' item properties are auto-assigned on save and must not be supplied.
+*
+* Empty cell semantics: an empty CSV cell conforms to null and CLEARS the existing
+* component data for that record (and lang, when translatable).
+*
+* Report channels: failed_rows (value ignored) and warning_rows (value imported,
+* needs user attention; e.g. select_lang codes not in the project languages).
+*
 * @package Dedalo
 * @subpackage Tools
 */
@@ -584,6 +603,7 @@ class tool_import_dedalo_csv extends tool_common {
 				$created_rows	= [];
 				$updated_rows	= [];
 				$failed_rows	= [];
+				$warning_rows	= [];
 
 			$counter		= 0;
 			if (empty($ar_csv_data)) {
@@ -749,8 +769,24 @@ class tool_import_dedalo_csv extends tool_common {
 								// To optimize save process in scripts of importation, you can disable this option if is not really necessary
 								$component->update_diffusion_info_propagate_changes = false;
 
+						// unwrap the dedalo_data wrapper when present
+						// raw exported data ('dedalo_raw' format) is wrapped as {"dedalo_data": <dato>}
+						// to identify externally that the value is Dédalo format data.
+						// Plain (un-wrapped) v6/v7 values are returned unchanged.
+							$unwrap_response = component_common::unwrap_dedalo_data($value);
+							$value = $unwrap_response->value;
+							// the flag allows components as component_json to disambiguate
+							// a v7 envelope from a literal JSON value with the same shape
+							$component->import_data_is_wrapped = $unwrap_response->wrapped;
+
 						// conform imported value with every component rules.
 							$conform_import_data_response = $component->conform_import_data($value, $column_map->column_name);
+							// if the component has warnings (non fatal), include them into warning rows
+							if(!empty($conform_import_data_response->warnings)){
+								foreach ($conform_import_data_response->warnings as $current_warning) {
+									$warning_rows[] = $current_warning;
+								}
+							}
 							// if the component has errors, include it into failed rows
 							if(!empty($conform_import_data_response->errors)){
 								foreach ($conform_import_data_response->errors as $current_error) {
@@ -932,10 +968,11 @@ class tool_import_dedalo_csv extends tool_common {
 		// response
 			if (!empty($updated_rows) || !empty($created_rows)) {
 				$response->result		= true;
-				$response->msg			= 'Section: '.$section_tipo.'. Total records created:'.count($created_rows).' - updated:'.count($updated_rows).' - failed:'.count($failed_rows);
+				$response->msg			= 'Section: '.$section_tipo.'. Total records created:'.count($created_rows).' - updated:'.count($updated_rows).' - failed:'.count($failed_rows).' - warnings:'.count($warning_rows);
 				$response->created_rows	= $created_rows;
 				$response->updated_rows	= $updated_rows;
 				$response->failed_rows	= $failed_rows;
+				$response->warning_rows	= $warning_rows;
 			}
 			$response->time = exec_time_unit($start_time,'ms');
 
