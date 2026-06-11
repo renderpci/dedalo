@@ -1,0 +1,46 @@
+{
+	"result": true,
+	"msg": "OK. Request done",
+	"langs": { "lg-eng": "English", "lg-spa": "Spanish", "lg-cat": "Catalan" },
+	"main_lang": "lg-eng",
+	"main": [
+		{ "diffusion_tipo": "test1", "term": "web_test_diffusion", "model": "database" }
+	],
+	"datum": [
+		{
+			"diffusion_tipo": "test5",
+			"section_tipo": "test3",
+			"term": "fallbacks",
+			"model": "table",
+			"parent": "test1",
+			"context": [
+				{ "term": "exact",      "tipo": "f1", "model": "field_text", "parent": "test5", "parser": {}, "columns": [] },
+				{ "term": "nolan_only", "tipo": "f2", "model": "field_text", "parent": "test5", "parser": {}, "columns": [] },
+				{ "term": "main_only",  "tipo": "f3", "model": "field_text", "parent": "test5", "parser": {}, "columns": [] },
+				{ "term": "any_only",   "tipo": "f4", "model": "field_text", "parent": "test5", "parser": {}, "columns": [] },
+				{ "term": "missing",    "tipo": "f5", "model": "field_text", "parent": "test5", "parser": {}, "columns": [] }
+			],
+			"data": [
+				{
+					"section_id": 1,
+					"fields": {
+						"f1": [
+							{ "tipo": "c1", "lang": "lg-eng", "entries": [ { "value": "exact-eng", "errors": [] } ], "id": null },
+							{ "tipo": "c1", "lang": "lg-spa", "entries": [ { "value": "exact-spa", "errors": [] } ], "id": null },
+							{ "tipo": "c1", "lang": "lg-cat", "entries": [ { "value": "exact-cat", "errors": [] } ], "id": null }
+						],
+						"f2": [
+							{ "tipo": "c2", "lang": null, "entries": [ { "value": "nolan-value", "errors": [] } ], "id": null }
+						],
+						"f3": [
+							{ "tipo": "c3", "lang": "lg-eng", "entries": [ { "value": "main-value", "errors": [] } ], "id": null }
+						],
+						"f4": [
+							{ "tipo": "c4", "lang": "lg-ita", "entries": [ { "value": "any-value", "errors": [] } ], "id": null }
+						]
+					}
+				}
+			]
+		}
+	]
+}
