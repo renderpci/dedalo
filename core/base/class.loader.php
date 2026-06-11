@@ -87,8 +87,8 @@ include DEDALO_CORE_PATH . '/widgets/widget_common/class.widget_common.php';
 // Diffusion
 include DEDALO_DIFFUSION_PATH . '/class.diffusion.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_section_stats.php';
-include DEDALO_DIFFUSION_PATH . '/class.diffusion_sql.php';
-include DEDALO_DIFFUSION_PATH . '/class.diffusion_mysql.php';
+include DEDALO_DIFFUSION_PATH . '/class.diffusion_api_client.php';
+include DEDALO_DIFFUSION_PATH . '/class.diffusion_delete.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_object.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_chain_processor.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_utils.php';
