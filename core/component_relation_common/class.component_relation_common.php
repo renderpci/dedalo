@@ -2682,7 +2682,9 @@ class component_relation_common extends component_common {
 			$value			= $import_value;
 
 		// no value case
+		// empty cell is valid: result null clears the existing component data
 			if (empty($value)) {
+				$response->msg = 'OK';
 				return $response;
 			}
 
