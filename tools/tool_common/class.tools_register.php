@@ -506,6 +506,22 @@ class tools_register {
 				continue;
 			}
 
+			// lifecycle hook: optional `public static function on_register(): void`.
+			// Sanctioned place for tool setup (e.g. creating its dd996 config
+			// record) instead of first-request hacks. The class is already loaded
+			// by the registration contract check in process_tool_directory.
+			// A broken hook never fails the import.
+			if (method_exists($tool_name, 'on_register')) {
+				try {
+					$tool_name::on_register();
+				} catch (\Throwable $e) {
+					debug_log(__METHOD__
+						. " on_register hook failed for '$tool_name': " . $e->getMessage()
+						, logger::ERROR
+					);
+				}
+			}
+
 			// Update report with success status
 			$report_item = array_find($info_file_processed, function($el) use($tool_name) {
 				return $el->name === $tool_name;
@@ -588,6 +604,24 @@ class tools_register {
 			});
 
 			if ($found_on_disk === null) {
+
+				// lifecycle hook: optional `public static function on_remove(): void`.
+				// Best effort only — the tool directory is usually already gone, so
+				// the class is callable only if it was loaded earlier in this
+				// request. Removal never fails on a broken hook.
+				if (is_string($tool_name_on_db)
+					&& class_exists($tool_name_on_db, false)
+					&& method_exists($tool_name_on_db, 'on_remove')) {
+					try {
+						$tool_name_on_db::on_remove();
+					} catch (\Throwable $e) {
+						debug_log(__METHOD__
+							. " on_remove hook failed for '$tool_name_on_db': " . $e->getMessage()
+							, logger::ERROR
+						);
+					}
+				}
+
 				$section_record = section_record::get_instance(self::$section_registered_tools_tipo, $current_section_id);
 				$section_record->delete();
 			}
