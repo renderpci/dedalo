@@ -672,20 +672,117 @@ final class component_common_test extends BaseTestCase {
 					'expected get_grid_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
 				);
 			}else{
-				if (in_array($element->model, component_relation_common::get_components_with_relations())) {
-					$this->assertTrue(
-						gettype($dd_grid_cell_object->value)==='array',
-						'expected get_grid_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
-					);
-				}else{
-					$this->assertTrue(
-						gettype($dd_grid_cell_object->value)==='array',
-						'expected get_grid_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
-					);
-				}
+				// raw values are wrapped as {"dedalo_data": <dato>} to identify
+				// externally that the value is Dédalo format data (see get_raw_value)
+				$this->assertTrue(
+					is_array($dd_grid_cell_object->value),
+					'expected get_raw_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
+				);
+				$this->assertTrue(
+					array_key_exists('dedalo_data', $dd_grid_cell_object->value),
+					'expected get_raw_value to have "dedalo_data" key' ." ($element->model)"
+				);
+				$this->assertTrue(
+					gettype($dd_grid_cell_object->value['dedalo_data'])==='array',
+					'expected wrapped dedalo_data type is array. ' .gettype($dd_grid_cell_object->value['dedalo_data']) ." ($element->model)"
+				);
 			}
 		}//end foreach (get_elements() as $element)
 	}//end test_get_raw_value
+
+
+
+	/**
+	* TEST_UNWRAP_DEDALO_DATA
+	* @return void
+	*/
+	public function test_unwrap_dedalo_data() {
+
+		// wrapped case
+		$wrapped = '{"dedalo_data":[{"value":"Hello","lang":"lg-eng","id":1}]}';
+		$response = component_common::unwrap_dedalo_data($wrapped);
+		$this->assertTrue(
+			$response->wrapped===true,
+			'expected wrapped true'
+		);
+		$decoded = json_decode($response->value);
+		$this->assertIsArray($decoded);
+		$this->assertEquals('Hello', $decoded[0]->value);
+
+		// plain v7 case (un-wrapped, returned unchanged)
+		$plain = '[{"value":"Hello"}]';
+		$response = component_common::unwrap_dedalo_data($plain);
+		$this->assertTrue(
+			$response->wrapped===false,
+			'expected wrapped false'
+		);
+		$this->assertEquals($plain, $response->value);
+
+		// plain string case (not JSON, returned unchanged)
+		$response = component_common::unwrap_dedalo_data('Hello world');
+		$this->assertTrue($response->wrapped===false);
+		$this->assertEquals('Hello world', $response->value);
+
+		// object without the marker (returned unchanged)
+		$other = '{"lg-eng":["Hello"]}';
+		$response = component_common::unwrap_dedalo_data($other);
+		$this->assertTrue($response->wrapped===false);
+		$this->assertEquals($other, $response->value);
+	}//end test_unwrap_dedalo_data
+
+
+
+	/**
+	* TEST_IS_PLAIN_BRACKET_STRING
+	* @return void
+	*/
+	public function test_is_plain_bracket_string() {
+
+		// admitted plain strings
+		$this->assertTrue(component_common::is_plain_bracket_string('Hello'));
+		$this->assertTrue(component_common::is_plain_bracket_string('[Ac]'));
+		$this->assertTrue(component_common::is_plain_bracket_string('[1,2,3]'));
+
+		// rejected malformed JSON array of strings
+		$this->assertFalse(component_common::is_plain_bracket_string('["Hello'));
+		$this->assertFalse(component_common::is_plain_bracket_string('Hello"]'));
+		$this->assertFalse(component_common::is_plain_bracket_string('["Hello"]'));
+	}//end test_is_plain_bracket_string
+
+
+
+	/**
+	* TEST_CONFORM_IMPORT_DATA_MULTILANG
+	* Multi-language JSON objects must be kept as objects with normalized
+	* per-lang arrays of v7 items (not cast to associative arrays)
+	* @return void
+	*/
+	public function test_conform_import_data_multilang() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_input_text',
+			'test52',
+			1,
+			'list',
+			DEDALO_DATA_LANG,
+			'test3'
+		);
+
+		// multi-lang object with plain string values
+		$response = $component->conform_import_data('{"lg-eng":"My value","lg-spa":"Mi valor"}', 'test52');
+		$this->assertTrue(empty($response->errors), 'expected empty errors');
+		$conformed = $response->result;
+		$this->assertIsObject($conformed, 'expected object result for multi-lang input');
+		$lg_eng = 'lg-eng';
+		$this->assertIsArray($conformed->$lg_eng, 'expected array lang value');
+		$this->assertEquals('My value', $conformed->$lg_eng[0]->value);
+
+		// '0' value must not be lost
+		$response = $component->conform_import_data('0', 'test52');
+		$this->assertTrue(!empty($response->result), "expected '0' value to be conformed, not nulled");
+	}//end test_conform_import_data_multilang
 
 
 
