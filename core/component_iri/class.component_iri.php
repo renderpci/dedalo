@@ -773,26 +773,6 @@ class component_iri extends component_common {
 				$response->errors	= [];
 				$response->msg		= 'Error. Request failed';
 
-		// valid_string
-		// check the begin and end of the value string, if it has a [] or other combination that seems array
-		// if the text has [" or "] it's not admitted, because it's a bad array of strings.
-			$is_valid_string = function(string $text_value) : bool {
-
-				$begins_one	= substr($text_value, 0, 1);
-				$ends_one	= substr($text_value, -1);
-				$begins_two	= substr($text_value, 0, 2);
-				$ends_two	= substr($text_value, -2);
-
-				if (($begins_two !== '["' && $ends_two !== '"]') ||
-					($begins_two !== '["' && $ends_one !== ']') ||
-					($begins_one !== '[' && $ends_two !== '"]')
-					){
-						return true;
-				}
-
-				return false;
-			};
-
 		// object | array case
 			// Check if is a JSON stringified. Is yes, decode
 			// if data is a object | array it will be the Dédalo format and check if the IRI is OK.
@@ -902,7 +882,7 @@ class component_iri extends component_common {
 										? $properties->fields_separator
 										: ', ';
 
-									$valid_string			= $is_valid_string($iri_object);
+									$valid_string			= self::is_plain_bracket_string($iri_object);
 									$has_field_separator	= strpos($iri_object, $fields_separator.'http')!==false;
 									$with_protocol			= $this->has_protocol($iri_object);
 
@@ -947,6 +927,9 @@ class component_iri extends component_common {
 						$iri_object = new stdClass();
 						if(isset($data_from_json->iri)){
 
+							// remove unused spaces or other invalid code as \t \n, etc
+							$data_from_json->iri = trim($data_from_json->iri);
+
 							$result = $this->has_protocol($data_from_json->iri);
 							if($result===false){
 
@@ -983,6 +966,19 @@ class component_iri extends component_common {
 						// set the title given - Deprecated
 						if(isset($data_from_json->title)){
 							$iri_object->title = $data_from_json->title;
+						}
+
+						// empty object check. Do not save data as [{}]
+						if (empty((array)$iri_object)) {
+
+							$failed = new stdClass();
+								$failed->section_id		= $this->section_id;
+								$failed->data			= to_string($data_from_json);
+								$failed->component_tipo	= $this->get_tipo();
+								$failed->msg			= 'IGNORED: object without iri data '. to_string($data_from_json);
+							$response->errors[] = $failed;
+
+							return $response;
 						}
 
 						$value = [$iri_object];
@@ -1114,7 +1110,7 @@ class component_iri extends component_common {
 		// label_id is the target section_id for label dataframe of the values: dédalo, nomisma and wikidata
 		// the label dataframe will be created when the component save
 		// @see Save()
-			$valid = $is_valid_string($import_value);
+			$valid = self::is_plain_bracket_string($import_value);
 			if ($valid===false) {
 
 				// import value seems to be a JSON malformed.
