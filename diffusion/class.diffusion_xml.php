@@ -18,6 +18,9 @@ class diffusion_xml {
 	public $lang;
 	// saved_files. Array of strings as ['/path/file1.xml','/path/file2.xml']
 	public static $saved_files = [];
+	// request-scoped caches (cleared by reset_cache)
+	private static ?array	$diffusion_objects_cache	= null;
+	private static bool		$parsers_loaded				= false;
 
 
 
@@ -54,9 +57,8 @@ class diffusion_xml {
 	public function get_diffusion_objects(string $root_tipo, bool $include_self=false, string $lang=DEDALO_STRUCTURE_LANG): array {
 
 		// diffusion_objects_cache. Cache for performance on multiple records
-		static $diffusion_objects_cache;
-		if (isset($diffusion_objects_cache)) {
-			return $diffusion_objects_cache;
+		if (self::$diffusion_objects_cache !== null) {
+			return self::$diffusion_objects_cache;
 		}
 
 		$diffusion_objects = [];
@@ -87,21 +89,21 @@ class diffusion_xml {
 			// column / node name (from the Ontology term value)
 			$name = ontology_node::get_term_by_tipo($child_tipo, $lang);
 
-			// create a new diffusion_object
-			$diffusion_object = new diffusion_object((object)[
+			// create a new diffusion object (plain object: container class diffusion_object removed in v7)
+			$diffusion_object = (object)[
 				'tipo'		=> $child_tipo,
 				'parent'	=> $parent,
 				'name'		=> $name,
 				'model'		=> ontology_node::get_model_by_tipo($child_tipo,true),
 				'process'	=> $process
-			]);
+			];
 
 			// add
 			$diffusion_objects[] = $diffusion_object;
 		}
 
 		// cache
-		$diffusion_objects_cache = $diffusion_objects;
+		self::$diffusion_objects_cache = $diffusion_objects;
 
 
 		return $diffusion_objects;
@@ -166,8 +168,7 @@ class diffusion_xml {
 	 */
 	public function load_parsers( string $diffusion_element_tipo ) : bool {
 
-		static $parsers_loaded;
-		if (isset($parsers_loaded) && $parsers_loaded===true) {
+		if (self::$parsers_loaded===true) {
 			return true;
 		}
 
@@ -220,11 +221,26 @@ class diffusion_xml {
 			}
 		}
 
-		$parsers_loaded = true;
+		self::$parsers_loaded = true;
 
 
 		return true;
 	}//end load_parsers
+
+
+
+	/**
+	 * RESET_CACHE
+	 * Clears the request-scoped static caches. Call at request boundaries
+	 * and between iterations of long-running CLI processes.
+	 * Note: $parsers_loaded is intentionally NOT reset — parser class files
+	 * stay included for the lifetime of the PHP process.
+	 * @return void
+	 */
+	public static function reset_cache() : void {
+
+		self::$diffusion_objects_cache = null;
+	}//end reset_cache
 
 
 
@@ -380,10 +396,10 @@ class diffusion_xml {
 	* 		<row>First informant</row>
 	* 		<row>Second informant</row>
 	* 	</informant>
-	* @param diffusion_object $diffusion_object
+	* @param object $diffusion_object
 	* @return array $diffusion_object_rows
 	*/
-	private function resolve_data_rows( diffusion_object $diffusion_object ) : array {
+	private function resolve_data_rows( object $diffusion_object ) : array {
 
 		$data = $diffusion_object->data ?? [];
 
@@ -419,15 +435,15 @@ class diffusion_xml {
 		// if the grouper has multiple datasets
 		// creates new diffusion object for grouping the datasets
 		// it is a clone of the original diffusion group
-		// create the new diffusion_object for current lang
-		$grouper_diffusion_object = new diffusion_object((object)[
+		// create the new diffusion object for current lang
+		$grouper_diffusion_object = (object)[
 			'tipo'		=> $diffusion_object->tipo,
 			'parent'	=> $diffusion_object->parent,
 			'name'		=> $diffusion_object->name,
 			'model'		=> ontology_node::get_model_by_tipo($diffusion_object->tipo, true),
 			'process'	=> $diffusion_object->process,
 			'data'		=> []
-		]);
+		];
 		$diffusion_object_rows[] = $grouper_diffusion_object;
 
 
@@ -435,15 +451,15 @@ class diffusion_xml {
 		// if the grouper has multiple datasets use the `row` name and link they to the diffusion object grouper.
 		foreach ($grouped as $key => $data_group) {
 
-			// create the new diffusion_object for current lang
-			$new_diffusion_object = new diffusion_object((object)[
+			// create the new diffusion object for current dataset
+			$new_diffusion_object = (object)[
 				'tipo'		=> $key . $diffusion_object->tipo,
 				'parent'	=> $diffusion_object->tipo,
 				'name'		=> 'row',
 				'model'		=> ontology_node::get_model_by_tipo($diffusion_object->tipo, true),
 				'process'	=> $diffusion_object->process,
 				'data'		=> $data_group
-			]);
+			];
 
 			// adds it to the final array
 			$diffusion_object_rows[] = $new_diffusion_object;
@@ -670,11 +686,11 @@ class diffusion_xml {
 	/**
 	* GET_DEFAULT_PROCESS_PARSER
 	* Get the default parser based on data items number and the model.
-	* @param diffusion_object $diffusion_object
+	* @param object $diffusion_object
 	* @return array
 	* 	Array of objects (parsers)
 	*/
-	public function get_default_process_parser( diffusion_object $diffusion_object ) : array {
+	public function get_default_process_parser( object $diffusion_object ) : array {
 
 		// default parser
 		$default_parser = [(object)[
@@ -892,7 +908,7 @@ class diffusion_xml {
 
 		$ar_data = [];
 
-		$ddo_map = diffusion_data::get_ddo_map($tipo, $section_tipo);
+		$ddo_map = diffusion_utils::get_ddo_map($tipo, $section_tipo);
 
 		if( empty($ddo_map) ){
 			return $ar_data;
@@ -905,8 +921,10 @@ class diffusion_xml {
 			$resolve_options->parent		= $section_tipo;
 			$resolve_options->section_tipo	= $section_tipo;
 			$resolve_options->section_id	= $section_id;
+			$resolve_options->is_publishable = true;
 
-		$ar_data = diffusion_data::get_ddo_map_value( $resolve_options );
+		$processor	= new diffusion_chain_processor();
+		$ar_data	= $processor->resolve_chain( $resolve_options );
 
 
 		return $ar_data;
@@ -1014,15 +1032,14 @@ class diffusion_xml {
 			$lang_tld2 = lang::get_alpha2_from_code($current_lang);
 			$lang_tipo = str_replace('lg-', '', $current_lang);
 
-			// create the new diffusion_object for current lang
-			$new_diffusion_object = new diffusion_object((object)[
+			// create the new diffusion object for current lang
+			$new_diffusion_object = (object)[
 				'tipo'		=> $lang_tipo . $diffusion_object->tipo,
 				'parent'	=> $diffusion_object->tipo,
 				'name'		=> $lang_tld2,
-				// 'model'		=> ontology_node::get_model_by_tipo($diffusion_object->tipo,true),
 				'process'	=> $diffusion_object->process,
 				'data'		=> $lang_data
-			]);
+			];
 
 			// add
 			$diffusion_object_langs[] = $new_diffusion_object;
@@ -1036,37 +1053,6 @@ class diffusion_xml {
 
 		return $diffusion_object_langs;
 	}//end resolve_langs
-
-
-
-	/**
-	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
-	* Used to determine when show publication button in sections
-	* Called from class diffusion to get the XML portion of sections
-	* @see diffusion::get_diffusion_sections_from_diffusion_element
-	* @param string $diffusion_element_tipo
-	* @param string|null $class_name = null
-	* @return array $ar_diffusion_sections
-	*/
-	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
-
-		$ar_diffusion_sections = array();
-
-		// XML elements
-		$elements = ontology_node::get_ar_tipo_by_model_and_relation($diffusion_element_tipo, 'xml', 'children', true);
-		foreach ($elements as $current_element_tipo) {
-
-			// Pointer to section
-			$ar_related = common::get_ar_related_by_model('section', $current_element_tipo);
-
-			if (isset($ar_related[0])) {
-				$ar_diffusion_sections[] = $ar_related[0];
-			}
-		}
-
-
-		return $ar_diffusion_sections;
-	}//end get_diffusion_sections_from_diffusion_element
 
 
 
