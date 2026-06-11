@@ -451,6 +451,7 @@ function curl_request(object $options) : object {
 		$timeout		= isset($options->timeout) ? (int)$options->timeout : 5; // seconds
 		$proxy			= $options->proxy ?? false;
 		$httpheader		= $options->httpheader ?? null; // array('Content-Type:application/json')
+		$unix_socket	= $options->unix_socket ?? null; // string path like '/tmp/diffusion.sock'
 
 	// response
 		$response = new stdClass();
@@ -481,6 +482,13 @@ function curl_request(object $options) : object {
 	// proxy. Use connection proxy on demand
 		if ($proxy!==false) {
 			curl_setopt($ch, CURLOPT_PROXY, $proxy); // like '127.0.0.1:8888'
+		}
+
+	// unix socket. Connect through a local unix socket instead of TCP
+	// (e.g. Bun diffusion API at /tmp/diffusion.sock). The URL host is ignored
+	// by curl but still required, like 'http://localhost/'
+		if (!empty($unix_socket)) {
+			curl_setopt($ch, CURLOPT_UNIX_SOCKET_PATH, $unix_socket);
 		}
 
 	// SSL. Avoid verify SSL certificates (very slow)
