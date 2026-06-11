@@ -964,9 +964,26 @@ class component_date extends component_common {
 			}
 
 		// check values (informative of errors)
-			if(!empty($value)){
+		// value is expected to be an array of date objects with start/end properties;
+		// JSON input could decode to other shapes (scalar, object): skip them safely
+			if(!empty($value) && is_array($value)){
 
 				foreach ($value as $current_date) {
+
+					// expected object items only. Reject malformed items as plain strings
+					// to prevent storing invalid date data
+						if (!is_object($current_date)) {
+
+							$failed = new stdClass();
+								$failed->section_id		= $this->section_id;
+								$failed->data			= stripslashes( $import_value );
+								$failed->component_tipo	= $this->get_tipo();
+								$failed->msg			= 'IGNORED: malformed data, expected date object and get: '.gettype($current_date);
+							$response->errors[] = $failed;
+
+							return $response;
+						}
+
 					foreach ($current_date as $key => $current_dd_date) {
 
 						// only check date properties (skip 'id', 'lang' and other non date properties)
