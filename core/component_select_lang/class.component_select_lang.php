@@ -317,4 +317,126 @@ class component_select_lang extends component_relation_common {
 
 
 
+	/**
+	* CONFORM_IMPORT_DATA
+	* Accepted import formats:
+	* 1. Lang code(s) as flat string, multiple values separated by comma:
+	* 	lg-spa
+	* 	lg-spa, lg-eng
+	* 2. JSON array of lang code strings:
+	* 	["lg-spa","lg-eng"]
+	* 3. JSON locator(s), array or single object (delegated to component_relation_common):
+	* 	[{"section_tipo":"dd1462","section_id":"17344"}]
+	* 4. Numeric section_id list (delegated to component_relation_common):
+	* 	17344,5101
+	* Lang codes are resolved to locators pointing to the languages section.
+	* Codes that resolve but are not in the project configured languages
+	* (DEDALO_PROJECTS_DEFAULT_LANGS) are imported with a WARNING: the value is saved
+	* but it will not be accessible until the project languages include it.
+	* Unresolvable codes produce a failed row.
+	* Empty value returns null (clears the existing component data)
+	* @param string $import_value
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data( string $import_value, string $column_name ) : object {
+
+		// Response
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->warnings	= [];
+				$response->msg		= 'Error. Request failed';
+
+		// collect the lang codes to resolve
+			$ar_codes = null;
+			if(json_handler::is_json($import_value)){
+
+				$data_from_json = json_handler::decode($import_value);
+
+				// JSON array of lang code strings as ["lg-spa","lg-eng"]
+				if (is_array($data_from_json) && !empty($data_from_json) &&
+					count(array_filter($data_from_json, 'is_string'))===count($data_from_json)) {
+					$ar_codes = array_map('trim', $data_from_json);
+				}
+				// any other JSON (locators array or single locator object):
+				// delegate to component_relation_common
+			}else{
+
+				// flat string case. Tokens separated by comma as 'lg-spa, lg-eng'
+				$tokens = array_map('trim', explode(',', $import_value));
+				$tokens = array_filter($tokens, function($v){ return $v!==''; });
+				if (!empty($tokens)) {
+					$is_all_codes = count(array_filter($tokens, function($v){
+						return preg_match('/^lg-[a-z0-9]+$/', $v)===1;
+					}))===count($tokens);
+					if ($is_all_codes===true) {
+						$ar_codes = array_values($tokens);
+					}
+					// numeric tokens (legacy section_id import) and any other string:
+					// delegate to component_relation_common
+				}
+			}
+
+		// delegate case. Locators, section_id lists, empty values, etc.
+			if ($ar_codes===null) {
+				return parent::conform_import_data($import_value, $column_name);
+			}
+
+		// lang codes case. Resolve every code to a locator
+			$ar_locators	= [];
+			$project_langs	= common::get_ar_all_langs();
+			foreach ($ar_codes as $current_code) {
+
+				// resolve the code against the languages section
+				$section_id = lang::get_section_id_from_code($current_code);
+				if ($section_id===null) {
+
+					debug_log(__METHOD__
+						." Unable to resolve lang code: ". PHP_EOL
+						.' code: ' . to_string($current_code) . PHP_EOL
+						.' column_name: ' . $column_name
+						, logger::ERROR
+					);
+
+					$failed = new stdClass();
+						$failed->section_id		= $this->section_id;
+						$failed->data			= stripslashes( $import_value );
+						$failed->component_tipo	= $this->get_tipo();
+						$failed->msg			= 'IGNORED: invalid lang code '. to_string($current_code);
+					$response->errors[] = $failed;
+
+					return $response;
+				}
+
+				// warn when the code is not part of the project configured languages
+				if (!in_array($current_code, $project_langs)) {
+					$warning = new stdClass();
+						$warning->section_id		= $this->section_id;
+						$warning->data				= stripslashes( $import_value );
+						$warning->component_tipo	= $this->get_tipo();
+						$warning->msg				= 'WARNING: lang '. to_string($current_code)
+							.' was imported, but it will not be accessible until the project languages include it';
+					$response->warnings[] = $warning;
+				}
+
+				// build the locator as component_relation_common does
+				$locator = new locator();
+					$locator->set_section_tipo(DEDALO_LANGS_SECTION_TIPO);
+					$locator->set_section_id($section_id);
+					$locator->set_type($this->get_relation_type());
+					$locator->set_from_component_tipo($this->tipo);
+
+				$ar_locators[] = $locator;
+			}
+
+		$response->result	= $ar_locators;
+		$response->msg		= 'OK';
+
+
+		return $response;
+	}//end conform_import_data
+
+
+
 }//end class component_select_lang
