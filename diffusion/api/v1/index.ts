@@ -786,13 +786,17 @@ async function handle_get_ontology_map(request_rqo: rqo, cookie_header: string |
 
 
 // =====================================================
-// SERVER
+// REQUEST HANDLER
 // =====================================================
 
-const server = Bun.serve({
-	unix:        SOCKET_PATH,
-	idleTimeout: 120, // 2 minutes (matches PHP_CLIENT timeout)
-	async fetch(request: Request): Promise<Response> {
+/**
+ * HANDLE_REQUEST
+ * Routes every incoming request of the diffusion engine.
+ * Exported so the action switch (auth, validation, dispatch) is directly
+ * testable with plain Request objects (see test/handler.test.ts) without
+ * opening the unix socket.
+ */
+export async function handle_request(request: Request): Promise<Response> {
 
 		const url    = new URL(request.url);
 		const method = request.method;
@@ -1040,28 +1044,39 @@ const server = Bun.serve({
 				{ status: 500 }
 			);
 		}
-	},
-} as any);
-
-console.log(`[diffusion] Listening on unix socket: ${SOCKET_PATH}`);
+}//end handle_request
 
 
 
 // =====================================================
-// GRACEFUL SHUTDOWN
+// SERVER
+// Started only when this file is the entry point (bun run index.ts):
+// importing it from tests does NOT open the unix socket.
 // =====================================================
 
-async function shutdown(): Promise<void> {
-	console.log('[diffusion] Shutting down...');
-	server.stop();
-	await close_all_pools();
-	// Remove the socket file
-	try {
-		const fs = await import('fs');
-		fs.unlinkSync(SOCKET_PATH);
-	} catch { /* ignore */ }
-	process.exit(0);
+if (import.meta.main) {
+
+	const server = Bun.serve({
+		unix:        SOCKET_PATH,
+		idleTimeout: 120, // 2 minutes (matches PHP_CLIENT timeout)
+		fetch:       handle_request,
+	} as any);
+
+	console.log(`[diffusion] Listening on unix socket: ${SOCKET_PATH}`);
+
+	// graceful shutdown
+	const shutdown = async (): Promise<void> => {
+		console.log('[diffusion] Shutting down...');
+		server.stop();
+		await close_all_pools();
+		// Remove the socket file
+		try {
+			const fs = await import('fs');
+			fs.unlinkSync(SOCKET_PATH);
+		} catch { /* ignore */ }
+		process.exit(0);
+	};
+
+	process.on('SIGINT',  shutdown);
+	process.on('SIGTERM', shutdown);
 }
-
-process.on('SIGINT',  shutdown);
-process.on('SIGTERM', shutdown);
