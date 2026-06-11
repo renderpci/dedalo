@@ -4231,6 +4231,14 @@ abstract class component_common extends common {
 	*/
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
+		// static cache. The path is ontology-derived: it depends only on the tipos
+		// and the portal origin (from_component_tipo/from_section_tipo)
+			static $order_path_cache = [];
+			$cache_key = $component_tipo .'_'. $section_tipo .'_'. ($this->from_component_tipo ?? '') .'_'. ($this->from_section_tipo ?? '');
+			if (isset($order_path_cache[$cache_key])) {
+				return $order_path_cache[$cache_key];
+			}
+
 		// get standard search query path. This get component path downwards
 			$path = search::get_query_path($component_tipo, $section_tipo);
 
@@ -4249,6 +4257,8 @@ abstract class component_common extends common {
 				]);
 			}
 
+		// cache add
+			$order_path_cache[$cache_key] = $path;
 
 		return $path;
 	}//end get_order_path

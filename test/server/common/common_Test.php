@@ -1564,10 +1564,16 @@ final class common_test extends BaseTestCase {
 		// First call
 		$result1 = $component->get_structure_context();
 
-		// Second call (should be cached)
+		// Second call (should be served from the core cache)
 		$result2 = $component->get_structure_context();
 
-		$this->assertSame($result1, $result2, 'Expected same instance from cache');
+		// The cache must return equal content but never the same instance:
+		// callers may add properties to the returned context and would pollute
+		// the cache entry if it were exposed by reference.
+		// debug (exec_time) is stamped per call: exclude it from the comparison
+		unset($result1->debug, $result2->debug);
+		$this->assertEquals($result1, $result2, 'Expected equal context from cache');
+		$this->assertNotSame($result1, $result2, 'Expected a fresh clone, not the cache entry itself');
 	}
 
 	/**

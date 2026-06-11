@@ -40,6 +40,24 @@ abstract class common {
 
 
 	/**
+	* CONTEXT_KEY
+	* Builds the identity key of a context item as the client matches it:
+	* tipo + section_tipo + mode. Used to deduplicate context items before
+	* sending them to the client (only the first occurrence is meaningful).
+	* @param object $item
+	* @return string
+	*/
+	public static function context_key(object $item) : string {
+		$section_tipo = $item->section_tipo ?? '';
+		if (is_array($section_tipo)) {
+			$section_tipo = implode(',', $section_tipo);
+		}
+		return ($item->tipo ?? '') .'_'. $section_tipo .'_'. ($item->mode ?? '');
+	}
+
+
+
+	/**
 	* CLASS VARS
 	*/
 		/**
@@ -171,6 +189,14 @@ abstract class common {
 		 * @var object|false|null $properties
 		 */
 		public object|false|null $properties = null;
+
+		/**
+		 * Whether properties were injected with set_properties() (overriding the
+		 * ontology definition). When true, the structure context core cache is
+		 * bypassed: a cached ontology-derived context would not reflect them.
+		 * @var bool $properties_injected
+		 */
+		public bool $properties_injected = false;
 
 		/**
 		 * Parent tipo used to link context DDO elements in nested structures.
@@ -1086,6 +1112,10 @@ abstract class common {
 		// Fix properties object|null
 		$this->properties = $properties;
 
+		// mark as injected: structure context must be built fresh for this
+		// instance instead of served from the ontology-derived core cache
+		$this->properties_injected = true;
+
 		return true;
 	}//end set_properties
 
@@ -1320,6 +1350,26 @@ abstract class common {
 	*/
 	public function get_structure_context(int $permissions=0, bool $add_request_config=false) : dd_object {
 
+		return $this->build_structure_context($permissions, $add_request_config, false);
+	}//end get_structure_context
+
+
+
+	/**
+	* BUILD_STRUCTURE_CONTEXT
+	* Resolves the full element context: gets the cached invariant core
+	* (build_structure_context_core) and stamps the per-call / per-instance
+	* variant fields (permissions, parent, lang, request_config, columns_map,
+	* view, ...) on a clone of it. A cache hit returns exactly what a fresh
+	* build would return for this instance and call.
+	* @param int $permissions
+	* @param bool $add_request_config
+	* @param bool $simple
+	* 	When true, tools and buttons are not calculated (used by get_structure_context_simple)
+	* @return dd_object $dd_object
+	*/
+	protected function build_structure_context(int $permissions, bool $add_request_config, bool $simple) : dd_object {
+
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 			// metrics
@@ -1330,20 +1380,119 @@ abstract class common {
 			$model			= get_class($this);
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
+			$mode			= $this->get_mode();
+
+		// core. Invariant, cached part of the context
+			$core = $this->build_structure_context_core($add_request_config, $simple);
+
+		// clone. Never expose the cache entry by reference: callers add top-level
+		// properties to the returned context (e.g. target_section_tipo) and would
+		// pollute the cache. Nested core properties (properties, tools, buttons, ...)
+		// remain shared with the cache entry and must be treated as read-only.
+			$dd_object = clone $core;
+
+		// stamp variant (per-call / per-instance) fields
+			// permissions. Callers inject inherited/capped permissions (see get_subdatum)
+				$dd_object->permissions = $permissions;
+			// parent. Depends on session ddo and the injected from_parent
+				$dd_object->parent = $this->resolve_context_parent();
+			// parent_grouper. Instance value (injected by get_subdatum) wins over the structure one
+				$dd_object->parent_grouper = !empty($this->parent_grouper)
+					? $this->parent_grouper
+					: $core->parent_grouper;
+			// lang. Instance lang (children langs can be switched per ddo or to their original lang)
+				$dd_object->lang = $this->get_lang();
+			// request_config. Per-instance: get_subdatum injects a narrowed children config
+				$request_config = ($add_request_config===true)
+					? $this->build_request_config() // array
+					: null;
+				$dd_object->request_config = $request_config;
+			// columns_map (the final calculation was moved to common JS)
+				$dd_object->columns_map = !empty($request_config)
+					? ($core->columns_map ?? [])
+					: null;
+			// path. Component order path; depends on instance request_config and from_section_tipo
+				if (str_starts_with($model, 'component_') && $dd_object->sortable===true) {
+					// add component path to allow sort columns properly
+					$dd_object->path = isset($this->request_config)
+						? $this->get_order_path($tipo, $section_tipo)
+						: [];
+				}
+			// view, all components has view, used to change the render view.
+			// the default value is "default" except in component_portal
+				$dd_object->view = $this->get_view();
+			// children_view. Sometimes the component defines the view of his children (see rsc368)
+				$dd_object->children_view = $this->get_children_view();
+			// sqo from session. Add to sync client and server sqo across calls (propagation data problem)
+			// this sqo will be injected into the section instance 'request_config_object' and 'rqo' when it is built
+				if ($model==='section') {
+					$sqo_id = section::build_sqo_id($this->tipo);
+					$dd_object->sqo_session = $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
+				}
+			// search. parent_grouper_label follows the stamped parent_grouper
+				if ($mode==='search' && isset($dd_object->parent_grouper)) {
+					// clone config: the core config object is shared with the cache entry
+					$config = isset($core->config)
+						? clone $core->config
+						: new stdClass();
+					$config->parent_grouper_label = ontology_node::get_term_by_tipo($dd_object->parent_grouper);
+					$dd_object->config = $config;
+				}
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$time = exec_time_unit($start_time,'ms');
+				// metrics
+				metrics::$structure_context_total_time += $time;
+				$debug = new stdClass();
+					$debug->exec_time = $time.' ms';
+				$dd_object->debug = $debug;
+			}
+
+		return $dd_object;
+	}//end build_structure_context
+
+
+
+	/**
+	* BUILD_STRUCTURE_CONTEXT_CORE
+	* Builds and caches the invariant part of the element context: everything
+	* derived from the ontology and the logged user (properties, css, tools,
+	* buttons, label, section_map, ...). Variant per-call fields are stamped by
+	* build_structure_context() on a clone of the returned object.
+	* (!) The returned dd_object is the cache entry itself: callers must clone
+	* it before any mutation.
+	* @param bool $add_request_config
+	* 	Only affects the cached core through the show_interface calculation
+	* @param bool $simple
+	* 	When true, tools and buttons are not calculated (empty arrays)
+	* @return dd_object $dd_object
+	*/
+	protected function build_structure_context_core(bool $add_request_config, bool $simple) : dd_object {
+
+		if(SHOW_DEBUG===true) {
+			$start_time = start_time();
+		}
+
+		// short vars
+			$model			= get_class($this);
+			$tipo			= $this->get_tipo();
+			$section_tipo	= $this->get_section_tipo();
 			$translatable	= $this->ontology_node->get_is_translatable();
 			$mode			= $this->get_mode();
 			$label			= $this->get_label();
-			$lang			= $this->get_lang();
 			$sortable		= $this->get_sortable() ?? false; // Used by section columns to sort list
 
-		// cache structure_context using ddo_key
-			// (!) Note that 'sections_json.php' will filter out duplicated context items using this criteria:
-			// 	$el->tipo===$context_item->tipo &&
-			// 	$el->section_tipo===$context_item->section_tipo &&
-			// 	$el->mode===$context_item->mode;
-				$use_cache = true;
+		// cache structure_context core using ddo_key
+			// The key covers every input the core depends on: user (tools, buttons,
+			// show_interface), tipo, section_tipo, mode, add_request_config and simple.
+			// Per-call / per-instance fields are NOT part of the core (they are stamped
+			// by build_structure_context), so they don't need to be in the key.
+			// Instances with injected properties (set_properties) bypass the cache:
+			// their context does not match the ontology-derived one.
+				$use_cache = ($this->properties_injected===false);
 				if ($use_cache===true) {
-					$ddo_key = $tipo.'_'.$section_tipo.'_'.$mode;
+					$ddo_key = (logged_user_id() ?? '').'_'.$tipo.'_'.$section_tipo.'_'.$mode.'_'.(int)$add_request_config.'_'.(int)$simple;
 					if (isset(self::$cache_structure_context[$ddo_key])) {
 						if(SHOW_DEBUG===true) {
 							$len = !empty($this->tipo)
@@ -1365,8 +1514,10 @@ abstract class common {
 		// properties
 			$properties_source = $this->get_properties();
 			if (is_object($properties_source)) {
-				// Clone to prevent accidental mutations of cached properties (SEC-023)
-				$properties = clone $properties_source;
+				// Deep clone to prevent accidental mutations of cached properties (SEC-023).
+				// A shallow clone is not enough: nested objects (filter_by_list, state_of_component,
+				// show_interface) are mutated below and would leak into the instance properties cache.
+				$properties = unserialize(serialize($properties_source));
 			} else {
 				$properties = new stdClass();
 			}
@@ -1419,96 +1570,13 @@ abstract class common {
 			}
 
 		// parent
-			// 1 . From requested context
-				// if (isset(dd_core_api::$dd_request)) {
-
-				// 	$dd_request		= dd_core_api::$dd_request;
-				// 	$request_ddo	= array_find($dd_request, function($item){
-				// 		return $item->typo==='request_ddo';
-				// 	});
-
-				// 	// ar_dd_objects . Array of all dd objects in requested context
-				// 		// $ar_dd_objects = array_values( array_filter($dd_request, function($item) {
-				// 		// 	 if($item->typo==='ddo') return $item;
-				// 		// }) );
-				// 		$ar_dd_objects = $request_ddo
-				// 			? $request_ddo->value
-				// 			: [];
-
-				// 	if (isset($this->from_parent)) {
-				// 		$current_from_parent = $this->from_parent;
-				// 		$request_dd_object = array_reduce($ar_dd_objects, function($carry, $item) use($tipo, $section_tipo, $current_from_parent){
-				// 			if ($item->tipo===$tipo && $item->section_tipo===$section_tipo && $item->parent===$current_from_parent) {
-				// 				return $item;
-				// 			}
-				// 			return $carry;
-				// 		});
-				// 	}else{
-				// 	 	$request_dd_object = array_reduce($ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
-				// 			if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
-				// 				return $item;
-				// 			}
-				// 			return $carry;
-				// 		});
-				// 	}
-				// 	if (!empty($request_dd_object->parent)) {
-				// 		// set
-				// 		$parent = $request_dd_object->parent;
-				// 	}
-				// }
-
-			// 1 . From session
-				if (isset($_SESSION['dedalo']['config']['ddo'][$section_tipo])) {
-
-					$section_ddo = $_SESSION['dedalo']['config']['ddo'][$section_tipo];
-
-					if (isset($this->from_parent)) {
-						$current_from_parent = $this->from_parent;
-						$dd_object = array_reduce($section_ddo, function($carry, $item) use($tipo, $section_tipo, $current_from_parent){
-							if ($item->tipo===$tipo && $item->section_tipo===$section_tipo && $item->parent===$current_from_parent) {
-								return $item;
-							}
-							return $carry;
-						});
-					}else{
-						$dd_object = array_reduce($section_ddo, function($carry, $item) use($tipo, $section_tipo){
-							if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
-								return $item;
-							}
-							return $carry;
-						});
-					}
-					if (!empty($dd_object->parent)) {
-						// set
-						$parent = $dd_object->parent;
-					}
-				}
-
-			// 2 . From injected 'from_parent'
-				if (!isset($parent) && isset($this->from_parent)) {
-
-					// injected by the element
-					$parent = $this->from_parent;
-				}
-
-			// 3 . From structure (fallback)
-				if (!isset($parent)) {
-
-					// use section tipo as parent
-					$parent = $this->get_section_tipo();
-				}
-
-			// 4 . From structure (area case)
-				if (empty($parent)) {
-
-					// use structure term tipo as parent
-					$parent = $this->ontology_node->get_parent();
-				}
+			// (!) parent depends on per-instance state (session ddo, injected from_parent)
+			// and is stamped per call by build_structure_context() using resolve_context_parent()
 
 		// parent_grouper (structure parent)
-			$parent_grouper = !empty($this->parent_grouper)
-				? $this->parent_grouper
-				: $this->ontology_node->get_parent();
+			// (!) the instance-injected parent_grouper (see get_subdatum) is stamped per call
+			// by build_structure_context(); the core stores only the structure (ontology) value
+			$parent_grouper = $this->ontology_node->get_parent();
 
 		// tools
 			$tools = [];
@@ -1516,7 +1584,9 @@ abstract class common {
 			// get the component tools in edit
 			// (!) Note that some tools like 'tool_upload' are used in list mode,
 			// but they can load tools using only the name if needed
-			if(( ($model==='section' || str_starts_with($model, 'area')) && $this->mode==='list') || ($this->mode!=='list')){
+			// simple mode skips tools calculation entirely
+			if( $simple===false &&
+				((($model==='section' || str_starts_with($model, 'area')) && $this->mode==='list') || ($this->mode!=='list')) ){
 				$tools_list	= $this->get_tools();
 				foreach ($tools_list as $tool_object) {
 
@@ -1570,13 +1640,14 @@ abstract class common {
 				}//end foreach ($tools_list as $tool_object)
 			}
 
-		// buttons
-			$buttons = $this->get_buttons_context();
+		// buttons. simple mode skips buttons calculation (it also involves permissions)
+			$buttons = ($simple===false)
+				? $this->get_buttons_context()
+				: [];
 
 		// request_config
-			$request_config = ($add_request_config===true)
-				? $this->build_request_config() // array
-				: null;
+			// (!) per-instance (get_subdatum injects a narrowed children config):
+			// stamped per call by build_structure_context()
 
 		// label
 		// To overwrite the label using a user preset, add the
@@ -1593,32 +1664,29 @@ abstract class common {
 				}
 			}
 
-		// columns_map (the final calculation was moved to common JS)
-			$columns_map = !empty($request_config)
-				? ($this->get_columns_map() ?? [])
-				: null;
+		// columns_map. Base ontology-derived value; final exposure is gated per call
+		// by build_structure_context() (null when request_config is not requested)
+			$columns_map = $this->get_columns_map();
 
 		// legacy_model
 			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 
 		// dd_object
+		// (!) variant fields (parent, lang, permissions, request_config, view, ...)
+		// are not part of the core: build_structure_context() stamps them per call
 			$dd_object = new dd_object((object)[
 				'label'				=> $label, // *
 				'tipo'				=> $tipo,
 				'section_tipo'		=> $section_tipo, // *
 				'model'				=> $model, // *
 				'legacy_model'		=> $legacy_model,
-				'parent'			=> $parent, // *
 				'parent_grouper'	=> $parent_grouper,
-				'lang'				=> $lang,
 				'mode'				=> $mode,
 				'translatable'		=> $translatable,
 				'properties'		=> $properties,
 				'css'				=> $css,
-				'permissions'		=> $permissions,
 				'tools'				=> $tools,
 				'buttons'			=> $buttons,
-				'request_config'	=> $request_config,
 				'columns_map'		=> $columns_map,
 				'sortable'			=> $sortable
 			]);
@@ -1656,15 +1724,9 @@ abstract class common {
 						}
 					}
 
-					if ($sortable===true) {
-						// add component path to allow sort columns properly
-						// ? remove if because forbids cache list mode uniformly
-						// if (!empty($this->from_parent)) {
-							$dd_object->path = isset($this->request_config)
-								? $this->get_order_path($tipo, $section_tipo)
-								: [];
-						// }
-					}
+					// path. Depends on instance request_config and from_section_tipo:
+					// stamped per call by build_structure_context()
+
 					if ($mode==='search') {
 						// search operators info (tool tips)
 						$dd_object->search_operators_info	= $this->search_operators_info();
@@ -1748,31 +1810,14 @@ abstract class common {
 					// section matrix_table
 						$dd_object->matrix_table = common::get_matrix_table_from_tipo( $section_tipo );
 
-					// sqo from session. Add to sync client and server sqo across calls (propagation data problem)
-					// this sqo will be injected into the section instance 'request_config_object' and 'rqo' when it is built
-						$sqo_id = section::build_sqo_id($this->tipo);
-						$dd_object->sqo_session = $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
+					// sqo_session. Session pagination state changes between calls:
+					// stamped per call by build_structure_context()
 				}
 
-			// view, all components has view, used to change the render view.
-			// the default value is "default" except in component_portal
-				$dd_object->view = $this->get_view();
+			// view / children_view. Injectable per instance (see get_subdatum):
+			// stamped per call by build_structure_context()
 
-			// children_view. Sometimes the component defines the view of his children (see rsc368)
-				$dd_object->children_view = $this->get_children_view();
-
-			// search
-				if ($this->mode==='search') {
-					// parent_grouper_label
-					if (isset($parent_grouper)) {
-						if (!isset($dd_object->config)) {
-							$dd_object->config = new stdClass();
-						}
-						$dd_object->config->parent_grouper_label = ontology_node::get_term_by_tipo($parent_grouper);
-					}
-				}
-
-		// cache. fix context dd_object
+		// cache. fix context core dd_object
 			if ($use_cache===true) {
 				self::$cache_structure_context[$ddo_key] = $dd_object;
 				// Manage cache size to prevent memory leaks
@@ -1782,14 +1827,6 @@ abstract class common {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$time = exec_time_unit($start_time,'ms');
-
-				// metrics
-				metrics::$structure_context_total_time += $time;
-
-				$debug = new stdClass();
-					$debug->exec_time = $time.' ms';
-
-				$dd_object->debug = $debug;
 
 				if ($time>15) {
 					$time_string = $time>15
@@ -1802,14 +1839,81 @@ abstract class common {
 						? (14 - $len)
 						: 0;
 					$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-					$msg = "--- SLOW get_structure_context --- " . "$tipo_line $time_string ms" . " ---- $model - parent:" . $parent . ' ' . json_encode($add_request_config);
+					$msg = "--- SLOW get_structure_context --- " . "$tipo_line $time_string ms" . " ---- $model " . json_encode($add_request_config);
 					debug_log($msg, logger::WARNING);
 				}
 			}
 
 
 		return $dd_object;
-	}//end get_structure_context
+	}//end build_structure_context_core
+
+
+
+	/**
+	* RESOLVE_CONTEXT_PARENT
+	* Resolves the context 'parent' value for this instance.
+	* Depends on per-instance / per-call state (session ddo, injected from_parent),
+	* so it is calculated on every build_structure_context() call instead of
+	* being cached in the structure context core.
+	* @return string|null $parent
+	*/
+	protected function resolve_context_parent() : ?string {
+
+		// short vars
+			$tipo			= $this->get_tipo();
+			$section_tipo	= $this->get_section_tipo();
+
+		// 1 . From session
+			if (isset($_SESSION['dedalo']['config']['ddo'][$section_tipo])) {
+
+				$section_ddo = $_SESSION['dedalo']['config']['ddo'][$section_tipo];
+
+				if (isset($this->from_parent)) {
+					$current_from_parent = $this->from_parent;
+					$dd_object = array_reduce($section_ddo, function($carry, $item) use($tipo, $section_tipo, $current_from_parent){
+						if ($item->tipo===$tipo && $item->section_tipo===$section_tipo && $item->parent===$current_from_parent) {
+							return $item;
+						}
+						return $carry;
+					});
+				}else{
+					$dd_object = array_reduce($section_ddo, function($carry, $item) use($tipo, $section_tipo){
+						if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
+							return $item;
+						}
+						return $carry;
+					});
+				}
+				if (!empty($dd_object->parent)) {
+					// set
+					$parent = $dd_object->parent;
+				}
+			}
+
+		// 2 . From injected 'from_parent'
+			if (!isset($parent) && isset($this->from_parent)) {
+
+				// injected by the element
+				$parent = $this->from_parent;
+			}
+
+		// 3 . From structure (fallback)
+			if (!isset($parent)) {
+
+				// use section tipo as parent
+				$parent = $this->get_section_tipo();
+			}
+
+		// 4 . From structure (area case)
+			if (empty($parent)) {
+
+				// use structure term tipo as parent
+				$parent = $this->ontology_node->get_parent();
+			}
+
+		return $parent;
+	}//end resolve_context_parent
 
 
 
@@ -1817,26 +1921,15 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT_SIMPLE
 	* Calculates the structure_context but ignoring some properties
 	* such as tools, permissions, buttons context..
+	* (!) Unlike previous versions, it does not mutate the instance
+	* (tools, buttons_context and permissions are left untouched).
 	* @param int $permissions = 0
 	* @param bool $add_request_config = false
 	* @return dd_object $ddo
 	*/
 	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : dd_object {
 
-		// tools. Force set $this->tools to prevent calculate tools in simple mode
-		$this->tools = [];
-
-		// buttons_context. Force to avoid calculate buttons_context (also involves calculating permissions)
-		$this->buttons_context = [];
-
-		// permissions. Force set $this->permissions to prevent calculate permissions in simple mode
-		$this->set_permissions($permissions);
-
-		// call general method
-		$ddo = $this->get_structure_context($permissions, $add_request_config);
-
-
-		return $ddo;
+		return $this->build_structure_context($permissions, $add_request_config, true);
 	}//end get_structure_context_simple
 
 
@@ -1850,11 +1943,10 @@ abstract class common {
 	* For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
 	* @param string|null $from_parent = null
 	* @param array $ar_locators = []
-	* @param object|null $subdatum_options = null
 	* @return object $subdatum
 	* 	Object with two properties: context, data
 	*/
-	public function get_subdatum( ?string $from_parent=null, array $ar_locators=[], ?object $subdatum_options=null ) : object {
+	public function get_subdatum( ?string $from_parent=null, array $ar_locators=[] ) : object {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1874,6 +1966,10 @@ abstract class common {
 
 		$ar_subcontext	= [];
 		$ar_subdata		= [];
+		// seen_context. Tracks already-added context items by tipo+section_tipo+mode.
+		// Context is identical for every row of the same column, so only the first
+		// occurrence is added (same criteria used by sections_json.php and the client).
+		$seen_context	= [];
 
 		// request_config. On empty, return empty context and data object
 			$request_config = $this->context->request_config ?? null;
@@ -2197,6 +2293,11 @@ abstract class common {
 								// the main component has all config, his children has specific config (only his own part)
 									// get the component rqo to be updated with the current config
 									$component_request_config = $current_element->build_request_config();
+									// pre-index by api_engine (first occurrence) to avoid a linear search per request_config item
+									$rc_by_api_engine = [];
+									foreach ($component_request_config as $rc_item) {
+										$rc_by_api_engine[$rc_item->api_engine] ??= $rc_item;
+									}
 									foreach ($request_config as $request_config_object) {
 
 										// use the current api_engine to ensure the inheritance has correct relation dd_engine -> dd_engine, zenon - >zenon
@@ -2226,9 +2327,7 @@ abstract class common {
 											$children_hide		= $children_cache[$cache_key]['hide'];
 
 										// select the current api_engine
-											$new_request_config_object = array_find($component_request_config, function($el) use($api_engine){
-												return $el->api_engine===$api_engine;
-											});
+											$new_request_config_object = $rc_by_api_engine[$api_engine] ?? null;
 											if (empty($new_request_config_object) || !is_object($new_request_config_object)) {
 												// debug_log(__METHOD__
 												// 	. " Error. Expected request config but value is empty from component_request_config " . PHP_EOL
@@ -2321,8 +2420,13 @@ abstract class common {
 									// force tipo from ddo. If not forced, time_machine_list cannot match context ddo column
 									$data_item->tipo = $current_tipo;
 								// data add
-									$ar_subdata[]		= $data_item;
-									$ar_subcontext[]	= $dd_object;
+									$ar_subdata[] = $data_item;
+								// context add (deduplicated by tipo+section_tipo+mode)
+									$dd_object_key = common::context_key($dd_object);
+									if (!isset($seen_context[$dd_object_key])) {
+										$seen_context[$dd_object_key] = true;
+										$ar_subcontext[] = $dd_object;
+									}
 								break;
 
 							// others case
@@ -2363,8 +2467,15 @@ abstract class common {
 									$item_options->get_data		= true;
 								$element_json = $current_element->get_json($item_options);
 
-							// ar_subcontext
-								array_push($ar_subcontext, ...$element_json->context);
+							// ar_subcontext. Deduplicate by tipo+section_tipo+mode (first occurrence wins)
+								foreach ($element_json->context as $context_item) {
+									$context_item_key = common::context_key($context_item);
+									if (isset($seen_context[$context_item_key])) {
+										continue;
+									}
+									$seen_context[$context_item_key] = true;
+									$ar_subcontext[] = $context_item;
+								}
 
 							// row_section_id
 							// add parent_section_id with the main locator section_id that define the row, to preserve row coherence between all columns
