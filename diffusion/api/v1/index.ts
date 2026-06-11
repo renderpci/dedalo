@@ -106,8 +106,8 @@ async function run_background_diffusion(
 		// we paginated the query (SQO) with limit/offset batches.
 		const DEFAULT_CHUNK_SIZE = 1;
 		const options     = request_rqo.options ?? {};
-		const total       = (options as any).total       ?? 0;
-		const chunk_size  = (options as any).chunk_size   ?? DEFAULT_CHUNK_SIZE;
+		const total       = options.total       ?? 0;
+		const chunk_size  = options.chunk_size   ?? DEFAULT_CHUNK_SIZE;
 		const use_chunks  = total > 0 && total > chunk_size;
 		const chunk_count = use_chunks ? Math.ceil(total / chunk_size) : 1;
 
@@ -285,7 +285,7 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null, c
 
 	const start_time = Date.now();
 	const options     = request_rqo.options ?? {};
-	const total       = (options as any).total       ?? 0;
+	const total       = options.total       ?? 0;
 	const estimated_total = total > 0 ? total : 0;
 	
 	const process_id = options.process_id || crypto.randomUUID();
@@ -381,8 +381,8 @@ async function run_background_rdf_diffusion(
 		// 1. CHUNKING STRATEGY (identical to SQL path)
 		const DEFAULT_CHUNK_SIZE = 100;
 		const options    = request_rqo.options ?? {};
-		const total      = (options as any).total      ?? 0;
-		const chunk_size = (options as any).chunk_size ?? DEFAULT_CHUNK_SIZE;
+		const total      = options.total      ?? 0;
+		const chunk_size = options.chunk_size ?? DEFAULT_CHUNK_SIZE;
 		const use_chunks = total > 0 && total > chunk_size;
 		const chunk_count = use_chunks ? Math.ceil(total / chunk_size) : 1;
 
@@ -576,9 +576,9 @@ function handle_diffuse_rdf_stream(
 
 	const start_time      = Date.now();
 	const options         = request_rqo.options ?? {};
-	const total           = (options as any).total ?? 0;
+	const total           = options.total ?? 0;
 	const estimated_total = total > 0 ? total : 0;
-	const process_id      = (options as any).process_id || crypto.randomUUID();
+	const process_id      = options.process_id || crypto.randomUUID();
 
 	create_process(estimated_total, process_id);
 
@@ -845,7 +845,7 @@ const server = Bun.serve({
 						);
 					}
 
-					const diffusion_type = (body.options as any)?.type ?? 'sql';
+					const diffusion_type = body.options?.type ?? 'sql';
 
 					switch (diffusion_type) {
 						case 'rdf':
@@ -886,15 +886,36 @@ const server = Bun.serve({
 					return handle_get_process_status(body as any);
 				}
 				case 'validate': {
+					const is_auth_validate = await check_auth(cookie_header);
+					if (!is_auth_validate) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
 					const result = await handle_validate(body, cookie_header, csrf_token);
 					return Response.json(result);
 				}
 				case 'get_ontology_map': {
+					const is_auth_map = await check_auth(cookie_header);
+					if (!is_auth_map) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
 					const result = await handle_get_ontology_map(body, cookie_header, csrf_token);
 					return Response.json(result);
 				}
 				case 'retry_pending_deletions': {
-					// Pass-through to PHP (permission check + retry run on PHP side)
+					// Pass-through to PHP (admin permission check + retry run on PHP side)
+					const is_auth_retry = await check_auth(cookie_header);
+					if (!is_auth_retry) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
 					const result = await call_dd_diffusion_api(body, cookie_header ?? undefined, csrf_token ?? undefined);
 					return Response.json(result);
 				}
@@ -944,6 +965,13 @@ const server = Bun.serve({
 					return Response.json({ result: health.result, msg: health.msg, data: health });
 				}
 				case 'get_diffusion_info': {
+					const is_auth_info = await check_auth(cookie_header);
+					if (!is_auth_info) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
 					const result = await handle_get_diffusion_info(body, cookie_header, csrf_token);
 					return Response.json(result);
 				}
