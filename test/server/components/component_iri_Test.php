@@ -295,6 +295,21 @@ final class component_iri_test extends BaseTestCase {
 		$this->assertCount(2, $response->result);
 		$this->assertEquals('https://dedalo.dev', $response->result[0]->iri);
 		$this->assertEquals('https://wikidata.org', $response->result[1]->iri);
+
+		// Case 5: flat array with per-item lang (raw export format).
+		// The lang property must be preserved to keep all the translations on round-trips
+		$flat_multilang = '[{"iri":"https://dedalo.dev","id":1,"lang":"lg-eng"},{"iri":"https://dedalo.dev/es","id":1,"lang":"lg-spa"}]';
+		$response = $component->conform_import_data($flat_multilang, self::$tipo);
+		$this->assertTrue(empty($response->errors), 'Case 5 error: ' . to_string($response->errors));
+		$this->assertCount(2, $response->result);
+		$this->assertEquals('lg-eng', $response->result[0]->lang ?? null, 'expected lang preserved on first item');
+		$this->assertEquals('lg-spa', $response->result[1]->lang ?? null, 'expected lang preserved on second item');
+
+		// Case 6: non-string iri value must be rejected, not crash
+		$response = $component->conform_import_data('[{"iri":["https://dedalo.dev"]}]', self::$tipo);
+		$this->assertTrue(!empty($response->errors), 'Case 6: expected errors for non-string iri');
+		$response = $component->conform_import_data('{"iri":{"nested":"object"}}', self::$tipo);
+		$this->assertTrue(!empty($response->errors), 'Case 6b: expected errors for non-string iri object');
 	}//end test_conform_import_data
 
 
