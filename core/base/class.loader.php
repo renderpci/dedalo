@@ -85,23 +85,27 @@ include DEDALO_CORE_PATH . '/search/class.search_tm.php';
 include DEDALO_CORE_PATH . '/search/class.search_related.php';
 include DEDALO_CORE_PATH . '/widgets/widget_common/class.widget_common.php';
 // Diffusion
-// DIFFUSION_CUSTOM: optional custom overrides file defined in config
-if (defined('DIFFUSION_CUSTOM') && !empty(DIFFUSION_CUSTOM)) {
-	if (!include_once DIFFUSION_CUSTOM) {
+// DEDALO_DIFFUSION_CUSTOM: optional custom overrides file defined in config
+// (legacy constant name DIFFUSION_CUSTOM is still accepted as fallback)
+$diffusion_custom_file = defined('DEDALO_DIFFUSION_CUSTOM') && !empty(DEDALO_DIFFUSION_CUSTOM)
+	? DEDALO_DIFFUSION_CUSTOM
+	: ((defined('DIFFUSION_CUSTOM') && !empty(DIFFUSION_CUSTOM)) ? DIFFUSION_CUSTOM : null);
+if ($diffusion_custom_file!==null) {
+	if (!include_once $diffusion_custom_file) {
 		debug_log(__METHOD__
-			. " DIFFUSION_CUSTOM file not found" . PHP_EOL
-			. ' DIFFUSION_CUSTOM: ' . to_string(DIFFUSION_CUSTOM)
+			. " Diffusion custom file not found" . PHP_EOL
+			. ' file: ' . to_string($diffusion_custom_file)
 			, logger::ERROR
 		);
 	}
 }
+unset($diffusion_custom_file);
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_section_stats.php';
+include DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_api_client.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_delete.php';
-include DEDALO_DIFFUSION_PATH . '/class.diffusion_object.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_chain_processor.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_utils.php';
-include DEDALO_DIFFUSION_PATH . '/class.diffusion_data.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_data_object.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_datum.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_fn.php';
