@@ -1601,21 +1601,6 @@ class diffusion_rdf {
 
 
 	/**
-	* GET_DIFFUSION_ELEMENT_TABLES_MAP
-	* @return object $diffusion_element_tables_map
-	*/
-	public function get_diffusion_element_tables_map() {
-
-		$diffusion_element_tables_map = new stdClass();
-
-		# Working here
-
-		return $diffusion_element_tables_map;
-	}//end get_diffusion_element_tables_map
-
-
-
-	/**
 	* GET_TO_PUBLISH_ROWS
 	* @param string $section_tipo
 	* @param array $ar_section_id
