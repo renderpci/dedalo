@@ -4301,9 +4301,25 @@ abstract class component_common extends common {
 
 		if (json_handler::is_json($import_value)) {
 			$decoded = json_handler::decode($import_value);
-			if (is_object($decoded) && property_exists($decoded, 'dedalo_data')) {
-				$response->value	= json_encode($decoded->dedalo_data, JSON_UNESCAPED_UNICODE);
-				$response->wrapped	= true;
+			// the wrapper must be an object with 'dedalo_data' as its ONLY property.
+			// Objects with additional properties are legitimate values (e.g. a component_json
+			// value that happens to contain a 'dedalo_data' property) and pass through unchanged
+			if (is_object($decoded) &&
+				property_exists($decoded, 'dedalo_data') &&
+				count((array)$decoded)===1 ) {
+
+				if ($decoded->dedalo_data===null) {
+					// wrapped null dato: treat as an empty cell (clears the existing data).
+					// Note that the exporter never wraps null datos; this case only happens
+					// with hand written CSV files
+					$response->value	= '';
+					$response->wrapped	= false;
+				}else{
+					// re-encode with the same flags used by the export (tool_export)
+					// to keep the inner JSON identical to the original stored dato
+					$response->value	= json_encode($decoded->dedalo_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+					$response->wrapped	= true;
+				}
 			}
 		}
 
