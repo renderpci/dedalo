@@ -641,4 +641,83 @@ class search_query_object extends stdClass {
 
 
 
+	/**
+	* SANITIZE_CLIENT_SQO
+	* Scrubs a client-supplied (json_decode'd) SQO before it is trusted by the search
+	* pipeline. The HTTP API is the only untrusted SQO source; server-internal builders
+	* construct a search_query_object and call search directly, so they bypass this gate.
+	*
+	* It removes server-only fields that, if supplied by a client, would reach raw SQL
+	* without going through the component conform pipeline:
+	*  - sentence / params : pre-built SQL fragment + bound values (always regenerated)
+	*  - column_sql        : trusted server-built ORDER fragment (see trait.order.php)
+	*  - table / table_alias : server-computed in conform_filter
+	* It also forces parsed=false (a client must never be able to skip parse_sqo) and
+	* coerces limit/offset/total to safe numeric types (preserving the 'all' limit sentinel).
+	*
+	* @param mixed $sqo
+	* 	Raw SQO (object) or any other value (passed through untouched)
+	* @return mixed
+	*/
+	public static function sanitize_client_sqo( mixed $sqo ) : mixed {
+
+		// only process objects (raw json_decode'd sqo)
+		if (!is_object($sqo)) {
+			return $sqo;
+		}
+
+		// server-only fields that a client SQO must never carry, at any depth
+		$server_only_keys = ['sentence','params','column_sql','table','table_alias'];
+		self::strip_keys_recursive($sqo, $server_only_keys);
+
+		// never let the client mark the SQO as already parsed (would skip the component
+		// conform pipeline and send the raw filter straight to SQL building)
+		if (property_exists($sqo, 'parsed')) {
+			$sqo->parsed = false;
+		}
+
+		// numeric coercions (the typed setters are not applied to a raw stdClass)
+		if (isset($sqo->offset)) {
+			$sqo->offset = (int)$sqo->offset;
+		}
+		if (isset($sqo->total) && $sqo->total!==null) {
+			$sqo->total = (int)$sqo->total;
+		}
+		// limit: keep the 'all'/'ALL' unlimited sentinel, otherwise force int
+		if (isset($sqo->limit) && !(is_string($sqo->limit) && strtolower(trim($sqo->limit))==='all')) {
+			$sqo->limit = (int)$sqo->limit;
+		}
+
+		return $sqo;
+	}//end sanitize_client_sqo
+
+
+
+	/**
+	* STRIP_KEYS_RECURSIVE
+	* Recursively unset the given keys from every object found in the node tree.
+	* @param mixed $node
+	* @param array $keys
+	* @return void
+	*/
+	private static function strip_keys_recursive( mixed $node, array $keys ) : void {
+
+		if (is_object($node)) {
+			foreach ($keys as $k) {
+				if (property_exists($node, $k)) {
+					unset($node->{$k});
+				}
+			}
+			foreach (get_object_vars($node) as $v) {
+				self::strip_keys_recursive($v, $keys);
+			}
+		} elseif (is_array($node)) {
+			foreach ($node as $v) {
+				self::strip_keys_recursive($v, $keys);
+			}
+		}
+	}//end strip_keys_recursive
+
+
+
 }//end search_query_object
