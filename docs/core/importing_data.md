@@ -107,12 +107,8 @@ To import the component `Key` [numisdata81](https://dedalo.dev/ontology/numisdat
 
 | section_id | numisdata81 | numisdata27 |
 | --- | --- | --- |
-| 1 | \["key1"] | \["062"] |
-| 2 | \["key2"] | \["685a"] |
-
-!!! note "v6 → v7 data format change"
-
-    The v6-style format `\["key1"]` shown above is the input format. In v7, the stored format uses objects with a `value` property: `\[{"value":"key1","lang":"lg-eng","id":1}]`. Both input formats are accepted — v6 input is automatically normalized to v7 on save.
+| 1 | \[{"value":"key1"}] | \[{"value":"062"}] |
+| 2 | \[{"value":"key2"}] | \[{"value":"685a"}] |
 
 !!! note "Columns with names instead ontology tipo"
 
@@ -122,164 +118,149 @@ To import the component `Key` [numisdata81](https://dedalo.dev/ontology/numisdat
 
     | id  | Key | Number |
     | --- | --- | ------ |
-    | 1 | \["key1"] | \["062"]  |
-    | 2 | \["key2"] | \["685a"]  |
+    | 1 | \[{"value":"key1"}] | \[{"value":"062"}]  |
+    | 2 | \[{"value":"key2"}] | \[{"value":"685a"}]  |
 
     But it will not match and you will need to set the component tipo inside the import tool.
+
+!!! warning "The header must match the mapped column exactly"
+
+    During the import, every CSV header is compared with its mapped column name and they must match **exactly**, including suffixes as `tch56_dmy` (date format) or `tch191_rsc723` (relation target). Columns whose header does not match are **silently skipped** — no data is imported for them and no error is reported. Review the column mapping in the import tool before launching the import.
 
 You can know the ontology tipo of the component picking one component and Dédalo will show it inside the info part of the inspector:
 
 ![getting component information](assets/20230825_140121_getting_component_info.png)
 
-Besides, Dédalo will show the component data format and it is possible to copy it. In v6 it shows `["062"]`, in v7 it shows `[{"value":"062"}]`.
+Besides, Dédalo will show the component data format and it is possible to copy it, as `[{"value":"062"}]`.
 
 Also you can check the ontology [here](https://dedalo.dev/ontology).
 
 ## Data formats
 
-In general Dédalo import a [stringify](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify) [JSON](https://www.json.org/json-en.html) for every data. But, for create a useful and easy import process, is possible use a string representation formats of data.
+### The v7 data format
 
-### Internal stored format (v7)
+Dédalo v7 stores component data as **arrays of objects**. Every object in the array is one value of the component, and the property that holds the data depends on the component type:
 
-Dédalo v7 stores component data as **arrays of objects** with specific properties depending on the component type. This differs from v6 which stored plain string/number arrays.
-
-| Component type | Stored format | Key property |
+| Component type | v7 format | Data property |
 | --- | --- | --- |
-| `component_input_text` | `[{"value":"Hello","lang":"lg-eng","id":1}]` | `value` |
-| `component_text_area` | `[{"value":"<p>Hello</p>","lang":"lg-eng","id":1}]` | `value` |
-| `component_email` | `[{"value":"a@b.com","lang":"lg-nolan","id":1}]` | `value` |
-| `component_number` | `[{"value":5.87,"lang":"lg-nolan","id":1}]` | `value` |
-| `component_date` | `[{"start":{"year":2023,"month":10,"day":26},"id":1,"lang":"lg-nolan"}]` | `start`/`end` |
-| `component_iri` | `[{"iri":"https://dedalo.dev","id":1,"lang":"lg-nolan"}]` | `iri` |
-| Relation components | `[{"section_id":"2","section_tipo":"rsc723","from_component_tipo":"tch191","type":"dd151"}]` | `section_id`/`section_tipo` |
+| `component_input_text` | `[{"value":"Hello"}]` | `value` |
+| `component_text_area` / `component_html_text` | `[{"value":"<p>Hello</p>"}]` | `value` |
+| `component_email` | `[{"value":"a@b.com"}]` | `value` |
+| `component_number` | `[{"value":5.87}]` | `value` |
+| `component_json` | `[{"value":{"any":"JSON"}}]` | `value` |
+| `component_date` | `[{"start":{"year":2023,"month":10,"day":26}}]` | `start` / `end` |
+| `component_iri` | `[{"iri":"https://dedalo.dev"}]` | `iri` |
+| `component_geolocation` | `[{"lat":39.4625,"lon":-0.3762,"zoom":16,"alt":0}]` | `lat` / `lon` |
+| Relation components (select, portals, etc.) | `[{"section_id":"2","section_tipo":"rsc723"}]` | `section_id` / `section_tipo` |
 
-!!! note "value property vs native properties"
+The **v7 format is the canonical import format**: what you see in the component inspector and in raw exports is what you import.
 
-    Text, email, and number components use the `value` property to store their data. Date components use `start`/`end`, IRI components use `iri`, and relation components use `section_id`/`section_tipo`. The `id` and `lang` properties are auto-assigned by the import process and should not be included in the import CSV data.
+!!! note "id and lang properties"
+
+    Stored data also carries `id` and `lang` properties, as `[{"value":"Hello","lang":"lg-eng","id":1}]`. Both are **auto-assigned by the import process** when omitted. The `lang` property can be set explicitly to import multiple languages at once (see [Multiple languages](#multiple-languages)); the `id` property should be omitted, except for `component_iri` where it pairs the value with its label dataframe.
+
+??? note "v6 legacy format (accepted)"
+
+    Dédalo v6 stored plain value arrays as `["Hello"]` or `[104,-75.35]`. This input is still accepted and automatically normalized to the v7 format on save, so old v6 CSV files import without changes.
+
+Besides the JSON formats, every component accepts simple **flat string** alternatives (a plain text, a number, a date as `2023/10/26`, a list of ids as `1,4,6`...) described in each component section below. Flat strings are the easiest way to write a CSV by hand.
+
+### The dedalo_data wrapper
+
+Data exported with the tool export in `dedalo_raw` format is wrapped with the `dedalo_data` property:
+
+```json
+{"dedalo_data":[{"value":"Hello","lang":"lg-eng","id":1}]}
+```
+
+The wrapper identifies externally that the content is Dédalo format data and not any other generic value. The import process detects and unwraps it transparently, so a raw exported CSV can be re-imported without any change (round-trip). Un-wrapped v7/v6 values remain fully accepted; the wrapper is only mandatory to disambiguate `component_json` data (see [JSON](#json)).
+
+!!! note "What is not wrapped"
+
+    Two cases are exported **without** the wrapper, and both re-import correctly as-is: the `section_id` column (a plain int, used as the record key on import) and components without data (empty cells). The wrapper is detected only when `dedalo_data` is the **only** property of the cell object — a JSON value that merely contains a `dedalo_data` property among others is treated as a normal value.
+
+### Empty cells
+
+!!! warning "An empty cell clears the existing data"
+
+    An empty CSV cell is imported as `null` and **clears the existing data** of that component for that record (and for the current data language when the component is translatable). If you don't want to touch a component in some records, don't include its column in the CSV file, or split the import into several files.
 
 ---
 
-### Plain text
+### Text
 
-By default import model use the JSON format of his data, an object with lang properties and values in array.
+Component: `component_input_text`.
 
-**v6 input format** (plain string arrays — simpler to write in CSV):
-
-```json
-{
-    "lg-spa" : ["mi dato para importar", "Otro dato"],
-    "lg-eng" : ["my import data", "Other data to import"]
-}
-```
-
-**v7 input format** (objects with `value` property — explicit structure):
+Canonical v7 input, array of objects with `value`:
 
 ```json
-{
-    "lg-spa" : [{"value":"mi dato para importar"}, {"value":"Otro dato"}],
-    "lg-eng" : [{"value":"my import data"}, {"value":"Other data to import"}]
-}
+[{"value":"my import data"},{"value":"Other data"}]
 ```
 
-Both formats are accepted as input. The v6 format is recommended for simplicity — the import process will automatically normalize it into v7 objects with `value`, `lang`, and `id` properties when saving to the database.
+#### Multiple languages
 
-Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
+For translatable components, is possible to import multiple languages at once in two equivalent ways:
 
-The table to import (v6 format)
+1. **Flat v7 array** (the stored v7 format, as produced by the raw export): every item carries its own `lang` property:
 
-| section_id    | oh14 |
-| ------------  | ---- |
-| 1             | {"lg-spa": \["mi dato para importar","Otro dato"]} |
+    ```json
+    [
+        {"value":"mi dato para importar","lang":"lg-spa"},
+        {"value":"my import data","lang":"lg-eng"}
+    ]
+    ```
 
-Will be encoded in CSV format as:
+2. **Lang keyed object**: one property per language, each holding its items:
+
+    ```json
+    {
+        "lg-spa" : [{"value":"mi dato para importar"}, {"value":"Otro dato"}],
+        "lg-eng" : [{"value":"my import data"}, {"value":"Other data to import"}]
+    }
+    ```
+
+Encoded in CSV format as:
 
 ```text
 section_id;rsc86
-1;"{""lg-spa"":[""mi dato para importar"",""Otro dato""]}"
+1;"{""lg-spa"":[{""value"":""mi dato para importar""},{""value"":""Otro dato""}]}"
 ```
 
-The table to import (v7 format)
-
-| section_id    | oh14 |
-| ------------  | ---- |
-| 1             | {"lg-spa": \[{"value":"mi dato para importar"},{"value":"Otro dato"}]} |
-
-Will be encoded in CSV format as:
-
-```text
-section_id;rsc86
-1;"{""lg-spa"":[{""value":""mi dato para importar""},{""value":""Otro dato""}]}"
-```
-
-!!! note "v6 → v7 data format change"
-
-    In Dédalo v7, component data is stored as arrays of objects with a `value` property instead of plain string arrays. For example, v6 stored `["mi dato"]` but v7 stores `[{"value":"mi dato","lang":"lg-spa","id":1}]`. The `id` and `lang` properties are auto-assigned by the import process. Both v6 and v7 input formats are accepted — v6 input is automatically normalized to v7 on save.
+In both cases every language present in the import value replaces that language data, and the languages not present are preserved. Items without `lang` are saved into the Dédalo data lang defined by the user in menu.
 
 #### Alternative formats to import text
 
-1. An array of string values
-
-    ```json
-    ["mi dato para importar", "Otro dato"]
-    ```
-
-    In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan` to save import data. Each string will be automatically wrapped into a v7 object with `value` property.
-
-    Example:
-
-    section_id | oh14
-    --- | ---
-    1 | \["mi dato para importar","Otro dato"]
-
-!!! note "v6 → v7 data format change"
-
-    In v7, each text item is stored as an object with a `value` property. Both v6-style plain string arrays `["mi dato"]` and v7-style object arrays `[{"value":"mi dato"}]` are accepted as input — v6 input is automatically normalized to v7 on save.
-
-2. Plain text
-
-    ```text
-    new data to import
-    ```
-
-    Example:
+1. Plain text (the simplest)
 
     section_id | oh14
     --- | ---
     1 | new data to import
 
-    In this case the import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array, if exists previous data it will be replace with a new array with the import value.
+    The import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array. If exists previous data in that lang it will be replaced with a new array with the import value.
 
-    If the data in database is:
+2. An array of string values (v6 format)
+
+    section_id | oh14
+    --- | ---
+    1 | \["mi dato para importar","Otro dato"]
+
+    The import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan`. Each string will be automatically wrapped into a v7 object with `value` property.
+
+3. Multi-language object with plain strings
 
     ```json
-    {
-        "lg-spa" : [{"value":"mi dato importado", "lang":"lg-spa", "id":1}, {"value":"Otro dato", "lang":"lg-spa", "id":2}],
-        "lg-eng" : [{"value":"my imported data", "lang":"lg-eng", "id":1}, {"value":"Other data", "lang":"lg-eng", "id":2}]
-    }
+    {"lg-eng":"My value","lg-spa":"Mi valor"}
     ```
 
-    and the Dédalo data lang is set to English, after import plain text, the final data will be:
-
-    ```json
-    {
-        "lg-spa" : [{"value":"mi dato importado", "lang":"lg-spa", "id":1}, {"value":"Otro dato", "lang":"lg-spa", "id":2}],
-        "lg-eng" : [{"value":"new data to import", "lang":"lg-eng", "id":1}]
-    }
-    ```
-
-    Plain text is easy to import, but it is limited in the data control. take account of the language set in the menu.
+    Each lang value is normalized to the v7 format and saved into its own language.
 
 ---
 
-### Format text
+### Formatted text
 
-#### HTML
+Components: `component_text_area` and `component_html_text`.
 
-Dédalo uses standard HTML format to import formatted text.
-
-As Dédalo use ck-editor as text editor, HTML tags accepted are the same than [ck-editor](https://ckeditor.com/docs/ckeditor5/latest/features/basic-styles.html#available-text-styles):
-
-Dédalo has two editors, `text_area` and `html_text`
+Dédalo uses standard HTML format to import formatted text. As Dédalo use ck-editor as text editor, HTML tags accepted are the same than [ck-editor](https://ckeditor.com/docs/ckeditor5/latest/features/basic-styles.html#available-text-styles):
 
 1. `text_area` accepts:
 
@@ -305,7 +286,7 @@ Dédalo has two editors, `text_area` and `html_text`
 
 !!! note "Import behavior for text_area vs html_text"
 
-    Both `component_text_area` (text_area editor) and `component_html_text` (html_text editor) use the same import format and data structure. The difference is only in which HTML tags are preserved after import. `text_area` will strip unsupported tags (like `<s>`, `<code>`, `<sub>`, `<sup>`), while `html_text` preserves them. The v6/v7 input format rules are the same for both components.
+    Both components use the same import format and data structure. The difference is only in which HTML tags are preserved after import. `text_area` will strip unsupported tags (like `<s>`, `<code>`, `<sub>`, `<sup>`), while `html_text` preserves them.
 
 Besides, import format text support some compatible elements and CSS styles:
 
@@ -321,6 +302,59 @@ Besides, import format text support some compatible elements and CSS styles:
 
 !!! note
     This elements and styles will be changed to elements supported in the import process.
+
+Canonical v7 input:
+
+```json
+[{"value":"<p>El meu text per <strong>importar</strong></p>"},{"value":"<p>Altra dada</p>"}]
+```
+
+Multi-language input, as flat v7 array (per-item `lang`, the raw export format) or as lang keyed object — see [Multiple languages](#multiple-languages):
+
+```json
+[
+    {"value":"<p>Les meves dades per <strong>importar</strong></p>","lang":"lg-cat"},
+    {"value":"<p>My data to <strong>import</strong></p>","lang":"lg-eng"}
+]
+```
+
+```json
+{
+    "lg-cat" : [{"value":"<p>Les meves dades per <strong>importar</strong></p><p>&nbsp;</p><p>Amb 2 paragraphs</p>"}],
+    "lg-eng" : [{"value":"<p>My data to <strong>import</strong></p><p>&nbsp;</p><p>With 2 paragraphs</p>"}]
+}
+```
+
+Encoded in CSV format as:
+
+```text
+section_id;numisdata18
+1;"{""lg-cat"": [{""value"":""<p>El meu text per <strong>importar</strong></p>""},{""value"":""<p>Altra dada</p>""}]}"
+```
+
+#### Alternative formats to import formatted text
+
+1. Formatted text (flat string, the simplest)
+
+    section_id | numisdata18
+    --- | ---
+    1 | `<p>Nou text per <strong>importar</strong></p>`
+
+2. Plain text (without HTML)
+
+    section_id | numisdata18
+    --- | ---
+    1 | new data to import
+
+    The text will be wrapped automatically into `<p></p>` paragraphs, and line returns become new paragraphs.
+
+3. An array of string values (v6 format)
+
+    section_id | oh14
+    --- | ---
+    1 | `["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]`
+
+In the flat string cases the import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array, replacing previous data of that lang.
 
 #### Indexation tags
 
@@ -429,305 +463,71 @@ The reference tag is used to a link to any other section. It use the locator to 
 
 > \[/reference-n-1-reference 1-data:\[{'section_tipo':'fr1','section_id':'1','type':'dd151'}]:data]
 
-By default import model use the JSON format of his data, an object with lang properties and values in array.
-
-**v6 input format** (plain string arrays — simpler to write in CSV):
-
-```json
-{
-    "lg-cat" : ["<p>Les meves dades per <strong>importar</strong></p><p>&nbsp;</p><p>Amb 2 paragraphs</p>"],
-    "lg-eng" : ["<p>My data to <strong>import</strong></p><p>&nbsp;</p><p>With 2 paragraphs</p>"]
-}
-```
-
-**v7 input format** (objects with `value` property — explicit structure):
-
-```json
-{
-    "lg-cat" : [{"value":"<p>Les meves dades per <strong>importar</strong></p><p>&nbsp;</p><p>Amb 2 paragraphs</p>"}],
-    "lg-eng" : [{"value":"<p>My data to <strong>import</strong></p><p>&nbsp;</p><p>With 2 paragraphs</p>"}]
-}
-```
-
-Both formats are accepted as input. The v6 format is recommended for simplicity — the import process will automatically normalize it into v7 objects with `value`, `lang`, and `id` properties when saving to the database.
-
-Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
-
-The table to import (v6 format)
-
-| section_id    | numisdata18 |
-| ------------  | ---- |
-| 1             | `{"lg-cat": ["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]}` |
-
-Will be encoded in CSV format as:
-
-```text
-section_id;numisdata18
-1;"{""lg-cat"": [""<p>El meu text per <strong>importar</strong></p>"",""<p>Altra dada</p>""]}"
-```
-
-The table to import (v7 format)
-
-| section_id    | numisdata18 |
-| ------------  | ---- |
-| 1             | `{"lg-cat": [{"value":"<p>El meu text per <strong>importar</strong></p>"},{"value":"<p>Altra dada</p>"}]}` |
-
-Will be encoded in CSV format as:
-
-```text
-section_id;numisdata18
-1;"{""lg-cat"": [{""value"":""<p>El meu text per <strong>importar</strong></p>""},{""value"":""<p>Altra dada</p>""}]}"
-```
-
-#### Alternative formats to import formated text
-
-1. An array of string values
-
-    ```json
-    ["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]
-    ```
-
-    In this case the import process assume the Dédalo data lang defined by the user in menu and will save into this lang, or if the component is non translatable will use `lg-nolan` to save import data. Each string will be automatically wrapped into a v7 object with `value` property.
-
-    Example:
-
-    section_id | oh14
-    --- | ---
-    1 | `["<p>El meu text per <strong>importar</strong></p>","<p>Altra dada</p>"]`
-
-!!! note "v6 → v7 data format change"
-
-    In v7, each formatted text item is stored as an object with a `value` property. Both v6-style plain string arrays and v7-style object arrays are accepted as input — v6 input is automatically normalized to v7 on save.
-
-2. Formatted text
-
-    ```text
-    <p>Nou text per <strong>importar</strong></p>
-    ```
-
-    Example:
-
-    section_id | numisdata18
-    --- | ---
-    1 | ` <p>Nou text per <strong>importar</strong></p>`
-
-    In this case the import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array, if exists previous data it will be replace with a new array with the import value.
-
-    If the data in database is:
-
-    ```json
-    {
-        "lg-cat" : [{"value":"<p>la meva dada importada</p>", "lang":"lg-cat", "id":1}, {"value":"<p>Altra dada</p>", "lang":"lg-cat", "id":2}],
-        "lg-eng" : [{"value":"<p>my imported data</p>", "lang":"lg-eng", "id":1}, {"value":"<p>Other data</p>", "lang":"lg-eng", "id":2}]
-    }
-    ```
-
-    and the Dédalo data lang is set to Catalan, after import plain text, the final data will be:
-
-    ```json
-    {
-        "lg-cat" : [{"value":"<p>Nou text per <strong>importar</strong></p>", "lang":"lg-cat", "id":1}],
-        "lg-eng" : [{"value":"<p>my imported data</p>", "lang":"lg-eng", "id":1}, {"value":"<p>Other data</p>", "lang":"lg-eng", "id":2}]
-    }
-    ```
-
-3. Plain text
-
-    Some cases, the text could not use any format instead the components support the formats, so is possible import plain text (without HTML)
-
-    ```text
-    new data to import
-    ```
-
-    Example:
-
-    section_id | numisdata18
-    --- | ---
-    1 | new data to import
-
-    In this case the import process assume the Dédalo data lang defined by the user in menu and will import the value as unique value in the array, if exists previous data it will be replace with a new array with the import value.
-
-    If the data in database is:
-
-    ```json
-    {
-        "lg-spa" : [{"value":"mi dato importado", "lang":"lg-spa", "id":1}, {"value":"Otro dato", "lang":"lg-spa", "id":2}],
-        "lg-eng" : [{"value":"my imported data", "lang":"lg-eng", "id":1}, {"value":"Other data", "lang":"lg-eng", "id":2}]
-    }
-    ```
-
-    and the Dédalo data lang is set to English, after import plain text, the final data will be:
-
-    ```json
-    {
-        "lg-spa" : [{"value":"mi dato importado", "lang":"lg-spa", "id":1}, {"value":"Otro dato", "lang":"lg-spa", "id":2}],
-        "lg-eng" : [{"value":"new data to import", "lang":"lg-eng", "id":1}]
-    }
-    ```
-
-    Plain text is easy to import, but it is limited in the data control. take account of the language set in the menu.
-
 ---
 
 ### Numbers
 
-By default import model use the JSON format of his value, as the component do not use languages the main format to import is the array of values.
+Component: `component_number`. The component do not use languages.
 
-**v6 input format** (plain number arrays — simpler to write in CSV):
-
-```json
-[104,-75.35]
-```
-
-**v7 input format** (objects with `value` property — explicit structure):
+Canonical v7 input:
 
 ```json
 [{"value":104},{"value":-75.35}]
 ```
 
-Both formats are accepted as input. The v6 format is recommended for simplicity — the import process will automatically normalize it into v7 objects with `value`, `lang`, and `id` properties when saving to the database.
-
-Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
-
-The table to import (v6 format)
-
-| section_id    | numisdata133     |
-| ------------  | ---------------- |
-| 1             | \[104,-75.35]    |
-
-Will be encoded in CSV format as:
+Encoded in CSV format as:
 
 ```text
-section_id;rsc86
-1;[104,-75.35]
+section_id;numisdata133
+1;"[{""value"":104},{""value"":-75.35}]"
 ```
-
-The table to import (v7 format)
-
-| section_id    | numisdata133     |
-| ------------  | ---------------- |
-| 1             | \[{"value":104},{"value":-75.35}]    |
-
-Will be encoded in CSV format as:
-
-```text
-section_id;rsc86
-1;[{""value"":104},{""value"":-75.35}]
-```
-
-!!! note "v6 → v7 data format change"
-
-    In Dédalo v7, number data is stored as arrays of objects with a `value` property instead of plain number arrays. For example, v6 stored `[104,-75.35]` but v7 stores `[{"value":104,"lang":"lg-nolan","id":1},{"value":-75.35,"lang":"lg-nolan","id":2}]`. The `id` and `lang` properties are auto-assigned by the import process. Both v6 and v7 input formats are accepted — v6 input is automatically normalized to v7 on save.
 
 #### Alternative formats to import numbers
 
-1. Plain number
-
-    ```text
-    33.85
-    ```
-
-    Example:
+1. Plain number (the simplest)
 
     | section_id  | numisdata133 |
     | ----------- | ------------ |
     | 1           | 33.85        |
 
-    In this case the import process assume this data as the full data, if exists previous data it will be replace with a new array with the import value.
+    The import process assume this data as the full data, if exists previous data it will be replaced with a new array with the import value.
 
-    If the data in database is:
+    The decimal separator (`.` or `,`) can be selected in the import tool for every number column.
 
-    ```json
-    {
-        "lg-nolan" : [{"value":104, "lang":"lg-nolan", "id":1},{"value":-75.35, "lang":"lg-nolan", "id":2}]
-    }
-    ```
+2. An array of numbers (v6 format)
 
-    after import plain number, the final data will be:
-
-    ```json
-    {
-        "lg-nolan" : [{"value":33.85, "lang":"lg-nolan", "id":1}]
-    }
-    ```
-
-    Plain number is easy to import, but it is limited in the data control.
+    | section_id  | numisdata133 |
+    | ----------- | ------------ |
+    | 1           | \[104,-75.35] |
 
 ---
 
 ### Email
 
-By default import model use the JSON format of his value, as the component do not use languages the main format to import is the array of email strings.
+Component: `component_email`. The component do not use languages.
 
-**v6 input format** (plain string arrays — simpler to write in CSV):
-
-```json
-["user@example.com", "admin@example.com"]
-```
-
-**v7 input format** (objects with `value` property — explicit structure):
+Canonical v7 input:
 
 ```json
-[{"value":"user@example.com"}, {"value":"admin@example.com"}]
+[{"value":"user@example.com"},{"value":"admin@example.com"}]
 ```
 
-Both formats are accepted as input. The v6 format is recommended for simplicity — the import process will automatically normalize it into v7 objects with `value`, `lang`, and `id` properties when saving to the database.
-
-Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
-
-The table to import (v6 format)
-
-| section_id    | tch442  |
-| ------------  | ------ |
-| 1             | \["user@example.com","admin@example.com"] |
-
-Will be encoded in CSV format as:
-
-```text
-section_id;tch442
-1;"[""user@example.com"",""admin@example.com""]"
-```
-
-The table to import (v7 format)
-
-| section_id    | tch442  |
-| ------------  | ------ |
-| 1             | \[{"value":"user@example.com"},{"value":"admin@example.com"}] |
-
-Will be encoded in CSV format as:
+Encoded in CSV format as:
 
 ```text
 section_id;tch442
 1;"[{""value"":""user@example.com""},{""value"":""admin@example.com""}]"
 ```
 
-!!! note "v6 → v7 data format change"
-
-    In Dédalo v7, email data is stored as arrays of objects with a `value` property instead of plain string arrays. For example, v6 stored `["user@example.com"]` but v7 stores `[{"value":"user@example.com","lang":"lg-nolan","id":1}]`. The `id` and `lang` properties are auto-assigned by the import process. Both v6 and v7 input formats are accepted — v6 input is automatically normalized to v7 on save.
-
 #### Alternative formats to import emails
 
-1. Plain email string
-
-    ```text
-    user@example.com
-    ```
-
-    Example:
+1. Plain email string (the simplest)
 
     | section_id  | tch442 |
     | ----------- | ------ |
     | 1           | user@example.com |
 
-    In this case the import process assume this data as the full data, if exists previous data it will be replace with a new array with the import value.
-
-2. Multiple emails with separator
-
-    To import multiple emails use the ` | ` separator:
-
-    ```text
-    user@example.com | admin@example.com
-    ```
+2. Multiple emails with the ` | ` separator
 
     | section_id  | tch442 |
     | ----------- | ------ |
@@ -736,14 +536,26 @@ section_id;tch442
     will be parse as:
 
     ```json
-    [{"value":"user@example.com"}, {"value":"admin@example.com"}]
+    [{"value":"user@example.com"},{"value":"admin@example.com"}]
     ```
+
+    !!! note "Fixed separator"
+
+        The ` | ` separator (space, pipe, space) is fixed and not configurable. An address containing a literal ` | ` cannot be imported as flat string: use the JSON array format instead.
+
+3. An array of strings (v6 format)
+
+    | section_id  | tch442 |
+    | ----------- | ------ |
+    | 1           | \["user@example.com","admin@example.com"] |
 
 ---
 
 ### Dates
 
-By default import model use the JSON format of his value, as the component do not use languages the main format to import is the array of dd_date objects.
+Component: `component_date`. The component do not use languages. The main format to import is the array of objects with `start` and optional `end` dd_date values.
+
+Canonical v7 input:
 
 ```json
 [{
@@ -755,15 +567,7 @@ By default import model use the JSON format of his value, as the component do no
 }]
 ```
 
-Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
-
-The table to import
-
-| section_id    | tch56  |
-| ------------  | ------ |
-| 1             | \[{"start":{"year":1238,"month":10,"day":9}}] |
-
-Will be encoded in CSV format as:
+Encoded in CSV format as:
 
 ```text
 section_id;tch56
@@ -1167,9 +971,144 @@ It's possible remove the `type` and `from_component_tipo` properties because the
 
 ---
 
+### Languages (select_lang)
+
+Component: `component_select_lang`. It is a relation component pointing to the Dédalo languages section, used to specify the language of a content (e.g. the language of a text or an audiovisual).
+
+Canonical v7 input, array of locators:
+
+```json
+[{"section_tipo":"lg1","section_id":"17344"}]
+```
+
+#### Alternative formats to import languages
+
+1. A lang code in flat string (the simplest)
+
+    | section_id | rsc36 |
+    | --- | --- |
+    | 1 | lg-spa |
+
+2. Multiple lang codes separated by comma
+
+    | section_id | rsc36 |
+    | --- | --- |
+    | 1 | lg-spa, lg-eng |
+
+3. A JSON array of lang codes
+
+    | section_id | rsc36 |
+    | --- | --- |
+    | 1 | \["lg-spa","lg-eng"] |
+
+Every code is resolved to its locator in the languages section. An unresolvable code (e.g. `lg-zzz`) produces a failed row and the value is ignored.
+
+Lang codes must be **lowercase** alphanumeric with the `lg-` prefix (`lg-spa`, `lg-eng`, `lg-vlca`); uppercase variants as `LG-SPA` are not recognized as lang codes.
+
+!!! note "Languages not configured in the project"
+
+    A valid lang code that is **not part of the project configured languages** (DEDALO_PROJECTS_DEFAULT_LANGS) is imported anyway, and the import report shows a **warning**: the value is saved but it will not be accessible until the project languages include it.
+
+---
+
+### Geolocation
+
+Component: `component_geolocation`. The component do not use languages. The data is an array with one item defining the map center (`lat`, `lon`), the map state (`zoom`, `alt`) and, optionally, the drawn shapes as GeoJSON layers (`lib_data`).
+
+Canonical v7 input:
+
+```json
+[{
+    "lat"  : 39.4625,
+    "lon"  : -0.3762,
+    "zoom" : 16,
+    "alt"  : 0
+}]
+```
+
+With drawn shapes:
+
+```json
+[{
+    "lat"  : 39.4625,
+    "lon"  : -0.3762,
+    "zoom" : 16,
+    "alt"  : 0,
+    "lib_data" : [{
+        "layer_id"   : 1,
+        "layer_data" : {
+            "type"     : "FeatureCollection",
+            "features" : [{
+                "type"       : "Feature",
+                "properties" : {"layer_id":1},
+                "geometry"   : {"type":"Point","coordinates":[-0.3762,39.4625]}
+            }]
+        }
+    }]
+}]
+```
+
+#### Alternative formats to import geolocation
+
+1. Coordinates in flat string (the simplest), as `lat, lon[, zoom[, alt]]` with dot decimals:
+
+    | section_id | tch102 |
+    | --- | --- |
+    | 1 | 39.4625, -0.3762 |
+    | 2 | 39.4625, -0.3762, 15 |
+
+    !!! note "Coordinate order"
+
+        The flat string order is **latitude first** (human convention, as map applications show). Note that GeoJSON `coordinates` use the opposite `[lon, lat]` order.
+
+2. A bare GeoJSON FeatureCollection:
+
+    ```json
+    {"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-0.3762,39.4625]}}]}
+    ```
+
+    The map center is taken from the first `Point` feature and the full collection is stored as the layer 1 shapes.
+
+Latitude must be in range \[-90, 90] and longitude in \[-180, 180]; `zoom` defaults to 16 and `alt` to 0 when omitted.
+
+---
+
+### JSON
+
+Component: `component_json`. The component do not use languages and stores **any arbitrary JSON** as a single value (monovalue).
+
+By default, the **entire cell content becomes the value**, whatever it is:
+
+| section_id | test18 |
+| --- | --- |
+| 1 | {"config":{"a":1}} |
+| 2 | \[1,2,3] |
+| 3 | hello world |
+| 4 | 42 |
+
+Row 1 will be saved as `[{"value":{"config":{"a":1}}}]`, row 4 as `[{"value":42}]`, etc.
+
+!!! note "The dedalo_data wrapper as disambiguator"
+
+    Because any JSON is a valid value, a v7 envelope like `[{"value":1},{"value":2}]` is indistinguishable from a literal JSON value with the same shape — so by default it is imported **entirely inside `value`**:
+
+    ```json
+    [{"value":[{"value":1},{"value":2}]}]
+    ```
+
+    To import data already in Dédalo v7 format (e.g. re-importing a raw export), wrap it with the `dedalo_data` property:
+
+    ```json
+    {"dedalo_data":[{"value":{"config":{"a":1}},"id":1}]}
+    ```
+
+    The raw export produces this wrapper automatically, so export → import round-trips work without changes.
+
+---
+
 ### URI
 
-By default import model use the JSON format of his value, if the component does not use languages the main format to import is the array of `dd_iri` objects.
+Component: `component_iri`. If the component does not use languages the main format to import is the array of `dd_iri` objects.
 
 !!! info "Data format in version 6.8.0"
     Data version for iri component has changed in version 6.8.0. `title` property has deprecated and will be removed in future verions.
@@ -1184,25 +1123,21 @@ By default import model use the JSON format of his value, if the component does 
 ```
 
 - `iri` property, **mandatory**. Defines the URL, it needs to have the protocol and a valid structure with domain.
-- `id` property **optional**. Defines the unique id of the data, it will be used to be linked with the label dataframe.
+- `id` property **optional**. Defines the unique id of the data, it will be used to be linked with the label dataframe. If omitted, it is auto-assigned on save.
 - `label_id` property **optional**. Defines the target id (section_id) to be used as value of the label in dataframe.
 
-Because the Dédalo import process uses a plain CSV file, the JSON data must be stringified in the following way:
+!!! note "id exception for component_iri"
 
-The table to import
+    In general the `id` property is auto-assigned by the import process and should not be included in the CSV data. The IRI component is the exception: because the label dataframe is paired with the value through its `id`, is possible to set it explicitly to control that pairing.
 
-| section_id    | tch442  |
-| ------------  | ------ |
-| 1             | \[{"iri":"https://dedalo.dev","id":1,"label_id":5}]|
-
-Will be encoded in CSV format as:
+Encoded in CSV format as:
 
 ```text
 section_id;tch442
-1;"[{""iri"":""https://dedalo.dev"",""id"":"1",""label_id"":"5"}]"
+1;"[{""iri"":""https://dedalo.dev"",""id"":1,""label_id"":5}]"
 ```
 
-### Multiple values
+#### Multiple values
 
 To import multiple values in the same component/field, add new object to the array in this way:
 
@@ -1245,7 +1180,7 @@ The table to import
 
 #### Alternative formats to import URI's
 
-1. Flat string:
+1. Flat string (the simplest):
 
     ```text
     https://dedalo.dev
@@ -1301,7 +1236,7 @@ The table to import
     ```json
     [{
         "iri"      : "https://dedalo.dev",
-        "id_label" : 8
+        "label_id" : 8
     }]
     ```
     And it will be processed to create the label relation with a `component_dataframe` pointing to the value 8 and create the relation with the `component_iri`.
@@ -1325,24 +1260,7 @@ The table to import
 
     The string value will be checked in the import process. If the string value exists in the value list, it will be set with its own id(section_id), if not exist will create new value in the list.
 
-    It will be parse as:
-
-    ```json
-    [{
-        "iri"      : "https://dedalo.dev",
-        "id_label" : 8
-    }]
-    ```
-
-    And it will be processed to create the label relation with a `component_dataframe` pointing to the value 8 and create the relation with the `component_iri`.
-    The `component_dataframe` will point to the `section_id` 8 that is the `Dédalo` label.
-
-    !!! tip "Separator format"
-
-        Dédalo interpreted the `, ` separator between data to differentiate two parts, left of the comma is the id label and the right of the comma will be the URI, if you are using this separator is important to add the space between comma and the URI, because is possible identify the comma when the URI is clear, sometimes the title or the URI can use this character. To minimized errors ensure that the space is after the comma in the separator.
-
-
-4. String of multiple values
+5. String of multiple values
 
     To import multiple values of the URI use the ` | ` separator in this way:
 
@@ -1367,7 +1285,7 @@ The table to import
 
         Dédalo interpreted the ` | ` separator between data to differentiate two or more values. Is possible that some URI's will use this character inside the variables. To minimized errors ensure that the space is before and after of the separator character.
 
-5. String of multiple values with label id
+6. String of multiple values with label id
 
     Is possible combine the label string or id with the separator `, ` and the values separator ` | ` in the same string in this way:
 
@@ -1385,13 +1303,14 @@ The table to import
     [
         {
             "iri":"https://dedalo.dev",
-            "id_label": 8
+            "label_id": 8
         },
         {
             "iri":"https://dedalo.dev/docs"
         }
     ]
     ```
+
 #### Version format < 6.8.0 (deprecated)
 
 !!! warning "Deprecated format"
@@ -1405,20 +1324,6 @@ The table to import
 }]
 ```
 
-The table to import
-
-| section_id    | tch442  |
-| ------------  | ------ |
-| 1             | \[{"iri":"https://dedalo.dev","title":"Dédalo website"}]|
-
-Will be encoded in CSV format as:
-
-```text
-section_id;tch442
-1;"[{""iri"":""https://dedalo.dev"",""title"":""Dédalo website""}]"
-```
-
 !!! note "Migration from title to label_id"
 
-    To migrate from the deprecated `title` property to `label_id`, replace the title string with the `section_id` of the corresponding label in the label list. For example, if the label "Dédalo website" has `section_id` 8 in the label list, change `\"title\":\"Dédalo website\"` to `\"label_id\":8`. The alternative string format `Dédalo website, https://dedalo.dev` (shown in the v7 section above) will automatically resolve the label for you.
-
+    To migrate from the deprecated `title` property to `label_id`, replace the title string with the `section_id` of the corresponding label in the label list. For example, if the label "Dédalo website" has `section_id` 8 in the label list, change `"title":"Dédalo website"` to `"label_id":8`. The alternative string format `Dédalo website, https://dedalo.dev` (shown above) will automatically resolve the label for you.
