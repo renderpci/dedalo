@@ -1,5 +1,4 @@
-<?php
-// declare(strict_types=1); // NOT IN UNIT TEST !
+<?php declare(strict_types=1);
 /**
 * DIFFUSION_RDF
 * Used to publish data to RDF
@@ -11,8 +10,8 @@ class diffusion_rdf {
 	public $section_id;
 	public $rdf_wrapper;	// Array of RDF wrapper lines to inject body content at element $rdf_wrapper[rdf_value]
 
-	public $service_name;	// From propiedades of diffusion_element (Fixed on update_record)
-	public $service_type;	// From propiedades of diffusion_element (Fixed on update_record)
+	public $service_name;	// From properties of diffusion_element (Fixed on update_record)
+	public $service_type;	// From properties of diffusion_element (Fixed on update_record)
 	public $external_ontology_tipo; // the diffusion element tipo
 	// public $entity_section_id; //Fixed on update_record
 	public $ar_records; // Inject data here by tool diffusion when update_record
@@ -64,7 +63,6 @@ class diffusion_rdf {
 	* UPDATE_RECORD
 	* Unified diffusion start point to publish one record.
 	* Creates an RDF file with the resultant nodes of process given record.
-	* @see diffusion_sql::generate_rdf (called from)
 	* @param object $options
 	* @return object $response
 	*/
@@ -439,37 +437,6 @@ class diffusion_rdf {
 
 		return $response->data ?? null;
 	}//end build_rdf_xml
-
-
-
-	/**
-	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
-	* Used to determine when show publication button in sections
-	* Called from class diffusion to get the RDF portion of sections
-	* @see diffusion::get_diffusion_sections_from_diffusion_element
-	* @param string $diffusion_element_tipo
-	* @param string|null $class_name = null
-	* @return array $ar_diffusion_sections
-	*/
-	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
-
-		$ar_diffusion_sections = array();
-
-		// XML elements
-		$elements = ontology_node::get_ar_tipo_by_model_and_relation($diffusion_element_tipo, 'owl:Class', 'children', true);
-		foreach ($elements as $current_element_tipo) {
-
-			# Pointer to section
-			$ar_related = common::get_ar_related_by_model('section', $current_element_tipo);
-
-			if (isset($ar_related[0])) {
-				$ar_diffusion_sections[] = $ar_related[0];
-			}
-		}
-
-
-		return $ar_diffusion_sections;
-	}//end get_diffusion_sections_from_diffusion_element
 
 
 
