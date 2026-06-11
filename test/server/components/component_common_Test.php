@@ -728,6 +728,24 @@ final class component_common_test extends BaseTestCase {
 		$response = component_common::unwrap_dedalo_data($other);
 		$this->assertTrue($response->wrapped===false);
 		$this->assertEquals($other, $response->value);
+
+		// object containing 'dedalo_data' among OTHER properties is a legitimate
+		// value (e.g. a component_json value), NOT the wrapper: returned unchanged
+		$not_wrapper = '{"dedalo_data":1,"other":2}';
+		$response = component_common::unwrap_dedalo_data($not_wrapper);
+		$this->assertTrue($response->wrapped===false, 'expected wrapped false for object with extra properties');
+		$this->assertEquals($not_wrapper, $response->value);
+
+		// wrapped null dato: treated as an empty cell (clears data)
+		$response = component_common::unwrap_dedalo_data('{"dedalo_data":null}');
+		$this->assertTrue($response->wrapped===false, 'expected wrapped false for null dato');
+		$this->assertSame('', $response->value, 'expected empty value for wrapped null dato');
+
+		// slashes are preserved un-escaped on re-encode (export fidelity)
+		$wrapped_iri = '{"dedalo_data":[{"iri":"https://dedalo.dev/docs","id":1}]}';
+		$response = component_common::unwrap_dedalo_data($wrapped_iri);
+		$this->assertTrue($response->wrapped===true);
+		$this->assertStringContainsString('https://dedalo.dev/docs', $response->value, 'expected un-escaped slashes');
 	}//end test_unwrap_dedalo_data
 
 
