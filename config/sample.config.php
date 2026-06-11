@@ -83,6 +83,11 @@
 		define('DEDALO_API_URL',			DEDALO_CORE_URL . '/api/v1/json/');
 
 	// Diffusion engine API
+	// All MariaDB operations of the diffusion system are executed by the Bun
+	// engine (diffusion/api/v1): PHP is a client of these endpoints.
+	// Related constants defined further below: DEDALO_DIFFUSION_LANGS,
+	// DEDALO_DIFFUSION_DOMAIN, DEDALO_DIFFUSION_RESOLVE_LEVELS,
+	// DEDALO_DIFFUSION_CUSTOM, EXCLUDE_DIFFUSION_ELEMENTS.
 		define('DEDALO_DIFFUSION_PATH', 	DEDALO_ROOT_PATH.'/diffusion');
 		define('DEDALO_DIFFUSION_API_URL',	DEDALO_ROOT_WEB . '/diffusion/api/v1/');
 		// Unix socket of the Bun diffusion engine. Preferred for server-to-server
@@ -670,9 +675,10 @@
 	// bool Defines how the paths of the media files will be treated in diffusion processing. Default: false
 	// on true, the paths will be simplified to the file name like 'rsc37_rsc176_34.pdf' from '/dedalo/media/pdf/web/0/rsc37_rsc176_34.pdf'
 	define('DEDALO_PUBLICATION_CLEAN_URL',		false);
-	// diffusion_custom
-	// Optional custom class to manipulate diffusion options. string|bool . Default: false
-	define('DIFFUSION_CUSTOM', false);
+	// diffusion custom
+	// Optional custom file to manipulate diffusion options. string|bool . Default: false
+	// (legacy constant name DIFFUSION_CUSTOM is still accepted as fallback by the loader)
+	define('DEDALO_DIFFUSION_CUSTOM', false);
 	// api (publication). This definition is used only in area maintenance to auto-fill main vars
 	// Note that in the public server config file, you need to define again this values because
 	// the public API files could be place in another location/server as independent files
