@@ -191,6 +191,26 @@ final class dd_tools_api {
 			}
 			require_once $class_file;
 
+		// SEC-024: per-tool method allowlist (API_ACTIONS), enforced by default.
+			// Fail-fast on the allowlist before any reflection on the method.
+			// Tools must declare `public const API_ACTIONS` (list form or map form
+			// with declarative permission specs — see tool_security class docs).
+			// Installs migrating third-party tools may temporarily set
+			// `define('TOOLS_REQUIRE_API_ACTIONS', false);` to restore the historical
+			// "any public-static method" rule (logged as deprecated).
+			$action = tool_security::resolve_action($tool_name, $tool_method);
+			if ($action->ok !== true) {
+				debug_log(__METHOD__
+					. ' Error: tool method not in API_ACTIONS allowlist.' . PHP_EOL
+					. ' tool_name: ' . $tool_name . PHP_EOL
+					. ' tool_method: ' . $tool_method
+					, logger::ERROR
+				);
+				$response->msg = 'Error. tool method not allowed: ' . $tool_method;
+				$response->errors[] = 'unauthorized_method';
+				return $response;
+			}
+
 		// method (static) + signature validation
 			$is_valid       = false;
 			$reflection     = null;
@@ -267,26 +287,18 @@ final class dd_tools_api {
 				return $response;
 			}
 
-		// SEC-024 (§9.2): opt-in per-tool method allowlist. When the tool class
-			// declares an API_ACTIONS class constant the method MUST appear in it;
-			// otherwise the historical "any public-static method" rule is preserved.
-			// The opt-in form is strongly preferred for new tools because
-			// `tool_request` is a generic dispatch surface that bypasses
-			// `dd_manager`'s own allowlist.
-			if (defined($tool_name . '::API_ACTIONS')) {
-				$tool_actions = constant($tool_name . '::API_ACTIONS');
-				if (!is_array($tool_actions) || !in_array($tool_method, $tool_actions, true)) {
-					debug_log(__METHOD__
-						. ' Error: tool method not in API_ACTIONS allowlist.' . PHP_EOL
-						. ' tool_name: ' . $tool_name . PHP_EOL
-						. ' tool_method: ' . $tool_method
-						, logger::ERROR
-					);
-					$response->msg = 'Error. tool method not allowed: ' . $tool_method;
-					$response->errors[] = 'unauthorized_method';
-					return $response;
-				}
-			}
+		// SEC-024 (§9.3): declarative per-action permission gate (map-form API_ACTIONS).
+			// MUST run here, BEFORE the background fork below: exec_::request_cli
+			// detaches a CLI process and reports success immediately, so any gate
+			// placed after it (or only inside the tool method body) would be
+			// unobservable by the HTTP caller. A thrown permission_exception
+			// propagates to dd_manager::request, which converts it to the
+			// standard 'permissions_denied' client response.
+			tool_security::assert_action_permission(
+				$action->spec,
+				$options,
+				__METHOD__ . ' ' . $tool_name . '::' . $tool_method
+			);
 
 		// background_running / direct cases
 			switch (true) {

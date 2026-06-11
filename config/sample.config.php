@@ -624,6 +624,16 @@
 	// tool import
 	define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',	DEDALO_MEDIA_PATH . '/import/files');
 
+	// TOOLS_REQUIRE_API_ACTIONS (bool). Default: true (SEC-024).
+	// When true (or undefined), a tool class that does not declare
+	// `public const API_ACTIONS` cannot be called through
+	// dd_tools_api::tool_request — its methods are refused with
+	// 'unauthorized_method'. All tools shipped with Dédalo declare the
+	// constant. Set to false ONLY as a temporary migration aid for
+	// third-party tools that have not yet adopted the allowlist; legacy
+	// dispatch is then allowed and logged as deprecated.
+	// define('TOOLS_REQUIRE_API_ACTIONS', true);
+
 
 
 // lock_components
