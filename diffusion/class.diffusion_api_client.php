@@ -16,6 +16,15 @@
 class diffusion_api_client {
 
 
+	/**
+	 * Test hook: when set, forces the engine endpoint (unix socket path)
+	 * regardless of config constants. Used by the test suite to simulate
+	 * an unreachable engine (pending-deletion path). Never set in production.
+	 * @var string|null $endpoint_override
+	 */
+	public static ?string $endpoint_override = null;
+
+
 
 	/**
 	* CALL
@@ -60,8 +69,11 @@ class diffusion_api_client {
 				$curl_options->timeout			= $timeout;
 
 		// endpoint resolution: unix socket preferred, HTTP URL fallback
-			$socket_path = defined('DEDALO_DIFFUSION_SOCKET_PATH') ? DEDALO_DIFFUSION_SOCKET_PATH : null;
-			if (!empty($socket_path) && file_exists($socket_path)) {
+			// test hook: when $endpoint_override is set, force the socket path
+			// (used by the test suite to simulate an unreachable engine)
+			$socket_path = self::$endpoint_override
+				?? (defined('DEDALO_DIFFUSION_SOCKET_PATH') ? DEDALO_DIFFUSION_SOCKET_PATH : null);
+			if (self::$endpoint_override!==null || (!empty($socket_path) && file_exists($socket_path))) {
 				// host is ignored by curl when using a unix socket, but a URL is still required
 				$curl_options->url			= 'http://localhost/';
 				$curl_options->unix_socket	= $socket_path;
