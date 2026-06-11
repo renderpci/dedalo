@@ -309,6 +309,58 @@ class tools_register {
 			return $obj->{$column}->{$tipo}[0]->value ?? null;
 		};
 
+		// Local helper for skip-with-report results
+		$skip_with_errors = function(array $errors) use ($result, $current_dir_tool, $basename) : object {
+			debug_log(__METHOD__
+				. " ERROR. Tool registration refused for '$basename': " . PHP_EOL
+				. implode(PHP_EOL, $errors)
+				, logger::ERROR
+			);
+			$result->skipped	= true;
+			$result->file_info	= (object)[
+				'dir'      => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
+				'name'     => $basename,
+				'version'  => null,
+				'imported' => false,
+				'errors'   => $errors
+			];
+			return $result;
+		};
+
+		$warnings = [];
+
+		// Class contract check: class.{tool}.php must exist, load and extend tool_common
+			$class_file = $current_dir_tool . '/class.' . $basename . '.php';
+			if (!file_exists($class_file)) {
+				return $skip_with_errors(["Missing tool class file: class.$basename.php"]);
+			}
+			require_once $class_file;
+			if (!class_exists($basename, false)) {
+				return $skip_with_errors(["Tool class '$basename' not found in class.$basename.php (class name must match the directory name)"]);
+			}
+			if (!is_subclass_of($basename, 'tool_common')) {
+				return $skip_with_errors(["Tool class '$basename' must extend tool_common"]);
+			}
+			// SEC-024: tools without an API_ACTIONS allowlist are rejected at dispatch
+			// (see dd_tools_api::tool_request); surface the problem at registration time
+			if (!defined($basename . '::API_ACTIONS')) {
+				$warning = "Tool class '$basename' does not declare const API_ACTIONS: its methods will be refused by dd_tools_api::tool_request";
+				debug_log(__METHOD__ . ' WARNING. ' . $warning, logger::WARNING);
+				$warnings[] = $warning;
+			}
+
+		// Minimum Dédalo version check (dd1328)
+			$min_version = $get_val($new_info_object, self::$tipo_dedalo_version_minimal);
+			if (!empty($min_version) && is_string($min_version)) {
+				// DEDALO_VERSION may carry a '.dev' suffix on development installs
+				$dedalo_version = preg_replace('/\.dev$/', '', DEDALO_VERSION);
+				if (version_compare($dedalo_version, $min_version, '<')) {
+					return $skip_with_errors([
+						"Tool '$basename' requires Dédalo >= $min_version but this install is $dedalo_version"
+					]);
+				}
+			}
+
 		// Prepare and renumerate ontology structure if defined
 		$tipo_ontology = self::$tipo_ontology;
 		$ontology_value = $get_val($new_info_object, $tipo_ontology);
@@ -318,6 +370,33 @@ class tools_register {
 				$ontology_value = [$ontology_value];
 			}
 			$new_ontology_value 	= self::renumerate_term_id($ontology_value, $counter);
+
+			// Ontology integrity: no duplicate tipos after renumeration
+				$seen_tipos = [];
+				foreach ($new_ontology_value as $node) {
+					$node_tipo = $node->tipo ?? null;
+					if ($node_tipo===null) {
+						continue;
+					}
+					if (isset($seen_tipos[$node_tipo])) {
+						return $skip_with_errors([
+							"Duplicate ontology tipo '$node_tipo' after renumeration in tool '$basename'"
+						]);
+					}
+					$seen_tipos[$node_tipo] = true;
+				}
+				// warn about parent references outside the tool ontology set
+				foreach ($new_ontology_value as $node) {
+					$parent = $node->parent ?? null;
+					if (!empty($parent) && str_starts_with((string)$parent, 'tool') && !isset($seen_tipos[$parent])) {
+						debug_log(__METHOD__
+							. " WARNING. Ontology node '" . ($node->tipo ?? '?') . "' of tool '$basename'"
+							. " references missing parent '$parent'"
+							, logger::WARNING
+						);
+					}
+				}
+
 			$result->ontology_data 	= $new_ontology_value;
 
 			// Inject renumerated ontology back into the object for saving
@@ -333,9 +412,10 @@ class tools_register {
 		$version = $get_val($new_info_object, self::$tipo_version);
 
 		$result->file_info = (object)[
-			'dir'     => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
-			'name'    => $name,
-			'version' => $version
+			'dir'      => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
+			'name'     => $name,
+			'version'  => $version,
+			'warnings' => $warnings
 		];
 
 		return $result;
