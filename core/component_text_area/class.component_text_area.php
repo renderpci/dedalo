@@ -1861,6 +1861,16 @@ class component_text_area extends component_string_common {
 				$value = [];
 				foreach ($import_value as $text_value) {
 
+					// numeric scalar values are admitted as text
+						if (is_int($text_value) || is_float($text_value)) {
+							$text_value = (string)$text_value;
+						}
+
+					// ignore non string values (objects, arrays, bool) to prevent substr TypeError
+						if (!is_string($text_value)) {
+							continue;
+						}
+
 					// ignore empty and null values
 						if (empty($text_value)) {
 							continue;
