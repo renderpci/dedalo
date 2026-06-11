@@ -61,7 +61,7 @@ For each match, answer:
 
 For every suspect site, ask: **does an HTTP/CLI entry point actually write the interpolated value?**
 
-If the value is a `define()` constant in `config/config.php` and `config.php` is hand-edited by a deployer with filesystem access:
+If the value is a `define()` constant in `config/bootstrap.php` and `bootstrap.php` is hand-edited by a deployer with filesystem access:
 - The "RCE via constant" finding collapses to **defence-in-depth** (Low).
 - An attacker who can edit `config.php` can already run arbitrary PHP.
 

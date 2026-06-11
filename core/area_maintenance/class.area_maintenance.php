@@ -371,7 +371,7 @@ class area_maintenance extends area_common {
 	 * GET_FILE_CONSTANTS
 	 * Get all config file constants using a regex
 	 * @param string $file
-	 * 	full file path like DEDALO_CONFIG_PATH . '/sample.config.php'
+	 * 	full file path like DEDALO_CONFIG_PATH . '/config_core.php'
 	 * @return array $constants_list
 	 */
 	public static function get_file_constants(string $file): array {

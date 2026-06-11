@@ -113,14 +113,11 @@ Then, install Dédalo manually [following this instruction(https://dedalo.dev/do
 
 1. Download Dédalo and place it under the httpdocs directory of the web server.
 2. Create a database in PostgreSQL named `dedalo_xx` (you can change the `xx` as you please).
-3. Rename `[...]/dedalo/config/sample.config.php` to `[...]/dedalo/config/config.php`.
-4. Modify `[...]/dedalo/config/config.php` as you need. Usually, this involves the `DEDALO_ENTITY` string and the OS library paths.
-5. Rename `[...]/dedalo/config/sample.config_db.php` to `[...]/dedalo/config/config_db.php`.
-6. Modify `[...]/dedalo/config/config_db.php` with your database configuration.
-7. Rename `[...]/dedalo/config/sample.config_core.php` to `[...]/dedalo/config/config_core.php`.
-8. Rename `[...]/dedalo/config/sample.config_areas.php` to `[...]/dedalo/config/config_areas.php`.
-9. Open Dédalo in the browser.
-10. Follow the instructions.
+3. Copy `[...]/dedalo/config/sample.config_core.php` to `[...]/dedalo/config/config_core.php`.
+4. Copy `[...]/dedalo/config/sample.config_areas.php` to `[...]/dedalo/config/config_areas.php`.
+5. Create `[...]/private/.env` from `.env.example` and set your database credentials, entity name, and secrets.
+6. Open Dédalo in the browser.
+7. Follow the instructions.
 11. Once the installation process is done, log in and head to the Development Area. There, update the Ontology and register all tools.
 12. Create an admin user.
 13. Log out and log in with the admin user.
@@ -138,14 +135,14 @@ In a nutshell, Dédalo has four main updates procedures:
     - Create a backup of all files.
     - Option 1, manual update (remove old caches and files, as a clean install):
         - Download the new files and change the files in your server.
-        - You will need see the new config files and put the changes into your own config files: `../dedalo/config/config.php`, `../dedalo/config/config_db.php`, `../dedalo/config/config_areas.php` and `../dedalo/config/config_core.php`.
+        - You will need see the new config files and put the changes into your own config files: `../dedalo/config/bootstrap.php`, `../dedalo/config/config_db.php`, `../dedalo/config/config_areas.php` and `../dedalo/config/config_core.php`.
     - Option 2 automatically (preserve old caches and files):
         - Log-in as `root` user.
         - You will see an indication, a "red" box, as vertical band in the left side of the menu.
         - Go to the Maintenance panel: *Administration->Maintenance*
         - Locate the `Check config` panel and press the `Activate maintenance mode` button
         - Locate the `Update code` panel and press the `Update Dédalo code to the latest version` button
-        - Review your config files see the info into the `Check config` panel or checking the changes in `../dedalo/config/sample.config.xx.php` files. Note: is not possible change this files automatically because are the configuration files and it has specific pw and paths of the users. If you don't change the config files, Dédalo will require the new "define" variables and will stop the app.
+        - Review your `.env` file against `.env.example` to see new environment variables added in the update. The `Check config` panel compares `config_core.php` with its sample.
 
 2. Update the ontology structure with the sections, components, list, etc.
     - Do the first update step

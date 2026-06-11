@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../../config/config.php';
+require_once __DIR__ . '/../../../config/bootstrap.php';
 
 $locator = new locator();
 $locator->set_section_tipo('oh1');

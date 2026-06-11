@@ -30,7 +30,7 @@
 *
 * SEC-083: each method now fails closed when `DEVELOPMENT_SERVER` is not
 * exactly `true`. This is the standard Dédalo production-vs-development
-* marker (defined in `config/sample.config.php`). The intent: even if a
+* marker (defined in `config/bootstrap.php`). The intent: even if a
 * production deployer accidentally registers `tool_dev_template` for a
 * user, calling either method on a production install returns a hard
 * refusal instead of running the unguarded body. Forks of this template

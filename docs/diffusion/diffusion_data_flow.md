@@ -416,7 +416,7 @@ Every language defined will create his own record and will store the lang code i
 | 2 | 1 | lg-spa | Mi título |
 | 3 | 1 | lg-cat | El meu títol |
 
-If the working data do not has the translation, publication process will do fallback to the main data lang defined in [DEDALO_DATA_LANG_DEFAULT](../config/config.md#defining-default-data-language) in `./config/config.php` file
+If the working data do not has the translation, publication process will do fallback to the main data lang defined in [DEDALO_DATA_LANG_DEFAULT](../config/config.md#defining-default-data-language) in `./config/bootstrap.php` file
 
 For example if working data has the abstract in English and Español but it is not done in Català, (català is empty) you will get:
 

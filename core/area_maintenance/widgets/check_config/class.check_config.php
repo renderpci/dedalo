@@ -32,8 +32,6 @@ class check_config {
 
 		// ar_files_name iterate
 			$ar_files_name = [
-				'config',
-				'config_db',
 				'config_core'
 			];
 			foreach ($ar_files_name as $file_name) {

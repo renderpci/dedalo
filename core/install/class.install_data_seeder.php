@@ -1,5 +1,7 @@
 <?php declare(strict_types=1);
 
+include_once __DIR__ . '/class.install_config_manager.php';
+
 /**
  * CLASS INSTALL_DATA_SEEDER
  * Encapsulates seeding of default data: root user,

@@ -11,7 +11,7 @@ This guide provides distribution-specific installation instructions.
 ## System Requirements
 
 ### OS
-- **Supported Distributions**: 
+- **Supported Distributions**:
   - RHEL 9.2+ (with CodeReady Builder repository)
   - Rocky Linux 9.x
   - AlmaLinux 9.x
@@ -21,7 +21,7 @@ This guide provides distribution-specific installation instructions.
 ### Hardware
 - **Processor**: 8-core CPU with 3+ GHz
 - **RAM**: Minimum 16 GB / Recommended: 64 GB
-- **Storage**: 
+- **Storage**:
   - OS: 100+ GB (RAID 10 preferred)
   - Data: 1 TB+ (RAID 10 for media files)
 
@@ -158,20 +158,48 @@ chmod 600 ~/.pgpass
 
 ### 6. Configuration Files
 
-```bash
-cd /path/to/dedalo/config/
+Dédalo v7 uses a unified `.env` file for all configuration. The old `config.php` and `config_db.php` files are no longer used — all values are set in `/private/.env`. The `config/bootstrap.php` file is scaffolding with safe defaults; **do not edit it** to change values.
 
-# Rename sample configuration files
-mv sample.config.php config.php
-mv sample.config_db.php config_db.php
+```bash
+# Create the /private/ directory (sibling of dedalo/)
+mkdir -p /path/to/private
+
+# Create .env from sample
+cp /path/to/private/.env.example /path/to/private/.env
+
+# Or auto-migrate from legacy config files:
+php /path/to/dedalo/core/base/migrate_config.php --dry-run    # preview
+php /path/to/dedalo/core/base/migrate_config.php              # migrate
+
+# Edit .env with your installation values
+nano /path/to/private/.env
+
+# Set file permissions (contains secrets)
+chmod 600 /path/to/private/.env
+
+# Rename remaining sample config files
+cd /path/to/dedalo/config/
 mv sample.config_core.php config_core.php
 mv sample.config_areas.php config_areas.php
 
-# Edit configuration files as needed
-nano config.php        # Set DEDALO_ENTITY, paths, etc.
-nano config_db.php     # Database connection details
-nano config_core.php   # Core settings
-nano config_areas.php  # Areas configuration
+# Edit areas configuration as needed
+nano config_areas.php
+```
+
+The minimum required `.env` settings:
+
+```ini
+DEDALO_ENTITY=my_entity
+DEDALO_SALT_STRING=My_secure_Salt_String!_2046
+DEDALO_HOSTNAME_CONN=/var/run/postgresql
+DEDALO_DATABASE_CONN=dedalo_production
+DEDALO_USERNAME_CONN=dedalo_user
+DEDALO_PASSWORD_CONN=YourSecurePassword
+DEDALO_INFORMATION=Dédalo for Cultural Heritage, version 7
+MYSQL_DEDALO_HOSTNAME_CONN=localhost
+MYSQL_DEDALO_USERNAME_CONN=root
+MYSQL_DEDALO_PASSWORD_CONN=
+MYSQL_DEDALO_DATABASE_CONN=web_my_entity
 ```
 
 ### 7. Complete the Installation

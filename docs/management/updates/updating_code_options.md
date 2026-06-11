@@ -21,7 +21,7 @@ You can see the typical Dédalo directory tree [here](updating_code.md#updating-
 The following files will be restored during the clean installation process:
 
 ```bash
-config/config.php
+config/bootstrap.php
 config/config_db.php
 config/config_areas.php
 config/config_core.php

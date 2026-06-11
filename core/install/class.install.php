@@ -94,7 +94,7 @@ class install extends common {
 				return $dd_object;
 			}
 
-		// check db_status (config_db.php and DB connection)
+		// check db_status (bootstrap.php and DB connection)
 			$db_status				= install_config_manager::get_db_status();
 			$properties->db_status	= $db_status;
 			if($db_status->global_status===false) {

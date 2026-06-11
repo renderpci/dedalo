@@ -1,861 +1,544 @@
-# Changing parameters of global Dédalo config file
+# Configuration Reference
 
-./dedalo/config/config.php
+All Dédalo configuration is managed through the `/private/.env` file. The `config/bootstrap.php` file is scaffolding that defines constants with safe defaults — **do not edit `bootstrap.php` to change values**. Instead, set or uncomment the corresponding key in your `.env` file.
 
-1. Locate the file into the directory: ../httpdocs/dedalo/config/
+## How to change a configuration value
 
-    ```shell
-    cd ../httpdocs/dedalo/config/
-    ```
-
-2. Edit the config.php
+1. Locate the `.env` file in the `/private/` directory
 
     ```shell
-    nano config.php
+    nano /private/.env
     ```
 
-3. Locate and change the PROPERTY with the proper configuration.
+2. Find (or add) the KEY and set the proper value
+
+    ```ini
+    DEDALO_ENTITY=my_entity_name
+    ```
+
+3. Save the file — changes take effect on the next request
+
+> Constants not present in `.env` fall back to their defaults defined in `bootstrap.php`. You only need to set values that differ from the defaults.
+
+### .env value types
+
+| Type | Format | Example |
+| --- | --- | --- |
+| String | Plain text | `DEDALO_ENTITY=my_entity` |
+| Boolean | true/false, yes/no, 1/0, on/off | `DEVELOPMENT_SERVER=true` |
+| Integer | Numeric | `DEDALO_MAX_ROWS_PER_PAGE=10` |
+| Array | JSON-encoded | `DEDALO_PREFIX_TIPOS=["dd","rsc","ontology"]` |
+| Object | JSON-encoded | `MAGICK_CONFIG={"remove_layer_0":false}` |
+| Null | Empty value | `DEDALO_SOCKET_CONN=` |
+
+---
+
+## Constant categories
+
+Constants fall into two categories:
+
+1. **Configurable via .env** — entity-specific values like `DEDALO_ENTITY`, database credentials, language settings, etc.
+2. **Structural / computed** — derived from `__FILE__`, other constants, or runtime state. These are auto-calculated by `bootstrap.php` and **cannot** be set in `.env`.
+
+Structural constants are noted with a *computed* label below.
+
+---
 
 ## **Main variables:** Paths
 
 ### Defining host
 
-./dedalo/config/config.php
+DEDALO_HOST `string` *computed*
 
-DEDALO_HOST `string`
-
-This parameter use the name of the domain or ip of your installation. Used the header from the current request, if there is one, and store the domain or ip of the call.
-
-```php
-define('DEDALO_HOST', $_SERVER['HTTP_HOST'] );
-```
+This parameter uses the name of the domain or IP of your installation. It is computed from `$_SERVER['HTTP_HOST']` (web) or `DEDALO_HOST` env var (CLI). Not configurable via `.env`.
 
 ---
 
 ### Defining protocol
 
-./dedalo/config/config.php
+DEDALO_PROTOCOL `string` *computed*
 
-DEDALO_PROTOCOL `string`
-
-This parameter define the internet protocol used by the server to connect all system. It is recommended to use the HTTPS protocol for installation with SSL certification, it is not mandatory but it ensures that your server connection will be protected with encryption.
-
-```php
-define('DEDALO_PROTOCOL', (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
-```
+This parameter defines the internet protocol used by the server. It is computed from `$_SERVER['HTTPS']`. Not configurable via `.env`.
 
 ---
 
 ### Defining root path
 
-./dedalo/config/config.php
+DEDALO_ROOT_PATH `string` *computed*
 
-DEDALO_ROOT_PATH `string`
+This parameter defines the root directory for Dédalo installation. It is computed from `dirname(__FILE__, 2)`. Not configurable via `.env`.
 
-This parameter define the root directory for Dédalo installation. It is used to define the relative paths inside the server used by internal server commands in the terminal or basic load and server code files. The path is define by you server directory configuration and apache directory configuration.
-
-```php
-define('DEDALO_ROOT_PATH', dirname(dirname(__FILE__)));
-```
-
-Usually `DEDALO_ROOT_PATH` will be:
-
-> /home/www/httpdocs/dedalo
-
-Because `config.php` file `__FILE__` is in the path:
-
-> /home/www/httpdocs/dedalo/config/config.php
+> Usually `DEDALO_ROOT_PATH` will be: `/home/www/httpdocs/dedalo`
 
 ---
 
 ### Defining root web directory
 
-./dedalo/config/config.php
+DEDALO_ROOT_WEB `string` *computed*
 
-DEDALO_ROOT_WEB `string`
+Used to define the URI path to the root Dédalo installation. It is computed from `$_SERVER["REQUEST_URI"]`. Not configurable via `.env`.
 
-Used to define the the uri path to the root Dédalo installation. This uri will be used to call to other Dédalo paths and files by the client. Used to create html and js with the uri paths to different Dédalo services.
-
-> Example: <https://dedalo.dev/dedalo>
-
-```php
-define('DEDALO_ROOT_WEB', '/' . explode('/', $_SERVER["REQUEST_URI"])[1]);
-```
+> Example: `/dedalo`
 
 ---
 
 ### Defining base paths
 
-./dedalo/config/config.php
+The following directory name constants are structural and computed by `bootstrap.php`:
 
-Define the names of the config files. This constants are used for build paths to config files. It is possible to change the name of the configuration files changing this values.
-
-DEDALO_CONFIG `string`
-DEDALO_CORE  `string`
-DEDALO_SHARED `string`
-DEDALO_TOOLS `string`
-DEDALO_LIB  `string`
-
-```php
-define('DEDALO_CONFIG', 'config');
-define('DEDALO_CORE', 'core');
-define('DEDALO_SHARED', 'shared');
-define('DEDALO_TOOLS', 'tools');
-define('DEDALO_LIB', 'lib');
-```
+DEDALO_CONFIG `string` *computed* — `'config'`
+DEDALO_CORE  `string` *computed* — `'core'`
+DEDALO_SHARED `string` *computed* — `'shared'`
+DEDALO_TOOLS `string` *computed* — `'tools'`
+DEDALO_LIB  `string` *computed* — `'lib'`
 
 ---
 
 ### Defining config path
 
-./dedalo/config/config.php
+DEDALO_CONFIG_PATH `string` *computed*
 
-DEDALO_CONFIG_PATH `string`
-
-Used to define the the main config directory. Config directory has all specific files of Dédalo installation. This files are not changed by the system because every installation has his own configuration as connection to DDBB. The exception is the `config_core` file that is used by Dédalo to store the state of the installation.
-
-To update the config constants you will need to see the version changes in the sample_* files because this files will be sync by updates.
-
-```php
-define('DEDALO_LIB_BASE_PATH', dirname( dirname(__FILE__) ));
-```
+Used to define the main config directory. Computed from `DEDALO_ROOT_PATH . '/config'`. Not configurable via `.env`.
 
 ---
 
 ### Defining core path
 
-./dedalo/config/config.php
+DEDALO_CORE_PATH `string` *computed*
 
-DEDALO_CORE_PATH `string`
-
-Defines the core directory. Core directory contains the main code of Dédalo as section, area or components code.
-
-```php
-define('DEDALO_CORE_PATH',  DEDALO_ROOT_PATH .'/'. DEDALO_CORE);
-```
+Defines the core directory. Computed from `DEDALO_ROOT_PATH . '/core'`. Not configurable via `.env`.
 
 ---
 
 ### Defining core URL
 
-./dedalo/config/config.php
+DEDALO_CORE_URL `string` *computed*
 
-DEDALO_CORE_URL `string`
-
-Defines the the uri for the core directory. Core directory contains the main code of Dédalo as section, area or components code.
-The uri path will be use to do calls from API to load and different components.
-
-```php
-define('DEDALO_CORE_URL',  DEDALO_ROOT_WEB .'/'. DEDALO_CORE );
-```
+Defines the URI for the core directory. Computed from `DEDALO_ROOT_WEB . '/core'`. Not configurable via `.env`.
 
 ---
 
 ### Defining shared path
 
-./dedalo/config/config.php
+DEDALO_SHARED_PATH `string` *computed*
 
-DEDALO_SHARED_PATH `string`
-
-Defines the shared directory path. Share directory contains shared code of Dédalo use by core, tools and diffusion system. It contains some classes with common code use in the work system as public webs. If you want create a diffusion system, without work system, you will need copy this directory because public API will use it.
-
-```php
-define('DEDALO_SHARED_PATH', DEDALO_ROOT_PATH .'/'. DEDALO_SHARED);
-```
+Defines the shared directory path. Computed from `DEDALO_ROOT_PATH . '/shared'`. Not configurable via `.env`.
 
 ---
 
 ### Defining shared URL
 
-./dedalo/config/config.php
+DEDALO_SHARED_URL `string` *computed*
 
-DEDALO_SHARED_URL `string`
+Defines the URI for the shared directory. Computed from `DEDALO_ROOT_WEB . '/shared'`. Not configurable via `.env`.
 
-Defines the the uri for the shared directory. Share directory contains shared code of Dédalo use by core, tools and diffusion system. It contains some classes with common code use in the work system as public webs. If you want create a diffusion system, without work system, you will need copy this directory because public API will use it.
-
-```php
-define('DEDALO_SHARED_URL',  DEDALO_ROOT_WEB  .'/'. DEDALO_SHARED );
-```
-
-> Example: <https://dedalo.dev/dedalo/shared/>
+> Example: `https://dedalo.dev/dedalo/shared/`
 
 ---
 
 ### Defining tools path
 
-./dedalo/config/config.php
+DEDALO_TOOLS_PATH `string` *computed*
 
-DEDALO_TOOLS_PATH `string`
-
-Defines the tools directory path. Tools directory contains the code for each of them. The tools can be developed outside of the main Dédalo code and can be extended by external developers. Dédalo by default includes specific tools such as image importers or workspaces such as interview indexing. Tools can use core code as sections, components or services to create specific workspaces.
-
-```php
-define('DEDALO_TOOLS_PATH',  DEDALO_ROOT_PATH .'/'. DEDALO_TOOLS);
-```
+Defines the tools directory path. Computed from `DEDALO_ROOT_PATH . '/tools'`. Not configurable via `.env`.
 
 ---
 
 ### Defining tools URL
 
-./dedalo/config/config.php
+DEDALO_TOOLS_URL `string` *computed*
 
-DEDALO_TOOLS_URL `string`
-
-Defines the uri for the tools directory. Tools directory contains the code for each of them. The tools can be developed outside of the main Dédalo code and can be extended by external developers. Dédalo by default includes specific tools such as image importers or workspaces such as interview indexing. Tools can use core code as sections, components or services to create specific workspaces.
-
-```php
-define('DEDALO_TOOLS_URL',  DEDALO_ROOT_WEB .'/'. DEDALO_TOOLS );
-```
+Defines the URI for the tools directory. Computed from `DEDALO_ROOT_WEB . '/tools'`. Not configurable via `.env`.
 
 ---
 
 ### Defining lib path
 
-./dedalo/config/config.php
+DEDALO_LIB_PATH `string` *computed*
 
-DEDALO_LIB_PATH `string`
-
-Used to define the libraries directory path. Lib directory contains the external libraries used by Dédalo for specific tasks, tools or functionalities. Libraries such as Leaflet, ckEditor or Paperjs.
-
-```php
-define('DEDALO_LIB_PATH',  DEDALO_ROOT_PATH .'/'. DEDALO_LIB);
-```
+Used to define the libraries directory path. Computed from `DEDALO_ROOT_PATH . '/lib'`. Not configurable via `.env`.
 
 ---
 
-### Defining library uri
+### Defining library URI
 
-./dedalo/config/config.php
+DEDALO_LIB_URL `string` *computed*
 
-DEDALO_LIB_URL `string`
+This parameter defines the URI path for the lib directory. Computed from `DEDALO_ROOT_WEB . '/lib'`. Not configurable via `.env`.
 
-This parameter define the uri path for the lib directory. Lib directory has the external libraries used by Dédalo for specific tasks, tools or functionalities. Libraries such as Leaflet , or Paperjs.
-The uri path will be use to create html and js to load and call different tools or functionalities by client.
-
-```php
-define('DEDALO_LIB_URL',  DEDALO_ROOT_WEB .'/'. DEDALO_LIB );
-```
-
-> Example: <https://dedalo.dev/dedalo/lib/>
+> Example: `https://dedalo.dev/dedalo/lib/`
 
 ---
 
 ### Defining widgets path
 
-./dedalo/config/config.php
+DEDALO_WIDGETS_PATH `string` *computed*
 
-DEDALO_WIDGETS_PATH `string`
-
-This parameter defines the widgets path. Widgets are pieces of code to be used by areas, sections or components to extend his functionality. For ex: Some components needs a summation or formula to calculate his value, so the component will has a definition of the formula in properties that will call to specific widget to be apply, widget will process the data and return it to the component as his value.
-
-```php
-define('DEDALO_WIDGETS_PATH', DEDALO_CORE_PATH . '/widgets');
-```
+This parameter defines the widgets path. Computed from `DEDALO_CORE_PATH . '/widgets'`. Not configurable via `.env`.
 
 ---
 
 ### Defining widgets URL
 
-./dedalo/config/config.php
+DEDALO_WIDGETS_URL `string` *computed*
 
-DEDALO_WIDGETS_URL `string`
+This parameter defines the URI for widgets directory. Computed from `DEDALO_CORE_URL . '/widgets'`. Not configurable via `.env`.
 
-This parameter defines the uri for widgets directory. Widgets are pieces of code to be used by areas, sections or components to extend his functionality. For ex: Some components needs a summation or formula to calculate his value, so the component will has a definition of the formula in properties that will call to specific widget to be apply, widget will process the data and return it to the component as his value.
-
-```php
-define('DEDALO_WIDGETS_URL', DEDALO_CORE_URL . '/widgets');
-```
-
-> Example: <https://dedalo.dev/dedalo/core/widgets/>
+> Example: `https://dedalo.dev/dedalo/core/widgets/`
 
 ---
 
 ### Defining extras path
 
-./dedalo/config/config.php
+DEDALO_EXTRAS_PATH  `string` *computed*
 
-DEDALO_EXTRAS_PATH  `string`
+This parameter defines the extras path directory. Computed from `DEDALO_CORE_PATH . '/extras'`. Not configurable via `.env.
 
-This parameter defines the extras path directory. Extras path contains specific code for some installations, like tools or widgets, that the specific entity use to extend default Dédalo behavior. The extras directory is linked by the tld of the ontology used. If you install Dédalo for oral history project, you will need load the 'oh' extras directory, because it has a extension tools for this research field.
-
-> Example: /home/www/httpdocs/dedalo/core/extras
-
-```php
-define('DEDALO_EXTRAS_PATH', DEDALO_CORE_PATH . '/extras');
-```
-
-> This parameter use previous constant definition:
->
-> DEDALO_CORE_PATH
->
-> It ensure the a changes in the lib path will be implemented in the extras path.
+> Example: `/home/www/httpdocs/dedalo/core/extras`
 
 ---
 
-### Defining extras uri
+### Defining extras URI
 
-./dedalo/config/config.php
+DEDALO_EXTRAS_URL  `string` *computed*
 
-DEDALO_EXTRAS_URL  `string`
+This parameter defines the extras URI directory. Computed from `DEDALO_CORE_URL . '/extras'`. Not configurable via `.env`.
 
-This parameter defines the extras uri directory. Extras path contains specific code for some installations, like tools or widgets, that the specific entity use to extend default Dédalo behavior. The extras directory is linked by the tld of the ontology used. If you install Dédalo for oral history project, you will need load the 'oh' extras directory, because it has a extension tools for this research field.
-
-```php
-define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
-```
-
-> Example: <https://dedalo.dev/dedalo/core/extras>
->
-> This parameter use previous constant definition:
->
-> DEDALO_CORE_URL
->
-> It ensure the a changes in the lib path will be implemented in the extras path.
+> Example: `https://dedalo.dev/dedalo/core/extras`
 
 ---
 
 ### Defining install path
 
-./dedalo/config/config.php
+DEDALO_INSTALL_PATH  `string` *computed*
 
-DEDALO_INSTALL_PATH  `string`
-
-This parameter defines the install path directory. Install path contains the files to be used in the installation process and the ontology and hierarchy updates. When Dédalo is installed first time this directory has a basic Dédalo configuration and the database schema to be implemented. When Dédalo update his ontology or common hierarchies, it will get changes from ontology servers and save into install directory previously to be implemented.
-
-```php
-define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
-```
-
-> This parameter use previous constant definition:
->
-> DEDALO_CORE_PATH
+This parameter defines the install path directory. Computed from `DEDALO_ROOT_PATH . '/install'`. Not configurable via `.env`.
 
 ---
 
-### Defining install uri
+### Defining install URI
 
-./dedalo/config/config.php
+DEDALO_INSTALL_URL  `string` *computed*
 
-DEDALO_INSTALL_URL  `string`
+This parameter defines the install URI directory. Computed from `DEDALO_ROOT_WEB . '/install'`. Not configurable via `.env`.
 
-This parameter defines the install uri directory. Install path contains the files to be used in the installation process and the ontology and hierarchy updates. When Dédalo is installed first time this directory has a basic Dédalo configuration and the database schema to be implemented. When Dédalo update his ontology or common hierarchies, it will get changes from ontology servers and save into install directory previously to be implemented.
-
-```php
-define('DEDALO_EXTRAS_URL',  DEDALO_CORE_URL . '/extras');
-```
-> Example: <https://master.dedalo.dev/dedalo/install>
->
-> This parameter use previous constant definition:
->
-> DEDALO_ROOT_WEB
+> Example: `https://master.dedalo.dev/dedalo/install`
 
 ---
-
 
 ## Salt
 
 ### Defining salt string (string used for encryption)
 
-./dedalo/config/config.php
-
 DEDALO_SALT_STRING `string`
 
-Salt string to be used by the encryption system. Used to generated random string that is added to each password as part of the hashing process.
+Salt string to be used by the encryption system. Used to generate random string that is added to each password as part of the hashing process.
 
-```php
-define('DEDALO_SALT_STRING', 'My_secure_Salt_String!_2046');
+```ini
+DEDALO_SALT_STRING=My_secure_Salt_String!_2046
 ```
+
+> **Security-critical**: This value MUST be explicitly set in `.env`. The default `'dedalo_six'` is only for development.
 
 ## Locale
 
 ### Defining time zone
 
-./dedalo/config/config.php
-
 DEDALO_TIMEZONE `string`
 
-Used to defines the time zone of the project. It could be different of the server installation or the linux timezone. The time zone will be used to store the time stamp of the changes done by the users.
+Used to define the time zone of the project. It could be different from the server installation or the Linux timezone. The time zone will be used to store the timestamps of the changes done by the users.
 
-```php
-define('DEDALO_TIMEZONE', 'Europe/Madrid');
+```ini
+DEDALO_TIMEZONE=Europe/Madrid
 ```
 
-> The time zone is set in the next code line:
->
-> ```php
->date_default_timezone_set(DEDALO_TIMEZONE);
->```
->
-> It ensure that PHP has defined the time zone in the parameter.
+> Default: `UTC`
 
 ---
 
 ### Defining locale encoding
 
-./dedalo/config/config.php
-
 DEDALO_LOCALE `string`
 
-Defines the internal php locale will be use to encode text. By default Dédalo use UTF8 encoding for Spanish 'es_ES.utf8'.
+Defines the internal PHP locale to be used to encode text. By default Dédalo uses UTF8 encoding.
 
-It is possible change it for specific languages, see the php documentation.
-
-```php
-define('DEDALO_LOCALE', 'es-ES');
+```ini
+DEDALO_LOCALE=es-ES
 ```
 
-> The locale is set in the next code line:
->
-> ```php
->setlocale(LC_ALL, DEDALO_LOCALE);
->```
->
-> It ensure that PHP has defined the time zone in the parameter.
+> Default: `C.UTF-8`
 
 ---
 
 ### Defining date order
 
-./dedalo/config/config.php
-
 DEDALO_DATE_ORDER `string`
 
-Defines the default order for the date input by users and to be showed in component_date. By default Dédalo use dmy (European dates format).
+Defines the default order for the date input by users and to be shown in `component_date`. By default Dédalo uses dmy (European date format).
 
 Options:
 
-* dmy : common way order day/moth/year
-* mdy : USA way order moth/day/year
+* dmy : common way order day/month/year
+* mdy : USA way order month/day/year
 * ymd : China, Japan, Korean, Iran way year/month/day
 
-```php
-define('DEDALO_DATE_ORDER', 'dmy');
+```ini
+DEDALO_DATE_ORDER=dmy
 ```
+
+> Default: `dmy`
 
 ## Entity
 
 ### Defining entity
 
-./dedalo/config/config.php
-
 DEDALO_ENTITY `string`
 
-This parameter defines the name of the entity proprietary of the Dédalo installation. Dédalo entity will be used to access to databases, to encrypt passwords or to publish data into the specific publication ontology and should NOT be changed after installation.
+This parameter defines the name of the entity proprietary of the Dédalo installation. Dédalo entity will be used to access databases, encrypt passwords, and publish data into the specific publication ontology. It should NOT be changed after installation.
 
-```php
-define('DEDALO_ENTITY', 'my_entity_name');
+```ini
+DEDALO_ENTITY=my_entity_name
 ```
 
-> Use secure characters to define the entity, without spaces, accents or other special characters that could create conflicts with other server parts, such as database connection. If you want define the full name of the entity, use DEDALO_ENTITY_LABEL definition.
+> Use secure characters to define the entity, without spaces, accents or other special characters that could create conflicts with other server parts, such as database connection. If you want to define the full name of the entity, use `DEDALO_ENTITY_LABEL`.
+
+> Default: `development`
 
 ---
 
 ### Defining entity label
 
-./dedalo/config/config.php
-
 DEDALO_ENTITY_LABEL `string`
 
-Defines the entity label, the real name of the entity. Due the entity definition is use to encrypt passwords or access to databases, sometimes you will need define the real name of the entity with characters such as 'ñ' or accents.
+Defines the entity label, the real name of the entity. Since the entity definition is used to encrypt passwords or access databases, sometimes you will need to define the real name of the entity with characters such as 'ñ' or accents.
 
-```php
-define('DEDALO_ENTITY_LABEL', DEDALO_ENTITY);
+```ini
+DEDALO_ENTITY_LABEL=Museu de Prehistòria de València
 ```
 
-> By default Dédalo use:
->
-> DEDALO_ENTITY
->
-> to define the real name of the entity as "Museu de Prehistòria de València"
->
+> Default: same as `DEDALO_ENTITY`
 
 ---
 
 ### Entity id
 
-./dedalo/config/config.php
-
 DEDALO_ENTITY_ID `int`
 
-This parameter defines the normalized id for the entity. The id of the entity could be used to create a locator to obtain information between Dédalo installations, the id will be added to the locator with the key: "entity_id" when the locator point to external resource.
+This parameter defines the normalized ID for the entity. The ID of the entity could be used to create a locator to obtain information between Dédalo installations.
 
-```php
-define('DEDALO_ENTITY_ID', 0);
+```ini
+DEDALO_ENTITY_ID=0
 ```
+
+> Default: `0`
 
 ---
 
 ### Developer server
 
-./dedalo/config/config.php
-
 DEVELOPMENT_SERVER `bool`
 
-It defines if the server will be used to do develop tasks. When the server is defined to be a developer server, Dédalo will activate the debug mode and will add the developer sections in the menu.
+It defines if the server will be used for development tasks. When the server is defined as a developer server, Dédalo will activate the debug mode and will add the developer sections in the menu.
 
-With the debugger active Dédalo will show lot of messages in the php log and js console taking time to process the data. Do not use developer mode in a production server.
+With the debugger active Dédalo will show many messages in the PHP log and JS console, taking time to process the data. Do not use developer mode in a production server.
 
-```php
-define('DEVELOPMENT_SERVER', false);
+```ini
+DEVELOPMENT_SERVER=false
 ```
 
-## Core require
-
-### Basic functions
-
-./dedalo/config/config.php
-
-Dédalo need to include core_functions.php file, it has definitions of some basic functions that will use for all Dédalo
-class and methods like encoding or encryption data. This file will be loaded before the session start.
-
-```php
-include(DEDALO_SHARED_PATH . '/core_functions.php');
-```
+> Default: `false`
 
 ---
 
-### Defining configuration path
+### Is production
 
-./dedalo/config/config.php
+IS_PRODUCTION `bool`
 
-This command include the config core file to control the status of installation.
+Computed from `!DEVELOPMENT_SERVER` by default. Set explicitly in `.env` to override.
 
-```php
-include(DEDALO_CONFIG_PATH . '/config_core.php');
+```ini
+IS_PRODUCTION=true
 ```
+
+> Default: opposite of `DEVELOPMENT_SERVER`
 
 ---
 
-### Database config  / connection
+### Binary base path
 
-./dedalo/config/config.php
+DEDALO_BINARY_BASE_PATH `string`
 
-Dédalo need to import the config4_db.php file to load the database connection configuration. This file contains the PostgreSQL and MariaDB / MySQL connections. Dédalo interface will use the PostgreSQL connection to manage all datasets, the ontology, etc, and will use the MySQL connection to transform and save the publication versions of the data.
+Path to the directory containing binary tools (ffmpeg, magick, ffprobe, etc.). Used to construct paths for media processing tools.
 
-```php
-include(DEDALO_CONFIG_PATH . '/config_db.php');
+```ini
+DEDALO_BINARY_BASE_PATH=/usr/bin
 ```
 
----
-
-### Defining fixed tipos
-
-./dedalo/config/config.php
-
-Dédalo need to import dd_tipos.php file, with the definition of some fixed ontology tipos, that will use to assign
-directly to some functionalities, without call the ontology.
-This file acts as cache of some common tipos, some times when Dédalo need access to fixed part of the ontology is faster use a prefixed tipo than load the ontology and resolve the tipo, this calls are not loaded dynamically.
-
-```php
-include(DEDALO_CORE_PATH . '/base/dd_tipos.php');
-```
-
-> Tipo = Typology of Indirect Programming Object/s.
-
----
-
-### Version
-
-./dedalo/config/config.php
-
-This command include the version file to control the correspondence between code and data versions.
-
-```php
-include(DEDALO_CORE_PATH . '/base/version.inc');
-```
-
----
+> Default: `/usr/bin`
+>
+> On macOS Homebrew: `/opt/homebrew/bin`
 
 ## Sessions
 
----
-
-### Defining session path
-
-./dedalo/config/config.php
-
-DEDALO_SESSIONS_PATH `string`
-
-This parameter defines the path directory to store the session files.
-
-!!! warning "About the sessions directory"
-    Sessions contains important information about the users and their configuration, be aware to use a secure session directory to store this information. Usually Dédalo uses a directory outside the httpdocs directory defined in Apache vhost to avoid any URL access. Read the PHP information [here](https://www.php.net/manual/en/session.configuration.php#ini.session.save-path).
-
-```php
-define('DEDALO_SESSIONS_PATH', dirname(dirname(DEDALO_ROOT_PATH)) . '/sessions');
-```
-
-In a Ubuntu server, the path to the sessions directory will be located into the user `$HOME` like:
-
-```bash
-├── home
-│    ├── dedalo_user
-│    │    ├── sessions
-│    │    ├── httpdocs
-│    │    │    ├──dedalo
-│    │    │    │    ├──core
-│    │    │    │    ├──lib
-│    │    │    │    ├──...
-│    │    ├── backups
-│    │    └── logs
-```
-
-In this configuration, Apache `DocumentRoot` and `<Directory>` directives would point to `httpdocs` directory
-
-> /home/dedalo_user/httpdocs
-
-```apacheconf
-DocumentRoot "/home/dedalo_user/httpdocs"
-<Directory /home/dedalo_user/httpdocs>
-    SSLRequireSSL
-    Options FollowSymLinks
-    Options -Includes
-    AllowOverride All
-</Directory>
-```
-
-And `DEDALO_SESSIONS_PATH` would point to `sessions` directory (default configuration)
-
-> /home/dedalo_user/sessions
-
-This path is like that because `DEDALO_ROOT_PATH` was defined as:
-
-> /home/dedalo_user/httpdocs/dedalo/
-
----
-
-### Defining session handler
-
-./dedalo/config/config.php
+### Session handler
 
 DEDALO_SESSION_HANDLER `string`
 
-This parameter defines the method used to manage php session for the installation. It could be configured as files, memcached, user or postgresql. By default this parameter is defined as `files`, it means that PHP will use a file stored in the server to save the users sessions.
+Defines the session handler to use. Options: `files`, `redis`, `memcached`.
 
-If you are using memcached, you can activate it to save the sessions in RAM.
-
-Sessions store information about the user connection or the last search done, it will use to reopen Dédalo in the same section of the last session browse by the user or reload the filter with the last search configuration.
-
-```php
-define('DEDALO_SESSION_HANDLER', 'files');
+```ini
+DEDALO_SESSION_HANDLER=redis
 ```
+
+> Default: `files`
 
 ---
 
-### Session lifetime
+### Session save path
 
-./dedalo/config/config.php
+DEDALO_SESSION_SAVE_PATH `string`
 
-session_duration_hours `int`
-timeout_seconds `int`
+The save path for the session handler. For Redis, use `tcp://host:port` or `unix:///path/to/redis.sock`. For files, the computed `DEDALO_SESSIONS_PATH` is used.
 
-Session lifetime is defined by one calculation of hours convert to seconds. Normally the sessions in Dédalo define 1 journal session (8 hours) and this time will be the max duration of dedalo user session. The session will be deleted when it exceeds the parameter of unused session time.
-
-```php
-$session_duration_hours = 8;
-$timeout_seconds = intval($session_duration_hours*3600);
+```ini
+DEDALO_SESSION_SAVE_PATH=tcp://127.0.0.1:6379
 ```
+
+> Default: computed from `DEDALO_SESSION_HANDLER`
+
+## Cache + debug
+
+### Cache path
+
+DEDALO_CACHE_PATH `string`
+
+Defines the cache directory path.
+
+```ini
+DEDALO_CACHE_PATH=/path/to/cache
+```
+
+> Default: `{parent_of_root}/cache`
 
 ---
-
-### Starting the session
-
-./dedalo/config/config.php
-
-Starting the session ensure that the session is open and alive when the user login. The session will start with the format defined.
-
-Session needs to define if the protocol to store cookies is https or not. Besides if the cookie `samesite` is `Lax` or `Strict`, by default is define as `Strict` the timeout and the session_name (using `DEDALO_ENTITY` parameter).
-
-```php
-$cookie_secure  = (DEDALO_PROTOCOL==='https://');
-$cookie_samesite = (DEVELOPMENT_SERVER===true) ? 'Lax' : 'Strict';
-session_start_manager([
-    'save_handler'          => 'files',
-    'timeout_seconds'       => $timeout_seconds,
-    'save_path'             => DEDALO_SESSIONS_PATH,
-    'prevent_session_lock'  => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
-    'session_name'          => 'dedalo_'.DEDALO_ENTITY
-    'cookie_secure'         => $cookie_secure, // Only https (true | false)
-    'cookie_samesite'       => $cookie_samesite // (None | Lax | Strict)
-]);
-```
-
-Parameters defined in `session_start_manager` will set into PHP session_manager like:
-
-* save_handler -> [save_handler](https://www.php.net/manual/en/session.configuration.php#ini.session.save-handler)
-* timeout_seconds -> [cache_expire](https://www.php.net/manual/en/session.configuration.php#ini.session.cache-expire)
-* save_path -> [save_path](https://www.php.net/manual/en/session.configuration.php#ini.session.save-path)
-* additional_save_path *(optional)* -> overwrite the [save_path](https://www.php.net/manual/en/session.configuration.php#ini.session.save-path)
-* prevent_session_lock -> [session_write_close](https://www.php.net/manual/en/function.session-write-close.php)
-* session_name -> [session_name](https://www.php.net/manual/en/session.configuration.php#ini.session.name)
-* cookie_secure -> [setcookie | secure](https://www.php.net/manual/en/function.setcookie.php)
-* cookie_samesite -> [setcookie | options | samesite](https://www.php.net/manual/en/function.setcookie.php)
-
-!!! note "About the different handlers"
-    By default, Dédalo uses a `files` handler, and the configuration has the necessary parameters to manage the session. If you want to change the handler to `mencached` or `postgresql` the parameters must be changed accordingly. This handlers are experimental, use it into preproduction, development or lab situations, but not in production.
-
----
-
-## Cache
-
-### Defining cache manager
-
-./dedalo/config/config.php
-
-DEDALO_CACHE_MANAGER `bool || object`
-
-This parameter configure the cache manager to use. By default the cache manager use files in tmp directory.
-
-```php
-define('DEDALO_CACHE_MANAGER', (object)[
-    'manager'  => 'files',
-    'files_path' => DEDALO_SESSIONS_PATH
-]);
-```
-
-> When cache manager is set to `files` it will write cache files with complex resolved data of current logged user (like profiles data). You can deactivate it in this way:
->
-> ```php
-> define('DEDALO_CACHE_MANAGER', false );
-> ```
-
-## Developer variables
 
 ### Show debug
 
-./dedalo/config/config.php
-
 SHOW_DEBUG `bool`
 
-This parameter active or deactivate the debugger. Used to show the log warnings and errors, it will be always active when the user logged is a superuser.
+Sets the debug mode. When true, Dédalo will show debug information in the interface and log verbose messages.
 
-```php
-define('SHOW_DEBUG',
-    (isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER)
-        ? true
-        : false // default false
-);
+```ini
+SHOW_DEBUG=true
 ```
+
+> Default: `false` (auto-enabled for superuser)
 
 ---
 
 ### Show developer
 
-./dedalo/config/config.php
-
 SHOW_DEVELOPER  `bool`
 
 Sets, as environment constant, the current logged user profile status (developer: bool true/false). This value is set in the user record option 'Developer' by Dédalo administrators and stored in session on login.
 
-When is true, the logged user can access and view specific develop information like component configuration (tipo, parent, etc.) hidden to regular users to avoid too much noise.
+When true, the logged user can access and view specific develop information like component configuration (tipo, parent, etc.) hidden to regular users.
 
-```php
-define('SHOW_DEVELOPER',
-    (isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
-        ? true
-        : false // default false
-);
+```ini
+# SHOW_DEVELOPER=false
 ```
+
+> Default: auto-detected from logged user session
 
 ## Loader / required
 
-### Loader
+Loader and includes are handled automatically by `bootstrap.php`. Not configurable via `.env`.
 
-./dedalo/config/config.php
-
-Dédalo needs to include some common classes and tools to be operative. The loader is the responsible for loading the core classes into memory before start the users login process and in every user call.
-
-```php
-include DEDALO_CORE_PATH . '/base/class.loader.php';
-```
-
-### Backup variables
-
----
+## Backup variables
 
 ### Defining backup on login
 
-./dedalo/config/config.php
-
 DEDALO_BACKUP_ON_LOGIN  `bool`
 
-This parameter defines if Dédalo will do a backup when the users login. It prevents that issues doing to the data could repair quickly.
+This parameter defines if Dédalo will do a backup when users login. It prevents that issues doing to the data could be repaired quickly.
 
-If this constant is set to `true` Dédalo will check if the last backup is a copy done after the time defined by DEDALO_BACKUP_TIME_RANGE and will create new one if the time exceed this parameter. Dédalo will use the `.pgpass` file to connect to PostgreSQL and will create a `.backup` file in the backup directory.
+If this constant is set to `true` Dédalo will check if the last backup is a copy done after the time defined by `DEDALO_BACKUP_TIME_RANGE` and will create a new one if the time exceeds this parameter.
 
-```php
-define('DEDALO_BACKUP_ON_LOGIN'  , true);
+```ini
+DEDALO_BACKUP_ON_LOGIN=true
 ```
+
+> Default: `true`
 
 ---
 
 ### Defining backup time range
 
-./dedalo/config/config.php
-
 DEDALO_BACKUP_TIME_RANGE `int`
 
-This parameter defines the time lapse between backup copies in hours. Dédalo check in every user login if the last backup exceed this time lapse, in affirmative case, it will create new one.
+This parameter defines the time lapse between backup copies in hours. Dédalo checks on every user login if the last backup exceeds this time lapse; if so, it will create a new one.
 
-```php
-define('DEDALO_BACKUP_TIME_RANGE', 8);
+```ini
+DEDALO_BACKUP_TIME_RANGE=8
 ```
+
+> Default: `8`
 
 ---
 
 ### Defining backups directory
 
-./dedalo/config/config.php
-
 DEDALO_BACKUP_PATH `string`
 
 This parameter defines the backups directory path. By default the backups directory will be out of httpdocs scope for security.
 
-```php
-define('DEDALO_BACKUP_PATH' , dirname(dirname(DEDALO_ROOT_PATH)) . '/backups');
+```ini
+DEDALO_BACKUP_PATH=/var/backups/dedalo
 ```
+
+> Default: `{two_levels_up_from_root}/backups`
 
 ---
 
 ### Defining temporary backup
 
-./dedalo/config/config.php
-
 DEDALO_BACKUP_PATH_TEMP `string`
 
-This parameter defines the temporary backups directory path. Dédalo will use this directory to store download ontology data before update the ontology.
+This parameter defines the temporary backups directory path. Dédalo will use this directory to store download ontology data before updating the ontology.
 
-```php
-define('DEDALO_BACKUP_PATH_TEMP' , DEDALO_BACKUP_PATH . '/temp');
+```ini
+DEDALO_BACKUP_PATH_TEMP=/var/backups/dedalo/temp
 ```
+
+> Default: `{DEDALO_BACKUP_PATH}/temp`
 
 ---
 
 ### Defining main db backup
 
-./dedalo/config/config.php
-
 DEDALO_BACKUP_PATH_DB `string`
 
 This parameter defines the main database backups directory path. Dédalo will use this directory to store the full backup of PostgreSQL.
 
-```php
-define('DEDALO_BACKUP_PATH_DB' , DEDALO_BACKUP_PATH . '/db');
+```ini
+DEDALO_BACKUP_PATH_DB=/var/backups/dedalo/db
 ```
+
+> Default: `{DEDALO_BACKUP_PATH}/db`
 
 ---
 
 ### Defining ontology backup
 
-./dedalo/config/config.php
-
 DEDALO_BACKUP_PATH_ONTOLOGY `string`
 
 This parameter defines the main ontology backups directory path. Dédalo will use this directory to store the full ontology backup.
 
-```php
-define('DEDALO_BACKUP_PATH_ONTOLOGY'  , DEDALO_BACKUP_PATH . '/ontology');
+```ini
+DEDALO_BACKUP_PATH_ONTOLOGY=/var/backups/dedalo/ontology
 ```
+
+> Default: `{DEDALO_BACKUP_PATH}/ontology`
 
 ## Logs and errors
 
@@ -865,13 +548,9 @@ Store application activity data info and errors into `activity` table in DDBB.
 
 ### Logger level
 
-./dedalo/config/config.php
+LOGGER_LEVEL `class constant` *computed*
 
-LOGGER_LEVEL `class constant`
-
-This parameter defines the level of the information shown in the logger. Normally, when Dédalo is in production, the logger uses the 'WARNING' level that only shows informative information of the action when it has inconsistencies. When Dédalo’s debugger is active, the lever of the logger will be more verbose with debug information, errors, and warnings.
-
-The server error log level by default is: `ERROR` (will be change to `DEBUG` when SHOW_DEBUG===true)
+This parameter defines the level of the information shown in the logger. It is computed from `SHOW_DEBUG` / `SHOW_DEVELOPER`. Not configurable via `.env`.
 
 | Level error codes ||
 | --- | --- |
@@ -882,47 +561,21 @@ The server error log level by default is: `ERROR` (will be change to `DEBUG` whe
 | ERROR | 10 |
 | CRITICAL| 5 |
 
-```php
-define('LOGGER_LEVEL', (SHOW_DEBUG===true)
-    ? logger::DEBUG // log all messages
-    : logger::ERROR // log only errors
-);
-```
-
-> Note that log outputs files are defined in the `php.ini` config file / `error_log` definition like `/var/log/fpm-php.log`. You can view the server log using terminal command `tail -f /var/log/php_errors.log` with your own log path.
+> Note that log output files are defined in the `php.ini` config file / `error_log` definition like `/var/log/fpm-php.log`. You can view the server log using terminal command `tail -f /var/log/php_errors.log` with your own log path.
 
 ---
 
 ### Activity log database
 
-./dedalo/config/config.php
-
-Dedalo store the activity in the table matrix_activity in PostgreSQL, the logger need to be configured to use this
-table.
-Logger wil save all user activity and the application errors and messages.
-
-```php
-logger::register('activity' , 'activity://auto:auto@auto:5432/log_data?table=matrix_activity');
-logger::$obj['activity'] = logger::get_instance('activity');
-```
+Dédalo stores the activity in the table `matrix_activity` in PostgreSQL. The logger is configured automatically by `bootstrap.php`. Not configurable via `.env`.
 
 ---
 
 ### Update log file
 
-./dedalo/config/config.php
+UPDATE_LOG_FILE `string` *computed*
 
-UPDATE_LOG_FILE `string`
-
-Defines the directory path to store the update log.
-
-The maintenance update process uses the update log to store the status of each update task. This log is useful to know what happens in the update process. If the update fails, you can consult the last status to restore the update process at this last point.
-
-Default directory for this file has set inside Dédalo config folder, take account that if you move to other location fix the permissions to be private as a directory outside httpdocs folder.
-
-```php
-define('UPDATE_LOG_FILE', DEDALO_CONFIG_PATH . '/update.log');
-```
+Defines the directory path to store the update log. Computed from `DEDALO_CONFIG_PATH . '/update.log'`. Not configurable via `.env`.
 
 ---
 
@@ -930,406 +583,287 @@ define('UPDATE_LOG_FILE', DEDALO_CONFIG_PATH . '/update.log');
 
 ### Defining structure lang
 
-./dedalo/config/config.php
-
 DEDALO_STRUCTURE_LANG `string`
 
-This parameter defines the default language that the ontology will use as main language. The ontology (abstracted structure) is the definition of areas, sections, fields, connections between data and definition models. All terms used in the ontology can be translated to any language, but this main language defined here will be use as mandatory language, if Dédalo is configured in other language that is not defined in the ontology translations Dédalo will do a fall back to this main language, if these main language is not present, Dédalo will use any other language to show the interface and explanations.
+This parameter defines the default language that the ontology will use as main language. The ontology (abstracted structure) is the definition of areas, sections, fields, connections between data and definition models. All terms used in the ontology can be translated to any language, but this main language defined here will be used as mandatory language. If Dédalo is configured in another language that is not defined in the ontology translations, Dédalo will fall back to this main language.
 
-This parameter do not define the main data language, it only affect to the Dédalo interface and definitions in the ontology.
+This parameter does not define the main data language; it only affects the Dédalo interface and definitions in the ontology.
 
-```php
-define('DEDALO_STRUCTURE_LANG', 'lg-spa');
+```ini
+DEDALO_STRUCTURE_LANG=lg-spa
 ```
 
->For the languages, Dédalo uses the pattern: `lg-xxx`
->lg : identify the term as language
->xxx : with the official tld of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
+> For the languages, Dédalo uses the pattern: `lg-xxx`
+> lg : identifies the term as language
+> xxx : with the official TLD of the ISO 639-6, Alpha-4 code for comprehensive coverage of language variants.
 >
->Some common languages:
+> Some common languages:
 >
->| Value | Diffusion language |
->| --- | --- |
->| lg-spa | Spanish |
->| lg-cat | Catalan |
->| lg-eus | Basque |
->| lg-eng | English |
->| lg-fra | French |
->| lg-ita | Italian |
->| lg-por | Portuguese |
->| lg-deu | German |
->| lg-ara | Arabian |
->| lg-ell | Greek |
->| lg-rus | Russian |
->| lg-ces | Czech |
->| lg-jpn | Japanese |
+> | Value | Diffusion language |
+> | --- | --- |
+> | lg-spa | Spanish |
+> | lg-cat | Catalan |
+> | lg-eus | Basque |
+> | lg-eng | English |
+> | lg-fra | French |
+> | lg-ita | Italian |
+> | lg-por | Portuguese |
+> | lg-deu | German |
+> | lg-ara | Arabian |
+> | lg-ell | Greek |
+> | lg-rus | Russian |
+> | lg-ces | Czech |
+> | lg-jpn | Japanese |
+
+> Default: `lg-spa`
 
 ---
 
 ### Defining application languages
 
-./dedalo/config/config.php
+DEDALO_APPLICATION_LANGS `object` (JSON-encoded associative array)
 
-DEDALO_APPLICATION_LANGS `object` (php: serialized associative array)
+This parameter defines the languages that Dédalo will use for the data and user interface. Dédalo is a true multi-language application; any text field can be defined as translatable, and this configuration defines the languages the installation will use to store and translate text data.
 
-This parameter defines the languages that Dédalo will use for the data and user interface. Dédalo is a true multi-language application, any text field can be defined as translatable and this configuration define the languages that the installation will use to store and translate text data. When the user select one of those languages Dédalo will change the data showed or the user interface, so it will render all data with this new language.
-
-```php
-define('DEDALO_APPLICATION_LANGS', serialize([
-    'lg-spa' => 'Castellano',
-    'lg-cat' => 'Català',
-    'lg-eus' => 'Euskara',
-    'lg-eng' => 'English',
-    'lg-fra' => 'French'
-]));
+```ini
+DEDALO_APPLICATION_LANGS={"lg-spa":"Castellano","lg-cat":"Català","lg-eus":"Euskara","lg-eng":"English","lg-fra":"French"}
 ```
 
-> See the Dédalo structure lang for see the languages definitions.
+> Default: `{"lg-eng":"English","lg-spa":"Castellano","lg-cat":"Català","lg-eus":"Euskara","lg-fra":"Français","lg-por":"Português","lg-deu":"Deutsch","lg-ita":"Italiano","lg-ell":"Ελληνικά","lg-nep":"नेपाली"}`
 
 ---
 
 ### Defining default application language
 
-./dedalo/config/config.php
-
 DEDALO_APPLICATION_LANGS_DEFAULT `string`
 
-Defines the main language will used in the user interface.
+Defines the main language used in the user interface.
 
-Dédalo can be translated to any language, the translations of the interface are done in the ontology. The users can change the Dédalo interface to use it in his language. In Dédalo the user interface and the data language are separated concepts and it is possible have a interface in one language and the data in other. This main language will be used as primary option and as fall back language when the element does not have the translation available.
+Dédalo can be translated into any language defined in `DEDALO_APPLICATION_LANGS`. This parameter defines which language will be used by default when a user starts a session.
 
-```php
-define('DEDALO_APPLICATION_LANGS_DEFAULT', 'lg-eng');
+```ini
+DEDALO_APPLICATION_LANGS_DEFAULT=lg-eng
 ```
 
-> See the Dédalo structure lang for see the languages definitions.
+> Default: `lg-eng`
 
 ---
 
-### Defining application language
-
-./dedalo/config/config.php
-
-DEDALO_APPLICATION_LANG `string`
-
-This parameter defines the language will us Dédalo for the user interface.
-
-This is a dynamic parameter and it can be changed when the user login, or in application menu. When the language is changed it is saved into the user's session and it is read to maintain coherence in the diary workflow. If the user's session does not have defined the application language then Dédalo will use the application default language definition.
-
-```php
-define('DEDALO_APPLICATION_LANG', 'lg-spa');
-```
-
-> This parameter use the method 'fix_cascade_config_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the interface use the: DEDALO_APPLICATION_LANGS_DEFAULT.
-
----
-
-### Defining default data language
-
-./dedalo/config/config.php
+### Defining data lang default
 
 DEDALO_DATA_LANG_DEFAULT `string`
 
-Defines the main language will used by Dédalo to manage and process data.
+Defines the default data language. This is the language that Dédalo will use to show the data when the user starts a session.
 
-The main language is the mandatory language for the text data in the catalog or inventory. Dédalo is a real multi-language application, it can manage multiple translation of the textual information.
-
-In a multi-language situation, when you require some translated information but it is not present (because it is not done), Dédalo will need to use the main language to do a fall back process to main language to show the data. If the main language data is not present, Dédalo will use any other language to show those data.
-
-```php
-define('DEDALO_DATA_LANG_DEFAULT', 'lg-spa');
+```ini
+DEDALO_DATA_LANG_DEFAULT=lg-eng
 ```
+
+> Default: `lg-eng`
 
 ---
 
-### Defining data language
-
-./dedalo/config/config.php
-
-DEDALO_DATA_LANG `string`
-
-It defines the data language used by Dédalo to process and render textual information.
-
-This is a dynamic parameter that can be changed by the user in any moment. Dédalo is a real multi-language application, it can manage information in multiple languages and process it as unique information block (the field store any translated version of his data). The user can translate any information directly or using specific tools. This parameter define the current language used.
-
-```php
-define('DEDALO_DATA_LANG', 'lg-spa');
-```
-
-> This parameter use the method 'fix_cascade_config_var' to calculate the value. The result of this function will be a string with the correct language value in string format. You can define it as fixed data value, but is recommended do not change the definition, if you want change the default language for the data use the: [DEDALO_DATA_LANG_DEFAULT](#defining-default-data-language).
-
----
-
-### Defining data language selector
-
-./dedalo/config/config.php
+### Defining data lang selector
 
 DEDALO_DATA_LANG_SELECTOR `bool`
 
-It defines if the menu show or hide the data language selector.
+Defines if the data language selector will be shown in the interface. When true, users can switch the data language from the interface.
 
-When the selector is showed the user can change the data language independently of the interface language. If the selector is hide the data language is synchronous to the interface language a change in the interface language will be a change in the data language.
-
-```php
-define('DEDALO_DATA_LANG_SELECTOR', true);
+```ini
+DEDALO_DATA_LANG_SELECTOR=true
 ```
+
+> Default: `true`
 
 ---
 
-### Defining data language sync
-
-./dedalo/config/config.php
+### Defining data lang sync
 
 DEDALO_DATA_LANG_SYNC `bool`
 
-Defines whether the application language and data language selection remain synchronized.
+Defines if the data language will be synced with the application language. When true, changing the application language will also change the data language.
 
-When set to ' true', it forces to keep DEDALO_APPLICATION_LANG and DEDALO_DATA_LANG synchronized across changes.
-The default value is 'false', which allows the application language and data language to be selected independently.
-
-```php
-define('DEDALO_DATA_LANG_SYNC', false);
+```ini
+DEDALO_DATA_LANG_SYNC=false
 ```
+
+> Default: `false`
 
 ---
 
-### Defining data without language (no lang)
-
-./dedalo/config/config.php
+### Defining no language
 
 DEDALO_DATA_NOLAN `string`
 
-This parameter defines the tld used by Dédalo to tag data without translation possibility.
+Defines the no-language code used for data that is not language-specific (numbers, dates, etc.).
 
-Dédalo is multi language by default, all information could be translated to other languages that the main lang, but some data is not susceptible to be translated, like numbers, dates or personal names. In these cases Dédalo defines this kind of data as "not translatable" with the specific tld define in this parameter.
-
-By default and for global Dédalo definition for non translatable data this tld is: `lg-nolan`
-
-```php
-define('DEDALO_DATA_NOLAN', 'lg-nolan');
+```ini
+DEDALO_DATA_NOLAN=lg-nolan
 ```
+
+> Default: `lg-nolan`
 
 ---
 
-### Defining default projects languages
+### Defining projects default languages
 
-./dedalo/config/config.php
+DEDALO_PROJECTS_DEFAULT_LANGS `array` (JSON)
 
-DEDALO_PROJECTS_DEFAULT_LANGS `array`
+Defines the default languages for projects.
 
-This parameter defines the languages that will use for export and publish data.
-
-This definition control the amount of languages that will be processed to export data or publish data in the publication process.
-
-When Dédalo export data or publish data, it check the languages of every field of every record to create a fixed version of the data with the language processed or his own correspondences of the main languages when the data is not available in the current language. This parameter reduce the amount languages used in those processes.
-
-```php
-define('DEDALO_PROJECTS_DEFAULT_LANGS', [ 'lg-spa', 'lg-cat', 'lg-eng', ]);
+```ini
+DEDALO_PROJECTS_DEFAULT_LANGS=["lg-spa","lg-cat","lg-eng","lg-fra"]
 ```
 
-> The parameter use the Dédalo tld definition for languages. See DEDALO_APPLICATION_LANGS definition to show some examples.
+> Default: `["lg-eng","lg-spa","lg-cat","lg-fra"]`
 
 ---
 
 ### Defining diffusion languages
 
-./dedalo/config/config.php
+DEDALO_DIFFUSION_LANGS `array` (JSON)
 
-DEDALO_DIFFUSION_LANGS `array`
+Defines the languages used for diffusion / publication.
 
-This parameter defines the languages that Dédalo will use to publish data.
-
-This definition control the amount of languages that will be processed to publish data in the publication process. When Dédalo publish data, it check the languages of every field of every record to create a fixed version of the data with the language processed or his own correspondences of the main languages when the data is not available in the current language. This parameter reduce the amount languages used in this process.
-
-This parameter is configured with the same values as DEDALO_PROJECTS_DEFAULT_LANGS, but it can be changed to other values to separate the export languages from the diffusion languages.
-
-```php
-define('DEDALO_DIFFUSION_LANGS', [ 'lg-spa', 'lg-cat', 'lg-eng', ]);
+```ini
+DEDALO_DIFFUSION_LANGS=["lg-spa","lg-cat","lg-eng","lg-fra"]
 ```
 
->The parameter use the Dédalo tld definition for languages. See DEDALO_APPLICATION_LANGS definition to show some examples.
+> Default: `["lg-eng","lg-spa","lg-cat","lg-fra"]`
 
 ---
 
-## Default variables
+## Default config values
 
 ### Defining prefix tipos
 
-./dedalo/config/config.php
+DEDALO_PREFIX_TIPOS `array` (JSON)
 
-DEDALO_PREFIX_TIPOS `array`
+Defines the ontology TLD prefixes used in the installation.
 
-This parameter defines the ontology tipos to be used in the Dédalo installation.
-
-Every tipo (typology of indirect programming object) defines a heritage field, a data model, a structuring tools and definitions. Dédalo is a multi heritage application with ontologies for Archeology, Ethnology, Oral History, Numismatics, etc. Every project or institution can add any tipos that it demands. An archaeologic museum will use the model for archeological catalogs, but it will not need the ethnological definitions. In the same way that Oral History project will don't use the archeological or numismatic definitions.
-
-By default Dédalo load some common tipos for all project types.
-
-| **TLD** | **Defintion** |
-| --- | --- |
-| **dd** | Dédalo. Definition of default list and common uses and tools such as translation tools. |
-| **rsc** | Resources. Definition for areas and sections commons to all projects such as people, images, audiovisual files, publications, documents, bibliography, etc. |
-| **ontology** | Ontology. Definition of the sections used as nodes of the ontology |
-| **hierarchy** | Thesaurus. Definition for sections as toponymy, onomastic, chronologies, techniques, material, etc. |
-| **lg** | Languages, Definition for the languages in the thesaurus (used for all application to translate data and interface) |
-| **utoponymy** | Unofficial toponymy. Section definition for unofficial toponymy (unofficial places names), used to add places that are not inside the official toponymy of countries or the installation don't want import the official toponymy (use to point the place without the official term in some sections as Publications, to define any place of publication around the world) |
-
-Besides, every installation can import the ontology tipo that will use in the inventory or research:
-
-| **TLD** | **Defintion** |
-| --- | --- |
-| **oh** | Oral History, the definition sections and tools to be used for oral history projects such as interviews, transcription, indexation, etc. |
-| **ich** | Intangible Cultural Heritage, the definition sections and tools to use for intangible heritage, such as elements, processes, communities, symbolic acts, etc. |
-| **tch** | Tangible heritage, the definition of sections and tools to use for tangible heritage, such as objects, collectors, informants, etc |
-| **tchi** | Tangible heritage immovable, the definition of sections and tools to use for tangible heritage immovable, such as archeological sites, finds, alqueries, etc |
-| **dmm** | Memory and documentary heritage, the definition of sections and tools to be used for the heritage of memory, such as graves, deportees, exiles, tortured, etc. |
-| **numisdata** | Numismatic heritage, the definition sections and tools to use for numismatics project, such as mints, types, legends, hoards, finds, etc. |
-| **isad** | Archives following the [ISAD(g) standard](https://www.ica.org/en/isadg-general-international-standard-archival-description-second-edition) (General International Standard Archival Description - Second edition), the definition of sections and tools to be used for cataloging documents with the standard structure, etc. |
-| **actv** | Activities, the definition of section and fields of activities as exhibitions, workshops, didactics, conferences, etc. |
-
-```php
-define('DEDALO_PREFIX_TIPOS', [ 'dd', 'rsc', 'ontology', 'hierarchy', 'lg', 'oh', 'ich' ]);
+```ini
+DEDALO_PREFIX_TIPOS=["dd","rsc","ontology","hierarchy","lg","utoponymy","oh","ich","nexus","actv"]
 ```
 
-!!! note "Thesaurus dependencies"
-    Some tld has a thesaurus dependency, if you want to use a `tch` Dédalo installation will need to create the `material`, `technique`, or `objects` hierarchies. This hierarchies are not included into the main tld, because the hierarchies need to be activate and created by the users. [See the table of dependencies](thesaurus_dependeces.md#dependencies).
-
-!!! note "Applying changes in DEDALO_PREFIX_TIPOS"
-    Any change in `DEDALO_PREFIX_TIPOS` will need a update of the ontology, this changes are not directly applied. Dédalo needs to get the ontology tld and install it, to do that update the ontology in [maintenance](../management/maintenace_status.md) control panel.
-
-!!! note "Activities"
-    The `actv` tld should be used as model to implement a virtual sections with more specific activities as hierarchies of toponymy does into the thesaurus using it as `hierarchy20`, the main section to implement in this way is `actv1` and his model `actv2`. The virtual sections should be defined with a prefix `actv` into the new tld, in this way:
-    - for exhibitions section the tld could be: `actvexhibition`
-    - for conferences section the tld could be: `actvconference`
+> Default: `["dd","rsc","ontology","ontologytype","hierarchy","lg","utoponymy","oh","ich","nexus","actv"]`
 
 ---
 
 ### Defining main fallback section
 
-./dedalo/config/config.php
-
 MAIN_FALLBACK_SECTION `string`
 
-It defines the section will loaded by default when the user login.
-The main section of the project that will used, normally will be a inventory or catalog section.
+Defines the main section to use as fallback when no specific section is found.
 
-```php
-define('MAIN_FALLBACK_SECTION', 'oh1');
+```ini
+MAIN_FALLBACK_SECTION=oh1
 ```
+
+> Default: `oh1`
 
 ---
 
 ### Defining numerical matrix value for yes
 
-./dedalo/config/config.php
-
 NUMERICAL_MATRIX_VALUE_YES `int`
 
-Definition of the section_id of the 'yes' value. This value will use to access directly to this value without call to the database.
+Definition of the section_id of the 'yes' value. This value is used to access directly to this value without calling the database.
 
-```php
-define('NUMERICAL_MATRIX_VALUE_YES', 1);
+```ini
+NUMERICAL_MATRIX_VALUE_YES=1
 ```
+
+> Default: `1`
 
 ---
 
 ### Defining numerical matrix value for no
 
-./dedalo/config/config.php
-
 NUMERICAL_MATRIX_VALUE_NO `int`
 
-Definition of the section_id of the 'no' value. This value will use to access directly to this value without call to the database.
+Definition of the section_id of the 'no' value. This value is used to access directly to this value without calling the database.
 
-```php
-define('NUMERICAL_MATRIX_VALUE_NO', 2);
+```ini
+NUMERICAL_MATRIX_VALUE_NO=2
 ```
+
+> Default: `2`
 
 ---
 
 ### Defining maximum rows per page
 
-./dedalo/config/config.php
-
 DEDALO_MAX_ROWS_PER_PAGE `int`
 
-It defines the maximum rows that will loaded in the lists.
+It defines the maximum rows that will be loaded in the lists.
 
-This value is the default number of rows that Dédalo will load, but is possible to change this value directly in the filter by the users, when they make a search, if the user do not define the maximum rows, Dédalo will use the value of this parameter.
+This value is the default number of rows that Dédalo will load, but it is possible to change this value directly in the filter by the users. When they make a search, if the user does not define the maximum rows, Dédalo will use the value of this parameter.
 
-```php
-define('DEDALO_MAX_ROWS_PER_PAGE', 10);
+```ini
+DEDALO_MAX_ROWS_PER_PAGE=10
 ```
+
+> Default: `10`
 
 ---
 
 ### Defining default profile
 
-./dedalo/config/config.php
-
 DEDALO_PROFILE_DEFAULT `int`
 
-This parameter defines the section_id of the default profile that Dédalo will use to create new user.
+This parameter defines the section_id of the default profile that Dédalo will use to create new users.
 
-The profile define where the user can access inside the system, and if they can access to tools or administrative areas. By default Dédalo will use the profile definition for normal 'users' (section_id : 2, the section_id : 1 is for administrators users).
+The profile defines where the user can access inside the system, and if they can access tools or administrative areas. By default Dédalo will use the profile definition for normal 'users' (section_id: 2; section_id: 1 is for administrator users).
 
-```php
-define('DEDALO_PROFILE_DEFAULT', 2);
+```ini
+DEDALO_PROFILE_DEFAULT=2
 ```
+
+> Default: `2`
 
 ---
 
 ### Defining default project
 
-./dedalo/config/config.php
-
 DEDALO_DEFAULT_PROJECT `int`
 
 This parameter defines the default project that Dédalo will use to create new sections (records in the DDBB).
 
-Dédalo use the project component (component_filter) to group sections by the research criteria. The project field is mandatory in every section, because an user that can access to a project will no see the records of the other projects and, therefore, is necessary that all sections can be searchable by projects. If the user forget introduce project data, Dédalo will use this parameter to introduce it.
+Dédalo uses the project component (`component_filter`) to group sections by research criteria. The project field is mandatory in every section, because a user that can access a project will not see the records of other projects. If the user forgets to introduce project data, Dédalo will use this parameter.
 
-```php
-define('DEDALO_DEFAULT_PROJECT', 1);
+```ini
+DEDALO_DEFAULT_PROJECT=1
 ```
+
+> Default: `1`
 
 ---
 
 ### Defining filter section tipo default
 
-./dedalo/config/config.php
+DEDALO_FILTER_SECTION_TIPO_DEFAULT `string` *computed*
 
-DEDALO_FILTER_SECTION_TIPO_DEFAULT `int`
+This parameter defines the section that has the project information inside the ontology. Computed from `DEDALO_SECTION_PROJECTS_TIPO`. Not configurable via `.env`.
 
-This parameter defines the section that has the projects information inside the ontology.
-
-Dédalo will use this parameter to define the locator of the filter by projects to apply to any search of sections. By default Dédalo has a predefined section to store the projects that administrators users can enlarge. The default section_tipo is 'dd153' and it is located below 'Administration' area in the menu. Every project field target this section to define the specific project of the current record.
-
-```php
-define('DEDALO_FILTER_SECTION_TIPO_DEFAULT', DEDALO_SECTION_PROJECTS_TIPO );
-```
-
-> By default this definition get the section_tipo from the predefined constant DEDALO_SECTION_PROJECTS_TIPO inside 'dd_tipos.php' file. Target filter section (current 'dd153' - Projects section). Do not change this param.
+> By default this definition gets the section_tipo from the predefined constant `DEDALO_SECTION_PROJECTS_TIPO` inside `dd_tipos.php` file. Do not change this param.
 
 ---
 
 ### Defining defaults values for components
 
-./dedalo/config/config.php
-
-CONFIG_DEFAULT_FILE_PATH `string`  *optional | disable*
+CONFIG_DEFAULT_FILE_PATH `string`  *optional*
 
 This parameter defines the path to the default values definition file for components.
 
-Defaults values are specific data to be enter into the component when a section is created, empty values are not allowed in components with default data, the component will replace empty data with default value.
+Defaults values are specific data to be entered into the component when a section is created; empty values are not allowed in components with default data — the component will replace empty data with the default value.
 
-Usually the component defines is own defaults data into the ontology, but is possible change it in the local installations creating a `config_defaults.json` file into the config directory with the specific default data for your installation.
+Usually the component defines its own defaults data in the ontology, but it is possible to change it in local installations by creating a `config_defaults.json` file in the config directory.
 
-```php
-define('CONFIG_DEFAULT_FILE_PATH',    DEDALO_CONFIG_PATH .'/config_defaults.json');
+```ini
+CONFIG_DEFAULT_FILE_PATH=/path/to/dedalo/config/config_defaults.json
 ```
 
-Example to change the default data for the publishable component [rsc279](https://dedalo.dev/ontology/rsc279), in the ontology the component has a default value of "no", the value is the locator to point the yes/no list (for "No" the section_id is 2). If we want to change to 'Yes'(section_id 1 of the section [dd64](https://dedalo.dev/ontology/dd64)) the `config_defaults.json` needs to have it defined as:
+Example to change the default data for the publishable component [rsc279](https://dedalo.dev/ontology/rsc279), in the ontology the component has a default value of "no" (section_id 2 of section [dd64](https://dedalo.dev/ontology/dd64)). To change to 'Yes' (section_id 1), the `config_defaults.json` needs:
 
 ```json
 [{
@@ -1350,401 +884,305 @@ Example to change the default data for the publishable component [rsc279](https:
 | tipo | string: ontology tipo | The unique tipo for the component or section |
 | type | string: ontology type of the node | defines the type of the node: component \| section |
 | tld | string: ontology tld of the node | defines the ontology group of tipos (dd, rsc, oh, tch, tchi, etc.) |
-| value | string \| array of locator/s \| object: the default value for the component | If the component is a related component it will be the locator, note that locator need to be inside a array, if the component is a literal it will be a compatible data as text or date |
+| value | string \| array of locator/s \| object: the default value for the component | If the component is a related component it will be the locator, note that locator needs to be inside an array; if the component is literal it will be compatible data as text or date |
 
 ---
 
 ## Media variables
 
-Media as images, pdf, audiovisual, svg and other are files that Dédalo use inside the sections.
+Media (images, PDF, audiovisual, SVG, etc.) are files that Dédalo uses inside sections.
 
-Media is referenced by locator and all files are name in the server with the locator that call it. Dédalo has a media directories definition that can be change with this parameter, for ex: is possible define the amount of image copies in different qualities for images.
+Media is referenced by locator and all files are named in the server with the locator that calls them. Dédalo has a media directories definition that can be changed with these parameters.
+
+---
+
+### Defining media directory name
+
+DEDALO_MEDIA_DIR_NAME `string`
+
+Defines the name of the media directory. This is the only media path constant configurable via `.env`; all other media paths are computed from it.
+
+```ini
+DEDALO_MEDIA_DIR_NAME=media_development
+```
+
+> Default: `media`
 
 ---
 
 ### Defining media base path
 
-./dedalo/config/config.php
+DEDALO_MEDIA_PATH `string` *computed*
 
-DEDALO_MEDIA_PATH `string`
-
-This parameter defines the root media directory in the directory tree.
-
-Normally this directory is located in the top Dédalo directory, but it can be define in other paths. remember that Dédalo will need access to this directory as owner with read / write permissions.
-
-```php
-define('DEDALO_MEDIA_PATH', DEDALO_ROOT_PATH . '/media');
-```
+This parameter defines the root media directory in the directory tree. Computed from `DEDALO_ROOT_PATH . '/' . DEDALO_MEDIA_DIR_NAME`. Not configurable via `.env`.
 
 ---
 
-### Defining media base url
+### Defining media base URL
 
-./dedalo/config/config.php
+DEDALO_MEDIA_URL `string` *computed*
 
-DEDALO_MEDIA_URL `string`
-
-This parameter defines the root media url to be accessed by the client.
-
-Dédalo will use this parameter to create the uri's to the media accessible to the clients.
-
-```php
-define('DEDALO_MEDIA_URL', DEDALO_ROOT_WEB . '/media');
-```
+This parameter defines the root media URL to be accessed by the client. Computed from `DEDALO_ROOT_WEB . '/' . DEDALO_MEDIA_DIR_NAME`. Not configurable via `.env`.
 
 ---
 
 ### Thumb
 
-Thumb media are small images to be used in lists, all media has thumb image to represent the media.
+Thumb media are small images to be used in lists; all media has a thumb image to represent the media.
 
 #### Defining image thumb extension
-
-./dedalo/config/config.php
 
 DEDALO_THUMB_EXTENSION `string`
 
 This parameter defines the standard file type of thumb files.
 
-```php
-define('DEDALO_THUMB_EXTENSION', 'jpg');
+```ini
+DEDALO_THUMB_EXTENSION=jpg
 ```
+
+> Default: `jpg`
 
 ---
 
 #### Defining image thumb quality
 
-./dedalo/config/config.php
-
 DEDALO_QUALITY_THUMB `string`
 
-This parameter defines the thumb quality definition that can be used for compress the media files.
+This parameter defines the thumb quality definition that can be used for compressing media files.
 
-This parameter will use to compress and store image files used in lists. The compression will use the default file.
+This parameter will be used to compress and store image files used in lists.
 
 | Media | Remark |
 | --- | --- |
-| PDF | Will render the first page of the website in quality, if the default image does not exist it will try to use the original quality.|
+| PDF | Will render the first page of the document in quality; if the default image does not exist it will try to use the original quality.|
 | AV | Will render the posterframe.|
-| Image | Will render the default quality, if the default image does not exist it will try to use the original quality.|
-| SVG | Will render the default quality, if the default image does not exist it will try to use the original quality.|
+| Image | Will render the default quality; if the default image does not exist it will try to use the original quality.|
+| SVG | Will render the default quality; if the default image does not exist it will try to use the original quality.|
 | 3d | Will render the posterframe.|
 
-```php
-define('DEDALO_QUALITY_THUMB', 'thumb');
+```ini
+DEDALO_QUALITY_THUMB=thumb
 ```
+
+> Default: `thumb`
 
 ---
 
 #### Defining image thumb width size
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_THUMB_WIDTH `int`
 
-This parameter defines width size in pixels to the thumb images, it will be used to compress the images with the thumb quality (the smaller version to be used in lists).
+This parameter defines width size in pixels for thumb images.
 
-```php
-define('DEDALO_IMAGE_THUMB_WIDTH', 222);
+```ini
+DEDALO_IMAGE_THUMB_WIDTH=222
 ```
+
+> Default: `222`
 
 ---
 
 #### Defining image thumb height size
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_THUMB_HEIGHT `int`
 
-This parameter defines height size in pixels to the thumb images, it will be used to compress the images with the thumb quality (the smaller version to be used in lists).
+This parameter defines height size in pixels for thumb images.
 
-```php
-define('DEDALO_IMAGE_THUMB_HEIGHT', 148);
+```ini
+DEDALO_IMAGE_THUMB_HEIGHT=148
 ```
+
+> Default: `148`
 
 ---
 
 ### Audiovisual
 
-Audiovisual media includes video and audio files, it use a posterframe to represent the file as the original quality.
+Audiovisual media includes video and audio files; it uses a posterframe to represent the file as the original quality.
 
 #### Defining audiovisual directory
-
-./dedalo/config/config.php
 
 DEDALO_AV_FOLDER `string`
 
 This parameter defines the main directory for the audiovisual files.
 
-```php
-define('DEDALO_AV_FOLDER', '/av');
+```ini
+DEDALO_AV_FOLDER=/av
 ```
+
+> Default: `/av`
 
 ---
 
 #### Defining audiovisual extension (type of file)
 
-./dedalo/config/config.php
-
 DEDALO_AV_EXTENSION `string`
 
-This parameter defines the standard file type of encapsulation for the audiovisual files.
+This parameter defines the standard file type of audiovisual files.
 
-By default Dédalo use mp4 encapsulation definition for the audiovisual files with codec h264 or h265. All other formats will be compressed to this parameters.
+By default Dédalo uses mp4 standard definition for the audiovisual files. All other formats will be compressed to this standard.
 
-```php
-define('DEDALO_AV_EXTENSION', 'mp4');
+```ini
+DEDALO_AV_EXTENSION=mp4
 ```
+
+> Default: `mp4`
 
 ---
 
 #### Defining audiovisual extensions supported
 
-./dedalo/config/config.php
+DEDALO_AV_EXTENSIONS_SUPPORTED `array` (JSON)
 
-DEDALO_AV_EXTENSIONS_SUPPORTED `array`
+This parameter defines the standard file types admitted for audiovisual files.
 
-This parameter defines the standards file type admitted for the audiovisual files.
-
-Dédalo will use this parameter to identify the file format of the original files uploaded by the users before compress it to the standard defined in the DEDALO_AV_EXTENSION parameter.
-
-```php
-define('DEDALO_AV_EXTENSIONS_SUPPORTED', ['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg','vob','zip','flv']);
+```ini
+DEDALO_AV_EXTENSIONS_SUPPORTED=["mp4","wave","wav","aiff","aif","mp3","mov","avi","mpg","mpeg","vob","zip","flv"]
 ```
+
+> Default: `["mp4","wave","wav","aiff","aif","mp3","mov","avi","mpg","mpeg","vob","zip","flv"]`
 
 ---
 
 #### Defining audiovisual mime type
 
-./dedalo/config/config.php
-
 DEDALO_AV_MIME_TYPE `string`
 
-This parameter defines the standard mime type for the audiovisual files.
+This parameter defines the standard mime type for audiovisual files.
 
-This parameter will use to create the correct http header for the standard define in DEDALO_AV_EXTENSION.
-
-```php
-define('DEDALO_AV_MIME_TYPE', 'video/mp4');
+```ini
+DEDALO_AV_MIME_TYPE=video/mp4
 ```
+
+> Default: `video/mp4`
 
 ---
 
-#### Defining audiovisual codec type
-
-./dedalo/config/config.php
+#### Defining audiovisual type
 
 DEDALO_AV_TYPE `string`
 
-This parameter define the standard code type for the audiovisual files. This parameter will use to compress the audiovisual original format to the codec defined by this parameter. By default Dédalo use the h264 or h265 codec to compress the av files.
+This parameter defines the standard codec type for audiovisual files.
 
-```php
-define('DEDALO_AV_TYPE', 'h264/AAC');
+```ini
+DEDALO_AV_TYPE=h264/AAC
 ```
+
+> Default: `h264/AAC`
 
 ---
 
 #### Defining audiovisual quality for original files
 
-./dedalo/config/config.php
-
 DEDALO_AV_QUALITY_ORIGINAL `string`
 
-This parameter defines the quality original for the audiovisual files.
+This parameter defines the quality original for audiovisual files.
 
-This parameter will use to identify the uploaded files to with specific quality. Dédalo admit lots of different formats from different sources and qualities, and it define this files as "original" quality. Dédalo will compress all formats to web standard format, unify all different qualities and codecs, and will store the original file without touch. In some cases, if the institution has a protocol for manage av files, is possible to use one specific quality for the files that users can upload. By default Dédalo do not limit the original format to be uploaded using a "original" quality denomination.
-
-```php
-define('DEDALO_AV_QUALITY_ORIGINAL', 'original');
+```ini
+DEDALO_AV_QUALITY_ORIGINAL=original
 ```
+
+> Default: `original`
 
 ---
 
-#### Defining audiovisual quality for processed files
-
-./dedalo/config/config.php
+#### Defining audiovisual default quality
 
 DEDALO_AV_QUALITY_DEFAULT `string`
 
-This parameter defines the default quality used for the audiovisual files.
+This parameter defines the default quality used for audiovisual files.
 
-This parameter will use to compress all audiovisual files to specific quality, unifying the quality used by all sections. By default Dédalo use 720x404 h264 quality.
-
-```php
-define('DEDALO_AV_QUALITY_DEFAULT', '404');
+```ini
+DEDALO_AV_QUALITY_DEFAULT=404
 ```
+
+> Default: `404`
 
 ---
 
 #### Defining audiovisual qualities definition
 
-./dedalo/config/config.php
+DEDALO_AV_AR_QUALITY `array` (JSON)
 
-DEDALO_AV_AR_QUALITY `string`
+This parameter defines the different qualities that can be used for compressing audiovisual files.
 
-This parameter defines the different qualities that can be used for compress the audiovisual files.
-
-This parameter will use to compress audiovisual files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
-
-```php
-define('DEDALO_AV_AR_QUALITY', [DEDALO_AV_QUALITY_ORIGINAL,'4k','1080','720','576','404','240','audio']);
+```ini
+DEDALO_AV_AR_QUALITY=["original","1080","720","576","404","240","audio"]
 ```
+
+> Default: `["original","1080","720","576","404","240","audio"]`
 
 ---
 
-#### Defining posterframe filetype extension for audiovisual files
-
-./dedalo/config/config.php
+#### Defining audiovisual posterframe extension
 
 DEDALO_AV_POSTERFRAME_EXTENSION `string`
 
-This parameter defines the type of the image file used to create the posterframe of the audiovisual files.
+This parameter defines the file extension for the posterframe image of audiovisual files.
 
-The posterframe is the image that will show before load the audiovisual files and identify it. This parameter define the type of this image. By default Dédalo use jpg standard to create the posterframe.
-
-```php
-define('DEDALO_AV_POSTERFRAME_EXTENSION', 'jpg');
+```ini
+DEDALO_AV_POSTERFRAME_EXTENSION=jpg
 ```
 
----
-
-#### Defining audiovisual processor filepath (ffmpeg path)
-
-./dedalo/config/config.php
-
-DEDALO_AV_FFMPEG_PATH `string`
-
-This parameter defines the path to the ffmpeg library in the server. ffmpeg will use to compress the audiovisual files.
-
-```php
-define('DEDALO_AV_FFMPEG_PATH', '/usr/bin/ffmpeg');
-```
-
----
-
-#### Defining audiovisual processor settings (ffmpeg settings)
-
-./dedalo/config/config.php
-
-DEDALO_AV_FFMPEG_SETTINGS `string`
-
-This parameter defines the path to the ffmpeg settings in the server. This settings configure the parameters of the qualities to be used to compress audiovisual files.
-
-```php
-define('DEDALO_AV_FFMPEG_SETTINGS', DEDALO_CORE_PATH . '/media_engine/lib/ffmpeg_settings');
-
-```
-
----
-
-#### Defining audiovisual processor settings (faststart)
-
-./dedalo/config/config.php
-
-DEDALO_AV_FASTSTART_PATH `string`
-
-This parameter defines the path to the qt-faststart library in the server.
-
-qt-faststart is used to move the av header from last bytes of the av file to the start of the av file, this change improve the load of the av because the header is at the beginning of the file and it can read first when loads begin.
-
-```php
-define('DEDALO_AV_FASTSTART_PATH', '/usr/bin/qt-faststart');
-```
-
----
-
-#### Defining audiovisual ffprobe path
-
-./dedalo/config/config.php
-
-DEDALO_AV_FFPROBE_PATH `string`
-
-This parameter defines the path to the ffprobe library in the server. ffprobe is used to analyze the audiovisual files and get his metadata.
-
-```php
-define('DEDALO_AV_FFPROBE_PATH', '/usr/bin/ffprobe');
-```
+> Default: `jpg`
 
 ---
 
 #### Defining audiovisual streamer
 
-./dedalo/config/config.php
+DEDALO_AV_STREAMER `string` *optional*
 
-DEDALO_AV_STREAMER `string`
+This parameter defines the streaming server URL.
 
-This parameter defines the path to the audiovisual streaming server to be used.
-
-By default Dédalo do not use a streaming server but is possible to setup a streaming video server.
-
-```php
-define('DEDALO_AV_STREAMER', NULL);
+```ini
+DEDALO_AV_STREAMER=
 ```
+
+> Default: not set
 
 ---
 
-#### Defining audiovisual watermark file
-
-./dedalo/config/config.php
-
-DEDALO_AV_WATERMARK_FILE `string`
-
-This parameter defines the path to the image file that will be used to create the watermark for audiovisual files.
-
-The watermark is an image superimposed on audiovisual files to identify the entity that has the rights to the av files. Dédalo will use to render the av files with this image and will create the copies of the av files with this watermark. By default, Dédalo uses a background-less png to overlay it as a watermark.
-
-```php
-define('DEDALO_AV_WATERMARK_FILE', DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
-
-```
-
----
-
-#### Defining audiovisual subtitles directory
-
-./dedalo/config/config.php
+#### Defining subtitles folder
 
 DEDALO_SUBTITLES_FOLDER `string`
 
-This parameter defines the path to the subtitles directory.
+This parameter defines the folder for subtitle files.
 
-Dédalo will store the VTT files generated by the subtitle engine in this directory.
-
-```php
-define('DEDALO_SUBTITLES_FOLDER', '/subtitles');
+```ini
+DEDALO_SUBTITLES_FOLDER=/subtitles
 ```
+
+> Default: `/subtitles`
 
 ---
 
-#### Defining audiovisual subtitles type extension
-
-./dedalo/config/config.php
+#### Defining subtitles extension
 
 DEDALO_AV_SUBTITLES_EXTENSION `string`
 
-This parameter defines the standard used to create the subtitles.
+This parameter defines the file extension for subtitle files.
 
-By default Dédalo use VTT format to create the subtitles.
-
-```php
-define('DEDALO_AV_SUBTITLES_EXTENSION', 'vtt');
+```ini
+DEDALO_AV_SUBTITLES_EXTENSION=vtt
 ```
+
+> Default: `vtt`
 
 ---
 
 #### Defining audiovisual re-compress all uploaded files
 
-./dedalo/config/config.php
-
 DEDALO_AV_RECOMPRESS_ALL `int`
 
-This parameter defines if Dédalo will process al audiovisual files uploaded to the server to the default quality.
+This parameter defines if Dédalo will process all audiovisual files uploaded to the server to the default quality.
 
 By default Dédalo will compress all files (1 value), but it can be deactivated with 0 value.
 
-```php
-define('DEDALO_AV_RECOMPRESS_ALL', 1);
+```ini
+DEDALO_AV_RECOMPRESS_ALL=1
 ```
+
+> Default: `1`
 
 ---
 
@@ -1752,304 +1190,254 @@ define('DEDALO_AV_RECOMPRESS_ALL', 1);
 
 #### Defining image directory
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_FOLDER `string`
 
 This parameter defines the main directory for the image files.
 
-```php
-define('DEDALO_IMAGE_FOLDER', '/image');
+```ini
+DEDALO_IMAGE_FOLDER=/image
 ```
+
+> Default: `/image`
 
 ---
 
 #### Defining image extension (type of file)
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_EXTENSION `string`
 
 This parameter defines the standard file type of image files.
 
-By default Dédalo use jpg standard definition for the image files. All other formats will be compressed to this standard.
+By default Dédalo uses jpg standard definition for image files. All other formats will be compressed to this standard.
 
-```php
-define('DEDALO_IMAGE_EXTENSION', 'jpg');
+```ini
+DEDALO_IMAGE_EXTENSION=jpg
 ```
+
+> Default: `jpg`
 
 ---
 
 #### Defining image mime type
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_MIME_TYPE `string`
 
-This parameter define the standard mime type for the image files. This parameter will use to create the correct http header for the standard define in DEDALO_IMAGE_EXTENSION.
+This parameter defines the standard mime type for image files.
 
-```php
-define('DEDALO_IMAGE_MIME_TYPE', 'image/jpeg');
+```ini
+DEDALO_IMAGE_MIME_TYPE=image/jpeg
 ```
+
+> Default: `image/jpeg`
 
 ---
 
 #### Defining image type
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_TYPE `string`
 
-This parameter defines the standard type for the image files.
+This parameter defines the standard type for image files.
 
-This parameter will use to compress the original image format to the codec defined by this parameter. By default Dédalo use the jpeg codec to compress the image files.
-
-```php
-define('DEDALO_IMAGE_TYPE', 'jpeg');
+```ini
+DEDALO_IMAGE_TYPE=jpeg
 ```
+
+> Default: `jpeg`
 
 ---
 
 #### Defining image extensions supported
 
-./dedalo/config/config.php
+DEDALO_IMAGE_EXTENSIONS_SUPPORTED `array` (JSON)
 
-DEDALO_IMAGE_EXTENSIONS_SUPPORTED `array`
+This parameter defines the standard file types admitted for image files.
 
-This parameter defines the standards file type admitted for the image files.
-
-Dédalo will use this parameter to identify the file format of the original files uploaded by the users before compress it to the standard defined in the DEDALO_IMAGE_EXTENSION parameter.
-
-```php
-define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED', ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic']);
+```ini
+DEDALO_IMAGE_EXTENSIONS_SUPPORTED=["jpg","jpeg","png","tif","tiff","bmp","psd","raw","webp","heic","avif"]
 ```
+
+> Default: `["jpg","jpeg","png","tif","tiff","bmp","psd","raw","webp","heic","avif"]`
 
 #### Defining alternative image extensions of image files
 
-./dedalo/config/config.php
+DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS `array` (JSON) *optional*
 
-DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS `array` *optional*
+This parameter defines the standard file types that will be used to create versions of the uploaded image files.
 
-This parameter defines the standards file types that will use to create versions of the uploaded image files.
+Dédalo will use this parameter to create alternative versions of uploaded images. This parameter is optional. When active, every uploaded image will be processed in every quality with every format defined.
 
-Dédalo will use this parameter to create alternative versions of the images uploaded, the files formats that will use to convert from the original files uploaded by the users. This parameter is optional and can be used to add other image formats. When the parameter is active, every image uploaded will be processed in every quality with every format define it.
-
-```php
-define('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS', ['avif','png']);
+```ini
+DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS=["avif","png"]
 ```
 
 Example:
 
 Original file: **my_image.tif**
 
-Default format defined in DEDALO_IMAGE_EXTENSION: **jpg**
+Default format defined in `DEDALO_IMAGE_EXTENSION`: **jpg**
 
-Alternatives formats defined in DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS: **\['avif','png'\]**
+Alternatives formats defined in `DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS`: **\['avif','png'\]**
 
 Result:
 
 In original quality directory:
-> ../media/image/original/rsc29_rsc170_1.tif
->
-> ../media/image/original/rsc29_rsc170_1.jpg
->
-> ../media/image/original/rsc29_rsc170_1.avif
->
-> ../media/image/original/rsc29_rsc170_1.png
+> `../media/image/original/rsc29_rsc170_1.tif`
+> `../media/image/original/rsc29_rsc170_1.jpg`
+> `../media/image/original/rsc29_rsc170_1.avif`
+> `../media/image/original/rsc29_rsc170_1.png`
 
 In 1.5MB quality directory:
-> ../media/image/1.5MB/rsc29_rsc170_1.jpg
->
-> ../media/image/1.5MB/rsc29_rsc170_1.avif
->
-> ../media/image/1.5MB/rsc29_rsc170_1.png
+> `../media/image/1.5MB/rsc29_rsc170_1.jpg`
+> `../media/image/1.5MB/rsc29_rsc170_1.avif`
+> `../media/image/1.5MB/rsc29_rsc170_1.png`
+
+> Default: `[]`
 
 ---
 
 #### Defining image quality for original files
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_QUALITY_ORIGINAL `string`
 
-This parameter defines the quality original for the image files.
+This parameter defines the quality original for image files.
 
-This parameter will use to identify the uploaded files to with specific quality. Dédalo admit lots of different formats from different sources and qualities, and it define this files as "original" quality. Dédalo will compress all formats to web standard format, unify all different qualities and codecs, and will store the original file without touch. In some cases, if the institution has a protocol for manage image files, is possible to use one specific quality for the files that users can upload. By default Dédalo do not limit the original format to be uploaded using a "original" quality denomination.
-
-```php
-define('DEDALO_IMAGE_QUALITY_ORIGINAL', 'original');
+```ini
+DEDALO_IMAGE_QUALITY_ORIGINAL=original
 ```
+
+> Default: `original`
 
 ---
 
 #### Defining image quality for the retouched files
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_QUALITY_RETOUCHED `string`
 
-This parameter defines the quality for the image files that has been retouched.
+This parameter defines the quality for retouched image files.
 
-Retouched images are the processed images to improve the image, this quality will be a copy of the original that has any kind of process (color balance, background removed, contrasted, etc)
+Retouched images are processed images to improve the image (color balance, background removed, contrasted, etc.)
 
-```php
-define('DEDALO_IMAGE_QUALITY_RETOUCHED', 'modified');
+```ini
+DEDALO_IMAGE_QUALITY_RETOUCHED=modified
 ```
+
+> Default: `modified`
 
 ---
 
 #### Defining image default quality
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_QUALITY_DEFAULT `string`
 
-This parameter defines the default quality used for the image files.
+This parameter defines the default quality used for image files.
 
-This parameter will use to compress all image files to specific quality, unifying the quality used by all sections. By default Dédalo use 1.5MB file size (524.217px or 887x591px) quality.
+By default Dédalo uses 1.5MB file size (524.217px or 887x591px) quality.
 
-```php
-define('DEDALO_IMAGE_QUALITY_DEFAULT', '1.5MB');
+```ini
+DEDALO_IMAGE_QUALITY_DEFAULT=1.5MB
 ```
+
+> Default: `1.5MB`
 
 ---
 
 #### Defining image thumb default
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_THUMB_DEFAULT `string` *deprecated; use DEDALO_QUALITY_THUMB*
 
-This parameter defines the thumb quality definition that can be used for compress the image files.
-
-This parameter will use to compress and store image files used in lists. The compression will use the original file and will compress with smaller version or thumb version of the image.
-
-```php
-define('DEDALO_IMAGE_THUMB_DEFAULT', 'thumb');
-```
+> Default: `thumb`
 
 ---
 
 #### Defining image qualities definition
 
-./dedalo/config/config.php
+DEDALO_IMAGE_AR_QUALITY `array` (JSON)
 
-DEDALO_IMAGE_AR_QUALITY `serialized array`
+This parameter defines the different qualities that can be used for compressing image files.
 
-This parameter defines the different qualities that can be used for compress the image files.
-
-This parameter will use to compress image files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
-
-```php
-define('DEDALO_IMAGE_AR_QUALITY', [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_QUALITY_THUMB]);
+```ini
+DEDALO_IMAGE_AR_QUALITY=["original","modified","100MB","25MB","6MB","1.5MB","thumb"]
 ```
+
+> Default: `["original","modified","100MB","25MB","6MB","1.5MB","thumb"]`
 
 ---
 
 #### Defining image print resolution definition
 
-./dedalo/config/config.php
-
 DEDALO_IMAGE_PRINT_DPI `int`
 
-This parameter defines the resolution in pixels per inch that will be used in the image compression to be apply when the images will be printed.
+This parameter defines the resolution in pixels per inch for image compression when printing.
 
-```php
-define('DEDALO_IMAGE_PRINT_DPI', 150);
+```ini
+DEDALO_IMAGE_PRINT_DPI=150
 ```
+
+> Default: `150`
 
 ---
 
 #### Defining image engine processor URL
 
-./dedalo/config/config.php
+DEDALO_IMAGE_FILE_URL `string` *computed*
 
-DEDALO_IMAGE_FILE_URL `string`
-
-This parameter defines the image processor engine URL to be used when images need to be compressed.
-
-```php
-define('DEDALO_IMAGE_FILE_URL', DEDALO_CORE_URL . '/media_engine/img.php');
-```
+This parameter defines the image processor engine URL. Computed from `DEDALO_CORE_URL . '/media_engine/img.php'`. Not configurable via `.env`.
 
 ---
 
 #### Defining Image Magick path
 
-./dedalo/config/config.php
+MAGICK_PATH `string` *computed*
 
-MAGICK_PATH `string`
+This parameter defines the path to ImageMagick library. Computed from `DEDALO_BINARY_BASE_PATH . '/'`. Not configurable via `.env`.
 
-This parameter defines the path to image magick library in the server (when image magick library is installed)
-
-```php
-define('MAGICK_PATH', '/usr/bin/');
-```
+> Set `DEDALO_BINARY_BASE_PATH` in `.env` to change the ImageMagick binary location.
 
 ---
 
 #### Defining Image Magick configuration
 
-./dedalo/config/config.php
+MAGICK_CONFIG `object` (JSON)
 
-MAGICK_CONFIG `object`
+This constant defines the configuration parameters of ImageMagick library.
 
-This constant defines the configuration parameters of ImageMagick library in the server.
-ImageMagick has different behaviors for transparent images, in some OS the library can detect opacity in others no, if the version is v6 the meta channel has not detected and in Ubuntu the transparent tiff needs to remove the composition channel to preserve the transparency.
-MAGICK_CONFIG allow to set specific behavior for every installation.
+ImageMagick has different behaviors for transparent images; in some OS the library can detect opacity, in others not. `MAGICK_CONFIG` allows setting specific behavior for every installation.
 
-```php
-define('MAGICK_PATH', [
-    'remove_layer_0'    => false, // default false
-    'is_opaque'         => null // default null
-]);
+```ini
+MAGICK_CONFIG={"remove_layer_0":false,"is_opaque":null}
 ```
 
 **remove_layer0** `bool`, by default `false`
 
-Use to control the composition layer of transparent tiff, when isset as true Dédalo will remove the layer 0 (flat composition layer)
+Use to control the composition layer of transparent tiff; when set as true Dédalo will remove the layer 0 before processing the image.
 
-* Ubuntu : false | don't remove the composition layer, because it delete the color layers (the image disappear)
-* Rocky, RedHat, MacOS: true | remove the composition layer, because it has the flat image with background color and it doesn't preserve the transparency
+**is_opaque** `bool|null`, by default `null`
 
-**is_opaque** `bool` || `null`, by default `null`
+Use to force opacity detection across different OS / ImageMagick versions.
 
-Used to set a fixed value for transparent images, if isset this parameter will remove the transparent pixel check and force to process the images as transparent or opaque.
-If isset as `false`, all images will be processed as transparent, if isset as `true`, all images will be processed as opaque.
-
-* Rocky, RedHat | set it as `false` | active the property, it set that all images are transparent (is_opaque = false), Rocky version of ImageMagick can not detect if the image has transparent pixels
-* Ubuntu, MacOs | set it as `null` | remove the property, it will check if the image has a transparent pixels correctly.
-* To remove the preservation of the transparency set it as `true`
+> Default: `{"remove_layer_0":false,"is_opaque":null}`
 
 ---
 
-#### Defining Color profiles paths
+#### Defining color profiles path
 
-./dedalo/config/config.php
+COLOR_PROFILES_PATH `string` *computed*
 
-COLOR_PROFILES_PATH `string`
-
-This parameter defines the path to image profiles that will apply to the images when they are processed.
-
-Dédalo use the icc (international color consortium) standard for the color profiles.
-
-```php
-define('COLOR_PROFILES_PATH', DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
-```
+This parameter defines the path to ICC color profiles. Computed from `DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/'`. Not configurable via `.env`.
 
 ---
 
-#### Defining image web directory
-
-./dedalo/config/config.php
+#### Defining image web folder
 
 DEDALO_IMAGE_WEB_FOLDER `string`
 
-This parameter defines path for the images uploaded by the user in the component_html, this component can layout html freely and it use a image system outside the resource definition for all images managed by Dédalo. Those images don't use the locator definition and can not re-used by the rest of the system. Normally those images are aesthetic images for institutional explanations and are not part of the catalog.
+This parameter defines the web quality subfolder for images.
 
-```php
-define('DEDALO_IMAGE_WEB_FOLDER', '/web');
+```ini
+DEDALO_IMAGE_WEB_FOLDER=/web
 ```
+
+> Default: `/web`
 
 ---
 
@@ -2057,227 +1445,151 @@ define('DEDALO_IMAGE_WEB_FOLDER', '/web');
 
 #### Defining pdf directory
 
-./dedalo/config/config.php
+DEDALO_PDF_FOLDER `string`
 
-DEDALO_PDF_FOLDER `int`
+This parameter defines the main directory for PDF files.
 
-This parameter defines the main directory for the pdf files.
-
-```php
-define('DEDALO_PDF_FOLDER', '/pdf');
+```ini
+DEDALO_PDF_FOLDER=/pdf
 ```
+
+> Default: `/pdf`
 
 ---
 
 #### Defining pdf extension (type of file)
 
-./dedalo/config/config.php
-
 DEDALO_PDF_EXTENSION `string`
 
-This parameter defines the standard file type of pdf files.
+This parameter defines the standard file type of PDF files.
 
-```php
-define('DEDALO_PDF_EXTENSION', 'pdf');
+```ini
+DEDALO_PDF_EXTENSION=pdf
 ```
+
+> Default: `pdf`
 
 ---
 
 #### Defining pdf extensions supported
 
-./dedalo/config/config.php
+DEDALO_PDF_EXTENSIONS_SUPPORTED `array` (JSON)
 
-DEDALO_PDF_EXTENSIONS_SUPPORTED `serialized array`
+This parameter defines the standard file types admitted for PDF files.
 
-This parameter define the standards file type admitted for the pdf files. Dédalo will use this parameter to identify the file format of the original files uploaded by the users.
-
-```php
-define('DEDALO_PDF_EXTENSIONS_SUPPORTED', serialize(['pdf']));
+```ini
+DEDALO_PDF_EXTENSIONS_SUPPORTED=["pdf","doc","pages","odt","ods","rtf","ppt","pages"]
 ```
+
+> Default: `["pdf","doc","pages","odt","ods","rtf","ppt","pages"]`
 
 ---
 
-#### Defining pdf alternative extensions to process the original file into different images
+#### Defining alternative pdf extensions
 
-./dedalo/config/config.php
+DEDALO_PDF_ALTERNATIVE_EXTENSIONS `array` (JSON)
 
-DEDALO_PDF_ALTERNATIVE_EXTENSIONS `array` *optional*
+This parameter defines alternative file types for PDF files.
 
-This parameter defines the standards file types that will use to create versions of the uploaded PDF files.
-
-Dédalo will use this parameter to create alternative versions of the PDF uploaded, the files formats that will use to convert from the original files uploaded by the users. This parameter is optional and can be used to add other image formats. When the parameter is active, every PDF uploaded will be processed for every quality with every alternative format defines.
-
-```php
-define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['avif','jpg']);
+```ini
+DEDALO_PDF_ALTERNATIVE_EXTENSIONS=["jpg"]
 ```
 
-Example:
-
-Original file: **my_pfd.pdf**
-
-Alternatives formats defined in DEDALO_PDF_ALTERNATIVE_EXTENSIONS: **\['avif','jpg'\]**
-
-Result:
-
-In original quality directory:
-> ../media/pdf/original/rsc37_rsc176_1.pdf
->
-> ../media/pdf/original/rsc37_rsc176_1.avif
->
-> ../media/pdf/original/rsc37_rsc176_1.jpg
-
-In web quality directory:
-> ../media/pdf/web/rsc37_rsc176_1.pdf
->
-> ../media/pdf/web/rsc37_rsc176_1.avif
->
-> ../media/pdf/web/rsc37_rsc176_1.jpg
-
-!!! warning "About increment time when uploaded PDF files render alternative versions"
-    Alternative versions of PDF increase the rendering process time of uploaded PDF files by ~5 times.
-    The render PDF use a high density dpi and reduce the final image to get a good anti-aliased image.
-    This process increases the waiting time until the PDF is displayed and usable.
+> Default: `["jpg"]`
 
 ---
 
 #### Defining pdf mime type
 
-./dedalo/config/config.php
-
 DEDALO_PDF_MIME_TYPE `string`
 
-This parameter defines the standard mime type for the pdf files.
+This parameter defines the standard mime type for PDF files.
 
-This parameter will use to create the correct http header for the standard define in DEDALO_PDF_EXTENSION.
-
-```php
-define('DEDALO_PDF_MIME_TYPE', 'application/pdf');
+```ini
+DEDALO_PDF_MIME_TYPE=application/pdf
 ```
+
+> Default: `application/pdf`
 
 ---
 
 #### Defining pdf type
 
-./dedalo/config/config.php
-
 DEDALO_PDF_TYPE `string`
 
-This parameter define the standard type for the pdf files.
+This parameter defines the standard type for PDF files.
 
-This parameter will use to compress the original pdf format to the codec defined by this parameter.
-
-```php
-define('DEDALO_PDF_TYPE', 'pdf');
+```ini
+DEDALO_PDF_TYPE=pdf
 ```
+
+> Default: `pdf`
 
 ---
 
 #### Defining pdf quality for original files
 
-./dedalo/config/config.php
-
 DEDALO_PDF_QUALITY_ORIGINAL `string`
 
-This parameter defines the quality original for the pdf files.
+This parameter defines the quality original for PDF files.
 
-This parameter will use to identify the uploaded files to with specific quality. Dédalo admit hight quality for PDF files (print formats or preservation formats), and it define this files as "original" quality. Dédalo will compress to web standard format, unify all different qualities and will store the original file without touch. In some cases, if the institution has a protocol for manage PDF files, is possible to use a specific quality for the files that users can upload. By default Dédalo do not limit the original format to be uploaded using a "original" quality denomination.
-
-```php
-define('DEDALO_PDF_QUALITY_ORIGINAL', 'original');
+```ini
+DEDALO_PDF_QUALITY_ORIGINAL=original
 ```
+
+> Default: `original`
 
 ---
 
-#### Defining pdf quality default
-
-./dedalo/config/config.php
+#### Defining pdf default quality
 
 DEDALO_PDF_QUALITY_DEFAULT `string`
 
-This parameter defines the default quality used for the PDF files.
+This parameter defines the default quality used for PDF files.
 
-This parameter will use to compress all pdf files to specific format, unifying the quality used by all sections. By default Dédalo will compress images to jpg for web quality.
-
-```php
-define('DEDALO_PDF_QUALITY_DEFAULT', 'web');
+```ini
+DEDALO_PDF_QUALITY_DEFAULT=web
 ```
+
+> Default: `web`
 
 ---
 
-#### Defining pdf quality for processed files
+#### Defining pdf qualities definition
 
-./dedalo/config/config.php
+DEDALO_PDF_AR_QUALITY `array` (JSON)
 
-DEDALO_PDF_AR_QUALITY `array`
+This parameter defines the different qualities for PDF files.
 
-This parameter defines the different qualities that can be used for compress the PDF files.
-
-This parameter will use to compress PDF files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
-
-```php
-define('DEDALO_PDF_AR_QUALITY', [DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]);
+```ini
+DEDALO_PDF_AR_QUALITY=["original","web"]
 ```
 
----
-
-#### Defining pdf rendered for html sections
-
-./dedalo/config/config.php
-
-DEDALO_PDF_RENDERER `string` *deprecated*
-
-Path of daemon pdf generator from html.
-
-Used to create a PDF print version of the section. The print version was used in v5 but is not active into v6.
-This parameter defines the path to the library, usually [wkhtmltopdf](https://wkhtmltopdf.org), to be used for process the html pages to pdf format, this library will be used to create a print version of the records.
-
-```php
-define('DEDALO_PDF_RENDERER', '/usr/bin/wkhtmltopdf');
-```
-
----
-
-#### Defining pdf thumb default
-
-./dedalo/config/config.php
-
-DEDALO_PDF_THUMB_DEFAULT `string` *deprecated; use DEDALO_QUALITY_THUMB*
-
-This parameter defines the thumb quality definition that can be used for compress the pdf files.
-
-This parameter will use to compress and store image files used in lists. The compression will use the original file and will compress the first page with smaller version or thumb version of the pdf. Only will be compress the first pdf page to thumb quality.
-
-```php
-define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
-```
+> Default: `["original","web"]`
 
 ---
 
 #### Pdf automatic transcription engine
 
-./dedalo/config/config.php
+PDF_AUTOMATIC_TRANSCRIPTION_ENGINE `string` *computed*
 
-PDF_AUTOMATIC_TRANSCRIPTION_ENGINE `string`
+This parameter defines the path to the library, usually [xpdf](http://www.xpdfreader.com/download.html) (pdftotext), used to extract text from PDF files. Computed from `DEDALO_BINARY_BASE_PATH . '/pdftotext'`. Not configurable via `.env`.
 
-This parameter defines the path to the library, usually [xpdf](http://www.xpdfreader.com/download.html) (pdftotext), to be used for process the pdf to extract the information, this library will be used get the text fo the pdf files and store in the component_text_area. The text will be use to search inside the pdf information.
-
-```php
-define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE', '/usr/bin/pdftotext');
-```
+> Set `DEDALO_BINARY_BASE_PATH` in `.env` to change the binary location.
 
 ---
 
 #### Pdf OCR process
 
-./dedalo/config/config.php
-
 PDF_OCR_ENGINE `string`
 
-This parameter defines the path to the library, usually [ocrmypdf](https://ocrmypdf.readthedocs.io/en/latest/index.html) that will be used for OCR processing of the pdf uploaded files. Optical Character Recognition or OCR is a technology that converts images of typed or handwritten text, such as in a scanned document, into computer text that can be selected, searched and copied.
+This parameter defines the path to the library, usually [ocrmypdf](https://ocrmypdf.readthedocs.io/en/latest/index.html), used for OCR processing of uploaded PDF files.
 
-```php
-define('PDF_OCR_ENGINE', '/usr/bin/ocrmypdf');
+```ini
+PDF_OCR_ENGINE=/usr/bin/ocrmypdf
 ```
+
+> Default: not set
 
 ---
 
@@ -2285,177 +1597,141 @@ define('PDF_OCR_ENGINE', '/usr/bin/ocrmypdf');
 
 #### Defining main 3d directory
 
-./dedalo/config/config.php
-
 DEDALO_3D_FOLDER `string`
 
-This parameter define the main directory for the 3d files.
+This parameter defines the main directory for 3D files.
 
-```php
-define('DEDALO_3D_FOLDER', '/3d');
+```ini
+DEDALO_3D_FOLDER=/3d
 ```
+
+> Default: `/3d`
 
 ---
 
 #### Defining 3d extension (type of file)
 
-./dedalo/config/config.php
-
 DEDALO_3D_EXTENSION `string`
 
-This parameter defines the standard file type of 3d files.
+This parameter defines the standard file type of 3D files.
 
-By default Dédalo use glb standard definition for the 3d files. All other formats will be exported to this standard.
+By default Dédalo uses glb standard definition for 3D files. All other formats will be exported to this standard.
 
-```php
-define('DEDALO_3D_EXTENSION', 'glb');
+```ini
+DEDALO_3D_EXTENSION=glb
 ```
+
+> Default: `glb`
 
 ---
 
 #### Defining 3d extensions supported
 
-./dedalo/config/config.php
+DEDALO_3D_EXTENSIONS_SUPPORTED `array` (JSON)
 
-DEDALO_3D_EXTENSIONS_SUPPORTED `array`
+This parameter defines the standard file types admitted for 3D files.
 
-This parameter defines the standards file type admitted for the 3d files.
-
-Dédalo will use this parameter to identify the file format of the original files uploaded by the users before transform it to the standard defined in the DEDALO_3D_EXTENSION parameter.
-
-```php
-define('DEDALO_3D_EXTENSIONS_SUPPORTED', ['glb']);
+```ini
+DEDALO_3D_EXTENSIONS_SUPPORTED=["glb","gltf","obj","fbx","dae","zip"]
 ```
 
-> Note: in current version only glb files are available, in future versions other format files will be supported: as 'gltf', 'obj', 'fbx', 'dae', 'zip'
+> Default: `["glb","gltf","obj","fbx","dae","zip"]`
 
 ---
 
 #### Defining 3d mime type
 
-./dedalo/config/config.php
-
 DEDALO_3D_MIME_TYPE `string`
 
-This parameter defines the standard mime type for the 3d files.
+This parameter defines the standard mime type for 3D files.
 
-This parameter will use to create the correct http header for the standard define in DEDALO_3D_EXTENSION.
-
-```php
-define('DEDALO_3D_MIME_TYPE', 'model/gltf-binary');
+```ini
+DEDALO_3D_MIME_TYPE=model/gltf-binary
 ```
+
+> Default: `model/gltf-binary`
 
 ---
 
 #### Defining 3d quality for original files
 
-./dedalo/config/config.php
-
 DEDALO_3D_QUALITY_ORIGINAL `string`
 
-This parameter defines the quality original for the 3d files.
+This parameter defines the quality original for 3D files.
 
-This parameter will use to identify the uploaded files to with specific quality. Dédalo admit lots of different formats from different sources and qualities, and it define this files as "original" quality. Dédalo will transform all supported formats to web standard format, unify all different qualities and codecs, and will store the original file without touch. In some cases, if the institution has a protocol for manage image files, is possible to use one specific quality for the files that users can upload. By default Dédalo do not limit the original format to be uploaded using a "original" quality denomination.
-
-```php
-define('DEDALO_3D_QUALITY_ORIGINAL', 'original');
+```ini
+DEDALO_3D_QUALITY_ORIGINAL=original
 ```
+
+> Default: `original`
 
 ---
 
 #### Defining 3d quality for processed files
 
-./dedalo/config/config.php
-
 DEDALO_3D_QUALITY_DEFAULT `string`
 
-This parameter defines the default quality used for the 3d files.
+This parameter defines the default quality used for 3D files.
 
-This parameter will use to transform all 3d files to specific format, unifying the quality used by all sections. By default Dédalo use glb format for web quality.
-
-```php
-define('DEDALO_3D_QUALITY_DEFAULT', 'web');
+```ini
+DEDALO_3D_QUALITY_DEFAULT=web
 ```
+
+> Default: `web`
 
 ---
 
 #### Defining 3d thumb default
 
-./dedalo/config/config.php
-
 DEDALO_3D_THUMB_DEFAULT `string`
 
-This parameter defines the thumb quality definition that can be used for compress the 3d files.
+This parameter defines the thumb quality for 3D files.
 
-This parameter will use to render, compress and store image files used in lists. The compression will use the 3d original file and will render it and compress at 720x404 jpg version or thumb version of the image.
-
-```php
-define('DEDALO_3D_THUMB_DEFAULT', 'thumb');
+```ini
+DEDALO_3D_THUMB_DEFAULT=thumb
 ```
+
+> Default: `thumb`
 
 ---
 
 #### Defining 3d qualities definition
 
-./dedalo/config/config.php
+DEDALO_3D_AR_QUALITY `array` (JSON)
 
-DEDALO_3D_AR_QUALITY `array`
+This parameter defines the different qualities for 3D files.
 
-This parameter defines the different qualities that can be used for store 3d files.
-
-This parameter will use to store files to specific quality.
-
-```php
-define('DEDALO_3D_AR_QUALITY', [DEDALO_3D_QUALITY_ORIGINAL, DEDALO_3D_QUALITY_DEFAULT]);
+```ini
+DEDALO_3D_AR_QUALITY=["original","web"]
 ```
+
+> Default: `["original","web"]`
 
 ---
 
 #### Defining 3d gltfpack converter
 
-./dedalo/config/config.php
+DEDALO_3D_GLTFPACK_PATH `string` *computed*
 
-DEDALO_3D_GLTFPACK_PATH `string`
+This parameter defines the gltfpack library path. Computed from `DEDALO_BINARY_BASE_PATH . '/gltfpack'`. Not configurable via `.env`.
 
-This parameter defines the gltfpack library path.
-
-This parameter will use to locate the gltfpack library, it will use to compress and store 3d files from gltf format to glb.
-
-```php
-define('DEDALO_3D_GLTFPACK_PATH', '/usr/local/bin/gltfpack');
-```
+> Set `DEDALO_BINARY_BASE_PATH` in `.env` to change the binary location.
 
 ---
 
 #### Defining 3d FBX2glTF converter
 
-./dedalo/config/config.php
+DEDALO_3D_FBX2GLTF_PATH `string` *computed*
 
-DEDALO_3D_FBX2GLTF_PATH `string`
-
-This parameter defines the FBX2glTF library path.
-
-This parameter will use to locate the FBX2glTF library, it will use to compress and store 3d files from fbx format to glb.
-
-```php
-define('DEDALO_3D_FBX2GLTF_PATH', '/usr/local/bin/FBX2glTF');
-```
+This parameter defines the FBX2glTF library path. Computed from `DEDALO_BINARY_BASE_PATH . '/FBX2glTF'`. Not configurable via `.env`.
 
 ---
 
 #### Defining 3d COLLADA2GLTF converter
 
-./dedalo/config/config.php
+DEDALO_3D_COLLADA2GLTF_PATH `string` *computed*
 
-DEDALO_3D_COLLADA2GLTF_PATH `string`
-
-This parameter defines the COLLADA2GLTF library path.
-
-This parameter will use to locate the COLLADA2GLTF library, it will use to compress and store 3d files from Collada format to glb.
-
-```php
-define('DEDALO_3D_COLLADA2GLTF_PATH', '/usr/local/bin/COLLADA2GLTF-bin');
-```
+This parameter defines the COLLADA2GLTF library path. Computed from `DEDALO_BINARY_BASE_PATH . '/COLLADA2GLTF-bin'`. Not configurable via `.env`.
 
 ---
 
@@ -2463,938 +1739,524 @@ define('DEDALO_3D_COLLADA2GLTF_PATH', '/usr/local/bin/COLLADA2GLTF-bin');
 
 #### Defining main directory for svg files
 
-./dedalo/config/config.php
-
 DEDALO_SVG_FOLDER `string`
 
-This parameter defines the main directory for the svg files.
+This parameter defines the main directory for SVG files.
 
-```php
-define('DEDALO_SVG_FOLDER', '/svg');
+```ini
+DEDALO_SVG_FOLDER=/svg
 ```
+
+> Default: `/svg`
 
 ---
 
 #### Defining svg extension (type of file)
 
-./dedalo/config/config.php
-
 DEDALO_SVG_EXTENSION `string`
 
-This parameter defines the standard file type of svg files.
+This parameter defines the standard file type of SVG files.
 
-```php
-define('DEDALO_SVG_EXTENSION', 'svg');
+```ini
+DEDALO_SVG_EXTENSION=svg
 ```
+
+> Default: `svg`
 
 ---
 
 #### Defining svg extensions supported
 
-./dedalo/config/config.php
+DEDALO_SVG_EXTENSIONS_SUPPORTED `array` (JSON)
 
-DEDALO_SVG_EXTENSIONS_SUPPORTED `array`
+This parameter defines the standard file types admitted for SVG files.
 
-This parameter defines the standards file type admitted for the svg files.
-
-Dédalo will use this parameter to identify the file format of the original files uploaded by the users.
-
-```php
-define('DEDALO_SVG_EXTENSIONS_SUPPORTED', ['svg']);
+```ini
+DEDALO_SVG_EXTENSIONS_SUPPORTED=["svg"]
 ```
+
+> Default: `["svg"]`
 
 ---
 
 #### Defining svg mime type
 
-./dedalo/config/config.php
-
 DEDALO_SVG_MIME_TYPE `string`
 
-This parameter defines the standard mime type for the svg files.
+This parameter defines the standard mime type for SVG files.
 
-This parameter will use to create the correct svg header for the standard define in DEDALO_SVG_EXTENSION.
-
-```php
-define('DEDALO_SVG_MIME_TYPE', 'image/svg+xml');
+```ini
+DEDALO_SVG_MIME_TYPE=image/svg+xml
 ```
+
+> Default: `image/svg+xml`
 
 ---
 
 #### Defining svg quality for original files
 
-./dedalo/config/config.php
-
 DEDALO_SVG_QUALITY_ORIGINAL `string`
 
-This parameter defines the quality original for the svg files.
+This parameter defines the quality original for SVG files.
 
-This parameter will use to identify the uploaded files to with specific quality. Dédalo admit different editing vector formats, and it define this files as "original" quality, Dédalo will store the original file without touch. In some cases, if the institution has a protocol for manage SVG files, is possible to use a specific quality for the files that users can upload. By default Dédalo do not limit the original format to be uploaded using a "original" quality denomination.
-
-```php
-define('DEDALO_SVG_QUALITY_ORIGINAL', 'original');
+```ini
+DEDALO_SVG_QUALITY_ORIGINAL=original
 ```
+
+> Default: `original`
 
 ---
 
-#### Defining svg quality for processed files
-
-./dedalo/config/config.php
+#### Defining svg default quality
 
 DEDALO_SVG_QUALITY_DEFAULT `string`
 
-This parameter defines the default quality used for the SVG files.
+This parameter defines the default quality for SVG files.
 
-This parameter will use to store all svg files, unifying the quality used by all sections. By default Dédalo will use a flat svg for web quality.
-
-```php
-define('DEDALO_SVG_QUALITY_DEFAULT', 'web');
+```ini
+DEDALO_SVG_QUALITY_DEFAULT=web
 ```
 
+> Default: `web`
+
 ---
 
-#### Defining svg qualities for processed files
+#### Defining svg qualities definition
 
-./dedalo/config/config.php
+DEDALO_SVG_AR_QUALITY `array` (JSON)
 
-DEDALO_SVG_AR_QUALITY `array`
+This parameter defines the different qualities for SVG files.
 
-This parameter defines the different qualities that can be used transformed svg files.
-
-This parameter will use to store different svg version files to specific quality.
-
-```php
-define('DEDALO_SVG_AR_QUALITY', [DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_DEFAULT]);
+```ini
+DEDALO_SVG_AR_QUALITY=["original","web"]
 ```
 
----
-
-### HTML
+> Default: `["original","web"]`
 
 ---
 
-#### Defining directory for html files
+### HTML files
 
-./dedalo/config/config.php
+#### Defining html files directory
 
 DEDALO_HTML_FILES_FOLDER `string`
 
-This parameter defines the directory for the html files.
+This parameter defines the main directory for HTML files.
 
-```php
-define('DEDALO_HTML_FILES_FOLDER', '/html_files');
+```ini
+DEDALO_HTML_FILES_FOLDER=/html_files
 ```
+
+> Default: `/html_files`
 
 ---
 
-#### Defining html files extension (type of file)
-
-./dedalo/config/config.php
+#### Defining html files extension
 
 DEDALO_HTML_FILES_EXTENSION `string`
 
-This parameter defines the standard file type of pdf files.
+This parameter defines the standard file type of HTML files.
 
-```php
-define('DEDALO_HTML_FILES_EXTENSION', 'html');
+```ini
+DEDALO_HTML_FILES_EXTENSION=html
 ```
+
+> Default: `html`
 
 ---
 
-### Defining upload temporary directory
+## Upload variables
 
-./dedalo/config/config.php
+### Defining upload service chunk files
 
-DEDALO_UPLOAD_TMP_DIR `string`
+DEDALO_UPLOAD_SERVICE_CHUNK_FILES `int`
 
-This parameter defines the temporary directory used for upload files.
+This parameter defines the number of chunk files used by the upload service.
 
-This parameter will be used to store different chunks or files previous to be processed.
-
-```php
-define('DEDALO_UPLOAD_TMP_DIR', DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
+```ini
+DEDALO_UPLOAD_SERVICE_CHUNK_FILES=4
 ```
+
+> Default: `4`
 
 ---
 
-### Defining upload temporary url
+### Defining upload service max concurrent
 
-./dedalo/config/config.php
+DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT `int`
 
-DEDALO_UPLOAD_TMP_URL `string`
+This parameter defines the maximum number of concurrent uploads.
 
-This parameter defines the temporary URL used for upload files.
-
-This parameter will be used by tools and upload services to get the thumbnails of processed files previously to be upload.
-
-```php
-define('DEDALO_UPLOAD_TMP_URL', DEDALO_MEDIA_URL  . '/upload/service_upload/tmp');
+```ini
+DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT=50
 ```
+
+> Default: `50`
 
 ---
 
-### Defining upload split files in chunks
+## Geo + entity menu + misc
 
-./dedalo/config/config.php
-
-DEDALO_UPLOAD_SERVICE_CHUNK_FILES `int || false`
-
-Defines the size at which files are split into chunks for upload.
-
-This parameter allows you to break large files into smaller, more manageable pieces for reliable resumable uploads.
-
-This parameter will use to split files at specific size into small chunks or blobs. The value is expressed in MB, but do not use the MB string, the value is a integer, for ex: 5 will be interpreted as 5MB.
-
-When an integer is provided, any file larger than this value will be automatically segmented into chunks. The value is interpreted as Megabytes (MB). For example, chunkSize: 95 will create chunks of approximately 95MB each.
-
-When set to `false`, the chunking feature is disabled, and all files are uploaded in a single request.
-
-```php
-define('DEDALO_UPLOAD_SERVICE_CHUNK_FILES', false); // 5 = 5MB
-```
-
----
-
-### Defining the maximum number of simultaneous connections for uploading chunked files
-
-./dedalo/config/config.php
-
-DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT `int || false`
-
-Defines the maximum number of simultaneous HTTP requests that can be open to the server when uploading a file in chunks.
-
-When set to `false`, the internal limit is removed. The browser will then determine the maximum number of concurrent requests, which is typically based on the HTTP protocol version (see below).
-When set to a positive integer (e.g., 50), the client will enforce that limit, ensuring no more than the specified number of chunks are uploaded simultaneously.
-
-Protocol Dependencies:
-This parameter is highly dependent on the HTTP protocol version in use:
-
-For HTTP/1.1: The standard limits the number of simultaneous requests per domain to a very low number (typically 4-6). In this environment, setting a value higher than ~6 is ineffective and will be ignored by the browser. For optimal performance with HTTP/1.1, it is recommended to set this value to 4.
-For HTTP/2: The protocol supports multiplexing, allowing many requests to be sent concurrently over a single connection. While this allows for a higher limit, setting the value too high can overwhelm the server with simultaneous processing load. This parameter should be used to throttle the requests to a level your server can handle reliably.
-
-Purpose:
-This setting allows you to optimize upload performance and ensure server stability by defining a number of concurrent chunk upload requests that your server can process efficiently.
-
-```php
-define('DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT', 50);
-```
-
-### Georeferencing variables
-
-Dédalo use a georeference system based in leaflet library to create maps for the heritage.
-
----
-
-#### Defining georeference provider
-
-./dedalo/config/config.php
+### Defining geo provider
 
 DEDALO_GEO_PROVIDER `string`
 
-This parameter defines the tile maps provider to be used.
+This parameter defines the geo provider to be used.
 
-The param can be change the provider to specific configurations, for ex, if you want to use the ancient roman map and the actual OSM map you can use the "NUMISDATA" provider that include both maps. values supported: OSM | ARCGIS | GOOGLE | VARIOUS | ARCGIS | NUMISDATA
-
-```php
-define('DEDALO_GEO_PROVIDER', 'VARIOUS');
+```ini
+DEDALO_GEO_PROVIDER=VARIOUS
 ```
 
-## Menu variables
-
-### Defining media area tipo for specific entity model
-
-./dedalo/config/config.php
-
-DEDALO_ENTITY_MEDIA_AREA_TIPO `string`
-
-This parameter defines the media area tipo that will removed from the menu. This area is the ontology definition for media files for the entity.
-
-By default Dédalo do not use this parameter because the default installation use the standard media area for all media definitions. This parameter can be used by the entities to define his media model in the ontology for ex: mupreva260.
-
-```php
-define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
-```
+> Default: `VARIOUS`
 
 ---
 
-### Defining skip tipos from menu
+### Defining entity media area tipo
 
-./dedalo/config/config.php
+DEDALO_ENTITY_MEDIA_AREA_TIPO `string`
 
-DEDALO_ENTITY_MENU_SKIP_TIPOS `array`
+This parameter defines the tipo of the entity's media area.
 
-This parameter defines the tipos to be skipped from the menu.
-
-The ontology sometimes define long hierarchy to access to the sections, and could be convenient to remove some tipo from the menu to access more quickly to the sections. Add the tipo to the array to be removed it from menu.
-
-```php
-define('DEDALO_ENTITY_MENU_SKIP_TIPOS', []);
+```ini
+DEDALO_ENTITY_MEDIA_AREA_TIPO=
 ```
+
+> Default: empty
+
+---
+
+### Defining entity menu skip tipos
+
+DEDALO_ENTITY_MENU_SKIP_TIPOS `array` (JSON)
+
+This parameter defines tipos to be skipped in the entity menu.
+
+```ini
+DEDALO_ENTITY_MENU_SKIP_TIPOS=["oh98","dd349","dd355","numisdata1","tch188"]
+```
+
+> Default: `[]`
 
 ---
 
 ### Defining test install
 
-./dedalo/config/config.php
-
 DEDALO_TEST_INSTALL `bool`
 
-This parameter defines if Dédalo will test if was installed.
+This parameter defines if Dédalo will test if it was installed.
 
-On true, check if the root user has set password at login page, if not set Dédalo will init the install process.
+On true, checks if the root user has set password at login page; if not set, Dédalo will init the install process.
 
-```php
-define('DEDALO_TEST_INSTALL', true);
+```ini
+DEDALO_TEST_INSTALL=true
 ```
+
+> Default: `true`
 
 ---
-
-
-## Tools variables
-
-### Defining path of the export tool files directory
-
-./dedalo/config/config.php
-
-DEDALO_TOOL_EXPORT_FOLDER_PATH `string`
-
-This parameter defines the path of the directory to be used by the tool export to save the data in the different formats such as .csv .html, etc
-
-```php
-define('DEDALO_TOOL_EXPORT_FOLDER_PATH', DEDALO_MEDIA_PATH . '/export/files');
-```
-
----
-
-### Defining uri of the export tool files directory
-
-./dedalo/config/config.php
-
-DEDALO_TOOL_EXPORT_FOLDER_URL `string`
-
-This parameter defines the uri of the directory to get the files exported by the export tool, it will be used by the client to get the different formats such as .csv .html, etc
-
-```php
-define('DEDALO_TOOL_EXPORT_FOLDER_URL' , DEDALO_MEDIA_BASE_URL . '/export/files');
-```
-
----
-
-### Defining path of the import tool files directory
-
-./dedalo/config/config.php
-
-DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH `string`
-
-This parameter defines the path to the directory to be used by the import tool. This path will be read to get the csv files inside it.
-
-```php
-define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH', DEDALO_MEDIA_BASE_PATH . '/import/files');
-```
-
-## Security variables
 
 ### Defining lock components
 
-./dedalo/config/config.php
-
 DEDALO_LOCK_COMPONENTS `bool`
 
-This parameter defines if Dédalo will lock / unlock components to avoid replacement data when more than one user edit the same component or Dédalo do not manage the user edition unlocking all components. By default Dédalo do not manage the editions (option false).
+This parameter defines if Dédalo will lock/unlock components to avoid replacement data when more than one user edits the same component.
 
-```php
-define('DEDALO_LOCK_COMPONENTS', false);
+```ini
+DEDALO_LOCK_COMPONENTS=true
 ```
+
+> Default: `true`
 
 ---
 
 ### Defining protect media files for external access
 
-./dedalo/config/config.php
-
 DEDALO_PROTECT_MEDIA_FILES `bool`
 
-This parameter defines if the directory of the media files (av, images, pdf, ...) will be protected and controlled for undesired/external access.
+This parameter defines if the directory of media files will be protected and controlled for undesired/external access.
 
-By default Dédalo do not close the access for media files because it can access by external web pages (false option), when the option is active (true) the direct access to media files are avoided and only is possible access by the internal system or the publication API .
+By default Dédalo does not close the access for media files because they can be accessed by external web pages (false). When active (true), direct access to media files is avoided and only possible via the internal system or the publication API.
 
-```php
-define('DEDALO_PROTECT_MEDIA_FILES', false);
+```ini
+DEDALO_PROTECT_MEDIA_FILES=false
 ```
+
+> Default: `false`
 
 ---
 
 ### Defining lock components notifications
 
-./dedalo/config/config.php
-
 DEDALO_NOTIFICATIONS `bool`
 
-This parameter defines if Dédalo will notify to the user than other users are editing the same field in the same section when the user try to edit the field.
+This parameter defines if Dédalo will notify the user that other users are editing the same field in the same section.
 
-```php
-define('DEDALO_NOTIFICATIONS', false);
+```ini
+DEDALO_NOTIFICATIONS=false
 ```
 
----
-
-### Defining node js library path
-
-./dedalo/config/config.php *deprecated*
-
-DEDALO_NODEJS `string`
-
-This parameter defines the path of the node js library in the server. Dédalo uses node to create and manage the notification system.
-
-```php
-define('DEDALO_NODEJS', '/usr/bin/node');
-```
-
----
-
-### Defining node js pm2 library path
-
-./dedalo/config/config.php *deprecated*
-
-DEDALO_NODEJS_PM2 `string`
-
-This parameter defines the path of the node js pm2 library in the server.
-
-```php
-define('DEDALO_NODEJS_PM2', '/usr/bin/pm2');
-```
+> Default: `false`
 
 ---
 
 ### Defining exclude components
 
-./dedalo/config/config.php
-
-DEDALO_AR_EXCLUDE_COMPONENTS `array`
+DEDALO_AR_EXCLUDE_COMPONENTS `array` (JSON)
 
 This parameter defines components to be excluded.
 
-Some installations need to block the global access to specific components, use this param to remove the components adding the tipo into the array.
+Some installations need to block global access to specific components; use this param to remove components by adding the tipo into the array.
 
-```php
-define('DEDALO_AR_EXCLUDE_COMPONENTS', []);
+```ini
+DEDALO_AR_EXCLUDE_COMPONENTS=[]
 ```
+
+> Default: `[]`
 
 ---
 
 ### Defining filter user records by id
 
-./dedalo/config/config.php
-
 DEDALO_FILTER_USER_RECORDS_BY_ID `bool`
 
-This parameter defines if the sections (records) will be filtered by the section is defined in user preferences.
+This parameter defines if sections (records) will be filtered by the section defined in user preferences.
 
-This filter is applied on every search and list made by the specific user.
-
-```php
-define('DEDALO_FILTER_USER_RECORDS_BY_ID', false);
+```ini
+DEDALO_FILTER_USER_RECORDS_BY_ID=false
 ```
+
+> Default: `false`
 
 ---
 
 ### Geonames account
 
-./dedalo/config/config.php
-
 GEONAMES_ACCOUNT_USERNAME `string`
 
-This parameter defines the username of the geonames account. It use by develop and sync toponomy data to build countries hierarchies.
+This parameter defines the username of the Geonames account. It is used by development and sync toponymy data to build country hierarchies.
 
-```php
-define('GEONAMES_ACCOUNT_USERNAME', 'my_account');
+```ini
+GEONAMES_ACCOUNT_USERNAME=my_account
 ```
+
+> Default: not set
 
 ---
 
 ### Encryption mode
 
-./dedalo/config/config.php
-
 ENCRYPTION_MODE `string`
 
-This parameter define the encryption engine used to manage the global security system. By default Dédalo uses openSSL to encrypt data.
+This parameter defines the encryption engine used to manage the global security system. By default Dédalo uses openSSL to encrypt data.
 
-```php
-define('ENCRYPTION_MODE', 'openssl');
+```ini
+ENCRYPTION_MODE=openssl
 ```
+
+> Default: `openssl`
+
+---
 
 ## Diffusion variables
 
-Diffusion defines the configuration variables to be used by Dédalo to process data and resolve relations to get the version of data defined to be stored into MySQL
+Diffusion defines the configuration variables used by Dédalo to process data and resolve relations to get the version of data defined to be stored into MySQL.
 
 ---
 
 ### Diffusion domain
 
-./dedalo/config/config.php
-
 DEDALO_DIFFUSION_DOMAIN `string`
 
-This parameter would be set with the diffusion domain of our project publication, diffusion domain is the target domain or the part of diffusion ontology that will be used to get the tables and fields and the relation components in the back-end.
+This parameter sets the diffusion domain of the project publication. Diffusion domain is the target domain or the part of diffusion ontology that will be used to get the tables, fields, and relation components in the back-end.
 
-The definition for diffusion domain in the configuration file can set only one ontology diffusion_domain for our installation, it can have different diffusion groups or diffusion elements with different databases and tables.
-
-```php
-define('DEDALO_DIFFUSION_DOMAIN', 'default')
+```ini
+DEDALO_DIFFUSION_DOMAIN=default
 ```
 
-> Any other 'section_tipo' are accepted and it can be other standard tlds used in the ontology like oh1 or ich1. If your institution has a specific tld space in the ontology, you can use your own tld into the DEDALO_DIFFUSION_DOMAIN.
+> Any other 'section_tipo' are accepted and it can be other standard TLDs used in the ontology like oh1 or ich1. If your institution has a specific TLD space in the ontology, you can use your own TLD into the `DEDALO_DIFFUSION_DOMAIN`.
+
+> Default: `default`
 
 ---
 
 ### Defining resolution levels; going to the deeper information
 
-./dedalo/config/config.php
-
 DEDALO_DIFFUSION_RESOLVE_LEVELS `int`
 
-This parameter set the number of resolution levels we would like to accomplish. By default, its value is set to '2'.
+This parameter sets the number of resolution levels. By default, its value is set to '2'.
 
-```php
-define('DEDALO_DIFFUSION_RESOLVE_LEVELS', 2)
+The number defines the maximum resolution levels of linked information that Dédalo will resolve in the publication process. Dédalo works with related data connected by locators; every link is a level of information. The parameter limits the quantity of linked data to be resolved in the linked data tree.
+
+Ex: If you have an Oral History interview (level 0) with 1 linked image (level 1) and this image has a person linked as author (level 2) and this author has 1 linked toponym for the birthplace (level 3). For publishing all linked information you need 3 levels of resolution.
+
+If you increase the value of this parameter, the time needed by Dédalo to resolve the linked data will increase in exponential progression.
+
+```ini
+DEDALO_DIFFUSION_RESOLVE_LEVELS=2
 ```
 
-> Every other positive, numerical value will be accepted.
-
-The number defines the maximum resolution levels of linked information that Dédalo will resolved in the publication process. Dédalo work with related data connected by locators, every link is a level of information, the parameter limit the quantity of linked data will be resolve in the linked data tree.
-
-Ex: If you have an Oral History interview (level 0) with 1 linked image (level 1) and this image has a person linked as author (level 2) and these author 1 linked toponym for the birthplace (level 3). For publishing all linked information will be necessary 3 levels of resolution:
-
-If you increase the value of this parameter, the time needed by Dédalo to resolve the linked data in the publication process will also increase in exponential progression.
+> Default: `2`
 
 ---
 
 ### Defining media paths resolution
 
-./dedalo/config/config.php
+DEDALO_PUBLICATION_CLEAN_URL `bool`
 
-DEDALO_PUBLICATION_CLEAN_URL `boolean`
+Defines how the paths of the media files will be treated in diffusion processing.
 
-Defines how the paths of the media files will be treated in diffusion processing. Default value: false.
+On true, the paths will be simplified to the file name like `rsc37_rsc176_34.pdf` from `/dedalo/media/pdf/web/0/rsc37_rsc176_34.pdf`.
 
-```php
-define('DEDALO_PUBLICATION_CLEAN_URL', false)
+```ini
+DEDALO_PUBLICATION_CLEAN_URL=false
 ```
 
-> If isset as true, the path will be lost and you will have to reconstruct it later, on the web page.
-
-On true, the paths will be simplified to the file name like 'rsc37_rsc176_34.pdf' from '/dedalo/media/pdf/web/0/rsc37_rsc176_34.pdf'.
+> Default: `false`
 
 ---
 
 ### Defining diffusion custom
 
-./dedalo/config/config.php
-
-DIFFUSION_CUSTOM `string || bool` *optional*
+DIFFUSION_CUSTOM `bool` *optional*
 
 Optional custom diffusion class file path.
 
-It is able to create additional diffusion class file with static methods to be called from ontology diffusion elements beyond the Dédalo defined diffusion methods.
+It is possible to create additional diffusion class files with static methods to be called from ontology diffusion elements beyond the Dédalo defined diffusion methods.
 
-Default is false.
-
-It is possible to specify a class file for ex: `/extras/my_entity/diffusion/class.diffusion_my_entity.php`
-
-```php
-define('DIFFUSION_CUSTOM', DEDALO_LIB_BASE_PATH . false);
+```ini
+DIFFUSION_CUSTOM=false
 ```
+
+> Default: `false`
 
 ---
 
-### Setting the API web user code for multiple DDBB
+### Defining API web user code multiple
 
-./dedalo/config/config.php
+API_WEB_USER_CODE_MULTIPLE `array` (JSON)
 
-API_WEB_USER_CODE_MULTIPLE `array`
+This parameter defines the API web user codes for accessing the publication API.
 
-The access to the public API is controlled with a code that we can define and store into the parameter. This code can be public or private, if you want open access to your public data you can share this code.
-
-The array specifies two key params; 'db_name' and 'code'. The combination of these two params get the access to the data.
-
-```php
-define('API_WEB_USER_CODE_MULTIPLE' , [
-        [
-            'db_name' => 'dedalo_public',
-            'code'  => 'My_code_for_public_API'
-        ]
-    ]);
+```ini
+API_WEB_USER_CODE_MULTIPLE=[{"db_name":"","code":"","api_ui":null}]
 ```
 
-> In a simple installation with only one DDBB you can use the param 'API_WEB_USER_CODE'.
+> Default: `[{"db_name":"","code":"","api_ui":null}]`
 
 ---
 
-### Defining diffusion exclude elements
+### Defining exclude diffusion elements
 
-./dedalo/config/config.php
+EXCLUDE_DIFFUSION_ELEMENTS `array` (JSON)
 
-EXCLUDE_DIFFUSION_ELEMENTS `array` *optional*
+This parameter defines diffusion elements to be excluded.
 
-Optional diffusion exclude elements (ontology diffusion element tipos like `Dédalo public web` [dd1099](https://dedalo.dev/ontology/dd1099)).
-
-It is used for hiding some diffusion elements from the tool_diffusion to prevent users from being confused by databases that are not usable, such as PRE environments to remove the PRO diffusion element.
-
-`tool_diffusion` uses this value as a fallback when the tool configuration does not provide a value for this exclusion list. This means that if there is a value in the tool configuration it will be used, if not, it will try to use the value of the variable in the config.php file if it exists and is valid.
-
-Default is undefined.
-
-```php
-define('EXCLUDE_DIFFUSION_ELEMENTS', []);
+```ini
+EXCLUDE_DIFFUSION_ELEMENTS=[]
 ```
 
-Introduced in version 6.6.2
-
-## Maintenance variables
-
-Maintenance configure the variables that Dédalo will use to update the ontology, the code or check if the system is working properly.
+> Default: `[]`
 
 ---
 
-### Sync ontology from master server
+## Structure / ontology / code servers
 
-./dedalo/config/config.php
+### Defining structure from server
 
 STRUCTURE_FROM_SERVER `bool`
 
-This parameter defines if the installation will be updated his ontology using the master server versions.
+This parameter defines if the ontology structure will be loaded from a remote server.
 
-```php
-define('STRUCTURE_FROM_SERVER', true);
+```ini
+STRUCTURE_FROM_SERVER=true
 ```
+
+> Default: `true`
 
 ---
 
-### Ontology master server code
-
-./dedalo/config/config.php
-
-STRUCTURE_SERVER_CODE `string` *deprecated in v6.3; use ONTOLOGY_SERVERS*
-
-This parameter defines the valid code to be send to get access to the master server.
-
-```php
-define('STRUCTURE_SERVER_CODE', 'ZdUs7asdasdhRsw4!sp');
-```
-
----
-
-### Ontology master server uri
-
-./dedalo/config/config.php
-
-STRUCTURE_SERVER_URL `string` *deprecated in v6.3; use ONTOLOGY_SERVERS*
-
-This parameter defines the uri to the master server
-
-```php
-define('STRUCTURE_SERVER_URL', 'https://master.dedalo.dev/dedalo/lib/dedalo/extras/str_manager/');
-```
-
----
-
-### Is an ontology master server
-
-./dedalo/config/config.php
+### Defining is an ontology server
 
 IS_AN_ONTOLOGY_SERVER `bool`
 
-It defines if the installation server can provide his ontology files to other Dédalo servers.
+This parameter defines if the server can provide ontology data to other Dédalo servers.
 
-```php
-define('IS_AN_ONTOLOGY_SERVER',         false);
+```ini
+IS_AN_ONTOLOGY_SERVER=false
 ```
+
+> Default: `false`
 
 ---
 
-### defining the  ontology master server code
+### Defining ontology servers
 
-./dedalo/config/config.php
+ONTOLOGY_SERVERS `array` (JSON)
 
-ONTOLOGY_SERVER_CODE `string`
+This parameter defines ontology server providers. By default the official Dédalo ontology server is defined.
 
-It  defines the valid code for clients to validate to get ontology files.
-
-```php
-define('ONTOLOGY_SERVER_CODE',          'x3a0B4Y020Eg9w');
+```ini
+ONTOLOGY_SERVERS=[{"name":"Official Dédalo Ontology server","url":"https://master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
 ```
 
-This parameter needs to be included as `code` in [ONTOLOGY_SERVERS](#ontology-servers) defintion in every authorized client.
-
----
-
-### Ontology servers
-
-./dedalo/config/config.php
-
-ONTOLOGY_SERVERS `array of objects`
-
-This parameter defines the ontology master servers to get the ontology updates. The servers could be:
-
-- the official dedalo.dev server
-- an external server for local Ontologies (private Ontologies of entities.)
-- local server, the current installation
-
-Configuration for the official dedalo.dev server:
-
-```php
-define('ONTOLOGY_SERVERS',  [
-    [
-        'name'  => 'Official Dédalo Ontology server',
-        'url'   => 'https://master.dedalo.dev/dedalo/install/import/ontology/',
-        'code'  => 'x3a0B4Y020Eg9w'
-    ]
-]);
-```
-
-It will get the tld from [DEDALO_PREFIX_TIPOS](#defining-prefix-tipos) definition.
-
-**optional** : Configuration for external server to provide local ontologies
-
-```php
-define('ONTOLOGY_SERVERS',  [
-    [
-        'name'  => 'Optional external Dédalo Ontology server',
-        'url'   => 'https://my_ontology_server_domain.org/dedalo/install/import/ontology/',
-        'code'  => 'my_super_code'
-        'tld'   => ['mytld','anothertld','localtld']
-    ]
-]);
-```
-
-Introduced in version 6.4.
-Local ontologies can be provided by other installations in parallel adding new servers to this constant.
-Every Dédalo server can provide his own ontologies.
-
-Introduced in version 6.6.2
-`tld` property for define specific TLD in array of strings format.
-When unofficial servers is defined to provide local ontology definitions,
-`tld` property defines witch tld's will be provided by the master external server.
-
----
-
-### Ontology download directory
-
-./dedalo/config/config.php
-
-ONTOLOGY_DOWNLOAD_DIR `string` *deprecated in v6.3; use ONTOLOGY_SERVERS*
-
-This parameter defines the directory to download the ontology files in the server.
-
-```php
-define('ONTOLOGY_DOWNLOAD_DIR', DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
-```
-
----
-
-### Ontology input/output, export/import or download directory
-
-./dedalo/config/config.php
-
-ONTOLOGY_DATA_IO_DIR `string`
-
-This parameter defines the directory to input/ouput the ontology files in the server. Onology files can be created by master ontology servers or download it from external provided as official master Dédalo server.
-
-```php
-define('ONTOLOGY_DATA_IO_DIR',          DEDALO_INSTALL_PATH . '/import/ontology');
-```
-
----
-
-### Ontology input/output, export/import or download directory
-
-./dedalo/config/config.php
-
-ONTOLOGY_DATA_IO_URL `string`
-
-This parameter defines the uri of the directory to input/ouput the ontology files in the server. Onology files can be created by master ontology servers or download it from external provided as official master Dédalo server.
-
-```php
-define('ONTOLOGY_DATA_IO_URL',          DEDALO_INSTALL_URL . '/import/ontology');
-```
-
----
-
-### Ontology in json format download directory
-
-./dedalo/config/config.php
-
-STRUCTURE_DOWNLOAD_JSON_FILE `string` *deprecated in v6.3; use ONTOLOGY_SERVERS*
-
-This parameter defines the directory on the server to download the ontology files in json format.
-
-```php
-define('STRUCTURE_DOWNLOAD_JSON_FILE', DEDALO_BACKUP_PATH_ONTOLOGY);
-```
-
----
-
-### Proxy server
-
-./dedalo/config/config.php
-
-SERVER_PROXY `string`
-
-This parameter defines if the access to the master server will need to be accessed through a proxy server.
-
-```php
-define('SERVER_PROXY', '192.0.0.1:3128');
-```
-
-> In the string could add user and password as proxy needs. Ex: my_user:my_pw@192.0.0.1:3128
+> Default: official Dédalo ontology server
 
 ---
 
 ### Defining is a code server
 
-./dedalo/config/config.php
-
 IS_A_CODE_SERVER `bool`
 
-This parameter defines id the server can provide code to other Dédalo servers. By default any Dédalo server doesn't provide code, but is possible create a mirror server to provide code versions.
-To enable process is necessary activate: `DEDALO_CODE_FILES_DIR` and `DEDALO_CODE_FILES_URL`
+This parameter defines if the server can provide code to other Dédalo servers.
 
-```php
-define('IS_A_CODE_SERVER', false);
+```ini
+IS_A_CODE_SERVER=false
 ```
+
+> Default: `false`
 
 ---
 
-### Defining is a code server directory
+### Defining code servers
 
-./dedalo/config/config.php
+CODE_SERVERS `array` (JSON)
 
-DEDALO_CODE_FILES_DIR `string`
+This parameter defines code server providers.
 
-This parameter defines the path to the code files in the server. Default location in root path /code.
-Code files are organize in version directories with major / minor / version_dedalo.zip as:
-`./dedalo/code/6/6.4/6.4.1_dedalo.zip`
-
-```php
-define('DEDALO_CODE_FILES_DIR', DEDALO_ROOT_PATH . '/code');
+```ini
+CODE_SERVERS=[{"name":"Official Dédalo code server","url":"https://master.dedalo.dev/dedalo/core/api/v1/json/","code":"x3a0B4Y020Eg9w"}]
 ```
+
+> Default: official Dédalo code server
 
 ---
 
-### Defining is a code server url
-
-./dedalo/config/config.php
-
-DEDALO_CODE_FILES_URL `string`
-
-This parameter defines the URL to the code files in the server. Default location in root URL /code.
-Code files are organize in version directories with major / minor / version_dedalo.zip as:
-`https://master.dedalo.dev/dedalo/code/6/6.4/6.4.1_dedalo.zip`
-
-```php
-define('DEDALO_CODE_FILES_URL', DEDALO_ROOT_WEB . '/code');
-```
-
----
-
-### Defining is a code server build version from development git
-
-./dedalo/config/config.php
-
-DEDALO_CODE_SERVER_GIT_DIR `string`
-
-This parameter defines the path to git directory in the server. It use to build the version with for specific version.
-GIT directory is a valid git server than can provide the build version.
-This parameter is not necessary if the server will be only a mirror from official files.
-
-
-```php
-define('DEDALO_CODE_SERVER_GIT_DIR', '/my_dedalo_git_directory');
-```
-
----
-
-### Defining server code provider
-
-./dedalo/config/config.php
-
-CODE_SERVERS `array`
-
-This parameter defines code servers provides. By default the server defines the official Dédalo code server.
-But is possible includes other mirror servers adding new definition into the array.
-
-This parameter substitute the `DEDALO_SOURCE_VERSION_URL` in version >6.4
-
-
-```php
-define('CODE_SERVERS', [
-    [
-        'name'  => 'Official Dédalo code server',
-        'url'   => 'https://master.dedalo.dev/core/api/v1/json/',
-        'code'  => 'x3a0B4Y020Eg9w'
-    ]
-]);
-```
-
----
-
-### Defining source version uri
-
-./dedalo/config/config.php
-
-DEDALO_SOURCE_VERSION_URL `string` *deprecated in v6.3; use CODE_SERVERS instead*
-
-This parameter defines the master server uri repository to get the new Dédalo code for update / upgrade.
-
-```php
-define('DEDALO_SOURCE_VERSION_URL', 'https://github.com/renderpci/dedalo/archive/refs/heads/master.zip');
-```
-
->It's possible get the Dédalo code from different sources. If you want specify the version to download you can access to the specific version in GitHub and use it.
->
->Examples:
->for the version 5.8.2
-><https://github.com/renderpci/dedalo/archive/refs/tags/V5.8.2.zip>
->
->for the version 5.7.77
-><https://github.com/renderpci/dedalo/archive/refs/tags/v5.7.77.zip>
->
->Or you can use the developer version
-><https://github.com/renderpci/dedalo/archive/refs/heads/developer.zip>
-
----
-
-### Defining source versions local directory to save the new code
-
-./dedalo/config/config.php
+### Defining source version local directory
 
 DEDALO_SOURCE_VERSION_LOCAL_DIR `string`
 
-This parameter defines the path to the local directory to save the new code downloaded from the master server repository.
+This parameter defines the path to the local directory to save new code downloaded from the master server repository.
 
-```php
-define('DEDALO_SOURCE_VERSION_LOCAL_DIR', '/tmp/'.DEDALO_ENTITY);
+```ini
+DEDALO_SOURCE_VERSION_LOCAL_DIR=/tmp/
 ```
+
+> Default: computed from `DEDALO_BACKUP_PATH_ONTOLOGY`
 
 ---
 
+## IP API
+
 ### Defining ip api service
 
-./dedalo/config/config.php
-
-IP_API `array`
+IP_API `object` (JSON)
 
 Defines the service to be used in section Activity to resolve source Country from IP address.
 
-By default Dédalo use the ipapi.co service with free unsigned account. Is possible to configure other services with your specific account. If you want to use a http instead https you can use `ip-api.com`
+By default Dédalo uses the ipapi.co service with free unsigned account. It is possible to configure other services with your specific account.
 
-```php
-define('IP_API', [
-    'url'           => 'https://api.country.is/$ip', // https capable as free
-    'href'          => 'https://ip-api.com/#$ip', // page to jump on click
-    'country_code'  => 'country' // / property where look country code for flag
-]);
+```ini
+IP_API={"url":"https://api.country.is/$ip","href":"https://ip-api.com/#$ip","country_code":"country"}
 ```
 
 !!! note "IP variable"
@@ -3404,35 +2266,158 @@ define('IP_API', [
 
 ---
 
-### Defining maintenance mode
+## CORS + MCP + maintenance
 
-./dedalo/config/config.php
+### Defining CORS configuration
+
+DEDALO_CORS `object` (JSON)
+
+Defines the Cross-Origin Resource Sharing configuration.
+
+```ini
+DEDALO_CORS={"allowed_origins":["*"],"allowed_methods":["GET","POST","PUT","OPTIONS"],"allowed_headers":["Content-Type","Content-Range","Authorization","X-Requested-With"],"max_age":86400}
+```
+
+> Default: permissive (all origins)
+
+---
+
+### Defining MCP proxy URL
+
+DEDALO_MCP_PROXY_URL `string`
+
+Defines the URL for the MCP (Model Context Protocol) proxy server.
+
+```ini
+DEDALO_MCP_PROXY_URL=http://localhost:3001
+```
+
+> Default: not set
+
+---
+
+### Defining maintenance mode
 
 DEDALO_MAINTENANCE_MODE `bool`
 
 This parameter defines whether the maintenance mode is active or not.
 
-By default the maintenance mode is inactive (false). When it is active (true) only root user can login and all logged users will be forced to leave the session, the debugger will be activated and the logger will be changed from WARNING to DEBUG mode.
+By default the maintenance mode is inactive (false). When active (true), only root user can login and all logged users will be forced to leave the session, the debugger will be activated, and the logger will be changed from WARNING to DEBUG mode.
 
-```php
-define('DEDALO_MAINTENANCE_MODE', false);
+```ini
+DEDALO_MAINTENANCE_MODE=false
 ```
+
+> Default: `false`
 
 ---
 
-### Notice to active users
+## Mailer config
 
-./dedalo/config/config.php
+### Mailer configuration
+
+All mailer settings are optional. Configure to enable email notifications.
+
+```ini
+MAILER_HOST=smtp.example.com
+MAILER_USERNAME=user@example.com
+MAILER_PASSWORD=secret
+MAILER_SMTP_SECURE=tls
+MAILER_PORT=587
+MAILER_FROM=noreply@example.com
+MAILER_REPLY=noreply@example.com
+MAILER_SMTP_AUTH=true
+```
+
+> All mailer settings default to not set.
+
+---
+
+## Optional configs (JSON-encoded)
+
+### SAML configuration
+
+SAML_CONFIG `object` (JSON) *optional*
+
+```ini
+SAML_CONFIG={"active":true,"url":"/dedalo/core/login/saml","logout_url":"https://idp.example.com/saml","debug":true,"code":"urn:oid:1.3.6.1.4.1.5923.1.1.1.6","idp_ip":["127.0.0.1"]}
+```
+
+> Default: not set
+
+---
+
+### Socrata configuration
+
+SOCRATA_CONFIG `object` (JSON) *optional*
+
+```ini
+SOCRATA_CONFIG={"app_token":"","socrata_user":"","socrata_password":"","server":"","mode":"pre"}
+```
+
+> Default: not set
+
+---
+
+### Init cookie auth addons
+
+INIT_COOKIE_AUTH_ADDONS `array` (JSON) *optional*
+
+```ini
+INIT_COOKIE_AUTH_ADDONS=[]
+```
+
+> Default: `[]`
+
+---
+
+### Config default file path
+
+CONFIG_DEFAULT_FILE_PATH `string` *optional*
+
+```ini
+CONFIG_DEFAULT_FILE_PATH=
+```
+
+> Default: not set
+
+---
+
+### Export hierarchy path
+
+EXPORT_HIERARCHY_PATH `string` *optional*
+
+```ini
+EXPORT_HIERARCHY_PATH=
+```
+
+> Default: not set
+
+---
+
+### Server proxy
+
+SERVER_PROXY `string`
+
+This parameter defines if the access to the master server needs to go through a proxy server.
+
+```ini
+SERVER_PROXY=192.0.0.1:3128
+```
+
+> In the string you can add user and password as proxy needs. Ex: `my_user:my_pw@192.0.0.1:3128`
+
+> Default: not set
+
+---
+
+## Notice to active users
 
 DEDALO_NOTIFICATION `array`
 
-This parameter activates a message for all registered users, it could be used to advertise if the server will need to shut down or other actions that users should know about. This parameter admin two different properties, the message and the and the class_name.
-
-```php
-notice_to_active_users(array('msg'=>'Please leave the session', 'class_name'=>"warning"));
-```
+This parameter activates a message for all registered users. It could be used to advertise if the server will need to shut down or other actions that users should know about.
 
 Properties:
 
-* `msg`. The text to be print into the user interface
+* `msg`. The text to be printed into the user interface
 * `class_name`. CSS class to be applied to the msg

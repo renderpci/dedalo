@@ -255,25 +255,78 @@ Then, install Dédalo manually, commands are for Ubuntu 24.04 (only as reference
     You can configure Apache and PHP as you wish following your needs. If you need help you can follow [this guide](apache_configuration.md) as reference.
 
 6.  Dédalo Configuration.
-    Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/index.md) documentation for further explanation on this.
 
-    1. Rename `sample.config.php` to `config.php`.
+    Dédalo v7 uses a unified `.env` file for all configuration. The old `config.php` and `config_db.php` files are no longer used — all values are set in `/private/.env`. The `config/bootstrap.php` file is scaffolding with safe defaults; **do not edit it** to change values.
 
-        ```shell
-        cd [...]/dedalo/config/
-        mv sample.config.php config.php
-        ```
+    Please read the [configuration](../config/index.md) documentation for further explanation.
 
-    2. Modify `[...]/dedalo/config/config.php` as you need. Usually, this involves the `DEDALO_ENTITY` string and the OS library paths. Read the [configuration](../config/config.md) documentation.
-
-    3. Rename `sample.config_db.php` to `config_db.php`.
+    1. Create the `/private/` directory (sibling of the `dedalo/` directory).
 
         ```shell
-        cd [...]/dedalo/config/
-        mv sample.config_db.php config_db.php
+        mkdir -p /path/to/private
         ```
 
-    4. Modify `[...]/dedalo/config/config_db.php` with your database configuration. Read the database [configuration](../config/config_db.md) documentation.
+        The directory structure should be:
+
+        ```
+        /path/to/
+        ├── httpdocs/
+        │   └── dedalo/          # Dédalo codebase
+        │       └── config/
+        │           ├── bootstrap.php   # scaffolding (do not edit)
+        │           ├── config_areas.php
+        │           └── config_core.php
+        ├── private/              # configuration + secrets (outside httpdocs)
+        │   └── .env              # your configuration
+        ├── backups/
+        ├── cache/
+        └── sessions/
+        ```
+
+    2. Create the `.env` file from the sample.
+
+        ```shell
+        cp /path/to/private/sample.env /path/to/private/.env
+        ```
+
+        Or, if you have legacy `config.php` and `config_db.php` files, Dédalo will auto-migrate them on first boot. You can also run the migrator manually:
+
+        ```shell
+        php /path/to/dedalo/core/base/migrate_config.php --dry-run    # preview
+        php /path/to/dedalo/core/base/migrate_config.php              # migrate
+        ```
+
+    3. Edit `/private/.env` with your installation values. The minimum required settings are:
+
+        ```ini
+        # Entity (do NOT change after installation)
+        DEDALO_ENTITY=my_entity
+        DEDALO_ENTITY_LABEL=My Institution Name
+
+        # Secrets
+        DEDALO_SALT_STRING=My_secure_Salt_String!_2046
+
+        # PostgreSQL (work system)
+        DEDALO_HOSTNAME_CONN=/var/run/postgresql
+        DEDALO_DATABASE_CONN=dedalo_my_entity
+        DEDALO_USERNAME_CONN=dedalo_user
+        DEDALO_PASSWORD_CONN=My_super_Secret_pw
+        DEDALO_INFORMATION=Dédalo for Cultural Heritage of my entity, version 7
+
+        # MySQL/MariaDB (diffusion / publication)
+        MYSQL_DEDALO_HOSTNAME_CONN=localhost
+        MYSQL_DEDALO_USERNAME_CONN=root
+        MYSQL_DEDALO_PASSWORD_CONN=
+        MYSQL_DEDALO_DATABASE_CONN=web_my_entity
+        ```
+
+        Read the [configuration reference](../config/config.md) and [database configuration](../config/config_db.md) for all available settings.
+
+    4. Set file permissions (the `.env` file contains secrets).
+
+        ```shell
+        chmod 600 /private/.env
+        ```
 
     5. Rename `sample.config_core.php` to `config_core.php`.
 
@@ -282,14 +335,14 @@ Then, install Dédalo manually, commands are for Ubuntu 24.04 (only as reference
         mv sample.config_core.php config_core.php
         ```
 
-    6. Rename `[...]/dedalo/config/sample.config_areas.php` to `[...]/dedalo/config/config_areas.php`.
+    6. Rename `sample.config_areas.php` to `config_areas.php`.
 
         ```shell
         cd [...]/dedalo/config/
         mv sample.config_areas.php config_areas.php
         ```
 
-    7. Modify `[...]/dedalo/config/config_areas.php` with your areas configuration. Read the areas [configuration](../config/config_areas.md) documentation.
+    7. Modify `config_areas.php` with your areas configuration. Read the areas [configuration](../config/config_areas.md) documentation.
 
 6. Open Dédalo in the browser.
 7. Follow the instructions.

@@ -37,7 +37,7 @@
 	define('PREVENT_SESSION_LOCK', true);
 
 // config. Starts a new session with forced id from command arguments
-	include dirname(__FILE__, 3) . '/config/config.php';
+	include dirname(__FILE__, 3) . '/config/bootstrap.php';
 
 // execute ANALYZE
 	try {

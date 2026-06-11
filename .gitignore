@@ -21,6 +21,10 @@ config/*
 !config/version.inc
 !/core/ontology/v5/config/config_ontology.php
 
+# env files (secrets — loaded from /private/ outside repo)
+.env
+.env.*
+
 # various
 acc
 _acc
