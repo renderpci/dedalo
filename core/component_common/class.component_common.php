@@ -433,10 +433,10 @@ abstract class component_common extends common {
 						}else{
 							$ar_modified_section_tipos = section::get_metadata_definition_tipos();
 							// add publication info
-								$ar_modified_section_tipos[] = diffusion::$publication_first_tipo;
-								$ar_modified_section_tipos[] = diffusion::$publication_last_tipo;
-								$ar_modified_section_tipos[] = diffusion::$publication_first_user_tipo;
-								$ar_modified_section_tipos[] = diffusion::$publication_last_user_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_first_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_last_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_first_user_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_last_user_tipo;
 							if (true===in_array($tipo, $ar_modified_section_tipos)) {
 								# skip verification
 							}else{
