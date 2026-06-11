@@ -4,7 +4,7 @@
 * @deprecated 6.0.0 Use dd_diffusion_api and diffusion_utils instead.
 * Manages publication on XML format
 */
-class diffusion_xml extends diffusion  {
+class diffusion_xml {
 
 
 
@@ -38,10 +38,193 @@ class diffusion_xml extends diffusion  {
 		// lang. Language for XML diffusion will be English always. This value diverges from
 		// historical 'lg-spa' (DEDALO_STRUCTURE_LANG) and is adopted from now for new diffusion code revisions.
 		$this->lang = 'lg-eng';
-
-
-		parent::__construct($options);
 	}//end __construct
+
+
+
+	/**
+	 * GET_DIFFUSION_OBJECTS
+	 * Collect all diffusion objects from diffusion_element_tipo
+	 * (Moved from legacy class diffusion, removed in v7)
+	 * @param string $root_tipo
+	 * @param bool $include_self=false
+	 * @param string $lang = DEDALO_STRUCTURE_LANG
+	 * @return array $diffusion_objects
+	 */
+	public function get_diffusion_objects(string $root_tipo, bool $include_self=false, string $lang=DEDALO_STRUCTURE_LANG): array {
+
+		// diffusion_objects_cache. Cache for performance on multiple records
+		static $diffusion_objects_cache;
+		if (isset($diffusion_objects_cache)) {
+			return $diffusion_objects_cache;
+		}
+
+		$diffusion_objects = [];
+
+		// Get recursively all children and iterate it
+		$children_objects = self::get_children_objects($root_tipo);
+
+		// include_self optional
+		if ($include_self) {
+			// add the self root tipo at beginning of the array
+			array_unshift($children_objects, (object)[
+				'tipo' => $root_tipo,
+				'parent' => null
+			]);
+		}
+
+		foreach ($children_objects as $child_object) {
+
+			$child_tipo = $child_object->tipo;
+			$parent =  $child_object->parent;
+
+			$ontology_node = ontology_node::get_instance($child_tipo);
+			$properties = $ontology_node->get_properties();
+			// all properties value is a request_config_object
+			$request_config_object = $properties ?? null;
+			$process = $request_config_object->process ?? null;
+
+			// column / node name (from the Ontology term value)
+			$name = ontology_node::get_term_by_tipo($child_tipo, $lang);
+
+			// create a new diffusion_object
+			$diffusion_object = new diffusion_object((object)[
+				'tipo'		=> $child_tipo,
+				'parent'	=> $parent,
+				'name'		=> $name,
+				'model'		=> ontology_node::get_model_by_tipo($child_tipo,true),
+				'process'	=> $process
+			]);
+
+			// add
+			$diffusion_objects[] = $diffusion_object;
+		}
+
+		// cache
+		$diffusion_objects_cache = $diffusion_objects;
+
+
+		return $diffusion_objects;
+	}//end get_diffusion_objects
+
+
+
+	/**
+	 * GET_CHILDREN_OBJECTS
+	 * Resolve ontology children nodes recursively using
+	 * properties->children definition as fallback.
+	 * Using objects as {parent:a,tipo:b}
+	 * (Moved from legacy class diffusion, removed in v7)
+	 * @param string $tipo
+	 * @return array $children_objects
+	 */
+	protected static function get_children_objects( string $tipo ) : array {
+
+		$children_objects = [];
+
+		// Ontology typical resolution
+		$children = ontology_node::get_ar_children($tipo);
+		if (empty($children)) {
+			// fallback to properties definition
+			$ontology_node = ontology_node::get_instance($tipo);
+			$properties = $ontology_node->get_properties();
+			$children = $properties->children ?? [];
+		}
+
+		if (!empty($children)) {
+
+			// Create the pairs object tipo/parent
+			$children_objects = array_map(function ($el) use ($tipo) {
+				return (object)[
+					'tipo' => $el,
+					'parent' => $tipo
+				];
+			}, $children);
+
+			// recursion
+			foreach ($children as $child) {
+				$children_objects = array_merge(
+					$children_objects,
+					self::get_children_objects($child)
+				);
+			}
+		}
+
+
+		return $children_objects;
+	} //end get_children_objects
+
+
+
+	/**
+	 * LOAD_PARSERS
+	 * Include the classes of the parsers based on the diffusion_element
+	 * properties definitions.
+	 * (Moved from legacy class diffusion, removed in v7)
+	 * @param string $diffusion_element_tipo
+	 * @return bool
+	 */
+	public function load_parsers( string $diffusion_element_tipo ) : bool {
+
+		static $parsers_loaded;
+		if (isset($parsers_loaded) && $parsers_loaded===true) {
+			return true;
+		}
+
+		$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
+		$properties		= $ontology_node->get_properties();
+		$parser			= $properties->diffusion->parser ?? null;
+		// SEC-051: `$parser` comes from ontology properties which are
+		// writable by admin/developer users. Concatenating the value onto
+		// DEDALO_ROOT_PATH without realpath containment would let a
+		// privileged user point parsers at arbitrary files (e.g. a hostile
+		// `.php` uploaded elsewhere). Confine each include to the known
+		// roots where legitimate parsers live.
+		$allowed_roots = array_filter([
+			defined('DEDALO_CORE_PATH')      ? realpath(DEDALO_CORE_PATH)      : null,
+			defined('DEDALO_DIFFUSION_PATH') ? realpath(DEDALO_DIFFUSION_PATH) : null,
+			defined('DEDALO_TOOLS_PATH')     ? realpath(DEDALO_TOOLS_PATH)     : null,
+		]);
+		if ($parser) {
+			foreach ((array)$parser as $file_path) {
+				try {
+					$full_path = DEDALO_ROOT_PATH . trim($file_path, " .");
+					$real = realpath($full_path);
+					$inside = false;
+					if ($real !== false) {
+						foreach ($allowed_roots as $root) {
+							if (strncmp($real, $root . DIRECTORY_SEPARATOR, strlen($root) + 1) === 0) {
+								$inside = true;
+								break;
+							}
+						}
+					}
+					if (!$inside) {
+						debug_log(__METHOD__
+							. ' SEC-051 refused parser outside allowed roots.' . PHP_EOL
+							. ' file_path: ' . to_string($file_path) . PHP_EOL
+							. ' full_path: ' . to_string($full_path)
+							, logger::ERROR
+						);
+						continue;
+					}
+					include_once $real;
+				} catch (Exception $e) {
+					debug_log(__METHOD__
+						. ' Ignored parser class file. File do not exists' . PHP_EOL
+						. ' file_path: ' . to_string($file_path) . PHP_EOL
+						. $e->getMessage()
+						, logger::ERROR
+					);
+				}
+			}
+		}
+
+		$parsers_loaded = true;
+
+
+		return true;
+	}//end load_parsers
 
 
 
