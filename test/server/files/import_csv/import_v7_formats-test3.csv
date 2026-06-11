@@ -1,2 +1,2 @@
 section_id;test52;test145_dmy;test208;test100;test18;test89
-1;"{""dedalo_data"":[{""value"":""WrappedHello""}]}";26/10/2023;a@b.com | c@d.com;"39.4625, -0.3762, 15";"{""config"":{""a"":1}}";lg-spa
+1;"{""dedalo_data"":[{""value"":""WrappedHello"",""lang"":""lg-eng"",""id"":1},{""value"":""HolaEnvuelto"",""lang"":""lg-spa"",""id"":1}]}";26/10/2023;a@b.com | c@d.com;"39.4625, -0.3762, 15";"{""config"":{""a"":1}}";lg-spa

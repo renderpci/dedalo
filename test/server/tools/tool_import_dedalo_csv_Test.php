@@ -650,10 +650,15 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 				return $component->get_data();
 			};
 
-			// input_text. Wrapped dedalo_data value
+			// input_text. Wrapped dedalo_data flat multi-language array (raw export shape):
+			// every item carries its own lang and all the translations must be preserved
 			$data = $get_component_data('component_input_text', 'test52', DEDALO_DATA_LANG);
-			$values = array_map(function($item){ return $item->value; }, $data ?? []);
-			$this->assertContains('WrappedHello', $values, 'expected wrapped value saved');
+			$lang_values = [];
+			foreach ($data ?? [] as $item) {
+				$lang_values[$item->lang ?? ''][] = $item->value;
+			}
+			$this->assertContains('WrappedHello', $lang_values['lg-eng'] ?? [], 'expected lg-eng wrapped value saved');
+			$this->assertContains('HolaEnvuelto', $lang_values['lg-spa'] ?? [], 'expected lg-spa wrapped value saved');
 
 			// date. Flat dmy string
 			$data = $get_component_data('component_date', 'test145', DEDALO_DATA_NOLAN);

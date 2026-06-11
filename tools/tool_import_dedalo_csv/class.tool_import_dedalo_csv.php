@@ -910,31 +910,68 @@ class tool_import_dedalo_csv extends tool_common {
 										$conformed_value	= $conformed_value->{$nolan};
 									}
 
-								// set dato
-									if ( is_object($conformed_value) &&
-										 property_exists($conformed_value, 'dataframe') &&
-										!property_exists($conformed_value, 'dato')) {
-										// Element without dato. Only the dataframe is saved
-									}else{
-
-										// Removed direct call
-										// unified with API calls with changed_data_item object
-											// $component->set_data( $conformed_value );
-											// $component->observable_dato = ($component->model === 'component_relation_related')
-											// 	? $component->get_data_with_references()
-											// 	: $conformed_value;
-
-										// added changed data object to set data and observable data
-										$changed_data_item = new stdClass();
-											$changed_data_item->action = 'set_data';
-											$changed_data_item->value = $conformed_value;
-
-										$component->update_data_value($changed_data_item);
+								// multi-language flat array check
+								// v7 stored data is a flat array where every item carries its own lang, as:
+								// [{"value":"hello","lang":"lg-eng"},{"value":"hola","lang":"lg-spa"}]
+								// it is the format produced by the raw export (dedalo_data wrapper).
+								// When the items define langs, group them by lang and save each lang
+								// separately with set_data_lang() to preserve all the translations
+								// (the default set_data action would force every item to the import lang)
+									$ar_lang_groups = [];
+									if ($translate===true && is_array($conformed_value)) {
+										$has_lang_items = false;
+										foreach ($conformed_value as $current_item) {
+											$item_lang = (is_object($current_item) && !empty($current_item->lang))
+												? $current_item->lang
+												: $component->get_lang();
+											if (is_object($current_item) && !empty($current_item->lang)) {
+												$has_lang_items = true;
+											}
+											$ar_lang_groups[$item_lang][] = $current_item;
+										}
+										if ($has_lang_items===false) {
+											// no lang defined in any item: use the default set dato path
+											$ar_lang_groups = [];
+										}
 									}
 
-								// Save of course
-								// Note that $component->save_to_database = false, avoid real save.
+								if (!empty($ar_lang_groups)) {
+
+									// set every lang group separately
+									foreach ($ar_lang_groups as $group_lang => $group_items) {
+										$component->set_data_lang($group_items, $group_lang);
+									}
+
+									// Save of course
 									$component->import_save();
+								}else{
+
+									// set dato
+										if ( is_object($conformed_value) &&
+											 property_exists($conformed_value, 'dataframe') &&
+											!property_exists($conformed_value, 'dato')) {
+											// Element without dato. Only the dataframe is saved
+										}else{
+
+											// Removed direct call
+											// unified with API calls with changed_data_item object
+												// $component->set_data( $conformed_value );
+												// $component->observable_dato = ($component->model === 'component_relation_related')
+												// 	? $component->get_data_with_references()
+												// 	: $conformed_value;
+
+											// added changed data object to set data and observable data
+											$changed_data_item = new stdClass();
+												$changed_data_item->action = 'set_data';
+												$changed_data_item->value = $conformed_value;
+
+											$component->update_data_value($changed_data_item);
+										}
+
+									// Save of course
+									// Note that $component->save_to_database = false, avoid real save.
+										$component->import_save();
+								}
 							}
 							break;
 					}//end switch (true)
