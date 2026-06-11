@@ -20,7 +20,9 @@ Diffusion converts Dédalo work data into publication formats (SQL tables, RDF f
 
 4. **No bespoke database tables ("the Dédalo way").** Operational state lives in standard Dédalo sections/components in PostgreSQL matrix tables — extend an existing section with a new component (ontology change, done by the user on request) instead of creating tables. Example: the diffusion activity log is section dd1758 in `matrix_activity_diffusion`.
 
-5. **`class diffusion` is dead.** The legacy v6 class was deleted. Everything lives in `diffusion_utils` (resolution, publication data, connection status) or format classes (`diffusion_rdf`, `diffusion_xml`, `diffusion_socrata` — standalone, no inheritance). Never reintroduce `diffusion::` calls or port v6 methods wholesale; check `diffusion_utils` for an existing v7 equivalent first.
+5. **`class diffusion` is dead — and so are the v6 containers.** The legacy v6 class plus `diffusion_object`, `diffusion_data`, `diffusion_sql`, `diffusion_mysql` were all deleted. Everything lives in `diffusion_utils` (resolution, connection status, `get_ddo_map`) or format classes (`diffusion_rdf`, `diffusion_xml`, `diffusion_socrata` — standalone, no inheritance). The two surviving containers: `diffusion_datum` (datum-group, explicit declared properties in wire order, no magic methods) and `diffusion_data_object` (per-field value item / chain wrapper; its public `$errors` serializes as `"errors":[]` in wire entries — load-bearing, don't remove). Never reintroduce `diffusion::` calls or port v6 methods wholesale; check `diffusion_utils` for an existing v7 equivalent first.
+6. **Section↔element resolution is type-agnostic.** `diffusion_utils::have_section_diffusion()` and `get_diffusion_sections_from_diffusion_element($element_tipo)` resolve from the virtual tree — never dispatch to per-type classes (`include 'class.diffusion_'.$type` was a bug source: missing class = silently no sections = tool button hidden).
+7. **Request-scoped caches are resettable.** `diffusion_utils::reset_cache()` (virtual tree, is_publishable, diffusion map), `diffusion_chain_processor::reset_cache()`, `diffusion_activity_logger::reset_cache()`, `diffusion_xml::reset_cache()` — all called in `dd_diffusion_api::diffuse()` step 0. Long-running CLI loops must call them between iterations. New static caches must follow this pattern (class static + reset, never method-local `static $x`).
 
 ## Architecture map
 
@@ -33,6 +35,8 @@ Diffusion converts Dédalo work data into publication formats (SQL tables, RDF f
 ## Working practices
 
 - Bun side: plain TS interfaces (no zod), manual validation; tolerate errno 1146 (table missing) and 1049 (db missing) as no-op success on deletes; tests in `diffusion/api/v1/test/` with bun:test (run `bun test` — `parsers.test.ts` has a known pre-existing failure, ignore it).
-- New API actions: add to the action switch in `diffusion/api/v1/index.ts`; PHP-side actions go in `dd_diffusion_api::API_ACTIONS` allowlist (SEC-024) with explicit permission checks.
+- New API actions: add to the action switch in `diffusion/api/v1/index.ts` — EVERY action gets Bun-side auth (`check_auth` for interactive, `check_server_auth` for server-to-server); PHP-side actions go in `dd_diffusion_api::API_ACTIONS` allowlist (SEC-024) with explicit permission checks. `validate` is a real admin-gated ontology-config validator (checks element/type/sections/database/service_name/parser fns against the virtual tree).
+- Bun MariaDB connections always build config from `lib/db_config.ts` `get_db_config()` — never read DB_* env vars directly.
+- Never leave `dump()` in PHP API paths (it corrupts the JSON/SSE response) — use `debug_log(..., logger::DEBUG)`.
 - New diffusion format delete handlers plug into the switch in `diffusion_delete::delete_record` (marked `// EXTENSION POINT`).
 - Always `php -l` every touched PHP file; the codebase uses tabs and `snake_case`.
