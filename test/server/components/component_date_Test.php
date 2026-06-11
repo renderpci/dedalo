@@ -996,6 +996,13 @@ final class component_date_test extends BaseTestCase {
 			'expected empty errors for valid v7 dato with id property: '.to_string($response->errors)
 		);
 		$this->assertEquals(2023, $response->result[0]->start->year);
+
+		// malformed JSON items (plain strings) must be rejected, not stored nor crash
+		$response = $component->conform_import_data('["2023"]', self::$tipo);
+		$this->assertTrue(
+			!empty($response->errors),
+			'expected errors for JSON array of strings as date input'
+		);
 	}//end test_conform_import_data_invalid
 
 
