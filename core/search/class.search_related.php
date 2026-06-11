@@ -24,14 +24,48 @@ class search_related extends search {
 	public function parse_sql_query() : string {
 
 		// tables where to search
-			$ar_tables_to_search = $this->sqo->tables ?? common::get_matrix_tables_with_relations();
+		// Security: table names are interpolated verbatim into the FROM clause. When the
+		// client SQO supplies them, restrict to the known matrix tables with relations
+		// (the same set used as the default) so no arbitrary identifier can be injected.
+			$ar_allowed_tables = common::get_matrix_tables_with_relations();
+			$ar_tables_to_search = !empty($this->sqo->tables)
+				? array_values(array_intersect((array)$this->sqo->tables, $ar_allowed_tables))
+				: $ar_allowed_tables;
+			if (empty($ar_tables_to_search)) {
+				debug_log(__METHOD__
+					." No valid tables to search (client tables not in allowed matrix tables)" . PHP_EOL
+					.' sqo->tables: ' . to_string($this->sqo->tables ?? null)
+					, logger::ERROR
+				);
+				return 'SELECT NULL WHERE false;';
+			}
 
 		// pagination
 			$limit	= $this->sqo->limit ?? 10;
 			$offset	= $this->sqo->offset ?? 0;
 
 		// group_by
+		// Security: group_by entries are interpolated verbatim as SQL column identifiers in
+		// the SELECT and GROUP BY clauses below. They come from the client SQO and are not
+		// parameterizable, so restrict each to a simple (optionally table-qualified) identifier
+		// and drop anything else (sub-selects, commas, quotes, parens...).
 			$group_by = $this->sqo->group_by ?? null;
+			if (!empty($group_by)) {
+				$group_by = array_values(array_filter((array)$group_by, static function($col){
+					return is_string($col)
+						&& preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*(\.[a-zA-Z_][a-zA-Z0-9_]*)?$/', $col)===1;
+				}));
+				if (count($group_by) !== count((array)$this->sqo->group_by)) {
+					debug_log(__METHOD__
+						." Dropped invalid group_by entries (only simple identifiers allowed)" . PHP_EOL
+						.' group_by: ' . to_string($this->sqo->group_by)
+						, logger::ERROR
+					);
+				}
+				if (empty($group_by)) {
+					$group_by = null;
+				}
+			}
 
 		// breakdown
 			$breakdown = $this->sqo->breakdown ?? false;
@@ -44,7 +78,11 @@ class search_related extends search {
 			$ar_locators = $this->sqo->filter_by_locators ?? [];
 
 		// filter by locators operator.
-			$filter_by_locators_op = $this->sqo->filter_by_locators_op ?? 'OR';
+		// Security: interpolated verbatim between WHERE clauses; allowlist to AND/OR.
+			$raw_locators_op = strtoupper(trim((string)($this->sqo->filter_by_locators_op ?? 'OR')));
+			$filter_by_locators_op = in_array($raw_locators_op, ['AND','OR'], true)
+				? $raw_locators_op
+				: 'OR';
 
 		// add filter of sections when the filter is not 'all', it's possible add specific section to get the related records only for these sections.
 		// If the section has 'all', the filter don't add any section to the WHERE sentence.
@@ -201,9 +239,9 @@ class search_related extends search {
 							$locators_query[] = $sql;
 							break;
 					}
-					// Old model, it search directly in the table with gin index of relations, but it's slow for large databases.
-					// now tables has a contraction/flat of the locator to be indexed the combination of section_tipo and section_id
-					// $locators_query[]	= PHP_EOL.'relation#>\'{relations}\' @> \'['. json_encode($locator) . ']\'::jsonb';
+					// Note: the previous model searched the relations jsonb directly with a GIN
+					// index but was slow on large databases; tables now carry a flat contraction
+					// of the locator (section_tipo + section_id) that is indexed for fast lookup.
 				}//end foreach ($ar_locators as $locator)
 
 				$where_clauses = [];
@@ -253,14 +291,17 @@ class search_related extends search {
 
 				$str_query .= PHP_EOL . 'ORDER BY ' . implode( ', ', $order_clauses_clean );
 
-				// limit
-				if(!empty($limit)){
-					$str_query .= PHP_EOL . 'LIMIT '.$limit;
+				// limit (coerced; 'all' sentinel preserved). Defense in depth: do not
+				// interpolate a raw value even though client SQO is scrubbed upstream.
+				$limit_sql = search::sanitize_sql_limit($limit);
+				if($limit_sql !== null){
+					$str_query .= PHP_EOL . 'LIMIT '.$limit_sql;
 				}
 
 				// offset
-				if($offset !== null){
-					$str_query .= PHP_EOL . 'OFFSET '.$offset;
+				$offset_int = (int)$offset;
+				if($offset_int > 0){
+					$str_query .= PHP_EOL . 'OFFSET '.$offset_int;
 				}
 			}
 
