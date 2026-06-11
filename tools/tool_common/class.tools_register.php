@@ -334,7 +334,16 @@ class tools_register {
 			if (!file_exists($class_file)) {
 				return $skip_with_errors(["Missing tool class file: class.$basename.php"]);
 			}
-			require_once $class_file;
+			try {
+				require_once $class_file;
+			} catch (\Throwable $e) {
+				// e.g. the class file requires a vendor lib that is not installed.
+				// Such a tool would fatal at first invocation anyway: refuse it here
+				// with a clear message instead.
+				return $skip_with_errors([
+					"Tool class failed to load: " . $e->getMessage()
+				]);
+			}
 			if (!class_exists($basename, false)) {
 				return $skip_with_errors(["Tool class '$basename' not found in class.$basename.php (class name must match the directory name)"]);
 			}
