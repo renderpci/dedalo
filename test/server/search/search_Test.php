@@ -363,4 +363,289 @@ final class search_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_IS_VALID_TIPO
+	* Unit test for the security tipo-format gate used before raw SQL interpolation.
+	* @return void
+	*/
+	public function test_is_valid_tipo() {
+
+		// valid ontology tipos
+		$this->assertTrue(search::is_valid_tipo('oh1'));
+		$this->assertTrue(search::is_valid_tipo('rsc453'));
+		$this->assertTrue(search::is_valid_tipo('numisdata303'));
+
+		// invalid / malicious
+		$this->assertFalse(search::is_valid_tipo("x'); DROP TABLE matrix_test;--"));
+		$this->assertFalse(search::is_valid_tipo('OH1'));      // uppercase
+		$this->assertFalse(search::is_valid_tipo('oh'));       // no number
+		$this->assertFalse(search::is_valid_tipo('1oh'));      // wrong order
+		$this->assertFalse(search::is_valid_tipo(''));         // empty
+		$this->assertFalse(search::is_valid_tipo('oh 1'));     // space
+
+	}//end test_is_valid_tipo
+
+
+
+	/**
+	* TEST_SANITIZE_SQL_LIMIT
+	* Unit test for the LIMIT coercion gate.
+	* @return void
+	*/
+	public function test_sanitize_sql_limit() {
+
+		// 'all' sentinel -> unlimited
+		$this->assertSame('ALL', search::sanitize_sql_limit('all'));
+		$this->assertSame('ALL', search::sanitize_sql_limit('ALL'));
+
+		// positive ints (string or int)
+		$this->assertSame('10', search::sanitize_sql_limit(10));
+		$this->assertSame('10', search::sanitize_sql_limit('10'));
+
+		// injection payload reduced to its leading int
+		$this->assertSame('10', search::sanitize_sql_limit('10) UNION SELECT * FROM matrix_users --'));
+
+		// non positive / non numeric -> null (no LIMIT)
+		$this->assertNull(search::sanitize_sql_limit(0));
+		$this->assertNull(search::sanitize_sql_limit(-5));
+		$this->assertNull(search::sanitize_sql_limit('abc'));
+		$this->assertNull(search::sanitize_sql_limit(null));
+
+	}//end test_sanitize_sql_limit
+
+
+
+	/**
+	* TEST_INJECTION_COMPONENT_TIPO_IN_JOIN_PATH
+	* A malicious component_tipo in an intermediate path step must be rejected
+	* (it is interpolated verbatim as a JSONB relation key in build_sql_join).
+	* @return void
+	*/
+	public function test_injection_component_tipo_in_join_path() {
+
+		$search_query_object = (object)[
+			'section_tipo' => $this->section_tipo,
+			'mode' => 'list',
+			'filter' => (object)[
+				'$and' => [
+					(object)[
+						'q' => '1',
+						'q_operator' => null,
+						'path' => [
+							// intermediate step with malicious component_tipo
+							(object)[
+								'section_tipo'		=> $this->section_tipo,
+								'component_tipo'	=> "x') AS t ON true; DROP TABLE matrix_test;--"
+							],
+							// final resolvable step
+							(object)[
+								'section_tipo'		=> $this->section_tipo,
+								'component_tipo'	=> 'section_id',
+								'model'				=> 'component_section_id',
+								'name'				=> 'Id'
+							]
+						]
+					]
+				]
+			]
+		];
+		$search_obj = search::get_instance($search_query_object);
+
+		$this->expectException(Exception::class);
+		$this->expectExceptionMessage('invalid component_tipo in search path');
+
+		// build the SQL (no DB execution); must throw before producing the join
+		$search_obj->parse_sql_query();
+
+	}//end test_injection_component_tipo_in_join_path
+
+
+
+	/**
+	* TEST_INJECTION_COLUMN_NAME_FORMAT_COLUMN
+	* A malicious column_name in a format:'column' filter must be dropped (not
+	* interpolated as a raw SQL identifier). The payload must not appear in the SQL.
+	* @return void
+	*/
+	public function test_injection_column_name_format_column() {
+
+		$payload = '(SELECT password FROM matrix_users)';
+
+		$search_query_object = (object)[
+			'section_tipo' => $this->section_tipo,
+			'mode' => 'list',
+			'filter' => (object)[
+				'$and' => [
+					(object)[
+						'q'				=> '1',
+						'q_operator'	=> '=',
+						'format'		=> 'column',
+						'column_name'	=> $payload,
+						'path' => [
+							(object)[
+								'section_tipo'		=> $this->section_tipo,
+								'component_tipo'	=> 'section_id',
+								'model'				=> 'component_section_id',
+								'name'				=> 'Id'
+							]
+						]
+					]
+				]
+			]
+		];
+		$search_obj = search::get_instance($search_query_object);
+		$sql_query  = $search_obj->parse_sql_query();
+
+		$this->assertStringNotContainsString(
+			$payload,
+			$sql_query,
+			'Malicious column_name must not be interpolated into the SQL'
+		);
+
+	}//end test_injection_column_name_format_column
+
+
+
+	/**
+	* TEST_INJECTION_LIMIT_NOT_INTERPOLATED
+	* A non-numeric / payload limit must be coerced to an integer in the SQL tail.
+	* @return void
+	*/
+	public function test_injection_limit_not_interpolated() {
+
+		$search_query_object = (object)[
+			'section_tipo' => $this->section_tipo,
+			'mode' => 'list',
+			'limit' => '10) UNION SELECT section_id, datos FROM matrix_users --',
+			'offset' => '5; DROP TABLE matrix_test'
+		];
+		$search_obj = search::get_instance($search_query_object);
+		$sql_query  = $search_obj->parse_sql_query();
+
+		$this->assertStringNotContainsString('UNION SELECT', $sql_query, 'limit payload must not reach SQL');
+		$this->assertStringNotContainsString('DROP TABLE', $sql_query, 'offset payload must not reach SQL');
+		$this->assertStringContainsString('LIMIT 10', $sql_query, 'limit must be coerced to its integer value');
+		$this->assertStringContainsString('OFFSET 5', $sql_query, 'offset must be coerced to its integer value');
+
+	}//end test_injection_limit_not_interpolated
+
+
+
+	/**
+	* TEST_INJECTION_SELECT_COLUMN_AND_KEY
+	* A select with a malicious column or key must be dropped, not interpolated.
+	* A legitimate select (column 'string', key tipo) must survive.
+	* @return void
+	*/
+	public function test_injection_select_column_and_key() {
+
+		// malicious column
+		$sqo_col = (object)[
+			'section_tipo'	=> $this->section_tipo,
+			'mode'			=> 'list',
+			'select'		=> [ (object)['column' => 'relation, (SELECT datos FROM matrix_users) AS x'] ]
+		];
+		$sql_col = search::get_instance($sqo_col)->parse_sql_query();
+		$this->assertStringNotContainsString('matrix_users', $sql_col, 'select column payload must not reach SQL');
+
+		// malicious key (JSONB key breakout)
+		$sqo_key = (object)[
+			'section_tipo'	=> $this->section_tipo,
+			'mode'			=> 'list',
+			'select'		=> [ (object)['column' => 'string', 'key' => "x' || (SELECT 1) || '"] ]
+		];
+		$sql_key = search::get_instance($sqo_key)->parse_sql_query();
+		$this->assertStringNotContainsString('SELECT 1', $sql_key, 'select key payload must not reach SQL');
+
+		// legitimate select survives
+		$sqo_ok = (object)[
+			'section_tipo'	=> $this->section_tipo,
+			'mode'			=> 'list',
+			'select'		=> [ (object)['column' => 'string', 'key' => 'test52'] ]
+		];
+		$sql_ok = search::get_instance($sqo_ok)->parse_sql_query();
+		$this->assertStringContainsString("string->'test52'", $sql_ok, 'legitimate select must be preserved');
+
+	}//end test_injection_select_column_and_key
+
+
+
+	/**
+	* TEST_SANITIZE_CLIENT_SQO
+	* The API boundary scrub must remove server-only fields at any depth, reset parsed,
+	* and coerce numerics, while keeping legitimate fields ('column', 'model', 'all').
+	* @return void
+	*/
+	public function test_sanitize_client_sqo() {
+
+		$sqo = (object)[
+			'section_tipo'	=> ['test65'],
+			'parsed'		=> true,                 // must be reset to false
+			'limit'			=> '5) UNION SELECT 1 --', // must coerce to 5
+			'offset'		=> '3; DROP',            // must coerce to 3
+			'total'			=> '42 junk',            // must coerce to 42
+			'order'			=> [
+				(object)[
+					'direction'	=> 'ASC',
+					'path'		=> [
+						(object)[
+							'section_tipo'	=> 'test65',
+							'component_tipo'=> 'section_id',
+							'column'		=> 'section_id',          // legitimate, kept
+							'column_sql'	=> '(SELECT pg_sleep(5))' // server-only, stripped
+						]
+					]
+				]
+			],
+			'filter'		=> (object)[
+				'$and' => [
+					(object)[
+						'q'			=> '1',
+						'path'		=> [
+							(object)['section_tipo'=>'test65','component_tipo'=>'section_id','model'=>'component_section_id']
+						],
+						'sentence'	=> "1=1; DROP TABLE matrix_test --", // server-only, stripped
+						'params'	=> ['_Q1_' => 'x'],                  // server-only, stripped
+						'table'		=> 'matrix_test',                    // server-only, stripped
+						'table_alias'=> 'te65'                           // server-only, stripped
+					]
+				]
+			]
+		];
+
+		$clean = search_query_object::sanitize_client_sqo($sqo);
+
+		// parsed reset
+		$this->assertFalse($clean->parsed, 'parsed must be forced false');
+
+		// numeric coercion
+		$this->assertSame(5, (int)$clean->limit);
+		$this->assertSame(3, $clean->offset);
+		$this->assertSame(42, $clean->total);
+
+		// server-only fields stripped (filter leaf)
+		$leaf = $clean->filter->{'$and'}[0];
+		$this->assertFalse(property_exists($leaf, 'sentence'), 'sentence must be stripped');
+		$this->assertFalse(property_exists($leaf, 'params'), 'params must be stripped');
+		$this->assertFalse(property_exists($leaf, 'table'), 'table must be stripped');
+		$this->assertFalse(property_exists($leaf, 'table_alias'), 'table_alias must be stripped');
+
+		// server-only field stripped (order path), legitimate kept
+		$order_step = $clean->order[0]->path[0];
+		$this->assertFalse(property_exists($order_step, 'column_sql'), 'column_sql must be stripped');
+		$this->assertTrue(property_exists($order_step, 'column'), 'legitimate column must be kept');
+		$this->assertTrue(property_exists($leaf, 'path'), 'legitimate path must be kept');
+
+		// 'all' limit sentinel preserved
+		$sqo_all = (object)['section_tipo'=>['test65'], 'limit'=>'all'];
+		$clean_all = search_query_object::sanitize_client_sqo($sqo_all);
+		$this->assertSame('all', $clean_all->limit, "'all' limit sentinel must be preserved");
+
+		// non-object passthrough
+		$this->assertNull(search_query_object::sanitize_client_sqo(null));
+
+	}//end test_sanitize_client_sqo
+
+
+
 }//end class
