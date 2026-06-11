@@ -831,6 +831,17 @@ class component_iri extends component_common {
 								if(is_object($iri_object)){
 
 									if(!empty($iri_object->iri)){
+										// iri must be a string
+										if (!is_string($iri_object->iri)) {
+											$failed = new stdClass();
+												$failed->section_id		= $this->section_id;
+												$failed->data			= to_string($import_value);
+												$failed->component_tipo	= $this->get_tipo();
+												$failed->msg			= 'IGNORED: malformed data, iri must be a string '. to_string($import_value);
+											$response->errors[] = $failed;
+
+											return $response;
+										}
 										// remove unused spaces or other invalid code as \t \n, etc
 										$iri_object->iri = trim($iri_object->iri);
 										$result = $this->has_protocol($iri_object->iri);
@@ -927,6 +938,18 @@ class component_iri extends component_common {
 						$iri_object = new stdClass();
 						if(isset($data_from_json->iri)){
 
+							// iri must be a string
+							if (!is_string($data_from_json->iri)) {
+								$failed = new stdClass();
+									$failed->section_id		= $this->section_id;
+									$failed->data			= to_string($data_from_json);
+									$failed->component_tipo	= $this->get_tipo();
+									$failed->msg			= 'IGNORED: malformed data, iri must be a string '. to_string($data_from_json);
+								$response->errors[] = $failed;
+
+								return $response;
+							}
+
 							// remove unused spaces or other invalid code as \t \n, etc
 							$data_from_json->iri = trim($data_from_json->iri);
 
@@ -966,6 +989,11 @@ class component_iri extends component_common {
 						// set the title given - Deprecated
 						if(isset($data_from_json->title)){
 							$iri_object->title = $data_from_json->title;
+						}
+						// set the lang given. Preserve it: component_iri supports translation
+						// and flat data items carry their own lang (raw export format)
+						if(isset($data_from_json->lang)){
+							$iri_object->lang = $data_from_json->lang;
 						}
 
 						// empty object check. Do not save data as [{}]
@@ -1041,6 +1069,20 @@ class component_iri extends component_common {
 
 							if(isset($current_value->iri)){
 
+								// iri must be a string
+								if (!is_string($current_value->iri)) {
+									$failed = new stdClass();
+										$failed->section_id		= $this->section_id;
+										$failed->data			= to_string($current_value);
+										$failed->component_tipo	= $this->get_tipo();
+										$failed->msg			= 'IGNORED: malformed data, iri must be a string '. to_string($current_value);
+									$response->errors[] = $failed;
+
+									return $response;
+								}
+								// remove unused spaces or other invalid code as \t \n, etc
+								$current_value->iri = trim($current_value->iri);
+
 								$result = $this->has_protocol($current_value->iri);
 								if($result===false){
 
@@ -1077,6 +1119,11 @@ class component_iri extends component_common {
 							// set the title given - Deprecated
 							if(isset($current_value->title)){
 								$iri_object->title = $current_value->title;
+							}
+							// set the lang given. Preserve it: component_iri supports translation
+							// and flat data items carry their own lang (raw export format)
+							if(isset($current_value->lang)){
+								$iri_object->lang = $current_value->lang;
 							}
 
 							$value[] = $iri_object;
