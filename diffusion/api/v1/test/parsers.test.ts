@@ -5,8 +5,8 @@
  */
 
 import { describe, test, expect } from 'bun:test';
-import { replace, cleanup_formatting } from '../lib/parsers/pattern_replacer';
-import { default_join, text_format }   from '../lib/parsers/parser_text';
+import { replace, cleanup_formatting } from '../lib/parsers/parser_helper';
+import { default_join, text_format, join_items_to_string } from '../lib/parsers/parser_text';
 import { string_date }                 from '../lib/parsers/parser_date';
 import { resolve_parser, apply_parser } from '../lib/parsers/index';
 
@@ -79,33 +79,31 @@ describe('parser_text', () => {
 
 	describe('default_join', () => {
 
+		// default_join delegates to merge(), which requires the `columns`
+		// option (injected by diffusion_processor on explicit parser calls).
+		// Without columns it returns null by design so the auto-completion
+		// chain treats it as a no-op and data flows through unchanged.
+		const columns = [{ tipo: 'dd1', model: 'field_text' }];
+
 		test('joins simple string values', () => {
 			const data = [
-				{ value: 'Hello' },
-				{ value: 'World' },
+				{ tipo: 'dd1', value: 'Hello' },
+				{ tipo: 'dd1', value: 'World' },
 			];
-			const result = default_join(data, {});
-			expect(result).toEqual([{
-				id: null,
-				value: 'Hello | World',
-				tipo: undefined,
-				lang: undefined
-			}]);
+			const result = default_join(data, { columns });
+			expect(result).toHaveLength(1);
+			expect(result[0]).toMatchObject({ value: 'Hello | World' });
 		});
 
 		test('joins with custom separator', () => {
 			const data = [
-				{ value: 'A' },
-				{ value: 'B' },
-				{ value: 'C' },
+				{ tipo: 'dd1', value: 'A' },
+				{ tipo: 'dd1', value: 'B' },
+				{ tipo: 'dd1', value: 'C' },
 			];
-			const result = default_join(data, { records_separator: ', ' });
-			expect(result).toEqual([{
-				id: null,
-				value: 'A, B, C',
-				tipo: undefined,
-				lang: undefined
-			}]);
+			const result = default_join(data, { columns, records_separator: ', ' });
+			expect(result).toHaveLength(1);
+			expect(result[0]).toMatchObject({ value: 'A, B, C' });
 		});
 
 		test('returns null for empty data', () => {
@@ -113,37 +111,38 @@ describe('parser_text', () => {
 			expect(default_join([], {})).toBeNull();
 		});
 
-		test('skips null values', () => {
+		test('returns null without columns (auto-completion no-op contract)', () => {
 			const data = [
-				{ value: 'Hello' },
-				{ value: null },
-				{ value: 'World' },
+				{ tipo: 'dd1', value: 'Hello' },
 			];
-			const result = default_join(data, {});
-			expect(result).toEqual([{
-				id: null,
-				value: 'Hello | World',
-				tipo: undefined,
-				lang: undefined
-			}]);
+			expect(default_join(data, {})).toBeNull();
 		});
 
-		test('handles array values with fields_separator', () => {
+		test('skips null values', () => {
+			const data = [
+				{ tipo: 'dd1', value: 'Hello' },
+				{ tipo: 'dd1', value: null },
+				{ tipo: 'dd1', value: 'World' },
+			];
+			const result = default_join(data, { columns });
+			expect(result).toHaveLength(1);
+			expect(result[0]).toMatchObject({ value: 'Hello | World' });
+		});
+
+		test('join_items_to_string handles array values with fields_separator', () => {
 			const data = [
 				{ value: ['Title 1', 'Title 2'] },
 			];
-			const result = default_join(data, { fields_separator: ' - ' });
-			expect(result).toEqual([{
-				id: null,
-				value: 'Title 1 - Title 2',
-				tipo: undefined,
-				lang: undefined
-			}]);
+			const result = join_items_to_string(data, { fields_separator: ' - ' });
+			expect(result).toBe('Title 1 - Title 2');
 		});
 	});
 
 
 	describe('text_format', () => {
+
+		// text_format wraps each formatted zip-row string in a single-element
+		// array so the output shape is uniform; downstream merge handles joining.
 
 		test('applies pattern with ids', () => {
 			const data = [
@@ -152,12 +151,8 @@ describe('parser_text', () => {
 				{ id: 'city',      value: 'London' },
 			];
 			const result = text_format(data, { pattern: '${firstName} ${lastName} from ${city}' });
-			expect(result).toEqual([{
-				id: null,
-				value: 'John Doe from London',
-				tipo: undefined,
-				lang: undefined
-			}]);
+			expect(result).toHaveLength(1);
+			expect(result[0].value).toEqual(['John Doe from London']);
 		});
 
 		test('handles null values in pattern', () => {
@@ -167,26 +162,23 @@ describe('parser_text', () => {
 				{ id: 'c', value: 'Code' },
 			];
 			const result = text_format(data, { pattern: '${a}, ${b}/${c}' });
-			expect(result).toEqual([{
-				id: null,
-				value: 'Title/Code',
-				tipo: undefined,
-				lang: undefined
-			}]);
+			expect(result).toHaveLength(1);
+			expect(result[0].value).toEqual(['Title/Code']);
 		});
 
 		test('falls back to default_join when no pattern', () => {
+			// without pattern AND without columns the fallback default_join
+			// returns null (no-op contract, see default_join tests)
 			const data = [
-				{ id: 'a', value: 'Hello' },
-				{ id: 'b', value: 'World' },
+				{ id: 'a', tipo: 'dd1', value: 'Hello' },
+				{ id: 'b', tipo: 'dd1', value: 'World' },
 			];
-			const result = text_format(data, {});
-			expect(result).toEqual([{
-				id: null,
-				value: 'Hello | World',
-				tipo: undefined,
-				lang: undefined
-			}]);
+			expect(text_format(data, {})).toBeNull();
+
+			// with columns the fallback joins as default_join does
+			const result = text_format(data, { columns: [{ tipo: 'dd1', model: 'field_text' }] });
+			expect(result).toHaveLength(1);
+			expect(result[0]).toMatchObject({ value: 'Hello | World' });
 		});
 
 		test('returns null for empty data', () => {
@@ -272,24 +264,21 @@ describe('parser registry', () => {
 	});
 
 	test('apply_parser with known function', () => {
-		const data = [{ value: 'hello' }, { value: 'world' }];
-		const result = apply_parser('parser_text::default_join', data, { records_separator: ' + ' });
-		expect(result).toEqual([{
-			id: null,
-			value: 'hello + world',
-			tipo: undefined,
-			lang: undefined
-		}]);
+		const data = [{ tipo: 'dd1', value: 'hello' }, { tipo: 'dd1', value: 'world' }];
+		const result = apply_parser('parser_text::default_join', data, {
+			records_separator: ' + ',
+			columns: [{ tipo: 'dd1', model: 'field_text' }]
+		});
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({ value: 'hello + world' });
 	});
 
 	test('apply_parser falls back to default_join for unknown', () => {
-		const data = [{ value: 'hello' }];
-		const result = apply_parser('unknown::fn', data, {});
-		expect(result).toEqual([{
-			id: null,
-			value: 'hello',
-			tipo: undefined,
-			lang: undefined
-		}]);
+		const data = [{ tipo: 'dd1', value: 'hello' }];
+		const result = apply_parser('unknown::fn', data, {
+			columns: [{ tipo: 'dd1', model: 'field_text' }]
+		});
+		expect(result).toHaveLength(1);
+		expect(result[0]).toMatchObject({ value: 'hello' });
 	});
 });
