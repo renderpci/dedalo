@@ -84,8 +84,7 @@ class diffusion_socrata {
 
 		// table
 			$table_tipo			= diffusion::get_table_tipo($diffusion_element_tipo, $section_tipo);
-			$ontology_node		= ontology_node::get_instance($table_tipo);
-			$table_properties	= $ontology_node->get_propiedades(true) ?? new stdClass();
+			$table_properties	= self::get_table_properties($table_tipo) ?? new stdClass();
 
 		// ar_rows. Build data (array of json_row objects) for each lang
 			$ar_rows = [];
@@ -204,21 +203,19 @@ class diffusion_socrata {
 
 				#$ar_socrata_rows = [$ar_socrata_rows[1]];
 
-		// Get socrata path from 'table' item
-			$tables_map	= diffusion_sql::get_diffusion_element_tables_map($diffusion_element_tipo);
-			$table_obj	= $tables_map->{$section_tipo} ?? null;
-			if (empty($table_obj)) {
-				dump($tables_map, ' diffusion_element_tables_map ++ '.to_string());
+		// Get socrata path from 'table' item (v7: resolved from the flat virtual diffusion tree)
+			$table_node = diffusion_utils::get_section_node_for_element($diffusion_element_tipo, $section_tipo);
+			if (empty($table_node)) {
 				$response->msg[] = 'Error. this section ('.$section_tipo.') do not have Socrata diffusion';
-				$response->errors[] = 'Section ('.$section_tipo.') is not in the diffusion_element_tables_map';
+				$response->errors[] = 'Section ('.$section_tipo.') is not in the diffusion virtual tree for element '.$diffusion_element_tipo;
 				return $response;
 			}
-			$socrata_config	= (object)SOCRATA_CONFIG;
-			$path			= $socrata_config->mode==='pro'
-				? $table_obj->properties->path_pro // production mode
-				: $table_obj->properties->path_pre; // pre-production mode
+			$table_properties	= self::get_table_properties($table_node->tipo);
+			$socrata_config		= (object)SOCRATA_CONFIG;
+			$path				= $socrata_config->mode==='pro'
+				? ($table_properties->path_pro ?? null) // production mode
+				: ($table_properties->path_pre ?? null); // pre-production mode
 			if (empty($path)) {
-				dump($tables_map, ' diffusion_element_tables_map ++ '.to_string());
 				$response->msg[] = 'Error. empty section ('.$section_tipo.') Socrata path';
 				$response->errors[] = 'Section ('.$section_tipo.') do not has properties paths defined';
 				return $response;
@@ -249,6 +246,28 @@ class diffusion_socrata {
 
 		return $response;
 	}//end update_record
+
+
+
+	/**
+	* GET_TABLE_PROPERTIES
+	* Resolves the v7 properties of a table node. The given tipo is usually
+	* the virtual (alias-preferred) tipo from the diffusion virtual tree;
+	* resolve_node_with_alias applies the alias contract (alias properties
+	* win, inherited from the real node when the alias has none).
+	* @param string|null $table_tipo
+	* @return object|null
+	*/
+	private static function get_table_properties( ?string $table_tipo ) : ?object {
+
+		if (empty($table_tipo)) {
+			return null;
+		}
+
+		$resolved = diffusion_utils::resolve_node_with_alias($table_tipo);
+
+		return $resolved->properties ?: null;
+	}//end get_table_properties
 
 
 
