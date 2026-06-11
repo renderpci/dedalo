@@ -20,7 +20,8 @@ class dd_diffusion_api {
 			'diffuse',
 			'get_diffusion_info',
 			'validate',
-			'get_ontology_map'
+			'get_ontology_map',
+			'retry_pending_deletions'
 		];
 
 		/**
@@ -89,6 +90,22 @@ class dd_diffusion_api {
 		$options      	= $rqo->options ?? new stdClass();
 		// deep resolution of linked secitons
 		$levels       	= $options->levels ?? DEDALO_DIFFUSION_RESOLVE_LEVELS; // 2
+
+		// Opportunistic retry of pending diffusion deletions (hybrid delete
+		// propagation): if the engine/targets are up for publishing, they are
+		// up for deleting. Fire-and-forget — never fails the publish run.
+		// Only on the first chunk (offset 0): Bun paginates large diffusions
+		// into many diffuse calls and the retry must run once per run, not per chunk.
+		if (empty($rqo->sqo->offset)) {
+			try {
+				diffusion_delete::retry_pending();
+			} catch (Exception $e) {
+				debug_log(__METHOD__
+					. " Ignored retry_pending exception: " . $e->getMessage()
+					, logger::WARNING
+				);
+			}
+		}
 
 		try {
 			// 0. Reset caches for this request
@@ -340,6 +357,65 @@ class dd_diffusion_api {
 
 		return $response;
 	}
+
+
+	/**
+	 * RETRY_PENDING_DELETIONS
+	 * Retries delete propagation for records whose deletion could not reach
+	 * one or more diffusion targets (dd1758 rows with action=unpublish_pending).
+	 * With options.count_only=true, only returns the pending count (used by
+	 * the tool_diffusion UI to display the badge without triggering a retry).
+	 *
+	 * @param object $rqo {
+	 *   action: "retry_pending_deletions",
+	 *   options: { count_only?: bool, limit?: int }
+	 * }
+	 * @return object $response
+	 */
+	public static function retry_pending_deletions(object $rqo): object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// SEC: restrict to global admins (cross-section operation over diffusion targets)
+		if (security::is_global_admin(logged_user_id()) !== true) {
+			$response->errors[] = 'insufficient permissions';
+			$response->msg = 'Error. Insufficient permissions to retry pending deletions.';
+			return $response;
+		}
+
+		$count_only	= $rqo->options->count_only ?? false;
+		$limit		= (int)($rqo->options->limit ?? 100);
+
+		try {
+			if ($count_only===true) {
+				$pending_count = diffusion_delete::count_pending();
+				$response->result	= (object)['pending' => $pending_count];
+				$response->msg		= 'OK. '.$pending_count.' pending deletion(s)';
+				return $response;
+			}
+
+			$retry_response = diffusion_delete::retry_pending($limit);
+
+			$response->result	= (object)[
+				'total'		=> $retry_response->total,
+				'retried'	=> $retry_response->retried,
+				'remaining'	=> $retry_response->remaining
+			];
+			$response->msg = $retry_response->msg;
+
+		} catch (Exception $e) {
+			$response->msg = 'Error: ' . $e->getMessage();
+			$response->errors[] = $e->getMessage();
+			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
+		}
+
+
+		return $response;
+	}//end retry_pending_deletions
+
 
 
 	/**
