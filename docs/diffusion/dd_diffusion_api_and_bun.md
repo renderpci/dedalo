@@ -600,7 +600,7 @@ DB_SOCKET=/tmp/mysql.sock
 DB_USER=dedalo_user
 DB_PASSWORD=secret
 
-# Redis (for session validation)
+# (legacy note: session validation is cookie passthrough to PHP, not Redis)
 REDIS_HOST=localhost
 REDIS_PORT=6379
 ```
@@ -944,3 +944,70 @@ define('SHOW_DEBUG', true);
 | `get_term_id` | parser_locator | Extract term IDs |
 | `parents` | parser_locator | Get parent hierarchy |
 | `slice_chain` | parser_locator | Slice parent chain |
+
+
+## Delete Propagation & Publication Tracking (v7)
+
+### Publication tracking — the dd1758 activity log
+
+Publication state is tracked exclusively in the **diffusion activity log**
+(section `dd1758`, PostgreSQL table `matrix_activity_diffusion`), written via
+`diffusion_activity_logger::log($section_tipo, $section_id, $element_tipo, $action)`.
+
+Components of each row: `dd1762` user, `dd1761` date, `dd1763` record locator,
+`dd1764` section_id, `dd1765` section_tipo, `dd1766` diffusion element and
+**`dd1767` action** (component_select → value-list section `dd1774`):
+
+| section_id | action |
+|---|---|
+| 1 | `published` |
+| 2 | `unpublished` |
+| 3 | `unpublish_pending` (durable retry marker) |
+
+The legacy per-record publication metadata writer (`update_publication_data`,
+components dd271/dd1223/dd1224/dd1225) was removed in v7.
+
+### Delete propagation
+
+When a record is deleted in the work system, `section_record::delete()` calls
+`diffusion_delete::delete_record()` (diffusion/class.diffusion_delete.php):
+
+1. Targets are resolved from the flat virtual diffusion tree (type-agnostic).
+2. SQL/Socrata targets are deleted in ONE Bun `delete_record` call
+   (`DELETE FROM table WHERE section_id IN (...)`, per-target transactions).
+3. RDF targets unlink the published file (deterministic name, see below).
+4. Per-element outcome is logged to dd1758: success → `unpublished`,
+   failure (engine/target down) → `unpublish_pending`.
+
+Pending deletions are retried by `diffusion_delete::retry_pending()` from three
+triggers: the start of every `diffuse()` run (first chunk only), the CLI helper
+`diffusion/migration/helpers/retry_pending_deletions.php` (cron-able, uses the
+internal token), and the tool_diffusion UI retry button
+(`retry_pending_deletions` API action, admin-gated).
+
+### RDF deterministic filenames
+
+Each record publishes to ONE canonical file, overwritten on re-publish:
+
+```
+DEDALO_MEDIA_PATH/rdf/{service_name}/{rdf_name}_{section_tipo}_{section_id}.rdf
+```
+
+`diffusion_rdf::get_record_file_path()` is the single source of truth shared by
+publish and delete. Legacy timestamped files are migrated by
+`diffusion/migration/migrate_rdf_filenames.php` (`--dry-run` supported); the
+delete path also glob-unlinks legacy variants for pre-migration installs.
+
+### Database admin actions (MariaDB is a Bun responsibility)
+
+PHP never connects to MariaDB. Server-to-server actions (session OR internal
+token auth):
+
+| Action | Purpose |
+|---|---|
+| `delete_record` | Delete published rows from target databases |
+| `check_database` | MariaDB reachability + database existence |
+| `backup_database` | mysqldump a target database to an absolute `.sql` path |
+
+PHP calls them through `diffusion_api_client::call()` (unix socket preferred,
+`DEDALO_DIFFUSION_SOCKET_PATH`; HTTP fallback `DEDALO_DIFFUSION_API_URL`).
