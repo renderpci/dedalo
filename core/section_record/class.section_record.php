@@ -688,13 +688,16 @@ class section_record {
 			$this->remove_section_media_files();
 
 		// 4. Publication
-			// Remove published records in MYSQL, etc.
+			// Remove published records in diffusion targets (SQL, RDF, etc.).
+			// Per-target failures never block the work-system delete: they are
+			// persisted as 'unpublish_pending' activity rows and retried later
+			// (see diffusion_delete::retry_pending).
 			if ($delete_diffusion_records===true) {
 				try {
-					diffusion::delete_record($section_tipo, $section_id);
+					diffusion_delete::delete_record($section_tipo, $section_id);
 				} catch (Exception $e) {
 					debug_log(__METHOD__
-						." Error on diffusion::delete_record: " .PHP_EOL
+						." Error on diffusion_delete::delete_record: " .PHP_EOL
 						.' Exception Catch message: '.$e->getMessage()
 						, logger::WARNING
 					);
