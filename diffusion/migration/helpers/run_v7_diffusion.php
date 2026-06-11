@@ -30,11 +30,8 @@ try {
     $locator->set_section_tipo($section_tipo);
     $locator->set_section_id($section_id);
 
-    $diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map($diffusion_element_tipo);
-    $section_tables_map = $diffusion_element_tables_map->{$section_tipo} ?? null;
-    $table_tipo = !empty($section_tables_map->from_alias) 
-					? $section_tables_map->from_alias
-					: ($section_tables_map->table ?? null);
+    // v7: resolved from the flat virtual diffusion tree (alias tipo preferred)
+    $table_tipo = diffusion_utils::get_table_tipo($diffusion_element_tipo, $section_tipo);
 
     $rqo = (object)[
         'dd_api' => 'dd_diffusion_api',
