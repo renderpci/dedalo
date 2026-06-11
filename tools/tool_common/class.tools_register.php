@@ -110,6 +110,16 @@ class tools_register {
 		 */
 		public static string $tipo_active = 'dd1354';
 
+		/**
+		 * In-memory caches for the config list getters.
+		 * Class properties (instead of function-local statics) so
+		 * invalidate_all_tool_caches() can reset them.
+		 */
+		protected static ?array $all_config_cache = null;
+		protected static ?array $all_default_config_cache = null;
+		protected static ?array $all_config_tool_client_cache = null;
+		protected static ?array $all_default_config_tool_client_cache = null;
+
 
 	/**
 	 * IMPORT_TOOLS
@@ -795,10 +805,8 @@ class tools_register {
 	 * @return array List of config objects {name, config}.
 	 */
 	public static function get_all_config() : array {
-		static $cache;
-		if (isset($cache)) return $cache;
-
-		return $cache = self::get_config_list(self::$section_tools_config_tipo, self::$tools_configuration);
+		return self::$all_config_cache
+			??= self::get_config_list(self::$section_tools_config_tipo, self::$tools_configuration);
 	}
 
 
@@ -810,10 +818,8 @@ class tools_register {
 	 * @return array List of default config objects {name, config}.
 	 */
 	public static function get_all_default_config() : array {
-		static $cache;
-		if (isset($cache)) return $cache;
-
-		return $cache = self::get_config_list(self::$section_registered_tools_tipo, self::$tools_default_configuration);
+		return self::$all_default_config_cache
+			??= self::get_config_list(self::$section_registered_tools_tipo, self::$tools_default_configuration);
 	}
 
 
@@ -893,11 +899,8 @@ class tools_register {
 	 * @return array
 	 */
 	public static function get_all_config_tool_client() : array {
-		static $cache;
-		if (isset($cache)) return $cache;
-
-		$full_configs = self::get_all_config();
-		return $cache = self::filter_client_config($full_configs);
+		return self::$all_config_tool_client_cache
+			??= self::filter_client_config( self::get_all_config() );
 	}
 
 
@@ -909,11 +912,8 @@ class tools_register {
 	 * @return array
 	 */
 	public static function get_all_default_config_tool_client() : array {
-		static $cache;
-		if (isset($cache)) return $cache;
-
-		$full_configs = self::get_all_default_config();
-		return $cache = self::filter_client_config($full_configs);
+		return self::$all_default_config_tool_client_cache
+			??= self::filter_client_config( self::get_all_default_config() );
 	}
 
 
@@ -941,19 +941,48 @@ class tools_register {
 
 
 	/**
-	 * CLEAN_CACHE
+	 * RESET_STATIC_CACHES
 	 *
-	 * Purges the tool-related cache files for ALL users.
-	 * Also clears in-memory static caches to prevent stale data
-	 * in the current and concurrent requests.
+	 * Clears the in-memory config list caches of this class.
+	 * Part of invalidate_all_tool_caches(); rarely useful alone.
+	 *
+	 * @return void
+	 */
+	public static function reset_static_caches() : void {
+		self::$all_config_cache						= null;
+		self::$all_default_config_cache				= null;
+		self::$all_config_tool_client_cache			= null;
+		self::$all_default_config_tool_client_cache	= null;
+	}//end reset_static_caches
+
+
+
+	/**
+	 * INVALIDATE_ALL_TOOL_CACHES
+	 *
+	 * Single orchestrating entry point for tool cache invalidation.
+	 * Every write path that touches tool registry (dd1324), tool configuration
+	 * (dd996) or user tools profiles MUST call this method. It clears:
+	 *  - all in-memory static caches (tool_common, tools_register, common)
+	 *  - the shared file caches (registered tools list, config lists)
+	 *  - the per-user authorization file caches
 	 *
 	 * @return bool Success status.
 	 */
-	public static function clean_cache() : bool {
+	public static function invalidate_all_tool_caches() : bool {
 
 		// Clear static caches immediately to prevent stale data in current request
-			tool_common::$user_tools_cache = [];
-			common::$cache_get_tools = [];
+			tool_common::reset_static_caches();
+			self::reset_static_caches();
+			common::$cache_get_tools		= [];
+			common::$cache_buttons_tools	= [];
+
+		// Delete shared file caches (entity-level, empty prefix: names are already fully qualified)
+			dd_cache::delete_cache_files([
+				tool_common::get_all_registered_tools_cache_name(),
+				self::get_config_list_cache_name(self::$section_registered_tools_tipo),
+				self::get_config_list_cache_name(self::$section_tools_config_tipo)
+			], '');
 
 		// Delete all per-user file caches.
 		// File naming convention: {entity}_{user_id}_cache_user_tools.php
@@ -977,6 +1006,20 @@ class tools_register {
 			}
 
 		return true;
+	}//end invalidate_all_tool_caches
+
+
+
+	/**
+	 * CLEAN_CACHE
+	 *
+	 * Back-compat alias of invalidate_all_tool_caches().
+	 * Kept because existing callers (section, section_record, tests) use this name.
+	 *
+	 * @return bool Success status.
+	 */
+	public static function clean_cache() : bool {
+		return self::invalidate_all_tool_caches();
 	}
 
 
@@ -1013,6 +1056,11 @@ class tools_register {
 		$sql_query = 'DELETE FROM "matrix_tools" WHERE section_tipo = $1 AND section_id = $2';
 
 		$result = matrix_db_manager::exec_search($sql_query, $params);
+
+		// Direct SQL delete bypasses section_record::save_event; invalidate explicitly
+		if ($result !== false) {
+			self::invalidate_all_tool_caches();
+		}
 
 		return ($result !== false);
 	}

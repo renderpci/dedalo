@@ -84,6 +84,22 @@ class tool_common {
 
 
 	/**
+	* RESET_STATIC_CACHES
+	* Clears all in-memory static caches of this class.
+	* Called by `tools_register::invalidate_all_tool_caches()` so every
+	* tool write path resets the full cache set in one place.
+	* @return void
+	*/
+	public static function reset_static_caches() : void {
+		self::$all_registered_tools_cache	= null;
+		self::$active_tools_cache			= null;
+		self::$cache_config_tool			= [];
+		self::$user_tools_cache				= [];
+	}//end reset_static_caches
+
+
+
+	/**
 	* __CONSTRUCT
 	* @param string|int|null $section_id Section ID of the record being processed. Null in list mode.
 	* @param string $section_tipo Section tipo (ontology identifier) where the tool is invoked
@@ -778,6 +794,56 @@ class tool_common {
 
 
 	/**
+	* GET_CONFIG_VALUE
+	* Resolves a single tool config key with per-key precedence:
+	*   1. user/install config record (section dd996)
+	*   2. registry default config (section dd1324, default configuration)
+	*   3. given $default
+	* Unlike get_config(), which falls back wholesale (the dd996 array wins
+	* as a whole when the record exists), this method resolves PER KEY, so a
+	* dd996 record that sets only one key inherits the rest from defaults.
+	* Property objects are unwrapped to their `value` when present.
+	* @param string $tool_name The name of the tool (same as class name)
+	* @param string $key The config property key
+	* @param mixed $default Fallback value when the key is not defined anywhere
+	* @return mixed
+	*/
+	public static function get_config_value(string $tool_name, string $key, mixed $default=null) : mixed {
+
+		$resolve = function(?array $config_item) use ($key) : mixed {
+			$config = $config_item['config'] ?? null;
+			if (is_object($config)) {
+				$config = (array)$config;
+			}
+			if (!is_array($config) || !array_key_exists($key, $config)) {
+				return null;
+			}
+			$prop = $config[$key];
+
+			return is_object($prop)
+				? ($prop->value ?? $prop)
+				: $prop;
+		};
+
+		// 1. user/install config (dd996)
+			$user_value = $resolve( tools_register::get_all_config()[$tool_name] ?? null );
+			if ($user_value !== null) {
+				return $user_value;
+			}
+
+		// 2. registry default config (dd1324)
+			$default_value = $resolve( tools_register::get_all_default_config()[$tool_name] ?? null );
+			if ($default_value !== null) {
+				return $default_value;
+			}
+
+		// 3. fallback
+		return $default;
+	}//end get_config_value
+
+
+
+	/**
 	* READ_FILES
 	*
 	* Reads files from a directory and returns an array of filenames,
@@ -1123,10 +1189,13 @@ class tool_common {
 		// Add resolved tool_config property to cached file
 		// Will be used later to get resolved user tools config from cache
 		// for example in get_structure_context or get_buttons_context
-			foreach ($user_tools as $tool) {
-				// Clone to avoid mutating the shared all_registered_tools_cache objects by reference
-				$tool = clone $tool;
-				$tool->tool_config = tool_common::get_config($tool->name);
+			foreach ($user_tools as $idx => $tool) {
+				// Clone to avoid mutating the shared all_registered_tools_cache objects by reference.
+				// The clone must be written back into the array; assigning only to the loop
+				// variable would silently drop the resolved tool_config.
+				$cloned_tool = clone $tool;
+				$cloned_tool->tool_config = tool_common::get_config($cloned_tool->name);
+				$user_tools[$idx] = $cloned_tool;
 			}
 
 		// 5. Save Cache

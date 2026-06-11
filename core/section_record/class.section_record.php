@@ -160,30 +160,13 @@ class section_record {
 				break;
 
 			case DEDALO_REGISTER_TOOLS_SECTION_TIPO : // dd1324
-				// This affects all users cache.
-				// Invalidate registered tools cache file. E.g. 'cache_tools_config_list_dd1324.php'
-				$cache_file1 = tools_register::get_config_list_cache_name(DEDALO_REGISTER_TOOLS_SECTION_TIPO);
-				// Invalidate all resolved registered tools cache file. E.g. 'cache_tools_all_registered_tools.php'
-				$cache_file2 = tool_common::get_all_registered_tools_cache_name();
-				dd_cache::delete_cache_files(
-					[$cache_file1, $cache_file2],
-					''
-				);
-				// Also invalidate per-user tool resolution caches
-				tools_register::clean_cache();
-				break;
-
 			case DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO : // dd996
+			case DEDALO_SECTION_PROFILES_TIPO : // dd234. Profile edits change per-user tool authorization (dd1067)
 				// This affects all users cache.
-				// Invalidate tools config cache file. E.g. 'cache_tools_config_list_dd996.php'
-				$cache_file_name = tools_register::get_config_list_cache_name(DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO);
-				dd_cache::delete_cache_files(
-					[$cache_file_name],
-					''
-				);
-				// Also invalidate per-user tool resolution caches (tool_config changed)
-				tools_register::clean_cache();
-				break;
+				// Single orchestrator: clears in-memory statics, the shared
+				// file caches (registered tools list, config lists dd1324/dd996)
+				// and the per-user tool resolution caches.
+				tools_register::invalidate_all_tool_caches();
 				break;
 
 			default:
