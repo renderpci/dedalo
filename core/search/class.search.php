@@ -436,22 +436,24 @@ class search {
 			}
 
 		// optimized version using IN
-			$ar_section_id = array_map(function($el){
-				return $el->section_id;
+		// Build the filter object directly (no JSON string interpolation) and force
+		// section_id values to int, so no raw value can corrupt the reconstructed SQO.
+			$ar_section_id = array_map(static function($el){
+				return (int)$el->section_id;
 			}, $ar_rows);
 			$section_tipo = $ar_rows[0]->section_tipo ?? '';
-			$item = json_decode('{
-				"q": "'. implode(',', $ar_section_id) .'",
-				"q_operator": null,
-				"path": [
-				  {
-					"section_tipo": "'. $section_tipo .'",
-					"component_tipo": "section_id",
-					"model": "component_section_id",
-					"name": "Id"
-				  }
-				]
-			}');
+
+			$path_item = new stdClass();
+				$path_item->section_tipo	= $section_tipo;
+				$path_item->component_tipo	= 'section_id';
+				$path_item->model			= 'component_section_id';
+				$path_item->name			= 'Id';
+
+			$item = new stdClass();
+				$item->q			= implode(',', $ar_section_id);
+				$item->q_operator	= null;
+				$item->path			= [$path_item];
+
 			$children_filter = [$item];
 
 		// filter
@@ -908,15 +910,8 @@ class search {
 			$query_inside .= $order_query;
 
 			if (!$use_window) {
-				// limit
-				if (isset($this->sqo->limit) && $this->sqo->limit>0) {
-					$query_inside .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
-				}
-
-				// offset
-				if (isset($this->sqo->offset) && $this->sqo->offset>0) {
-					$query_inside .= ' OFFSET ' . $this->sqo->offset;
-				}
+				// limit / offset (safe coerced tail)
+				$query_inside .= $this->build_limit_offset_sql();
 			}
 			// end query_inside
 
@@ -940,15 +935,8 @@ class search {
 
 				$sql_query .= PHP_EOL . 'ORDER BY ' . implode( ', ', $outer_order_clean );
 
-				// limit
-				if (isset($this->sqo->limit) && $this->sqo->limit>0) {
-					$sql_query .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
-				}
-
-				// offset
-				if (isset($this->sqo->offset) && $this->sqo->offset>0) {
-					$sql_query .= ' OFFSET ' . $this->sqo->offset;
-				}
+				// limit / offset (safe coerced tail)
+				$sql_query .= $this->build_limit_offset_sql();
 			}else{
 				$sql_query = $query_inside;
 			}
@@ -1064,15 +1052,8 @@ class search {
 
 		$sql_query .= PHP_EOL . 'ORDER BY ' . implode( ', ', $outer_order_clean );
 
-		// limit
-		if (isset($this->sqo->limit) && $this->sqo->limit>0) {
-			$sql_query .= PHP_EOL . 'LIMIT ' . $this->sqo->limit;
-		}
-
-		// offset
-		if (isset($this->sqo->offset) && $this->sqo->offset>0) {
-			$sql_query .= ' OFFSET ' . $this->sqo->offset;
-		}
+		// limit / offset (safe coerced tail)
+		$sql_query .= $this->build_limit_offset_sql();
 
 
 		return $sql_query;
