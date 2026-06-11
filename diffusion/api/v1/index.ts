@@ -16,6 +16,8 @@ import { check_bun_health, enrich_diffusion_info_with_readiness } from './lib/st
 import { process_response }           from './lib/diffusion_processor';
 import { insert_table_data }          from './lib/db';
 import { close_all_pools }            from './lib/db';
+import { delete_records, validate_delete_targets } from './lib/delete_handler';
+import { check_server_auth }          from './lib/auth';
 import { extract_cookie_header, extract_csrf_token } from './lib/session';
 import {
 	create_process,
@@ -890,6 +892,11 @@ const server = Bun.serve({
 					const result = await handle_get_ontology_map(body, cookie_header, csrf_token);
 					return Response.json(result);
 				}
+				case 'retry_pending_deletions': {
+					// Pass-through to PHP (permission check + retry run on PHP side)
+					const result = await call_dd_diffusion_api(body, cookie_header ?? undefined, csrf_token ?? undefined);
+					return Response.json(result);
+				}
 				case 'list_processes': {
 					const is_auth_list = await check_auth(cookie_header);
 					if (!is_auth_list) {
@@ -938,6 +945,28 @@ const server = Bun.serve({
 				case 'get_diffusion_info': {
 					const result = await handle_get_diffusion_info(body, cookie_header, csrf_token);
 					return Response.json(result);
+				}
+				case 'delete_record': {
+					// Server-to-server delete propagation: accepts a session
+					// cookie (PHP interactive delete) or the internal token
+					// (CLI/cron retry without a session).
+					const is_auth_delete = await check_server_auth(cookie_header, request);
+					if (!is_auth_delete) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const targets = (body as any).targets;
+					const validation_error = validate_delete_targets(targets);
+					if (validation_error) {
+						return Response.json(
+							{ result: false, msg: validation_error, deleted: [], errors: [validation_error] },
+							{ status: 400 }
+						);
+					}
+					const delete_result = await delete_records(targets);
+					return Response.json(delete_result);
 				}
 				default:
 					return Response.json(

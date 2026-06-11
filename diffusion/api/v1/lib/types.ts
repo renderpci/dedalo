@@ -188,6 +188,30 @@ export interface engine_response {
 
 
 // =====================================================
+// Delete record propagation (work-system record deleted
+// → remove its published copies from target databases)
+// =====================================================
+
+export interface delete_target {
+	database_name: string;
+	table_name:    string;
+	section_ids:   (string | number)[];
+}
+
+export interface delete_record_request {
+	action:  'delete_record';
+	targets: delete_target[];
+}
+
+export interface delete_record_response {
+	result:  boolean;
+	msg:     string;
+	deleted: { database_name: string; table_name: string; affected: number }[];
+	errors?: string[];
+}
+
+
+// =====================================================
 // Progress tracking (streaming + polling)
 // =====================================================
 
