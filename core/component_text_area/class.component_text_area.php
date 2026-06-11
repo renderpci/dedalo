@@ -1914,24 +1914,37 @@ class component_text_area extends component_string_common {
 					}
 					$data_from_json = $normalized;
 				}else if (is_object($data_from_json)) {
-					foreach ($data_from_json as $key => $current_values) {
-						$ar_values = is_array($current_values)
-							? $current_values
-							: [$current_values];
 
-						$normalized = [];
-						foreach ($ar_values as $val) {
-							if (is_object($val) && property_exists($val, 'value')) {
-								$val->value = $normalize_value([$val->value])[0]->value ?? $val->value;
-								$normalized[] = $val;
-							}else if (is_object($val)) {
-								$normalized[] = $val;
-							}else{
-								$wrapped = $normalize_value([$val]);
-								$normalized = [...$normalized, ...$wrapped];
+					$first_key = array_key_first( (array)$data_from_json );
+					if ($first_key!==null && strpos($first_key, 'lg-')===0) {
+						// Multi-language object as {"lg-eng": "<p>My value</p>"}
+						// Keep it as object so the import tool can iterate languages calling set_data_lang(),
+						// but normalize every lang value into an array of v7 items
+						foreach ($data_from_json as $key => $current_values) {
+							$ar_values = is_array($current_values)
+								? $current_values
+								: [$current_values];
+
+							$normalized = [];
+							foreach ($ar_values as $val) {
+								if (is_object($val) && property_exists($val, 'value')) {
+									$val->value = $normalize_value([$val->value])[0]->value ?? $val->value;
+									$normalized[] = $val;
+								}else if (is_object($val)) {
+									$normalized[] = $val;
+								}else{
+									$wrapped = $normalize_value([$val]);
+									$normalized = [...$normalized, ...$wrapped];
+								}
 							}
+							$data_from_json->$key = $normalized;
 						}
-						$data_from_json->$key = $normalized;
+					}else{
+						// Single object item as {"value":"<p>x</p>"}. Wrap into an array
+						if (property_exists($data_from_json, 'value')) {
+							$data_from_json->value = $normalize_value([$data_from_json->value])[0]->value ?? $data_from_json->value;
+						}
+						$data_from_json = [$data_from_json];
 					}
 				}
 
@@ -1944,15 +1957,7 @@ class component_text_area extends component_string_common {
 		// string case
 			// check the begin and end of the value string, if it has a [] or other combination that seems array
 			// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
-			$begins_one	= substr($import_value, 0, 1);
-			$ends_one	= substr($import_value, -1);
-			$begins_two	= substr($import_value, 0, 2);
-			$ends_two	= substr($import_value, -2);
-
-			if (($begins_two !== '["' && $ends_two !== '"]') ||
-				($begins_two !== '["' && $ends_one !== ']') ||
-				($begins_one !== '[' && $ends_two !== '"]')
-				){
+			if (self::is_plain_bracket_string($import_value)) {
 
 				// import_value is a string
 				$value = !empty($import_value) || $import_value==='0'
