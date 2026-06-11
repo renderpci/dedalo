@@ -173,10 +173,10 @@ Options -Indexes
 	RequestHeader unset Proxy
 
 	# Content Security Policy (enforced).
-	Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
+	Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
 
 	# Report-Only version (for monitoring — swap with enforced line above if needed):
-	# Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
+	# Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
 </IfModule>
 
 # Legacy header section preserved (commented) for reference.
