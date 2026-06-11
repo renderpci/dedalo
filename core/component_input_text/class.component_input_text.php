@@ -213,10 +213,10 @@ class component_input_text extends component_string_common {
 				// try to JSON decode (null on not decode)
 				$data_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 
-				// Normalize: ensure array items are objects with 'value' property (v7 format)
-				if (is_array($data_from_json)) {
+				// normalize_items: ensure array items are objects with 'value' property (v7 format)
+				$normalize_items = function(array $items) : array {
 					$normalized = [];
-					foreach ($data_from_json as $val) {
+					foreach ($items as $val) {
 						if (!is_object($val)) {
 							$normalized[] = (object)['value' => $val];
 						}else if (!property_exists($val, 'value') && !property_exists($val, 'section_id')) {
@@ -226,7 +226,30 @@ class component_input_text extends component_string_common {
 							$normalized[] = $val;
 						}
 					}
-					$data_from_json = $normalized;
+					return $normalized;
+				};
+
+				if (is_array($data_from_json)) {
+
+					$data_from_json = $normalize_items($data_from_json);
+
+				}else if (is_object($data_from_json)) {
+
+					$first_key = array_key_first( (array)$data_from_json );
+					if ($first_key!==null && strpos($first_key, 'lg-')===0) {
+						// Multi-language object as {"lg-eng": "My value", "lg-spa": "Mi valor"}
+						// Keep it as object so the import tool can iterate languages calling set_data_lang(),
+						// but normalize every lang value into an array of v7 items
+						foreach ($data_from_json as $lang => $lang_value) {
+							$ar_lang_value = is_array($lang_value)
+								? $lang_value
+								: [$lang_value];
+							$data_from_json->$lang = $normalize_items($ar_lang_value);
+						}
+					}else{
+						// Single object item as {"value":"x"}. Wrap into an array
+						$data_from_json = $normalize_items([$data_from_json]);
+					}
 				}
 
 				$response->result	= $data_from_json;
@@ -238,15 +261,7 @@ class component_input_text extends component_string_common {
 		// string case
 			// check the begin and end of the value string, if it has a [] or other combination that seems array
 			// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
-			$begins_one	= substr($import_value, 0, 1);
-			$ends_one	= substr($import_value, -1);
-			$begins_two	= substr($import_value, 0, 2);
-			$ends_two	= substr($import_value, -2);
-
-			if (($begins_two !== '["' && $ends_two !== '"]') ||
-				($begins_two !== '["' && $ends_one !== ']') ||
-				($begins_one !== '[' && $ends_two !== '"]')
-				){
+			if (self::is_plain_bracket_string($import_value)) {
 				// Wrap plain string into v7 format: [(object)['value' => $import_value]]
 				// set_data_lang() requires object items; plain strings would be silently dropped
 				$value = !empty($import_value) || $import_value==='0'
