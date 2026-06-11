@@ -26,6 +26,22 @@ class tool_time_machine extends tool_common {
 
 
 	/**
+	* IS_AVAILABLE
+	* Availability hook called by common::get_tools() (moved here from the
+	* previously hardcoded core case). component_relation_children has no
+	* time-machine data, so the tool is hidden there.
+	* Lifecycle hook: never list in API_ACTIONS.
+	* @param object $context {caller_model, called_class, is_component, tipo, section_tipo, mode}
+	* @return bool
+	*/
+	public static function is_available(object $context) : bool {
+
+		return $context->called_class !== 'component_relation_children';
+	}//end is_available
+
+
+
+	/**
 	* APPLY_VALUE
 	* Set user selected value from time machine to current element data
 	* @param object $request_options

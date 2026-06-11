@@ -84,6 +84,52 @@ class tool_common {
 
 
 	/**
+	* TOOL_DECLARES_AVAILABILITY
+	* True when the tool class declares the optional availability hook:
+	*
+	*   public static function is_available(object $context) : bool
+	*
+	* Contract: `common::get_tools()` calls the hook with a context object
+	* {caller_model, called_class, is_component, tipo, section_tipo, mode}
+	* AFTER the affected_models/affected_tipos match; returning anything but
+	* true excludes the tool for that element. Implementations must be fast
+	* and side-effect-free (results are cached per user/tipo/section_tipo).
+	* Lifecycle hooks like this one must NEVER be listed in API_ACTIONS.
+	*
+	* tool_common deliberately does NOT declare a default is_available, so
+	* method_exists is true only for tools that opt in.
+	*
+	* @param string $tool_name Tool class name, e.g. 'tool_diffusion'
+	* @return bool
+	*/
+	public static function tool_declares_availability(string $tool_name) : bool {
+
+		static $memo = [];
+		if (isset($memo[$tool_name])) {
+			return $memo[$tool_name];
+		}
+
+		if (!class_exists($tool_name, false)) {
+			$class_file = DEDALO_TOOLS_PATH . '/' . $tool_name . '/class.' . $tool_name . '.php';
+			if (is_file($class_file)) {
+				try {
+					require_once $class_file;
+				} catch (\Throwable $e) {
+					// a tool class that cannot load declares nothing
+					debug_log(__METHOD__
+						. " Tool class failed to load: $tool_name " . $e->getMessage()
+						, logger::WARNING
+					);
+				}
+			}
+		}
+
+		return $memo[$tool_name] = (class_exists($tool_name, false) && method_exists($tool_name, 'is_available'));
+	}//end tool_declares_availability
+
+
+
+	/**
 	* RESET_STATIC_CACHES
 	* Clears all in-memory static caches of this class.
 	* Called by `tools_register::invalidate_all_tool_caches()` so every

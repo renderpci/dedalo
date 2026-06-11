@@ -3479,6 +3479,18 @@ abstract class common {
 			$properties			= $this->get_properties();
 			$with_lang_versions	= $this->with_lang_versions;
 
+		// availability context passed to optional tool::is_available($context).
+		// Tools declare their own availability conditions instead of core
+		// hardcoding per-tool rules here (see tool_common docblock contract).
+			$tool_context = (object)[
+				'caller_model'	=> $model,
+				'called_class'	=> get_called_class(),
+				'is_component'	=> $is_component,
+				'tipo'			=> $tipo,
+				'section_tipo'	=> $this->get_section_tipo(),
+				'mode'			=> $this->mode ?? null
+			];
+
 		// element tools
 			foreach ($user_tools as $tool) {
 
@@ -3500,26 +3512,20 @@ abstract class common {
 							}
 						}
 
-					// diffusion case. Skip non diffusion defined (in Ontology) sections
-						if ($tool->name==='tool_diffusion') {
-							// components are never in the diffusion map, skip the expensive check
-							if ($is_component) {
-								continue;
-							}
-							$have_section_diffusion = diffusion_utils::have_section_diffusion($tipo);
-							if ($have_section_diffusion===false) {
-								continue;
-							}
-						}
-
-					// time machine case
-						if ($tool->name==='tool_time_machine' && get_called_class()==='component_relation_children') {
-							// skip tool for component_relation_children because it has no data
+					// dd15 section case. Only tool_export is allowed for time machine section.
+					// This is element-centric policy about the time machine section, not a
+					// tool capability, so it stays in core.
+						if ($this->get_section_tipo()===DEDALO_TIME_MACHINE_SECTION_TIPO && $tool->name!=='tool_export') {
 							continue;
 						}
 
-					// dd15 section case. Only tool_export is allowed for time machine section
-						if ($this->get_section_tipo()===DEDALO_TIME_MACHINE_SECTION_TIPO && $tool->name!=='tool_export') {
+					// tool-declared availability. Replaces the previous hardcoded
+					// tool_diffusion / tool_time_machine cases: a tool class may declare
+					// `public static function is_available(object $context): bool` to
+					// add its own availability conditions. Cost is amortized by the
+					// per-(user, tipo, section_tipo) cache of this method.
+						if (tool_common::tool_declares_availability($tool->name)
+							&& $tool->name::is_available($tool_context) !== true) {
 							continue;
 						}
 
