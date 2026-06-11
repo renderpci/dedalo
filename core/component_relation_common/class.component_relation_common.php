@@ -1089,7 +1089,7 @@ class component_relation_common extends component_common {
 	* @param ?string $diffusion_element_tipo
 	* @return array $diffusion_data
 	*
-	* @see class.diffusion_data.php
+	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
 	* @test false
 	*/
 	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo = null ) : array {
@@ -3013,66 +3013,24 @@ class component_relation_common extends component_common {
 
 	/**
 	* MAP_LOCATOR_TO_TERM_ID [diffusion]
-	* Alias of diffusion_sql::map_locator_to_term_id
-	* Used in diffusion by component_autocomplete and component_portal (!)
-	* @see Ontology term properties 'rsc863' or 'mdcat2242'
-	* @return string|null $term_id
+	* v6-only diffusion method (was an alias of diffusion_sql::map_locator_to_term_id,
+	* removed in v7). Diffusion values are processed by the Bun engine parsers now;
+	* ontology process_dato configs were converted by the migration script
+	* (diffusion/migration/migrate_diffusion_properties.php). Any call reaching this
+	* method comes from an unmigrated config: it resolves as null and is reported.
+	* @return string|null $term_id Always null
 	*/
-	public function map_locator_to_term_id() { // Diffusion method
+	public function map_locator_to_term_id() : ?string {
 
-		$term_id = null;
+		debug_log(__METHOD__
+			. " UNMIGRATED v6 process_dato config detected (map_locator_to_term_id). Value resolved as null." . PHP_EOL
+			. " Migrate this ontology config to v7 parsers (see diffusion/migration/migrate_diffusion_properties.php)." . PHP_EOL
+			. ' tipo: ' . to_string($this->tipo ?? null) . PHP_EOL
+			. ' section_tipo: ' . to_string($this->section_tipo ?? null)
+			, logger::ERROR
+		);
 
-		$data = $this->get_data();
-
-		if (!empty($data)) {
-
-			// arguments from properties->process_dato_arguments->custom_arguments
-				$args 	 = func_get_args(); // is array of objects
-				$options = new stdClass();
-				if (!empty($args)) {
-					foreach ($args as $value_obj) {
-						foreach ($value_obj as $key => $value) {
-							$options->{$key} = $value;
-						}
-					}
-				}
-
-			// add parents option
-				if (isset($options->add_parents) && $options->add_parents===true) {
-					$new_data = [];
-					# calculate parents and add to data
-					foreach ((array)$data as $current_locator) {
-						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-						$ar_parents = component_relation_parent::get_parents_recursive(
-							$current_locator->section_id,
-							$current_locator->section_tipo
-						);
-						foreach ($ar_parents as $parent_locator) {
-							$new_data[] = $parent_locator;
-						}
-					}
-					$data = [...$data, ...$new_data];
-				}
-
-			// send to diffusion for normalize formats
-				$map_options = null;
-				$check_publishable = $options->check_publishable ?? false;
-				if ($check_publishable) {
-
-					// Pass 'check_publishable' value to diffusion_sql to apply (mupreva138 case)
-					// path: $process_dato_arguments = $options->properties->process_dato_arguments
-					$map_options = new stdClass();
-						$map_options->properties = (object)[
-							'process_dato_arguments' => (object)[
-								'check_publishable' => true
-							]
-						];
-				}
-			// send to diffusion for normalize formats
-				$term_id = diffusion_sql::map_locator_to_term_id($map_options, $data);
-		}
-
-		return $term_id;
+		return null;
 	}//end map_locator_to_term_id
 
 
