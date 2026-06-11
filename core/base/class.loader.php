@@ -241,7 +241,9 @@ class class_loader {
 
 			// tools
 			case (str_starts_with($class_name, 'tool')):
-				$directory	= ($class_name==='tools_register') ? 'tool_common' : $class_name;
+				// classes that live inside tool_common (subsystem infrastructure)
+				$tool_common_classes = ['tools_register','tool_ontology_map','tool_security','tool_paths'];
+				$directory	= in_array($class_name, $tool_common_classes, true) ? 'tool_common' : $class_name;
 				$file_path	= DEDALO_TOOLS_PATH . '/' . $directory . '/class.' . $class_name . '.php';
 				break;
 

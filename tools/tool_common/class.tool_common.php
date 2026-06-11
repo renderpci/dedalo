@@ -657,13 +657,13 @@ class tool_common {
 								'section_id' => '1',
 								'section_tipo' => 'dd64',
 								'type' => 'dd151',
-								'from_component_tipo' => 'dd1354'
+								'from_component_tipo' => tool_ontology_map::ACTIVE
 							],
 							'q_operator' => null,
 							'path' => [
 								(object)[
 									'section_tipo' => DEDALO_REGISTER_TOOLS_SECTION_TIPO,
-									'component_tipo' => 'dd1354',
+									'component_tipo' => tool_ontology_map::ACTIVE,
 									'model' => 'component_radio_button',
 									'name' => 'Active'
 								]

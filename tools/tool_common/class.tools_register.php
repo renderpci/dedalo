@@ -24,43 +24,43 @@ class tools_register {
 		 * Component tipo for tool name identifier. E.g. 'tool_transcription'.
 		 * @var string $tipo_tool_name
 		 */
-		public static string $tipo_tool_name = 'dd1326';
+		public static string $tipo_tool_name = tool_ontology_map::TOOL_NAME;
 
 		/**
 		 * Component tipo for tool label display name.
 		 * @var string $tipo_tool_label
 		 */
-		public static string $tipo_tool_label = 'dd799';
+		public static string $tipo_tool_label = tool_ontology_map::TOOL_LABEL;
 
 		/**
 		 * Component tipo for tool ontology definition reference.
 		 * @var string $tipo_ontology
 		 */
-		public static string $tipo_ontology = 'dd1334';
+		public static string $tipo_ontology = tool_ontology_map::ONTOLOGY;
 
 		/**
 		 * Component tipo for tool version number.
 		 * @var string $tipo_version
 		 */
-		public static string $tipo_version = 'dd1327';
+		public static string $tipo_version = tool_ontology_map::VERSION;
 
 		/**
 		 * Component tipo for tool developer/author name.
 		 * @var string $tipo_developer
 		 */
-		public static string $tipo_developer = 'dd1644';
+		public static string $tipo_developer = tool_ontology_map::DEVELOPER;
 
 		/**
 		 * Component tipo for tool description text.
 		 * @var string $tipo_description
 		 */
-		public static string $tipo_description = 'dd612';
+		public static string $tipo_description = tool_ontology_map::DESCRIPTION;
 
 		/**
 		 * Component tipo for minimum required Dédalo version.
 		 * @var string $tipo_dedalo_version_minimal
 		 */
-		public static string $tipo_dedalo_version_minimal = 'dd1328';
+		public static string $tipo_dedalo_version_minimal = tool_ontology_map::DEDALO_VERSION_MIN;
 
 		/**
 		 * Section tipo for 'Tools Configuration' section (dd996).
@@ -74,41 +74,41 @@ class tools_register {
 		 * Defines which component/section models the tool applies to.
 		 * @var string $tipo_affected_models
 		 */
-		public static string $tipo_affected_models = 'dd1330';
+		public static string $tipo_affected_models = tool_ontology_map::AFFECTED_MODELS;
 
 		/**
 		 * Component tipo for tool properties configuration (component_json).
 		 * @var string $tipo_properties
 		 */
-		public static string $tipo_properties = 'dd1335';
+		public static string $tipo_properties = tool_ontology_map::PROPERTIES;
 
 		/**
 		 * Component tipo for 'always active' flag.
 		 * Controls whether tool is available without explicit activation.
 		 * @var string $tipo_always_active
 		 */
-		public static string $tipo_always_active = 'dd1601';
+		public static string $tipo_always_active = tool_ontology_map::ALWAYS_ACTIVE;
 
 		/**
 		 * Component tipo for tools configuration JSON (dd999).
 		 * Runtime configuration storage for tool behavior.
 		 * @var string $tools_configuration
 		 */
-		public static string $tools_configuration = 'dd999';
+		public static string $tools_configuration = tool_ontology_map::CONFIG;
 
 		/**
 		 * Component tipo for tools default configuration JSON (dd1633).
 		 * Factory default settings for tool initialization.
 		 * @var string $tools_default_configuration
 		 */
-		public static string $tools_default_configuration = 'dd1633';
+		public static string $tools_default_configuration = tool_ontology_map::DEFAULT_CONFIG;
 
 		/**
 		 * Component tipo for tool active status (component_radio_button, dd1354).
 		 * Boolean flag to enable/disable the tool in the system.
 		 * @var string $tipo_active
 		 */
-		public static string $tipo_active = 'dd1354';
+		public static string $tipo_active = tool_ontology_map::ACTIVE;
 
 		/**
 		 * In-memory caches for the config list getters.
@@ -368,7 +368,7 @@ class tools_register {
 			}
 
 			// Remove dd1353 (simple_tool_object) if exists in source file (/current_tool/register.json)
-			$simple_tool_object_tipo = 'dd1353';
+			$simple_tool_object_tipo = tool_ontology_map::SIMPLE_TOOL_OBJECT;
 			$model = ontology_node::get_model_by_tipo($simple_tool_object_tipo, true);
 			$column = section_record_data::get_column_name($model);
 			if( isset($current_tool_section_data->{$column}->{$simple_tool_object_tipo}) ) {
@@ -658,14 +658,14 @@ class tools_register {
 		})();
 
 		// affected_tipos
-		$tool_object->affected_tipos = self::get_val($section_id, $section_tipo, 'dd1350', DEDALO_DATA_NOLAN, true)[0]->value ?? null;
+		$tool_object->affected_tipos = self::get_val($section_id, $section_tipo, tool_ontology_map::AFFECTED_TIPOS, DEDALO_DATA_NOLAN, true)[0]->value ?? null;
 
 		// Boolean flags (represented as value 1 in database)
 		$flags = [
-			'show_in_inspector'        => 'dd1331',
-			'show_in_component'        => 'dd1332',
+			'show_in_inspector'        => tool_ontology_map::SHOW_IN_INSPECTOR,
+			'show_in_component'        => tool_ontology_map::SHOW_IN_COMPONENT,
 			'always_active'            => self::$tipo_always_active, // 'dd1601'
-			'requirement_translatable' => 'dd1333'
+			'requirement_translatable' => tool_ontology_map::REQUIRE_TRANSLATABLE
 		];
 
 		foreach ($flags as $prop => $tipo) {
@@ -678,7 +678,7 @@ class tools_register {
 		$json_props = [
 			'ontology'   => self::$tipo_ontology,
 			'properties' => self::$tipo_properties,
-			'labels'     => 'dd1372'
+			'labels'     => tool_ontology_map::LABELS
 		];
 
 		foreach ($json_props as $prop => $tipo) {
