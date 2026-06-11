@@ -122,4 +122,82 @@ final class context_cache_determinism_test extends BaseTestCase {
 
 		$this->assertSame($props_before, $props_after, 'instance properties mutated by context build');
 	}
+
+	/**
+	* Old bug: the context's properties object was shared with the cache entry
+	* (shallow clone). Callers that mutate nested context properties — e.g.
+	* component_relation_*_json set show_interface->button_add=false, dd_core_api
+	* area cases inject thesaurus vars — polluted every later caller of the key.
+	*/
+	public function test_nested_context_properties_mutation_does_not_pollute_cache() {
+		$component = $this->build_component(4);
+
+		$ctx_a = $component->get_structure_context(1, false);
+		// mutate nested properties exactly like component_relation_parent_json does
+		$ctx_a->properties = $ctx_a->properties ?? new stdClass();
+		$ctx_a->properties->show_interface = $ctx_a->properties->show_interface ?? new stdClass();
+		$ctx_a->properties->show_interface->button_add = false;
+
+		$ctx_b = $component->get_structure_context(1, false);
+		$this->assertFalse(
+			isset($ctx_b->properties->show_interface->button_add),
+			'nested properties mutation leaked into the cached context core'
+		);
+	}
+
+	/**
+	* Injected properties (set_properties) must produce a context that reflects
+	* them — served from a properties-hash cache key, not from the plain
+	* ontology-derived entry and not by disabling the cache.
+	*/
+	public function test_injected_properties_reflected_and_isolated() {
+		$component = $this->build_component(5);
+
+		// warm the ontology-derived entry first
+		$ctx_plain = $component->get_structure_context(1, false);
+		$this->assertFalse(isset($ctx_plain->properties->custom_marker));
+
+		// inject custom properties
+		$properties = $component->get_properties() ?? new stdClass();
+		$properties = unserialize(serialize($properties));
+		$properties->custom_marker = 'injected_value';
+		$component->set_properties($properties);
+
+		$ctx_injected = $component->get_structure_context(1, false);
+		$this->assertSame(
+			'injected_value',
+			$ctx_injected->properties->custom_marker ?? null,
+			'injected properties not reflected in context (stale ontology-derived cache entry served)'
+		);
+
+		// a fresh instance without injection must still get the pristine entry
+		$fresh = component_common::get_instance(
+			'component_text_area', 'test17', 6, 'edit', DEDALO_DATA_NOLAN, 'test3'
+		);
+		$ctx_fresh = $fresh->get_structure_context(1, false);
+		$this->assertFalse(
+			isset($ctx_fresh->properties->custom_marker),
+			'injected properties leaked into the ontology-derived cache entry'
+		);
+	}
+
+	/**
+	* get_order_path results are memoized; subclass overrides mutate path items
+	* ($path[0]->column) after calling parent, so the memo must hand out copies.
+	*/
+	public function test_order_path_memo_is_isolated() {
+		$component = $this->build_component(7);
+
+		$path_a = $component->get_order_path('test17', 'test3');
+		if (empty($path_a)) {
+			$this->markTestSkipped('no order path resolved for test component');
+		}
+		$path_a[0]->column = 'polluted';
+
+		$path_b = $component->get_order_path('test17', 'test3');
+		$this->assertFalse(
+			isset($path_b[0]->column) && $path_b[0]->column==='polluted',
+			'order path memo polluted by caller mutation'
+		);
+	}
 }
