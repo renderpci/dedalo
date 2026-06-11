@@ -8,7 +8,7 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {dd_request_idle_callback} from '../../../core/common/js/events.js'
-	import {common} from '../../../core/common/js/common.js'
+	import {common, create_source} from '../../../core/common/js/common.js'
 	import {LZString as lzstring} from '../../../core/common/js/utils/lzstring.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {
@@ -432,6 +432,97 @@ tool_common.prototype.render = async function(options={}) {
 
 
 /**
+* TOOL_REQUEST
+* Builds and sends the standard dd_tools_api 'tool_request' rqo that every
+* tool used to assemble by hand. Routes to the static PHP method
+* {this.model}::{action}(object $options) on the server.
+* The method must be listed in the tool class API_ACTIONS allowlist.
+*
+* @param {Object} options - Request options
+* @param {string} options.action - Server static method name (e.g. 'my_action')
+* @param {Object} [options.options={}] - Options object passed to the PHP method
+* @param {boolean} [options.background=false] - Run on the server CLI background runner
+*   (the PHP method must also be listed in the tool class BACKGROUND_RUNNABLE allowlist)
+* @param {string} [options.url] - Optional API URL override (e.g. a custom endpoint)
+* @param {boolean} [options.prevent_lock=true] - Release the PHP session lock during the request
+*
+* @return {Promise<Object>} API response { result, msg, errors }
+*/
+tool_common.prototype.tool_request = async function(options) {
+
+	const self = this
+
+	// options
+		const action		= options.action
+		const fn_options	= options.options || {}
+		const background	= options.background ?? false
+		const url			= options.url ?? null
+		const prevent_lock	= options.prevent_lock ?? true
+
+	if (!action) {
+		console.error('tool_request: missing action', options)
+		return {result: false, msg: 'Error. tool_request: missing action', errors: ['missing action']}
+	}
+
+	// rqo
+		const rqo = {
+			dd_api			: 'dd_tools_api',
+			action			: 'tool_request',
+			prevent_lock	: prevent_lock,
+			source			: create_source(self, action),
+			options			: background===true
+				? {...fn_options, background_running: true}
+				: fn_options
+		}
+
+	// request
+		const api_response = await data_manager.request({
+			body : rqo,
+			...(url ? {url} : {})
+		})
+
+
+	return api_response
+}//end tool_request
+
+
+
+/**
+* WIRE_TOOL
+* Performs the standard prototype wiring that every tool repeats:
+*   tool_x.prototype.render  = tool_common.prototype.render
+*   tool_x.prototype.destroy = common.prototype.destroy
+*   tool_x.prototype.refresh = common.prototype.refresh
+*   tool_x.prototype.edit    = render_module.prototype.edit  (when defined)
+*   tool_x.prototype.list    = render_module.prototype.list  (when defined)
+* Tools keep assigning additional methods after this call as usual.
+*
+* @param {Function} tool_constructor - The tool constructor function
+* @param {Function} [render_module] - The render constructor (e.g. render_tool_x)
+*
+* @return {Function} The same tool_constructor, wired
+*/
+export const wire_tool = function(tool_constructor, render_module) {
+
+	tool_constructor.prototype.render	= tool_common.prototype.render
+	tool_constructor.prototype.destroy	= common.prototype.destroy
+	tool_constructor.prototype.refresh	= common.prototype.refresh
+
+	if (render_module) {
+		if (typeof render_module.prototype.edit==='function') {
+			tool_constructor.prototype.edit = render_module.prototype.edit
+		}
+		if (typeof render_module.prototype.list==='function') {
+			tool_constructor.prototype.list = render_module.prototype.list
+		}
+	}
+
+	return tool_constructor
+}//end wire_tool
+
+
+
+/**
 * LOAD_COMPONENT
 * Loads a component to place it in its respective container.
 * Initializes and builds the component with the given options.
@@ -695,8 +786,9 @@ const view_modal = async function(options) {
 	// load tool CSS
 		const tool_css_url = tool_context.css?.url
 		if(tool_css_url) {
-			// Don't await here. Race conditions are handled
-			load_style(tool_css_url)
+			// Await to prevent a first paint of the tool before its stylesheet
+			// is applied (build() awaits its own load_style the same way)
+			await load_style(tool_css_url)
 		}
 
 	// modal
@@ -729,7 +821,7 @@ const view_modal = async function(options) {
 					callback			: async () => {
 
 						// invalid tool common render
-						const render_invalid_tool = () => {
+						const render_invalid_tool = (error) => {
 							// Create a wrapper element with a message indicating the tool is invalid
 							const msg = tool_instance
 								? `${tool_instance.context?.label} (${tool_instance.model}) called from: ${caller.label} (${caller.model} - ${caller.tipo})`
@@ -740,6 +832,16 @@ const view_modal = async function(options) {
 								class_name		: 'body content'
 							});
 							wrapper.slot = 'body';
+
+							// surface the actual error to the user instead of console-only
+							if (error) {
+								ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'content_data tool tool_error content_data_error',
+									inner_html		: 'Error: ' + (error.message || error) + '. Try to close the tool and re-open it',
+									parent			: wrapper
+								});
+							}
 
 							// Create and configure the tool header for the invalid tool case
 							const tool_header = ui.create_dom_element({
@@ -788,7 +890,7 @@ const view_modal = async function(options) {
 						} catch (error) {
 							console.log('tool_instance:', tool_instance);
 							console.error(error, caller);
-							return render_invalid_tool();
+							return render_invalid_tool(error);
 						}
 					}
 				})
