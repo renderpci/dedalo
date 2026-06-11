@@ -16,7 +16,7 @@
 
 
 
-class diffusion_section_stats extends diffusion {
+class diffusion_section_stats {
 
 
 
