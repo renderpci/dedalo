@@ -318,6 +318,15 @@ class area_maintenance extends area_common {
 		$item->label = 'DEDALO COUNTERS STATUS';
 		$ar_widgets[] = $this->widget_factory($item);
 
+		// dataframe_control *
+		$item = new stdClass();
+		$item->id = 'dataframe_control';
+		$item->class = 'width_100';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = 'DATAFRAME PAIRING INTEGRITY';
+		$ar_widgets[] = $this->widget_factory($item);
+
 		// php_info *
 		$item = new stdClass();
 		$item->id = 'php_info';
