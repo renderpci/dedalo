@@ -303,6 +303,52 @@ export async function reconcile(): Promise<{ added: number; removed: number } | 
 
 
 
+/**
+ * GET_STATUS
+ * Lightweight inspection of the marker store for the maintenance UI
+ * (media_control widget): whether the feature is enabled in this engine
+ * (DEDALO_MEDIA_PATH set) and current marker counts. Read-only.
+ */
+export async function get_status(): Promise<{
+	enabled:      boolean;
+	base:         string | null;
+	pub_markers:  number;
+	auth_markers: number;
+	databases:    string[];
+}> {
+
+	const base = get_base();
+	if (base === null) {
+		return { enabled: false, base: null, pub_markers: 0, auth_markers: 0, databases: [] };
+	}
+
+	const count_dir = async (dir: string): Promise<number> => {
+		try {
+			return (await fs.readdir(dir)).length;
+		} catch (err: any) {
+			if (err?.code !== 'ENOENT') throw err;
+			return 0;
+		}
+	};
+
+	let databases: string[] = [];
+	try {
+		databases = await fs.readdir(path.join(base, 'dbs'));
+	} catch (err: any) {
+		if (err?.code !== 'ENOENT') throw err;
+	}
+
+	return {
+		enabled:      true,
+		base,
+		pub_markers:  await count_dir(path.join(base, 'pub')),
+		auth_markers: await count_dir(path.join(base, 'auth')),
+		databases,
+	};
+}
+
+
+
 export interface rebuild_target {
 	database_name: string;
 	table_name:    string;

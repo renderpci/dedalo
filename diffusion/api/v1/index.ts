@@ -17,7 +17,7 @@ import { process_response }           from './lib/diffusion_processor';
 import { insert_table_data }          from './lib/db';
 import { close_all_pools }            from './lib/db';
 import { delete_records, validate_delete_targets } from './lib/delete_handler';
-import { apply_table_state, reconcile, rebuild, validate_rebuild_targets } from './lib/media_index';
+import { apply_table_state, reconcile, rebuild, validate_rebuild_targets, get_status as get_media_index_status } from './lib/media_index';
 import { check_database_exists, backup_database } from './lib/db_admin';
 import { check_server_auth }          from './lib/auth';
 import { extract_cookie_header, extract_csrf_token } from './lib/session';
@@ -1020,6 +1020,24 @@ export async function handle_request(request: Request): Promise<Response> {
 					}
 					const delete_result = await delete_records(targets);
 					return Response.json(delete_result);
+				}
+				case 'media_index_status': {
+					// Server-to-server: read-only status of the media publication
+					// marker store (used by the area_maintenance media_control
+					// widget to report engine-side configuration).
+					const is_auth_status = await check_server_auth(cookie_header, request);
+					if (!is_auth_status) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const media_index_status = await get_media_index_status();
+					return Response.json({
+						result: true,
+						msg:    'OK. Media index status',
+						...media_index_status,
+					});
 				}
 				case 'rebuild_media_index': {
 					// Server-to-server: full resync of the media publication

@@ -96,6 +96,7 @@ const server_actions = [
 	'check_database',
 	'backup_database',
 	'rebuild_media_index',
+	'media_index_status',
 ];
 
 describe('uniform Bun-side auth', () => {
@@ -195,6 +196,22 @@ describe('action input validation', () => {
 			const data = await res.json() as any;
 			expect(data.result).toBe(false);
 			expect(data.msg).toContain('DEDALO_MEDIA_PATH');
+		} finally {
+			if (saved !== undefined) process.env.DEDALO_MEDIA_PATH = saved;
+		}
+	});
+
+	test('media_index_status reports disabled when DEDALO_MEDIA_PATH is unset', async () => {
+		mock_php_auth(true);
+		const saved = process.env.DEDALO_MEDIA_PATH;
+		delete process.env.DEDALO_MEDIA_PATH;
+		try {
+			const res = await handle_request(post_authed({ action: 'media_index_status', source: {} }));
+			expect(res.status).toBe(200);
+			const data = await res.json() as any;
+			expect(data.result).toBe(true);
+			expect(data.enabled).toBe(false);
+			expect(data.pub_markers).toBe(0);
 		} finally {
 			if (saved !== undefined) process.env.DEDALO_MEDIA_PATH = saved;
 		}
