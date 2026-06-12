@@ -42,7 +42,7 @@ cp .env.example .env
 | --- | --- |
 | `SOCKET_PATH` | Path to the Unix socket (e.g., `/tmp/diffusion.sock`). **Apache must have write permissions to this file.** |
 | `DEDALO_API_URL` | The internal URL of your Dédalo PHP API (e.g., `http://localhost:8080/dedalo/core/api/v1/json/`). |
-| `DEDALO_MEDIA_PATH` | Filesystem path to the Dédalo media directory (e.g., `/var/www/html/dedalo/media/`). Bun writes merged RDF and ZIP files here. Must be writable by the Bun process. |
+| `DEDALO_MEDIA_PATH` | Filesystem path to the Dédalo media directory (e.g., `/var/www/html/dedalo/media/`). Bun writes merged RDF and ZIP files here. Must be writable by the Bun process. When set, the engine also maintains the **media publication markers** under `{DEDALO_MEDIA_PATH}/.publication/` (zero-byte files the web server stats to authorize anonymous media access when `DEDALO_MEDIA_ACCESS_MODE='publication'` — see `lib/media_index.ts`). Markers update on every publish/unpublish/delete; run `php diffusion/migration/helpers/rebuild_media_index.php` for a full resync. Leave unset to disable the markers. |
 | `DEDALO_MEDIA_URL` | Public URL prefix for the media directory (e.g., `/dedalo/media/`). Used to build download URLs returned to the client. |
 | `DB_*` | Standard credentials for the target MariaDB database where diffusion data should be inserted. |
 
