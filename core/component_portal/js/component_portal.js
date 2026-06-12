@@ -761,7 +761,12 @@ component_portal.prototype.link_record = async function(value) {
 		value.from_component_tipo = self.tipo
 
 	// dataframe case
+	// pairing keys are copied from the instance data stub (built by get_dataframe):
+	// type + id_key are the unified contract; legacy keys are kept until the
+	// data migration runs
 		if(self.model === 'component_dataframe'){
+			value.type					= self.data.type ?? value.type
+			value.id_key				= self.data.id_key ?? self.data.section_id_key
 			value.section_id_key		= self.data.section_id_key
 			value.section_tipo_key		= self.data.section_tipo_key
 			value.main_component_tipo	= self.data.main_component_tipo

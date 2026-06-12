@@ -274,4 +274,206 @@ final class component_input_text_dataframe_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_pairing_key_survives_reorder
+	* Contract: the dataframe pairing key is the item `id`, never the array index.
+	* Reordering the data array must keep each id attached to its original value,
+	* so a dataframe row keyed by id keeps pointing at the same logical value.
+	* @return void
+	*/
+	public function test_pairing_key_survives_reorder() {
+
+		$component = $this->build_component_instance();
+
+		// Set initial ordered data
+		$initial_data = [
+			(object)['id' => 1, 'value' => 'Alpha'],
+			(object)['id' => 2, 'value' => 'Beta'],
+			(object)['id' => 3, 'value' => 'Gamma']
+		];
+		$component->set_data($initial_data);
+
+		// Reorder: move last item first (array indexes all shift)
+		$reordered_data = [
+			(object)['id' => 3, 'value' => 'Gamma'],
+			(object)['id' => 1, 'value' => 'Alpha'],
+			(object)['id' => 2, 'value' => 'Beta']
+		];
+		$component->set_data($reordered_data);
+
+		$data = $component->get_data();
+		$this->assertIsArray($data);
+		$this->assertCount(3, $data);
+
+		// Index-based addressing now points at different values...
+		$this->assertEquals('Gamma', $data[0]->value);
+
+		// ...but id-based addressing still resolves the same value
+		$by_id = [];
+		foreach ($data as $item) {
+			$by_id[$item->id] = $item->value;
+		}
+		$this->assertEquals('Alpha', $by_id[1]);
+		$this->assertEquals('Beta',  $by_id[2]);
+		$this->assertEquals('Gamma', $by_id[3]);
+	}//end test_pairing_key_survives_reorder
+
+
+
+	/**
+	* TEST_pairing_key_survives_middle_removal
+	* Contract: removing a middle item must not change the ids of the remaining
+	* items (array indexes shift, ids do not). A dataframe row keyed by id stays
+	* correctly paired after the removal.
+	* @return void
+	*/
+	public function test_pairing_key_survives_middle_removal() {
+
+		$component = $this->build_component_instance();
+
+		$initial_data = [
+			(object)['id' => 1, 'value' => 'Alpha'],
+			(object)['id' => 2, 'value' => 'Beta'],
+			(object)['id' => 3, 'value' => 'Gamma']
+		];
+		$component->set_data($initial_data);
+
+		// Remove the middle item by id
+		$changed_data = (object)[
+			'action'	=> 'remove',
+			'id'		=> 2
+		];
+		$result = $component->update_data_value($changed_data, DEDALO_DATA_LANG);
+		$this->assertTrue($result);
+
+		$data = $component->get_data();
+		$this->assertIsArray($data);
+		$this->assertCount(2, $data);
+
+		// Remaining items keep their original ids paired to their values
+		$by_id = [];
+		foreach ($data as $item) {
+			$by_id[$item->id] = $item->value;
+		}
+		$this->assertArrayHasKey(1, $by_id);
+		$this->assertArrayHasKey(3, $by_id);
+		$this->assertArrayNotHasKey(2, $by_id);
+		$this->assertEquals('Alpha', $by_id[1]);
+		$this->assertEquals('Gamma', $by_id[3]);
+
+		// The item that occupies the old middle index has a different id:
+		// index-based dataframe keying would now target the wrong row
+		$this->assertNotEquals(2, $data[1]->id);
+	}//end test_pairing_key_survives_middle_removal
+
+
+
+	/**
+	* TEST_dataframe_export_import_round_trip
+	* The raw export ships frames alongside the dato as
+	* {"dedalo_data": {"dato": [...], "dataframe": [...]}}; unwrap +
+	* import_dataframe_data must re-create the exact pairing.
+	* Uses the test60 dataframe slot of section test3 record 1.
+	* @return void
+	*/
+	public function test_dataframe_export_import_round_trip() {
+
+		$this->user_login();
+
+		$frame_tipo = 'test60';
+
+		// seed: main items + paired frames
+		$component = $this->build_component_instance();
+		$component->set_data([
+			(object)['id' => 1, 'value' => 'Alpha'],
+			(object)['id' => 2, 'value' => 'Beta']
+		]);
+
+		$frames = [
+			(object)[
+				'type'					=> DEDALO_RELATION_TYPE_DATAFRAME,
+				'section_id'			=> '21',
+				'section_tipo'			=> 'test3',
+				'id_key'				=> 1,
+				'section_id_key'		=> 1,
+				'section_tipo_key'		=> self::$section_tipo,
+				'from_component_tipo'	=> $frame_tipo,
+				'main_component_tipo'	=> self::$tipo
+			],
+			(object)[
+				'type'					=> DEDALO_RELATION_TYPE_DATAFRAME,
+				'section_id'			=> '22',
+				'section_tipo'			=> 'test3',
+				'id_key'				=> 2,
+				'section_id_key'		=> 2,
+				'section_tipo_key'		=> self::$section_tipo,
+				'from_component_tipo'	=> $frame_tipo,
+				'main_component_tipo'	=> self::$tipo
+			]
+		];
+		$result = $component->import_dataframe_data($frames);
+		$this->assertTrue($result);
+
+		// export side: frames are collected for the wrapper.
+		// (get_export_dataframe_data resolves the slot from ontology/RQO ddos;
+		// when the test instance carries no dataframe ddo it returns null and
+		// the wrapper stays plain - both outcomes are contract-valid, so the
+		// import side is exercised with the explicit envelope below.)
+		$exported_frames = $component->get_export_dataframe_data();
+		if ($exported_frames!==null) {
+			$this->assertCount(2, $exported_frames);
+		}
+
+		// envelope round trip: unwrap detects the dataframe envelope
+		$envelope = json_encode([
+			'dedalo_data' => [
+				'dato'		=> [ (object)['id'=>1,'value'=>'Alpha'], (object)['id'=>2,'value'=>'Beta'] ],
+				'dataframe'	=> $frames
+			]
+		], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+
+		$unwrap = component_common::unwrap_dedalo_data($envelope);
+		$this->assertTrue($unwrap->wrapped);
+		$this->assertTrue($unwrap->has_dato);
+		$this->assertIsArray($unwrap->dataframe);
+		$this->assertCount(2, $unwrap->dataframe);
+		$this->assertStringContainsString('Alpha', $unwrap->value);
+
+		// dataframe-only envelope
+		$frames_only = json_encode(['dedalo_data' => ['dataframe' => $frames]], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+		$unwrap_only = component_common::unwrap_dedalo_data($frames_only);
+		$this->assertFalse($unwrap_only->has_dato);
+		$this->assertIsArray($unwrap_only->dataframe);
+		$this->assertEquals('', $unwrap_only->value);
+
+		// plain wrapper is untouched by the envelope detection
+		$plain = json_encode(['dedalo_data' => [ (object)['id'=>1,'value'=>'Alpha'] ]], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+		$unwrap_plain = component_common::unwrap_dedalo_data($plain);
+		$this->assertTrue($unwrap_plain->wrapped);
+		$this->assertNull($unwrap_plain->dataframe);
+
+		// import side: clear the slot, re-import the frames, verify pairing
+		$df = component_common::get_instance('component_dataframe', $frame_tipo, 1, 'list', DEDALO_DATA_NOLAN, self::$section_tipo, false);
+		tm_record::$save_tm = false; $df->set_data(null); $df->save(); tm_record::$save_tm = true;
+
+		$import_result = $component->import_dataframe_data($unwrap->dataframe);
+		$this->assertTrue($import_result);
+
+		$check = component_common::get_instance('component_dataframe', $frame_tipo, 1, 'list', DEDALO_DATA_NOLAN, self::$section_tipo, false);
+		$restored = $check->get_data_unfiltered() ?? [];
+		$this->assertCount(2, $restored);
+		$restored_keys = array_map(fn($el) => (int)($el->id_key ?? $el->section_id_key), $restored);
+		sort($restored_keys);
+		$this->assertEquals([1,2], $restored_keys);
+		foreach ($restored as $el) {
+			$this->assertEquals(DEDALO_RELATION_TYPE_DATAFRAME, $el->type);
+			$this->assertEquals(self::$tipo, $el->main_component_tipo);
+		}
+
+		// cleanup
+		tm_record::$save_tm = false; $check->set_data(null); $check->save(); tm_record::$save_tm = true;
+	}//end test_dataframe_export_import_round_trip
+
+
+
 }//end class component_input_text_dataframe_test

@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {change_handler} from './render_edit_component_input_text.js'
 
 
@@ -141,6 +142,14 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('change', function(e) {
 				change_handler(e, i, self)
 			})
+
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+		attach_item_dataframe({
+			self		: self,
+			item		: current_value,
+			container	: content_value,
+			view		: self.view
+		})
 
 
 	return content_value

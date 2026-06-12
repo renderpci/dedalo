@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {delete_dataframe} from '../../component_common/js/component_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {view_default_edit_input_text} from './view_default_edit_input_text.js'
@@ -278,18 +277,9 @@ const _do_remove = function(input, id, key, self, current_value) {
 		})
 
 
-		if(self.properties.has_dataframe){
-			// delete_dataframe_record
-			delete_dataframe({
-				self			: self,
-				section_id		: self.section_id,
-				section_tipo	: self.section_tipo,
-				// tipo_key		: self.tipo,
-				section_id_key	: key,
-				paginated_key	: false,
-				row_key			: false
-			})
-		}
+		// dataframe cleanup is server-authoritative: update_data_value 'remove'
+		// cascades the paired dataframe rows (single-writer rule). No client
+		// delete_dataframe call here.
 
 
 	return response

@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
-	import {get_dataframe, activate_edit_in_list} from '../../component_common/js/component_common.js'
+	import {attach_item_dataframe, activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
 
@@ -66,28 +66,12 @@ view_default_list_input_text.render = async function(self, options) {
 				parent			: wrapper
 			})
 
-			// component_dataframe
-				if(self.properties.has_dataframe) {
-
-					content_value.classList.add('has_dataframe')
-
-					const component_dataframe = await get_dataframe({
-						self			: self,
-						section_id		: self.section_id,
-						section_tipo	: self.section_tipo,
-						// tipo_key		: self.tipo,
-						section_id_key	: i
-					})
-					if(component_dataframe) {
-						// add dataframe to existing component instances
-						self.ar_instances.push(component_dataframe)
-						// render dataframe
-						component_dataframe.render()
-						.then(function(dataframe_node){
-							content_value.appendChild(dataframe_node)
-						})
-					}
-				}
+			// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+				await attach_item_dataframe({
+					self		: self,
+					item		: entries[i],
+					container	: content_value
+				})
 
 			// separator
 				if( i < entries.length -1 ) {

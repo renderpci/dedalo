@@ -9,7 +9,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {change_handler, remove_handler, check_duplicates} from './render_edit_component_input_text.js'
-	import {get_dataframe} from '../../component_common/js/component_common.js'
+	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 
 
 /**
@@ -225,30 +225,13 @@ const get_content_value = (i, current_value, self) => {
 			});
 		}
 
-	// component_dataframe
-		if(self.context.properties?.has_dataframe){
-
-			content_value.classList.add('has_dataframe')
-
-			get_dataframe({
-				self			: self,
-				section_id		: self.section_id,
-				section_tipo	: self.section_tipo,
-				// tipo_key		: self.tipo,
-				section_id_key	: i,
-				view 			: self.view
-			})
-			.then(async function(component_dataframe){
-
-				if(component_dataframe){
-
-					self.ar_instances.push(component_dataframe)
-					const dataframe_node = await component_dataframe.render()
-
-					content_value.appendChild(dataframe_node)
-				}
-			})
-		}
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+		attach_item_dataframe({
+			self		: self,
+			item		: current_value,
+			container	: content_value,
+			view		: self.view
+		})
 
 	return content_value
 }//end get_content_value

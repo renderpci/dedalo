@@ -366,9 +366,13 @@ class component_iri extends component_common {
 				if( property_exists($value, 'label_id') ){
 
 					// create new dataframe locator to be set as new data
+					// type stamps the locator as a dataframe pairing entry (unified contract);
+					// legacy section_id_key/section_tipo_key are kept until the data migration runs
 					$locator = new locator();
+					$locator->set_type( DEDALO_RELATION_TYPE_DATAFRAME );
 					$locator->set_section_tipo( component_iri::$label_target_section_tipo );
 					$locator->set_section_id( $value->label_id );
+					$locator->set_id_key( (int)$value->id );
 					$locator->set_section_id_key( $value->id );
 					$locator->set_section_tipo_key( $this->section_tipo );
 					$locator->set_main_component_tipo( $this->tipo );
@@ -535,8 +539,10 @@ class component_iri extends component_common {
 					$current_title = $this->resolve_title( $current_value );
 					if (!empty($current_title)) {
 						$ar_parts[] = $current_title;
-						// set the title of the data as label of the dataframe
-						$current_value->title = $current_title;
+						// (!) do not assign the resolved title back into the data item:
+						// $current_value references live component data and a later save
+						// would persist the dataframe label into the deprecated literal
+						// `title`, re-creating the title duality.
 					}
 
 					// set a flat version to be downloaded
@@ -630,28 +636,24 @@ class component_iri extends component_common {
 	*/
 	public function resolve_title( object $value ) : ?string {
 
-		// component dataframe of the component_iri
-		$caller_dataframe = new stdClass();
-		$caller_dataframe->section_tipo = $this->section_tipo;
-		$caller_dataframe->section_id_key = $value->id;
-		$caller_dataframe->section_tipo_key = $this->section_tipo;
-		$caller_dataframe->main_component_tipo = $this->tipo;
+		// rows without id cannot pair a frame (very old data): literal fallback
+		if (!isset($value->id)) {
+			return $value->title ?? null;
+		}
 
-		// Build the component
-		$component_dataframe_label = component_common::get_instance(
-			'component_dataframe', // string model
-			DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
-			$this->section_id, // string section_id
-			'list', // string mode
-			DEDALO_DATA_NOLAN, // string lang
-			$this->section_tipo ,// string section_tipo,
-			false, //cache
-			$caller_dataframe // caller dataframe
+		// dataframe label paired by the item id (trait single authority path)
+		$component_dataframe_label = $this->get_dataframe_instance(
+			(int)$value->id, // item id (pairing key)
+			DEDALO_COMPONENT_IRI_LABEL_DATAFRAME // dataframe slot tipo
 		);
 		// dataframe value as string
-		$dataframe_label = $component_dataframe_label->get_value();
+		$dataframe_label = $component_dataframe_label
+			? $component_dataframe_label->get_value()
+			: null;
 
-		// Set title with fallback from dataframe value to data item value (old values).
+		// Set title with fallback from dataframe value to data item value
+		// (deprecated literal `title`, kept readable until the title
+		// materialization migration runs).
 		$title = $dataframe_label ?? $value->title ?? null;
 
 
@@ -1381,7 +1383,7 @@ class component_iri extends component_common {
 	* @param string $label "dedalo"
 	* @return null|int $target_section_id
 	*/
-	private static function save_label_dataframe_from_string( string $label ) : ?int {
+	public static function save_label_dataframe_from_string( string $label ) : ?int {
 
 		// Remove spaces
 		$new_label = trim(strip_tags($label));
@@ -1481,9 +1483,13 @@ class component_iri extends component_common {
 		);
 
 		// create new dataframe locator to be set as new data
+		// type stamps the locator as a dataframe pairing entry (unified contract);
+		// legacy section_id_key/section_tipo_key are kept until the data migration runs
 		$new_locator = new locator();
+			$new_locator->set_type( DEDALO_RELATION_TYPE_DATAFRAME );
 			$new_locator->set_section_tipo( component_iri::$label_target_section_tipo );
 			$new_locator->set_section_id( $target_section_id );
+			$new_locator->set_id_key( (int)$section_id_key );
 			$new_locator->set_section_id_key( $section_id_key );
 			$new_locator->set_section_tipo_key( $section_tipo );
 			$new_locator->set_main_component_tipo( $component_tipo );

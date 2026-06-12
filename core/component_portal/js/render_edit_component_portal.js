@@ -551,12 +551,15 @@ export const render_column_remove = function(options) {
 								})
 
 								// delete_dataframe_record. if it is not dataframe it will be ignored
+								// (explicit unlink: this flow removes the locator via inverse
+								// references, outside the server remove cascade)
+								// pairing key is the row item id, never the target section_id
 								await delete_dataframe({
 									self				: self,
 									section_id			: self.section_id,
 									section_tipo		: self.section_tipo,
-									section_id_key		: section_id,
-									section_tipo_key	: section_tipo,
+									section_id_key		: options.locator.id,
+									section_tipo_key	: self.section_tipo,
 									main_component_tipo	: self.tipo,
 								})
 
@@ -615,17 +618,10 @@ export const render_column_remove = function(options) {
 
 						// deletes the locator from component data and refresh the component
 						// (!) Note that this function refresh the component and wait for it
+						// dataframe cleanup is server-authoritative: unlink_record sends
+						// update_data_value 'remove' and the server cascades the paired
+						// dataframe rows (single-writer rule). No client delete_dataframe.
 						await self.unlink_record(options.locator)
-
-						// delete_dataframe_record. if it is not dataframe it will be ignored
-						await delete_dataframe({
-							self				: self,
-							section_id			: self.section_id,
-							section_tipo		: self.section_tipo,
-							section_id_key		: section_id,
-							section_tipo_key	: section_tipo,
-							main_component_tipo : self.tipo
-						})
 
 						// close modal
 						modal.close()
