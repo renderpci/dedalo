@@ -22,9 +22,11 @@
 export const render_ts_line = function(self) {
 
 	// short vars
-		const ar_elements			= self.data?.ar_elements || []
-		const is_descriptor			= self.is_descriptor
-		const indexations_container	= self.indexations_container
+		const ar_elements	= self.data?.ar_elements || []
+		const is_descriptor	= self.is_descriptor
+		// note: self.indexations_container is created AFTER this function runs
+		// (get_content_data builds the ts_line first); always read it from the
+		// instance at click time, never capture it here
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
@@ -283,7 +285,7 @@ export const render_ts_line = function(self) {
 								section_tipo		: self.section_tipo,
 								section_id			: self.section_id,
 								component_tipo		: current_element.tipo,
-								target_div			: indexations_container,
+								target_div			: self.indexations_container,
 								value				: null,
 								total				: current_total,
 								totals_group		: current_element.count_result?.totals_group,
@@ -328,7 +330,7 @@ export const render_ts_line = function(self) {
 								section_tipo		: self.section_tipo,
 								section_id			: self.section_id,
 								component_tipo		: current_element.tipo,
-								target_div			: indexations_container,
+								target_div			: self.indexations_container,
 								value				: null,
 								total				: null,
 								totals_group		: current_element.count_result.totals_group,

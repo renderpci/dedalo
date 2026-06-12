@@ -1830,6 +1830,12 @@ ts_object.prototype.show_indexations = async function(options) {
 	// pagination vars
 		const total = options.total || null
 
+	// check mandatory target_div (the node's indexations_container)
+		if (!target_div) {
+			console.error('[ts_object.show_indexations] Error: target_div is mandatory. options:', options);
+			return false
+		}
+
 	// get the filter section
 		const target_section = totals_group.map(el => el.key)
 
