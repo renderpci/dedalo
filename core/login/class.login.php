@@ -1360,22 +1360,13 @@ class login extends common {
 	private static function init_cookie_auth() : bool {
 
 		// short vars
-			$ktoday				= date("Y_m_d");
-			$kyesterday			= date("Y_m_d",strtotime("-1 day"));
-			$cookie_file		= DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
-			$cookie_file_exists	= file_exists($cookie_file);
-			$ar_data			= null;
-			if ($cookie_file_exists===true) {
-				// SEC: the file carries a '<?php exit();' first line so the
-				// raw JSON can never be disclosed if fetched over HTTP
-				$current_file	= file_get_contents($cookie_file);
-				$json_string	= $current_file;
-				if (str_starts_with($current_file, '<?php')) {
-					$json_start		= strpos($current_file, PHP_EOL);
-					$json_string	= $json_start===false ? '' : substr($current_file, $json_start);
-				}
-				$ar_data		= json_decode($json_string);
-			}
+			$ktoday			= date("Y_m_d");
+			$kyesterday		= date("Y_m_d",strtotime("-1 day"));
+			$cookie_file	= media_protection::get_cookie_auth_file_path();
+			// SEC: the file carries a '<?php exit();' first line so the raw
+			// JSON can never be disclosed if fetched over HTTP
+			// (read_cookie_auth_file strips it; legacy raw-JSON files OK)
+			$ar_data		= media_protection::read_cookie_auth_file();
 
 		if ( isset($ar_data->$ktoday->cookie_value) && isset($ar_data->$kyesterday->cookie_value) ) {
 
