@@ -13,6 +13,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();
+	$properties		= $this->get_properties();
+	$has_dataframe	= isset($properties->has_dataframe) && $properties->has_dataframe===true;
 
 
 
@@ -23,12 +25,18 @@ if (!isset($this)) { http_response_code(404); exit; }
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context_simple($permissions);
+					$context[] = $this->get_structure_context_simple(
+						$permissions,
+						$has_dataframe // bool add_request_config (dataframe ddo must reach the client RQO)
+					);
 				break;
 
 			default:
 				// Component structure context (tipo, relations, properties, etc.)
-					$context[] = $this->get_structure_context($permissions);
+					$context[] = $this->get_structure_context(
+						$permissions,
+						$has_dataframe // bool add_request_config (dataframe ddo must reach the client RQO)
+					);
 
 				break;
 		}
@@ -56,10 +64,27 @@ if (!isset($this)) { http_response_code(404); exit; }
 					break;
 			}
 
+		// dataframe. If it exists, calculate the subdatum (shared trait helper)
+			$dataframe_subdatum = $this->build_dataframe_subdatum($value, $mode);
+			if ($dataframe_subdatum!==null) {
+				foreach ($dataframe_subdatum->context as $current_context) {
+					$context[] = $current_context;
+				}
+				foreach ($dataframe_subdatum->data as $sub_value) {
+					$data[] = $sub_value;
+				}
+			}
+
 		// data item
 			$item = $this->get_data_item($value);
 				$item->parent_tipo			= $this->get_tipo();
 				$item->parent_section_id	= $this->get_section_id();
+
+			// counter. Used by edit views to build the provisional dataframe
+			// render context (counter+1) for new blank rows
+			if ($dataframe_subdatum!==null) {
+				$item->counter = $dataframe_subdatum->counter;
+			}
 
 		// debug
 			if(SHOW_DEBUG===true) {

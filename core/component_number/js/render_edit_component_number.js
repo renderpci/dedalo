@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {view_default_edit_number} from './view_default_edit_number.js'
 	import {view_line_edit_number} from './view_line_edit_number.js'
 	import {view_mini_number} from './view_mini_number.js'
@@ -182,6 +183,14 @@ export const get_content_value = (i, current_value, self, options={}) => {
 				remove_handler(input, current_value?.id, self)
 			})
 		}
+
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+		attach_item_dataframe({
+			self		: self,
+			item		: current_value,
+			container	: content_value,
+			view		: self.view
+		})
 
 
 	return content_value

@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {tr} from '../../common/js/tr.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 
@@ -44,6 +45,16 @@ view_mini_text_area.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_mini(self, {
 			value_string : value_string
 		})
+
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+		for (const entry of entries) {
+			await attach_item_dataframe({
+				self		: self,
+				item		: entry,
+				container	: wrapper,
+				view		: 'mini'
+			})
+		}
 
 
 	return wrapper

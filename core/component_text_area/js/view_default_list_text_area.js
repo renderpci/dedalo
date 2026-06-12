@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
@@ -78,6 +79,15 @@ view_default_list_text_area.render = async function(self, options) {
 			inner_html		: value_string,
 			parent			: content_data
 		})
+
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+		for (const entry of entries) {
+			await attach_item_dataframe({
+				self		: self,
+				item		: entry,
+				container	: content_data
+			})
+		}
 
 
 	return wrapper

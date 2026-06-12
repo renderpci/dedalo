@@ -7,6 +7,7 @@
 // imports
 	import { add_instance } from '../../common/js/instances.js'
 import {ui} from '../../common/js/ui.js'
+import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {view_default_edit_email} from './view_default_edit_email.js'
 	import {view_line_edit_email} from './view_line_edit_email.js'
 	import {view_mini_email} from './view_mini_email.js'
@@ -186,6 +187,14 @@ const get_content_value = (i, current_value, self) => {
 				self.send_email(input.value)
 			}
 			button_email.addEventListener('mouseup', mouseup_handler)
+
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+		attach_item_dataframe({
+			self		: self,
+			item		: current_value,
+			container	: content_value,
+			view		: self.view
+		})
 
 
 	return content_value
