@@ -52,7 +52,15 @@ export const render_ts_line = function(self) {
 			type	: current_element.type
 		}
 
-		switch(current_element.type) {
+		// element_case. component_relation_index elements dispatch by MODEL:
+		// their ddo_map type is 'icon' (see section_list_thesaurus properties),
+		// so matching by type made the indexations case unreachable and the U
+		// button fell into the default show_component path (view 'line')
+		const element_case = current_element.model==='component_relation_index'
+			? 'component_relation_index'
+			: current_element.type
+
+		switch(element_case) {
 
 			// TERM
 			case ('term'): {
@@ -333,6 +341,7 @@ export const render_ts_line = function(self) {
 					}
 					button_recursive_indexations.addEventListener('mousedown', mousedown_handler)
 				}
+				break;
 			}
 
 			// IMG
