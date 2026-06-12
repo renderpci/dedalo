@@ -179,6 +179,16 @@ The wrapper identifies externally that the content is Dédalo format data and no
 
     Two cases are exported **without** the wrapper, and both re-import correctly as-is: the `section_id` column (a plain int, used as the record key on import) and components without data (empty cells). The wrapper is detected only when `dedalo_data` is the **only** property of the cell object — a JSON value that merely contains a `dedalo_data` property among others is treated as a normal value.
 
+### The dataframe envelope
+
+Components whose values carry paired [dataframe](components/component_dataframe.md) rows export them alongside the dato:
+
+```json
+{"dedalo_data":{"dato":[{"value":"Hello","lang":"lg-eng","id":1}],"dataframe":[{"type":"dd490","section_tipo":"dd1706","section_id":"3","id_key":1,"from_component_tipo":"dd560","main_component_tipo":"rsc217"}]}}
+```
+
+The `id_key` of each frame locator pairs it with the dato item carrying the same `id` (this is why explicit item ids round-trip). On import, the dato is conformed and saved as usual, then the frames are written replacing the component's previous frames in each slot (frames of other components sharing the slot are preserved). A `{"dedalo_data":{"dataframe":[...]}}` envelope without `dato` writes only the frames and leaves the component data untouched.
+
 ### Empty cells
 
 !!! warning "An empty cell clears the existing data"

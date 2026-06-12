@@ -778,6 +778,10 @@ class tool_import_dedalo_csv extends tool_common {
 							// the flag allows components as component_json to disambiguate
 							// a v7 envelope from a literal JSON value with the same shape
 							$component->import_data_is_wrapped = $unwrap_response->wrapped;
+							// dataframe envelope: frames paired with the component items,
+							// written after the component data is set (see import_dataframe_data)
+							$import_dataframe	= $unwrap_response->dataframe ?? null;
+							$import_has_dato	= $unwrap_response->has_dato ?? true;
 
 						// conform imported value with every component rules.
 							$conform_import_data_response = $component->conform_import_data($value, $column_map->column_name);
@@ -963,10 +967,9 @@ class tool_import_dedalo_csv extends tool_common {
 								}else{
 
 									// set dato
-										if ( is_object($conformed_value) &&
-											 property_exists($conformed_value, 'dataframe') &&
-											!property_exists($conformed_value, 'dato')) {
-											// Element without dato. Only the dataframe is saved
+										if ( $import_dataframe!==null && $import_has_dato===false ) {
+											// dataframe-only envelope: the component data is not
+											// touched, only the frames are written below
 										}else{
 
 											// Removed direct call
@@ -995,6 +998,20 @@ class tool_import_dedalo_csv extends tool_common {
 											$failed_rows[] = $failed;
 										}
 								}
+
+								// dataframe envelope: write the frames pairing the
+								// (already saved) component items
+									if (!empty($import_dataframe)) {
+										$dataframe_result = $component->import_dataframe_data($import_dataframe);
+										if ($dataframe_result===false) {
+											$failed = new stdClass();
+												$failed->section_id		= $section_id;
+												$failed->data			= $import_dataframe;
+												$failed->component_tipo	= $component->get_tipo();
+												$failed->msg			= 'IGNORED: component rejected the dataframe data on save';
+											$failed_rows[] = $failed;
+										}
+									}
 							}
 							break;
 					}//end switch (true)
