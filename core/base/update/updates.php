@@ -459,3 +459,68 @@ $updates->$v = new stdClass();
 					$ar_tables
 				] // Note that only ONE argument encoded is sent
 			];
+
+
+
+$v=701; #####################################################################################
+$updates->$v = new stdClass();
+
+	// UPDATE TO
+	$updates->$v->version_major			= 7;
+	$updates->$v->version_medium		= 0;
+	$updates->$v->version_minor			= 1;
+
+	// MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 7;
+	$updates->$v->update_from_medium	= 0;
+	$updates->$v->update_from_minor		= 0;
+
+	// Load class with update methods
+		require_once dirname(dirname(__FILE__)) .'/upgrade/class.dataframe_v7_migration.php';
+
+	// DATAFRAME : Migrate dataframe pairing locators to the unified v7 contract
+	// (type: DEDALO_RELATION_TYPE_DATAFRAME, id_key = main item id; drops legacy
+	// section_id_key/section_tipo_key). Covers matrix tables, time machine and
+	// activity log. Unresolvable entries are left as legacy (dual-read) and reported.
+	// Idempotent: already-migrated locators are skipped.
+	// Dry-run available via: dataframe_v7_migration::migrate_all(false)
+		$updates->$v->run_scripts[] = (object)[
+			'info'			=> 'Migrate dataframe pairing locators (matrix tables) to the unified v7 contract: type marker + id_key (main item id)',
+			'script_class'	=> 'dataframe_v7_migration',
+			'script_method'	=> 'migrate_matrix',
+			'stop_on_error'	=> true,
+			'script_vars'	=> [
+				null, // ar_tables. null = discover matrix tables with a relation column
+				true // save option. On false, only data review is made. Not save
+			] // Note that only ONE argument encoded is sent
+		];
+
+		$updates->$v->run_scripts[] = (object)[
+			'info'			=> 'Migrate dataframe pairing locators (matrix_time_machine) to the unified v7 contract',
+			'script_class'	=> 'dataframe_v7_migration',
+			'script_method'	=> 'migrate_time_machine',
+			'stop_on_error'	=> false,
+			'script_vars'	=> [
+				true // save option. On false, only data review is made. Not save
+			] // Note that only ONE argument encoded is sent
+		];
+
+		$updates->$v->run_scripts[] = (object)[
+			'info'			=> 'Migrate dataframe pairing locators (matrix_activity payloads, literal mains) to the unified v7 contract',
+			'script_class'	=> 'dataframe_v7_migration',
+			'script_method'	=> 'migrate_activity',
+			'stop_on_error'	=> false,
+			'script_vars'	=> [
+				true // save option. On false, only data review is made. Not save
+			] // Note that only ONE argument encoded is sent
+		];
+
+		$updates->$v->run_scripts[] = (object)[
+			'info'			=> 'Materialize deprecated component_iri literal titles into label dataframe records, then strip the literal title',
+			'script_class'	=> 'dataframe_v7_migration',
+			'script_method'	=> 'materialize_iri_titles',
+			'stop_on_error'	=> false,
+			'script_vars'	=> [
+				true // save option. On false, only data review is made. Not save
+			] // Note that only ONE argument encoded is sent
+		];
