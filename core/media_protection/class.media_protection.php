@@ -485,13 +485,50 @@ class media_protection {
 
 
 	/**
+	* Test hook: overrides the cookie auth file location so unit tests never
+	* touch the real core/extras/media_protection/ directory.
+	*/
+	public static ?string $cookie_auth_file_override = null;
+
+
+
+	/**
 	* GET_COOKIE_AUTH_FILE_PATH
 	* @return string
 	*/
 	public static function get_cookie_auth_file_path() : string {
 
-		return DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
+		return self::$cookie_auth_file_override
+			?? DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
 	}//end get_cookie_auth_file_path
+
+
+
+	/**
+	* WRITE_COOKIE_AUTH_FILE
+	* Persists the cookie auth data (today/yesterday rotated values) with
+	* the '<?php exit();' HTTP-disclosure guard line, creating the parent
+	* directory when missing (fresh installs never shipped it — the legacy
+	* writer assumed it existed and the first login failed).
+	* @param object $data
+	* @return bool
+	*/
+	public static function write_cookie_auth_file(object $data) : bool {
+
+		$cookie_file	= self::get_cookie_auth_file_path();
+		$cookie_dir		= dirname($cookie_file);
+
+		if (!is_dir($cookie_dir) && !mkdir($cookie_dir, 0755, true)) {
+			debug_log(__METHOD__
+				. " Unable to create media protection cookie dir " . PHP_EOL
+				. ' cookie_dir: ' . $cookie_dir
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return false!==file_put_contents($cookie_file, '<?php exit(); ?>'.PHP_EOL.json_encode($data));
+	}//end write_cookie_auth_file
 
 
 

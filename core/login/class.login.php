@@ -1393,8 +1393,9 @@ class login extends common {
 
 				$data->$kyesterday = $kyesterday_data;
 			}
-			// File cookie data (with the HTTP-disclosure guard line)
-			if( !file_put_contents($cookie_file, '<?php exit(); ?>'.PHP_EOL.json_encode($data)) ){
+			// File cookie data (with the HTTP-disclosure guard line; the
+			// parent dir is created when missing — fresh installs)
+			if( !media_protection::write_cookie_auth_file($data) ){
 				throw new Exception("Error Processing Request. Media protection error on create cookie_file", 1);
 			}
 

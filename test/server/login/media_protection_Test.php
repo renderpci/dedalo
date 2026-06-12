@@ -25,6 +25,7 @@ final class media_protection_Test extends BaseTestCase {
 
 	protected function tearDown(): void {
 		media_protection::$media_path_override = null;
+		media_protection::$cookie_auth_file_override = null;
 		exec('rm -rf ' . escapeshellarg($this->tmp_media_path));
 		parent::tearDown();
 	}
@@ -183,24 +184,71 @@ final class media_protection_Test extends BaseTestCase {
 
 
 	/**
+	* TEST_COOKIE_AUTH_FILE_ROUND_TRIP
+	* write_cookie_auth_file creates MISSING PARENT DIRECTORIES (fresh
+	* installs never shipped core/extras/media_protection/cookie/ — the
+	* legacy writer assumed it existed and the first login failed), writes
+	* the '<?php exit();' HTTP-disclosure guard line, and
+	* read_cookie_auth_file strips it back. Legacy raw-JSON files (no guard
+	* line) keep being readable.
+	*/
+	public function test_cookie_auth_file_round_trip(): void {
+
+		// point the cookie file at a path whose parents DO NOT exist yet
+		$cookie_file = $this->tmp_media_path . '/extras/media_protection/cookie/cookie_auth.php';
+		media_protection::$cookie_auth_file_override = $cookie_file;
+		$this->assertDirectoryDoesNotExist(dirname($cookie_file));
+
+		$ktoday = date('Y_m_d');
+		$data = (object)[
+			$ktoday => (object)[
+				'cookie_name'	=> media_protection::COOKIE_NAME,
+				'cookie_value'	=> hash('sha512', 'test' . random_bytes(8))
+			]
+		];
+
+		// write: parents created, guard line present
+		$this->assertTrue(media_protection::write_cookie_auth_file($data));
+		$this->assertFileExists($cookie_file);
+		$this->assertStringStartsWith('<?php exit(); ?>', (string)file_get_contents($cookie_file));
+
+		// read: guard line stripped, data intact
+		$read = media_protection::read_cookie_auth_file();
+		$this->assertNotNull($read);
+		$this->assertSame($data->{$ktoday}->cookie_value, $read->{$ktoday}->cookie_value);
+
+		// legacy raw-JSON file (no guard line) stays readable
+		file_put_contents($cookie_file, json_encode($data));
+		$legacy_read = media_protection::read_cookie_auth_file();
+		$this->assertSame($data->{$ktoday}->cookie_value, $legacy_read->{$ktoday}->cookie_value);
+	}//end test_cookie_auth_file_round_trip
+
+
+
+	/**
 	* TEST_GET_MODE_BC
-	* The mode resolver maps the legacy boolean when the new constant is
-	* absent; with the new constant defined, it always wins.
+	* The mode resolver priority: DEDALO_MEDIA_ACCESS_MODE_CUSTOM override
+	* (config_core.php, null = no override) → DEDALO_MEDIA_ACCESS_MODE
+	* (config.php) → legacy DEDALO_PROTECT_MEDIA_FILES boolean.
 	*/
 	public function test_get_mode_bc(): void {
 
 		$mode = media_protection::get_mode();
 
-		if (defined('DEDALO_MEDIA_ACCESS_MODE')) {
+		if (defined('DEDALO_MEDIA_ACCESS_MODE_CUSTOM') && DEDALO_MEDIA_ACCESS_MODE_CUSTOM!==null) {
+			$expected = in_array(DEDALO_MEDIA_ACCESS_MODE_CUSTOM, ['private','publication'], true)
+				? DEDALO_MEDIA_ACCESS_MODE_CUSTOM
+				: false;
+		} elseif (defined('DEDALO_MEDIA_ACCESS_MODE')) {
 			$expected = in_array(DEDALO_MEDIA_ACCESS_MODE, ['private','publication'], true)
 				? DEDALO_MEDIA_ACCESS_MODE
 				: false;
-			$this->assertSame($expected, $mode);
 		} else {
 			$expected = (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true)
 				? 'private'
 				: false;
-			$this->assertSame($expected, $mode);
 		}
+
+		$this->assertSame($expected, $mode);
 	}//end test_get_mode_bc
 }//end class media_protection_Test
