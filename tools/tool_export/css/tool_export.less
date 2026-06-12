@@ -192,6 +192,23 @@
 							}
 						}
 
+						// per-component 'export parents' checkbox (relation components)
+						>.export_component_parents {
+							display: flex;
+							align-items: center;
+							gap: 0.25rem;
+							font-size: 0.8rem;
+							color: @color_grey_7;
+							white-space: nowrap;
+							padding-right: 0.5rem;
+							cursor: pointer;
+
+							>.option_check_box {
+								cursor: pointer;
+								margin: 0;
+							}
+						}
+
 						&.dragging {
 							opacity: 0.2;
 							width: auto;
