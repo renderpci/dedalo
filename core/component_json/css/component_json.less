@@ -128,3 +128,146 @@
 	}
 
 }//end .component_json
+
+
+
+// ---- DARK MODE ----
+// svelte-jsoneditor uses --jse-* CSS custom properties internally.
+// Override them under :root[data-theme="dark"] scoped to .component_json
+// so the editor adapts to the dark palette. See vars.less / theme_dark.less for tokens.
+:root[data-theme="dark"] {
+
+	.component_json {
+
+		// save button
+		.button_save {
+			color: var(--fg_default);
+		}
+
+		// jse editor: override all CSS custom properties for dark theme
+		.content_value {
+
+			// ---- Core ----
+			--jse-background-color:                          var(--bg_input);
+			--jse-text-color:                                var(--fg_default);
+			--jse-text-color-inverse:                        #ffffff;
+			--jse-text-readonly:                             var(--fg_muted);
+
+			// ---- Border / shadow ----
+			--jse-main-border:                               1px solid var(--border_default);
+			--jse-controls-box-shadow:                       0 2px 6px 0 rgba(0, 0, 0, 0.5);
+			--jse-edit-outline:                              2px solid var(--border_strong);
+
+			// ---- Input ----
+			--jse-input-background:                          var(--bg_input);
+			--jse-input-background-readonly:                 transparent;
+			--jse-input-border:                              1px solid var(--border_strong);
+			--jse-input-color:                               var(--fg_default);
+			--jse-svelte-select-background:                  var(--bg_input);
+			--jse-svelte-select-border:                      1px solid var(--border_strong);
+
+			// ---- Panel (left/right side panel) ----
+			--jse-panel-background:                          var(--color_grey_14);
+			--jse-panel-color:                               var(--fg_default);
+			--jse-panel-color-readonly:                      var(--fg_muted);
+			--jse-panel-border:                              1px solid var(--border_default);
+			--jse-panel-button-background:                   transparent;
+			--jse-panel-button-background-highlight:         var(--color_grey_13);
+			--jse-panel-button-color:                        var(--fg_default);
+
+			// ---- Navigation bar ----
+			--jse-navigation-bar-background:                 var(--bg_elevated);
+			--jse-navigation-bar-background-highlight:       var(--color_grey_13);
+			--jse-navigation-bar-dropdown-color:             var(--fg_muted);
+
+			// ---- Theme / primary color ----
+			--jse-theme-color:                               var(--color_primary);
+			--jse-theme-color-highlight:                     var(--color_blue_2);
+			--jse-item-is-active-bg:                         var(--color_primary);
+
+			// ---- Menu (toolbar) ----
+			--jse-menu-color:                                var(--fg_inverse);
+
+			// ---- Context menu ----
+			--jse-context-menu-background:                   var(--color_grey_12);
+			--jse-context-menu-background-highlight:         var(--color_grey_11);
+			--jse-context-menu-color:                        var(--fg_default);
+			--jse-context-menu-color-disabled:               var(--fg_muted);
+			--jse-context-menu-separator-color:              var(--border_default);
+			--jse-context-menu-pointer-hover-background:     var(--color_grey_10);
+
+			// ---- Buttons ----
+			--jse-button-background:                         var(--color_grey_13);
+			--jse-button-background-highlight:               var(--color_grey_12);
+			--jse-button-color:                              var(--fg_default);
+			--jse-button-secondary-background:               var(--color_grey_12);
+			--jse-button-secondary-background-highlight:     var(--color_grey_11);
+			--jse-button-secondary-background-disabled:      var(--color_grey_10);
+			--jse-button-secondary-color:                    var(--fg_default);
+
+			// ---- Hover / selection / active line ----
+			--jse-hover-background-color:                    rgba(255, 255, 255, 0.06);
+			--jse-selection-background-color:                var(--color_grey_11);
+			--jse-selection-background-inactive-color:       var(--color_grey_13);
+			--jse-active-line-background-color:              rgba(255, 255, 255, 0.04);
+
+			// ---- JSON syntax coloring ----
+			--jse-key-color:                                 var(--fg_default);
+			--jse-delimiter-color:                           var(--fg_muted);
+			--jse-value-color-string:                        #7ec98a;
+			--jse-value-color-number:                        #f08070;
+			--jse-value-color-boolean:                       #f0a860;
+			--jse-value-color-null:                          #6aacff;
+			--jse-value-color-url:                           var(--color_primary);
+
+			// ---- Collapsed items ----
+			--jse-collapsed-items-background-color:          var(--color_grey_14);
+			--jse-collapsed-items-selected-background-color: var(--color_grey_11);
+			--jse-collapsed-items-link-color:                rgba(255, 255, 255, 0.4);
+			--jse-collapsed-items-link-color-highlight:      var(--color_danger);
+
+			// ---- Modal ----
+			--jse-modal-background:                          var(--bg_elevated);
+			--jse-modal-code-background:                     rgba(0, 0, 0, 0.2);
+			--jse-modal-editor-theme-color:                  var(--fg_muted);
+			--jse-modal-editor-theme-color-highlight:        var(--fg_default);
+			--jse-overlay-background:                        rgba(0, 0, 0, 0.5);
+
+			// ---- Tags ----
+			--jse-tag-background:                            rgba(255, 255, 255, 0.15);
+			--jse-tag-color:                                 var(--fg_default);
+
+			// ---- Tooltips ----
+			--jse-tooltip-background:                        var(--bg_elevated);
+			--jse-tooltip-border:                            1px solid var(--border_default);
+			--jse-tooltip-color:                             var(--fg_default);
+			--jse-tooltip-action-button-background:          var(--color_grey_12);
+			--jse-tooltip-action-button-color:               var(--fg_default);
+
+			// ---- Search ----
+			--jse-search-match-background-color:             rgba(74, 158, 255, 0.25);
+			--jse-search-match-color:                        #ffd54f;
+			--jse-search-match-active-color:                 #ffeb3b;
+			--jse-search-match-outline:                      2px solid var(--color_primary);
+
+			// ---- Table mode ----
+			--jse-table-header-background:                   var(--color_grey_14);
+			--jse-table-header-background-highlight:         var(--color_grey_13);
+			--jse-table-row-odd-background:                  rgba(255, 255, 255, 0.03);
+
+			// ---- Color picker ----
+			--jse-color-picker-background:                   var(--color_grey_14);
+			--jse-color-picker-border-box-shadow:            var(--border_strong) 0 0 0 1px;
+
+			// ---- Links / status / messages ----
+			--jse-a-color:                                   var(--color_primary);
+			--jse-a-color-highlight:                         var(--color_blue);
+			--jse-error-color:                               var(--color_danger);
+			--jse-warning-color:                             var(--color_warning);
+			--jse-info-color:                                var(--color_info);
+
+		}//end .content_value
+
+	}//end .component_json
+
+}//end :root[data-theme="dark"]
