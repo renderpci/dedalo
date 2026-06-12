@@ -61,6 +61,16 @@ final class metrics {
 	public static int $db_connection_total_calls = 0;
 	public static int $db_connection_total_calls_cached = 0;
 
+	// request_config (build_request_config / get_ar_request_config)
+	public static float $request_config_total_time = 0;
+	public static int $request_config_total_calls = 0;
+	public static int $request_config_total_calls_cached = 0;
+	public static int $request_config_source_rqo_total_calls = 0;
+	public static int $request_config_source_preset_total_calls = 0;
+	public static int $request_config_source_v6_total_calls = 0;
+	public static int $request_config_source_v5_total_calls = 0;
+	public static int $request_config_drops_total_calls = 0;
+
 	/**
 	* ADD_METRIC
 	* @param string $name
@@ -134,6 +144,14 @@ final class metrics {
 		self::$db_connection_total_time = 0;
 		self::$db_connection_total_calls = 0;
 		self::$db_connection_total_calls_cached = 0;
+		self::$request_config_total_time = 0;
+		self::$request_config_total_calls = 0;
+		self::$request_config_total_calls_cached = 0;
+		self::$request_config_source_rqo_total_calls = 0;
+		self::$request_config_source_preset_total_calls = 0;
+		self::$request_config_source_v6_total_calls = 0;
+		self::$request_config_source_v5_total_calls = 0;
+		self::$request_config_drops_total_calls = 0;
 	}//end reset
 
 

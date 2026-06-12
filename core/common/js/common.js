@@ -1444,6 +1444,8 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 		}
 
 	// ar_sections. Get ar_sections from sqo and map to string from object
+	// (the server emits ddo objects {tipo,...} from every construction path;
+	// the bare-string branch is kept as a defensive fallback for old contexts)
 		const ar_sections = (sqo && sqo.section_tipo)
 			? sqo.section_tipo.map(el => el.tipo ? el.tipo : el)
 			: sqo_config && sqo_config.section_tipo
@@ -1522,6 +1524,8 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 		const source	= create_source(self, action);
 
 	// get the operator to use into the filter free
+	// '$or' default mirrors the server default in request_config_utils
+	// build_sqo_config_default / resolve_show_sqo_config — keep both in sync
 		const operator	= request_config_object.search && request_config_object.search.sqo_config && request_config_object.search.sqo_config.operator
 			? request_config_object.search.sqo_config.operator
 			: '$or'
@@ -1542,6 +1546,9 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 
 	// limit and offset
 	// check if limit and offset exist in choose, if not get from search.sqo_config, if not, get from show.sqo_config else fixed value
+	// NOTE: the server now resolves choose.sqo_config.limit with the same chain
+	// (request_config_v6 parse_choose_config); this fallback remains for configs
+	// without a choose section and for old cached contexts — keep both in sync
 		const choose_limit_default = 25
 		const limit	= request_config_object.choose && request_config_object.choose.sqo_config && (request_config_object.choose.sqo_config.limit || request_config_object.choose.sqo_config.limit==0)
 			? request_config_object.choose.sqo_config.limit

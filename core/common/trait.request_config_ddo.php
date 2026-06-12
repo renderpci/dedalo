@@ -89,6 +89,7 @@ trait request_config_ddo {
 				.' current_ddo: ' . to_string($current_ddo)
 				, logger::ERROR
 			);
+			$this->add_request_config_warning('drop', "Ignored {$map_type} ddo: missing tipo", $current_ddo);
 			return null;
 		}
 
@@ -130,6 +131,7 @@ trait request_config_ddo {
 		// STEP 11: Check user permissions for sections
 		if ($context->model==='section') {
 			if (!$this->check_ddo_permissions($current_ddo)) {
+				$this->add_request_config_warning('drop', "Removed {$map_type} ddo '{$current_ddo->tipo}': user has no permissions");
 				return null;
 			}
 		}
@@ -165,6 +167,7 @@ trait request_config_ddo {
 				.' context tipo: ' . to_string($context->tipo)
 				, logger::WARNING
 			);
+			$this->add_request_config_warning('drop', "Ignored {$map_type} ddo '{$tipo}': invalid tipo (unresolvable model)");
 			return false;
 		}
 
@@ -176,6 +179,7 @@ trait request_config_ddo {
 				. ' tipo: ' . to_string($tipo)
 				, logger::WARNING
 			);
+			$this->add_request_config_warning('drop', "Removed {$map_type} ddo '{$tipo}': tld not installed");
 			return false;
 		}
 
@@ -350,15 +354,12 @@ trait request_config_ddo {
 
 	/**
 	* RESOLVE_GET_DDO_MAP
-	* Gets ddo_map from ontology by model reference
-	*
-	* Delegates to the main class method if get_ddo_map is not false.
-	* This allows ddo_map to be dynamically generated from ontology
+	* Gets ddo_map dynamically generated from ontology by model reference
 	* (e.g., from 'section_map' definitions).
 	*
 	* @param array $ar_section_tipo
-	* @param string|object|bool $get_ddo_map Model name or false
-	* @return array
+	* @param object|bool $get_ddo_map Definition object or false
+	* @return array $ar_ddo_calculated
 	*/
 	protected function resolve_get_ddo_map(array $ar_section_tipo, $get_ddo_map) : array {
 
@@ -366,8 +367,103 @@ trait request_config_ddo {
 			return [];
 		}
 
-		// Delegate to main class method (defined in class.common.php)
-		return $this->resolve_get_ddo_map($ar_section_tipo, $get_ddo_map);
+		// Guard: get_ddo_map must be an object with model and columns
+		// (ontology properties are user-edited JSON; malformed values must not fatal)
+		if (!is_object($get_ddo_map) || !isset($get_ddo_map->model) || !is_array($get_ddo_map->columns ?? null)) {
+			debug_log(__METHOD__
+				." Ignored invalid get_ddo_map definition. Expected object with 'model' and 'columns'" . PHP_EOL
+				.' get_ddo_map: ' . to_string($get_ddo_map) . PHP_EOL
+				.' tipo: ' . to_string($this->get_tipo()) . PHP_EOL
+				.' section_tipo: ' . to_string($this->get_section_tipo())
+				, logger::ERROR
+			);
+			$this->add_request_config_warning('drop', "Ignored invalid get_ddo_map definition: expected object with 'model' and 'columns'", $get_ddo_map);
+			return [];
+		}
+
+		$ar_ddo_calculated	= [];
+
+		switch ($get_ddo_map->model) {
+
+			case 'section_map':
+				$procesed_component_tipo = [];
+				foreach ($ar_section_tipo as $current_section_tipo) {
+
+					$section_map = section::get_section_map( $current_section_tipo );
+					if(empty($section_map)) {
+						debug_log(__METHOD__
+							." Ignored section_tipo without section_map (1) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
+							.' tipo: ' . $this->tipo . PHP_EOL
+							.' section_tipo: ' . $this->section_tipo . PHP_EOL
+							.' section_id: ' . $this->section_id
+							, logger::WARNING
+						);
+						continue;
+					}
+					foreach ($get_ddo_map->columns as $original_column) {
+
+						$current_column = is_array($original_column)
+							? (object)[ // compatibility with previous version ontology of 10-08-2024
+								'path' => $original_column
+							  ]
+							: $original_column;
+
+						$current_column_path = $current_column->path;
+
+						$section_map_value = get_object_property($section_map, $current_column_path);
+
+						// ignore value
+						if(empty($section_map_value)){
+							debug_log(__METHOD__
+								." Ignored section_tipo without section_map (2) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
+								.' tipo: ' . $this->tipo . PHP_EOL
+								.' section_tipo: ' . ($this->section_tipo ?? null) . PHP_EOL
+								.' section_id: ' . $this->section_id
+								, logger::WARNING
+							);
+							continue;
+						}
+						$ar_component_tipo = (array)$section_map_value;
+
+						foreach ($ar_component_tipo as $current_component_tipo) {
+							if(in_array($current_component_tipo, $procesed_component_tipo)){
+
+								$to_change_ddo = array_find($ar_ddo_calculated, function($ddo) use($current_component_tipo){
+									return $ddo->tipo === $current_component_tipo;
+								});
+								if (is_object($to_change_ddo)) {
+									$to_change_ddo->section_tipo = [...(array)$to_change_ddo->section_tipo, $current_section_tipo];
+								}
+
+							}else{
+								$ddo = new dd_object();
+									$ddo->set_tipo($current_component_tipo);
+									$ddo->set_section_tipo($current_section_tipo);
+									$ddo->set_parent( $this->get_tipo() );
+
+								foreach ($current_column as $current_column_key => $current_column_value) {
+
+									if($current_column_key === 'path'){
+										continue;
+									}
+									$set_ddo_key = 'set_'.$current_column_key;
+									$ddo->{$set_ddo_key}($current_column_value);
+								}
+
+								$procesed_component_tipo[] = $current_component_tipo;
+								$ar_ddo_calculated[] = $ddo;
+							}
+						}
+					}
+				}//end foreach ($ar_section_tipo as $current_section_tipo)
+				break;
+
+			default:
+				// Nothing to do
+				break;
+		}//end switch ($get_ddo_map->model)
+
+		return $ar_ddo_calculated;
 	}//end resolve_get_ddo_map
 
 

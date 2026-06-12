@@ -49,13 +49,6 @@ final class dd_core_api {
 	public static ?object $rqo = null;
 
 	/**
-	 * Cache for calculated context dd_objects.
-	 * Stores resolved ontology and data objects to prevent redundant calculations.
-	 * @var ?array $context_dd_objects
-	 */
-	public static ?array $context_dd_objects = null;
-
-	/**
 	 * The complete calculated response context object.
 	 * Holds the final structure and data to be returned to the client.
 	 * @var ?object $context

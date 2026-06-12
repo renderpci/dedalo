@@ -1708,6 +1708,24 @@ class ontology {
 				$properties = null;
 			}
 
+			// validate-on-save (non-blocking): structurally invalid
+			// request_config definitions are reported as warnings here so they
+			// surface at ontology update time instead of as an empty UI later.
+			// @see request_config_object::validate_config
+			if (isset($properties->source->request_config)) {
+				$config_issues = request_config_object::validate_config($properties->source->request_config);
+				if (!empty($config_issues)) {
+					$issues_msg = implode(PHP_EOL, array_map(function($issue){
+						return "[{$issue->level}] {$issue->path}: {$issue->message}";
+					}, $config_issues));
+					debug_log(__METHOD__
+						." Invalid request_config in ontology node '$tipo' properties:" . PHP_EOL
+						. $issues_msg
+						, logger::WARNING
+					);
+				}
+			}
+
 			// set the term into jet_dd_record
 			$ontology_node->set_properties( $properties );
 

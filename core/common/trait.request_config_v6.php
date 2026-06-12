@@ -54,6 +54,24 @@ trait request_config_v6 {
 			return [];
 		}
 
+		// Structural validation. Ontology properties are user-edited JSON:
+		// a request_config that is not an array of objects is a structural
+		// misconfiguration. ERROR CONTRACT: when this element is the direct
+		// target of the API request, fail loudly (the exception reaches the
+		// client through the API response 'errors' channel); otherwise drop
+		// with a collected warning so the context self-explains in debug.
+		$raw_request_config = $properties->source->request_config;
+		if (!is_array($raw_request_config)) {
+			$msg = "Invalid request_config in properties of '{$context->tipo}': expected array, got " . gettype($raw_request_config);
+			debug_log(__METHOD__ .' '. $msg, logger::ERROR);
+			$requested_source_tipo = dd_core_api::$rqo->source->tipo ?? null;
+			if ($requested_source_tipo===$context->tipo) {
+				throw new Exception($msg, 1);
+			}
+			$this->add_request_config_warning('drop', $msg);
+			return [];
+		}
+
 		$ar_request_query_objects = [];
 
 		// Get API request overrides (limit, offset, filters from client)
@@ -62,7 +80,18 @@ trait request_config_v6 {
 
 		// Process each request_config item
 		// Multiple items allow different API engines or section sources
-		foreach ($properties->source->request_config as $item_request_config) {
+		foreach ($raw_request_config as $item_request_config) {
+
+			// Structural validation per item (same error contract as above)
+			if (!is_object($item_request_config)) {
+				$msg = "Invalid request_config item in properties of '{$context->tipo}': expected object, got " . gettype($item_request_config);
+				debug_log(__METHOD__ .' '. $msg, logger::ERROR);
+				if (($requested_source->tipo ?? null)===$context->tipo) {
+					throw new Exception($msg, 1);
+				}
+				$this->add_request_config_warning('drop', $msg, $item_request_config);
+				continue;
+			}
 
 			$parsed_item = $this->parse_request_config_item(
 				$item_request_config,
@@ -126,13 +155,17 @@ trait request_config_v6 {
 		$parsed_item->set_sqo($item_request_config->sqo ?? new stdClass());
 
 		// STEP 2: Resolve section_tipos with validation
-		// Converts section_tipo to ddo objects with permissions
+		// Converts section_tipo to ddo objects with permissions.
+		// use_cache: false when the sqo resolves record data (fixed_filter,
+		// filter_by_list) — propagated to get_ar_request_config, which then
+		// skips caching the whole result.
 		$use_cache = $this->resolve_sqo_section_tipo(
 			$parsed_item,
 			$item_request_config,
 			$context->section_tipo,
 			$context->section_id
 		);
+		$context->use_cache = ($context->use_cache ?? true) && $use_cache;
 
 		// STEP 3: Apply pagination overrides from API request
 		$this->resolve_pagination_override(
@@ -215,8 +248,11 @@ trait request_config_v6 {
 		$parsed_item->sqo->section_tipo = $this->build_sqo_section_tipo_ddo((array)$ar_section_tipo);
 
 		// Handle filter_by_list (dropdown pre-filter)
+		// IMPORTANT: get_filter_list_data resolves live record data (list of
+		// values from the DB) with no invalidation path, so disable caching
 		if (isset($item_request_config->sqo->filter_by_list)) {
 			$parsed_item->sqo->filter_by_list = component_relation_common::get_filter_list_data($item_request_config->sqo->filter_by_list);
+			$use_cache = false;
 		}
 
 		// Handle fixed_filter (context-based filtering)
@@ -271,6 +307,7 @@ trait request_config_v6 {
 				. ' parsed_item: ' . json_encode($parsed_item, JSON_PRETTY_PRINT)
 				, logger::ERROR
 			);
+			$this->add_request_config_warning('default', "Missing request_config->show in '{$context->tipo}': empty show applied");
 			$parsed_item->show = new stdClass();
 		}
 
@@ -333,7 +370,7 @@ trait request_config_v6 {
 				if ($context->model === 'section') {
 					// Sections: check session for user preference
 					$sqo_id = section::build_sqo_id($context->tipo);
-					$parsed_item->sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
+					$parsed_item->sqo->limit = section::get_session_sqo($sqo_id)->limit
 						?? $parsed_item->show->sqo_config->limit;
 				} else {
 					// Components: use config limit with API override
@@ -453,6 +490,22 @@ trait request_config_v6 {
 
 		$choose_ddo_map = $item_request_config->choose->ddo_map ?? $ar_choose_ddo_calculated;
 		$parsed_item->choose->ddo_map = $this->process_ddo_map((array)$choose_ddo_map, $ddo_context, 'choose');
+
+		// sqo_config limit. Resolve the autocomplete selection limit server-side
+		// (single source of truth). Mirrors the client fallback chain in
+		// common.js build_rqo_search: choose.sqo_config.limit → (search.sqo_config
+		// || show.sqo_config).limit → 25. The client keeps its own fallback for
+		// configs without a choose section.
+		if (!isset($parsed_item->choose->sqo_config)) {
+			$parsed_item->choose->sqo_config = new stdClass();
+		}
+		if (!isset($parsed_item->choose->sqo_config->limit)) {
+			$fallback_sqo_config = $parsed_item->search->sqo_config ?? $parsed_item->show->sqo_config ?? null;
+			// 0 is a valid explicit limit (client checks `limit || limit==0`)
+			$parsed_item->choose->sqo_config->limit = (isset($fallback_sqo_config->limit) && ($fallback_sqo_config->limit===0 || !empty($fallback_sqo_config->limit)))
+				? $fallback_sqo_config->limit
+				: 25; // default autocomplete selection size
+		}
 	}//end parse_choose_config
 
 

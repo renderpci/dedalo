@@ -186,6 +186,18 @@ if (isset($rqo->options->sqo)) {
 	$rqo->options->sqo = search_query_object::sanitize_client_sqo($rqo->options->sqo);
 }
 
+// ddo_map security scrub. Client-sent show/search ddo_maps feed
+// build_request_config_from_rqo and end up echoed in the server-built
+// request_config: reduce every ddo to the whitelisted display fields.
+// Tipo validity and user permissions are enforced later server-side.
+// @see request_config_object::sanitize_client_ddo_map
+if (isset($rqo->show->ddo_map) && is_array($rqo->show->ddo_map)) {
+	$rqo->show->ddo_map = request_config_object::sanitize_client_ddo_map($rqo->show->ddo_map);
+}
+if (isset($rqo->search->ddo_map) && is_array($rqo->search->ddo_map)) {
+	$rqo->search->ddo_map = request_config_object::sanitize_client_ddo_map($rqo->search->ddo_map);
+}
+
 
 
 // Performance checkpoint: request parsed

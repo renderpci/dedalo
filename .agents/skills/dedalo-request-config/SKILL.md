@@ -199,9 +199,19 @@ When used in section `numisdata3`, becomes:
 
 ## Caching
 
-- Cache key: `{tipo}_{section_tipo}_{external}_{mode}_{section_id}`
-- Cleared when array exceeds 1000 entries
-- **Disabled** when `fixed_filter` is used (section_id dependent)
+- The cache boundary is **immutable**: store and read both deep-clone
+  (`unserialize(serialize())`) so per-call overlays (session/rqo sqo merge in
+  `build_request_config`) never poison the shared base config
+- Cache key: `{tipo}_{section_tipo}_{external}_{mode}_{section_id}` plus
+  request-scoped suffixes: `_u{user}` `_pg{limit}-{offset}` `_rq{rqo_limit}`
+  `_ss{session_limit}` (sections) `_v{view}` (tm) `_p{preset_hash}` (presets)
+- Cleared when array exceeds 1000 entries; emptied per worker request by `common::clear()`
+- **Disabled** when `fixed_filter` or `filter_by_list` is used (both resolve record data)
+- Build flow: `build_request_config()` = RQO-derived path -> base build
+  (`get_ar_request_config`, cached) -> per-call overlay (`overlay_request_state`)
+- Build issues (dropped ddos, defaults) are collected in
+  `common::$request_config_warnings` and surfaced as context `config_warnings`
+  under SHOW_DEBUG; batch audit: `php core/ontology/audit_request_config.php`
 
 ---
 

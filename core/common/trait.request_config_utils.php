@@ -50,6 +50,7 @@ trait request_config_utils {
 				. ' current tipo: '  . to_string($this->get_tipo())
 				, logger::ERROR
 			);
+			$this->add_request_config_warning('drop', "Empty request_config: section_tipo '{$section_tipo}' has no resolvable model");
 			return false;
 		}
 
@@ -63,6 +64,7 @@ trait request_config_utils {
 				. ' dbt: ' . to_string(debug_backtrace()[1])
 				, logger::ERROR
 			);
+			$this->add_request_config_warning('drop', "Empty request_config: section_tipo '{$section_tipo}' model '{$section_model}' is not a section/area");
 			return false;
 		}
 
@@ -82,6 +84,18 @@ trait request_config_utils {
 	* - mode: edit/list/tm/etc
 	* - section_id: for fixed_filter cases
 	*
+	* Plus a suffix covering every request-scoped input the build bakes into
+	* the result (the cached payload would otherwise be served across calls
+	* that differ in these dimensions):
+	* - user: permissions and buttons are embedded per user
+	*   (build_sqo_section_tipo_ddo, check_ddo_permissions)
+	* - instance pagination: resolve_pagination_defaults/override read it
+	* - API rqo limit: applied when the rqo source targets this tipo
+	* - session sqo limit: applied for sections (resolve_show_sqo_config)
+	* - view in tm mode: baked into the dataframe ddo (process_single_ddo)
+	* - user preset hash: set by build_request_config when a layout preset
+	*   overrides properties (presets are per user and per mode)
+	*
 	* @param string $tipo
 	* @param string $section_tipo
 	* @param bool $external
@@ -97,7 +111,42 @@ trait request_config_utils {
 		int $section_id
 	) : string {
 
-		return $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
+		$key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
+
+		// user. Permissions/buttons embedded in the payload are user-specific
+		$key .= '_u'. (logged_user_id() ?? '');
+
+		// instance pagination. Baked into sqo->limit / sqo_config
+		$key .= '_pg'. ($this->pagination->limit ?? 'n') .'-'. ($this->pagination->offset ?? 'n');
+
+		// API rqo limit. Applied when the rqo source targets this tipo
+		// (resolve_pagination_override, resolve_show_sqo_config)
+		$requested_source	= dd_core_api::$rqo->source ?? null;
+		$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
+		$rqo_limit = ($requested_source && ($requested_source->tipo ?? null)===$tipo && isset($requested_sqo->limit))
+			? $requested_sqo->limit
+			: 'n';
+		$key .= '_rq'. $rqo_limit;
+
+		// session sqo limit. Sections read it in resolve_show_sqo_config
+		if (get_called_class()==='section') {
+			$sqo_id			= section::build_sqo_id($tipo);
+			$session_sqo	= section::get_session_sqo($sqo_id);
+			$session_limit	= $session_sqo->limit ?? 'n';
+			$key .= '_ss'. $session_limit;
+		}
+
+		// view. Baked into component_dataframe ddos in tm mode
+		if ($mode==='tm') {
+			$key .= '_v'. ($this->view ?? 'n');
+		}
+
+		// preset hash. Separates layout-preset builds from plain builds
+		if (!empty($this->request_config_preset_hash)) {
+			$key .= '_p'. $this->request_config_preset_hash;
+		}
+
+		return $key;
 	}//end build_request_config_cache_key
 
 
@@ -106,16 +155,26 @@ trait request_config_utils {
 	* GET_CACHED_REQUEST_CONFIG
 	* Retrieves cached request config if available
 	*
-	* Includes safety check to prevent memory bloat:
-	* - Uses common::manage_cache_size() to limit cache entries
-	* - This prevents unbounded memory growth in long-running processes
+	* IMMUTABLE CACHE BOUNDARY: a deep clone is returned, never the live
+	* cached objects. Callers mutate the result with request-scoped state
+	* (the session/rqo sqo overlay in build_request_config; the children
+	* ddo_map injection in get_section_elements_context) and a shared
+	* reference would poison the pristine base config for every subsequent
+	* caller with the same key.
+	* unserialize(serialize()) is required (NOT a json round-trip): the
+	* arrays contain request_config_object / dd_object / search_query_object
+	* instances that must keep their classes.
 	*
 	* @param string $resolved_key
-	* @return array|null Cached config or null if not found
+	* @return array|null Cloned cached config or null if not found
 	*/
 	protected function get_cached_request_config(string $resolved_key) : ?array {
 
-		return common::$resolved_request_properties_parsed[$resolved_key] ?? null;
+		$cached = common::$resolved_request_properties_parsed[$resolved_key] ?? null;
+
+		return ($cached !== null)
+			? unserialize(serialize($cached))
+			: null;
 	}//end get_cached_request_config
 
 
@@ -123,6 +182,11 @@ trait request_config_utils {
 	/**
 	* CACHE_REQUEST_CONFIG
 	* Stores resolved request config in static cache
+	*
+	* A pristine deep-cloned snapshot is stored (see get_cached_request_config):
+	* the freshly built array returned to the miss-path caller is the same one
+	* that gets mutated downstream, so storing it by reference would poison
+	* the cache.
 	*
 	* @param string $resolved_key
 	* @param array $ar_request_query_objects
@@ -133,7 +197,7 @@ trait request_config_utils {
 		// Safety: prevent memory bloat in long-running processes
 		common::manage_cache_size(common::$resolved_request_properties_parsed);
 
-		common::$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
+		common::$resolved_request_properties_parsed[$resolved_key] = unserialize(serialize($ar_request_query_objects));
 	}//end cache_request_config
 
 
@@ -156,12 +220,15 @@ trait request_config_utils {
 	* @param string $tipo
 	* @param string $mode
 	* @param string $model
+	* @param object|null $properties_override = null
+	* 	Used in place of the instance properties (e.g. a user layout preset);
+	* 	keeps preset application free of instance-properties mutation
 	* @return object|null Cloned properties object
 	*/
-	protected function resolve_source_properties(string $tipo, string $mode, string $model) : ?object {
+	protected function resolve_source_properties(string $tipo, string $mode, string $model, ?object $properties_override=null) : ?object {
 
-		// Start with own properties
-		$source_properties = $this->get_properties();
+		// Start with the override (preset) or own properties
+		$source_properties = $properties_override ?? $this->get_properties();
 
 		switch ($mode) {
 			case 'list_thesaurus':
@@ -257,9 +324,11 @@ trait request_config_utils {
 		$limit = null;
 
 		// Try to get limit from properties request_config
-		if (isset($properties->source->request_config)) {
-			$found = array_find($properties->source->request_config ?? [], function($el){
-				return isset($el->api_engine) && $el->api_engine==='dedalo';
+		// (is_array guard: properties are user-edited JSON and may be malformed;
+		// the structural error contract is applied later in build_request_config_v6)
+		if (isset($properties->source->request_config) && is_array($properties->source->request_config)) {
+			$found = array_find($properties->source->request_config, function($el){
+				return is_object($el) && isset($el->api_engine) && $el->api_engine==='dedalo';
 			});
 			if (is_object($found) && isset($found->sqo->limit)) {
 				$limit = $found->sqo->limit;
@@ -376,6 +445,40 @@ trait request_config_utils {
 
 		return $buttons;
 	}//end build_section_buttons
+
+
+
+	/**
+	* SYNC_PAGINATION_FROM_CONFIG
+	* Replicates, on the cache-hit path, the instance pagination side effect
+	* that the build (miss) path performs: parse_show_config (v6) and
+	* build_request_config_v5 both update $this->pagination->limit while
+	* building. Without this, instance pagination — consumed downstream by
+	* the *_json.php response controllers — would depend on whether the
+	* config came from cache or from a fresh build.
+	*
+	* Mirrors the per-item assignment order of the miss path (last item wins,
+	* each falling back to the current limit).
+	*
+	* @param array $ar_request_config
+	* @return void
+	*/
+	protected function sync_pagination_from_config(array $ar_request_config) : void {
+
+		// Some instances don't have pagination (mirrors trait.request_config_v5 guard)
+		if (!isset($this->pagination)) {
+			return;
+		}
+
+		foreach ($ar_request_config as $item) {
+			if (!is_object($item)) {
+				continue;
+			}
+			$this->pagination->limit = $item->sqo->limit
+				?? $item->show->sqo_config->limit
+				?? $this->pagination->limit;
+		}
+	}//end sync_pagination_from_config
 
 
 

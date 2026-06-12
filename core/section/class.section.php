@@ -1666,6 +1666,45 @@ class section extends common {
 
 
 
+	/**
+	* GET_SESSION_SQO
+	* Accessor for the section navigation SQO stored in session
+	* ($_SESSION['dedalo']['config']['sqo'][$sqo_id]). Use this instead of
+	* touching the superglobal directly so the storage shape stays in one place.
+	* @param string $sqo_id
+	* 	Key built by section::build_sqo_id()
+	* @return object|null $session_sqo
+	*/
+	public static function get_session_sqo(string $sqo_id) : ?object {
+
+		$session_sqo = $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
+
+		return is_object($session_sqo)
+			? $session_sqo
+			: null;
+	}//end get_session_sqo
+
+
+
+	/**
+	* SET_SESSION_SQO
+	* Stores (or removes, on null) the section navigation SQO in session.
+	* @param string $sqo_id
+	* @param object|null $sqo
+	* @return void
+	*/
+	public static function set_session_sqo(string $sqo_id, ?object $sqo) : void {
+
+		if ($sqo===null) {
+			unset($_SESSION['dedalo']['config']['sqo'][$sqo_id]);
+			return;
+		}
+
+		$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+	}//end set_session_sqo
+
+
+
 
 
 }//end class section

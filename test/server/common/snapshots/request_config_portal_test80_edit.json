@@ -1,0 +1,75 @@
+[
+    {
+        "api_engine": "dedalo",
+        "type": "main",
+        "sqo": {
+            "section_tipo": [
+                {
+                    "typo": "ddo",
+                    "tipo": "test3",
+                    "model": "section",
+                    "permissions": 3,
+                    "label": "Unit Test Section (using matrix_test table)",
+                    "buttons": [
+                        {
+                            "model": "button_new",
+                            "permissions": 3
+                        },
+                        {
+                            "model": "button_delete",
+                            "permissions": 3
+                        }
+                    ],
+                    "color": "#b9b9b9",
+                    "matrix_table": "matrix_test"
+                }
+            ],
+            "limit": 10
+        },
+        "show": {
+            "ddo_map": [
+                {
+                    "info": "component_input_text traducible",
+                    "mode": "list",
+                    "tipo": "test52",
+                    "parent": "test80",
+                    "section_tipo": [
+                        "test3"
+                    ],
+                    "model": "component_input_text",
+                    "label": "input_text",
+                    "fixed_mode": true
+                }
+            ],
+            "sqo_config": {
+                "full_count": false,
+                "limit": 10,
+                "offset": 0,
+                "mode": "edit",
+                "operator": "$or"
+            }
+        },
+        "search": {
+            "ddo_map": [
+                {
+                    "tipo": "test52",
+                    "parent": "test80",
+                    "section_tipo": [
+                        "test3"
+                    ],
+                    "model": "component_input_text",
+                    "label": "input_text",
+                    "mode": "list",
+                    "fixed_mode": true
+                }
+            ],
+            "sqo_config": {
+                "limit": 30
+            },
+            "fields_separator": ", "
+        },
+        "choose": null,
+        "hide": null,
+        "api_config": null
+    }
+]
