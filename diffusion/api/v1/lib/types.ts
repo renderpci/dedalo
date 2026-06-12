@@ -153,6 +153,7 @@ export interface data_item {
 export interface processed_table {
 	database_name:   string;
 	table_name:      string;
+	section_tipo:    string;                // work-system section tipo (media publication markers)
 	records:         processed_record[];
 	deletions:       (string | number)[];   // section_ids to DELETE
 	columns_context: Record<string, context_field>; // Map: sanitized_name -> context
@@ -197,6 +198,7 @@ export interface delete_target {
 	database_name: string;
 	table_name:    string;
 	section_ids:   (string | number)[];
+	section_tipo?: string; // optional (back-compat): enables media publication marker removal
 }
 
 export interface delete_record_request {

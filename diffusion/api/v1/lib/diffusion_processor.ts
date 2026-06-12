@@ -167,6 +167,7 @@ function process_datum_group(
 	return {
 		database_name,
 		table_name,
+		section_tipo: datum.section_tipo,
 		records,
 		deletions,
 		columns_context,
