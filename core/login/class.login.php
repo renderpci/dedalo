@@ -1186,8 +1186,8 @@ class login extends common {
 				$_SESSION['dedalo']['config']['dedalo_application_lang'] = DEDALO_APPLICATION_LANG;
 			}
 
-		// cookie authorization
-			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
+		// cookie authorization (media access control: 'private' or 'publication' mode)
+			if (media_protection::get_mode()!==false) {
 				self::init_cookie_auth();
 			}
 
@@ -1345,24 +1345,39 @@ class login extends common {
 
 	/**
 	* INIT_COOKIE_AUTH
+	* Media access control, rule A (work system): sets the fixed-name auth
+	* cookie (media_protection::COOKIE_NAME) whose daily-rotated value the
+	* web server validates with a stat() on the auth marker synced here.
+	* Today's and yesterday's values stay valid (same rotation semantics as
+	* the legacy implementation; only the cookie NAME no longer rotates,
+	* which keeps the generated .htaccess static and makes Nginx support
+	* possible without reloads).
+	* The .htaccess generation is delegated to media_protection::write_htaccess()
+	* (config-hash guarded: rewritten only when the configuration changes,
+	* not daily).
 	* @return bool true
 	*/
 	private static function init_cookie_auth() : bool {
 
 		// short vars
-			$cookie_name		= self::get_auth_cookie_name();
-			$cookie_value		= self::get_auth_cookie_value();
 			$ktoday				= date("Y_m_d");
 			$kyesterday			= date("Y_m_d",strtotime("-1 day"));
 			$cookie_file		= DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
 			$cookie_file_exists	= file_exists($cookie_file);
+			$ar_data			= null;
 			if ($cookie_file_exists===true) {
-
+				// SEC: the file carries a '<?php exit();' first line so the
+				// raw JSON can never be disclosed if fetched over HTTP
 				$current_file	= file_get_contents($cookie_file);
-				$ar_data		= json_decode($current_file);
+				$json_string	= $current_file;
+				if (str_starts_with($current_file, '<?php')) {
+					$json_start		= strpos($current_file, PHP_EOL);
+					$json_string	= $json_start===false ? '' : substr($current_file, $json_start);
+				}
+				$ar_data		= json_decode($json_string);
 			}
 
-		if ( $cookie_file_exists===true && isset($ar_data->$ktoday) && isset($ar_data->$kyesterday) ) {
+		if ( isset($ar_data->$ktoday->cookie_value) && isset($ar_data->$kyesterday->cookie_value) ) {
 
 			$data = $ar_data;
 			debug_log(__METHOD__." data 1 Recycle ".to_string($data), logger::DEBUG);
@@ -1372,78 +1387,53 @@ class login extends common {
 			$data = new stdClass();
 
 			$ktoday_data = new stdClass();
-				$ktoday_data->cookie_name	= $cookie_name;
-				$ktoday_data->cookie_value	= $cookie_value;
+				$ktoday_data->cookie_name	= media_protection::COOKIE_NAME;
+				$ktoday_data->cookie_value	= self::get_auth_cookie_value();
 
 			$data->$ktoday = $ktoday_data;
 
-			if (isset($ar_data->$kyesterday)) {
+			if (isset($ar_data->$kyesterday->cookie_value)) {
 				$data->$kyesterday = $ar_data->$kyesterday;
 			}else{
 
 				$kyesterday_data = new stdClass();
-					$kyesterday_data->cookie_name	= self::get_auth_cookie_name();
+					$kyesterday_data->cookie_name	= media_protection::COOKIE_NAME;
 					$kyesterday_data->cookie_value	= self::get_auth_cookie_value();
 
 				$data->$kyesterday = $kyesterday_data;
 			}
-			// File cookie data
-			if( !file_put_contents($cookie_file, json_encode($data)) ){
+			// File cookie data (with the HTTP-disclosure guard line)
+			if( !file_put_contents($cookie_file, '<?php exit(); ?>'.PHP_EOL.json_encode($data)) ){
 				throw new Exception("Error Processing Request. Media protection error on create cookie_file", 1);
 			}
 
 			debug_log(__METHOD__." data 2 New data ".to_string($data), logger::DEBUG);
+		}
 
-			// APACHE 2.4
-				$htaccess_text  = '';
-
-				$htaccess_text .= '# Protect files and directories from prying eyes.'.PHP_EOL;
-				$htaccess_text .= '<FilesMatch "\.(deleted|sh|temp|tmp|import|csv)$">'.PHP_EOL;
-				$htaccess_text .= 'Require all denied'.PHP_EOL;
-				$htaccess_text .= '</FilesMatch>'.PHP_EOL;
-
-				$htaccess_text .= '# Protect media files with realm'.PHP_EOL;
-				$htaccess_text .= 'AuthType Basic'.PHP_EOL;
-				$htaccess_text .= 'AuthName "Protected Login"'.PHP_EOL;
-				$htaccess_text .= 'AuthUserFile ".htpasswd"'.PHP_EOL;
-				$htaccess_text .= 'AuthGroupFile "/dev/null"'.PHP_EOL;
-				$htaccess_text .= 'SetEnvIf Cookie '.$data->$ktoday->cookie_name.'='.$data->$ktoday->cookie_value.' PASS=1'.PHP_EOL;
-				$htaccess_text .= 'SetEnvIf Cookie '.$data->$kyesterday->cookie_name.'='.$data->$kyesterday->cookie_value.' PASS=1'.PHP_EOL;
-				// Require any sentence
-				$htaccess_text .= '<RequireAny>'.PHP_EOL;
-				$htaccess_text .= 'Require env PASS'.PHP_EOL;
-				$htaccess_text .= 'Require valid-user'.PHP_EOL;
-
-			# INIT_COOKIE_AUTH_ADDONS (From config)
-			if ( defined('INIT_COOKIE_AUTH_ADDONS') ) {
-				if ($ar_lines = json_decode(INIT_COOKIE_AUTH_ADDONS)) {
-					foreach ((array)$ar_lines as $current_line) {
-						$htaccess_text .= $current_line . PHP_EOL;
-					}
-				}
+		// auth markers: today + yesterday values become stat-able marker
+		// files; stale values are rotated out. Runs on every login (a
+		// redeploy or a cleared media dir must self-heal).
+			if( !media_protection::sync_auth_markers([
+					$data->{$ktoday}->cookie_value,
+					$data->{$kyesterday}->cookie_value
+				]) ){
+				throw new Exception("Error Processing Request. Media protection error on sync auth markers", 1);
 			}
 
-			$htaccess_text .= '</RequireAny>'.PHP_EOL;
-
-			debug_log(__METHOD__." htaccess_text ".to_string($htaccess_text), logger::DEBUG);
-
-			# File .htaccess
-			$htaccess_file = DEDALO_MEDIA_PATH.'/.htaccess';
-			if( !file_put_contents($htaccess_file, $htaccess_text) ){
+		// .htaccess (config-hash guarded, normally a no-op)
+			if( !media_protection::write_htaccess() ){
 				// Remove cookie file (cookie_file.php)
 				unlink($cookie_file);
 				// Launch Exception
 				throw new Exception("Error Processing Request. Media protection error on create access file", 1);
 			}
-		}
 
 		$_SESSION['dedalo']['auth']['cookie_auth'] = $data;
 
 		// set cookie
 			$cookie_properties = get_cookie_properties();
-			// setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
 			$cookie_values = (object)[
-				'name'		=> $data->{$ktoday}->cookie_name,
+				'name'		=> media_protection::COOKIE_NAME,
 				'value'		=> $data->{$ktoday}->cookie_value,
 				'expires'	=> (time() + (86400 * 1)),
 				'path'		=> '/',
@@ -1463,20 +1453,6 @@ class login extends common {
 
 		return true;
 	}//end init_cookie_auth
-
-
-
-	/**
-	* GET_AUTH_COOKIE_NAME
-	* @return string $cookie_name
-	*/
-	private static function get_auth_cookie_name() : string {
-		$date = getdate();
-		#$cookie_name = md5( 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. mt_rand() );
-		$cookie_name = hash('sha512', 'dedalo_c_name_'.$date['year'].$date['mon'].$date['mday'].$date['weekday']. random_bytes(8));
-
-		return $cookie_name;
-	}//end get_auth_cookie_name
 
 
 
@@ -1671,34 +1647,17 @@ class login extends common {
 		// Cookie properties
 			$cookie_properties = get_cookie_properties();
 
-		// Delete authorization cookie
-			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
-				$cookie_auth = (object)$_SESSION['dedalo']['auth']['cookie_auth'];
-				$ktoday 	 = date("Y_m_d");
-				$kyesterday  = date("Y_m_d",strtotime("-1 day"));
-
-				if (isset($cookie_auth->$ktoday->cookie_name)) {
-					setcookie(
-						$cookie_auth->$ktoday->cookie_name, // string $name
-						'', // string $value
-						-1, // int $expires_or_options
-						'/', // string $path
-						$cookie_properties->domain, // string $domain
-						$cookie_properties->secure, // bool $secure
-						$cookie_properties->httponly // bool $httponly
-					);
-				}
-				if (isset($cookie_auth->$kyesterday->cookie_name)) {
-					setcookie(
-						$cookie_auth->$kyesterday->cookie_name, // string $name
-						'', // string $value
-						-1, // int $expires_or_options
-						'/', // string $path
-						$cookie_properties->domain, // string $domain
-						$cookie_properties->secure, // bool $secure
-						$cookie_properties->httponly// bool $httponly
-					);
-				}
+		// Delete authorization cookie (media access control, fixed name)
+			if (media_protection::get_mode()!==false) {
+				setcookie(
+					media_protection::COOKIE_NAME, // string $name
+					'', // string $value
+					-1, // int $expires_or_options
+					'/', // string $path
+					$cookie_properties->domain, // string $domain
+					$cookie_properties->secure, // bool $secure
+					$cookie_properties->httponly // bool $httponly
+				);
 			}
 
 		// reset cookie and session

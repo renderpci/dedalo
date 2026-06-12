@@ -165,7 +165,8 @@ class diffusion_delete {
 						$targets[] = (object)[
 							'database_name'	=> $t->database_name,
 							'table_name'	=> $t->table_name,
-							'section_ids'	=> [$section_id]
+							'section_ids'	=> [$section_id],
+							'section_tipo'	=> $section_tipo // enables media publication marker removal in Bun
 						];
 					}
 				}

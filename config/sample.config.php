@@ -659,7 +659,47 @@
 
 
 
-// protect media files, when active the access to media files are controlled and only register users can access to it.
+// media access control
+	// DEDALO_MEDIA_ACCESS_MODE. Media file access control enforced by the web
+	// server (Apache: generated media/.htaccess; Nginx: see config/nginx.conf.sample):
+	//   false         : no protection — media files are world-readable
+	//   'private'     : only logged-in Dédalo users can read media files
+	//                   (auth cookie set at login, validated with one stat())
+	//   'publication' : logged-in users read everything; anonymous users read
+	//                   ONLY media of published records (publication markers
+	//                   maintained by the Bun diffusion engine) and only in
+	//                   the DEDALO_MEDIA_PUBLIC_QUALITIES folders.
+	// When enabling 'publication' on an instance with existing publications,
+	// run once: php diffusion/migration/helpers/rebuild_media_index.php
+	// The diffusion engine needs DEDALO_MEDIA_PATH set in its .env
+	// (diffusion/api/v1/.env) with the same value as the PHP constant.
+	define('DEDALO_MEDIA_ACCESS_MODE', false);
+
+	// DEDALO_MEDIA_PUBLIC_QUALITIES. Optional. Quality folders (relative to the
+	// media root) anonymous users may read when the record is published
+	// ('publication' mode). 'original'/'modified' folders are always refused.
+	// Default when undefined: web-delivery qualities
+	// ['av/404','av/posterframe','av/subtitles','image/1.5MB','image/thumb','pdf/web','svg/web','3d/web']
+	// define('DEDALO_MEDIA_PUBLIC_QUALITIES', [
+	// 	DEDALO_AV_FOLDER .'/'. DEDALO_AV_QUALITY_DEFAULT,
+	// 	DEDALO_AV_FOLDER .'/posterframe',
+	// 	DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER,
+	// 	DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_DEFAULT,
+	// 	DEDALO_IMAGE_FOLDER .'/'. DEDALO_QUALITY_THUMB,
+	// 	DEDALO_PDF_FOLDER .'/'. DEDALO_PDF_QUALITY_DEFAULT,
+	// 	DEDALO_SVG_FOLDER .'/'. DEDALO_SVG_QUALITY_DEFAULT,
+	// 	DEDALO_3D_FOLDER .'/'. DEDALO_3D_QUALITY_DEFAULT
+	// ]);
+
+	// MEDIA_HTACCESS_ADDONS. Optional. JSON array of raw lines appended to the
+	// generated media/.htaccess before the final deny rule (replaces the legacy
+	// INIT_COOKIE_AUTH_ADDONS, whose lines targeted the removed <RequireAny>
+	// block). Example — allow an internal network unconditionally:
+	// define('MEDIA_HTACCESS_ADDONS', '["RewriteCond %{REMOTE_ADDR} ^10\\\\.0\\\\.","RewriteRule ^ - [L]"]');
+
+	// DEDALO_PROTECT_MEDIA_FILES. Deprecated: legacy boolean kept for
+	// back-compat — true behaves as DEDALO_MEDIA_ACCESS_MODE='private' when
+	// DEDALO_MEDIA_ACCESS_MODE is not defined.
 	define('DEDALO_PROTECT_MEDIA_FILES', false);
 
 

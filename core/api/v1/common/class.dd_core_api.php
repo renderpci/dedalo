@@ -2860,8 +2860,8 @@ final class dd_core_api {
 			$obj->dedalo_quality_thumb			= defined('DEDALO_QUALITY_THUMB') ? DEDALO_QUALITY_THUMB : 'thumb';
 			// tag_id
 			$obj->tag_id						= isset($_REQUEST['tag_id']) ? safe_xss($_REQUEST['tag_id']) : null;
-			// dedalo_protect_media_files
-			$obj->dedalo_protect_media_files	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
+			// dedalo_protect_media_files ('private' or 'publication' media access mode active)
+			$obj->dedalo_protect_media_files	= media_protection::get_mode()!==false ? 1 : 0;
 			// notifications
 			$obj->DEDALO_NOTIFICATIONS			= defined('DEDALO_NOTIFICATIONS') ? (int)DEDALO_NOTIFICATIONS : 0;
 			// ip_api
