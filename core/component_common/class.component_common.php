@@ -1772,49 +1772,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_GRID_FLAT_VALUE
-	* Get the flat value of the components (text version of data).
-	* overwrite in every different specific component
-	* @return dd_grid_cell_object $flat_value
-	* 	dd_grid_cell_object
-	*/
-	public function get_grid_flat_value() : dd_grid_cell_object {
-
-		// column_obj
-			if(isset($this->column_obj)){
-				$column_obj = $this->column_obj;
-			}else{
-				$column_obj = new stdClass();
-					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
-			}
-
-		// Resolve the complex grid value into a flat string
-			$grid_value = $this->get_grid_value();
-			$value = dd_grid_cell_object::resolve_value($grid_value);
-
-		// get the total of locators of the data, it will be use to render the rows separated.
-			$row_count = 1; // sizeof($value);
-
-		// label
-			$label = $this->get_label();
-
-		// flat_value
-			$flat_value = new dd_grid_cell_object();
-				$flat_value->set_type('column');
-				$flat_value->set_label($label);
-				$flat_value->set_cell_type('text');
-				$flat_value->set_ar_columns_obj([$column_obj]);
-				$flat_value->set_row_count($row_count);
-				$flat_value->set_value([$value]); // array
-				$flat_value->set_model(get_called_class());
-
-
-		return $flat_value;
-	}//end get_grid_flat_value
-
-
-
-	/**
 	* GET_EXPORT_VALUE
 	* Atoms based export contract. Base implementation: one atom per data
 	* item, arrays/objects json_encoded (parity with get_grid_value base).

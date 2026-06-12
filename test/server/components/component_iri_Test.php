@@ -193,25 +193,6 @@ final class component_iri_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_grid_flat_value
-	* @return void
-	*/
-	public function test_get_grid_flat_value() {
-
-		$component = $this->build_component_instance();
-
-		$result	= $component->get_grid_flat_value();
-
-		$this->assertTrue(
-			gettype($result)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_grid_flat_value
-
-
-
-	/**
 	* TEST_get_value
 	* @return void
 	*/

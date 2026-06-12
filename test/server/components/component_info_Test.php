@@ -253,25 +253,6 @@ final class component_info_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_grid_flat_value
-	* @return void
-	*/
-	public function test_get_grid_flat_value() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_grid_flat_value();
-
-		$this->assertTrue(
-			gettype($result)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_grid_flat_value
-
-
-
-	/**
 	* TEST_COMPONENT_INSTANCE_MODES
 	* @return void
 	*/
@@ -371,32 +352,6 @@ final class component_info_test extends BaseTestCase {
 				. gettype($result)
 		);
 	}//end test_get_diffusion_value
-
-
-
-	/**
-	* TEST_GET_GRID_FLAT_VALUE
-	* get_grid_flat_value delegates to get_grid_value (each call creates new object)
-	* @return void
-	*/
-	public function test_get_grid_flat_value_delegates_to_grid_value() {
-
-		$component = $this->build_component_instance();
-
-		$grid_value		= $component->get_grid_value();
-		$flat_value		= $component->get_grid_flat_value();
-
-		$this->assertTrue(
-			gettype($flat_value)==='object',
-			'expected type object : ' . PHP_EOL
-				. gettype($flat_value)
-		);
-		// both should return dd_grid_cell_object instances
-		$this->assertTrue(
-			get_class($grid_value)===get_class($flat_value),
-			'expected get_grid_flat_value to return same class as get_grid_value'
-		);
-	}//end test_get_grid_flat_value_delegates_to_grid_value
 
 
 

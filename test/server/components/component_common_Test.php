@@ -955,56 +955,6 @@ final class component_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_GET_GRID_FLAT_VALUE
-	* @return void
-	*/
-	public function test_get_grid_flat_value() {
-
-		$this->user_login();
-
-		// default data
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$dd_grid_cell_object = $component->get_grid_flat_value();
-				// dump($dd_grid_cell_object, ' raw_value dd_grid_cell_object ++ '.to_string($element->model));
-
-			$this->assertTrue(
-				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
-			);
-
-			$this->assertTrue(
-				gettype($dd_grid_cell_object)==='object',
-				'expected get_grid_value type is object. ' .gettype($dd_grid_cell_object) ." ($element->model)"
-			);
-
-			$this->assertInstanceOf(dd_grid_cell_object::class, $dd_grid_cell_object);
-
-			if (!empty($dd_grid_cell_object->value)) {
-				$this->assertTrue(
-					gettype($dd_grid_cell_object->value)==='string' || gettype($dd_grid_cell_object->value)==='array',
-					'expected get_grid_value type is string or array. type:' .gettype($dd_grid_cell_object->value) . PHP_EOL
-					." ($element->model)" . PHP_EOL
-					. json_encode($dd_grid_cell_object)
-				);
-			}
-		}
-	}//end test_get_grid_flat_value
-
-
-
-	/**
 	* TEST_SAVE
 	* @return void
 	*/

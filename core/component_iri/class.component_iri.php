@@ -664,30 +664,6 @@ class component_iri extends component_common {
 
 
 	/**
-	* GET_GRID_FLAT_VALUE
-	* Get the flat value of the components (text version of data).
-	* overwrite in every different specific component
-	* @return dd_grid_cell_object $flat_value
-	* 	dd_grid_cell_object
-	*/
-	public function get_grid_flat_value() : dd_grid_cell_object {
-
-		$flat_value = parent::get_grid_flat_value();
-
-		// overwrite cell_type (custom case)
-		$flat_value->set_cell_type('iri');
-
-		// add data (custom case)
-		$data = $this->get_data();
-		$flat_value->set_data($data);
-
-
-		return $flat_value;
-	}//end get_grid_flat_value
-
-
-
-	/**
 	* UPDATE_DATA_VERSION
 	* @param object $options
 	* @return object $response

@@ -605,23 +605,6 @@ class component_info extends component_common {
 
 
 	/**
-	* GET_GRID_FLAT_VALUE
-	* @param object|null $ddo = null
-	* @return dd_grid_cell_object
-	*/
-	public function get_grid_flat_value( ?object $ddo=null ) : dd_grid_cell_object {
-
-		$grid_value = $this->get_grid_value($ddo);
-
-		// Resolve the complex grid value into a flat string
-		// $grid_value->value = dd_grid_cell_object::resolve_value($grid_value);
-
-		return $grid_value;
-	}//end get_grid_flat_value
-
-
-
-	/**
 	* GET_EXPORT_VALUE
 	* Atoms based export contract (see component_common::get_export_value).
 	* One atom per widget IPO output: the output id travels as the segment
