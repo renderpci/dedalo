@@ -83,6 +83,39 @@ final class dd_diffusion_api_Test extends BaseTestCase {
 
 
 	/**
+	* TEST_RESOLVE_MEDIA_INDEX_TARGETS
+	* Every SQL/socrata publication target resolved from the ontology must
+	* carry the full {database_name, table_name, section_tipo} triple the
+	* Bun rebuild_media_index action requires.
+	*/
+	public function test_resolve_media_index_targets(): void {
+
+		$config = diffusion_test_helper::require_diffusion_ontology($this);
+
+		$targets = dd_diffusion_api::resolve_media_index_targets();
+
+		$this->assertIsArray($targets);
+		$this->assertNotEmpty($targets, 'usable SQL diffusion ontology must yield at least one media index target');
+
+		$seen = [];
+		foreach ($targets as $target) {
+			$this->assertNotEmpty($target->database_name);
+			$this->assertNotEmpty($target->table_name);
+			$this->assertNotEmpty($target->section_tipo);
+			// dedupe contract
+			$key = $target->database_name .'|'. $target->table_name .'|'. $target->section_tipo;
+			$this->assertArrayNotHasKey($key, $seen, 'duplicated media index target: ' . $key);
+			$seen[$key] = true;
+		}
+
+		// the guarded element's section must be covered
+		$section_tipos = array_column($targets, 'section_tipo');
+		$this->assertContains($config->section_tipo, $section_tipos);
+	}//end test_resolve_media_index_targets
+
+
+
+	/**
 	* TEST_GET_DIFFUSION_INFO
 	*/
 	public function test_get_diffusion_info(): void {

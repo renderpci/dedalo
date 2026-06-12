@@ -292,19 +292,14 @@ final class login_test extends BaseTestCase {
 	*/
 	public function test_cookie_generation_security(): void {
 
-		// Use reflection to test private methods
+		// The media auth cookie NAME is fixed (media_protection::COOKIE_NAME):
+		// the web server validates the rotated VALUE against a marker file,
+		// which is what makes the generated .htaccess static and lets Nginx
+		// validate without reloads.
+		$this->assertSame('dedalo_media_auth', media_protection::COOKIE_NAME);
+
+		// Use reflection to test the private value generator
 		$reflection = new ReflectionClass('login');
-
-		// Test get_auth_cookie_name method
-		$method = $reflection->getMethod('get_auth_cookie_name');
-		$method->setAccessible(true);
-		$cookie_name = $method->invoke(null);
-
-		$this->assertIsString($cookie_name, 'Cookie name should be a string');
-		$this->assertEquals(128, strlen($cookie_name), 'SHA512 hash should be 128 characters');
-		$this->assertMatchesRegularExpression('/^[a-f0-9]+$/', $cookie_name, 'Cookie name should be hex string');
-
-		// Test get_auth_cookie_value method
 		$method = $reflection->getMethod('get_auth_cookie_value');
 		$method->setAccessible(true);
 		$cookie_value = $method->invoke(null);
@@ -314,9 +309,7 @@ final class login_test extends BaseTestCase {
 		$this->assertMatchesRegularExpression('/^[a-f0-9]+$/', $cookie_value, 'Cookie value should be hex string');
 
 		// Test that multiple calls generate different values (randomness)
-		$cookie_name2 = $method->invoke(null);
 		$cookie_value2 = $method->invoke(null);
-		$this->assertNotEquals($cookie_name, $cookie_name2, 'Cookie names should be different on multiple calls');
 		$this->assertNotEquals($cookie_value, $cookie_value2, 'Cookie values should be different on multiple calls');
 	}
 
