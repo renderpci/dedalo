@@ -7,12 +7,16 @@ require_once 'elements.php';
 
 /**
 * EXPORT_VALUE_PARITY_TEST
-* Asserts that the atoms based export contract (get_export_value()->to_flat_string())
-* produces the same flat string as the legacy grid path
-* (dd_grid_cell_object::resolve_value(get_grid_value())) for every fixture element.
-*
-* Relation components (component_relation_common descendants) resolve their
-* children recursively via export_context (phase 4) and are compared too.
+* Parity gates of the atoms contract:
+* - facade invariant for EVERY fixture model:
+*   get_value() === get_export_value()->to_flat_string()
+* - legacy-tree comparison ONLY for the components that keep a structural
+*   get_grid_value override (component_relation_common descendants,
+*   component_info, component_inverse): their visual trees resolved with
+*   dd_grid_cell_object::resolve_value must keep matching the atoms flat
+*   string. Leaf components are excluded since convergence B2: their
+*   get_grid_value IS the atoms adapter, making the comparison
+*   self-referential (the shape is pinned by grid_value_snapshot_Test).
 */
 final class export_value_parity_test extends BaseTestCase {
 
@@ -65,22 +69,10 @@ final class export_value_parity_test extends BaseTestCase {
 				false
 			);
 
-			// legacy reference
-				$legacy_grid	= $component->get_grid_value();
-				$legacy_flat	= dd_grid_cell_object::resolve_value($legacy_grid);
-
 			// atoms path
 				$export_flat = $component->get_export_value()->to_flat_string();
 
-			// some components initialize their data on first read (null -> [],
-			// references computed): when the two paths observed different data
-			// states, recompute the legacy reference so both compare the same
-			// state (same idiom as test_get_raw_export_value)
-				if ($legacy_flat!==$export_flat) {
-					$legacy_flat = dd_grid_cell_object::resolve_value( $component->get_grid_value() );
-				}
-
-			// get_value() facade invariant (Phase A: get_value runs on atoms)
+			// get_value() facade invariant (every model: get_value runs on atoms)
 				$facade_value = $component->get_value();
 				if ($facade_value!==$export_flat) {
 					// re-read both adjacently (data-init race guard)
@@ -92,6 +84,27 @@ final class export_value_parity_test extends BaseTestCase {
 					$facade_value,
 					"expected get_value() to be the to_flat_string facade ($element->model)"
 				);
+
+			// legacy-tree comparison: only components keeping a STRUCTURAL
+			// get_grid_value override (leaf models use the atoms adapter
+			// since B2 — comparing them would be self-referential)
+				$has_structural_override = ($component instanceof component_relation_common)
+					|| ($component instanceof component_info)
+					|| ($component instanceof component_inverse);
+				if (!$has_structural_override) {
+					continue;
+				}
+
+			// legacy reference
+				$legacy_flat = dd_grid_cell_object::resolve_value( $component->get_grid_value() );
+
+			// some components initialize their data on first read (null -> [],
+			// references computed): when the two paths observed different data
+			// states, recompute both adjacently (data-init race guard)
+				if ($legacy_flat!==$export_flat) {
+					$export_flat	= $component->get_export_value()->to_flat_string();
+					$legacy_flat	= dd_grid_cell_object::resolve_value( $component->get_grid_value() );
+				}
 
 			// accepted deviations:
 			// (1) relation components without ddo children (no export paths
@@ -130,8 +143,9 @@ final class export_value_parity_test extends BaseTestCase {
 			$compared++;
 		}//end foreach (get_elements() as $element)
 
-		// guard: the loop must compare a meaningful number of elements
-		$this->assertGreaterThan(10, $compared, 'expected fixture coverage');
+		// guard: the legacy-tree comparison must cover a meaningful number of
+		// structural-override models (relation family + info + inverse)
+		$this->assertGreaterThan(5, $compared, 'expected structural fixture coverage');
 	}//end test_flat_parity
 
 
