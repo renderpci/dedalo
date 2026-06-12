@@ -269,6 +269,59 @@ class matrix_db_manager {
 
 
 	/**
+	* ACQUIRE_NODE_LOCK
+	* Acquires a transaction scoped advisory lock for one section node, used to
+	* serialize concurrent tree mutations on the same parent (child ordering,
+	* move, add). Same hashtext pattern as the section_id counter lock in create().
+	* The lock is released automatically when the enclosing transaction ends
+	* (COMMIT or ROLLBACK), so callers MUST be inside a transaction
+	* (see DBi::transaction); outside one the lock would be released immediately
+	* and protect nothing.
+	* @param string $section_tipo
+	* @param int|string $section_id
+	* @return bool
+	*/
+	public static function acquire_node_lock( string $section_tipo, int|string $section_id ) : bool {
+
+		$conn = DBi::_getConnection();
+		if ($conn === false) {
+			debug_log(__METHOD__ . ' Error. No DB connection available', logger::ERROR);
+			return false;
+		}
+
+		if (pg_transaction_status($conn) === PGSQL_TRANSACTION_IDLE) {
+			debug_log(__METHOD__
+				. ' Error. acquire_node_lock called outside a transaction; lock would be ineffective' . PHP_EOL
+				. ' section_tipo: ' . $section_tipo . PHP_EOL
+				. ' section_id: ' . $section_id
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		$result = pg_query_params(
+			$conn,
+			'SELECT pg_advisory_xact_lock(hashtext($1))',
+			[$section_tipo . '_' . $section_id]
+		);
+
+		if ($result === false) {
+			debug_log(__METHOD__
+				. ' Error. Unable to acquire node advisory lock' . PHP_EOL
+				. ' section_tipo: ' . $section_tipo . PHP_EOL
+				. ' section_id: ' . $section_id . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end acquire_node_lock
+
+
+
+	/**
 	* READ
 	* Retrieves a single row of data from a specified PostgreSQL table
 	* based on section_id and section_tipo.
