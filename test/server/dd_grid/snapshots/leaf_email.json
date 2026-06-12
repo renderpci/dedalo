@@ -13,7 +13,7 @@
     "value": [
         "{\"value\":\"mail@example.org\",\"lang\":\"lg-nolan\"}"
     ],
-    "fallback_value": null,
+    "fallback_value": [],
     "data": null,
     "render_label": null,
     "column": null,

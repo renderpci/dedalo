@@ -1076,10 +1076,23 @@ final class tool_export_test extends BaseTestCase {
 				? (string)$cells[$ordinal_by_key[$key]]
 				: '';
 
-			// accepted deviation: relation components without ddo children
-			// produced separator-only strings in the legacy grid; the atoms
-			// path produces a clean empty cell instead
+			// accepted deviations (same allowlist as export_value_parity_Test):
+			// (1) relation components without ddo children produced
+			//     separator-only strings in the legacy grid; atoms: ''
+			// (2) relation records whose children resolve to nothing left
+			//     empty row segments in the legacy join; atoms drop them
 				if ($export_cell==='' && trim($legacy_flat, ' |,')==='') {
+					continue;
+				}
+				$drop_empty_records = function(string $value) : string {
+					$segments = array_filter(
+						array_map('trim', explode(' | ', $value)),
+						fn($segment) => $segment!==''
+					);
+					return implode(' | ', $segments);
+				};
+				if ($export_cell!==$legacy_flat && $export_cell===$drop_empty_records($legacy_flat)) {
+					$compared++;
 					continue;
 				}
 

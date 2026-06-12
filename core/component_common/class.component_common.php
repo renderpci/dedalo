@@ -1524,81 +1524,110 @@ abstract class component_common extends common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_data().
-	* overwrite in every different specific component
-	* Some the text components can set the value with the data directly
-	* the relation components need to process the locator to resolve the value
+	* Visual grid cell of the component (dd_grid_cell_object, the CLIENT
+	* rendering format used by the thesaurus indexation grid, the time
+	* machine matrix and the descriptors widget).
+	*
+	* The data resolution is the atoms export contract (get_export_value):
+	* this default implementation is a generic atoms->cell adapter covering
+	* uniform-leaf components. Components producing STRUCTURAL trees keep
+	* visual-only overrides: component_relation_common (rows/columns
+	* recursion), component_info (widget multi-column), component_inverse
+	* (per-pair columns), component_text_area in 'indexation_list' mode
+	* (interactive tag fragment cells).
+	*
 	* @param object|null $ddo = null
+	* 	Optional caller customs: fields_separator, records_separator, class_list
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
+		// atoms. Single data-resolution authority (same values the export resolves).
+		// absolute_urls reproduces the legacy media/av/3d caller switch.
+			$context = new export_context((object)[
+				'ddo'			=> $ddo,
+				'caller'		=> $this->caller ?? '',
+				'absolute_urls'	=> (($this->caller ?? null)==='tool_export')
+			]);
+			$export_value = $this->get_export_value($context);
 
-		// column_obj
+		return $this->export_value_to_grid_cell($export_value, $ddo);
+	}//end get_grid_value
+
+
+
+	/**
+	* EXPORT_VALUE_TO_GRID_CELL
+	* Generic atoms -> dd_grid_cell_object conversion (VISUAL layer only).
+	*
+	* Shape contract pinned by the client views (see grid_value_snapshot_Test):
+	* - 'value' and 'fallback_value' are ALWAYS arrays, never null
+	*   (view_descriptors dereferences fallback_value[0])
+	* - 'ar_columns_obj' is ALWAYS set (component_relation_common spreads it)
+	* - the injected $this->column_obj is honored (indexation/relation
+	*   recursion contact point); the own id keeps the '{section_tipo}_{tipo}'
+	*   grammar (view_indexation get_section_id_column splits it)
+	* - one value element per atom (clients join with records_separator;
+	*   rendered output identical to the legacy pre-joined strings)
+	*
+	* @param export_value $export_value
+	* @param object|null $ddo = null
+	* @return dd_grid_cell_object
+	*/
+	final protected function export_value_to_grid_cell( export_value $export_value, ?object $ddo=null ) : dd_grid_cell_object {
+
+		// column_obj. Injected by relation_common / indexation_grid, else own identity
 			$column_obj = $this->column_obj ?? (object)[
 				'id' => $this->section_tipo.'_'.$this->tipo
 			];
 
-		// short vars
-			$raw_data	= $this->get_data();
-			$label		= $this->get_label();
-			$properties	= $this->get_properties();
-
-		// data
-			$data = empty($raw_data)
-				? null
-				: array_map(function($el){
-					if (is_array($el) || is_object($el)) {
-						return json_encode($el);
-					}
-					return $el;
-				}, $raw_data);
-
-		// fields_separator
-			$fields_separator = isset($fields_separator)
-				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ', ');
-
-		// records_separator
-			$records_separator = isset($records_separator)
-				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
-
-		// fallback value. Overwrite in translatable components like input_text or text_area
-			$fallback_value = (isset($data) && $this->is_translatable())
-				? $data
+		// leaf segment. Uniform-leaf components share the own segment on every atom
+			$leaf_segment = isset($export_value->atoms[0])
+				? $export_value->atoms[0]->get_leaf_segment()
 				: null;
 
-		// value
-			$value = $data; // array|null
+		// separators. ddo > leaf segment (already ddo>properties resolved) > joiner defaults
+			$records_separator	= $ddo?->records_separator ?? $leaf_segment?->records_separator ?? ' | ';
+			$fields_separator	= $ddo?->fields_separator  ?? $leaf_segment?->fields_separator  ?? ', ';
+
+		// value / fallback partition (is_fallback atoms), atom order preserved
+			$value			= [];
+			$fallback_value	= [];
+			foreach ($export_value->atoms as $atom) {
+				if ($atom->is_fallback===true) {
+					$fallback_value[] = $atom->value;
+				}else{
+					$value[] = $atom->value;
+				}
+			}
+
+		// cell_type from atoms (uniform per leaf)
+			$cell_type = isset($export_value->atoms[0])
+				? $export_value->atoms[0]->cell_type
+				: 'text';
 
 		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
-				$dd_grid_cell_object->set_label($label);
-				$dd_grid_cell_object->set_cell_type('text');
+				$dd_grid_cell_object->set_label($export_value->label ?? $this->get_label());
+				$dd_grid_cell_object->set_cell_type($cell_type);
 				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				if(isset($class_list)){
-					$dd_grid_cell_object->set_class_list($class_list);
+				if (isset($ddo->class_list)) {
+					$dd_grid_cell_object->set_class_list($ddo->class_list);
 				}
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
 				$dd_grid_cell_object->set_value($value);
 				$dd_grid_cell_object->set_fallback_value($fallback_value);
+				if ($cell_type==='section_id') {
+					// legacy component_section_id parity (client record-link button)
+					$dd_grid_cell_object->set_row_count(1);
+				}
 				$dd_grid_cell_object->set_model(get_called_class());
 
 
 		return $dd_grid_cell_object;
-	}//end get_grid_value
+	}//end export_value_to_grid_cell
 
 
 
