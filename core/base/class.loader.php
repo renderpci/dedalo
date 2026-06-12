@@ -73,6 +73,11 @@ include DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php';
 // dd grid
 include DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'; // new 27-07-2021
 include DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'; // new 28-07-2021
+// export contract (atoms based component export value)
+include DEDALO_CORE_PATH . '/dd_grid/class.export_path_segment.php';
+include DEDALO_CORE_PATH . '/dd_grid/class.export_atom.php';
+include DEDALO_CORE_PATH . '/dd_grid/class.export_value.php';
+include DEDALO_CORE_PATH . '/dd_grid/class.export_context.php';
 // component_common
 include DEDALO_CORE_PATH . '/component_common/class.component_common.php';
 include DEDALO_CORE_PATH . '/component_common/class.lock_components.php';
