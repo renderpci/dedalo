@@ -301,6 +301,14 @@ class area_maintenance extends area_common {
 		$item->value = $response;
 		$ar_widgets[] = $this->widget_factory($item);
 
+		// media_control *
+		$item = new stdClass();
+		$item->id = 'media_control';
+		$item->type = 'widget';
+		$item->tipo = $this->tipo;
+		$item->label = label::get_label('media_control') ?? 'Media access control';
+		$ar_widgets[] = $this->widget_factory($item);
+
 		// counters_status *
 		$item = new stdClass();
 		$item->id = 'counters_status';
@@ -846,6 +854,25 @@ class area_maintenance extends area_common {
 				$write_value = json_encode((bool) $value);
 				break;
 
+			case 'DEDALO_MEDIA_ACCESS_MODE_CUSTOM':
+				// media access control mode override (media_control widget).
+				// Allowed values:
+				//   null          : no override (config.php DEDALO_MEDIA_ACCESS_MODE rules)
+				//   false         : force protection off
+				//   'private'     : only logged-in users read media
+				//   'publication' : logged-in everything; anonymous only published media
+				$is_valid = $value===null
+					|| $value===false
+					|| in_array($value, ['private','publication'], true);
+				if (!$is_valid) {
+					$response->msg = 'Error. invalid value. Only allow null|false|private|publication';
+					return $response;
+				}
+				$write_value = $value===null
+					? 'null'
+					: ($value===false ? 'false' : "'".$value."'");
+				break;
+
 			// Disable (Experimental with serious security implications)
 			case 'DEDALO_NOTIFICATION_CUSTOM':
 				if (logged_user_id() !== DEDALO_SUPERUSER) {
@@ -986,6 +1013,33 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end set_maintenance_mode
+
+
+
+	/**
+	 * SET_MEDIA_ACCESS_MODE
+	 * Changes the media access control mode override
+	 * (DEDALO_MEDIA_ACCESS_MODE_CUSTOM in config_core.php) consumed by
+	 * media_protection::get_mode(). Root-user gated by set_config_core.
+	 * Called from the area_maintenance 'media_control' widget.
+	 * @param object $options
+	 * {
+	 * 	value : null|false|'private'|'publication'
+	 * }
+	 * @return object $response
+	 */
+	public static function set_media_access_mode(object $options): object {
+
+		$value = $options->value ?? null;
+
+		$response = area_maintenance::set_config_core((object) [
+			'name' => 'DEDALO_MEDIA_ACCESS_MODE_CUSTOM',
+			'value' => $value
+		]);
+
+
+		return $response;
+	}//end set_media_access_mode
 
 
 
