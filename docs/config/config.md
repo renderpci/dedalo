@@ -2812,11 +2812,21 @@ define('DEDALO_LOCK_COMPONENTS', false);
 
 ./dedalo/config/config.php
 
-DEDALO_PROTECT_MEDIA_FILES `bool`
+DEDALO_MEDIA_ACCESS_MODE `false | string`
 
-This parameter defines if the directory of the media files (av, images, pdf, ...) will be protected and controlled for undesired/external access.
+This parameter defines if the directory of the media files (av, images, pdf, subtitles, ...) will be protected and controlled for undesired/external access. The full documentation, with the architecture, use cases, web server configuration and examples, is in [Media protection (media file access control)](./media_protection.md).
 
-By default Dédalo do not close the access for media files because it can access by external web pages (false option), when the option is active (true) the direct access to media files are avoided and only is possible access by the internal system or the publication API .
+* `false` : no protection — media files are world-readable (default)
+* `'private'` : only logged-in Dédalo users can access media files
+* `'publication'` : logged-in users access everything; anonymous users access only media of published records in the configured public quality folders (see `DEDALO_MEDIA_PUBLIC_QUALITIES`)
+
+```php
+define('DEDALO_MEDIA_ACCESS_MODE', false);
+```
+
+DEDALO_PROTECT_MEDIA_FILES `bool` (deprecated)
+
+The legacy boolean is kept for back-compat: `true` behaves as `DEDALO_MEDIA_ACCESS_MODE='private'` when the new constant is not defined.
 
 ```php
 define('DEDALO_PROTECT_MEDIA_FILES', false);
