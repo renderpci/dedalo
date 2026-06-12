@@ -4,8 +4,8 @@
 // imports
 	import {get_instance_by_id} from '../../common/js/instances.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {find_up_tag} from '../../common/js/utils/util.js'
-	import {render_children} from './view_default_edit_ts_object.js'
 
 
 

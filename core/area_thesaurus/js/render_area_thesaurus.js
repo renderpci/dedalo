@@ -455,6 +455,12 @@ export const render_root_term = function (options) {
 	})
 	.then(async (ts_object_instance)=>{
 
+		// register in the area destroy cascade: every rebuild (search, refresh)
+		// already destroys dependencies, so the previous tree is reclaimed
+		if (self.ar_instances && !self.ar_instances.includes(ts_object_instance)) {
+			self.ar_instances.push(ts_object_instance)
+		}
+
 		await ts_object_instance.build()
 
 		const node_wrapper = await ts_object_instance.render()
