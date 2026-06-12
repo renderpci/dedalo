@@ -227,12 +227,6 @@
 	// --- DARK MODE ---
 	:root[data-theme="dark"] & {
 
-		// OSM raster tiles: invert + hue-rotate to approximate dark map
-		// (.leaflet-tile-pane only, so overlays/markers keep their true colors)
-		.leaflet-tile-pane {
-			filter : invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%);
-		}
-
 		// coordinate overlay panel
 		.map_inputs {
 			color        : var(--fg_default);
