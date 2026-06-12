@@ -224,4 +224,65 @@
 		}
 	}
 
+	// --- DARK MODE ---
+	:root[data-theme="dark"] & {
+
+		// coordinate overlay panel
+		.map_inputs {
+			color        : var(--fg_default);
+			border-color : var(--border_strong);
+
+			.map_reload,
+			.map_point {
+				background : var(--fg_muted);
+			}
+			.map_reload:active,
+			.map_point:active {
+				background : @color_orange_dedalo;
+			}
+		}
+
+		// Leaflet control bar (zoom buttons, layer toggle)
+		.leaflet-bar a {
+			background-color    : var(--bg_elevated);
+			color               : var(--fg_default);
+			border-bottom-color : var(--border_default);
+		}
+		.leaflet-bar a:hover,
+		.leaflet-bar a:focus {
+			background-color : var(--bg_header);
+		}
+		.leaflet-bar a.leaflet-disabled {
+			background-color : var(--bg_elevated);
+			color            : var(--fg_muted);
+		}
+
+		// Leaflet layers control (expanded panel)
+		.leaflet-control-layers-expanded {
+			background-color : var(--bg_elevated);
+			color            : var(--fg_default);
+			border-color     : var(--border_default);
+		}
+
+		// Leaflet popups
+		.leaflet-popup-content-wrapper,
+		.leaflet-popup-tip {
+			background : var(--bg_elevated);
+			color      : var(--fg_default);
+		}
+
+		// Leaflet tooltips
+		.leaflet-tooltip {
+			background-color : var(--bg_elevated);
+			color            : var(--fg_default);
+			border-color     : var(--border_default);
+		}
+
+		// Geoman text marker textarea
+		.pm-textarea {
+			background-color : var(--bg_elevated);
+			color            : var(--fg_default);
+		}
+	}//end dark mode
+
 }//end .component_geolocation
