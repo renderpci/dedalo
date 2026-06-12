@@ -180,7 +180,7 @@ final class grid_value_snapshot_test extends BaseTestCase {
 			'image'			=> ['component_image',		'test99',	null], // media URL derives from tipo+section_id (DB data)
 			'av'			=> ['component_av',			'test94',	null],
 			'3d'			=> ['component_3d',			'test26',	null],
-			'iri'			=> ['component_iri',		'test140',	[ (object)['id'=>1, 'iri'=>'https://dedalo.dev', 'title'=>'Site'] ], DEDALO_DATA_LANG],
+			'iri'			=> ['component_iri',		'test140',	[ (object)['id'=>1, 'iri'=>'https://dedalo.dev', 'title'=>'Site', 'lang'=>DEDALO_DATA_LANG] ], DEDALO_DATA_LANG],
 			// base implementation models
 			'number'		=> ['component_number',		'test211',	[42]],
 			'email'			=> ['component_email',		'test208',	['mail@example.org']],

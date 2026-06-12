@@ -484,91 +484,17 @@ class component_iri extends component_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the component as a dd_grid_cell_object.
+	* Generic atoms adapter cell (cell_type 'iri' comes from the atoms)
+	* plus the raw 'data' payload kept for the legacy iri grid renderers
+	* (view_table_dd_grid render_iri_column; likely dead, flagged for
+	* removal once confirmed unused).
 	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $value
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
-
-		// column_obj
-			$column_obj = $this->column_obj ?? (object)[
-				'id' => $this->section_tipo.'_'.$this->tipo
-			];
-
-		// set the label of the component as column label
-			$label = $this->get_label();
-
-		// properties
-			$properties = $this->get_properties();
-
-		// fields_separator. set the separator text that will be used to render the column
-			$fields_separator = isset($fields_separator)
-				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ', ');
-
-		// records_separator
-			$records_separator = isset($records_separator)
-				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
-
-		// ar_values
-			$ar_values	= [];
-			$data		= $this->get_data_lang();
-			if (!empty($data)) {
-				foreach ($data as $current_value) {
-
-					$ar_parts = [];
-
-					// iri property
-					$current_iri = $current_value->iri ?? null;
-					if ($current_iri) {
-						$ar_parts[] = $current_iri;
-					}
-
-					// title property
-					$current_title = $this->resolve_title( $current_value );
-					if (!empty($current_title)) {
-						$ar_parts[] = $current_title;
-						// (!) do not assign the resolved title back into the data item:
-						// $current_value references live component data and a later save
-						// would persist the dataframe label into the deprecated literal
-						// `title`, re-creating the title duality.
-					}
-
-					// set a flat version to be downloaded
-					$ar_values[] = implode($fields_separator, $ar_parts);
-				}
-			}
-
-		// value. flat_value (array of one value full resolved)
-			$value = [implode($records_separator, $ar_values)]; // array
-
-		// value
-			$dd_grid_cell_object = new dd_grid_cell_object();
-				$dd_grid_cell_object->set_type('column');
-				$dd_grid_cell_object->set_label($label);
-				$dd_grid_cell_object->set_cell_type('iri'); // text
-				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				if(isset($class_list)){
-					$dd_grid_cell_object->set_class_list($class_list);
-				}
-				$dd_grid_cell_object->set_fields_separator($fields_separator);
-				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($value);
-				$dd_grid_cell_object->set_fallback_value($value);
-				$dd_grid_cell_object->set_data($data);
-				$dd_grid_cell_object->set_model(get_called_class());
-
+		$dd_grid_cell_object = parent::get_grid_value($ddo);
+		$dd_grid_cell_object->set_data( $this->get_data_lang() );
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value

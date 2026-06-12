@@ -6,14 +6,14 @@
     "row_count": null,
     "column_count": null,
     "column_labels": null,
-    "fields_separator": null,
-    "records_separator": null,
+    "fields_separator": ", ",
+    "records_separator": " | ",
     "cell_type": "img",
     "action": null,
     "value": [
         "/dedalo/media_monedaiberica/image/thumb/0/test99_test3_1.jpg"
     ],
-    "fallback_value": null,
+    "fallback_value": [],
     "data": null,
     "render_label": null,
     "column": null,

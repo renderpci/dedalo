@@ -98,11 +98,20 @@ class component_text_area extends component_string_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
+		// indexation_list mode keeps the legacy custom-columns grid: tag
+		// fragments rendered as interactive record_link/button cells with
+		// per-cell class_list and action objects (component_text_area_value.php)
+		// — structural/interactive shapes the scalar atoms contract does not
+		// carry by design. Every other mode uses the generic atoms adapter
+		// (component_common::get_grid_value).
+		if ($this->mode!=='indexation_list') {
+			return parent::get_grid_value($ddo);
+		}
+
 		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
+			$class_list		= $ddo?->class_list ?? null;
+			// read inside the component_text_area_value.php include
+			$format_columns	= $ddo?->format_columns ?? null;
 
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
@@ -112,56 +121,17 @@ class component_text_area extends component_string_common {
 		// data
 			$data = $this->get_data_lang();
 
-		// processed_data
-			switch ($this->mode) {
-				case 'indexation_list':
-					// process data to build the indexation custom columns
-					$processed_data	= include 'component_text_area_value.php';
-					$cell_type		= null;
-					break;
-
-				default:
-					$processed_data = [];
-					if (!empty($data)) {
-						foreach ($data as $item) {
-							// $item = trim($item);
-							if (!$this->is_empty($item)) {
-								$processed_data[] = TR::add_tag_img_on_the_fly($item->value);
-							}
-						}
-					}
-					$cell_type = 'text'; // default
-					break;
-			}
+		// processed_data. indexation custom columns
+			$processed_data = include 'component_text_area_value.php';
+			$cell_type      = null;
 
 		// fallback_value
 			if (empty($data)) {
-
 				$data = $this->get_component_data_fallback(
 					$this->get_lang(), // string lang
 					DEDALO_DATA_LANG_DEFAULT // string main_lang
 				);
-
-				switch ($this->mode) {
-					case 'indexation_list':
-						// process data to build the indexation custom columns
-						$processed_fallback_value	= include 'component_text_area_value.php';
-						$cell_type					= null;
-						break;
-
-					default:
-						$processed_fallback_value = [];
-						if (!empty($data)) {
-							foreach ($data as $item) {
-								// $item = trim($item);
-								if (!$this->is_empty($item)) {
-									$processed_fallback_value[] = TR::add_tag_img_on_the_fly($item->value);
-								}
-							}
-						}
-						$cell_type = 'text'; // default
-						break;
-				}
+				$processed_fallback_value = include 'component_text_area_value.php';
 			}else{
 				$processed_fallback_value = []; // unnecessary to calculate
 			}
@@ -173,18 +143,14 @@ class component_text_area extends component_string_common {
 			$properties = $this->get_properties();
 
 		// fields_separator
-			$fields_separator = isset($fields_separator)
-				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ', ');
+			$fields_separator = $ddo?->fields_separator
+				?? $properties?->fields_separator
+				?? ', ';
 
 		// records_separator
-			$records_separator = isset($records_separator)
-				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
+			$records_separator = $ddo?->records_separator
+				?? $properties?->records_separator
+				?? ' | ';
 
 		// value
 			$dd_grid_cell_object = new dd_grid_cell_object();

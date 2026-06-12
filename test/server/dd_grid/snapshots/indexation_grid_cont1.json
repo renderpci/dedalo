@@ -46,14 +46,14 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": null,
-                                "records_separator": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
                                 "cell_type": "img",
                                 "action": null,
                                 "value": [
                                     ""
                                 ],
-                                "fallback_value": null,
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -73,16 +73,14 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": ", ",
+                                "fields_separator": " | ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
                                 "value": [
                                     "Empúries"
                                 ],
-                                "fallback_value": [
-                                    "Empúries"
-                                ],
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -102,16 +100,14 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": " <> ",
+                                "fields_separator": " | ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
                                 "value": [
                                     "1989"
                                 ],
-                                "fallback_value": [
-                                    "1989"
-                                ],
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -131,16 +127,14 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": ", ",
+                                "fields_separator": " | ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
                                 "value": [
                                     "3NM4RVKV"
                                 ],
-                                "fallback_value": [
-                                    "3NM4RVKV"
-                                ],
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -186,16 +180,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "R."
                                                 ],
-                                                "fallback_value": [
-                                                    "R."
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -216,16 +208,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "Marcet"
                                                 ],
-                                                "fallback_value": [
-                                                    "Marcet"
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -268,16 +258,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "Enric"
                                                 ],
-                                                "fallback_value": [
-                                                    "Enric"
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -298,16 +286,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "Sanmartí Grego"
                                                 ],
-                                                "fallback_value": [
-                                                    "Sanmartí Grego"
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -518,14 +504,14 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": null,
-                                "records_separator": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
                                 "cell_type": "img",
                                 "action": null,
                                 "value": [
                                     ""
                                 ],
-                                "fallback_value": null,
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -545,16 +531,14 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": ", ",
+                                "fields_separator": " | ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
                                 "value": [
                                     "Segobriga IV: Hallazgos monetarios"
                                 ],
-                                "fallback_value": [
-                                    "Segobriga IV: Hallazgos monetarios"
-                                ],
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -574,16 +558,14 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": " <> ",
+                                "fields_separator": " | ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
                                 "value": [
                                     "2008"
                                 ],
-                                "fallback_value": [
-                                    "2008"
-                                ],
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -603,16 +585,14 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": ", ",
+                                "fields_separator": " | ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
                                 "value": [
                                     "7GA4A65X"
                                 ],
-                                "fallback_value": [
-                                    "7GA4A65X"
-                                ],
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -658,16 +638,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "Juan Manuel"
                                                 ],
-                                                "fallback_value": [
-                                                    "Juan Manuel"
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -688,16 +666,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "Abascal Palazón"
                                                 ],
-                                                "fallback_value": [
-                                                    "Abascal Palazón"
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -740,16 +716,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "Antonio"
                                                 ],
-                                                "fallback_value": [
-                                                    "Antonio"
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -770,16 +744,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "Alberola Belda"
                                                 ],
-                                                "fallback_value": [
-                                                    "Alberola Belda"
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -822,16 +794,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "Rosario"
                                                 ],
-                                                "fallback_value": [
-                                                    "Rosario"
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -852,16 +822,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "Cebrián Fernández"
                                                 ],
-                                                "fallback_value": [
-                                                    "Cebrián Fernández"
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -935,16 +903,14 @@
                                                 "row_count": null,
                                                 "column_count": null,
                                                 "column_labels": null,
-                                                "fields_separator": ", ",
+                                                "fields_separator": " | ",
                                                 "records_separator": " | ",
                                                 "cell_type": "text",
                                                 "action": null,
                                                 "value": [
                                                     "Castellano"
                                                 ],
-                                                "fallback_value": [
-                                                    "Spanish"
-                                                ],
+                                                "fallback_value": [],
                                                 "data": null,
                                                 "render_label": null,
                                                 "column": null,
@@ -1176,14 +1142,14 @@
                                 "row_count": 1,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": null,
-                                "records_separator": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
                                 "cell_type": "section_id",
                                 "action": null,
                                 "value": [
                                     807
                                 ],
-                                "fallback_value": null,
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -1224,7 +1190,7 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": ", ",
+                                "fields_separator": " | ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
@@ -1251,16 +1217,12 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": " <> ",
+                                "fields_separator": ", ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
-                                "value": [
-                                    ""
-                                ],
-                                "fallback_value": [
-                                    ""
-                                ],
+                                "value": [],
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -1369,14 +1331,14 @@
                                 "row_count": 1,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": null,
-                                "records_separator": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
                                 "cell_type": "section_id",
                                 "action": null,
                                 "value": [
                                     808
                                 ],
-                                "fallback_value": null,
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -1417,7 +1379,7 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": ", ",
+                                "fields_separator": " | ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
@@ -1444,16 +1406,12 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": " <> ",
+                                "fields_separator": ", ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
-                                "value": [
-                                    ""
-                                ],
-                                "fallback_value": [
-                                    ""
-                                ],
+                                "value": [],
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -1562,14 +1520,14 @@
                                 "row_count": 1,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": null,
-                                "records_separator": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
                                 "cell_type": "section_id",
                                 "action": null,
                                 "value": [
                                     863
                                 ],
-                                "fallback_value": null,
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,
@@ -1610,7 +1568,7 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": ", ",
+                                "fields_separator": " | ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
@@ -1637,16 +1595,12 @@
                                 "row_count": null,
                                 "column_count": null,
                                 "column_labels": null,
-                                "fields_separator": " <> ",
+                                "fields_separator": ", ",
                                 "records_separator": " | ",
                                 "cell_type": "text",
                                 "action": null,
-                                "value": [
-                                    ""
-                                ],
-                                "fallback_value": [
-                                    ""
-                                ],
+                                "value": [],
+                                "fallback_value": [],
                                 "data": null,
                                 "render_label": null,
                                 "column": null,

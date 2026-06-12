@@ -6,12 +6,13 @@
     "row_count": null,
     "column_count": null,
     "column_labels": null,
-    "fields_separator": ", ",
+    "fields_separator": " | ",
     "records_separator": " | ",
     "cell_type": "text",
     "action": null,
     "value": [
-        "alpha | beta"
+        "alpha",
+        "beta"
     ],
     "fallback_value": [],
     "data": null,

@@ -98,53 +98,6 @@ class component_section_id extends component_common {
 
 
 	/**
-	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_data().
-	* overwrite in every different specific component
-	* The direct components can set the value with the dato directly
-	* The relation components will separate the locator in rows
-	* @param object|null $ddo = null
-	* @return dd_grid_cell_object $value
-	*/
-	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
-
-		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
-
-		// column_obj
-			$column_obj = $this->column_obj ?? (object)[
-				'id' => $this->section_tipo.'_'.$this->tipo
-			];
-
-		$data	= $this->get_data();
-		$label	= $this->get_label();
-		$value 	= $data; // array
-
-		// dd_grid_cell_object
-			$dd_grid_cell_object = new dd_grid_cell_object();
-				$dd_grid_cell_object->set_type('column');
-				$dd_grid_cell_object->set_label($label);
-				$dd_grid_cell_object->set_cell_type('section_id');
-				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				if(isset($class_list)){
-					$dd_grid_cell_object->set_class_list($class_list);
-				}
-				$dd_grid_cell_object->set_fields_separator($fields_separator);
-				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_row_count(1);
-				$dd_grid_cell_object->set_value($value);
-				$dd_grid_cell_object->set_model(get_called_class());
-
-
-		return $dd_grid_cell_object;
-	}//end get_grid_value
-
-
-
-	/**
 	* GET_EXPORT_VALUE
 	* Atoms based export contract (see component_common::get_export_value).
 	* One int atom per data item with cell_type 'section_id'
