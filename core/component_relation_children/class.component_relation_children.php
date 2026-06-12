@@ -164,9 +164,20 @@ class component_relation_children extends component_relation_common {
 				$offset
 			);
 
-		// set total (count all children)
-			$data = $this->get_data();
-			$this->pagination->total = is_array($data) ? count($data) : 0;
+		// set total (count all children) only when the caller did not provide
+		// it already: loading every child row just to count defeats pagination
+			if (!isset($this->pagination->total)) {
+				$total = self::count_children(
+					$this->section_id,
+					$this->section_tipo,
+					$this->tipo
+				);
+				if ($total===null) {
+					$data = $this->get_data();
+					$total = is_array($data) ? count($data) : 0;
+				}
+				$this->pagination->total = $total;
+			}
 
 
 		return $data_paginated;
@@ -492,6 +503,60 @@ class component_relation_children extends component_relation_common {
 
 		return $children;
 	}//end get_children
+
+
+
+	/**
+	* COUNT_CHILDREN
+	* Counts children of the given section with a SQL count query, without
+	* loading the children rows. Used for pagination totals where the previous
+	* implementation loaded all children just to count them.
+	* @param int|string $section_id
+	* @param string $section_tipo
+	* @param string|null $component_tipo = null
+	* @return int|null $total
+	* 	null when the count could not be resolved (caller should fall back
+	* 	to counting loaded data)
+	*/
+	public static function count_children( int|string $section_id, string $section_tipo, ?string $component_tipo=null ) : ?int {
+
+		// Locate component children in section when is not received
+			if (empty($component_tipo)) {
+				$component_tipo = component_relation_children::get_children_tipo($section_tipo);
+			}
+
+		// get the ontology node tipo of the related component_relation_parent assigned to my tipo.
+			$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $component_tipo, $section_tipo );
+			if( empty($ar_parent_tipo) || !isset($ar_parent_tipo[0])){
+				return 0;
+			}
+			$parent_tipo = $ar_parent_tipo[0];
+
+		// build SQO using unified builder (no order: irrelevant for counting)
+			$sqo = self::build_children_sqo(
+				$section_id,
+				$section_tipo,
+				$component_tipo,
+				$parent_tipo,
+				[
+					'limit'	=> 0,
+					'order'	=> false
+				]
+			);
+			if ($sqo === null) {
+				return null;
+			}
+			$sqo->set_full_count(true);
+
+		$search			= search::get_instance($sqo);
+		$records_data	= $search->count();
+
+		if (!isset($records_data->total)) {
+			return null;
+		}
+
+		return (int)$records_data->total;
+	}//end count_children
 
 
 

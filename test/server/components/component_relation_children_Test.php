@@ -724,7 +724,171 @@ final class component_relation_children_test extends BaseTestCase {
 		);
 	}//end test_search_operators_info
 
+	/**
+	* SAMPLE_PARENT_LOCATORS
+	* Picks real thesaurus nodes (read-only) from the installation.
+	* @param int $limit
+	* @return array
+	*/
+	private function sample_parent_locators( int $limit=10 ) : array {
+
+		$conn = DBi::_getConnection();
+
+		$result = pg_query($conn, "
+			SELECT section_tipo, count(*) AS n
+			FROM matrix_hierarchy
+			GROUP BY section_tipo
+			ORDER BY n DESC
+			LIMIT 1
+		");
+		$row = $result ? pg_fetch_assoc($result) : null;
+		if (empty($row)) {
+			return [];
+		}
+		$section_tipo = $row['section_tipo'];
+
+		$result = pg_query_params($conn, '
+			SELECT section_id
+			FROM matrix_hierarchy
+			WHERE section_tipo = $1
+			ORDER BY section_id ASC
+			LIMIT '.(int)$limit.'
+		', [$section_tipo]);
+
+		$locators = [];
+		while ($r = pg_fetch_assoc($result)) {
+			$locators[] = (object)[
+				'section_tipo'	=> $section_tipo,
+				'section_id'	=> (int)$r['section_id']
+			];
+		}
+
+		return $locators;
+	}//end sample_parent_locators
+
+
+
+	/**
+	* TEST_COUNT_CHILDREN_PARITY
+	* count_children (SQL count) must equal count(get_children) for real nodes.
+	* @return void
+	*/
+	public function test_count_children_parity() {
+
+		$locators = $this->sample_parent_locators();
+		if (empty($locators)) {
+			$this->markTestSkipped('No thesaurus rows available in this installation');
+		}
+
+		$checked = 0;
+		foreach ($locators as $locator) {
+
+			$counted = component_relation_children::count_children(
+				$locator->section_id,
+				$locator->section_tipo
+			);
+			$this->assertNotNull(
+				$counted,
+				'expected count_children to resolve for '
+					. $locator->section_tipo . '_' . $locator->section_id
+			);
+
+			$loaded = component_relation_children::get_children(
+				$locator->section_id,
+				$locator->section_tipo
+			);
+
+			$this->assertSame(
+				count($loaded),
+				$counted,
+				'count_children parity failed for '
+					. $locator->section_tipo . '_' . $locator->section_id
+			);
+			$checked++;
+		}
+
+		$this->assertGreaterThan(0, $checked, 'expected at least one node checked');
+	}//end test_count_children_parity
+
+
+
+	/**
+	* TEST_GET_DATA_PAGINATED_TOTAL
+	* get_data_paginated must produce a correct total without a caller provided
+	* one, and must respect a caller provided total.
+	* @return void
+	*/
+	public function test_get_data_paginated_total() {
+
+		$locators = $this->sample_parent_locators(30);
+
+		// find a node with at least 3 children
+		$target = null;
+		$target_total = null;
+		foreach ($locators as $locator) {
+			$total = component_relation_children::count_children($locator->section_id, $locator->section_tipo);
+			if ($total!==null && $total >= 3) {
+				$target = $locator;
+				$target_total = $total;
+				break;
+			}
+		}
+		if ($target===null) {
+			$this->markTestSkipped('No node with 3+ children available');
+		}
+
+		$children_tipo = component_relation_children::get_children_tipo($target->section_tipo);
+		$component = component_common::get_instance(
+			'component_relation_children',
+			$children_tipo,
+			$target->section_id,
+			'list_thesaurus',
+			DEDALO_DATA_NOLAN,
+			$target->section_tipo
+		);
+
+		// caller did NOT provide total: paginated call computes it
+		$component->pagination = (object)[
+			'limit'		=> 2,
+			'offset'	=> 0
+		];
+		$page = $component->get_data_paginated();
+
+		$this->assertCount(
+			2,
+			$page,
+			'expected page of 2 children'
+		);
+		$this->assertSame(
+			$target_total,
+			$component->pagination->total,
+			'expected computed total to match count_children'
+		);
+
+		// caller DID provide total: it is preserved untouched
+		$component2 = component_common::get_instance(
+			'component_relation_children',
+			$children_tipo,
+			$target->section_id,
+			'list_thesaurus',
+			DEDALO_DATA_NOLAN,
+			$target->section_tipo,
+			false // no cache: fresh instance
+		);
+		$component2->pagination = (object)[
+			'limit'		=> 2,
+			'offset'	=> 0,
+			'total'		=> $target_total
+		];
+		$component2->get_data_paginated();
+
+		$this->assertSame(
+			$target_total,
+			$component2->pagination->total,
+			'expected caller provided total preserved'
+		);
+	}//end test_get_data_paginated_total
+
 
 
 }//end class component_relation_children_test
-
