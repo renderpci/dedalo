@@ -435,6 +435,11 @@ abstract class common {
 			self::$cache_get_tools = [];
 			self::$cache_buttons_tools = [];
 			self::$pdata = null;
+
+			// purge search per-user filter cache (class-static, would otherwise leak across requests)
+			if (class_exists('search', false)) {
+				search::reset_filter_user_records_cache();
+			}
 		}
 
 

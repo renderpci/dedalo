@@ -73,7 +73,7 @@ trait count {
 			$count_sql_query = $this->parse_sql_query();
 			$count_result = matrix_db_manager::exec_search(
 				$count_sql_query,
-				array_keys($this->params), // Form array as ['oh1' => $1, 'oh2' => $2, ...]
+				$this->params, // 0-indexed sequential list of bound values ($1..$n)
 			);
 
 			if ($count_result===false) {
@@ -118,7 +118,7 @@ trait count {
 				$this->sqo->generated_time		= $exec_time;
 
 				$conn = DBi::_getConnection();
-				$sql_query_debug = debug_prepared_statement($count_sql_query, array_keys($this->params), $conn);
+				$sql_query_debug = debug_prepared_statement($count_sql_query, $this->params, $conn);
 
 				dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $sql_query_debug;
 

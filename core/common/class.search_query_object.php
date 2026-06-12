@@ -652,8 +652,12 @@ class search_query_object extends stdClass {
 	*  - sentence / params : pre-built SQL fragment + bound values (always regenerated)
 	*  - column_sql        : trusted server-built ORDER fragment (see trait.order.php)
 	*  - table / table_alias : server-computed in conform_filter
-	* It also forces parsed=false (a client must never be able to skip parse_sqo) and
-	* coerces limit/offset/total to safe numeric types (preserving the 'all' limit sentinel).
+	* It also strips client-supplied ACL/control flags that would weaken access control
+	* (skip_projects_filter, skip_duplicated, include_negative).
+	* It forces parsed=false (a client must never be able to skip parse_sqo) and
+	* coerces offset/total to safe numeric types. The limit is clamped to
+	* DEDALO_SEARCH_CLIENT_MAX_LIMIT (the 'all' sentinel and out-of-range values are
+	* coerced to the ceiling) so untrusted clients cannot request unbounded result sets.
 	*
 	* @param mixed $sqo
 	* 	Raw SQO (object) or any other value (passed through untouched)
@@ -666,8 +670,20 @@ class search_query_object extends stdClass {
 			return $sqo;
 		}
 
-		// server-only fields that a client SQO must never carry, at any depth
-		$server_only_keys = ['sentence','params','column_sql','table','table_alias'];
+		// server-only fields that a client SQO must never carry, at any depth.
+		// Two groups:
+		//  - SQL/identifier fields that bypass the component conform pipeline
+		//    (sentence/params/column_sql/table/table_alias)
+		//  - ACL / control flags that, if client-supplied, weaken access control:
+		//      skip_projects_filter : disables the per-user projects WHERE filter (set_up honors it)
+		//      skip_duplicated      : only valid inside the component '!!' duplicated pipeline;
+		//                             a client value silently drops sibling filters
+		//      include_negative     : currently a search instance property (not read from the SQO),
+		//                             stripped defensively against future regressions
+		$server_only_keys = [
+			'sentence','params','column_sql','table','table_alias',
+			'skip_projects_filter','skip_duplicated','include_negative'
+		];
 		self::strip_keys_recursive($sqo, $server_only_keys);
 
 		// never let the client mark the SQO as already parsed (would skip the component
@@ -683,9 +699,18 @@ class search_query_object extends stdClass {
 		if (isset($sqo->total) && $sqo->total!==null) {
 			$sqo->total = (int)$sqo->total;
 		}
-		// limit: keep the 'all'/'ALL' unlimited sentinel, otherwise force int
-		if (isset($sqo->limit) && !(is_string($sqo->limit) && strtolower(trim($sqo->limit))==='all')) {
-			$sqo->limit = (int)$sqo->limit;
+		// limit: clamp the client-supplied limit to a safe ceiling. Untrusted clients
+		// must not request unbounded result sets: the 'all'/'ALL' sentinel, non-positive
+		// values and values above the ceiling are all coerced to DEDALO_SEARCH_CLIENT_MAX_LIMIT.
+		// Server-internal builders construct a search_query_object directly and bypass this
+		// gate, so they keep full access to 'all'.
+		if (isset($sqo->limit)) {
+			$max_limit	= defined('DEDALO_SEARCH_CLIENT_MAX_LIMIT') ? (int)DEDALO_SEARCH_CLIENT_MAX_LIMIT : 1000;
+			$is_all		= is_string($sqo->limit) && strtolower(trim($sqo->limit))==='all';
+			$int_limit	= (int)$sqo->limit;
+			$sqo->limit	= ($is_all || $int_limit <= 0 || $int_limit > $max_limit)
+				? $max_limit
+				: $int_limit;
 		}
 
 		return $sqo;

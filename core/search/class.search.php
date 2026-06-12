@@ -56,10 +56,9 @@ class search {
 	// ar_matrix_tables : array
 	protected array $ar_matrix_tables;
 
-	// params counter for prepared statements
-	protected int $params_counter = 1;
-
-	// params array for prepared statements
+	// params array for prepared statements.
+	// 0-indexed sequential list of bound values (the order pg_execute expects); the
+	// placeholder $N maps to $this->params[N-1]. @see get_placeholder()
 	protected array $params = [];
 
 	// sql_query : string (final query to execute stored for debug purposes)
@@ -269,7 +268,7 @@ class search {
 		// execute search. Perform a SQL query in DB using pg_execute and parameters.
 		$result	= matrix_db_manager::exec_search(
 			$sql_query,
-			array_keys($this->params), // Form array as ['oh1' => $1, 'oh2' => $2, ...]
+			$this->params, // 0-indexed sequential list of bound values ($1..$n)
 			true
 		);
 		if ($result===false) {
@@ -285,7 +284,7 @@ class search {
 		if(SHOW_DEBUG===true) {
 			$exec_time = exec_time_unit($start_time,'ms');
 			$conn = DBi::_getConnection();
-			$sql_query_debug = debug_prepared_statement($sql_query, array_keys($this->params), $conn);
+			$sql_query_debug = debug_prepared_statement($sql_query, $this->params, $conn);
 			if($exec_time>SLOW_QUERY_MS) {
 				debug_log(__METHOD__
 					. " SLOW_QUERY. LOAD_SLOW_QUERY " . PHP_EOL
@@ -338,8 +337,8 @@ class search {
 	*/
 	private function search_children_recursive( db_result $parents_db_result ) : db_result|false {
 
-		$ar_row_children = [];
-		$ar_records = [];
+		$ar_records		= [];
+		$ar_parent_roots = [];
 		foreach ($parents_db_result as $row) {
 
 			// row expected an object as {section_tipo: oh1, section_id: 2} (select previously changed on parse sqo)
@@ -351,16 +350,18 @@ class search {
 				continue; // Skip rows without section_id
 			}
 
-			$section_tipo = $row->section_tipo ?? $this->main_section_tipo;
-
-			$row_children = component_relation_children::get_children_recursive(
-				$section_id, // string|int section_id
-				$section_tipo, // string section_tipo
-				null // string|null component_tipo
-			);
-
-			$ar_row_children = [...$ar_row_children, ...$row_children];
+			// Collect parent roots and resolve their children in a single batched pass
+			// (shared visited set) instead of one recursive call per parent row.
+			$root				= new stdClass();
+			$root->section_id	= $section_id;
+			$root->section_tipo	= $row->section_tipo ?? $this->main_section_tipo;
+			$ar_parent_roots[]	= $root;
 		}
+
+		$ar_row_children = component_relation_children::get_children_recursive_batch(
+			$ar_parent_roots, // array of {section_id, section_tipo}
+			null // string|null component_tipo
+		);
 
 		// No children found case. Return the main search result rewound to start.
 		if (empty($ar_row_children)) {
@@ -602,6 +603,46 @@ class search {
 			}else{
 
 				$path						= $search_object->path;
+
+				// Security chokepoint (covers ALL component traits at one point).
+				// section_tipo / component_tipo from a client path are interpolated verbatim
+				// into JSONB keys and jsonpath member steps ($.{tipo}[*]) by the per-component
+				// search builders and cannot be parameterized. Single-level paths never reach
+				// build_sql_join (which validates multi-level joins), so validate here before
+				// any model dispatch. Pseudo-tipos (section_id, id, tipo, lang, type, section_tipo)
+				// are legitimate path terminals (e.g. generate_children_recursive_search).
+				// Also validate the optional lang selector (string-interpolated as a SQL literal).
+				foreach ($path as $path_step) {
+					$step_section_tipo	= $path_step->section_tipo ?? null;
+					$step_component_tipo= $path_step->component_tipo ?? null;
+					if ( isset($step_section_tipo) && !search::is_valid_tipo((string)$step_section_tipo) ) {
+						debug_log(__METHOD__
+							. " Rejected invalid section_tipo in search path (possible injection attempt) " . PHP_EOL
+							. ' section_tipo: ' . to_string($step_section_tipo)
+							, logger::ERROR
+						);
+						throw new Exception("Error: invalid section_tipo in search path", 1);
+					}
+					if ( isset($step_component_tipo)
+						&& !search::is_valid_tipo((string)$step_component_tipo)
+						&& !search::is_valid_data_column((string)$step_component_tipo) ) {
+						debug_log(__METHOD__
+							. " Rejected invalid component_tipo in search path (possible injection attempt) " . PHP_EOL
+							. ' component_tipo: ' . to_string($step_component_tipo)
+							, logger::ERROR
+						);
+						throw new Exception("Error: invalid component_tipo in search path", 1);
+					}
+				}
+				if ( isset($search_object->lang) && !search::is_valid_lang((string)$search_object->lang) ) {
+					debug_log(__METHOD__
+						. " Rejected invalid lang in search filter (possible injection attempt) " . PHP_EOL
+						. ' lang: ' . to_string($search_object->lang)
+						, logger::ERROR
+					);
+					throw new Exception("Error: invalid lang in search filter", 1);
+				}
+
 				$search_object->table_alias	= $this->get_table_alias_from_path( $path );
 				$search_object->table		= $this->matrix_table;
 
@@ -723,20 +764,27 @@ class search {
 		if (count($this->ar_matrix_tables)>1) {
 			$tables_query = [];
 
-			// Add current query
+			// Add current query (first table)
 			$tables_query[] = $sql_query;
+
+			// Each UNION branch is an independent SELECT with its own alias scope, so every
+			// branch keeps the same main alias ($this->main_section_tipo_alias, 'mix' here) and
+			// only the main FROM table is swapped. We replace an EXACT substring (the exact
+			// clause build_main_from_sql produced) instead of a regex: this never touches the
+			// FROM clauses of correlated subqueries (e.g. the '!!' duplicated operator emits
+			// "FROM <table> AS m2", a different alias) and removes the previous 'mix.' string
+			// surgery that corrupted those subqueries.
+			$main_from_needle = 'FROM ' . $this->matrix_table . ' AS ' . $this->main_section_tipo_alias;
 
 			foreach ($this->ar_matrix_tables as $key => $current_matrix_table) {
 
-				// Ignore the first table
+				// Ignore the first table (already added unchanged)
 				if ($key===0) {
 					continue;
 				}
 
-				// copy source and replace table and alias names
-				$current_query	= $sql_query;
-				$current_query	= preg_replace('/(FROM [a-zA-z]+ AS [a-zA-z]+)/i', 'FROM '.$current_matrix_table.' AS mix_'.$current_matrix_table, $current_query);
-				$current_query	= str_replace('mix.', 'mix_'.$current_matrix_table.'.', $current_query);
+				$branch_from	= 'FROM ' . $current_matrix_table . ' AS ' . $this->main_section_tipo_alias;
+				$current_query	= str_replace($main_from_needle, $branch_from, $sql_query);
 
 				// Add the modified query to the list
 				$tables_query[] = $current_query;

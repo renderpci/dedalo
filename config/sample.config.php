@@ -722,6 +722,15 @@
 
 
 
+// dedalo_search_client_max_limit
+	// Ceiling applied to client-supplied SQO limits (HTTP API). Untrusted clients cannot
+	// request unbounded result sets: 'all', non-positive and out-of-range limits are clamped
+	// to this value. Server-internal search builders bypass this gate (see
+	// search_query_object::sanitize_client_sqo). int default 1000
+	define('DEDALO_SEARCH_CLIENT_MAX_LIMIT', 1000);
+
+
+
 // geonames
 	// geonames_account_username. For development only
 	// define('GEONAMES_ACCOUNT_USERNAME', 'my_account');

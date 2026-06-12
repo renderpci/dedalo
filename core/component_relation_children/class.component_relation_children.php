@@ -597,6 +597,79 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
+	* GET_CHILDREN_RECURSIVE_BATCH
+	* Resolves the recursive children of many root records in a single pass, sharing one
+	* cycle-detection/visited set across all roots. This avoids re-walking subtrees that are
+	* shared between roots (the per-root get_children_recursive() always starts with an empty
+	* visited set, so a node reachable from N roots is expanded N times).
+	* Used by search::search_children_recursive to collapse its per-parent-row N+1 loop.
+	* @param array $roots
+	* 	List of objects/locators exposing ->section_id and ->section_tipo
+	* @param ?string $component_tipo = null
+	* @return array $all_children
+	* 	Flat list of descendant locators (deduplicated by section_tipo+section_id)
+	*/
+	public static function get_children_recursive_batch( array $roots, ?string $component_tipo=null ) : array {
+
+		$visited		= [];
+		$all_children	= [];
+
+		foreach ($roots as $root) {
+
+			$section_id		= $root->section_id ?? null;
+			$section_tipo	= $root->section_tipo ?? null;
+			if ($section_id===null || $section_tipo===null) {
+				continue;
+			}
+
+			// Shared $visited (passed by reference) prevents re-expanding subtrees already
+			// reached from a previous root, and dedups the returned descendants.
+			$descendants = self::get_children_recursive_shared($section_id, $section_tipo, $component_tipo, $visited);
+			if (!empty($descendants)) {
+				$all_children = [...$all_children, ...$descendants];
+			}
+		}
+
+		return $all_children;
+	}//end get_children_recursive_batch
+
+
+
+	/**
+	* GET_CHILDREN_RECURSIVE_SHARED
+	* Same as get_children_recursive but takes $visited BY REFERENCE so a single accumulator
+	* can be shared across multiple root expansions (see get_children_recursive_batch). A node
+	* already in $visited is skipped, so each node is expanded at most once per batch.
+	* @param int|string $section_id
+	* @param string $section_tipo
+	* @param ?string $component_tipo
+	* @param array $visited (by reference)
+	* @return array $all_children
+	*/
+	public static function get_children_recursive_shared(int|string $section_id, string $section_tipo, ?string $component_tipo, array &$visited) : array {
+
+		// Cycle / shared-subtree detection
+		$current_node_key = $section_tipo . '_' . $section_id;
+		if (isset($visited[$current_node_key])) {
+			return [];
+		}
+		$visited[$current_node_key] = true;
+
+		$all_children = component_relation_children::get_children($section_id, $section_tipo, $component_tipo);
+
+		foreach ($all_children as $child) {
+			$descendants = self::get_children_recursive_shared($child->section_id, $child->section_tipo, $component_tipo, $visited);
+			if (!empty($descendants)) {
+				$all_children = [...$all_children, ...$descendants];
+			}
+		}
+
+		return $all_children;
+	}//end get_children_recursive_shared
+
+
+
+	/**
 	* GET_AR_RELATED_PARENT_TIPO
 	* Get the parent node(s) in the ontology related to the component_relation_children.
 	* This determines which parent relation component in the ontology corresponds to this children relation.

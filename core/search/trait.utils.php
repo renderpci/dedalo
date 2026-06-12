@@ -108,6 +108,23 @@ trait utils {
 
 
     /**
+	* IS_VALID_LANG
+	* Validates that a lang value is a well-formed Dédalo language code (e.g. 'lg-spa',
+	* 'lg-nolan') or the 'all' sentinel. Security gate for the few places lang is
+	* interpolated verbatim into raw SQL jsonpath/string literals (where the jsonpath
+	* `vars` mechanism is not used). A lang carrying a single quote would otherwise escape
+	* the surrounding SQL literal.
+	* @param string $lang
+	* @return bool
+	*/
+	public static function is_valid_lang( string $lang ) : bool {
+
+		return preg_match('/^(lg-[a-z0-9_]+|all)$/', $lang) === 1;
+	}//end is_valid_lang
+
+
+
+    /**
 	* IS_VALID_DATA_COLUMN
 	* Security allowlist of real matrix column identifiers, used wherever a column name
 	* from the client SQO (select/order/format) is interpolated verbatim into SQL (it
@@ -399,22 +416,24 @@ trait utils {
 	* GET_PLACEHOLDER
 	* Gets the placeholder for a given value.
 	* If it exists, returns it, otherwise returns the next available placeholder.
-	* @param string $value Like 'oh1'
+	* @param mixed $value Like 'oh1' (string|int|float|bool|null)
 	* @return string $placeholder Like $1, $2, $3, ...
 	*/
 	public function get_placeholder(mixed $value) : string {
 
-		if(isset($this->params[$value])){
-			// Recycle placeholder and param
-			$placeholder = $this->params[$value];
-		}else{
-			$current_param_key = $this->params_counter++; // Uses value before increment
-			$placeholder = '$' . $current_param_key;
-			$this->params[$value] = $placeholder;
+		// Params are stored as a 0-indexed sequential list of values (the order pg_execute
+		// expects). Dedup uses a STRICT comparison so distinct typed values never collapse
+		// onto the same placeholder. The previous implementation keyed $this->params by the
+		// value itself, which silently corrupted non-string params via PHP array-key coercion
+		// (1.5 -> 1, true -> 1, null -> '').
+		$idx = array_search($value, $this->params, true);
+		if ($idx === false) {
+			$this->params[] = $value;
+			$idx = array_key_last($this->params);
 		}
 
-		return $placeholder;
-	}//end get_placeholders
+		return '$' . ($idx + 1);
+	}//end get_placeholder
 
 
 
@@ -447,7 +466,7 @@ trait utils {
 		$conn = DBi::_getConnection();
 		$sql_query_debug = debug_prepared_statement(
 			$this->sql_query,
-			array_keys($this->params),
+			$this->params,
 			$conn
 		);
 

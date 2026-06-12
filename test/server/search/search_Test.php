@@ -571,6 +571,244 @@ final class search_test extends BaseTestCase {
 
 
 	/**
+	* TEST_INJECTION_LANG_IN_JSONPATH
+	* A malicious filter-item lang (interpolated into SQL jsonpath/string literals by the
+	* component search builders) must be rejected at the central conform_filter chokepoint.
+	* Legitimate langs ('lg-spa', 'all') must pass and produce SQL.
+	* @return void
+	*/
+	public function test_injection_lang_in_jsonpath() {
+
+		$make_sqo = function(string $lang) : object {
+			return (object)[
+				'section_tipo'	=> $this->section_tipo,
+				'mode'			=> 'list',
+				'filter'		=> (object)[
+					'$and' => [
+						(object)[
+							'q'			=> 'foo',
+							'q_operator'=> null,
+							'lang'		=> $lang,
+							'path'		=> [
+								(object)[
+									'section_tipo'	=> $this->section_tipo,
+									'component_tipo'=> 'test52',
+									'model'			=> 'component_input_text',
+									'name'			=> 'Value'
+								]
+							]
+						]
+					]
+				]
+			];
+		};
+
+		// malicious lang (single quote breaks out of the SQL literal)
+		$payload = "lg-spa\" || @.value != \"";
+		try {
+			search::get_instance($make_sqo($payload))->parse_sql_query();
+			$this->fail('Malicious lang must be rejected');
+		} catch (Exception $e) {
+			$this->assertStringContainsString('invalid lang in search filter', $e->getMessage());
+		}
+
+		// classic injection lang
+		try {
+			search::get_instance($make_sqo("x' ; DROP TABLE matrix_test; --"))->parse_sql_query();
+			$this->fail('Malicious lang must be rejected');
+		} catch (Exception $e) {
+			$this->assertStringContainsString('invalid lang in search filter', $e->getMessage());
+		}
+
+		// legitimate langs survive
+		$sql_spa = search::get_instance($make_sqo('lg-spa'))->parse_sql_query();
+		$this->assertStringNotContainsString('DROP TABLE', $sql_spa);
+		$this->assertNotEmpty($sql_spa);
+
+		$sql_all = search::get_instance($make_sqo('all'))->parse_sql_query();
+		$this->assertNotEmpty($sql_all);
+
+	}//end test_injection_lang_in_jsonpath
+
+
+
+	/**
+	* TEST_INJECTION_COMPONENT_TIPO_SINGLE_LEVEL_PATH
+	* A malicious component_tipo in a SINGLE-level path (which never reaches build_sql_join)
+	* must still be rejected at the conform_filter chokepoint. A legitimate pseudo-tipo
+	* ('section_id') must be accepted.
+	* @return void
+	*/
+	public function test_injection_component_tipo_single_level_path() {
+
+		$sqo = (object)[
+			'section_tipo'	=> $this->section_tipo,
+			'mode'			=> 'list',
+			'filter'		=> (object)[
+				'$and' => [
+					(object)[
+						'q'			=> '1',
+						'q_operator'=> null,
+						'path'		=> [
+							(object)[
+								'section_tipo'	=> $this->section_tipo,
+								'component_tipo'=> "x'] ? (@ == 1) || (SELECT 1)--"
+							]
+						]
+					]
+				]
+			]
+		];
+
+		try {
+			search::get_instance($sqo)->parse_sql_query();
+			$this->fail('Malicious single-level component_tipo must be rejected');
+		} catch (Exception $e) {
+			$this->assertStringContainsString('invalid component_tipo in search path', $e->getMessage());
+		}
+
+		// legitimate pseudo-tipo 'section_id' is accepted (children-recursive uses it)
+		$sqo_ok = (object)[
+			'section_tipo'	=> $this->section_tipo,
+			'mode'			=> 'list',
+			'filter'		=> (object)[
+				'$and' => [
+					(object)[
+						'q'			=> '1',
+						'q_operator'=> null,
+						'path'		=> [
+							(object)[
+								'section_tipo'	=> $this->section_tipo,
+								'component_tipo'=> 'section_id',
+								'model'			=> 'component_section_id'
+							]
+						]
+					]
+				]
+			]
+		];
+		$sql_ok = search::get_instance($sqo_ok)->parse_sql_query();
+		$this->assertNotEmpty($sql_ok);
+
+	}//end test_injection_component_tipo_single_level_path
+
+
+
+	/**
+	* TEST_FILTER_PARSER_NO_DANGLING_OPERATOR
+	* filter_parser must join only non-empty fragments. An element that resolves to an empty
+	* fragment (whether in the middle or at the end) must never leave a trailing/double operator.
+	* @return void
+	*/
+	public function test_filter_parser_no_dangling_operator() {
+
+		$search_obj = search::get_instance((object)[
+			'section_tipo'	=> $this->section_tipo,
+			'mode'			=> 'list'
+		]);
+
+		$leaf = function(?string $sentence) : object {
+			return (object)[
+				'path'		=> [ (object)['section_tipo'=>$this->section_tipo,'component_tipo'=>'section_id'] ],
+				'sentence'	=> $sentence,
+				'params'	=> []
+			];
+		};
+
+		// middle element empty
+		$sql_mid = $search_obj->filter_parser('$and', [ $leaf('a.x = 1'), $leaf(''), $leaf('b.y = 2') ]);
+		$this->assertStringContainsString('a.x = 1', $sql_mid);
+		$this->assertStringContainsString('b.y = 2', $sql_mid);
+		$this->assertSame(1, substr_count($sql_mid, ' AND '), 'exactly one AND between two fragments');
+
+		// trailing element empty (the classic dangling-operator case)
+		$sql_tail = $search_obj->filter_parser('$and', [ $leaf('a.x = 1'), $leaf('b.y = 2'), $leaf('') ]);
+		$this->assertSame(1, substr_count($sql_tail, ' AND '), 'trailing empty element must not leave a dangling AND');
+		$this->assertDoesNotMatchRegularExpression('/\bAND\s*$/', trim($sql_tail), 'no trailing AND');
+
+		// all empty -> empty string
+		$sql_empty = $search_obj->filter_parser('$and', [ $leaf(''), $leaf(null) ]);
+		$this->assertSame('', $sql_empty, 'all-empty fragments must produce an empty string');
+
+	}//end test_filter_parser_no_dangling_operator
+
+
+
+	/**
+	* TEST_FILTER_PARSER_NAND_NOR
+	* NAND/NOR must produce valid SQL (a negated AND/OR), not an invalid ' NAND '/' NOR ' join.
+	* @return void
+	*/
+	public function test_filter_parser_nand_nor() {
+
+		$search_obj = search::get_instance((object)[
+			'section_tipo'	=> $this->section_tipo,
+			'mode'			=> 'list'
+		]);
+
+		$leaf = function(string $sentence) : object {
+			return (object)[
+				'path'		=> [ (object)['section_tipo'=>$this->section_tipo,'component_tipo'=>'section_id'] ],
+				'sentence'	=> $sentence,
+				'params'	=> []
+			];
+		};
+
+		$sql_nand = $search_obj->filter_parser('$nand', [ $leaf('a.x = 1'), $leaf('b.y = 2') ]);
+		$this->assertStringContainsString('NOT (', $sql_nand);
+		$this->assertStringContainsString(' AND ', $sql_nand);
+		$this->assertStringNotContainsString(' NAND ', $sql_nand);
+
+		$sql_nor = $search_obj->filter_parser('$nor', [ $leaf('a.x = 1'), $leaf('b.y = 2') ]);
+		$this->assertStringContainsString('NOT (', $sql_nor);
+		$this->assertStringContainsString(' OR ', $sql_nor);
+		$this->assertStringNotContainsString(' NOR ', $sql_nor);
+
+	}//end test_filter_parser_nand_nor
+
+
+
+	/**
+	* TEST_GET_PLACEHOLDER_VALUE_TYPES
+	* get_placeholder must give distinct placeholders to distinct typed values and must store
+	* them unmangled (the previous value-keyed dedup corrupted 1.5->1, true->1, null->'').
+	* @return void
+	*/
+	public function test_get_placeholder_value_types() {
+
+		$search_obj = search::get_instance((object)[
+			'section_tipo'	=> $this->section_tipo,
+			'mode'			=> 'list'
+		]);
+
+		$p_float	= $search_obj->get_placeholder(1.5);
+		$p_int		= $search_obj->get_placeholder(1);
+		$p_strone	= $search_obj->get_placeholder('1');
+		$p_true		= $search_obj->get_placeholder(true);
+		$p_null		= $search_obj->get_placeholder(null);
+
+		// all distinct
+		$placeholders = [$p_float, $p_int, $p_strone, $p_true, $p_null];
+		$this->assertSame($placeholders, array_unique($placeholders), 'distinct typed values must get distinct placeholders');
+
+		// dedup: same value (strict) recycles its placeholder
+		$this->assertSame($p_float, $search_obj->get_placeholder(1.5), 'identical value must recycle its placeholder');
+
+		// stored values must be unmangled
+		$ref = new ReflectionProperty(search::class, 'params');
+		$params = $ref->getValue($search_obj);
+
+		$this->assertSame(1.5, $params[(int)substr($p_float,1) - 1], 'float must be stored unmangled');
+		$this->assertSame(1, $params[(int)substr($p_int,1) - 1], 'int must be stored unmangled');
+		$this->assertSame('1', $params[(int)substr($p_strone,1) - 1], 'string must be stored unmangled');
+		$this->assertSame(true, $params[(int)substr($p_true,1) - 1], 'bool must be stored unmangled');
+		$this->assertSame(null, $params[(int)substr($p_null,1) - 1], 'null must be stored unmangled');
+
+	}//end test_get_placeholder_value_types
+
+
+
+	/**
 	* TEST_SANITIZE_CLIENT_SQO
 	* The API boundary scrub must remove server-only fields at any depth, reset parsed,
 	* and coerce numerics, while keeping legitimate fields ('column', 'model', 'all').
@@ -584,6 +822,9 @@ final class search_test extends BaseTestCase {
 			'limit'			=> '5) UNION SELECT 1 --', // must coerce to 5
 			'offset'		=> '3; DROP',            // must coerce to 3
 			'total'			=> '42 junk',            // must coerce to 42
+			'skip_projects_filter'	=> true,         // ACL flag, must be stripped
+			'skip_duplicated'		=> true,         // ACL flag, must be stripped
+			'include_negative'		=> true,         // ACL flag, must be stripped
 			'order'			=> [
 				(object)[
 					'direction'	=> 'ASC',
@@ -636,10 +877,30 @@ final class search_test extends BaseTestCase {
 		$this->assertTrue(property_exists($order_step, 'column'), 'legitimate column must be kept');
 		$this->assertTrue(property_exists($leaf, 'path'), 'legitimate path must be kept');
 
-		// 'all' limit sentinel preserved
+		// ACL / control flags stripped (a client must never weaken access control)
+		$this->assertFalse(property_exists($clean, 'skip_projects_filter'), 'skip_projects_filter must be stripped');
+		$this->assertFalse(property_exists($clean, 'skip_duplicated'), 'skip_duplicated must be stripped');
+		$this->assertFalse(property_exists($clean, 'include_negative'), 'include_negative must be stripped');
+
+		// client limit clamped to the ceiling (untrusted clients cannot request unbounded sets)
+		$max = defined('DEDALO_SEARCH_CLIENT_MAX_LIMIT') ? (int)DEDALO_SEARCH_CLIENT_MAX_LIMIT : 1000;
+
+		// 'all' sentinel is clamped to the ceiling for clients
 		$sqo_all = (object)['section_tipo'=>['test65'], 'limit'=>'all'];
 		$clean_all = search_query_object::sanitize_client_sqo($sqo_all);
-		$this->assertSame('all', $clean_all->limit, "'all' limit sentinel must be preserved");
+		$this->assertSame($max, $clean_all->limit, "'all' limit must be clamped to the ceiling for clients");
+
+		// non-positive limit clamped to the ceiling
+		$sqo_zero = (object)['section_tipo'=>['test65'], 'limit'=>0];
+		$this->assertSame($max, search_query_object::sanitize_client_sqo($sqo_zero)->limit, 'limit 0 must clamp to ceiling');
+
+		// over-ceiling limit clamped
+		$sqo_big = (object)['section_tipo'=>['test65'], 'limit'=> $max + 50000];
+		$this->assertSame($max, search_query_object::sanitize_client_sqo($sqo_big)->limit, 'over-ceiling limit must clamp');
+
+		// in-range limit preserved
+		$sqo_ok = (object)['section_tipo'=>['test65'], 'limit'=>10];
+		$this->assertSame(10, search_query_object::sanitize_client_sqo($sqo_ok)->limit, 'in-range limit must be preserved');
 
 		// non-object passthrough
 		$this->assertNull(search_query_object::sanitize_client_sqo(null));
