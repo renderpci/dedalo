@@ -1277,7 +1277,6 @@ abstract class common {
 			DEDALO_RELATION_TYPE_RELATED_TIPO,
 			// DEDALO_RELATION_TYPE_EQUIVALENT_TIPO,
 			DEDALO_RELATION_TYPE_INDEX_TIPO,
-			DEDALO_RELATION_TYPE_STRUCT_TIPO,
 			DEDALO_RELATION_TYPE_MODEL_TIPO,
 			DEDALO_RELATION_TYPE_LINK,
 			DEDALO_RELATION_TYPE_FILTER
@@ -2187,8 +2186,11 @@ abstract class common {
 								? reset($dd_object->section_tipo)
 								: $dd_object->section_tipo;
 
-							$section_id_key		= $current_locator->section_id; // section_id_key link the dataframe data to the main locator
-							$section_tipo_key	= $current_locator->section_tipo; // section_tipo_key link the dataframe data to the main locator
+							// unified pairing: the key is the main data item id.
+							// Relation mains carry it as locator->id; literal mains
+							// build pseudo-locators whose section_id IS the item id
+							$section_id_key		= $current_locator->id ?? $current_locator->section_id;
+							$section_tipo_key	= $this->get_section_tipo(); // host section (legacy alias, demoted to consistency check)
 							$section_id			= $this->get_section_id(); // the section that call to component, not the component
 
 						}else{

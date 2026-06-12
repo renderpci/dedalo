@@ -918,12 +918,14 @@ abstract class component_common extends common {
 			}
 
 			// Set the counter with the max id when the counter is below it.
+			// Explicit ids (imports, migrations, restored data) are absorbed
+			// atomically so concurrent allocations cannot reuse them.
 			if (!empty($ar_id)) {
 				$max_id = max($ar_id);
 				$counter = $this->get_counter();
 				if( $counter < $max_id ){
-					// set the new counter with the id
-					$this->set_counter( $max_id );
+					$section_record = $this->get_my_section_record();
+					$section_record->raise_component_counter( $this->tipo, $max_id );
 				}
 			}
 		}
@@ -1097,19 +1099,19 @@ abstract class component_common extends common {
 			if ( is_array($data_tm) && (in_array($current_model, $relation_components) || $is_literal_with_dataframe) ){
 
 				// Get only the component data. Remove possible dataframe data
-				if($current_model==='component_iri'){
-					// component_iri: filter by iri property
+				// (TM rows store main + dataframe data merged; the dataframe
+				// entries are identified positively with is_dataframe_entry:
+				// type marker first, legacy pairing-keys shape as fallback)
+				if( $is_literal_with_dataframe ){
+					// Literal main components with dataframe: filter out dataframe locators
 					$data_tm = array_values( array_filter( $data_tm, function($el) {
-						return is_object($el) && property_exists($el, 'iri');
+						return is_object($el) && !self::is_dataframe_entry($el);
 					}));
-				}elseif( $is_literal_with_dataframe ){
-					// Literal main components with dataframe: filter out dataframe locators.
-					// Dataframe locators always have section_id_key, section_tipo_key and main_component_tipo.
-					$data_tm = array_values( array_filter( $data_tm, function($el) {
-						return is_object($el) && !isset($el->section_id_key);
-					}));
-				}else{
-					// any other relation component
+				}elseif($current_model!=='component_dataframe'){
+					// any other relation component: keep valid locator-shaped objects.
+					// (!) dataframe entries are intentionally NOT excluded here to
+					// preserve pre-migration behavior: relation components filter
+					// their own locators by from_component_tipo downstream
 					$data_tm = array_values( array_filter( $data_tm, function($el) {
 						if(is_object($el)) {
 							// Note that TM data locators could or could not have the property "from_component_tipo."
@@ -1131,18 +1133,13 @@ abstract class component_common extends common {
 					}));
 				}
 
-				// If the component is a dataframe filter the tm data with the section_id_key also.
+				// If the component is a dataframe filter the tm data with the pairing keys also.
 				if($current_model==='component_dataframe' && isset($this->caller_dataframe)){
 
-					$section_id_key			= $this->caller_dataframe->section_id_key;
-					$section_tipo_key		= $this->caller_dataframe->section_tipo_key;
-					$main_component_tipo	= $this->caller_dataframe->main_component_tipo;
+					$caller_dataframe = $this->caller_dataframe;
 
-					$data_tm = array_values( array_filter( $data_tm, function($el) use($section_id_key, $section_tipo_key, $main_component_tipo) {
-						return is_object($el)
-							&& ( isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key )
-							&& ( isset($el->section_tipo_key) && $el->section_tipo_key===$section_tipo_key )
-							&& ( isset($el->main_component_tipo) && $el->main_component_tipo===$main_component_tipo );
+					$data_tm = array_values( array_filter( $data_tm, function($el) use($caller_dataframe) {
+						return self::dataframe_entry_matches($el, $caller_dataframe);
 					}));
 				}
 			}
@@ -1272,22 +1269,21 @@ abstract class component_common extends common {
 
 	/**
 	* SET_DATA_ITEM_COUNTER
+	* Assigns a new server-minted item id to the given data item.
+	* Item ids are the dataframe pairing keys: allocation is atomic
+	* (advisory-locked, see section_record::allocate_component_ids) so
+	* concurrent processes editing the same record cannot mint the same id.
 	* @param object $data_item
 	* @return object $data_item // added the id for the item
 	*/
 	public function set_data_item_counter( object $data_item ) : object {
 
-		// get the component counter
-		// it's the last counter used
-			$counter = $this->get_counter();
-			$counter++;
-			$id = $counter;
+		// allocate one id atomically
+			$section_record	= $this->get_my_section_record();
+			$ar_id			= $section_record->allocate_component_ids( $this->tipo, 1 );
 
 		// Set the new id to the data
-			$data_item->id = $id;
-
-		// set the counter to use next value
-			$this->set_counter( $id );
+			$data_item->id = $ar_id[0];
 
 		return $data_item;
 	}//end set_data_item_counter
@@ -1651,8 +1647,14 @@ abstract class component_common extends common {
 		// as the record key on re-import. Null data is not wrapped (empty export cell).
 		// Note that the wrapper is an associative array because set_value() expects
 		// ?array; it serializes to JSON as the {"dedalo_data": ...} object.
+		// Components with paired dataframe rows ship them alongside the dato as
+		// {"dedalo_data": {"dato": <dato>, "dataframe": <frame locators>}} so the
+		// round-trip re-creates the pairing (see import_dataframe_data).
 			if ($cell_type!=='section_id' && $data!==null) {
-				$data = ['dedalo_data' => $data];
+				$dataframe_data = $this->get_export_dataframe_data();
+				$data = ($dataframe_data!==null)
+					? ['dedalo_data' => ['dato' => $data, 'dataframe' => $dataframe_data]]
+					: ['dedalo_data' => $data];
 			}
 
 		// raw_value
@@ -2755,6 +2757,35 @@ abstract class component_common extends common {
 
 
 	/**
+	* SET_CALLER_DATAFRAME
+	* Sets the dataframe pairing caller context, normalizing legacy stdClass
+	* shapes ({section_id_key, section_tipo_key, ...}) into the typed
+	* dataframe_caller DTO when possible. Overrides the magic set accessor.
+	* @param object $caller_dataframe
+	* @return void
+	*/
+	public function set_caller_dataframe( object $caller_dataframe ) : void {
+
+		if (!($caller_dataframe instanceof dataframe_caller)) {
+			$normalized = dataframe_caller::from_legacy($caller_dataframe);
+			if ($normalized!==null) {
+				$caller_dataframe = $normalized;
+			}else{
+				debug_log(__METHOD__
+					. ' Unable to normalize caller_dataframe to dataframe_caller DTO. Keeping raw object' . PHP_EOL
+					. ' caller_dataframe: ' . to_string($caller_dataframe) . PHP_EOL
+					. ' component tipo: ' . $this->tipo
+					, logger::WARNING
+				);
+			}
+		}
+
+		$this->caller_dataframe = $caller_dataframe;
+	}//end set_caller_dataframe
+
+
+
+	/**
 	* GET_DATAFRAME_DDO
 	* get the components dataframe when they are defined in RQO
 	* if the component has not a dataframe return null
@@ -3827,13 +3858,12 @@ abstract class component_common extends common {
 					$this->observable_data = $all_data;
 
 					// DATAFRAME DELETION for translatable literal components
+					// Single-writer cascade (server-authoritative): the entry was
+					// removed from ALL languages, so the paired dataframe rows
+					// (lang-agnostic, keyed by the item id) are removed too.
 					$dataframe_ddo = $this->get_dataframe_ddo();
 					if (!empty($dataframe_ddo)) {
-						// Build a virtual locator for dataframe deletion
-						$locator = new locator();
-						$locator->set_section_tipo($this->section_tipo);
-						$locator->set_section_id($id);
-						$this->remove_dataframe_data($locator);
+						$this->remove_dataframe_data_by_id( (int)$id );
 					}
 
 					$this->set_data($new_data);
@@ -3874,32 +3904,36 @@ abstract class component_common extends common {
 					: $data;
 
 				// DATAFRAME DELETION
+				// Single-writer cascade (server-authoritative)
 				$dataframe_ddo = $this->get_dataframe_ddo();
 				if( !empty($dataframe_ddo) && $id !== null ){
 
-					$locator = array_find($data_lang, fn($locator) => is_object($locator) && isset($locator->id) && $locator->id === $id);
-					if( !empty($locator) ){
-						$remove_relation_components = component_relation_common::get_components_with_relations();
-						if( !in_array(get_called_class(), $remove_relation_components) && isset($locator->id) ){
+					$remove_relation_components = component_relation_common::get_components_with_relations();
+					if( !in_array(get_called_class(), $remove_relation_components) ){
 
-							$current_section_id = $locator->id;
-
-							$locator = new locator();
-								$locator->set_section_tipo($this->section_tipo);
-								$locator->set_section_id($current_section_id);
-
-							if( $lang!==DEDALO_DATA_NOLAN ){
-								$id_exists_in_nolan = $this->get_key_from_id( $current_section_id, DEDALO_DATA_NOLAN);
-								if( $id_exists_in_nolan !== null ){
-									$locator = null;
-								}
+						// literal main: cascade by item id, but only when the
+						// removed id no longer exists in any OTHER language
+						// (frames are lang-agnostic, paired by the item id)
+						$all_data		= $this->get_data() ?? [];
+						$occurrences	= 0;
+						foreach ($all_data as $data_item) {
+							if (is_object($data_item) && isset($data_item->id) && $data_item->id === $id) {
+								$occurrences++;
 							}
 						}
+						// the current-language copy is still present in $all_data
+						// (removal not persisted yet): cascade only when it is the last one
+						if ($occurrences <= 1) {
+							$this->remove_dataframe_data_by_id( (int)$id );
+						}
+					}else{
 
-						if ($locator !== null) {
+						// relation main (legacy target-keyed semantics until the
+						// data migration runs): cascade keyed by the removed locator
+						$locator = array_find($data_lang, fn($locator) => is_object($locator) && isset($locator->id) && $locator->id === $id);
+						if( !empty($locator) ){
 							$this->remove_dataframe_data( $locator );
 						}
-
 					}
 				}
 
@@ -4311,8 +4345,10 @@ abstract class component_common extends common {
 	public static function unwrap_dedalo_data(string $import_value) : object {
 
 		$response = new stdClass();
-			$response->value	= $import_value;
-			$response->wrapped	= false;
+			$response->value		= $import_value;
+			$response->wrapped		= false;
+			$response->dataframe	= null;
+			$response->has_dato		= true;
 
 		if (json_handler::is_json($import_value)) {
 			$decoded = json_handler::decode($import_value);
@@ -4323,16 +4359,31 @@ abstract class component_common extends common {
 				property_exists($decoded, 'dedalo_data') &&
 				count((array)$decoded)===1 ) {
 
-				if ($decoded->dedalo_data===null) {
+				$inner = $decoded->dedalo_data;
+
+				// dataframe envelope: {"dedalo_data": {"dato": ..., "dataframe": [...]}}
+				// recognized only when the inner object's properties are a subset of
+				// {dato, dataframe} with 'dataframe' present (a plain dato object can
+				// not collide: datos are arrays or lang-keyed lg-* objects)
+				if (is_object($inner)
+					&& property_exists($inner, 'dataframe')
+					&& empty(array_diff(array_keys((array)$inner), ['dato','dataframe'])) ) {
+
+					$response->dataframe	= is_array($inner->dataframe) ? $inner->dataframe : null;
+					$response->has_dato		= property_exists($inner, 'dato');
+					$inner					= $inner->dato ?? null;
+				}
+
+				if ($inner===null) {
 					// wrapped null dato: treat as an empty cell (clears the existing data).
 					// Note that the exporter never wraps null datos; this case only happens
-					// with hand written CSV files
+					// with hand written CSV files or dataframe-only envelopes
 					$response->value	= '';
 					$response->wrapped	= false;
 				}else{
 					// re-encode with the same flags used by the export (tool_export)
 					// to keep the inner JSON identical to the original stored dato
-					$response->value	= json_encode($decoded->dedalo_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+					$response->value	= json_encode($inner, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 					$response->wrapped	= true;
 				}
 			}

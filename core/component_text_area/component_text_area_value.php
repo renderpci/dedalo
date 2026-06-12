@@ -50,13 +50,10 @@
 		$structure_context	= $this->get_structure_context( $permissions );
 		$tools				= $structure_context->tools ?? [];
 
-	// TAG_TYPE: Determine tag type (index/struct) from locator relation type
+	// TAG_TYPE: Determine tag type (index) from locator relation type
 		switch ($locator->type) {
 			case DEDALO_RELATION_TYPE_INDEX_TIPO:
 				$tag_type = 'index';
-				break;
-			case DEDALO_RELATION_TYPE_STRUCT_TIPO:
-				$tag_type = 'struct';
 				break;
 			default:
 				debug_log(__METHOD__

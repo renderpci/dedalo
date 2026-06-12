@@ -432,12 +432,14 @@ class component_relation_common extends component_common {
 				$current_path			= $locator->section_tipo.'_'.$ddo->tipo;
 				$translatable			= ontology_node::get_translatable($ddo->tipo);
 				// if the component has a dataframe component, create his caller_dataframe to related with the locator
+				// unified pairing: the key is the main data item id (locator->id)
 				$caller_dataframe 		= ($ddo->model === 'component_dataframe')
 					? (object)[
-						'section_tipo'			=> $ddo->section_tipo,
-						'section_id_key'		=> $locator->section_id,
-						'section_tipo_key'		=> $locator->section_tipo_key ?? null,
-						'main_component_tipo'	=> $locator->main_component_tipo ?? null
+						'section_tipo'			=> is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo,
+						'id_key'				=> $locator->id ?? null,
+						'section_id_key'		=> $locator->id ?? $locator->section_id_key ?? null, // legacy alias
+						'section_tipo_key'		=> $locator->section_tipo_key ?? $this->get_section_tipo(),
+						'main_component_tipo'	=> $locator->main_component_tipo ?? $this->tipo
 					  ]
 					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
@@ -895,7 +897,13 @@ class component_relation_common extends component_common {
 
 						$removed = true;
 						// Remove dataframe
-						$this->remove_dataframe_data( $current_locator );
+						// unified pairing: cascade by the removed item id when available
+						// (legacy target-keyed cascade for pre-migration items without id)
+						if (isset($current_locator->id)) {
+							$this->remove_dataframe_data_by_id( (int)$current_locator->id );
+						}else{
+							$this->remove_dataframe_data( $current_locator );
+						}
 					}else{
 
 						$new_relations[] = $current_locator;

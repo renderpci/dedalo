@@ -175,7 +175,13 @@ const render_content_value = function(options) {
 			self.create_new_section({
 				data : data
 			})
-			.then(function() {
+			.then(function(response) {
+
+				// aborted attach (save-then-attach flushed pending caller
+				// changes and re-rendered): do not open the modal
+				if (response===false) {
+					return
+				}
 
 				// open modal
 				open_target_section(self)

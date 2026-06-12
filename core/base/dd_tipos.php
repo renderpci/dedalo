@@ -143,10 +143,10 @@ define('DEDALO_RELATION_TYPE_LINK',						'dd151');
 define('DEDALO_RELATION_TYPE_CHILDREN_TIPO',			'dd48');
 define('DEDALO_RELATION_TYPE_PARENT_TIPO',				'dd47');
 define('DEDALO_RELATION_TYPE_INDEX_TIPO',				'dd96');
-define('DEDALO_RELATION_TYPE_STRUCT_TIPO',				'dd490');
 define('DEDALO_RELATION_TYPE_MODEL_TIPO',				'dd98');
 define('DEDALO_RELATION_TYPE_FILTER',					'dd675');
 define('DEDALO_RELATION_TYPE_ONTOLOGY',					'dd77');
+define('DEDALO_RELATION_TYPE_DATAFRAME',				'dd490'); // reserved term: register in master ontology. Positive marker of dataframe pairing locators
 // update core_functions 'get_relation_name' on relation types updates (!)
 
 // define('DEDALO_RELATION_TYPE_EQUIVALENT_TIPO',		'dd47');

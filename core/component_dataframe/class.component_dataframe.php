@@ -11,7 +11,8 @@ class component_dataframe extends component_portal {
 
 
 	// test_equal_properties is used to verify duplicates when add locators
-	public array $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','section_id_key','section_tipo_key','main_component_tipo'];
+	// id_key is the unified pairing key; section_id_key/section_tipo_key are the legacy pair (dual-read until migration)
+	public array $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','id_key','section_id_key','section_tipo_key','main_component_tipo'];
 
 
 
@@ -35,20 +36,12 @@ class component_dataframe extends component_portal {
 		}
 
 		// filtered data
-		// iterate relations filtering match values
+		// iterate relations filtering match values with the central predicate
+		// (dual-read: id_key unified contract / section_id_key legacy)
 		$filtered_data = [];
 		if (!empty($data)) {
 			foreach ($data as $locator) {
-
-				if(	isset($locator->from_component_tipo)
-					&& isset($locator->section_id_key)
-					&& isset($locator->section_tipo_key)
-					&& isset($locator->main_component_tipo)
-					&& $locator->from_component_tipo	=== $this->tipo
-					&& (int)$locator->section_id_key	=== (int)$caller_dataframe->section_id_key
-					&& $locator->section_tipo_key		=== $caller_dataframe->section_tipo_key
-					&& $locator->main_component_tipo	=== $caller_dataframe->main_component_tipo
-				) {
+				if( self::dataframe_entry_matches($locator, $caller_dataframe, $this->tipo) ) {
 					$filtered_data[] = $locator;
 				}
 			}
@@ -66,8 +59,54 @@ class component_dataframe extends component_portal {
 
 
 	/**
+	* SET_DATA
+	* Caller-aware write: when this instance is paired with one main data item
+	* (caller_dataframe), writing must only replace the paired subset of the
+	* slot data, PRESERVING the sibling frames of other items. Without this
+	* merge, set_data(null) from the remove cascade would wipe every frame of
+	* the slot in the record (frames of other rows included).
+	* Entries of $data identical to preserved siblings are deduplicated, so
+	* full-array flows (update_data_value 'remove' over unfiltered data) work
+	* unchanged.
+	* @param array|null $data
+	* @return bool
+	*/
+	public function set_data( ?array $data ) : bool {
+
+		$caller_dataframe = $this->get_caller_dataframe();
+
+		if (isset($caller_dataframe)) {
+
+			// siblings: every entry NOT paired with this caller context
+			$full_data = $this->get_data_unfiltered() ?? [];
+			$others = array_values(array_filter($full_data, function($el) use ($caller_dataframe) {
+				return !self::dataframe_entry_matches($el, $caller_dataframe, $this->tipo);
+			}));
+
+			// additions: incoming entries not already present as siblings
+			$others_signatures = array_map(fn($el) => json_encode($el), $others);
+			$additions = array_values(array_filter($data ?? [], function($el) use ($others_signatures) {
+				return !in_array(json_encode($el), $others_signatures, true);
+			}));
+
+			$data = array_merge($others, $additions);
+			if (empty($data)) {
+				$data = null;
+			}
+		}
+
+		return parent::set_data($data);
+	}//end set_data
+
+
+
+	/**
 	* REMOVE_LOCATOR_FROM_DATA
-	* Removes from data one or more locators that accomplish given locator equality
+	* Removes from data one or more locators that accomplish given locator equality.
+	* Matching is predicate-based (dual-read: id_key unified contract /
+	* section_id_key legacy) so pre and post migration shapes are both removable:
+	* a data locator is removed when it pairs with the caller context AND points
+	* at the same frame target (section_tipo / section_id) as $locator_to_remove.
 	* (!) Not save the result
 	* @param object $locator_to_remove
 	* @param array $ar_properties = []
@@ -90,19 +129,32 @@ class component_dataframe extends component_portal {
 				return false;
 			}
 
-		// locator_to_remove. add custom properties from caller_dataframe
-			$locator_to_remove->section_id_key		= $caller_dataframe->section_id_key;
-			$locator_to_remove->section_tipo_key	= $caller_dataframe->section_tipo_key;
-			$locator_to_remove->main_component_tipo	= $caller_dataframe->main_component_tipo;
+		// iterate the full (unfiltered) component data removing matches
+			$removed	= false;
+			$new_data	= [];
+			$data		= $this->get_data_unfiltered() ?? [];
+			foreach ($data as $current_locator) {
 
-		// locator_properties_to_check
-			$locator_properties_to_check = $this->get_locator_properties_to_check();
+				$is_match = is_object($current_locator)
+					// pairs with the caller context (this main item, this dataframe slot)
+					&& self::dataframe_entry_matches($current_locator, $caller_dataframe, $this->tipo)
+					// points at the same frame target record
+					&& isset($current_locator->section_tipo) && isset($locator_to_remove->section_tipo)
+					&& $current_locator->section_tipo === $locator_to_remove->section_tipo
+					&& isset($current_locator->section_id) && isset($locator_to_remove->section_id)
+					&& (string)$current_locator->section_id === (string)$locator_to_remove->section_id;
 
-		// exec remove (return bool)
-			$removed = parent::remove_locator_from_data(
-				$locator_to_remove,
-				$locator_properties_to_check
-			);
+				if ($is_match) {
+					$removed = true;
+				}else{
+					$new_data[] = $current_locator;
+				}
+			}
+
+		// Updates current data with clean array of locators
+			if ($removed===true) {
+				$this->set_data( $new_data );
+			}
 
 
 		return $removed;
@@ -267,6 +319,51 @@ class component_dataframe extends component_portal {
 
 		return $time_machine_data_to_save;
 	}//end get_time_machine_data_to_save
+
+
+	/**
+	* GET_DIFFUSION_DATA
+	* Publishes the frame pairing locators of this slot. When the diffusion
+	* ddo declares its parent (the main component in the chain), only the
+	* frames pairing that main component are published; the chain processor
+	* recursion follows the locators into the frame target section records.
+	* Published locators carry id_key: the join key against the main
+	* component's item ids.
+	* @param object $ddo
+	* @param string|null $diffusion_element_tipo = null
+	* @return array $diffusion_data
+	*/
+	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo=null ) : array {
+
+		// Default diffusion data object
+		$diffusion_data_object = new diffusion_data_object( (object)[
+			'tipo'	=> $this->tipo,
+			'lang'	=> null,
+			'value'	=> null,
+			'id'	=> $ddo->id ?? null
+		]);
+
+		$data = $this->get_data_unfiltered() ?? [];
+
+		// parent scoping: only the frames of the chain's main component
+		$parent_tipo = (isset($ddo->parent) && $ddo->parent!=='self')
+			? $ddo->parent
+			: null;
+
+		$frames = array_values(array_filter($data, function($el) use ($parent_tipo) {
+			if (!is_object($el) || !self::is_dataframe_entry($el)) {
+				return false;
+			}
+			return $parent_tipo===null
+				|| ($el->main_component_tipo ?? null)===$parent_tipo;
+		}));
+
+		$diffusion_data_object->value = empty($frames) ? null : $frames;
+
+
+		return [$diffusion_data_object];
+	}//end get_diffusion_data
+
 
 
 	/**

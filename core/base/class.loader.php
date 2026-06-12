@@ -46,6 +46,7 @@ include DEDALO_CORE_PATH . '/common/class.counter.php';
 include DEDALO_CORE_PATH . '/common/class.label.php';
 include DEDALO_CORE_PATH . '/common/class.exec_.php';
 include DEDALO_CORE_PATH . '/common/class.locator.php';
+include DEDALO_CORE_PATH . '/common/class.dataframe_caller.php'; // dataframe pairing caller DTO
 include DEDALO_CORE_PATH . '/common/class.dd_date.php';
 include DEDALO_CORE_PATH . '/common/class.request_config_presets.php';
 include DEDALO_CORE_PATH . '/common/class.dd_object.php'; // new 12-06-2019

@@ -17,8 +17,9 @@
 * 		$locator->tag_type				= (string)$tag_type; // reference to the type of the tag that the locator is referenced
 * 		$locator->type					= (string)$type;
 * 		$locator->type_rel				= (string)$type_rel; // type of rel (like unidirectional, bidirectional, multi directional, etc..) (used by component_relation_related)
-*		$locator->section_id_key		= (int)$section_id_key; // dataframe, link to section_id of the main data or index array number of the data that reference
-*		$locator->section_tipo_key		= (string)$section_tipo_key; // dataframe section_tipo of the main component data (component that has dataframe)
+*		$locator->id_key				= (int)$id_key; // dataframe pairing key: the stable `id` of the main component data item this dataframe locator extends
+*		$locator->section_id_key		= (int)$section_id_key; // @deprecated dataframe legacy pairing key (pre id_key unification), replaced by id_key
+*		$locator->section_tipo_key		= (string)$section_tipo_key; // @deprecated dataframe legacy section_tipo of the main component data, dropped by the id_key unification
 *
 *	Note that properties could exists or not (they are created on the fly). Final result object only contain set properties and locator object could be empty or partially set.
 *	For example, component portal only use section_tipo an section_id in many cases.
@@ -423,7 +424,34 @@ class locator extends stdClass {
 
 
 	/**
+	* SET_ID_KEY
+	* Dataframe pairing key: the stable `id` of the main component data item
+	* that this dataframe locator extends (relation and literal components alike).
+	* Replaces the legacy `section_id_key` / `section_tipo_key` pair.
+	* @param int|string $value
+	* @return bool
+	*/
+	public function set_id_key(int|string $value) : bool {
+
+		if((int)$value < 1) {
+			debug_log(__METHOD__
+				. ' Invalid id_key (only positive integers are allowed)' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
+			throw new Exception("Error Processing Request. Invalid id_key: $value", 1);
+		}
+		$this->id_key = (int)$value;
+
+		return true;
+	}//end set_id_key
+
+
+
+	/**
 	* SET_SECTION_ID_KEY
+	* @deprecated Legacy dataframe pairing key, replaced by `id_key`.
+	* Kept to read pre-migration data.
 	* @param int|string $value
 	* @return bool
 	*/

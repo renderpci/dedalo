@@ -121,6 +121,7 @@ This components extend component_common.php class
 Related components manage [locators](../locator.md) to point at other sections or components, sections pointed could be the same of the related component or other sections. The locator can specify if the pointed components is a literal or other related component.
 
 - [component_check_box](component_check_box.md)
+- [component_dataframe](component_dataframe.md)
 - component_filter
 - component_filter_master
 - component_portal

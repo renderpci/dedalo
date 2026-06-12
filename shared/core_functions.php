@@ -3418,7 +3418,7 @@ function get_relation_name( ?string $tipo ) : string {
 		case 'dd675':	return 'DEDALO_RELATION_TYPE_FILTER';
 		case 'dd77':	return 'DEDALO_RELATION_TYPE_ONTOLOGY';
 		case 'dd98':	return 'DEDALO_RELATION_TYPE_MODEL_TIPO';
-		case 'dd490':	return 'DEDALO_RELATION_TYPE_STRUCT_TIPO';
+		case 'dd490':	return 'DEDALO_RELATION_TYPE_DATAFRAME';
 		default:		return 'Not defined';
 	}
  }//end get_relation_name

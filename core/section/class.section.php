@@ -1387,12 +1387,8 @@ class section extends common {
 			// In those cases the component_dataframe manage its data as other components with whole data.
 			if($model === 'component_dataframe' && isset($caller_dataframe) ) {
 
-				if (
-					( isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo)
-					&& ( isset($current_locator->section_id_key) && intval($current_locator->section_id_key)===intval($caller_dataframe->section_id_key) )
-					&& ( isset($current_locator->section_tipo_key) && $current_locator->section_tipo_key===$caller_dataframe->section_tipo_key)
-					&& ( isset($current_locator->main_component_tipo) && $current_locator->main_component_tipo===$caller_dataframe->main_component_tipo)
-					){
+				// central match predicate (dual-read: id_key unified contract / section_id_key legacy)
+				if ( component_common::dataframe_entry_matches($current_locator, $caller_dataframe, $component_tipo) ){
 						$ar_deleted_locators[] = $current_locator;
 
 						debug_log(__METHOD__

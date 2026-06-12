@@ -917,6 +917,169 @@ class section_record {
 
 
 	/**
+	* ALLOCATE_COMPONENT_IDS
+	* Atomically allocates $count new data item ids for the given component tipo.
+	* Item ids are the dataframe pairing keys (id_key): they must be unique per
+	* component per section record and never reused, so allocation is serialized
+	* with a PostgreSQL advisory lock and the counter is persisted immediately
+	* (a plain read-increment-write of the in-memory counter races between
+	* concurrent processes editing the same record).
+	* The in-memory counter is synced so the subsequent record save keeps it.
+	* @param string $tipo - component ontology tipo
+	* @param int $count = 1 - how many ids to allocate
+	* @return array - allocated ids, sequential, e.g. [8,9,10]
+	*/
+	public function allocate_component_ids( string $tipo, int $count=1 ) : array {
+
+		if ($count < 1) {
+			return [];
+		}
+
+		$section_tipo	= $this->section_tipo;
+		$section_id		= $this->section_id;
+		$table			= $this->get_table();
+
+		$conn = DBi::_getConnection();
+		if ($conn===false) {
+			// connection unavailable: fall back to the in-memory counter
+			// (previous behavior, non-atomic)
+			debug_log(__METHOD__
+				. ' DB connection unavailable: falling back to non-atomic counter allocation' . PHP_EOL
+				. ' tipo: ' . $tipo . ' section: ' . $section_tipo . '_' . $section_id
+				, logger::ERROR
+			);
+			$base = $this->get_component_counter($tipo);
+			$this->set_component_counter($tipo, $base + $count);
+			return range($base+1, $base+$count);
+		}
+
+		// advisory lock key from the (table, record, component) triple
+		$lock_key = $table.'_'.$section_tipo.'_'.$section_id.'_'.$tipo;
+
+		// session-level advisory lock (no surrounding transaction required)
+		pg_query_params($conn, 'SELECT pg_advisory_lock( hashtextextended($1, 0) )', [$lock_key]);
+
+		try {
+
+			// re-read the PERSISTED counter: another process may have
+			// allocated ids since this record was loaded in memory
+			$persisted	= 0;
+			$row_exists	= false;
+			$result = @pg_query_params($conn,
+				'SELECT (meta->$1->0->>\'count\')::int AS count FROM "'.$table.'" WHERE section_tipo=$2 AND section_id=$3',
+				[$tipo, $section_tipo, $section_id]
+			);
+			if ($result!==false) {
+				$row = pg_fetch_assoc($result);
+				if ($row!==false && $row!==null) {
+					$row_exists	= true;
+					$persisted	= (int)($row['count'] ?? 0);
+				}
+			}
+
+			// the in-memory counter may be ahead of the persisted one
+			// (unsaved allocations within this same request)
+			$in_memory	= $this->get_component_counter($tipo);
+			$base		= max($persisted, $in_memory);
+
+			$new_counter = $base + $count;
+
+			// persist immediately so concurrent processes see the allocation
+			// before this record is saved
+			if ($row_exists) {
+				$meta_value = json_encode([ (object)['count' => $new_counter] ]);
+				$update_result = @pg_query_params($conn,
+					'UPDATE "'.$table.'" SET meta = jsonb_set( COALESCE(meta, \'{}\'::jsonb), ARRAY[$1], $2::jsonb, true ) WHERE section_tipo=$3 AND section_id=$4',
+					[$tipo, $meta_value, $section_tipo, $section_id]
+				);
+				if ($update_result===false) {
+					debug_log(__METHOD__
+						. ' Unable to persist allocated counter (allocation continues in-memory)' . PHP_EOL
+						. ' tipo: ' . $tipo . ' section: ' . $section_tipo . '_' . $section_id
+						, logger::WARNING
+					);
+				}
+			}
+
+			// sync the in-memory counter so the record save keeps it
+			$this->set_component_counter($tipo, $new_counter);
+
+			return range($base+1, $new_counter);
+
+		} finally {
+			pg_query_params($conn, 'SELECT pg_advisory_unlock( hashtextextended($1, 0) )', [$lock_key]);
+		}
+	}//end allocate_component_ids
+
+
+
+	/**
+	* RAISE_COMPONENT_COUNTER
+	* Atomically raises the component counter to at least $min_value
+	* (no-op when the counter is already there). Used to absorb explicit
+	* item ids carried by imported / migrated data without racing against
+	* concurrent allocations.
+	* @param string $tipo - component ontology tipo
+	* @param int $min_value
+	* @return int - the resulting counter value
+	*/
+	public function raise_component_counter( string $tipo, int $min_value ) : int {
+
+		$current = $this->get_component_counter($tipo);
+		if ($current >= $min_value) {
+			return $current;
+		}
+
+		// allocate the gap under the lock: this re-reads the persisted
+		// counter and persists the raise atomically
+		$conn = DBi::_getConnection();
+		if ($conn===false) {
+			$this->set_component_counter($tipo, $min_value);
+			return $min_value;
+		}
+
+		$table		= $this->get_table();
+		$lock_key	= $table.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$tipo;
+
+		pg_query_params($conn, 'SELECT pg_advisory_lock( hashtextextended($1, 0) )', [$lock_key]);
+		try {
+
+			$persisted = 0;
+			$row_exists = false;
+			$result = @pg_query_params($conn,
+				'SELECT (meta->$1->0->>\'count\')::int AS count FROM "'.$table.'" WHERE section_tipo=$2 AND section_id=$3',
+				[$tipo, $this->section_tipo, $this->section_id]
+			);
+			if ($result!==false) {
+				$row = pg_fetch_assoc($result);
+				if ($row!==false && $row!==null) {
+					$row_exists	= true;
+					$persisted	= (int)($row['count'] ?? 0);
+				}
+			}
+
+			$new_counter = max($persisted, $this->get_component_counter($tipo), $min_value);
+
+			if ($row_exists && $new_counter > $persisted) {
+				$meta_value = json_encode([ (object)['count' => $new_counter] ]);
+				@pg_query_params($conn,
+					'UPDATE "'.$table.'" SET meta = jsonb_set( COALESCE(meta, \'{}\'::jsonb), ARRAY[$1], $2::jsonb, true ) WHERE section_tipo=$3 AND section_id=$4',
+					[$tipo, $meta_value, $this->section_tipo, $this->section_id]
+				);
+			}
+
+			$this->set_component_counter($tipo, $new_counter);
+
+			return $new_counter;
+
+		} finally {
+			pg_query_params($conn, 'SELECT pg_advisory_unlock( hashtextextended($1, 0) )', [$lock_key]);
+		}
+	}//end raise_component_counter
+
+
+
+	/**
 	* GET_MODIFIED_SECTION_SAVE_PATH
 	* Computes metadata save_path items and sets data_instance values.
 	* Delegates data computation to build_modification_data to avoid duplication.
@@ -1163,11 +1326,13 @@ class section_record {
 			}
 
 			// component dataframe
+			// pairing keys are dual-read: id_key (unified contract) or section_id_key (legacy)
 			if($model_name==='component_dataframe'){
 				$caller_dataframe = new stdClass();
-					$caller_dataframe->section_id_key		= $current_locator->section_id_key;
-					$caller_dataframe->section_tipo_key		= $current_locator->section_tipo_key;
-					$caller_dataframe->main_component_tipo	= $current_locator->main_component_tipo;
+					$caller_dataframe->id_key				= $current_locator->id_key ?? $current_locator->section_id_key ?? null;
+					$caller_dataframe->section_id_key		= $current_locator->id_key ?? $current_locator->section_id_key ?? null;
+					$caller_dataframe->section_tipo_key		= $current_locator->section_tipo_key ?? null;
+					$caller_dataframe->main_component_tipo	= $current_locator->main_component_tipo ?? null;
 			}
 
 			$component = component_common::get_instance(
@@ -1515,11 +1680,13 @@ class section_record {
 				if( $current_model==='component_dataframe' ){
 					// check if the data has main_component_tipo
 					// if data has not ask to the component to give its main_component_tipo.
+					// pairing keys are dual-read: id_key (unified contract) or section_id_key (legacy)
 					$main_component_tipo = $component_data[0]->main_component_tipo ?? $component->get_main_component_tipo();
 					$caller_dataframe = new stdClass();
 						$caller_dataframe->main_component_tipo	= $main_component_tipo;
-						$caller_dataframe->section_tipo_key		= $component_data[0]->section_tipo_key;
-						$caller_dataframe->section_id_key		= $component_data[0]->section_id_key;
+						$caller_dataframe->id_key				= $component_data[0]->id_key ?? $component_data[0]->section_id_key ?? null;
+						$caller_dataframe->section_id_key		= $component_data[0]->id_key ?? $component_data[0]->section_id_key ?? null;
+						$caller_dataframe->section_tipo_key		= $component_data[0]->section_tipo_key ?? $section_tipo;
 					$component->set_caller_dataframe( $caller_dataframe );
 				}
 
