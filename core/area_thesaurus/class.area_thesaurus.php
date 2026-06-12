@@ -368,6 +368,7 @@ class area_thesaurus extends area_common {
 		// ar_path_mix . Calculate full path of each result
 			$ar_ts_objects_map	= [];
 			$found				= [];
+			$ancestors_cache	= []; // results sharing a branch re-use the walked chain
 
 			foreach ($db_result as $row) {
 
@@ -379,11 +380,15 @@ class area_thesaurus extends area_common {
 					'section_id'	=> $section_id
 				];
 
-				// get all parents of the node
-				$ar_parents = component_relation_parent::get_parents_recursive(
-					$section_id,
-					$section_tipo
-				);
+				// get all parents of the node (memoized per call)
+				$ancestors_key = $section_tipo . '_' . $section_id;
+				if (!isset($ancestors_cache[$ancestors_key])) {
+					$ancestors_cache[$ancestors_key] = component_relation_parent::get_parents_recursive(
+						$section_id,
+						$section_tipo
+					);
+				}
+				$ar_parents = $ancestors_cache[$ancestors_key];
 
 				if (empty($ar_parents)) {
 					// create the ts_object of the root and get its data
@@ -426,7 +431,11 @@ class area_thesaurus extends area_common {
 							$children_section_tipo // string section_tipo
 						);
 
-						$children_data = $component_children->get_data();
+						$children_data = $component_children->get_data() ?? [];
+
+						// prefetch. Batched is_indexable resolution for the whole
+						// children set (one query) instead of one component per child
+						$prefetched_info = ts_node_repository::fetch_node_info($children_data);
 
 						// built the ts_object with every child data
 						foreach ($children_data as $children_key => $child_locator) {
@@ -437,8 +446,13 @@ class area_thesaurus extends area_common {
 								// ts_parent. Used to link the child node to its parent in the tree
 								$ts_parent = $children_section_tipo.'_'.$children_section_id;
 								// set the order number(int) in the ts_options
+								// note: order here is the positional index, NOT the order component value
 								$ts_options = new stdClass();
 									$ts_options->order = $children_key+1;
+								$node_info = $prefetched_info[$child_locator->section_tipo . '_' . (int)$child_locator->section_id] ?? null;
+								if ($node_info!==null) {
+									$ts_options->is_indexable = $node_info->is_indexable;
+								}
 
 								// create the ts_object of the child and get its data
 								$ts_object = new ts_object(
