@@ -67,10 +67,23 @@ class media_protection {
 	/**
 	* GET_MODE
 	* Resolves the configured media access mode.
-	* Back-compat: legacy DEDALO_PROTECT_MEDIA_FILES===true maps to 'private'.
+	* Priority:
+	*  1. DEDALO_MEDIA_ACCESS_MODE_CUSTOM (config_core.php, set from the
+	*     area_maintenance 'media_control' widget; null = no override)
+	*  2. DEDALO_MEDIA_ACCESS_MODE (config.php)
+	*  3. legacy DEDALO_PROTECT_MEDIA_FILES===true maps to 'private'
 	* @return string|false 'private' | 'publication' | false
 	*/
 	public static function get_mode() : string|false {
+
+		// custom override (writable from the maintenance area, like
+		// DEDALO_MAINTENANCE_MODE_CUSTOM). null means 'no override'.
+		if (defined('DEDALO_MEDIA_ACCESS_MODE_CUSTOM') && DEDALO_MEDIA_ACCESS_MODE_CUSTOM!==null) {
+			$mode = DEDALO_MEDIA_ACCESS_MODE_CUSTOM;
+			return in_array($mode, ['private','publication'], true)
+				? $mode
+				: false;
+		}
 
 		if (defined('DEDALO_MEDIA_ACCESS_MODE')) {
 			$mode = DEDALO_MEDIA_ACCESS_MODE;
@@ -241,7 +254,12 @@ class media_protection {
 	* The substitution is always '-' and the query string is never touched,
 	* so Range requests and the H.264 module '?start=' clipping keep working.
 	*
-	* @param string $mode 'private' | 'publication'
+	* Mode 'off' generates the hardening header only (no rewrite gate):
+	* used when an administrator disables the protection from the
+	* media_control widget so the previously generated deny rules do not
+	* linger in the file.
+	*
+	* @param string $mode 'off' | 'private' | 'publication'
 	* @param array $public_qualities
 	* @param array $addon_lines Raw lines appended before the final deny
 	*        (MEDIA_HTACCESS_ADDONS config)
@@ -277,6 +295,11 @@ class media_protection {
 		$t .= 'Options -Indexes -ExecCGI' . PHP_EOL;
 		$t .= 'AddHandler default-handler .php .phtml .phar .pht' . PHP_EOL;
 		$t .= PHP_EOL;
+
+		// mode 'off': hardening only, no access gate
+		if ($mode==='off') {
+			return $t;
+		}
 
 		$t .= '<IfModule mod_rewrite.c>' . PHP_EOL;
 		$t .= 'RewriteEngine On' . PHP_EOL;
@@ -373,14 +396,32 @@ class media_protection {
 	* config-hash differs from the current configuration (idempotent on
 	* every other login).
 	*
+	* @param string|null $mode_override = null
+	*	Explicit mode ('off' | 'private' | 'publication'). Used by the
+	*	media_control widget right after changing the configuration in
+	*	config_core.php (the constants of the running request still hold
+	*	the old value). null resolves from get_mode(); a resolved false
+	*	leaves any existing file alone (login never calls this when the
+	*	protection is disabled).
 	* @return bool true when the file is up to date (written or already
 	*         current), false on write failure
 	*/
-	public static function write_htaccess() : bool {
+	public static function write_htaccess(?string $mode_override=null) : bool {
 
-		$mode = self::get_mode();
-		if ($mode===false) {
-			return true; // protection off: leave any existing file alone
+		if ($mode_override!==null) {
+			if (!in_array($mode_override, ['off','private','publication'], true)) {
+				debug_log(__METHOD__
+					. " Refused invalid htaccess mode override: " . to_string($mode_override)
+					, logger::ERROR
+				);
+				return false;
+			}
+			$mode = $mode_override;
+		}else{
+			$mode = self::get_mode();
+			if ($mode===false) {
+				return true; // protection off: leave any existing file alone
+			}
 		}
 
 		$public_qualities	= $mode==='publication' ? self::get_public_qualities() : [];
@@ -409,4 +450,105 @@ class media_protection {
 
 		return true;
 	}//end write_htaccess
+
+
+
+	/**
+	* GET_HTACCESS_STATUS
+	* Inspects the generated media/.htaccess against the current
+	* configuration (used by the media_control widget).
+	* @return object { exists: bool, up_to_date: bool|null, path: string }
+	*	up_to_date is null when the protection is disabled (no expected
+	*	content to compare against).
+	*/
+	public static function get_htaccess_status() : object {
+
+		$htaccess_file	= self::get_media_path() . '/.htaccess';
+		$exists			= file_exists($htaccess_file);
+		$mode			= self::get_mode();
+
+		$up_to_date = null;
+		if ($mode!==false) {
+			$public_qualities	= $mode==='publication' ? self::get_public_qualities() : [];
+			$hash				= self::get_config_hash($mode, $public_qualities, self::get_addon_lines());
+			$up_to_date			= $exists
+				&& str_contains((string)file_get_contents($htaccess_file), '# config-hash: ' . $hash);
+		}
+
+		return (object)[
+			'exists'		=> $exists,
+			'up_to_date'	=> $up_to_date,
+			'path'			=> $htaccess_file
+		];
+	}//end get_htaccess_status
+
+
+
+	/**
+	* GET_COOKIE_AUTH_FILE_PATH
+	* @return string
+	*/
+	public static function get_cookie_auth_file_path() : string {
+
+		return DEDALO_EXTRAS_PATH.'/media_protection/cookie/cookie_auth.php';
+	}//end get_cookie_auth_file_path
+
+
+
+	/**
+	* READ_COOKIE_AUTH_FILE
+	* Parses the cookie auth persistence file (today/yesterday rotated
+	* values), stripping the '<?php exit();' HTTP-disclosure guard line
+	* (legacy files hold raw JSON). Shared by login::init_cookie_auth and
+	* the media_control widget.
+	* @return object|null decoded data or null when missing/corrupt
+	*/
+	public static function read_cookie_auth_file() : ?object {
+
+		$cookie_file = self::get_cookie_auth_file_path();
+		if (!file_exists($cookie_file)) {
+			return null;
+		}
+
+		$current_file	= (string)file_get_contents($cookie_file);
+		$json_string	= $current_file;
+		if (str_starts_with($current_file, '<?php')) {
+			$json_start		= strpos($current_file, PHP_EOL);
+			$json_string	= $json_start===false ? '' : substr($current_file, $json_start);
+		}
+
+		$data = json_decode($json_string);
+
+		return is_object($data) ? $data : null;
+	}//end read_cookie_auth_file
+
+
+
+	/**
+	* SYNC_AUTH_MARKERS_FROM_COOKIE_FILE
+	* Re-creates the auth markers from the persisted cookie values (today +
+	* yesterday). Used when the protection is (re)enabled from the
+	* media_control widget so users already holding a valid cookie keep
+	* media access without re-login. No-op (true) when no cookie file
+	* exists yet — markers will be created at the next login.
+	* @return bool
+	*/
+	public static function sync_auth_markers_from_cookie_file() : bool {
+
+		$data = self::read_cookie_auth_file();
+		if ($data===null) {
+			return true;
+		}
+
+		$values = [];
+		foreach (get_object_vars($data) as $day_data) {
+			if (isset($day_data->cookie_value)) {
+				$values[] = $day_data->cookie_value;
+			}
+		}
+
+		return empty($values)
+			? true
+			: self::sync_auth_markers($values);
+	}//end sync_auth_markers_from_cookie_file
 }//end class media_protection
