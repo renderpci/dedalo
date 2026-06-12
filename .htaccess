@@ -154,7 +154,8 @@ Options -Indexes
 #     media previews, and worker scripts (pdfjs worker, audio blobs).
 #   * `img-src` allows the external map tile hosts used by
 #     component_geolocation (Leaflet): OpenStreetMap (`*.tile.openstreetmap.org`,
-#     `*.tile.osm.org`), ArcGIS World Imagery (`server.arcgisonline.com`) and
+#     `*.tile.osm.org`), CartoDB dark tiles (`*.basemaps.cartocdn.com`),
+#     ArcGIS World Imagery (`server.arcgisonline.com`) and
 #     the DARE/Imperium historical tileset (`dh.gu.se`). Listed without scheme
 #     so they match on both http (dev) and https (prod) pages.
 #   * `object-src 'none'` blocks Flash/plugin embeds.
@@ -178,10 +179,10 @@ Options -Indexes
 	RequestHeader unset Proxy
 
 	# Content Security Policy (enforced).
-	Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
+	Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
 
 	# Report-Only version (for monitoring — swap with enforced line above if needed):
-	# Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
+	# Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'self'; base-uri 'self'; form-action 'self'"
 </IfModule>
 
 # Legacy header section preserved (commented) for reference.
