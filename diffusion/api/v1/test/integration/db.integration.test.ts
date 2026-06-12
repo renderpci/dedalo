@@ -19,6 +19,7 @@ function make_table(records: processed_table['records'], deletions: processed_ta
 	return {
 		database_name: TEST_DB,
 		table_name: 'it_interview',
+		section_tipo: 'test3',
 		records,
 		deletions,
 		columns_context: { code: text_ctx('code'), title: text_ctx('title') },

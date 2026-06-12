@@ -95,6 +95,7 @@ const server_actions = [
 	'delete_record',
 	'check_database',
 	'backup_database',
+	'rebuild_media_index',
 ];
 
 describe('uniform Bun-side auth', () => {
@@ -162,6 +163,41 @@ describe('action input validation', () => {
 			targets: [{ table_name: 'interview', section_ids: [1] }], // missing database_name
 		}));
 		expect(res.status).toBe(400);
+	});
+
+	test('rebuild_media_index with missing targets responds 400', async () => {
+		mock_php_auth(true);
+		const res = await handle_request(post_authed({ action: 'rebuild_media_index', source: {} }));
+		expect(res.status).toBe(400);
+	});
+
+	test('rebuild_media_index with malformed target responds 400', async () => {
+		mock_php_auth(true);
+		const res = await handle_request(post_authed({
+			action: 'rebuild_media_index',
+			source: {},
+			targets: [{ database_name: 'web_a', table_name: 'interview' }], // missing section_tipo
+		}));
+		expect(res.status).toBe(400);
+	});
+
+	test('rebuild_media_index reports failure when DEDALO_MEDIA_PATH is unset', async () => {
+		mock_php_auth(true);
+		const saved = process.env.DEDALO_MEDIA_PATH;
+		delete process.env.DEDALO_MEDIA_PATH;
+		try {
+			const res = await handle_request(post_authed({
+				action: 'rebuild_media_index',
+				source: {},
+				targets: [],
+			}));
+			expect(res.status).toBe(200);
+			const data = await res.json() as any;
+			expect(data.result).toBe(false);
+			expect(data.msg).toContain('DEDALO_MEDIA_PATH');
+		} finally {
+			if (saved !== undefined) process.env.DEDALO_MEDIA_PATH = saved;
+		}
 	});
 
 	test('cancel_process without process_id responds 400', async () => {

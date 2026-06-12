@@ -47,6 +47,7 @@ describe('generate_batch_upsert', () => {
 		const table: processed_table = {
 			database_name: 'web_test',
 			table_name: 'interview',
+			section_tipo: 'test3',
 			records: [
 				{ section_id: 1, lang: 'lg-eng', columns: { code: 'a' } },
 				{ section_id: 1, lang: 'lg-spa', columns: { code: 'b' } },

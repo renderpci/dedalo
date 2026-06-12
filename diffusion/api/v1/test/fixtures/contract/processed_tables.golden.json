@@ -2,6 +2,7 @@
 	{
 		"database_name": "web_test_diffusion",
 		"table_name": "interview",
+		"section_tipo": "test3",
 		"records": [
 			{
 				"section_id": 1,
