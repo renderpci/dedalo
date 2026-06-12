@@ -1,132 +1,371 @@
-# Request Query Object
+# Request Query Object (RQO)
 
-## Introduction
+> Class: `./core/common/class.request_query_object.php`
+> API entry: `./core/api/v1/json/index.php` → `dd_manager::manage_request()`
 
-Request Query Object or RQO is used to create send and request data to Dédalo work API.
+## Overview
 
-In versions before v6, Dédalo uses specific calls for every type of data or component, every piece of code had a `trigger` with the class of the class. This architecture made that a `component_autocomplete` will had different interface of `component_autocomplete_hi` or a `component_portal`. So any change of of a component needed to be development in the triggers of the different components with the same behavior.
+The Request Query Object (RQO) is the single, normalized message format used by every client→server call to the Dédalo work API. One RQO answers four questions:
 
-In version 5 Dédalo introduce a Search Query Object, or SQO, an abstraction layer of the SQL and a standard way to create queries into the database, so, every search done by every component, section, tool, etc was unified into a common way. SQO was done thinking in Dédalo relations, and the paths of the data, SQO has a `filter`,, equivalent to to `WHERE` clause, and it has a `select` property equivalent to `SELECT` sentence into SQL.
+| Question | RQO property |
+|----------|--------------|
+| **Who** is calling? | `source` (the element instance: tipo, section_tipo, section_id, mode, lang...) |
+| **What** should be done? | `dd_api` (API class) + `action` (API method) + `source->action` (per-element modifier) |
+| **Over which records?** | `sqo` (Search Query Object: filter, limit, offset, order) |
+| **What should come back / be displayed?** | `show` / `search` / `choose` / `hide` (ddo_map layouts) |
 
-In the first versions of the v6, the development was focused in the unification of the calls to the new API, and the first option was to use the SQO model. This way to unify the calls using SQO was quickly clearly insufficient, and the `select` property of the SQO do not meet the needs. The calls needs to define who is calling, what is request, what kind of action to do and other needs than the `SQO select` has been not design for that and RQO arise.
+Everything else (`data`, `options`, `prevent_lock`, `pretty_print`, `id`) is payload and transport tuning.
 
-Therefore Request Query Object is the way to communicate client and server and use to control data flow into Dédalo.
+## Why RQO exists
 
-## Request Query Object - RQO definition
+- **Before v6** every component type had its own `trigger` endpoint with its own interface. A `component_autocomplete` spoke a different dialect than `component_autocomplete_hi` or `component_portal`; any shared behavior had to be re-implemented per trigger.
+- **v5 introduced the SQO** — an SQL abstraction that unified *queries* (its `filter` maps to `WHERE`, its `select` to `SELECT`), designed around Dédalo relations and data paths.
+- **v6 unified the API** and first tried to use the SQO as the whole call format. It was quickly insufficient: a call also has to say *who* is calling, *what action* to perform, and *how to lay out* the result — none of which `SQO->select` was designed for.
 
-> ./core/common/class.request_query_object.php
+The RQO wraps the SQO and adds the caller identity, the action dispatch and the layout maps. **SQO = the query; RQO = the request.**
 
-**request_query_object** `object`
+## The contract at a glance
 
-!!! Note "About the main object definition and use to closure into an array to do the calls"
-	Request Query Object is defined as object, but the calls of the API are multiple, is possible send multiple RQOs in one API call.
-	So, every RQO need to be enclosed into an array previously to made the API call.
+A section list view requesting its first page of records:
 
-Request Query Object defines an object with normalized properties to create an API call.
-
-## Request flow
-
-Client create a RQO and call to the API doing a `fetch`, API check the user configuration, his permissions and analyze the RQO sent. If the RQO is correct, API perform the `action` defined. Every action use the RQO definition to perform the specific request, it can create components, sections, doing search, save or update data, etc.
-when the `action` is done, the API sent the response to the client. Response is a standard object with the `result`, of the request, a `message` with a string result of the action and the `error` property with the issues or problems arise performing the call. Some API calls can add more properties to the response as they need.
-
-```mermaid
-    graph TD
-     A["User request a section
-    [{
-    source : {
-      'section_tipo':'oh1',
-      'section_id':3
-      },
-    action : 'read',
-    dd_api : 'dd_core'
-    }]"] -- RQO with SQO--> B
-    B(("API :: read()
-    action : search"))
-    B --SQO--> C(("search :: search()" ))
-    C --is send to preparse--> D("search :: parse_sqo()" )
-    D-- result preparsed -->C
-    D --is send to--> E("search :: conform_search_query_object()" )
-    E-- result -->D
-    E --is send to--> F("component_common :: get_search_query()" )
-    F-- result -->E
-    F-- is send to -->G
-    G("component :: resolve_query_object_sql()
-      q='orange'")
-    F-- is send to -->H
-    H("component :: resolve_query_object_sql()
-      q='cat' ")
-    G-- result -->F
-    H-- result -->F
-    C-- wait for preparse--> I("search :: parse_sql_query()" )
-    I--SQL--> J("matrix_db_manager :: exec_search()")
-    J--SQL-->Q[(matrix tables)]
-    Q --PgSql\Result--> K{{"result ::
-    {ar_records:[{'Raspa'}]}"}}
-    K --Object--> B
-    B --JSON--> A
+```json
+{
+	"id"     : "section_oh1_list",
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"prevent_lock" : true,
+	"source" : {
+		"typo"         : "source",
+		"type"         : "section",
+		"action"       : "search",
+		"model"        : "section",
+		"tipo"         : "oh1",
+		"section_tipo" : "oh1",
+		"section_id"   : null,
+		"mode"         : "list",
+		"lang"         : "lg-eng"
+	},
+	"sqo" : {
+		"section_tipo" : ["oh1"],
+		"filter"       : null,
+		"limit"        : 10,
+		"offset"       : 0,
+		"order"        : [{"direction":"ASC","path":[{"component_tipo":"section_id"}]}]
+	}
+}
 ```
 
-## parameters
+And the standard response envelope:
 
-- **id** : `string`  *Optional* id of the API request
-- **api_engine** : `string` *Optional* Engine name. `dedalo` or `zenon. If the parameter is not set, the API will use the default: 'dedalo'
-- **dd_api**  : `string` *Mandatory* API class that will be used. Dédalo define 5 different classes: `dd_core_api`, `dd_tools_api`, `dd_ts_api`, `dd_utils_api` and `dd_component_xx_api` that is used by specific components. By default will use `dd_core_api`
-- **action**  : `string` *Mandatory* API method that will be used (like 'get_menu')
-- **source**  : `string` *Mandatory* component, section, menu, etc that made the call
-    - **action** : `string` *Mandatory* API method that will be used with the source. source->action perform specific action for the caller.
-- **sqo**   : `object` *Optional* Search Query Object to be used to perform BBDD queries.
-- **show**  : `object` *Optional* Defines the component to be showed into sections or portals, show defines the layout of the list and the components to show into the component_portal
-    - **ddo_map** `array` Defines the component chains to get context and data to be showed
-    - **get_ddo_map"** : `object` *Optional* If this property is set, ddo_map will be calculated. The value is the model of the ontology term to get the ddo_map, such as `section_map`, different sections can define a component or multiple component to build common search and common columns (mint, type, es1, fr1, etc)
-        - **model** : `string` Defines the ontology model to get the information
-        - **path** : `array` Defines the path of properties into the object to get the information (stored into properties)
-    - **fields_separator** : `string` *Optional* Defines the string between fields, used when the data need to be showed as string.
-    - **records_separator** : `string` *Optional* Defines the string between records, used when the data need to be showed as string.
-    - **sqo_config** `object` *Optional* Modifies SQO configuration for the show
-    - **interface** : `object` *Optional* Defines the controls of the user interface elements as buttons or tools
-        - **read_only** : `bool` | By default `false` | Control the edit ability of the component
-        - **save_animation** : `bool` | By default `true` | Control for the green line animation when the component save his data
-        - **value_buttons** : `bool` | By default `true` | Control to show or hide the buttons associated to values, as edit, remove, etc.
-        - **button_add** : `bool` | By default `true`  | Control of the input interface button to add new registers
-        - **button_delete** : `bool` | By default `true`  | Control for show or hide the delete button in the portal rows
-        - **button_delete_link** : `bool` | By default `true`  | Control if the button for `unlink` records in the delete modal can be showed or not.
-        - **button_delete_link_and_record** : `bool` | By default `true`  | Control if the button for `unlink` and `delete` records in the delete modal can be showed or not.
-        - **button_link** : `bool` | By default `true`  | Control of the input interface button to link existent registers
-        - **button_edit** : `bool` | By default `false`  | Control if the edit button in portals or sections can be showed
-        - **button_edit_options** : `object`  Expand the  | control of the button edit with specific parameters
-            - **action_mousedown** : `string` navigate|open_window | By default use `navigate` (name of function to be executed) | `navigate` option enter in edit mode in the same window, `open_window` option will open new popup window.
-            - **action_contextmenu** : `string` navigate|open_window | By default use `open_window`  (name of function to be executed) | `navigate` option enter in edit mode in the same window, `open_window` option will open new popup window.
-        - **button_list** : `bool` | By default `true` (ex. component_radio_button: to go to target section)
-        - **tools** : `bool` | By default `true`  | Control of the input interface of the component tools
-        - **button_external** : `bool` | By default `false`  | Control of the refresh button when the data of the portal is external
-        - **button_fullscreen** : `bool` | By default `true`  | Control the input interface of the fullscreen
-        - **button_save** :  `bool` | By default `true`  | Control the input interface of the save button
-        - **button_tree** : `bool` | By default `false`  | Control of the input interface button tree
-        - **show_autocomplete** : `bool` | By default `true`  | Control of the input interface for autocomplete for search records
-        - **show_section_id** : `bool`  | By default `true`  | Control to show the section_id into edit buttons
-- **search**  : `object` *Optional* | List of element to search (used in service_autocomplete) | When `search` is defined, will use into the `search` process instead `show` ddo_map, it will replace `show` for searches, when `choose` is not defines, `search` will used as `choose` create the choose, when these object is not sent
-    - **ddo_map** `array` Defines the component chains to get the context and data to be searched
-    - **get_ddo_map"** : `object` *Optional* If this property is set, ddo_map will be calculated. The value is the model of the ontology term to get the ddo_map, such as `section_map`, different sections can define a component or multiple component to build common search and common columns (mint, type, es1, fr1, etc)
-    - **sqo_config** `object` *Optional* Modifies SQO configuration for the show
-    - **fields_separator** : `string` *Optional* Defines the string between fields, used when the data need to be showed as string.
-    - **records_separator** : `string` *Optional* Defines the string between records, used when the data need to be showed as string.
-- **choose** :`object` *Optional* | List of elements for choose (used in service_autocomplete) | when choose is defined the list to pick a result in service_autocomplete wil use his ddo_map instead the `search` ddo_map or `show` ddo_map
-    - **ddo_map** `array` Defines the component chains to get the context and data to be use as list of results of the search
-    - **get_ddo_map"** : `object` *Optional* If this property is set, ddo_map will be calculated. The value is the model of the ontology term to get the ddo_map, such as `section_map`, different sections can define a component or multiple component to build common search and common columns (mint, type, es1, fr1, etc)
-    - **fields_separator** : `string` *Optional* Defines the string between fields, used when the data need to be showed as string.
-    - **records_separator** : `string` *Optional* Defines the string between records, used when the data need to be showed as string.
-- **hide** :`object` *Optional* | Define a list of elements that will need to be resolved his context and his data to be used into the component. but it not showed in the user interface. Ex. `Location` [actv19](https://dedalo.dev/ontology/actv19)
-    - **ddo_map** `array` Defines the component chains to get context and data to be used by the caller component
-- **data**  : `object`  *Optional* | Used like pre-calculated container (datalist, pagination, etc.) to minimize cpu usage on calls to 'save'
-- **prevent_lock** : `bool`| prevent PHP lock the session while the request is working. For example in 'count' calls
-- **options** : `object` | For to send heterogeneous data to the API. Used by components, tools etc.
-- **pretty_print** : `bool`| Output JSON as pretty_print -using whitespace to format it- from API manager
+```json
+{
+	"result" : { "...action specific..." : "context/data, records, count, etc." },
+	"msg"    : "OK. Request done successfully",
+	"errors" : [],
+	"debug"  : { "real_execution_time": "123 ms" }
+}
+```
 
+- `result` — the action's payload (`false` on failure). Shape depends on the action: `read` returns `{context, data}`, `count` returns a number, etc.
+- `msg` — human-readable outcome string.
+- `errors` — array of issue strings; empty on success. Server exceptions reach the client through this channel.
+- `debug` / `dedalo_last_error` — added under `SHOW_DEBUG` / when server errors were logged.
 
-## Configuration vs Request
+!!! note "One RQO per HTTP call"
+	In Dédalo 7 the API endpoint decodes **a single RQO object** per request (`core/api/v1/json/index.php` → `dd_manager::manage_request($rqo)`). Batching several operations is done with several `fetch` calls (the client `data_manager` runs them concurrently), not by sending an array of RQOs.
 
-Request Query Object is used to call to work API and is used to define the component behavior into the ontology. Some times the RQO need to be configured to calculate the ddo_map of the section that is calling in the instance. For example to call multiple toponymy thesaurus as Spain, France, etc is not possible to defines the section_tipo because every Dédalo installation has a different
+## Request lifecycle
 
+```mermaid
+graph TD
+	A["Client element instance<br/>(section, component, service...)"] -- "create_source() + build_rqo_show()/build_rqo_search()" --> B["data_manager.request({body: rqo})<br/>POST JSON + X-Dedalo-Csrf-Token"]
+	B --> C["api/v1/json/index.php<br/>decode + security gates"]
+	C -- "sanitize_client_sqo(rqo.sqo)<br/>sanitize_client_ddo_map(rqo.show/search)" --> D["dd_manager::manage_request()"]
+	D -- "dd_api whitelist + login check<br/>+ CSRF + API_ACTIONS check" --> E["dd_core_api::read() / save() / ..."]
+	E -- SQO --> F["search::get_instance()->search()"]
+	F -- SQL --> G[("matrix tables (PostgreSQL)")]
+	G --> E
+	E -- "response {result, msg, errors}" --> A
+```
 
+Step by step:
 
+1. **Build** — the element instance builds its RQO, normally from its `request_config` (injected in its context by the server; see [request_config.md](request_config.md)). Helpers: `create_source()`, `common.build_rqo_show()`, `common.build_rqo_search()` in `core/common/js/common.js`.
+2. **Send** — `data_manager.request({body: rqo})` POSTs it as JSON with the CSRF token header, retry/timeout handling and optional local-DB caching (`cache_handler`).
+3. **Gate** — `index.php` decodes the body and scrubs the untrusted parts: `search_query_object::sanitize_client_sqo()` strips server-only SQO fields and clamps limits; `request_config_object::sanitize_client_ddo_map()` reduces client `show`/`search` ddo_maps to whitelisted display fields.
+4. **Dispatch** — `dd_manager::manage_request()` validates the `dd_api` class against a whitelist, checks login (a small allowlist of actions works without a session: `start`, `login`, `get_environment`, ...), verifies the CSRF token for non-exempt actions, and confirms `action` is in the target class's `API_ACTIONS` constant.
+5. **Execute** — the API class method runs the action. For data actions it instantiates the section/component identified by `source`, applies the `sqo`, resolves `show`/`search`/`choose`/`hide` ddo_maps into context+data.
+6. **Respond** — the standard envelope goes back as JSON; top-level exceptions are captured into `errors` with the message (full traces stay server-side).
 
+## Properties
+
+All properties live in `request_query_object` (`$direct_keys`): `id`, `api_engine`, `dd_api`, `action`, `source`, `sqo`, `show`, `search`, `choose`, `data`, `prevent_lock`, `options`, `pretty_print`.
+
+**Mandatory:** `dd_api`, `action`, `source` — **Optional:** everything else. If only a `source` is sent, the server derives the SQO and layout from the user preset or the ontology `request_config` (see *RQO and request_config* below).
+
+### id : `string` *Optional*
+
+Client-side identifier of the request, echoed for correlation/debugging. Conventionally built from the caller context (e.g. `section_oh1_list`).
+
+### api_engine : `string` *Optional, default `'dedalo'`*
+
+Backend engine for data retrieval: `dedalo` (internal) or an external engine name such as `zenon`. External engines resolve their connection details from the target section's `api_config` properties.
+
+### dd_api : `string` *Mandatory, default `'dd_core_api'`*
+
+The API class that will handle the call. Only whitelisted classes are accepted (`dd_manager::manage_request`):
+
+| Class | Purpose |
+|-------|---------|
+| `dd_core_api` | Core data lifecycle: read/save/create/delete/count, element contexts |
+| `dd_tools_api` | Tool execution (export, import, time machine, diffusion launchers...) |
+| `dd_ts_api` | Thesaurus tree operations (expand, move, indexation...) |
+| `dd_utils_api` | Utilities: login context, uploads, locks, environment |
+| `dd_ontology_api` | Ontology browsing/editing |
+| `dd_diffusion_api` | Publishing (diffuse, validate, get_ontology_map) — auto-selected for those actions |
+| `dd_area_maintenance_api` | Admin maintenance widgets |
+| `dd_agent_api`, `dd_mcp_api` | Agent / MCP integrations |
+| `dd_component_portal_api`, `dd_component_text_area_api`, `dd_component_av_api`, `dd_component_3d_api`, `dd_component_info` | Component-specific endpoints (pagination, transcription, media...) |
+
+Every class declares an `API_ACTIONS` constant; an `action` outside that list is rejected. This is the action-level security chokepoint — new API methods are not callable until explicitly listed.
+
+### action : `string` *Mandatory*
+
+The API class method to execute. `dd_core_api` actions: `start`, `read`, `read_raw`, `create`, `duplicate`, `delete`, `save`, `count`, `get_element_context`, `get_section_elements_context`, `get_indexation_grid`, `get_environment`, `get_matrix_ontology_locator`, `test`.
+
+### source : `object` *Mandatory*
+
+Identity of the calling element — built client-side by `create_source()` (`core/common/js/common.js`):
+
+| Field | Type | Notes |
+|-------|------|-------|
+| `typo` | `string` | Always `'source'` |
+| `type` | `string` | Element type: `component`, `section`, `area`, ... (drives e.g. `save` dispatch) |
+| `action` | `string` | **Modifier of the main action** for this element. E.g. `read` + `source->action: 'get_value'` returns the plain component value instead of context+data |
+| `model` | `string` | Element model (`section`, `component_portal`, ...). Recalculated server-side from `tipo` when omitted |
+| `tipo` | `string` | Ontology tipo of the element |
+| `section_tipo` | `string` | Target section tipo (mandatory in `read`) |
+| `section_id` | `string\|int\|null` | Record id; `null` for lists/new records |
+| `mode` | `string` | `edit` \| `list` \| `search` \| `tm` \| ... |
+| `lang` | `string` | Data language (`lg-eng`, `lg-nolan`, ...) |
+| `view` | `string` | View variant (`default`, `line`, `mosaic`, ...) |
+| `matrix_id`, `data_source` | optional | Time machine: address a specific matrix row / `'tm'` data source |
+| `is_temporal` | `bool` optional | Temporal instances (e.g. `tool_propagate_component_data`) |
+| `caller_dataframe` | `object` optional | Dataframe pairing info (see component_dataframe docs) |
+| `value` | `array` optional | Values to resolve (portal in search mode) |
+
+Component instances can extend the source via `self.source_add` (e.g. `component_relation_model` adds `ar_target_section_tipo`).
+
+### sqo : `object` *Optional*
+
+The Search Query Object — filter (`WHERE`-equivalent), `section_tipo` targets, `limit`, `offset`, `order`, `full_count`. Full definition in [sqo.md](sqo.md) / `class.search_query_object.php`.
+
+Security: the HTTP API is the only untrusted SQO source. `sanitize_client_sqo()` strips server-only fields (`sentence`, `params`, SQL column aliases...), forces `parsed=false` and clamps `limit` before the SQO reaches the search pipeline.
+
+### show : `object` *Optional*
+
+What to display and how — the layout of section lists and portal columns.
+
+- **ddo_map** : `array` — chains of ddo objects (`{tipo, section_tipo, parent, mode, ...}`) linked by `parent` to form resolution paths. The server resolves each chain into context and data.
+- **get_ddo_map** : `object` *Optional* — compute the ddo_map dynamically from the ontology instead of listing it: `{model: 'section_map', columns: [...]}`. Lets different sections share common search/columns (mint, type, etc.).
+- **fields_separator** / **records_separator** : `string` — used when values are flattened to strings (e.g. `" | "`, `"<br>"`).
+- **sqo_config** : `object` — display-specific SQO tuning (`operator`, `limit`, `offset`, `full_count`).
+- **interface** : `object` — UI element switches:
+
+| Key | Default | Controls |
+|-----|---------|----------|
+| `read_only` | `false` | Edit ability of the component |
+| `save_animation` | `true` | Green save feedback line |
+| `value_buttons` | `true` | Per-value buttons (edit, remove...) |
+| `button_add` | `true` | Add-new-record button |
+| `button_delete` | `true` | Delete button on portal rows |
+| `button_delete_link` | `true` | "Unlink" option in the delete modal |
+| `button_delete_link_and_record` | `true` | "Unlink and delete" option in the delete modal |
+| `button_link` | `true` | Link-existing-record button |
+| `button_edit` | `false` | Edit button in portals/sections |
+| `button_edit_options` | — | `{action_mousedown: 'navigate'\|'open_window', action_contextmenu: 'navigate'\|'open_window'}` |
+| `button_list` | `true` | Go-to-target-section button (e.g. component_radio_button) |
+| `tools` | `true` | Component tools entry |
+| `button_external` | `false` | Refresh button for external portal data |
+| `button_fullscreen` | `true` | Fullscreen toggle |
+| `button_save` | `true` | Save button |
+| `button_tree` | `false` | Tree button |
+| `show_autocomplete` | `true` | Record search autocomplete |
+| `show_section_id` | `true` | section_id shown in edit buttons |
+
+### search : `object` *Optional*
+
+Fields available to the search process (used by `service_autocomplete` and the search panel). Same sub-shape as `show` (`ddo_map`, `get_ddo_map`, `sqo_config`, separators). Fallback chain: when `search` is defined it replaces `show` for searching; when `choose` is absent, `search` also drives the result list.
+
+### choose : `object` *Optional*
+
+Fields shown when picking a result in `service_autocomplete`. Same sub-shape. When defined, its `ddo_map` overrides `search`/`show` for the picker list. The server resolves `choose.sqo_config.limit` with the fallback chain *choose → search/show sqo_config → 25*.
+
+### hide : `object` *Optional*
+
+`ddo_map` of elements whose context and data must be **resolved but not rendered** — internal values the caller component needs (e.g. `Location` [actv19](https://dedalo.dev/ontology/actv19)).
+
+### data : `object` *Optional*
+
+Request payload for write actions. For `save`, carries `changed_data` (the modified values); also used as pre-calculated container (datalist, pagination) to avoid recomputation.
+
+### options : `object` *Optional*
+
+Heterogeneous extra parameters for components and tools — e.g. upload descriptors:
+
+```json
+{
+	"options": {
+		"file_data": { "name": "test26_test3_1.jpg", "tmp_dir": "DEDALO_UPLOAD_TMP_DIR", "key_dir": "3d", "tmp_name": "tmp_test26_test3_1.jpg" },
+		"target_dir": "posterframe"
+	}
+}
+```
+
+When files are POSTed without a JSON body (e.g. CKEditor image upload), `index.php` synthesizes an RQO with `action:'upload'`, `dd_api:'dd_utils_api'` and the `$_FILES`/`$_POST` data in `options`.
+
+### prevent_lock : `bool` *Optional*
+
+Closes the PHP session (`session_write_close()`) before the work runs, so this request does not serialize behind — or block — other requests of the same session. Use for read-only/long calls (`count` does it by default). Never combine with actions that must write session state.
+
+### pretty_print : `bool` *Optional*
+
+Pretty-printed JSON response (debugging).
+
+## Use cases and examples
+
+### Read one record in edit mode
+
+```json
+{
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"section", "action":"search", "model":"section",
+		"tipo":"oh1", "section_tipo":"oh1", "section_id":3, "mode":"edit", "lang":"lg-eng" },
+	"sqo"    : { "section_tipo":["oh1"], "limit":1, "offset":0,
+		"filter_by_locators":[{"section_tipo":"oh1","section_id":3}] }
+}
+```
+
+### Save a component value
+
+```json
+{
+	"action" : "save",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"component", "action":"update", "model":"component_input_text",
+		"tipo":"oh24", "section_tipo":"oh1", "section_id":3, "mode":"edit", "lang":"lg-eng" },
+	"data"   : { "changed_data": [ {"action":"update","key":0,"value":"Interview about..."} ] }
+}
+```
+
+`save` dispatches on `source->type` (`component` | `section`), instantiates the element and applies `data->changed_data`.
+
+### Autocomplete search (service_autocomplete)
+
+```json
+{
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"component", "action":"search", "model":"component_portal",
+		"tipo":"rsc17", "section_tipo":"oh1", "section_id":3, "mode":"edit", "lang":"lg-eng" },
+	"sqo"    : { "section_tipo":["rsc197"], "filter":{"$or":[{ "q":"smith", "path":[{ "section_tipo":"rsc197","component_tipo":"rsc85" }] }]},
+		"limit":25, "offset":0 },
+	"search" : { "ddo_map":[ {"tipo":"rsc85","section_tipo":"rsc197","parent":"rsc197","mode":"list"} ] },
+	"choose" : { "ddo_map":[ {"tipo":"rsc85","section_tipo":"rsc197","parent":"rsc197","mode":"list"} ], "fields_separator":" | " }
+}
+```
+
+Note the dispatch split: the top-level `action` is `read` (it must be in `dd_core_api::API_ACTIONS`); the *search* behavior comes from `source->action: 'search'`. Built client-side by `build_rqo_search()` from the component's `request_config` (operator default `$or`, choose limit fallback 25).
+
+### Count without blocking the session
+
+```json
+{
+	"action" : "count",
+	"dd_api" : "dd_core_api",
+	"prevent_lock" : true,
+	"source" : { "typo":"source", "type":"section", "model":"section", "tipo":"oh1", "section_tipo":"oh1", "mode":"list" },
+	"sqo"    : { "section_tipo":["oh1"], "filter": null }
+}
+```
+
+### Component value only (source->action modifier)
+
+```json
+{
+	"action" : "read",
+	"dd_api" : "dd_core_api",
+	"source" : { "typo":"source", "type":"component", "action":"get_value", "model":"component_select",
+		"tipo":"oh37", "section_tipo":"oh1", "section_id":3, "mode":"list", "lang":"lg-eng" }
+}
+```
+
+Same top-level `action` (`read`), different per-element behavior: `source->action:'get_value'` short-circuits to the plain value.
+
+### Tool execution
+
+```json
+{
+	"action" : "tool_request",
+	"dd_api" : "dd_tools_api",
+	"prevent_lock" : true,
+	"source" : { "typo":"source", "type":"tool", "action":"get_export_grid", "model":"tool_export",
+		"tipo":"oh1", "section_tipo":"oh1", "mode":"list" },
+	"options": { "section_tipo":"oh1", "data_format":"csv", "breakdown":"default", "ar_ddo_to_export":[ "..." ] }
+}
+```
+
+The generic `tool_request` action routes to `{source->model}::{source->action}(options)` — here `tool_export::get_export_grid()`. Tool methods are additionally gated by each tool's `API_ACTIONS` registration (see tools docs).
+
+## RQO and request_config
+
+The RQO and the [request_config](request_config.md) are the two halves of the same contract:
+
+- **request_config = configuration** (server → client). Defined in ontology `properties->source->request_config` (or user layout presets), resolved per element and injected into the element's context. It declares *what an element can request*: target sections, ddo_maps for show/search/choose/hide, sqo defaults, interface switches.
+- **RQO = request** (client → server). The client builds it *from* the request_config: `build_rqo_show()`/`build_rqo_search()` copy the sqo/sqo_config/ddo_maps into a concrete call, adding the live state (current filter, page, query string).
+
+Because the ontology cannot know installation-specific values, the request_config uses placeholders that are resolved server-side before reaching the client — `section_tipo: "self"`, `parent: "self"`, dynamic `sqo.section_tipo` sources (`section`, `hierarchy_types`, `self`). By the time the client builds an RQO, those are concrete tipos.
+
+The reverse path also exists: when a client sends `rqo->show` (e.g. time machine, `tool_qr`, graph view, search presets — `section` instantiated with `add_show:true`), the server rebuilds the element's request_config **from the RQO** (`common::build_request_config_from_rqo`). Client-sent ddos pass the same validation as ontology configs: whitelist scrub at the API gate (`sanitize_client_ddo_map`) plus tipo/TLD/permission checks (`validate_requested_ddo`); rejected ddos are dropped and reported through the `config_warnings` channel under `SHOW_DEBUG`.
+
+## Security model summary
+
+| Gate | Where | Protects |
+|------|-------|----------|
+| dd_api whitelist | `dd_manager::manage_request` | Only known API classes are instantiable |
+| `API_ACTIONS` per class | each `dd_*_api` | Only declared methods are callable |
+| Login + no-login allowlist | `dd_manager` | Session required except bootstrap actions (`start`, `login`, `get_environment`, ...) |
+| CSRF token | `X-Dedalo-Csrf-Token` header ↔ session token | Cross-site request forgery (exempt: bootstrap actions) |
+| `sanitize_client_sqo` | `api/v1/json/index.php` | Server-only SQO fields, unbounded limits, pre-parsed SQL |
+| `sanitize_client_ddo_map` | `api/v1/json/index.php` | Injected ddo fields beyond the display whitelist |
+| `validate_requested_ddo` | `common` (rqo-derived config) | Invalid tipos, inactive TLDs, unauthorized elements |
+| XSS scrub | legacy `$_REQUEST`/`$_FILES` branches | Form/query-parameter payloads |
+| Permission checks | per action (`read`, `count`, `save`...) | Section/element access levels |
+
+## Best practices
+
+1. **Build RQOs from the request_config** the server injected — don't hand-craft sqo/ddo_maps in client code when the config already defines them (`build_rqo_show`/`build_rqo_search`).
+2. **Always send `source` complete** (`tipo`, `section_tipo`, `mode`, `lang`): the server resolves defaults from it and `read` rejects an empty `section_tipo`.
+3. **Use `prevent_lock: true`** for read-only calls that may run long (counts, exports preflight) so they don't serialize the user's session.
+4. **Let the server own limits**: send `limit: null` to get the mode/model default; client limits are clamped server-side anyway.
+5. **Use `source->action` modifiers** instead of new top-level actions when the behavior is a variant of read/save for one element type.
+6. **New API methods must be added to `API_ACTIONS`** of their class — they are unreachable otherwise (by design).
+7. **Never put credentials or server-only state in an RQO**: the object is logged in debug environments and echoed in error contexts.
+
+## Troubleshooting
+
+- **`Invalid action var (not found in rqo)`** — the body has no `action`; check JSON serialization of the fetch body.
+- **`Error. Invalid API class`** — `dd_api` not in the whitelist (typo, or class not registered in `dd_manager`).
+- **Action rejected / `Undefined method`** — the action is missing from the class's `API_ACTIONS`.
+- **`Empty source 'section_tipo'`** — `read` requires it; verify `create_source()` received a fully initialized instance.
+- **Empty result with no error** — likely dropped ddos (invalid tipo, inactive TLD, no permissions). Under `SHOW_DEBUG`, inspect `config_warnings` in the element context; production counts drops in `metrics`.
+- **Stale list after editing** — check the session SQO (`section::get_session_sqo`) and the client local-DB cache (`cache_handler`); the navigation SQO is preserved across calls by design.
+- **CSRF errors on first call** — the token is minted on `start`; ensure the bootstrap call ran and `page_globals.csrf_token` is populated.
+
+## Related documentation
+
+- [request_config.md](request_config.md) — how the server builds the configuration the client turns into RQOs
+- [sqo.md](sqo.md) — the Search Query Object (filter/limit/order) carried inside the RQO
+- `class.request_query_object.php` — property definitions and inline format reference
+- `core/common/js/data_manager.js` — client transport (retries, timeout, CSRF, local cache)
