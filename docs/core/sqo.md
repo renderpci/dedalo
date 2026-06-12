@@ -25,9 +25,13 @@ Search Query Object is send as part of Request Query Object to be processed by s
     B(("API :: read()
     action : search"))
     B --SQO--> C(("search :: search()" ))
+    A2["API :: sanitize_client_sqo()
+    (strip server-only + ACL fields,
+    clamp limit)"] -.client SQO only.-> B
     C --is send to parse--> D("search :: parse_sqo()" )
     D-- result parsed -->C
-    D --is send to--> E("search :: conform_search_query_object()" )
+    D --is send to--> E("search :: conform_filter()
+    (validate tipo/lang)" )
     E-- result -->D
     E --is send to--> F("component_common :: get_search_query()" )
     F-- result -->E
@@ -47,6 +51,18 @@ Search Query Object is send as part of Request Query Object to be processed by s
     K --Object--> B
     B --JSON--> A
 ```
+
+!!! note "About the SQL examples in this page"
+    The inline `SQL` blocks below illustrate the **logical** shape of the `WHERE` clause (which paths join, which operator applies). The actual statement Dédalo generates targets the per-type JSONB columns of the `matrix_*` tables (`string`, `relation`, `iri`, `number`, `date`, …) using PostgreSQL `jsonpath` (`@?`, `jsonb_path_query`) and bound `$1..$n` parameters. The source of truth for the exact SQL is the per-component search traits (`core/component_*/trait.search_component_*.php`) and the SQL-string tests in `test/server/search/` and `test/server/components/component_*_Search_Test.php`.
+
+## Security and access control
+
+The SQO is the query language, but not every SQO is equally trusted. **A client-built SQO arriving from the HTTP API is untrusted; an SQO a server class builds and runs directly is trusted.** The full configuration (the `DEDALO_SEARCH_CLIENT_MAX_LIMIT` and `DEDALO_FILTER_USER_RECORDS_BY_ID` constants, and the project filter) is documented in [Search configuration and access control](../config/search.md). In short:
+
+- **Client boundary** — `search_query_object::sanitize_client_sqo()` runs once at the API entry (`core/api/v1/json/index.php`) and, for client SQOs only: strips server-only SQL fields (`sentence`, `params`, `column_sql`, `table`, `table_alias`), strips access-control flags (`skip_projects_filter`, `skip_duplicated`, `include_negative`), forces `parsed = false`, and clamps `limit` to `DEDALO_SEARCH_CLIENT_MAX_LIMIT`. Server-internal builders bypass this gate.
+- **Identifier / language validation** — for **every** SQO, `search::conform_filter()` validates each path `section_tipo`/`component_tipo` (`is_valid_tipo` / `is_valid_data_column`) and each filter `lang` (`is_valid_lang`) before they are interpolated verbatim into JSONB keys / jsonpath. Malformed values are rejected (they cannot be parameterized).
+- **Prepared parameters** — all literal `q` values reach SQL as bound `$n` parameters, never inlined.
+- **Project filter** — for non global-admin users a project-scope restriction is always added to `WHERE` (per section), and `skip_projects_filter` (which removes it) is not settable from a client SQO.
 
 ## Parameters
 
@@ -80,7 +96,7 @@ Search Query Object is send as part of Request Query Object to be processed by s
 - **breakdown** : `bool` (true || false) Split the data in the section(DDBB row) that match with the query in a row for every match. Used to locate specific locators and count the values than match the locator to be searched. Applied in `related` mode to search the indexations than call to specific interviews, person, etc. Default false  **optional**
 - **tables** : `array` list of tables to search. Used in search related to limit the tables to search. Overwrites the default value 'common::get_matrix_tables_with_relations()'. **optional**
 - **parsed** : `bool` (true || false) state of the sqo, it indicates if the filter was parsed by the components to add operators to the q. It's used as internal property, but is possible parse it manually and indicate this state. Default false  **optional**
-- **select** : `array of objects` array of ddo with defines the SELECT parameter **DEPRECATED DO NOT USED IN V6**
+- **select** : `array of objects` array of ddo that defines the SELECT columns. In v7 it is used to return specific component columns instead of the whole `datos`; each item resolves its data column via the component model (`search::conform_select`). When omitted, the search returns `section_id`, `section_tipo` and the row data. **optional**
 
 ### Summary
 
@@ -129,11 +145,14 @@ skip_projects_filter    : (true || false) // default false
 breakdown               : (true || false) // default false
 tables                  : (array) // default null
 parsed                  : (true || false) // boolean, state of the sqo | default false
-select                  : [{    //DEPRECATED | array of objects optional
+select                  : [{    // array of objects, optional. Return specific component columns instead of full datos
                             section_tipo
                             component_tipo
                         }]
 ```
+
+!!! note "Trust boundary"
+    Some properties are **server-only**: `sentence`, `params`, `column_sql`, `table`, `table_alias` (server-built SQL) and the access-control flags `skip_projects_filter`, `skip_duplicated`, `include_negative`. They are stripped from any SQO that arrives from the HTTP API. See [Security and access control](#security-and-access-control).
 
 ## Using SQO
 
@@ -967,6 +986,9 @@ Defines the maximum records to get from the database. It is equivalent to LIMIT 
 
 Definition: `int` records limit **optional**, ex: 10
 
+!!! note "Client limit ceiling"
+    A `limit` arriving from the HTTP API is clamped to [`DEDALO_SEARCH_CLIENT_MAX_LIMIT`](../config/search.md#dedalo_search_client_max_limit) (default 1000): the `all` sentinel, `0`/negative and out-of-range values all become the ceiling. Server-internal callers bypass this clamp and may still use `limit: 'all'`.
+
 Example: search the first 10 interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh16](https://dedalo.dev/ontology/oh16) `mother`.
 
 ```json
@@ -1525,6 +1547,9 @@ LIMIT 5;
 Remove the projects filter applied to users. Every search inside Dédalo use the component_filter to restrict the section records that the user can get of any section. Every user has his own permissions to get one, two or more projects, projects are defined in section [dd153](https://dedalo.dev/ontology/dd153) and is assign to every user in the system. Only general-admin and the root user remove the projects restriction using this property. By default is false and is not possible to change in the fly.
 
 Definition: `bool` (true || false) remove the mandatory filter of the component_filter applied at all users except root and global admin users. Default : false **optional**
+
+!!! warning "Server-only flag"
+    `skip_projects_filter` is an access-control flag and is **stripped from client SQOs** by `sanitize_client_sqo()` at the API boundary. It is honored only when an SQO is built and run server-side (e.g. to read common value lists or transversal data). A client cannot set it to bypass the project filter. See [Search configuration and access control](../config/search.md).
 
 ### breakdown
 

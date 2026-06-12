@@ -104,3 +104,4 @@ Every config file has its own parameters that need to be changed with the your o
 3. Changing parameters of [areas configuration file](./config_areas.md#changing-parameters-of-dédalo-areas-config-file).
 4. Implement all [thesaurus dependencies](thesaurus_dependeces.md).
 5. Optional: configure the [media protection (media file access control)](./media_protection.md).
+6. Optional: review [search configuration and access control](./search.md).
