@@ -154,8 +154,23 @@ area_thesaurus.prototype.init = async function(options) {
 
 		// key commands
 			dd_request_idle_callback(
-				() => {
-					window.page_globals.show_models = localStorage.getItem('show_models') || false
+				async () => {
+					// show_models persisted state. Lives in the local db 'status'
+					// table like every other UI state (expand status, search panel).
+					// One-time migration from the legacy localStorage key.
+					const legacy_value = localStorage.getItem('show_models')
+					if (legacy_value) {
+						await data_manager.set_local_db_data(
+							{ id: 'show_models', value: true },
+							'status'
+						)
+						localStorage.removeItem('show_models')
+					}
+					const show_models_status = await data_manager.get_local_db_data('show_models', 'status')
+					window.page_globals.show_models = show_models_status?.value===true
+						? true
+						: (window.page_globals.show_models || false)
+
 					const keydown_handler = (e) => {
 
 						// control + m keys
@@ -167,14 +182,17 @@ area_thesaurus.prototype.init = async function(options) {
 									el.classList.add('hide')
 								})
 								// save status for persistence
-								localStorage.removeItem("show_models");
+								data_manager.delete_local_db_data('show_models', 'status')
 								window.page_globals.show_models = false
 							}else{
 								// hidden case. Change to display
 								[...model_value_list].map((el)=>{
 									el.classList.remove('hide')
 								})
-								localStorage.setItem('show_models', true);
+								data_manager.set_local_db_data(
+									{ id: 'show_models', value: true },
+									'status'
+								)
 								window.page_globals.show_models = true
 							}
 						}
@@ -451,7 +469,12 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		}
 
 	// show_models. Thesaurus default is false, but Ontology default is true.
-		window.page_globals.show_models = (self.model==='area_ontology' || localStorage.getItem('show_models'))
+	// Persisted in the local db 'status' table (localStorage read kept one
+	// release as legacy fallback; see init migration)
+		const show_models_status = await data_manager.get_local_db_data('show_models', 'status')
+		window.page_globals.show_models = (self.model==='area_ontology'
+			|| show_models_status?.value===true
+			|| localStorage.getItem('show_models'))
 			? true
 			: false;
 
