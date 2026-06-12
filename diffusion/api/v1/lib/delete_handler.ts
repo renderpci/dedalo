@@ -10,8 +10,9 @@
  * reusing the same pools and SQL generation as the publish path.
  */
 
-import { get_pool }        from './db';
-import { generate_delete } from './sql_generator';
+import { get_pool }          from './db';
+import { generate_delete }   from './sql_generator';
+import { apply_table_state } from './media_index';
 import type { delete_target, delete_record_response } from './types';
 
 
@@ -45,6 +46,11 @@ export function validate_delete_targets(targets: unknown): string | null {
 			if (typeof id !== 'string' && typeof id !== 'number') {
 				return `Invalid target: bad section_id for table "${t.table_name}"`;
 			}
+		}
+		// section_tipo is optional (older PHP clients omit it) but must be a
+		// non-empty string when present: it drives media publication markers.
+		if (t.section_tipo !== undefined && (typeof t.section_tipo !== 'string' || t.section_tipo.length === 0)) {
+			return `Invalid target: bad section_tipo for table "${t.table_name}"`;
 		}
 	}
 
@@ -109,6 +115,24 @@ export async function delete_records(targets: delete_target[]): Promise<delete_r
 				}
 			} finally {
 				connection.release();
+			}
+
+			// Media publication markers: the rows are gone (or were never
+			// there), so drop the matching markers. Optional field for
+			// back-compat with older PHP clients; marker failures never
+			// fail the delete itself.
+			if (target.section_tipo) {
+				try {
+					await apply_table_state(
+						target.database_name,
+						target.table_name,
+						target.section_tipo,
+						[],
+						target.section_ids
+					);
+				} catch (marker_error: unknown) {
+					console.error(`[delete_record] Media marker removal failed for ${target.database_name}.${target.table_name}:`, marker_error);
+				}
 			}
 
 		} catch (error: unknown) {

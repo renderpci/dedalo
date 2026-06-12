@@ -17,6 +17,7 @@ import { process_response }           from './lib/diffusion_processor';
 import { insert_table_data }          from './lib/db';
 import { close_all_pools }            from './lib/db';
 import { delete_records, validate_delete_targets } from './lib/delete_handler';
+import { apply_table_state, reconcile, rebuild, validate_rebuild_targets } from './lib/media_index';
 import { check_database_exists, backup_database } from './lib/db_admin';
 import { check_server_auth }          from './lib/auth';
 import { extract_cookie_header, extract_csrf_token } from './lib/session';
@@ -204,6 +205,23 @@ async function run_background_diffusion(
 					const unique_ids = new Set(table.records.map(r => String(r.section_id)));
 					const prev_count = table_records_count_map.get(table.table_name) ?? 0;
 					table_records_count_map.set(table.table_name, prev_count + unique_ids.size);
+
+					// Media publication markers: mirror the committed write into the
+					// filesystem allowlist (no-op when DEDALO_MEDIA_PATH is unset).
+					// Marker failures are reported but never fail the diffusion.
+					try {
+						await apply_table_state(
+							table.database_name,
+							table.table_name,
+							table.section_tipo,
+							[...unique_ids],
+							table.deletions
+						);
+					} catch (marker_error: unknown) {
+						const marker_msg = marker_error instanceof Error ? marker_error.message : String(marker_error);
+						console.error(`[diffuse] Media marker update failed for "${table.table_name}":`, marker_error);
+						errors.push(`Media markers "${table.table_name}": ${marker_msg}`);
+					}
 
 					const elapsed     = Date.now() - start_time;
 					const record_time = Date.now() - record_start;
@@ -1003,6 +1021,29 @@ export async function handle_request(request: Request): Promise<Response> {
 					const delete_result = await delete_records(targets);
 					return Response.json(delete_result);
 				}
+				case 'rebuild_media_index': {
+					// Server-to-server: full resync of the media publication
+					// markers (filesystem allowlist) from the publication
+					// databases. PHP resolves the targets from the diffusion
+					// ontology; this engine only executes the diff-sync.
+					const is_auth_rebuild = await check_server_auth(cookie_header, request);
+					if (!is_auth_rebuild) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const rebuild_targets = (body as any).targets;
+					const rebuild_validation_error = validate_rebuild_targets(rebuild_targets);
+					if (rebuild_validation_error) {
+						return Response.json(
+							{ result: false, msg: rebuild_validation_error, markers: 0, errors: [rebuild_validation_error] },
+							{ status: 400 }
+						);
+					}
+					const rebuild_result = await rebuild(rebuild_targets);
+					return Response.json(rebuild_result);
+				}
 				case 'check_database': {
 					// Server-to-server: PHP asks Bun whether a target MariaDB
 					// database is reachable/exists (MariaDB is a Bun responsibility).
@@ -1065,6 +1106,19 @@ if (import.meta.main) {
 	} as any);
 
 	console.log(`[diffusion] Listening on unix socket: ${SOCKET_PATH}`);
+
+	// Heal media publication marker drift (crash between SQL commit and
+	// marker apply): derive pub/ from the dbs/ ground truth. Pure FS diff,
+	// no SQL; no-op when DEDALO_MEDIA_PATH is unset.
+	reconcile()
+		.then(result => {
+			if (result !== null) {
+				console.log(`[diffusion] Media marker reconcile: +${result.added} / -${result.removed}`);
+			}
+		})
+		.catch(error => {
+			console.error('[diffusion] Media marker reconcile failed:', error);
+		});
 
 	// graceful shutdown
 	const shutdown = async (): Promise<void> => {
