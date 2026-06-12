@@ -188,6 +188,32 @@ class component_password extends component_common {
 
 
 	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* Single atom with the fake value: real password data is never exported
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// own segment
+			$segment	= $this->build_export_path_segment($context);
+			$path		= [...$context->path_prefix, $segment];
+
+		return export_value::from_scalar(
+			$path,
+			$this->fake_value,
+			null, // atom options (cell_type text)
+			$this->get_label(),
+			get_called_class()
+		);
+	}//end get_export_value
+
+
+
+	/**
 	* ENCRYPT_PASSWORD
 	*
 	* @deprecated SEC-001/002/007: this is the legacy reversible AES helper. New

@@ -145,6 +145,42 @@ class component_section_id extends component_common {
 
 
 	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One int atom per data item with cell_type 'section_id'
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// own segment
+			$segment	= $this->build_export_path_segment($context);
+			$path		= [...$context->path_prefix, $segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data. One int atom per item (usually one)
+			$data = $this->get_data();
+			if (empty($data) || !is_array($data)) {
+				return $export_value;
+			}
+			foreach ($data as $key => $item) {
+				$export_value->add_atom( new export_atom($path, (int)$item, (object)[
+					'cell_type'		=> 'section_id',
+					'value_index'	=> (int)$key
+				]) );
+			}
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
+	/**
 	* GET_TOOLS
 	* @override component_common get_tools()
 	* Catch get_tools call to prevent load tools sections

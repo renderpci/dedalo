@@ -210,6 +210,62 @@ class component_text_area extends component_string_common {
 
 
 	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One atom per non-empty data item (TR image tags resolved on the fly,
+	* as the legacy grid). Items join with fields_separator (legacy parity:
+	* the grid value was an array joined by resolve_value with fields_separator).
+	* The 'indexation_list' mode custom columns stay on the legacy grid path
+	* (indexation grid client); export never runs in that mode.
+	* Paragraph/entity cleanup is a tabulator concern (single chokepoint),
+	* atoms carry the same values the legacy grid carried.
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// own segment (base resolution: ddo > properties > joiner defaults)
+			$segment	= $this->build_export_path_segment($context);
+			$path		= [...$context->path_prefix, $segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data items. main lang first, fallback when empty
+			$data			= $this->get_data_lang();
+			$is_fallback	= false;
+			if (empty($data)) {
+				$data = $this->get_component_data_fallback(
+					$this->get_lang(), // string lang
+					DEDALO_DATA_LANG_DEFAULT // string main_lang
+				);
+				$is_fallback = true;
+			}
+			if (empty($data)) {
+				return $export_value;
+			}
+
+			$value_index = 0;
+			foreach ($data as $item) {
+				if ($this->is_empty($item)) {
+					continue;
+				}
+				$export_value->add_atom( new export_atom($path, TR::add_tag_img_on_the_fly($item->value), (object)[
+					'value_index'	=> $value_index++,
+					'lang'			=> $item->lang ?? $this->lang,
+					'is_fallback'	=> $is_fallback
+				]) );
+			}
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
+	/**
 	* SAVE
 	* Save component data with text sanitization
 	* Overwrite component_common method

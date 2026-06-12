@@ -708,4 +708,71 @@ class component_relation_index extends component_relation_common {
 
 
 
+	/**
+	* RESOLVE_EXPORT_DDO_CHILDREN
+	* component_relation_index has no export ddo paths (no request_config of
+	* its own): the ddo_map is self-computed per locator from the pointed
+	* section relation_list request_config, prefixing the target section_id
+	* ddo. Mirrors the legacy inline logic of get_grid_value.
+	* @see component_relation_common::get_export_value
+	* @param array $ddo_map
+	* @param array $ddo_direct_children
+	* @param object $locator
+	* @return object
+	* 	{ddo_map: array, ddo_direct_children: array}
+	*/
+	protected function resolve_export_ddo_children( array $ddo_map, array $ddo_direct_children, object $locator ) : object {
+
+		// already resolved by the caller (export ddo paths exist): use them
+			if (!empty($ddo_direct_children)) {
+				return parent::resolve_export_ddo_children($ddo_map, $ddo_direct_children, $locator);
+			}
+
+		// get the locator pointed section context and his relation_list request config
+			$datum		= $this->get_section_datum_from_locator($locator);
+			$context	= $datum->context ?? [];
+
+			$section_context = array_find($context, function($el) use ($locator){
+				return $el->section_tipo === $locator->section_tipo;
+			}) ?? (object)['request_config'=>[]];
+
+			// get the correct rqo (use only the dedalo api_engine)
+			$dd_request_config = array_find($section_context->request_config ?? [], function($el){
+				return $el->api_engine==='dedalo';
+			});
+
+		// section_id_tipo of the pointed section
+			$ar_section_id_tipo	= section::get_ar_children_tipo_by_model_name_in_section(
+				$locator->section_tipo,
+				['component_section_id'],
+				true, // bool from cache
+				true, // bool resolve_virtual
+				true, // bool recursive
+				true // search_exact
+			);
+			$section_id_tipo = reset($ar_section_id_tipo);
+
+			$ddo_section_id = new dd_object();
+				$ddo_section_id->set_tipo($section_id_tipo);
+				$ddo_section_id->set_section_tipo($locator->section_tipo);
+				$ddo_section_id->set_parent($this->tipo);
+
+		// ddo_map. section_id ddo + the pointed section relation_list ddo_map
+			$current_ddo_map = is_object($dd_request_config) && isset($dd_request_config->show)
+				? ($dd_request_config->show->ddo_map ?? [])
+				: [];
+			$resolved_ddo_map = [$ddo_section_id, ...$current_ddo_map];
+
+			$resolved_children = array_filter($resolved_ddo_map, function($el){
+				return $el->parent === $this->tipo;
+			});
+
+		return (object)[
+			'ddo_map'				=> $resolved_ddo_map,
+			'ddo_direct_children'	=> $resolved_children
+		];
+	}//end resolve_export_ddo_children
+
+
+
 }//end class component_relation_index

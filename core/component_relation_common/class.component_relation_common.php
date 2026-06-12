@@ -615,6 +615,282 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* Component driven recursion: for every data locator and every direct
+	* child ddo of this component in the ddo_map, the child component is
+	* instantiated and resolved; its atoms are merged extending the path.
+	* The child own segment carries the locator position (item_index), so
+	* row/column explosion is a tabulator decision — the legacy
+	* sub_columns_division flag and the request_config/column_obj instance
+	* injections are not ported (the ddo_map travels in the export_context).
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// request_config. The component own default; the legacy injected
+		// request_config is replaced by context->ddo_map
+			$request_config = isset($this->request_config)
+				? $this->request_config
+				: $this->build_request_config();
+			$dedalo_request_config = array_find($request_config, function($el){
+				return $el->api_engine==='dedalo';
+			});
+
+		// ddo_map. Export injection (context) wins, else the component default
+			$ddo_map = !empty($context->ddo_map)
+				? $context->ddo_map
+				: (is_object($dedalo_request_config) && isset($dedalo_request_config->show)
+					? ($dedalo_request_config->show->ddo_map ?? [])
+					: []);
+
+		// separators. legacy precedence: ddo > request_config->show > properties > joiner defaults
+			$properties			= $this->get_properties();
+			$fields_separator	= $context->ddo?->fields_separator
+				?? $dedalo_request_config?->show?->fields_separator
+				?? $properties?->fields_separator
+				?? null;
+			$records_separator	= $context->ddo?->records_separator
+				?? $dedalo_request_config?->show?->records_separator
+				?? $properties?->records_separator
+				?? null;
+
+		// own segment
+			$own_segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model'				=> $this->get_model(),
+				'fields_separator'	=> $fields_separator,
+				'records_separator'	=> $records_separator,
+				'item_index'		=> $context->item_index,
+				'section_id'		=> $context->item_section_id
+			]);
+			$base_path = [...$context->path_prefix, $own_segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data. locators
+			$data = $this->get_data() ?? [];
+
+		// direct children of this component in the ddo_map
+		// (component_relation_index recomputes them per locator, see hook)
+			$ddo_direct_children = array_filter($ddo_map, function($el){
+				return $el->parent === $this->tipo;
+			});
+			if (empty($ddo_direct_children) && get_called_class()!=='component_relation_index') {
+				debug_log(__METHOD__
+					. " WARNING! Empty ddo_direct_children for tipo: $this->tipo" .PHP_EOL
+					. 'ddo_map: ' . to_string($ddo_map) .PHP_EOL
+					. 'tipo: ' . to_string($this->tipo)
+					, logger::WARNING
+				);
+			}
+
+		foreach ($data as $current_key => $locator) {
+
+			// locator validations (as legacy get_grid_value)
+				if (empty($locator) || !isset($locator->section_tipo)) {
+					debug_log(__METHOD__
+						. ' Ignored empty or invalid locator' . PHP_EOL
+						. ' locator: ' . json_encode($locator)
+						, logger::ERROR
+					);
+					continue;
+				}
+				$tipo_is_valid = ontology_utils::check_tipo_is_valid($locator->section_tipo);
+				if (!$tipo_is_valid) {
+					debug_log(__METHOD__
+						. " Ignored locator with invalid target section. Install the missing TLD (".get_tld_from_tipo($locator->section_tipo).") or remove this locator from data " . PHP_EOL
+						. ' section_tipo: ' . to_string($locator->section_tipo) . PHP_EOL
+						. ' locator: ' . to_string($locator)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+			// per-locator children resolution (component_relation_index hook)
+				$resolved				= $this->resolve_export_ddo_children($ddo_map, $ddo_direct_children, $locator);
+				$current_ddo_map		= $resolved->ddo_map;
+				$current_ddo_children	= $resolved->ddo_direct_children;
+				if (empty($current_ddo_children)) {
+					continue;
+				}
+
+			foreach ($current_ddo_children as $ddo) {
+
+				// model check (as legacy)
+					if (!isset($ddo->model)) {
+						$ddo->model = ontology_node::get_model_by_tipo($ddo->tipo,true);
+						debug_log(__METHOD__
+							. " ddo without model ! Added calculated model: $ddo->model" . PHP_EOL
+							. ' ddo: ' . to_string($ddo)
+							, logger::WARNING
+						);
+					}
+					if (empty($ddo->model)) {
+						debug_log(__METHOD__
+							. " Ignored non existing ddo element (model is empty). Maybe the TLD is not installed " . PHP_EOL
+							. ' tipo: ' . to_string($ddo->tipo)
+							, logger::WARNING
+						);
+						continue;
+					}
+
+				// sub_ddo_map. descendant chain of this child in the ddo_map
+					$sub_ddo_map = $this->get_export_ddo_descendants($current_ddo_map, $ddo);
+
+				// cache. Children resolved deeper carry an injected ddo_map context;
+				// kept disabled for them as the legacy path did (parity / perf-neutral).
+				// Leaf children are cacheable.
+					$use_cache = empty($sub_ddo_map);
+
+				// the ddo can have multiple section_tipo (such as toponymy component_autocomplete)
+					$tmp_section_tipo		= $ddo->section_tipo;
+					$ddo_section_tipo		= is_array($tmp_section_tipo) ? reset($tmp_section_tipo) : $tmp_section_tipo;
+					$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo;
+
+				// lang / model
+					$translatable		= ontology_node::get_translatable($ddo->tipo);
+					$current_lang		= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+					$component_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
+
+				// if the component has a dataframe component, create his caller_dataframe to relate with the locator
+				// unified pairing: the key is the main data item id (locator->id)
+					$caller_dataframe = ($ddo->model === 'component_dataframe')
+						? (object)[
+							'section_tipo'			=> $ddo_section_tipo,
+							'id_key'				=> $locator->id ?? null,
+							'section_id_key'		=> $locator->id ?? $locator->section_id_key ?? null, // legacy alias
+							'section_tipo_key'		=> $locator->section_tipo_key ?? $this->get_section_tipo(),
+							'main_component_tipo'	=> $locator->main_component_tipo ?? $this->tipo
+						  ]
+						: null;
+
+				// create the child component with the ddo definition
+				// dataframe case: the data of the component_dataframe is inside the same section
+				// than the caller, so his section_tipo and section_id are the caller ones
+					$current_component = component_common::get_instance(
+						$component_model,
+						$ddo->tipo,
+						($ddo->model === 'component_dataframe')
+							? $this->section_id
+							: $locator->section_id,
+						$this->mode,
+						$current_lang,
+						($ddo->model === 'component_dataframe')
+							? $this->section_tipo
+							: $locator->section_tipo,
+						$use_cache,
+						$caller_dataframe
+					);
+					// set the locator to the new component, it will be used to know who created it
+					$current_component->set_locator($this->locator);
+
+				// child context. ddo_map and traversal position travel as arguments
+					$child_context = $context->descend(
+						$base_path, // array path_prefix
+						$sub_ddo_map, // array sub_ddo_map
+						$ddo, // object ddo
+						(int)$current_key, // int item_index
+						isset($locator->section_id) ? (int)$locator->section_id : null // int item_section_id
+					);
+
+				// merge the child atoms
+					$export_value->merge( $current_component->get_export_value($child_context) );
+			}//end foreach ($current_ddo_children as $ddo)
+
+			// parents. Optional ancestor chain of the locator target as a
+			// sibling 'parents' sub-column (export tool checkbox; mirrors the
+			// list-view ddinfo value_with_parents). One atom per ancestor,
+			// joined in the cell with ' > '. Targets without hierarchy
+			// (no component_relation_parent data) emit nothing.
+				if ($context->value_with_parents===true) {
+					$ar_parents_value = component_relation_common::get_locator_value(
+						$locator, // object locator
+						DEDALO_DATA_LANG, // string lang
+						true, // bool show_parents
+						null, // array|null ar_components_related
+						false // bool include_self (the term is already the main child value)
+					) ?? [];
+
+					if (!empty($ar_parents_value)) {
+						$parents_segment = new export_path_segment($locator->section_tipo, $this->tipo, (object)[
+							'sub_id'			=> 'parents',
+							'item_index'		=> (int)$current_key,
+							'section_id'		=> isset($locator->section_id) ? (int)$locator->section_id : null,
+							'fields_separator'	=> ' > '
+						]);
+						$parents_path = [...$base_path, $parents_segment];
+
+						$value_index = 0;
+						foreach ($ar_parents_value as $parent_value) {
+							if (empty($parent_value)) {
+								continue;
+							}
+							$export_value->add_atom( new export_atom($parents_path, $parent_value, (object)[
+								'value_index' => $value_index++
+							]) );
+						}
+					}
+				}
+		}//end foreach ($data as $current_key => $locator)
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
+	/**
+	* RESOLVE_EXPORT_DDO_CHILDREN
+	* Hook for per-locator ddo children resolution in get_export_value().
+	* Default: the given map and children are returned unchanged.
+	* component_relation_index overrides it to self-compute the ddo_map from
+	* the target section relation_list config (it has no export ddo paths).
+	* @param array $ddo_map
+	* @param array $ddo_direct_children
+	* @param object $locator
+	* @return object
+	* 	{ddo_map: array, ddo_direct_children: array}
+	*/
+	protected function resolve_export_ddo_children( array $ddo_map, array $ddo_direct_children, object $locator ) : object {
+
+		return (object)[
+			'ddo_map'				=> $ddo_map,
+			'ddo_direct_children'	=> $ddo_direct_children
+		];
+	}//end resolve_export_ddo_children
+
+
+
+	/**
+	* GET_EXPORT_DDO_DESCENDANTS
+	* All ddo_map elements that depend on the given ddo (recursive children chain)
+	* @param array $ddo_map
+	* @param object $dd_object
+	* @return array
+	*/
+	protected function get_export_ddo_descendants( array $ddo_map, object $dd_object ) : array {
+
+		$ar_children = [];
+		foreach ($ddo_map as $ddo) {
+			if ($ddo->parent===$dd_object->tipo) {
+				$ar_children[] = $ddo;
+				$result = $this->get_export_ddo_descendants($ddo_map, $ddo);
+				if (!empty($result)) {
+					$ar_children = [...$ar_children, ...$result];
+				}
+			}
+		}
+
+		return $ar_children;
+	}//end get_export_ddo_descendants
+
+
+
+	/**
 	* GET_DATA_WITH_REFERENCES
 	* Return the data to all components, except the components that has references calculated,
 	* like component_relation_related

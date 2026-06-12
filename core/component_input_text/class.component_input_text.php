@@ -128,6 +128,75 @@ class component_input_text extends component_string_common {
 
 
 	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One atom per data item in the current lang; when the current lang is
+	* empty, fallback items are emitted flagged as is_fallback.
+	* Note that the leaf segment fields_separator is set to the resolved
+	* records_separator because the legacy grid pre-joined the items with
+	* records_separator (flat output parity).
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// records_separator. resolved as the legacy get_grid_value
+			$properties			= $this->get_properties();
+			$records_separator	= $context->ddo?->records_separator
+				?? $properties?->records_separator
+				?? ' | ';
+
+		// own segment. items join with records_separator (legacy pre-join parity)
+			$segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model'				=> $this->get_model(),
+				'fields_separator'	=> $records_separator,
+				'records_separator'	=> $records_separator,
+				// relation traversal position (set by the calling relation via descend)
+				'item_index'		=> $context->item_index,
+				'section_id'		=> $context->item_section_id
+			]);
+			$path = [...$context->path_prefix, $segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data items. main lang first, fallback when empty
+			$data			= $this->get_data_lang();
+			$is_fallback	= false;
+			if (empty($data)) {
+				$data = $this->get_component_data_fallback(
+					$this->get_lang(), // string lang
+					DEDALO_DATA_LANG_DEFAULT // string main_lang
+				);
+				$is_fallback = true;
+			}
+			if (empty($data)) {
+				return $export_value;
+			}
+
+			$value_index = 0;
+			foreach ($data as $item) {
+				$item_value = $item->value ?? '';
+				// Handle case where value is an object (convert to JSON string)
+				if (is_object($item_value)) {
+					$item_value = json_encode($item_value);
+				}
+				$export_value->add_atom( new export_atom($path, $item_value, (object)[
+					'value_index'	=> $value_index++,
+					'lang'			=> $item->lang ?? $this->lang,
+					'is_fallback'	=> $is_fallback
+				]) );
+			}
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
+	/**
 	* GET_LIST_VALUE
 	* Overwrites the component_common method adding a special case
 	* resolution for time machine mode ('tm') and user Root (-1)

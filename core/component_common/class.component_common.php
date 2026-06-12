@@ -1623,39 +1623,17 @@ abstract class component_common extends common {
 					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 			}
 
-		// data
-			$data = $this->get_data();
+		// data + cell_type. Shared chokepoint with get_raw_export_value
+		// so the dedalo_data wire shape cannot drift between paths.
+			$raw_export_data	= $this->build_raw_export_data();
+			$data				= $raw_export_data->data;
+			$cell_type			= $raw_export_data->cell_type;
 
 		// get the total of locators of the data, it will be use to render the rows separated.
 			$row_count = 1; // sizeof($data);
 
 		// label
 			$label = $this->get_label();
-
-		// cell_type
-		// Exception for comoponent_section_id. As section_id must be used as int,
-		// avoid to use the json cell type to render it as int instead an array [3]
-			$cell_type = $this->get_model()==='component_section_id'
-				? 'section_id'
-				: 'json';
-
-		// dedalo_data wrapper
-		// Raw exported data is wrapped as {"dedalo_data": <dato>} to identify externally
-		// that the value is Dédalo format data and not any other generic value.
-		// The import process unwraps it transparently (see unwrap_dedalo_data).
-		// component_section_id is excluded: it must remain a plain int to be used
-		// as the record key on re-import. Null data is not wrapped (empty export cell).
-		// Note that the wrapper is an associative array because set_value() expects
-		// ?array; it serializes to JSON as the {"dedalo_data": ...} object.
-		// Components with paired dataframe rows ship them alongside the dato as
-		// {"dedalo_data": {"dato": <dato>, "dataframe": <frame locators>}} so the
-		// round-trip re-creates the pairing (see import_dataframe_data).
-			if ($cell_type!=='section_id' && $data!==null) {
-				$dataframe_data = $this->get_export_dataframe_data();
-				$data = ($dataframe_data!==null)
-					? ['dedalo_data' => ['dato' => $data, 'dataframe' => $dataframe_data]]
-					: ['dedalo_data' => $data];
-			}
 
 		// raw_value
 			$raw_value = new dd_grid_cell_object();
@@ -1669,6 +1647,100 @@ abstract class component_common extends common {
 
 		return $raw_value;
 	}//end get_raw_value
+
+
+
+	/**
+	* BUILD_RAW_EXPORT_DATA
+	* Shared chokepoint for the 'dedalo_raw' export wire shape, used by both
+	* get_raw_value() (legacy grid path) and get_raw_export_value() (atoms path).
+	*
+	* dedalo_data wrapper:
+	* Raw exported data is wrapped as {"dedalo_data": <dato>} to identify externally
+	* that the value is Dédalo format data and not any other generic value.
+	* The import process unwraps it transparently (see unwrap_dedalo_data).
+	* component_section_id is excluded: it must remain a plain int to be used
+	* as the record key on re-import. Null data is not wrapped (empty export cell).
+	* Note that the wrapper is an associative array because set_value() expects
+	* ?array; it serializes to JSON as the {"dedalo_data": ...} object.
+	* Components with paired dataframe rows ship them alongside the dato as
+	* {"dedalo_data": {"dato": <dato>, "dataframe": <frame locators>}} so the
+	* round-trip re-creates the pairing (see import_dataframe_data).
+	*
+	* @return object
+	* 	{data: array|null, cell_type: string}
+	*/
+	private function build_raw_export_data() : object {
+
+		// data
+			$data = $this->get_data();
+
+		// cell_type
+		// Exception for comoponent_section_id. As section_id must be used as int,
+		// avoid to use the json cell type to render it as int instead an array [3]
+			$cell_type = $this->get_model()==='component_section_id'
+				? 'section_id'
+				: 'json';
+
+		// dedalo_data wrapper (see method doc)
+			if ($cell_type!=='section_id' && $data!==null) {
+				$dataframe_data = $this->get_export_dataframe_data();
+				$data = ($dataframe_data!==null)
+					? ['dedalo_data' => ['dato' => $data, 'dataframe' => $dataframe_data]]
+					: ['dedalo_data' => $data];
+			}
+
+		return (object)[
+			'data'		=> $data,
+			'cell_type'	=> $cell_type
+		];
+	}//end build_raw_export_data
+
+
+
+	/**
+	* GET_RAW_EXPORT_VALUE
+	* Atoms based version of get_raw_value() for the 'dedalo_raw' export format.
+	* One atom per component: the value is the pre-encoded {"dedalo_data": ...}
+	* JSON string (byte-fixed here so the tabulator and the client emit it
+	* verbatim), or a plain int for component_section_id (record key on
+	* re-import), or null for empty data (empty export cell).
+	* Final: components must never override the raw wire shape.
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	final public function get_raw_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// shared chokepoint with get_raw_value()
+			$raw_export_data = $this->build_raw_export_data();
+
+		// path. Raw export does not recurse: single segment after the prefix
+			$segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model' => $this->get_model()
+			]);
+			$path = [...$context->path_prefix, $segment];
+
+		// scalar value
+			if ($raw_export_data->cell_type==='section_id') {
+				$data	= $raw_export_data->data;
+				$first	= is_array($data) ? reset($data) : $data;
+				$value	= isset($first) ? (int)$first : null;
+			}else{
+				$value = ($raw_export_data->data===null)
+					? null
+					: json_encode($raw_export_data->data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			}
+
+		return export_value::from_scalar(
+			$path,
+			$value,
+			(object)['cell_type' => $raw_export_data->cell_type],
+			$this->get_label(),
+			get_called_class()
+		);
+	}//end get_raw_export_value
 
 
 
@@ -1712,6 +1784,89 @@ abstract class component_common extends common {
 
 		return $flat_value;
 	}//end get_grid_flat_value
+
+
+
+	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract. Base implementation: one atom per data
+	* item, arrays/objects json_encoded (parity with get_grid_value base).
+	* Overwrite in every different specific component; relation components
+	* resolve their children and merge the child atoms extending the path.
+	*
+	* Replaces the polymorphic get_grid_value() tree for the export path:
+	* the result is always a flat list of scalar atoms whose structured
+	* paths carry column identity and relation item indexes
+	* (see core/dd_grid/class.export_atom.php).
+	*
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// own segment. Separators precedence: ddo override > properties > joiner default
+			$segment		= $this->build_export_path_segment($context);
+			$path			= [...$context->path_prefix, $segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data. One atom per item
+			$raw_data = $this->get_data();
+			if (empty($raw_data) || !is_array($raw_data)) {
+				return $export_value;
+			}
+
+			$is_translatable = $this->is_translatable();
+			foreach ($raw_data as $key => $item) {
+				// parity with get_grid_value base: arrays/objects as plain json_encode
+				$value = (is_array($item) || is_object($item))
+					? json_encode($item)
+					: $item;
+
+				$export_value->add_atom( new export_atom($path, $value, (object)[
+					'value_index'	=> (int)$key,
+					'lang'			=> $is_translatable ? $this->lang : null
+				]) );
+			}
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
+	/**
+	* BUILD_EXPORT_PATH_SEGMENT
+	* Builds the component own path segment for get_export_value().
+	* Separators precedence matches the legacy get_grid_value resolution:
+	* ddo override > component properties > null (joiner defaults ', ' / ' | ')
+	* @param export_context $context
+	* @return export_path_segment
+	*/
+	protected function build_export_path_segment( export_context $context ) : export_path_segment {
+
+		$properties	= $this->get_properties();
+		$ddo		= $context->ddo;
+
+		$fields_separator	= $ddo?->fields_separator
+			?? $properties?->fields_separator
+			?? null;
+		$records_separator	= $ddo?->records_separator
+			?? $properties?->records_separator
+			?? null;
+
+		return new export_path_segment($this->section_tipo, $this->tipo, (object)[
+			'model'				=> $this->get_model(),
+			'fields_separator'	=> $fields_separator,
+			'records_separator'	=> $records_separator,
+			// relation traversal position (set by the calling relation via descend)
+			'item_index'		=> $context->item_index,
+			'section_id'		=> $context->item_section_id
+		]);
+	}//end build_export_path_segment
 
 
 

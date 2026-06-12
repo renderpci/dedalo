@@ -576,6 +576,81 @@ class component_iri extends component_common {
 
 
 	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One atom per data item: iri and resolved title (dataframe paired label)
+	* joined with fields_separator, cell_type 'iri'.
+	* The leaf segment fields_separator is set to the resolved
+	* records_separator because the legacy grid pre-joined the items with
+	* records_separator (flat output parity).
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// separators. resolved as the legacy get_grid_value
+			$properties			= $this->get_properties();
+			$fields_separator	= $context->ddo?->fields_separator
+				?? $properties?->fields_separator
+				?? ', ';
+			$records_separator	= $context->ddo?->records_separator
+				?? $properties?->records_separator
+				?? ' | ';
+
+		// own segment. items join with records_separator (legacy pre-join parity)
+			$segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model'				=> $this->get_model(),
+				'fields_separator'	=> $records_separator,
+				'records_separator'	=> $records_separator,
+				// relation traversal position (set by the calling relation via descend)
+				'item_index'		=> $context->item_index,
+				'section_id'		=> $context->item_section_id
+			]);
+			$path = [...$context->path_prefix, $segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data items
+			$data = $this->get_data_lang();
+			if (empty($data)) {
+				return $export_value;
+			}
+
+			$value_index = 0;
+			foreach ($data as $current_value) {
+
+				$ar_parts = [];
+
+				// iri property
+					$current_iri = $current_value->iri ?? null;
+					if ($current_iri) {
+						$ar_parts[] = $current_iri;
+					}
+
+				// title property (resolved, never assigned back into live data;
+				// see get_grid_value note about the title duality)
+					$current_title = $this->resolve_title( $current_value );
+					if (!empty($current_title)) {
+						$ar_parts[] = $current_title;
+					}
+
+				$export_value->add_atom( new export_atom($path, implode($fields_separator, $ar_parts), (object)[
+					'cell_type'		=> 'iri',
+					'value_index'	=> $value_index++,
+					'lang'			=> $current_value->lang ?? $this->lang
+				]) );
+			}
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
+	/**
 	* GET_DIFFUSION_DATA
 	* Resolve the default diffusion data
 	* is used by the `diffusion_data`

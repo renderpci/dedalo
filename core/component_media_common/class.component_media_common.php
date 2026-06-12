@@ -310,6 +310,52 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* Single atom with the media URL, cell_type 'img'.
+	* URL absoluteness comes from the export_context (replaces the legacy
+	* $this->caller==='tool_export' switch)
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// own segment
+			$segment	= $this->build_export_path_segment($context);
+			$path		= [...$context->path_prefix, $segment];
+
+		// current_url. get from data
+			$data = $this->get_data();
+			if (isset($data)) {
+
+				$element_quality = ($this->mode==='edit')
+					? $this->get_default_quality()
+					: $this->get_thumb_quality();
+
+				$current_url = $this->get_url(
+					$element_quality, // string quality
+					false, // bool test_file
+					$context->absolute_urls, // bool absolute
+					false // bool default_add
+				);
+			}else{
+				$current_url = '';
+			}
+
+		return export_value::from_scalar(
+			$path,
+			$current_url,
+			(object)['cell_type' => 'img'],
+			$this->get_label(),
+			get_called_class()
+		);
+	}//end get_export_value
+
+
+
+	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a MYSQL field)

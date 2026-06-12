@@ -270,6 +270,65 @@ class component_date extends component_common {
 
 
 	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One atom per data item resolved with data_item_to_value().
+	* The leaf segment fields_separator is set to the resolved
+	* records_separator because the legacy grid pre-joined the items with
+	* records_separator (flat output parity). Empty items are dropped by
+	* the joiner (legacy kept empty slots between separators; accepted
+	* deviation, documented in the export plan).
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// records_separator. resolved as the legacy get_grid_value
+			$properties			= $this->get_properties();
+			$records_separator	= $context->ddo?->records_separator
+				?? $properties?->records_separator
+				?? ' | ';
+
+		// own segment. items join with records_separator (legacy pre-join parity)
+			$segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model'				=> $this->get_model(),
+				'fields_separator'	=> $records_separator,
+				'records_separator'	=> $records_separator,
+				// relation traversal position (set by the calling relation via descend)
+				'item_index'		=> $context->item_index,
+				'section_id'		=> $context->item_section_id
+			]);
+			$path = [...$context->path_prefix, $segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data items
+			$data = $this->get_data();
+			if (empty($data)) {
+				return $export_value;
+			}
+
+			$date_mode = $this->get_date_mode();
+			foreach ($data as $key => $current_data) {
+				$item_value = empty($current_data)
+					? ''
+					: self::data_item_to_value($current_data, $date_mode);
+
+				$export_value->add_atom( new export_atom($path, $item_value, (object)[
+					'value_index' => (int)$key
+				]) );
+			}
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
+	/**
 	* DATA_ITEM_TO_VALUE
 	* Converts each data item to value (one by one)
 	* based on $date_mode (range,period,time,date)

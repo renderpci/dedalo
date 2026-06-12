@@ -225,6 +225,49 @@ class component_3d extends component_media_common implements component_media_int
 
 
 	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* Single atom with the 3D model URL (edit mode) or posterframe URL,
+	* cell_type 'img'. URL absoluteness comes from the export_context
+	* (replaces the legacy $this->caller==='tool_export' switch)
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// own segment
+			$segment	= $this->build_export_path_segment($context);
+			$path		= [...$context->path_prefix, $segment];
+
+		// current_url. get from data
+			$data = $this->get_data();
+			if (isset($data)) {
+				$current_url = ($this->mode==='edit')
+					? $this->get_url(
+						$this->get_default_quality(), // string quality
+						false, // bool test_file
+						$context->absolute_urls, // bool absolute
+						false // bool default_add
+					  )
+					: $this->get_posterframe_url();
+			}else{
+				$current_url = '';
+			}
+
+		return export_value::from_scalar(
+			$path,
+			$current_url,
+			(object)['cell_type' => 'img'],
+			$this->get_label(),
+			get_called_class()
+		);
+	}//end get_export_value
+
+
+
+	/**
 	* GET_POSTERFRAME_FILE_NAME
 	*  like 'rsc35_rsc167_1.jpg'
 	* @return string $posterframe_file_name;

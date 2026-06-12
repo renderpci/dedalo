@@ -693,6 +693,156 @@ final class component_common_test extends BaseTestCase {
 
 
 	/**
+	* TEST_GET_EXPORT_VALUE
+	* Atoms based export contract: structural assertions for all fixture elements
+	* (per-component flat parity is asserted in each component own test)
+	* @return void
+	*/
+	public function test_get_export_value() {
+
+		$this->user_login();
+
+		// default data
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$export_value = $component->get_export_value();
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors' . PHP_EOL
+				.'$_ENV[DEDALO_LAST_ERROR]: ' . to_string($_ENV['DEDALO_LAST_ERROR']) ." ($element->model)"
+			);
+
+			$this->assertInstanceOf(export_value::class, $export_value, "($element->model)");
+
+			foreach ($export_value->atoms as $atom) {
+
+				$this->assertInstanceOf(export_atom::class, $atom, "($element->model)");
+
+				// atom values are strictly scalar or null
+				$this->assertTrue(
+					$atom->value===null || is_scalar($atom->value),
+					'expected scalar|null atom value. ' . gettype($atom->value) ." ($element->model)"
+				);
+
+				// path: non-empty list of export_path_segment, leaf resolvable
+				$this->assertNotEmpty($atom->path, "expected non empty atom path ($element->model)");
+				foreach ($atom->path as $segment) {
+					$this->assertInstanceOf(export_path_segment::class, $segment, "($element->model)");
+				}
+				$this->assertNotEmpty(
+					$atom->get_base_key(),
+					"expected non empty base_key ($element->model)"
+				);
+			}
+
+			// to_flat_string never fails and returns string
+			$this->assertTrue(
+				gettype($export_value->to_flat_string())==='string',
+				"expected to_flat_string string ($element->model)"
+			);
+		}//end foreach (get_elements() as $element)
+	}//end test_get_export_value
+
+
+
+	/**
+	* TEST_GET_RAW_EXPORT_VALUE
+	* The atoms raw path must match the legacy get_raw_value() wire shape
+	* exactly (shared build_raw_export_data chokepoint): decoded atom value
+	* equals the legacy grid value for every component
+	* @return void
+	*/
+	public function test_get_raw_export_value() {
+
+		$this->user_login();
+
+		// default data
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			// legacy reference
+				$legacy_raw = $component->get_raw_value();
+
+			// atoms path
+				$raw_export_value = $component->get_raw_export_value();
+
+			// some components initialize their data on first read (null -> []),
+			// e.g. component_relation_children computing references: recompute
+			// the legacy reference after the atoms call so both paths observe
+			// the same data state
+				$legacy_recheck = $component->get_raw_value();
+				if (json_encode($legacy_recheck->value)!==json_encode($legacy_raw->value)) {
+					$legacy_raw = $legacy_recheck;
+				}
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors' . PHP_EOL
+				.'$_ENV[DEDALO_LAST_ERROR]: ' . to_string($_ENV['DEDALO_LAST_ERROR']) ." ($element->model)"
+			);
+
+			$this->assertInstanceOf(export_value::class, $raw_export_value, "($element->model)");
+			$this->assertCount(1, $raw_export_value->atoms, "expected single raw atom ($element->model)");
+
+			$atom = $raw_export_value->atoms[0];
+			$this->assertSame(
+				$legacy_raw->cell_type,
+				$atom->cell_type,
+				"expected raw cell_type parity ($element->model)"
+			);
+
+			if ($atom->cell_type==='section_id') {
+				// plain int (record key on re-import) or null when empty
+				$legacy_first = is_array($legacy_raw->value) ? reset($legacy_raw->value) : $legacy_raw->value;
+				$expected = isset($legacy_first) ? (int)$legacy_first : null;
+				$this->assertSame($expected, $atom->value, "expected raw section_id parity ($element->model)");
+				continue;
+			}
+
+			if ($legacy_raw->value===null) {
+				$this->assertNull($atom->value, "expected null raw value parity ($element->model)");
+				continue;
+			}
+
+			// pre-encoded {"dedalo_data": ...} string: byte-equal to the legacy
+			// value encoded with the same flags (what the wire/CSV carries)
+				$this->assertTrue(
+					is_string($atom->value),
+					"expected pre-encoded raw string ($element->model)"
+				);
+				$this->assertSame(
+					json_encode($legacy_raw->value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+					$atom->value,
+					"expected raw value byte parity ($element->model)"
+				);
+		}//end foreach (get_elements() as $element)
+	}//end test_get_raw_export_value
+
+
+
+	/**
 	* TEST_UNWRAP_DEDALO_DATA
 	* @return void
 	*/
