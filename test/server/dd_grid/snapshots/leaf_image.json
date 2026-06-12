@@ -1,0 +1,27 @@
+{
+    "id": null,
+    "class_list": null,
+    "type": "column",
+    "label": "image",
+    "row_count": null,
+    "column_count": null,
+    "column_labels": null,
+    "fields_separator": null,
+    "records_separator": null,
+    "cell_type": "img",
+    "action": null,
+    "value": [
+        "/dedalo/media_monedaiberica/image/thumb/0/test99_test3_1.jpg"
+    ],
+    "fallback_value": null,
+    "data": null,
+    "render_label": null,
+    "column": null,
+    "ar_columns_obj": [
+        {
+            "id": "test3_test99"
+        }
+    ],
+    "features": null,
+    "model": "component_image"
+}

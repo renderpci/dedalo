@@ -1,0 +1,29 @@
+{
+    "id": null,
+    "class_list": null,
+    "type": "column",
+    "label": "iri",
+    "row_count": null,
+    "column_count": null,
+    "column_labels": null,
+    "fields_separator": ", ",
+    "records_separator": " | ",
+    "cell_type": "iri",
+    "action": null,
+    "value": [
+        ""
+    ],
+    "fallback_value": [
+        ""
+    ],
+    "data": [],
+    "render_label": null,
+    "column": null,
+    "ar_columns_obj": [
+        {
+            "id": "test3_test140"
+        }
+    ],
+    "features": null,
+    "model": "component_iri"
+}

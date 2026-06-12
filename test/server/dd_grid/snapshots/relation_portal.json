@@ -1,0 +1,77 @@
+{
+    "id": null,
+    "class_list": null,
+    "type": "column",
+    "label": "portal",
+    "row_count": 1,
+    "column_count": 1,
+    "column_labels": null,
+    "fields_separator": ", ",
+    "records_separator": " | ",
+    "cell_type": null,
+    "action": null,
+    "value": [
+        {
+            "id": null,
+            "class_list": null,
+            "type": "row",
+            "label": null,
+            "row_count": null,
+            "column_count": null,
+            "column_labels": null,
+            "fields_separator": null,
+            "records_separator": null,
+            "cell_type": null,
+            "action": null,
+            "value": [
+                {
+                    "id": null,
+                    "class_list": null,
+                    "type": "column",
+                    "label": "section_id",
+                    "row_count": 1,
+                    "column_count": null,
+                    "column_labels": null,
+                    "fields_separator": null,
+                    "records_separator": null,
+                    "cell_type": "section_id",
+                    "action": null,
+                    "value": [
+                        1
+                    ],
+                    "fallback_value": null,
+                    "data": null,
+                    "render_label": null,
+                    "column": null,
+                    "ar_columns_obj": [
+                        {
+                            "id": "test3_test80_test3_test102",
+                            "group": "test3_test80_test3"
+                        }
+                    ],
+                    "features": null,
+                    "model": "component_section_id"
+                }
+            ],
+            "fallback_value": null,
+            "data": null,
+            "render_label": null,
+            "column": null,
+            "ar_columns_obj": null,
+            "features": null,
+            "model": null
+        }
+    ],
+    "fallback_value": null,
+    "data": null,
+    "render_label": null,
+    "column": null,
+    "ar_columns_obj": [
+        {
+            "id": "test3_test80_test3_test102",
+            "group": "test3_test80_test3"
+        }
+    ],
+    "features": null,
+    "model": "component_portal"
+}

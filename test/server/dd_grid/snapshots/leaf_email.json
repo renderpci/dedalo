@@ -1,0 +1,27 @@
+{
+    "id": null,
+    "class_list": null,
+    "type": "column",
+    "label": "email",
+    "row_count": null,
+    "column_count": null,
+    "column_labels": null,
+    "fields_separator": ", ",
+    "records_separator": " | ",
+    "cell_type": "text",
+    "action": null,
+    "value": [
+        "{\"value\":\"mail@example.org\",\"lang\":\"lg-nolan\"}"
+    ],
+    "fallback_value": null,
+    "data": null,
+    "render_label": null,
+    "column": null,
+    "ar_columns_obj": [
+        {
+            "id": "test3_test208"
+        }
+    ],
+    "features": null,
+    "model": "component_email"
+}
