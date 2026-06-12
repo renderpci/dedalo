@@ -21,7 +21,8 @@ class dd_diffusion_api {
 			'get_diffusion_info',
 			'validate',
 			'get_ontology_map',
-			'retry_pending_deletions'
+			'retry_pending_deletions',
+			'rebuild_media_index'
 		];
 
 		/**
@@ -571,6 +572,124 @@ class dd_diffusion_api {
 		return $response;
 	}//end retry_pending_deletions
 
+
+
+	/**
+	 * REBUILD_MEDIA_INDEX
+	 * Full resync of the media publication markers (the filesystem allowlist
+	 * the web server checks to authorize anonymous media access) from the
+	 * publication databases. Used for initial migration and drift repair.
+	 *
+	 * PHP resolves the SQL targets {database_name, table_name, section_tipo}
+	 * from the diffusion ontology (the Bun engine never interprets the
+	 * ontology) and delegates the diff-sync to the Bun action of the same
+	 * name. MariaDB is a Bun responsibility.
+	 *
+	 * @param object $rqo {
+	 *   action: "rebuild_media_index",
+	 *   options: {}
+	 * }
+	 * @return object $response
+	 */
+	public static function rebuild_media_index(object $rqo): object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// SEC: restrict to global admins (cross-section operation over diffusion targets)
+		if (security::is_global_admin(logged_user_id()) !== true) {
+			$response->errors[] = 'insufficient permissions';
+			$response->msg = 'Error. Insufficient permissions to rebuild the media index.';
+			return $response;
+		}
+
+		try {
+			$targets = self::resolve_media_index_targets();
+
+			$bun_response = diffusion_api_client::call((object)[
+				'action'	=> 'rebuild_media_index',
+				'targets'	=> $targets
+			]);
+
+			$response->result	= $bun_response->result ?? false;
+			$response->msg		= $bun_response->msg ?? 'Error. Empty engine response';
+			if (!empty($bun_response->errors)) {
+				$response->errors = array_merge($response->errors, (array)$bun_response->errors);
+			}
+			$response->markers	= $bun_response->markers ?? 0;
+			$response->targets	= count($targets);
+
+		} catch (Exception $e) {
+			$response->msg = 'Error: ' . $e->getMessage();
+			$response->errors[] = $e->getMessage();
+			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
+		}
+
+
+		return $response;
+	}//end rebuild_media_index
+
+
+	/**
+	 * RESOLVE_MEDIA_INDEX_TARGETS
+	 * Walks the diffusion ontology and returns every SQL publication target
+	 * as {database_name, table_name, section_tipo} objects for the Bun
+	 * rebuild_media_index action. Covers all publication databases defined
+	 * in the ontology ("published in ANY database" union semantics).
+	 *
+	 * @return array $targets
+	 */
+	public static function resolve_media_index_targets(): array {
+
+		$targets	= [];
+		$seen		= []; // "db|table|section" dedupe
+
+		foreach (diffusion_utils::get_ar_diffusion_map_elements() as $map_element) {
+
+			$element_tipo	= $map_element->element_tipo;
+			$resolved		= diffusion_utils::resolve_node_with_alias($element_tipo);
+			$type			= $resolved->properties->diffusion->type ?? null;
+			if ($type!=='sql' && $type!=='socrata') {
+				continue; // file-based formats have no publication tables
+			}
+
+			$database_name = diffusion_utils::get_database_name_for_element($element_tipo);
+			if (empty($database_name)) {
+				debug_log(__METHOD__
+					. " Ignored media index target without database name" . PHP_EOL
+					. ' element_tipo: ' . $element_tipo
+					, logger::WARNING
+				);
+				continue;
+			}
+
+			$ar_sections = diffusion_utils::get_diffusion_sections_from_diffusion_element($element_tipo);
+			foreach ($ar_sections as $section_tipo) {
+
+				$section_node = diffusion_utils::get_section_node_for_element($element_tipo, $section_tipo);
+				$table_name = $section_node->label ?? null;
+				if (empty($table_name)) {
+					continue;
+				}
+
+				$key = $database_name .'|'. $table_name .'|'. $section_tipo;
+				if (isset($seen[$key])) {
+					continue;
+				}
+				$seen[$key] = true;
+
+				$targets[] = (object)[
+					'database_name'	=> $database_name,
+					'table_name'	=> $table_name,
+					'section_tipo'	=> $section_tipo
+				];
+			}
+		}
+
+		return $targets;
+	}//end resolve_media_index_targets
 
 
 	/**
