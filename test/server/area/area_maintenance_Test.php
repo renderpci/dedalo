@@ -142,6 +142,7 @@ final class area_maintenance_test extends BaseTestCase {
 			'export_hierarchy',
 			'lock_components',
 			'make_backup',
+			'media_control',
 			'move_lang',
 			'move_locator',
 			'move_tld',
