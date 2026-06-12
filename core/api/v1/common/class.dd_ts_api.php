@@ -170,51 +170,26 @@ final class dd_ts_api {
 			$default_limit = 300;
 			$current_pagination = $pagination;
 
-		// children. Calculated from given locator
+		// children. Calculated from given locator.
+		// Delegates to ts_object::get_children_data: single implementation of
+		// the children + pagination logic (previously a literal copy here).
 			if (empty($children) && $section_id && $children_tipo) {
 
-				// Calculate children from parent
-					$model = ontology_node::get_model_by_tipo($children_tipo,true);
-					if ($model!=='component_relation_children') {
-						$response->errors[] = 'Wrong model';
-						$response->msg .= ' Expected model (component_relation_children) but calculated: ' . $model;
-						return $response;
-					}
-
-				// component_relation_children
-					$component_relation_children = component_common::get_instance(
-						$model,
-						$children_tipo,
-						$section_id,
-						'list_thesaurus',
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-
-					// Set default pagination if not defined
-					if (empty($current_pagination)) {
-						$current_pagination = (object)[
-							'limit' => $default_limit,
-							'offset' => 0,
-						];
-					}
-
-					// Calculate total if not set
-					if (!isset($current_pagination->total)) {
-						$data = $component_relation_children->get_data();
-						$current_pagination->total = (is_countable($data) ? count($data) : 0);
-					}
-					// Fix pagination to the component (used when get_data_paginated is called from the class)
-					$component_relation_children->pagination = $current_pagination;
-
-				// Get data (paginated or full based on actual need, not just total count)
-					$use_pagination = $current_pagination->limit > 0 && $current_pagination->total > $current_pagination->limit;
-					$children = $use_pagination
-						? $component_relation_children->get_data_paginated()
-						: $component_relation_children->get_data();
+				$ts_object = new ts_object(
+					$section_id,
+					$section_tipo,
+					$ts_object_options
+				);
+				return $ts_object->get_children_data((object)[
+					'children_tipo'		=> $children_tipo,
+					'default_limit'		=> $default_limit,
+					'area_model'		=> $area_model,
+					'ts_object_options'	=> $ts_object_options,
+					'pagination'		=> $current_pagination
+				]);
 			}//end if (empty($children))
 
-		// parse_child_data
+		// parse_child_data. Direct children list received case
 			$ar_children_data = ts_object::parse_child_data(
 				$children,
 				$area_model,
@@ -289,169 +264,211 @@ final class dd_ts_api {
 				return $response;
 			}
 
-		// new section. Create a new empty section
-			$new_section = section::get_instance($section_tipo);
-			$new_section_id = $new_section->create_record();
-			if (empty($new_section_id)) {
-				$response->msg = 'Error on create new section from parent. Stopped add_child process !';
-				debug_log(__METHOD__
-					." $response->msg "
-					, logger::ERROR
-				);
-				$response->errors[] = 'Failed create new section from parent';
-				return $response;
-			}
+		// Validations. All checks that can abort the process run BEFORE creating
+		// any record, so a failed precondition can never leave an orphan section.
 
-		// section map
-			$section_map = section::get_section_map( $section_tipo );
+			// section map
+				$section_map = section::get_section_map( $section_tipo );
 
-		// is_descriptor: set new section component 'is_descriptor' value
-			if (!isset($section_map->thesaurus->is_descriptor)) {
-				debug_log(__METHOD__.
-					" Invalid section_map 'is_descriptor' property from section:" . PHP_EOL
-					.' section_tipo: ' . $section_tipo . PHP_EOL
-					.' section_map: ' . to_string($section_map)
-					, logger::DEBUG
-				);
-				$response->errors[] = 'Invalid section_map \'is_descriptor\' property from section';
-			}else{
-				if ($section_map->thesaurus->is_descriptor!==false) {
-					$component_tipo	= $section_map->thesaurus->is_descriptor;
-					$model			= ontology_node::get_model_by_tipo($component_tipo,true);
-					$component		= component_common::get_instance(
-						$model,
-						$component_tipo,
-						$new_section_id,
-						'edit', // note that mode edit autosave default value
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-					$component->get_data();
-					debug_log(__METHOD__
-						." Saved default data to 'is_descriptor' " . PHP_EOL
-						.' component_tipo: ' . $component_tipo . PHP_EOL
-						.' model: ' . $model . PHP_EOL
-						.' section_id: ' . to_string($new_section_id)
+			// is_descriptor: check section_map property
+				if (!isset($section_map->thesaurus->is_descriptor)) {
+					debug_log(__METHOD__.
+						" Invalid section_map 'is_descriptor' property from section:" . PHP_EOL
+						.' section_tipo: ' . $section_tipo . PHP_EOL
+						.' section_map: ' . to_string($section_map)
 						, logger::DEBUG
 					);
+					$response->errors[] = 'Invalid section_map \'is_descriptor\' property from section';
 				}
-			}
 
-		// is_indexable: set is_indexable default value
-			if (!isset($section_map->thesaurus->is_indexable)) {
-				debug_log(__METHOD__
-					." Invalid section_map 'is_indexable' property from section." . PHP_EOL
-					.' section_tipo: ' . $section_tipo . PHP_EOL
-					.' section_map: ' . to_string($section_map)
-					, logger::DEBUG
-				);
-				$response->errors[] = 'Invalid section_map \'is_indexable\' property from section';
-			}else{
-				if ($section_map->thesaurus->is_indexable!==false) {
-					$component_tipo	= $section_map->thesaurus->is_indexable;
-					$model			= ontology_node::get_model_by_tipo($component_tipo,true);
-					$component		= component_common::get_instance(
-						$model,
-						$component_tipo,
-						$new_section_id,
-						'edit', // note that mode edit forces auto-save default value
-						DEDALO_DATA_NOLAN,
-						$section_tipo
-					);
-					$component->get_data();
+			// is_indexable: check section_map property
+				if (!isset($section_map->thesaurus->is_indexable)) {
 					debug_log(__METHOD__
-						." Saved default data to 'is_indexable' " . PHP_EOL
-						.' component_tipo: ' . $component_tipo . PHP_EOL
-						.' model: ' . $model . PHP_EOL
-						.' section_id: ' . to_string($new_section_id)
+						." Invalid section_map 'is_indexable' property from section." . PHP_EOL
+						.' section_tipo: ' . $section_tipo . PHP_EOL
+						.' section_map: ' . to_string($section_map)
 						, logger::DEBUG
 					);
+					$response->errors[] = 'Invalid section_map \'is_indexable\' property from section';
 				}
-			}
 
-		// ontology TLD. It must inherit the TLD
-			$is_ontology = get_section_id_from_tipo( $section_tipo ) === '0';
-			if( $is_ontology ){
-				$component_tipo	= 'ontology7'; // component_input_text TLD
-				$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
+			// component_relation_parent tipo. Resolved before record creation: without
+			// it the new record could never be linked into the tree.
+				$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true);
+				$component_relation_parent_tipo = $ar_parent_tipo[0] ?? null;
+				if (empty($component_relation_parent_tipo)) {
+					$response->msg = 'Error on get component_relation_parent from section. Model does not exists';
+					debug_log(__METHOD__.
+						" $response->msg " . PHP_EOL
+						.' section_tipo: ' . $section_tipo . PHP_EOL
+						.' model: component_relation_parent' . PHP_EOL
+						.' ar_parent_tipo: ' . to_string($ar_parent_tipo)
+						, logger::ERROR
+					);
+					$response->errors[] = 'Invalid component_relation_parent from section: '.$section_tipo;
+					return $response;
+				}
 
-				$tld_source_component = component_common::get_instance(
-					$model_name,
-					$component_tipo,
-					$section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$section_tipo,
-					false
-				);
-				$source_data = $tld_source_component->get_data();
+		// Mutation. Record creation, default values and parent link run as one
+		// transaction: any failure rolls back everything (no orphan sections).
+		try {
 
-				$tld_target_component = component_common::get_instance(
-					$model_name,
-					$component_tipo,
-					$new_section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$section_tipo,
-					false
-				);
-				$tld_target_component->set_data( $source_data );
-				$tld_target_component->save();
-			}
+			$new_section_id = DBi::transaction(function() use ($section_tipo, $section_id, $section_map, $component_relation_parent_tipo) {
 
-		// component_relation_parent
-		// Is created in the new created record and the current section_id is added as parent
-			$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true);
-			$component_relation_parent_tipo = $ar_parent_tipo[0] ?? null;
-			if (empty($component_relation_parent_tipo)) {
-				$response->msg = 'Error on get component_relation_parent from section. Model does not exists';
-				debug_log(__METHOD__.
-					" $response->msg " . PHP_EOL
-					.' section_tipo: ' . $section_tipo . PHP_EOL
-					.' model: component_relation_parent' . PHP_EOL
-					.' ar_parent_tipo: ' . to_string($ar_parent_tipo)
-					, logger::ERROR
-				);
-				$response->errors[] = 'Invalid component_relation_parent from section: '.$section_tipo;
-				return $response;
-			}
-			$model_name = ontology_node::get_model_by_tipo($component_relation_parent_tipo, true);
-			$component_relation_parent = component_common::get_instance(
-				$model_name,
-				$component_relation_parent_tipo,
-				$new_section_id,
-				'list',
-				DEDALO_DATA_NOLAN,
-				$section_tipo,
-				false
-			);
-
-			// add
-			$locator = new locator();
-				$locator->set_section_tipo($section_tipo);
-				$locator->set_section_id($section_id);
-				$locator->set_from_component_tipo($component_relation_parent_tipo);
-				$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
-
-			$added = (bool)$component_relation_parent->add_parent( $locator );
-			if ($added===true) {
-
-				// Save relation parent data
-				$component_relation_parent->save();
-
-				// All is OK. Result is new created section section_id
-				$response->result	= (int)$new_section_id;
-				$response->msg		= empty($response->errors)
-					? 'OK. Added child successfully'
-					: 'Warning! Added child with errors';
-
-				// debug
-					if(SHOW_DEBUG===true) {
-						$debug = new stdClass();
-							$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
-						$response->debug = $debug;
+				// Lock the parent node: serializes set_child_order counting against
+				// concurrent add_child/update_parent_data on the same parent.
+					if (matrix_db_manager::acquire_node_lock($section_tipo, $section_id)===false) {
+						throw new RuntimeException('Unable to acquire parent node lock');
 					}
-			}//end if ($added===true)
+
+				// new section. Create a new empty section
+					$new_section = section::get_instance($section_tipo);
+					$new_section_id = $new_section->create_record();
+					if (empty($new_section_id)) {
+						throw new RuntimeException('Failed create new section from parent');
+					}
+
+				// is_descriptor: set new section component 'is_descriptor' value
+					if (isset($section_map->thesaurus->is_descriptor) && $section_map->thesaurus->is_descriptor!==false) {
+						$component_tipo	= $section_map->thesaurus->is_descriptor;
+						$model			= ontology_node::get_model_by_tipo($component_tipo,true);
+						$component		= component_common::get_instance(
+							$model,
+							$component_tipo,
+							$new_section_id,
+							'edit', // note that mode edit autosave default value
+							DEDALO_DATA_NOLAN,
+							$section_tipo
+						);
+						$component->get_data();
+						debug_log(__METHOD__
+							." Saved default data to 'is_descriptor' " . PHP_EOL
+							.' component_tipo: ' . $component_tipo . PHP_EOL
+							.' model: ' . $model . PHP_EOL
+							.' section_id: ' . to_string($new_section_id)
+							, logger::DEBUG
+						);
+					}
+
+				// is_indexable: set is_indexable default value
+					if (isset($section_map->thesaurus->is_indexable) && $section_map->thesaurus->is_indexable!==false) {
+						$component_tipo	= $section_map->thesaurus->is_indexable;
+						$model			= ontology_node::get_model_by_tipo($component_tipo,true);
+						$component		= component_common::get_instance(
+							$model,
+							$component_tipo,
+							$new_section_id,
+							'edit', // note that mode edit forces auto-save default value
+							DEDALO_DATA_NOLAN,
+							$section_tipo
+						);
+						$component->get_data();
+						debug_log(__METHOD__
+							." Saved default data to 'is_indexable' " . PHP_EOL
+							.' component_tipo: ' . $component_tipo . PHP_EOL
+							.' model: ' . $model . PHP_EOL
+							.' section_id: ' . to_string($new_section_id)
+							, logger::DEBUG
+						);
+					}
+
+				// ontology TLD. It must inherit the TLD
+					$is_ontology = get_section_id_from_tipo( $section_tipo ) === '0';
+					if( $is_ontology ){
+						$component_tipo	= 'ontology7'; // component_input_text TLD
+						$model_name		= ontology_node::get_model_by_tipo($component_tipo, true);
+
+						$tld_source_component = component_common::get_instance(
+							$model_name,
+							$component_tipo,
+							$section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tipo,
+							false
+						);
+						$source_data = $tld_source_component->get_data();
+
+						$tld_target_component = component_common::get_instance(
+							$model_name,
+							$component_tipo,
+							$new_section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tipo,
+							false
+						);
+						$tld_target_component->set_data( $source_data );
+						if ($tld_target_component->save()===false) {
+							throw new RuntimeException('Failed save TLD value to new section');
+						}
+					}
+
+				// component_relation_parent
+				// Is created in the new created record and the current section_id is added as parent
+					$model_name = ontology_node::get_model_by_tipo($component_relation_parent_tipo, true);
+					$component_relation_parent = component_common::get_instance(
+						$model_name,
+						$component_relation_parent_tipo,
+						$new_section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo,
+						false
+					);
+
+					// add
+					$locator = new locator();
+						$locator->set_section_tipo($section_tipo);
+						$locator->set_section_id($section_id);
+						$locator->set_from_component_tipo($component_relation_parent_tipo);
+						$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
+
+					$added = (bool)$component_relation_parent->add_parent( $locator );
+					if ($added!==true) {
+						throw new RuntimeException('Failed add parent locator to new section');
+					}
+
+					// Save relation parent data
+					if ($component_relation_parent->save()===false) {
+						throw new RuntimeException('Failed save relation parent data');
+					}
+
+				return $new_section_id;
+			});
+
+		} catch (Throwable $e) {
+
+			// In-memory instance caches may hold state written before the rollback;
+			// drop them so worker mode does not serve stale data.
+			self::clear_instance_caches();
+
+			$response->msg = 'Error on add_child. Process rolled back: ' . $e->getMessage();
+			debug_log(__METHOD__
+				." $response->msg " . PHP_EOL
+				.' section_tipo: ' . $section_tipo . PHP_EOL
+				.' section_id: ' . to_string($section_id)
+				, logger::ERROR
+			);
+			$response->errors[] = 'add_child failed: ' . $e->getMessage();
+			return $response;
+		}
+
+		// cache invalidation. New node changes the parent's children set
+			ts_object::invalidate_node($section_tipo, $section_id);
+
+		// All is OK. Result is new created section section_id
+			$response->result	= (int)$new_section_id;
+			$response->msg		= empty($response->errors)
+				? 'OK. Added child successfully'
+				: 'Warning! Added child with errors';
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time = exec_time_unit($start_time,'ms').' ms';
+				$response->debug = $debug;
+			}
 
 
 		return $response;
@@ -506,62 +523,131 @@ final class dd_ts_api {
 				return $response;
 			}
 
-		// component_relation_parent
-			$parent_tipo	= section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true)[0];
-			$model_name		= ontology_node::get_model_by_tipo($parent_tipo,true);
-			$lang			= DEDALO_DATA_NOLAN;
-			$component_relation_parent = component_common::get_instance(
-				$model_name,
-				$parent_tipo,
-				$section_id,
-				'list',
-				$lang,
-				$section_tipo
-			);
+		// Validations. All checks that can abort the process run BEFORE mutating.
 
-		// remove old parent
-			$locator = new locator();
-				$locator->set_section_tipo($old_parent_section_tipo);
-				$locator->set_section_id($old_parent_section_id);
-				$locator->set_from_component_tipo($parent_tipo);
-				$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
-			$result = $component_relation_parent->remove_parent($locator);
-			if (!$result) {
-				$response->errors[] = 'remove old parent failed';
-				$response->msg .= ' Remove old parent locator failed: ' . to_string($locator);
-				return $response;
-			}
+			// component_relation_parent tipo
+				$ar_parent_tipo	= section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true);
+				$parent_tipo	= $ar_parent_tipo[0] ?? null;
+				if (empty($parent_tipo)) {
+					$response->errors[] = 'invalid component_relation_parent';
+					$response->msg = "Error. Unable to resolve component_relation_parent from section ($section_tipo)";
+					return $response;
+				}
+
+			// descendant cycle guard. The node cannot be moved under itself or
+			// under its own descendant. Checked here (besides add_parent) to give
+			// the client a clean, distinct error before any mutation.
+				$is_self_target = ($new_parent_section_tipo===$section_tipo && (int)$new_parent_section_id===(int)$section_id);
+				if ($is_self_target || true===component_relation_parent::is_ancestor($section_tipo, $section_id, $new_parent_section_tipo, (int)$new_parent_section_id)) {
+					$response->errors[] = 'cycle';
+					$response->msg = 'Error. The node cannot be moved under itself or under its own descendant';
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' section_tipo: ' . $section_tipo . PHP_EOL
+						. ' section_id: ' . to_string($section_id) . PHP_EOL
+						. ' new_parent_section_tipo: ' . $new_parent_section_tipo . PHP_EOL
+						. ' new_parent_section_id: ' . to_string($new_parent_section_id)
+						, logger::ERROR
+					);
+					return $response;
+				}
+
+			// component_relation_parent instance
+				$model_name	= ontology_node::get_model_by_tipo($parent_tipo,true);
+				$lang		= DEDALO_DATA_NOLAN;
+				$component_relation_parent = component_common::get_instance(
+					$model_name,
+					$parent_tipo,
+					$section_id,
+					'list',
+					$lang,
+					$section_tipo
+				);
+
+		// Mutation. Remove old parent, add new parent, save and recalculate orders
+		// as one transaction: a failure mid-way can no longer orphan the node.
+		try {
+
+			DBi::transaction(function() use ($component_relation_parent, $parent_tipo, $old_parent_section_tipo, $old_parent_section_id, $new_parent_section_tipo, $new_parent_section_id) {
+
+				// Lock both parent nodes (deterministic order to avoid deadlocks):
+				// serializes child order counting against concurrent mutations.
+					$lock_keys = [
+						[$old_parent_section_tipo, (int)$old_parent_section_id],
+						[$new_parent_section_tipo, (int)$new_parent_section_id]
+					];
+					usort($lock_keys, function($a, $b) {
+						return strcmp($a[0].'_'.$a[1], $b[0].'_'.$b[1]);
+					});
+					foreach ($lock_keys as $lock_key) {
+						if (matrix_db_manager::acquire_node_lock($lock_key[0], $lock_key[1])===false) {
+							throw new RuntimeException('Unable to acquire parent node lock: ' . $lock_key[0] .'_'. $lock_key[1]);
+						}
+					}
+
+				// remove old parent
+					$locator = new locator();
+						$locator->set_section_tipo($old_parent_section_tipo);
+						$locator->set_section_id($old_parent_section_id);
+						$locator->set_from_component_tipo($parent_tipo);
+						$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
+					$result = $component_relation_parent->remove_parent($locator);
+					if (!$result) {
+						throw new RuntimeException('Remove old parent locator failed: ' . to_string($locator));
+					}
+					debug_log(__METHOD__
+						. " Removed old locator from data " . PHP_EOL
+						. ' locator: ' . to_string($locator)
+						, logger::DEBUG
+					);
+
+				// add new parent
+					$locator = new locator();
+						$locator->set_section_tipo($new_parent_section_tipo);
+						$locator->set_section_id($new_parent_section_id);
+						$locator->set_from_component_tipo($parent_tipo);
+						$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
+					$result = $component_relation_parent->add_parent($locator);
+					if (!$result) {
+						throw new RuntimeException('Add new parent locator failed: ' . to_string($locator));
+					}
+					debug_log(__METHOD__
+						. " Added new locator to data " . PHP_EOL
+						. ' locator: ' . to_string($locator)
+						, logger::DEBUG
+					);
+
+				// save
+					$save_result = $component_relation_parent->save();
+					if ($save_result===false) {
+						throw new RuntimeException('Save parent relation data failed');
+					}
+
+				// Recalculate the order of the siblings
+					$component_relation_parent->recalculate_sibling_orders($old_parent_section_tipo, (int)$old_parent_section_id);
+			});
+
+		} catch (Throwable $e) {
+
+			// In-memory instance caches may hold state written before the rollback;
+			// drop them so worker mode does not serve stale data.
+			self::clear_instance_caches();
+
+			$response->msg = 'Error. Update parent data failed and was rolled back: ' . $e->getMessage();
 			debug_log(__METHOD__
-				. " Removed old locator from data " . PHP_EOL
-				. ' locator: ' . to_string($locator)
-				, logger::DEBUG
+				. " $response->msg " . PHP_EOL
+				. ' section_tipo: ' . $section_tipo . PHP_EOL
+				. ' section_id: ' . to_string($section_id)
+				, logger::ERROR
 			);
+			$response->errors[] = 'update_parent_data failed: ' . $e->getMessage();
+			return $response;
+		}
 
-		// add new parent
-			$locator = new locator();
-				$locator->set_section_tipo($new_parent_section_tipo);
-				$locator->set_section_id($new_parent_section_id);
-				$locator->set_from_component_tipo($parent_tipo);
-				$locator->set_type(DEDALO_RELATION_TYPE_PARENT_TIPO);
-			$result = $component_relation_parent->add_parent($locator);
-			if (!$result) {
-				$response->errors[] = 'add new parent failed';
-				$response->msg .= ' Add new parent locator failed: ' . to_string($locator);
-				return $response;
-			}
-			debug_log(__METHOD__
-				. " Added new locator to data " . PHP_EOL
-				. ' locator: ' . to_string($locator)
-				, logger::DEBUG
-			);
-
-		// save
-			$save_result = $component_relation_parent->save();
-
-		// Recalculate the order of the siblins
-			if($save_result) {
-				$component_relation_parent->recalculate_sibling_orders($old_parent_section_tipo, (int)$old_parent_section_id);
-			}
+		// cache invalidation. Moved node and both parents changed
+			ts_object::invalidate_node($section_tipo, $section_id);
+			ts_object::invalidate_node($old_parent_section_tipo, $old_parent_section_id);
+			ts_object::invalidate_node($new_parent_section_tipo, $new_parent_section_id);
 
 		// response
 			$response->result	= true;
@@ -631,13 +717,45 @@ final class dd_ts_api {
 				return $response;
 			}
 
-		// sort
-			$result = component_relation_children::sort_children(
-				$section_tipo,
-				$ar_locators,
-				$parent_section_tipo,
-				(int)$parent_section_id
-			);
+		// sort. All per-child order saves run as one transaction holding the
+		// parent node lock, so a concurrent move/reorder cannot interleave.
+			try {
+
+				$result = DBi::transaction(function() use ($section_tipo, $ar_locators, $parent_section_tipo, $parent_section_id) {
+
+					if (matrix_db_manager::acquire_node_lock($parent_section_tipo, (int)$parent_section_id)===false) {
+						throw new RuntimeException('Unable to acquire parent node lock');
+					}
+
+					return component_relation_children::sort_children(
+						$section_tipo,
+						$ar_locators,
+						$parent_section_tipo,
+						(int)$parent_section_id
+					);
+				});
+
+			} catch (Throwable $e) {
+
+				// In-memory instance caches may hold state written before the rollback;
+				// drop them so worker mode does not serve stale data.
+				self::clear_instance_caches();
+
+				$response->msg = 'Error. Save order failed and was rolled back: ' . $e->getMessage();
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' section_tipo: ' . $section_tipo . PHP_EOL
+					. ' parent: ' . $parent_section_tipo . '_' . to_string($parent_section_id)
+					, logger::ERROR
+				);
+				$response->errors[] = 'save_order failed: ' . $e->getMessage();
+				return $response;
+			}
+
+		// cache invalidation. Sibling order under this parent changed
+			if ($result!==false) {
+				ts_object::invalidate_node($parent_section_tipo, $parent_section_id);
+			}
 
 		// response
 			$response->msg = $result===false
@@ -655,6 +773,22 @@ final class dd_ts_api {
 
 		return $response;
 	}//end save_order
+
+
+
+	/**
+	* CLEAR_INSTANCE_CACHES
+	* Drops the in-memory component and section_record instance caches.
+	* Called after a transaction rollback: cached instances may hold data
+	* written before the rollback and, in worker mode, would otherwise be
+	* served as current state on subsequent requests.
+	* @return void
+	*/
+	private static function clear_instance_caches() : void {
+
+		component_instances_cache::clear();
+		section_record_instances_cache::clear();
+	}//end clear_instance_caches
 
 
 
