@@ -1508,18 +1508,16 @@ abstract class component_common extends common {
 	/**
 	* GET_VALUE
 	* Get the string value of the components.
-	* Use dd_grid to resolve his value
-	* first it get the dd_grid_value
-	* second it flat the dd_grid to obtain a string
+	* Flat-string facade over the atoms export contract: resolves
+	* get_export_value() with a default export_context (component default
+	* ddo_map for relations, relative media URLs, no parents) and joins
+	* the atoms with the legacy resolve_value() semantics
+	* (see export_value::to_flat_string, parity tested per model).
 	* @return string|null $value
-	* 	dd_grid_cell_object
 	*/
 	public function get_value() : ?string {
 
-		$grid_value	= $this->get_grid_value();
-		$value		= dd_grid_cell_object::resolve_value($grid_value);
-
-		return $value;
+		return $this->get_export_value()->to_flat_string();
 	}//end get_value
 
 
