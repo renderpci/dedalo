@@ -143,7 +143,7 @@ final class export_value_parity_test extends BaseTestCase {
 
 		// bust the term session cache: earlier tests in the same process may
 		// have resolved chain records BEFORE the seeding (stale empty values)
-			ts_object::$term_by_locator_data_cache = [];
+			ts_object::clear();
 
 		// expected chain from the same resolver the feature reuses
 			$locator = (object)[

@@ -1203,7 +1203,7 @@ final class tool_export_test extends BaseTestCase {
 					$this->assertNotFalse($term_component->Save(), 'fixture seed: failed saving the parent term');
 				}
 			}
-			ts_object::$term_by_locator_data_cache = [];
+			ts_object::clear();
 
 		// export column: portal (test80) resolving the target section_id (test102)
 			$build_portal_ddo = function(bool $with_parents) : object {

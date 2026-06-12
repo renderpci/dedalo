@@ -46,6 +46,14 @@
 *     }
  * ]
  */
+
+// ts_node_repository. Batched raw row access used by the tree hot path
+// (lives in this directory, outside the one-class-per-dir autoload convention)
+require_once DEDALO_CORE_PATH . '/ts_object/class.ts_node_repository.php';
+// ts_term_resolver. Term resolution and its request-scope cache
+require_once DEDALO_CORE_PATH . '/ts_object/class.ts_term_resolver.php';
+
+
 class ts_object {
 
 
@@ -109,13 +117,6 @@ class ts_object {
 		 * @var ?string $ts_parent
 		 */
 		public ?string $ts_parent = null;
-
-		/**
-		 * Static cache mapping locators to their term data.
-		 * Avoids repeated database queries for the same term lookups.
-		 * @var array $term_by_locator_data_cache
-		 */
-		public static array $term_by_locator_data_cache = [];
 
 		/**
 		 * Static cache for resolved child thesaurus objects.
@@ -292,6 +293,11 @@ class ts_object {
 			$component_order_model = ontology_node::get_model_by_tipo($component_order_tipo);
 		}
 
+		// Prefetch. Batched order + is_indexable resolution for all locators
+		// (one query per section_tipo group) replacing the per-child component
+		// instantiations below. On failure (null) the legacy path runs unchanged.
+		$prefetched_info = ts_node_repository::fetch_node_info($locators);
+
 		foreach ($locators as $key => $locator) {
 
 			// Validate locator has required properties
@@ -316,8 +322,17 @@ class ts_object {
 			// set order of locator in the ts_options
 			// $ts_options->order = $key+1;
 
+			// prefetched node info (order + is_indexable from one batched query)
+			$node_info = $prefetched_info[$section_tipo . '_' . (int)$section_id] ?? null;
+
 			// Set order from component number value
-			if (!empty($component_order_model) && !empty($component_order_tipo)) {
+			if ($node_info!==null) {
+				$ts_options->order = !empty($component_order_tipo)
+					? $node_info->order
+					: null;
+				$ts_options->is_indexable = $node_info->is_indexable;
+			} else if (!empty($component_order_model) && !empty($component_order_tipo)) {
+				// legacy fallback: per-child order component load
 				$component = component_common::get_instance(
 					$component_order_model,
 					$component_order_tipo,
@@ -365,8 +380,11 @@ class ts_object {
 	 */
 	public function get_data() : object {
 
-		// Is index-able check
-		$is_indexable = self::is_indexable($this->section_tipo, $this->section_id);
+		// Is index-able check. Prefetched (batched) by parse_child_data when
+		// available; resolved per node otherwise.
+		$is_indexable = isset($this->options->is_indexable)
+			? (bool)$this->options->is_indexable
+			: self::is_indexable($this->section_tipo, $this->section_id);
 
 		// Permissions calculation
 		$permissions_button_new		= $this->get_permissions_element('button_new');
@@ -483,19 +501,30 @@ class ts_object {
 				];
 			}
 
-			// Calculate total if not set
+			// Calculate total if not set. SQL count avoids loading every child
+			// row just to count it (falls back to the load-and-count path).
 			if (!isset($current_pagination->total)) {
-				$data = $component_relation_children->get_data();
-				$current_pagination->total = (is_countable($data) ? count($data) : 0);
+				$total = component_relation_children::count_children(
+					$this->section_id,
+					$this->section_tipo,
+					$children_tipo
+				);
+				if ($total===null) {
+					$data = $component_relation_children->get_data();
+					$total = (is_countable($data) ? count($data) : 0);
+				}
+				$current_pagination->total = $total;
 			}
 			// Fix pagination to the component (used when get_data_paginated is called from the class)
 			$component_relation_children->pagination = $current_pagination;
 
 		// Get data (paginated or full based on actual need, not just total count)
+		// Note: get_data() returns null for nodes without children; normalize
+		// to an empty array (parse_child_data expects an array).
 			$use_pagination = $current_pagination->limit > 0 && $current_pagination->total > $current_pagination->limit;
 			$children = $use_pagination
 				? $component_relation_children->get_data_paginated()
-				: $component_relation_children->get_data();
+				: ($component_relation_children->get_data() ?? []);
 
 		// parse_child_data
 			$ar_children_data = ts_object::parse_child_data(
@@ -542,6 +571,19 @@ class ts_object {
 		}
 
 		$descriptor_value = ($type==='descriptor') ? 1 : 2;  # 1 for descriptors, 2 for non descriptors
+
+		// Batched resolution: one query per section_tipo group instead of one
+		// component load per child. Falls back to the legacy loop on failure.
+		$batched_flags = ts_node_repository::batch_descriptor_flags($ar_children);
+		if ($batched_flags!==null) {
+			foreach ($ar_children as $current_locator) {
+				$key = $current_locator->section_tipo . '_' . (int)$current_locator->section_id;
+				if (isset($batched_flags[$key]) && $batched_flags[$key]===$descriptor_value) {
+					return true;
+				}
+			}
+			return false;
+		}
 
 		// Local cache to avoid repetitive DB/Config lookups for the same section_tipo
 		$cache_models = [];
@@ -736,62 +778,14 @@ class ts_object {
 
 	/**
 	* GET_TERM_DATO_BY_LOCATOR
+	* Delegate of ts_term_resolver::get_term_dato_by_locator (kept here because
+	* diffusion/export/portal code calls it on ts_object).
 	* @param object $locator
 	* @return array|null $final_value
 	*/
 	public static function get_term_dato_by_locator( object $locator ) : ?array {
 
-		// check valid object
-			if (!is_object($locator) || !property_exists($locator, 'section_tipo')) {
-				if(SHOW_DEBUG===true) {
-					#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
-					debug_log(__METHOD__
-						." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !"
-						, logger::ERROR
-					);
-				}
-				return null;
-			}
-
-		$section_map	= section::get_section_map($locator->section_tipo);
-		$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
-
-		$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
-		$section_id		= $locator->section_id;
-		$section_tipo	= $locator->section_tipo;
-
-		if(empty($ar_tipo) || empty($section_id) || empty($section_tipo)) {
-			debug_log(__METHOD__
-				." ERROR on get term. ar_tipo is empty or section_id or section_tipo is empty. NULL VALUE IS RETURNED !"
-				, logger::ERROR
-			);
-			return null;
-		}
-
-		$ar_value = [];
-		foreach ($ar_tipo as $tipo) {
-
-			$model		= ontology_node::get_model_by_tipo($tipo,true);
-			$component	= component_common::get_instance(
-				$model,
-				$tipo,
-				$section_id,
-				'list',
-				DEDALO_DATA_LANG,
-				$section_tipo
-			);
-			$data = $component->get_data();
-
-			if (!empty($data)) {
-				$ar_value = [...$ar_value, ...$data];
-			}
-		}//end foreach ($ar_tipo as $tipo) {
-
-		// final value
-			$final_value = $ar_value;
-
-
-		return $final_value;
+		return ts_term_resolver::get_term_dato_by_locator($locator);
 	}//end get_term_dato_by_locator
 
 
@@ -799,6 +793,8 @@ class ts_object {
 	/**
 	 * GET_TERM_BY_LOCATOR
 	 * Retrieves the string representation of a term given its locator.
+	 * Delegate of ts_term_resolver::get_term_by_locator (kept here because
+	 * diffusion/export/portal code calls it on ts_object).
 	 *
 	 * @param object $locator
 	 * @param string $lang
@@ -807,102 +803,39 @@ class ts_object {
 	 */
 	public static function get_term_by_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) : ?string {
 
-		$valor = null;
-
-		// check locator->section_tipo mandatory property
-			if (!property_exists($locator, 'section_tipo')) {
-				if(SHOW_DEBUG===true) {
-					#throw new Exception("Error Processing Request. locator is not object: ".to_string($locator), 1);
-					debug_log(__METHOD__
-						." ERROR on get term. locator is not of type object: ".gettype($locator)." FALSE VALUE IS RETURNED !"
-						, logger::ERROR
-					);
-				}
-				return $valor; // null
-			}
-
-		// Cache control (session)
-			$cache_uid = $locator->section_tipo.'_'.$locator->section_id.'_'.$lang;
-			if ($from_cache===true && isset(self::$term_by_locator_data_cache[$cache_uid])) {
-				return self::$term_by_locator_data_cache[$cache_uid];
-			}
-
-		// thesaurus_map conditional value
-			$section_map	= section::get_section_map($locator->section_tipo);
-			$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
-			if ($thesaurus_map===false) {
-
-				$valor = $locator->section_tipo .'_'. $locator->section_id ;
-				if(isset($locator->component_tipo))
-					$valor .= '_'. $locator->component_tipo;
-				if(isset($locator->tag_id))
-					$valor .= '_'. $locator->tag_id;
-
-			}else{
-
-				$term		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term]; // source could be an array or string
-				$ar_valor	= [];
-				foreach ($term as $tipo) {
-
-					$parent			= $locator->section_id;
-					$section_tipo	= $locator->section_tipo;
-					$model_name		= ontology_node::get_model_by_tipo($tipo,true);
-					// debug
-						// if(SHOW_DEBUG===true) {
-						// 	$real_model_name 	= ontology_node::get_model_by_tipo($tipo,true);
-						// 	if ($real_model_name!==$model_name) {
-						// 		trigger_error("Error. modelo_name of component $tipo must be $model_name. $#real_model_name is defined");#
-						// 	}
-						// }
-					$component = component_common::get_instance(
-						$model_name,
-						$tipo,
-						$parent,
-						'list',
-						$lang,
-						$section_tipo
-					);
-					$current_value = $component->get_value();
-
-					if (empty($current_value)) {
-						$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
-						$data = $component->get_data();
-						// get_value_with_fallback_from_dato_full( $dato_full_json, $decorate_untranslated=false, $main_lang=DEDALO_DATA_LANG_DEFAULT)
-						$current_value = component_string_common::get_value_with_fallback_from_data(
-							$data,
-							true,
-							$main_lang,
-							$lang
-						);
-					}
-
-					if (!empty($current_value)) {
-						$ar_valor[] = $current_value;
-					}
-				}
-				$valor = implode(', ', $ar_valor);
-			}
-
-		/*
-			# En proceso. De momento devuelve el locator en formato json, sin resolver..
-			if (!isset($valor)) {
-				$valor = json_encode($locator);
-			}
-
-			if(SHOW_DEBUG===true) {
-				$valor .= " <span class=\"debug_info notes\">".json_encode($locator)."</span>";
-			}
-			*/
-
-		// cache control
-			if (count(self::$term_by_locator_data_cache) >= 1000) {
-				self::$term_by_locator_data_cache = [];
-			}
-			self::$term_by_locator_data_cache[$cache_uid] = $valor;
-
-
-		return $valor;
+		return ts_term_resolver::get_term_by_locator($locator, $lang, $from_cache);
 	}//end get_term_by_locator
+
+
+
+	/**
+	* INVALIDATE_NODE
+	* Targeted cache eviction after a tree mutation (add_child, move, reorder):
+	* drops the node's cached term strings and the resolved children cache
+	* (sqo-hash keyed: tree mutations invalidate broadly and it is cheap to rebuild).
+	* @param string $section_tipo
+	* @param int|string $section_id
+	* @return void
+	*/
+	public static function invalidate_node( string $section_tipo, int|string $section_id ) : void {
+
+		ts_term_resolver::invalidate_node($section_tipo, $section_id);
+		self::$resolved_child_cache = [];
+	}//end invalidate_node
+
+
+
+	/**
+	* CLEAR
+	* Full static cache reset. Registered in worker cache_manager (RoadRunner)
+	* so long-running workers never serve tree data cached in a previous request.
+	* @return void
+	*/
+	public static function clear() : void {
+
+		ts_term_resolver::clear();
+		self::$resolved_child_cache = [];
+	}//end clear
 
 
 

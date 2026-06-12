@@ -68,11 +68,20 @@ final class cache_manager {
 			// }
 		});
 
-		// hierarchy
+		// hierarchy — main lang map, section map elements, section instances
 		$this->register('hierarchy', function(): void {
-			// if (class_exists('\hierarchy') && method_exists('\hierarchy', 'clear')) {
-			// 	\hierarchy::clear();
-			// }
+			if (class_exists('\hierarchy', false)) {
+				\hierarchy::clear();
+			}
+		});
+
+		// ts_object — term resolution cache + resolved children cache.
+		// Stale across requests in worker mode otherwise (a term edited in one
+		// request would keep serving its old cached string in the next).
+		$this->register('ts_object', function(): void {
+			if (class_exists('\ts_object', false)) {
+				\ts_object::clear();
+			}
 		});
 
 		// component_common
