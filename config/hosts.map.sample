@@ -1,0 +1,9 @@
+# hosts.map — copy to /private/hosts.map (outside the web root).
+# Maps a request host to a profile name in config/profiles/<profile>.env.
+# Replaces the legacy /private/config.inc  switch($_SERVER['SERVER_NAME']).
+# Format: host=profile  (one per line; '*' is the fallback). Profile selection
+# precedence: DEDALO_PROFILE/DEDALO_ENV env var > this map > none.
+archive.example.org=archive
+pre.example.org=archive_pre
+localhost=dev
+*=production

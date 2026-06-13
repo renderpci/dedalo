@@ -1,13 +1,26 @@
 # Configuration
 
-Dédalo has four different config files in the ../dedalo/config/ directory:
+Dédalo uses a **layered configuration architecture**. `config/config.php` is a
+thin entry point; the bootstrap (`config/bootstrap/`) loads flat `key=value`
+text layers, types and merges them, and emits the `DEDALO_*` constants the rest
+of the code uses. Secrets live in `/private/.env`, outside the web root.
 
-* config.php
-* config_db.php
-* config_areas
-* config_core.php
+> See **[Configuration & bootstrap architecture](./bootstrap_architecture.md)**
+> for the full picture: layers, precedence, the schema manifest, profiles,
+> secrets and the validation tools. The notes below cover the individual config
+> files.
 
-Every file configure a specific part of the installation.
+Config files in the `../dedalo/config/` directory:
+
+* `config.php` — entry point (copy of `sample.config.php`); requires the bootstrap kernel
+* `defaults.env` — canonical declarative defaults (`key=value`, version-controlled, no secrets)
+* `config_db.php` — database connection (optional once credentials move to `/private/.env`)
+* `config_areas.php` — area access allow/deny lists
+* `config_core.php` — auto-managed runtime state (generated; do not edit by hand)
+* `profiles/<name>.env` — optional per-environment / per-entity overlays
+
+Real per-deployment values and secrets live in `/private/.env` (outside the web
+root, never version-controlled). Start from `config/.env.dist`.
 
 The configuration files are "static" files that is necessary update manually, because these files has your database connection (with name, passwords, etc) and other specific parameters for your installation.
 
@@ -97,11 +110,14 @@ This config file is used by Dédalo to set and get the status of the installatio
 
 Every config file has its own parameters that need to be changed with the your own project environment.
 
-1. Changing parameters of global [Dédalo configuration file](./config.md#changing-parameters-of-global-dédalo-config-file).
-2. Changing parameters of [database configuration file](./config_db.md#changing-parameters-of-dédalo-database-config-file).
+1. Understand the [configuration & bootstrap architecture](./bootstrap_architecture.md) (layers, precedence, secrets, tools).
+2. Put secrets and per-deployment values in `/private/.env` (start from `config/.env.dist`); override only the keys that differ from `defaults.env`.
+3. Changing parameters of global [Dédalo configuration file](./config.md#changing-parameters-of-global-dédalo-config-file).
+4. Changing parameters of [database configuration file](./config_db.md#changing-parameters-of-dédalo-database-config-file).
    1. Work system [configuration](./config_db.md#work-system-database-variables)
    2. Diffusion system [configuration](./config_db.md#diffusion-system-database-variables)
-3. Changing parameters of [areas configuration file](./config_areas.md#changing-parameters-of-dédalo-areas-config-file).
-4. Implement all [thesaurus dependencies](thesaurus_dependeces.md).
-5. Optional: configure the [media protection (media file access control)](./media_protection.md).
-6. Optional: review [search configuration and access control](./search.md).
+5. Changing parameters of [areas configuration file](./config_areas.md#changing-parameters-of-dédalo-areas-config-file).
+6. Implement all [thesaurus dependencies](thesaurus_dependeces.md).
+7. Optional: configure the [media protection (media file access control)](./media_protection.md).
+8. Optional: review [search configuration and access control](./search.md).
+9. Validate the declarative layer: `php config/bootstrap/dev/lint_config.php`.

@@ -10,9 +10,10 @@ Dédalo is a Free and Open Source software develop abstract objects with a ontol
 
 3. [Configuration](./config/index.md)
 
-    1. [Configuration of Dédalo](./config/config.md)
-    2. [Configuration of database](./config/config_db.md)
-    3. [Configuration of areas](./config/config_areas.md)
+    1. [Bootstrap architecture (layers, secrets, profiles)](./config/bootstrap_architecture.md)
+    2. [Configuration of Dédalo](./config/config.md)
+    3. [Configuration of database](./config/config_db.md)
+    4. [Configuration of areas](./config/config_areas.md)
 
 4. [Management](./management/index.md)
 

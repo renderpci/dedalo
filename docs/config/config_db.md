@@ -1,5 +1,12 @@
 # Changing parameters of Dédalo database config file
 
+> **Secrets in `/private/.env`.** Database credentials can now live in
+> `/private/.env` (outside the web root) instead of this file. The bootstrap
+> registry sources DB connection constants from `/private/.env` and emits any
+> this file does not already define, so existing installs keep working unchanged
+> while new installs may leave the secret lines out of `config_db.php`. See
+> [Configuration & bootstrap architecture](./bootstrap_architecture.md#secrets-privateenv).
+
 ./dedalo/config/config_db.php
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/

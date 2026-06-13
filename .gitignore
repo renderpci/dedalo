@@ -20,6 +20,16 @@ config/*
 !config/dd_tipos.php
 !config/version.inc
 !/core/ontology/v5/config/config_ontology.php
+# new bootstrap architecture (shippable code + canonical defaults, no secrets)
+!config/bootstrap/
+config/bootstrap/dev/snapshots/
+!config/defaults.env
+!config/.env.dist
+!config/hosts.map.sample
+!config/profiles/
+# per-install / secret layers stay ignored:
+#   config/config.php config/config_db.php config/config_core.php
+#   config/state.json  and  /private/.env  (out of webroot)
 
 # various
 acc

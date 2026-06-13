@@ -425,59 +425,26 @@ final class install_config_manager {
 
 			}else{
 
-				if(!file_exists($file)) {
-
-					if(!file_put_contents($file, '')) {
-						$response->msg = 'Error (1). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: ' . $file;
-						debug_log(__METHOD__." ".$response->msg, logger::ERROR);
-						return $response;
-					}
+				// Atomic write via dd_config_state: parse existing define() map,
+				// set DEDALO_INSTALL_STATUS, regenerate config_core.php (temp + rename).
+				if (!class_exists('dd_config_state', false)) {
+					require_once DEDALO_CONFIG_PATH . '/bootstrap/class.dd_config_state.php';
+				}
+				$ok = dd_config_state::set_literal('DEDALO_INSTALL_STATUS', "'".$status."'", $file);
+				if (!$ok) {
+					$response->msg = 'Error. It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: '.$file;
+					debug_log(__METHOD__
+						. ' ' . $response->msg .PHP_EOL
+						. 'file: '.$file
+						, logger::ERROR
+					);
+					return $response;
 				}
 
-				$content = file_get_contents($file);
+				$response->result	= true;
+				$response->msg		= 'All ready';
 
-				// add vars
-				if (strpos($content, 'DEDALO_INSTALL_STATUS')===false) {
-
-					// line
-					$line = PHP_EOL . 'define(\'DEDALO_INSTALL_STATUS\', \''.$status.'\');';
-					// Write the contents to the file,
-					// using the FILE_APPEND flag to append the content to the end of the file
-					// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
-					if(!file_put_contents($file, $line, FILE_APPEND | LOCK_EX)) {
-
-						$response->msg = 'Error (2). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: '.$file;
-						debug_log(__METHOD__
-							. ' ' . $response->msg .PHP_EOL
-							. 'file: '.$file
-							, logger::ERROR
-						);
-						return $response;
-					}
-
-					$response->result	= true;
-					$response->msg		= 'All ready';
-
-					debug_log(__METHOD__." Added config_auto line with constant: DEDALO_INSTALL_STATUS  ", logger::DEBUG);
-
-
-				}elseif (strpos($content, 'DEDALO_INSTALL_STATUS')!==false && strpos($content, '\'DEDALO_INSTALL_STATUS\', \''.$status.'\'')===false) {
-
-					// replace line to updated value
-					$content = preg_replace('/define\(\'DEDALO_INSTALL_STATUS\',.+\);/', 'define(\'DEDALO_INSTALL_STATUS\', \''.$status.'\');', $content);
-					// Write the contents to the file,
-					// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
-					if(!file_put_contents($file, $content, LOCK_EX)) {
-						$response->msg = 'Error (3). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: ' . $file;
-						debug_log(__METHOD__." ".$response->msg, logger::ERROR);
-						return $response;
-					}
-
-					$response->result	= true;
-					$response->msg		= 'All ready';
-
-					debug_log(__METHOD__." Changed config_auto content with constant: DEDALO_INSTALL_STATUS = ''.$status.'' ".to_string(), logger::DEBUG);
-				}
+				debug_log(__METHOD__." Set config_core constant: DEDALO_INSTALL_STATUS = '".$status."' ", logger::DEBUG);
 			}
 
 		// refresh session cached data. Delete all session data

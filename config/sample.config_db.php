@@ -1,6 +1,17 @@
 <?php
 
 // Reviewed: 05-10-2022
+//
+// NOTE (layered bootstrap): database credentials can now live in /private/.env
+// (outside the web root) instead of here. The bootstrap registry sources DB
+// connection constants from /private/.env and emits any that this file does
+// NOT already define, so:
+//   - Existing installs keep working unchanged (the defines below win).
+//   - New installs may leave the secret lines out of this file and set
+//     DEDALO_DATABASE_CONN / DEDALO_USERNAME_CONN / DEDALO_PASSWORD_CONN /
+//     MYSQL_DEDALO_* in /private/.env instead. See config/.env.dist.
+// Whatever a constant ends up as, the SEC-094 sentinel guard still refuses
+// sample-default secrets when DEDALO_ENFORCE_SECRET_SENTINELS=true.
 
 
 

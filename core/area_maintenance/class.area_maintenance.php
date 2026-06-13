@@ -943,25 +943,19 @@ class area_maintenance extends area_common {
 		}
 
 		// config_core file (config_core.php)
-		$config = install::get_config();
-		$file_path = $config->config_core_file_path;
+			$config = install::get_config();
+			$file_path = $config->config_core_file_path;
 
-		// content string from file
-		$content = file_get_contents($file_path);
-
-		// add vars
-		if (strpos($content, $name) === false) {
-
-			// file do not exists or const DEDALO_MAINTENANCE_MODE_CUSTOM it's not defined case
-
-			// line
-			$line = PHP_EOL . "define('$name', " . $write_value . ");";
-			// Write the contents to the file,
-			// using the FILE_APPEND flag to append the content to the end of the file
-			// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
-			if (!file_put_contents($file_path, $line, FILE_APPEND | LOCK_EX)) {
-
-				$response->msg = 'Error (2). It\'s not possible set the constant, review the PHP permissions to write in Dédalo directory: ' . $file_path;
+		// Atomic write. dd_config_state parses the existing define() map,
+		// applies this single change, and regenerates config_core.php via a
+		// temp file + rename() (no more preg_replace / FILE_APPEND on live PHP
+		// source, which could half-write executable code under a concurrent read).
+			if (!class_exists('dd_config_state', false)) {
+				require_once DEDALO_CONFIG_PATH . '/bootstrap/class.dd_config_state.php';
+			}
+			$ok = dd_config_state::set_literal($name, $write_value, $file_path);
+			if ($ok!==true) {
+				$response->msg = 'Error. It\'s not possible set the constant, review the PHP permissions to write in Dédalo directory: ' . $file_path;
 				debug_log(
 					__METHOD__
 					. ' ' . $response->msg . PHP_EOL
@@ -977,39 +971,10 @@ class area_maintenance extends area_common {
 
 			debug_log(
 				__METHOD__
-				. " Added config_core line with constant: $name  "
+				. " Set config_core constant: $name = '" . to_string($value) . "' "
 				,
 				logger::DEBUG
 			);
-
-		} elseif (strpos($content, $name) !== false) {
-
-			// file and constant exists like 'DEDALO_MAINTENANCE_MODE_CUSTOM'
-
-			// replace line to updated value
-			$content = preg_replace(
-				'/define\(\'' . $name . '\',.+\);/',
-				'define(\'' . $name . '\', ' . $write_value . ');',
-				$content
-			);
-			// Write the contents to the file,
-			// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
-			if (!file_put_contents($file_path, $content, LOCK_EX)) {
-				$response->msg = 'Error (3). It\'s not possible set the constant, review the PHP permissions to write in Dédalo directory: ' . $file_path;
-				debug_log(__METHOD__ . " " . $response->msg, logger::ERROR);
-				return $response;
-			}
-
-			$response->result = true;
-			$response->msg = 'All ready';
-
-			debug_log(
-				__METHOD__
-				. " Changed config_core content with constant: $name = '" . to_string($value) . "' "
-				,
-				logger::DEBUG
-			);
-		}
 
 
 		return $response;
