@@ -58,44 +58,11 @@ render_area_thesaurus.prototype.list = async function(options) {
 				// prevent to re-create content_data again
 					const content_data = self.node.content_data
 
-				// render. Search : parse_search_result with ts_object
-					// Identify root nodes from search results and wait for them to be rendered
-					const result_data = data.ts_search.result || []
-					const root_items = result_data.filter(item => item.ts_parent === 'root')
-
-					if (root_items.length > 0) {
-						// Get instances for root nodes with exact same parameters as render_root_term
-						const root_promises = root_items.map(async (item) => {
-							const instance = await ts_object.get_instance({
-								section_tipo			: item.section_tipo,
-								section_id				: item.section_id,
-								children_tipo			: item.children_tipo, // CRITICAL: must match render_root_term
-								thesaurus_mode			: self.context?.thesaurus_mode || 'default',
-								ts_parent				: 'root',
-								// others
-								caller					: self,
-								linker					: self.linker, // usually a portal component instance
-								thesaurus_view_mode		: self.thesaurus_view_mode,
-								is_root_node			: true,
-								area_model				: self.model,
-								is_ontology				: self.model === 'area_ontology'
-							})
-
-							// Wait for render if not already rendered
-							if (instance.status !== 'rendered') {
-								return new Promise((resolve) => {
-									const token = event_manager.subscribe('render_' + instance.id, () => {
-										event_manager.unsubscribe(token)
-										resolve()
-									})
-								})
-							}
-						})
-
-						// Wait for all roots to be ready
-						await Promise.all(root_promises)
-					}
-
+				// render. Search : parse_search_result with ts_object.
+					// parse_search_result() (phase 1: build_search_instances) is what creates and
+					// renders the root instances. Do NOT pre-wait here for their 'render_<id>'
+					// event before calling it: that wait is circular and deadlocks navigation
+					// (the interface freezes on every search).
 					const ts_object_instance = await ts_object.get_instance({
 						// key options
 						section_tipo			: self.section_tipo,
@@ -162,44 +129,11 @@ render_area_thesaurus.prototype.list = async function(options) {
 				dd_request_idle_callback(
 					async () => {
 
-						// Identify root nodes from search results and wait for them to be rendered
-						const result_data = data.ts_search.result || []
-						const root_items = result_data.filter(item => item.ts_parent === 'root')
-
-						if (root_items.length > 0) {
-							// Get instances for root nodes with exact same parameters as render_root_term
-							const root_promises = root_items.map(async (item) => {
-								const instance = await ts_object.get_instance({
-									section_tipo			: item.section_tipo,
-									section_id				: item.section_id,
-									children_tipo			: item.children_tipo, // CRITICAL: must match render_root_term
-									thesaurus_mode			: self.context?.thesaurus_mode || 'default',
-									ts_parent				: 'root',
-									// others
-									caller					: self,
-									linker					: self.linker,
-									thesaurus_view_mode		: self.thesaurus_view_mode,
-									is_root_node			: true,
-									area_model				: self.model,
-									is_ontology				: self.model === 'area_ontology'
-								})
-
-								// Wait for render if not already rendered
-								if (instance.status !== 'rendered') {
-									return new Promise((resolve) => {
-										const token = event_manager.subscribe('render_' + instance.id, () => {
-											event_manager.unsubscribe(token)
-											resolve()
-										})
-									})
-								}
-							})
-
-							// Wait for all roots to be ready
-							await Promise.all(root_promises)
-						}
-
-						// Now call parse_search_result to build the search tree
+						// render. Search : parse_search_result with ts_object.
+						// parse_search_result() (phase 1: build_search_instances) is what creates and
+						// renders the root instances. Do NOT pre-wait here for their 'render_<id>'
+						// event before calling it: that wait is circular and deadlocks navigation
+						// (the interface freezes on every search).
 						const ts_object_instance = await ts_object.get_instance({
 							section_tipo			: self.section_tipo,
 							section_id				: self.section_id,
