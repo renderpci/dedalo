@@ -102,10 +102,13 @@ class login extends common {
 	*/
 	private static function get_login_throttle_file(string $key) : ?string {
 
-		if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
+		if (defined('DEDALO_CACHE_PATH')) {
+			$base_path = DEDALO_CACHE_PATH;
+		} elseif (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
+			$base_path = DEDALO_CACHE_MANAGER['files_path'];
+		} else {
 			return null;
 		}
-		$base_path = DEDALO_CACHE_MANAGER['files_path'];
 		if (!is_dir($base_path)) {
 			return null;
 		}
