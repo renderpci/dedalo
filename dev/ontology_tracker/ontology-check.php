@@ -18,9 +18,9 @@
 
 // Bootstrap Dédalo if available
 $bootstrap_paths = [
-    __DIR__ . '/../../config/bootstrap.php',
-    __DIR__ . '/../../../config/bootstrap.php',
-    __DIR__ . '/../../core/config/bootstrap.php',
+    __DIR__ . '/../../config/config.php',
+    __DIR__ . '/../../../config/config.php',
+    __DIR__ . '/../../core/config/config.php',
 ];
 
 foreach ($bootstrap_paths as $path) {

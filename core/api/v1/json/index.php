@@ -43,14 +43,14 @@ if (!defined('APP_ROOT')) {
 	define('APP_ROOT', dirname(__DIR__, 4)); // Go up 4 directories from this file to the root
 }
 if (!defined('DEDALO_ROOT_PATH')) {
-	if (!include APP_ROOT . '/config/bootstrap.php') {
+	if (!include APP_ROOT . '/config/config.php') {
 		throw new Exception('Config file not found');
 	}
 }
 
 
 
-// Allow CORS setting from bootstrap.php
+// Allow CORS setting from config.php
 // SEC-012: Access-Control-Allow-Origin must be a single origin or '*' per spec.
 // Only echo the request Origin when it matches DEDALO_CORS['allowed_origins'];
 // never combine '*' with Allow-Credentials: true.

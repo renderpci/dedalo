@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../../config/bootstrap.php';
+require_once __DIR__ . '/../../../config/config.php';
 
 function extract_database_results($db_name, $output_file) {
     echo "Extracting results from database: $db_name to $output_file" . PHP_EOL;

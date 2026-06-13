@@ -26,7 +26,7 @@
 </FilesMatch>
 
 # Block specific filenames (composer/bun/git/CI metadata).
-<FilesMatch "^(composer\.json|composer\.lock|package\.json|package-lock\.json|bun\.lock|bun\.lockb|tsconfig\.json|\.gitignore|\.gitattributes|\.editorconfig|\.jshintrc|\.htaccess|\.htpasswd|cliff\.toml|phpstan\.neon\.dist|phpstan-bootstrap\.php|stub\.php|worker\.php|status\.md|AGENTS\.md|Updates\.md|migrate_config\.php)$">
+<FilesMatch "^(composer\.json|composer\.lock|package\.json|package-lock\.json|bun\.lock|bun\.lockb|tsconfig\.json|\.gitignore|\.gitattributes|\.editorconfig|\.jshintrc|\.htaccess|\.htpasswd|cliff\.toml|phpstan\.neon\.dist|phpstan-bootstrap\.php|stub\.php|worker\.php|status\.md|AGENTS\.md|Updates\.md)$">
 	<IfModule mod_authz_core.c>
 		Require all denied
 	</IfModule>

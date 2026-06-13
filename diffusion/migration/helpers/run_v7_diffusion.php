@@ -1,6 +1,6 @@
 <?php
 // USE V7 CODEBASE
-require_once __DIR__ . '/../../../config/bootstrap.php';
+require_once __DIR__ . '/../../../config/config.php';
 require_once __DIR__ . '/../../../core/api/v1/common/class.dd_diffusion_api.php';
 
 $diffusion_element_tipo = $argv[1] ?? 'oh63';

@@ -712,7 +712,7 @@
 	// This check verifies that the cache directory is writable and the file-based cache stream is functional.
 	if (!defined('DEDALO_CACHE_MANAGER') || empty(DEDALO_CACHE_MANAGER)) {
 
-		$init_response->msg[] = 'Error Processing Request: DEDALO_CACHE_MANAGER is mandatory. Please check your config file and set a valid value. You can see the default in config/bootstrap.php';
+		$init_response->msg[] = 'Error Processing Request: DEDALO_CACHE_MANAGER is mandatory. Please check your config file and set a valid value. You can see some examples in sample.config file';
 		$init_response->errors[] = 'DEDALO_CACHE_MANAGER config missing';
 		debug_log(
 			implode(PHP_EOL, $init_response->msg)

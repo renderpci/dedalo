@@ -31,7 +31,7 @@ final class install_config_manager {
 
 		$db_install_name	= self::$db_install_name;
 		// SEC-041: shell-quote host/port values. The values originate from
-		// `config/bootstrap.php` constants (deployer-controlled, filesystem-only)
+		// `config/config.php` constants (deployer-controlled, filesystem-only)
 		// so this is defence-in-depth, not an HTTP-reachable taint fix. Quoting
 		// the *value* portion only — the `-h`/`-p` flag stays unquoted.
 		$host_line			= (!empty(DEDALO_HOSTNAME_CONN)) ? ('-h '.escapeshellarg(DEDALO_HOSTNAME_CONN)) : 'localhost';

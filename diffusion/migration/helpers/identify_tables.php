@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../../config/bootstrap.php';
+require_once __DIR__ . '/../../../config/config.php';
 
 $diffusion_element_tipo = 'oh88';
 $section_tipo = 'oh1';

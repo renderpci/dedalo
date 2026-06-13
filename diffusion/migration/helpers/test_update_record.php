@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../../config/bootstrap.php';
+require_once __DIR__ . '/../../../config/config.php';
 
 $diffusion_class_name = 'diffusion_mysql';
 require_once DEDALO_DIFFUSION_PATH . '/class.diffusion_mysql.php';

@@ -8,7 +8,7 @@
 // file includes
 	define('APP_ROOT', dirname(__DIR__, 2)); // Go up 2 directories from this file to the root
 	// config dedalo
-	if (!include APP_ROOT . '/config/bootstrap.php') {
+	if (!include APP_ROOT . '/config/config.php') {
 		throw new Exception('Config file not found');
 	}
 	// class download

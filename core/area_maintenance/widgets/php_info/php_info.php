@@ -1,6 +1,6 @@
 <?php declare(strict_types=1);
 // config dedalo
-require dirname(__FILE__, 5).'/config/bootstrap.php';
+require dirname(__FILE__, 5).'/config/config.php';
 
 
 if(login::is_logged()!==true) {

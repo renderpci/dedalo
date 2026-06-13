@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../../config/bootstrap.php';
+require_once __DIR__ . '/../../../config/config.php';
 
 $_SESSION['dedalo']['auth']['user_id'] = 1;
 $_SESSION['dedalo']['auth']['username'] = 'render';

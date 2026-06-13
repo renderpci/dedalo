@@ -1,6 +1,6 @@
 <?php
 // USE V6 CODEBASE
-require_once '/Users/render/Desktop/trabajos/dedalo/v6/master_dedalo/config/bootstrap.php';
+require_once '/Users/render/Desktop/trabajos/dedalo/v6/master_dedalo/config/config.php';
 
 $diffusion_element_tipo = $argv[1] ?? 'oh63';
 $section_tipo = $argv[2] ?? 'rsc167';

@@ -8,10 +8,19 @@ To do this, you must config your Dédalo config files and the diffusion output O
 
 ## Dédalo config file
 
-You must find and set the const: `API_WEB_USER_CODE_MULTIPLE` in your config file (/private/.env). For example:
+You must find and set the const: `API_WEB_USER_CODE_MULTIPLE` in your config file (/config/config.php). For example:
 
-```text
-API_WEB_USER_CODE_MULTIPLE = [{"db_name":"web_my_entity_pre","code":"Yhf13likE459QwkG987pErl87x"},{"db_name":"web_my_entity_pro","code":"Yhf13likE459QwkG987pErl87x"}]
+```php
+define('API_WEB_USER_CODE_MULTIPLE', [
+    [
+        'db_name'  => 'web_my_entity_pre',
+        'code'     => 'Yhf13likE459QwkG987pErl87x'
+    ],
+    [
+        'db_name' => 'web_my_entity_pro',
+        'code'    => 'Yhf13likE459QwkG987pErl87x'
+    ]
+]);
 ```
 
 ## Dédalo config_db file

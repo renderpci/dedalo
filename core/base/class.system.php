@@ -510,8 +510,8 @@ class system {
 	/**
 	* CHECK_SESSIONS_PATH
 	* Checks if Dédalo sessions path is set and available
-	* constant 'DEDALO_SESSIONS_PATH' is defined in bootstrap.php
-	* @see bootstrap.php
+	* constant 'DEDALO_SESSIONS_PATH' is defined in config.php
+	* @see config.php
 	* @return bool
 	*/
 	public static function check_sessions_path() : bool {
@@ -617,10 +617,10 @@ class system {
 	/**
 	* CHECK_BACKUP_PATH
 	* Checks if Dédalo backup path is set and available
-	* constant 'DEDALO_BACKUP_PATH' is defined in bootstrap.php
+	* constant 'DEDALO_BACKUP_PATH' is defined in config.php
 	* Note that this directory contains various types of backups:
 	* /db, /ontology, /mysql, /temp
-	* @see bootstrap.php
+	* @see config.php
 	* @return bool
 	*/
 	public static function check_backup_path() : bool {
@@ -719,7 +719,7 @@ class system {
 	* If errors occurred in upload files process, chunk files could be
 	* stored and not deleted. use this function to clean old chunks
 	* Note that chunk are used only if config 'DEDALO_UPLOAD_SERVICE_CHUNK_FILES' is set
-	* @see bootstrap.php
+	* @see config.php
 	* @return bool
 	*/
 	public static function remove_old_chunk_files() : bool {

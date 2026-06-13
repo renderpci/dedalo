@@ -59,11 +59,11 @@ Dédalo could be updated using the integrated update code widget that update [au
     !!! warning "Re-login after update"
         Is important after updating the code, log out and log in to Dédalo to safely refresh the browser's cache files.
 
-4. Check the changes into `.env` file
+4. Check the changes into sample.config files
 
-    Some code updates can change the config necessities and new constants may need to be added to your `.env` file. It will be indicated in the "Check config" control panel.
+    Some code updates can change the config necessities and is necessary to add or remove manually. It will indicate into the "Check config" control panel.
 
-    If your config needs to be updated, add the new key/value pairs to your `/private/.env` file. New constants and their defaults are defined in `config/bootstrap.php` — check the comments there for the latest available settings.
+    If you config need to be updated, open the sample.config and your equivalent config file that was indicated and add the new variable/s.
 
 5. Follow the update instructions and update data.
 
@@ -85,8 +85,6 @@ A typical Dédalo installation use a vhost of a GNU/Linux user with a directory 
 ├── home
 │    ├── dedalo_user
 │    │    ├── sessions
-│    │    ├── cache
-│    │    ├── private
 │    │    ├── httpdocs
 │    │    │    ├── dedalo
 │    │    │    │    ├── config/
@@ -160,7 +158,7 @@ Adapt the following tasks to your own virtual host directory structure.
 
     ```shell
     cd /home/dedalo_user
-    cp backups/code/dedalo_old/config/bootstrap.php httpdocs/dedalo/config/bootstrap.php
+    cp backups/code/dedalo_old/config/config.php httpdocs/dedalo/config/config.php
     cp backups/code/dedalo_old/config/config_db.php httpdocs/dedalo/config/config_db.php
     cp backups/code/dedalo_old/config/config_core.php httpdocs/dedalo/config/config_core.php
     cp backups/code/dedalo_old/config/config_areas.php httpdocs/dedalo/config/config_areas.php
@@ -180,11 +178,11 @@ Adapt the following tasks to your own virtual host directory structure.
     mv backups/code/dedalo_old/media httpdocs/dedalo/media
     ```
 
-8. Check the changes into `.env` file
+8. Check the changes into sample.config files
 
-    Some code updates can change the config necessities and new constants may need to be added to your `.env` file. It will be indicated in the "Check config" control panel.
+    Some code updates can change the config necessities and is necessary to add or remove manually. It will indicate into the "Check config" control panel.
 
-    If your config needs to be updated, add the new key/value pairs to your `/private/.env` file. New constants and their defaults are defined in `config/bootstrap.php` — check the comments there for the latest available settings.
+    If you config need to be updated, open the sample.config and your equivalent config file that was indicated and add the new variable/s.
 
 9. Follow the update instructions and update data.
 

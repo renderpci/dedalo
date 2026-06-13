@@ -2103,7 +2103,7 @@ final class dd_utils_api {
 
 		// check configuration of the ontology constants
 			if ( !defined('ONTOLOGY_DATA_IO_URL') ) {
-				$response->msg		= 'Error. Dédalo is miss configured. Define ONTOLOGY_DATA_IO_URL as bootstrap.php defines using .env definition';
+				$response->msg		= 'Error. Dédalo is miss configured. Define ONTOLOGY_DATA_IO_URL as sample.config.php defines';
 				$response->errors[]	= 'Error. Bad ONTOLOGY_DATA_IO_URL';
 				return $response;
 			}
@@ -2129,7 +2129,7 @@ final class dd_utils_api {
 
 		// code
 		// client needs to provide a valid code.
-		// valid code is defined in bootstrap.php constant of ONTOLOGY_SERVERS from .env
+		// valid code is defined in config.php constant of ONTOLOGY_SERVERS
 			$code = $options->code;
 
 			// validate code comparing with config definitions
@@ -2212,7 +2212,7 @@ final class dd_utils_api {
 
 		// check configuration of the ontology constants
 			if ( !defined('DEDALO_CODE_FILES_DIR') ) {
-				$response->msg		= 'Error. Dédalo is miss configured. Define DEDALO_CODE_FILES_DIR as bootstrap.php defines from .env';
+				$response->msg		= 'Error. Dédalo is miss configured. Define DEDALO_CODE_FILES_DIR as sample.config.php defines';
 				$response->errors[]	= 'Error. Bad DEDALO_CODE_FILES_DIR';
 				return $response;
 			}
@@ -2238,7 +2238,7 @@ final class dd_utils_api {
 
 		// code
 		// client needs to provide a valid code.
-		// valid code is defined in .env constant of CODE_SERVERS
+		// valid code is defined in config.php constant of CODE_SERVERS
 			$code = $options->code;
 
 			$code_servers = defined('CODE_SERVERS') && !empty(CODE_SERVERS)

@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../../../config/bootstrap.php';
+require_once __DIR__ . '/../../../config/config.php';
 $conn = DBi::_getConnection_mysql();
 $target_db = 'web_default';
 $target_table = 'interview';

@@ -97,7 +97,7 @@ final class install_database_manager {
 
 		// terminal command psql copy data from file 'dedalo4_install.pgsql'
 			// SEC-041: shell-quote all interpolated values. Constants come from
-			// `config/bootstrap.php` (deployer-controlled, not HTTP-reachable);
+			// `config/config.php` (deployer-controlled, not HTTP-reachable);
 			// `$config->host_line`/`port_line` are pre-quoted in `get_config()`.
 			$command = DB_BIN_PATH.'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors --file '.escapeshellarg($uncompressed_file);
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);

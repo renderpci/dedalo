@@ -1159,8 +1159,8 @@ function dedalo_decrypt_v2(string $payload, ?string $key=null) : mixed {
 * DEDALO_ASSERT_SECRETS_INITIALISED
 * SEC-094: refuse to ship sample-default secrets to production.
 *
-* Walks the well-known config sentinels documented in `config/bootstrap.php`,
-* `config/sample.config_core.php` and `publication/server_api/v1/config_api/sample.server_config_api.php`.
+* Walks the well-known config sentinels documented in `config/sample.config_db.php`,
+* `config/sample.config.php` and `publication/server_api/v1/config_api/sample.server_config_api.php`.
 * For every constant that still equals (or matches) the sample placeholder
 * the function emits a structured warning. When the optional opt-in
 * `DEDALO_ENFORCE_SECRET_SENTINELS=true` is defined, it dies on detection;

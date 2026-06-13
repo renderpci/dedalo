@@ -44,7 +44,7 @@
 	define('PREVENT_SESSION_LOCK', true);
 
 // config. Starts a new session with forced id from command arguments
-	include dirname(__FILE__, 3) . '/config/bootstrap.php';
+	include dirname(__FILE__, 3) . '/config/config.php';
 
 // actions to run
 	$datalist = component_security_access::calculate_tree($user_id, $lang);

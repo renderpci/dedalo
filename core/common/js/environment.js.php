@@ -13,7 +13,7 @@ $global_start_time = hrtime(true);
 	define('PREVENT_SESSION_LOCK', true);
 
 // config file
-	$config_path = dirname(__DIR__, 3) . '/config/bootstrap.php'; // Go up 3 directories from this file to the root
+	$config_path = dirname(__DIR__, 3) . '/config/config.php'; // Go up 3 directories from this file to the root
 	if( !include_once $config_path ) {
 
 		echo '

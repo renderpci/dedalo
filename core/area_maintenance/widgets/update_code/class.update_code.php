@@ -102,10 +102,10 @@ class update_code {
 				: null;
 			if(empty($servers)) {
 				debug_log(__METHOD__
-					." Undefined CODE_SERVERS constant in bootstrap.php"
+					." Undefined CODE_SERVERS constant in config.php"
 					, logger::ERROR
 				);
-				$response->errors[] = 'Undefined CODE_SERVERS constant in bootstrap.php';
+				$response->errors[] = 'Undefined CODE_SERVERS constant in config.php';
 				return $response;
 			}
 
@@ -557,7 +557,8 @@ class update_code {
 
 		// copy config files
 			$files_to_copy = [
-				'config/bootstrap.php',
+				'config/config.php',
+				'config/config_db.php',
 				'config/config_areas.php',
 				'config/config_core.php',
 				'config/config_defaults.json',
