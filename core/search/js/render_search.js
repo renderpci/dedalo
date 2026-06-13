@@ -460,6 +460,21 @@ render_search.prototype.render_search_buttons = function(){
 		}
 		reset_button.addEventListener('mousedown', reset_mousedown_handler)
 
+	// Show all
+		const show_all_fn = (e) => {
+			e.stopPropagation()
+			self.show_all(show_all_button)
+			// Close search div
+			toggle_search_panel(self) // toggle to open from default state close
+		}
+		const show_all_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button show_all',
+			inner_html		: get_label.show_all || 'Show all',
+			parent			: reset_group
+		})
+		show_all_button.addEventListener('mousedown', show_all_fn)
+
 	// Submit button
 		const submit_fn = (e) => {
 			e.stopPropagation()
