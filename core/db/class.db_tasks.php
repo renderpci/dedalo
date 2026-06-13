@@ -296,6 +296,13 @@ class db_tasks {
 	* @return bool
 	*/
 	public static function consolidate_table( string $table ) : bool {
+		// DB-06: $table is interpolated into several raw queries below (column/table
+		// names cannot be bound), so require a bare identifier — reject anything that
+		// could carry SQL.
+		if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $table)) {
+			debug_log(__METHOD__ . ' Rejected invalid table identifier: ' . to_string($table), logger::ERROR);
+			return false;
+		}
 		// Get first id
 		$first_id_query = '
 			SELECT id

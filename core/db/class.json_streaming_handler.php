@@ -29,7 +29,11 @@ class json_streaming_handler {
 		// We remove JSON_PRETTY_PRINT from options passed down if we get here,
 		// but we already returned above if it was set.
 
-		if (is_array($value) && count($value) > $chunk_size) {
+		// DB-04: only stream true LISTS. stream_array reindexes its chunk buffer and
+		// strips the outer brackets, which drops the string keys of an associative
+		// array and emits a values-only array instead of the intended object. Large
+		// associative arrays fall through to json_handler::encode, which is correct.
+		if (is_array($value) && array_is_list($value) && count($value) > $chunk_size) {
 			self::stream_array($value, $options, $chunk_size);
 		} elseif (is_object($value)) {
 			// Check if object has a large array property that we should stream?

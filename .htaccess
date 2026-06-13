@@ -94,7 +94,11 @@
 # deployer creates those paths.
 <IfModule mod_rewrite.c>
 	RewriteEngine On
-	RewriteRule (^|/)(media|upload|tmp)/.+\.(phps?|phtml|phar|pht|inc|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$ - [F,L,NC]
+	# CONF-08: lib/ serves only client-side assets (js/css/images) and a few
+	# server-side-only includes (lessphp, included by filesystem path). No PHP/script
+	# under lib/ should ever be executed via a direct HTTP request — deny it (static
+	# .js/.css/.png assets are unaffected).
+	RewriteRule (^|/)(media|upload|tmp|lib)/.+\.(phps?|phtml|phar|pht|inc|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$ - [F,L,NC]
 </IfModule>
 
 # Browser caching FileETag control

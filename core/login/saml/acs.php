@@ -10,8 +10,7 @@
  * link where it will send a certified response via $_POST.
  */
 
-// debug
-	error_log(" SAML acs... ");
+// AUTH-02: removed leftover unconditional `error_log(" SAML acs... ")` debug noise.
 
 $start_time=start_time();
 
@@ -58,7 +57,15 @@ $start_time=start_time();
 							$client_ip		= function_exists('get_client_ip_trusted')
 								? get_client_ip_trusted()
 								: get_client_ip();
-							error_log("SAMLResponse code: ".print_r($code, true).", client_ip: ".print_r($client_ip, true));
+							// AUTH-02: the SAML subject code is PII (e.g. a national id);
+							// do not log it (with the client IP) to the PHP error log on
+							// every login. Gate behind SHOW_DEBUG via the standard logger.
+							if (defined('SHOW_DEBUG') && SHOW_DEBUG===true) {
+								debug_log(__METHOD__
+									. " SAMLResponse code: " . to_string($code) . " client_ip: " . to_string($client_ip)
+									, logger::DEBUG
+								);
+							}
 
 						// Login_SAML
 							$response = login::Login_SAML((object)[
@@ -101,7 +108,11 @@ $start_time=start_time();
 			// Any pot SAMLResponse var is received
 			echo 'No SAML Response found in POST.';
 		}
-	}catch (Exception $e) {
-		// Error in saml response manager
-		echo 'Invalid SAML Response (2): ' . $e->getMessage();
+	}catch (\Throwable $e) {
+		// AUTH-01: do not reflect the raw OneLogin exception text to the client
+		// (internal detail disclosure). Return a constant message; log the detail.
+		http_response_code(400);
+		header('Content-Type: text/plain; charset=utf-8');
+		echo 'Invalid SAML Response';
+		debug_log(__FILE__ . ' SAML response error: ' . $e->getMessage(), logger::ERROR);
 	}

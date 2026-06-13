@@ -109,7 +109,10 @@ trait where {
 				$filter_by_user_records .= "\n-- filter_user_records_by_id --".PHP_EOL;
 			}
 
-			$filter = implode( ',', $filter_user_records_by_id[$section_tipo] );
+			// SEARCH-04: section_ids are integers — int-cast every element before
+			// interpolating into IN(...), so no non-integer value can reach the SQL.
+			$ids = array_map('intval', (array)$filter_user_records_by_id[$section_tipo]);
+			$filter = implode( ',', $ids );
 			$filter_by_user_records .= $section_alias . '.section_id IN ( ' . $filter . ' )';
 
 			$this->sql_obj->where[] = $filter_by_user_records;
