@@ -175,6 +175,9 @@ trait search_component_number {
         $ar_parts   = explode($ctx->between_sep, $q);
         $first_val  = !empty($ar_parts[0]) ? trim(str_replace(',', '.', $ar_parts[0])) : '0';
         $second_val = !empty($ar_parts[1]) ? trim(str_replace(',', '.', $ar_parts[1])) : $first_val;
+        // SEARCH-02: both bounds are cast `::numeric` in SQL; coerce non-numeric to '0'.
+        if (!is_numeric($first_val))  { $first_val  = '0'; }
+        if (!is_numeric($second_val)) { $second_val = $first_val; }
 
         $json_path = "$.{$ctx->component_tipo}[*]";
 
@@ -203,7 +206,10 @@ trait search_component_number {
     */
     protected static function resolve_number_greater_than_or_equal_sql(object $query_object, string $q, object $ctx) : object {
         $q_clean = str_replace(['>=', ','], ['', '.'], $q);
-        if ($q_clean==='' || $q_clean===$ctx->q_only_op) {
+        // SEARCH-02: coerce empty / operator-only / non-numeric input to '0'. The
+        // cleaned value is bound and cast `(_Q1_)::numeric` in SQL; a non-numeric
+        // value raised a Postgres cast error (surfacing as a failed/empty search).
+        if ($q_clean==='' || $q_clean===$ctx->q_only_op || !is_numeric($q_clean)) {
             $q_clean = '0';
         }
 
@@ -229,7 +235,10 @@ trait search_component_number {
     */
     protected static function resolve_number_less_than_or_equal_sql(object $query_object, string $q, object $ctx) : object {
         $q_clean = str_replace(['<=', ','], ['', '.'], $q);
-        if ($q_clean==='' || $q_clean===$ctx->q_only_op) {
+        // SEARCH-02: coerce empty / operator-only / non-numeric input to '0'. The
+        // cleaned value is bound and cast `(_Q1_)::numeric` in SQL; a non-numeric
+        // value raised a Postgres cast error (surfacing as a failed/empty search).
+        if ($q_clean==='' || $q_clean===$ctx->q_only_op || !is_numeric($q_clean)) {
             $q_clean = '0';
         }
 
@@ -255,7 +264,10 @@ trait search_component_number {
     */
     protected static function resolve_number_greater_than_sql(object $query_object, string $q, object $ctx) : object {
         $q_clean = str_replace(['>', ','], ['', '.'], $q);
-        if ($q_clean==='' || $q_clean===$ctx->q_only_op) {
+        // SEARCH-02: coerce empty / operator-only / non-numeric input to '0'. The
+        // cleaned value is bound and cast `(_Q1_)::numeric` in SQL; a non-numeric
+        // value raised a Postgres cast error (surfacing as a failed/empty search).
+        if ($q_clean==='' || $q_clean===$ctx->q_only_op || !is_numeric($q_clean)) {
             $q_clean = '0';
         }
 
@@ -281,7 +293,10 @@ trait search_component_number {
     */
     protected static function resolve_number_less_than_sql(object $query_object, string $q, object $ctx) : object {
         $q_clean = str_replace(['<', ','], ['', '.'], $q);
-        if ($q_clean==='' || $q_clean===$ctx->q_only_op) {
+        // SEARCH-02: coerce empty / operator-only / non-numeric input to '0'. The
+        // cleaned value is bound and cast `(_Q1_)::numeric` in SQL; a non-numeric
+        // value raised a Postgres cast error (surfacing as a failed/empty search).
+        if ($q_clean==='' || $q_clean===$ctx->q_only_op || !is_numeric($q_clean)) {
             $q_clean = '0';
         }
 
@@ -307,6 +322,10 @@ trait search_component_number {
     */
     protected static function resolve_number_equal_sql(object $query_object, string $q, object $ctx) : object {
         $q_clean = str_replace(['+', ','], ['', '.'], $q);
+        // SEARCH-02: bound value is cast `(_Q1_)::numeric`; coerce non-numeric to '0'.
+        if ($q_clean==='' || !is_numeric($q_clean)) {
+            $q_clean = '0';
+        }
 
         $json_path = "$.{$ctx->component_tipo}[*]";
         $query_object->params = ['_Q1_' => $q_clean];

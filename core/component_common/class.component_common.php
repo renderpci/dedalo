@@ -3902,6 +3902,15 @@ abstract class component_common extends common {
 
 				// Extract the id from the change request
 				$id = $changed_data->id ?? null;
+				// COMP-02: normalize a numeric client id to int. Data-item ids are
+				// integers, but the id arrives from raw client JSON and may be a
+				// string ("5"); a string-vs-int mismatch made the strict === match
+				// below fall through to the "not found" branch and APPEND a duplicate
+				// entry instead of updating the existing one.
+				if (is_string($id) && is_numeric($id)) {
+					$id = (int)$id;
+					$changed_data->id = $id;
+				}
 
 				// Translatable literal components id resolution across languages
 				// When id is null and key is provided, resolve the id from other languages

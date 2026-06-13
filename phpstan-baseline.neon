@@ -1,0 +1,276 @@
+parameters:
+	ignoreErrors:
+		-
+			message: "#^Variable \\$result in isset\\(\\) is never defined\\.$#"
+			count: 1
+			path: core/api/v1/common/class.dd_core_api.php
+
+		-
+			message: "#^Caught class Spiral\\\\RoadRunner\\\\Http\\\\Exception\\\\StreamStoppedException not found\\.$#"
+			count: 1
+			path: core/api/v1/common/class.dd_utils_api.php
+
+		-
+			message: "#^Variable \\$rqo in isset\\(\\) always exists and is not nullable\\.$#"
+			count: 1
+			path: core/api/v1/json/index.php
+
+		-
+			message: "#^Call to an undefined static method common\\:\\:user_is_global_admin\\(\\)\\.$#"
+			count: 1
+			path: core/api/v1/json/performance/performance_viewer_api.php
+
+		-
+			message: "#^Constant DEDALO_DB_PORT_CONN not found\\.$#"
+			count: 4
+			path: core/db/class.DBi.php
+
+		-
+			message: "#^Constant DEDALO_PASSWORD_CONN not found\\.$#"
+			count: 3
+			path: core/db/class.DBi.php
+
+		-
+			message: "#^Constant DEDALO_SOCKET_CONN not found\\.$#"
+			count: 3
+			path: core/db/class.DBi.php
+
+		-
+			message: "#^Constant DEDALO_USERNAME_CONN not found\\.$#"
+			count: 4
+			path: core/db/class.DBi.php
+
+		-
+			message: "#^Undefined variable\\: \\$start_time$#"
+			count: 1
+			path: core/db/class.DBi.php
+
+		-
+			message: "#^Constant DB_BIN_PATH not found\\.$#"
+			count: 1
+			path: core/db/class.db_tasks.php
+
+		-
+			message: "#^Undefined variable\\: \\$start_time$#"
+			count: 2
+			path: core/db/class.dd_ontology_db_manager.php
+
+		-
+			message: "#^Constant SLOW_QUERY_MS not found\\.$#"
+			count: 2
+			path: core/db/class.matrix_db_manager.php
+
+		-
+			message: "#^Undefined variable\\: \\$prepend_sql$#"
+			count: 1
+			path: core/db/class.matrix_db_manager.php
+
+		-
+			message: "#^Undefined variable\\: \\$start_time$#"
+			count: 2
+			path: core/db/class.matrix_db_manager.php
+
+		-
+			message: "#^Variable \\$prepend_sql in isset\\(\\) is never defined\\.$#"
+			count: 1
+			path: core/db/class.matrix_db_manager.php
+
+		-
+			message: "#^Undefined variable\\: \\$conn$#"
+			count: 1
+			path: core/db/class.matrix_temp_manager.php
+
+		-
+			message: "#^Variable \\$term_node in empty\\(\\) always exists and is not falsy\\.$#"
+			count: 1
+			path: diffusion/class.diffusion_fn.php
+
+		-
+			message: "#^Constant DEDALO_USER_NAME_TIPO not found\\.$#"
+			count: 2
+			path: diffusion/class.diffusion_section_stats.php
+
+		-
+			message: "#^Constant USER_ACTIVITY_DATE_TIPO not found\\.$#"
+			count: 9
+			path: diffusion/class.diffusion_section_stats.php
+
+		-
+			message: "#^Constant USER_ACTIVITY_SECTION_TIPO not found\\.$#"
+			count: 7
+			path: diffusion/class.diffusion_section_stats.php
+
+		-
+			message: "#^Constant USER_ACTIVITY_TOTALS_TIPO not found\\.$#"
+			count: 5
+			path: diffusion/class.diffusion_section_stats.php
+
+		-
+			message: "#^Constant USER_ACTIVITY_TYPE_TIPO not found\\.$#"
+			count: 2
+			path: diffusion/class.diffusion_section_stats.php
+
+		-
+			message: "#^Constant USER_ACTIVITY_USER_TIPO not found\\.$#"
+			count: 9
+			path: diffusion/class.diffusion_section_stats.php
+
+		-
+			message: "#^Instantiated class diffusion_mysql not found\\.$#"
+			count: 1
+			path: diffusion/migration/helpers/test_update_record.php
+
+		-
+			message: "#^Constant DEDALO_ONTOLOGY_CONNECTED_TO_TIPO not found\\.$#"
+			count: 2
+			path: diffusion/migration/migrate_diffusion_properties.php
+
+		-
+			message: "#^Variable \\$argv might not be defined\\.$#"
+			count: 1
+			path: diffusion/migration/migrate_rdf_filenames.php
+
+		-
+			message: "#^Variable \\$argv might not be defined\\.$#"
+			count: 1
+			path: diffusion/migration/migrate_xml_filenames.php
+
+		-
+			message: "#^Call to an undefined static method section\\:\\:get_ar_all_section_tipos\\(\\)\\.$#"
+			count: 1
+			path: shared/agent/class.agent_view_builder.php
+
+		-
+			message: "#^Call to an undefined static method metrics\\:\\:reset\\(\\)\\.$#"
+			count: 1
+			path: worker/class.cache_manager.php
+
+		-
+			message: "#^Instantiated class Nyholm\\\\Psr7\\\\Response not found\\.$#"
+			count: 1
+			path: worker/class.cors_middleware.php
+
+		-
+			message: "#^Instantiated class Nyholm\\\\Psr7\\\\Response not found\\.$#"
+			count: 1
+			path: worker/class.response_builder.php
+
+		-
+			message: "#^Parameter \\$storage of method Dedalo\\\\RoadRunner\\\\RoadRunnerSessionHandler\\:\\:__construct\\(\\) has invalid type Spiral\\\\RoadRunner\\\\KeyValue\\\\StorageInterface\\.$#"
+			count: 1
+			path: worker/class.roadrunner_session_handler.php
+
+		-
+			message: "#^Function session_start_manager invoked with 1 parameter, 0 required\\.$#"
+			count: 1
+			path: worker/class.session_manager.php
+
+		-
+			message: "#^Parameter \\$kv_factory of method Dedalo\\\\RoadRunner\\\\session_manager\\:\\:__construct\\(\\) has invalid type Spiral\\\\RoadRunner\\\\KeyValue\\\\Factory\\.$#"
+			count: 1
+			path: worker/class.session_manager.php
+
+		-
+			message: "#^Property Dedalo\\\\RoadRunner\\\\session_manager\\:\\:\\$kv_factory has unknown class Spiral\\\\RoadRunner\\\\KeyValue\\\\Factory as its type\\.$#"
+			count: 1
+			path: worker/class.session_manager.php
+
+		-
+			message: "#^Instantiated class Nyholm\\\\Psr7\\\\Response not found\\.$#"
+			count: 2
+			path: worker/class.sse_streamer.php
+
+		-
+			message: "#^Parameter \\$psr7_worker of method Dedalo\\\\RoadRunner\\\\sse_streamer\\:\\:stream\\(\\) has invalid type Spiral\\\\RoadRunner\\\\Http\\\\PSR7Worker\\.$#"
+			count: 1
+			path: worker/class.sse_streamer.php
+
+		-
+			message: "#^Call to static method create\\(\\) on an unknown class Spiral\\\\Goridge\\\\RPC\\\\RPC\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Call to static method create\\(\\) on an unknown class Spiral\\\\RoadRunner\\\\Worker\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Constant APP_ROOT not found\\.$#"
+			count: 2
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Instantiated class Nyholm\\\\Psr7\\\\Factory\\\\Psr17Factory not found\\.$#"
+			count: 3
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Instantiated class Spiral\\\\RoadRunner\\\\Http\\\\PSR7Worker not found\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Instantiated class Spiral\\\\RoadRunner\\\\KeyValue\\\\Factory not found\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Parameter \\$kv_factory of method Dedalo\\\\RoadRunner\\\\worker_bootstrap\\:\\:__construct\\(\\) has invalid type Spiral\\\\RoadRunner\\\\KeyValue\\\\Factory\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Parameter \\$psr7_worker of method Dedalo\\\\RoadRunner\\\\worker_bootstrap\\:\\:__construct\\(\\) has invalid type Spiral\\\\RoadRunner\\\\Http\\\\PSR7Worker\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Parameter \\$rpc of method Dedalo\\\\RoadRunner\\\\worker_bootstrap\\:\\:__construct\\(\\) has invalid type Spiral\\\\Goridge\\\\RPC\\\\RPC\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Parameter \\$worker of method Dedalo\\\\RoadRunner\\\\worker_bootstrap\\:\\:__construct\\(\\) has invalid type Spiral\\\\RoadRunner\\\\Worker\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Property Dedalo\\\\RoadRunner\\\\worker_bootstrap\\:\\:\\$kv_factory has unknown class Spiral\\\\RoadRunner\\\\KeyValue\\\\Factory as its type\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Property Dedalo\\\\RoadRunner\\\\worker_bootstrap\\:\\:\\$psr7_worker has unknown class Spiral\\\\RoadRunner\\\\Http\\\\PSR7Worker as its type\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Property Dedalo\\\\RoadRunner\\\\worker_bootstrap\\:\\:\\$rpc has unknown class Spiral\\\\Goridge\\\\RPC\\\\RPC as its type\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Property Dedalo\\\\RoadRunner\\\\worker_bootstrap\\:\\:\\$worker has unknown class Spiral\\\\RoadRunner\\\\Worker as its type\\.$#"
+			count: 1
+			path: worker/class.worker_bootstrap.php
+
+		-
+			message: "#^Constant APP_ROOT not found\\.$#"
+			count: 1
+			path: worker/class.worker_loop.php
+
+		-
+			message: "#^Parameter \\$psr7_worker of method Dedalo\\\\RoadRunner\\\\worker_loop\\:\\:handle_normal_request\\(\\) has invalid type Spiral\\\\RoadRunner\\\\Http\\\\PSR7Worker\\.$#"
+			count: 1
+			path: worker/class.worker_loop.php
+
+		-
+			message: "#^Parameter \\$psr7_worker of method Dedalo\\\\RoadRunner\\\\worker_loop\\:\\:handle_request\\(\\) has invalid type Spiral\\\\RoadRunner\\\\Http\\\\PSR7Worker\\.$#"
+			count: 1
+			path: worker/class.worker_loop.php
+
+		-
+			message: "#^Parameter \\$psr7_worker of method Dedalo\\\\RoadRunner\\\\worker_loop\\:\\:handle_sse_request\\(\\) has invalid type Spiral\\\\RoadRunner\\\\Http\\\\PSR7Worker\\.$#"
+			count: 1
+			path: worker/class.worker_loop.php

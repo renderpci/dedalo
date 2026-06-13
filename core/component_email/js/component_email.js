@@ -82,20 +82,20 @@ component_email.prototype.verify_email = function(email_value) {
 		return true;
 	}
 
-	let valid_email		= false;
-	const emailRegEx	= /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
+	// UIUX-04: TLD quantifier {2,} (was {2,4}, which rejected valid long TLDs like
+	// .museum / .travel).
+	const emailRegEx	= /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
 
 	const ar_email = (!Array.isArray(email_value))
 		? [email_value]
 		: email_value
 
-	ar_email.forEach(function(email) {
-	 	if (email.search(emailRegEx) == -1) {
-			valid_email = false;
-		}else{
-			valid_email = true;
-		}
-  	})
+	// UIUX-04: ALL addresses must be valid. The previous forEach reassigned
+	// valid_email each iteration, so the result reflected only the LAST address
+	// (e.g. ['bad@','good@x.com'] wrongly validated as true).
+	const valid_email = ar_email.every(function(email) {
+		return typeof email === 'string' && email.search(emailRegEx) !== -1
+	})
 
   	// debug
   		if(SHOW_DEBUG===true) {

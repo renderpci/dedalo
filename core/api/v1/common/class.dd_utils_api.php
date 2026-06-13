@@ -2389,10 +2389,13 @@ final class dd_utils_api {
 				'mime'		=> 'text/plain',
 				'extension'	=> ['txt','glsl','csv']
 			],
-			[
-				'mime'		=> 'text/html',
-				'extension'	=> ['html','htm']
-			],
+			// MEDIA-01: text/html (html/htm) removed from the generic upload allowlist —
+			// an uploaded HTML file served same-origin from the media tree is a stored-XSS
+			// vector and has no legitimate media use (cf. the javascript/flash removals).
+			// NOTE: application/xml and image/svg+xml below are kept (MARCXML/.dae/RDF
+			// imports, and component_svg respectively) — their inline-rendering risk must
+			// be mitigated at the serving layer (Content-Disposition: attachment / CSP),
+			// not by dropping them here.
 			[
 				'mime'		=> 'text/css',
 				'extension'	=> ['css']

@@ -1003,8 +1003,11 @@ component_common.prototype.change_value = async function(options) {
 		}
 
 	// remove dialog. Check the remove dialog (default or sent by caller )user confirmation prevents remove accidentally
-		const action = changed_data[0]
-		if (action==='remove') {
+		// UIUX-01: changed_data items are objects ({action, ...}), not strings.
+		// The old `changed_data[0]==='remove'` was always false, so the accidental-
+		// delete confirmation never fired. Detect a remove action anywhere in the batch.
+		const action = changed_data[0]?.action
+		if ( changed_data.some(el => el && el.action==='remove') ) {
 
 			// generate default remove dialog to confirm the remove option is correct
 			// to overwrite this dialog use something as:

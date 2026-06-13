@@ -127,13 +127,47 @@ trait search_component_date {
 		$ctx->table_alias    = $query_object->table_alias;
 		$ctx->table          = $query_object->table;
 		$ctx->date_mode      = $properties->date_mode ?? 'date';
-		$ctx->operator       = !empty($query_object->q_operator) ? trim($query_object->q_operator) : '=';
+		// SEARCH-01: allowlist the client operator. The per-mode switches below
+		// interpolate $ctx->operator into the JSONPath expression and have no
+		// default case, so an unrecognized operator silently produced no SQL (an
+		// empty result set with no error). Coerce unknown operators to '='.
+		$ctx->operator       = self::sanitize_date_q_operator($query_object->q_operator ?? null);
 
 		// Set defaults on query_object
 		$query_object->type = 'jsonb';
 
 		return $ctx;
 	}
+
+
+
+	/**
+	* SANITIZE_DATE_Q_OPERATOR
+	* Allowlist the client-supplied search operator for date components. Unknown
+	* values are coerced to '=' (and logged) so a malformed operator cannot
+	* silently empty the whole search. The allowlist is the union of operators the
+	* per-date-mode switches handle. (SEARCH-01)
+	* @param string|null $q_operator
+	* @return string
+	*/
+	private static function sanitize_date_q_operator(?string $q_operator) : string {
+
+		$op = is_string($q_operator) ? trim($q_operator) : '';
+		if ($op === '') {
+			return '=';
+		}
+
+		$allowed = ['=', '<', '>', '<=', '>=', '!*', '*'];
+		if (!in_array($op, $allowed, true)) {
+			debug_log(__METHOD__
+				. " Ignored unknown date q_operator (coerced to '='): " . to_string($op)
+				, logger::WARNING
+			);
+			return '=';
+		}
+
+		return $op;
+	}//end sanitize_date_q_operator
 
 
 
