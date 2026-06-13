@@ -3757,7 +3757,7 @@ abstract class component_common extends common {
 	* @see dd_core_api update
 	*
 	* @param object $changed_data The data change request object with the following structure:
-	*   - action: (string) The operation to perform. One of: 'insert', 'update', 'remove', 'set_data', 'sort_data', 'add_new_element', 'force_save'
+	*   - action: (string) The operation to perform. One of: 'insert', 'update', 'remove', 'set_data', 'sort_data', 'sort_by_column', 'add_new_element', 'force_save'
 	*   - id: (string|null) The unique identifier of the data entry to modify
 	*     - For 'remove': id of entry to remove, or null to remove all entries
 	*     - For 'update': id of entry to update (required for targeted update)
@@ -3807,6 +3807,14 @@ abstract class component_common extends common {
 	*   "source_key": 0,
 	*   "target_key": 2,
 	*   "value": { "section_id": "1", "section_tipo": "dd123" }
+	* }
+	*
+	* @example Sort all entries by a column value (relation components, gated by 'sort_by_column' property):
+	* {
+	*   "action": "sort_by_column",
+	*   "component_tipo": "dd456",
+	*   "direction": "ASC",
+	*   "value": null
 	* }
 	*
 	* @example Add new element (creates new section and links it):
@@ -4197,6 +4205,35 @@ abstract class component_common extends common {
 				$this->observable_data = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
 					: $new_data;
+				break;
+
+			// SORT_BY_COLUMN ACTION
+			// Persistently reorders the full locator array by the value of a column
+			// component in the target section(s). Used by portals to apply a global
+			// ASC|DESC order by any sortable column (e.g. a component_date).
+			// Relation components only; gated by the 'sort_by_column' ontology property.
+			case 'sort_by_column':
+
+				// Only relation components store locator arrays that can be column-sorted
+				if (!($this instanceof component_relation_common)) {
+					debug_log(__METHOD__
+						.' Error on sort_by_column. Action is only available for relation components.' .PHP_EOL
+						.' model: ' . get_called_class() .PHP_EOL
+						.' tipo: ' . $this->tipo
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// Resolve the new order and update the component data (not saved here)
+				if ($this->sort_data_by_column($changed_data, $lang) !== true) {
+					return false;
+				}
+
+				// Set observable data for event notifications
+				$this->observable_data = (get_called_class() === 'component_relation_related')
+					? $this->get_data_with_references()
+					: $this->get_data_lang($lang);
 				break;
 
 			// ADD_NEW_ELEMENT ACTION
