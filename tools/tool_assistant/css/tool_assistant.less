@@ -1,8 +1,11 @@
+// Indigo accent (brand color, reads well on both themes)
 @assistant_color: #6366f1;
 @assistant_color_light: #818cf8;
 @assistant_color_dark: #4f46e5;
-@border_color: #e5e7eb;
-@text_muted: #6b7280;
+// Structural colors mapped to semantic tokens so they follow the active theme.
+// Dark overrides for the status-tinted surfaces live in the block at the end.
+@border_color: var(--border_default);
+@text_muted: var(--fg_muted);
 
 // assistant_container: wrapper placed inside inspector_container (right panel)
 .assistant_container {
@@ -11,7 +14,7 @@
 	flex: 1 1 0;
 	min-height: 0;
 	overflow: visible;
-	background-color: #f9fafb;
+	background-color: var(--bg_surface);
 }
 
 // standalone mode: list mode has no inspector, so the assistant floats fixed on the right
@@ -24,8 +27,8 @@
 	max-height: calc(100vh - var(--menu_heigth, 2.6rem));
 	z-index: 2;
 	border: 1px solid @border_color;
-	border-radius: 6px;
-	box-shadow: -2px 0 8px rgba(0,0,0,0.08);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-3);
 	display: none; // hidden by default, toggled via JS
 
 	&.show {
@@ -39,7 +42,7 @@
 	flex-direction: column;
 	flex: 1 1 0;
 	min-height: 0;
-	background-color: #f9fafb;
+	background-color: var(--bg_surface);
 }
 
 // toolbar
@@ -48,7 +51,7 @@
 	align-items: center;
 	gap: 0.35rem;
 	padding: 0.4rem 0.6rem;
-	background-color: #fff;
+	background-color: var(--bg_elevated);
 	border-bottom: 1px solid @border_color;
 	position: relative;
 	flex-shrink: 0;
@@ -57,17 +60,17 @@
 .assistant_toolbar_button {
 	background: none;
 	border: 1px solid @border_color;
-	color: #374151;
+	color: var(--fg_default);
 	font-size: 0.95rem;
 	line-height: 1;
 	padding: 0.3rem 0.5rem;
-	border-radius: 4px;
+	border-radius: var(--radius-md);
 	cursor: pointer;
-	transition: background-color 0.15s, border-color 0.15s;
+	transition: background-color var(--transition-fast), border-color var(--transition-fast);
 
 	&:hover {
-		background-color: #f3f4f6;
-		border-color: #d1d5db;
+		background-color: var(--bg_surface_alt);
+		border-color: var(--border_strong);
 	}
 }
 
@@ -80,9 +83,9 @@
 	margin-left: auto;
 	font-size: 0.7rem;
 	color: @text_muted;
-	background-color: #f3f4f6;
+	background-color: var(--bg_surface_alt);
 	border: 1px solid @border_color;
-	border-radius: 999px;
+	border-radius: var(--radius-pill);
 	padding: 0.15rem 0.6rem;
 	font-family: monospace;
 	white-space: nowrap;
@@ -100,10 +103,10 @@
 	max-width: 360px;
 	max-height: 320px;
 	overflow-y: auto;
-	background-color: #fff;
+	background-color: var(--bg_elevated);
 	border: 1px solid @border_color;
-	border-radius: 6px;
-	box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-3);
 	z-index: 100;
 	padding: 0.25rem;
 }
@@ -121,7 +124,7 @@
 	gap: 0.25rem;
 
 	&:hover {
-		background-color: #f3f4f6;
+		background-color: var(--bg_surface_alt);
 	}
 }
 
@@ -136,7 +139,7 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	color: #1f2937;
+	color: var(--fg_default);
 }
 
 .assistant_history_item_delete {
@@ -149,7 +152,7 @@
 	cursor: pointer;
 
 	&:hover {
-		color: #dc2626;
+		color: var(--color_danger);
 	}
 }
 
@@ -159,10 +162,10 @@
 	top: calc(100% + 4px);
 	right: 0;
 	min-width: 175px;
-	background-color: #fff;
+	background-color: var(--bg_elevated);
 	border: 1px solid @border_color;
-	border-radius: 6px;
-	box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+	border-radius: var(--radius-lg);
+	box-shadow: var(--shadow-3);
 	z-index: 100;
 	padding: 0.6rem;
 	display: flex;
@@ -179,10 +182,12 @@
 }
 
 .assistant_settings_input {
-	border: 1px solid #d1d5db;
-	border-radius: 4px;
+	border: 1px solid var(--border_strong);
+	border-radius: var(--radius-md);
 	padding: 0.3rem 0.4rem;
 	font-size: 0.85rem;
+	background-color: var(--input_bg);
+	color: var(--input_fg);
 }
 
 .assistant_settings_apply {
@@ -190,7 +195,7 @@
 	background-color: @assistant_color;
 	color: #fff;
 	border: none;
-	border-radius: 4px;
+	border-radius: var(--radius-md);
 	padding: 0.35rem 0.85rem;
 	font-size: 0.8rem;
 	cursor: pointer;
@@ -205,8 +210,8 @@
 	display: flex;
 	align-items: center;
 	padding: 0.35rem 1rem;
-	background-color: #eef2ff;
-	border-bottom: 1px solid #c7d2fe;
+	background-color: var(--assistant_progress_bg, #eef2ff);
+	border-bottom: 1px solid var(--assistant_progress_border, #c7d2fe);
 	position: relative;
 	height: 1.5rem;
 	flex-shrink: 0;
@@ -216,7 +221,7 @@
 	height: 100%;
 	background-color: @assistant_color;
 	border-radius: 2px;
-	transition: width 0.3s ease;
+	transition: width var(--transition-slow);
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -225,7 +230,7 @@
 .assistant_progress_text {
 	position: relative;
 	z-index: 1;
-	color: @assistant_color_dark;
+	color: var(--assistant_progress_text, @assistant_color_dark);
 	font-size: 0.75rem;
 	font-weight: 600;
 }
@@ -264,8 +269,8 @@
 
 .assistant_assistant_message {
 	align-self: flex-start;
-	background-color: #fff;
-	color: #1f2937;
+	background-color: var(--bg_elevated);
+	color: var(--fg_default);
 	border: 1px solid @border_color;
 	border-bottom-left-radius: 0.2rem;
 
@@ -288,17 +293,17 @@
 		color: @text_muted;
 	}
 	.md_code_inline {
-		background-color: #f3f4f6;
+		background-color: var(--bg_surface_alt);
 		padding: 0.05rem 0.3rem;
-		border-radius: 3px;
+		border-radius: var(--radius-sm);
 		font-size: 0.8rem;
 		font-family: monospace;
 	}
 	.md_code_block {
-		background-color: #1f2937;
-		color: #f3f4f6;
+		background-color: var(--color_grey_2);
+		color: var(--color_grey_15);
 		padding: 0.6rem 0.75rem;
-		border-radius: 6px;
+		border-radius: var(--radius-lg);
 		overflow-x: auto;
 		margin: 0.4rem 0;
 		font-size: 0.78rem;
@@ -319,7 +324,7 @@
 .assistant_system_message {
 	align-self: center;
 	background-color: transparent;
-	color: #9ca3af;
+	color: @text_muted;
 	font-size: 0.75rem;
 	font-style: italic;
 	text-align: center;
@@ -329,7 +334,7 @@
 // thinking pulse bubble
 .assistant_thinking_message {
 	align-self: flex-start;
-	background-color: #fff;
+	background-color: var(--bg_elevated);
 	color: @text_muted;
 	border: 1px dashed @border_color;
 	border-bottom-left-radius: 0.2rem;
@@ -347,7 +352,7 @@
 .assistant_thoughts_block {
 	align-self: flex-start;
 	max-width: 88%;
-	background-color: #fafafa;
+	background-color: var(--bg_surface_alt);
 	color: @text_muted;
 	border: 1px dashed @border_color;
 	border-radius: 0.5rem;
@@ -365,7 +370,7 @@
 		&::before {
 			content: '▸ ';
 			display: inline-block;
-			transition: transform 0.15s;
+			transition: transform var(--transition-fast);
 		}
 	}
 
@@ -390,9 +395,9 @@
 	position: absolute;
 	top: 0.25rem;
 	right: 0.25rem;
-	background: rgba(255,255,255,0.85);
+	background: var(--bg_elevated);
 	border: 1px solid @border_color;
-	border-radius: 4px;
+	border-radius: var(--radius-md);
 	width: 1.4rem;
 	height: 1.4rem;
 	font-size: 0.85rem;
@@ -400,15 +405,15 @@
 	color: @text_muted;
 	cursor: pointer;
 	opacity: 0;
-	transition: opacity 0.15s, background-color 0.15s;
+	transition: opacity var(--transition-fast), background-color var(--transition-fast);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 
 	&.copied {
-		color: #166534;
-		background-color: #dcfce7;
-		border-color: #86efac;
+		color: var(--assistant_ok_text, #166534);
+		background-color: var(--assistant_ok_bg, #dcfce7);
+		border-color: var(--assistant_ok_border, #86efac);
 	}
 }
 
@@ -419,9 +424,9 @@
 // tool call (now <details>)
 .assistant_tool_call {
 	align-self: flex-start;
-	background-color: #f0fdf4;
-	color: #166534;
-	border: 1px solid #bbf7d0;
+	background-color: var(--assistant_ok_bg, #f0fdf4);
+	color: var(--assistant_ok_text, #166534);
+	border: 1px solid var(--assistant_ok_border, #bbf7d0);
 	border-radius: 0.5rem;
 	padding: 0.3rem 0.6rem;
 	font-size: 0.75rem;
@@ -442,19 +447,19 @@
 }
 
 .assistant_tool_call_calling {
-	background-color: #fefce8;
-	color: #854d0e;
-	border-color: #fde68a;
+	background-color: var(--assistant_warn_bg, #fefce8);
+	color: var(--assistant_warn_text, #854d0e);
+	border-color: var(--assistant_warn_border, #fde68a);
 }
 
 .assistant_tool_call_error {
-	background-color: #fef2f2;
-	color: #991b1b;
-	border-color: #fecaca;
+	background-color: var(--assistant_err_bg, #fef2f2);
+	color: var(--assistant_err_text, #991b1b);
+	border-color: var(--assistant_err_border, #fecaca);
 }
 
 .assistant_tool_call_denied {
-	background-color: #f9fafb;
+	background-color: var(--bg_surface);
 	color: @text_muted;
 	border-color: @border_color;
 	text-decoration: line-through;
@@ -470,14 +475,14 @@
 .assistant_tool_call_pre {
 	margin: 0.15rem 0 0.25rem;
 	padding: 0.4rem 0.5rem;
-	background-color: rgba(0,0,0,0.04);
-	border-radius: 4px;
+	background-color: var(--assistant_pre_bg, rgba(0,0,0,0.04));
+	border-radius: var(--radius-md);
 	max-height: 240px;
 	overflow: auto;
 	white-space: pre-wrap;
 	word-break: break-word;
 	font-size: 0.72rem;
-	color: #1f2937;
+	color: var(--fg_default);
 }
 
 // footer with input
@@ -486,14 +491,14 @@
 	align-items: flex-end;
 	gap: 0.5rem;
 	padding: 0.5rem;
-	background-color: #fff;
+	background-color: var(--bg_elevated);
 	border-top: 1px solid @border_color;
 	flex-shrink: 0;
 }
 
 .assistant_input {
 	flex: 1;
-	border: 1px solid #d1d5db;
+	border: 1px solid var(--border_strong);
 	border-radius: 0.5rem;
 	padding: 0.4rem 0.6rem;
 	font-size: 0.85rem;
@@ -503,16 +508,18 @@
 	min-height: 1.8rem;
 	line-height: 1.4;
 	outline: none;
-	transition: border-color 0.15s;
+	transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 	overflow-y: auto;
+	background-color: var(--input_bg);
+	color: var(--input_fg);
 
 	&:focus {
 		border-color: @assistant_color;
-		box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+		box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.25);
 	}
 
 	&:disabled {
-		background-color: #f3f4f6;
+		background-color: var(--bg_surface_alt);
 		opacity: 0.6;
 	}
 }
@@ -531,23 +538,23 @@
 	align-items: center;
 	justify-content: center;
 	flex-shrink: 0;
-	transition: background-color 0.15s;
+	transition: background-color var(--transition-fast);
 
 	&:hover {
 		background-color: @assistant_color_dark;
 	}
 
 	&:disabled {
-		background-color: #c7d2fe;
+		background-color: var(--assistant_disabled_bg, #c7d2fe);
 		cursor: not-allowed;
 	}
 }
 
 .assistant_stop_button {
-	background-color: #dc2626;
+	background-color: var(--color_danger);
 
 	&:hover {
-		background-color: #b91c1c;
+		background-color: var(--color_danger_hover_bg);
 	}
 }
 
@@ -561,7 +568,7 @@
 	background-position: center;
 	cursor: pointer;
 	opacity: 0.85;
-	transition: opacity 0.15s;
+	transition: opacity var(--transition-fast);
 
 	&:hover {
 		opacity: 1;
@@ -575,4 +582,25 @@
 		opacity: 1;
 		border-bottom: 2px solid @assistant_color;
 	}
+}
+
+// ---- DARK THEME OVERRIDES ----
+// Structural surfaces/text already follow semantic tokens above. Only the
+// status-tinted chips (success/warning/error), the indigo progress strip, and
+// a couple of fixed light tints need dark-optimized values here.
+:root[data-theme="dark"] {
+	--assistant_progress_bg:     #1e1f3a;
+	--assistant_progress_border: #2f3360;
+	--assistant_progress_text:   #b8bcf0;
+	--assistant_ok_bg:           #16271c;
+	--assistant_ok_text:         #7ee2a8;
+	--assistant_ok_border:       #2c5038;
+	--assistant_warn_bg:         #2a2410;
+	--assistant_warn_text:       #e8c97a;
+	--assistant_warn_border:     #4a4020;
+	--assistant_err_bg:          #2a1818;
+	--assistant_err_text:        #f08a8a;
+	--assistant_err_border:      #5a3030;
+	--assistant_pre_bg:          rgba(255, 255, 255, 0.06);
+	--assistant_disabled_bg:     #2f3360;
 }

@@ -88,11 +88,11 @@
 			margin-top: 1rem;
 			margin-bottom: 1rem;
 
-			// Colors
-			@color_thead: #e9d6c2;
-			@color_text_base: #666666;
-			@color_text_light: #757575;
-			@color_over: #efefef;
+			// Colors (theme-aware via semantic tokens)
+			@color_thead: var(--color_hilite);
+			@color_text_base: var(--fg_muted);
+			@color_text_light: var(--fg_muted);
+			@color_over: var(--bg_surface_alt);
 
 			.indexes_label {
 				text-align: right;
@@ -112,7 +112,7 @@
 				color: @color_text_light;
 				font-size: 0.9rem;
 				font-weight: 500;
-				color: #000000;
+				color: var(--fg_default);
 				padding-left: 0.5rem;
 				text-transform: none;
 				font-size: 1rem;

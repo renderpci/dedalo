@@ -21,6 +21,8 @@
 	--component_width: 50%; // default components wrapper width
 	// general sizes
 	--inspector_width: 19rem;
+	--inspector_rail_width: 48px; // width when inspector collapses into the icon rail
+	--inspector_block_radius: 8px; // corner radius of inspector content cards
 	--component_label_height: 1.5rem;
 	--content_data_min_height: 2.66rem; // +/- 47.8px
 	// media heights (3d,av,image,pdf,svg)
@@ -108,6 +110,42 @@
 	--border_strong:   var(--color_grey_11);
 	--shadow_default:  rgba(0, 0, 0, 0.1);
 	--focus_ring:      var(--color_input_focus);
+	--focus_ring_weak: rgba(59, 135, 253, 0.4); // = color_input_focus @ 40% for the focus glow
+
+	// ---- SPACING SCALE ----
+	// Compact density (base font 0.8125rem). Reuses the 0.25/0.5/1rem rhythm
+	// already used across the codebase, so adopting it is a like-for-like swap.
+	--space-0: 0;
+	--space-1: 0.125rem; //  2px hairline gaps
+	--space-2: 0.25rem;  //  4px
+	--space-3: 0.5rem;   //  8px
+	--space-4: 0.75rem;  // 12px
+	--space-5: 1rem;     // 16px
+	--space-6: 1.5rem;   // 24px
+	--space-7: 2rem;     // 32px
+	--space-8: 3rem;     // 48px
+
+	// ---- RADIUS SCALE ----
+	--radius-sm:   3px;
+	--radius-md:   0.25rem; // 4px
+	--radius-lg:   7px;     // cards, dropdowns, modals
+	--radius-pill: 999px;   // tags / chips
+
+	// ---- ELEVATION SCALE ----
+	// Composed shadows built on --shadow_default so they retune per theme
+	// automatically (no dark override needed). Resting=1, floating=2/3, modal=4.
+	--shadow-1:     0 1px 2px var(--shadow_default);
+	--shadow-2:     0 2px 6px var(--shadow_default);
+	--shadow-3:     0 4px 12px var(--shadow_default);
+	--shadow-4:     0 4px 8px var(--shadow_default), 0 6px 20px var(--shadow_default);
+	--shadow-focus: 0 0 0 3px var(--focus_ring_weak);
+
+	// ---- MOTION ----
+	--ease-standard:   cubic-bezier(0.2, 0, 0, 1);
+	--ease-out:        cubic-bezier(0, 0, 0.2, 1);
+	--transition-fast: 120ms var(--ease-standard); // micro hovers
+	--transition-base: 200ms var(--ease-standard); // general hovers
+	--transition-slow: 400ms var(--ease-standard); // theme / modal cross-fades
 
 	// ---- COMPONENT SEMANTIC TOKENS ----
 	--menu_dropdown_text:       var(--color_grey_14);
@@ -134,14 +172,14 @@
 	--modal_overlay_bg:            rgba(0, 0, 0, 0.4);
 	--modal_overlay_bg_weak:      rgba(0, 0, 0, 0.075);
 	--modal_content_bg:           var(--color_white);
-	--modal_content_shadow:       0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
+	--modal_content_shadow:       var(--shadow-4);
 	--modal_header_bg:            var(--color_orange_dedalo);
-	--modal_header_shadow:        0 2px 3px var(--color_grey_10);
+	--modal_header_shadow:        var(--shadow-2);
 	--modal_header_color:         var(--color_white);
 	--modal_btn_color:            var(--color_white);
 	--modal_btn_hover_color:      var(--color_black);
 	--modal_mini_header_bg:       var(--color_orange_dedalo);
-	--modal_radius:               7px;
+	--modal_radius:               var(--radius-lg);
 
 	// ---- DERIVED TOKENS (darken/lighten replacements) ----
 	// Pre-computed values for former darken()/lighten() calls so they
