@@ -2484,7 +2484,7 @@ export const ui = {
 						})
 
 						// add sort column icons
-							if (self.constructor.name==='section' && current_column.sortable===true) {
+							if (ui.allow_column_order(self, current_column)===true) {
 								const sort_node = ui.add_column_order_set(self, current_column, header_wrapper)
 								sort_nodes.push(sort_node)
 								sub_header_item.appendChild(sort_node)
@@ -2492,7 +2492,7 @@ export const ui = {
 					}
 				}else{
 					// add sort column icons
-						if (self.constructor.name==='section' && column.sortable===true) {
+						if (ui.allow_column_order(self, column)===true) {
 							const sort_node = ui.add_column_order_set(self, column, header_wrapper)
 							sort_nodes.push(sort_node)
 							header_item.appendChild(sort_node)
@@ -2530,6 +2530,50 @@ export const ui = {
 
 
 	/**
+	* ALLOW_COLUMN_ORDER
+	* Checks if the given column accepts order/sort buttons in the list header
+	* Section lists order results with a sqo order (view time, not stored)
+	* component_portal applies a persistent re-order of the stored locators
+	* when the ontology property 'sort_by_column' is enabled (boolean true to
+	* allow all sortable columns or array of column tipos as allowlist)
+	* @see add_column_order_set
+	* @param object self
+	* 	Instance of section/component_portal
+	* @param object column
+	* 	columns_map item
+	* @return bool
+	*/
+	allow_column_order(self, column) {
+
+		// column must be sortable in any case (calculated from context 'sortable')
+			if (column.sortable!==true) {
+				return false
+			}
+
+		// section case. All sortable columns are orderable
+			if (self.constructor.name==='section') {
+				return true
+			}
+
+		// component_portal case. Edit mode with edit permissions and
+		// non external source only, gated by the 'sort_by_column' property
+			if (self.model==='component_portal'
+				&& self.mode==='edit'
+				&& self.permissions > 1
+				&& self.context?.properties?.source?.mode!=='external'
+				) {
+				const sort_by_column = self.context?.properties?.sort_by_column
+				return sort_by_column===true
+					|| (Array.isArray(sort_by_column) && sort_by_column.includes(column.tipo))
+			}
+
+
+		return false
+	},//end allow_column_order
+
+
+
+	/**
 	* ADD_COLUMN_ORDER_SET
 	* Creates the arrows to sort list by column and
 	* place it into the header_item node
@@ -2544,25 +2588,34 @@ export const ui = {
 
 		// short vars
 			const path				= column.path
+			const is_portal			= self.model==='component_portal'
 			const title_asc			= (get_label.sort || 'Sort') + ' ' + (get_label.ascending || 'ascending')
 			const title_desc		= (get_label.sort || 'Sort') + ' ' + (get_label.descending || 'descending')
 			let default_direction	= 'DESC'
 			let current_direction	= undefined
 
-		// current_direction. current order current_direction check from sqo
-		// default is undefined
-			const sqo_order = self.rqo.sqo.order || null
-			if (sqo_order) {
+		// current_direction. default is undefined
+			if (is_portal) {
+				// portal case. Last applied column order (ephemeral, advisory only:
+				// manual drag and drop can change the stored order at any time)
+				if (self.column_order_state && self.column_order_state.tipo===column.tipo) {
+					current_direction = self.column_order_state.direction
+				}
+			}else{
+				// section case. current order current_direction check from sqo
+				const sqo_order = self.rqo?.sqo?.order || null
+				if (sqo_order) {
 
-				const sqo_order_length = sqo_order.length
-				for (let i = 0; i < sqo_order_length; i++) {
+					const sqo_order_length = sqo_order.length
+					for (let i = 0; i < sqo_order_length; i++) {
 
-					const item = sqo_order[i]
+						const item = sqo_order[i]
 
-					const last_path	= item.path[item.path.length-1]
-					if (last_path.component_tipo===column.tipo) {
-						current_direction = item.direction
-						break;
+						const last_path	= item.path[item.path.length-1]
+						if (last_path.component_tipo===column.tipo) {
+							current_direction = item.direction
+							break;
+						}
 					}
 				}
 			}
@@ -2570,36 +2623,44 @@ export const ui = {
 		// exec_order function
 			const exec_order = (direction) => {
 
-				// sample
-					// [
-					//    {
-					//        "direction": "DESC",
-					//        "path": [
-					//            {
-					//                "name": "Code",
-					//                "model": "component_input_text",
-					//                "section_tipo": "oh1",
-					//                "component_tipo": "oh14"
-					//            }
-					//        ]
-					//    }
-					// ]
+				if (is_portal) {
 
-				// order sqo build
-					const order = [{
-						direction : direction, // ASC|DESC
-						path : path
-					}]
+					// portal case. Persistently re-order the stored locator array
+					// by the column value (the order is resolved and saved in the server)
+						self.sort_by_column(column, direction)
+				}else{
 
-				// update rqo (removed way. navigate from page directly wit a user_navigation event bellow)
-				// note that navigate only refresh current instance content_data, not the whole page
-					self.navigate({
-						callback : async () => { // callback
-							self.request_config_object.sqo.order	= order
-							self.rqo.sqo.order						= order
-						},
-						navigation_history : true // bool navigation_history save
-					})
+					// sample
+						// [
+						//    {
+						//        "direction": "DESC",
+						//        "path": [
+						//            {
+						//                "name": "Code",
+						//                "model": "component_input_text",
+						//                "section_tipo": "oh1",
+						//                "component_tipo": "oh14"
+						//            }
+						//        ]
+						//    }
+						// ]
+
+					// order sqo build
+						const order = [{
+							direction : direction, // ASC|DESC
+							path : path
+						}]
+
+					// update rqo (removed way. navigate from page directly wit a user_navigation event bellow)
+					// note that navigate only refresh current instance content_data, not the whole page
+						self.navigate({
+							callback : async () => { // callback
+								self.request_config_object.sqo.order	= order
+								self.rqo.sqo.order						= order
+							},
+							navigation_history : true // bool navigation_history save
+						})
+				}
 
 				// update current_direction
 					current_direction = direction
