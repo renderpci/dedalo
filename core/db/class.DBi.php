@@ -179,6 +179,11 @@ abstract class DBi {
 	public static function invalidate_connection_cache() : void {
 		self::$pg_conn_cache = null;
 		self::$pg_conn_valid_until = 0;
+		// DB-02: prepared statements are bound to the (now dead) connection. The
+		// tracking map must be cleared too, otherwise exec_search sees a stale
+		// md5 key, skips re-preparing on the fresh connection and then fails with
+		// "prepared statement does not exist".
+		self::$prepared_statements = [];
 	}//end invalidate_connection_cache
 
 

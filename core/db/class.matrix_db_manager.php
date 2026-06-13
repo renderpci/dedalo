@@ -203,8 +203,12 @@ class matrix_db_manager {
 			 SELECT $1, next_start FROM calc_start
 			 ON CONFLICT (tipo)
 			 DO UPDATE
-			  -- Step 3: If the counter exists, ignore the calculation and just increment
-			  SET value = matrix_counter.value + 1
+			  -- Step 3: If the counter exists, ignore the calculation and just increment.
+			  -- DB-01: reference the actual conflict-target table ($counter_table),
+			  -- not a hardcoded 'matrix_counter'. For '_dd' sections the target is
+			  -- 'matrix_counter_dd'; hardcoding raised 'missing FROM-clause entry for
+			  -- table matrix_counter' on the second insert (DO UPDATE) of those tables.
+			  SET value = $counter_table.value + 1
 			  RETURNING value
 			)
 			INSERT INTO $table (" . implode(', ', $columns) . ")

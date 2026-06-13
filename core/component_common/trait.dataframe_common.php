@@ -267,15 +267,19 @@ trait dataframe_common {
 
 			// The dataframe must not create its own time machine row:
 			// the main component saves the full state in its TM row.
+			// REL-01: restore $save_tm in finally so a throw in set_data/save does
+			// not leave Time Machine capture globally disabled in the worker.
+			$prev_save_tm = tm_record::$save_tm;
 			tm_record::$save_tm = false;
-
-			// remove the paired locators (caller-aware write preserves the
-			// sibling frames of other items, see component_dataframe::set_data)
-			$dataframe_component->set_data( null );
-			$dataframe_component->save();
-
-			// back to set time machine to true for the next savings.
-			tm_record::$save_tm = true;
+			try {
+				// remove the paired locators (caller-aware write preserves the
+				// sibling frames of other items, see component_dataframe::set_data)
+				$dataframe_component->set_data( null );
+				$dataframe_component->save();
+			} finally {
+				// back to set time machine for the next savings.
+				tm_record::$save_tm = $prev_save_tm;
+			}
 		}
 
 		// delete_target policy: soft-delete the unlinked frame target records
@@ -522,10 +526,15 @@ trait dataframe_common {
 			}));
 
 			// the main component save captures the state: no dataframe TM row
+			// REL-01: restore $save_tm in finally even if set_data/save throws.
+			$prev_save_tm = tm_record::$save_tm;
 			tm_record::$save_tm = false;
-			$dataframe_component->set_data( array_merge($keep, $group_frames) );
-			$save_result = $dataframe_component->save();
-			tm_record::$save_tm = true;
+			try {
+				$dataframe_component->set_data( array_merge($keep, $group_frames) );
+				$save_result = $dataframe_component->save();
+			} finally {
+				tm_record::$save_tm = $prev_save_tm;
+			}
 
 			if ($save_result===false) {
 				$result = false;

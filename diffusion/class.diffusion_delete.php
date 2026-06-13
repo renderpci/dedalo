@@ -221,6 +221,18 @@ class diffusion_delete {
 						}
 						break;
 
+					case 'xml':
+						// DIFFU-02: XML was grouped with rdf in step 2 but had no
+						// execution case here, so deleting a record left its published
+						// XML file orphaned on disk. Mirror the rdf case.
+						$xml_result = self::delete_xml($element_tipo, $section_tipo, $section_id);
+						$success	= $xml_result->result;
+						$info->file_path = $xml_result->file_path ?? null;
+						if (!$success && !empty($xml_result->msg)) {
+							$response->errors[] = $xml_result->msg;
+						}
+						break;
+
 					default:
 						continue 2; // unsupported types: skip silently (already logged)
 				}
