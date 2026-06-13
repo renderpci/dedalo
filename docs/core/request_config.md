@@ -555,7 +555,7 @@ Returns first `request_config_object` or null.
 
 ## Related Documentation
 
-- [Request Query Object (RQO)](../rqo.md)
-- [Search Query Object (SQO)](../sqo.md)
-- [DD Object](../dd_object.md)
-- [Request Config Presets](./request_config_presets.md)
+- [Request Query Object (RQO)](./rqo.md)
+- [Search Query Object (SQO)](./sqo.md)
+- [DD Object](./dd_object.md)
+- [Request Config Presets](./ontology/request_config_presets.md)

@@ -238,6 +238,13 @@ You can find specific documentation on the [Dedalo ontology here.](./ontology/in
 
 ## Core Documentation
 
+### Start here
+
+- **[Architecture Overview](./architecture_overview.md)** — the recommended starting point: the two systems, the matrix data model, the active ontology, and how data flows from server build to client render.
+- **[Sections](./sections/index.md)** — the table abstraction (a group of records of the same kind) in depth.
+- **[Components](./components/index.md)** — the field abstraction: typologies, inheritance, datum, and the full per-component reference.
+- **[Glossary](./glossary.md)** — the full Dédalo nomenclature (section, component, tipo, locator, sqo, rqo, ddo, dd_date, …).
+
 ### Request Configuration
 
 The `request_config` system defines how sections and components retrieve and display data. It bridges the ontology definition with API requests.
@@ -254,7 +261,7 @@ The `request_config` system defines how sections and components retrieve and dis
 
 - **[DD Object (ddo)](./dd_object.md)** - Normalized object for requests
 - **[Locator](./locator.md)** - Pointer between data
-- **[DD Date](./dd_date.md)** - Date representation
+- **[DD Date](./glossary.md#dd_date)** - Date representation
 
 ### Ontology
 

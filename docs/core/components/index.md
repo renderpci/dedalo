@@ -1,5 +1,7 @@
 # Introduction to components
 
+> See also: [Architecture overview](../architecture_overview.md) · [Sections](../sections/index.md) · [Base classes](base_classes.md)
+
 Components are re-usable objects that can be instantiated by the ontology definition. Components are part of the sections and are used as fields with specific properties.
 
 ## Nomenclature of files
@@ -83,59 +85,59 @@ Literal components has three different ways to manage data; direct, media and in
 
 #### Direct components
 
-- [component_date](component_date.md)
-- [component_email](component_email.md)
-- component_external
-- component_filter_records
-- component_geolocation
-- [component_input_text](component_input_text.md)
-- [component_iri](component_iri.md)
-- component_json
-- [component_number](component_number.md)
-- component_password
-- component_security_access
-- component_section_id
-- component_text_area
+- [component_date](component_date.md) — dates and time values; non-translatable, stored in `lg-nolan`.
+- [component_email](component_email.md) — e-mail addresses as plain strings, with client and server format validation.
+- [component_external](component_external.md) — retrieves and displays data live from a remote external API.
+- [component_filter_records](component_filter_records.md) — per-record access control stored in the section `misc` data.
+- [component_geolocation](component_geolocation.md) — a geographic position (and optional vector shapes) edited on a Leaflet map.
+- [component_input_text](component_input_text.md) — the basic single-line plain-text field; the default literal building block.
+- [component_iri](component_iri.md) — Internationalized Resource Identifiers (IRI / URI): web addresses and persistent identifiers.
+- [component_json](component_json.md) — an arbitrary, free-form JSON value stored as a single monovalue.
+- [component_number](component_number.md) — numeric data (integer / float) with controlled type and precision; non-translatable.
+- [component_password](component_password.md) — a single hashed user password value.
+- [component_security_access](component_security_access.md) — per-profile permission levels over every reachable ontology element.
+- [component_section_id](component_section_id.md) — read-only, virtual component exposing the record's own `section_id`.
+- [component_text_area](component_text_area.md) — rich / multi-paragraph (formatted) text content.
 
-This components extend component_common.php class
+These components extend the `component_common` class (the string-based ones — `component_input_text`, `component_text_area`, `component_email` — through the shared `component_string_common` base). See [base classes](base_classes.md).
 
 #### Media components
 
-- component_3d
-- component_av
-- component_image
-- component_pdf
-- component_svg
-  
-This components extend component_media_common.php class
+- [component_3d](component_3d.md) — 3D model files, rendered with an interactive WebGL (three.js) viewer.
+- [component_av](component_av.md) — audio and video media, with quality versions, poster frames, subtitles and timecodes.
+- [component_image](component_image.md) — raster images, with quality versions, alternative formats and SVG overlay regions.
+- [component_pdf](component_pdf.md) — PDF and office documents, with thumbnails, text extraction and optional OCR.
+- [component_svg](component_svg.md) — Scalable Vector Graphics files with normalized storage and raster thumbnails.
+
+These components extend the `component_media_common` class. See [base classes](base_classes.md).
 
 #### Info components
 
-- component_info
-- component_inverse
-  
-This components extend component_common.php class
+- [component_info](component_info.md) — a container for widgets that compute their data dynamically from other components of the record.
+- [component_inverse](component_inverse.md) — displays the backlinks of a record (which records point at me) without storing anything.
+
+These components extend the `component_common` class. See [base classes](base_classes.md).
 
 ### Related components
 
 Related components manage [locators](../locator.md) to point at other sections or components, sections pointed could be the same of the related component or other sections. The locator can specify if the pointed components is a literal or other related component.
 
-- [component_check_box](component_check_box.md)
-- [component_dataframe](component_dataframe.md)
-- component_filter
-- component_filter_master
-- component_portal
-- component_publication
-- component_radio_button
-- component_relation_children
-- component_relation_index
-- component_relation_model
-- component_relation_parent
-- component_relation_related
-- component_select
-- component_select_lang
+- [component_check_box](component_check_box.md) — multi-select of a closed list of values; each check stores a locator.
+- [component_dataframe](component_dataframe.md) — frame records (uncertainty, qualifiers, sources) paired to individual items of a main component.
+- [component_filter](component_filter.md) — assigns a record to one or more projects, controlling per-project user visibility.
+- [component_filter_master](component_filter_master.md) — the User-section variant of `component_filter` declaring a user's project membership.
+- [component_portal](component_portal.md) — the relational workhorse: links the record to one or more records in a target section.
+- [component_publication](component_publication.md) — publication yes/no switch stored as a locator into the shared yes/no section.
+- [component_radio_button](component_radio_button.md) — single-select of a closed list of values; one locator, replaced on change.
+- [component_relation_children](component_relation_children.md) — read-only downstream view of a parent/child hierarchy.
+- [component_relation_index](component_relation_index.md) — indexation backlinks (`dd96`): which records index this one.
+- [component_relation_model](component_relation_model.md) — model-type relation (`dd98`) to an ontology-model-derived target section.
+- [component_relation_parent](component_relation_parent.md) — the parent reference(s) of the record; upward edge of a tree.
+- [component_relation_related](component_relation_related.md) — associative (see-also / RT) relationships between thesaurus terms.
+- [component_select](component_select.md) — single-choice dropdown of a target section's records, stored as one locator.
+- [component_select_lang](component_select_lang.md) — language picker; stores a locator into the languages section and resolves a language code/name.
 
-This components extend component_relation_common.php class
+These components extend the `component_relation_common` class. See [base classes](base_classes.md).
 
 ## Inheritance
 
@@ -145,35 +147,41 @@ In server context. components classes inherit from common classes dependent of t
     flowchart RL
        B("component_common") -.-> A("common")
          subgraph inheritance["components inheritance"]
+            BSC("component_string_common") -.-> B
             BA("component_media_common") -.-> B
-            BB("component_related_common")  -.-> B
-            subgraph literal["literal components"]
+            BB("component_relation_common") -.-> B
+            subgraph literal["literal / direct components"]
                 BC("component_date") -.-> B
-                BD("component_email") -.-> B
                 BE("component_external") -.-> B
                 BF("component_filter_records") -.-> B
                 BG("component_geolocation") -.-> B
-                BH("component_input_text") -.-> B
                 BI("component_iri") -.-> B
                 BJ("component_json") -.-> B
                 BK("component_number") -.-> B
                 BL("component_password") -.-> B
                 BM("component_security_access") -.-> B
                 BN("component_section_id") -.-> B
-                BO("component_text_area") -.-> B
+                BINFO("component_info") -.-> B
+                BINV("component_inverse") -.-> B
+                subgraph strings["string components"]
+                   BD("component_email") -.-> BSC
+                   BH("component_input_text") -.-> BSC
+                   BO("component_text_area") -.-> BSC
+                end
                 subgraph media["media components"]
                    BAA("component_3d") -.-> BA
                    BAB("component_av") -.-> BA
                    BAC("component_image") -.-> BA
                    BAD("component_pdf") -.-> BA
                    BAF("component_svg") -.-> BA
-                    end
                 end
-            subgraph related["related Components"]
+            end
+            subgraph related["related components"]
                 BBA("component_check_box") -.-> BB
                 BBB("component_filter") -.-> BB
                 BBBA("component_filter_master") -.-> BBB
                 BBC("component_portal") -.-> BB
+                BBDF("component_dataframe") -.-> BBC
                 BBD("component_publication") -.-> BB
                 BBE("component_radio_button") -.-> BB
                 BBF("component_relation_children") -.-> BB
@@ -186,6 +194,9 @@ In server context. components classes inherit from common classes dependent of t
             end
         end
 ```
+
+!!! note "Reading the diagram"
+    `component_string_common` (the base of `component_input_text`, `component_text_area` and `component_email`) and `component_media_common` and `component_relation_common` all extend `component_common`. Two related components do **not** extend `component_relation_common` directly: `component_filter_master` extends `component_filter`, and `component_dataframe` extends `component_portal`. See [base classes](base_classes.md) for what each layer adds.
 
 ## Instantiation
 
