@@ -1374,30 +1374,37 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 
 	/**
 	* TEST_get_csv_files_with_custom_path
-	* Test get_csv_files with custom files_path option
+	* TOOLS-02 (2026-06 audit): a client-supplied files_path MUST be ignored.
+	* get_csv_files always reads the caller's own per-user import dir; honouring an
+	* arbitrary files_path was an authenticated arbitrary-directory read. This test
+	* now asserts the secure contract: passing a custom files_path yields the same
+	* result as not passing one (the custom directory's contents are never leaked).
 	* @return void
 	*/
 	public function test_get_csv_files_with_custom_path() {
 
-		$response = tool_import_dedalo_csv::get_csv_files((object)[
+		// a custom files_path pointing at the test fixture dir (which has CSVs)
+		$with_custom = tool_import_dedalo_csv::get_csv_files((object)[
 			'files_path' => $this->get_test_files_path()
 		]);
+		// the same call without any custom path (per-user dir only)
+		$without_custom = tool_import_dedalo_csv::get_csv_files((object)[]);
 
-		$this->assertTrue(
-			gettype($response)==='object',
-			'expected gettype result is object'
-				.' and is : '.gettype($response)
+		$this->assertSame(
+			'object',
+			gettype($with_custom),
+			'expected response object'
 		);
-		$this->assertTrue(
-			gettype($response->result)==='array',
-			'expected gettype result is array'
-				.' and is : '.gettype($response->result)
+		$this->assertSame(
+			'array',
+			gettype($with_custom->result),
+			'expected result array'
 		);
-		// Should find the test CSV files
-		$this->assertTrue(
-			count($response->result) >= 2,
-			'expected at least 2 CSV files'
-				.' and found : '.count($response->result)
+		// the client files_path must be ignored: same file set as the default call.
+		$this->assertSame(
+			count($without_custom->result),
+			count($with_custom->result),
+			'TOOLS-02: a client-supplied files_path must be ignored (must not read an arbitrary directory)'
 		);
 	}//end test_get_csv_files_with_custom_path
 
