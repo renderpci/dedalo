@@ -281,7 +281,9 @@ class tool_import_dedalo_csv extends tool_common {
 					$item = (object)[
 						'dir'					=> $dir,
 						'name'					=> $current_file_name,
-						'data'					=> $ar_data, // $ar_data,
+						// TOOLS-07: do not ship the full parsed contents of every CSV in the
+						// listing response — clients use 'sample_data' for preview and load
+						// full rows only at import time.
 						'n_records'				=> $n_records,
 						'n_columns'				=> $n_columns,
 						'file_info'				=> $file_info,

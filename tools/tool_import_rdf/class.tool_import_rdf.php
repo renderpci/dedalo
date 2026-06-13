@@ -765,7 +765,7 @@ class tool_import_rdf extends tool_common {
 				: '{
 					"$and": [
 						{
-							"q": "'.$value.'",
+							"q": '.json_encode((string)$value).',
 							"q_operator": "==",
 							"q_split": false,
 							"unaccent": false,
@@ -775,12 +775,14 @@ class tool_import_rdf extends tool_common {
 									"section_tipo"		: "'.$section_tipo.'",
 									"component_tipo"	: "'.$component_tipo.'",
 									"model"				: "'.$model_name.'",
-									"name"				: "'.$name.'"
+									"name"				: '.json_encode((string)$name).'
 								}
 							]
 						}
 					]
 				  }';
+				// TOOLS-04: $value (a remote RDF literal) and $name are json_encode'd so
+				// quotes/backslashes can't break the JSON filter document.
 
 		// sqo
 			$sqo = json_decode('{
@@ -1013,10 +1015,11 @@ class tool_import_rdf extends tool_common {
 
 			$lang = ontology_node::get_translatable( $component_tipo ) ? 'all' : DEDALO_DATA_NOLAN;
 		// filter
+			// TOOLS-04: json_encode the remote RDF literal so it can't break the filter JSON.
 			$filter = '{
 				"$and": [
 					{
-						"q": "'.$value.'",
+						"q": '.json_encode((string)$value).',
 						"q_split": false,
 						"unaccent": false,
 						"lang": "'.$lang.'",

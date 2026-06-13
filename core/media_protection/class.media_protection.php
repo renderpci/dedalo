@@ -196,7 +196,9 @@ class media_protection {
 
 		$auth_dir = self::get_base_path() . '/auth';
 
-		if (!is_dir($auth_dir) && !mkdir($auth_dir, 0755, true)) {
+		// MEDIA-03: 0750 (not world-readable) so other local users can't list the
+		// auth markers (whose filenames are valid cookie values).
+		if (!is_dir($auth_dir) && !mkdir($auth_dir, 0750, true)) {
 			debug_log(__METHOD__
 				. " Unable to create media auth marker dir " . PHP_EOL
 				. ' auth_dir: ' . $auth_dir
@@ -518,7 +520,9 @@ class media_protection {
 		$cookie_file	= self::get_cookie_auth_file_path();
 		$cookie_dir		= dirname($cookie_file);
 
-		if (!is_dir($cookie_dir) && !mkdir($cookie_dir, 0755, true)) {
+		// MEDIA-03: 0750 (not world-readable) — keep the cookie-auth marker store
+		// unreadable to other local users.
+		if (!is_dir($cookie_dir) && !mkdir($cookie_dir, 0750, true)) {
 			debug_log(__METHOD__
 				. " Unable to create media protection cookie dir " . PHP_EOL
 				. ' cookie_dir: ' . $cookie_dir

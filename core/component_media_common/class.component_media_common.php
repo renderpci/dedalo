@@ -2455,20 +2455,34 @@ class component_media_common extends component_common {
 	* @return string $media_path
 	* @test true
 	*/
-	public function get_media_path_dir(string $quality) : string {
+	/**
+	* SANITIZE_QUALITY
+	* SEC-065 / MEDIA-04 / MEDIA-05: $quality is interpolated into filesystem paths
+	* and URLs. Restrict it to a strict identifier grammar (alphanumeric, underscore,
+	* hyphen, dot) — note '<' is NOT allowed — and reject pure-dot tokens ('.'/'..')
+	* so it cannot escape the media root. Falls back to the original quality on mismatch.
+	* @param string $quality
+	* @return string
+	*/
+	private function sanitize_quality(string $quality) : string {
 
-		// SEC-065: `$quality` is interpolated into a filesystem path; an unchecked
-		// value (e.g. "../..") would escape the media root. We restrict $quality
-		// to the same strict identifier grammar we use for key_dir (alphanumeric,
-		// underscore, hyphen, dot) and fall back to the original quality on
-		// mismatch. No caller legitimately needs path separators in $quality.
-		if (preg_match('/^[A-Za-z0-9_\-\.\<]+$/', $quality) !== 1) {
+		if ($quality==='.' || $quality==='..' || preg_match('/^[A-Za-z0-9_\-\.]+$/', $quality) !== 1) {
 			debug_log(__METHOD__
-				. ' SEC-065: rejecting unsafe quality: ' . to_string($quality)
+				. ' SEC-065/MEDIA-04: rejecting unsafe quality: ' . to_string($quality)
 				, logger::ERROR
 			);
-			$quality = (string)$this->get_original_quality();
+			return (string)$this->get_original_quality();
 		}
+
+		return $quality;
+	}//end sanitize_quality
+
+
+
+	public function get_media_path_dir(string $quality) : string {
+
+		// SEC-065 / MEDIA-05: confine $quality before it reaches the filesystem path.
+		$quality = $this->sanitize_quality($quality);
 
 		if(isset($this->external_source)) {
 
@@ -2499,6 +2513,10 @@ class component_media_common extends component_common {
 	* @test true
 	*/
 	public function get_media_url_dir(string $quality) : string {
+
+		// MEDIA-04: validate $quality here too (parity with get_media_path_dir) so the
+		// URL and filesystem path stay consistent and no raw client value is reflected.
+		$quality = $this->sanitize_quality($quality);
 
 		$initial_media_path	= $this->initial_media_path;
 		$additional_path	= $this->additional_path;
