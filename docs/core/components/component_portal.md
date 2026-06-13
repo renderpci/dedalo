@@ -98,6 +98,26 @@ See the full number import definition [here](../importing_data.md#related-data).
 
 ## Properties
 
+### sort_by_column
+
+Allows users to persistently re-order **all** portal entries (the full stored locator array, across pagination) by the value of a column component in the target section, ascending or descending. For example, order the entries by time using a `component_date` column of the linked records.
+
+To allow, include the `sort_by_column` into ontology properties.
+
+```json
+{
+	"sort_by_column": true
+}
+```
+
+Value shapes:
+
+- `true` : every sortable column of the portal shows sort buttons in the list header (default view, edit mode).
+- `array of column tipos` : restricts the sortable columns to the given component tipos, e.g. `["oh28"]`.
+
+When enabled, clicking a column sort button resolves the new order in the server (a search over the target section restricted to the linked section_id list, ordered by the column component value) and **saves the re-ordered locator array** — it is a real data change, recorded in Time Machine like any other component save. Entries whose target record cannot be resolved (deleted records) fall to the end preserving their relative order; entries with empty column values sort after valued ones (`NULLS LAST`).
+
+Manual drag and drop re-ordering remains always available regardless of this property; the column sort is a one-shot action, not a stored view preference. Columns whose component model is not sortable (`get_sortable()` false: check_box, select, radio_button, etc.) never show sort buttons. Portals with `source.mode` `external` are excluded (their data is not locally owned).
 
 ## Render Views
 
