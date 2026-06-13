@@ -6,7 +6,10 @@
          bootstrap="bootstrap.php"
          colors="true">
     <php>
-        <ini name="error_reporting" value="E_ALL &amp; ~E_NOTICE &amp; ~E_WARNING &amp; ~E_DEPRECATED"/>
+        <!-- CONF-09: re-enable E_WARNING so warnings surface in test output (notices and
+             deprecations stay off until the existing legacy noise is baselined). This
+             only affects what PHP reports, not what fails the suite. -->
+        <ini name="error_reporting" value="E_ALL &amp; ~E_NOTICE &amp; ~E_DEPRECATED"/>
     </php>
     <source>
         <exclude>
