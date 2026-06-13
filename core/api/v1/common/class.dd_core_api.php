@@ -2783,9 +2783,11 @@ final class dd_core_api {
 			// entity
 			$obj->dedalo_entity						= DEDALO_ENTITY;
 			$obj->dedalo_entity_id					= DEDALO_ENTITY_ID;
-			// version
-			$obj->dedalo_version					= DEDALO_VERSION;
-			$obj->dedalo_build						= DEDALO_BUILD;
+			// version (API-03: the exact build is a version-disclosure recon aid;
+			// expose it only to authenticated callers. entity stays public for the
+			// pre-auth login page branding.)
+			$obj->dedalo_version					= $obj->is_logged ? DEDALO_VERSION : null;
+			$obj->dedalo_build						= $obj->is_logged ? DEDALO_BUILD : null;
 			// mode
 			$obj->mode								= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
 			// lang

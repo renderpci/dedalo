@@ -920,7 +920,9 @@
 	// 		'http://allowed-domain.org'
 	// 	],
 	// 	'allowed_methods' => ['GET', 'POST', 'PUT', 'OPTIONS'],
-	// 	'allowed_headers' => ['Content-Type', 'Content-Range', 'Authorization', 'X-Requested-With'],
+	// 	// API-04: X-Dedalo-Csrf-Token is required for the SEC-008 CSRF header path on
+	// 	// cross-origin deployments (the browser preflight must permit the custom header).
+	// 	'allowed_headers' => ['Content-Type', 'Content-Range', 'Authorization', 'X-Requested-With', 'X-Dedalo-Csrf-Token'],
 	// 	'max_age' => 86400,  // 24 hours
 	// ]);
 

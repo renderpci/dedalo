@@ -758,6 +758,15 @@ class matrix_db_manager {
 			$key		= $data->key;
 			$value		= $data->value;
 
+			// DB-05: $column is interpolated directly into the UPDATE SET clause
+			// (SQL column names cannot be bound as parameters), so it MUST be a bare
+			// identifier — reject anything that could carry SQL. ($key below is bound
+			// as a text[] path parameter, so it is data, not SQL.)
+			if (!is_string($column) || !preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $column)) {
+				debug_log(__METHOD__ . ' Rejected invalid column identifier: ' . to_string($column), logger::ERROR);
+				return false;
+			}
+
 			// Group by column
 			if (!isset($columns_data[$column])) {
 				$columns_data[$column] = [];

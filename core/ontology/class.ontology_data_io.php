@@ -244,6 +244,15 @@ class ontology_data_io {
 
 		// get section_tipo
 			$section_tipo = ontology::map_tld_to_target_section_tipo( $tld );
+			// COMP-06: $section_tipo is interpolated into a psql -c SQL string literal
+			// that runs a shell `TO PROGRAM`. It is server-derived from the
+			// safe_tld-validated $tld, but assert a bare identifier as defence-in-depth
+			// so no quote / shell metacharacter can reach the command.
+			if (!is_string($section_tipo) || !preg_match('/^[a-zA-Z0-9_]+$/', $section_tipo)) {
+				$response->msg		= 'Error. Invalid section_tipo for ontology export';
+				$response->errors[]	= 'Invalid section_tipo: '.to_string($section_tipo);
+				return $response;
+			}
 
 		// columns. Like ["section_id", "section_tipo", "data", "relation", ..]
 			$columns = matrix_db_manager::get_columns_name();
