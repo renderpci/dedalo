@@ -268,6 +268,17 @@ class class_loader {
 				$file_path	= DEDALO_DIFFUSION_PATH . '/class.' . $class_name . '.php';
 				break;
 
+			// ts_object co-located helpers. These hot-path tree classes live
+			// inside core/ts_object/ (alongside class.ts_object.php) instead of
+			// in their own one-class-per-dir directories, so the default rule
+			// below would resolve them to a non-existent path. ts_object.php
+			// require_once's them, but direct consumers (e.g. area_thesaurus
+			// calling ts_node_repository::fetch_node_info before instantiating
+			// a ts_object) must still be able to autoload them on demand.
+			case (in_array($class_name, ['ts_node_repository','ts_term_resolver'], true)):
+				$file_path	= DEDALO_CORE_PATH . '/ts_object/class.' . $class_name . '.php';
+				break;
+
 			// components, areas, etc. (first level directory inside DEDALO_CORE_PATH)
 			default:
 				$file_path	= DEDALO_CORE_PATH . '/' . $class_name . '/class.' . $class_name . '.php';
