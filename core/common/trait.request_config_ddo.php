@@ -412,6 +412,21 @@ trait request_config_ddo {
 
 						$section_map_value = get_object_property($section_map, $current_column_path);
 
+						// Scope-fallback: when a [scope, key] path resolves empty, retry through
+						// the section_map chain (e.g. a section defining only 'main' for a
+						// 'thesaurus.term' path). Additive: only fires on a previously-empty value.
+						if(	empty($section_map_value)
+							&& is_array($current_column_path)
+							&& count($current_column_path)===2
+							&& in_array($current_column_path[0], section_map::SCOPE_FALLBACK, true)
+						){
+							$section_map_value = section_map::get_element_tipo(
+								$current_section_tipo,
+								$current_column_path[1],
+								$current_column_path[0]
+							);
+						}
+
 						// ignore value
 						if(empty($section_map_value)){
 							debug_log(__METHOD__

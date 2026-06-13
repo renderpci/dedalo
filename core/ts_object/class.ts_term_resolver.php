@@ -16,8 +16,8 @@ class ts_term_resolver {
 
 
 	/**
-	 * Static cache mapping locators to their term string per lang.
-	 * Key format: "{section_tipo}_{section_id}_{lang}"
+	 * Static cache mapping locators to their term string per scope and lang.
+	 * Key format: "{section_tipo}_{section_id}_{scope}_{lang}"
 	 * @var array $term_by_locator_data_cache
 	 */
 	public static array $term_by_locator_data_cache = [];
@@ -25,11 +25,14 @@ class ts_term_resolver {
 
 
 	/**
-	* GET_TERM_DATO_BY_LOCATOR
+	* get_term_data_by_locator
+	* Merged raw component data across all `term` tipos of the resolved scope.
 	* @param object $locator
+	* @param string|null $scope	Section_map scope. Defaults to 'thesaurus' to
+	* 	preserve the historical (thesaurus-only) behavior; null walks the chain.
 	* @return array|null $final_value
 	*/
-	public static function get_term_dato_by_locator( object $locator ) : ?array {
+	public static function get_term_data_by_locator( object $locator, ?string $scope='thesaurus' ) : ?array {
 
 		// check valid object
 			if (!is_object($locator) || !property_exists($locator, 'section_tipo')) {
@@ -42,12 +45,11 @@ class ts_term_resolver {
 				return null;
 			}
 
-		$section_map	= section::get_section_map($locator->section_tipo);
-		$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
-
-		$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
 		$section_id		= $locator->section_id;
 		$section_tipo	= $locator->section_tipo;
+
+		// term tipos from the resolved scope (null-safe; chain-aware)
+		$ar_tipo = section_map::get_term_tipos($section_tipo, $scope);
 
 		if(empty($ar_tipo) || empty($section_id) || empty($section_tipo)) {
 			debug_log(__METHOD__
@@ -81,7 +83,7 @@ class ts_term_resolver {
 
 
 		return $final_value;
-	}//end get_term_dato_by_locator
+	}//end get_term_data_by_locator
 
 
 
@@ -92,11 +94,13 @@ class ts_term_resolver {
 	 * @param object $locator
 	 * @param string $lang
 	 * @param bool $from_cache
+	 * @param string|null $scope	Section_map scope. Defaults to 'thesaurus' to
+	 * 	preserve the historical (thesaurus-only) behavior; null walks the chain.
 	 * @return string|null
 	 */
-	public static function get_term_by_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) : ?string {
+	public static function get_term_by_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false, ?string $scope='thesaurus' ) : ?string {
 
-		$valor = null;
+		$value = null;
 
 		// check locator->section_tipo mandatory property
 			if (!property_exists($locator, 'section_tipo')) {
@@ -106,40 +110,42 @@ class ts_term_resolver {
 						, logger::ERROR
 					);
 				}
-				return $valor; // null
+				return $value; // null
 			}
 
-		// Cache control (request scope)
-			$cache_uid = $locator->section_tipo.'_'.$locator->section_id.'_'.$lang;
+		$section_tipo	= $locator->section_tipo;
+		$section_id		= $locator->section_id;
+
+		// Cache control (request scope). Scope-aware key avoids cross-scope pollution.
+		// invalidate_node() still matches on the "{tipo}_{id}_" prefix.
+			$scope_key = $scope ?? '';
+			$cache_uid = $section_tipo.'_'.$section_id.'_'.$scope_key.'_'.$lang;
 			if ($from_cache===true && isset(self::$term_by_locator_data_cache[$cache_uid])) {
 				return self::$term_by_locator_data_cache[$cache_uid];
 			}
 
-		// thesaurus_map conditional value
-			$section_map	= section::get_section_map($locator->section_tipo);
-			$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
-			if ($thesaurus_map===false) {
+		// term tipos from the resolved scope (null-safe; chain-aware)
+			$term_tipos = section_map::get_term_tipos($section_tipo, $scope);
+			if (empty($term_tipos)) {
 
-				$valor = $locator->section_tipo .'_'. $locator->section_id ;
+				// no usable map/term: legacy locator-string fallback
+				$value = $section_tipo .'_'. $section_id;
 				if(isset($locator->component_tipo))
-					$valor .= '_'. $locator->component_tipo;
+					$value .= '_'. $locator->component_tipo;
 				if(isset($locator->tag_id))
-					$valor .= '_'. $locator->tag_id;
+					$value .= '_'. $locator->tag_id;
 
 			}else{
 
-				$term		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term]; // source could be an array or string
-				$ar_valor	= [];
-				foreach ($term as $tipo) {
+				$ar_value = [];
+				foreach ($term_tipos as $tipo) {
 
-					$parent			= $locator->section_id;
-					$section_tipo	= $locator->section_tipo;
-					$model_name		= ontology_node::get_model_by_tipo($tipo,true);
+					$model_name = ontology_node::get_model_by_tipo($tipo,true);
 
 					$component = component_common::get_instance(
 						$model_name,
 						$tipo,
-						$parent,
+						$section_id,
 						'list',
 						$lang,
 						$section_tipo
@@ -147,7 +153,7 @@ class ts_term_resolver {
 					$current_value = $component->get_value();
 
 					if (empty($current_value)) {
-						$main_lang = hierarchy::get_main_lang( $locator->section_tipo );
+						$main_lang = hierarchy::get_main_lang( $section_tipo );
 						$data = $component->get_data();
 						$current_value = component_string_common::get_value_with_fallback_from_data(
 							$data,
@@ -158,20 +164,22 @@ class ts_term_resolver {
 					}
 
 					if (!empty($current_value)) {
-						$ar_valor[] = $current_value;
+						$ar_value[] = $current_value;
 					}
 				}
-				$valor = implode(', ', $ar_valor);
+				// separator travels with the scope that supplied the term
+				$separator	= section_map::get_fields_separator($section_tipo, $scope);
+				$value		= implode($separator, $ar_value);
 			}
 
 		// cache control
 			if (count(self::$term_by_locator_data_cache) >= 1000) {
 				self::$term_by_locator_data_cache = [];
 			}
-			self::$term_by_locator_data_cache[$cache_uid] = $valor;
+			self::$term_by_locator_data_cache[$cache_uid] = $value;
 
 
-		return $valor;
+		return $value;
 	}//end get_term_by_locator
 
 

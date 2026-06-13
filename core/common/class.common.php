@@ -1895,6 +1895,12 @@ abstract class common {
 						if (!isset($dd_object->config)) {
 							$dd_object->config = new stdClass();
 						}
+						// relation_list_tipo keys the "who references me" trigger off the
+						// legacy relation_list ontology node of this section. The new
+						// section_map 'relation_list' scope only changes the grid COLUMNS of
+						// related sections (see relation_list::get_relation_list_obj); a future
+						// option is to stamp a synthetic fallback tipo here when only the scope
+						// is defined.
 						$dd_object->config->relation_list_tipo = $ar_children_tipo[0] ?? null;
 
 					// section matrix_table

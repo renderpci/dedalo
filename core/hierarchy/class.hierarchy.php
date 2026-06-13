@@ -721,39 +721,17 @@ class hierarchy extends ontology {
 	* GET_ELEMENT_TIPO_FROM_SECTION_MAP
 	* Search in section_map the current request element,
 	* For example, search for term tipo, children element tipo, etc..
+	* Delegates to section_map::get_first_element_tipo, which applies the scope
+	* fallback chain (deterministic priority main -> thesaurus -> relation_list)
+	* instead of the legacy "first scope in property order" lookup.
 	* @param string $section_tipo
 	* @param string $type
+	* @param string|null $scope	Section_map scope. null walks the chain from 'main'.
 	* @return string|null $element_tipo
 	*/
-	public static function get_element_tipo_from_section_map( string $section_tipo, string $type ) : ?string {
+	public static function get_element_tipo_from_section_map( string $section_tipo, string $type, ?string $scope=null ) : ?string {
 
-		$element_tipo = null;
-
-		// Search map
-		$ar_elements = hierarchy::get_section_map_elemets($section_tipo);
-
-		// sample
-		// {
-		//     "thesaurus": {
-		//         "term": "hierarchy25",
-		//         "model": "hierarchy27",
-		//         "parent": "hierarchy36",
-		//         "is_indexable": "hierarchy24",
-		//         "is_descriptor": "hierarchy23"
-		//     }
-		// }
-
-		if (!empty($ar_elements)) {
-			foreach ($ar_elements as $object_value) {
-				if (property_exists($object_value, $type)) {
-					$element_tipo = $object_value->{$type};
-					break;
-				}
-			}
-		}
-
-
-		return $element_tipo;
+		return section_map::get_first_element_tipo($section_tipo, $type, $scope);
 	}//end get_element_tipo_from_section_map
 
 
@@ -1591,8 +1569,8 @@ class hierarchy extends ontology {
 	*/
 	public static function set_term_value( string $section_tipo, string|int $section_id, string $name ) : bool {
 
-		// section map resolution for term
-		$term_tipo = hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term' );
+		// section map resolution for term (write path: thesaurus scope, single tipo)
+		$term_tipo = hierarchy::get_element_tipo_from_section_map( $section_tipo, 'term', 'thesaurus' );
 		if (empty($term_tipo)) {
 			debug_log(__METHOD__
 				. " Section without section map definition or bad configured. 'term' is not resolved " . PHP_EOL

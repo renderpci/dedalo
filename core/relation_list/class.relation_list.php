@@ -158,35 +158,55 @@ class relation_list extends common {
 					$ar_context[] = $current_id;
 
 				//get the columns of the @context
-				$ar_model_name_required	= array('relation_list');
-				$resolve_virtual		= false;
+				// Prefer the section_map 'relation_list' scope (strict, no chain): its
+				// term tipos become the grid columns. Falls back to the legacy
+				// relation_list ontology node 'relations' when the scope is absent.
+				$rl_scope = section_map::get_scope($current_section_tipo, 'relation_list', true);
+				if ($rl_scope!==null && !empty($rl_scope->term)) {
 
-				// Locate relation_list element in current section (virtual or not)
-				$ar_children = section::get_ar_children_tipo_by_model_name_in_section($current_section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+					$rl_term_tipos = is_array($rl_scope->term)
+						? array_values($rl_scope->term)
+						: [$rl_scope->term];
+					// Normalize to the same shape as get_relations(): a list of
+					// iterables yielding component tipos (here keyed 'term').
+					$ar_relation_components[$current_section_tipo] = array_map(
+						fn($t) => ['term' => $t],
+						$rl_term_tipos
+					);
 
-				// If not found children, try resolving real section
-				if (empty($ar_children)) {
-					$resolve_virtual = true;
+				} else {
+
+					$ar_model_name_required	= array('relation_list');
+					$resolve_virtual		= false;
+
+					// Locate relation_list element in current section (virtual or not)
 					$ar_children = section::get_ar_children_tipo_by_model_name_in_section($current_section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
-				}// end if (empty($ar_children))
 
+					// If not found children, try resolving real section
+					if (empty($ar_children)) {
+						$resolve_virtual = true;
+						$ar_children = section::get_ar_children_tipo_by_model_name_in_section($current_section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
+					}// end if (empty($ar_children))
 
-				if( isset($ar_children[0]) ) {
-					$current_children	= reset($ar_children);
-					$ontology_node		= ontology_node::get_instance($current_children);
-					$ar_relation_components[$current_section_tipo] = $ontology_node->get_relations();
-					if(isset($ar_relation_components[$current_section_tipo])){
-						foreach ($ar_relation_components[$current_section_tipo] as $current_relation_component) {
-							foreach ($current_relation_component as $tipo) {
+					if( isset($ar_children[0]) ) {
+						$current_children	= reset($ar_children);
+						$ontology_node		= ontology_node::get_instance($current_children);
+						$ar_relation_components[$current_section_tipo] = $ontology_node->get_relations();
+					}
+				}
 
-								$current_relation_list = new stdClass;
-									$current_relation_list->section_tipo	= $current_section_tipo;
-									$current_relation_list->section_label	= ontology_node::get_term_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
-									$current_relation_list->component_tipo	= $tipo;
-									$current_relation_list->component_label	= ontology_node::get_term_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
+				// Build @context columns from the resolved relation components (either source)
+				if( !empty($ar_relation_components[$current_section_tipo]) ){
+					foreach ($ar_relation_components[$current_section_tipo] as $current_relation_component) {
+						foreach ($current_relation_component as $tipo) {
 
-								$ar_context[] = $current_relation_list;
-							}
+							$current_relation_list = new stdClass;
+								$current_relation_list->section_tipo	= $current_section_tipo;
+								$current_relation_list->section_label	= ontology_node::get_term_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
+								$current_relation_list->component_tipo	= $tipo;
+								$current_relation_list->component_label	= ontology_node::get_term_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
+
+							$ar_context[] = $current_relation_list;
 						}
 					}
 				}

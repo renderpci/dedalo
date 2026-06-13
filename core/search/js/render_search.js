@@ -20,6 +20,7 @@
 		load_search_preset,
 		presets_section_tipo
 	} from './search_user_presets.js'
+	import {get_scope} from '../../common/js/section_map.js'
 
 
 
@@ -421,7 +422,7 @@ render_search.prototype.render_search_buttons = function(){
 		self.max_input = max_input
 
 	// recursive children
-		if (self.caller.context?.section_map && self.caller.context.section_map.thesaurus) {
+		if (get_scope(self.caller.context?.section_map, 'thesaurus', true)) {
 			// re-check if this section have really a component_relation_children before create the option
 			const section_components_list		= self.components_list[self.section_tipo]
 			const component_relation_children	= section_components_list.find(el => el.model==='component_relation_children')

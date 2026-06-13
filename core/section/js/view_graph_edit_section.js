@@ -13,6 +13,8 @@
 		fetch_node_relations,
 		fetch_section_datum,
 		fetch_inverse_relations,
+		fetch_section_terms,
+		apply_section_terms,
 		build_model_map,
 		build_section_maps,
 		extract_node_fields,
@@ -271,10 +273,23 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 	// section_maps accumulator (grows as datums are fetched)
 		const section_maps = initial_section_maps || {}
 
+	// label nodes: authoritative section_map terms via the batch get_section_terms
+	// API first, then the per-node heuristic upgrade only for nodes that still
+	// show a fallback label (no-map sections); mapped nodes are already labeled
+	// so upgrade_fallback_labels' is_fallback gate skips them (no per-node read)
+		const refresh_labels = (nodes) => {
+			fetch_section_terms(self, nodes).then(terms => {
+				if (apply_section_terms(nodes, terms)) {
+					update()
+				}
+				upgrade_fallback_labels(self, nodes, () => {
+					update()
+				}, section_maps)
+			})
+		}
+
 	// lazily upgrade fallback labels ("tipo · id" → readable label)
-		upgrade_fallback_labels(self, graph.nodes, () => {
-			update()
-		}, section_maps)
+		refresh_labels(graph.nodes)
 
 	// dimensions
 		const get_size = () => {
@@ -361,9 +376,7 @@ const root_node = graph.nodes.find(n => n.id === root_id) || { id: root_id, x: w
 
 				add_children(root_node, result)
 
-				upgrade_fallback_labels(self, result.nodes, () => {
-					update()
-				}, section_maps)
+				refresh_labels(result.nodes)
 
 				update_more_button()
 				update()
@@ -416,9 +429,7 @@ const root_node = graph.nodes.find(n => n.id === root_id) || { id: root_id, x: w
 
 add_children(root_node, result)
 
-		upgrade_fallback_labels(self, result.nodes, () => {
-			update()
-		}, section_maps)
+		refresh_labels(result.nodes)
 
 		update_more_button()
 		update()
@@ -632,9 +643,7 @@ add_children(root_node, result)
 				const result = await fetch_node_relations(self, node, section_maps)
 				add_children(node, result)
 				// upgrade fallback labels on new child nodes
-				upgrade_fallback_labels(self, result.nodes, () => {
-					update()
-				}, section_maps)
+				refresh_labels(result.nodes)
 				node.loaded = true
 				node.expanded = true
 				update()

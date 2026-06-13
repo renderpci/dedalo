@@ -29,6 +29,7 @@ final class dd_core_api {
 		'get_indexation_grid',
 		'get_environment',
 		'get_matrix_ontology_locator',
+		'get_section_terms',
 		'test'
 	];
 
@@ -3089,6 +3090,111 @@ final class dd_core_api {
 
 		return $response;
 	}//end get_matrix_ontology_locator
+
+
+
+	/**
+	* GET_SECTION_TERMS
+	* Resolves the section_map 'term' (display label) for one or more section
+	* records in a single call. Read-only batch resolver used by client
+	* visualizations (e.g. the graph view) to label related nodes with the
+	* authoritative term instead of a client-side heuristic.
+	* @param object $rqo
+	* 	{
+	* 		action   : 'get_section_terms',
+	* 		locators : [ {section_tipo, section_id}, ... ],
+	* 		scope    : string|null,   // optional; null => main -> thesaurus -> relation_list chain
+	* 		lang     : string         // optional; defaults to DEDALO_DATA_LANG
+	* 	}
+	* @return object $response
+	* 	$response->result is an object map keyed "{section_tipo}_{section_id}" => term string.
+	* 	(The key matches the graph client node id format for a direct lookup.)
+	*/
+	public static function get_section_terms( object $rqo ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// hard cap to prevent unbounded work from a hostile/huge batch
+		$max_locators = 1000;
+
+		// locators check
+			$ar_locators = $rqo->locators ?? null;
+			if ( !is_array($ar_locators) || empty($ar_locators) ) {
+				$response->msg		= 'Error. Invalid or empty locators';
+				$response->errors[]	= 'bad_locators';
+				return $response;
+			}
+			if ( count($ar_locators) > $max_locators ) {
+				debug_log(__METHOD__
+					." Locators batch exceeds cap ($max_locators). Truncating from ".count($ar_locators)
+					, logger::WARNING
+				);
+				$ar_locators = array_slice($ar_locators, 0, $max_locators);
+			}
+
+		// resolution options
+			$scope	= $rqo->scope ?? null; // null => chain main -> thesaurus -> relation_list
+			$lang	= ( isset($rqo->lang) && is_string($rqo->lang) )
+				? $rqo->lang
+				: DEDALO_DATA_LANG;
+
+		// resolve terms (deduped by composite key; skip invalid or unreadable sections)
+			$terms = new stdClass();
+			foreach ($ar_locators as $current_locator) {
+
+				if (!is_object($current_locator)) {
+					continue;
+				}
+
+				$section_tipo	= $current_locator->section_tipo ?? null;
+				$section_id		= $current_locator->section_id ?? null;
+
+				// validate
+				if ( safe_tipo($section_tipo)===false || $section_id===null || $section_id==='' || !is_scalar($section_id) ) {
+					continue;
+				}
+
+				$key = $section_tipo . '_' . $section_id;
+				if ( isset($terms->{$key}) ) {
+					continue; // dedup
+				}
+
+				// SEC: read permission required on the section (omit forbidden, never leak)
+				if ( common::get_permissions($section_tipo, $section_tipo) < 1 ) {
+					continue;
+				}
+
+				// Only return a term when a section_map term is actually defined.
+				// Without this, get_term() returns the "{section_tipo}_{section_id}"
+				// fallback string, which would clobber the client's own label.
+				if ( empty(section_map::get_term_tipos($section_tipo, $scope)) ) {
+					continue;
+				}
+
+				$term = section_map::get_term(
+					(object)[
+						'section_tipo'	=> $section_tipo,
+						'section_id'	=> $section_id
+					],
+					$scope,
+					$lang,
+					true // from_cache
+				);
+
+				$terms->{$key} = $term;
+			}
+
+		$response->result	= $terms;
+		$response->msg		= empty($response->errors)
+			? 'OK. Request done successfully'
+			: 'Warning! Request done with errors';
+
+
+		return $response;
+	}//end get_section_terms
 
 
 

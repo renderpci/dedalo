@@ -7,6 +7,7 @@
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {clone} from '../../common/js/utils/index.js'
+	import {get_term_tipos, get_fields_separator} from '../../common/js/section_map.js'
 
 
 
@@ -76,31 +77,6 @@ const strip_html = function(str) {
 
 	return str.replace(/<[^>]*>/g, '')
 }//end strip_html
-
-
-
-/**
-* GET_TERM_TIPO
-* Find the term (display label) component tipo from a section_map.
-* Iterates all domains and returns the first `term` tipo found.
-* @param object|null section_map
-* @return string|null
-*/
-const get_term_tipo = function(section_map) {
-
-	if (!section_map) return null
-
-	const domains = Object.values(section_map)
-	const domains_len = domains.length
-	for (let i = 0; i < domains_len; i++) {
-		const domain = domains[i]
-		if (domain && domain.term) {
-			return Array.isArray(domain.term) ? domain.term[0] : domain.term
-		}
-	}
-
-	return null
-}//end get_term_tipo
 
 
 
@@ -186,18 +162,28 @@ export const resolve_label = function(datum, section_tipo, section_id, model_map
 	const data		= datum?.data || []
 	const data_length = data.length
 
-	// 0. try section_map term tipo for precise label resolution
-		const term_tipo = get_term_tipo(section_maps?.[section_tipo])
-		if (term_tipo) {
-			for (let i = 0; i < data_length; i++) {
-				const item = data[i]
-				if (item.section_tipo!==section_tipo || String(item.section_id)!==String(section_id) || item.tipo!==term_tipo) {
-					continue
+	// 0. try section_map term tipos for precise label resolution
+	// (all term tipos of the resolved scope, joined with its separator)
+		const section_map	= section_maps?.[section_tipo]
+		const term_tipos	= get_term_tipos(section_map)
+		if (term_tipos.length) {
+			const parts = []
+			for (let t = 0; t < term_tipos.length; t++) {
+				const term_tipo = term_tipos[t]
+				for (let i = 0; i < data_length; i++) {
+					const item = data[i]
+					if (item.section_tipo!==section_tipo || String(item.section_id)!==String(section_id) || item.tipo!==term_tipo) {
+						continue
+					}
+					const piece = extract_text(item.entries)
+					if (piece) {
+						parts.push(piece)
+					}
+					break // one item per tipo
 				}
-				const label = extract_text(item.entries)
-				if (label) {
-					return label
-				}
+			}
+			if (parts.length) {
+				return parts.join(get_fields_separator(section_map))
 			}
 		}
 
@@ -435,6 +421,102 @@ export const fetch_section_datum = async function(self, section_tipo, section_id
 		return null
 	}
 }//end fetch_section_datum
+
+
+
+/**
+* FETCH_SECTION_TERMS
+* Batch-resolve the section_map term (display label) for a set of nodes/locators
+* via the get_section_terms API endpoint. One request resolves every node,
+* avoiding per-node full-datum reads. The server returns only sections that
+* actually define a section_map term (no-map sections are omitted, so the
+* client's own provisional label is preserved).
+* @param object self section instance (lang source)
+* @param array locators array of {section_tipo, section_id} (e.g. graph nodes)
+* @return object terms map keyed `${section_tipo}_${section_id}` (empty on failure)
+*/
+export const fetch_section_terms = async function(self, locators) {
+
+	try {
+		if (!Array.isArray(locators) || locators.length===0) {
+			return {}
+		}
+
+		// build a deduped minimal locator list
+		const seen = {}
+		const ar_locators = []
+		const locators_length = locators.length
+		for (let i = 0; i < locators_length; i++) {
+			const n = locators[i]
+			if (!n || !n.section_tipo || n.section_id===undefined || n.section_id===null) {
+				continue
+			}
+			const key = n.section_tipo + '_' + n.section_id
+			if (seen[key]) {
+				continue
+			}
+			seen[key] = true
+			ar_locators.push({ section_tipo: n.section_tipo, section_id: String(n.section_id) })
+		}
+		if (ar_locators.length===0) {
+			return {}
+		}
+
+		const rqo = {
+			action		: 'get_section_terms',
+			locators	: ar_locators
+		}
+		// match the displayed data lang when available; server defaults otherwise
+		const lang = self?.lang || self?.rqo?.source?.lang || null
+		if (lang) {
+			rqo.lang = lang
+		}
+
+		const api_response = await data_manager.request({ body : rqo })
+
+		if (SHOW_DEBUG===true && api_response?.errors?.length) {
+			console.warn('[build_graph_data.fetch_section_terms] errors:', api_response.errors)
+		}
+
+		const result = api_response?.result
+		return (result && typeof result === 'object') ? result : {}
+
+	} catch (error) {
+		console.error('[build_graph_data.fetch_section_terms] error:', error)
+		return {}
+	}
+}//end fetch_section_terms
+
+
+
+/**
+* APPLY_SECTION_TERMS
+* Overwrite node labels with authoritative server terms (keyed by node id =
+* `${section_tipo}_${section_id}`). Only non-empty terms override (so a mapped
+* section with an empty record value keeps its provisional label).
+* @param array nodes graph nodes (mutated in place)
+* @param object terms map from fetch_section_terms
+* @return bool true when at least one label changed
+*/
+export const apply_section_terms = function(nodes, terms) {
+
+	if (!terms || !Array.isArray(nodes)) {
+		return false
+	}
+
+	let changed = false
+	const nodes_length = nodes.length
+	for (let i = 0; i < nodes_length; i++) {
+		const node = nodes[i]
+		const term = terms[node.id]
+		if (term && term !== node.label) {
+			node.label = term
+			changed = true
+		}
+	}
+
+	return changed
+}//end apply_section_terms
 
 
 

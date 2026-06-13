@@ -279,6 +279,14 @@ class class_loader {
 				$file_path	= DEDALO_CORE_PATH . '/ts_object/class.' . $class_name . '.php';
 				break;
 
+			// section co-located helper. section_map is part of section resolution
+			// and lives inside core/section/ (alongside class.section.php) rather
+			// than in its own one-class-per-dir directory, so the default rule
+			// below would resolve it to a non-existent path.
+			case ($class_name==='section_map'):
+				$file_path	= DEDALO_CORE_PATH . '/section/class.section_map.php';
+				break;
+
 			// components, areas, etc. (first level directory inside DEDALO_CORE_PATH)
 			default:
 				$file_path	= DEDALO_CORE_PATH . '/' . $class_name . '/class.' . $class_name . '.php';
