@@ -8,6 +8,7 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {ui} from '../../common/js/ui.js'
+	import {apply_inspector_state, init_inspector_resize} from '../../inspector/js/render_inspector.js'
 
 
 
@@ -66,6 +67,19 @@ view_default_edit_section.render = async function(self, options) {
 			const inspector_wrapper = await self.inspector.render()
 			if (inspector_wrapper) {
 				inspector_container.appendChild(inspector_wrapper)
+
+				// apply persisted rail / width state BEFORE the fragment is attached,
+				// so the very first layout uses the correct width (no flicker)
+				apply_inspector_state(self.inspector, inspector_container)
+
+				// left-edge drag handle to resize the panel width
+				const resize_handle = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'inspector_resize_handle',
+					title			: get_label.resize || 'Resize',
+					parent			: inspector_container
+				})
+				init_inspector_resize(resize_handle, self.inspector)
 
 				// paginator inside inspector
 				if (self.paginator) {
