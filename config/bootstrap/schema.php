@@ -209,4 +209,16 @@ return [
 'MYSQL_DEDALO_DB_PORT_CONN'           => ['int',   'MYSQL_DEDALO_DB_PORT_CONN',           null, ['secret'],                             'secrets'],
 'MYSQL_DEDALO_SOCKET_CONN'            => ['string','MYSQL_DEDALO_SOCKET_CONN',            null, ['secret'],                             'secrets'],
 
+// =============================================================================
+// INTERNAL / OPTIONAL overrides.
+//  - no_emit : registry holds the value for kernel computation; emits no constant.
+//  - optional: emitted only when a layer/env supplies it (else the kernel computes
+//    it). Exempt from the lint "needs a defaults.env value" check.
+// key                                    type     const(=key)                            default     flags
+'DEDALO_MEDIA_SUBDIR'                 => ['string','DEDALO_MEDIA_SUBDIR',                  '/media',   ['no_emit']],
+'DEDALO_BACKUP_PATH'                  => ['string','DEDALO_BACKUP_PATH',                   null,       ['optional']],
+'DEDALO_DIFFUSION_LANGS'              => ['json',  'DEDALO_DIFFUSION_LANGS',               null,       ['optional']],
+'SHOW_DEBUG'                          => ['bool',  'SHOW_DEBUG',                           null,       ['optional']],
+'SHOW_DEVELOPER'                      => ['bool',  'SHOW_DEVELOPER',                       null,       ['optional']],
+
 ];

@@ -3,37 +3,29 @@
 * KERNEL — Dédalo bootstrap orchestrator
 * --------------------------------------------------------------------------
 * Deterministic boot sequence that replaces the legacy monolithic config.php
-* body. Preserves every ordering dependency of the original include chain:
+* body and the per-entity /private/config.inc.
 *
-*   paths -> includes(version/logger/core_functions) -> state -> db -> sentinel
-*   -> dd_tipos -> registry boot+emit(declarative) -> derived -> session
-*   -> debug -> loader -> logger -> request-scoped langs -> post-tipos
+* Order (key dependencies noted):
+*   paths -> registry boot+emit(main) -> version.inc (reads DEVELOPMENT_SERVER)
+*   -> logger/core_functions -> config_core -> config_db + emit(secrets)
+*   -> sentinel -> dd_tipos -> derived paths -> session -> debug -> loader
+*   -> logger::register -> request langs -> post-tipos -> /private/config.local.php
 *
-* Pure-declaration constants come from the registry (defaults.env + schema).
-* Computed paths come from paths.php. Everything imperative (session_start,
-* logger::register, class loading) is isolated here and guarded for CLI /
-* persistent-worker (DEDALO_RR_WORKER) modes.
+* Declarative values come from the layered registry (defaults.env < profile <
+* /private/.env < env vars). Computed/structural paths come from paths.php.
+* Install-specific imperative overrides live in the optional, out-of-webroot
+* /private/config.local.php (the escape hatch that replaces config.inc).
 * --------------------------------------------------------------------------
 */
 
-// ---- 1. computed path / host constants -------------------------------------
+// ---- 1. structural path / host constants -----------------------------------
 	require __DIR__ . '/paths.php';
 
-// ---- 2. required files (functions/classes the rest of boot depends on) -----
-	// version. Info about current version and build
-	include(DEDALO_CORE_PATH . '/base/version.inc');
-	// logger. Logger class (before any logging)
-	include(DEDALO_CORE_PATH . '/logger/class.logger.php');
-	// core_functions. Basic common functions (before session start)
-	include(DEDALO_SHARED_PATH . '/core_functions.php');
-
-// ---- 3. declarative configuration registry ---------------------------------
-	// Loads defaults.env (+ later: profiles + /private/.env + real env vars),
-	// coerces per schema, validates fail-closed, and emits the legacy constants.
-	// Runs BEFORE config_db/config_core because those files reference declarative
-	// constants (e.g. config_db builds DEDALO_INFO_KEY from DEDALO_ENTITY).
+// ---- 2. configuration registry classes -------------------------------------
 	require __DIR__ . '/class.dd_config.php';
 	require __DIR__ . '/class.dd_config_state.php'; // atomic config_core.php writer
+
+// ---- 3. declarative configuration (layered, typed, validated) --------------
 	// /private lives outside the web root (sibling of the install root, where
 	// config.inc/sessions/backups already live). Override with DEDALO_PRIVATE_DIR.
 	$dedalo_private_dir = getenv('DEDALO_PRIVATE_DIR') ?: (dirname(DEDALO_ROOT_PATH, 1) . '/private');
@@ -63,35 +55,57 @@
 		'schema_file' => __DIR__ . '/schema.php',
 		'layers'      => $dedalo_layers
 	]);
-	dd_config::emit_constants(); // phase 'main' (non-secret declarative)
+	dd_config::emit_constants(); // phase 'main' — emits DEVELOPMENT_SERVER, entity, etc.
 
-// ---- 4. runtime state (install status, maintenance, media-access overrides) -
-	// config_core. Auto-managed status file (absent on a brand-new install).
+	// locale / timezone / encoding (side effects; need DEDALO_TIMEZONE/DEDALO_LOCALE)
+	date_default_timezone_set(DEDALO_TIMEZONE);
+	setlocale(LC_ALL, DEDALO_LOCALE);
+	mb_internal_encoding('UTF-8');
+
+// ---- 4. version (reads DEVELOPMENT_SERVER, set just above) ------------------
+	include(DEDALO_CORE_PATH . '/base/version.inc');
+
+// ---- 5. logger + core functions --------------------------------------------
+	include(DEDALO_CORE_PATH . '/logger/class.logger.php');
+	include(DEDALO_SHARED_PATH . '/core_functions.php');
+
+// ---- 6. runtime state (install status, maintenance, media-access overrides) -
 	if (is_file(DEDALO_CONFIG_PATH . '/config_core.php')) {
 		include(DEDALO_CONFIG_PATH . '/config_core.php');
 	}
 
-// ---- 5. database credentials -----------------------------------------------
-	// config_db. Legacy PostgreSQL + MariaDB connection constants. Optional once
-	// the credentials have moved to /private/.env. Included BEFORE the secrets
-	// emit so a legacy config_db.php wins (zero-touch upgrade); anything it does
-	// not define is then supplied from /private/.env by the secrets phase.
+// ---- 7. database credentials -----------------------------------------------
+	// Legacy config_db.php is optional once credentials move to /private/.env.
+	// Included BEFORE the secrets emit so a legacy config_db.php wins (zero-touch
+	// upgrade); anything it does not define is supplied from /private/.env.
 	if (is_file(DEDALO_CONFIG_PATH . '/config_db.php')) {
 		include(DEDALO_CONFIG_PATH . '/config_db.php');
 	}
 	dd_config::emit_constants('secrets'); // fills any DB/secret constant not already defined
 
-// ---- 6. secret sentinel (SEC-094) ------------------------------------------
-	// Refuse to boot with sample-default secrets when enforcement is on; the
-	// function self-skips under IS_UNIT_TEST and only logs by default.
+// ---- 8. secret sentinel (SEC-094) ------------------------------------------
 	if (function_exists('dedalo_assert_secrets_initialised')) {
 		dedalo_assert_secrets_initialised();
 	}
 
-// ---- 7. resolved tipo constants --------------------------------------------
+// ---- 9. resolved tipo constants --------------------------------------------
 	include(DEDALO_CORE_PATH . '/base/dd_tipos.php');
 
-// ---- 8. derived constants (depend on emitted values and/or computed paths) --
+// ---- 10. derived constants (depend on emitted values and/or computed paths) -
+	// media base: ROOT + subdir (subdir overridable via DEDALO_MEDIA_SUBDIR, e.g.
+	// '/media_<entity>'); no_emit so DEDALO_MEDIA_SUBDIR itself is not a constant.
+	$dedalo_media_subdir = dd_config::get('DEDALO_MEDIA_SUBDIR', '/media');
+	if (!defined('DEDALO_MEDIA_PATH')) define('DEDALO_MEDIA_PATH', DEDALO_ROOT_PATH . $dedalo_media_subdir);
+	if (!defined('DEDALO_MEDIA_URL'))  define('DEDALO_MEDIA_URL',  DEDALO_ROOT_WEB  . $dedalo_media_subdir);
+
+	// backups (kept outside httpdocs). DEDALO_BACKUP_PATH is an 'optional' schema
+	// key: if /private/.env supplies it, the registry already emitted it above and
+	// this default is skipped.
+	if (!defined('DEDALO_BACKUP_PATH'))			define('DEDALO_BACKUP_PATH', dirname(DEDALO_ROOT_PATH, 2) . '/backups');
+	if (!defined('DEDALO_BACKUP_PATH_TEMP'))		define('DEDALO_BACKUP_PATH_TEMP', DEDALO_BACKUP_PATH . '/temp');
+	if (!defined('DEDALO_BACKUP_PATH_DB'))		define('DEDALO_BACKUP_PATH_DB', DEDALO_BACKUP_PATH . '/db');
+	if (!defined('DEDALO_BACKUP_PATH_ONTOLOGY'))	define('DEDALO_BACKUP_PATH_ONTOLOGY', DEDALO_BACKUP_PATH . '/ontology');
+
 	// entity label follows entity unless explicitly overridden
 	if (!defined('DEDALO_ENTITY_LABEL')) {
 		define('DEDALO_ENTITY_LABEL', DEDALO_ENTITY);
@@ -101,25 +115,27 @@
 		define('DEDALO_DIFFUSION_LANGS', DEDALO_PROJECTS_DEFAULT_LANGS);
 	}
 	// media-derived paths/urls
-	define('DEDALO_AV_FFMPEG_SETTINGS',					DEDALO_CORE_PATH . '/media_engine/lib/ffmpeg_settings');
-	define('DEDALO_AV_WATERMARK_FILE',					DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
-	define('DEDALO_IMAGE_FILE_URL',						DEDALO_CORE_URL . '/media_engine/img.php');
-	define('COLOR_PROFILES_PATH',						DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
-	define('DEDALO_UPLOAD_TMP_DIR',						DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
-	define('DEDALO_UPLOAD_TMP_URL',						DEDALO_MEDIA_URL  . '/upload/service_upload/tmp');
-	define('DEDALO_TOOL_EXPORT_FOLDER_PATH',			DEDALO_MEDIA_PATH . '/export/files');
-	define('DEDALO_TOOL_EXPORT_FOLDER_URL',				DEDALO_MEDIA_URL  . '/export/files');
-	define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',	DEDALO_MEDIA_PATH . '/import/files');
-	define('ONTOLOGY_DATA_IO_DIR',						DEDALO_INSTALL_PATH . '/import/ontology');
-	define('ONTOLOGY_DATA_IO_URL',						DEDALO_INSTALL_URL . '/import/ontology');
-	define('DEDALO_SOURCE_VERSION_LOCAL_DIR',			'/tmp/'.DEDALO_ENTITY);
+	if (!defined('DEDALO_AV_FFMPEG_SETTINGS'))			define('DEDALO_AV_FFMPEG_SETTINGS',					DEDALO_CORE_PATH . '/media_engine/lib/ffmpeg_settings');
+	if (!defined('DEDALO_AV_WATERMARK_FILE'))			define('DEDALO_AV_WATERMARK_FILE',					DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/watermark/watermark.png');
+	if (!defined('DEDALO_IMAGE_FILE_URL'))				define('DEDALO_IMAGE_FILE_URL',						DEDALO_CORE_URL . '/media_engine/img.php');
+	if (!defined('COLOR_PROFILES_PATH'))				define('COLOR_PROFILES_PATH',						DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
+	if (!defined('DEDALO_UPLOAD_TMP_DIR'))				define('DEDALO_UPLOAD_TMP_DIR',						DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
+	if (!defined('DEDALO_UPLOAD_TMP_URL'))				define('DEDALO_UPLOAD_TMP_URL',						DEDALO_MEDIA_URL  . '/upload/service_upload/tmp');
+	if (!defined('DEDALO_TOOL_EXPORT_FOLDER_PATH'))		define('DEDALO_TOOL_EXPORT_FOLDER_PATH',			DEDALO_MEDIA_PATH . '/export/files');
+	if (!defined('DEDALO_TOOL_EXPORT_FOLDER_URL'))		define('DEDALO_TOOL_EXPORT_FOLDER_URL',				DEDALO_MEDIA_URL  . '/export/files');
+	if (!defined('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH')) define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',	DEDALO_MEDIA_PATH . '/import/files');
+	if (!defined('ONTOLOGY_DATA_IO_DIR'))				define('ONTOLOGY_DATA_IO_DIR',						DEDALO_INSTALL_PATH . '/import/ontology');
+	if (!defined('ONTOLOGY_DATA_IO_URL'))				define('ONTOLOGY_DATA_IO_URL',						DEDALO_INSTALL_URL . '/import/ontology');
+	if (!defined('DEDALO_SOURCE_VERSION_LOCAL_DIR'))	define('DEDALO_SOURCE_VERSION_LOCAL_DIR',			'/tmp/'.DEDALO_ENTITY);
 	// cache manager (files cache lives in the sessions dir)
-	define('DEDALO_CACHE_MANAGER', [
-		'manager'		=> 'files',
-		'files_path'	=> DEDALO_SESSIONS_PATH
-	]);
+	if (!defined('DEDALO_CACHE_MANAGER')) {
+		define('DEDALO_CACHE_MANAGER', [
+			'manager'		=> 'files',
+			'files_path'	=> DEDALO_SESSIONS_PATH
+		]);
+	}
 
-// ---- 9. session ------------------------------------------------------------
+// ---- 11. session -----------------------------------------------------------
 	// save_path: derive from the (declarative) handler unless explicitly set
 	if (!defined('DEDALO_SESSION_SAVE_PATH')) {
 		switch (DEDALO_SESSION_HANDLER) {
@@ -160,44 +176,55 @@
 		]);
 	}//end if (session_status()!==PHP_SESSION_ACTIVE)
 
-// ---- 10. debug / developer flags (request-scoped) --------------------------
+// ---- 12. debug / developer flags (request-scoped; overridable via /private) -
 	if (!defined('SHOW_DEBUG')) {
 		define('SHOW_DEBUG', (logged_user_id()==DEDALO_SUPERUSER)
 			? true
 			: false
 		);
 	}
-	define('SHOW_DEVELOPER', (logged_user_is_developer()===true)
-		? true
-		: false
-	);
+	if (!defined('SHOW_DEVELOPER')) {
+		define('SHOW_DEVELOPER', (logged_user_is_developer()===true)
+			? true
+			: false
+		);
+	}
 
-// ---- 11. class loader ------------------------------------------------------
-	// auto load main classes and manage class calls
+// ---- 13. class loader ------------------------------------------------------
 	include DEDALO_CORE_PATH . '/base/class.loader.php';
 
-// ---- 12. activity log ------------------------------------------------------
-	define('LOGGER_LEVEL', (SHOW_DEBUG===true || SHOW_DEVELOPER===true)
-		? logger::DEBUG
-		: logger::ERROR
-	);
+// ---- 14. activity log ------------------------------------------------------
+	if (!defined('LOGGER_LEVEL')) {
+		define('LOGGER_LEVEL', (SHOW_DEBUG===true || SHOW_DEVELOPER===true)
+			? logger::DEBUG
+			: logger::ERROR
+		);
+	}
 	logger::register('activity'	, 'activity://auto:auto@auto:5432/log_data?table=matrix_activity');
 	logger::$obj['activity'] = logger::get_instance('activity');
 
-// ---- 13. request-scoped languages ------------------------------------------
+// ---- 15. request-scoped languages ------------------------------------------
 	// cascade calculate from get, post, session vars, default
-	define('DEDALO_APPLICATION_LANG',	fix_cascade_config_var('dedalo_application_lang', DEDALO_APPLICATION_LANGS_DEFAULT));
-	define('DEDALO_DATA_LANG',			fix_cascade_config_var('dedalo_data_lang', DEDALO_DATA_LANG_DEFAULT));
+	if (!defined('DEDALO_APPLICATION_LANG'))	define('DEDALO_APPLICATION_LANG',	fix_cascade_config_var('dedalo_application_lang', DEDALO_APPLICATION_LANGS_DEFAULT));
+	if (!defined('DEDALO_DATA_LANG'))			define('DEDALO_DATA_LANG',			fix_cascade_config_var('dedalo_data_lang', DEDALO_DATA_LANG_DEFAULT));
 
-	// Persistent-worker hazard: SHOW_DEBUG / SHOW_DEVELOPER / DEDALO_APPLICATION_LANG /
-	// DEDALO_DATA_LANG are request-scoped but, as constants, freeze on the FIRST
-	// request this worker process handles. Until call sites migrate to the
-	// request-scoped resolver (dd_config::request('application_lang') etc.),
-	// make the hazard visible instead of silent. Logged once per worker process.
+	// Persistent-worker hazard: these request-scoped constants freeze on the FIRST
+	// request a worker process handles. Until call sites migrate to the resolver
+	// (dd_config::request('application_lang') etc.), make the hazard visible.
 	if (defined('DEDALO_RR_WORKER')) {
 		@error_log('[dd_config] worker mode: request-scoped constants (DEDALO_APPLICATION_LANG, DEDALO_DATA_LANG, SHOW_DEBUG, SHOW_DEVELOPER) are frozen for this worker process; per-request code should use dd_config::request(...) to avoid state bleed.');
 	}
 
-// ---- 14. post-tipos derived constants --------------------------------------
-	// target filter section (depends on dd_tipos)
-	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT', DEDALO_SECTION_PROJECTS_TIPO);
+// ---- 16. post-tipos derived constants --------------------------------------
+	if (!defined('DEDALO_FILTER_SECTION_TIPO_DEFAULT')) {
+		define('DEDALO_FILTER_SECTION_TIPO_DEFAULT', DEDALO_SECTION_PROJECTS_TIPO);
+	}
+
+// ---- 17. install-specific overrides (optional, outside the web root) --------
+	// Escape hatch that replaces the per-entity config.inc: arbitrary PHP for
+	// custom constants / computed paths that do not fit the declarative model.
+	// Runs last, so it can use any constant, class or function. Define with
+	// if(!defined()) inside the file to override, or plain define() for additions.
+	if (is_file($dedalo_private_dir . '/config.local.php')) {
+		include $dedalo_private_dir . '/config.local.php';
+	}

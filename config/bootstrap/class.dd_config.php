@@ -157,6 +157,11 @@ final class dd_config {
 			if ($entry_phase!==$want_phase) {
 				continue;
 			}
+			// 'no_emit' keys are internal config (e.g. DEDALO_MEDIA_SUBDIR): the
+			// registry holds the value for kernel computation but defines no constant.
+			if (in_array('no_emit', $spec['flags'] ?? [], true)) {
+				continue;
+			}
 			if (!array_key_exists($key, self::$values)) {
 				continue; // required-and-missing keys already failed in boot()
 			}

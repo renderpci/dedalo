@@ -56,9 +56,10 @@ foreach (array_keys($env_keys) as $k) {
 foreach ($schema as $k => $spec) {
 	$flags   = (array)($spec[3] ?? []);
 	$default = $spec[2] ?? null;
-	$is_secret_or_required = in_array('required', $flags, true) || in_array('secret', $flags, true);
-	if (!array_key_exists($k, $env_keys) && $default===null && !$is_secret_or_required) {
-		$problems[] = "schema key '{$k}' has no defaults.env value, no default, and is not required/secret (would emit null)";
+	$exempt = in_array('required', $flags, true) || in_array('secret', $flags, true)
+		|| in_array('optional', $flags, true) || in_array('no_emit', $flags, true);
+	if (!array_key_exists($k, $env_keys) && $default===null && !$exempt) {
+		$problems[] = "schema key '{$k}' has no defaults.env value, no default, and is not required/secret/optional (would emit null)";
 	}
 }
 
@@ -82,7 +83,10 @@ $emitted = dd_config::emit_constants();
 foreach ($schema as $k => $spec) {
 	$const = $spec[1] ?? $k;
 	$phase = $spec[4] ?? 'main';
+	$flags = (array)($spec[3] ?? []);
 	if ($phase!=='main') { continue; }
+	// optional/no_emit keys are intentionally absent unless a layer supplies them
+	if (in_array('optional', $flags, true) || in_array('no_emit', $flags, true)) { continue; }
 	if (!defined($const)) {
 		$problems[] = "schema const '{$const}' (key '{$k}') was not emitted";
 	}

@@ -38,7 +38,23 @@ config/
 /private/                    OUTSIDE the web root (sibling of the install root)
   .env                       Real per-deployment values + secrets (never committed)
   hosts.map                  Optional host -> profile map (multi-entity / multi-env)
+  config.local.php           Optional PHP escape hatch: install-specific custom
+                             constants / computed paths (replaces config.inc)
 ```
+
+The kernel also applies process-global side effects from the resolved values:
+`date_default_timezone_set(DEDALO_TIMEZONE)`, `setlocale(LC_ALL, DEDALO_LOCALE)`
+and `mb_internal_encoding('UTF-8')`.
+
+### Media directory & `config.local.php`
+
+* `DEDALO_MEDIA_SUBDIR` (default `/media`) sets the media folder under the install
+  root — e.g. `/media_<entity>` for a per-entity media tree. The kernel derives
+  `DEDALO_MEDIA_PATH`/`_URL` (and the upload/export/watermark paths) from it.
+* `/private/config.local.php` is included last by the kernel and may define any
+  install-specific constant or computed path that does not fit the declarative
+  model. Use `if (!defined(...))` to override, or plain `define()` to add. This
+  is the small, explicit replacement for the legacy 800-line `config.inc`.
 
 ---
 

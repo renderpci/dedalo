@@ -72,18 +72,12 @@
 	define('DEDALO_DIFFUSION_PATH', 	DEDALO_ROOT_PATH.'/diffusion');
 	define('DEDALO_DIFFUSION_API_URL',	DEDALO_ROOT_WEB . '/diffusion/api/v1/');
 
-// media base paths (entity-overridable subdir comes in a later phase)
-	define('DEDALO_MEDIA_PATH',	DEDALO_ROOT_PATH	. '/media');
-	define('DEDALO_MEDIA_URL',	DEDALO_ROOT_WEB		. '/media');
-
 // sessions (kept outside httpdocs)
 	define('DEDALO_SESSIONS_PATH', dirname(DEDALO_ROOT_PATH, 2) . '/sessions');
 
-// backups (kept outside httpdocs)
-	define('DEDALO_BACKUP_PATH',			dirname(DEDALO_ROOT_PATH, 2) . '/backups');
-	define('DEDALO_BACKUP_PATH_TEMP',		DEDALO_BACKUP_PATH . '/temp');
-	define('DEDALO_BACKUP_PATH_DB',			DEDALO_BACKUP_PATH . '/db');
-	define('DEDALO_BACKUP_PATH_ONTOLOGY',	DEDALO_BACKUP_PATH . '/ontology');
-
 // update log (web read forbidden)
 	define('UPDATE_LOG_FILE', DEDALO_CONFIG_PATH . '/update.log');
+
+// NOTE: media paths (DEDALO_MEDIA_PATH/_URL) and backup paths (DEDALO_BACKUP_PATH*)
+// are computed in kernel.php step 10 — they depend on registry values
+// (DEDALO_MEDIA_SUBDIR, optional DEDALO_BACKUP_PATH override) emitted after this file.
