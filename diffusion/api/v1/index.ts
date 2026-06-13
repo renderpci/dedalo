@@ -685,15 +685,24 @@ function handle_get_process_status(body: { process_id?: string; update_rate?: nu
 		});
 	}
 
+	// DIFFTS-03: hoist the timer handles so cancel() (client disconnect) can tear
+	// them down — otherwise the heartbeat interval and poll timeout leak and keep
+	// enqueueing onto a closed controller.
+	let heartbeat: ReturnType<typeof setInterval> | undefined;
+	let poll_timer: ReturnType<typeof setTimeout> | undefined;
+	let cancelled = false;
+
 	const stream = new ReadableStream({
 		start(controller) {
 
 			// Heartbeat to prevent proxy disconnects
-			const heartbeat = setInterval(() => {
+			heartbeat = setInterval(() => {
 				try { controller.enqueue(encoder.encode(':\n')); } catch { /* ignore */ }
 			}, 15000);
 
 			const poll = () => {
+
+				if (cancelled) return;
 
 				const snapshot = get_progress(process_id);
 
@@ -723,14 +732,17 @@ function handle_get_process_status(body: { process_id?: string; update_rate?: nu
 				}
 
 				// Schedule next poll
-				setTimeout(poll, update_rate);
+				poll_timer = setTimeout(poll, update_rate);
 			};
 
 			// Start polling
 			poll();
 		},
 		cancel() {
-			// cleanup if client aborts early
+			// DIFFTS-03: client aborted — stop the heartbeat and any pending poll.
+			cancelled = true;
+			if (heartbeat) clearInterval(heartbeat);
+			if (poll_timer) clearTimeout(poll_timer);
 		}
 	});
 

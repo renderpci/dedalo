@@ -28,16 +28,21 @@ export function validate_delete_targets(targets: unknown): string | null {
 		return 'Missing or empty targets array';
 	}
 
+	// DIFFTS-06: validate identifiers against the same strict charset the media-index
+	// entry points enforce, so every engine entry point rejects odd db/table names
+	// uniformly (defence-in-depth against any future non-escaped interpolation).
+	const NAME_REGEX = /^[A-Za-z0-9_.-]+$/;
+
 	for (const target of targets) {
 		if (typeof target !== 'object' || target === null) {
 			return 'Invalid target: not an object';
 		}
 		const t = target as Partial<delete_target>;
-		if (typeof t.database_name !== 'string' || t.database_name.length === 0) {
-			return 'Invalid target: missing database_name';
+		if (typeof t.database_name !== 'string' || !NAME_REGEX.test(t.database_name)) {
+			return 'Invalid target: missing or malformed database_name';
 		}
-		if (typeof t.table_name !== 'string' || t.table_name.length === 0) {
-			return 'Invalid target: missing table_name';
+		if (typeof t.table_name !== 'string' || !NAME_REGEX.test(t.table_name)) {
+			return 'Invalid target: missing or malformed table_name';
 		}
 		if (!Array.isArray(t.section_ids) || t.section_ids.length === 0) {
 			return `Invalid target: missing section_ids for table "${t.table_name}"`;

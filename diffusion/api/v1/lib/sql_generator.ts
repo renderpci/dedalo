@@ -224,7 +224,10 @@ function get_column_definition(col_name: string, table: processed_table): string
 			break;
 	}
 
-	const comment = `${ctx.term} - ${ctx.tipo}`.replace(/'/g, "''");
+	// DIFFTS-05: escape backslashes before doubling quotes. In MariaDB's default mode
+	// (NO_BACKSLASH_ESCAPES off) a backslash is an escape char, so an un-escaped one
+	// in the term/tipo could escape the closing quote of this COMMENT literal.
+	const comment = `${ctx.term} - ${ctx.tipo}`.replace(/\\/g, '\\\\').replace(/'/g, "''");
 	return `${safe_col} ${type} DEFAULT NULL COMMENT '${comment}'`;
 }
 

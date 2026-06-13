@@ -59,6 +59,18 @@ export class WorkClient {
 	private loggedIn = false;
 
 	constructor(config: WorkClientConfig) {
+	  // DIFFTS-08: this client POSTs credentials (login username/password) to baseUrl.
+	  // Warn loudly when it is not https (and not a loopback host), so a plaintext
+	  // misconfiguration is visible rather than silent.
+	  try {
+	    const u = new URL(config.baseUrl);
+	    const isLoopback = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '::1';
+	    if (u.protocol !== 'https:' && !isLoopback) {
+	      console.warn(`[work_client] WARNING: baseUrl is not https (${u.protocol}//${u.host}); credentials will be sent in plaintext.`);
+	    }
+	  } catch {
+	    console.warn(`[work_client] WARNING: invalid baseUrl: ${config.baseUrl}`);
+	  }
 	  this.baseUrl = config.baseUrl.replace(/\/$/, '') + '/core/api/v1/json/';
 	  this.auth = config.auth ?? null;
 	  this.autoLogin = config.autoLogin ?? false;

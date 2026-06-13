@@ -77,6 +77,11 @@ async function main(): Promise<void> {
 
 	if (useHttp) {
 		const { port, host, allowedOrigins } = config!.http;
+		// DIFFTS-12: warn loudly when exposed beyond loopback without a client token.
+		const isLoopback = host === '127.0.0.1' || host === 'localhost' || host === '::1';
+		if (!isLoopback && !process.env.DEDALO_MCP_HTTP_TOKEN) {
+			logger.warn(`MCP HTTP transport bound to non-loopback host '${host}' without DEDALO_MCP_HTTP_TOKEN — set a token to authenticate clients.`);
+		}
 		Bun.serve({
 			port,
 			hostname: host,
@@ -93,6 +98,18 @@ async function main(): Promise<void> {
 
 				if (req.method === 'OPTIONS') {
 					return new Response(null, { status: 204, headers: corsHeaders });
+				}
+
+				// DIFFTS-12: the Origin check is not authentication (it permits clients
+				// that send no Origin, e.g. curl). When DEDALO_MCP_HTTP_TOKEN is set,
+				// require it as a bearer token on every non-preflight request, independent
+				// of host/Origin. Opt-in so local stdio/dev usage is unaffected.
+				const requiredToken = process.env.DEDALO_MCP_HTTP_TOKEN;
+				if (requiredToken) {
+					const provided = (req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+					if (provided !== requiredToken) {
+						return new Response('Unauthorized', { status: 401, headers: corsHeaders });
+					}
 				}
 
 				const sessionId = req.headers.get('mcp-session-id');
