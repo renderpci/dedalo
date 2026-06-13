@@ -22,7 +22,6 @@
 	import {ui} from '../../common/js/ui.js'
 	import {check_unsaved_data} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
-	import {search} from '../../search/js/search.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {inspector} from '../../inspector/js/inspector.js'
 	import {render_edit_section} from './render_edit_section.js'
@@ -538,10 +537,16 @@ section.prototype.build = async function(autoload=false) {
 
 	// filter search
 		if (self.filter===null && self.mode!=='tm') {
-			self.filter = new search()
-			await self.filter.init({
-				caller	: self,
-				mode	: self.mode
+			// keyed, registered instance (no longer a bare `new search()`).
+			// id_variant disambiguates section searches from area searches that
+			// could otherwise share section_tipo/mode/lang.
+			self.filter = await get_instance({
+				model			: 'search',
+				section_tipo	: self.section_tipo,
+				mode			: self.mode,
+				lang			: self.lang,
+				id_variant		: self.model,
+				caller			: self
 			})
 			// preload search (experimental disable now)
 			const pre_built_search = false

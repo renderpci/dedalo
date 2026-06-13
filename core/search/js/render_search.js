@@ -345,6 +345,10 @@ export const render_filter = function(options) {
 	// Reset resolved
 		self.ar_resolved_elements = []
 
+	// Reset canonical model. Rebuilt as a side effect of render_search_group /
+	// build_search_component while build_dom_group walks the preset.
+		self.filter_model = null
+
 	// Build global_group
 		self.build_dom_group(editing_preset, search_group_container, {
 			is_root				: true,
@@ -546,6 +550,15 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 			self.root_search_group = search_group
 		}
 
+	// model node. Create the canonical group node and link DOM ↔ model.
+	// Root attaches to self.filter_model; sub groups attach to their parent node.
+		const parent_group_node	= is_root ? null : (parent_div.__node || null)
+		const group_node		= self.create_group_model_node(operator, parent_group_node, search_group)
+		search_group.__node		= group_node
+		if (is_root===true) {
+			self.filter_model = group_node
+		}
+
 	// drag and drop events
 		search_group.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
 		search_group.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
@@ -566,6 +579,10 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 			e.stopPropagation()
 			//console.log("Clicked search_group_operator:",search_group_operator );
 			toggle_operator_value(this)
+			// sync the canonical model operator (source of truth)
+			if (search_group.__node) {
+				search_group.__node.operator = this.dataset.value
+			}
 			// Set initial state as unchanged
 			self.update_state({state:'changed'})
 		})
@@ -579,6 +596,8 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 		})
 		search_group_button_close.addEventListener('click', function(e){
 			e.stopPropagation()
+			// detach from the canonical model
+			self.remove_model_node(search_group.__node)
 			// remove from dom
 			search_group.parentNode.removeChild(search_group);
 			// Set as changed
@@ -646,6 +665,18 @@ render_search.prototype.build_search_component = async function(options) {
 			parent			: parent_div
 		})
 
+		// model node. Create the canonical node synchronously so the model child
+		// order matches DOM insertion order (components load async and may resolve
+		// out of order). The built instance is bound below.
+			const component_model_node = self.create_component_model_node({
+				path		: path,
+				section_id	: section_id,
+				instance	: null,
+				parent_node	: parent_div.__node || null,
+				dom			: search_component
+			})
+			search_component.__node = component_model_node
+
 		// component_instance. Get functional component, build and returns it ready to render
 			const component_instance = await self.get_component_instance({
 				section_id				: section_id,
@@ -673,6 +704,10 @@ render_search.prototype.build_search_component = async function(options) {
 		// add component node
 			search_component.appendChild(component_node)
 
+		// model node. Bind the now-built instance into the canonical node that was
+		// created synchronously above (keeps model child order aligned with DOM order).
+			component_model_node.instance = component_instance
+
 	// button close
 		const search_component_button_close = ui.create_dom_element({
 			element_type	: 'span',
@@ -681,6 +716,8 @@ render_search.prototype.build_search_component = async function(options) {
 		})
 		search_component_button_close.addEventListener('click', function(e){
 			e.stopPropagation()
+			// detach from the canonical model
+			self.remove_model_node(component_model_node)
 			// remove search box and content (component) from dom
 			search_component.parentNode.removeChild(search_component)
 			// delete the instance from search ar_instances
@@ -714,6 +751,8 @@ render_search.prototype.build_search_component = async function(options) {
 			const prev = search_component.previousElementSibling
 			if (prev && prev.classList.contains('search_component')) {
 				parent_div.insertBefore(search_component, prev)
+				// mirror the reorder in the canonical model
+				self.move_model_node(component_model_node, 'up')
 				self.update_state({state:'changed'})
 				update_reorder_buttons(search_component)
 				update_reorder_buttons(prev)
@@ -732,6 +771,8 @@ render_search.prototype.build_search_component = async function(options) {
 			const next = search_component.nextElementSibling
 			if (next && next.classList.contains('search_component')) {
 				parent_div.insertBefore(next, search_component)
+				// mirror the reorder in the canonical model
+				self.move_model_node(component_model_node, 'down')
 				self.update_state({state:'changed'})
 				update_reorder_buttons(search_component)
 				update_reorder_buttons(next)
