@@ -74,6 +74,7 @@ class area_maintenance extends area_common {
 		// make_backup *
 		$item = new stdClass();
 		$item->id = 'make_backup';
+		$item->category = 'data';
 		$item->type = 'widget';
 		$item->label = label::get_label('make_backup') ?? 'Make backup';
 		$ar_widgets[] = $this->widget_factory($item);
@@ -81,6 +82,7 @@ class area_maintenance extends area_common {
 		// check_config *
 		$item = new stdClass();
 		$item->id = 'check_config';
+		$item->category = 'config';
 		$item->class = 'success';
 		$item->type = 'widget';
 		$item->label = label::get_label('check_config') ?? 'Check config';
@@ -89,6 +91,7 @@ class area_maintenance extends area_common {
 		// update_ontology *
 		$item = new stdClass();
 		$item->id = 'update_ontology';
+		$item->category = 'config';
 		$item->type = 'widget';
 		$item->label = label::get_label('update_ontology') ?? 'Update Ontology';
 		$ar_widgets[] = $this->widget_factory($item);
@@ -96,6 +99,7 @@ class area_maintenance extends area_common {
 		// register_tools *
 		$item = new stdClass();
 		$item->id = 'register_tools';
+		$item->category = 'config';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
 		$item->label = label::get_label('registrar_herramientas');
@@ -104,6 +108,7 @@ class area_maintenance extends area_common {
 		// move_tld
 		$item = new stdClass();
 		$item->id = 'move_tld';
+		$item->category = 'migration';
 		$item->type = 'widget';
 		$item->label = label::get_label('move_tld') ?? 'Move TLD';
 		$item->value = (object) [
@@ -116,6 +121,7 @@ class area_maintenance extends area_common {
 
 		$item = new stdClass();
 		$item->id = 'move_locator';
+		$item->category = 'migration';
 		$item->type = 'widget';
 		$item->label = label::get_label('move_locator') ?? 'Move locator';
 		$item->value = (object) [
@@ -129,6 +135,7 @@ class area_maintenance extends area_common {
 		// move_to_portal
 		$item = new stdClass();
 		$item->id = 'move_to_portal';
+		$item->category = 'migration';
 		$item->type = 'widget';
 		$item->label = label::get_label('move_to_portal') ?? 'Move to portal';
 		$item->value = (object) [
@@ -142,6 +149,7 @@ class area_maintenance extends area_common {
 		// move_to_table
 		$item = new stdClass();
 		$item->id = 'move_to_table';
+		$item->category = 'migration';
 		$item->type = 'widget';
 		$item->label = label::get_label('move_to_table') ?? 'Move to table';
 		$item->value = (object) [
@@ -154,6 +162,7 @@ class area_maintenance extends area_common {
 		// move_lang
 		$item = new stdClass();
 		$item->id = 'move_lang';
+		$item->category = 'migration';
 		$item->type = 'widget';
 		$item->label = label::get_label('move_lang') ?? 'Move LANG';
 		$item->value = (object) [
@@ -167,6 +176,7 @@ class area_maintenance extends area_common {
 		// build_database_version *
 		$item = new stdClass();
 		$item->id = 'build_database_version';
+		$item->category = 'data';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
 		$item->label = label::get_label('build_database_version') ?? 'Build database version';
@@ -175,6 +185,7 @@ class area_maintenance extends area_common {
 		// update_data_version *
 		$item = new stdClass();
 		$item->id = 'update_data_version';
+		$item->category = 'data';
 		$item->class = 'success width_100';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
@@ -184,6 +195,7 @@ class area_maintenance extends area_common {
 		// update_code *
 		$item = new stdClass();
 		$item->id = 'update_code';
+		$item->category = 'config';
 		$item->type = 'widget';
 		$item->label = label::get_label('update') . ' ' . label::get_label('code');
 		$ar_widgets[] = $this->widget_factory($item);
@@ -191,6 +203,7 @@ class area_maintenance extends area_common {
 		// export_hierarchy *
 		$item = new stdClass();
 		$item->id = 'export_hierarchy';
+		$item->category = 'data';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
 		$item->label = label::get_label('export_hierarchy') ?? 'Export hierarchy';
@@ -199,6 +212,7 @@ class area_maintenance extends area_common {
 		// publication_api *
 		$item = new stdClass();
 		$item->id = 'publication_api';
+		$item->category = 'diffusion';
 		$item->type = 'widget';
 		$item->label = 'Publication server API';
 		$item->value = (object) [
@@ -216,6 +230,7 @@ class area_maintenance extends area_common {
 		// add_hierarchy *
 		$item = new stdClass();
 		$item->id = 'add_hierarchy';
+		$item->category = 'data';
 		$item->type = 'widget';
 		$item->class = 'success width_100';
 		$item->label = label::get_label('instalar') . ' ' . label::get_label('jerarquias');
@@ -224,6 +239,7 @@ class area_maintenance extends area_common {
 		// dedalo_api_test_environment *
 		$item = new stdClass();
 		$item->id = 'dedalo_api_test_environment';
+		$item->category = 'dev';
 		$item->class = 'green fit width_100';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
@@ -233,6 +249,7 @@ class area_maintenance extends area_common {
 		// sqo_test_environment *
 		$item = new stdClass();
 		$item->id = 'sqo_test_environment';
+		$item->category = 'dev';
 		$item->class = 'blue fit width_100';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
@@ -242,6 +259,7 @@ class area_maintenance extends area_common {
 		// lock_components *
 		$item = new stdClass();
 		$item->id = 'lock_components';
+		$item->category = 'integrity';
 		$item->class = 'width_100';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
@@ -259,6 +277,7 @@ class area_maintenance extends area_common {
 		$php_error_log_path = system::get_error_log_path();
 		$item = new stdClass();
 		$item->id = 'php_user';
+		$item->category = 'system';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
 		$item->label = 'PHP USER';
@@ -272,6 +291,7 @@ class area_maintenance extends area_common {
 		// database_info *
 		$item = new stdClass();
 		$item->id = 'database_info';
+		$item->category = 'system';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
 		$item->label = 'DATABASE INFO';
@@ -280,6 +300,7 @@ class area_maintenance extends area_common {
 		// environment *
 		$item = new stdClass();
 		$item->id = 'environment';
+		$item->category = 'system';
 		$item->type = 'widget';
 		$item->label = 'Environment';
 		$ar_widgets[] = $this->widget_factory($item);
@@ -287,6 +308,7 @@ class area_maintenance extends area_common {
 		// unit_test *
 		$item = new stdClass();
 		$item->id = 'unit_test';
+		$item->category = 'dev';
 		$item->type = 'widget';
 		$item->label = 'Unit test area';
 		$ar_widgets[] = $this->widget_factory($item);
@@ -295,6 +317,7 @@ class area_maintenance extends area_common {
 		$response = db_tasks::check_sequences();
 		$item = new stdClass();
 		$item->id = 'sequences_status';
+		$item->category = 'integrity';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
 		$item->label = 'DB SEQUENCES STATUS';
@@ -304,6 +327,7 @@ class area_maintenance extends area_common {
 		// media_control *
 		$item = new stdClass();
 		$item->id = 'media_control';
+		$item->category = 'integrity';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
 		$item->label = label::get_label('media_control') ?? 'Media access control';
@@ -312,6 +336,7 @@ class area_maintenance extends area_common {
 		// counters_status *
 		$item = new stdClass();
 		$item->id = 'counters_status';
+		$item->category = 'integrity';
 		$item->class = 'width_100';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
@@ -321,6 +346,7 @@ class area_maintenance extends area_common {
 		// dataframe_control *
 		$item = new stdClass();
 		$item->id = 'dataframe_control';
+		$item->category = 'integrity';
 		$item->class = 'width_100';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
@@ -330,6 +356,7 @@ class area_maintenance extends area_common {
 		// php_info *
 		$item = new stdClass();
 		$item->id = 'php_info';
+		$item->category = 'system';
 		$item->class = 'violet fit width_100';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
@@ -342,6 +369,7 @@ class area_maintenance extends area_common {
 		// system_info *
 		$item = new stdClass();
 		$item->id = 'system_info';
+		$item->category = 'system';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
 		$item->label = 'SYSTEM INFO';
@@ -368,6 +396,7 @@ class area_maintenance extends area_common {
 		$widget = new stdClass();
 		$widget->id = $item->id;
 		$widget->class = $item->class ?? null;
+		$widget->category = $item->category ?? 'general';
 		$widget->type = 'widget';
 		$widget->tipo = $item->tipo ?? $this->tipo;
 		$widget->parent = $item->parent ?? $this->tipo;
