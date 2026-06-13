@@ -632,8 +632,11 @@ component_portal.prototype.build = async function(autoload=false) {
 	// columns
 	// @see common.get_columns_map ddo_map_sequence
 	// Note that default ddo_map_sequence is [show], but in search mode is [search,show]
+	// datum_context allows to resolve column 'sortable' from the children contexts
+	// (used by the sort_by_column property to add column sort buttons)
 		self.columns_map = get_columns_map({
-			context : self.context
+			context			: self.context,
+			datum_context	: self.datum.context
 		})
 
 	// self.add_component_info. Indicates if exists any ddinfo (value_with_parents) in the ddo_map items list
@@ -1286,6 +1289,59 @@ component_portal.prototype.sort_data = async function(options) {
 
 	return api_response
 }//end sort_data
+
+
+
+/**
+* SORT_BY_COLUMN
+* Persistently reorders the full portal data (all locators, across pagination)
+* by the value of the given column component in the target section.
+* The new order is resolved and saved in the server (changed_data action 'sort_by_column').
+* Available when the ontology property 'sort_by_column' is enabled.
+* @see ui.add_column_order_set
+* @param {object} column - columns_map item (uses column.tipo)
+* @param {string} direction - 'ASC'|'DESC'
+* @returns {Promise<object>} API request response
+*/
+component_portal.prototype.sort_by_column = async function(column, direction) {
+
+	const self = this
+
+	// sort_by_column changed_data
+	// (!) value must stay null: with null value and no id, the client
+	// update_data_value is a no-op and the server resolves the new order
+		const changed_data = [Object.freeze({
+			action			: 'sort_by_column',
+			component_tipo	: column.tipo,
+			direction		: direction, // 'ASC'|'DESC'
+			value			: null
+		})]
+
+	// api_response : change_value (and save)
+		const api_response = await self.change_value({
+			changed_data	: changed_data,
+			refresh			: false // not refresh here (!)
+		})
+
+	// column_order_state. Ephemeral indicator of the last applied column order
+	// (advisory only: manual drag and drop can change the order at any time)
+		if (api_response && api_response.result!==false) {
+			self.column_order_state = {
+				tipo		: column.tipo,
+				direction	: direction
+			}
+		}
+
+	// refresh self component
+		await self.refresh({
+			destroy				: false,
+			build_autoload		: true,
+			tmp_api_response	: api_response // pass api_response before build to avoid call API again
+		})
+
+
+	return api_response
+}//end sort_by_column
 
 
 

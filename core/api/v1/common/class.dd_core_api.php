@@ -1126,6 +1126,7 @@ final class dd_core_api {
 	* 	remove		// removes a item value from the component data array
 	* 	set_data	// set the whole data sent by the client without check the array key (bulk insert or update)
 	* 	sort_data	// re-organize the whole component data based on target key given. Used by portals to sort rows
+	* 	sort_by_column	// re-organize the whole component data ordered by a target section column value. Used by portals (gated by 'sort_by_column' property)
 	* @param object $rqo
 	* sample:
 		* {
