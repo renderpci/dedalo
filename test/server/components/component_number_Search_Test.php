@@ -97,4 +97,35 @@ final class component_number_Search_Test extends BaseTestCase {
             ]
         ];
     }
+
+
+
+    /**
+    * TEST_NON_NUMERIC_Q_COERCED_TO_ZERO
+    * SEARCH-06 / SEARCH-02: a non-numeric number `q` is coerced to '0' before the
+    * (_Q1_)::numeric cast, so the search builds valid SQL instead of failing on a
+    * Postgres cast error (and does not silently empty the result).
+    * @return void
+    */
+    public function test_non_numeric_q_coerced_to_zero() : void {
+
+        $this->user_login();
+
+        $query_object = json_decode(json_encode([
+            "q"           => "not-a-number",
+            "q_operator"  => "=",
+            "path"        => [["name" => "number", "model" => "component_number", "section_tipo" => "test3", "component_tipo" => "test211"]],
+            "table_alias" => "te3",
+            "table"       => "matrix_test"
+        ]));
+
+        $result = component_number::resolve_query_object_sql($query_object);
+
+        $this->assertNotFalse($result, 'non-numeric q must still build SQL');
+        $this->assertSame(
+            '0',
+            (string)(((array)($result->params ?? []))['_Q1_'] ?? null),
+            'SEARCH-02: a non-numeric number q must be coerced to 0 before the ::numeric cast'
+        );
+    }//end test_non_numeric_q_coerced_to_zero
 }
