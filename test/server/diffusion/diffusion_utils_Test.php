@@ -149,6 +149,90 @@ final class diffusion_utils_Test extends BaseTestCase {
 
 
 	/**
+	* TEST_SECTION_DIFFUSION_MAP_PARITY
+	* The persistent map must answer have_section_diffusion identically to the
+	* legacy per-section walk (get_section_diffusion_nodes + parents element test)
+	* for every section_tipo.
+	*/
+	public function test_section_diffusion_map_parity(): void {
+
+		$config = diffusion_test_helper::require_diffusion_ontology($this);
+
+		// legacy oracle (the old have_section_diffusion body, still callable)
+		$oracle = function(string $section_tipo) : bool {
+			$nodes = diffusion_utils::get_section_diffusion_nodes($section_tipo);
+			foreach ($nodes as $node) {
+				foreach ($node->parents ?? [] as $path_item) {
+					if ($path_item->model==='diffusion_element' || $path_item->model==='diffusion_element_alias') {
+						return true;
+					}
+				}
+			}
+			return false;
+		};
+
+		$map = diffusion_utils::get_section_diffusion_map();
+		$this->assertIsArray($map);
+		$this->assertArrayHasKey($config->section_tipo, $map, 'Diffusion section missing from map');
+
+		// every mapped section + known negatives must match the oracle
+		$samples = array_merge(
+			array_keys($map),
+			['dd1758', 'dd1324', 'dd996', $config->section_tipo]
+		);
+		$samples = array_values(array_unique($samples));
+
+		foreach ($samples as $section_tipo) {
+			$this->assertSame(
+				$oracle($section_tipo),
+				diffusion_utils::have_section_diffusion($section_tipo),
+				"Map/oracle mismatch for section_tipo: $section_tipo"
+			);
+		}
+	}//end test_section_diffusion_map_parity
+
+
+
+	/**
+	* TEST_SECTION_DIFFUSION_MAP_CACHE_PERSIST
+	* The map is written to a persistent wrapper file, honored on the next read
+	* (even when empty), and removed by delete_section_map_cache_file.
+	*/
+	public function test_section_diffusion_map_cache_persist(): void {
+
+		diffusion_test_helper::require_diffusion_ontology($this);
+
+		$base_path = DEDALO_CACHE_MANAGER['files_path'] ?? null;
+		if (empty($base_path) || !is_dir($base_path)) {
+			$this->markTestSkipped('Cache files path not available');
+		}
+		$file_path = $base_path . '/' . diffusion_utils::get_section_diffusion_map_cache_name();
+
+		// build + persist
+		diffusion_utils::delete_section_map_cache_file();
+		$map = diffusion_utils::get_section_diffusion_map();
+		$this->assertFileExists($file_path, 'Map cache file was not persisted');
+
+		// payload is a wrapper, never a bare array
+		$payload = include $file_path;
+		$this->assertIsArray($payload);
+		$this->assertSame(DEDALO_DIFFUSION_DOMAIN, $payload['domain'] ?? null, 'Map payload missing domain wrapper');
+		$this->assertArrayHasKey('map', $payload);
+		$this->assertSame($map, $payload['map']);
+
+		// read again (request static reset) must be honored from file, no rebuild diff
+		diffusion_utils::reset_cache();
+		$map_2 = diffusion_utils::get_section_diffusion_map();
+		$this->assertSame($map, $map_2, 'Map differs when served from the persistent file');
+
+		// invalidation removes the file
+		diffusion_utils::delete_section_map_cache_file();
+		$this->assertFileDoesNotExist($file_path, 'delete_section_map_cache_file did not remove the cache file');
+	}//end test_section_diffusion_map_cache_persist
+
+
+
+	/**
 	* TEST_GET_DDO_MAP
 	*/
 	public function test_get_ddo_map(): void {

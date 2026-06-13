@@ -149,14 +149,12 @@ class section_record {
 		// Invalidate cache files
 		switch ($this->section_tipo) {
 			case DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO : // dd1244
-				// Invalidate request config cache file.
-				// This is used to invalidate the request config cache file
-				// when the section_record_save event is triggered.
-				// This only affects current user cache.
-				$cache_file_name = 'cache_active_request_config.php';
-				dd_cache::delete_cache_files([
-					$cache_file_name
-				]);
+				// Invalidate request config presets cache.
+				// Goes through clean_cache() (not a raw delete_cache_files) so the
+				// in-request static is reset too — otherwise a save within the same
+				// request keeps serving the stale pre-save list from memory.
+				// This only affects current user cache (file is user-prefixed).
+				request_config_presets::clean_cache();
 				break;
 
 			case DEDALO_REGISTER_TOOLS_SECTION_TIPO : // dd1324

@@ -31,6 +31,9 @@ class diffusion_utils {
 	private static ?array	$virtual_tree_cache			= null;
 	private static array	$is_publishable_cache		= [];
 	private static array	$diffusion_map_cache		= [];
+	// request-scoped mirror of the persistent "sections with diffusion" map
+	// (see get_section_diffusion_map). null = not yet loaded this request.
+	private static ?array	$section_diffusion_map_cache	= null;
 
 
 
@@ -46,6 +49,13 @@ class diffusion_utils {
 		self::$virtual_tree_cache	= null;
 		self::$is_publishable_cache	= [];
 		self::$diffusion_map_cache	= [];
+		// Reset the request-scoped mirror only. The PERSISTENT map file is NOT
+		// deleted here: reset_cache runs on every publish (dd_diffusion_api::diffuse
+		// step 0) but the map depends only on the ontology, which publishing does
+		// not change. Ontology mutations invalidate the file through
+		// delete_section_map_cache_file (called from the ontology write chokepoints
+		// and tools_register::invalidate_all_tool_caches).
+		self::$section_diffusion_map_cache	= null;
 	}//end reset_cache
 
 
@@ -582,22 +592,153 @@ class diffusion_utils {
 	* Checks if the given section is targeted by at least one diffusion element,
 	* resolved from the v7 flat virtual diffusion tree (type-agnostic: works for
 	* sql, rdf, xml, socrata and any future diffusion type).
+	*
+	* This runs on EVERY section API request (via tool_diffusion::is_available in
+	* common::get_tools). Rebuilding the virtual tree per request cost ~70-175ms,
+	* so the answer for every section is precomputed once into a persistent map
+	* (get_section_diffusion_map) and this method is now an O(1) lookup. The map is
+	* semantically equivalent to calling the previous walk for each section_tipo.
+	*
 	* @param string $section_tipo
 	* @return bool $have_section_diffusion
 	*/
 	public static function have_section_diffusion( string $section_tipo ) : bool {
 
-		$nodes = self::get_section_diffusion_nodes($section_tipo);
-		foreach ($nodes as $node) {
-			foreach ($node->parents ?? [] as $path_item) {
-				if ($path_item->model==='diffusion_element' || $path_item->model==='diffusion_element_alias') {
-					return true;
-				}
+		return isset(self::get_section_diffusion_map()[$section_tipo]);
+	}//end have_section_diffusion
+
+
+
+	/**
+	* GET_SECTION_DIFFUSION_MAP_CACHE_NAME
+	* Entity-level (shared, empty-prefix) cache file name for the persistent
+	* "sections with diffusion" map. Same naming pattern as the tool caches.
+	* @return string
+	*/
+	public static function get_section_diffusion_map_cache_name() : string {
+		return DEDALO_ENTITY . '_cache_diffusion_section_map.php';
+	}//end get_section_diffusion_map_cache_name
+
+
+
+	/**
+	* GET_SECTION_DIFFUSION_MAP
+	* Builds (and persists) the map of every section targeted by at least one
+	* diffusion element: [ section_tipo => true ]. `isset($map[$s])` is identical
+	* to the legacy `have_section_diffusion($s)` for every $s.
+	*
+	* The map depends ONLY on the diffusion ontology, so it is cached at the
+	* entity level and invalidated by delete_section_map_cache_file() from the
+	* ontology write chokepoints (ontology::set_records_in_dd_ontology /
+	* regenerate_records_in_dd_ontology / delete_ontology), from
+	* tools_register::invalidate_all_tool_caches (import_tools rewrites the tool
+	* tld) and from install_ontology_manager::clean_ontology.
+	*
+	* The on-disk payload is a WRAPPER ['domain'=>..., 'map'=>...], never a bare
+	* array: it lets the domain config self-invalidate the file and avoids the
+	* "cached empty array == miss" ambiguity (the wrapper is never empty).
+	*
+	* @return array $map [ section_tipo => true ]
+	*/
+	public static function get_section_diffusion_map() : array {
+
+		// request-scoped static
+		if (self::$section_diffusion_map_cache !== null) {
+			return self::$section_diffusion_map_cache;
+		}
+
+		// recovery mode: ontology reads are redirected to dd_ontology_recovery, so
+		// never read/write the live-ontology cache file. Compute fresh, static only.
+		$recovery_mode = ($_ENV['DEDALO_RECOVERY_MODE'] ?? false) === true;
+
+		// persistent file read (accept only a well-formed wrapper for the current domain)
+		if ($recovery_mode === false) {
+			$cached = dd_cache::cache_from_file((object)[
+				'file_name'	=> self::get_section_diffusion_map_cache_name(),
+				'prefix'	=> ''
+			]);
+			if (is_array($cached)
+				&& ($cached['domain'] ?? null) === DEDALO_DIFFUSION_DOMAIN
+				&& isset($cached['map']) && is_array($cached['map'])
+			) {
+				self::$section_diffusion_map_cache = $cached['map'];
+				return $cached['map'];
 			}
 		}
 
-		return false;
-	}//end have_section_diffusion
+		// compute: ONE virtual-tree walk, exact semantic clone of the per-section path
+		// (get_section_diffusion_nodes + the parents element-model test in the old
+		// have_section_diffusion).
+		$map = [];
+
+		// misconfig / fresh install: no domain -> empty map, NOT persisted (mirrors
+		// the early return in get_virtual_diffusion_tree)
+		if (self::get_diffusion_domain_tipo() === null) {
+			self::$section_diffusion_map_cache = $map;
+			return $map;
+		}
+
+		$all_virtual_nodes = self::get_virtual_diffusion_tree();
+		foreach ($all_virtual_nodes as $vnode) {
+
+			// cheap filter first: the node must sit under a diffusion element
+			$under_element = false;
+			foreach ($vnode->parents ?? [] as $path_item) {
+				if ($path_item->model==='diffusion_element' || $path_item->model==='diffusion_element_alias') {
+					$under_element = true;
+					break;
+				}
+			}
+			if ($under_element === false) {
+				continue;
+			}
+
+			// related sections of the node, with the real_tipo fallback ONLY when
+			// empty (replicates get_section_diffusion_nodes exactly)
+			$ar_related_sections = ontology_node::get_ar_tipo_by_model_and_relation($vnode->tipo, 'section', 'related', true);
+			if (empty($ar_related_sections) && $vnode->real_tipo) {
+				$ar_related_sections = ontology_node::get_ar_tipo_by_model_and_relation($vnode->real_tipo, 'section', 'related', true);
+			}
+
+			foreach ($ar_related_sections as $current_section_tipo) {
+				$map[$current_section_tipo] = true;
+			}
+		}
+
+		// persist (wrapper). Skip the file write in recovery mode.
+		if ($recovery_mode === false) {
+			dd_cache::cache_to_file((object)[
+				'file_name'	=> self::get_section_diffusion_map_cache_name(),
+				'prefix'	=> '',
+				'data'		=> [
+					'domain'	=> DEDALO_DIFFUSION_DOMAIN,
+					'map'		=> $map
+				]
+			]);
+		}
+
+		self::$section_diffusion_map_cache = $map;
+		return $map;
+	}//end get_section_diffusion_map
+
+
+
+	/**
+	* DELETE_SECTION_MAP_CACHE_FILE
+	* Invalidates the persistent "sections with diffusion" map: resets the
+	* request-scoped static and deletes the entity-level cache file. Call from
+	* every ontology write chokepoint (see get_section_diffusion_map docblock).
+	* @return bool
+	*/
+	public static function delete_section_map_cache_file() : bool {
+
+		self::$section_diffusion_map_cache = null;
+
+		return dd_cache::delete_cache_files(
+			[ self::get_section_diffusion_map_cache_name() ],
+			'' // shared, empty prefix
+		);
+	}//end delete_section_map_cache_file
 
 
 

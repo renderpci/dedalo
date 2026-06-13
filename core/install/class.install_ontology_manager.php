@@ -93,6 +93,13 @@ class install_ontology_manager {
 				}
 			}
 
+		// dd_ontology was wiped down to the preserved TLDs: invalidate the
+		// ontology-derived "sections with diffusion" map (defensive — guard the
+		// boot context where the entity/cache path may not be resolvable yet).
+			if (defined('DEDALO_ENTITY') && class_exists('diffusion_utils')) {
+				diffusion_utils::delete_section_map_cache_file();
+			}
+
 		$response->result 	= true;
 		$response->msg 		= 'OK. Request done';
 

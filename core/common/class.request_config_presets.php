@@ -8,8 +8,11 @@ class request_config_presets {
 
 	// cache file name
 	public static string $active_request_config_cache_file_name = 'cache_active_request_config.php';
-	// Cache for active request config
-	public static array $active_request_config_cache = [];
+	// Cache for active request config.
+	// Nullable: null means "not yet computed this request" (a real miss), while an
+	// empty array is a valid cached value (no active presets) that must be honored
+	// instead of recomputed + rewritten on every request.
+	public static ?array $active_request_config_cache = null;
 
 
 
@@ -23,16 +26,18 @@ class request_config_presets {
 	*/
 	public static function get_active_request_config() : array {
 
-		// static cache
-		if (!empty(self::$active_request_config_cache)) {
+		// static cache. null = not computed yet; [] is a valid honored value.
+		if (self::$active_request_config_cache !== null) {
 			return self::$active_request_config_cache;
 		}
 
-		// cache file read
+		// cache file read. cache_from_file returns null only on a missing/unreadable
+		// file (the real miss); a cached empty array (no active presets) is a HIT and
+		// must be honored, otherwise the file is rewritten via a DB search every request.
 		$cache_data	= dd_cache::cache_from_file((object)[
 			'file_name' => self::$active_request_config_cache_file_name
 		]);
-		if (!empty($cache_data)) {
+		if (is_array($cache_data)) {
 
 			// static cache
 			self::$active_request_config_cache = $cache_data;
@@ -54,6 +59,16 @@ class request_config_presets {
 			DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO,
 			'{"dd1566":[{"section_tipo": "dd64", "section_id": "1"}]}'
 		]);
+
+		// Fix C: never cache a failure state. On search failure return empty without
+		// writing the cache (also guards the pg_fetch_object loop against false).
+		if ($result === false) {
+			debug_log(__METHOD__
+				. " Search failed for active request config presets (not cached)"
+				, logger::ERROR
+			);
+			return [];
+		}
 
 		// Prepare component info for fast access
 		$ar_components_info = [
@@ -232,6 +247,10 @@ class request_config_presets {
 	* @return bool
 	*/
 	public static function clean_cache() : bool {
+
+		// reset the in-request static too, otherwise a save within the same request
+		// keeps serving the stale pre-save list from memory
+		self::$active_request_config_cache = null;
 
 		dd_cache::delete_cache_files([
 			self::$active_request_config_cache_file_name

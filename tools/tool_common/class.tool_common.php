@@ -602,7 +602,13 @@ class tool_common {
 			if (isset(self::$all_registered_tools_cache)) {
 				return self::$all_registered_tools_cache;
 			}
-			// file cache
+			// file cache.
+			// Note: an empty array is treated as a read MISS on purpose. This shared
+			// entity-level cache is never legitimately empty on an installed system
+			// (a real install always has registered tools), so honoring a cached []
+			// would make a transiently-poisoned [] file (e.g. written during a failed
+			// search or mid-import) a sticky "no tools" state. Read-miss + the write
+			// guard below make any empty file self-heal on the next request.
 			$all_registered_tools = dd_cache::cache_from_file((object)[
 				'file_name'	=> self::get_all_registered_tools_cache_name(),
 				'prefix' => ''
@@ -659,14 +665,22 @@ class tool_common {
 
 		// cache
 		if ($use_cache===true) {
-			// static
+			// static (always, for request consistency)
 			self::$all_registered_tools_cache = $registered_tools;
-			// file cache
-			dd_cache::cache_to_file((object)[
-				'file_name' => self::get_all_registered_tools_cache_name(),
-				'prefix' => '',
-				'data' => $registered_tools
-			]);
+			// file cache.
+			// Fix C: never persist a failure/empty state. Writing only when the
+			// search succeeded ($db_result !== false) AND produced tools prevents
+			// poisoning this shared file with [] on a failed search or transient
+			// empty compute. A genuinely empty result (fresh, pre-import install)
+			// simply recomputes per request — one cheap indexed search — until
+			// import_tools runs and clean_cache() lets the real list be cached.
+			if ($db_result !== false && !empty($registered_tools)) {
+				dd_cache::cache_to_file((object)[
+					'file_name' => self::get_all_registered_tools_cache_name(),
+					'prefix' => '',
+					'data' => $registered_tools
+				]);
+			}
 		}
 
 
@@ -1250,15 +1264,22 @@ class tool_common {
 		// 5. Save Cache
 			if ($use_file_cache===true) {
 
-				// static cache
+				// static cache (always, for request consistency)
 				self::$user_tools_cache[$cache_key] = $user_tools;
 
-				// cache file write
-				dd_cache::cache_to_file((object)[
-					'data'		=> $user_tools,
-					'file_name'	=> $cache_file_name,
-					'prefix'    => $cache_prefix // Same prefix as reading
-				]);
+				// cache file write.
+				// Skip writing an empty list: the file reader treats [] as a miss
+				// (to avoid sticky empty poisoning), so persisting [] would just be
+				// rewritten every request. An empty resolution (user authorized for
+				// zero tools, or registry not yet built) recomputes cheaply — the
+				// registry itself comes from the shared file cache.
+				if (!empty($user_tools)) {
+					dd_cache::cache_to_file((object)[
+						'data'		=> $user_tools,
+						'file_name'	=> $cache_file_name,
+						'prefix'    => $cache_prefix // Same prefix as reading
+					]);
+				}
 			}
 
 

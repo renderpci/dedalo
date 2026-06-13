@@ -2194,6 +2194,13 @@ class ontology {
 			$response->msg .= ' | ' . exec_time_unit($start_time, 'ms') . ' ms';
 		}
 
+		// dd_ontology changed: invalidate the persistent "sections with diffusion"
+		// map, which is derived purely from the ontology. Over-invalidation is
+		// harmless (one extra rebuild on the next read).
+		if ( $processed_count > 0 ) {
+			diffusion_utils::delete_section_map_cache_file();
+		}
+
 
 		return $response;
 	}//end set_records_in_dd_ontology
@@ -2325,6 +2332,12 @@ class ontology {
 			}
 			// total_insert dd_ontology records
 			$response->total_insert = $total_insert;
+
+		// dd_ontology nodes were reinserted directly (bypassing set_records), so
+		// invalidate the ontology-derived "sections with diffusion" map.
+			if ( $total_insert > 0 ) {
+				diffusion_utils::delete_section_map_cache_file();
+			}
 
 
 		return $response;
@@ -2592,6 +2605,10 @@ class ontology {
 			$response->msg			= empty($response->errors)
 				? 'OK. Request completed successfully'
 				: 'Warning. Request completed with errors';
+
+		// dd_ontology nodes were deleted: invalidate the ontology-derived
+		// "sections with diffusion" map.
+			diffusion_utils::delete_section_map_cache_file();
 
 
 		return $response;

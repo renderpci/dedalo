@@ -1053,13 +1053,17 @@ class tools_register {
 		$use_cache = true;
 		if ($use_cache===true) {
 
-			// file cache
+			// file cache.
+			// An empty array IS a legitimate, common value here (e.g. zero dd996
+			// install-config records), so a cached [] must be honored as a HIT
+			// (is_array), not treated as a miss. cache_from_file returns null only
+			// when the file is missing/unreadable, which is the real miss case.
 			$key = $section_tipo;
 			$config_list = dd_cache::cache_from_file((object)[
 				'file_name'	=> self::get_config_list_cache_name($key),
 				'prefix' => ''
 			]);
-			if (!empty($config_list)) {
+			if (is_array($config_list)) {
 				return $config_list;
 			}
 		}
@@ -1073,6 +1077,16 @@ class tools_register {
 
 		$search = search::get_instance($sqo);
 		$result = $search->search();
+
+		// Fix C: never cache a failure state. On search failure, return empty
+		// without writing the cache (also guards the foreach below against false).
+		if ($result === false) {
+			debug_log(__METHOD__
+				. " Search failed for section_tipo: $section_tipo (config not cached)"
+				, logger::ERROR
+			);
+			return [];
+		}
 
 		$config_list = [];
 		foreach ($result as $record) {
@@ -1191,6 +1205,11 @@ class tools_register {
 				self::get_config_list_cache_name(self::$section_registered_tools_tipo),
 				self::get_config_list_cache_name(self::$section_tools_config_tipo)
 			], '');
+
+		// Invalidate the persistent "sections with diffusion" map too: import_tools
+		// rewrites the `tool` tld in dd_ontology, which can change diffusion-relevant
+		// nodes. Also gives belt-and-braces coverage via section_record::save_event.
+			diffusion_utils::delete_section_map_cache_file();
 
 		// Delete all per-user file caches.
 		// File naming convention: {entity}_{user_id}_cache_user_tools.php

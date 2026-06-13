@@ -51,6 +51,10 @@ final class tool_caches_test extends BaseTestCase {
 			$all_config	= tools_register::get_all_config();
 			$config		= tool_common::get_config('tool_export');
 			$client		= tools_register::get_all_config_tool_client();
+			// the diffusion section map is invalidated together with the tool
+			// caches (import_tools rewrites the tool tld). Best-effort warm: only
+			// writes a file when a diffusion domain exists.
+			diffusion_utils::get_section_diffusion_map();
 
 			$this->assertNotEmpty($registered, 'expected registered tools (install must have tools imported)');
 
@@ -77,7 +81,8 @@ final class tool_caches_test extends BaseTestCase {
 			$shared_files = [
 				tool_common::get_all_registered_tools_cache_name(),
 				tools_register::get_config_list_cache_name(DEDALO_REGISTER_TOOLS_SECTION_TIPO),
-				tools_register::get_config_list_cache_name(DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO)
+				tools_register::get_config_list_cache_name(DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO),
+				diffusion_utils::get_section_diffusion_map_cache_name()
 			];
 			foreach ($shared_files as $file_name) {
 				$this->assertFileDoesNotExist($base_path .'/'. $file_name, "shared cache file not deleted: $file_name");
