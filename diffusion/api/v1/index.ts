@@ -19,7 +19,7 @@ import { close_all_pools }            from './lib/db';
 import { delete_records, validate_delete_targets } from './lib/delete_handler';
 import { apply_table_state, reconcile, rebuild, validate_rebuild_targets, get_status as get_media_index_status } from './lib/media_index';
 import { check_database_exists, backup_database } from './lib/db_admin';
-import { check_server_auth }          from './lib/auth';
+import { check_server_auth, check_privileged_action } from './lib/auth';
 import { extract_cookie_header, extract_csrf_token } from './lib/session';
 import {
 	create_process,
@@ -306,7 +306,11 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null, c
 	const total       = options.total       ?? 0;
 	const estimated_total = total > 0 ? total : 0;
 	
-	const process_id = options.process_id || crypto.randomUUID();
+	// DIFFTS-02: always server-generate the process id. Honoring a client-supplied
+	// id let an attacker choose/guess another user's id and cancel their diffusion
+	// or read its progress (IDOR). An unguessable server UUID acts as a capability
+	// the owner learns from the stream; it cannot be enumerated.
+	const process_id = crypto.randomUUID();
 	create_process(estimated_total, process_id);
 
 	// 1. Kick off the background process independently
@@ -598,7 +602,8 @@ function handle_diffuse_rdf_stream(
 	const options         = request_rqo.options ?? {};
 	const total           = options.total ?? 0;
 	const estimated_total = total > 0 ? total : 0;
-	const process_id      = options.process_id || crypto.randomUUID();
+	// DIFFTS-02: always server-generate the process id (unguessable capability).
+	const process_id      = crypto.randomUUID();
 
 	create_process(estimated_total, process_id);
 
@@ -1000,10 +1005,12 @@ export async function handle_request(request: Request): Promise<Response> {
 					return Response.json(result);
 				}
 				case 'delete_record': {
-					// Server-to-server delete propagation: accepts a session
-					// cookie (PHP interactive delete) or the internal token
-					// (CLI/cron retry without a session).
-					const is_auth_delete = await check_server_auth(cookie_header, request);
+					// Server-to-server delete propagation. DIFFTS-01: require the
+					// internal token, not a bare session cookie — the publicly
+					// proxied socket must not let a low-priv user delete arbitrary
+					// rows. PHP's diffusion_api_client always attaches the token,
+					// including on the interactive delete path.
+					const is_auth_delete = check_privileged_action(request);
 					if (!is_auth_delete) {
 						return Response.json(
 							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
@@ -1044,7 +1051,8 @@ export async function handle_request(request: Request): Promise<Response> {
 					// markers (filesystem allowlist) from the publication
 					// databases. PHP resolves the targets from the diffusion
 					// ontology; this engine only executes the diff-sync.
-					const is_auth_rebuild = await check_server_auth(cookie_header, request);
+					// DIFFTS-01: admin/server-only — require the internal token.
+					const is_auth_rebuild = check_privileged_action(request);
 					if (!is_auth_rebuild) {
 						return Response.json(
 							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
@@ -1065,7 +1073,8 @@ export async function handle_request(request: Request): Promise<Response> {
 				case 'check_database': {
 					// Server-to-server: PHP asks Bun whether a target MariaDB
 					// database is reachable/exists (MariaDB is a Bun responsibility).
-					const is_auth_check = await check_server_auth(cookie_header, request);
+					// DIFFTS-01: admin/server-only — require the internal token.
+					const is_auth_check = check_privileged_action(request);
 					if (!is_auth_check) {
 						return Response.json(
 							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
@@ -1078,7 +1087,8 @@ export async function handle_request(request: Request): Promise<Response> {
 				case 'backup_database': {
 					// Server-to-server: PHP asks Bun to dump a target MariaDB
 					// database with mysqldump (MariaDB is a Bun responsibility).
-					const is_auth_backup = await check_server_auth(cookie_header, request);
+					// DIFFTS-01: admin/server-only — require the internal token.
+					const is_auth_backup = check_privileged_action(request);
 					if (!is_auth_backup) {
 						return Response.json(
 							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },

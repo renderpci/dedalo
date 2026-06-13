@@ -175,27 +175,14 @@ $rqo->dd_api = $rqo->dd_api ?? 'dd_core_api';
 
 
 
-// SQO security scrub. The HTTP API is the only untrusted SQO source: strip server-only
-// fields (sentence/params/column_sql/table aliases), force parsed=false and coerce
-// limit/offset/total before the SQO reaches the search pipeline.
-// @see search_query_object::sanitize_client_sqo
-if (isset($rqo->sqo)) {
-	$rqo->sqo = search_query_object::sanitize_client_sqo($rqo->sqo);
-}
-if (isset($rqo->options->sqo)) {
-	$rqo->options->sqo = search_query_object::sanitize_client_sqo($rqo->options->sqo);
-}
-
-// ddo_map security scrub. Client-sent show/search ddo_maps feed
-// build_request_config_from_rqo and end up echoed in the server-built
-// request_config: reduce every ddo to the whitelisted display fields.
-// Tipo validity and user permissions are enforced later server-side.
-// @see request_config_object::sanitize_client_ddo_map
-if (isset($rqo->show->ddo_map) && is_array($rqo->show->ddo_map)) {
-	$rqo->show->ddo_map = request_config_object::sanitize_client_ddo_map($rqo->show->ddo_map);
-}
-if (isset($rqo->search->ddo_map) && is_array($rqo->search->ddo_map)) {
-	$rqo->search->ddo_map = request_config_object::sanitize_client_ddo_map($rqo->search->ddo_map);
+// SQO + ddo_map security scrub. The HTTP API is an untrusted rqo source: strip
+// server-only SQO fields (sentence/params/column_sql/table aliases), force
+// parsed=false, coerce limit/offset/total, and reduce client-sent show/search
+// ddo_maps to the whitelisted display fields. Shared with the worker SSE entry
+// point so the two entry points cannot drift.
+// @see dd_manager::sanitize_client_rqo
+if (isset($rqo)) {
+	$rqo = dd_manager::sanitize_client_rqo($rqo);
 }
 
 

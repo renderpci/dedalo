@@ -65,3 +65,27 @@ export async function check_server_auth(cookie_header: string | null, request: R
 	// Fall back to standard session validation via PHP
 	return await check_auth(cookie_header);
 }
+
+
+
+/**
+ * CHECK_PRIVILEGED_ACTION
+ * Gate for admin / server-only actions (delete_record, backup_database,
+ * check_database, rebuild_media_index). These must NOT be reachable with a bare
+ * session cookie: the Bun socket is publicly proxied (Apache ProxyPass), so any
+ * logged-in low-privilege user could otherwise POST them directly and delete
+ * arbitrary rows / dump / enumerate databases — bypassing the is_global_admin
+ * gate enforced on the PHP side (DIFFTS-01).
+ *
+ * Require the internal token, which PHP's diffusion_api_client ALWAYS attaches
+ * for server-to-server calls (including interactive deletes; see
+ * class.diffusion_api_client.php). Browsers never hold this token. Deployments
+ * MUST therefore configure DIFFUSION_INTERNAL_TOKEN for these actions to work.
+ *
+ * @param request - Incoming request (to read the token header)
+ * @returns true only when a valid internal token is presented
+ */
+export function check_privileged_action(request: Request): boolean {
+
+	return check_internal_token(request.headers.get('X-Diffusion-Internal-Token'));
+}
