@@ -426,6 +426,13 @@ trait utils {
 		// onto the same placeholder. The previous implementation keyed $this->params by the
 		// value itself, which silently corrupted non-string params via PHP array-key coercion
 		// (1.5 -> 1, true -> 1, null -> '').
+		// SEARCH-03 (known characteristic, not currently a bottleneck): this array_search
+		// is a linear scan, so assembling N params is O(n^2). It is invoked once per
+		// filter item / IN-member, and real filters are small. If a pathological filter
+		// ever puts this on the hot path, add a side-index keyed by a type-tagged string
+		// (e.g. gettype(value)."\0".serialized-key) -> placeholder index for O(1) lookup,
+		// preserving the strict type-distinct semantics above. Left as-is to avoid
+		// touching the prepared-params model for a non-demonstrated cost.
 		$idx = array_search($value, $this->params, true);
 		if ($idx === false) {
 			$this->params[] = $value;

@@ -102,6 +102,15 @@ class login extends common {
 	*/
 	private static function get_login_throttle_file(string $key) : ?string {
 
+		// AUTH-08 (known limitation): throttle state is local-disk only, so lockout
+		// is per-node. Under a multi-node deployment behind a load balancer (or a
+		// shared KV/redis session backend), an attacker's attempts spread across nodes
+		// and the per-node counters never reach the lockout threshold. The single-node
+		// file backend is correct for single-node installs (the common case). Proper
+		// multi-node remediation: when a shared backend is configured, persist these
+		// counters there with atomic increments + TTL and keep this file path as the
+		// single-node fallback. Tracked as a deliberate follow-up (needs the shared
+		// backend wiring), not a code change here.
 		if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
 			return null;
 		}
