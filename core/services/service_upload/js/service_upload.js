@@ -663,7 +663,7 @@ service_upload.prototype.upload_file = async function(options) {
 			key_dir				: key_dir, // string like 'image' used to target dir
 			allowed_extensions	: allowed_extensions, // array ['tiff', 'jpeg']
 			max_size_bytes		: self.max_size_bytes, // int 352142
-			tipo				: self.caller.caller?.tipo || null,
+			tipo				: self.caller?.caller?.tipo || null,
 			max_concurrent 		: self.max_concurrent // int | false, limit the open connections with the server
 		})
 		if (!api_response.result) {
@@ -675,7 +675,7 @@ service_upload.prototype.upload_file = async function(options) {
 		}
 
 	// event upload_file_done_
-		event_manager.publish('upload_file_done_' + self.caller.id, {
+		event_manager.publish('upload_file_done_' + self.caller?.id, {
 			file_data		: api_response.file_data,
 			process_options	: self.process_options
 		})
