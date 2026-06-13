@@ -68,6 +68,7 @@ export const tool_export = function () {
 	tool_export.prototype.refresh						= common.prototype.refresh
 	tool_export.prototype.edit							= render_tool_export.prototype.edit
 	tool_export.prototype.build_export_component		= render_tool_export.prototype.build_export_component
+	tool_export.prototype.sync_ar_ddo_to_export			= render_tool_export.prototype.sync_ar_ddo_to_export
 	// get and render list of components from common
 	tool_export.prototype.get_section_elements_context	= common.prototype.get_section_elements_context
 	tool_export.prototype.calculate_component_path		= common.prototype.calculate_component_path

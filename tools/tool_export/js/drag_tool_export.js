@@ -107,22 +107,16 @@ export const on_drop = function(container, event) {
 
 			const user_selection_list = container
 
-			// add DOM node
+			// move DOM node to the end, then derive order from the DOM
 			user_selection_list.appendChild(dragged)
 
 			dragged.classList.add('active')
 
-			// Update the ddo_export. Move to the new array position
-				const from_index	= self.ar_ddo_to_export.findIndex(el => el.id===dragged.ddo.id)
-				const to_index		= [...dragged.parentNode.children].indexOf(dragged) // exclude title node
-				// remove
-				const item_moving_ddo = self.ar_ddo_to_export.splice(from_index, 1)[0];
-				// add
-				self.ar_ddo_to_export.splice(to_index, 0, item_moving_ddo);
+			// Update the ddo_export from the new DOM order
+				self.sync_ar_ddo_to_export()
 
 				// save local db data
 				self.update_local_db_data()
-			// console.log('ignored drop of type different to add:', parsed_data.drag_type);
 			return true
 		}
 
@@ -169,8 +163,8 @@ export const on_drop = function(container, event) {
 				}
 			}
 
-			// Update the ddo_export list
-			self.ar_ddo_to_export.push(new_ddo)
+			// Update the ddo_export from the new DOM order
+			self.sync_ar_ddo_to_export()
 
 			// save local db data
 			self.update_local_db_data()

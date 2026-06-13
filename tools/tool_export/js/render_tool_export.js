@@ -1100,9 +1100,8 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 			// remove search box and content (component) from DOM
 			export_component.parentNode.removeChild(export_component)
 
-			// delete the ddo from the array to export ddos
-			const delete_ddo_index = self.ar_ddo_to_export.findIndex( el => el.id === ddo.id )
-			self.ar_ddo_to_export.splice(delete_ddo_index, 1)
+			// derive the ddo_export list from the remaining DOM order
+			self.sync_ar_ddo_to_export()
 
 			// save local db data
 			self.update_local_db_data()
@@ -1111,6 +1110,31 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 
 	return export_component
 }//end build_export_component
+
+
+
+/**
+* SYNC_AR_DDO_TO_EXPORT
+* Rebuilds ar_ddo_to_export from the current DOM order of the selection list.
+* The DOM is the single source of truth for column order: deriving the array
+* from it after every add / sort / remove keeps the export column order exactly
+* equal to the user order, and removes the fragile index math (and its off-by-one
+* / stale-index / async-race bugs) that previously kept the two in sync by hand.
+* @return void
+*/
+render_tool_export.prototype.sync_ar_ddo_to_export = function() {
+
+	const self = this
+
+	const container = self.user_selection_list
+	if (!container) {
+		return
+	}
+
+	self.ar_ddo_to_export = [...container.children]
+		.filter(node => node.classList && node.classList.contains('export_component') && node.ddo)
+		.map(node => node.ddo)
+}//end sync_ar_ddo_to_export
 
 
 
@@ -1203,18 +1227,13 @@ const do_sortable = function(element, self) {
 				if (parsed_data.drag_type==='sort') {
 
 					// sort case
-					// place drag item
+					// place drag item, then derive the order from the DOM
 					const dragged = self.dragged
 					element.parentNode.insertBefore(dragged, element)
 					dragged.classList.add('active')
 
-					// Update the ddo_export. Move to the new array position
-						const from_index	= self.ar_ddo_to_export.findIndex(el => el.id===dragged.ddo.id)
-						const to_index		= [...element.parentNode.children].indexOf(dragged) // exclude title node
-						// remove
-						const item_moving_ddo = self.ar_ddo_to_export.splice(from_index, 1)[0];
-						// add
-						self.ar_ddo_to_export.splice(to_index, 0, item_moving_ddo);
+					// Update the ddo_export from the new DOM order
+						self.sync_ar_ddo_to_export()
 
 						// save local db data
 						self.update_local_db_data()
@@ -1253,16 +1272,13 @@ const do_sortable = function(element, self) {
 					self.build_export_component(new_ddo)
 					.then((export_component_node)=>{
 
-						// add DOM node
+						// add DOM node at the drop position, then derive order from DOM
 						element.parentNode.insertBefore(export_component_node, element)
 
 						export_component_node.classList.add('active')
 
-						// Add ddo in the current position
-						// self.ar_ddo_to_export.push(new_ddo)
-						const to_index = [...element.parentNode.children].indexOf(export_component_node) -1 // exclude title node
-						// add
-						self.ar_ddo_to_export.splice(to_index, 0, export_component_node.ddo);
+						// Update the ddo_export from the new DOM order
+						self.sync_ar_ddo_to_export()
 
 						// save local db data
 						self.update_local_db_data()
