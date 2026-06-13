@@ -2908,6 +2908,194 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* SORT_DATA_BY_COLUMN
+	* Persistently reorders the full locator array by the value of a column
+	* component in the target section(s). The new order is resolved with a
+	* search over the target section restricted to the linked section_id list,
+	* ordered by the column component order path. Locators are never dropped:
+	* entries without a matching search row (deleted/unreadable targets) fall
+	* to the end preserving their relative order.
+	* Used by changed_data action 'sort_by_column' (see component_common::update_data_value)
+	* (!) Not save the result. The caller save flow (dd_core_api::save) persists it.
+	* @param object $changed_data
+	* 	Expected: { action:'sort_by_column', component_tipo:'oh28', direction:'ASC'|'DESC', value:null }
+	* @param string $lang
+	* @return bool
+	*/
+	public function sort_data_by_column( object $changed_data, string $lang ) : bool {
+
+		// sort_by_column property. Mandatory gate: the portal ontology properties
+		// must enable column sorting as boolean true or array of allowed column tipos
+			$properties		= $this->get_properties();
+			$sort_by_column	= $properties->sort_by_column ?? false;
+			if ($sort_by_column!==true && !is_array($sort_by_column)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. Property 'sort_by_column' is not enabled in component properties"
+					.' tipo: ' . $this->tipo . PHP_EOL
+					.' section_tipo: ' . $this->section_tipo
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// direction. Allowlist ASC|DESC
+			$direction = strtoupper( (string)($changed_data->direction ?? '') );
+			if (!in_array($direction, ['ASC','DESC'], true)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. Invalid direction: " . to_string($changed_data->direction ?? null)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// component_tipo. Must be one of the current component show ddo_map columns
+		// (prevents ordering by arbitrary injected tipos)
+			$component_tipo = (string)($changed_data->component_tipo ?? '');
+			$request_config = $this->build_request_config(); // memoized; assigns $this->request_config
+			$request_config_item = array_find($request_config, function($el){
+				return isset($el->api_engine) && $el->api_engine==='dedalo';
+			}) ?? reset($request_config);
+			$show_ddo_map = $request_config_item->show->ddo_map ?? [];
+			$ddo = array_find($show_ddo_map, function($el) use($component_tipo) {
+				return isset($el->tipo) && $el->tipo===$component_tipo;
+			});
+			if (empty($ddo)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. component_tipo '$component_tipo' is not a show ddo_map column of component: " . $this->tipo
+					, logger::ERROR
+				);
+				return false;
+			}
+			// allowlist case. When the property is an array, it restricts the sortable column tipos
+			if (is_array($sort_by_column) && !in_array($component_tipo, $sort_by_column, true)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. component_tipo '$component_tipo' is not allowed by the 'sort_by_column' property of component: " . $this->tipo
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// target_section_tipo. From the validated ddo ('self' resolves to current section_tipo)
+			$target_section_tipo = array_map(function($el){
+				return $el==='self' ? $this->section_tipo : $el;
+			}, (array)($ddo->section_tipo ?? []));
+			if (empty($target_section_tipo)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. Unable to resolve target section_tipo from ddo: " . to_string($ddo)
+					, logger::ERROR
+				);
+				return false;
+			}
+			$first_target_section_tipo = reset($target_section_tipo);
+
+		// data. Full stored locator array (never paginated server side)
+			$data_lang = $this->get_data_lang($lang) ?? [];
+			if (count($data_lang) < 2) {
+				// nothing to reorder
+				return true;
+			}
+			// remove possible client paginated_key marks (get_data_paginated mutates memoized objects)
+			foreach ($data_lang as $current_locator) {
+				if (is_object($current_locator)) {
+					unset($current_locator->paginated_key);
+				}
+			}
+
+		// ar_section_id. Unique linked ids to restrict the search
+			$ar_section_id = array_values(array_unique(array_map(function($el){
+				return (int)($el->section_id ?? 0);
+			}, $data_lang)));
+
+		// order path. Built from a fresh target component instance so subclass
+		// get_order_path overrides apply (date/number column literals, relation ddo hop)
+		// without the caller hop a portal child instance would prepend.
+			$model = ontology_node::get_model_by_tipo($component_tipo, true);
+			if (empty($model)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. Unable to resolve model of component_tipo: $component_tipo"
+					, logger::ERROR
+				);
+				return false;
+			}
+			$target_component = component_common::get_instance(
+				$model,
+				$component_tipo,
+				null, // section_id
+				'list', // mode
+				DEDALO_DATA_NOLAN, // lang
+				$first_target_section_tipo // section_tipo
+			);
+			if (in_array($model, component_relation_common::get_components_with_relations(), true)) {
+				// relation overrides of get_order_path (portal, related) require request_config
+				$target_component->build_request_config();
+			}
+			$order_path = $target_component->get_order_path($component_tipo, $first_target_section_tipo);
+			if (empty($order_path)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. Empty order path for component_tipo: $component_tipo - section_tipo: $first_target_section_tipo"
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// order item
+		// note that lang is intentionally not set: trait.order resolves it as
+		// DEDALO_DATA_LANG for translatable columns (same as section list ordering,
+		// whose client order items never carry lang). The save rqo lang would be
+		// wrong here: relation components are always lg-nolan.
+			$order_item = new stdClass();
+				$order_item->direction	= $direction;
+				$order_item->path		= $order_path;
+
+		// filter. section_id = ANY(ar_section_id) over the target section
+		// same shape as search::generate_children_recursive_search
+			$path_item = new stdClass();
+				$path_item->section_tipo	= $first_target_section_tipo;
+				$path_item->component_tipo	= 'section_id';
+				$path_item->model			= 'component_section_id';
+				$path_item->name			= 'Id';
+			$filter_item = new stdClass();
+				$filter_item->q				= implode(',', $ar_section_id);
+				$filter_item->q_operator	= null;
+				$filter_item->path			= [$path_item];
+			$filter = new stdClass();
+				$filter->{'$or'} = [$filter_item];
+
+		// search. Resolve the (section_tipo, section_id) pairs ordered by the column value
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo( $target_section_tipo );
+				$sqo->set_limit( 0 );
+				$sqo->set_skip_projects_filter( true ); // portal display already grants min read (see get_subdatum)
+				$sqo->set_filter( $filter );
+				$sqo->set_order( [$order_item] );
+			$search		= search::get_instance($sqo);
+			$db_result	= $search->search();
+			$ar_rows	= $db_result->fetch_all();
+
+		// rank map. "{section_tipo}_{section_id}" => order position
+			$rank = [];
+			foreach ($ar_rows as $key => $row) {
+				$rank[ $row->section_tipo.'_'.$row->section_id ] = $key;
+			}
+
+		// stable sort. Unmatched locators keep relative order at the end
+			$max_rank = PHP_INT_MAX;
+			usort($data_lang, function($a, $b) use($rank, $max_rank) {
+				$rank_a = $rank[ ($a->section_tipo ?? '').'_'.(int)($a->section_id ?? 0) ] ?? $max_rank;
+				$rank_b = $rank[ ($b->section_tipo ?? '').'_'.(int)($b->section_id ?? 0) ] ?? $max_rank;
+				return $rank_a <=> $rank_b;
+			});
+
+		// set the reordered data (the caller flow saves it)
+			$this->set_data_lang($data_lang, $lang);
+
+
+		return true;
+	}//end sort_data_by_column
+
+
+
+	/**
 	* GET_LIST_VALUE
 	* Unified value list output
 	* By default, list value is equivalent to data. Override in other cases.
