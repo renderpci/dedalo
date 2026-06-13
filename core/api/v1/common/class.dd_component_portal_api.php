@@ -53,16 +53,23 @@ final class dd_component_portal_api {
 				$response->errors	= [];
 
 		// source
-			$source			= $rqo->source;
-			$section_tipo	= $source->section_tipo;
-			$section_id		= $source->section_id;
-			$tipo			= $source->tipo;
-			$lang			= $source->lang;
+			// REL-05: read defensively and validate up front; the $lang read here was
+			// dead (immediately overwritten by common::get_element_lang() below).
+			$source			= $rqo->source ?? null;
+			$section_tipo	= is_object($source) ? ($source->section_tipo ?? null) : null;
+			$section_id		= is_object($source) ? ($source->section_id ?? null) : null;
+			$tipo			= is_object($source) ? ($source->tipo ?? null) : null;
 
 		// options
-			$options		= $rqo->options;
-			$locator		= $options->locator; // object e.g. {tag_id:"2",type:"dd96"}
-			$ar_properties	= $options->ar_properties ?? []; // array properties to compare e.g. ['tag_id','type']
+			$options		= $rqo->options ?? null;
+			$locator		= is_object($options) ? ($options->locator ?? null) : null; // object e.g. {tag_id:"2",type:"dd96"}
+			$ar_properties	= is_object($options) ? ($options->ar_properties ?? []) : []; // array properties to compare e.g. ['tag_id','type']
+
+		// REL-05: validate required inputs before touching permission / ontology calls
+			if (empty($section_tipo) || empty($tipo) || $section_id===null || !is_object($locator)) {
+				$response->errors[] = 'Missing required source/options (section_tipo, tipo, section_id, locator)';
+				return $response;
+			}
 
 		// SEC: write permission required to delete data from the component
 			security::assert_section_permission($section_tipo, 2, __METHOD__);

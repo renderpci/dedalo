@@ -1005,6 +1005,12 @@ class tool_common {
 
 		// open file in read mode
 			$f = fopen($file, "r");
+			// TOOLS-06: fopen can fail (missing file, permissions, TOCTOU). Bail out
+			// cleanly instead of passing false to fgetcsv() (a TypeError/fatal).
+			if ($f === false) {
+				debug_log(__METHOD__ . ' Could not open CSV file for reading: ' . $file, logger::ERROR);
+				return [];
+			}
 
 		// read contents line by line and store data
 			$csv_array			= array();
