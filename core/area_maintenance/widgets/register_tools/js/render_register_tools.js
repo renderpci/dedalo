@@ -98,19 +98,19 @@ const render_content_data = async function(self) {
 				parent			: tool_item
 			})
 
-			// version
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'tool_version',
-				inner_html		: get_label.version || 'Version',
-				parent			: tool_item
-			})
-
 			// installed_version
 			const installed_version_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'tool_installed_version',
 				inner_html		: get_label.installed || 'Installed',
+				parent			: tool_item
+			})
+
+			// available version
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tool_version',
+				inner_html		: get_label.version || 'Version',
 				parent			: tool_item
 			})
 
@@ -251,14 +251,6 @@ const render_datalist = (self, datalist_container) => {
 			parent			: tool_item
 		})
 
-		// version
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'tool_version',
-			inner_html		: version,
-			parent			: tool_item
-		})
-
 		// installed_version
 		const installed_version_node = ui.create_dom_element({
 			element_type	: 'div',
@@ -269,6 +261,14 @@ const render_datalist = (self, datalist_container) => {
 		if (installed_version!==version) {
 			installed_version_node.classList.add('warning')
 		}
+
+		// available version
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'tool_version',
+			inner_html		: version,
+			parent			: tool_item
+		})
 
 		// warning
 		if (!version) {
