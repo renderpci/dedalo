@@ -84,11 +84,15 @@ final class cache_manager {
 			}
 		});
 
-		// component_common
+		// component_common — list_of_values (datalist) caches. COMP-03: these are
+		// process-wide statics holding per-user, project-filtered option lists; left
+		// uncleared they leak one user's options to the next request in the worker
+		// (the class contract documents clear() as the reset hook). Pairs with the
+		// user-scoped cache key in component_common::get_list_of_values (COMP-01).
 		$this->register('component_common', function(): void {
-			// if (class_exists('\component_common') && method_exists('\component_common', 'clear')) {
-			// 	\component_common::clear();
-			// }
+			if (class_exists('\component_common', false) && method_exists('\component_common', 'clear')) {
+				\component_common::clear();
+			}
 		});
 
 		// ontology

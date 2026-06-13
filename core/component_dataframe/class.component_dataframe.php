@@ -206,11 +206,17 @@ class component_dataframe extends component_portal {
 		// Remove the time machine to save the dataframe
 		// this set will be saved by main component.
 		$section = $this->get_my_section();
+		// REL-01: restore $save_tm in finally so a throw does not leave Time
+		// Machine capture globally disabled for later saves in the worker.
+		$prev_save_tm = tm_record::$save_tm;
 		tm_record::$save_tm = false;
-		$this->set_data( $data );
-		$this->save();
-		// re activate the time machine
-		tm_record::$save_tm = true;
+		try {
+			$this->set_data( $data );
+			$this->save();
+		} finally {
+			// re activate the time machine
+			tm_record::$save_tm = $prev_save_tm;
+		}
 
 		return true;
 	}//end set_time_machine_data

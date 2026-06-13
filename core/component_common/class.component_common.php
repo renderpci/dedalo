@@ -2645,9 +2645,16 @@ abstract class component_common extends common {
 					? md5(json_encode($filter_for_hash))
 					: 'full';
 
+				// COMP-01: include the logged user id in the cache key. The SQO below
+				// is project-filtered per requesting user (search::set_up defaults
+				// skip_projects_filter=false), so the option list is user-specific.
+				// Without the user id, the persistent worker would serve one user's
+				// project-filtered list to another (cross-tenant over/under-exposure).
+				// Pairs with the per-request cache clear (COMP-03).
+				$uid_user = (string) logged_user_id();
 				$uid = !empty($ar_sections_tipo)
-					? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id
-					: $this->tipo .'_'. $lang . '_'. $hash_id;
+					? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id . '_u' . $uid_user
+					: $this->tipo .'_'. $lang . '_'. $hash_id . '_u' . $uid_user;
 
 				if (isset(self::$list_of_values_data_cache[$uid])) {
 
@@ -3132,10 +3139,13 @@ abstract class component_common extends common {
 						. " error: " . $e->getMessage()
 						, logger::ERROR
 					);
-					$fn_data = null;
+					// DIFFU-04: this method is typed `: array`. On a fn failure return
+					// an empty array, not null, or the return below raises a TypeError
+					// (and the catch hides the original fn error behind it).
+					$fn_data = [];
 				}
-				// overwrite default diffusion data
-				$diffusion_data = $fn_data;
+				// overwrite default diffusion data (coerce null defensively)
+				$diffusion_data = $fn_data ?? [];
 
 				return $diffusion_data;
 			}

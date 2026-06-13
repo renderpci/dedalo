@@ -100,7 +100,7 @@ class dd_diffusion_api {
 		if (empty($rqo->sqo->offset)) {
 			try {
 				diffusion_delete::retry_pending();
-			} catch (Exception $e) {
+			} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
 				debug_log(__METHOD__
 					. " Ignored retry_pending exception: " . $e->getMessage()
 					, logger::WARNING
@@ -226,7 +226,7 @@ class dd_diffusion_api {
 			$response->datum  		= self::$datum;
 
 
-		} catch (Exception $e) {
+		} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
 			$response->msg = 'Error: ' . $e->getMessage();
 			$response->errors[] = $e->getMessage();
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
@@ -562,7 +562,7 @@ class dd_diffusion_api {
 			];
 			$response->msg = $retry_response->msg;
 
-		} catch (Exception $e) {
+		} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
 			$response->msg = 'Error: ' . $e->getMessage();
 			$response->errors[] = $e->getMessage();
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
@@ -621,7 +621,7 @@ class dd_diffusion_api {
 			$response->markers	= $bun_response->markers ?? 0;
 			$response->targets	= count($targets);
 
-		} catch (Exception $e) {
+		} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
 			$response->msg = 'Error: ' . $e->getMessage();
 			$response->errors[] = $e->getMessage();
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
@@ -1205,7 +1205,130 @@ class dd_diffusion_api {
 			$response->sub_path        		= $sub_path;
 			$response->datum         		= [$datum];
 
-		} catch (Exception $e) {
+		} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
+			$response->msg	= 'Error: ' . $e->getMessage();
+			$response->errors[]	= $e->getMessage();
+			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
+		}
+
+		return $response;
+	}
+
+
+
+	/**
+	 * DIFFUSE_XML
+	 * XML publication, symmetric to diffuse_rdf (DIFFU-01). Dispatches each record
+	 * of $db_result to diffusion_xml::update_record (which renders + saves one
+	 * deterministic file per record under /xml/{service_name}/, shared with
+	 * delete_record_file for delete propagation), then builds a single
+	 * diffusion_datum describing the produced files.
+	 * @param string $diffusion_element_tipo
+	 * @param string $section_tipo
+	 * @param mixed $db_result
+	 * @param array $langs
+	 * @param array $main
+	 * @param object $options
+	 * @return object
+	 */
+	private static function diffuse_xml(string $diffusion_element_tipo, string $section_tipo, $db_result, array $langs, array $main, object $options): object {
+
+		$response = new stdClass();
+			$response->result = false;
+			$response->msg    = 'Error. XML diffusion failed';
+			$response->errors = [];
+
+		try {
+			include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_xml.php';
+
+			$diffusion_data = [];
+			$datum_data     = [];
+			$parent         = ontology_node::get_instance($diffusion_element_tipo)->get_parent();
+			$xml_term       = ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG);
+			$properties     = ontology_node::get_instance($diffusion_element_tipo)->get_properties();
+			$service_name   = $properties->diffusion->service_name ?? '';
+			$sub_path       = '/xml/' . $service_name . '/';
+
+			// build one instance per element (loads parsers once); the per-record
+			// diffusion-object structure is shared via diffusion_xml's static cache.
+			diffusion_xml::reset_cache();
+			$xml_instance = new diffusion_xml((object)[
+				'diffusion_element_tipo' => $diffusion_element_tipo
+			]);
+
+			foreach ($db_result as $locator) {
+
+				if (diffusion_chain_processor::is_used($locator->section_tipo, intval($locator->section_id))) {
+					continue;
+				}
+				diffusion_chain_processor::mark_used($locator->section_tipo, intval($locator->section_id));
+
+				$xml_response = $xml_instance->update_record((object)[
+					'section_tipo'			 => $locator->section_tipo,
+					'section_id'			 => $locator->section_id,
+					'diffusion_element_tipo' => $diffusion_element_tipo,
+					'save_file'				 => true,
+					'skip_publication_check' => $options->skip_publication_state_check ?? false
+				]);
+
+				if (!empty($xml_response->diffusion_data)) {
+					$diffusion_data = array_merge($diffusion_data, $xml_response->diffusion_data);
+				}
+				if (!empty($xml_response->errors)) {
+					$response->errors = array_merge($response->errors, (array)$xml_response->errors);
+				}
+
+				// XML update_record saves to file and returns the file_url (not the
+				// raw document body), so the datum value carries the file_url.
+				$file_url = $xml_response->diffusion_data[0]->file_url ?? null;
+
+				$entries = new stdClass();
+				$xml_value = new stdClass();
+					$xml_value->tipo  = $diffusion_element_tipo;
+					$xml_value->lang  = null;
+					$xml_value->value = $file_url;
+				if (!empty($file_url)) {
+					$xml_value->file_url = $file_url;
+				}
+				$entries->{$diffusion_element_tipo} = [$xml_value];
+
+				$datum_data[] = (object)[
+					'section_id' => $locator->section_id,
+					'entries' => $entries
+				];
+			}
+
+			// Build XML datum using canonical diffusion datum semantics
+			$datum = new diffusion_datum();
+				$datum->set_diffusion_tipo($diffusion_element_tipo);
+				$datum->set_section_tipo($section_tipo);
+				$datum->set_term($xml_term);
+				$datum->set_model('diffusion_element');
+				$datum->set_parent($parent);
+				$datum->set_context([
+					(object)[
+						'term' => $xml_term,
+						'tipo' => $diffusion_element_tipo,
+						'model' => 'diffusion_element',
+						'parent' => $parent,
+						'parser' => new stdClass(),
+						'output_format' => 'xml',
+						'columns' => []
+					]
+				]);
+				$datum->set_data($datum_data);
+
+			$response->result        		= true;
+			$response->msg           		= 'OK. XML diffusion done';
+			$response->langs         		= $langs;
+			$response->main_lang     		= DEDALO_DATA_LANG_DEFAULT;
+			$response->main          		= $main;
+			$response->DEDALO_MEDIA_PATH 	= DEDALO_MEDIA_PATH;
+			$response->DEDALO_MEDIA_URL  	= DEDALO_MEDIA_URL;
+			$response->sub_path        		= $sub_path;
+			$response->datum         		= [$datum];
+
+		} catch (\Throwable $e) {
 			$response->msg	= 'Error: ' . $e->getMessage();
 			$response->errors[]	= $e->getMessage();
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
