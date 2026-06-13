@@ -11,6 +11,14 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback, when_in_viewport} from '../../../core/common/js/events.js'
 	import {downloadZip} from './lib/client-zip/index.js'
+	import {
+		presets_section_tipo,
+		load_user_export_presets,
+		create_new_export_preset,
+		save_export_preset,
+		edit_user_export_preset
+	} from './export_user_presets.js'
+	import {render_preset_modal, select_preset} from '../../../core/section/js/view_export_user_presets.js'
 
 
 
@@ -143,6 +151,8 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'user_selection_list',
 			parent			: selection_list_contaniner
 		})
+		// store reference so user presets (apply_export_preset) can rebuild the selection
+		self.user_selection_list = user_selection_list
 		// empty_space
 		const empty_space = ui.create_dom_element({
 			element_type	: 'div',
@@ -189,6 +199,9 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'export_buttons_config',
 			parent			: grid_top
 		})
+
+		// user presets (save/load export configurations per user, DB backed)
+			render_presets_ui(self, export_buttons_config)
 
 		// records info
 			ui.create_dom_element({
@@ -780,6 +793,238 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* RENDER_PRESETS_UI
+* Builds the user export presets toolbar: a panel (hidden by default) holding
+* the presets list plus 'New preset' / 'Save preset' buttons, and a toggle
+* button that opens the panel and lazy-loads the list.
+* Mirrors the search presets UI (core/search/js/render_search.js).
+* @param object self - The tool_export instance
+* @param HTMLElement parent
+* @return HTMLElement presets_block
+*/
+const render_presets_ui = function(self, parent) {
+
+	// presets_block. Themed, collapsible block placed at the top of the config column
+		const presets_block = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_presets',
+			parent			: parent
+		})
+
+	// header. Always visible: title + New + collapse toggle
+		const presets_header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_presets_header',
+			parent			: presets_block
+		})
+		// title
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'export_presets_title',
+			inner_html		: get_label.presets_de_exportacion || 'Export presets',
+			parent			: presets_header
+		})
+		// button_new_preset
+		const button_add_preset = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'export_presets_new',
+			inner_html		: '+',
+			title			: get_label.new || 'New',
+			parent			: presets_header
+		})
+		// toggle chevron (visual; the whole header is the click target)
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'export_presets_toggle',
+			title			: get_label.preset || 'Presets',
+			parent			: presets_header
+		})
+
+	// panel. Collapsible body: save button + presets list (collapsed by default)
+		const presets_panel = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_presets_panel display_none',
+			parent			: presets_block
+		})
+		self.export_presets_panel = presets_panel
+
+		// button_save_preset (hidden until a preset is selected)
+		const button_save_preset = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'export_presets_save button_save_preset hide',
+			inner_html		: (get_label.save || 'Save') + ' ' + (get_label.changes || 'changes'),
+			parent			: presets_panel
+		})
+		self.button_save_preset = button_save_preset
+
+		// list container (the presets section list mounts here)
+		const presets_list = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_presets_list',
+			parent			: presets_panel
+		})
+		self.export_presets_list = presets_list
+
+	// events
+
+		// new preset
+		button_add_preset.addEventListener('click', async (e) => {
+			e.stopPropagation()
+
+			// make sure the panel is open so the new preset is visible in the list
+			open_export_presets(self)
+
+			// create_new_export_preset (stores current config as the new preset)
+			const section_id = await create_new_export_preset({
+				self			: self,
+				section_tipo	: presets_section_tipo
+			})
+			if (!section_id) {
+				return
+			}
+
+			// launch the editor for name / public / default
+			const section = await edit_user_export_preset(self, section_id)
+
+			// open modal to edit the new preset
+			render_preset_modal({
+				caller		: section,
+				section_id	: section_id,
+				on_close	: async () => {
+
+					// force refresh the presets list
+					if (self.user_presets_section) {
+						self.user_presets_section.total = null
+						await self.user_presets_section.refresh()
+					}
+
+					// activate created preset (mark selected, do not re-apply)
+					dd_request_idle_callback(
+						() => {
+							const button_apply = document.getElementById('apply_preset_' + section_id)
+							if (button_apply) {
+								select_preset({
+									self			: self,
+									section_id		: section_id,
+									button_apply	: button_apply,
+									load_preset		: false
+								})
+							}
+						}
+					)
+				}
+			})
+		})
+
+		// save current config to the selected preset
+		button_save_preset.addEventListener('click', (e) => {
+			e.stopPropagation()
+
+			// check user_preset_section_id is already set
+			if (!self.user_preset_section_id) {
+				return
+			}
+
+			save_export_preset({
+				self			: self,
+				section_id		: self.user_preset_section_id,
+				section_tipo	: presets_section_tipo
+			})
+			.then(function(response){
+				if (response && response.result) {
+					button_save_preset.classList.add('hide')
+				}
+			})
+		})
+
+		// toggle the panel (clicking anywhere on the header except the New button)
+		presets_header.addEventListener('click', function(){
+			toggle_export_presets(self)
+		})
+
+
+	return presets_block
+}//end render_presets_ui
+
+
+
+/**
+* TOGGLE_EXPORT_PRESETS
+* Shows or hides the export presets panel and lazy-loads the presets list on
+* first open.
+* @param object self - The tool_export instance
+* @return promise bool
+*/
+const toggle_export_presets = async function(self) {
+
+	const panel = self.export_presets_panel
+
+	// validate
+		if (!panel || !(panel instanceof HTMLElement)) {
+			console.error('toggle_export_presets: panel not found or invalid');
+			return
+		}
+
+	// close case
+		if (!panel.classList.contains('display_none')) {
+			panel.classList.add('display_none')
+			self.export_presets_panel.parentNode?.classList.remove('open')
+			return true
+		}
+
+	// open case
+		await open_export_presets(self)
+
+
+	return true
+}//end toggle_export_presets
+
+
+
+/**
+* OPEN_EXPORT_PRESETS
+* Opens the export presets panel and lazy-loads the presets list on first open.
+* @param object self - The tool_export instance
+* @return promise bool
+*/
+const open_export_presets = async function(self) {
+
+	const panel	= self.export_presets_panel
+	const list	= self.export_presets_list
+
+	// validate
+		if (!panel || !(panel instanceof HTMLElement)) {
+			return false
+		}
+
+	// reveal panel
+		panel.classList.remove('display_none')
+		panel.parentNode?.classList.add('open')
+
+	// load presets list on first open
+		if (!self.user_presets_section && list) {
+
+			// loading message
+			const loading_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'export_presets_loading notes loading',
+				inner_html		: (get_label.loading || 'Loading') + '..',
+				parent			: list
+			})
+
+			self.user_presets_section = await load_user_export_presets(self)
+			const user_presets_node = await self.user_presets_section.render()
+			loading_node.remove()
+			list.appendChild(user_presets_node)
+		}
+
+
+	return true
+}//end open_export_presets
 
 
 

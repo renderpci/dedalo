@@ -80,12 +80,13 @@
 	--bg_header:      #2a2e35;
 	--bg_menu:        #101214;
 	--fg_default:     #e5e7ea;
-	--fg_muted:       #a3a8b0;
+	--fg_muted:       #aeb4bd; // lifted from #a3a8b0 for WCAG AA on elevated surfaces
 	--fg_inverse:     #ffffff;
 	--border_default: #353a42;
 	--border_strong:  #4a5059;
 	--shadow_default: rgba(0, 0, 0, 0.55);
 	--focus_ring:     var(--color_input_focus);
+	--focus_ring_weak: rgba(74, 158, 255, 0.45); // = dark color_input_focus @ 45%
 
 	// ---- DERIVED TOKENS (dark variants) ----
 
@@ -136,7 +137,7 @@
 	--service_bg_dark:                    #cc6a10;
 
 	// ---- COMPONENT SEMANTIC TOKENS (dark) ----
-	--menu_dropdown_text:       #9c9c9c;
+	--menu_dropdown_text:       #b4b4b4; // raised from #9c9c9c for WCAG AA on dropdown bg
 	--menu_dropdown_bg:         #31353d;
 	--menu_dropdown_border:     #3a3a3a;
 	--menu_dropdown_li_border:  transparent;
@@ -160,14 +161,14 @@
 	--modal_overlay_bg:            rgba(0, 0, 0, 0.6);
 	--modal_overlay_bg_weak:      rgba(0, 0, 0, 0.2);
 	--modal_content_bg:           var(--color_grey_15);
-	--modal_content_shadow:       0 4px 8px 0 rgba(0,0,0,0.4), 0 6px 20px 0 rgba(0,0,0,0.35);
+	--modal_content_shadow:       var(--shadow-4);
 	--modal_header_bg:            var(--color_grey_blue);
-	--modal_header_shadow:        0 2px 6px rgba(0, 0, 0, 0.4);
+	--modal_header_shadow:        var(--shadow-2);
 	--modal_header_color:         var(--color_black);
 	--modal_btn_color:            var(--color_grey_4);
 	--modal_btn_hover_color:      var(--color_white);
 	--modal_mini_header_bg:       var(--color_grey_4);
-	--modal_radius:               7px;
+	--modal_radius:               var(--radius-lg);
 
 	// ---- TOOL COLORS (dark variants) ----
 	// Tools that alias existing vars inherit their dark values automatically.

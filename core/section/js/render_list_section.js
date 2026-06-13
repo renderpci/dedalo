@@ -19,6 +19,7 @@
 	import {view_base_list_section} from './view_base_list_section.js'
 	import {view_thesaurus_list_section} from './view_thesaurus_list_section.js'
 	import {view_search_user_presets} from './view_search_user_presets.js'
+	import {view_export_user_presets} from './view_export_user_presets.js'
 
 
 
@@ -65,6 +66,9 @@ render_list_section.list = async function(options) {
 
 			case 'search_user_presets':
 				return view_search_user_presets.render(self, options)
+
+			case 'export_user_presets':
+				return view_export_user_presets.render(self, options)
 
 			case 'default':
 			default: {

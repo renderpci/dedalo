@@ -92,7 +92,7 @@ const render_content_value = function(options) {
 	// short vars
 		const data		= self.data || {}
 		const entries	= data.entries || []
-		const default_bk_color = '#006ed2';
+		const default_bk_color = ui.css_var('--color_blue_3', '#006ed2');
 
 	// content_value
 		const content_value = ui.create_dom_element({

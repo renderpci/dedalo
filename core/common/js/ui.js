@@ -3287,6 +3287,25 @@ export const ui = {
 
 
 	/**
+	* CSS_VAR
+	* Resolves a CSS custom property declared on :root to its concrete value
+	* for the active theme, with a literal fallback. Useful when a color must
+	* be passed to code that can't accept a `var(...)` string (e.g. get_text_color,
+	* SVG attributes, canvas).
+	* @param string name e.g. '--color_primary'
+	* @param string fallback literal value if the property is unset
+	* @return string resolved value (e.g. '#2b77c7')
+	*/
+	css_var : function(name, fallback) {
+
+		const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+
+		return value || fallback;
+	},//end css_var
+
+
+
+	/**
 	* RENDER_EDIT_MODAL
 	* Render a component into a modal window
 	* Used for section list records to allow users edit inline big

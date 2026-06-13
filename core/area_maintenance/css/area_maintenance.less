@@ -2,11 +2,28 @@
 * area_maintenance
 *
 * Included from main.less file
+*
+* Modern dashboard layout: a sticky toolbar (live search + category chips) over
+* widgets grouped into category sections of cards. Colored card headers are kept
+* (orange / blue / green / violet) but refined; all surfaces route through the
+* semantic tokens so the panel works in light and dark themes.
 */
+
+// masked svg helper used by group headers and card headers
+.fn_maintenance_icon(@icon_name) {
+	content: ' ';
+	display: inline-block;
+	flex: 0 0 auto;
+	width: 1.1em;
+	height: 1.1em;
+	.fn_add_mask(@icon_name);
+}
+
 .area_maintenance {
 
 	>.content_data {
 
+		// ---- generic element styles (apply to widget content) ----
 		h1 {
 			line-height: 1em;
 		}
@@ -26,9 +43,9 @@
 		}
 
 		button {
-			border: 1px solid @color_grey_13;
+			border: 1px solid var(--border_default);
 			font-size: 1em;
-			color: @color_grey_1;
+			color: var(--fg_default);
 			margin-bottom: 0.25rem;
 		}
 
@@ -58,12 +75,8 @@
 			padding: 0.5rem;
 			margin-top: 0.5rem;
 			grid-gap: 0.5rem;
-			border: 1px solid @color_grey_11;
+			border: 1px solid var(--border_default);
 			border-radius: 4px;
-
-			.value {
-
-			}
 		}
 
 		.icon {
@@ -97,53 +110,218 @@
 			}
 		}
 
-		@widget_container_heigth: 3.15rem;
-
-		>.widget_container {
-			contain: content;
-			height: @widget_container_heigth;
-			margin: 0.35em;
-			flex: 1 1 49%;
+		// ---- toolbar (sticky) ----
+		>.maintenance_toolbar {
+			position: sticky;
+			top: 0;
+			z-index: 3;
 			display: flex;
-			flex-direction: column;
-			overflow: auto;
-			background-color: @color_hilite;
+			flex-wrap: wrap;
+			align-items: center;
+			gap: 0.75rem;
+			padding: 0.75rem 1rem;
+			background-color: var(--bg_app);
+			border-bottom: 1px solid var(--border_default);
 
-			&.loaded {
-				height: unset;
-			}
+			.maintenance_search_wrap {
+				position: relative;
+				display: flex;
+				align-items: center;
+				flex: 1 1 16rem;
+				min-width: 12rem;
 
-			// label
-			>.widget_label {
-				height: @widget_container_heigth;
-				contain: content;
-				background-color: @color_hilite;
-				transition: background-color 1000ms ease-in-out;
-			}
+				&:before {
+					.fn_maintenance_icon('search.svg');
+					position: absolute;
+					left: 0.6rem;
+					width: 1em;
+					height: 1em;
+					background-color: var(--fg_muted);
+					pointer-events: none;
+				}
 
-			&.danger {
-				>.widget_label {
-					background-color: @color_danger;
-
-					&:before {
-						display: inline-block;
-						content: " ";
-						margin-right: 0.5rem;
-						line-height: 1rem;
-						background-color: #ffffff;
-						width: 1rem;
-						height: 1rem;
-						vertical-align: bottom;
-
-						@icon-path: url(../../themes/default/icons/alert.svg);
-						mask-image: @icon-path;
-						mask-size: contain;
-						mask-repeat: no-repeat;
-						mask-position: center;
-					}
+				.maintenance_search {
+					width: 100%;
+					height: 2.25rem;
+					margin: 0;
+					padding-left: 2.1rem;
 				}
 			}
 
+			.maintenance_filters {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 0.4rem;
+
+				.maintenance_chip {
+					cursor: pointer;
+					padding: 0.32rem 0.85rem;
+					font-size: 0.85em;
+					line-height: 1;
+					text-transform: none;
+					color: var(--fg_default);
+					background-color: var(--bg_surface);
+					border: 1px solid var(--border_default);
+					border-radius: 999px;
+					margin-bottom: 0;
+					transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+
+					&:hover {
+						border-color: var(--border_strong);
+					}
+
+					&.active {
+						color: var(--fg_inverse);
+						background-color: var(--color_primary);
+						border-color: var(--color_primary);
+					}
+				}
+			}
+		}//end .maintenance_toolbar
+
+		// ---- groups ----
+		>.maintenance_groups {
+			padding: 1rem;
+
+			.maintenance_empty {
+				padding: 2rem 1rem;
+				text-align: center;
+				color: var(--fg_muted);
+			}
+
+			.maintenance_group {
+				margin-bottom: 1.5rem;
+
+				>.group_header {
+					display: flex;
+					align-items: center;
+					gap: 0.5rem;
+					margin-bottom: 0.6rem;
+					font-size: 1.05em;
+					font-weight: 600;
+					color: var(--fg_default);
+
+					.group_icon {
+						background-color: var(--fg_muted);
+					}
+
+					.group_count {
+						margin-left: 0.25rem;
+						padding: 0.05rem 0.5rem;
+						font-size: 0.75em;
+						font-weight: 500;
+						color: var(--fg_muted);
+						background-color: var(--bg_surface);
+						border: 1px solid var(--border_default);
+						border-radius: 999px;
+					}
+				}
+
+				// per-category group icon
+				&[data-category="data"]		>.group_header .group_icon { .fn_maintenance_icon('save.svg'); }
+				&[data-category="migration"]	>.group_header .group_icon { .fn_maintenance_icon('exchange.svg'); }
+				&[data-category="config"]		>.group_header .group_icon { .fn_maintenance_icon('gears.svg'); }
+				&[data-category="integrity"]	>.group_header .group_icon { .fn_maintenance_icon('repair.svg'); }
+				&[data-category="system"]		>.group_header .group_icon { .fn_maintenance_icon('info.svg'); }
+				&[data-category="diffusion"]	>.group_header .group_icon { .fn_maintenance_icon('diffusion.svg'); }
+				&[data-category="dev"]			>.group_header .group_icon { .fn_maintenance_icon('bug.svg'); }
+				&[data-category="general"]		>.group_header .group_icon { .fn_maintenance_icon('gear.svg'); }
+
+				>.group_grid {
+					display: grid;
+					grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+					gap: 0.75rem;
+
+					@media screen and (max-width: @width_break_point_0) {
+						grid-template-columns: 1fr;
+					}
+				}
+			}
+		}//end .maintenance_groups
+
+		// ---- widget card ----
+		.widget_container {
+			display: flex;
+			flex-direction: column;
+			background-color: var(--bg_elevated);
+			border: 1px solid var(--border_default);
+			border-radius: 8px;
+			box-shadow: 0 1px 3px var(--shadow_default);
+			overflow: hidden;
+			transition: box-shadow 160ms ease, transform 160ms ease;
+
+			&:hover {
+				box-shadow: 0 4px 12px var(--shadow_default);
+			}
+
+			// reserve space for the loading spinner
+			&:not(.loaded) {
+				min-height: 3.15rem;
+			}
+
+			// hidden by the search / category filters
+			&.filtered_out {
+				display: none;
+			}
+
+			// full-row card
+			&.width_100 {
+				grid-column: 1 / -1;
+			}
+
+			&.fit {
+				>.widget_body {
+					padding: 0px;
+				}
+			}
+
+			// ---- header / label ----
+			>.widget_label {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				padding: 0.85rem 1rem;
+				color: var(--color_white);
+				background-color: var(--color_orange_dedalo);
+				font-weight: 600;
+				letter-spacing: 0.01em;
+				user-select: none;
+				cursor: pointer;
+				position: relative;
+
+				// category icon (white mask). content set by per-category rules below
+				&:before {
+					background-color: var(--color_white);
+				}
+
+				// chevron (icon_arrow provided globally) tinted white on colored header
+				&.icon_arrow {
+					&:after {
+						background-color: var(--color_white);
+					}
+				}
+
+				>* {
+					pointer-events: none;
+				}
+			}
+
+			// per-category header icon
+			&[data-category="data"]		>.widget_label:before { .fn_maintenance_icon('save.svg'); }
+			&[data-category="migration"]	>.widget_label:before { .fn_maintenance_icon('exchange.svg'); }
+			&[data-category="config"]		>.widget_label:before { .fn_maintenance_icon('gears.svg'); }
+			&[data-category="integrity"]	>.widget_label:before { .fn_maintenance_icon('repair.svg'); }
+			&[data-category="system"]		>.widget_label:before { .fn_maintenance_icon('info.svg'); }
+			&[data-category="diffusion"]	>.widget_label:before { .fn_maintenance_icon('diffusion.svg'); }
+			&[data-category="dev"]			>.widget_label:before { .fn_maintenance_icon('bug.svg'); }
+			&[data-category="general"]		>.widget_label:before { .fn_maintenance_icon('gear.svg'); }
+
+			// colored header variants
+			&.danger {
+				>.widget_label {
+					background-color: @color_danger;
+				}
+			}
 			&.blue {
 				>.widget_label {
 					background-color: @color_primary;
@@ -152,7 +330,6 @@
 					background-color: @color_blue_light;
 				}
 			}
-
 			&.green {
 				>.widget_label {
 					background-color: @color_success;
@@ -161,7 +338,6 @@
 					background-color: @color_green_light;
 				}
 			}
-
 			&.violet {
 				>.widget_label {
 					background-color: @color_php;
@@ -171,46 +347,21 @@
 				}
 			}
 
-			&.fit {
-				>.widget_body {
-					padding: 0px;
-				}
-			}
-
-			// label
-			>.widget_label {
-				padding: 1em;
-				background-color: @color_orange_dedalo;
-				color: @color_white;
-				text-transform: uppercase;
-				letter-spacing: 0.025em;
-				user-select: none;
-				cursor: pointer;
-				position: relative;
-
-				&.icon_arrow {
-
-					&:after {
-						margin-right: 0.87rem;
-						background-color: @color_white;
-					}
-				}
-
-				>* {
-					pointer-events: none;
-				}
-			}
-
-			// body
+			// ---- body ----
 			>.widget_body {
 				contain: content;
 				padding: 1rem;
-				background-color: @color_hilite;
+				background-color: var(--bg_surface);
 				min-height: 9.5rem;
 				flex-grow: 1; // grow vertical to fill
 				resize: vertical;
 				overflow: auto;
 				width: 100%;
+
+				// smooth reveal on expand
+				&:not(.hide) {
+					animation: maintenance_reveal 180ms ease-out;
+				}
 
 				.link {
 					cursor: pointer;
@@ -233,7 +384,7 @@
 
 				.body_info {
 					font-size: 0.9em;
-					color: @color_grey_5;
+					color: var(--fg_muted);
 
 					h6 {
 						font-size: 1.33rem;
@@ -262,9 +413,8 @@
 						font-family: Menlo, Monaco, Consolas, 'Courier New', monospace;
 						font-size: 0.8rem;
 						padding: 0.5em;
-						border: 1px solid @color_grey_11;
-						background-color: @color_grey_15;
-						// display: flex;
+						border: 1px solid var(--border_default);
+						background-color: var(--bg_surface_alt);
 						margin-bottom: 0.25em;
 
 						display: grid;
@@ -275,7 +425,7 @@
 							font-size: 3.5em;
 							padding: 0.25em;
 							position: relative;
-							background-color: @color_grey_11;
+							background-color: var(--border_default);
 							min-width: 6rem;
 							text-align: right;
 						}
@@ -386,7 +536,7 @@
 				}
 			}
 			.comment {
-				color: @color_grey_7;
+				color: var(--fg_muted);
 			}
 
 		}//end .widget_container
@@ -394,6 +544,18 @@
 	}//end .content_data
 
 }//end .area_maintenance
+
+// expand reveal animation
+@keyframes maintenance_reveal {
+	from {
+		opacity: 0;
+		transform: translateY(-4px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
 
 
 // widgets import

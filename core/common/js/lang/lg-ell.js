@@ -111,6 +111,7 @@
     "name_to_field": "Η κατάληξη υποδηλώνει το πεδίο",
     "name_to_record_id": "Το πρόθεμα υποδηλώνει ID",
     "presets_de_busqueda": "Προεπιλογές αναζήτησης",
+    "presets_de_exportacion": "Προεπιλογές εξαγωγής",
     "search_options": "Επιλογές αναζήτησης",
     "fields": "Πεδία",
     "and": "και",

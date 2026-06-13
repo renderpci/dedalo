@@ -7,6 +7,7 @@
 // imports
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {translate_component_browser} from '../../tool_lang/js/browser_translation.js'
 
 
 
@@ -59,12 +60,22 @@ const get_content_data_edit = async function(self) {
 
 	const fragment = new DocumentFragment()
 
+	// lang_containers. Map of lang value -> target_component_container (used for source highlight)
+		self.lang_containers = {}
+	// lang_components. Map of lang value -> component instance (used as translation source/target)
+		self.lang_components = {}
+
 	// top_container
 		const top_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'top_container',
 			parent			: fragment
 		})
+
+	// translator_engine config (from tool config section)
+		const translator_engine = (self.context.config)
+			? self.context.config.translator_engine.value
+			: false
 
 	// automatic_translation
 		// icon
@@ -73,16 +84,21 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'button icon lang black',
 			parent			: top_container
 		})
-		// label
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'automatic_label',
+		// button (one click translate to all languages). Alt+click overwrites without modal.
+		const button_automatic_translation = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'warning button_automatic_translation',
 			inner_html		: self.get_tool_label('automatic_translation') || 'Automatic translation',
 			parent			: top_container
 		})
-		const translator_engine = (self.context.config)
-			? self.context.config.translator_engine.value
-			: false
+		button_automatic_translation.addEventListener('click', function(e){
+			e.stopPropagation()
+			if (!translator_engine) {
+				return
+			}
+			self.automatic_translation_all({ event: e })
+		})
+
 		if (translator_engine) {
 			const automatic_tranlation_node = build_automatic_translation({
 				self				: self,
@@ -90,6 +106,13 @@ const get_content_data_edit = async function(self) {
 			})
 			top_container.appendChild(automatic_tranlation_node)
 		}//end if (translator_engine)
+
+	// status_container. Shared progress/status messages for the translate-all action
+		self.status_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'status_container hide',
+			parent			: top_container
+		})
 
 	// components container
 		const components_container = ui.create_dom_element({
@@ -134,6 +157,9 @@ export const create_target_component = (lang, self) => {
 			class_name		: 'target_component_container'
 		})
 
+	// register container for source highlighting
+		self.lang_containers[lang.value] = target_component_container
+
 	// target_component_title
 		const target_component_title = ui.create_dom_element({
 			element_type	: 'div',
@@ -142,9 +168,8 @@ export const create_target_component = (lang, self) => {
 			parent			: target_component_container
 		})
 
-	// target_component
+	// source highlight. Mark the current source lang
 		if (lang.value===self.source_lang) {
-
 			target_component_container.classList.add('source')
 			target_component_title.classList.add('bold')
 		}
@@ -159,10 +184,32 @@ export const create_target_component = (lang, self) => {
 				// component load (init and build component)
 					const component = await self.get_component(lang.value)
 					component.show_interface.tools = false
+					self.lang_components[lang.value] = component
 					// render node
 					const node = await component.render({
 						render_mode : 'edit'
 					})
+
+				// source tracking. When the user focuses/edits this component it becomes the source
+					const set_as_source = () => {
+						self.set_source_lang(lang.value)
+					}
+					node.addEventListener('focusin', set_as_source)
+					node.addEventListener('input', set_as_source)
+
+				// streaming overlay (used by the browser engine while translating)
+					const streaming_overlay = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'streaming_overlay hide',
+						parent			: target_component_container
+					})
+					const streaming_overlay_content = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'streaming_overlay_content',
+						parent			: streaming_overlay
+					})
+					target_component_container.streaming_overlay			= streaming_overlay
+					target_component_container.streaming_overlay_content	= streaming_overlay_content
 
 				// translator_engine. Append translation button if exists
 					const translator_engine = (self.context.config)
@@ -177,13 +224,16 @@ export const create_target_component = (lang, self) => {
 								title			: self.get_tool_label('automatic_translation') || 'Automatic translation',
 								parent			: buttons_fold
 							})
-							const fn_click = function(e) {
+							const fn_click = async function(e) {
 								e.stopPropagation()
 
+								// skip translating into the current source lang
+									if (lang.value===self.source_lang) {
+										return
+									}
+
 								// non empty value cases generates a confirm dialog
-									const current_value	= component.data.value
-									const is_empty		= (!current_value || current_value.length<1 || current_value[0]==='')
-									if (is_empty===false) {
+									if (is_component_empty(component)===false) {
 										if(!confirm(get_label.are_you_sure_to_overwrite_text || 'Are you sure to overwrite the current value?')) {
 											return
 										}
@@ -191,20 +241,17 @@ export const create_target_component = (lang, self) => {
 
 								target_component_container.classList.add('loading')
 
-								const translator	= self.translator_engine_select.value
-								const source_lang	= self.source_lang
-								const target_lang	= component.lang
-
-								self.automatic_translation(translator, source_lang, target_lang, target_component_container)
-								.then((api_response)=>{
-									target_component_container.classList.remove('loading')
-									if (api_response.errors) {
-										console.error('api_response errors:', api_response.errors);
-									}
-									if (api_response.result===false) {
-										alert( api_response.msg );
-									}
-								})
+								try {
+									await self.translate_target({
+										target_lang			: lang.value,
+										target_component	: component,
+										container			: target_component_container,
+										translator_engine	: translator_engine
+									})
+								} catch (error) {
+									console.error('translate_target error:', error)
+								}
+								target_component_container.classList.remove('loading')
 							}//end fn_click
 							button_translate.addEventListener('click', fn_click)
 						}
@@ -217,6 +264,29 @@ export const create_target_component = (lang, self) => {
 
 	return target_component_container
 }//end create_target_component
+
+
+
+/**
+* IS_COMPONENT_EMPTY
+* Check whether a component instance has no meaningful value.
+* @param object component
+* @return bool
+*/
+export const is_component_empty = (component) => {
+
+	const value = component?.data?.value
+	if (!value || value.length<1) {
+		return true
+	}
+
+	const first = value[0]
+	const text = (typeof first==='string')
+		? first
+		: (first?.value || '')
+
+	return !text || text.trim()===''
+}//end is_component_empty
 
 
 
@@ -262,7 +332,73 @@ const build_automatic_translation = (options) => {
 				id		: 'translator_engine_select',
 				value	: self.translator_engine_select.value
 			}, 'status')
+
+			// show/hide configuration based on engine type
+			const selected_engine = translator_engine.find(el => el.name===self.translator_engine_select.value)
+			if (selected_engine && selected_engine.type==='browser') {
+				configuration_container.classList.remove('hide')
+			}else{
+				configuration_container.classList.add('hide')
+			}
 		})
+
+	// configuration. open/close the configuration options
+		const show_configuration = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'icon gear',
+			parent			: automatic_translation_container
+		})
+		show_configuration.addEventListener('click', function () {
+			configuration_container.classList.toggle('hide')
+		})
+
+		const configuration_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'configuration_container hide',
+			parent			: automatic_translation_container
+		})
+
+		// device checkbox (browser engine: webgpu by default, wasm/cpu when checked)
+		const device_container = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'device_container',
+			parent 			: configuration_container
+		})
+
+		const option_label = ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: self.get_tool_label('cpu_device') || 'More compatible, slower.',
+			parent			: device_container
+		})
+
+		const translator_device_checkbox = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox'
+		})
+		self.translator_device_checkbox = translator_device_checkbox
+		option_label.prepend(translator_device_checkbox)
+
+		const device_id = 'translator_device_checkbox'
+		translator_device_checkbox.addEventListener('change', function(){
+			data_manager.set_local_db_data({
+				id		: device_id,
+				value	: translator_device_checkbox.checked
+			}, 'status')
+		})
+		data_manager.get_local_db_data(
+			device_id,
+			'status'
+		).then(function( device_saved ){
+			if(device_saved){
+				translator_device_checkbox.checked = device_saved.value
+			}
+		})
+
+		// initial visibility: show config if the default engine is browser type
+		const initial_engine = translator_engine.find(el => el.name===self.target_translator)
+		if (initial_engine && initial_engine.type==='browser') {
+			configuration_container.classList.remove('hide')
+		}
 
 
 	return automatic_translation_container

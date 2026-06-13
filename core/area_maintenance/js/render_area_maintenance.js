@@ -68,48 +68,241 @@ render_area_maintenance.prototype.list = async function(options) {
 
 
 /**
+* CATEGORY_DEFS
+* Presentation order and labels for the maintenance widget categories.
+* The category key is set server-side on every widget (see class.area_maintenance.php
+* widget_factory). Labels fall back to the literal English string when no translation
+* exists, matching the pattern used in get_ar_widgets().
+* @return array
+*/
+const get_category_defs = function() {
+
+	return [
+		{ key:'data',		label: get_label.maintenance_cat_data		|| 'Backup & data' },
+		{ key:'migration',	label: get_label.maintenance_cat_migration	|| 'Migration & transform' },
+		{ key:'config',		label: get_label.maintenance_cat_config		|| 'Configuration & code' },
+		{ key:'integrity',	label: get_label.maintenance_cat_integrity	|| 'Integrity & monitoring' },
+		{ key:'system',		label: get_label.maintenance_cat_system		|| 'System & environment' },
+		{ key:'diffusion',	label: get_label.maintenance_cat_diffusion	|| 'Diffusion' },
+		{ key:'dev',		label: get_label.maintenance_cat_dev		|| 'Developer & testing' },
+		{ key:'general',	label: get_label.others						|| 'Other' }
+	]
+}//end get_category_defs
+
+
+
+/**
 * CONTENT_DATA
+* Builds the maintenance dashboard: a sticky toolbar (live search + category chips)
+* over widgets grouped into category sections. Each widget card is still lazy-loaded
+* via render_widget exactly as before; only the surrounding layout/chrome changed.
 * @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
-	const fragment = new DocumentFragment()
+	const widgets = self.widgets || []
 
-	// widgets
-		const widgets = self.widgets || [];
-		const widgets_length = widgets.length;
-		for (let i = 0; i < widgets_length; i++) {
-
-			const widget = widgets[i]
-
-			// container
-			const container = ui.create_dom_element({
-				id				: widget.id,
-				element_type	: 'div',
-				dataset			: {},
-				class_name		: 'widget_container ' + (widget.class || ''),
-				parent			: fragment
-			})
-
-			ui.load_item_with_spinner({
-				container			: container,
-				replace_container	: false,
-				label				: widget.label ,
-				callback			: async () => {
-					const node = await render_widget(widget, self)
-					setTimeout(()=>{
-						container.classList.add('loaded')
-					}, 3)
-					return node
-				}
-			})
+	// bucket widgets by category, preserving definition order within each bucket
+		const buckets = {}
+		for (let i = 0; i < widgets.length; i++) {
+			const widget	= widgets[i]
+			const cat		= widget.category || 'general'
+			if (!buckets[cat]) {
+				buckets[cat] = []
+			}
+			buckets[cat].push(widget)
 		}
 
 	// content_data
-		const content_data = document.createElement('div')
-			  content_data.classList.add('content_data', self.type || '')
-			  content_data.appendChild(fragment)
+		const content_data = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_data maintenance_v2 ' + (self.type || '')
+		})
+
+	// filter state
+		let active_category	= '' // '' === all
+		let search_term		= ''
+
+	// toolbar (sticky)
+		const toolbar = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'maintenance_toolbar',
+			parent			: content_data
+		})
+		const search_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'maintenance_search_wrap',
+			parent			: toolbar
+		})
+		const search_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'search',
+			class_name		: 'maintenance_search dd_input',
+			placeholder		: (get_label.buscar || 'Search') + '…',
+			parent			: search_wrap
+		})
+		const filters = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'maintenance_filters',
+			parent			: toolbar
+		})
+
+	// groups container
+		const groups = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'maintenance_groups',
+			parent			: content_data
+		})
+
+	// filter chips ('All' + one per non-empty category)
+		const chips = []
+		const make_chip = (key, label) => {
+			const chip = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'maintenance_chip' + (key==='' ? ' active' : ''),
+				inner_html		: label,
+				dataset			: { category: key },
+				parent			: filters
+			})
+			chip.addEventListener('click', (e) => {
+				e.preventDefault()
+				active_category = key
+				chips.forEach(c => c.classList.toggle('active', c===chip))
+				apply_filters()
+			})
+			chips.push(chip)
+		}
+		make_chip('', get_label.todos || 'All')
+
+	// build one section per non-empty category, in defined order
+		const category_defs	= get_category_defs()
+		const group_nodes	= []
+		for (let c = 0; c < category_defs.length; c++) {
+
+			const def	= category_defs[c]
+			const list	= buckets[def.key]
+			if (!list || !list.length) {
+				continue
+			}
+
+			make_chip(def.key, def.label)
+
+			// group
+			const group = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'maintenance_group',
+				dataset			: { category: def.key },
+				parent			: groups
+			})
+
+			// group header (icon + label + count)
+			const header = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'group_header',
+				parent			: group
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'group_icon',
+				parent			: header
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'group_label',
+				inner_html		: def.label,
+				parent			: header
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'group_count',
+				inner_html		: list.length,
+				parent			: header
+			})
+
+			// grid of cards
+			const grid = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'group_grid',
+				parent			: group
+			})
+
+			for (let i = 0; i < list.length; i++) {
+
+				const widget = list[i]
+
+				// container (same structure/lifecycle as before; data-attrs added for filtering + category icon)
+				const container = ui.create_dom_element({
+					id				: widget.id,
+					element_type	: 'div',
+					dataset			: {
+						category	: widget.category || 'general',
+						label		: (widget.label || '').toLowerCase()
+					},
+					class_name		: 'widget_container ' + (widget.class || ''),
+					parent			: grid
+				})
+
+				ui.load_item_with_spinner({
+					container			: container,
+					replace_container	: false,
+					label				: widget.label,
+					callback			: async () => {
+						const node = await render_widget(widget, self)
+						setTimeout(()=>{
+							container.classList.add('loaded')
+						}, 3)
+						return node
+					}
+				})
+			}
+
+			group_nodes.push(group)
+		}
+
+	// empty state (shown when nothing matches the current filters)
+		const empty_state = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'maintenance_empty hide',
+			inner_html		: get_label.sin_resultados || 'No tools match your search',
+			parent			: groups
+		})
+
+	// apply_filters. Combines active category chip + search term (AND)
+		const apply_filters = () => {
+			let any_visible = false
+			for (let g = 0; g < group_nodes.length; g++) {
+
+				const group		= group_nodes[g]
+				const cat_ok	= !active_category || active_category===group.dataset.category
+
+				let visible_in_group = 0
+				const cards = group.querySelectorAll('.widget_container')
+				for (let k = 0; k < cards.length; k++) {
+					const card			= cards[k]
+					const match_search	= !search_term || (card.dataset.label || '').includes(search_term)
+					const show			= cat_ok && match_search
+					card.classList.toggle('filtered_out', !show)
+					if (show) {
+						visible_in_group++
+					}
+				}
+
+				group.classList.toggle('hide', visible_in_group===0)
+				if (visible_in_group>0) {
+					any_visible = true
+				}
+			}
+			empty_state.classList.toggle('hide', any_visible)
+		}
+
+	// live search (debounced via idle callback)
+		search_input.addEventListener('input', () => {
+			dd_request_idle_callback(() => {
+				search_term = search_input.value.trim().toLowerCase()
+				apply_filters()
+			})
+		})
 
 
 	return content_data

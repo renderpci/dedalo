@@ -111,6 +111,7 @@
     "name_to_field": "Suffix gibt Feld an",
     "name_to_record_id": "Präfix zeigt ID an",
     "presets_de_busqueda": "Suchkonfiguration",
+    "presets_de_exportacion": "Exportkonfiguration",
     "search_options": "Suchoptionen",
     "fields": "Felder",
     "and": "und",

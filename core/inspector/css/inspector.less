@@ -12,13 +12,32 @@
 	margin-bottom: 0.5rem;
 	padding: 0px;
 	width: 100%;
-	background-color: @color_grey_16;
-	outline: 1px solid @color_grey_14;
+	background-color: var(--bg_surface);
+	outline: 1px solid var(--border_default);
 
 	&.inspector_fixed {
 		position: fixed;
 		top: 0px;
 		width: 18.5% !important;
+	}
+
+	// block_icon. Leading mask icon for block headers and the main label.
+	// Defined at wrapper scope so it reaches the main >.label icon too.
+	// NOTE: the main-label modifier is 'panel' (NOT 'inspector') to avoid
+	// colliding with the .inspector wrapper class on the same span.
+	.block_icon {
+		flex: 0 0 auto;
+		width: 1.1em;
+		height: 1.1em;
+		background-color: var(--fg_muted);
+
+		&.info		{ .fn_add_mask('info.svg'); }
+		&.gear		{ .fn_add_mask('gear.svg'); }
+		&.link		{ .fn_add_mask('link.svg'); }
+		&.history	{ .fn_add_mask('history.svg'); }
+		&.note		{ .fn_add_mask('note.svg'); }
+		&.activity	{ .fn_add_mask('gears.svg'); }
+		&.panel		{ .fn_add_mask('inspector.svg'); }
 	}
 
 	// inspector_div_content
@@ -28,18 +47,61 @@
 		padding: 0px;
 		position: relative;
 
+		// content cards. Each top-level block is a rounded surface card
 		>div {
 			contain: content;
-			border-bottom: 1px solid @color_grey_13;
+			margin: 0.4rem;
+			background-color: var(--bg_surface);
+			border: 1px solid var(--border_default);
+			border-radius: var(--inspector_block_radius);
+			box-shadow: var(--shadow-1);
+			overflow: hidden; // clip rounded corners over inner content
 
 			&.project_wrap {
 				contain: layout;
 			}
+
+			// paginator reads as a flat header, not an elevated card
+			&.paginator_container {
+				box-shadow: none;
+			}
 		}
 
-		// icon_arrow
-		.icon_arrow {
+		// block headers. Flex row: icon + label + (right) chevron, with hover feedback
+		.element_info_head,
+		.project_head,
+		.relation_list_head,
+		.time_machine_list_head,
+		.component_history_head,
+		.activity_info_head {
+			display: flex;
+			align-items: center;
+			gap: 0.5rem;
+			background-color: var(--bg_surface_alt);
+			color: var(--fg_default);
+			transition: background-color 0.15s ease;
 
+			&:hover {
+				background-color: var(--border_default);
+			}
+			&:active {
+				opacity: 0.85;
+			}
+
+			// label text wrapper, allows hiding text in rail mode while keeping the icon
+			.block_label {
+				flex: 1 1 auto;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+			}
+		}
+
+		// icon_arrow chevron color tracks the theme via semantic token
+		.icon_arrow {
+			&:after {
+				background-color: var(--fg_muted);
+			}
 		}
 
 		// paginator
@@ -59,7 +121,7 @@
 				font-weight: 500;
 				font-size: 1.2rem;
 				line-height: 1rem;
-				color: @color_grey_8;
+				color: var(--fg_muted);
 
 				@media screen and (max-width: @width_break_point_0) {
 					top: 1rem;
@@ -122,7 +184,7 @@
 			}
 
 			.key {
-				background-color: @color_grey_14;
+				background-color: var(--bg_surface_alt);
 				padding: 0.25rem;
 				text-align: right;
 				text-transform: capitalize;
@@ -149,7 +211,7 @@
 					white-space: pre-wrap;
 					display: flex;
 					flex-direction: column;
-					background-color: @color_grey_16;
+					background-color: var(--bg_surface_alt);
 					min-height: 3rem;
 
 					&.monospace {
@@ -293,6 +355,48 @@
 	>.label {
 
 		.label_top(); // defined in layout
+		// override the mixin's raw greys so the header tracks the theme
+		background-color: var(--bg_surface_alt);
+		color: var(--fg_default);
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		// .label_top sets padding:0.33em which clobbers the 1.33rem right padding
+		// that .icon_arrow reserves for its chevron. Restore it (plus a little) so
+		// the flex row (incl. the rail toggle) never runs under the chevron.
+		padding-right: 1.6rem;
+
+		// label text wrapper (hidden in rail mode, keeps the toggle visible)
+		.block_label {
+			flex: 1 1 auto;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		// rail collapse / expand toggle button.
+		// sits left of the whole-content collapse chevron (.icon_arrow:after),
+		// which is kept clear by the label's reserved padding-right above
+		.inspector_rail_toggle {
+			flex: 0 0 auto;
+			.fn_add_mask('arrow-circle-right.svg');
+			// the icon's circle touches the viewBox edges; shrink the mask within the
+			// box so the outer stroke isn't clipped (looks cut) at small sizes
+			-webkit-mask-size: 82%;
+					mask-size: 82%;
+			background-color: var(--fg_muted);
+			width: 1.4em;
+			height: 1.4em;
+			cursor: pointer;
+			border: none;
+			padding: 0px;
+			margin: 0px;
+			transition: transform 0.2s ease, background-color 0.15s ease;
+
+			&:hover {
+				background-color: var(--fg_default);
+			}
+		}
 
 		@media screen and (min-width: @width_break_point_1) {
 			position: sticky;
