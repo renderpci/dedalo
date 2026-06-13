@@ -23,9 +23,20 @@ jobs:
           coverage: none
 
       - name: Lint PHP files
+        # CONF-03: fail the job on any parse error. The previous pipe into
+        # `grep ... || true` swallowed php -l exit codes, so a committed fatal
+        # parse error could never fail this gate.
         run: |
-          find . -type f -name "*.php" \
+          status=0
+          while IFS= read -r -d '' file; do
+            if ! php -l "$file" > /dev/null 2>&1; then
+              echo "::error file=$file::PHP syntax error"
+              php -l "$file" || true
+              status=1
+            fi
+          done < <(find . -type f -name "*.php" \
             ! -path "./vendor/*" \
             ! -path "./lib/*" \
             ! -path "./.git/*" \
-            -exec php -l {} \; 2>&1 | grep -v "No syntax errors" || true
+            -print0)
+          exit $status

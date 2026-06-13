@@ -1,8 +1,17 @@
+# CONF-05: a baseline captures the existing (mostly runtime-magic false-positive)
+# errors so the gate enforces "no NEW errors", and the analysed scope is widened
+# beyond the original 3 directories to the security/correctness-critical
+# subsystems (worker, core/db). Regenerate after intentional changes with:
+#   vendor/bin/phpstan analyse -c phpstan.neon.dist --generate-baseline
+includes:
+    - phpstan-baseline.neon
 parameters:
     level: 1
     paths:
         - diffusion
         - core/api
+        - core/db
+        - worker
         - shared
     tmpDir: /tmp/phpstan
     scanFiles:

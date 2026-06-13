@@ -895,17 +895,31 @@ export const ui = {
 		*/
 		error : (error, input_wrap) => {
 
+			// UIUX-05: tolerate callers that pass the input element itself instead of
+			// the wrapper. Resolve the wrapper (climb to it when given a field) and
+			// the focusable field in both cases, and no-op safely on a null arg.
+			if (!input_wrap || !input_wrap.classList) {
+				return false
+			}
+			const is_field = typeof input_wrap.matches === 'function'
+				&& input_wrap.matches('input, textarea, select')
+			const wrapper = is_field
+				? (input_wrap.closest('.wrapper_component, .input_component, .component') || input_wrap)
+				: input_wrap
+
 			if (error) {
 
-				input_wrap.classList.add('error')
+				wrapper.classList.add('error')
 
-				const input_node = input_wrap.querySelector('input')
+				const input_node = is_field
+					? input_wrap
+					: wrapper.querySelector('input, textarea, select')
 				if(input_node){
 					input_node.focus();
 				}
 
 			}else{
-				input_wrap.classList.remove('error')
+				wrapper.classList.remove('error')
 			}
 
 			return true
@@ -2623,11 +2637,15 @@ export const ui = {
 		// exec_order function
 			const exec_order = (direction) => {
 
+				// FEJS-01: capture the portal re-order promise so the click handler
+				// can await it (loading state + error surfacing). undefined for the
+				// section case (navigate handles its own lifecycle).
+				let order_promise = null
 				if (is_portal) {
 
 					// portal case. Persistently re-order the stored locator array
 					// by the column value (the order is resolved and saved in the server)
-						self.sort_by_column(column, direction)
+						order_promise = self.sort_by_column(column, direction)
 				}else{
 
 					// sample
@@ -2679,6 +2697,8 @@ export const ui = {
 					sort_node.title = direction==='DESC'
 						? title_asc
 						: title_desc
+
+				return order_promise
 			}
 
 		// title
@@ -2716,14 +2736,34 @@ export const ui = {
 				}
 			})
 			// click
-			sort_node.addEventListener('click', function(e){
+			sort_node.addEventListener('click', async function(e){
 				e.stopPropagation()
+
+				// FEJS-01: the portal re-order is a server round-trip. Guard against
+				// double-clicks while it runs, show a loading state, and surface
+				// errors instead of discarding the (previously unawaited) promise.
+				if (sort_node.classList.contains('loading')) {
+					return
+				}
 
 				const direction = current_direction
 					? current_direction==='ASC' ? 'DESC' : 'ASC' // reverse current value
 					: default_direction // defaults
 
-				exec_order(direction)
+				sort_node.classList.add('loading')
+				try {
+					await exec_order(direction)
+				} catch (err) {
+					console.error('Error sorting by column', err)
+					if (typeof ui.notification?.create === 'function') {
+						ui.notification.create({
+							msg		: 'Error sorting by column',
+							type	: 'error'
+						})
+					}
+				} finally {
+					sort_node.classList.remove('loading')
+				}
 			})
 
 

@@ -306,11 +306,14 @@ class diffusion_chain_processor {
 				if(!empty($valid_sections_tipo) && !in_array($locator->section_tipo, $valid_sections_tipo)){
 					continue;
 				}else{
-					// Fallback: If no children resolved (either bypassed due to not being in the 
-					// whitelist, or child resolution returned empty), simply return the raw 
-					// locator object itself without extracting deeper data of that linked section.
-					$new_diffusion_data[0]->value[] = $locator;
-					$relation_values = $new_diffusion_data;
+					// Fallback: If no children resolved (either bypassed due to not being in the
+					// whitelist, or child resolution returned empty), use the raw locator
+					// object itself as the value without extracting deeper data.
+					// DIFFU-09: APPEND to the accumulator. The previous
+					// `$relation_values = $new_diffusion_data` reassigned it, discarding
+					// every value collected from earlier locators in this loop (and mixing
+					// the wrapper shape into the flat value-item list that line 319 expects).
+					$relation_values[] = $locator;
 				}
 			}
 		}

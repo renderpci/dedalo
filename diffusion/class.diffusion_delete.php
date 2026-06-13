@@ -368,7 +368,13 @@ class diffusion_delete {
 				]
 			);
 
-			if ($delete_response->result===true) {
+			// DIFFU-08: only flip to 'unpublished' when the retry actually resolved
+			// the deletion. delete_record returns the default result=true even when
+			// nothing was processed (e.g. the only_element_tipos restriction matched
+			// no element of the record); in that no-op case ar_deleted is empty and
+			// the published data may still exist. A real or idempotent (already-gone)
+			// file delete always populates ar_deleted, so require it here.
+			if ($delete_response->result===true && !empty($delete_response->ar_deleted)) {
 				// flip the row action in place: unpublish_pending -> unpublished
 				$relation = $row_data->relation;
 				foreach ($relation->{diffusion_activity_logger::ACTION_TIPO} ?? [] as $action_locator) {

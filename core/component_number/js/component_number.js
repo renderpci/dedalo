@@ -164,15 +164,16 @@ component_number.prototype.fix_number_format = function( value ) {
 	//    clean_value is expected to return a cleaned string (e.g., "17.2") or null.
 	let cleaned_string = self.clean_value(value);
 
+	// UIUX-02: clean_value returns null for input with no numeric chars. Guard
+	// BEFORE split() — calling null.split('.') threw a TypeError on non-numeric input.
+	if (cleaned_string === null) {
+		return null;
+	}
+
 	// Handle multiple dots - keep only the first one
 	const parts = cleaned_string.split('.');
 	if (parts.length > 2) {
 		cleaned_string = parts[0] + '.' + parts.slice(1).join('');
-	}
-
-	// If cleaning resulted in no valid numeric characters, return null.
-	if (cleaned_string === null) {
-		return null;
 	}
 
 	// 2. Convert the cleaned string to a JavaScript number.
