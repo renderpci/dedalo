@@ -97,10 +97,11 @@ class diffusion_chain_processor {
 	/**
 	 * RESOLVE_DDO_VALUE
 	 * Resolves a single DDO node, either getting terminal data or recursing.
-	 * Supports fn property for custom method dispatch:
-	 * - Component methods: "fn": "get_section_id"
-	 * - Class methods: "fn": "diffusion_fn::map_locator_to_section_label"
-	 * 
+	 * Supports the `fn` property for custom component-method dispatch, e.g.
+	 * "fn": "get_section_id". (DIFFU-05: the unused "Class::method" string-dispatch
+	 * helper was removed; component fn resolution lives in
+	 * component_common::get_diffusion_data.)
+	 *
 	 * @param object $ddo
 	 * @param array $ddo_map
 	 * @param string $section_tipo
@@ -187,9 +188,11 @@ class diffusion_chain_processor {
 		}
 
 		// Fetch linked diffusion node settings to check for explicit publish override
-		$diffusion_tipo = $ddo->diffusion_tipo;
+		// DIFFU-06: fall back to $current_tipo when diffusion_tipo is absent (matches
+		// the fallback used elsewhere) and null-guard the node before get_properties().
+		$diffusion_tipo = $ddo->diffusion_tipo ?? $current_tipo;
 		$diffusion_node = ontology_node::get_instance($diffusion_tipo);
-		$properties = $diffusion_node->get_properties();
+		$properties = $diffusion_node ? $diffusion_node->get_properties() : null;
 		$publishable = $properties->is_publishable ?? null;
 
 
@@ -395,73 +398,6 @@ class diffusion_chain_processor {
 		return (object)[
 			'chain_string' => implode(' → ', array_unique($this->debug_chain))
 		];
-	}
-
-
-
-	/**
-	 * DISPATCH_CLASS_METHOD
-	 * Calls a custom static class method handler configured in the DDO map.
-	 * format "ClassName::methodName"
-	 * 
-	 * Enables executing specialized external resolution hooks (e.g., custom SQL mappings, 
-	 * thesaurus lookups, or value transformations) where standard component getters 
-	 * do not suffice for the export format structure.
-	 * 
-	 * @param string $fn Static method identifier string (e.g., "diffusion_fn::map_locator_to_section_label")
-	 * @param object $element The Component instance executing within the scope
-	 * @param object $ddo DDO configuration map context
-	 * @return array<diffusion_data_object> Uniform array of resolved output payload items
-	 */
-	private function dispatch_class_method(string $fn, object $element, object $ddo): array {
-		
-		// Parse string for static method call convention segments
-		$parts = explode('::', $fn);
-		if (count($parts) !== 2) {
-			debug_log(__METHOD__ . " Invalid class method format: $fn", logger::ERROR);
-			return [];
-		}
-
-		$class_name  = $parts[0];
-		$method_name = $parts[1];
-
-		// Verify execution target safely prior to attempting dynamic call triggers
-		if (!class_exists($class_name) || !method_exists($class_name, $method_name)) {
-			debug_log(__METHOD__ . " Class or method not found: $fn", logger::ERROR);
-			return [];
-		}
-
-		try {
-			// Call static method supplying the active component and configuration DDO
-			$result = $class_name::$method_name($element, $ddo);
-
-			// Normalize single result items into iterable containers standard arrays
-			if (!is_array($result)) {
-				$result = [$result];
-			}
-
-			$ar_results = [];
-			foreach ($result as $item) {
-				if ($item instanceof diffusion_data_object) {
-					$ar_results[] = $item;
-				} else {
-					
-					// Wrap raw values into structured datasets standard output container payload structs
-					$ar_results[] = new diffusion_data_object((object)[
-						'tipo'  => $ddo->tipo,
-						'lang'  => null,
-						'value' => $item,
-						// missing id from ddo->id review this ???
-					]);
-				}
-			}
-
-			return $ar_results;
-
-		} catch (Exception $e) {
-			debug_log(__METHOD__ . " Error calling $fn: " . $e->getMessage(), logger::ERROR);
-			return [];
-		}
 	}
 
 

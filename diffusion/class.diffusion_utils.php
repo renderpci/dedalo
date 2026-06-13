@@ -84,6 +84,10 @@ class diffusion_utils {
 		);
 
 		if (empty($ar_children)) {
+			// DIFFU-07: cache the early-true result too (a section with no
+			// component_publication is always publishable), so repeated calls for the
+			// same record skip the get_ar_children lookup.
+			self::$is_publishable_cache[$uid] = true;
 			return true;
 		}
 
