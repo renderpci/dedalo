@@ -2817,6 +2817,68 @@ function sanitize_file_name(string $filename, bool $beautify=true) : string {
 
 
 /**
+* SAFE_UPLOAD_TARGET
+* Build a filesystem-safe absolute target path for an upload/import file whose
+* name comes from an untrusted client. Defuses path traversal by reducing the
+* client name to its basename (stripping any directory component and absolute
+* prefix), rejecting empty / '.' / '..' / separator-bearing names and null bytes,
+* and confining the result under $base_dir. The basename reduction is the actual
+* guarantee; the realpath check is defence-in-depth applied when $base_dir exists.
+*
+* This is the canonical confinement primitive for every upload/import sink. It
+* mirrors the existing good pattern at core/hierarchy/class.hierarchy.php
+* (sanitize_file_name + basename).
+*
+* @param string $base_dir Directory the file must stay within.
+* @param string $client_name Untrusted file name from the request.
+* @param bool $sanitize When true (default) also run sanitize_file_name() on the
+*        basename for a clean on-disk name. Pass false to preserve the exact
+*        (already server-generated) name — e.g. when reading back chunk parts whose
+*        on-disk names must match verbatim.
+* @return string Absolute, confined target path ($base_dir . '/' . safe_name).
+* @throws Exception when the name is unusable or would escape $base_dir.
+*/
+function safe_upload_target(string $base_dir, string $client_name, bool $sanitize=true) : string {
+
+	// strip null bytes and reduce to basename (defuses ../, ..\ and absolute paths)
+	$name = basename(str_replace(chr(0), '', $client_name));
+
+	// reject names that cannot resolve to a real child file
+	if ($name === '' || $name === '.' || $name === '..') {
+		throw new Exception('Invalid upload file name');
+	}
+
+	// optional canonicalization for a clean on-disk name
+	if ($sanitize===true) {
+		$name = sanitize_file_name($name);
+		if ($name === '' || $name === '.' || $name === '..') {
+			throw new Exception('Invalid upload file name after sanitize');
+		}
+	}
+
+	// basename cannot contain a separator, but assert defensively
+	if (strpbrk($name, "/\\") !== false) {
+		throw new Exception('Invalid upload file name (separator)');
+	}
+
+	$target = rtrim($base_dir, '/') . '/' . $name;
+
+	// defence-in-depth confinement: when the base dir exists, the resolved parent
+	// must stay under it. (The basename reduction above already prevents escape.)
+	$real_base = realpath($base_dir);
+	if ($real_base !== false) {
+		$real_parent = realpath(dirname($target));
+		if ($real_parent !== false && strpos($real_parent . DIRECTORY_SEPARATOR, $real_base . DIRECTORY_SEPARATOR) !== 0) {
+			throw new Exception('Upload target escapes base dir');
+		}
+	}
+
+	return $target;
+}//end safe_upload_target
+
+
+
+/**
 * BEAUTIFY_FILENAME
 * Make more human readable sanitized file names
 * From Sean Vieira

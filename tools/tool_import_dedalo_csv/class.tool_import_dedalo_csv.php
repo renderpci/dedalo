@@ -121,7 +121,10 @@ class tool_import_dedalo_csv extends tool_common {
 			$response->errors	= [];
 
 		// options
-			$dir = $options->files_path ?? tool_import_dedalo_csv::get_files_path();
+			// TOOLS-02: ignore any client-supplied files_path. Reading arbitrary
+			// directories is an authenticated arbitrary-file-read; always scope to
+			// the caller's own per-user import dir.
+			$dir = tool_import_dedalo_csv::get_files_path();
 
 		// read_files
 			$files_list	= tool_common::read_files(
@@ -326,10 +329,20 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// options
 			$file_name	= $options->file_name ?? '';
-			$dir		= $options->files_path ?? tool_import_dedalo_csv::get_files_path();
+			// TOOLS-01: ignore any client-supplied files_path and confine to the
+			// per-user import dir; basename-confine the file name so '../' cannot
+			// rename/delete files outside the user's own staging area.
+			$dir		= tool_import_dedalo_csv::get_files_path();
 
 		// remove file is exists
-			$file_full_path = $dir .'/'. $file_name;
+			try {
+				$file_full_path = safe_upload_target($dir, $file_name, false);
+			} catch (\Throwable $e) {
+				$response->msg = 'Error. Invalid file name';
+				$response->errors[] = 'invalid file name';
+				debug_log(__METHOD__ .' Rejected unsafe file_name: '. $e->getMessage(), logger::ERROR);
+				return $response;
+			}
 			if (file_exists($file_full_path)) {
 
 				// check is file (prevent to delete directories accidentally)
@@ -1567,14 +1580,22 @@ class tool_import_dedalo_csv extends tool_common {
 			// }
 
 		// short vars
+			// TOOLS-03: name, key_dir and tmp_name are all client-supplied; sanitize
+			// key_dir and confine the source path before any filesystem use.
 			$name		= $file_data->name; // string original file name like 'name-rsc197.csv'
-			$key_dir	= $file_data->key_dir; // string upload caller name like 'tool_upload'
+			$key_dir	= sanitize_key_dir($file_data->key_dir ?? ''); // upload caller name like 'tool_upload'
 			$tmp_name	= $file_data->tmp_name; // string like 'phpJIQq4e'
 
 			$user_id = logged_user_id();
 			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
-			$source_file = $tmp_dir . '/' . $tmp_name;
+			try {
+				$source_file = safe_upload_target($tmp_dir, $tmp_name, false);
+			} catch (\Throwable $e) {
+				$response->msg .= ' Invalid source file name.';
+				debug_log(__METHOD__ .' Rejected unsafe source: '. $e->getMessage(), logger::ERROR);
+				return $response;
+			}
 
 		// check source file file
 			if (!file_exists($source_file)) {
@@ -1586,10 +1607,6 @@ class tool_import_dedalo_csv extends tool_common {
 				);
 				return $response;
 			}
-
-		// target_file
-			$dir			= tool_import_dedalo_csv::get_files_path();
-			$target_file	= $dir . '/' . $name;
 
 		// check target directory
 			$dir = tool_import_dedalo_csv::get_files_path();
@@ -1607,6 +1624,17 @@ class tool_import_dedalo_csv extends tool_common {
 					." CREATED DIR: $dir "
 					, logger::DEBUG
 				);
+			}
+
+		// target_file
+			// TOOLS-03: confine the client-supplied $name under the per-user dir
+			// (computed after the dir exists so realpath confinement applies).
+			try {
+				$target_file = safe_upload_target($dir, $name, false);
+			} catch (\Throwable $e) {
+				$response->msg .= ' Invalid target file name.';
+				debug_log(__METHOD__ .' Rejected unsafe target: '. $e->getMessage(), logger::ERROR);
+				return $response;
 			}
 
 		// move file

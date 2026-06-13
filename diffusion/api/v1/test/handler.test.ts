@@ -46,6 +46,15 @@ function post_authed(body: unknown, headers: Record<string, string> = {}): Reque
 	return post(body, { 'Cookie': 'dedalo_test=session-token', ...headers });
 }
 
+// privileged request: carries the internal token (DIFFTS-01). Admin/server-only
+// actions (delete_record, backup_database, check_database, rebuild_media_index)
+// require this token and reject a bare session cookie. Callers must also set
+// process.env.DIFFUSION_INTERNAL_TOKEN = TEST_TOKEN for the comparison to pass.
+const TEST_TOKEN = 'test-internal-token-xyz';
+function post_token(body: unknown, headers: Record<string, string> = {}): Request {
+	return post(body, { 'X-Diffusion-Internal-Token': TEST_TOKEN, ...headers });
+}
+
 // -----------------------------------------------------
 // Method + body routing
 // -----------------------------------------------------
@@ -145,20 +154,43 @@ describe('uniform Bun-side auth', () => {
 	});
 });
 
+// DIFFTS-01 regression: admin/server-only actions must reject a bare session
+// cookie. Before the fix any logged-in user's cookie was accepted, letting a
+// low-privilege user delete arbitrary rows / dump databases through the publicly
+// proxied socket. media_index_status is deliberately NOT here: it is read-only
+// and still accepts a session cookie via check_server_auth.
+describe('DIFFTS-01: privileged actions reject a bare session cookie', () => {
+
+	const privileged_actions = ['delete_record', 'check_database', 'backup_database', 'rebuild_media_index'];
+
+	for (const action of privileged_actions) {
+		test(`${action} with a valid session but no internal token responds 401`, async () => {
+			mock_php_auth(true); // valid logged-in (but non-admin) session
+			delete process.env.DIFFUSION_INTERNAL_TOKEN;
+			const res = await handle_request(post_authed({ action, source: {} }));
+			expect(res.status).toBe(401);
+		});
+	}
+});
+
 // -----------------------------------------------------
 // Input validation after auth
 // -----------------------------------------------------
 describe('action input validation', () => {
 
+	// privileged (admin/server-only) actions are gated on the internal token,
+	// not a session cookie (DIFFTS-01) — set it for this block.
+	beforeEach(() => {
+		process.env.DIFFUSION_INTERNAL_TOKEN = TEST_TOKEN;
+	});
+
 	test('delete_record with missing targets responds 400', async () => {
-		mock_php_auth(true);
-		const res = await handle_request(post_authed({ action: 'delete_record', source: {} }));
+		const res = await handle_request(post_token({ action: 'delete_record', source: {} }));
 		expect(res.status).toBe(400);
 	});
 
 	test('delete_record with malformed target responds 400', async () => {
-		mock_php_auth(true);
-		const res = await handle_request(post_authed({
+		const res = await handle_request(post_token({
 			action: 'delete_record',
 			source: {},
 			targets: [{ table_name: 'interview', section_ids: [1] }], // missing database_name
@@ -167,14 +199,12 @@ describe('action input validation', () => {
 	});
 
 	test('rebuild_media_index with missing targets responds 400', async () => {
-		mock_php_auth(true);
-		const res = await handle_request(post_authed({ action: 'rebuild_media_index', source: {} }));
+		const res = await handle_request(post_token({ action: 'rebuild_media_index', source: {} }));
 		expect(res.status).toBe(400);
 	});
 
 	test('rebuild_media_index with malformed target responds 400', async () => {
-		mock_php_auth(true);
-		const res = await handle_request(post_authed({
+		const res = await handle_request(post_token({
 			action: 'rebuild_media_index',
 			source: {},
 			targets: [{ database_name: 'web_a', table_name: 'interview' }], // missing section_tipo
@@ -183,11 +213,10 @@ describe('action input validation', () => {
 	});
 
 	test('rebuild_media_index reports failure when DEDALO_MEDIA_PATH is unset', async () => {
-		mock_php_auth(true);
 		const saved = process.env.DEDALO_MEDIA_PATH;
 		delete process.env.DEDALO_MEDIA_PATH;
 		try {
-			const res = await handle_request(post_authed({
+			const res = await handle_request(post_token({
 				action: 'rebuild_media_index',
 				source: {},
 				targets: [],
@@ -224,8 +253,7 @@ describe('action input validation', () => {
 	});
 
 	test('check_database without database_name responds with result false', async () => {
-		mock_php_auth(true);
-		const res = await handle_request(post_authed({ action: 'check_database', source: {} }));
+		const res = await handle_request(post_token({ action: 'check_database', source: {} }));
 		const data = await res.json() as any;
 		expect(data.result).toBe(false);
 		expect(data.msg).toContain('database_name');

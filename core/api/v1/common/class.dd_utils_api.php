@@ -867,7 +867,17 @@ final class dd_utils_api {
 					}
 
 				// move file to target path
-					$target_path	= $tmp_dir . '/' . $name;
+					// API-01: confine the client-supplied name to $tmp_dir (basename +
+					// realpath confinement) before it reaches move_uploaded_file/moveTo.
+					// sanitize=false preserves the exact (server-generated for chunks)
+					// name so the chunk-join read-back still matches on disk.
+					try {
+						$target_path = safe_upload_target($tmp_dir, $name, false);
+					} catch (\Throwable $e) {
+						$response->msg .= ' Invalid upload file name.';
+						debug_log(__METHOD__ . ' Rejected unsafe upload target: ' . $e->getMessage(), logger::ERROR);
+						return $response;
+					}
 					// Handle move file.
 					// If we are in RoadRunner, we use moveTo() from PSR-7 object
 					if (isset($file_to_upload['psr7']) && $file_to_upload['psr7'] instanceof \Psr\Http\Message\UploadedFileInterface) {
@@ -1026,17 +1036,31 @@ final class dd_utils_api {
 			$user_id	= logged_user_id();
 			$file_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
-		// tmp_joined_file
-			$tmp_joined_file = 'tmp_'.$file_data->name;
-
-		// target path of the final file joined
-			$target_path = $file_path .'/'. $tmp_joined_file;
+		// tmp_joined_file + target path of the final file joined.
+		// API-02: confine the client-supplied name under $file_path before any
+		// filesystem use; reject names that would escape the upload tree.
+			try {
+				$target_path	 = safe_upload_target($file_path, 'tmp_'.$file_data->name, false);
+				$tmp_joined_file = basename($target_path);
+			} catch (\Throwable $e) {
+				$response->msg = 'Invalid joined file name.';
+				debug_log(__METHOD__ .' Rejected unsafe joined target: '. $e->getMessage(), logger::ERROR);
+				return $response;
+			}
 
 		// loop through temp files and grab the content
 			foreach ($files_chunked as $chunk_filename) {
 
 				// copy chunk
-				$temp_file_path	= "{$file_path}/{$chunk_filename}";
+				// API-02: confine each client-supplied chunk name under $file_path
+				// BEFORE read/unlink, so '../' cannot read or delete arbitrary files.
+				try {
+					$temp_file_path = safe_upload_target($file_path, (string)$chunk_filename, false);
+				} catch (\Throwable $e) {
+					$response->msg = 'Invalid chunk file name.';
+					debug_log(__METHOD__ .' Rejected unsafe chunk: '. $e->getMessage(), logger::ERROR);
+					return $response;
+				}
 				$chunk			= file_get_contents($temp_file_path);
 				if ( empty($chunk) ){
 					$response->msg = "Chunks are uploading as empty strings.";
