@@ -1439,7 +1439,9 @@ abstract class component_common extends common {
 			}
 
 			// Compares id. If is the same, result the array key value.
-			if($current_value->id === $id){
+			// COMP-04: cast the stored id — it may be a string in the data while $id
+			// is typed int; a strict === would then miss the match.
+			if((int)$current_value->id === $id){
 				return (int)$key;
 			}
 		}

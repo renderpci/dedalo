@@ -2026,11 +2026,12 @@ class login extends common {
 
 		$code_component_tipo = 'dd1053';
 
-		$conn = DBi::_getConnection();
-		$code = pg_escape_string($conn, $code);
-
+		// AUTH-03: build the JSONB containment document with json_encode so structural
+		// characters in $code (", \) are escaped correctly instead of breaking the JSON.
+		// $code is bound as a prepared-statement parameter ($1), so it needs JSON
+		// escaping here, NOT SQL escaping (the previous pg_escape_string double-escaped it).
 		$params = [
-			'{"'.$code_component_tipo.'":[{"lang": "lg-nolan", "value": "'.$code.'"}]}'
+			json_encode([$code_component_tipo => [['lang' => 'lg-nolan', 'value' => $code]]], JSON_UNESCAPED_UNICODE)
 		];
 
 		// direct data way

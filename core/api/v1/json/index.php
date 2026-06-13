@@ -73,10 +73,11 @@ if (defined('DEDALO_CORS')) {
 
 // CORS preflight OPTIONS requests area ignored
 if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+	// API-06: a CORS preflight is a normal, expected request — not an error.
+	// Respond without writing to the PHP error log on every OPTIONS request.
 	$response = new stdClass();
 	$response->result	= false;
 	$response->msg		= 'Ignored preflight call ' . $_SERVER['REQUEST_METHOD'];
-	error_log('Error: ' . $response->msg);
 	echo json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	return;
 }

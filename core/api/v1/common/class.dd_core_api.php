@@ -789,10 +789,17 @@ final class dd_core_api {
 		// options
 			$sqo			= $rqo->sqo ?? null;
 			$options		= $rqo->options ?? null;
-			$section_tipo	= $rqo->options->section_tipo;
-			$tipo			= $options->tipo;
+			$section_tipo	= $rqo->options->section_tipo ?? null;
+			$tipo			= $options->tipo ?? null;
+			// API-05: tipo is required to resolve the model below; fail cleanly instead
+			// of dereferencing a missing property (PHP warning) then hitting a TypeError.
+			if (empty($tipo)) {
+				$response->msg .= 'Empty options \'tipo\' (is mandatory)';
+				$response->errors[] = 'empty options tipo';
+				return $response;
+			}
 			$model			= $options->model ?? ontology_node::get_model_by_tipo($tipo);
-			$type 			= $options->type;
+			$type 			= $options->type ?? null;
 
 		// permissions check for the section
 			$permissions = common::get_permissions($section_tipo, $section_tipo);
@@ -3052,7 +3059,8 @@ final class dd_core_api {
 				return $response;
 			}
 
-		$tipo = $source->tipo;
+		// API-05: read defensively; safe_tipo() below returns a clean 'Bad tipo' error.
+		$tipo = $source->tipo ?? null;
 
 		// tipo check
 			if ( safe_tipo($tipo)===false ) {
