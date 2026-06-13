@@ -95,25 +95,30 @@ final class cache_manager {
 			}
 		});
 
-		// ontology
+		// ontology — WORKER-06: intentionally NOT cleared per request. The ontology
+		// is (near-)static structural data shared by all users; clearing it every
+		// request would be a large performance regression with no correctness benefit.
+		// (Memory growth of its per-tipo caches is bounded separately — see COMP-05.)
 		$this->register('ontology', function(): void {
-			// if (class_exists('\ontology') && method_exists('\ontology', 'clear')) {
-			// 	\ontology::clear();
-			// }
+			// intentionally a no-op; see comment above.
 		});
 
-		// section_record_instances_cache
+		// section_record_instances_cache — WORKER-06: per-request record instances.
+		// Left uncleared, a section_record loaded for one user/request can be served
+		// from cache to the next request in the persistent worker (stale/cross-user
+		// data). Clear it every request.
 		$this->register('section_record_instances_cache', function(): void {
-			// if (class_exists('\section_record_instances_cache') && method_exists('\section_record_instances_cache', 'clear')) {
-			// 	\section_record_instances_cache::clear();
-			// }
+			if (class_exists('\section_record_instances_cache', false) && method_exists('\section_record_instances_cache', 'clear')) {
+				\section_record_instances_cache::clear();
+			}
 		});
 
-		// component_instances_cache
+		// component_instances_cache — WORKER-06: per-request component instances; same
+		// cross-request bleed risk as above. Clear it every request.
 		$this->register('component_instances_cache', function(): void {
-			// if (class_exists('\component_instances_cache') && method_exists('\component_instances_cache', 'clear')) {
-			// 	\component_instances_cache::clear();
-			// }
+			if (class_exists('\component_instances_cache', false) && method_exists('\component_instances_cache', 'clear')) {
+				\component_instances_cache::clear();
+			}
 		});
 	}
 

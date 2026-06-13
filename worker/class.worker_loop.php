@@ -161,8 +161,9 @@ final class worker_loop {
 		// 8. Respond
 		$psr7_worker->respond($response);
 
-		// 9. Session close
-		$this->session->close();
+		// WORKER-05: the session is already closed inside handle_normal_request()
+		// (after the API executes, before inject_cookie reads session_id()/params,
+		// which remain valid after write-close). No second close() here.
 	}
 
 	/**
