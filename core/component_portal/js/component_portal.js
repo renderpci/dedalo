@@ -1260,6 +1260,10 @@ component_portal.prototype.sort_data = async function(options) {
 
 	const self = this
 
+	// FEJS-02: a manual drag-and-drop reorder diverges from the last column sort,
+	// so clear the (advisory) column-order indicator state.
+	self.column_order_state = null
+
 	// options
 		const value			= options.value
 		const source_key	= options.source_key

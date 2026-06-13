@@ -851,3 +851,14 @@
 			outline: var(--input_outline);
 		}
 	}
+
+/* UIUX-08: keyboard focus visibility.
+   --input_outline:none removes the outline at rest AND on focus (both themes),
+   which traps keyboard users. Restore a guaranteed-visible outline on
+   :focus-visible (keyboard focus only — not on mouse click). */
+	input[type='text'], input[type='number'], input[type='url'], input[type='password'], button[type='submit'], textarea, select, .contenteditable {
+		&:focus-visible {
+			outline: 2px solid var(--focus_outline_color, #4a90d9);
+			outline-offset: 1px;
+		}
+	}

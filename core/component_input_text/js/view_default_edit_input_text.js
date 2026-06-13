@@ -159,7 +159,9 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('keyup', function(e) {
 				e.stopPropagation()
 				// skip non-character keys (modifiers, arrows, etc.)
-				if (e.key.length > 1 && e.key !== 'Process' && e.key !== 'Backspace' && e.key !== 'Delete') {
+				// UIUX-10: e.key can be undefined for some synthetic/IME/autofill events;
+				// guard before reading .length so the handler doesn't throw a TypeError.
+				if ((e.key?.length ?? 0) > 1 && e.key !== 'Process' && e.key !== 'Backspace' && e.key !== 'Delete') {
 					return
 				}
 				clearTimeout(debounce_timer)

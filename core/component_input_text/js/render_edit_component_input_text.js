@@ -324,7 +324,8 @@ export const check_duplicates = async function(self, value) {
 	if (equal_value) {
 		ui.component.add_component_warning(
 			self.node,
-			`Warning. Duplicated value '${value}' in id: ${equal_value}`,
+			// UIUX-09: use the localized label instead of a hardcoded English string.
+			`${get_label.duplicated || 'Duplicated'}: '${value}' (id: ${equal_value})`,
 			'alert',
 			true, // clean buttons
 			function(e) {
