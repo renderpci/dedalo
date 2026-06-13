@@ -55,11 +55,14 @@ class json_handler {
 				. 'value: ' . print_r($value, true) .PHP_EOL
 				. 'json_last_error: '.json_last_error() .PHP_EOL
 				. 'json_last_error_msg: '.json_last_error_msg() .PHP_EOL
-				. json_handler::$_messages[json_last_error()] ?? 'Unknown error'
+				// DB-08: parenthesize the coalesce. Without parens, '.' binds tighter
+				// than '??', so the fallback applied to the whole (never-null) string
+				// and an unknown error code produced an undefined-index null instead.
+				. (json_handler::$_messages[json_last_error()] ?? 'Unknown error')
 				, logger::ERROR
 			);
 
-		throw new RuntimeException(static::$_messages[json_last_error()]);
+		throw new RuntimeException(static::$_messages[json_last_error()] ?? json_last_error_msg());
 	}//end encode
 
 

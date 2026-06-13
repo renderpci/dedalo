@@ -467,9 +467,15 @@ abstract class DBi {
 		}
 
 		// PDO
+			// DB-07: include the port in the DSN (it was accepted as a param but
+			// dropped), so this helper connects consistently with _getConnection on
+			// non-default ports.
+			$dsn = 'pgsql:host=' . $host
+				. (!empty($port) ? ';port=' . $port : '')
+				. ';dbname=' . $database . ';';
 			try {
 				$pdo_conn = new PDO(
-					'pgsql:host=' . $host . ';dbname=' . $database . ';', $user, $password, array(
+					$dsn, $user, $password, array(
 						PDO::ATTR_ERRMODE =>  PDO::ERRMODE_EXCEPTION,
 					)
 				);
