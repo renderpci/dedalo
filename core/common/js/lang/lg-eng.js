@@ -111,6 +111,7 @@
     "name_to_field": "Suffix indicates field",
     "name_to_record_id": "Prefix indicates id",
     "presets_de_busqueda": "Search presets",
+    "presets_de_exportacion": "Export presets",
     "search_options": "Search options",
     "fields": "Fields",
     "and": "and",

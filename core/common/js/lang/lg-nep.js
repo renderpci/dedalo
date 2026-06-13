@@ -111,6 +111,7 @@
     "name_to_field": "Sufijo indica campo",
     "name_to_record_id": "Prefijo indica ID",
     "presets_de_busqueda": "प्रिसेटहरू खोज्नुहोस्",
+    "presets_de_exportacion": "निर्यात प्रिसेटहरू",
     "search_options": "खोज विकल्प",
     "fields": "क्षेत्रहरू",
     "and": "र",

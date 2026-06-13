@@ -111,6 +111,7 @@
     "name_to_field": "Le suffixe indique le champ",
     "name_to_record_id": "Le préfixe indique l'ID",
     "presets_de_busqueda": "Paramètres de recherche",
+    "presets_de_exportacion": "Paramètres d'exportation",
     "search_options": "Options de recherche",
     "fields": "Champs",
     "and": "Y",
