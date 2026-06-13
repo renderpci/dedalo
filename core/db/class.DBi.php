@@ -83,7 +83,7 @@ abstract class DBi {
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 			// metrics
-			metrics::$db_connection_total_calls++;
+			metrics::inc('db_connection_total_calls');
 		}
 
 		$now = time();
@@ -94,7 +94,7 @@ abstract class DBi {
 			if ($now < self::$pg_conn_valid_until ||
 				pg_connection_status(self::$pg_conn_cache) === PGSQL_CONNECTION_OK) {
 				self::$pg_conn_valid_until = $now + self::$connection_check_interval;
-				metrics::$db_connection_total_calls_cached++;
+				metrics::inc('db_connection_total_calls_cached');
 				return self::$pg_conn_cache;
 			}
 			// Connection is dead, clear cache
@@ -151,7 +151,7 @@ abstract class DBi {
 		if (SHOW_DEBUG===true) {
 			$time = exec_time_unit($start_time, 'ms');
 			// metrics
-			metrics::$db_connection_total_time += $time;
+			metrics::add_time_ms('db_connection_total_time', $time);
 		}
 
 		// If caching is not requested, return the fresh connection immediately

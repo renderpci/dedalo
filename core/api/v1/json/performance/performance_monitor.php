@@ -206,21 +206,34 @@ class performance_monitor
     public function get_metrics(): object
     {
 
-        $total_time_ms = isset($this->end_time)
-            ? exec_time_unit($this->start_time, 'ms', 3)
-            : exec_time_unit($this->start_time, 'ms', 3);
+        $total_time_ms = exec_time_unit($this->start_time, 'ms', 3);
 
         $metrics = (object)[
             'total_time_ms' => $total_time_ms,
-            'start_memory_mb' => round($this->start_memory / 1024 / 1024, 2),
-            'end_memory_mb' => isset($this->end_memory) ? round($this->end_memory / 1024 / 1024, 2) : null,
-            'peak_memory_mb' => isset($this->peak_memory) ? round($this->peak_memory / 1024 / 1024, 2) : null,
-            'memory_delta_mb' => isset($this->end_memory) ? round(($this->end_memory - $this->start_memory) / 1024 / 1024, 2) : null,
             'is_slow' => $total_time_ms > (defined('PERFORMANCE_SLOW_THRESHOLD_MS') ? PERFORMANCE_SLOW_THRESHOLD_MS : 1000),
-            'checkpoint_count' => count($this->checkpoints),
-            'request' => $this->request_data,
-            'response' => $this->response_data
+            'checkpoint_count' => count($this->checkpoints)
         ];
+
+        // Memory profiling fields (gated by PERFORMANCE_LOG_MEMORY)
+        if (!defined('PERFORMANCE_LOG_MEMORY') || PERFORMANCE_LOG_MEMORY === true) {
+            $metrics->start_memory_mb  = round($this->start_memory / 1024 / 1024, 2);
+            $metrics->end_memory_mb    = isset($this->end_memory) ? round($this->end_memory / 1024 / 1024, 2) : null;
+            $metrics->peak_memory_mb   = isset($this->peak_memory) ? round($this->peak_memory / 1024 / 1024, 2) : null;
+            $metrics->memory_delta_mb  = isset($this->end_memory) ? round(($this->end_memory - $this->start_memory) / 1024 / 1024, 2) : null;
+        }
+
+        // Request/response metadata (gated by PERFORMANCE_LOG_METADATA)
+        if (!defined('PERFORMANCE_LOG_METADATA') || PERFORMANCE_LOG_METADATA === true) {
+            $metrics->request  = $this->request_data;
+            $metrics->response = $this->response_data;
+        }
+
+        // Subsystem breakdown bridge: include the per-subsystem metrics aggregated by the
+        // metrics class (search, ontology, matrix, db, tools, presets, request_config, …)
+        // so file logs / the dashboard get the same detail as the dd_manager debug log.
+        if (class_exists('metrics')) {
+            $metrics->subsystems = metrics::get_summary();
+        }
 
         // Add checkpoint details if enabled
         if (defined('PERFORMANCE_LOG_CHECKPOINTS') && PERFORMANCE_LOG_CHECKPOINTS === true) {

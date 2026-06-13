@@ -115,7 +115,7 @@ class security {
 			if(SHOW_DEBUG===true) {
 				$start_time=start_time();
 				// metrics
-				metrics::$security_permissions_total_calls++;
+				metrics::inc('security_permissions_total_calls');
 			}
 
 		// read_only case. For speed and accessibility, return fixed value 1 here
@@ -202,7 +202,7 @@ class security {
 			if(SHOW_DEBUG===true) {
 				// metrics
 				$total_time = exec_time_unit($start_time);
-				metrics::$security_permissions_total_time += $total_time;
+				metrics::add_time_ms('security_permissions_total_time', $total_time);
 			}
 
 
@@ -261,7 +261,7 @@ class security {
 					// debug
 					if(SHOW_DEBUG===true) {
 						// metrics
-						metrics::$security_permissions_table_time = exec_time_unit($start_time);
+						metrics::set('security_permissions_table_time', exec_time_unit($start_time));
 					}
 
 					return $permissions_table;
@@ -299,8 +299,8 @@ class security {
 		// debug
 			if(SHOW_DEBUG===true) {
 				// metrics
-				metrics::$security_permissions_table_time = exec_time_unit($start_time);
-				metrics::$security_permissions_table_count = count($permissions_table);
+				metrics::set('security_permissions_table_time', exec_time_unit($start_time));
+				metrics::set('security_permissions_table_count', count($permissions_table));
 			}
 
 

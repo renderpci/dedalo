@@ -24,7 +24,7 @@ trait count {
 			if(SHOW_DEBUG===true) {
 				$start_time=start_time();
 				// metrics
-				metrics::$search_total_calls++;
+				metrics::inc('search_total_calls');
 			}
 
 		// RECORDS_DATA BUILD TO OUTPUT
@@ -54,7 +54,8 @@ trait count {
 				$records_data->debug->generated_time['get_records_data'] = $exec_time;
 				$records_data->debug->strQuery = 'Total from children_recursive search: ' . $total;
 				$this->sqo->generated_time = $exec_time;
-				metrics::$search_total_time += $exec_time;
+				metrics::add_time_ms('search_total_time', $exec_time);
+				metrics::observe_max('search_max_time', $exec_time); // slowest single search
 				
 				// Add extra debug info
 				$records_data->debug->children_recursive_total = $total;
@@ -123,7 +124,8 @@ trait count {
 				dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $sql_query_debug;
 
 				// metrics
-				metrics::$search_total_time += $exec_time;
+				metrics::add_time_ms('search_total_time', $exec_time);
+				metrics::observe_max('search_max_time', $exec_time); // slowest single search
 			}
 
 		// Fix total value in the SQO

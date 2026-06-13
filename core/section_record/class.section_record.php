@@ -512,10 +512,15 @@ class section_record {
 
 		// debug
 		if(SHOW_DEBUG) {
+			// metrics (per-component JSONB persist path)
+			$save_ms = exec_time_unit($start_time,'ms');
+			metrics::inc('section_record_save_total_calls');
+			metrics::add_time_ms('section_record_save_total_time', $save_ms);
+			metrics::observe_max('section_record_save_max_time', $save_ms); // slowest single save
 			debug_log(__METHOD__
 				. ' Saved component data' . PHP_EOL
 				. ' result: ' . json_encode($result, JSON_PRETTY_PRINT) . PHP_EOL
-				. ' time: ' . exec_time_unit($start_time,'ms').' ms'
+				. ' time: ' . $save_ms .' ms'
 				, logger::WARNING
 			);
 		}

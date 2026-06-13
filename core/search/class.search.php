@@ -236,7 +236,7 @@ class search {
 			$start_time=start_time();
 
 			// metrics
-			metrics::$search_total_calls++;
+			metrics::inc('search_total_calls');
 		}
 
 		// children recursive dedicated path
@@ -302,7 +302,8 @@ class search {
 			}
 
 			// metrics
-			metrics::$search_total_time += $exec_time;
+			metrics::add_time_ms('search_total_time', $exec_time);
+			metrics::observe_max('search_max_time', $exec_time); // slowest single search
 		}
 
 		// json_columns to process based on mode

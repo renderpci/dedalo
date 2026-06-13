@@ -466,87 +466,31 @@ final class dd_manager {
 				}
 
 				// metrics
-					$metrics = [];
+				// Single source of truth: metrics::get_summary() builds the grouped per-subsystem
+				// breakdown (permissions, search, ontology, matrix, db, tools, presets,
+				// request_config, …) and the aggregate server time. @see metrics::get_summary()
+					$metrics	= [];
+					$summary	= metrics::get_summary();
 
-					// permissions stats
-						if(metrics::$security_permissions_total_calls > 0) {
-							$metrics[] = 'Permissions';
+					// permissions context line (user id)
+						if (isset($summary['groups']['Permissions'])) {
 							$metrics[] = '--> calculated permissions for user ' . logged_user_id();
-							$metrics[] = '--> calculated permissions_table ' . metrics::$security_permissions_table_time.' ms';
-							$metrics[] = '--> calculated security_permissions_table_count ' . metrics::$security_permissions_table_count;
-							$metrics[] = '--> security_permissions_total_time: ' . metrics::$security_permissions_total_time.' ms';
-							$metrics[] = '--> security_permissions_total_calls: '. metrics::$security_permissions_total_calls;
 						}
 
-					// get_tools stats
-						if(metrics::$get_tools_total_calls > 0) {
-							$metrics[] = 'Tools';
-							$metrics[] = '--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms';
-							$metrics[] = '--> get_tools_total_calls: '. metrics::$get_tools_total_calls;
-							$metrics[] = '--> get_tools_total_calls_cached: '. metrics::$get_tools_total_calls_cached;
-							$metrics[] = '--> get_tool_config_total_time: ' . metrics::$get_tool_config_total_time.' ms';
-							$metrics[] = '--> get_tool_config_total_calls: '. metrics::$get_tool_config_total_calls;
+					// per-group breakdown
+						foreach ($summary['groups'] as $label => $group_metrics) {
+							// db hostname context in the group label
+							if ($label === 'DB connection') {
+								$label .= ' (' . DEDALO_HOSTNAME_CONN . ')';
+							}
+							$metrics[] = $label;
+							foreach ($group_metrics as $name => $value) {
+								$unit = str_ends_with($name, '_time') ? ' ms' : '';
+								$metrics[] = '--> ' . $name . ': ' . $value . $unit;
+							}
 						}
 
-					// presets
-						if(metrics::$presets_total_calls > 0) {
-							$metrics[] = 'Presets (request config)';
-							$metrics[] = '--> presets_total_time: '  . metrics::$presets_total_time.' ms';
-							$metrics[] = '--> presets_total_calls: ' . metrics::$presets_total_calls;
-						}
-
-					// search stats
-						if(metrics::$search_total_calls > 0) {
-							$metrics[] = 'Search';
-							$metrics[] = '--> search_total_time: ' . metrics::$search_total_time.' ms';
-							$metrics[] = '--> search_total_calls: '. metrics::$search_total_calls;
-						}
-
-					// ontology stats
-						if(metrics::$ontology_total_calls > 0) {
-							$metrics[] = 'Ontology load';
-							$metrics[] = '--> ontology_total_time: ' . metrics::$ontology_total_time.' ms';
-							$metrics[] = '--> ontology_total_calls: '. metrics::$ontology_total_calls;
-							$metrics[] = '--> ontology_total_calls_cached: '. metrics::$ontology_total_calls_cached;
-							$metrics[] = '--> ontology_total_calls_different: '. (metrics::$ontology_total_calls - metrics::$ontology_total_calls_cached);
-						}
-
-					// matrix stats
-						if(metrics::$matrix_total_calls > 0) {
-							$metrics[] = 'matrix load';
-							$metrics[] = '--> matrix_total_time: ' . metrics::$matrix_total_time.' ms';
-							$metrics[] = '--> matrix_total_calls: '. metrics::$matrix_total_calls;
-						}
-
-					// exec_search stats (matrix_db_manager)
-						if(metrics::$exec_search_total_calls > 0) {
-							$metrics[] = 'Search exec_search (matrix_db_manager)';
-							$metrics[] = '--> exec_search_total_time: ' . metrics::$exec_search_total_time.' ms';
-							$metrics[] = '--> exec_search_total_calls: '. metrics::$exec_search_total_calls;
-						}
-
-					// exec_search stats (dd_ontology_db_manager)
-						if(metrics::$exec_dd_ontology_search_total_calls > 0) {
-							$metrics[] = 'Search exec_search (dd_ontology_db_manager)';
-							$metrics[] = '--> exec_dd_ontology_search_total_time: ' . metrics::$exec_dd_ontology_search_total_time.' ms';
-							$metrics[] = '--> exec_dd_ontology_search_total_calls: '. metrics::$exec_dd_ontology_search_total_calls;
-						}
-
-					// Context
-						if(metrics::$structure_context_total_calls > 0) {
-							$metrics[] = 'Context (all)';
-							$metrics[] = '--> structure_context_total_time: '  . metrics::$structure_context_total_time.' ms';
-							$metrics[] = '--> structure_context_total_calls: ' . metrics::$structure_context_total_calls;
-						}
-
-					// data
-						if(metrics::$data_total_calls > 0) {
-							$metrics[] = 'Data (components)';
-							$metrics[] = '--> data_total_time: '  . metrics::$data_total_time.' ms';
-							$metrics[] = '--> data_total_calls: ' . metrics::$data_total_calls;
-						}
-
-					// Section record cache
+					// Section record cache (statics live on other classes, appended here)
 						if(section_record::$section_record_total_calls > 0) {
 							$metrics[] = 'Section record cache';
 							$metrics[] = '--> section_record_total: ' . section_record::$section_record_total;
@@ -554,35 +498,18 @@ final class dd_manager {
 							$metrics[] = '--> section_record_data_total_calls: ' . section_record_data::$section_record_data_total_calls;
 						}
 
-					// section_save stats
-						if(metrics::$section_save_total_calls > 0) {
-							$metrics[] = 'section_save';
-							$metrics[] = '--> section_save_total_time: ' . metrics::$section_save_total_time.' ms';
-							$metrics[] = '--> section_save_total_calls: '. metrics::$section_save_total_calls;
-						}
-
-					// db connection
-						if(metrics::$db_connection_total_calls > 0) {
-							$metrics[] = 'DB connection (' . DEDALO_HOSTNAME_CONN . ')';
-							$metrics[] = '--> db_connection_total_time: ' . metrics::$db_connection_total_time.' ms';
-							$metrics[] = '--> db_connection_total_calls: '. metrics::$db_connection_total_calls;
-							$metrics[] = '--> db_connection_total_calls_cached: '. metrics::$db_connection_total_calls_cached;
+					// Instance caches hit/miss (object_cache; lightweight counters, no serialize cost)
+						$src_counters = section_record_instances_cache::getCounters();
+						$cmp_counters = component_instances_cache::getCounters();
+						if (($src_counters['hits'] + $src_counters['misses']) > 0 || ($cmp_counters['hits'] + $cmp_counters['misses']) > 0) {
+							$metrics[] = 'Instance caches (hit/miss)';
+							$metrics[] = '--> section_record_instances: ' . $src_counters['hits'] . ' hits / ' . $src_counters['misses'] . ' misses (' . $src_counters['hit_rate'] . ', size ' . $src_counters['size'] . ')';
+							$metrics[] = '--> component_instances: ' . $cmp_counters['hits'] . ' hits / ' . $cmp_counters['misses'] . ' misses (' . $cmp_counters['hit_rate'] . ', size ' . $cmp_counters['size'] . ')';
 						}
 
 					// summary add always
 						$metrics[] = 'Summary';
-						$metrics[] = 'time: ' . (
-							metrics::$security_permissions_total_time +
-							metrics::$exec_search_total_time +
-							metrics::$exec_dd_ontology_search_total_time +
-							metrics::$ontology_total_time +
-							metrics::$matrix_total_time +
-							metrics::$get_tools_total_time +
-							metrics::$section_save_total_time +
-							metrics::$db_connection_total_time +
-							metrics::$structure_context_total_time +
-							metrics::$presets_total_time
-						);
+						$metrics[] = 'time: ' . $summary['summary']['time_ms'] . ' ms';
 
 					debug_log(__METHOD__ . PHP_EOL
 						. implode(PHP_EOL, $metrics)

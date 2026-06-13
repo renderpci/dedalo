@@ -1039,6 +1039,27 @@ class matrix_db_manager {
 
 
 	/**
+	* SQL_METRIC_BASE
+	* Classify a SQL statement by its leading verb so metrics can track writes
+	* (INSERT/UPDATE/DELETE) separately from reads (SELECT/WITH/…). Without this,
+	* every mutation is counted as a search and a slow write is indistinguishable
+	* from a slow read.
+	* @param string $sql_query
+	* @return string 'exec_write' | 'exec_search'
+	*/
+	private static function sql_metric_base( string $sql_query ) : string {
+
+		$verb = strtoupper(substr(ltrim($sql_query), 0, 6));
+		if ($verb==='INSERT' || $verb==='UPDATE' || $verb==='DELETE') {
+			return 'exec_write';
+		}
+
+		return 'exec_search';
+	}//end sql_metric_base
+
+
+
+	/**
 	* EXEC_SEARCH
 	* Perform a SQL query in DB using pg_execute and parameters.
 	* @param string $sql_query
@@ -1055,8 +1076,9 @@ class matrix_db_manager {
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 
-			// metrics
-			metrics::$exec_search_total_calls++;
+			// metrics: classify reads vs writes (INSERT/UPDATE/DELETE)
+			$metric_base = self::sql_metric_base($sql_query);
+			metrics::inc($metric_base . '_total_calls');
 		}
 
 		// connection to DDBB
@@ -1127,7 +1149,11 @@ class matrix_db_manager {
 			}
 
 			// metrics
-			metrics::$exec_search_total_time += $total_time_ms;
+			metrics::add_time_ms($metric_base . '_total_time', $total_time_ms);
+			metrics::observe_max($metric_base . '_max_time', $total_time_ms); // tail latency
+			if ($total_time_ms > SLOW_QUERY_MS) {
+				metrics::inc($metric_base . '_slow_calls');
+			}
 
 			if($verbose===true) {
 				// query additional info
@@ -1198,8 +1224,9 @@ class matrix_db_manager {
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 
-			// metrics
-			metrics::$exec_search_total_calls++;
+			// metrics: classify reads vs writes (INSERT/UPDATE/DELETE)
+			$metric_base = self::sql_metric_base($sql_query);
+			metrics::inc($metric_base . '_total_calls');
 		}
 
 		// connection to DDBB
@@ -1239,7 +1266,11 @@ class matrix_db_manager {
 			}
 
 			// metrics
-			metrics::$exec_search_total_time += $total_time_ms;
+			metrics::add_time_ms($metric_base . '_total_time', $total_time_ms);
+			metrics::observe_max($metric_base . '_max_time', $total_time_ms); // tail latency
+			if ($total_time_ms > SLOW_QUERY_MS) {
+				metrics::inc($metric_base . '_slow_calls');
+			}
 
 			if($verbose===true) {
 				// query additional info

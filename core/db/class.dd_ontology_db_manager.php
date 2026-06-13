@@ -221,14 +221,14 @@ abstract class dd_ontology_db_manager {
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 			// metrics
-			metrics::$ontology_total_calls++;
+			metrics::inc('ontology_total_calls');
 		}
 
 		// cache check - only return cached successful results
 		if (isset(self::$load_cache[$tipo])) {
 			if(SHOW_DEBUG===true) {
 				// metrics
-				metrics::$ontology_total_calls_cached++;
+				metrics::inc('ontology_total_calls_cached');
 			}
 			return self::$load_cache[$tipo];
 		}
@@ -340,7 +340,7 @@ abstract class dd_ontology_db_manager {
 				);
 			}
 			// metrics
-			metrics::$ontology_total_time += $total_time_ms;
+			metrics::add_time_ms('ontology_total_time', $total_time_ms);
 		}
 
 
@@ -561,7 +561,7 @@ abstract class dd_ontology_db_manager {
 			$start_time = start_time();
 
 			// metrics
-			metrics::$exec_dd_ontology_search_total_calls++;
+			metrics::inc('exec_dd_ontology_search_total_calls');
 		}
 
 		$table = self::$table;
@@ -643,7 +643,11 @@ abstract class dd_ontology_db_manager {
 			$total_time_ms = exec_time_unit($start_time, 'ms');
 
 			// metrics
-			metrics::$exec_dd_ontology_search_total_time += $total_time_ms;
+			metrics::add_time_ms('exec_dd_ontology_search_total_time', $total_time_ms);
+			metrics::observe_max('exec_dd_ontology_search_max_time', $total_time_ms); // tail latency
+			if ($total_time_ms > SLOW_QUERY_MS) {
+				metrics::inc('exec_dd_ontology_search_slow_calls');
+			}
 
 			// query additional info
 			$bt = debug_backtrace();

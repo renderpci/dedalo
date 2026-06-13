@@ -289,7 +289,7 @@ class section extends common {
 
 		if(SHOW_DEBUG===true) {
 			// metrics
-				metrics::$section_save_total_calls++;
+				metrics::inc('section_save_total_calls');
 		}
 
 		// Options
@@ -432,7 +432,7 @@ class section extends common {
 				$total_time_ms = exec_time_unit($start_time, 'ms');
 
 				// metrics
-					metrics::$section_save_total_time += $total_time_ms;
+					metrics::add_time_ms('section_save_total_time', $total_time_ms);
 
 				debug_log(__METHOD__
 					." Create new section finish: ($tipo - $section_id) in time: ".$total_time_ms.' ms'

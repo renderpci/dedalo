@@ -2661,6 +2661,10 @@ abstract class component_common extends common {
 				if (isset(self::$list_of_values_data_cache[$uid])) {
 
 					if(SHOW_DEBUG===true) {
+						// metrics (datalist cache hit)
+						metrics::inc('datalist_total_calls');
+						metrics::inc('datalist_total_calls_cached');
+						metrics::add_metric('datalist_total_time', $start_time);
 						// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 						self::$list_of_values_data_cache[$uid]->debug	= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
 					}
@@ -2821,6 +2825,9 @@ abstract class component_common extends common {
 			$response->msg		= 'OK';
 			if(SHOW_DEBUG===true) {
 				// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				// metrics (datalist cache miss / fresh resolution)
+				metrics::inc('datalist_total_calls');
+				metrics::add_metric('datalist_total_time', $start_time);
 				$response->debug = 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
 			}
 

@@ -259,6 +259,7 @@ class metrics{
 	public static $presets_total_time;
 	public static $search_total_calls;
 	public static $search_total_time;
+	public static $search_max_time;
 	public static $ontology_total_calls;
 	public static $ontology_total_time;
 	public static $ontology_total_calls_cached;
@@ -266,17 +267,46 @@ class metrics{
 	public static $matrix_total_time;
 	public static $exec_search_total_calls;
 	public static $exec_search_total_time;
+	public static $exec_search_max_time;
+	public static $exec_search_slow_calls;
 	public static $exec_dd_ontology_search_total_calls;
 	public static $exec_dd_ontology_search_total_time;
+	public static $exec_dd_ontology_search_max_time;
+	public static $exec_dd_ontology_search_slow_calls;
+	public static $exec_write_total_time;
+	public static $exec_write_total_calls;
+	public static $exec_write_max_time;
+	public static $exec_write_slow_calls;
 	public static $structure_context_total_calls;
 	public static $structure_context_total_time;
 	public static $data_total_calls;
 	public static $data_total_time;
 	public static $section_save_total_calls;
 	public static $section_save_total_time;
+	public static $section_record_save_total_time;
+	public static $section_record_save_total_calls;
+	public static $section_record_save_max_time;
+	public static $datalist_total_time;
+	public static $datalist_total_calls;
+	public static $datalist_total_calls_cached;
 	public static $db_connection_total_calls;
 	public static $db_connection_total_time;
 	public static $db_connection_total_calls_cached;
+	public static $request_config_total_time;
+	public static $request_config_total_calls;
+	public static $request_config_total_calls_cached;
+	public static $request_config_source_rqo_total_calls;
+	public static $request_config_source_preset_total_calls;
+	public static $request_config_source_v6_total_calls;
+	public static $request_config_source_v5_total_calls;
+	public static $request_config_drops_total_calls;
+	public static function add_metric($name, $start_time=0){}
+	public static function inc($name, $by=1){}
+	public static function add_time_ms($name, $ms){}
+	public static function observe_max($name, $value){}
+	public static function set($name, $value){}
+	public static function get_summary(){}
+	public static function reset(){}
 };
 // PostgreSQL extension stubs for IDE static analysis (see .vscode/settings.json)
 if (!function_exists('pg_num_rows')) {

@@ -1436,7 +1436,7 @@ abstract class common {
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 			// metrics
-			metrics::$structure_context_total_calls++;
+			metrics::inc('structure_context_total_calls');
 		}
 
 		// short vars
@@ -1521,7 +1521,7 @@ abstract class common {
 			if(SHOW_DEBUG===true) {
 				$time = exec_time_unit($start_time,'ms');
 				// metrics
-				metrics::$structure_context_total_time += $time;
+				metrics::add_time_ms('structure_context_total_time', $time);
 				$debug = new stdClass();
 					$debug->exec_time = $time.' ms';
 				$dd_object->debug = $debug;
@@ -3767,7 +3767,7 @@ abstract class common {
 			if(SHOW_DEBUG===true) {
 				$start_time=start_time();
 				// metrics
-				metrics::$get_tools_total_calls++;
+				metrics::inc('get_tools_total_calls');
 			}
 
 		// already set
@@ -3796,7 +3796,7 @@ abstract class common {
 				if (isset(self::$cache_get_tools[$cache_key])) {
 					if(SHOW_DEBUG===true) {
 						// metrics
-						metrics::$get_tools_total_calls_cached++;
+						metrics::inc('get_tools_total_calls_cached');
 					}
 					$this->tools = self::$cache_get_tools[$cache_key];
 					return $this->tools;
@@ -3894,7 +3894,7 @@ abstract class common {
 			if(SHOW_DEBUG===true) {
 				// metrics
 				$total_time_ms = exec_time_unit($start_time, 'ms');
-				metrics::$get_tools_total_time += $total_time_ms;
+				metrics::add_time_ms('get_tools_total_time', $total_time_ms);
 			}
 
 		$this->tools = $tools;

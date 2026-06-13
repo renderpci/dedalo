@@ -407,6 +407,23 @@ class section_record_instances_cache {
     }
 
     /**
+     * Get lightweight cache counters (hits/misses/hit_rate/size).
+     * Unlike getStats(), this avoids the serialize()-based memory_usage cost, so it
+     * is safe to call on every request (e.g. from the dd_manager metrics block).
+     */
+    public static function getCounters(): array {
+        $total = self::$hits + self::$misses;
+        $hitRate = $total > 0 ? round((self::$hits / $total) * 100, 2) : 0;
+
+        return [
+            'size' => count(self::$instances),
+            'hits' => self::$hits,
+            'misses' => self::$misses,
+            'hit_rate' => $hitRate . '%'
+        ];
+    }
+
+    /**
      * Normalize cache key to string
      */
     protected static function normalizeKey(string|int|array $key): string {
@@ -541,6 +558,23 @@ class component_instances_cache {
             'misses' => self::$misses,
             'hit_rate' => $hitRate . '%',
             'memory_usage' => self::getMemoryUsage()
+        ];
+    }
+
+    /**
+     * Get lightweight cache counters (hits/misses/hit_rate/size).
+     * Unlike getStats(), this avoids the serialize()-based memory_usage cost, so it
+     * is safe to call on every request (e.g. from the dd_manager metrics block).
+     */
+    public static function getCounters(): array {
+        $total = self::$hits + self::$misses;
+        $hitRate = $total > 0 ? round((self::$hits / $total) * 100, 2) : 0;
+
+        return [
+            'size' => count(self::$instances),
+            'hits' => self::$hits,
+            'misses' => self::$misses,
+            'hit_rate' => $hitRate . '%'
         ];
     }
 
