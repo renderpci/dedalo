@@ -5,7 +5,7 @@
 
 // import
 	import { ui } from '../../common/js/ui.js'
-	import { is_filter_empty } from '../../search/js/search.js'
+	import { is_filter_empty } from '../../search/js/search_utils.js'
 	import { data_manager } from '../../common/js/data_manager.js'
 	import {
 		open_records_in_window,
