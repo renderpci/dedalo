@@ -27,6 +27,8 @@ config/bootstrap/dev/snapshots/
 !config/.env.dist
 !config/hosts.map.sample
 !config/profiles/
+config/profiles/*.env
+!config/profiles/*.env.sample
 # per-install / secret layers stay ignored:
 #   config/config.php config/config_db.php config/config_core.php
 #   config/state.json  and  /private/.env  (out of webroot)

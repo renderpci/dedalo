@@ -36,7 +36,10 @@
 	if ($dedalo_profile==='' && is_file($dedalo_private_dir . '/hosts.map')) {
 		$dedalo_host_map = dd_config::parse_env_file($dedalo_private_dir . '/hosts.map');
 		$dedalo_req_host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? '';
-		$dedalo_profile  = $dedalo_host_map[$dedalo_req_host] ?? ($dedalo_host_map['*'] ?? '');
+		$dedalo_req_host_noport = explode(':', $dedalo_req_host, 2)[0]; // 'mdcat:8080' -> 'mdcat'
+		$dedalo_profile  = $dedalo_host_map[$dedalo_req_host]
+			?? $dedalo_host_map[$dedalo_req_host_noport]
+			?? ($dedalo_host_map['*'] ?? '');
 	}
 
 	// layer order (lowest -> highest precedence):
