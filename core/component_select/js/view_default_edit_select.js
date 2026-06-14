@@ -305,6 +305,9 @@ const get_content_value = (i, current_value, self) => {
 					content_value.appendChild(dataframe_node)
 				}
 			})
+			.catch((error) => {
+				console.error('component_select: dataframe load failed', error)
+			})
 		}
 
 
