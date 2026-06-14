@@ -4,6 +4,45 @@
 
 
 
+/**
+* VIEW_GRAPH_SOLVED_SECTION
+* Client-side view renderer for sections displayed in 'solved' mode with a D3 force-directed
+* graph layout. This module is the sole rendering backend for `render_solved_section.solved()`
+* when the active view is 'graph' or 'default'.
+*
+* Layout overview:
+*   The rendered wrapper (`<section>`) has two child regions:
+*   - left_node  : a browseable list of records (source sections) that the user can drag onto
+*                  graph nodes to create new nexus connections.
+*   - right_node : the D3 SVG graph canvas, a caller-section label, search controls, and
+*                  the record content panel (content_data / node_body).
+*
+* Key interactions:
+*   - Clicking a graph node opens that entity's section record in a new browser window.
+*   - Clicking a graph link (path) opens the nexus section record in a new window.
+*   - Hovering a link temporarily annotates the connected node labels with role names.
+*   - Dragging a list record onto a graph node creates a new nexus section via `data_manager`
+*     and immediately refreshes the view.
+*   - Dragging a graph node repositions it; D3's force simulation updates all connected links.
+*
+* graph_map (read from `self.properties.graph_map` or the default):
+*   Maps semantic role names to ontology tipo identifiers so the renderer knows which
+*   component within a nexus section holds source/target/role/typology/connection data.
+*   Default: { source: 'nexus10', target: 'nexus11', source_role: 'nexus12',
+*              target_role: 'nexus13', typology: 'nexus7', connection: 'nexus29' }
+*
+* from_map (read from `self.properties.from_map` or the default):
+*   Identifies the ontology tipo of the name component in the calling (parent) section.
+*   Used to resolve a human-readable label for the caller section header.
+*   Default: { name: 'nexus48' }
+*
+* Exports:
+*   view_graph_solved_section  — namespace/constructor; static methods are the real API
+*   on_dragstart               — drag-start handler (also used by external callers)
+*/
+
+
+
 // imports
 	import {dd_request_idle_callback, when_in_dom} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -25,7 +64,10 @@
 
 /**
 * VIEW_GRAPH_SOLVED_SECTION
-* Manages the component's logic and appearance in client side
+* Namespace constructor for the graph-view renderer.
+* Always returns true; all rendering logic is attached as static properties.
+* Instantiation is not intended — use the static methods directly.
+* @returns {boolean} true
 */
 export const view_graph_solved_section = function() {
 
@@ -36,10 +78,29 @@ export const view_graph_solved_section = function() {
 
 /**
 * RENDER
-* Render node for use in mode
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Entry point called by render_solved_section.solved() to build the full DOM subtree
+* for a section displayed in solved/graph mode.
+*
+* Builds the two-panel layout:
+*   left  — browseable list of source-section records (drag sources)
+*   right — D3 force-graph SVG canvas, caller label, search-panel toggle, content_data
+*
+* `self.graph_map` and `self.from_map` are resolved here from section properties
+* (or defaults) and written onto `self` for downstream use.
+* `self.node_body` is set to `content_data` so that pagination can update the content
+* panel without re-rendering the whole view.
+*
+* When `render_level === 'content'`, only the content_data panel is returned
+* (used by pagination to refresh the graph without rebuilding the surrounding chrome).
+*
+* @param {Object} self    - Section instance; must have `.datum`, `.properties`,
+*                           `.section_tipo`, `.tipo`, `.mode`, `.view`, `.id`,
+*                           `.type`, `.model`, `.inspector`, `.label`,
+*                           and `.request_config_object`.
+* @param {Object} options - Render options
+* @param {string} [options.render_level='full'] - 'full' builds the entire layout;
+*                           'content' returns only the inner content_data element.
+* @returns {Promise<HTMLElement>} The `<section>` wrapper (full) or `<div.content_data>` (content).
 */
 view_graph_solved_section.render = async function(self, options) {
 
@@ -92,6 +153,9 @@ view_graph_solved_section.render = async function(self, options) {
 				parent			: right_node
 			})
 
+			// Resolve the caller label asynchronously so it does not block initial paint.
+			// URL vars `fst` (from section tipo) and `fsi` (from section id) are set by the
+			// page that opened this section view (e.g. via open_window with session_save:false).
 			dd_request_idle_callback(
 				async () => {
 					const url_vars = url_vars_to_object()
@@ -163,8 +227,18 @@ view_graph_solved_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Creates the content_data container div that hosts the D3 graph SVG.
+*
+* The D3 graph is built asynchronously — rendering is deferred via `when_in_dom` +
+* `dd_request_idle_callback` so the DOM element is attached before `getBoundingClientRect()`
+* is called (which requires a laid-out element to return non-zero dimensions).
+*
+* Side effect: appends the rendered SVG node as a child of the returned element
+* once it is in the DOM and the browser is idle.
+*
+* @param {Object} self - Section instance with `.graph_map` and `.datum` already populated.
+* @returns {Promise<HTMLElement>} The `<div.content_data>` element (initially empty;
+*                                 the SVG graph is appended once in the DOM).
 */
 const get_content_data = async function(self) {
 
@@ -173,6 +247,9 @@ const get_content_data = async function(self) {
 			  content_data.classList.add('content_data', self.mode)
 
 	// d3 data and graph
+	// Deferred to when_in_dom because get_graph calls getBoundingClientRect() on content_data
+	// to derive the SVG viewBox; that requires the element to have been inserted into the DOM
+	// and laid out. dd_request_idle_callback further defers to a browser idle slot.
 		when_in_dom(content_data, ()=>{
 
 			dd_request_idle_callback(
@@ -204,9 +281,43 @@ const get_content_data = async function(self) {
 
 /**
 * GET_GRAPH
-* Render d3 graph node
-* @param object options
-* @return HTMLElement svg.node
+* Builds the full D3 v7 force-directed SVG graph and wires all interaction handlers.
+*
+* Responsibilities:
+*   - Lazy-loads the D3 library via dynamic import (avoids bundling it at build time;
+*     a rollup-compiled local copy is used — see the commented import lines above).
+*   - Builds the SVG canvas with a viewBox that matches the container's rendered size
+*     and a resize listener to keep them in sync.
+*   - Defines an SVG `<marker id="arrow">` for directional path arrows.
+*   - Renders link paths with directional arrowheads that stop at the circle's edge
+*     (two-pass layout: first draw to center, then shorten to the circle boundary).
+*   - Renders nodes as `<g>` elements containing a `<circle>` and a `<text>` label
+*     with a white-outline shadow clone for readability.
+*   - Handles duplicate edges (same source→target or target→source pairs) by drawing
+*     them as arcs with varying radii (`r = 75 / link_number`) rather than overlapping
+*     straight lines. Self-loops (source === target) use a fixed `link_number = 3`.
+*   - Attaches drag-to-reposition behavior to nodes (D3 drag, updates fx/fy on the
+*     simulation subject).
+*   - Attaches HTML5 drag-and-drop handlers to the SVG and to each node circle so that
+*     list records from the left panel can be dropped to create new nexus sections.
+*   - Attaches click handlers: node opens the entity section; link opens the nexus section.
+*   - Attaches hover handlers to links: temporarily overlays role annotations on the
+*     connected node labels, then removes them on mouseleave.
+*
+* Arrow positioning algorithm (two-pass `.attr("d", …)` on the simulation tick):
+*   Pass 1 draws the path to the node center (d.target.x / d.target.y).
+*   Pass 2 reads the path's total length via `getTotalLength()`, subtracts the circle
+*   radius (10 px * 2) plus the arrow marker hypotenuse (√(3²+3²) ≈ 4.24 px), and
+*   calls `getPointAtLength(pl - r)` to find the adjusted endpoint. This keeps the
+*   arrowhead flush with the circle boundary regardless of path length or curvature.
+*
+* @param {Object} options
+* @param {Object} options.self         - Section instance (used for event handlers and data).
+* @param {HTMLElement} options.content_data - Container element; must be in the DOM
+*                                             so getBoundingClientRect() returns real dimensions.
+* @param {Object} options.data         - D3 graph data: `{ nodes: Array, links: Array }`
+*                                        as produced by get_d3_data().
+* @returns {Promise<SVGElement>} The D3-created SVG DOM node ready to be appended.
 */
 const get_graph = async function(options) {
 
@@ -582,12 +693,16 @@ const get_graph = async function(options) {
 				self.refresh()
 
 			}
-			/** set_component_data
-			* assign and save the data into the specific component (source, target component)
-			* @param tipo component tipo
-			* @param value data of the component
-			* @param section_tipo
-			* @param section_id
+			/**
+			* SET_COMPONENT_DATA
+			* Assigns and saves data into a specific component (source or target component
+			* of a newly-created nexus section).
+			* @param {Object} options
+			* @param {string} options.tipo          - Component tipo to update.
+			* @param {Object} options.value         - Locator `{ section_tipo, section_id }` of the entity to assign.
+			* @param {string} options.section_tipo  - Section tipo of the nexus record being updated.
+			* @param {number} options.section_id    - Section id of the nexus record being updated.
+			* @returns {Promise<void>}
 			*/
 			async function set_component_data(options){
 
@@ -657,16 +772,16 @@ const get_graph = async function(options) {
 		}
 
 		// Restore the target alpha so the simulation cools after dragging ends.
-		// Unfix the subject position now that it’s no longer being dragged.
+		// Unfix the subject position now that it's no longer being dragged.
 		function dragended(event) {
 			if (!event.active) simulation.alphaTarget(0);
 			event.subject.fx = null;
 			event.subject.fy = null;
 		}
 
-	// When this cell is re-run, stop the previous simulation. (This doesn’t
+	// When this cell is re-run, stop the previous simulation. (This doesn't
 	// really matter since the target alpha is zero and the simulation will
-	// stop naturally, but it’s a good practice.)
+	// stop naturally, but it's a good practice.)
 	// invalidation.then(() => simulation.stop());
 
 	// node behavior
@@ -774,9 +889,18 @@ const get_graph = async function(options) {
 
 /**
 * GET_BUTTONS
-* Render section buttons
-* @param object self
-* @return HTMLElement buttons
+* Builds the action buttons toolbar for the right panel.
+*
+* Currently renders a single "Search" toggle button that publishes the
+* `toggle_search_panel_<self.id>` event via event_manager. The search subsystem
+* (init in the section lifecycle) listens for this event to show/hide the
+* search_container panel.
+*
+* Returns a DocumentFragment so the caller can append it conditionally
+* without forcing unnecessary reflows.
+*
+* @param {Object} self - Section instance; `self.id` is used to scope the event.
+* @returns {DocumentFragment} Fragment containing a `<div.buttons_container>` with the search button.
 */
 const get_buttons = function(self) {
 
@@ -811,9 +935,26 @@ const get_buttons = function(self) {
 
 /**
 * RENDER_LEFT
-* Render left container and contents
-* @param object self
-* @return HTMLElement left_node
+* Builds the left panel: a `<select>` for choosing which source section type to browse,
+* and a scrollable list of records from that section type that the user can drag onto
+* graph nodes to create new nexus connections.
+*
+* The set of available section types is read from the source component's context
+* `request_config` → SQO `section_tipo[]` entries. Each entry carries a `.tipo` and
+* a `.label` used to populate the `<option>` elements.
+*
+* On initial render the first available section type is selected automatically.
+* Changing the `<select>` clears the section_container and renders a fresh record list
+* for the newly selected type.
+*
+* Source component context resolution:
+*   The source component tipo (from `self.graph_map.source`) is looked up in
+*   `self.datum.context`. If not found there (e.g. section has no records yet), a
+*   temporary component instance is created with `section_id: 1` (a fake sentinel
+*   value — the real data is not needed, only the static context object).
+*
+* @param {Object} self - Section instance with `.graph_map`, `.datum`, and `.section_tipo`.
+* @returns {Promise<HTMLElement>} The `<div.left_node>` element.
 */
 const render_left = async (self) => {
 
@@ -827,7 +968,9 @@ const render_left = async (self) => {
 		? self.datum.context.find(el => el.tipo === source)
 		: await get_source_component_context(source)
 
-
+	// Fallback: retrieve context from a temporary component instance when the datum
+	// carries no context entry for the source tipo (e.g. zero records in the section).
+	// section_id:1 is a sentinel — only the static context is needed, not real data.
 	async function get_source_component_context(source){
 
 		const component = await get_instance({
@@ -858,6 +1001,9 @@ const render_left = async (self) => {
 			parent			: section_selector_container
 		})
 
+		// Populate one <option> per section_tipo entry in the SQO.
+		// The section_tipo is stored as a DOM property (not an HTML attribute) on the option
+		// element so it survives selection without URL-encoding.
 		const section_tipo_length = sqo.section_tipo.length
 		for (let i = 0; i < section_tipo_length; i++) {
 			const section = sqo.section_tipo[i]
@@ -871,6 +1017,7 @@ const render_left = async (self) => {
 			section_option.section_tipo = section.tipo
 		}// end for
 
+		// Re-render the section list whenever the user picks a different section type.
 		section_select.addEventListener('change', async function(e) {
 
 			while (section_container.hasChildNodes()) {
@@ -909,9 +1056,32 @@ const render_left = async (self) => {
 
 /**
 * RENDER_SOURCE_SECTION
-* Render source section node
-* @param object options - Configuration options
-* @return HTMLElement section_node
+* Renders a scrollable record list for one source section type inside the left panel.
+*
+* Builds a scoped `request_config` from the parent source component's `rqo`, filtering
+* `ddo_map` entries to only those belonging to `section_tipo`, and overriding the SQO
+* to a simple paged query (limit 10, offset 0) restricted to that section type.
+* The `parent` field is added to each ddo_map entry so that the section list renderer
+* knows the owning section for relative component lookups.
+*
+* After building the section instance, `rebuild_columns_map` is injected onto it so that
+* the column layout produced by section_records includes the custom ID-edit and drag
+* columns defined in this module.
+*
+* The `view` is forced to 'base' before render so that the section uses its standard
+* list presentation rather than the graph view.
+*
+* `id_variant: 'into_graph_solved'` scopes the instance cache key so the left-panel
+* section instances do not collide with identically-typed sections elsewhere in the page.
+*
+* @param {Object} options
+* @param {string} options.section_tipo - Ontology tipo of the source section to list.
+* @param {Object} options.rqo          - The parent request query object (from the source
+*                                        component's request_config); provides the full
+*                                        ddo_map to filter from.
+* @returns {Promise<HTMLElement>} Rendered section node ready to be inserted into the DOM.
+* @throws {Error} If get_instance returns null, render returns null, or rebuild_columns_map
+*                 is somehow not a function (defensive guard — it is module-scoped here).
 */
 const render_source_section = async function(options) {
 
@@ -963,6 +1133,9 @@ const render_source_section = async function(options) {
 		await section.build(true)
 
 		// rebuild_columns_map
+		// (!) This guard is defensive — rebuild_columns_map is always defined as a const
+		// in this module's scope. The typeof check would only fail if the module were somehow
+		// partially evaluated or if the code were restructured to remove the function.
 		if (typeof rebuild_columns_map !== 'function') {
 			throw new Error('rebuild_columns_map function is not available');
 		}
@@ -990,9 +1163,21 @@ const render_source_section = async function(options) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
-* @param object self
-* @return {array} columns_map
+* Injected onto left-panel section instances to override their default column layout.
+* Called by section_records during render to obtain the final ordered columns list.
+*
+* Adds two custom columns around the base columns_map produced by the section:
+*   1. 'section_id' column (prepended) — renders an edit button that opens the record
+*      in a new window via view_graph_solved_section.render_column_id.
+*   2. 'drag' column (appended) — renders a draggable handle that the user can drag
+*      onto graph nodes; uses view_graph_solved_section.render_column_drag.
+*
+* Once computed, `self.fixed_columns_map = true` is set as a guard so that subsequent
+* calls from pagination or re-render return the cached result immediately.
+*
+* @param {Object} self - Section instance; must have `.columns_map` (Promise or Array)
+*                        and `.section_tipo`.
+* @returns {Promise<Array>} The augmented columns_map array with id + base + drag columns.
 */
 const rebuild_columns_map = async function(self) {
 
@@ -1047,9 +1232,20 @@ const rebuild_columns_map = async function(self) {
 
 /**
 * RENDER_COLUMN_ID
-* It is called by section_record to create the column id with custom options
-* @param object options
-* @return DocumentFragment
+* Column callback invoked by section_records to render the leftmost ID column cell.
+* Produces an edit-pencil button that opens the record in a new browser window.
+*
+* On window blur (user closes/leaves the edit window), triggers a `self.refresh()` with
+* `build_autoload: true` so the left-panel list picks up any changes made in the edit window.
+*
+* The `session_save: false` URL parameter prevents the opened window from overwriting
+* the current session's section navigation state.
+*
+* @param {Object} options
+* @param {Object} options.caller       - The section_record instance (`self` in caller scope).
+* @param {number} options.section_id   - ID of the record being rendered.
+* @param {string} options.section_tipo - Tipo of the record's section.
+* @returns {DocumentFragment} Fragment containing the edit button with a pen icon span.
 */
 view_graph_solved_section.render_column_id = function(options) {
 
@@ -1106,9 +1302,30 @@ view_graph_solved_section.render_column_id = function(options) {
 
 /**
 * RENDER_COLUMN_DRAG
-* It is called by section_record to create the column id with custom options
-* @param object options
-* @return DocumentFragment
+* Column callback invoked by section_records to render the drag-handle column cell.
+* Produces a draggable `<span>` that, when dragged over the SVG graph and dropped on a
+* node, triggers the `on_drop` handler in get_graph() to create a new nexus connection.
+*
+* The drag image is built from cloned render nodes of all component instances for this
+* record, giving the user a visual preview of what they are dragging.
+*
+* Data transferred: JSON-stringified `{ value: locator, paginated_key: number }` via
+* `dataTransfer.setData('text/plain', …)`, consumed by `on_dragstart` → `on_drop`.
+*
+* (!) `drag_node` is declared AFTER the `dragstart` listener closure that references it.
+*     This works because `drag_node` is captured by the closure via the variable binding,
+*     not its value at the time of addEventListener. By the time 'dragstart' fires,
+*     `drag_node` has been assigned. This is a forward-reference via closure — intentional
+*     but non-obvious.
+*
+* @param {Object} options
+* @param {Object} options.caller        - The section_record instance.
+* @param {number} options.section_id    - Record ID (not used directly but kept for API parity).
+* @param {string} options.section_tipo  - Section tipo (not used directly).
+* @param {Object} options.locator       - Locator object `{ section_tipo, section_id }` for this record.
+* @param {number} options.paginated_key - Position index of this record in the paginated data array.
+* @param {Array}  options.ar_instances  - Array of rendered component instances; each has a `.node` property.
+* @returns {DocumentFragment} Fragment with a move-icon span and a draggable container.
 */
 view_graph_solved_section.render_column_drag = function(options) {
 
@@ -1167,12 +1384,27 @@ view_graph_solved_section.render_column_drag = function(options) {
 
 /**
 * ON_DRAGSTART
-* Get element dataset path as event.dataTransfer from selected component
-* @param DOM node
-*	Its a section record (only in mosaic mode)
-* @param event
-* @param object options
-* @return bool true
+* Initializes an HTML5 drag operation for a list-record drag handle.
+* Serializes the record locator and its paginated position into
+* `dataTransfer` as JSON text so that the SVG drop handlers in get_graph()
+* can reconstruct the record identity without accessing any shared state.
+*
+* Sets the drag image to the `drag_node` visual preview built in render_column_drag.
+* Adds a 'dragging' CSS class to `node` for visual feedback during the drag.
+*
+* Called from the 'dragstart' listener in render_column_drag; also exported for
+* potential reuse by other view modules.
+*
+* @param {HTMLElement} node    - The drag-handle element that the 'dragstart' event fired on.
+* @param {DragEvent}   event   - The native browser dragstart event.
+* @param {Object}      options
+* @param {HTMLElement} options.section_record_node - The containing section record row element.
+* @param {number}      options.paginated_key       - 0-based index of the record in the paginated results.
+* @param {number}      options.total_records       - Total record count (available for drop handlers).
+* @param {Object}      options.value               - Locator: `{ section_tipo, section_id }`.
+* @param {Object}      options.caller              - The section instance that owns this record.
+* @param {HTMLElement} options.drag_node           - Element used as the custom drag image.
+* @returns {boolean} Always true.
 */
 export const on_dragstart = function(node, event, options) {
 	event.stopPropagation();

@@ -15,7 +15,40 @@
 
 /**
 * VIEW_BASE_LIST_SECTION
-* Manages the section's logic and appearance in client side
+* Minimal base view for rendering a section in list (grid) mode.
+*
+* This module provides the simplest complete implementation of a list view:
+* it handles the full render lifecycle without the extra features found in
+* view_default_list_section (font-size adaptation, show-all button, per-button
+* access control, etc.).
+*
+* Intended use cases:
+* - Lightweight list views where the richer view_default_list_section is not
+*   required.
+* - Base template that specialised views can import and override selectively
+*   by assigning their own render or get_content_data to the function object.
+*
+* Exported API:
+*   view_base_list_section          — namespace constructor (always returns true)
+*   view_base_list_section.render   — builds the full section DOM (async)
+*
+* Module-private helpers (not exported):
+*   get_content_data                — builds the scrollable row area
+*   get_buttons                     — builds the toolbar with the search toggle
+*
+* DOM structure produced by render():
+*   <section id="{self.id}" class="wrapper_section …">
+*     [div.buttons_container]          — optional; only when self.buttons && mode!=='tm'
+*     [div.search_container]           — optional; only when self.filter && mode!=='tm'
+*     [div.paginator_container]        — optional; only when self.paginator
+*     <div.list_body>
+*       <div.list_header>…</div>       — column labels; hidden when 0 records
+*       <div.content_data>
+*         <div.no_records>             — when ar_section_record.length === 0
+*         | <div>…</div>              — one section_record row per record
+*       </div>
+*     </div>
+*   </section>
 */
 export const view_base_list_section = function() {
 
@@ -27,14 +60,44 @@ export const view_base_list_section = function() {
 /**
 * RENDER
 * Render node for the current view
-* @param object self
-* @param object options
-* sample:
-* {
-*    "render_level": "full",
-*    "render_mode": "list"
-* }
-* @return HTMLElement wrapper
+*
+* Builds the complete list DOM for a section instance and returns its wrapper
+* element. The function supports two render levels:
+*
+* - 'full'    (default): builds the entire wrapper including buttons, search
+*   placeholder, paginator slot, column header, and content rows. All DOM
+*   pointers (wrapper.content_data, wrapper.list_body, wrapper.list_header_node)
+*   are set before the wrapper is returned.
+*
+* - 'content': rebuilds only the row area (content_data). Used by the
+*   pagination handler to swap rows without tearing down the entire wrapper.
+*   Before returning, the list header's 'hide' class is removed if new records
+*   arrived. Returns the content_data element directly, NOT the wrapper.
+*
+* columns_map resolution order:
+*   1. If self.rebuild_columns_map is defined (injected by the caller), it is
+*      called and the result is stored back on self.columns_map.
+*   2. Otherwise self.columns_map is used as-is.
+*
+* CSS grid template:
+*   ui.flat_column_items() flattens nested column entries into a list of CSS
+*   track-size strings (e.g. ['minmax(auto,4rem)', '1fr', '1fr']). These are
+*   joined and written to the .list_body grid-template-columns rule via
+*   set_element_css() using a scoped selector so that multiple sections on the
+*   same page do not clash.
+*
+* (!) ar_instances is populated lazily: if already present and non-empty it is
+*   reused, otherwise get_section_records() is called. This avoids a redundant
+*   server round-trip when render() is called again after a navigation event.
+*
+* @param {Object} self    - The section instance (type: section). Expected
+*                           properties: id, type, model, tipo, section_tipo,
+*                           mode, view, context, columns_map, ar_instances,
+*                           buttons, filter, paginator, rebuild_columns_map.
+* @param {Object} options - Render options.
+*   @param {string} [options.render_level='full'] - 'full' | 'content'
+* @returns {Promise<HTMLElement>} The section wrapper element (render_level
+*   'full') or the content_data div (render_level 'content').
 */
 view_base_list_section.render = async function(self, options) {
 
@@ -172,9 +235,24 @@ view_base_list_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @param array ar_section_record
-* @return HTMLElement content_data
+* Builds the scrollable row area for the list view.
+*
+* Iterates over ar_section_record in parallel (Promise.all) and appends each
+* rendered section_record node to a DocumentFragment in their original order.
+* When the array is empty, a localised "No records found" placeholder is
+* rendered instead via no_records_node().
+*
+* The returned div carries the CSS classes 'content_data', self.mode, and
+* self.type so that layout rules can target mode/type combinations without
+* relying on ancestor selectors.
+*
+* @param {Object} self              - The section instance (used for .mode and
+*                                     .type class names on content_data).
+* @param {Array}  ar_section_record - Array of initialised section_record
+*                                     instances. Each must expose a render()
+*                                     method that accepts { add_hilite_row }.
+* @returns {Promise<HTMLElement>} A div.content_data element containing all
+*   row nodes (or the no_records placeholder).
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -213,8 +291,27 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * GET_BUTTONS
-* @param object self
-* @return HTMLElement fragment
+* Builds the section toolbar fragment containing the search toggle button.
+*
+* Returns null when self.context.buttons is absent (no ontology buttons defined
+* for this section), allowing the caller to skip appending anything.
+*
+* Only one button is produced in this base view:
+*   - "Search" / filter toggle: publishes the event_manager channel
+*     'toggle_search_panel_{self.id}', which the search panel instance
+*     (initialised in section.js) subscribes to in order to show/hide itself.
+*
+* (!) 'mousedown' is intentionally used instead of 'click' so that the toolbar
+*   button receives the event before focus leaves the active component, which
+*   would otherwise fire component blur/save handlers first.
+*
+* Note: this is a stripped-down variant. view_default_list_section provides a
+* richer toolbar with show-all, delete, import, and per-user-role button guards.
+*
+* @param {Object} self - The section instance. Reads self.context.buttons and
+*                        self.id.
+* @returns {DocumentFragment|null} Fragment containing div.buttons_container
+*   (with the search button inside), or null if no buttons are configured.
 */
 const get_buttons = function(self) {
 
