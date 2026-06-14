@@ -1,13 +1,56 @@
 <?php declare(strict_types=1);
 /**
-* CLASS v6_to_v7
+* CLASS V6_TO_V7
+* One-shot migration helper that upgrades a Dédalo v6 PostgreSQL database to the v7 schema.
 *
+* Responsibilities:
+* - Transforms the legacy `jer_dd` ontology table into the v7 `dd_ontology` table,
+*   renaming columns and converting 'si'/'no' booleans.
+* - Migrates all data matrices from the v6 monolithic `datos` JSONB blob to the v7
+*   columnar layout (data, relation, string, date, iri, geo, number, media, misc, meta).
+* - Migrates the Time Machine table (`matrix_time_machine`) to the v7 schema,
+*   adding `user_id`, `bulk_process_temp`/`bulk_process_id`, and `data` columns.
+* - Cleans up obsolete indexes, constraints, and user-defined functions that are
+*   incompatible with the v7 schema.
+* - Migrates search preset records from the v6 filter format to the v7 id-bearing format.
 *
+* Usage flow (invoked by the upgrade controller, never directly by user code):
+*   1. pre_update()         — runs before logout; migrates ontology table.
+*   2. reformat_matrix_data()  — converts all data matrices row-by-row.
+*   3. reformat_matrix_time_machine_data() — converts TM rows.
+*   4. Various schema-cleanup helpers (delete_v6_db_indexes, rename_constraint,
+*      recreate_db_assets, drop_legacy_datos_column, etc.).
+*
+* All methods are static. The class is never instantiated.
+* Relates to: update (tables_rows_iterator, convert_table_data),
+*             db_tasks (create_extensions, rebuild_constraints, rebuild_indexes, …),
+*             matrix_db_manager (exec_sql, exec_search),
+*             tm_db_manager (delete), DBi, ontology_node.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class v6_to_v7 {
 
+	/**
+	* Name of the legacy v6 ontology table. Kept as a class property to allow
+	* subclass or test overrides without changing every SQL statement.
+	* @var string $table_jer_dd
+	*/
 	public static string $table_jer_dd = 'jer_dd';
+
+	/**
+	* Name of the v7 ontology table created from `jer_dd` during pre_update().
+	* The login process requires at least the `dd` TLD row to be present here.
+	* @var string $table_dd_ontology
+	*/
 	public static string $table_dd_ontology = 'dd_ontology';
+
+	/**
+	* Name of the Time Machine audit table migrated by recreate_tm_table() and
+	* reformat_matrix_time_machine_data().
+	* @var string $table_matrix_time_machine
+	*/
 	public static string $table_matrix_time_machine = 'matrix_time_machine';
 
 
@@ -328,7 +371,19 @@ class v6_to_v7 {
 
 	/**
 	* GET_VALUE_TYPE_MAP
-	* @return object
+	* Returns a map from component model name to the DEDALO_VALUE_TYPE_* constant that
+	* determines which v7 columnar slot (string, number, date, media, iri, geo, misc)
+	* the migrated data must be placed in.
+	*
+	* Only component models that require explicit type routing are listed here.
+	* Any model absent from this map defaults to DEDALO_VALUE_TYPE_MISC → 'misc' column.
+	* Relation-bearing components (component_relation_*) are handled separately and
+	* are intentionally omitted.
+	*
+	* Called once per batch in reformat_matrix_data() and reformat_matrix_time_machine_data()
+	* and cached locally; calling it per-row would be needlessly expensive.
+	*
+	* @return object Keyed by model name, values are DEDALO_VALUE_TYPE_* string constants.
 	*/
 	public static function get_value_type_map() : object {
 
@@ -356,11 +411,14 @@ class v6_to_v7 {
 
 	/**
 	* CONVERT_TABLE_DATA
-	* Alias of update::convert_table_data
-	* @param array $ar_tables
-	* @param string $action
-	* @return bool
-	* 	true
+	* Thin delegation wrapper that forwards to update::convert_table_data().
+	*
+	* Exists so that upgrade scripts can call v6_to_v7::convert_table_data() without
+	* depending on the update class name directly.
+	*
+	* @param array $ar_tables - list of matrix table names to operate on.
+	* @param string $action   - action identifier passed through to update::convert_table_data().
+	* @return bool - result of update::convert_table_data(); true on success.
 	*/
 	public static function convert_table_data(array $ar_tables, string $action) : bool {
 
@@ -403,9 +461,13 @@ class v6_to_v7 {
 		);
 
 		// Pre-fetch value type map once
+		// Avoids a redundant object construction for every row; the map is read-only
+		// and shared across the closure via 'use'.
 		$value_type_map = v6_to_v7::get_value_type_map();
 
 		// CLI process data initialization
+		// common::$pdata is a shared status object polled by the CLI shell to display
+		// live progress without flooding stdout with full log lines.
 		if ( running_in_cli()===true ) {
 			if (!isset(common::$pdata)) {
 				common::$pdata = new stdClass();
@@ -416,19 +478,27 @@ class v6_to_v7 {
 		}
 
 		$conn = DBi::_getConnection();
+		// Escaped-table cache
+		// pg_escape_identifier() is called once per unique table name and cached here
+		// because the iterator visits thousands of rows per table.
 		$ar_escaped_tables = [];
 
 		// iterate tables
+		// update::tables_rows_iterator streams rows in batches, calling the closure for
+		// each row. Using a streaming cursor avoids loading the entire table into memory.
 		update::tables_rows_iterator(
 			$ar_tables,
 			function($row, $table, $max) use ($response, $save, $conn, $value_type_map, &$ar_escaped_tables) {
 
 				$id				= $row['id'];
 				$section_tipo	= $row['section_tipo'] ?? null;
+				// Decode the legacy v6 monolithic blob; null when the column is absent or empty.
 				$datos			= (isset($row['datos'])) ? json_handler::decode($row['datos']) : null;
 				$section_id		= $row['section_id'] ?? '';
 
 				// CLI process data status
+				// Memory is sampled only every 5 000 rows to avoid calling memory_get_usage()
+				// on every iteration, which would add measurable overhead over millions of rows.
 				if ( running_in_cli()===true ) {
 					common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': ' . __METHOD__
 						. ' | table: '			. $table
@@ -445,6 +515,7 @@ class v6_to_v7 {
 				}
 
 				// datos properties
+				// Rows without a 'datos' value (already migrated or empty) are skipped silently.
 				if( isset($datos) ){
 
 					$processed_data = self::process_matrix_row_data(
@@ -456,6 +527,10 @@ class v6_to_v7 {
 						$response
 					);
 
+					// Build the ordered parameter array for the UPDATE statement.
+					// Empty column objects (no keys) are stored as SQL NULL to preserve
+					// storage efficiency; the v7 search layer treats NULL and empty-object
+					// identically when querying JSONB columns.
 					$data_cols = [
 						'data'            => $processed_data->data,
 						'relation'        => $processed_data->relation,
@@ -556,7 +631,10 @@ class v6_to_v7 {
 			'meta'            => new stdClass()
 		];
 
-		// Map of typology to target column property
+		// Column routing map
+		// Maps each DEDALO_VALUE_TYPE_* constant to the property name on $results
+		// that holds the corresponding v7 column data. Absent types fall through
+		// to 'misc' as the safe default.
 		$column_map = [
 			DEDALO_VALUE_TYPE_STRING => 'string',
 			DEDALO_VALUE_TYPE_NUMBER => 'number',
@@ -573,6 +651,10 @@ class v6_to_v7 {
 			switch ($datos_key) {
 				case 'relations_search':
 				case 'relations':
+					// Relation routing
+					// v6 stored both live relations ('relations') and the search-index
+					// copy ('relations_search') inside the same datos blob. v7 separates
+					// them into two distinct JSONB columns: 'relation' and 'relation_search'.
 					$target_key = ($datos_key === 'relations_search') ? 'relation_search' : 'relation';
 					foreach ($datos_value as $locator) {
 						if (!isset($locator->from_component_tipo)) {
@@ -583,6 +665,8 @@ class v6_to_v7 {
 						}
 
 						// Skip deprecated activity project link
+						// dd550 was a v5/v6 internal link from activities to their project; it has no
+						// equivalent in v7 and must be discarded during migration.
 						if ($locator->from_component_tipo === 'dd550') continue;
 
 						$comp_tipo = $locator->from_component_tipo;
@@ -592,7 +676,10 @@ class v6_to_v7 {
 						$results->{$target_key}->{$comp_tipo}[] = $locator;
 					}
 
-					// Update IDs and meta counts for relations
+					// Assign sequential ids and meta counters to live relations
+					// v7 requires every locator to carry a numeric 'id' field (1-based) and a
+					// corresponding meta entry {count: N} so the UI can manage additions/deletions
+					// without re-querying counts from the DB.
 					if ($datos_key === 'relations') {
 						foreach ($results->relation as $comp_tipo => $rel_data) {
 							foreach ($rel_data as $i => $locator) {
@@ -606,10 +693,14 @@ class v6_to_v7 {
 				case 'components':
 					foreach ($datos_value as $literal_tipo => $literal_value) {
 
-						// Get model
+						// Resolve component model
+						// ontology_node::get_model_by_tipo() returns the PHP class name without the
+						// 'class.' prefix, e.g. 'component_input_text', or null for unknown tipos.
 						$model = ontology_node::get_model_by_tipo($literal_tipo);
 
 						// Skip v5 legacy components columns
+						// component_filter and component_section_id were v5 internal pseudo-components
+						// that stored filter configuration inside the data matrix. v7 does not use them.
 						if (in_array($model, ['component_filter', 'component_section_id'])) continue;
 
 						// Get target column based on typology
@@ -759,14 +850,17 @@ class v6_to_v7 {
 					break;
 
 				case 'section_real_tipo':
-					break; // Extinct property
+					break; // Extinct property — was used in v5/v6 to track the canonical section type; dropped in v7.
 
 				case 'created_by_userID':
+					// Column rename: v6 used camelCase 'created_by_userID'; v7 uses snake_case.
 					$results->data->created_by_user_id = $datos_value;
 					break;
 
 				default:
-					// update other properties like section_tipo, created_date, etc.
+					// Scalar metadata pass-through
+					// Properties like section_tipo, created_date, modified_date, and any future
+					// top-level metadata are copied verbatim into the 'data' column object.
 					$results->data->{$datos_key} = $datos_value;
 					break;
 			}
@@ -808,10 +902,13 @@ class v6_to_v7 {
 			, logger::WARNING
 		);
 
-		// $_ENV['DEDALO_UPDATING'] avoid verbose logs during update
+		// Suppress verbose logs during bulk update
+		// When DEDALO_UPDATING is set, lower-level classes reduce their logging output
+		// to avoid flooding the log file with millions of routine debug entries.
 		$_ENV['DEDALO_UPDATING'] = true;
 
 		// Pre-fetch value type map once
+		// Shared across the closure via 'use'; see get_value_type_map() for the contract.
 		$value_type_map = v6_to_v7::get_value_type_map();
 
 		// CLI process data initialization
@@ -838,7 +935,10 @@ class v6_to_v7 {
 				$tipo			= $row['tipo'] ?? null;
 				$lang			= $row['lang'] ?? null;
 
-				// garbage old data
+				// Garbage old data guard
+				// 'termino' was a v5-era tipo value used for standalone thesaurus term records.
+				// These rows have no equivalent in v7 and must be hard-deleted rather than
+				// migrated; leaving them would cause type-resolution failures later.
 				if( empty($tipo) || $tipo === 'termino' ) {
 					// Delete it because it is old data garbage
 					$deleted = tm_db_manager::delete( (int)$id );
@@ -846,6 +946,9 @@ class v6_to_v7 {
 					return;
 				}
 
+				// Lang guard
+				// Every TM component row must carry a language code. A row without one cannot
+				// be routed to the correct columnar slot and is treated as corrupt.
 				if( empty($lang) ) {
 					$response->errors[] = "Ignored empty column lang for matrix_time_machine ID $id";
 					return;
@@ -878,12 +981,17 @@ class v6_to_v7 {
 					return;
 				}
 
-				// data types: section / component
+				// Determine record kind: section snapshot vs. component snapshot
+				// In the TM table the 'tipo' column holds either the section_tipo (for a
+				// whole-section snapshot) or a component tipo (for a single-component change).
+				// The two cases need completely different migration paths.
 				$is_section = $safe_tipo === $section_tipo;
 
 				if($is_section) {
 
-					// temporal fix invalid import
+					// Temporary fix for invalid import rows
+					// Some rows imported from external sources wrapped the section snapshot
+					// inside an extra data.0 envelope. Unwrap it before migrating.
 					$safe_data = $data;
 					if(isset($data->data->{'0'})) {
 						$safe_data = $data->data->{'0'};
@@ -917,8 +1025,11 @@ class v6_to_v7 {
 					return;
 				}
 
-				// Check if any transformation actually happened
-				// Use JSON comparison to avoid PHP type conversion errors (e.g., comparing object with scalar)
+				// Skip unchanged rows
+				// JSON round-trip comparison is used here instead of PHP strict equality
+				// because $data may contain stdClass objects that PHP would compare as
+				// equal even when their JSON representations differ (numeric vs. string keys,
+				// etc.). Serialising both sides ensures a consistent comparison.
 				if(json_handler::encode($migrated_data_response->result) === json_handler::encode($data)) {
 					return;
 				}
@@ -1019,7 +1130,10 @@ class v6_to_v7 {
 			return $response;
 		}
 
-		// relations. Do not touch them
+		// Guard: do not touch relation components
+		// Relation data (locators) in the TM table was already migrated by the
+		// relations branch of process_matrix_row_data(); re-processing it here would
+		// double-wrap the locators and corrupt the data.
 		$components_with_relations = component_relation_common::get_components_with_relations();
 		if(in_array($model, $components_with_relations)) {
 			$response->result = false;
@@ -1027,6 +1141,11 @@ class v6_to_v7 {
 		}
 
 		// Normalize non-array values (TinyMCE, etc.)
+		// In v6, TinyMCE-backed components stored their value as a plain string (the HTML)
+		// rather than an array. A few known garbage values must be silently discarded:
+		//   - hierarchy42 with lang 'lg-nolan': a Space-frame artifact with no real content.
+		//   - '<br data-mce-bogus="1">': a TinyMCE cursor placeholder, not real data.
+		//   - tipo 'dd23' (component_layout Layout templates): v5-era internal record, dropped in v7.
 		if (!is_array($raw_value)) {
 			// To delete values
 			if (($tipo === 'hierarchy42' && $lang === 'lg-nolan') || // component_text_area Space frame
@@ -1077,11 +1196,15 @@ class v6_to_v7 {
 					return $response;
 				}
 
-				// Create a normalized object with id and value
+				// Build normalized v7 datum object from a scalar value
 				if ($typology === DEDALO_VALUE_TYPE_IRI) {
 
-					// IRI case : use 'iri' instead of 'value' as property name
-
+					// IRI scalar normalization
+					// In v6, component_iri sometimes stored the full IRI as a plain string,
+					// optionally prefixed with a human-readable label (e.g. "My Label http://…").
+					// Split on 'http' to separate label from IRI, then reconstruct the v7 shape:
+					// { iri: "http://…", title: "My Label" }.
+					// Limit to 2 parts so that 'http' within the IRI path is not split again.
 					$parts = explode('http', (string)$value, 2);
 					$last_part = end($parts);
 
@@ -1090,13 +1213,17 @@ class v6_to_v7 {
 					];
 
 					// Add label when $parts > 1
+					// $parts[0] is the text before the first 'http'; only include it when non-empty.
 					if(count($parts) > 1 && !empty($parts[0])) {
 						$final_obj->title = $parts[0];
 					}
 
 				}else{
 
-					// Assume the value is a v6 data like string or array. Move to v7 object with 'value' property
+					// Non-IRI scalar: wrap in {value: …} for components that use that property shape.
+					// component_common::$components_using_value_property lists the models whose v7
+					// datum objects must carry a 'value' property (e.g. component_input_text,
+					// component_number, component_date when stored as a scalar — unusual but possible).
 					if(in_array($model, component_common::$components_using_value_property)) {
 
 						$final_obj = (object)[
@@ -1165,9 +1292,9 @@ class v6_to_v7 {
 	 * (!) It is used ONLY in TIME MACHINE transformations (matrix_time_machine table) to avoid change
 	 * the actual process_matrix_row_data method.
 	 *
-	 * @param string|null $section_tipo The section type (e.g., 'oh1').
+	 * @param string $section_tipo The section type (e.g., 'oh1').
 	 * @param mixed $section_id The section id (e.g., 123).
-	 * @param object $section_data The raw data to migrate.
+	 * @param array|object $section_data The raw data to migrate.
 	 * @return stdClass Response object with 'errors' (array) and 'result' (array|false).
 	 *                  'result' contains the migrated data array or false if no changes were needed.
 	 */
@@ -1204,6 +1331,10 @@ class v6_to_v7 {
 
 		$value_type_map = self::get_value_type_map();
 
+		// Unwrap optional array envelope
+		// Section snapshots in the TM table were historically stored as a single-element
+		// array [{ … section data … }]. Unwrap it so process_matrix_row_data() receives
+		// a plain object, which is what it expects.
 		$section_data_object = is_array($section_data) ? $section_data[0] : $section_data;
 
 		$result = self::process_matrix_row_data(
@@ -1278,6 +1409,9 @@ class v6_to_v7 {
 			$is_to_delete	= in_array($indexname, $unique_indexes_to_delete);
 
 			// Preserve unique indexes not in our explicit deletion list
+			// Non-listed unique indexes are assumed to belong to constraints created by
+			// the application itself (e.g. project-specific custom uniques) and must not
+			// be touched. Only the well-known v6 system indexes are dropped.
 			if ($is_unique && !$is_to_delete) {
 				continue;
 			}
@@ -1291,7 +1425,11 @@ class v6_to_v7 {
 				print_cli(common::$pdata);
 			}
 
-			// If explicitly listed, try to drop associated constraints first
+			// Drop associated constraints before dropping the index
+			// In PostgreSQL a UNIQUE or PRIMARY KEY constraint creates a backing index.
+			// Dropping the index directly while the constraint exists raises an error.
+			// We must drop the constraint first; the backing index is then dropped implicitly,
+			// but we issue a DROP INDEX CASCADE as well for any standalone indexes.
 			if ($is_to_delete) {
 				$constraints = DBi::get_constraint_name_from_index($indexname);
 				if (!empty($constraints)) {
@@ -1419,7 +1557,10 @@ class v6_to_v7 {
 				print_cli(common::$pdata);
 			}
 
-			// Drop old and new (to be sure)
+			// Drop both old and new constraint names before re-adding
+			// PostgreSQL does not support RENAME CONSTRAINT without first dropping the existing one.
+			// Dropping both old and new ensures the operation is idempotent: a previous partial run
+			// that added the new constraint will not cause a "constraint already exists" error.
 			$sql_query 	= "ALTER TABLE IF EXISTS {$escaped_table} DROP CONSTRAINT IF EXISTS {$old_constraint}, DROP CONSTRAINT IF EXISTS {$new_constraint};";
 			$result		= matrix_db_manager::exec_sql($sql_query);
 
@@ -1462,13 +1603,25 @@ class v6_to_v7 {
 
 
 	/**
-	 * RECREATE_DB_ASSETS
-	 *
-	 * Forces the re-building of PostgreSQL main assets: extensions, constraints, functions,
-	 * indexes, and generic maintenance tasks.
-	 *
-	 * @return object $response
-	 */
+	* RECREATE_DB_ASSETS
+	* Forces the full rebuild of all PostgreSQL schema assets after schema migration.
+	*
+	* Runs these db_tasks methods in sequence:
+	* 1. create_extensions   — ensures required PostgreSQL extensions (e.g. pgcrypto, unaccent) exist.
+	* 2. rebuild_constraints — re-adds foreign keys and check constraints that were dropped.
+	* 3. rebuild_functions   — re-creates all user-defined PL/pgSQL functions.
+	* 4. rebuild_indexes     — re-creates all JSONB and standard indexes for the v7 schema.
+	* 5. exec_maintenance    — runs VACUUM ANALYZE and REINDEX (long-running; should be last).
+	*
+	* Individual task failures are recorded in response->errors but do not abort the remaining
+	* tasks. The caller should inspect response->errors and response->success_count afterwards.
+	*
+	* @return object - stdClass with properties:
+	*   result  stdClass  — per-task result keyed by task name, plus success_count/total_count.
+	*   msg     string    — human-readable summary.
+	*   errors  array     — collected error messages from all tasks.
+	*   success int       — number of tasks that returned a truthy result.
+	*/
 	public static function recreate_db_assets() : object {
 
 		$response = new stdClass();
@@ -1638,9 +1791,19 @@ class v6_to_v7 {
 
 	/**
 	* FILL_NEW_COLUMNS_IN_TM
-	* Set the new columns `user_id`, `bulk_process_temp` and `data` with its previous column data
-	* New columns data is compatible with previous column data.
-	* @return bool
+	* Copies v6 Time Machine column values into their v7 equivalents.
+	*
+	* Column mapping performed by a single bulk UPDATE:
+	* - 'userID'          → 'user_id'         (camelCase to snake_case; content identical)
+	* - 'bulk_process_id' → 'bulk_process_temp' (temporarily renamed to avoid constraint
+	*                        conflicts; later renamed back by rename_tm_column_bulk_process())
+	* - 'dato'            → 'data'             (v6 used 'dato'; v7 uses 'data')
+	*
+	* Prerequisites: recreate_tm_table() must have been called first to add the target columns.
+	* Silently succeeds (returns true) when the source columns ('userID', 'bulk_process_id',
+	* 'dato') do not exist, which means the migration was already completed.
+	*
+	* @return bool - true on success or when source columns are absent, false on SQL error.
 	*/
 	public static function fill_new_columns_in_tm() : bool {
 
@@ -1698,10 +1861,22 @@ class v6_to_v7 {
 
 
 	/**
-	 * DELETE_TM_COLUMNS
-	 * Delete obsolete columns to matrix_time_machine table
-	 * @return bool
-	 */
+	* DELETE_TM_COLUMNS
+	* Drops obsolete v6 columns from `matrix_time_machine` after data has been migrated
+	* into the v7 equivalents by fill_new_columns_in_tm().
+	*
+	* Columns removed:
+	* - 'section_id_key' — v5-era composite key helper; superseded by (section_id, section_tipo).
+	* - 'state'          — section-level create/update/delete state; v7 tracks this differently.
+	* - 'userID'         — replaced by 'user_id' (see fill_new_columns_in_tm).
+	* - 'dato'           — replaced by 'data' (see fill_new_columns_in_tm).
+	*
+	* Uses IF EXISTS guards so the statement is idempotent and safe to re-run.
+	*
+	* (!) Must only be called AFTER fill_new_columns_in_tm() has successfully completed.
+	*
+	* @return bool - true on success, false on SQL error.
+	*/
 	public static function delete_tm_columns() : bool {
 
 		$sql_query = sanitize_query ('
@@ -1730,10 +1905,23 @@ class v6_to_v7 {
 
 
 	/**
-	 * RENAME_TM_COLUMN_BULK_PROCESS
-	 * Rename column "bulk_process_temp" to "bulk_process_id" in tm table (matrix_time_machine) in PostgreSQL.
-	 * @return bool
-	 */
+	* RENAME_TM_COLUMN_BULK_PROCESS
+	* Renames the staging column 'bulk_process_temp' back to its final name 'bulk_process_id'
+	* in the `matrix_time_machine` table.
+	*
+	* Why the two-step rename?
+	* fill_new_columns_in_tm() copies the old 'bulk_process_id' value into 'bulk_process_temp'
+	* instead of directly into 'bulk_process_id', because the source column and the target column
+	* share the same name and a single UPDATE cannot write to a column while reading from it in
+	* some PostgreSQL planner paths. Once the old 'bulk_process_id' column is dropped (by
+	* delete_tm_columns), this method finalizes the rename.
+	*
+	* Guards against:
+	* - 'bulk_process_temp' absent → already renamed or migration not run; returns true silently.
+	* - 'bulk_process_id' already present → rename would cause a name collision; returns true.
+	*
+	* @return bool - true on success or when rename is not needed, false on SQL error.
+	*/
 	public static function rename_tm_column_bulk_process() : bool {
 
 		// column 'bulk_process_temp' already exists check
@@ -1778,10 +1966,19 @@ class v6_to_v7 {
 
 
 	/**
-	 * CREATE_MATRIX_ACTIVITY_DIFFUSION_TABLE
-	 * Create matrix_activity_diffusion table
-	 * @return bool
-	 */
+	* CREATE_MATRIX_ACTIVITY_DIFFUSION_TABLE
+	* Creates the `matrix_activity_diffusion` table by executing the canonical SQL DDL file
+	* from the install/db directory.
+	*
+	* This table tracks diffusion (publishing) events per activity record and is part of the
+	* v7 diffusion subsystem. The DDL is read from disk rather than inlined here so that the
+	* install and upgrade paths share a single authoritative schema definition.
+	*
+	* (!) Requires DEDALO_ROOT_PATH to be defined and the file
+	*     install/db/matrix_activity_diffusion.sql to be present and readable.
+	*
+	* @return bool - true on success, false on SQL error.
+	*/
 	public static function create_matrix_activity_diffusion_table() : bool {
 
 		$sql_query = file_get_contents(DEDALO_ROOT_PATH . '/install/db/matrix_activity_diffusion.sql');
@@ -1856,11 +2053,19 @@ class v6_to_v7 {
 
 
 	/**
-	 * CHANGE_NOTIFICATIONS_TABLE_COLUMN_NAME
-	 *
-	 * Change notifications table column name from 'datos' to 'data'
-	 * @return bool
-	 */
+	* CHANGE_NOTIFICATIONS_TABLE_COLUMN_NAME
+	* Renames the 'datos' column to 'data' in the `matrix_notifications` table.
+	*
+	* This is the very first step of pre_update() because the update process itself
+	* writes PID and status entries into `matrix_notifications`, and the new v7 code
+	* expects the column to be named 'data'. Running this before any other migration
+	* step ensures compatibility even if later steps fail and need to be retried.
+	*
+	* Uses an anonymous DO block with an IF EXISTS guard so the statement is idempotent
+	* and safe to re-run after a partial failure.
+	*
+	* @return bool - true on success, false on SQL error.
+	*/
 	public static function change_notifications_table_column_name() : bool {
 
 		$sql_query = sanitize_query('
@@ -2042,14 +2247,21 @@ class v6_to_v7 {
 
 
 	/**
-	 * TRANSFORM_SEARCH_PRESET
-	 *
-	 * Transforms a single search preset from v6 to v7 format.
-	 * Adds id properties as required. Handles nested $and/$or operators recursively.
-	 *
-	 * @param array $preset_data The preset array to transform
-	 * @return array|null The transformed array, or null if no changes needed
-	 */
+	* TRANSFORM_SEARCH_PRESET
+	* Transforms a single search preset from v6 to v7 format by assigning the mandatory
+	* top-level 'id' property and recursively processing nested filter operators ($and/$or).
+	*
+	* In v7, every preset wrapper object must carry id:1 so the UI can address it by id.
+	* The method mutates the preset object in place (stdClass properties are passed by reference)
+	* and wraps the result back in a single-element array to match the storage shape.
+	*
+	* Returns null (no-op) when:
+	* - $preset_data is empty or its first element is not a stdClass.
+	* - The preset already has an 'id' property (idempotent guard).
+	*
+	* @param array $preset_data - single-element array containing the preset stdClass.
+	* @return array|null - the transformed single-element array, or null when no change is needed.
+	*/
 	private static function transform_search_preset(array $preset_data) : ?array {
 
 		if (empty($preset_data) || !isset($preset_data[0])) {
@@ -2081,14 +2293,16 @@ class v6_to_v7 {
 
 
 	/**
-	 * PROCESS_FILTER_OPERATORS
-	 *
-	 * Recursively processes $and and $or operators in filter objects.
-	 * Handles nested operators by calling itself recursively.
-	 *
-	 * @param object $filter_object The filter object containing $and/$or arrays
-	 * @return void
-	 */
+	* PROCESS_FILTER_OPERATORS
+	* Entry point for recursive filter-tree transformation.
+	* Dispatches '$and' and '$or' arrays from a filter value object to process_filter_items(),
+	* which handles the per-item id assignment and deeper recursion.
+	*
+	* Called by transform_search_preset() on the top-level 'value' object of a preset.
+	*
+	* @param object $filter_object - filter value object that may contain '$and' and/or '$or' arrays.
+	* @return void
+	*/
 	private static function process_filter_operators(object $filter_object) : void {
 
 		// Process $and array if exists
@@ -2105,14 +2319,18 @@ class v6_to_v7 {
 
 
 	/**
-	 * PROCESS_FILTER_ITEMS
-	 *
-	 * Processes an array of filter items, handling both regular filters with 'q' property
-	 * and nested operators ($and/$or) recursively.
-	 *
-	 * @param array $filter_items Array of filter item objects
-	 * @return void
-	 */
+	* PROCESS_FILTER_ITEMS
+	* Iterates over a flat array of filter item objects, assigning id:1 to each item's
+	* 'q' entries (when q is a non-null array), or removing the 'id' property (when q is null).
+	* Descends into nested '$and'/'$or' arrays by calling itself recursively.
+	*
+	* Mutation semantics: array items are modified by reference via 'foreach … &$filter_item';
+	* the caller's array is updated in place. The trailing 'unset($filter_item)' is required
+	* to break the reference after the loop (standard PHP safety pattern).
+	*
+	* @param array $filter_items - array of filter item stdClass objects (may be deeply nested).
+	* @return void
+	*/
 	private static function process_filter_items(array $filter_items) : void {
 
 		foreach ($filter_items as &$filter_item) {
