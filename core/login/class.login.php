@@ -478,7 +478,7 @@ class login extends common {
 					# STOP : PASSWORD IS WRONG
 					#
 					$activity_data['result']	= 'deny';
-					$activity_data['cause']	= 'wrong password';
+					$activity_data['cause']		= 'wrong password';
 					$activity_data['username']	= $username;
 
 					# LOGIN ACTIVITY REPORT
@@ -833,6 +833,7 @@ class login extends common {
 						sleep(2);
 					}
 					$response->msg = label::get_label('user_code_does_not_exist_error'); # "Error: User Code not exists! Please try again";
+					$response->errors[] = 'user_code_does_not_exist';
 					error_log("[Login_SAML] DEDALO LOGIN ERROR : Invalid saml code");
 					return $response;
 			}
