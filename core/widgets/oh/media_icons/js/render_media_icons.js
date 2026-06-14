@@ -104,11 +104,11 @@ const get_content_data_edit = async function(self) {
 
 			const data_item = value[i]
 
-			for (let i = 0; i < ipo_length; i++) {
+			for (let j = 0; j < ipo_length; j++) {
 
-				const current_ipo = ipo[i]
+				const current_ipo = ipo[j]
 
-				const value_element_node = get_value_element(i, data_item, self, current_ipo)
+				const value_element_node = get_value_element(j, data_item, self, current_ipo)
 				values_container.appendChild(value_element_node)
 			}
 		}
