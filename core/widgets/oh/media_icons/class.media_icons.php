@@ -122,24 +122,36 @@ class media_icons extends widget_common {
 
 		$data = [];
 
-		// every state has a IPO that come from structure (input, process , output).
+		// IPO iteration
+		// Each IPO entry (keyed by $key) defines one logical data band: its own
+		// input sources, path traversal, and output column list. In practice most
+		// ontology definitions carry exactly one IPO entry, but the loop supports
+		// multiple independent bands (e.g. primary media + supplementary clips).
 		foreach ($ipo as $key => $current_ipo) {
 
 			$input		= $current_ipo->input;
 			$output		= $current_ipo->output;
 			// get the paths to the source data
+			// $source defines which components to read locators FROM (e.g. oh25 on the current interview).
+			// $ar_paths defines the traversal FROM those locators INTO the target section (e.g. rsc167/rsc35).
 			$source		= $input->source;
 			$ar_paths	= $input->paths;
 
 			// check the type for input,
 			// if it's a filter will use search_query_object to find data
+			// Currently only 'component_data' is implemented; 'filter' (SQO-driven) is planned.
 			$type 		= $input->type;
 			switch($type) {
 
 				case 'component_data':
+					// locator collection
+					// Iterate every source descriptor and gather all locator objects stored in
+					// the named component (typically a component_relation_* such as oh25).
+					// Multiple source descriptors merge into a single flat $ar_locator list.
 					$ar_locator = [];
 					foreach ($source as $current_source) {
 
+						// resolve 'current' sentinels to the actual widget context values
 						$source_section_tipo = (!isset($current_source->section_tipo) || $current_source->section_tipo==='current')
 							? $section_tipo
 							: $current_source->section_tipo;
@@ -150,6 +162,8 @@ class media_icons extends widget_common {
 
 						$source_component_tipo = $current_source->component_tipo;
 
+						// (!) get_model_by_tipo resolves the PHP class name from the ontology
+						// cache; the second parameter (true) forces a cache-first lookup.
 						$source_model_name	= ontology_node::get_model_by_tipo($source_component_tipo,true);
 						$source_component	= component_common::get_instance(
 							$source_model_name,
@@ -175,7 +189,11 @@ class media_icons extends widget_common {
 			}//end switch($type)
 
 
-			// ar_path iterate
+			// ar_path iteration
+			// Each $path is an ordered array of traversal hops from the locator's section
+			// to the final target component. Only the LAST hop matters here: its
+			// component_tipo identifies which component to instantiate on the linked
+			// section (e.g. rsc35 — the AV file component on the rsc167 media record).
 			// sample ar_path:
 			// [
 			//     [
@@ -189,14 +207,22 @@ class media_icons extends widget_common {
 			foreach ($ar_paths as $path) {
 
 				// get the last path, this will be the component the call to the list (select / radio_button)
+				// For a single-hop path this is the only element; multi-hop paths are not
+				// traversed — the widget assumes direct links, not chained relations.
 				$last_path = end($path);
 
 				// get the section pointed by the last component_tipo
 				$component_tipo = $last_path->component_tipo;
 
-				// create items with the every locator
+				// per-locator row construction
+				// Each locator from $ar_locator corresponds to one linked audiovisual record.
+				// This loop instantiates the target component (e.g. the AV file component on
+				// the media record) so that helper methods such as get_duration() are available
+				// when the cached timecode value is missing.
 				foreach ($ar_locator as $locator) {
 
+					// DEDALO_DATA_NOLAN: use the language-neutral (non-language) slot because
+					// the AV component stores binary metadata, not translatable text.
 					$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
 					$component	= component_common::get_instance(
 						$model_name,
@@ -207,23 +233,36 @@ class media_icons extends widget_common {
 						$locator->section_tipo
 					);
 
+					// $object_value accumulates all column sub-objects for one media row.
+					// It is reset for every locator so columns from one row do not bleed
+					// into the next.
 					$object_value = new stdClass();
 
-					// output, use the IPO output for create the items to send to compoment_info and client side
+					// output column construction
+				// Walk every output descriptor from the IPO and produce one sub-object per column.
+				// The resulting sub-objects are merged into $object_value keyed by column id
+				// and are consumed by render_media_icons.js → get_value_element().
 					foreach ($output as $data_map) {
 
-						// begin with empty tool_context
+						// reset per-output-column state; only tool columns populate tool_context
 							$tool_context = null;
 
-						// value
+						// value resolution: branch on the column's semantic id
 							switch ($data_map->id) {
 
 								case 'id':
+									// Simple pass-through: the section_id of the linked media record
+									// is surfaced as the visible row identifier / link target.
 									$value = $locator->section_id;
 									break;
 
 								case 'tc':
-									// component that store duration (rsc54). Updated on file upload post-processing
+									// timecode (duration) resolution — two-tier strategy
+									// rsc54 is the component that stores the pre-computed HH:MM:SS
+									// duration string. It is normally populated by the post-upload
+									// processing pipeline in component_av::post_save_files().
+									// (!) 'rsc54' is hardcoded here; if the media ontology changes
+									// this tipo the widget must be updated accordingly.
 										$duration_tipo			= 'rsc54';
 										$duration_model_name	= ontology_node::get_model_by_tipo($duration_tipo,true);
 										$duration_component		= component_common::get_instance(
@@ -237,12 +276,16 @@ class media_icons extends widget_common {
 										$duration_data = $duration_component->get_data();
 										if (isset($duration_data[0]->value)) {
 
-											// use already stored value from DDBB
+											// fast path: the timecode is already cached in the DB
 											$tc	= $duration_data[0]->value;
 
 										}else{
 
-											// fallback to real calculation from av file
+											// slow path: probe the actual media file via the AV
+											// component's get_duration() method (reads file metadata)
+											// and persist the result so subsequent calls take the fast path.
+											// Saving is skipped in 'tm' (time-machine) mode to avoid
+											// writing back-dated data into the versioned record.
 											$duration_seconds	= $component->get_duration();
 											$tc					= OptimizeTC::seg2tc($duration_seconds);
 											if ($this->mode!=='tm') {
@@ -269,8 +312,18 @@ class media_icons extends widget_common {
 								case 'indexation':
 								case 'translation':
 								default:
+									// tool-link columns (transcription / indexation / translation)
+									// These columns carry no display value of their own; instead they
+									// supply a tool_context object that the JS renderer uses to launch
+									// the appropriate Dédalo tool when the user clicks the icon.
+
 									$value = null;
-									//get the section_tool of the $data_map
+
+									// resolve the section_tool node configured in the ontology
+									// for this column (e.g. rsc190 → tool_transcription section).
+									// The section_tool node's properties hold a tool_config object
+									// that contains the ddo_map specifying which components the
+									// tool should load for the given media record.
 									$section_tool_tipo	= $data_map->process_section_tipo;
 									$section_tool		= ontology_node::get_instance($section_tool_tipo);
 									// and get the tool_name, it need to be the same that the tool_name in the section_tool (see ontology)
@@ -280,7 +333,14 @@ class media_icons extends widget_common {
 									$tool_config		= $properties->tool_config->{$tool_name} ?? false;
 
 									// build the tool_context
+									// tool_context is a dd_object built by tool_common::create_tool_simple_context()
+									// containing name, label, CSS URL, icon, and the resolved ddo_map.
+									// The ddo_map 'self' sentinel in section_id is expanded here to the
+									// actual section_id of the linked media record so the tool opens
+									// the correct record directly rather than requiring the user to navigate.
 										if ($tool_name) {
+											// get_user_tools returns only tools the current user has access to;
+											// if this tool is not in the list the icon will be absent/disabled.
 											$user_tools = tool_common::get_user_tools( logged_user_id() );
 											$tool_info = array_find($user_tools, function($el) use($tool_name) {
 												return $el->name===$tool_name;
@@ -291,6 +351,8 @@ class media_icons extends widget_common {
 													, logger::ERROR
 												);
 											}else{
+												// expand ddo_map 'self' sentinels to the concrete section_id
+												// of the current media locator before building the context.
 												if (is_object($tool_config) && isset($tool_config->ddo_map)) {
 													$ar_tool_ddo_map = $tool_config->ddo_map;
 													for ($i=0; $i < sizeof($ar_tool_ddo_map); $i++) {
@@ -306,7 +368,12 @@ class media_icons extends widget_common {
 									break;
 							}//end switch ($data_map->id)
 
-						// get the current row id and the items into the $result
+						// assemble column sub-object
+						// Each column becomes a named property on $object_value.
+						// The 'widget' and 'key' fields let the client identify the
+						// originating widget and IPO band without extra context.
+						// 'value' is omitted for tool columns; 'tool_context' is omitted
+						// for value columns — isset() guards handle both cases cleanly.
 							$current_id = $data_map->id;
 
 							$current_data = new stdClass();
@@ -326,7 +393,9 @@ class media_icons extends widget_common {
 							// $data[] = $current_data;
 					}//end foreach ($output as $data_map)
 
-					// set the final data to the widget
+					// append completed row object (one per locator / media record)
+					// $object_value holds all column sub-objects keyed by column id (id, tc,
+					// transcription, indexation, translation) plus the top-level 'widget' label.
 					$data[] = $object_value;
 				}
 			}//end foreach ($ar_paths as $path)
