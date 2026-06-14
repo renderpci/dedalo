@@ -2459,14 +2459,16 @@ class component_media_common extends component_common {
 	* SANITIZE_QUALITY
 	* SEC-065 / MEDIA-04 / MEDIA-05: $quality is interpolated into filesystem paths
 	* and URLs. Restrict it to a strict identifier grammar (alphanumeric, underscore,
-	* hyphen, dot) — note '<' is NOT allowed — and reject pure-dot tokens ('.'/'..')
-	* so it cannot escape the media root. Falls back to the original quality on mismatch.
+	* hyphen, dot), allowing a single leading '<' or '>' so that the legitimate size
+	* qualities '<1MB' and '>100MB' pass (see component_image::convert_quality_to_megabytes),
+	* and reject pure-dot tokens ('.'/'..') so it cannot escape the media root.
+	* Falls back to the original quality on mismatch.
 	* @param string $quality
 	* @return string
 	*/
 	private function sanitize_quality(string $quality) : string {
 
-		if ($quality==='.' || $quality==='..' || preg_match('/^[A-Za-z0-9_\-\.]+$/', $quality) !== 1) {
+		if ($quality==='.' || $quality==='..' || preg_match('/^[<>]?[A-Za-z0-9_\-\.]+$/', $quality) !== 1) {
 			debug_log(__METHOD__
 				. ' SEC-065/MEDIA-04: rejecting unsafe quality: ' . to_string($quality)
 				, logger::ERROR
