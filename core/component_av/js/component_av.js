@@ -60,7 +60,24 @@ export const component_av = function(){
 	component_av.prototype.build				= component_common.prototype.build
 	component_av.prototype.render				= common.prototype.render
 	component_av.prototype.refresh				= common.prototype.refresh
-	component_av.prototype.destroy				= common.prototype.destroy
+	// destroy: release the <video> element before delegating to the generic
+	// destructor. A retained, loaded/playing media element keeps its decoded
+	// buffers and network connection alive (media memory leak) and keeps firing
+	// timeupdate into a destroyed instance.
+	component_av.prototype.destroy				= function() {
+		const self = this
+		if (self.video) {
+			try {
+				self.video.pause()
+				self.video.removeAttribute('src')
+				self.video.load()
+			} catch (e) {
+				console.warn('component_av destroy: error releasing video', e)
+			}
+			self.video = null
+		}
+		return common.prototype.destroy.call(self)
+	}
 
 	// change data
 	component_av.prototype.save					= component_common.prototype.save
