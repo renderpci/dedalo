@@ -1,10 +1,16 @@
 <?php declare(strict_types=1);
 /**
 * UPDATES CONTROL
-* Definition of the update process
+* Registry of all version-to-version migration steps for the Dédalo data layer.
 *
-* Every update is a object with his own definition
-* the update key is unique combination of the version numbers
+* This file is included (not required_once) by update::get_updates() each time it
+* runs, so it must remain side-effect-free beyond populating $updates.
+*
+* Each migration is keyed by an integer formed by concatenating version digits
+* (e.g. 700 = v7.0.0, 701 = v7.0.1). The key is unique and controls iteration
+* order inside update::get_updates().
+*
+* Every update entry is a stdClass with this shape:
 *
 * {
 * 	# UPDATE TO
@@ -29,6 +35,23 @@
 * 	 	components_update	: array
 * }
 *
+* Execution pipeline (orchestrated by update::update_version()):
+*   1. run_pre_scripts  — PHP class methods to run before any SQL (e.g. schema pre-checks)
+*   2. SQL_update       — raw PostgreSQL statements executed in sequence
+*   3. components_update — iterate every section record and update component data format
+*   4. run_scripts      — PHP class methods (data migrations, index rebuilds, cleanup)
+*
+* Script objects (run_pre_scripts / run_scripts entries) share this shape:
+*   {
+*     info          : string  - human-readable description for the update log
+*     script_class  : string  - fully-qualified PHP class (must be require_once'd above)
+*     script_method : string  - static method name on that class
+*     stop_on_error : bool    - true = abort the whole update pipeline on failure
+*     script_vars   : array   - positional arguments forwarded to the method
+*   }
+*
+* @package Dédalo
+* @subpackage Core
 */
 global $updates;
 $updates = new stdClass();
@@ -56,6 +79,8 @@ $updates->$v = new stdClass();
 		require_once dirname(dirname(__FILE__)) .'/upgrade/class.v6_to_v7.php';
 
 	// Pre update, changing jer_dd data in PostgreSQL with new format and set `dd_ontology` table.
+	// (!) Must run before any SQL_update: the pre_update step converts the ontology source
+	//     table so that DEDALO_* constants referenced in SQL_update are already resolvable.
 		$updates->$v->run_pre_scripts[] = (object)[
 			'info'			=> 'Set a new table `dd_ontology` with old `jer_dd` in PostgreSQL with new v7 schema',
 			'script_class'	=> 'v6_to_v7',
@@ -69,6 +94,8 @@ $updates->$v = new stdClass();
 
 		// Rename matrix_activity column date to timestamp.
 		// The date column will be used to store the component_date data.
+		// (!) The rename is guarded by an IF EXISTS check so the statement is idempotent
+		//     and safe to re-run on installations that already renamed the column.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			DO $$
 			BEGIN
@@ -86,6 +113,7 @@ $updates->$v = new stdClass();
 		');
 
 		// Rename matrix_notifications column datos to data
+		// Normalises the Spanish column name ('datos') to the v7 English convention ('data').
 		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query('
 			DO $$
 			BEGIN
@@ -102,6 +130,10 @@ $updates->$v = new stdClass();
 
 		// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
+		// $ar_tables holds every matrix table that stores component data in v7's
+		// typed-column layout (data, relation, string, date, iri, geo, number, media,
+		// misc, relation_search, meta). This list is reused later by run_scripts that
+		// process or clean legacy columns.
 		$ar_tables = [
 			'matrix',
 			'matrix_activities',
@@ -129,6 +161,10 @@ $updates->$v = new stdClass();
 		];
 
 		// Create the new table structure, with new columns for data type.
+		// Each ADD COLUMN … IF NOT EXISTS is idempotent: re-running the update
+		// on a partially-migrated database will not duplicate columns.
+		// The COMMENT ON statements are collected separately so they can be sent as
+		// a single batch after all ALTER TABLE statements complete.
 		$columns_sentences = [];
 		$comments_sentences = [];
 		foreach ($ar_tables as $current_table) {
@@ -168,6 +204,8 @@ $updates->$v = new stdClass();
 		$updates->$v->SQL_update[] = PHP_EOL . sanitize_query('ANALYZE ' . implode(', ', array_map(fn($t) => '"' . $t . '"', $ar_tables)) . ';');
 
 		// Rename the "datos" column "data" in the other tables.
+		// $other_tables covers tables whose schema differs from the main typed-column
+		// layout above; they store a single general-purpose JSON column renamed here.
 		$columns_sentences = [];
 		$comments_sentences = [];
 		// other kind of tables
@@ -199,6 +237,8 @@ $updates->$v = new stdClass();
 		// Create new temporary table with key -> value
 		// Use to storage temporary sections (sections without section_id or section_id=0)
 		// key string as section_tipo_user_id or any other string combination as section_tipo_section_id_user_id
+		// UNLOGGED: data is not written to the WAL, so it survives a clean shutdown
+		// but is lost on a crash. Acceptable for transient draft sections.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			CREATE UNLOGGED TABLE IF NOT EXISTS temp (
 				key text PRIMARY KEY,
@@ -207,11 +247,16 @@ $updates->$v = new stdClass();
 		');
 
 		// Set the matrix_notifications as "UNLOGGED" to optimize write operations
+		// Notification rows are ephemeral; crash-safety is not required, and removing
+		// WAL overhead significantly reduces write latency on busy installations.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			ALTER TABLE matrix_notifications SET UNLOGGED;
 		');
 
 		// create index for matrix_langs hierarchy41 value (lang code as 'eng')
+		// The language code is buried inside the string column at key 'hierarchy41', first
+		// element, 'value' property. A functional index on this JSON path makes language
+		// look-ups by code (e.g. 'eng', 'spa') fast without a full table scan.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			DROP INDEX IF EXISTS "idx_matrix_langs_hierarchy41_value";
 			CREATE INDEX IF NOT EXISTS idx_matrix_langs_hierarchy41_value ON "matrix_langs" (
@@ -221,6 +266,8 @@ $updates->$v = new stdClass();
 		');
 
 		// create index for matrix_time_machine. The default search is performed using the following: section_id, section_tipo, tipo, lang, timestamp DESC.
+		// Composite index matches the WHERE + ORDER BY clause used by the time-machine
+		// diff viewer, keeping point-in-time lookups O(log n) even on large audit tables.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			DROP INDEX IF EXISTS "idx_matrix_time_machine_search_default";
 			CREATE INDEX IF NOT EXISTS idx_matrix_time_machine_search_default ON "matrix_time_machine" (
@@ -229,6 +276,10 @@ $updates->$v = new stdClass();
 			ANALYZE matrix_time_machine;
 		');
 
+		// matrix_counter: replace implicit index with an explicit UNIQUE constraint on 'tipo'.
+		// A UNIQUE constraint provides the same index performance while also enforcing
+		// data integrity. The old btree index (matrix_counter_tipo_idx) is dropped first
+		// to avoid duplicate coverage. The BEGIN/COMMIT makes both DDL steps atomic.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			DROP INDEX IF EXISTS "matrix_counter_tipo_idx";
 
@@ -245,6 +296,8 @@ $updates->$v = new stdClass();
 			COMMIT;
 		');
 
+		// matrix_counter_dd: same UNIQUE-constraint promotion as matrix_counter above,
+		// applied to the companion Dédalo-internal counter table.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			DROP INDEX IF EXISTS "matrix_counter_dd_tipo_idx";
 
@@ -261,6 +314,12 @@ $updates->$v = new stdClass();
 			COMMIT;
 		');
 
+		// matrix_counter: rename 'dato' column to 'value' and rebuild the table.
+		// The v6 schema used the Spanish 'dato'; v7 standardises on 'value'.
+		// Because PostgreSQL cannot alter a column that has data dependencies (primary
+		// key, check constraints), the safest migration path is:
+		//   rename original → temp → create clean table → copy data → drop temp.
+		// The IF EXISTS guard makes the block idempotent for already-migrated databases.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			DO $$
 			BEGIN
@@ -290,6 +349,8 @@ $updates->$v = new stdClass();
 			END $$;
 		');
 
+		// matrix_counter_dd: same rename-rebuild pattern as matrix_counter above,
+		// applied to the Dédalo-ontology counter table.
 		$updates->$v->SQL_update[] = PHP_EOL.sanitize_query('
 			DO $$
 			BEGIN
@@ -335,6 +396,10 @@ $updates->$v = new stdClass();
 			// ];
 
 		// Updates all data in PostgreSQL with the new v7 format
+		// stop_on_error=false: individual row failures are logged but do not
+		// halt the migration; the update pipeline continues to subsequent steps.
+		// The save argument (true) causes v6_to_v7::reformat_matrix_data() to
+		// persist every reformatted row immediately.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'UPDATE all data in PostgreSQL with new v7 format (SAVE DATA IGNORING FOUND ERRORS)',
 				'script_class'	=> 'v6_to_v7',
@@ -347,6 +412,8 @@ $updates->$v = new stdClass();
 			];
 
 		// Delete all indexes in PostgreSQL
+		// Removes v6-era indexes whose names, columns, or expressions no longer
+		// match the v7 schema. Indexes are recreated in the recreate_db_assets step.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Delete all INDEXES and functions in PostgreSQL. Cleaning unused indexes',
 				'script_class'	=> 'v6_to_v7',
@@ -357,6 +424,8 @@ $updates->$v = new stdClass();
 			];
 
 		// Rename the constraints in PostgreSQL
+		// Unifies constraint names to the v7 naming convention so that subsequent
+		// DROP CONSTRAINT IF EXISTS statements are predictable across all installations.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Rename all CONSTRAINTS in PostgreSQL. Unification of the constraints',
 				'script_class'	=> 'v6_to_v7',
@@ -368,6 +437,9 @@ $updates->$v = new stdClass();
 
 		// TM : Recreate the tm table in PostgreSQL. Extends the `matrix_time_machine` table with new columns required by the v7 schema.
 		// (!) Run before Recreate all assets in PostgreSQL to prevent index creation of non existent columns
+		// stop_on_error=true: the time-machine table is critical; if it cannot be
+		// recreated the subsequent fill_new_columns_in_tm step would write to missing
+		// columns and corrupt the audit trail.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Recreate the Time machine table (matrix_time_machine) in PostgreSQL. Add "user_id", "bulk_process" and "data" columns.',
 				'script_class'	=> 'v6_to_v7',
@@ -378,6 +450,9 @@ $updates->$v = new stdClass();
 			];
 
 		// Recreate the database assets in PostgreSQL (functions, indexes, constraints, etc.)
+		// Re-applies all v7 pg_functions, GIN/btree indexes, and FK constraints
+		// after the schema has been restructured. Must run after delete_v6_db_indexes
+		// and recreate_tm_table so all target columns exist.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Recreate all assets in PostgreSQL (EXTENSIONS, CONSTRAINTS, FUNCTIONS, INDEXES)',
 				'script_class'	=> 'v6_to_v7',
@@ -388,6 +463,10 @@ $updates->$v = new stdClass();
 			];
 
 		// TM : Remove the unused sections in tm table in PostgreSQL. Only deleted sections are stored and contains recoverable data.
+		// Prunes matrix_time_machine rows that belong to sections which were created
+		// (not deleted) — those rows are not needed for recovery and inflate the table.
+		// stop_on_error=true: if the pruning query fails the remaining TM steps would
+		// operate on an oversized dataset and risk timeout or data loss.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Remove the unused sections in Time machine table (matrix_time_machine) in PostgreSQL. Only deleted sections are stored and contains recoverable data',
 				'script_class'	=> 'v6_to_v7',
@@ -398,6 +477,9 @@ $updates->$v = new stdClass();
 			];
 
 		// TM : Fill the new  columns `user_id`, `bulk_process` and `data` with its previous column data.
+		// Backfills the three new typed columns from the legacy monolithic 'datos'
+		// JSON blob. stop_on_error=true: missing data in user_id/bulk_process/data
+		// would silently break the time-machine diff UI.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Fill the new Time machine table (matrix_time_machine) columns "user_id", "bulk_process" and "data" with its previous column data. ',
 				'script_class'	=> 'v6_to_v7',
@@ -408,6 +490,10 @@ $updates->$v = new stdClass();
 			];
 
 		// TM : Delete old 'section_id_key', 'state', 'userID', 'dato' tm columns in PostgreSQL.
+		// Final cleanup of v6-only columns now superseded by the new typed layout.
+		// stop_on_error=false: column removal is best-effort; missing columns on a
+		// partially-migrated instance will produce a harmless error and the pipeline
+		// continues.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Delete Time machine table (matrix_time_machine) old columns "section_id_key" and "state" in PostgreSQL.',
 				'script_class'	=> 'v6_to_v7',
@@ -418,6 +504,9 @@ $updates->$v = new stdClass();
 			];
 
 		// TM : Rename column "bulk_process_temp" to "bulk_process_id" in PostgreSQL.
+		// The column was created as 'bulk_process_temp' during fill_new_columns_in_tm
+		// to avoid name conflicts with the existing column; it is promoted to its final
+		// name here once the old column has been dropped.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Rename Time machine column "bulk_process_temp" to "bulk_process_id" (matrix_time_machine) in PostgreSQL.',
 				'script_class'	=> 'v6_to_v7',
@@ -428,6 +517,9 @@ $updates->$v = new stdClass();
 			];
 
 		// TM : Update all Time machine data in PostgreSQL with new v7 format
+		// Reformats the content of the 'data' column in matrix_time_machine to
+		// the v7 component-datum shape (typed-column per value type), mirroring what
+		// reformat_matrix_data did for the main matrix tables.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'UPDATE all data Time machine in PostgreSQL with new v7 format (SAVE DATA IGNORING FOUND ERRORS)',
 				'script_class'	=> 'v6_to_v7',
@@ -440,6 +532,10 @@ $updates->$v = new stdClass();
 			];
 
 		// DIFFUSION_ACTIVITY : Create matrix_activity_diffusion table
+		// Creates the table that tracks which records have been diffused (published)
+		// and records the last diffusion timestamp per locator. Required by the v7
+		// diffusion pipeline before any publish operation can run.
+		// stop_on_error=true: the diffusion subsystem is unusable without this table.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'Create MATRIX_ACTIVITY_DIFFUSION table.',
 				'script_class'	=> 'v6_to_v7',
@@ -450,6 +546,11 @@ $updates->$v = new stdClass();
 			];
 
 		// Cleanup: Remove legacy 'datos' column from matrix tables
+		// The final cleanup step drops the original v6 'datos' column now that all
+		// data has been migrated to the typed-column layout. Runs last so any
+		// preceding script can still fall back to 'datos' if a step was re-run.
+		// stop_on_error=false: if the column was already dropped the IF EXISTS guard
+		// in the method makes this a no-op; the pipeline should still complete.
 			$updates->$v->run_scripts[] = (object)[
 				'info'			=> 'DROP legacy "datos" column in matrix tables (Final cleanup)',
 				'script_class'	=> 'v6_to_v7',
@@ -515,6 +616,10 @@ $updates->$v = new stdClass();
 			] // Note that only ONE argument encoded is sent
 		];
 
+		// Materialise deprecated component_iri inline title strings as proper label
+		// dataframe records and strip the literal title from the IRI locator.
+		// See memory note: IRI 'id' pairs value with label dataframe — the id_key
+		// must survive this migration so label look-ups remain intact.
 		$updates->$v->run_scripts[] = (object)[
 			'info'			=> 'Materialize deprecated component_iri literal titles into label dataframe records, then strip the literal title',
 			'script_class'	=> 'dataframe_v7_migration',
