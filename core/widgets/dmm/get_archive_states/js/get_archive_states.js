@@ -63,13 +63,13 @@ export const get_archive_states = function(){
 	this.mode         // {string} render mode: 'edit' (only mode implemented here)
 
 	// this.value holds the flat result array produced by class.get_archive_states.php.
-	// Each element corresponds to one output slot:
+	// {Array} Each element corresponds to one output slot:
 	//   { widget, key, widget_id, value [, closed_label, answer_label] }
 	// 'key' is the IPO array index; 'widget_id' is the output slot identifier.
 	// Labels appear only on the 'closed_afirmative' item for each key group.
 	this.value
 
-	this.node         // {HTMLElement} mounted DOM node for this widget instance
+	this.node         // {HTMLElement} root wrapper element inserted into the page DOM by render()
 
 	// Tokens returned by event_manager.subscribe() — stored here so that
 	// destroy() can unsubscribe all live event listeners in one sweep.

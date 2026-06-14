@@ -104,7 +104,8 @@ class get_archive_states extends widget_common {
 	*   ]);
 	*   $data = $widget->get_data();
 	*
-	* @return array|null $data
+	* @return array|null Flat array of stdClass output items (one per IPO output entry),
+	*                    or an empty array when no linked records are found.
 	*/
 	public function get_data() : ?array {
 
@@ -137,8 +138,7 @@ class get_archive_states extends widget_common {
 					? $section_tipo
 					: $component_source->section_tipo;
 
-			#
-			# PORTAL ROWS
+			// PORTAL ROWS
 			// Load the source portal in 'list' mode (NOLAN = language-neutral)
 			// to retrieve all linked record locators for the current section_id.
 				$model_name 	  = ontology_node::get_model_by_tipo($current_component_tipo,true); // Expected portal
@@ -173,6 +173,8 @@ class get_archive_states extends widget_common {
 			});
 
 			$component_tipo_answer 	= $component_answer->component_tipo;
+			// (!) $section_tipo_answer is declared but never referenced below; each linked
+			// record's section_tipo is taken from the locator instead ($current_locator->section_tipo).
 			$section_tipo_answer 	= $component_answer->section_tipo;
 
 			// closed input descriptor
@@ -197,7 +199,9 @@ class get_archive_states extends widget_common {
 			$ar_closed		= [];
 			$answer_label	= ontology_node::get_term_by_tipo($component_tipo_answer, DEDALO_DATA_LANG);
 			$closed_label	= ontology_node::get_term_by_tipo($component_tipo_closed, DEDALO_DATA_LANG);
-			#get the value of the component using portal data
+			// iterate linked records
+			// For each locator returned by the source portal, instantiate the answer
+			// and closed components on the linked record and harvest their first datum.
 				foreach ($component_data as $current_locator) {
 
 					// (!) $section_id and $section_tipo are overwritten here with
@@ -227,7 +231,10 @@ class get_archive_states extends widget_common {
 						$ar_answer[] = $answer_data[0];
 					}
 
-					//closed
+					// closed component for this linked record
+					// Same pattern as answer: read the first datum of the closed
+					// radio-button to determine whether the record is closed (section_id "1")
+					// or open (section_id "2").
 					$closed_modelo_name	= ontology_node::get_model_by_tipo($component_tipo_closed,true); // Expected component_radio_button
 					$closed_component	= component_common::get_instance(
 						$closed_modelo_name,
@@ -270,6 +277,9 @@ class get_archive_states extends widget_common {
 					$total_closed 			= array_count_values(array_column($ar_closed, 'section_id'));
 					$count_closed 			= count($ar_closed);
 				}else{
+					// (!) "Empty diameter" in the message below is a copy-paste artefact from
+					// the sibling widget get_archive_weights. The subject here is "closed",
+					// not "diameter". Do not change the string literal — flag only.
 					debug_log(__METHOD__." Empty diameter. Sum ignored in widget get_archive_states ".to_string(), logger::DEBUG);
 				}
 
@@ -325,7 +335,11 @@ class get_archive_states extends widget_common {
 						$answer_total			= $total_data;
 					}
 
-				// fix data
+				// dead code — previous flat-object output shape
+				// The original implementation returned a single stdClass with three
+				// properties. The current approach emits one item per IPO output entry
+				// (using variable variables below) to align with the renderer's expected
+				// 14-item flat array. Left here for reference; do not remove.
 					// $data = new stdClass();
 					// 	$data->total_data 			= $total_data 			?? null;
 					// 	$data->total_answer 		= $total_answer 		?? null;
