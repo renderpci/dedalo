@@ -219,7 +219,7 @@ component_info.prototype.update_data_value = function(changed_data_item) {
 			const widget_name		= current_widget.widget_name
 			const widget_id			= self.id + '_'+ widget_name
 
-			const loaded_widget	= self.ar_instances.find(item => item.id === widget_id)
+			const loaded_widget	= (self.ar_instances || []).find(item => item.id === widget_id)
 			const widget_value	= value.filter(item => item.widget === widget_name && item.key === i)
 
 			if(loaded_widget){
