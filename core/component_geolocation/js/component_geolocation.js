@@ -280,19 +280,14 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 			: []
 
 	// map_data
-		const map_data = (typeof entries!=='undefined')
-			? {
-				x		: field_lat,
-				y		: field_lon,
-				zoom	: field_zoom,
-				alt		: field_alt,
-			  }
-			: {
-				x		: self.default_value.lat,
-				y		: self.default_value.lon,
-				zoom	: self.default_value.zoom,
-				alt		: self.default_value.alt
-			 }
+	// fall back to default_value per field when the entry has no coordinates,
+	// otherwise new L.LatLng() receives undefined and throws (Invalid LatLng object)
+		const map_data = {
+			x		: field_lat  ?? self.default_value.lat,
+			y		: field_lon  ?? self.default_value.lon,
+			zoom	: field_zoom ?? self.default_value.zoom,
+			alt		: field_alt  ?? self.default_value.alt
+		}
 
 	// new map vars
 		let arcgis		= null
