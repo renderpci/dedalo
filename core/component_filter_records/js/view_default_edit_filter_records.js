@@ -12,7 +12,30 @@
 
 /**
 * VIEW_DEFAULT_EDIT_FILTER_RECORDS
-* Manage the components logic and appearance in client side
+* Default edit-mode view for component_filter_records.
+*
+* component_filter_records grants individual user accounts access to specific
+* records across arbitrary sections. This module is responsible for building the
+* interactive DOM for the 'default', 'line', and 'print' edit views.
+*
+* The component renders a header row (tipo / section label / value columns) and
+* then one content-value row per entry in the server-supplied datalist:
+*   - When self.permissions === 1 (read-only), only the entries that already have
+*     stored values are shown, each as a static read-only row.
+*   - When self.permissions > 1 (edit), every datalist section gets a text input
+*     allowing the user to type a comma-separated list of record IDs (e.g. "1,2,3").
+*
+* Data shapes consumed from self.data:
+*   datalist  — array of {tipo: string, label: string, permissions: number} objects
+*               built by class.component_filter_records.php::get_datalist(); one
+*               entry per section the current user is authorised to administer.
+*   entries   — array of currently stored values:
+*               [{id: *, tipo: string, value: Array<number>}, …]
+*
+* Main export: view_default_edit_filter_records (constructor placeholder); all
+* logic lives on the static .render() method and the module-private helpers.
+*
+* Invoked by: render_edit_component_filter_records.prototype.edit
 */
 export const view_default_edit_filter_records = function() {
 
@@ -23,10 +46,28 @@ export const view_default_edit_filter_records = function() {
 
 /**
 * RENDER
-* Render node for use in current view
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Build and return the full component DOM node for the default-edit view.
+*
+* When options.render_level is 'content', only the inner content_data node is
+* returned (no outer wrapper, no buttons).  This is the contract used by
+* component_common.prototype.refresh to replace the content area in place
+* without destroying the outer wrapper's event listeners.
+*
+* The wrapper is a standard edit-mode container produced by
+* ui.component.build_wrapper_edit; it carries a content_data pointer so callers
+* can reach individual row nodes via self.node.content_data[i].
+*
+* When the component is rendered in 'line' view the label is suppressed so that
+* the component fits inside compact list rows (e.g. inline portal grids).
+*
+* @param {Object} self - The component_filter_records instance.
+*   Expected: self.permissions {number}, self.data {Object}, self.view {string},
+*   self.show_interface {Object}, self.context {Object}.
+* @param {Object} options - Render configuration.
+*   options.render_level {string} 'full' (default) | 'content' — controls
+*   whether to build the outer wrapper+buttons or only the content area.
+* @returns {Promise<HTMLElement>} wrapper (render_level='full') or content_data
+*   (render_level='content').
 */
 view_default_edit_filter_records.render = async function(self, options) {
 
@@ -65,7 +106,33 @@ view_default_edit_filter_records.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @return HTMLElement content_data
+* Build the content_data container, including the column header row and all
+* data rows for this component instance.
+*
+* The output structure is a standard ui.component.build_content_data div that
+* contains:
+*   1. A header_row with three column labels: tipo / section / value.
+*   2. One content-value row per datalist entry (edit path, permissions > 1),
+*      or one row per matching entry that already has a stored value (read path,
+*      permissions === 1).
+*
+* Permissions routing:
+*   permissions === 1 — Iterates self.data.entries.  For each entry whose tipo
+*     is present in the datalist, a static read-only row is appended.  If no
+*     entries exist at all a single empty read row is produced so the component
+*     is never visually blank.
+*   permissions > 1  — Iterates self.data.datalist.  Every authorised section
+*     gets an interactive row with a text input whose current value (if any) is
+*     pre-populated from self.data.entries.
+*
+* Each produced row node is stored as a numeric index property on content_data
+* (content_data[i]) in addition to being appended as a DOM child, giving callers
+* O(1) access to individual rows.
+*
+* @param {Object} self - The component_filter_records instance.
+*   Expected: self.data {Object} with .datalist {Array} and .entries {Array},
+*   self.permissions {number}.
+* @returns {HTMLElement} content_data - The populated content container div.
 */
 const get_content_data = function(self) {
 
@@ -175,15 +242,33 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @param int i
-* 	Value array current key
-* @param object datalist_item
-* {
-* 	label		: "label",
-* 	tipo		: "rsc23",
-*	permissions	: 2
-* }
-* @return HTMLElement li
+* Build a single interactive edit row for one datalist section entry.
+*
+* Produces a div.content_value with three child columns:
+*   1. span.section_tipo — the section's ontology tipo identifier (e.g. 'dd128').
+*   2. span — the human-readable label for that section, from the datalist.
+*   3. input[type=text].input_value — a free-text field pre-filled with any
+*      previously stored comma-separated record IDs for this section.
+*
+* Two events are wired on the input:
+*   'change' — delegates to self.change_handler, which validates the raw string,
+*     normalises it to an array of positive integers, and persists immediately.
+*     The input value is then updated with the normalised string (e.g. leading
+*     zeros and duplicates removed).
+*   'keyup'  — pressing Enter synthesises a 'change' event (triggering immediate
+*     save) and also calls set_before_unload(true) on every other keystroke so
+*     the browser warns the user if they try to navigate away with unsaved changes.
+*
+* Note: only the 'change' event triggers a server save; 'keyup' merely guards
+* against accidental data loss.
+*
+* @param {number} i - Zero-based index into the datalist array (used by the caller
+*   to set the content_data[i] pointer; not embedded in the DOM here).
+* @param {Object} datalist_item - One entry from self.data.datalist.
+*   Shape: {tipo: string, label: string, permissions: number}
+* @param {Object} self - The component_filter_records instance.
+*   Expected: self.data.entries {Array}, self.change_handler {Function}.
+* @returns {HTMLElement} content_value - The assembled row div.
 */
 const get_content_value = (i, datalist_item, self) => {
 
@@ -217,6 +302,8 @@ const get_content_value = (i, datalist_item, self) => {
 
 	// input field
 		const item					= entries.find(item => item.tipo===tipo)
+		// Join the stored value array to a comma-separated string for display;
+		// if this section has no stored entry yet, the input starts empty.
 		const input_value_string	= typeof item!=="undefined" ? item.value.join(',') : ''
 		const input_node			= ui.create_dom_element({
 			element_type	: 'input',
@@ -258,13 +345,22 @@ const get_content_value = (i, datalist_item, self) => {
 
 /**
 * GET_CONTENT_VALUE_READ
-* Render a element based on passed value
-* @param int i
-* 	data.entries array key
-* @param object current_value
-* @param object self
+* Build a single static (non-interactive) read row for one data entry.
 *
-* @return HTMLElement content_value
+* Used when self.permissions === 1.  Renders the section tipo, its human-readable
+* label, and the stored value as three plain <span> elements with class 'label'.
+* No inputs or event listeners are attached.
+*
+* If the supplied current_value is an empty object (fallback case when no entries
+* exist at all), all three spans render with empty inner HTML.
+*
+* @param {number} i - Zero-based index; used by the caller for content_data[i]
+*   pointer assignment only — not embedded in the DOM by this function.
+* @param {Object} current_value - The resolved value object for one entry.
+*   Shape: {tipo: string, label: string, value: Array<number>|*} or {} when empty.
+* @param {Object} self - The component_filter_records instance (unused internally
+*   but retained for API symmetry with get_content_value).
+* @returns {HTMLElement} content_value - The assembled read-only row div.
 */
 const get_content_value_read = (i, current_value, self) => {
 
@@ -306,8 +402,25 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object instance
-* @return HTMLElement buttons_container
+* Build and return the component's buttons container for edit mode.
+*
+* Conditionally appends:
+*   - Tool buttons (via ui.add_tools) when show_interface.tools is true.
+*     These are dynamically resolved from self.tools[] and rendered as
+*     clickable tool-launcher icons.
+*   - A full-screen toggle button when show_interface.button_fullscreen is true.
+*     Clicking it calls ui.enter_fullscreen on the component's root node (self.node).
+*
+* The container is always built (via ui.component.build_buttons_container) and
+* returned even if no sub-elements are added, allowing the wrapper to include
+* a consistently structured buttons area.
+*
+* Only called when self.permissions > 1 — read-only users receive no buttons.
+*
+* @param {Object} self - The component_filter_records instance.
+*   Expected: self.show_interface {Object} with optional keys .tools {boolean} and
+*   .button_fullscreen {boolean}; self.node {HTMLElement} (for fullscreen target).
+* @returns {HTMLElement} buttons_container - The assembled buttons wrapper div.
 */
 const get_buttons = (self) => {
 
