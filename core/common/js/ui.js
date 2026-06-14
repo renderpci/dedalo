@@ -846,6 +846,19 @@ export const ui = {
 											}
 										}
 									)
+								}else if (wrapper) {
+									// components without a focusable input/select (e.g. component_svg) never
+									// received the implicit scroll that first_input.focus() performs, so
+									// restore_section_selection selected them without bringing them on screen.
+									// Scroll the wrapper into view instead. block:'nearest' is a no-op when the
+									// element is already visible, matching the focus() behavior on a normal click.
+									dd_request_idle_callback(
+										() => {
+											if (component.active) {
+												wrapper.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+											}
+										}
+									)
 								}
 							}//end if (!already_focus)
 					}

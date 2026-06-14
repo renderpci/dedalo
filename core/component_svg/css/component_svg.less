@@ -16,6 +16,11 @@
 				>.image_container {
 					height: 100%;
 					max-height: 100%;
+					// reserve space while the lazy-loaded svg is still loading, so the
+					// wrapper does not collapse to ~0 height and then jump on load. This
+					// prevents layout shift and keeps the restore-scroll on the selected
+					// component accurate. Matches component_pdf / component_json behavior.
+					min-height: var(--media_min_height);
 					width: 100%;
 					position: relative;
 					display: flex;
