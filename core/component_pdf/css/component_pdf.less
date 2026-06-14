@@ -8,10 +8,6 @@
 	&.disabled_component {
 		>.content_data {
 			pointer-events: initial !important;
-
-			.fields {
-
-			}
 		}
 	}
 
@@ -19,37 +15,11 @@
 
 		>.content_data {
 
-			// moved to layout.less.media_wrapper.edit
-				// // Note that height is always the media min height (392px)
-				// // (!) Do not use max o min height here to prevent to affect canvas reference size
-				// height: var(--media_min_height);
-				// display: table;
-
-				// justify-content: center;
-				// max-height: var(--media_max_height);
-				// min-height: var(--media_min_height);
-				// overflow: hidden;
-
-				// @media screen and (max-width: @width_break_point_1) {
-				// 	min-height: unset;
-				// }
+			// Wrapper height/overflow handled by .media_wrapper.edit in layout.less
 
 			// pdf container
 			>.content_value {
 
-				// moved to layout.less.media_wrapper.edit
-					// // flex-wrap: wrap;
-					// // align-items: flex-start;
-					// width: 100%;
-					// height: 100%;
-					// resize: vertical;
-					// overflow: auto;
-					// min-height: var(--media_min_height); // 404px;
-
-					// @media screen and (max-width: @width_break_point_1) {
-					// 	height: unset;
-					// 	max-height: 600px;
-					// }
 				>img {
 					height: 100%;
 				}
@@ -110,19 +80,7 @@
 		}
 
 
-	}//end .view_default
-
-	&.list {
-
-	}
-
-	&.search {
-
-	}
-
-	&.view_default {
-
-	}
+	}//end &.edit
 
 	&.view_viewer {
 
@@ -138,10 +96,6 @@
 	&.view_player {
 		display: block;
 		height: 100%;
-
-		.content_data {
-
-		}
 	}
 
 	&.view_line {
@@ -160,14 +114,9 @@
 		}
 	}
 
-	// with suffix _mini like 'component_av_mini'
+	// with suffix _mini like 'component_pdf_mini'
 	&_mini {
-		display: inline-block;
-		vertical-align: middle;
-
-		img {
-			height: 2rem;
-		}
+		.media_mini_mixin();
 	}
 
 }//end .component_pdf

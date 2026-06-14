@@ -108,6 +108,82 @@
 	}//end .fn_build_tag_reference
 
 
+	// media_control_buttons_mixin. Shared player control bar for media components
+	// (component_av .av_control_buttons, component_3d .threeD_control_buttons).
+	.media_control_buttons_mixin() {
+		display: flex;
+		flex-wrap: wrap;
+		width: 100%;
+		align-items: center;
+		justify-content: center;
+		padding-bottom: 0.75rem;
+		padding-top: 0.75rem;
+
+		>button {
+			height: 2rem;
+			text-align: center;
+			margin-bottom: 0.25rem;
+			margin-top: 0.25rem;
+
+			&:before {
+				margin: 0px;
+			}
+
+			&:last-of-type {
+				margin-right: 0px;
+			}
+		}
+	}//end .media_control_buttons_mixin
+
+	// media_viewer_download_mixin. Shared floating download button in media
+	// fullscreen viewer (component_image, component_av, component_3d).
+	.media_viewer_download_mixin() {
+		position: fixed;
+		right: 10px;
+		bottom: 10px;
+		z-index: 2;
+		width: 3em;
+		height: 3em;
+		padding: unset;
+		margin: unset;
+
+		&:before {
+			height: 1.5em;
+			width: 1.5em;
+			margin: unset;
+		}
+	}//end .media_viewer_download_mixin
+
+	// media_posterframe_mixin. Shared poster image rendering for media with a
+	// preview frame (component_av, component_3d). Sizing differs per component
+	// and is set by the caller; this covers only the common fit/focus behavior.
+	.media_posterframe_mixin() {
+		max-height: 100%;
+		max-width: 100%;
+		background-repeat: no-repeat;
+		background-size: contain;
+		background-position: center;
+		object-fit: contain;
+		object-position: center;
+		align-self: center;
+
+		// on focus adds a soft shadow and outline
+		&:focus {
+			.hilite_mixin(-1px);
+		}
+	}//end .media_posterframe_mixin
+
+	// media_mini_mixin. Shared inline mini thumbnail for media components
+	// (image, av, 3d, pdf use 2rem; svg passes var(--view_text_height)).
+	.media_mini_mixin(@img_height: 2rem) {
+		display: inline-block;
+		vertical-align: middle;
+
+		img {
+			height: @img_height;
+		}
+	}//end .media_mini_mixin
+
 	// fn_build_tag_draw. indexation tag builder
 	.fn_build_tag_draw(@bg_color:@color_orange_dedalo, @text_color:var(--fg_inverse)) {
 			display: flex;

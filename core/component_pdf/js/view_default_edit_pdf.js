@@ -6,8 +6,8 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {when_in_viewport} from '../../common/js/events.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {lazy_load_media} from '../../component_media_common/js/component_media_common.js'
 
 
 
@@ -257,8 +257,8 @@ const get_content_value = function(i, current_value, self) {
 				iframe.src = viewer_url
 		}//end init_viewer
 
-	// observe viewport entry to lazy init the viewer
-		when_in_viewport(
+	// observe viewport entry to lazy init the viewer (shared media helper, 200px preload)
+		lazy_load_media(
 			viewer_container,
 			init_viewer
 		)

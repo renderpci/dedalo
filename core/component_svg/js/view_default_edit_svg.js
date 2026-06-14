@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {lazy_load_media, media_fade_in} from '../../component_media_common/js/component_media_common.js'
 
 
 
@@ -132,9 +133,8 @@ const get_content_value = function(i, value, self) {
 				class_name		: 'image_container',
 				parent			: content_value
 			})
-			// start invisible for smooth fade-in on load
-			image_container.style.opacity	= '0'
-			image_container.style.transition	= 'opacity 0.3s ease-in'
+			// start invisible for smooth fade-in on load (shared media contract)
+			const reveal = media_fade_in(image_container)
 
 			// image
 			const image = ui.create_dom_element({
@@ -148,20 +148,16 @@ const get_content_value = function(i, value, self) {
 			const load_svg = () => {
 				image.src = url
 			}
-			// use IntersectionObserver to load only when visible (with margin to preload slightly)
-			const observer = new IntersectionObserver((entries) => {
-				if (entries[0].isIntersecting) {
-					observer.disconnect()
-					load_svg()
-				}
-			}, { rootMargin: '200px' })
-			observer.observe(image_container)
+			// lazy load only when near viewport (shared media helper, 200px preload)
+			lazy_load_media(image_container, load_svg)
 
 			// load handler: smooth appearance fade-in
 			const load_handler = () => {
-				image_container.style.opacity = '1'
+				reveal()
 			}
 			image.addEventListener('load', load_handler)
+			// error also reveals so a broken svg does not stay invisible
+			image.addEventListener('error', reveal)
 
 		}else{
 
@@ -173,14 +169,10 @@ const get_content_value = function(i, value, self) {
 				parent			: content_value
 			})
 
-			// lazy load for fallback
-			const observer = new IntersectionObserver((entries) => {
-				if (entries[0].isIntersecting) {
-					observer.disconnect()
-					image_node.src = image_url
-				}
-			}, { rootMargin: '200px' })
-			observer.observe(content_value)
+			// lazy load for fallback (shared media helper, 200px preload)
+			lazy_load_media(content_value, () => {
+				image_node.src = image_url
+			})
 
 			// click handler
 			const click_handler = (e) => {

@@ -212,10 +212,12 @@ export const when_in_dom = function(node, callback) {
 * @param {HTMLElement} node - The element to observe. Must be an HTMLElement instance.
 * @param {Function} callback - Invoked with the IntersectionObserverEntry on visibility.
 * @param {boolean} [once=true] - When true, disconnect after the first intersection.
+* @param {object} [observer_options={}] - Extra IntersectionObserver options merged over
+*   the defaults (e.g. `{ rootMargin: '200px' }` to preload before the node is visible).
 * @throws {Error} When node is not an HTMLElement instance.
 * @returns {IntersectionObserver|undefined} The active observer, or undefined when callback is invalid.
 */
-export const when_in_viewport = function(node, callback, once=true) {
+export const when_in_viewport = function(node, callback, once=true, observer_options={}) {
 
 	if (!(node instanceof HTMLElement)) {
 		throw new Error("Invalid node passed to when_in_viewport");
@@ -244,7 +246,8 @@ export const when_in_viewport = function(node, callback, once=true) {
 		},
 		{
 			rootMargin: '0px',
-			threshold: [0]
+			threshold: [0],
+			...observer_options
 		}
 	);
 	observer.observe(node);

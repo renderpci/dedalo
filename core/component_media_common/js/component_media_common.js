@@ -7,6 +7,42 @@
 // imports
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {when_in_viewport} from '../../common/js/events.js'
+
+
+
+/**
+* LAZY_LOAD_MEDIA
+* Standard lazy-load trigger shared by all media edit views (image, svg, pdf, ...).
+* Defers `on_enter` until the node nears the viewport, using a uniform 200px
+* preload margin so heavy media (svg objects, pdf iframes, large images) start
+* loading slightly before they become visible and feel instant on scroll.
+* Thin wrapper over when_in_viewport to keep the preload margin consistent in
+* one place instead of being copy-pasted as raw IntersectionObserver blocks.
+* @param {HTMLElement} node
+* @param {Function} on_enter - Invoked once when the node nears the viewport.
+* @return {IntersectionObserver|undefined}
+*/
+export const lazy_load_media = function(node, on_enter) {
+	return when_in_viewport(node, on_enter, true, { rootMargin: '200px' })
+}//end lazy_load_media
+
+
+
+/**
+* MEDIA_FADE_IN
+* Shared smooth fade-in for lazy-loaded media containers. Adds the `.media_fade`
+* class (defined in layout.less) so the container starts invisible, and returns
+* a `reveal` function the caller invokes once the media is ready (on load and on
+* error) to fade it in. Centralizes what used to be duplicated inline
+* `style.opacity` / `style.transition` assignments across image and svg.
+* @param {HTMLElement} container
+* @return {Function} reveal - Call to fade the container in.
+*/
+export const media_fade_in = function(container) {
+	container.classList.add('media_fade')
+	return () => container.classList.add('is_loaded')
+}//end media_fade_in
 
 
 

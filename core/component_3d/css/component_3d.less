@@ -7,7 +7,7 @@
 
 	&.disabled_component {
 		.content_data.component {
-			pointer-events: unset !important;
+			pointer-events: initial !important;
 		}
 	}
 
@@ -26,9 +26,6 @@
 
 				canvas {
 					max-width: 100%;
-				}
-				.canvas[resize] {
-
 				}
 
 				.axes {
@@ -56,65 +53,19 @@
 
 			// posterframe
 			.posterframe {
+				.media_posterframe_mixin();
+				// 3d-specific sizing (fills the container)
 				height: 100%;
-				max-height: 100%;
 				width: 100%;
-				max-width: 100%;
 				min-width: 100%;
-
-				background-repeat: no-repeat;
-				background-size: contain;
-				background-position: center;
-				object-fit: contain;
-				object-position: center;
-				align-self: center;
-
-				// on focus adds a soft shadow and outline
-				&:focus {
-					.hilite_mixin(-1px);
-				}
 			}
 		}
-	}
-
-	&.list {
-
-	}
-
-	&.search {
-
 	}
 
 	// player 3d_control_buttons
 	.threeD_control_buttons {
-		display: flex;
-		flex-wrap: wrap;
-		width: 100%;
-		align-items: center;
-		justify-content: center;
-		padding-bottom: 0.75rem;
-		padding-top: 0.75rem;
-
-		>button {
-			height: 2rem;
-			text-align: center;
-			margin-bottom: 0.25rem;
-			margin-top: 0.25rem;
-
-			&:before {
-				margin: 0px;
-			}
-
-			&:last-of-type {
-				margin-right: 0px;
-			}
-		}
-
+		.media_control_buttons_mixin();
 	}//end .threeD_control_buttons
-
-	&.view_default {
-
-	}
 
 	&.view_line {
 		display: inline-block;
@@ -137,7 +88,7 @@
 		height: 100%;
 
 		.content_value.media_content_value {
-			height: 93.4vh;
+			height: var(--media_viewer_height);
 		}
 	}
 
@@ -150,54 +101,9 @@
 		}
 	}
 
-	// with suffix _mini like 'component_av_mini'
+	// with suffix _mini like 'component_3d_mini'
 	&_mini {
-		display: inline-block;
-		vertical-align: middle;
-
-		img {
-			height: 2rem;
-		}
+		.media_mini_mixin();
 	}
-
-	// used ??????
-	&.viewer {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-
-		position: absolute;
-		width: 100%;
-		height: 100%;
-		background-color: @color_black;
-
-		>.content_data {
-			height: unset;
-			width: 100%;
-			text-align: center;
-
-			video {
-				width: 100%;
-			}
-		}
-
-		// button download
-		.download {
-			bottom: 10px;
-			height: 3em;
-			position: fixed;
-			right: 10px;
-			width: 3em;
-			z-index: 2;
-			padding: unset;
-			margin: unset;
-
-			&:before {
-				height: 1.5em;
-				width: 1.5em;
-				margin: unset;
-			}
-		}
-	}//end &.viewer
 
 }//end .component_3d

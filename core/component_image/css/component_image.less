@@ -7,15 +7,11 @@
 
 	&.disabled_component {
 		.content_data.component {
-			pointer-events: unset !important;
+			pointer-events: initial !important;
 		}
 	}
 
 	&.edit {
-
-		&.fullscreen {
-
-		}
 
 		>.content_data {
 
@@ -25,6 +21,10 @@
 				.image_container {
 					height: 100%;
 					max-height: 100%;
+					// reserve space while the lazy-loaded image is still loading, so the
+					// wrapper does not collapse and then jump on load (prevents layout
+					// shift). Matches component_svg / component_pdf behavior.
+					min-height: var(--media_min_height);
 					width: 100%;
 					position: relative;
 					display: flex;
@@ -75,18 +75,6 @@
 		}//end .buttons_container
 	}
 
-	&.list {
-
-	}
-
-	&.search {
-
-	}
-
-	&.view_default {
-
-	}
-
 	&.view_line {
 		display: inline-block;
 
@@ -119,20 +107,7 @@
 
 		// button download
 		.download {
-			position: fixed;
-			right: 10px;
-			bottom: 10px;
-			z-index: 2;
-			width: 3em;
-			height: 3em;
-			padding: unset;
-			margin: unset;
-
-			&:before {
-				height: 1.5em;
-				width: 1.5em;
-				margin : unset;
-			}
+			.media_viewer_download_mixin();
 		}
 	}
 
@@ -149,18 +124,9 @@
 		}
 	}
 
-	// with suffix _mini like 'component_date_mini'
+	// with suffix _mini like 'component_image_mini'
 	&_mini {
-		display: inline-block;
-		vertical-align: middle;
-
-		img {
-			height: 2rem;
-		}
-	}
-
-	&.view_text {
-
+		.media_mini_mixin();
 	}
 
 }//end .component_image

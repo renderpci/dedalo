@@ -7,48 +7,17 @@
 
 	// posterframe
 	.posterframe {
+		.media_posterframe_mixin();
+		// av-specific sizing (1px inset outline frame)
 		width: calc(100% - 1px);
 		height: calc(100% - 1px);
 		outline: 1px solid @color_grey_14;
-		max-height: 100%;
-		max-width: 100%;
-		background-repeat: no-repeat;
-		background-size: contain;
-		background-position: center;
-		object-fit: contain;
-		object-position: center;
-		align-self: center;
-
-		// on focus adds a soft shadow and outline
-		&:focus {
-			.hilite_mixin(-1px);
-		}
 	}
 
 	// shared player av_control_buttons
 	.av_control_buttons {
-		display: flex;
-		flex-wrap: wrap;
-		width: 100%;
-		align-items: center;
-		justify-content: center;
-		padding-bottom: 0.75rem;
-		padding-top: 0.75rem;
+		.media_control_buttons_mixin();
 
-		>button {
-			height: 2rem;
-			text-align: center;
-			margin-bottom: 0.25rem;
-			margin-top: 0.25rem;
-
-			&:before {
-				margin: 0px;
-			}
-
-			&:last-of-type {
-				margin-right: 0px;
-			}
-		}
 		.smpte {
 			display: inline-block;
 			width: auto;
@@ -66,28 +35,11 @@
 
 	&.edit {
 
-		>.content_data {
-
-			// video_container
-			>.content_value {
-
-			}
-
-			// posterframe
-			.posterframe {
-
-			}
-		}
-
 		&.disabled_component {
 			.content_data {
 				pointer-events: initial !important;
 			}
 		}
-	}
-
-	&.list {
-
 	}
 
 	&.search {
@@ -98,10 +50,6 @@
 				height: unset;
 			}
 		}
-	}
-
-	&.view_default {
-
 	}
 
 	&.view_player {
@@ -149,39 +97,13 @@
 
 		// button download
 		.download {
-			bottom: 10px;
-			height: 3em;
-			position: fixed;
-			right: 10px;
-			width: 3em;
-			z-index: 2;
-			padding: unset;
-			margin: unset;
-
-			&:before {
-				height: 1.5em;
-				width: 1.5em;
-				margin: unset;
-			}
+			.media_viewer_download_mixin();
 		}
-	}//end &.viewer
+	}//end &.view_viewer
 
 	// with suffix _mini like 'component_av_mini'
 	&_mini {
-		display: inline-block;
-		vertical-align: middle;
-
-		img {
-			height: 2rem;
-		}
-	}
-
-	&.view_text {
-
-	}
-
-	&.view_print {
-
+		.media_mini_mixin();
 	}
 
 }//end .component_av

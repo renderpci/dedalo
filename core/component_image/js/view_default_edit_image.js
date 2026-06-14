@@ -9,6 +9,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {get_quality_selector} from './render_edit_component_image.js'
+	import {lazy_load_media, media_fade_in} from '../../component_media_common/js/component_media_common.js'
 
 
 
@@ -321,9 +322,8 @@ const render_image_node = function(self, file_info, content_value) {
 			element_type	: 'div',
 			class_name		: 'image_container work_area'
 		})
-		// start invisible for smooth fade-in on load
-		image_container.style.opacity	= '0'
-		image_container.style.transition	= 'opacity 0.3s ease-in'
+		// start invisible for smooth fade-in on load (shared media contract)
+		const reveal = media_fade_in(image_container)
 
 	// fallback to default svg file
 		const svg_fallback = (object_node) => {
@@ -373,14 +373,8 @@ const render_image_node = function(self, file_info, content_value) {
 				svg_fallback(object_node)
 			}
 		}
-		// use IntersectionObserver to load only when visible (with margin to preload slightly)
-		const observer = new IntersectionObserver((entries) => {
-			if (entries[0].isIntersecting) {
-				observer.disconnect()
-				load_svg()
-			}
-		}, { rootMargin: '200px' })
-		observer.observe(image_container)
+		// lazy load only when near viewport (shared media helper, 200px preload)
+		lazy_load_media(image_container, load_svg)
 
 	// load handler: update image quality and apply cache-busting
 		const load_handler = async () => {
@@ -400,7 +394,7 @@ const render_image_node = function(self, file_info, content_value) {
 
 			// smooth appearance: fade in instead of instant show
 			content_value.classList.remove('hide')
-			image_container.style.opacity = '1'
+			reveal()
 		}
 		object_node.addEventListener('load', load_handler)
 
@@ -421,7 +415,7 @@ const render_image_node = function(self, file_info, content_value) {
 				}
 			}
 			content_value.classList.remove('hide')
-			image_container.style.opacity = '1'
+			reveal()
 		})
 
 

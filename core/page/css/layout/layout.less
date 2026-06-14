@@ -1273,6 +1273,19 @@
 	}
 }
 
+// shared smooth fade-in for lazy-loaded media containers (image, svg, ...)
+// The container starts invisible; JS (media_fade_in, component_media_common)
+// adds `.is_loaded` once the underlying media fires its load/error event, so
+// every media type reveals the same way and at the same speed.
+.media_fade {
+	opacity: 0;
+	transition: opacity var(--media_fade_speed) ease-in;
+
+	&.is_loaded {
+		opacity: 1;
+	}
+}
+
 // affects all media components span wrapper (3d,av,image,pdf,svg)
 .media.view_text {
 	display: inline-block;

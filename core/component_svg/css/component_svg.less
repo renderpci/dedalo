@@ -36,10 +36,6 @@
 					object-fit: contain;
 					object-position: center;
 				}
-
-				.fallback_image {
-
-				}
 			}
 		}
 	}
@@ -54,20 +50,12 @@
 		}
 	}
 
-	&.search {
-
-	}
-
-	&.view_default {
-
-	}
-
 	&.view_viewer {
 
 		.content_data {
 
 			.content_value {
-				height: calc(100vh - 3rem);
+				height: var(--media_viewer_height);
 			}
 		}
 	}
@@ -90,18 +78,9 @@
 		}
 	}
 
-	// with suffix _mini like 'component_text_area_mini'
+	// with suffix _mini like 'component_svg_mini'
 	&_mini {
-		display: inline-block;
-		vertical-align: middle;
-
-		img {
-			height: var(--view_text_height); //	2rem;
-		}
-	}
-
-	&.view_text {
-
+		.media_mini_mixin(var(--view_text_height));
 	}
 
 	&.view_tag {
