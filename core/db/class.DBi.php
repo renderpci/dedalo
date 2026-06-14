@@ -291,7 +291,7 @@ abstract class DBi {
 		string			$user		= MYSQL_DEDALO_USERNAME_CONN,
 		string			$password	= MYSQL_DEDALO_PASSWORD_CONN,
 		string			$database	= MYSQL_DEDALO_DATABASE_CONN,
-		int|null		$port		= MYSQL_DEDALO_DB_PORT_CONN,
+		int|string|null	$port		= MYSQL_DEDALO_DB_PORT_CONN,
 		string|null		$socket		= MYSQL_DEDALO_SOCKET_CONN,
 		bool			$cache		= true
 		) : mysqli|false {
@@ -331,6 +331,9 @@ abstract class DBi {
 
 		// connect
 			try {
+				if ($port !== null && empty($port)) {
+					$port = null;
+				}
 				if (!$mysqli->real_connect($host, $user, $password, $database, $port, $socket)) {
 					debug_log(__METHOD__
 						. " Error on connect to MYSQL database ". PHP_EOL
