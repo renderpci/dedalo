@@ -97,14 +97,15 @@ export const ui = {
 				parent			: message_wrap
 			})
 
-		// adjust height
+		// adjust height. Read layout once to avoid repeated forced reflows
+			const message_height = message_wrap.offsetHeight
 			const computed_styles = getComputedStyle(message_wrap.parentNode);
 			if (computed_styles.position!=='fixed') {
-				message_wrap.style.top = '-' + message_wrap.offsetHeight + 'px'
+				message_wrap.style.top = '-' + message_height + 'px'
 			}
 
 		// close button move to bottom when height is too much
-			if (message_wrap.offsetHeight>120) {
+			if (message_height>120) {
 				const close_button			= message_wrap.querySelector('.close')
 				close_button.style.top		= 'unset';
 				close_button.style.bottom	= '0px';
