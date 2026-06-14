@@ -4,6 +4,27 @@
 
 
 
+/**
+* RENDER_LIST_DESCRIPTORS
+* List-mode renderer for the Oral History 'descriptors' widget.
+*
+* In list mode the server intentionally returns an empty value array
+* (class.descriptors.php::get_data() short-circuits when mode === 'list').
+* This renderer therefore shows a lightweight placeholder button instead
+* of the full thesaurus term grid.  When the user clicks the button the
+* widget switches to 'edit' mode, triggers a full server round-trip via
+* self.refresh(), and hands off to render_edit_descriptors.js — which
+* receives the actual 'indexation' and 'terms' data items and builds the
+* complete dd_grid view.
+*
+* Prototype assignment (in descriptors.js):
+*   descriptors.prototype.list = render_list_descriptors.prototype.list
+*
+* Exports:
+*   render_list_descriptors — constructor / prototype host; used only as a
+*                             mixin source; never instantiated directly.
+*/
+
 // imports
 	import {get_instance} from '../../../../common/js/instances.js'
 	import {ui} from '../../../../common/js/ui.js'
@@ -12,7 +33,10 @@
 
 /**
 * RENDER_LIST_DESCRIPTORS
-* Manages the component's logic and appearance in client side
+* Prototype constructor used exclusively as a mixin host.
+* Instances are never created directly; the prototype method (.list) is
+* copied onto the descriptors constructor in descriptors.js.
+* @returns {boolean} true
 */
 export const render_list_descriptors = function() {
 
@@ -23,9 +47,24 @@ export const render_list_descriptors = function() {
 
 /**
 * LIST
-* Render node for use in modes: list, list_in_list
-* @param object options
-* @return HTMLElement wrapper
+* Render node for use in modes: list, list_in_list.
+*
+* Produces a widget wrapper that contains only a toggle button.
+* Full term data is intentionally deferred: the server returns an empty
+* value array in list mode for performance (no IPO resolution, no DB
+* queries for term counts).  The button switches the widget to 'edit'
+* mode and calls self.refresh() so the server re-runs get_data() with
+* the full IPO processing pipeline.
+*
+* When render_level === 'content', returns the inner content_data element
+* directly (used by callers that manage the wrapper themselves, e.g.
+* component_info grid cells).
+*
+* @param {Object} options - Render options supplied by the lifecycle orchestrator.
+* @param {string} options.render_level - 'content' → return content_data only;
+*                                        any other value → return full wrapper.
+* @returns {Promise<HTMLElement>} Resolves to the wrapper (or content_data when
+*                                 render_level === 'content').
 */
 render_list_descriptors.prototype.list = async function(options) {
 
@@ -53,8 +92,24 @@ render_list_descriptors.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_LIST
-* @param object self
-* @return HTMLElement content_data
+* Build the list-mode content area for the descriptors widget.
+*
+* Renders a single 'Terms' button.  On click the widget transitions to
+* edit mode (removes the 'list' CSS class, adds 'edit') and calls
+* self.refresh() so the server returns the full IPO-resolved data set
+* consumed by render_edit_descriptors.js.
+*
+* A spinner element is appended to content_data while the refresh is in
+* flight and removed once the promise resolves.
+*
+* (!) The mouseup handler is not async; the spinner cleanup relies on
+* .then() chained on the refresh() promise.  If refresh() rejects the
+* spinner will remain in the DOM and the 'loading' class will not be
+* removed.
+*
+* @param {Object} self - The descriptors widget instance (bound as `this`
+*                        in render_list_descriptors.prototype.list).
+* @returns {Promise<HTMLElement>} Resolves to the content_data div element.
 */
 const get_content_data_list = async function(self) {
 
@@ -103,7 +158,44 @@ const get_content_data_list = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return HTMLElement li
+* Build a single list item (<li>) for one IPO entry, showing the
+* descriptor term count and the dd_grid term list on demand.
+*
+* Called once per IPO key within the descriptors widget when it is
+* rendering in a context that already has value data available (i.e.
+* after the mode has transitioned to edit and a refresh has been
+* completed — this function is reachable from the list DOM even though
+* it is defined in the list renderer module).
+*
+* Data shape expected in `data` (flat items, NOT nested under .value
+* unlike render_edit_descriptors.js):
+*   { widget_id: 'indexation', value: <number> }
+*   { widget_id: 'terms',      value: <component_grid_value Object> }
+*
+* (!) Structural difference from render_edit_descriptors.js: that file
+* accesses el.value.widget_id (nested), while this file accesses
+* el.widget_id directly.  They consume the same PHP data shape but
+* through different wrapping layers — verify alignment if the server
+* data format changes.
+*
+* (!) If no item with widget_id === 'indexation' is found in `data`,
+* data.find() returns undefined and the next line (`indexation.value`)
+* will throw a TypeError.  There is no null guard here.
+*
+* If the indexation count is less than 1 the li is returned immediately
+* without any content — callers can check for this empty-item case.
+*
+* Clicking the rendered value span toggles visibility of the
+* descriptors_list_container via CSS class 'hide'.
+*
+* @param {number}      i                - Zero-based IPO entry index (for future
+*                                         use; not currently consumed here).
+* @param {Array}       data             - Flat array of widget data items for
+*                                         this IPO entry (widget_id + value pairs).
+* @param {HTMLElement} values_container - Parent element that receives the <li>.
+* @param {Object}      self             - The descriptors widget instance.
+* @returns {Promise<HTMLElement>} Resolves to the <li> element (may be empty
+*                                 if indexation value < 1).
 */
 const get_value_element = async (i, data, values_container, self) => {
 
@@ -153,6 +245,9 @@ const get_value_element = async (i, data, values_container, self) => {
 		})
 
 	// dd_grid build
+		// Extract the pre-resolved component_grid_value object produced by
+		// class.descriptors.php and wrap it in a single-element array as
+		// dd_grid expects its `data` option to be an array of grid-value objects.
 		const dd_grid_data	= [data.find(el => el.widget_id==='terms').value]
 		const dd_grid		= await get_instance({
 			model			: 'dd_grid',
