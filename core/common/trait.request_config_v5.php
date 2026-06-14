@@ -1,26 +1,43 @@
 <?php declare(strict_types=1);
 /**
-* COMMON
-* TRAIT request_config_v5
+* TRAIT REQUEST_CONFIG_V5
+* V5 legacy fallback strategy for building a request_config from ontology
+* relation nodes.
 *
-* V5 legacy fallback methods for request_config building.
-* Handles backward compatibility for ontologies without V6 request_config.
+* When an ontology node does NOT define an explicit
+* `properties->source->request_config` (the V6 approach), Dédalo falls back
+* to this trait to derive which components to display by walking the
+* ontology relation graph. The trait is mixed into class common and is
+* selected by get_ar_request_config() when the V6 condition is false.
 *
-* RESPONSIBILITIES:
-* - Build request_config from ontology relation nodes (V5 style)
-* - Resolve related terms based on model and mode
-* - Create ddo_map from related components
-* - Maintain backward compatibility with older ontologies
+* Responsibilities:
+* - Derive the list of component tipos to display (ar_related) by inspecting
+*   ontology relation nodes for the caller's model and mode.
+* - Remove sections, groupers, deprecated tipos, and items the current user
+*   cannot access from that list.
+* - Build a ddo_map array of dd_object instances, one per authorized component.
+* - Wrap everything in a single request_config_object (api_engine=dedalo,
+*   type=main) and return it as a one-element array — matching the shape that
+*   V6 returns so callers need no branching.
+* - Update $this->pagination->limit as a side effect (mirrors V6 behaviour;
+*   sync_pagination_from_config replicates this on the cache-hit path).
 *
-* V5 VS V6 DIFFERENCES:
-* - V6: Uses properties->source->request_config (explicit configuration)
-* - V5: Uses ontology relation_nodes (implicit configuration from hierarchy)
+* V5 vs V6 comparison:
+* - V6: reads an explicit `properties->source->request_config` JSON array
+*   stored on the ontology node — fast, deterministic, migration target.
+* - V5: derives configuration implicitly by traversing ontology children and
+*   relation_nodes — flexible but expensive; deprecated for new ontologies.
 *
-* WHEN V5 IS USED:
-* - properties->source->request_config is NOT defined
-* - Legacy ontologies that haven't been migrated to V6 style
+* Unsupported models:
+*   component_relation_parent and component_relation_children are not
+*   resolvable via V5 graph traversal; they throw immediately to force
+*   their ontology nodes to be migrated to explicit V6 RQOs.
 *
-* USED BY: get_ar_request_config() in class.common.php
+* Used by: common::get_ar_request_config() (class.common.php)
+* Peer traits: request_config_utils, request_config_ddo, request_config_v6
+*
+* @package Dédalo
+* @subpackage Core
 */
 trait request_config_v5 {
 
@@ -28,19 +45,35 @@ trait request_config_v5 {
 
 	/**
 	* BUILD_REQUEST_CONFIG_V5
-	* Builds request_config using V5 legacy logic
+	* Entry point for V5 legacy request_config resolution.
 	*
-	* FLOW:
-	* 1. Check for unsupported V5 components (throw error)
-	* 2. Resolve related terms based on model/mode
-	* 3. Clean related list (remove sections, excluded elements)
-	* 4. Build ddo_map from related components
-	* 5. Create request_config_object with show and sqo
-	* 6. Store ddo_map in dd_core_api for legacy access
+	* Orchestrates the full V5 pipeline and returns a one-element array
+	* containing a request_config_object, matching the shape produced by
+	* build_request_config_v6 so that callers need no branching.
 	*
-	* @param object $context {tipo, section_tipo, section_id, mode, model}
-	* @param object $pagination {offset, limit}
-	* @return array Array with single request_config_object
+	* Pipeline steps:
+	* 1. Reject models that are incompatible with V5 graph traversal (throw).
+	* 2. Resolve the raw list of related tipos via the ontology relation graph,
+	*    using mode- and model-specific rules (resolve_ar_related).
+	* 3. Strip sections (which become the target_section_tipo), deprecated
+	*    markers, and inaccessible tipos (clean_and_extract_related).
+	* 4. Build the default sqo_config object (limit, offset, operator, mode).
+	* 5. Apply the instance pagination limit side effect expected by the
+	*    *_json.php response controllers.
+	* 6. Determine display mode — non-section callers (portals) always use
+	*    'list'; section callers inherit $mode.
+	* 7. Filter the clean list to items the current user can read (permissions>0).
+	* 8. Build a dd_object for every authorized tipo (build_legacy_ddo_map).
+	* 9. Wrap the result in a request_config_object and return it.
+	*
+	* Side effect: sets $this->pagination->limit (if the instance has a
+	* pagination property) so downstream *_json.php controllers see the
+	* resolved limit even when the config came from this build path.
+	*
+	* @param object $context {tipo: string, section_tipo: string, section_id: int, mode: string, model: string, use_cache: bool}
+	* @param object $pagination {offset: int, limit: int}
+	* @return array Single-element array containing a request_config_object
+	* @throws Exception when $context->model is in the V5 unsupported list
 	*/
 	protected function build_request_config_v5(object $context, object $pagination) : array {
 
@@ -130,17 +163,25 @@ trait request_config_v5 {
 
 	/**
 	* RESOLVE_AR_RELATED
-	* Resolves related terms based on model and mode
+	* Dispatches to the correct mode-specific resolver to obtain the raw list
+	* of related tipos for a caller node.
 	*
-	* Related terms are components that should be displayed/processed.
-	* The resolution varies by:
-	* - Model: section, grouper, component_filter, etc.
-	* - Mode: edit, list, related_list, tm, search
+	* Related tipos are the component/section tipos that should be displayed or
+	* processed when the caller renders. The set varies by:
+	* - Model: 'section' walks its own children; groupers return their direct
+	*   children; component_filter has fixed project tipos; other components
+	*   follow their relation_nodes.
+	* - Mode: edit mode typically includes all editable children; list/tm modes
+	*   look for a section_list sub-node first; related_list uses a
+	*   relation_list sub-node.
 	*
-	* @param string $model Caller model name
-	* @param string $tipo Caller tipo
-	* @param string $mode Current mode
-	* @return array Array of related tipo strings
+	* The raw list returned here is unfiltered — callers should subsequently
+	* pass it through clean_and_extract_related and filter_authorized_related.
+	*
+	* @param string $model Caller's model class name (e.g. 'section', 'component_portal')
+	* @param string $tipo Caller's ontology tipo (e.g. 'dd153')
+	* @param string $mode Current render mode: 'edit'|'list'|'tm'|'search'|'related_list'
+	* @return array Flat array of ontology tipo strings
 	*/
 	protected function resolve_ar_related(string $model, string $tipo, string $mode) : array {
 
@@ -170,17 +211,23 @@ trait request_config_v5 {
 
 	/**
 	* RESOLVE_AR_RELATED_EDIT
-	* Resolves related terms for edit mode
+	* Determines which tipos to display when the caller renders in edit mode.
 	*
-	* EDIT MODE RULES:
-	* - section: Get all components, groups, tabs from section
-	* - groupers: Get direct children
-	* - component_filter: Special handling for projects
-	* - other components: Get relation_nodes (linked components)
+	* Rules by model:
+	* - section: returns every component_, section_group, section_group_div,
+	*   section_tab and tab child (recursively), explicitly excluding
+	*   component_dataframe (it has special rendering treatment).
+	* - groupers (section_group / section_group_div / section_tab / tab): returns
+	*   direct children only (one level), so the grouper controls its own layout.
+	* - component_filter: hardcodes the two project-section tipos
+	*   (DEDALO_SECTION_PROJECTS_TIPO, DEDALO_PROJECTS_NAME_TIPO) because the
+	*   filter component always operates on the projects matrix.
+	* - all other components: returns their ontology relation_nodes (the
+	*   sections and components they are linked to in the ontology graph).
 	*
-	* @param string $model
-	* @param string $tipo
-	* @return array
+	* @param string $model Caller's model class name
+	* @param string $tipo Caller's ontology tipo
+	* @return array Flat array of ontology tipo strings
 	*/
 	protected function resolve_ar_related_edit(string $model, string $tipo) : array {
 
@@ -224,14 +271,26 @@ trait request_config_v5 {
 
 	/**
 	* RESOLVE_AR_RELATED_RELATED_LIST
-	* Resolves related terms for related_list mode
+	* Determines which tipos to display when the caller renders in related_list
+	* mode.
 	*
-	* RELATED_LIST is used for showing relations in a special view.
-	* Only sections have related_list handling.
+	* related_list is a specialised view used to show records that are linked
+	* to the current record via a relation_list child node. Only sections
+	* have a meaningful related_list; all other models return an empty array.
 	*
-	* @param string $model
-	* @param string $tipo
-	* @return array
+	* Resolution strategy:
+	* 1. Look for a 'relation_list' child of the section using virtual-section
+	*    resolution disabled (resolve_virtual=false) — fast path for sections
+	*    that define their own relation_list.
+	* 2. If nothing found, retry with virtual-section resolution enabled so
+	*    that virtual sections (ontology aliases) fall through to their real
+	*    section's relation_list.
+	* 3. Return the relation_nodes of the first relation_list found, which are
+	*    the section/component tipos the relation_list is configured to show.
+	*
+	* @param string $model Caller's model class name
+	* @param string $tipo Caller's ontology tipo
+	* @return array Flat array of ontology tipo strings; empty if model is not 'section'
 	*/
 	protected function resolve_ar_related_related_list(string $model, string $tipo) : array {
 
@@ -241,12 +300,12 @@ trait request_config_v5 {
 			return $ar_related;
 		}
 
-		// Try to find relation_list child (virtual section first)
+		// Try to find relation_list child without virtual-section resolution
 		$ar_terms = section::get_ar_children_tipo_by_model_name_in_section(
 			$tipo,
 			['relation_list'],
 			true,		// from_cache
-			false,		// resolve_virtual (try virtual first)
+			false,		// resolve_virtual: direct lookup only
 			false,		// recursive
 			true		// search_exact
 		);
@@ -275,17 +334,20 @@ trait request_config_v5 {
 
 	/**
 	* RESOLVE_AR_RELATED_LIST
-	* Resolves related terms for list mode
+	* Dispatches to the correct sub-resolver when the caller renders in list,
+	* tm, or search mode.
 	*
-	* LIST MODE RULES:
-	* - section: Look for section_list child, use its components
-	* - groupers: Get direct children
-	* - component_filter: Special handling for projects
-	* - other components: Try section_list, fallback to relation_nodes
+	* Rules by model:
+	* - section: delegates to resolve_ar_related_list_section which looks for a
+	*   section_list child to define the visible columns.
+	* - groupers: returns direct ontology children (same as edit mode).
+	* - component_filter: hardcodes the project section tipos.
+	* - all other components: delegates to resolve_ar_related_list_component
+	*   which prefers a section_list child over relation_nodes.
 	*
-	* @param string $model
-	* @param string $tipo
-	* @return array
+	* @param string $model Caller's model class name
+	* @param string $tipo Caller's ontology tipo
+	* @return array Flat array of ontology tipo strings
 	*/
 	protected function resolve_ar_related_list(string $model, string $tipo) : array {
 
@@ -308,13 +370,21 @@ trait request_config_v5 {
 
 	/**
 	* RESOLVE_AR_RELATED_LIST_SECTION
-	* Resolves related terms for section in list mode
+	* Resolves the list of related tipos for a section in list/tm/search mode.
 	*
-	* Looks for section_list child term which defines list columns.
-	* Falls back to real section if virtual section has no section_list.
+	* A section's list columns are defined by its 'section_list' child node in
+	* the ontology. The relation_nodes of that section_list are the component
+	* tipos that appear as columns.
 	*
-	* @param string $tipo Section tipo
-	* @return array
+	* Fallback chain:
+	* 1. Look for a section_list child under $tipo directly.
+	* 2. If not found and $tipo is a virtual section (an alias), resolve it to
+	*    its backing real section and look there.
+	* 3. If still not found, return an empty array — the caller will produce no
+	*    ddo_map, and V5 will effectively render no columns.
+	*
+	* @param string $tipo Section tipo to resolve
+	* @return array Flat array of ontology tipo strings; empty if no section_list found
 	*/
 	protected function resolve_ar_related_list_section(string $tipo) : array {
 
@@ -351,13 +421,22 @@ trait request_config_v5 {
 
 	/**
 	* RESOLVE_AR_RELATED_LIST_COMPONENT
-	* Resolves related terms for component in list mode
+	* Resolves the list of related tipos for a non-section caller (e.g. a
+	* portal component) in list mode.
 	*
-	* Components (like portals) may have section_list defining columns.
-	* Also ensures target section is included in related terms.
+	* Strategy:
+	* 1. Check whether the component has a section_list child. If so, use its
+	*    relation_nodes as the column list.
+	*    - Also ensure the target section itself is present in that list:
+	*      portals link to one section but the section_list child may omit it.
+	*      If no section tipo is found among the relation_nodes, the main
+	*      related section (from the component's 'related' relation in the
+	*      ontology) is prepended.
+	* 2. If no section_list child exists, fall back to the component's own
+	*    relation_nodes.
 	*
 	* @param string $tipo Component tipo
-	* @return array
+	* @return array Flat array of ontology tipo strings
 	*/
 	protected function resolve_ar_related_list_component(string $tipo) : array {
 
@@ -404,17 +483,27 @@ trait request_config_v5 {
 
 	/**
 	* CLEAN_AND_EXTRACT_RELATED
-	* Cleans related array and extracts target section_tipo
+	* Removes non-displayable tipos from the raw related list and identifies
+	* the target section.
 	*
-	* CLEANING RULES:
-	* - Remove sections (they become target_section_tipo)
-	* - Remove 'exclude_elements' model
-	* - Remove deprecated component_security_areas_profiles
-	* - Remove component_filter from system tables
+	* The raw ar_related list may contain a mix of sections, components, and
+	* meta-types. This method partitions and filters them:
 	*
-	* @param array $ar_related Raw related terms
-	* @param string $section_tipo Default section_tipo
-	* @return array {ar_related_clean: array, target_section_tipo: string}
+	* - 'section' model: the first one found becomes target_section_tipo (used
+	*   as the section_tipo in all generated ddos). It is not added to the
+	*   component list because sections are not rendered as data columns.
+	* - 'exclude_elements' model: ontology marker nodes; skip silently.
+	* - DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO (dd249): deprecated
+	*   security component removed in V6; skip to avoid rendering it.
+	* - 'component_filter' in system tables (matrix_dd / matrix_list): the
+	*   filter component is not meaningful in these internal tables; skip.
+	*   (!) Note: $table is initialised to null and never reassigned in this
+	*   method; the matrix_dd/matrix_list branch is therefore currently dead
+	*   code — the guard never triggers.
+	*
+	* @param array $ar_related Raw flat list of ontology tipo strings from a resolver
+	* @param string $section_tipo Fallback section_tipo if no 'section' model is found in the list
+	* @return array{ar_related_clean: array, target_section_tipo: string}
 	*/
 	protected function clean_and_extract_related(array $ar_related, string $section_tipo) : array {
 
@@ -468,13 +557,19 @@ trait request_config_v5 {
 
 	/**
 	* FILTER_AUTHORIZED_RELATED
-	* Filters related items by user permissions
+	* Removes tipos that the current user cannot access.
 	*
-	* Only includes items where user has at least read permission (1).
+	* Calls common::get_permissions() for each tipo against the target section.
+	* Permission level 0 means no access; levels 1–3 grant increasing rights.
+	* Only tipos with permissions > 0 survive the filter.
 	*
-	* @param array $ar_related_clean Cleaned related terms
-	* @param string $target_section_tipo Section for permission check
-	* @return array Authorized related terms
+	* This is a second-pass filter after clean_and_extract_related removes
+	* structural/deprecated items; together they produce the final authorized
+	* component list that is turned into a ddo_map.
+	*
+	* @param array $ar_related_clean Component tipos after structural cleaning
+	* @param string $target_section_tipo The resolved section tipo against which permissions are checked
+	* @return array Subset of $ar_related_clean for which the user has at least read access
 	*/
 	protected function filter_authorized_related(array $ar_related_clean, string $target_section_tipo) : array {
 
@@ -494,22 +589,30 @@ trait request_config_v5 {
 
 	/**
 	* BUILD_LEGACY_DDO_MAP
-	* Builds ddo_map for V5 legacy mode
+	* Converts the authorized list of component tipos into an array of
+	* dd_object instances (the ddo_map) used by V5 request_config.
 	*
-	* Creates dd_object for each related component with:
-	* - tipo: component identifier
-	* - model: component model name
-	* - section_tipo: target section
-	* - parent: calling element
-	* - mode: display mode
-	* - view: view configuration
-	* - label: human-readable name
+	* Each dd_object carries the minimum information needed for the data layer
+	* to fetch and render the component:
+	* - tipo: component's ontology identifier.
+	* - model: resolved from the ontology (e.g. 'component_input_text').
+	* - section_tipo: the target section that holds this component's data.
+	* - parent: the calling element's tipo (section or portal).
+	* - mode: 'list' for non-section callers, or the caller's own mode.
+	* - view: the component's configured view, with $children_view as an
+	*   override when the caller's properties define `children_view`.
+	* - label: human-readable term in DEDALO_APPLICATION_LANG for UI display.
 	*
-	* @param array $ar_related_clean_auth Authorized related terms
-	* @param string $parent_tipo Calling element tipo
-	* @param string $target_section_tipo Target section
-	* @param string $current_mode Display mode
-	* @param string|null $children_view View override from properties
+	* View resolution priority:
+	* 1. $children_view (from caller's properties->children_view), if set.
+	* 2. The component's own `properties->view`, if defined.
+	* 3. common::resolve_view() default for the model.
+	*
+	* @param array $ar_related_clean_auth Authorized component tipos (post-filter)
+	* @param string $parent_tipo Ontology tipo of the calling element (section or component)
+	* @param string $target_section_tipo Section tipo that owns the data rows
+	* @param string $current_mode Display mode for all generated ddos ('list', 'edit', etc.)
+	* @param string|null $children_view View override from the caller's properties; null means use each component's own view
 	* @return array Array of dd_object instances
 	*/
 	protected function build_legacy_ddo_map(
