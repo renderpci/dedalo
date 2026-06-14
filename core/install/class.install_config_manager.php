@@ -71,8 +71,12 @@ final class install_config_manager {
 	*
 	* Key properties of the returned object:
 	* - `db_install_name`           — name of the PostgreSQL install database.
-	* - `host_line` / `port_line`   — shell-safe `-h`/`-p` fragments for psql
-	*                                 commands (empty string when not set).
+	* - `host_line`                  — shell-safe `-h <host>` fragment for psql
+	*                                 commands; falls back to the bare string
+	*                                 `'localhost'` when DEDALO_HOSTNAME_CONN is
+	*                                 empty (no `-h` flag in that case).
+	* - `port_line`                  — shell-safe `-p <port>` fragment; empty
+	*                                 string when DEDALO_DB_PORT_CONN is not set.
 	* - `to_preserve_tld`           — TLD prefixes whose records must NOT be
 	*                                 deleted during a "clean data" operation.
 	* - `to_clean_tables`           — matrix_* tables that are truncated when

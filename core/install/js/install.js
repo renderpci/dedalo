@@ -140,7 +140,7 @@ export const install = function() {
 * @param {Object|null} [options.context=null] - Pre-fetched install context (omit to let build() fetch it)
 * @param {Object|null} [options.data=null] - Pre-resolved data (normally null for install)
 * @param {Array|null} [options.datum=null] - Full datum array (normally null for install)
-* @returns {boolean} true on success; false if the instance was already initialized
+* @returns {Promise<boolean>} Resolves to true on success; false if the instance was already initialized
 */
 install.prototype.init = async function(options) {
 

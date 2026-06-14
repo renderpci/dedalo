@@ -81,8 +81,8 @@
 *
 * Primary caller:
 *   dd_utils_api::get_install_context() instantiates install, calls get_json()
-*   with get_context=true / get_data=false, and forwards context[0] to the JS
-*   install wizard over the API.
+*   with get_context=true / get_data=false, and forwards the context array to
+*   the JS install wizard over the API as response->result.
 *
 * Called by:
 *   common::get_json()  →  includes this file  →  returns result
