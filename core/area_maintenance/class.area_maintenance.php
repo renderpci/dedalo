@@ -204,6 +204,7 @@ class area_maintenance extends area_common {
 		$item = new stdClass();
 		$item->id = 'export_hierarchy';
 		$item->category = 'data';
+		$item->class = 'success width_100';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
 		$item->label = label::get_label('export_hierarchy') ?? 'Export hierarchy';
