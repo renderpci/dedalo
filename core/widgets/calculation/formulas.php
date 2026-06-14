@@ -1,33 +1,32 @@
 <?php declare(strict_types=1);
 /**
- * CALCULATION FORMULAS
- *
- * Collection of standalone PHP functions loaded and invoked by the
- * `calculation` widget class via `resolve_logic()` (class.calculation.php).
- * Each function receives a unified request_options object that bundles
- * the pre-resolved component data together with the per-IPO-block options
- * defined in the ontology, and returns a structured result array consumed
- * by render_calculation.js on the client.
- *
- * Invocation model:
- * - The widget's IPO "process" block references this file by path and names
- *   the function to call (e.g. { "file": "/mdcat/calculation/formulas.php",
- *   "fn": "summarize" }).
- * - resolve_logic() (SEC-052) confines the include to DEDALO_WIDGETS_PATH and
- *   validates the function name, then calls $fn($arg) where $arg carries:
- *     $arg->data    — stdClass keyed by component var_name, values from
- *                     resolve_data() (current record, all records, or search session)
- *     $arg->options — options object from the IPO process block (type, precision, …)
- *     $arg->caller_section_tipo — tipo of the section that owns the widget
- * - The return value must be an array of stdClass objects, each with at least
- *   'id' and 'value' properties, matching the ids listed in the IPO output map.
- *
- * Currently bundled functions:
- * - summarize() — numeric (int/float) or date aggregation across all input vars
- *
- * @package Dédalo
- * @subpackage Widgets
- */
+* CALCULATION FORMULAS
+* Bundled PHP processing functions for the calculation widget.
+*
+* This file is loaded at runtime by calculation::resolve_logic() (class.calculation.php,
+* SEC-052) when an IPO "process" block names this file and a function it contains.
+* Each function receives a unified argument object built by resolve_logic() and must
+* return an array of stdClass result items consumed by render_calculation.js.
+*
+* Invocation model:
+* - The widget's IPO "process" block references this file by path and names
+*   the function to call (e.g. { "file": "/mdcat/calculation/formulas.php",
+*   "fn": "summarize" }).
+* - resolve_logic() (SEC-052) confines the include to DEDALO_WIDGETS_PATH and
+*   validates the function name, then calls $fn($arg) where $arg carries:
+*     $arg->data    — stdClass keyed by component var_name, values from
+*                     resolve_data() (current record, all records, or search session)
+*     $arg->options — options object from the IPO process block (type, precision, …)
+*     $arg->caller_section_tipo — tipo of the section that owns the widget
+* - The return value must be an array of stdClass objects, each with at least
+*   'id' and 'value' properties, matching the ids listed in the IPO output map.
+*
+* Currently bundled functions:
+* - summarize() — numeric (int/float) or date aggregation across all input vars
+*
+* @package Dédalo
+* @subpackage Widgets
+*/
 
 
 
@@ -69,13 +68,14 @@
 *   "options": { "type": "float|int|date", "precision": 2 }
 * }
 *
-* Sample float input data:
+* Sample float input data (values arrive as single-element arrays from
+* component_number resolution — each property is an array, not a scalar):
 * {
-*   "au": "1",
-*   "ag": "2.1",
-*   "cu": "8.4",
-*   "pb": "",
-*   "sn": "0.34"
+*   "au": [1],
+*   "ag": [2.1],
+*   "cu": [8.4],
+*   "pb": [],
+*   "sn": [0.34]
 * }
 *
 * Sample returned result:
@@ -98,6 +98,9 @@
 */
 function summarize( string|object $request_options) : array {
 
+	// Normalize input
+	// Accept either a raw JSON string (legacy direct calls) or the unified $arg
+	// object passed by resolve_logic(). Both paths produce the same $options shape.
 	$options = is_string($request_options)
 		? json_decode($request_options)
 		: $request_options;
@@ -205,6 +208,9 @@ function summarize( string|object $request_options) : array {
 				: null;
 			if(isset($total_full)){
 				$total = new dd_date();
+				// Copy only the shape-enabled properties from $total_full to $total.
+				// Dynamic getter/setter dispatch (get_year / set_year etc.) avoids
+				// a large explicit switch and relies on dd_date's named accessors.
 				foreach ($shape as $key => $value) {
 					if($value === true){
 						$method_get = 'get_' . $key;

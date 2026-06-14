@@ -368,7 +368,9 @@ class calculation extends widget_common {
 			}
 
 		// set the filter
-		// NEED TO BE DEFINED
+		// (!) Placeholder: a future "filter" input-config key (distinct from the
+		// $data->filter===true branch above) is intended to allow injecting a
+		// pre-built SQO directly into the resolved data. Not yet implemented.
 
 
 		return $data_resolved;
@@ -768,10 +770,12 @@ class calculation extends widget_common {
 	* Currently only 'php' engine is implemented; the switch is in place to allow
 	* future engines (e.g. WASM, sandbox) without changing the call site.
 	*
-	* @param object    $process Object with engine (string), file (string, relative to
-	*                           DEDALO_WIDGETS_PATH), fn (string), options (object).
-	* @param object    $data    Pre-resolved data object keyed by var_name.
-	* @return mixed|null        Return value of the invoked function, or null on refusal
+	* @param object      $process Object with engine (string), file (string, relative to
+	*                             DEDALO_WIDGETS_PATH), fn (string), options (object).
+	* @param object|null $data    Pre-resolved data object keyed by var_name. Untyped in
+	*                             the signature because resolve_data() may return null
+	*                             (empty input block), which would then arrive here.
+	* @return mixed|null          Return value of the invoked function, or null on refusal
 	*/
 	private function resolve_logic(object $process, $data) {
 

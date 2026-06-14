@@ -59,8 +59,15 @@
 
 
 /**
-* RENDER_COMPONENT_CALCULATION
-* Manage the components logic and appearance in client side
+* RENDER_CALCULATION
+* Client-side render constructor for the calculation widget.
+*
+* This constructor serves as a mixin container: its prototype methods
+* (`edit`, `list`) are mixed into `calculation.prototype` by calculation.js.
+* The constructor itself is a no-op stub — instantiation is handled by
+* widget_common.prototype.init.
+*
+* @returns {boolean} Always returns true.
 */
 export const render_calculation = function() {
 
@@ -70,8 +77,23 @@ export const render_calculation = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @return HTMLElement wrapper
+* Build and return the edit-mode DOM wrapper for the calculation widget.
+*
+* Delegates inner content construction to `get_content_data_edit`. When
+* `options.render_level === 'content'` the inner `<div>` is returned
+* directly (used by embedded/portal callers that manage their own wrapper).
+* Otherwise `ui.widget.build_wrapper_edit` wraps the content in the standard
+* widget shell and the full wrapper is returned.
+*
+* (!) The `add_events` call is currently commented out. This is intentional —
+* event subscription for live updates is handled inside `get_value_element`
+* via `event_manager.subscribe`, not here.
+*
+* @param {Object} options - Render options bag.
+* @param {string} [options.render_level='full'] - 'full' returns the outer wrapper;
+*   'content' returns only the inner content_data node.
+* @returns {Promise<HTMLElement>} Resolves to the widget wrapper (full mode) or
+*   the content_data div (content mode).
 */
 render_calculation.prototype.edit = async function(options) {
 
@@ -101,8 +123,12 @@ render_calculation.prototype.edit = async function(options) {
 
 /**
 * LIST
-* Render component node to use in list
-* @return HTMLElement wrapper
+* Render the calculation widget for list (grid/table) mode.
+*
+* Aliased directly to `edit` because the calculation widget's output is
+* read-only in both modes. The same DOM structure and event wiring applies.
+*
+* @returns {Promise<HTMLElement>} See `render_calculation.prototype.edit`.
 */
 render_calculation.prototype.list = render_calculation.prototype.edit
 
@@ -163,7 +189,7 @@ const get_content_data_edit = async function(self) {
 
 
 /**
-* INPUT_ELEMENT
+* GET_VALUE_ELEMENT
 * Build a single `<li>` element representing one IPO output group and attach a
 * live-update event subscription for reactive DOM updates.
 *
@@ -333,7 +359,7 @@ const get_value_element = (i, data, inputs_container, self) => {
 
 
 	return li
-}//end input_element
+}//end get_value_element
 
 
 
