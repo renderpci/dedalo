@@ -7,6 +7,26 @@
  * @module link/reference_ui
  */
 
+/**
+ * REFERENCE_UI
+ * CKEditor 5 UI sub-plugin for the Dédalo "reference" inline-annotation feature.
+ *
+ * Responsibilities:
+ * - Registers a `'reference'` toolbar button via the CKEditor component factory.
+ * - Binds the button's `isEnabled` and `isOn` state to the `reference_command` so that
+ *   the toolbar reflects whether the cursor is inside an existing reference span.
+ * - Listens to the button's `'execute'` event and delegates to the `reference` command,
+ *   which in turn fires its own `'execute'` event where the Dédalo host code
+ *   (`service_ckeditor.setup_button_reference`) intercepts and opens the reference modal.
+ *
+ * This plugin is a lightweight orchestrator: it owns no modal, no form view, and no
+ * balloon.  The commented-out Ctrl+K keystroke and formView tear-down stubs are preserved
+ * from the CKEditor link plugin template and left for future implementation.
+ *
+ * Consumed by:
+ *   reference.js → lists this class in `static get requires()`
+ */
+
 import { Plugin } from 'ckeditor5/src/core';
 import { ClickObserver } from 'ckeditor5/src/engine';
 import { ButtonView } from 'ckeditor5/src/ui';
@@ -16,19 +36,34 @@ import { isLinkElement, REFERENCE_KEYSTROKE } from './utils';
 
 import linkIcon from '../theme/icons/link.svg';
 
+/**
+ * Marker name used by the CKEditor UI infrastructure to track the visual
+ * selection highlight while a contextual balloon is open.
+ * Reserved for future balloon-based UI (currently no balloon is shown).
+ *
+ * @var {string}
+ */
 const VISUAL_SELECTION_MARKER_NAME = 'link-ui';
 
 /**
- * The link UI plugin. It introduces the `'link'` and `'unlink'` buttons and support for the <kbd>Ctrl+K</kbd> keystroke.
+ * REFERENCE_UI
+ * CKEditor 5 Plugin that wires the Dédalo reference feature's toolbar button.
  *
- * It uses the
- * {@link module:ui/panel/balloon/contextualballoon~ContextualBalloon contextual balloon plugin}.
+ * Introduces a single `'reference'` button in the editor's component factory.
+ * The button is bound to the `reference_command` command so its enabled/toggled
+ * state tracks the command automatically.  No contextual balloon or form view is
+ * managed here — those are left for future extension.
  *
  * @extends module:core/plugin~Plugin
  */
 export default class reference_ui extends Plugin {
 
 	/**
+	 * PLUGINNAME
+	 * Canonical name used by CKEditor to look up this plugin instance via
+	 * `editor.plugins.get( 'reference_ui' )`.
+	 *
+	 * @returns {string} The registered plugin name.
 	 * @inheritDoc
 	 */
 	static get pluginName() {
@@ -36,6 +71,14 @@ export default class reference_ui extends Plugin {
 	}
 
 	/**
+	 * INIT
+	 * CKEditor lifecycle hook called once the editor is fully assembled.
+	 *
+	 * Registers the ClickObserver on the editing view (required for detecting
+	 * user click events that may later be used to show contextual UI), then
+	 * delegates toolbar-button creation to `_createToolbarLinkButton`.
+	 *
+	 * @returns {void}
 	 * @inheritDoc
 	 */
 	init() {
@@ -48,6 +91,17 @@ export default class reference_ui extends Plugin {
 	}
 
 	/**
+	 * DESTROY
+	 * CKEditor lifecycle hook called when the editor is destroyed.
+	 *
+	 * Delegates to the parent plugin teardown and provides a stub for future
+	 * form-view cleanup.  CKEditor does not automatically destroy UI components
+	 * that are created outside of a View's template binding, so any balloon or
+	 * form view added in the future must be explicitly destroyed here.
+	 *
+	 * See https://github.com/ckeditor/ckeditor5/issues/1341 for the upstream issue.
+	 *
+	 * @returns {void}
 	 * @inheritDoc
 	 */
 	destroy() {
@@ -59,10 +113,44 @@ export default class reference_ui extends Plugin {
 
 
 	/**
-	 * Creates a toolbar Link button. Clicking this button will show
-	 * a {@link #_balloon} attached to the selection.
+	 * _CREATETOOLBARLINKBUTTON
+	 * Registers the `'reference'` button in CKEditor's UI component factory and
+	 * wires its state and execute behaviour to the `reference_command`.
+	 *
+	 * The button is created lazily by the factory each time CKEditor builds a
+	 * toolbar, so this method only registers the factory callback — it does not
+	 * create a ButtonView itself.
+	 *
+	 * Button properties set at creation time:
+	 * - `isEnabled`     — initially forced to `true`, then overridden by the
+	 *                     binding below; the initial assignment has no lasting
+	 *                     effect because `bind` replaces it immediately.
+	 * - `label`         — static string 'Reference' (not localised via `t()`).
+	 * - `icon`          — link SVG icon imported from the theme directory.
+	 * - `keystroke`     — Ctrl+D (defined in utils.js as REFERENCE_KEYSTROKE);
+	 *                     displayed in the tooltip but NOT registered as a global
+	 *                     keystroke handler (the commented-out block below).
+	 * - `tooltip`       — true: CKEditor renders an accessible tooltip automatically.
+	 * - `isToggleable`  — true: the button can appear in a pressed/active state
+	 *                     when the cursor is inside an existing reference.
+	 *
+	 * State bindings (live, automatic):
+	 * - `button.isEnabled` ← `reference_command.isEnabled`
+	 *   (disabled when schema forbids `reference` at the current selection)
+	 * - `button.isOn`      ← `!!reference_command.value`
+	 *   (toggled when the caret is inside an existing reference span)
+	 *
+	 * Execute flow:
+	 *   button 'execute' → editor.execute('reference') → reference_command.execute()
+	 *   → fires command 'execute' event → service_ckeditor.setup_button_reference
+	 *   listener opens the Dédalo reference-picker modal.
+	 *
+	 * (!) The Ctrl+D global keystroke handler is commented out.  Re-enabling it
+	 *     requires uncommenting the `editor.keystrokes.set(…)` block and adding
+	 *     browser-focus prevention for Firefox/Chrome/Edge (see ckeditor5#4811).
 	 *
 	 * @private
+	 * @returns {void}
 	 */
 	_createToolbarLinkButton() {
 		const editor = this.editor;
@@ -105,16 +193,38 @@ export default class reference_ui extends Plugin {
 
 
 	/**
-	 * Returns the link {@link module:engine/view/attributeelement~AttributeElement} under
-	 * the {@link module:engine/view/document~Document editing view's} selection or `null`
-	 * if there is none.
+	 * _GETSELECTEDLINKELEMENT
+	 * Returns the `<reference>` AttributeElement that is currently selected in the
+	 * editing view, or `null` when the selection does not coincide with a reference
+	 * element.
 	 *
-	 * **Note**: For a non–collapsed selection, the link element is returned when **fully**
-	 * selected and the **only** element within the selection boundaries, or when
-	 * a linked widget is selected.
+	 * Three cases are handled:
+	 *
+	 * 1. **Collapsed selection** — walks up the ancestor chain from the caret
+	 *    position and returns the nearest `<reference>` AttributeElement (or null).
+	 *
+	 * 2. **Widget selected** (e.g. an inline image inside a reference) — same
+	 *    ancestor walk from the widget's position.  `isWidget` is used to detect
+	 *    CKEditor-managed widget wrappers.
+	 *
+	 * 3. **Non-collapsed text selection** — the reference element is returned only
+	 *    when the selection **fully** covers exactly one reference element and that
+	 *    element is the **only** thing selected.  Partial selections and selections
+	 *    spanning multiple elements both return `null`.
+	 *    Implementation: trim whitespace-only boundary nodes from both ends of the
+	 *    range, walk up from start and end to find their respective ancestor
+	 *    `<reference>` elements, confirm they are the same node, then verify that
+	 *    a range spanning the interior of that element (also trimmed) is equal to
+	 *    the selection range.
+	 *
+	 * (!) This method is defined but currently unused within this file.  It was
+	 *     retained from the CKEditor link plugin template for potential future use
+	 *     (e.g. a contextual balloon or inline toolbar).
 	 *
 	 * @private
-	 * @returns {module:engine/view/attributeelement~AttributeElement|null}
+	 * @returns {Object|null|undefined} The CKEditor AttributeElement for the selected reference,
+	 *   `null` when a non-collapsed selection does not fully cover exactly one reference, or
+	 *   `undefined` when no ancestor reference element is found (propagated from `findLinkElementAncestor`).
 	 */
 	_getSelectedLinkElement() {
 		const view = this.editor.editing.view;
@@ -146,11 +256,24 @@ export default class reference_ui extends Plugin {
 
 }
 
-// Returns a link element if there's one among the ancestors of the provided `Position`.
-//
-// @private
-// @param {module:engine/view/position~Position} View position to analyze.
-// @returns {module:engine/view/attributeelement~AttributeElement|null} Link element at the position or null.
+/**
+ * FINDLINKELEMENTANCESTOR
+ * Walks the ancestor chain of a view Position upward and returns the first
+ * node that is a Dédalo `<reference>` AttributeElement, or `undefined` when
+ * none is found.
+ *
+ * Uses `isLinkElement` from `./utils` which checks both that the node is a
+ * CKEditor `attributeElement` AND that it carries the `'reference'` custom
+ * property set during downcast conversion.
+ *
+ * Called by `_getSelectedLinkElement` to resolve the enclosing reference from
+ * any position within the editing view tree.
+ *
+ * @private
+ * @param {Object} position - CKEditor view Position whose ancestor chain is searched.
+ * @returns {Object|undefined} The nearest ancestor AttributeElement that qualifies
+ *   as a reference element, or `undefined` if no such ancestor exists.
+ */
 function findLinkElementAncestor( position ) {
 	return position.getAncestors().find( ancestor => isLinkElement( ancestor ) );
 }
