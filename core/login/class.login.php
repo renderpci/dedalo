@@ -1,18 +1,28 @@
 <?php declare(strict_types=1);
 /**
 * CLASS LOGIN
-* Handles user authentication, session management, and login security for Dédalo
+* Handles user authentication, session management, and login security for Dédalo.
 *
-* Key features:
-* - User authentication with username/password validation
-* - SAML authentication support for external identity providers
-* - Session management and security token handling
-* - Login activity logging and security monitoring
-* - Maintenance mode access control
-* - Cookie-based media file protection
-* - User profile and project validation
+* This class is the single entry-point for all credential-based access to Dédalo.
+* Responsibilities:
+* - Standard username/password authentication with Argon2id verification and
+*   transparent legacy AES → Argon2id rehash on first successful login (SEC-001).
+* - SAML authentication for institutional identity providers (Login_SAML).
+* - Session fixation prevention via session ID regeneration on login and logout
+*   (SEC-004 / SEC-080).
+* - Brute-force / credential-stuffing throttle keyed by (namespace|username|ip),
+*   stored as per-key JSON files under DEDALO_CACHE_MANAGER['files_path'] (SEC-019).
+* - Maintenance-mode access control: only the root user (username 'root') may log in
+*   while DEDALO_MAINTENANCE_MODE is true.
+* - Media access control: issues the daily-rotated auth cookie and syncs the
+*   server-side marker files through media_protection on every login.
+* - Login/logout activity reporting through the activity logger.
+* - Post-login sequence: backup, DB ANALYZE, cache warming, component-lock cleanup.
 *
-* @package Dedalo
+* Extends common for structure-context loading (ontology, mode, lang).
+* Extended by nothing (final behaviour through static calls).
+*
+* @package Dédalo
 * @subpackage Core
 */
 class login extends common {
@@ -23,42 +33,49 @@ class login extends common {
 	* CLASS VARS
 	*/
 		/**
-		 * Unique identifier for the login instance.
-		 * Set via set_id(), typically null for login operations.
-		 * @var ?int $id
-		 */
+		* Numeric record identifier for this login instance. Always null for login operations
+		* because the login form is not associated with any particular section record.
+		* @var ?int $id
+		*/
 		protected ?int $id = null;
 
 		/**
-		 * Ontology tipo for the active account status component.
-		 * Identifies the component that stores whether a user account is active ('dd131').
-		 * @var string $tipo_active_account
-		 */
+		* Ontology tipo for the "active account" component (component_radio_button, value dd131).
+		* Used by active_account_check() to fetch account activation state from matrix_users.
+		* The stored value is compared to the NUMERICAL_MATRIX_VALUE_YES constant.
+		* @var string $tipo_active_account
+		*/
 		protected string $tipo_active_account = 'dd131';
 
 		/**
-		 * Ontology tipo for the login button component.
-		 * Identifies the button element that triggers login submission ('dd259').
-		 * @var string $tipo_button_login
-		 */
+		* Ontology tipo for the login submit button (dd259).
+		* Used by get_structure_context() to include the button in the login form context so
+		* the client can render the button from the ontology definition.
+		* @var string $tipo_button_login
+		*/
 		protected string $tipo_button_login = 'dd259';
 
 		/**
-		 * Default password for the super user (root) account.
-		 * Empty string indicates no default; must be set during installation.
-		 */
+		* The expected default password value for the root (super-user) account.
+		* An empty string signals "no default password configured"; check_root_has_default_password()
+		* flags the installer when the stored password is blank, matching this sentinel.
+		* (!) Never store a non-empty value here — this constant is intentionally empty.
+		*/
 		const SU_DEFAULT_PASSWORD = '';
 
 
 
 	/**
 	* __CONSTRUCT
-	* Initialize login instance with specified mode
+	* Initialize a login instance bound to the fixed login section tipo (dd229).
 	*
-	* Note: Removed is_logged verification to allow login context retrieval
-	* in test environments like unit tests
+	* Sets up the common inherited state (id, tipo, lang, mode) and calls
+	* parent::load_structure_data() to populate the ontology structure.
+	* The is_logged() guard is intentionally skipped here so that the login form
+	* context (get_structure_context) can be fetched even before a session exists —
+	* this also allows unit tests to build a login instance without a live session.
 	*
-	* @param string $mode Operation mode (default: 'edit')
+	* @param string $mode = 'edit' - Operation mode passed to the parent constructor.
 	* @return void
 	*/
 	public function __construct(string $mode='edit') {
@@ -95,10 +112,14 @@ class login extends common {
 
 	/**
 	* GET_LOGIN_THROTTLE_FILE
-	* Returns the absolute path to the throttle state file for the given key,
-	* or null if cache infrastructure is not available.
-	* @param string $key
-	* @return string|null
+	* Returns the absolute filesystem path to the per-key throttle state JSON file,
+	* or null when the cache infrastructure is not available (constant missing, directory
+	* absent, or not writable). Files are stored under
+	*   DEDALO_CACHE_MANAGER['files_path']/dd_login_attempts/<sha1(key)>.json
+	* The SHA-1 digest of the raw key prevents directory traversal and limits
+	* the filename to a safe fixed-length hex string.
+	* @param string $key - throttle key produced by build_login_throttle_key()
+	* @return string|null - absolute path, or null when unavailable
 	*/
 	private static function get_login_throttle_file(string $key) : ?string {
 
@@ -135,10 +156,24 @@ class login extends common {
 
 	/**
 	* CHECK_LOGIN_THROTTLE
-	* Returns null when the caller is allowed to attempt authentication.
-	* Returns a ready-to-return response object when the caller is locked out.
-	* @param string $key
-	* @return object|null
+	* Evaluate whether the given (namespace|username|ip) key is currently locked out.
+	*
+	* Reads the per-key JSON state file and applies the sliding-window rule:
+	*  - Count only timestamps within the last DEDALO_LOGIN_ATTEMPT_WINDOW seconds.
+	*  - If the count is below DEDALO_LOGIN_MAX_ATTEMPTS, allow the attempt (return null).
+	*  - If the latest attempt + DEDALO_LOGIN_LOCKOUT_SECONDS is still in the future,
+	*    return a pre-built response object so the caller can short-circuit immediately.
+	*  - Once the lockout window has passed, the caller is allowed again (return null).
+	* Skipped entirely during unit-test runs (IS_UNIT_TEST === true) to prevent
+	* state leaking between test cases.
+	*
+	* Tunable constants (all have safe built-in defaults):
+	*   DEDALO_LOGIN_MAX_ATTEMPTS    (default 10)  — failures before lockout.
+	*   DEDALO_LOGIN_ATTEMPT_WINDOW  (default 900) — sliding window in seconds.
+	*   DEDALO_LOGIN_LOCKOUT_SECONDS (default 900) — cooldown after reaching the limit.
+	*
+	* @param string $key - throttle key produced by build_login_throttle_key()
+	* @return object|null - null means proceed; a stdClass with result/msg/errors/retry_after means reject
 	*/
 	private static function check_login_throttle(string $key) : ?object {
 
@@ -192,8 +227,14 @@ class login extends common {
 
 	/**
 	* RECORD_FAILED_LOGIN_ATTEMPT
-	* Append a failed-attempt timestamp for the given key.
-	* @param string $key
+	* Append the current Unix timestamp to the throttle state file for the given key.
+	*
+	* The file is opened with 'c+' (create-or-append without truncation) and an
+	* exclusive flock() ensures that concurrent PHP workers do not corrupt the JSON.
+	* Old entries beyond DEDALO_LOGIN_ATTEMPT_WINDOW are pruned on every write so the
+	* file does not grow unboundedly. No-op during unit tests.
+	*
+	* @param string $key - throttle key produced by build_login_throttle_key()
 	* @return void
 	*/
 	private static function record_failed_login_attempt(string $key) : void {
@@ -246,8 +287,14 @@ class login extends common {
 
 	/**
 	* CLEAR_FAILED_LOGIN_ATTEMPTS
-	* Remove the throttle state file for the given key on successful auth.
-	* @param string $key
+	* Delete the throttle state file for the given key after a successful authentication.
+	*
+	* Resetting on success means a legitimate user who hits a transient lockout due to
+	* a forgotten password can log in normally once they use the correct credentials,
+	* without waiting for the full lockout window to expire.
+	* No-op during unit tests.
+	*
+	* @param string $key - throttle key produced by build_login_throttle_key()
 	* @return void
 	*/
 	private static function clear_failed_login_attempts(string $key) : void {
@@ -265,10 +312,20 @@ class login extends common {
 
 	/**
 	* BUILD_LOGIN_THROTTLE_KEY
-	* Build a throttle key from a label + raw identifier (username, SAML code...)
-	* + the trusted client IP.
-	* @param string $namespace
-	* @param string $identifier
+	* Build a composite throttle key from a namespace, a case-normalised identifier,
+	* and the trusted client IP address.
+	*
+	* Format: "<namespace>|<lower(identifier)>|<trusted_ip>"
+	* This compound key means:
+	*  - Different namespaces ('login' vs 'saml') maintain independent counters.
+	*  - Username comparison is case-insensitive (prevents trivial bypass via mixed case).
+	*  - Keying by IP prevents an attacker from locking out all users by guessing many
+	*    names from the same address, while each IP still accumulates its own counter.
+	*  - get_client_ip_trusted() is used (not $_SERVER['REMOTE_ADDR'] directly) so that
+	*    reverse-proxy X-Forwarded-For headers are handled safely.
+	*
+	* @param string $namespace  - caller context label, e.g. 'login' or 'saml'
+	* @param string $identifier - username, SAML code, or other user-identifying token
 	* @return string
 	*/
 	private static function build_login_throttle_key(string $namespace, string $identifier) : string {
@@ -364,8 +421,11 @@ class login extends common {
 			$ar_result		= $ar_section_id;
 			$user_count		= count($ar_result);
 
-			// give root user of v6
-			// Provisional!
+			// v6 root fallback (provisional migration helper)
+			// The root superuser (section_id -1) does not have a real row in matrix_users,
+			// so get_users_with_name() returns an empty array for 'root'. Fall back to the
+			// synthetic [-1] result so the credential path continues normally.
+			// (!) PROVISIONAL: remove once all deployments have migrated past v7.0.0.
 			if( empty($ar_result) && $username==='root' ){
 				$ar_result = login::get_v6_root_db_data();
 				$user_count = count($ar_result);
@@ -854,14 +914,15 @@ class login extends common {
 
 
 	/**
-	* GET_USERNAME
-	* Retrieve the username for a given user section ID
+	* LOGGED_USER_USERNAME
+	* Return the login name (username) stored for the given user section_id.
 	*
-	* Fetches the user's login name from the DEDALO_USER_NAME_TIPO component
-	* and concatenates all values (for multi-language scenarios)
+	* Fetches the DEDALO_USER_NAME_TIPO component (component_input_text) in nolan lang
+	* and joins all value entries with a space. In practice usernames are single-valued,
+	* but the join handles the edge case where multiple data entries exist gracefully.
 	*
-	* @param string|int $section_id User section identifier
-	* @return string $username Concatenated username values
+	* @param string|int $section_id - user section ID (record in DEDALO_SECTION_USERS_TIPO)
+	* @return string - concatenated username value(s), or an empty string if none stored
 	*/
 	public static function logged_user_username( string|int $section_id ) : string {
 
@@ -889,13 +950,15 @@ class login extends common {
 
 	/**
 	* GET_FULL_USERNAME
-	* Retrieve the full display name for a given user section_id
+	* Return the human-readable display name stored for the given user section_id.
 	*
-	* Fetches the user's full name from the DEDALO_FULL_USER_NAME_TIPO component
-	* and concatenates all values (for multi-language scenarios)
+	* Fetches the DEDALO_FULL_USER_NAME_TIPO component (component_input_text) in nolan lang
+	* and joins all value entries with a space. The full username is written into the session
+	* ($_SESSION['dedalo']['auth']['full_username']) during init_user_login_sequence() and is
+	* used in activity-log messages and the UI greeting.
 	*
-	* @param string|int $section_id User section identifier
-	* @return string $full_username Concatenated full name values
+	* @param string|int $section_id - user section ID (record in DEDALO_SECTION_USERS_TIPO)
+	* @return string - concatenated full name value(s), or an empty string if none stored
 	*/
 	public static function get_full_username( string|int $section_id ) : string {
 
@@ -923,9 +986,15 @@ class login extends common {
 
 	/**
 	* GET_USER_CODE
-	* Resolve user code from section_id
-	* @param string|int $section_id (is user section id)
-	* @return string $code
+	* Return the external identifier code (e.g. DNI, passport) stored for the given user.
+	*
+	* Reads ontology tipo dd1053 (component_input_text for user codes) and joins all values
+	* with a space. This code is the same token that SAML identity providers send back and that
+	* get_users_with_code() queries to match an incoming SAML assertion to a Dédalo user record.
+	*
+	* @param string|int $section_id - user section ID (record in DEDALO_SECTION_USERS_TIPO)
+	* @return ?string - concatenated code value(s); the declared return type is ?string
+	*                   but the method can return '' (empty string) when no data is stored
 	*/
 	public static function get_user_code( string|int $section_id ) : ?string {
 
@@ -955,9 +1024,19 @@ class login extends common {
 
 	/**
 	* GET_USER_IMAGE
-	* @param string|int $section_id (is user section id)
-	* @return string|null $user_image
-	* 	Local url of user image path as /v6/media/media_development/image/1.5MB/dd522_dd128_1.jpg
+	* Return the relative web URL for the avatar image stored for the given user.
+	*
+	* Reads the DEDALO_USER_IMAGE_TIPO (dd522) component_image and calls get_url() with the
+	* default image quality. The URL is relative (absolute = false) and the existence of the
+	* underlying file is verified (test_file = true) so broken image links are not returned.
+	*
+	* Fallback: when the section_id is less than 1 (e.g. the virtual root user with id -1) and
+	* no image is stored, returns the path to the default theme thumbnail raspa_screen.jpg.
+	*
+	* Example URL: /v6/media/media_development/image/1.5MB/dd522_dd128_1.jpg
+	*
+	* @param string|int $section_id - user section ID (record in DEDALO_SECTION_USERS_TIPO)
+	* @return string|null - relative image URL, or null when no image is stored and section_id >= 1
 	*/
 	public static function get_user_image( string|int$section_id ) : ?string {
 
@@ -1024,7 +1103,13 @@ class login extends common {
 			return $active_account; // false
 		}
 
-		// NOTE: The valid value can only be 1, which is 'Yes' in the referenced list of values and is assigned as a constant in config 'NUMERICAL_MATRIX_VALUE_YES'
+		// Resolve the selected radio-button value
+		// component_radio_button stores data items as objects with a 'section_id' property
+		// that holds the section_id of the chosen list entry, not the user's section_id.
+		// The valid 'active' choice maps to NUMERICAL_MATRIX_VALUE_YES (= 1, 'Yes' in the
+		// referenced lookup list). Any other value (e.g. 2 = 'No') leaves $active_account false.
+		// (!) $section_id here shadows the method parameter; it refers to the selected
+		//     list-entry section_id, not the user section_id passed in.
 		$section_id = $active_account_data[0]->section_id ?? null;
 		if ( $section_id && (int)$section_id === NUMERICAL_MATRIX_VALUE_YES ) {
 			$active_account = true;
@@ -1037,9 +1122,15 @@ class login extends common {
 
 	/**
 	* USER_HAVE_PROFILE_CHECK
-	* Check if the given user id have profile data
-	* @param string|int $section_id
-	* @return bool $have_profile
+	* Return true if the given user has a security profile assigned.
+	*
+	* Delegates to security::get_user_profile() which reads the profile component
+	* for the user record. A user without a profile cannot determine which sections
+	* and components they are allowed to access, so login is denied.
+	* Global admins bypass this check (see Login() / Login_SAML()).
+	*
+	* @param string|int $section_id - user section ID (record in DEDALO_SECTION_USERS_TIPO)
+	* @return bool - true when a profile locator exists, false otherwise
 	*/
 	public static function user_have_profile_check( string|int $section_id ) : bool {
 
@@ -1055,8 +1146,16 @@ class login extends common {
 
 	/**
 	* USER_HAVE_PROJECTS_CHECK
-	* @param string|int $section_id
-	* @return bool
+	* Return true if the given user has at least one project (filter_master entry) assigned.
+	*
+	* Reads the DEDALO_FILTER_MASTER_TIPO (component_filter_master) component for the user
+	* record. The filter_master drives the per-request projects filter that scopes every
+	* data query to the user's allowed collections. A user with no projects assigned would
+	* see an empty dataset, so login is denied.
+	* Global admins bypass this check (see Login() / Login_SAML()).
+	*
+	* @param string|int $section_id - user section ID (record in DEDALO_SECTION_USERS_TIPO)
+	* @return bool - true when at least one filter_master datum exists, false otherwise
 	*/
 	public static function user_have_projects_check( string|int $section_id ) : bool {
 
@@ -1082,8 +1181,16 @@ class login extends common {
 
 	/**
 	* GET_DEFAULT_SECTION
-	* @param string|int $section_id (is user section id)
-	* @return string $full_username
+	* Return the tipo of the section that should be shown immediately after login for the given user.
+	*
+	* Reads ontology tipo dd1603 (component_input_text for the default-section preference)
+	* from the user record. The client redirects to this area after a successful login so
+	* each user can land on their preferred starting screen.
+	* Special case: the root user (section_id == -1) always lands on DEDALO_AREA_MAINTENANCE_TIPO
+	* because regular areas are not appropriate for the superuser account.
+	*
+	* @param string|int $section_id - user section ID (record in DEDALO_SECTION_USERS_TIPO)
+	* @return ?string - section tipo string, or null when no preference is stored
 	*/
 	private static function get_default_section( string|int $section_id ) : ?string {
 
@@ -1111,13 +1218,34 @@ class login extends common {
 
 	/**
 	* INIT_USER_LOGIN_SEQUENCE
-	* init login sequence when all is OK
-	* @param int $user_id
-	* @param string $username
-	* @param string $full_username
-	* @param bool $init_test = true
-	* @param string $login_type = 'default'
-	* @return object $response
+	* Execute all post-authentication setup steps after credentials have been verified.
+	*
+	* Called by Login() and Login_SAML() once every security gate has passed.
+	* Performs in order:
+	*  1. Optional dd_init_test (system health check): errors are accumulated in
+	*     $response->errors but do NOT abort the login — the UI displays warnings.
+	*  2. Session ID regeneration (SEC-004) to prevent session fixation.
+	*  3. Writes all auth session variables (user_id, username, full_username,
+	*     is_logged=1, salt_secure, login_type, is_global_admin, is_developer).
+	*     salt_secure uses dedalo_encrypt_v2 (AES-256-GCM) since SEC-082.
+	*  4. Media access control cookie initialisation (init_cookie_auth) if the
+	*     media_protection mode is active.
+	*  5. On-login backup (if DEDALO_BACKUP_ON_LOGIN is true).
+	*  6. Daily DB ANALYZE trigger in a background process (if not recently run).
+	*  7. Component lock cleanup: releases any locks the user left from a previous session.
+	*  8. Background security-access datalist cache generation.
+	*  9. Sets the dedalo_logged JS-readable cookie (SEC-013: Secure/SameSite=Lax).
+	* 10. Writes the activity log entry.
+	*
+	* (!) This method writes directly to $_SESSION. It must run before any output is flushed.
+	*
+	* @param int $user_id         - authenticated user's section_id in DEDALO_SECTION_USERS_TIPO
+	* @param string $username     - login name (written to session and activity log)
+	* @param string $full_username - display name (written to session)
+	* @param bool $init_test = true    - run dd_init_test system health check
+	* @param string $login_type = 'default' - authentication channel ('default' or 'saml')
+	* @return object - stdClass with result (bool), msg (string), errors (array),
+	*                  result_options (object|null with user_image, user_id, optional redirect)
 	*/
 	private static function init_user_login_sequence(int $user_id, string $username, string $full_username, bool $init_test=true, string $login_type='default') : object {
 
@@ -1358,17 +1486,31 @@ class login extends common {
 
 	/**
 	* INIT_COOKIE_AUTH
-	* Media access control, rule A (work system): sets the fixed-name auth
-	* cookie (media_protection::COOKIE_NAME) whose daily-rotated value the
-	* web server validates with a stat() on the auth marker synced here.
-	* Today's and yesterday's values stay valid (same rotation semantics as
-	* the legacy implementation; only the cookie NAME no longer rotates,
-	* which keeps the generated .htaccess static and makes Nginx support
-	* possible without reloads).
-	* The .htaccess generation is delegated to media_protection::write_htaccess()
-	* (config-hash guarded: rewritten only when the configuration changes,
-	* not daily).
-	* @return bool true
+	* Set up the server-side media access control markers and issue the auth cookie.
+	*
+	* Implements media access control rule A (work / private mode):
+	*  - Reads the persisted cookie-auth state file (media_protection::read_cookie_auth_file).
+	*  - If today's AND yesterday's values already exist in the file, the data is recycled
+	*    (no new values generated — a login by a second user on the same day reuses them).
+	*  - Otherwise generates new daily cookie values for today and, if absent, yesterday,
+	*    then writes the state file via media_protection::write_cookie_auth_file().
+	*    The file includes a '<?php exit();' guard so its contents cannot be disclosed via HTTP.
+	*  - Calls media_protection::sync_auth_markers() to create/remove the stat()-able marker
+	*    files that the web server (Apache/Nginx) checks against the cookie value.
+	*  - Calls media_protection::write_htaccess() (config-hash guarded, normally a no-op)
+	*    to regenerate .htaccess when the media protection configuration has changed.
+	*  - Stores the cookie data in $_SESSION['dedalo']['auth']['cookie_auth'] for reuse by
+	*    Quit() when clearing the cookie on logout.
+	*  - Issues the auth cookie using the domain/secure/httponly properties from
+	*    get_cookie_properties() so it matches the security posture of the session cookie.
+	*
+	* (!) Throws an Exception (not just logs) on write failures: a misconfigured media
+	*     protection setup must fail loudly at login time rather than silently allow access
+	*     to protected files.
+	*
+	* @return bool - always true on success; throws on fatal media protection errors
+	* @throws Exception - when writing the cookie auth file, syncing markers, or regenerating
+	*                     .htaccess fails
 	*/
 	private static function init_cookie_auth() : bool {
 
@@ -1462,15 +1604,21 @@ class login extends common {
 
 
 	/**
-	* GET_AUTH_COOKIE_value
-	*    [mday]    => 17
-	*    [wday]    => 2
-	*    [mon]     => 6
-	*    [year]    => 2003
-	*    [yday]    => 167
-	*    [weekday] => Tuesday
-	*    [month]   => June
-	* @return string $cookie_value
+	* GET_AUTH_COOKIE_VALUE
+	* Generate a cryptographically random daily-scoped cookie value for media access control.
+	*
+	* Combines date components (weekday, year-day, month-day, month name) from getdate()
+	* with 8 random bytes from random_bytes() and hashes the concatenation with SHA-512.
+	* The date component means values naturally cycle every 24 hours (calendar-day boundary),
+	* while the random suffix prevents value prediction even when the date is known.
+	* The SHA-512 hex digest (128 chars) is the value stored in the auth marker files and
+	* sent as the browser cookie; the web server validates by stat()-ing the marker file
+	* whose name matches the submitted cookie value.
+	*
+	* (!) The commented-out md5 predecessor was replaced with SHA-512 + random_bytes for
+	*     collision resistance and unpredictability — do not revert to md5 + mt_rand.
+	*
+	* @return string - 128-character lowercase hex SHA-512 digest
 	*/
 	private static function get_auth_cookie_value() : string {
 		$date = getdate();
@@ -1484,13 +1632,14 @@ class login extends common {
 
 	/**
 	* IS_LOGGED
-	* Test if current user is logged in (alias of verify_login)
+	* Return true when the current request has an authenticated Dédalo session.
 	*
-	* Public interface for login verification. Delegates to verify_login()
-	* for the actual authentication check.
+	* Public facade for verify_login(). All code outside this class should call
+	* is_logged() rather than accessing $_SESSION directly, so the session structure
+	* is not scattered across the codebase.
 	*
-	* @see login::verify_login
-	* @return bool True if user is authenticated, false otherwise
+	* @see login::verify_login()
+	* @return bool - true when the session passes all authentication checks
 	*/
 	public static function is_logged() : bool {
 
@@ -1501,16 +1650,25 @@ class login extends common {
 
 	/**
 	* VERIFY_LOGIN
-	* Verify user authentication status based on session data
+	* Validate the current session against the three required authentication markers.
 	*
-	* Checks session variables to confirm user authentication:
-	* - user_id must be set and valid
-	* - is_logged flag must equal 1
-	* - salt_secure token must be present
+	* A session is considered authenticated when all of the following are true:
+	*  1. $_SESSION['dedalo']['auth']['user_id']    is non-empty
+	*  2. $_SESSION['dedalo']['auth']['is_logged']  equals integer 1 (strict comparison)
+	*  3. $_SESSION['dedalo']['auth']['salt_secure'] is non-empty (set by dedalo_encrypt_v2
+	*     in init_user_login_sequence; its presence confirms the session was written by
+	*     a genuine Dédalo auth flow, not forged by direct session manipulation)
 	*
-	* Special handling for maintenance mode: only root user allowed
+	* When the user_id is missing (never logged in or session expired) the entire
+	* $_SESSION['dedalo'] key is cleared, preserving only the language preferences
+	* (application_lang / data_lang) so the UI does not lose the user's locale after
+	* a session timeout.
 	*
-	* @return bool True if user is properly authenticated, false otherwise
+	* Additional gate: if the system is in maintenance mode (DEDALO_MAINTENANCE_MODE or
+	* DEDALO_MAINTENANCE_MODE_CUSTOM is true), only the 'root' username is allowed to
+	* pass; all other authenticated sessions are treated as unauthenticated.
+	*
+	* @return bool - true when all gates pass, false otherwise
 	*/
 	private static function verify_login() : bool {
 
@@ -1524,14 +1682,19 @@ class login extends common {
 
 			if (empty($_SESSION['dedalo']['auth']['user_id'])) {
 
-				# Store current lang for not loose
+				// Preserve language preferences across session expiry
+				// The lang preferences (application and data lang) live under the 'config'
+				// sub-key, not 'auth', so they survive the session wipe below.
+				// This ensures the UI reopens in the user's chosen locale after a timeout.
 				$dedalo_application_lang	= $_SESSION['dedalo']['config']['dedalo_application_lang'] ?? false;
 				$dedalo_data_lang			= $_SESSION['dedalo']['config']['dedalo_data_lang'] ?? false;
 
-				# remove complete session
+				// Wipe the entire dedalo session namespace
+				// Avoids leaving partial auth state that could be exploited by a subsequent
+				// user reusing the same PHP session slot.
 				unset($_SESSION['dedalo']);
 
-				# Restore langs
+				// Restore preserved lang preferences
 				if ($dedalo_application_lang) {
 					$_SESSION['dedalo']['config']['dedalo_application_lang'] = $dedalo_application_lang;
 				}
@@ -1562,8 +1725,13 @@ class login extends common {
 
 	/**
 	* GET_LOGIN_TIPO
-	* @return string $tipo
-	* 	value 'dd229'
+	* Return the fixed ontology tipo that identifies the login section (dd229).
+	*
+	* This value never changes (it is hard-wired in the ontology) and is used
+	* as the tipo argument when building the login context object and when writing
+	* activity-log entries so they are scoped to the correct ontology node.
+	*
+	* @return string - always 'dd229'
 	*/
 	private static function get_login_tipo() : string {
 
@@ -1728,10 +1896,20 @@ class login extends common {
 
 	/**
 	* LOGIN_ACTIVITY_REPORT
-	* Save activity info into logger file
-	* @param string $msg
-	* @param string $login_label
-	* @param array|null $activity_data = null
+	* Write a structured login/logout event to the activity logger.
+	*
+	* Wraps the logger::$obj['activity']->log_message() call used throughout Login(),
+	* Login_SAML(), and Quit() so all authentication events share a uniform structure.
+	* The base message is merged with the optional $activity_data array (keys: result,
+	* cause, username, browser, etc.) into the data payload sent to the logger.
+	*
+	* Events are scoped to the login ontology tipo (get_login_tipo() → 'dd229') and
+	* attributed to the currently logged-in user via logged_user_id() — which may be 0
+	* for denied attempts where no session exists yet.
+	*
+	* @param string $msg            - human-readable event description (written to the log)
+	* @param string $login_label    - normalised action label ('LOG IN' or 'LOG OUT')
+	* @param array|null $activity_data = null - optional associative array of event metadata
 	* @return void
 	*/
 	public static function login_activity_report( string $msg, string $login_label, ?array $activity_data=null ) : void {
@@ -1760,9 +1938,16 @@ class login extends common {
 
 	/**
 	* CHECK_ROOT_HAS_DEFAULT_PASSWORD
-	* Check if super user password (root) default has been changed or not
-	* If is default password returns true, else false
-	* @return bool
+	* Return true when the root (super-user) account has no password set, signalling
+	* that the installation is still in its initial unconfigured state.
+	*
+	* Reads the component_password for section_id -1 (the virtual root user).
+	* If the stored value is empty or absent, the password has not been set since
+	* installation (matching the SU_DEFAULT_PASSWORD sentinel ''), and the installer
+	* UI should prompt the administrator to create one.
+	*
+	* @return bool - true when the root password is unset (still at factory default),
+	*                false when a password has been stored
 	*/
 	public static function check_root_has_default_password() : bool {
 
@@ -1787,9 +1972,26 @@ class login extends common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
-	* @param int $permissions = 1
-	* @param bool $add_request_config = false
-	* @return dd_object $dd_object
+	* Build and return the dd_object that describes the login form to the client.
+	*
+	* Overrides the common::get_structure_context() contract to produce a login-specific
+	* context payload. The returned dd_object's properties include:
+	*  - login_items: array of {tipo, model, label} descriptors for each child component
+	*    (username field, password field, login button, etc.) derived from the ontology
+	*    children of dd229.
+	*  - info: array of build/version entries exposed to the login page UI:
+	*    entity, code version, code build, data version, ontology version.
+	*    On development servers (DEDALO_ENTITY==='development' && DEVELOPMENT_SERVER===true)
+	*    the DB connection user and database name are also included.
+	*  - demo_user: present only when DEDALO_ENTITY==='dedalo_demo'; supplies hardcoded
+	*    demo credentials so the login page can pre-fill the form.
+	*    (!) Do not ship this branch in a production entity.
+	*  - saml_config: boolean true when SAML_CONFIG is defined; triggers the SAML login
+	*    button on the client without exposing any sensitive SAML configuration detail.
+	*
+	* @param int $permissions = 1           - passed through to parent; currently unused here
+	* @param bool $add_request_config = false - passed through to parent; currently unused here
+	* @return dd_object - fully populated context object for the login area
 	*/
 	public function get_structure_context(int $permissions=1, bool $add_request_config=false) : dd_object {
 
@@ -1919,9 +2121,17 @@ class login extends common {
 
 	/**
 	* GET_V6_ROOT_DB_DATA
-	* PROVISIONAL! TO BE USED IN THE V6 TO V7 TRANSITION
-	* REMOVE IT IN VERSIONS >V7.0.0
-	* @return array
+	* Return a synthetic result set representing the v6 root user during the v6→v7 migration.
+	*
+	* The root user (section_id = -1) is a virtual superuser that does not have a real row
+	* in the matrix_users JSONB table. This method provides the hard-coded section_id array
+	* [-1] so that the Login() credential flow can locate and authenticate the root account
+	* even before a native v7 user record has been created.
+	*
+	* (!) PROVISIONAL: intended only for the v6-to-v7 transition period.
+	*     Remove this method when all deployments have migrated beyond v7.0.0.
+	*
+	* @return array - single-element array containing integer -1
 	*/
 	public static function get_v6_root_db_data(): array {
 
@@ -1933,18 +2143,26 @@ class login extends common {
 
 	/**
 	* GET_USERS_WITH_NAME
-	* Search for users by username in matrix_users table
+	* Find user section IDs in matrix_users whose DEDALO_USER_NAME_TIPO value equals $username.
 	*
-	* Queries the matrix_users table to find records matching the given username
-	* in the DEDALO_USER_NAME_TIPO component with section tipo DEDALO_SECTION_USERS_TIPO.
-	* Uses direct SQL query with JSONB operations for efficient searching.
+	* Uses a direct JSONB containment query against the matrix_users table instead of the
+	* SQO search path. The SQO alternative is preserved in a commented-out block for reference;
+	* the direct query is preferred here because:
+	*  - The SQO path enforces section_id > 0, which would exclude the root user (-1).
+	*  - This code runs before session auth is established, so bypassing the SQO security
+	*    filters is intentional — the login process is itself the auth gate.
+	* The query uses a JSONB containment operator ($1) with a parameterised value to prevent
+	* SQL injection. pg_escape_string() is applied to $username before building the JSON
+	* string parameter; note that the value is bound as a prepared parameter ($1), so the
+	* pg_escape_string call adds a second layer of escaping for the inline JSON string.
+	* Results are ordered by section_id ASC. The LIMIT 1 means this function returns at most one
+	* row; the duplicate-username ("ambiguous user") guard in Login() (user_count > 1) is therefore
+	* not reachable through this method alone — it is a defensive check left in place should
+	* the query ever be relaxed or a different look-up path is used.
 	*
-	* Security note: Username is escaped using pg_escape_string() to prevent SQL injection
-	*
-	* @param string $username User login name from login form (e.g., 'Pepe')
-	* @return array $ar_section_id List of matching user section IDs
-	*
-	* @throws Exception When database query fails
+	* @param string $username - login name from the login form (e.g. 'Pepe')
+	* @return array - ordered list of matching section_id integers (usually 0 or 1 entries)
+	* @throws Exception - when the database query fails
 	*/
 	public static function get_users_with_name( string $username ) : array {
 
@@ -2021,19 +2239,21 @@ class login extends common {
 
 	/**
 	* GET_USERS_WITH_CODE
-	* Search for users by code identifier (SAML authentication)
+	* Find user section IDs in matrix_users whose dd1053 (user code) component value equals $code.
 	*
-	* Queries the matrix_users table to find records matching the given code
-	* in the 'dd1053' component with section tipo DEDALO_SECTION_USERS_TIPO.
-	* Used primarily for SAML authentication where users are identified by
-	* codes like DNI, passport numbers, etc.
+	* This is the SAML counterpart of get_users_with_name(): the code (DNI, passport number, etc.)
+	* is the external identifier sent by the identity provider in the SAML assertion and stored
+	* in the user record under tipo dd1053.
+	* Unlike get_users_with_name(), the $code value here is encoded via json_encode() (not
+	* pg_escape_string) before being bound as the $1 parameter — AUTH-03 fix: JSON-encoding
+	* correctly handles structural characters (", \) in the code without the double-escaping
+	* risk of combining pg_escape_string with a prepared statement.
+	* The JSONB containment document structure mirrors the component_input_text storage format:
+	*   { "dd1053": [{"lang": "lg-nolan", "value": "<code>"}] }
 	*
-	* Security note: Code is escaped using pg_escape_string() to prevent SQL injection
-	*
-	* @param string $code User identifier from SAML provider (e.g., '25748925G')
-	* @return array|false $ar_section_id List of matching user section IDs, or false if not found
-	*
-	* @throws Exception When database query fails
+	* @param string $code - user identifier from the SAML assertion (e.g. '25748925G')
+	* @return array|false - ordered list of matching section_id integers, or false on query error
+	* @throws Exception - when the database query fails
 	*/
 	public static function get_users_with_code( string $code ) : array|false {
 
@@ -2077,14 +2297,38 @@ class login extends common {
 
 
 
+/**
+* CLASS EXEC
+* Lightweight utility wrapper for launching and managing background shell processes.
+*
+* Provides three primitives — background(), is_running(), and kill() — for spawning
+* OS-level processes via shell_exec()/exec() and checking or terminating them by PID.
+*
+* (!) This class appears to be legacy infrastructure left over from v6 / early v7
+*     development. In v7 the preferred pattern for background work is
+*     dd_cache::process_and_cache_to_file() with wait=false (used in
+*     init_user_login_sequence for DB ANALYZE and security-access cache generation).
+*     This class is no longer referenced within class.login.php itself and its
+*     continued presence here may be unintentional. Flag for removal review.
+*
+* @package Dédalo
+* @subpackage Core
+*/
 class exec {
 	/**
-	 * Run Application in background
-	 *
-	 * @param     unknown_type $Command
-	 * @param     unknown_type $Priority
-	 * @return     PID
-	 */
+	* BACKGROUND
+	* Spawn a shell command in the background using nohup and return its PID string.
+	*
+	* When $Priority is non-zero the command is wrapped with nice -n $Priority to
+	* adjust its CPU scheduling priority.
+	*
+	* (!) Uses shell_exec() with an unsanitised $Command argument — callers are
+	*     responsible for escaping or validating the command string before passing it.
+	*
+	* @param mixed $Command  - shell command string to execute in the background
+	* @param mixed $Priority - nice(1) priority level; 0 disables nice wrapping
+	* @return mixed          - PID string from "echo $!" on success, null on failure
+	*/
 	function background($Command, $Priority = 0){
 	   if($Priority)
 		   $PID = shell_exec("nohup nice -n $Priority $Command > /dev/null & echo $!");
@@ -2093,20 +2337,27 @@ class exec {
 	   return($PID);
    }
    /**
-	* Check if the Application running !
+	* IS_RUNNING
+	* Check whether a process identified by $PID is still active.
 	*
-	* @param     unknown_type $PID
-	* @return     boolen
+	* Runs 'ps $PID' and counts the output lines; two or more lines (header + process row)
+	* means the process exists.
+	*
+	* @param mixed $PID - process identifier returned by background()
+	* @return bool      - true when the process is still running, false otherwise
 	*/
    function is_running($PID){
 	   exec("ps $PID", $ProcessState);
 	   return(count($ProcessState) >= 2);
    }
    /**
-	* Kill Application PID
+	* KILL
+	* Send SIGKILL to a running process and return whether it was terminated.
 	*
-	* @param  unknown_type $PID
-	* @return boolen
+	* Checks is_running() first; if the process is not found, returns false immediately.
+	*
+	* @param mixed $PID - process identifier returned by background()
+	* @return bool      - true when SIGKILL was sent, false when the process was not running
 	*/
    function kill($PID){
 	   if(exec::is_running($PID)){

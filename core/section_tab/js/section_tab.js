@@ -12,7 +12,22 @@
 
 
 /**
-* SECTION_tab
+* SECTION_TAB
+* Constructor for section-tab UI instances in Dédalo v7.
+*
+* A section_tab groups multiple child sections (or components) under a tabbed
+* interface. Each child section is registered as a named tab whose label comes
+* from the ontology context. Only the active tab is visible at a time; switching
+* tabs publishes a 'tab_active_<tipo>' event that any child listening with view
+* 'tab' can respond to.
+*
+* Lifecycle (inherited from common via prototype chain):
+*   init → build → render (edit | list) → destroy
+*
+* Properties declared here are seeded to null/undefined and populated by init().
+* The render logic lives entirely in render_section_tab (edit, list prototypes).
+*
+* Exported via named export so the module loader can resolve it by class name.
 */
 export const section_tab = function(){
 
@@ -49,6 +64,7 @@ export const section_tab = function(){
 	section_tab.prototype.build		= common.prototype.build
 	section_tab.prototype.render	= common.prototype.render
 	section_tab.prototype.destroy	= common.prototype.destroy
+	// render_section_tab provides the view-mode implementations
 	section_tab.prototype.list		= render_section_tab.prototype.list
 	section_tab.prototype.edit		= render_section_tab.prototype.edit
 
@@ -56,7 +72,31 @@ export const section_tab = function(){
 
 /**
 * INIT
-* @return bool true
+* Populates all instance properties from the `options` bag and marks the
+* instance as initialized. Called once per instance immediately after
+* construction by the common build pipeline.
+*
+* Guard: if `this.is_init` is already set a second call is treated as a
+* programming error (duplicated event subscription) and the method returns
+* false without re-initializing. This prevents state corruption from accidental
+* double-wiring. In debug mode (SHOW_DEBUG===true) an alert is also raised.
+* (!) alert() is intentional debug tooling — do not replace with console.warn.
+*
+* After init the instance status progresses:
+*   'initializing' → 'initialized'
+*
+* @param {Object} options - Initialization options provided by the build pipeline
+* @param {string} options.model - Class name for this instance, e.g. 'section_tab'
+* @param {string} options.tipo - Ontology tipo identifying this tab in the tree, e.g. 'dd123'
+* @param {string} options.section_tipo - Ontology tipo of the enclosing section record
+* @param {string|number} options.section_id - Record id within the enclosing section
+* @param {string} options.mode - Render mode: 'edit', 'list', 'search', etc.
+* @param {string} options.lang - Active language tag, e.g. 'lg-eng'
+* @param {Object|null} [options.context=null] - Server-resolved context object; must contain
+*   at minimum `label` (display name), `view` ('section_tab'|'tab'), and `children` (Array)
+* @param {Object} options.parent - Owning parent instance (section or area)
+* @param {string} options.type - Element type classifier: always 'section' for tabs
+* @returns {boolean} true on success, false if already initialized (duplicate guard)
 */
 section_tab.prototype.init = function(options) {
 
@@ -85,11 +125,15 @@ section_tab.prototype.init = function(options) {
 	self.context		= options.context || null
 	self.parent			= options.parent
 	self.type			= options.type
+	// events_tokens collects event subscription handles so destroy() can unsubscribe cleanly
 	self.events_tokens	= []
+	// ar_instances holds child Dédalo instances spawned during render
 	self.ar_instances	= []
 
+	// node is null until render attaches the DOM element
 	self.node			= null
 
+	// label is sourced from the server-resolved context; used as the tab heading text
 	self.label			= self.context.label
 
 	// status update
@@ -103,8 +147,18 @@ section_tab.prototype.init = function(options) {
 
 /**
 * GET_PANELS_STATUS
-* Get local DDBB record if exists and return result object
-* @return object | undefined
+* Retrieves the persisted UI state for this section_tab from the browser's
+* local IndexedDB ('section_tab' store, 'context' key). The value, when
+* present, records which child tab the user last activated so that the active
+* tab can be restored on re-render.
+*
+* (!) UNDER CONSTRUCTION: the returned value is not yet used by the caller;
+* active-tab persistence is currently handled inside render_section_tab.edit()
+* via data_manager.get_local_db_data(status_id, 'status'). This method exists
+* as the planned public accessor but the integration is incomplete.
+*
+* @returns {Promise<Object|undefined>} Resolves with the stored panels-status
+*   record from IndexedDB, or undefined if no record has been saved yet.
 */
 section_tab.prototype.get_panels_status = async function() {
 

@@ -17,11 +17,31 @@
 	import {component_password} from '../../component_password/js/component_password.js'
 	import {get_instance} from '../../common/js/instances.js'
 
-
-
-// ─────────────────────────────────────────────────
-// REUSABLE HELPERS
-// ─────────────────────────────────────────────────
+/**
+* RENDER_INSTALL
+* Client-side renderer for the Dédalo first-run installation wizard.
+*
+* This module drives a sequential, multi-step installation UI that runs without
+* any prior authentication (see SEC-032). The wizard walks the operator through:
+*
+*   1. Help/docs links
+*   2. Server init-test results (PHP environment checks)
+*   3. Database configuration status + action choice (fresh install vs. update vs. root-pw reset)
+*   4. Database creation from the bundled SQL file
+*   5. Root-password setup (strength-validated)
+*   6. First login
+*   7. Hierarchy (thesaurus tree) import
+*   8. Finish / reload
+*
+* The constructor is a no-op stub; all logic lives on the prototype. `install.js`
+* assigns `render_install.prototype.render` to `install.prototype.edit` and related
+* render modes, so this prototype method is the single entry point invoked by the
+* common render dispatcher.
+*
+* Exported symbols:
+*   - render_install           (constructor, assigned to install.prototype)
+*   - render_hierarchies_import_block  (also used standalone by activation screens)
+*/
 
 /**
 * CREATE_SECTION_BLOCK
@@ -247,8 +267,18 @@ export const render_install = function() {
 /**
 * RENDER
 * Render node for use in install mode
-* @param object options
-* @return HTMLElement wrapper
+*
+* Entry point called by the common render dispatcher (install.prototype.edit, .list, …).
+* Builds the full install wizard DOM tree wrapped in a top-level div.wrapper.install
+* element and returns it, or returns the inner content_data fragment directly when
+* render_level is 'content'.
+*
+* Side effects: attaches content_data as a property on the returned wrapper so that
+* inner sub-blocks can later unhide sibling sections via `self.node.content_data.*`.
+*
+* @param {Object} options - Render options passed by the common render dispatcher
+* @param {string} [options.render_level='full'] - 'full' returns wrapper; 'content' returns inner fragment only
+* @returns {Promise<HTMLElement>} The wrapper div (render_level 'full') or content_data div ('content')
 */
 render_install.prototype.render = async function(options) {
 
@@ -279,9 +309,28 @@ render_install.prototype.render = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* Builds the full installer UI: header, step indicator, and all section blocks.
-* @param instance self
-* @return HTMLElement content_data
+* Builds and returns the full multi-section install wizard DOM tree.
+*
+* Creates one <section> per wizard step and attaches each as a named property on
+* the returned content_data div so that sibling sections can be revealed later with
+* `self.node.content_data.<section_name>.classList.remove('hide')`.
+*
+* All sections except help_block and init_test_block start with the CSS class 'hide'
+* (injected by the inner add_hidden_block helper) and are progressively revealed as
+* each step completes successfully.
+*
+* Section order and purpose:
+*   help_block                – documentation links
+*   init_test_block           – server environment pre-flight results
+*   config_block              – database configuration check + action selector
+*   install_db_block          – create DB from bundled SQL file
+*   set_root_password_block   – set superuser password
+*   login_block               – first login after password is set
+*   hierarchies_import_block  – import thesaurus hierarchies
+*   install_finish_block      – finalize and reload
+*
+* @param {Object} self - The install instance (provides self.context.properties and self.node)
+* @returns {HTMLElement} content_data div containing all wizard sections
 */
 const get_content_data = function(self) {
 
@@ -477,9 +526,14 @@ const get_content_data = function(self) {
 
 /**
 * RENDER_HELP_BLOCK
-* Creates contents nodes for current block
-* @param object self
-* @return DOM DocumentFragment
+* Creates the help/documentation link section of the install wizard.
+*
+* Renders two rows: one linking to the official install guide and one linking to
+* the configuration reference. Both links open in a new tab with rel="noopener noreferrer"
+* to prevent tab-napping (SEC-033).
+*
+* @param {Object} self - The install instance (unused directly; retained for API consistency)
+* @returns {DocumentFragment} Fragment containing the two documentation link rows
 */
 const render_help_block = function(self) {
 
@@ -541,11 +595,22 @@ const render_help_block = function(self) {
 
 /**
 * RENDER_INIT_TEST_BLOCK
-* Creates diagnostic cards grid and summary banner.
-* Shows server environment details: PHP version, memory, PG version,
-* disk space, tools availability, etc.
-* @param object self
-* @return HTMLElement DocumentFragment
+* Creates the server environment pre-flight result section.
+*
+* Reads `context.properties.init_test` (a server-populated object) and renders either
+* an error message (when the test failed or the property is absent) or a success/warning
+* message. On success it wires a when_in_viewport observer that reveals config_block once
+* this message scrolls into view, creating the step-by-step wizard progression.
+*
+* init_test shape expected from the server:
+*   {
+*     result  : {boolean},   // false → pre-flight failed
+*     errors  : {boolean},   // true → passed with warnings
+*     msg     : {Array}      // array of human-readable result strings
+*   }
+*
+* @param {Object} self - The install instance (provides self.context.properties and self.node)
+* @returns {DocumentFragment} Fragment with one status message element
 */
 const render_init_test_block = function(self) {
 
@@ -556,7 +621,10 @@ const render_init_test_block = function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// init_test result banner (always show, regardless of pass/fail)
+	// fail init_test case
+	// Guard against both missing property and explicit result:false.
+	// When init_test is absent it usually means a PHP fatal prevented the context from
+	// being built at all; show a generic error rather than crashing.
 		if (!init_test || init_test.result===false) {
 			const msg = init_test && init_test.msg
 				? init_test.msg.join('<br>')
@@ -803,9 +871,28 @@ const render_init_test_block = function(self) {
 
 /**
 * RENDER_CONFIG_BLOCK
-* Creates contents nodes for current block
-* @param object self
-* @return HTMLElement
+* Creates the database configuration validation status section.
+*
+* Reads `context.properties.db_status` (a server-populated object) and renders a
+* hierarchical summary of each configuration sub-check. When global_status is false the
+* function renders per-item error/ok indicators (db name, username, password, information
+* schema, info key, and connection) and returns early so the user sees exactly what to fix
+* in dedalo_config.php. When global_status is true it renders a single "passed" message.
+*
+* db_status shape expected from the server:
+*   {
+*     global_status           : {boolean},
+*     config_check            : {boolean},  // config file parsed successfully
+*     config_db_name_check    : {boolean},
+*     config_user_name_check  : {boolean},
+*     config_pw_check         : {boolean},
+*     config_information_check: {boolean},
+*     config_info_key_check   : {boolean},
+*     db_connection_check     : {boolean}   // actual TCP connection to PostgreSQL
+*   }
+*
+* @param {Object} self - The install instance (provides self.context.properties)
+* @returns {DocumentFragment} Fragment with status message(s) and optional error detail nodes
 */
 const render_config_block = function(self) {
 
@@ -816,6 +903,8 @@ const render_config_block = function(self) {
 	const fragment = new DocumentFragment()
 
 	// fail db_status case
+	// If the server could not even assemble db_status (e.g. config file unreadable),
+	// there is nothing useful to display — show a generic context-failure message.
 		if (!db_status) {
 			// if the db_status is not set the installation process can not be start
 			// some error was happen in the server.
@@ -830,6 +919,8 @@ const render_config_block = function(self) {
 		}//end if (!db_status)
 
 	// fail global_status case
+	// Render one indicator node per sub-check so the operator can identify precisely
+	// which values in dedalo_config.php need correction before retrying.
 		if (db_status.global_status===false) {
 
 			// warning errors message
@@ -848,6 +939,7 @@ const render_config_block = function(self) {
 				})
 
 			// db config_check (global)
+			// Top-level check: could the config file be found and parsed at all?
 				const db_config_check_label = db_status.config_check
 					? get_label.db_config_check_ok || 'Database: db config ok'
 					: get_label.db_config_check_invalid || 'Database: db config invalid!'
@@ -930,6 +1022,9 @@ const render_config_block = function(self) {
 				})
 
 			// db connection_check
+			// The connection check is rendered outside db_config_check_node because it
+			// tests a live TCP handshake rather than a config-value parse, so it is
+			// logically a sibling of config_check rather than a child.
 				const db_connection_check_label = db_status.db_connection_check
 					? get_label.db_connection_check_ok || 'Database: db connection ok'
 					: get_label.db_connection_check_invalid || 'Database: db connection invalid!'
@@ -975,9 +1070,19 @@ const render_config_block = function(self) {
 
 /**
 * RENDER_CONFIG_OPTIONS
-* Creates contents nodes with options of install
-* @param object self
-* @return HTMLElement
+* Creates the action-selector section shown after configuration checks pass.
+*
+* Renders up to three mutually exclusive buttons:
+*   - "To install"        – always present; reveals install_db_block and removes this options panel.
+*   - "To update"         – only present when db_data_version[0] < 6 (migration from v5/v6);
+*                           calls the 'to_update' API action and triggers a 5-second reload countdown.
+*   - "To change root"    – always present; reveals set_root_password_block for a standalone
+*                           password reset without re-running the full install.
+*
+* Each button removes the config_block_options panel on click to prevent double-submission.
+*
+* @param {Object} self - The install instance (provides self.context.properties and self.node)
+* @returns {DocumentFragment} Fragment containing the action buttons and optional update-status div
 */
 const render_config_options = function(self) {
 
@@ -998,6 +1103,8 @@ const render_config_options = function(self) {
 		})//end mouse_up event
 
 	// db_data_version. Update option
+	// Only show the "To update" button when an existing v5/v6 Dédalo database is detected.
+	// db_data_version is an array; index [0] holds the major version number as a string.
 		const db_data_version = (self.context.properties && self.context.properties.db_data_version)
 			? self.context.properties.db_data_version
 			: null
@@ -1038,6 +1145,8 @@ const render_config_options = function(self) {
 		}
 
 	// to reset root pw
+	// A standalone path that skips DB creation and goes directly to the password-change
+	// form; useful when the operator forgets the root password on an existing installation.
 		const reset_root_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary install_button',
@@ -1058,9 +1167,19 @@ const render_config_options = function(self) {
 
 /**
 * RENDER_INSTALL_DB_BLOCK
-* Creates contents nodes for current block
-* @param object self
-* @return DOM DocumentFragment
+* Creates the database installation section.
+*
+* Verifies that the bundled SQL source file exists at the expected server path
+* (via `properties.target_file_path_exists`); if not, renders an error and returns early.
+* Otherwise displays the target file path, the active db_config key/value pairs (db name,
+* host, port, user – no password), and an "INSTALL DATABASE FROM FILE" button.
+*
+* On button click the function calls the 'install_db_from_default_file' API action.
+* On success it reveals set_root_password_block; on failure it shows the error message
+* from the API response via textContent (SEC-032: never innerHTML for API output).
+*
+* @param {Object} self - The install instance (provides self.context.properties and self.node)
+* @returns {DocumentFragment} Fragment with file path info, db config grid, action button, and status div
 */
 const render_install_db_block = function(self) {
 
@@ -1070,6 +1189,8 @@ const render_install_db_block = function(self) {
 	const fragment = new DocumentFragment()
 
 	// check if the file exists in the correct path
+	// The SQL dump must be present before the install action is offered; without it
+	// the server-side handler would fail immediately with an unhelpful I/O error.
 		if (!properties.target_file_path_exists) {
 			ui.create_dom_element({
 				element_type	: 'div',
@@ -1090,6 +1211,8 @@ const render_install_db_block = function(self) {
 		})
 
 	// db_config properties
+	// Render a two-column grid of key/value config pairs so the operator can confirm
+	// the target database before triggering the potentially destructive SQL import.
 		const db_config_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'db_config_container',
@@ -1151,14 +1274,39 @@ const render_install_db_block = function(self) {
 
 /**
 * RENDER_SET_ROOT_PASSWORD_BLOCK
-* @param object self
-* @return HTMLElement content_value
+* Creates the root-password setup form for the Dédalo superuser account.
+*
+* Renders two password fields (new password + retype) backed by
+* component_password.prototype.validate_password_format for real-time strength checking.
+* Paste is disabled on the retype field to force manual retyping.
+* A show/hide checkbox toggles both fields between 'password' and 'text' type.
+*
+* password_validation_options contract (passed to validate_password_format):
+*   lower / upper / numeric : minimum required character counts (0 = not required)
+*   alpha                   : combined lower+upper count (0 = not required separately)
+*   special                 : minimum special character count
+*   length                  : [min, max] character length
+*   custom                  : array of additional regexes or functions
+*   badWords                : forbidden substrings
+*   badSequenceLength       : disallow sequential repeated chars of this length
+*   noQwertySequences       : reject keyboard-row sequences
+*   noSequential            : reject ascending/descending letter or digit runs
+*
+* On successful save (API result===true), set_root_password_block.change_root_pw_button is
+* removed and login_block is revealed. API response messages are always set via textContent
+* (SEC-032).
+*
+* @param {Object} self - The install instance (provides self.node for sibling-block revelation)
+* @returns {DocumentFragment} Fragment with description, two password inputs, show-checkbox, status div, and save button
 */
 const render_set_root_password_block = function(self) {
 
 	const fragment = new DocumentFragment()
 
 	// password_validation_options
+	// These constraints define "strong enough" for a Dédalo superuser credential.
+	// Adjust here to tighten/loosen policy; the validate_password_format call site
+	// is in component_password and receives this object verbatim.
 		const password_validation_options = {
 			lower				: 1,
 			upper				: 1,
@@ -1185,6 +1333,8 @@ const render_set_root_password_block = function(self) {
 		})
 
 	// input_new_pw field
+	// Both 'keyup' and 'change' fire set_message so that inline validation runs both
+	// while typing and on programmatic value changes (e.g. autofill).
 		const input_new_pw = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'password',
@@ -1204,13 +1354,36 @@ const render_set_root_password_block = function(self) {
 		})
 		input_new_pw.addEventListener('change', function(e) {
 			e.preventDefault()
-			const validated_obj = component_password.prototype.validate_password_format(
-				input_new_pw.value,
-				password_validation_options
-			)
-			set_message(validated_obj, input_new_pw)
+
+			// validated. Test password is acceptable string
+				const validated_obj = component_password.prototype.validate_password_format(
+					input_new_pw.value,
+					password_validation_options
+				)
+
+			// message
+				set_message(validated_obj, input_new_pw)
 		})
 
+		/**
+		* SET_MESSAGE
+		* Updates the set_pw_status element and input decoration based on a validation result.
+		*
+		* Applies 'valid'/'invalid' CSS class to the input node and 'ok'/'error' to the status
+		* div, and adds/removes the 'loading' class on the save button to prevent submission
+		* when the password does not meet the configured policy.
+		*
+		* (!) set_pw_status and change_root_pw_button are referenced from the enclosing
+		* render_set_root_password_block scope; they are defined later in that function and
+		* accessed via closure. This is safe because set_message is only ever called from
+		* user-event handlers that fire after the full fragment has been composed.
+		*
+		* @param {Object} validated_obj - Return value of component_password.validate_password_format
+		* @param {boolean} validated_obj.result - true if password meets all policy requirements
+		* @param {string}  validated_obj.msg    - human-readable failure reason (empty on success)
+		* @param {HTMLElement} input_node - The password input to decorate
+		* @returns {boolean} Always true
+		*/
 		function set_message(validated_obj, input_node) {
 
 			// message reset
@@ -1234,6 +1407,8 @@ const render_set_root_password_block = function(self) {
 		}//end set_message
 
 	// input_new_pw 2 field
+	// The retype field validates that both entries are identical AND that the primary
+	// field still passes the policy; catching copy-paste errors that could lock the operator out.
 		const input_new_pw_retype = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'password',
@@ -1244,6 +1419,8 @@ const render_set_root_password_block = function(self) {
 		})
 		input_new_pw_retype.autocomplete = 'new-password'
 		// prevent paste values here
+		// Paste is blocked on the retype field so the operator is forced to type the
+		// password twice, reducing the risk of committing an accidentally wrong value.
 		input_new_pw_retype.addEventListener('paste', function(e) {
 			e.preventDefault();
 			return false;
@@ -1265,6 +1442,8 @@ const render_set_root_password_block = function(self) {
 		})
 
 	// checkbox show/hide
+	// Toggles both password inputs between 'password' and 'text' type simultaneously
+	// so the operator can visually inspect what they have typed in both fields.
 		const label_checkbox_show = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'password_show_label',
@@ -1291,6 +1470,9 @@ const render_set_root_password_block = function(self) {
 		const set_pw_status = create_status_msg(fragment)
 
 	// change_root_pw_button
+	// Performs a final re-validation of both fields before submitting, guarding against
+	// edge cases where the button might be clicked before the keyup handler had a chance
+	// to lock it (e.g. rapid keyboard→mouse transitions).
 		const change_root_pw_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary change_root_pw_button',
@@ -1348,14 +1530,26 @@ const render_set_root_password_block = function(self) {
 
 /**
 * RENDER_LOGIN_BLOCK
-* @param object self
-* @return HTMLElement content_value
+* Creates the login section that appears after the root password is saved.
+*
+* Renders a "To login" button that, on click, lazily instantiates and renders a full
+* login component (fetched via get_instance) and appends it inside login_container.
+* A custom_action_dispatch hook is injected into the login instance before it builds so
+* that a successful authentication immediately reveals hierarchies_import_block and
+* removes the login button to prevent re-use.
+*
+* The login component context is loaded via login.build(true) (autoload=true), which
+* calls the 'get_install_context' API action — no prior session is required.
+*
+* @param {Object} self - The install instance (provides self.node for sibling-block revelation)
+* @returns {Promise<DocumentFragment>} Fragment with login_container, "To login" button, and logged-status div
 */
 const render_login_block = async function(self) {
 
 	const fragment = new DocumentFragment()
 
 	// login_container
+	// Starts hidden; revealed after the operator clicks "To login" and the login widget is built.
 		const login_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'login_container hide',
@@ -1378,6 +1572,9 @@ const render_login_block = async function(self) {
 				})
 
 			// custom_action_dispatch. Set before render to catch the on-login action
+			// This function is called by the login component's submit handler in place of
+			// the default session-redirect logic, so we can intercept the result inside
+			// the install wizard without navigating away from the page.
 				const custom_action_dispatch = function(api_response){
 
 					if (api_response.result===true) {
@@ -1417,6 +1614,7 @@ const render_login_block = async function(self) {
 		})//end mouse_up event
 
 	// login_status msg
+	// Hidden by default; revealed with class 'ok' on successful login, or 'error' on failure.
 		const login_status = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'msg logged hide',
@@ -1432,8 +1630,40 @@ const render_login_block = async function(self) {
 
 /**
 * RENDER_HIERARCHIES_IMPORT_BLOCK
-* @param object self
-* @return HTMLElement content_value
+* Creates the hierarchy (thesaurus tree) selection and import section.
+*
+* This function is exported and reused by the hierarchy activation screen outside of
+* the install wizard, so it accepts a plain options object rather than a self reference.
+*
+* Hierarchies are grouped by typology and sorted alphabetically (reversed, because the
+* render loops iterate from last to first — the visual order is therefore A→Z top-to-bottom).
+* Each hierarchy is rendered as a labelled checkbox. Pre-checked items come from
+* options.default_checked (an array of TLD strings). Already-active hierarchies show an
+* '[active]' badge but can still be selected for re-import.
+*
+* Hierarchy objects shape (element of options.hierarchies):
+*   {
+*     label    : {string},  // human-readable name
+*     tld      : {string},  // top-level domain identifier, e.g. 'es', 'ca'
+*     typology : {string},  // groups the entry under a typology header
+*     type     : {string}   // 'model' entries are skipped (they are definition templates)
+*   }
+*
+* On "Import hierarchies" click the function calls the 'install_hierarchies' API action with
+* the collected TLD list. A partial failure (some items result===false) shows the first
+* failing item's message; full success calls options.callback if provided.
+*
+* (!) alert() and confirm() are used here because this screen is part of the pre-auth
+* install wizard where no Dédalo dialog component is available yet.
+*
+* @param {Object} options - Configuration object
+* @param {Array}  options.hierarchies              - All available hierarchy descriptors
+* @param {Array}  [options.default_checked=[]]     - TLD strings pre-checked by default
+* @param {Array}  [options.active_hierarchies=[]]  - TLD strings already active in the DB
+* @param {string} [options.hierarchy_files_dir_path=''] - Server path shown for informational purposes
+* @param {Function} [options.callback]             - Called with api_response on successful import
+* @param {Array}  [options.hierarchy_typologies=[]] - Typology group descriptors ({label, typology})
+* @returns {DocumentFragment} Fragment with description, grouped hierarchy checkboxes, import button, and status div
 */
 export const render_hierarchies_import_block = function(options) {
 
@@ -1448,6 +1678,8 @@ export const render_hierarchies_import_block = function(options) {
 	// DocumentFragment
 		const fragment = new DocumentFragment();
 
+		// Sort both arrays in descending alphabetical order. The rendering loops iterate
+		// from last-to-first (i-- / j--), so the final on-screen order is ascending A→Z.
 		hierarchies.sort((a,b) => (a.label < b.label) ? 1 : ((b.label < a.label) ? -1 : 0))
 		hierarchy_typologies.sort((a,b) => (a.label < b.label) ? 1 : ((b.label < a.label) ? -1 : 0))
 
@@ -1474,11 +1706,16 @@ export const render_hierarchies_import_block = function(options) {
 			parent			: fragment
 		})
 
+		// Accumulates the TLD strings for all checked checkboxes.
+		// Pre-populated with default_checked items during the initial loop, then kept
+		// in sync by checkbox change handlers (push on check, splice on uncheck).
 		const hierarchies_to_install = []
 		const hierarchy_typologies_length = hierarchy_typologies.length
 		for (let i = hierarchy_typologies_length - 1; i >= 0; i--) {
 
 			const current_hierarchy_typology = hierarchy_typologies[i]
+
+			// Skip typology groups that have no matching hierarchies in the available list.
 			const found_hierarchies = hierarchies.filter(el => el.typology === current_hierarchy_typology.typology)
 
 			if(found_hierarchies.length < 1){
@@ -1505,6 +1742,7 @@ export const render_hierarchies_import_block = function(options) {
 
 				// hierarchy object
 					const current_hierarchy = found_hierarchies[j]
+					// Skip model-type entries — they are definition templates, not importable data files.
 					if(current_hierarchy.type==='model'){
 						continue
 					}
@@ -1520,6 +1758,8 @@ export const render_hierarchies_import_block = function(options) {
 					})
 
 				// label
+				// The label text includes the TLD in brackets for disambiguation when
+				// multiple hierarchies share similar display names.
 					const hierarchy_label = ui.create_dom_element({
 						element_type	: 'label',
 						class_name		: 'hierarchy_label',
@@ -1553,6 +1793,8 @@ export const render_hierarchies_import_block = function(options) {
 					})
 
 				// add checked to hierarchies_to_install
+				// Seed the array on initial render so that default-checked items are
+				// included without requiring the user to interact with the checkbox.
 					if(checked){
 						hierarchies_to_install.push(current_hierarchy.tld)
 					}
@@ -1570,6 +1812,21 @@ export const render_hierarchies_import_block = function(options) {
 			parent			: hierarchy_container
 		})
 		import_hierarchies_button.addEventListener('mouseup', fn_import_hierarchies)
+		/**
+		* FN_IMPORT_HIERARCHIES
+		* Event handler for the "Import hierarchies" button.
+		*
+		* Guards against empty selection (alert) and prompts for confirmation (confirm)
+		* before dispatching the 'install_hierarchies' API action with the collected TLD list.
+		* On a partial failure the first failing item's message is shown. On full success the
+		* import button is removed, and options.callback is called if provided.
+		*
+		* (!) Uses alert() and confirm() — acceptable here because no modal component is
+		* available at install time. Flag: consider replacing with inline UI feedback once
+		* the UI layer is fully initialized.
+		*
+		* @returns {Promise<void>}
+		*/
 		async function fn_import_hierarchies(){
 
 			// empty selection warning
@@ -1602,6 +1859,9 @@ export const render_hierarchies_import_block = function(options) {
 					import_hierarchies_status.classList.add('error')
 					import_hierarchies_status.textContent = api_response.msg
 				}else{
+
+					// Partial failure: the API may return an array of per-hierarchy results.
+					// Show the first failing item's message; the operator can adjust and retry.
 					const false_check = api_response.result.find(el => el.result === false)
 					if(false_check) {
 						import_hierarchies_status.classList.add('error')
@@ -1629,8 +1889,20 @@ export const render_hierarchies_import_block = function(options) {
 
 /**
 * RENDER_INSTALL_FINISH_BLOCK
-* @param object self
-* @return HTMLElement content_value
+* Creates the final step section shown after hierarchy import completes.
+*
+* Renders a success description and a "Let's go!" button. On click the button calls the
+* 'install_finish' API action which disables install mode server-side (removes/renames the
+* install lock file). On success a 5-second countdown updates install_finish_status via
+* textContent and then triggers location.reload() to boot into the normal Dédalo UI.
+*
+* On failure the spinner is removed but the button stays locked (class 'loading' is not
+* removed on error) — this is intentional: if install_finish fails the operator should
+* not retry without understanding the server error shown in install_finish_status.
+*
+* @param {Object} self - The install instance (provides self.node; unused in this function
+*                        body but retained for API consistency with other render functions)
+* @returns {DocumentFragment} Fragment with description, finish button, and status div
 */
 const render_install_finish_block = function(self) {
 
@@ -1665,6 +1937,11 @@ const render_install_finish_block = function(self) {
 
 			// manage result
 				if (api_response.result===false) {
+
+					// fail case
+					// (!) The 'loading' class is NOT removed on error — intentional guard
+					// to prevent a re-click without understanding the failure.
+
 					console.error("install_finish api_response:", api_response);
 					install_finish_status.classList.add('error')
 					install_finish_status.textContent = api_response.msg

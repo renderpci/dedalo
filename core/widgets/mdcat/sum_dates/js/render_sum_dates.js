@@ -264,7 +264,13 @@ const get_value_element = (i, data, values_container, self) => {
 			ar_sum_intervals.push(day_text)
 		}
 
-	// get the text of the sum_estitmated_time_add
+	// format estimated-time-add interval as text parts
+	// (!) sum_estitmated_time_add is null when no estimation was needed. The
+	// property accesses below (.y, .m, .d) are safe because `null > 0` evaluates
+	// to false in JS, so the branches are simply skipped. If the server omits
+	// the item entirely (find returns undefined), `.value` above would throw
+	// before reaching this block — the `|| null` default only guards against an
+	// item whose value property is undefined/falsy, not a missing array item.
 	const ar_sum_estitmated_time_add =[]
 
 		if( sum_estitmated_time_add.y > 0 ){
@@ -289,7 +295,10 @@ const get_value_element = (i, data, values_container, self) => {
 			ar_sum_estitmated_time_add.push(estimated_day_text)
 		}
 
-	//ar_sum_intervals
+	// render total interval
+	// Always rendered even when ar_sum_intervals is empty (all parts are zero),
+	// resulting in an empty <div>. No guard is needed because a zero-length
+	// interval is a valid server response (no records in the portal).
 		const sum_intervals_node = ui.create_dom_element({
 			element_type: 'div',
 			class_name	: 'sum_intervals',
@@ -297,8 +306,14 @@ const get_value_element = (i, data, values_container, self) => {
 			parent 		: li
 		})
 
+		// render period notes (estimated / indeterminate)
+		// Only appended when at least one estimated interval was injected OR an
+		// indeterminate gap was detected — avoids showing an empty footnote.
 		if( ar_sum_estitmated_time_add.length > 0 || estitmated_time_undefined === true){
 
+			// (!) These string literals are hardcoded in Catalan. A future i18n pass
+			// should replace them with get_label calls once corresponding label keys
+			// are defined in the ontology.
 			const ar_indeterminate = ['( Temps estimat afegit:'];
 
 			if( ar_sum_estitmated_time_add.length  > 0 ){
@@ -325,10 +340,11 @@ const get_value_element = (i, data, values_container, self) => {
 
 
 
-		// even manager model to use in other widgets_properties
-		// this widget don't use it, because the info is not in the same section
-		// than the components that changed our value
-		// the user don't see the info and the input components at same time
+		// event_manager subscription — intentionally disabled
+		// This widget does not use live event updates because the computed value
+		// lives in a different section from the input components the user edits.
+		// The two are never visible simultaneously, so the update channel never
+		// fires in practice. The code below is kept for reference; do not remove.
 		// self.events_tokens.push(
 		// 	event_manager.subscribe('update_widget_value_'+i+'_'+self.id, fn_update_widget_value)
 		// )

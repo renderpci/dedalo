@@ -14,8 +14,46 @@
 
 /**
 * SERVICE_CKEDITOR
-* @todo: Unify service model using prototypes
-* Used as service by component_text_area
+*
+* Constructor-based service adapter that wraps CKEditor 5 for use inside
+* Dédalo's component_text_area (ddEditor mode) and component_html_text
+* (InlineEditor mode).
+*
+* Architecture overview
+* ─────────────────────
+* CKEditor 5 does not ship a built-in toolbar UI when used in headless
+* ("ddEditor") mode.  This service creates and manages:
+*   • The CKEditor instance (ddEditor or InlineEditor variant)
+*   • A custom Dédalo toolbar rendered by build_toolbar() / render_button()
+*   • Dédalo-specific tag model: inline <img> nodes carrying data-type,
+*     data-tag_id, data-state, data-label and data-data attributes, plus
+*     inline text runs with a 'reference' model attribute.
+*   • Dirty-tracking via is_dirty / set_dirty() / init_status_changes()
+*   • Round-trip tag operations: set_content, delete_tag, update_tag,
+*     get_last_tag_id, wrap_selection_with_tags, get_view_tag, etc.
+*
+* Tag flavours managed by this service
+* ──────────────────────────────────────
+*   imageInline tags (CKEditor model element 'imageInline', rendered as
+*   <span><img></span> in the view): draw, geo, tc, indexIn, indexOut, svg,
+*   page, person, note, lang.
+*
+*   reference tags: inline text marked with the 'reference' attribute in the
+*   CKEditor model (not an imageInline node); handled separately throughout.
+*
+* Lifecycle
+* ─────────
+*   new service_ckeditor() → init(options) → create_ddEditor|create_InlineEditor
+*   → [user edits] → save() / destroy()
+*
+* Dependencies
+* ─────────────
+*   • ckeditor global (loaded on demand from DEDALO_ROOT_WEB/lib/ckeditor/build)
+*   • plug-ins/reference/src — custom CKEditor plugin bundled into ckeditor.js
+*   • render_text_editor.js  — render_button, render_find_and_replace helpers
+*
+* @todo Unify service model using prototypes (all methods currently assigned
+*       directly on `this` inside the constructor function)
 */
 export const service_ckeditor = function() {
 
@@ -40,9 +78,25 @@ export const service_ckeditor = function() {
 	* 	See the ckeditor.js file in ../libs_dev/ckeditor to change the conversion tags
 	* Editor load the core and common commands and plugins from ckEditor but Dédalo will not use the ckEditor user interface
 	* the interface is created inside the toolbar_container with custom icons and functionalities
-	* @param object options
-	* @return promise
-	*  	object ckeditor
+	*
+	* Initialization sequence:
+	*   1. If `ckeditor` global is undefined, lazily loads ckeditor.js and
+	*      JSON language data in parallel (Promise.all).
+	*   2. Waits up to indefinitely (50 ms polling) for `ckeditor` to become
+	*      available in the global scope (webpack async chunk may not be
+	*      synchronous even after the script tag loads).
+	*   3. Delegates to create_ddEditor or create_InlineEditor depending on
+	*      options.editor_class.
+	*
+	* @param {Object} options
+	* @param {Object}      options.caller          - component_text_area instance owning this service
+	* @param {HTMLElement} options.value_container  - editable DOM node passed to CKEditor as the source element
+	* @param {HTMLElement} options.toolbar_container - DOM node where Dédalo's custom toolbar is rendered
+	* @param {string}      options.fallback_value   - HTML placeholder shown when the editor is empty
+	* @param {number|string} options.key            - Array index into the caller's data array for the text value
+	* @param {Object}      options.editor_config    - Toolbar definition and custom event callbacks (see build_toolbar/setup_events)
+	* @param {string}      [options.editor_class='ddEditor'] - 'ddEditor' (default) or 'InlineEditor'
+	* @returns {Promise<Object>} Resolves to the created CKEditor editor instance
 	*/
 	this.init = async function(options) {
 
@@ -125,9 +179,26 @@ export const service_ckeditor = function() {
 	* Builds a ckeditor InlineEditor instance
 	* This instance uses full featured ckeditor toolbar and is used
 	* by component_html_text
-	* @param object editor_config
-	* @return promise
-	* 	Resolve editor
+	*
+	* Key responsibilities beyond a plain InlineEditor.create():
+	*   • Loads the CKEditor translation file for the current Dédalo data
+	*     language (page_globals.dedalo_data_lang) when it is not English.
+	*   • Optionally removes the 'reference' button from the toolbar by
+	*     inspecting editor_config.toolbar (the caller opts in by including
+	*     the string 'reference' in that array).
+	*   • Configures the simple-upload plugin to POST images to the Dédalo
+	*     API endpoint (/core/api/v1/json/index.php), which constructs the
+	*     RQO from the URI query-string variables.
+	*   • Moves the CKEditor balloon toolbar panel into self.toolbar_container
+	*     so that Dédalo controls its visibility and sizing.
+	*   • Attaches a ResizeObserver so the toolbar width tracks the editable
+	*     area width automatically.
+	*   • Delegates to init_status_changes(), setup_button_reference(), and
+	*     setup_events() after the editor promise resolves.
+	*
+	* @param {Object} editor_config - same shape accepted by build_toolbar; must
+	*        contain at least {toolbar: string[], read_only: boolean}
+	* @returns {Promise<Object>} Resolves to the InlineEditor instance
 	*/
 	this.create_InlineEditor = async function(editor_config) {
 
@@ -300,9 +371,26 @@ export const service_ckeditor = function() {
 	* Builds a ckeditor ddEditor instance
 	* This instance uses custom limited toolbar and is used
 	* by component_text_area
-	* @param object editor_config
-	* @return promise
-	* 	Resolve editor
+	*
+	* ddEditor is the headless CKEditor 5 variant bundled in
+	* /lib/ckeditor/build/ckeditor.js (compiled with webpack, including the
+	* custom dedalo_tags and reference plug-ins).  It has no built-in toolbar
+	* UI; instead Dédalo's build_toolbar() creates a fully custom toolbar inside
+	* self.toolbar_container.
+	*
+	* Additional wiring performed here:
+	*   • clipboardInput handler — prevents a drag-and-drop from placing the
+	*     caret *inside* an existing imageInline tag (img node) by forcing the
+	*     drop position to be *after* the img's parent span.
+	*   • toolbar toggle — mousedown on the parent node reveals the toolbar;
+	*     a delegated mouseup on document.body hides it when focus leaves the
+	*     component area.
+	*   • Adds 'editor_container' CSS class to the view root for styling.
+	*   • Removes self.value_container from the DOM after CKEditor has
+	*     consumed its initial HTML content (CKEditor injects its own editable).
+	*
+	* @param {Object} editor_config - same structure as accepted by build_toolbar/setup_events
+	* @returns {Promise<Object>} Resolves to the ddEditor instance
 	*/
 	this.create_ddEditor = async function(editor_config) {
 
@@ -458,10 +546,15 @@ export const service_ckeditor = function() {
 	/**
 	* SAVE
 	* Trigger save_value against caller sending key and value
-	* @param string previous_value
-	*	Used to compare changes in editor value.
-	*	Current saved value for current key data
-	* @return bool
+	*
+	* Only performs the save when self.is_dirty is true (the editor content
+	* has been modified since the last save or init).  Delegates the actual
+	* persistence to self.caller.save_value(key, value), which is the
+	* component_text_area method responsible for writing back to the Dédalo
+	* data matrix.  Resets is_dirty to false on success.
+	*
+	* @returns {Promise<boolean>} false when the editor was clean (no save needed),
+	*   true after a successful save
 	*/
 	this.save = async function() {
 
@@ -491,7 +584,14 @@ export const service_ckeditor = function() {
 	/**
 	* INIT_STATUS_CHANGES
 	* Listen to new changes (to enable the "Save" button) and to pending actions.
-	* @return void
+	*
+	* Attaches a debounced listener on the CKEditor model's 'change:data' event.
+	* The debounce delay (waitTime = 500 ms) prevents marking the editor dirty
+	* on every individual keystroke; set_dirty() is only called after the user
+	* pauses typing for half a second.  This avoids excessive save triggers and
+	* UI thrashing in component_text_area.
+	*
+	* @returns {void}
 	*/
 	this.init_status_changes = function() {
 
@@ -521,7 +621,13 @@ export const service_ckeditor = function() {
 	/**
 	* GET_VALUE
 	* Get editor value as raw html string
-	* @return string
+	*
+	* Calls CKEditor's getData(), which serialises the current model back to
+	* the HTML string representation (using the downcast pipeline, including
+	* the custom dedalo_tags downcast that converts imageInline model nodes
+	* back to <img> elements with data-* attributes).
+	*
+	* @returns {string} The current HTML content of the editor
 	*/
 	this.get_value = function() {
 
@@ -539,8 +645,32 @@ export const service_ckeditor = function() {
 	* SETUP_EVENTS
 	* callback when ckeditor is ready
 	* Capture the event fired in the editor and callback to the caller to be processed. See render_edit_component_text_area.js
-	* @param object editor_config
-	* @return true
+	*
+	* Wires CKEditor view/model events to the caller's custom_events callbacks
+	* so that component_text_area can respond to user interactions without
+	* holding a direct reference to CKEditor internals.
+	*
+	* Event mapping:
+	*   focus          → custom_events.focus(domEvent, {})
+	*   blur           → custom_events.blur(domEvent, {})
+	*   click          → resolves the clicked element (img tag or reference text
+	*                    run) and invokes custom_events.click / custom_events.MouseUp
+	*                    with a tag_obj payload.
+	*   selectionChangeDone → custom_events.MouseUp(null, {selection}) with the
+	*                    serialised HTML selection string; skipped for one cycle
+	*                    after a click on a tag (prevent_selectionChangeDone flag).
+	*   change:data    → collects changed imageInline entries and fires
+	*                    custom_events.changeData(evt, ar_changes) where each
+	*                    entry is {action, tag_id, type}.
+	*   keydown        → custom_events.KeyUp(domEvent, {})
+	*
+	* tag_obj shape (for click/MouseUp payloads):
+	*   { type, tag_id, state, label, data, node_name }
+	*   — for references: sourced from the CKEditor selection attribute 'reference'
+	*   — for imageInline: sourced from data-* attributes on the parent span
+	*
+	* @param {Object} editor_config - must contain {custom_events: Object}
+	* @returns {boolean} true always
 	*/
 	this.setup_events = function(editor_config) {
 
@@ -704,7 +834,25 @@ export const service_ckeditor = function() {
 	* SETUP_BUTTON_REFERENCE
 	* callback when ckeditor is ready
 	* Capture the event fired in the editor and callback to the caller to be processed. See render_edit_component_text_area.js
-	* @return bool
+	*
+	* Hooks into the CKEditor 'reference' command's 'execute' event so that
+	* when the user presses the reference toolbar button, Dédalo's own modal
+	* dialog is opened instead of any built-in CKEditor UI.
+	*
+	* Sequence when the reference button is activated:
+	*   1. Publishes the event 'create_reference_<id_base>_<key>' via
+	*      event_manager so any registered listener in the caller hierarchy
+	*      can react.
+	*   2. Checks whether the current selection already covers a reference tag
+	*      (via get_selected_reference_element); if so, re-uses that tag
+	*      object (edit mode) rather than creating a new one.
+	*   3. If creating a new reference, calculates the next available tag_id
+	*      (max existing reference tag_id + 1) to ensure uniqueness within
+	*      the editor content.
+	*   4. Calls self.caller.render_reference() which is component_text_area's
+	*      method responsible for showing the reference-creation modal.
+	*
+	* @returns {boolean} true always
 	*/
 	this.setup_button_reference = function() {
 
@@ -755,9 +903,20 @@ export const service_ckeditor = function() {
 	* SET_CONTENT
 	* Get the tag parameters and create the node of the DOM using the ckeditor tools
 	* insert the node in the caret position
-	* @param object tag_obj
-	*  Tag object with all parameters for create a view node in DOM
-	* @return bool
+	*
+	* Inserts a new 'imageInline' model element at the current caret position.
+	* The tag_obj is passed directly as the element's attribute map; callers
+	* must therefore pre-populate all required attributes (type, tag_id, state,
+	* label, data, src, id, etc.) before calling this method.
+	*
+	* After insertion, is_dirty is set to true directly (bypassing the normal
+	* debounce in init_status_changes) because the change is programmatic and
+	* should be marked dirty immediately rather than waiting for the timer.
+	*
+	* @param {Object} tag_obj - Attribute map for the new imageInline element;
+	*   expected keys: type, tag_id, state, label, data, src, src_id, id.
+	*   All values must be their native types (not JSON-stringified).
+	* @returns {boolean} true always
 	*/
 	this.set_content = function(tag_obj) {
 
@@ -783,9 +942,26 @@ export const service_ckeditor = function() {
 
 	/**
 	* DELETE_TAG
-	* @param object tag_obj
-	*  Tag object with all parameters for search the tag inside the model structure of ckeditor
-	* @return promise bool
+	* Removes the imageInline model node(s) that match the given tag_obj.
+	*
+	* Supports multi-type deletion (e.g. removing both 'indexIn' and 'indexOut'
+	* for the same tag_id in a single call) by accepting type as either a string
+	* or an Array.  Each type is processed in a separate loop pass because
+	* deleting one node invalidates the current range, so the range must be
+	* re-created for every iteration.
+	*
+	* The walk is performed over the CKEditor model (not the view) because model
+	* node identity is stable and the _attrs Map is the authoritative source for
+	* 'type' and 'tag_id'.
+	*
+	* Note: uses loose equality (==) to compare tag_id values because the stored
+	* attribute may be a number while the incoming tag_id may be a string (or
+	* vice versa).
+	*
+	* @param {Object} tag_obj - Search criteria
+	* @param {string|Array} tag_obj.type   - Tag type(s) to match (e.g. 'indexIn' or ['indexIn','indexOut'])
+	* @param {string|number} tag_obj.tag_id - Numeric ID of the tag to remove
+	* @returns {Promise<boolean>} Resolves to true after all matching nodes have been removed
 	*/
 	this.delete_tag = function(tag_obj) {
 
@@ -860,7 +1036,18 @@ export const service_ckeditor = function() {
 	/**
 	* GET_EDITOR_CONTENT_DATA
 	* get the full data of the editor in html format to be saved
-	* @return HTMLElement | false
+	*
+	* Returns the live DOM root element of the CKEditor editable area (not the
+	* serialised HTML string — use get_value() for that).  This is useful when
+	* the caller needs to traverse or measure the actual rendered DOM, e.g. for
+	* tag-highlight overlays or print layout.
+	*
+	* The 'main' key in domRoots refers to the single root document element;
+	* for a non-inline/iframe-based editor this is the body of the iframe, for
+	* a div-based editable it is the div itself.
+	*
+	* @returns {HTMLElement|false} The editable root element, or false if the
+	*   editor is not yet initialised or 'main' root is unavailable
 	*/
 	this.get_editor_content_data = function() {
 
@@ -888,8 +1075,18 @@ export const service_ckeditor = function() {
 	/**
 	* GET_SELECTION
 	* get the html fragment, in string format, selected by the user
-	* @return string selection
-	*	Raw string without formatting
+	*
+	* Extracts the current user selection from the CKEditor model, converts it
+	* to a CKEditor DocumentFragment, then serialises that fragment to an HTML
+	* string via editor.data.stringify().  The result is the raw HTML for only
+	* the selected content, as CKEditor would serialise it (including downcast
+	* of any imageInline / reference model nodes back to HTML).
+	*
+	* Returns an empty string when the selection is collapsed (no text is
+	* selected), and false when the editor instance is not available.
+	*
+	* @returns {string|false} HTML string of the selected content, or false if
+	*   the editor is unavailable
 	*/
 	this.get_selection = function() {
 
@@ -918,11 +1115,22 @@ export const service_ckeditor = function() {
 	/**
 	* WRAP_SELECTION_WITH_TAGS
 	* Get the tag_in and the tag out
-	* @param tag_obj_in
-	*  object with the definition of the in tag options
-	* @param tag_obj_out
-	*  object with the definition of the out tag options
-	* @return bool
+	*
+	* Inserts a pair of imageInline model nodes around a text selection to
+	* create a start/end marker pair (as used for indexIn/indexOut index tags).
+	*
+	* Two separate model.change() calls are required because after inserting
+	* tag_in, the selection's last position (used for tag_out) shifts.  The
+	* method therefore reads getFirstPosition() for the in-tag, then
+	* getLastPosition() for the out-tag in the second pass.
+	*
+	* After both inserts, is_dirty is explicitly set to false.
+	* (!) This intentionally overrides the normal debounce mechanism; the caller
+	* is expected to manage the dirty state separately after a wrap operation.
+	*
+	* @param {Object} tag_obj_in  - Attribute map for the opening imageInline element (type:'indexIn', ...)
+	* @param {Object} tag_obj_out - Attribute map for the closing imageInline element (type:'indexOut', ...)
+	* @returns {boolean} true always
 	*/
 	this.wrap_selection_with_tags = function(tag_obj_in, tag_obj_out) {
 
@@ -962,9 +1170,25 @@ export const service_ckeditor = function() {
 	/**
 	* SET_SELECTION_FROM_TAG
 	* Set text selection from given tag
-	* @param object|null tag_obj
-	*  Tag object with all parameters for search the tag inside the model structure of ckeditor
-	* @return bool
+	*
+	* Handles two tag flavours differently:
+	*
+	*   'reference' tags — these are inline text runs with a 'reference' model
+	*   attribute (not imageInline nodes).  CKEditor's view representation has
+	*   a corresponding attribute element; the method locates it via
+	*   get_view_tag() and uses writer.setSelection(el, 'on') to select it.
+	*
+	*   'indexIn'/'indexOut' tags — paired boundary markers.  The method finds
+	*   both the 'indexIn' and 'indexOut' view elements for the given tag_id
+	*   and calls set_selection_from_view_tags() to create a range that spans
+	*   the text between them (from 'after' indexIn to 'before' indexOut).
+	*
+	* Returns false immediately for tag types other than 'reference',
+	* 'indexIn', or 'indexOut'.
+	*
+	* @param {Object|null} tag_obj - Tag object with type and tag_id; pass null
+	*   to no-op and return false
+	* @returns {boolean} true when selection was set, false otherwise
 	*/
 	this.set_selection_from_tag = function(tag_obj) {
 
@@ -1022,11 +1246,19 @@ export const service_ckeditor = function() {
 	/**
 	* GET_SELECTION_FROM_TAGS
 	* Set selection and scroll selection into the view
-	* @param object tag_view_in
-	* 	tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag in
-	* @param object tag_view_out
-	* 	tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag out
-	* @return void
+	*
+	* Creates a CKEditor view range that starts immediately *after* tag_view_in
+	* and ends immediately *before* tag_view_out, then applies it as the view
+	* selection.  The 'after'/'before' positions exclude the boundary marker
+	* elements themselves so that only the content between them is highlighted.
+	*
+	* (!) Note: the method is named set_selection_from_view_tags in code but
+	* the doc-block header says GET_SELECTION_FROM_TAGS — the end label
+	* `//end get_selection_from_tags` reflects this legacy naming mismatch.
+	*
+	* @param {Object} tag_view_in  - CKEditor view element for the 'indexIn' span
+	* @param {Object} tag_view_out - CKEditor view element for the 'indexOut' span
+	* @returns {void}
 	*/
 	this.set_selection_from_view_tags = function(tag_view_in, tag_view_out) {
 
@@ -1058,7 +1290,13 @@ export const service_ckeditor = function() {
 	* SCROLL_TO_SELECTION
 	* Scroll the editor to show the selection.
 	* get the view selection and move the editor to center the range
-	* @return void
+	*
+	* Uses CKEditor's built-in scrollToTheSelection() with a viewport offset
+	* of 40 px so that the selected content is not obscured by a fixed toolbar.
+	* No-ops silently when the selection range is null (e.g. when the editor
+	* has no selection yet).
+	*
+	* @returns {void}
 	*/
 	this.scroll_to_selection = function() {
 
@@ -1080,9 +1318,25 @@ export const service_ckeditor = function() {
 
 	/**
 	* GET_VIEW_TAG
-	* @param obj tag_obj
-	*  Tag object with all parameters for search the tag inside the model structure of ckeditor
-	* @return bool
+	* Locate the CKEditor view element corresponding to the given tag_obj.
+	*
+	* Walks the entire CKEditor view document tree (using createRangeIn on the
+	* view root) looking for an element whose node name is 'img' or 'reference'
+	* and whose data-type / data-tag_id attributes match tag_obj.type and
+	* tag_obj.tag_id.
+	*
+	* For 'img' nodes (imageInline tags), the meaningful data-* attributes live
+	* on the *parent* span element (not on the img itself), so the method
+	* returns the parent span.  For 'reference' elements, the element itself
+	* holds the attributes.
+	*
+	* Returns false (not null) when not found or when the editor is not ready,
+	* so callers must guard with `if (!view_tag)`.
+	*
+	* @param {Object} tag_obj
+	* @param {string} tag_obj.type   - Tag type to match (e.g. 'indexIn', 'reference')
+	* @param {string} tag_obj.tag_id - Tag numeric ID as a string
+	* @returns {Object|false} CKEditor view element (span or reference), or false if not found
 	*/
 	this.get_view_tag = function(tag_obj) {
 
@@ -1151,9 +1405,19 @@ export const service_ckeditor = function() {
 	* GET_VIEW_TAG_NODE
 	* Get the DOM element of the tag
 	* If the tag is a index the DOM element will be the span (it context the img node as child)
-	* @param object tag_obj
-	*  Tag object with 'type' and 'tag_id' parameters for search the tag inside the model structure of ckeditor
-	* @return HTMLElement tag_node
+	*
+	* Bridges from CKEditor's virtual view tree to the actual browser DOM by
+	* using the view-to-DOM converter.  This is needed when the caller requires
+	* a real HTMLElement (e.g. to measure position, add a highlight overlay, or
+	* dispatch native DOM events).
+	*
+	* Internally calls get_view_tag() first to obtain the CKEditor view element,
+	* then maps it to the DOM node via editor.editing.view.domConverter.
+	*
+	* @param {Object} tag_obj - Tag search criteria
+	* @param {string} tag_obj.type   - Tag type (e.g. 'indexIn', 'draw', 'reference')
+	* @param {string|number} tag_obj.tag_id - Tag numeric ID (converted to string internally)
+	* @returns {HTMLElement} The real DOM span (or reference element) for the tag
 	*/
 	this.get_view_tag_node = function(tag_obj) {
 
@@ -1183,9 +1447,22 @@ export const service_ckeditor = function() {
 	/**
 	* GET_LAST_TAG_ID
 	* Calculates all current text_editor editor tags id of given type (ex. 'tc') and get last used id
-	* @param object options
-	*  object with the tag parameters, here use only tag_type to search in the ckeditor model structure
-	* @return int last_tag_id
+	*
+	* Walks the entire CKEditor model tree collecting all tag_id values for
+	* nodes whose type matches options.tag_type.  Returns the numeric maximum
+	* of all found IDs (or 0 when none exist), which is used by callers to
+	* derive the next available tag_id (last_tag_id + 1).
+	*
+	* Handles both imageInline model nodes (attributes on _attrs Map accessed
+	* via getAttribute('type') / getAttribute('tag_id')) and inline reference
+	* text runs (where the data lives in the 'reference' attribute object).
+	*
+	* Special case: 'index' is normalised to 'indexIn' because 'index' is a
+	* logical group name, not an actual attribute value stored in the model.
+	*
+	* @param {Object} options
+	* @param {string} options.tag_type - Logical tag type; 'index' is aliased to 'indexIn'
+	* @returns {number} The highest numeric tag_id currently in the editor for that type, or 0
 	*/
 	this.get_last_tag_id = function(options) {
 
@@ -1249,10 +1526,20 @@ export const service_ckeditor = function() {
 
 	/**
 	* GET_VIEW_TAG_ATTRIBUTES
-	* @param tag_obj
-	* Tag object with type and tag_id for search the tag inside the model structure of ckeditor
-	* @return object|null
+	* @param {Object} tag_obj - Tag object with type and tag_id for search the tag inside the model structure of ckeditor
+	* @param {string} tag_obj.type   - Tag type to match (e.g. 'indexIn', 'draw')
+	* @param {string} tag_obj.tag_id - Tag numeric ID as string
+	* @returns {Object|null} Attribute object of the found tag, or null if not found.
 	* 	sample: {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
+	*
+	* Walks the CKEditor view tree (not the model) to extract the data-*
+	* attributes from the view representation of the matching tag.  The returned
+	* plain object uses un-prefixed key names (type, tag_id, state, label, data)
+	* regardless of how they are stored in the view (data-type, data-tag_id,
+	* data-state, data-label, data-data).
+	*
+	* Used when the caller needs tag metadata without going through the model
+	* (e.g. for read-only views where only the rendered DOM / view is available).
 	*/
 	this.get_view_tag_attributes = function(tag_obj) {
 
@@ -1317,14 +1604,30 @@ export const service_ckeditor = function() {
 	/**
 	* UPDATE_TAG
 	* Find and change target tag in editor
-	* @param object options
-	* Sample:
-	* {
-	* 	type : [indexIn,indexOut]
-	* 	tag_id : 1,
-	* 	new_data_obj : { type : n } (former dataset)
-	* }
-	* @return promise
+	*
+	* Locates one or more imageInline model nodes that match tag_id and any of
+	* the types in options.type, then merges new_data_obj properties onto each
+	* matched node's attribute set.  Callers pass only the properties that
+	* changed; unchanged properties are preserved from the current node state.
+	*
+	* Special handling for 'data' property: the raw data value is passed through
+	* self.caller.tag_data_object_to_string() to produce the stringified form
+	* expected in the model attribute.
+	*
+	* After updating attributes, the method rebuilds the tag's 'src' attribute
+	* (the image URL used by the custom dedalo_tags plugin to render the visual
+	* tag icon).  The URL is constructed as: <base_url>?id=<new_id> where
+	* new_id comes from self.caller.build_view_tag_obj().
+	*
+	* The loop breaks once all expected type matches have been found (counter
+	* `changed` reaches ar_type.length), preventing unnecessary full traversal.
+	*
+	* @param {Object} options
+	* @param {string|Array} options.type         - Tag type(s) to match
+	* @param {string|number} options.tag_id      - Tag numeric ID to match (loose equality)
+	* @param {Object} options.new_data_obj       - Properties to set/overwrite; values must be
+	*   their native types (not JSON-stringified). Special key 'data' is stringified internally.
+	* @returns {Promise<boolean>} Resolves to true after all updates are applied
 	*/
 	this.update_tag = function(options) {
 
@@ -1431,8 +1734,18 @@ export const service_ckeditor = function() {
 
 	/**
 	* SET_DIRTY
-	* @param bool value
-	* @return bool
+	* Mark the editor as having unsaved changes and notify the caller.
+	*
+	* When value is true, sets self.is_dirty and calls
+	* self.caller.update_changed_data() so that the parent component_text_area
+	* can enable the Save button and/or trigger auto-save logic.
+	*
+	* Passing false is accepted but is a no-op beyond setting is_dirty; the
+	* component is not notified about a clean state through this path (clean
+	* state is managed externally, e.g. after save() completes).
+	*
+	* @param {boolean} value - true to mark dirty and notify caller; false is accepted but does not notify
+	* @returns {boolean} false on type error, true on success
 	*/
 	this.set_dirty = function(value) {
 
@@ -1462,14 +1775,27 @@ export const service_ckeditor = function() {
 	/**
 	* BUILD_TOOLBAR
 	* 	Render all toolbar buttons from editor_config
-	* @param object editor_config
-	* Like
-	* {
-	* 	custom_buttons : [{name:..},{name:..}],
-	* 	custom_events : [{name:..},{name:..}],
-	* 	toolbar : ['bold','italic',..]
-	* }
-	* @return HTMLElement toolbar_node
+	*
+	* Iterates editor_config.toolbar (an ordered array of button name strings)
+	* and for each entry looks up the corresponding definition object in
+	* editor_config.custom_buttons.  Creates the DOM button node via
+	* render_button() (from render_text_editor.js), then:
+	*   • Stores the node back onto button_config.node for later reference.
+	*   • If button_config.manager_editor is true, wires the button to the
+	*     CKEditor command system via factory_events_for_buttons() so that
+	*     active/disabled state is synced with the editor command state.
+	*   • Appends the node to toolbar_container.
+	* Attaches a mousedown listener on toolbar_container that prevents default
+	* and stops propagation so toolbar clicks do not blur the editor.
+	*
+	* Buttons without a matching definition in custom_buttons are logged as
+	* a warning and skipped.
+	*
+	* @param {Object} editor_config
+	* @param {string[]} editor_config.toolbar       - Ordered list of button name strings
+	* @param {Object[]} editor_config.custom_buttons - Button definition objects with
+	*   {name, manager_editor, options:{tooltip, image, onclick, class_name}}
+	* @returns {HTMLElement} The populated toolbar_container element
 	*/
 	this.build_toolbar = function(editor_config) {
 
@@ -1538,8 +1864,8 @@ export const service_ckeditor = function() {
 
 	/**
 	* FACTORY_EVENTS_FOR_BUTTONS
-	* @param button_obj
-	* definition of the button, it's created at render of the caller as: render_edit_component_text_area.js
+	* @param {Object} button_obj - Button definition object created at the caller's render phase
+	*   (see render_edit_component_text_area.js get_custom_buttons)
 	* Like
 	* {
 	*	name			: "button_geo",
@@ -1555,7 +1881,28 @@ export const service_ckeditor = function() {
 	*		}
 	*	}
 	* }
-	* @return bool
+	*
+	* Wires a button DOM node (button_obj.node) to its corresponding CKEditor
+	* command or special handler.  Three cases are handled:
+	*
+	*   'html_source'    — toggles SourceEditing plugin mode directly (no
+	*                      CKEditor command; accessed via the plugin instance).
+	*   'find_and_replace' — calls render_find_and_replace(editor) which opens
+	*                      the CKEditor find/replace dialog.
+	*   all other names — retrieved via editor.commands.get(name) and bound to
+	*                     editor.execute(name) on click.  Additionally:
+	*                     • Listens to 'change:value' on the command (except
+	*                       'undo'/'redo') to toggle an 'active' CSS class.
+	*                     • Listens to 'change:isEnabled' to toggle a 'disable'
+	*                       CSS class, reflecting whether the command can be
+	*                       executed in the current editor context.
+	*
+	* (!) The mousedown prevention on the toolbar_container (set in build_toolbar)
+	* prevents focus loss when clicking buttons, which is why click listeners
+	* here do not need to call e.preventDefault().
+	*
+	* @returns {boolean|undefined} true for command-backed buttons; undefined
+	*   (implicit return) for html_source and find_and_replace early-return paths
 	*/
 	this.factory_events_for_buttons = function(button_obj) {
 
@@ -1629,9 +1976,15 @@ export const service_ckeditor = function() {
 	* _GETVALUEFROMFIRSTALLOWEDNODE
 	* Checks the attribute value of the first node in the selection that allows the attribute.
 	* For the collapsed selection returns the selection attribute.
+	*
+	* This is a helper ported from the CKEditor 5 LinkEditing plugin pattern to
+	* support the custom 'reference' attribute command.  It mirrors the internal
+	* _getValueFromFirstAllowedNode logic used by CKEditor's AttributeCommand.
+	*
 	* @private
-	* @returns bool
-	*  The attribute value.
+	* @returns {boolean} True when the first schema-allowed node has the attribute;
+	*   false when no such node is found or when the selection is not collapsed
+	*   and none of the items in the ranges allow the attribute
 	*/
 	this._getValueFromFirstAllowedNode = function() {
 
@@ -1666,8 +2019,20 @@ export const service_ckeditor = function() {
 	* selected and the **only** element within the selection boundaries, or when
 	* a linked widget is selected.
 	*
+	* Returns the 'reference' attribute value (the tag_obj) for the currently
+	* selected reference element, or undefined when no reference is active.
+	* The 'reference_editing' CKEditor plugin (custom Dédalo plug-in in
+	* plug-ins/reference/) is used to call its findAttributeRange helper to
+	* locate the element.
+	*
+	* Two resolution paths:
+	*   1. Selected block element is schema-referable → getAttribute('reference')
+	*      from the element.
+	*   2. Otherwise → getAttribute('reference') from the current selection
+	*      (text run with reference attribute).
+	*
 	* @private
-	* @return {module:engine/view/attributeelement~AttributeElement|null}
+	* @returns {Object|undefined} The reference tag_obj, or undefined if none selected
 	*/
 	this.get_selected_reference_element = function() {
 
@@ -1703,8 +2068,16 @@ export const service_ckeditor = function() {
 	/**
 	* FIND_REFERENCE_ELEMENT_ANCESTOR
 	* Returns `true` if a given view node is the reference element.
-	* @param {module:engine/view/node~Node} node
-	* @return bool
+	*
+	* Walks the ancestor chain from the given position to find any
+	* attributeElement that has the custom property 'reference' set.
+	* Used internally to determine whether a position is inside a reference
+	* span when adjusting selection or performing reference operations.
+	*
+	* @param {Object} position - CKEditor view Position object; ancestors are
+	*   obtained via position.getAncestors()
+	* @returns {Object|undefined} The ancestor attributeElement with 'reference'
+	*   custom property, or undefined if none found
 	*/
 	this.find_reference_element_ancestor = function ( position ) {
 
@@ -1719,14 +2092,32 @@ export const service_ckeditor = function() {
 
 	/**
 	* SET_REFERENCE
-	* @param object options
-	* Sample:
-	* {
-	* 	type : [indexIn,indexOut]
-	* 	tag_id : 1,
-	* 	new_data_obj : { type : n } (former dataset)
-	* }
-	* @return void
+	* Apply or update the 'reference' model attribute on the current selection.
+	*
+	* Handles two distinct selection states:
+	*
+	*   Collapsed selection (caret):
+	*     • If the caret is inside an existing reference text run (selection has
+	*       'reference' attribute), updates that entire run's attribute to
+	*       new_data_obj using reference_editing.findAttributeRange() to find
+	*       its bounds.
+	*     • If the caret is outside any reference, inserts a new text node with
+	*       the reference attribute using locator_text_value as the display text.
+	*     In both cases the 'reference' attribute is removed from the selection
+	*     afterwards so subsequent typing does not continue inside the reference.
+	*
+	*   Non-collapsed selection:
+	*     • Retrieves valid ranges via schema.getValidRanges() and also checks
+	*       selected block elements that allow the 'reference' attribute.
+	*     • Applies writer.setAttribute('reference', new_data_obj, range) to all
+	*       applicable ranges.
+	*
+	* @param {Object} options
+	* @param {Object} options.new_data_obj          - Reference tag object to set as the attribute value.
+	*   All properties must be their native types (not stringified).
+	* @param {string} options.locator_text_value    - Text string inserted as the visible reference
+	*   label when creating a new reference on a collapsed selection
+	* @returns {void}
 	*/
 	this.set_reference = function(options) {
 
@@ -1821,7 +2212,17 @@ export const service_ckeditor = function() {
 
 	/**
 	* REMOVE_REFERENCE
-	* @return void
+	* Remove the 'reference' model attribute from the current selection.
+	*
+	* Collapsed selection: uses reference_editing.findAttributeRange() to
+	* determine the full extent of the reference run at the caret position,
+	* then removes the 'reference' attribute from that entire range.
+	*
+	* Non-collapsed selection: uses schema.getValidRanges() to find all
+	* text nodes within the selection that allow the 'reference' attribute,
+	* and removes it from each.
+	*
+	* @returns {void}
 	*/
 	this.remove_reference = function() {
 
@@ -1856,8 +2257,24 @@ export const service_ckeditor = function() {
 	/**
 	* GET_SELECTED_TAG
 	* get the tag object that was selected
-	* @return object|false tag_obj
-	*	the tag selected object
+	*
+	* Returns a unified tag_obj regardless of whether the selection is a
+	* reference text run or an imageInline element:
+	*
+	*   reference: the 'reference' attribute value on the selection is the
+	*   tag_obj directly.
+	*
+	*   imageInline (draw, geo, tc, indexIn/Out, etc.): the model element is
+	*   obtained via selection.getSelectedElement() and its individual model
+	*   attributes (type, tag_id, state, label, data) are assembled into a
+	*   plain object.
+	*
+	* Returns false when there is neither a reference in the selection nor a
+	* selected element (i.e. the user has a text cursor or text range without
+	* a tag).
+	*
+	* @returns {Object|false} tag_obj with {type, tag_id, state, label, data},
+	*   or false if no tag is selected
 	*/
 	this.get_selected_tag = function() {
 
@@ -1902,7 +2319,16 @@ export const service_ckeditor = function() {
 	/**
 	* FOCUS
 	* Focus editor and set pointer to the end of text
-	* @return void
+	*
+	* Moves the model selection to the end of the root document node, then
+	* calls editorInstance.editing.view.focus() to transfer browser focus to
+	* the CKEditor editable area.  Both steps are performed inside a single
+	* model.change() batch so they execute as one undoable transaction.
+	*
+	* (!) The warning message 'Editor is available' is a pre-existing typo in
+	* the source; the intent is 'Editor is NOT available'. Do not change.
+	*
+	* @returns {void}
 	*/
 	this.focus = function() {
 

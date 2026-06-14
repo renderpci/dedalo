@@ -1,8 +1,31 @@
 <?php declare(strict_types=1);
 /**
 * CLASS SECTIONS
+* Aggregate manager for querying, iterating, and deleting sets of section records.
 *
+* Whereas `section` represents a single section type (its schema and component
+* layout) and `section_record` represents a single row in the data matrix,
+* `sections` operates on a *collection* of records matched by a
+* search_query_object (SQO). Its responsibilities are:
 *
+* - Execute a search via search::get_instance() and cache the db_result.
+* - Expose the matched section tipos for the JSON controller (sections_json.php).
+* - Provide the full list of matching section_id values without pagination, used
+*   by callers such as component_relation_common that need to batch-process all
+*   related records.
+* - Orchestrate multi-record deletion, including permission checks, child-guard
+*   logic (thesaurus trees), ontology/hierarchy cleanup, parent-reference
+*   removal, and a post-delete verification search.
+*
+* Typical callers: component_portal (list view), relation_list, dd_core_api
+* (create/delete API actions), component_text_area (related-list), and
+* component_common::dataframe_common.
+*
+* Note: `get_instance()` always creates a fresh object — there is no shared
+* singleton cache. Each call site owns its own instance.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class sections extends common {
 
@@ -12,22 +35,28 @@ class sections extends common {
 	* CLASS VARS
 	*/
 		/**
-		 * Array of locators identifying the specific section records to load.
-		 * Each locator contains section_tipo and section_id for targeted data retrieval.
+		 * Locators identifying specific section records to load.
+		 * Each entry is a locator with section_tipo and section_id.
+		 * Reserved for future targeted-load paths; currently not consumed by
+		 * search or delete internally — callers pass an SQO with
+		 * filter_by_locators instead.
 		 * @var ?array $ar_locators
 		 */
 		protected ?array $ar_locators = null;
 
 		/**
-		 * Array of section tipos this sections instance operates on.
-		 * Defines which section types are included in the data scope.
+		 * Resolved list of section tipos covered by this instance.
+		 * Populated lazily by get_ar_section_tipo(). In 'related' mode with
+		 * section_tipo=['all'], the list is derived by scanning the db_result;
+		 * otherwise it mirrors search_query_object->section_tipo.
 		 * @var ?array $ar_section_tipo
 		 */
 		protected ?array $ar_section_tipo = null;
 
 		/**
-		 * Database result object containing the queried section records.
-		 * Holds raw db_result from PostgreSQL before transformation to section objects.
+		 * Cached db_result from the first call to get_data().
+		 * The db_result is iterable (implements Iterator) and exposes
+		 * row_count(). Null until the first search executes.
 		 * @var ?db_result $data
 		 */
 		private ?db_result $data = null;
@@ -35,19 +64,27 @@ class sections extends common {
 		/**
 		 * Full dd_request object defining the data retrieval configuration.
 		 * Contains show, select, and search parameters for the sections query.
+		 * Not populated by the constructor; reserved for callers that attach
+		 * a request object after construction.
 		 * @var ?object $dd_request
 		 */
 		public ?object $dd_request = null;
 
 		/**
-		 * Search query object with parsed SQL conditions and filters.
-		 * Defines how section records are filtered, sorted, and paginated.
+		 * Search query object (SQO) driving all searches performed by this
+		 * instance. Cloned in the constructor so mutations by set_up() do not
+		 * affect the caller's original SQO. Null when the instance is created
+		 * without a search context (e.g. standalone delete with explicit
+		 * section_tipo/section_id only).
 		 * @var ?object $search_query_object
 		 */
 		public ?object $search_query_object = null;
 
 		/**
-		 * Tipo of the calling element that instantiated this sections object.
+		 * Tipo of the element that instantiated this sections object.
+		 * Typically a section tipo or a component_portal tipo. Used by
+		 * set_up() to look up the caller's request_config and inherit its
+		 * configured SQO limit when the caller is a section.
 		 * @var ?string $caller_tipo
 		 */
 		public ?string $caller_tipo = null;
@@ -56,16 +93,17 @@ class sections extends common {
 
 	/**
 	* GET_INSTANCE
-	* Singleton pattern
-	* Singleton pattern implementation for sections class
-	* @param array|null $ar_locators
-	* @param object|null $search_query_object = null
-	* @param string|null $caller_tipo = null
-	* 	normally will be section or component_portal
-	* @param string $mode = list
-	* @param string $lang = DEDALO_DATA_NOLAN
-	* @return object $instance
-	* 	Returns a singleton instance of sections class
+	* Factory method — creates and returns a new sections instance.
+	*
+	* Unlike most Dédalo classes this is NOT a true singleton; it always
+	* creates a fresh object because each call site requires its own SQO state.
+	*
+	* @param array|null $ar_locators [= null] - Reserved locator list (not yet consumed internally).
+	* @param object|null $search_query_object [= null] - SQO describing which records to load. Cloned internally.
+	* @param string|null $caller_tipo [= null] - Tipo of the calling section or component_portal.
+	* @param string $mode [= 'list'] - Display mode ('list' | 'edit'); 'edit' forces limit=1.
+	* @param string $lang [= DEDALO_DATA_NOLAN] - Language code for data retrieval.
+	* @return object - New sections instance.
 	*/
 	public static function get_instance(
 		array|null $ar_locators = null,
@@ -82,13 +120,15 @@ class sections extends common {
 
 
 	/**
-	* CONSTRUCT
-	* @param array|null $ar_locators
-	* @param object $search_query_object
-	* @param string $caller_tipo
-	* @param string $mode
-	* @param string $lang
+	* __CONSTRUCT
+	* Initialises instance state and immediately runs set_up() to normalise the SQO.
+	* Private — callers must use get_instance().
 	*
+	* @param array|null $ar_locators - Reserved locator list.
+	* @param object|null $search_query_object - SQO; cloned to avoid mutating the caller's copy.
+	* @param string|null $caller_tipo - Tipo of the calling element.
+	* @param string $mode - Display mode ('list' | 'edit').
+	* @param string $lang - Language code.
 	* @return void
 	*/
 	private function __construct(?array $ar_locators, ?object $search_query_object, ?string $caller_tipo, string $mode, string $lang) {
@@ -106,9 +146,24 @@ class sections extends common {
 
 
 	/**
-	 * SET_UP
-	 * @return void
-	 */
+	* SET_UP
+	* Normalises the cloned SQO before any search executes.
+	*
+	* Responsibilities:
+	* - Ensures limit is set. Priority order:
+	*     1. Already set on the incoming SQO → leave untouched.
+	*     2. mode='edit' → force limit=1 (single-record edit view).
+	*     3. caller_tipo resolves to model='section' → inherit the limit from
+	*        the caller's request_config (the Dédalo engine entry whose
+	*        api_engine='dedalo').
+	*     4. Fallback → default limit of 10.
+	* - Ensures offset defaults to 0 when absent.
+	* - Forces select=[] so the search returns only section_tipo and section_id
+	*   columns, avoiding the cost of fetching full component data at the
+	*   aggregate level (individual section instances fetch their own columns).
+	*
+	* @return void
+	*/
 	private function set_up() : void {
 
 		// sqo. Use sqo.mode to define the search class manager to run your search
@@ -164,8 +219,15 @@ class sections extends common {
 
 	/**
 	* GET_DATA
-	* Get records from database using current sqo (search_query_object)
-	* @return db_result|false $db_result
+	* Executes the search defined by $this->search_query_object and returns the
+	* paginated db_result. The result is cached so repeated calls within the
+	* same request reuse it without hitting the database again.
+	*
+	* Returns false when the underlying search fails (e.g. invalid SQL generated
+	* for translation-memory mode). Callers must check for false before
+	* iterating.
+	*
+	* @return db_result|false - Iterable result set, or false on search error.
 	*/
 	public function get_data() : db_result|false {
 
@@ -194,8 +256,20 @@ class sections extends common {
 
 
 	/**
-	* GET_AR_SECTION_TIPO : alias of $this->get_tipo()
-	* @return array $this->ar_section_tipo
+	* GET_AR_SECTION_TIPO
+	* Returns the list of section tipos covered by this instance.
+	*
+	* The derivation depends on the SQO mode:
+	* - 'related' with section_tipo != ['all']: use the tipos already listed in
+	*   the SQO (the SQL JOIN already restricts results to those types).
+	* - 'related' with section_tipo == ['all']: the actual set of tipos is not
+	*   known until records are loaded, so get_data() is called and each
+	*   record's section_tipo is collected into the unique list.
+	* - Any other mode: mirror search_query_object->section_tipo directly.
+	*
+	* Result is cached after the first call.
+	*
+	* @return array - Non-empty list of section tipo strings (e.g. ['oh1', 'oh2']).
 	*/
 	public function get_ar_section_tipo() : array {
 
@@ -244,7 +318,18 @@ class sections extends common {
 
 	/**
 	* GET_AR_ALL_SECTION_ID
-	* @return array $ar_all_section_id
+	* Returns the section_id of every record matching the current SQO, ignoring
+	* any pagination (limit/offset). Used by callers that need to operate on
+	* the complete matched set (e.g. bulk relation updates).
+	*
+	* Internally builds an unpaginated, minimal search (limit=0, full_count=false,
+	* select=[]) using an immediately-invoked closure to avoid mutating the
+	* instance's own SQO. The $sqo argument to the closure is passed by value
+	* via PHP's copy-on-write semantics, so the clone is write-safe.
+	*
+	* Returns an empty array when no SQO is set.
+	*
+	* @return array - Flat list of int section_ids; empty when no SQO or no results.
 	*/
 	public function get_ar_all_section_id() : array {
 
@@ -277,33 +362,61 @@ class sections extends common {
 
 	/**
 	* DELETE
-	* Removes one or more section records from database
-	* If sqo is received, it will be used to search target sections,
-	* else a new sqo will be created based on current section_tipo, section_id
-	* Note that 'delete_mode' must be declared (delete_data|delete_record)
-	* @param object $options
-	* {
-	*	delete_mode					: 'delete_data' | 'delete_record',
-	*	section_tipo				: 'oh1',
-	*	section_id					: 57 | null,
-	*	caller_dataframe			: caller_dataframe ?? null,
-	*	sqo							: {
-	*										"section_tipo": [
-	*											"oh1"
-	*										],
-	*										"filter_by_locators": [
-	*											{
-	*												"section_tipo": "oh1",
-	*												"section_id": "127"
-	*											}
-	*										],
-	*										"limit": 1
-	*								   }
-	*	delete_diffusion_records	: bool (false),
-	*	delete_with_children		: bool (false),
-	*	prevent_delete_main 		: bool (false)
+	* Removes one or more section records from the database with full
+	* integrity and permission checks.
+	*
+	* Two deletion modes:
+	* - 'delete_data'   — wipes component data inside records while keeping
+	*                     the row skeleton (section_tipo/section_id) intact.
+	*                     Delegates to section_record::delete_data().
+	* - 'delete_record' — permanently removes the row and, where applicable,
+	*                     cleans up parent-tree references and ontology nodes.
+	*                     Delegates to section_record::delete().
+	*
+	* Execution order for each matched record in 'delete_record' mode:
+	*   1. If the section is DEDALO_HIERARCHY_SECTION_TIPO or
+	*      DEDALO_ONTOLOGY_SECTION_TIPO, call ontology::delete_main() first to
+	*      tear down the tree node and subordinate matrix rows.
+	*   2. If the section has a component_relation_children component and
+	*      delete_with_children=false, skip records that still have children
+	*      (thesaurus safety guard — orphaning child nodes is not allowed).
+	*   3. Capture parent references before deletion so they can be cleaned up
+	*      afterwards via component_relation_common::remove_parent_references().
+	*   4. Call section_record::delete() / delete_data().
+	*   5. Remove stale parent-tree references for hierarchical sections.
+	*   6. If the section tipo ends with '0' (an ontology-type section such as
+	*      'numisdata0'), reconstruct the ontology node tipo (e.g. 'numisdata631')
+	*      and delete its dd_ontology entry via ontology_node::delete().
+	*
+	* After the loop, a verification search is run (delete_record mode only) to
+	* confirm all targeted records have actually been removed.
+	*
+	* Guard rails:
+	* - Permission level must be >= 2 (write access); otherwise returns an error.
+	* - Bulk deletes (more than one record) are restricted to global admins.
+	* - If no sqo is provided, one is auto-built from section_tipo + section_id;
+	*   in this case section_id must be non-empty.
+	* - prevent_delete_main=true suppresses the ontology::delete_main() call to
+	*   avoid re-entrant loops when this method is already called from
+	*   ontology::delete_main().
+	*
+	* @param object $options - Deletion parameters:
+	*   {
+	*     delete_mode               : 'delete_data' | 'delete_record',
+	*     section_tipo              : string  (e.g. 'oh1'),
+	*     section_id                : int | null,
+	*     caller_dataframe          : mixed | null,
+	*     sqo                       : search_query_object | null,
+	*     delete_diffusion_records  : bool  (default true),
+	*     delete_with_children      : bool  (default false),
+	*     prevent_delete_main       : bool  (default false)
+	*   }
+	* @return object $response - {
+	*   result   : int[] | false  (array of deleted section_ids on success),
+	*   msg      : string,
+	*   errors   : string[],
+	*   delete_mode : string  (present on success)
 	* }
-	* @return object $response
 	*/
 	public function delete( object $options) : object {
 

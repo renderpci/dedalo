@@ -1,9 +1,9 @@
 <?php declare(strict_types=1);
 /**
-* MEDIA_PROTECTION
-* Media file access control (work system + publication).
+* CLASS MEDIA_PROTECTION
+* Media file access control for the work system and the publication layer.
 *
-* One media tree serves two audiences at the same URLs:
+* One media tree serves two audiences at the same URLs with no file duplication:
 *  - Rule A (work system): logged-in Dédalo users get unrestricted media
 *    access via a fixed-name cookie ('dedalo_media_auth') whose daily-rotated
 *    value must exist as a zero-byte marker file in
@@ -18,7 +18,14 @@
 * Both rules are enforced by the web server itself with one stat() per
 * request (Apache: generated media/.htaccess, pure mod_rewrite; Nginx:
 * static sample config) so multi-GB files keep native sendfile/Range and
-* the H.264/mp4 '?start=' clipping handlers.
+* the H.264/mp4 '?start=' clipping handlers. No PHP process ever sits
+* in the media-serving path — the gate can never break streaming/Range.
+*
+* Failure mode is always 404 (not 403): the existence of unpublished media
+* is not disclosed. Every failure path — missing marker, malformed cookie,
+* engine down, non-grammar filename — denies access. Rule A markers are
+* PHP-owned and independent of the Bun engine so engine failures never
+* lock out editors.
 *
 * Modes (DEDALO_MEDIA_ACCESS_MODE):
 *  - false         : no protection (media is world-readable)
@@ -26,7 +33,15 @@
 *  - 'publication' : rule A + rule B
 *
 * This class is pure/static and session-free: login::init_cookie_auth()
-* delegates to it, and install/maintenance scripts can call it directly.
+* delegates to it at every login, and install/maintenance scripts (e.g.
+* the media_control widget in area_maintenance) can call it directly.
+*
+* Marker-store ownership split (must stay exclusive):
+*  - PHP writes ONLY .publication/auth/
+*  - Bun diffusion engine writes ONLY .publication/pub/ and .publication/dbs/
+*
+* @package Dédalo
+* @subpackage Core
 */
 class media_protection {
 
@@ -48,6 +63,8 @@ class media_protection {
 	/**
 	* Test hook: overrides DEDALO_MEDIA_PATH so unit tests never touch the
 	* real media directory (same convention as diffusion_api_client::$endpoint_override).
+	* Set to null to use the production constant.
+	* @var ?string $media_path_override
 	*/
 	public static ?string $media_path_override = null;
 
@@ -55,7 +72,10 @@ class media_protection {
 
 	/**
 	* GET_MEDIA_PATH
-	* @return string
+	* Returns the absolute path to the media root directory. All other methods
+	* read from this rather than DEDALO_MEDIA_PATH directly so that the
+	* test-hook override ($media_path_override) takes effect everywhere.
+	* @return string - absolute media root path
 	*/
 	public static function get_media_path() : string {
 
@@ -116,9 +136,20 @@ class media_protection {
 	* GET_PUBLIC_QUALITIES
 	* Quality folders (relative to the media root, no leading slash) that
 	* anonymous users may read when the record is published. Configurable
-	* with DEDALO_MEDIA_PUBLIC_QUALITIES; 'original'/'modified' folders are
-	* refused defensively (master files are never public).
-	* @return array
+	* with DEDALO_MEDIA_PUBLIC_QUALITIES (array of strings); falls back to
+	* get_default_public_qualities() when the constant is not defined.
+	*
+	* Hard security filter applied to every entry — even if configured:
+	*  - 'original' and 'modified' folder names are always refused (master
+	*    copies must never be reachable by anonymous users, regardless of
+	*    what an admin types in the config).
+	*  - Path traversal sequences ('..') are refused.
+	*  - Only characters matching [A-Za-z0-9_.\/-] are accepted.
+	*
+	* The result is the set of folders that will appear in the rule-B
+	* RewriteRule alternation inside the generated .htaccess; changing
+	* this list requires a write_htaccess() call to regenerate the file.
+	* @return array - validated, deduplicated quality folder strings
 	*/
 	public static function get_public_qualities() : array {
 
@@ -162,8 +193,14 @@ class media_protection {
 
 	/**
 	* GET_DEFAULT_PUBLIC_QUALITIES
-	* Web-delivery qualities derived from the install constants.
-	* @return array
+	* Web-delivery quality folders derived from the install constants.
+	* These are the delivery-grade derivatives only; master/work folders
+	* ('original', 'modified') are intentionally absent. The list is keyed
+	* by media type so that adding a new media type in config automatically
+	* expands the default set. Called by get_public_qualities() when
+	* DEDALO_MEDIA_PUBLIC_QUALITIES is not defined in config.
+	* @return array - default quality folder strings (not validated; callers
+	*                 must pass through get_public_qualities() before use)
 	*/
 	public static function get_default_public_qualities() : array {
 
@@ -187,10 +224,17 @@ class media_protection {
 	* files in .publication/auth/: the web server validates rule A with
 	* '-f auth/{cookie_value}'. Any other file in the dir is removed
 	* (daily rotation). Values are sha512 hex (128 chars); anything else
-	* is refused.
+	* is refused (path-traversal guard: the value becomes a filename).
 	*
-	* @param array $valid_values
-	* @return bool
+	* Called at every successful login so the marker store self-heals after
+	* a redeploy or directory wipe without requiring user action. The marker
+	* files hold no content — the filename IS the credential.
+	*
+	* (!) Only PHP calls this method. The Bun engine must never write to auth/.
+	*
+	* @param array $valid_values - sha512 hex strings (128 chars each)
+	* @return bool - false only on filesystem write failure; validation
+	*                failures for individual values are logged and skipped
 	*/
 	public static function sync_auth_markers(array $valid_values) : bool {
 
@@ -209,6 +253,8 @@ class media_protection {
 
 		$keep = [];
 		foreach ($valid_values as $value) {
+			// path-traversal guard: the value becomes the literal filename
+			// in auth/; strict sha512-hex pattern ensures nothing unsafe lands on disk
 			if (!is_string($value) || !preg_match('/^[a-f0-9]{128}$/', $value)) {
 				debug_log(__METHOD__
 					. " Refused invalid auth cookie value (expected sha512 hex)"
@@ -218,6 +264,7 @@ class media_protection {
 			}
 			$keep[$value] = true;
 			$marker = $auth_dir . '/' . $value;
+			// file_exists() avoids redundant writes on every login for the same day's value
 			if (!file_exists($marker) && false===file_put_contents($marker, '')) {
 				debug_log(__METHOD__
 					. " Unable to write media auth marker " . PHP_EOL
@@ -243,29 +290,40 @@ class media_protection {
 	/**
 	* BUILD_HTACCESS
 	* Generates the full media/.htaccess text for the given mode.
-	* Pure function (unit-testable): no filesystem access, no session.
+	* Pure function (unit-testable): no filesystem access, no session,
+	* no side effects — callers may call it freely for preview/diff.
 	*
-	* The rewrite gate composes:
-	*  0. the marker store itself is never served
-	*  1. rule A : fixed-name cookie whose 128-hex value exists in auth/
-	*  2. rule B : public quality folder AND pub/{section_tipo}_{section_id}
-	*     marker exists (publication mode only)
-	*  3. default deny as 404 (existence of unpublished media is not
-	*     disclosed)
+	* The rewrite gate composes four stages in order:
+	*  0. The .publication/ marker store itself is never served (404).
+	*  1. Rule A: fixed-name cookie whose 128-hex value exists as a file in
+	*     auth/ — grants full media access to any logged-in Dédalo user.
+	*  2. Rule B (publication mode only): request is in an allowed quality
+	*     folder AND the derived pub/{section_tipo}_{section_id} marker exists.
+	*     The filename grammar that drives backreference capture:
+	*       .+_([a-z0-9]+)_([0-9]+)(?:_lg-[a-zA-Z0-9-]{2,12})?\.[A-Za-z0-9]+$
+	*     The greedy prefix anchors capture groups to the LAST two underscore
+	*     tokens, so the component tipo prefix (which also uses underscores)
+	*     cannot be mistaken for the section tipo. This grammar is LOAD-BEARING
+	*     — it must match media_index.ts KEY_REGEX and the nginx sample block.
+	*  3. Default deny as 404: the existence of unpublished media is not revealed.
 	*
-	* The substitution is always '-' and the query string is never touched,
-	* so Range requests and the H.264 module '?start=' clipping keep working.
+	* (!) The rewrite substitution is always '-' and the query string is
+	* never touched so HTTP Range requests and the H.264 '?start=' clipping
+	* module handlers keep working through the native web-server path.
 	*
-	* Mode 'off' generates the hardening header only (no rewrite gate):
-	* used when an administrator disables the protection from the
-	* media_control widget so the previously generated deny rules do not
-	* linger in the file.
+	* (!) When bumping the template (changing rules here), also increment
+	* TEMPLATE_VERSION so existing installs regenerate on next login.
+	*
+	* Mode 'off' writes the SEC-088 hardening block only — no rewrite gate.
+	* Used when an administrator disables protection from the media_control
+	* widget so the previously-generated deny rules do not linger in the file.
 	*
 	* @param string $mode 'off' | 'private' | 'publication'
-	* @param array $public_qualities
-	* @param array $addon_lines Raw lines appended before the final deny
-	*        (MEDIA_HTACCESS_ADDONS config)
-	* @return string
+	* @param array $public_qualities = [] - validated quality folder strings
+	*        (from get_public_qualities()); ignored for 'off' and 'private'
+	* @param array $addon_lines = [] - raw rewrite lines appended before the
+	*        final deny rule (from MEDIA_HTACCESS_ADDONS config)
+	* @return string - full .htaccess text, UTF-8
 	*/
 	public static function build_htaccess(string $mode, array $public_qualities=[], array $addon_lines=[]) : string {
 
@@ -324,6 +382,10 @@ class media_protection {
 			$t .= '# 2. Rule B: public quality folders, gated by the publication marker' . PHP_EOL;
 			$t .= '#    maintained by the diffusion engine. The file name identifies the' . PHP_EOL;
 			$t .= '#    record: ...{component_tipo}_{section_tipo}_{section_id}[_lg-xxx].ext' . PHP_EOL;
+			// (!) RewriteCond back-references for rule B use $1/$2 (captures from the
+			// FOLLOWING RewriteRule), NOT %1 (which would reference the last RewriteCond
+			// capture of rule A). The '$1_$2' form was a documented real bug — keep it
+			// exactly as '$1_$2'. The RewriteRule line below must immediately follow.
 			$t .= 'RewriteCond "' . $media_path . '/.publication/pub/$1_$2" -f' . PHP_EOL;
 			$t .= 'RewriteRule ^(?:' . $quality_alternation . ')/(?:.+/)?[^/]*_([a-z0-9]+)_([0-9]+)(?:_lg-[a-zA-Z0-9-]{2,12})?\.[A-Za-z0-9]+$ - [L]' . PHP_EOL;
 		}
@@ -348,14 +410,19 @@ class media_protection {
 
 	/**
 	* GET_CONFIG_HASH
-	* Stable hash of everything that shapes the generated .htaccess: it is
-	* embedded as a comment and compared on login so the file is rewritten
-	* only when the configuration (or the template) actually changes.
+	* Stable SHA-256 hash of everything that shapes the generated .htaccess:
+	* TEMPLATE_VERSION, mode, quality list, addon lines, and the media path.
+	* Embedded as '# config-hash: {hash}' in the file header and compared by
+	* write_htaccess() so the file is rewritten only when something actually
+	* changes (typically a no-op on every login).
 	*
-	* @param string $mode
-	* @param array $public_qualities
-	* @param array $addon_lines
-	* @return string
+	* TEMPLATE_VERSION is included so bumping it in code forces every existing
+	* install to regenerate even when all other inputs are identical.
+	*
+	* @param string $mode - 'off' | 'private' | 'publication'
+	* @param array $public_qualities = [] - validated quality folder strings
+	* @param array $addon_lines = [] - raw rewrite lines from config
+	* @return string - 64-char lowercase hex (SHA-256)
 	*/
 	public static function get_config_hash(string $mode, array $public_qualities=[], array $addon_lines=[]) : string {
 
@@ -372,10 +439,17 @@ class media_protection {
 
 	/**
 	* GET_ADDON_LINES
-	* Raw extra .htaccess lines from config (MEDIA_HTACCESS_ADDONS, a JSON
-	* array of strings — replaces the legacy INIT_COOKIE_AUTH_ADDONS whose
-	* lines targeted the removed <RequireAny> block).
-	* @return array
+	* Decodes the MEDIA_HTACCESS_ADDONS config constant (a JSON-encoded array
+	* of raw Apache rewrite directive strings) and returns them as a flat
+	* string array. These lines are appended directly before the final deny
+	* rule in the generated .htaccess, so the caller is responsible for
+	* their syntax correctness.
+	*
+	* This constant replaced the legacy INIT_COOKIE_AUTH_ADDONS, whose lines
+	* targeted the <RequireAny> block that no longer exists in the template.
+	*
+	* @return array - string[] of raw directive lines, or [] when constant
+	*                 is not defined or its value does not decode to an array
 	*/
 	public static function get_addon_lines() : array {
 
@@ -431,7 +505,9 @@ class media_protection {
 		$hash				= self::get_config_hash($mode, $public_qualities, $addon_lines);
 		$htaccess_file		= self::get_media_path() . '/.htaccess';
 
-		// up to date? (hash comment match)
+		// idempotency guard: compare the embedded config-hash comment rather
+		// than the full file body so whitespace/content drift never matters;
+		// if the hash line is present the generated output would be identical
 		if (file_exists($htaccess_file)) {
 			$current = (string)file_get_contents($htaccess_file);
 			if (str_contains($current, '# config-hash: ' . $hash)) {
@@ -457,11 +533,16 @@ class media_protection {
 
 	/**
 	* GET_HTACCESS_STATUS
-	* Inspects the generated media/.htaccess against the current
-	* configuration (used by the media_control widget).
+	* Inspects the generated media/.htaccess against the current configuration.
+	* Used by the media_control widget to report the .htaccess state to the UI
+	* without triggering a write.
+	*
 	* @return object { exists: bool, up_to_date: bool|null, path: string }
-	*	up_to_date is null when the protection is disabled (no expected
-	*	content to compare against).
+	*   - exists: whether the .htaccess file is present on disk
+	*   - up_to_date: true when the embedded config-hash matches the current
+	*     config; false when a rewrite is needed; null when protection is
+	*     disabled (mode===false — there is no expected content to compare)
+	*   - path: absolute path to the .htaccess file (for display in the widget)
 	*/
 	public static function get_htaccess_status() : object {
 
@@ -489,6 +570,8 @@ class media_protection {
 	/**
 	* Test hook: overrides the cookie auth file location so unit tests never
 	* touch the real core/extras/media_protection/ directory.
+	* Set to null to use the production path resolved by get_cookie_auth_file_path().
+	* @var ?string $cookie_auth_file_override
 	*/
 	public static ?string $cookie_auth_file_override = null;
 
@@ -496,7 +579,12 @@ class media_protection {
 
 	/**
 	* GET_COOKIE_AUTH_FILE_PATH
-	* @return string
+	* Returns the path to the PHP-guarded JSON file that persists today/yesterday
+	* cookie values across requests. The file lives under DEDALO_EXTRAS_PATH so
+	* it is outside the web root. All readers/writers call this rather than
+	* hardcoding the path so the test-hook override ($cookie_auth_file_override)
+	* takes effect everywhere.
+	* @return string - absolute path to cookie_auth.php persistence file
 	*/
 	public static function get_cookie_auth_file_path() : string {
 
@@ -508,12 +596,18 @@ class media_protection {
 
 	/**
 	* WRITE_COOKIE_AUTH_FILE
-	* Persists the cookie auth data (today/yesterday rotated values) with
-	* the '<?php exit();' HTTP-disclosure guard line, creating the parent
-	* directory when missing (fresh installs never shipped it — the legacy
-	* writer assumed it existed and the first login failed).
-	* @param object $data
-	* @return bool
+	* Persists the cookie auth data (today/yesterday rotated values) as JSON,
+	* prepended with a '<?php exit(); ?>' HTTP-disclosure guard so that a
+	* misconfigured web server serving the extras directory would return an
+	* empty response rather than the JSON payload.
+	*
+	* Creates the parent directory on first call (fresh installs never shipped
+	* it — the legacy writer assumed it existed and the very first login failed
+	* silently). Called by login::init_cookie_auth() at every login.
+	*
+	* @param object $data - structured auth data with per-day cookie values;
+	*        shape: { today: {cookie_value: string, ...}, yesterday: {...} }
+	* @return bool - false on mkdir or write failure
 	*/
 	public static function write_cookie_auth_file(object $data) : bool {
 
@@ -538,11 +632,17 @@ class media_protection {
 
 	/**
 	* READ_COOKIE_AUTH_FILE
-	* Parses the cookie auth persistence file (today/yesterday rotated
-	* values), stripping the '<?php exit();' HTTP-disclosure guard line
-	* (legacy files hold raw JSON). Shared by login::init_cookie_auth and
-	* the media_control widget.
-	* @return object|null decoded data or null when missing/corrupt
+	* Parses the cookie auth persistence file (today/yesterday rotated values),
+	* stripping the '<?php exit(); ?>' HTTP-disclosure guard line that
+	* write_cookie_auth_file() prepends. Legacy files written before the guard
+	* line was introduced hold raw JSON from the first byte — both shapes are
+	* handled transparently by the str_starts_with('<?php') branch.
+	*
+	* Shared by login::init_cookie_auth (recycle/rotate logic) and the
+	* media_control widget (sync_auth_markers_from_cookie_file on re-enable).
+	*
+	* @return object|null - decoded auth data object, or null when the file is
+	*         missing, empty, or its JSON is malformed/not an object
 	*/
 	public static function read_cookie_auth_file() : ?object {
 
@@ -553,6 +653,8 @@ class media_protection {
 
 		$current_file	= (string)file_get_contents($cookie_file);
 		$json_string	= $current_file;
+		// guard-line strip: skip the PHP exit guard first line if present;
+		// legacy files that predate the guard hold raw JSON from byte 0
 		if (str_starts_with($current_file, '<?php')) {
 			$json_start		= strpos($current_file, PHP_EOL);
 			$json_string	= $json_start===false ? '' : substr($current_file, $json_start);
@@ -560,6 +662,8 @@ class media_protection {
 
 		$data = json_decode($json_string);
 
+		// json_decode returns null for invalid JSON and scalar/array for other shapes;
+		// only a plain object (stdClass) is the expected payload shape
 		return is_object($data) ? $data : null;
 	}//end read_cookie_auth_file
 
@@ -567,12 +671,16 @@ class media_protection {
 
 	/**
 	* SYNC_AUTH_MARKERS_FROM_COOKIE_FILE
-	* Re-creates the auth markers from the persisted cookie values (today +
-	* yesterday). Used when the protection is (re)enabled from the
-	* media_control widget so users already holding a valid cookie keep
-	* media access without re-login. No-op (true) when no cookie file
-	* exists yet — markers will be created at the next login.
-	* @return bool
+	* Re-creates the auth marker files from the cookie values persisted on disk
+	* (today + yesterday). Used by the media_control widget when protection is
+	* (re)enabled so users already holding a valid cookie keep media access
+	* without needing to log in again.
+	*
+	* No-op (returns true) when no cookie file exists yet — markers will be
+	* created naturally at the next login via sync_auth_markers().
+	*
+	* @return bool - false only on filesystem write failure inside
+	*                sync_auth_markers(); true when there is nothing to sync
 	*/
 	public static function sync_auth_markers_from_cookie_file() : bool {
 
@@ -581,6 +689,8 @@ class media_protection {
 			return true;
 		}
 
+		// iterate over per-day slots (today, yesterday) and collect cookie values;
+		// get_object_vars() avoids dynamic property access warnings in strict mode
 		$values = [];
 		foreach (get_object_vars($data) as $day_data) {
 			if (isset($day_data->cookie_value)) {

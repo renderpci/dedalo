@@ -52,6 +52,9 @@
 // or display_errors mode. The .htaccess <FilesMatch> rule is layer 1.
 if (!isset($this)) { http_response_code(404); exit; }
 /** @var calculation $this */
+/** @var object $options - Request options object injected by common::get_json(); carries
+ *                         get_context (bool), get_data (bool), and context_type (string).
+ */
 // JSON data component controller
 
 
@@ -85,7 +88,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 				$context[] = $this->get_structure_context($permissions);
 				break;
 		}
-	}//end if($options->get_context===true)
+	}//end if($options->get_context===true && $permissions>0)
 
 
 
@@ -101,6 +104,10 @@ if (!isset($this)) { http_response_code(404); exit; }
 		// Resolve widget output for the active render mode.
 		// 'list' calls get_valor() for a compact, read-only representation
 		// suitable for table cells (bypasses the full IPO pipeline).
+		// (!) get_valor() is not defined in calculation or widget_common — it must
+		//     be provided by a concrete subclass or a trait mixed in at runtime.
+		//     If the concrete widget does not implement it, a fatal method-not-found
+		//     error will occur at runtime for 'list' mode requests.
 		// 'edit' (and any other mode) calls get_data(), which runs the complete
 		// IPO pipeline: resolve_data() → resolve_logic() → output map iteration.
 		switch ($mode) {

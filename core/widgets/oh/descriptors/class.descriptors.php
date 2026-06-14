@@ -1,19 +1,29 @@
 <?php declare(strict_types=1);
 /**
  * CLASS DESCRIPTORS
+ * Oral History widget that aggregates and displays thesaurus descriptor terms
+ * linked to a given record through a configurable IPO data path.
  *
- * Widget that displays indexed descriptor terms for a given record, typically
- * used in Oral History sections. It aggregates thesaurus descriptors linked
- * through a source component and renders them as a browsable term list
- * (via a dd_grid instance on the client side).
+ * Responsibilities:
+ * - Reads locator objects (section_tipo + section_id pairs) produced by a
+ *   source component (e.g. component_relation oh24) via the IPO 'input' block.
+ * - Follows each 'paths' entry to a target component (e.g. rsc36 inside rsc170)
+ *   and collects its component_data (raw) and component_grid_value (display) for
+ *   every locator returned by the source.
+ * - Emits two typed data items per IPO entry per path:
+ *     'indexation' — integer count of matched descriptor records
+ *     'terms'      — merged component_grid_value object ready for dd_grid
+ * - Short-circuits immediately for 'list' mode: the list renderer only shows a
+ *   count badge and loads the full term grid on demand (see render_list_descriptors.js).
  *
- * Key features:
- * - Reads descriptor locators from a source component (IPO input)
- * - Resolves each locator through ontology paths to the target component
- * - Aggregates component_data and component_grid_value across all locators
- * - Outputs term grid data and an indexation count
- * - Short-circuits in list mode for performance
- * - Consumed by render_edit_descriptors.js and render_list_descriptors.js
+ * Relationships:
+ * - Extends widget_common (core/widgets/widget_common/class.widget_common.php).
+ * - Instantiated by widget_common::get_instance() with path 'oh/descriptors'.
+ * - Client-side counterpart: descriptors.js / render_edit_descriptors.js /
+ *   render_list_descriptors.js — the latter two consume the 'indexation' and
+ *   'terms' widget_id values produced here to build a dd_grid display node.
+ * - Uses ontology_node::get_model_by_tipo() and component_common::get_instance()
+ *   to resolve components dynamically from ontology tipos.
  *
  * @package Dédalo
  * @subpackage Widgets
@@ -24,8 +34,28 @@ class descriptors extends widget_common {
 
 	/**
 	* GET_DATA
-	* Resolve the widget IPO configuration into the structured data expected
-	* by the client-side renderer.
+	* Resolve the widget IPO configuration into the structured data items
+	* expected by render_edit_descriptors.js and render_list_descriptors.js.
+	*
+	* Processing pipeline (one iteration per IPO entry):
+	*  1. Read the 'source' block to identify which component holds the
+	*     relation locators (e.g. a component_relation like oh24).
+	*  2. Call get_data() on that source component to obtain an array of
+	*     locator objects — each locator identifies one related record
+	*     (section_tipo + section_id) in the thesaurus section.
+	*  3. For every 'paths' entry, resolve the final path step's
+	*     component_tipo against each locator to load the target component
+	*     (e.g. rsc36 inside rsc170), then merge component_data (count) and
+	*     component_grid_value (display terms) across all locators.
+	*  4. Build one stdClass data item per output id ('indexation'/'terms')
+	*     and append to the returned array.
+	*
+	* 'list' mode short-circuit:
+	*  Returns an empty array immediately. The list renderer shows only a
+	*  toggle button; full term data is requested on demand by the client.
+	*
+	* Currently supported input type: 'component_data'.
+	* Other types are silently skipped via the switch default branch.
 	*
 	* Expected IPO sample (from ontology properties):
 	* {
@@ -54,34 +84,16 @@ class descriptors extends widget_common {
 	*   ]
 	* }
 	*
-	* Sample returned data items:
+	* Each data item in the returned array has this shape:
 	* {
-	*   "widget": "descriptors",
-	*   "key": 0,
-	*   "widget_id": "indexation",
-	*   "value": 7,
-	*   "locator": { "type":"dd151", "section_id":"42", "section_tipo":"rsc170", "from_component_tipo":"oh24" }
-	* }
-	* {
-	*   "widget": "descriptors",
-	*   "key": 0,
-	*   "widget_id": "terms",
-	*   "value": { "value": [ ... ] },
-	*   "locator": { ... }
+	*   "widget":    "descriptors",   // class name
+	*   "key":       0,               // IPO entry index
+	*   "widget_id": "indexation",    // output id: 'indexation' | 'terms'
+	*   "value":     7,               // int for 'indexation'; grid object for 'terms'
+	*   "locator":   { ... }          // last locator processed — used as metadata
 	* }
 	*
-	* Usage:
-	*   $widget = widget_common::get_instance((object)[
-	*       'widget_name'   => 'descriptors',
-	*       'path'          => 'oh/descriptors',
-	*       'section_tipo'  => 'oh1',
-	*       'section_id'    => '123',
-	*       'mode'          => 'edit',
-	*       'ipo'           => $ipo_from_ontology
-	*   ]);
-	*   $data = $widget->get_data();
-	*
-	* @return array|null $data
+	* @return array|null $data - flat array of stdClass data items (may be empty)
 	*/
 	public function get_data() : ?array {
 		$start_time=start_time();
@@ -94,12 +106,16 @@ class descriptors extends widget_common {
 			$mode			= $this->mode;
 			$ipo			= $this->ipo;
 
-		// list mode does not compute result for speed
+		// list mode short-circuit
+		// The list renderer shows only a toggle button and loads data on demand;
+		// building the full term grid server-side on every list row would be wasteful.
 			if($mode==='list') {
 				return $data;
 			}
 
-		// every state has a ipo that come from structure (input, process , output).
+		// IPO loop — each entry defines one independent data source + output set.
+		// The $key is forwarded to the client so it can match data items back to
+		// the correct IPO slot in the widget's configuration.
 		foreach ($ipo as $key => $current_ipo) {
 
 			// short vars
@@ -109,7 +125,10 @@ class descriptors extends widget_common {
 				$source		= $input->source;
 				$ar_paths	= $input->paths;
 
-			// check the type for input, if it's a filter will use search_query_object to find data
+			// Resolve the source into an array of locator objects.
+			// 'component_data' reads a relation component (e.g. oh24) whose get_data()
+			// returns the locators pointing at the thesaurus records.
+			// Other input types (e.g. search-based filters) are not yet implemented here.
 				$type		= $input->type;
 				$ar_locator	= [];
 				switch($type) {
@@ -117,6 +136,8 @@ class descriptors extends widget_common {
 					case 'component_data':
 						foreach ($source as $current_source) {
 
+							// Resolve 'current' placeholders to the widget's own section context.
+							// This allows the IPO definition to be section-agnostic.
 							$source_section_tipo = (!isset($current_source->section_tipo) || $current_source->section_tipo==='current')
 								? $section_tipo
 								: $current_source->section_tipo;
@@ -127,6 +148,8 @@ class descriptors extends widget_common {
 
 							$source_component_tipo = $current_source->component_tipo;
 
+							// Load source component in 'list' mode — we only need its data
+							// (the locator array), not a full edit-mode render.
 							$source_model_name	= ontology_node::get_model_by_tipo($source_component_tipo,true);
 							$source_component	= component_common::get_instance(
 								$source_model_name,
@@ -142,7 +165,7 @@ class descriptors extends widget_common {
 							// $locator = reset($source_data);
 
 							if (!empty($source_data)) {
-								// add
+								// Merge locators from multiple source entries into a single flat array.
 								$ar_locator = [...$ar_locator, ...$source_data];
 							}
 						}
@@ -152,7 +175,9 @@ class descriptors extends widget_common {
 						break;
 				}//end switch($type)
 
-			// paths
+			// paths — each path describes a navigation chain to a target component.
+			// Only the last step of the path is used here; intermediate hops are
+			// reserved for more complex multi-hop traversals not yet needed.
 				foreach ($ar_paths as $path) {
 
 					// get the last path, this will be the component the call to the list (select / radio_button)
@@ -161,11 +186,15 @@ class descriptors extends widget_common {
 					// get the section pointed by the last component_tipo
 					$component_tipo = $last_path->component_tipo;
 
-					// create items with the every locator
+					// Collect component_data and component_grid_value from every related record.
+					// component_data is used for the count ('indexation').
+					// component_grid_value carries the display rows for the term grid ('terms').
 					$ar_component_data			= [];
 					$ar_component_grid_value	= [];
 					foreach ($ar_locator as $locator) {
 
+						// Use DEDALO_DATA_NOLAN so term labels are returned language-neutral
+						// (the dd_grid on the client applies its own language resolution).
 						$model_name	= ontology_node::get_model_by_tipo($component_tipo,true);
 						$component	= component_common::get_instance(
 							$model_name,
@@ -182,12 +211,16 @@ class descriptors extends widget_common {
 						$ar_component_grid_value = [...$ar_component_grid_value, ...$component_grid_value->value];
 					}
 
-					// prevent empty locators value continue execution generating errors
+					// Guard: $component_grid_value is only set when $ar_locator is non-empty.
+					// If the source component returned no locators, skip this path to avoid
+					// referencing an undefined variable in the output block below.
 						if (!isset($component_grid_value)) {
 							continue;
 						}
 
-					// set value. Using last created component
+					// Overwrite the value array on the last component's grid-value object
+					// with the merged collection built above, so the client receives a single
+					// consolidated grid-value structure rather than the last record's data only.
 						$component_grid_value->value = $ar_component_grid_value;
 
 					// output, use the IPO output for create the items to send to component_info and client side
@@ -196,17 +229,24 @@ class descriptors extends widget_common {
 						switch ($data_map->id) {
 
 							case 'indexation':
+								// Total number of descriptor records linked to this record.
+								// sizeof($ar_component_data) counts raw data items, one per locator match.
 								$value = sizeof($ar_component_data);
 								break;
 
 							case 'terms':
 							default:
+								// Merged grid-value object: the 'value' array contains one row
+								// per descriptor term, ready for dd_grid rendering on the client.
 								$value = $component_grid_value;
 						}
 
 						// get the current row id and the items into the $result
 							$current_id = $data_map->id;
 
+						// (!) $locator here is the last value from the foreach above.
+						// It is forwarded as metadata for the client renderer but does not
+						// represent all locators — it is just the final one iterated.
 						$current_data = new stdClass();
 							$current_data->widget		= get_class($this);
 							$current_data->key			= $key;
@@ -218,7 +258,7 @@ class descriptors extends widget_common {
 						$data[] = $current_data;
 					}//end foreach ($output as $data_map)
 				}//end foreach ($ar_paths as $path)
-		}//foreach $ipo
+		}//end foreach $ipo
 
 		// debug
 			if(SHOW_DEVELOPER===true) {

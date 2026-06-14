@@ -1,8 +1,46 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, DEDALO_CORE_URL, Dropzone */
 /*eslint no-undef: "error"*/
+// (!) DEDALO_API_URL is used in render_template (dropzone init) but is NOT listed in the
+//     /*global*/ declaration above. ESLint will flag this as an undeclared global. Do not add
+//     it here — fix the /*global*/ declaration when the codebase-wide audit is performed.
 
 
+
+/**
+* MODULE: render_edit_service_dropzone
+*
+* Client-side edit renderer for service_dropzone.  Builds the full Dropzone-
+* powered upload UI: an info panel (server limits, temp paths, session expiry),
+* a file-preview grid, per-file and global progress bars, and a set of action
+* buttons.  The Dropzone.js library is loaded on demand by service_dropzone.init
+* before this module is ever called.
+*
+* Exported symbols
+*   render_edit_service_dropzone  — constructor / prototype host for the `edit`
+*                                   method that is mixed into service_dropzone.
+*   get_content_data              — async; assembles the top-level content_data
+*                                   container (info panel + upload template).
+*   render_info_container         — sync; builds the server-info disclosure panel.
+*
+* The `self` argument accepted by every function is the service_dropzone instance
+* (see service_dropzone.js).  Key properties consumed from `self`:
+*   self.caller            — the tool/component that instantiated this service.
+*   self.caller.files_data — {Array<{name,previewTemplate,previewElement,size}>}
+*                            live registry of files known to the UI; mutated here.
+*   self.active_dropzone   — cached Dropzone instance (re-used across re-renders).
+*   self.allowed_extensions — {Array<string>} accepted MIME/extension list.
+*   self.max_size_bytes    — {number} PHP upload_max_filesize in bytes.
+*   self.key_dir           — {string} server-side sub-directory key for uploads.
+*   self.file_processor    — {Array|null} optional list of per-file processing
+*                            pipelines to offer in a <select>.
+*   self.component_option  — {Array|null} optional list of target component ddos.
+*   self.sys_get_temp_dir  — {string} PHP sys_get_temp_dir() path.
+*   self.upload_tmp_dir    — {string} configured user upload temp directory.
+*   self.upload_tmp_perms  — {string} octal permission string of upload_tmp_dir.
+*   self.session_cache_expire     — {number} session expiry in minutes.
+*   self.upload_service_chunk_files — {number|null} chunk size in MB (or null).
+*/
 
 // imports
 	import {event_manager} from '../../../common/js/event_manager.js'
@@ -13,8 +51,11 @@
 
 
 /**
-* RENDER_EDIT_SERVICE_dropzone
-* Manages the service's logic and appearance in client side
+* RENDER_EDIT_SERVICE_DROPZONE
+* Constructor function — prototype host for the `edit` method.
+* The actual implementation is spread across the exported helper functions below;
+* this constructor exists solely so that service_dropzone can inherit `edit` via
+* prototype assignment (see service_dropzone.js → prototype assign block).
 */
 export const render_edit_service_dropzone = function() {
 
@@ -25,9 +66,17 @@ export const render_edit_service_dropzone = function() {
 
 /**
 * EDIT
-* Render node for use like button
-* @param object options
-* @return HTMLElement wrapper
+* Entry point called by common.prototype.render when mode is 'edit'.
+* Builds and returns the outer wrapper div (class 'service_dropzone') that holds
+* the complete upload UI.  When render_level is 'content' only the inner
+* content_data element is returned (useful for partial refreshes without
+* rebuilding the wrapper).
+*
+* @param {Object} options
+* @param {string} [options.render_level='full'] - 'full' returns the wrapper div;
+*   'content' returns only the content_data element.
+* @returns {Promise<HTMLElement>} wrapper div (render_level 'full') or
+*   content_data div (render_level 'content').
 */
 render_edit_service_dropzone.prototype.edit = async function (options) {
 
@@ -37,12 +86,14 @@ render_edit_service_dropzone.prototype.edit = async function (options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
+		// Build the inner UI tree (info panel + Dropzone template + events).
 		const content_data = await get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
 
 	// wrapper
+		// Root element; callers query wrapper.content_data for partial re-renders.
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'service_dropzone'
@@ -59,8 +110,17 @@ render_edit_service_dropzone.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Assembles the top-level content_data div containing:
+*   1. An info toggle button + the collapsible info panel (hidden by default).
+*   2. The async render_template result which includes the Dropzone widget,
+*      file-preview grid, action buttons, and all Dropzone event bindings.
+*
+* This function is exported so that tool renderers (e.g. tool_import_files) can
+* embed the upload UI inside their own template without going through the full
+* render_edit_service_dropzone.prototype.edit lifecycle.
+*
+* @param {Object} self - The service_dropzone instance.
+* @returns {Promise<HTMLElement>} The assembled content_data div.
 */
 export const get_content_data = async function(self) {
 
@@ -69,7 +129,7 @@ export const get_content_data = async function(self) {
 			  content_data.classList.add('content_data')
 
 	// info: About caller, allowed extensions, max file size, upload directory, etc.
-		// button_info
+		// button_info — clicking this button toggles the disclosure panel visibility.
 			const button_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button info',
@@ -80,11 +140,14 @@ export const get_content_data = async function(self) {
 				info_node.classList.toggle('hide')
 			})
 		// info container
+			// Starts hidden; the info button above toggles the 'hide' class.
 			const info_node = render_info_container(self)
 			info_node.classList.add('hide')
 			content_data.appendChild(info_node)
 
 	// template_node
+		// render_template is async because it fetches the list of already-uploaded
+		// files from the server and emits them into the Dropzone as existing files.
 		const template_node = await render_template(self)
 		content_data.appendChild(template_node)
 
@@ -96,8 +159,22 @@ export const get_content_data = async function(self) {
 
 /**
 * RENDER_INFO_CONTAINER
-* @param object self
-* @return HTMLElement info_container
+* Builds the collapsible diagnostic panel shown when the user clicks the info
+* button.  The panel renders as a label/value grid via CSS and surfaces the
+* server-side upload constraints that were fetched during service_dropzone.build:
+*   - Caller component model name.
+*   - Target media quality (from caller context.features, if present).
+*   - Allowed file extensions.
+*   - Maximum upload size in MB (highlighted with CSS 'warning' when < 100 MB).
+*   - Chunk file size in MB (or JSON-serialised falsy value when chunking is off).
+*   - PHP sys_get_temp_dir path.
+*   - Configured upload_tmp_dir path.
+*   - Upload temp directory octal permissions string.
+*   - Session cache expiry expressed in Days (> 24 h) or Hours, with the raw
+*     minute count shown in brackets for precision.
+*
+* @param {Object} self - The service_dropzone instance.
+* @returns {HTMLElement} The info_container div (NOT yet appended to the DOM).
 */
 export const render_info_container = function(self) {
 
@@ -120,6 +197,8 @@ export const render_info_container = function(self) {
 		})
 
 	// target quality
+		// context.features may be absent when the caller is a plain tool rather than
+		// a component with a context object that exposes features.
 		const target_quality = self.caller.context.features
 			? self.caller.context.features.target_quality || self.caller.context.features.default_target_quality
 			: null
@@ -149,6 +228,8 @@ export const render_info_container = function(self) {
 		})
 
 	// max file size upload file size
+		// Converts bytes to MB; adds CSS class 'warning' when < 100 MB to alert
+		// administrators that the PHP upload limit may prevent large file uploads.
 		const max_mb = Math.floor(self.max_size_bytes / (1024*1024))
 		ui.create_dom_element({
 			element_type	: 'label',
@@ -163,6 +244,9 @@ export const render_info_container = function(self) {
 		})
 
 	// DEDALO_UPLOAD_SERVICE_CHUNK_FILES
+		// When chunking is enabled, self.upload_service_chunk_files is a positive
+		// number (MB per chunk).  When disabled it is falsy (null/0/false) and is
+		// rendered as the JSON representation so the state is unambiguous.
 		ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: 'Chunk files size',
@@ -214,6 +298,9 @@ export const render_info_container = function(self) {
 		})
 
 	// session_cache_expire
+		// self.session_cache_expire is in minutes.  Display in Days when the value
+		// exceeds 24 h (i.e. > 24 * 60 = 1440 minutes), otherwise in Hours.
+		// The raw minute count is always shown in brackets for exact reference.
 		const session_cache_expire = (self.session_cache_expire / 60) > 24
 			? (self.session_cache_expire / (60 * 24)).toLocaleString() + ' Days'
 			: (self.session_cache_expire / 60).toLocaleString() + ' Hours'
@@ -236,9 +323,61 @@ export const render_info_container = function(self) {
 
 /**
 * RENDER_TEMPLATE
-* @param object self
-* 	Instance of current tool
-* @return DocumentFragment
+* Core builder for the Dropzone upload widget.  Constructs the complete DOM
+* tree, initialises (or reuses) the Dropzone.js instance, registers all event
+* listeners, and finally fetches the list of previously uploaded files from the
+* server so they appear in the preview grid on first render.
+*
+* Structure of the returned DocumentFragment:
+*   fragment
+*   ├── #actions.row
+*   │   ├── .buttons_container
+*   │   │   ├── button.add         — triggers the Dropzone file picker
+*   │   │   ├── button.start       — enqueues all ADDED-state files for upload
+*   │   │   ├── button.cancel      — removes all files from the queue
+*   │   │   ├── button.delete      — batch-deletes checked files
+*   │   │   └── input[checkbox]    — master checkbox for bulk selection
+*   │   └── .col-lg-5.column_right
+*   │       └── .fileupload-process
+*   │           └── .progress      — global upload progress bar
+*   └── .table.table-striped       — previews container (Dropzone renders into here)
+*       └── .file-row (template)   — per-file preview template extracted by Dropzone
+*           ├── .preview_wrapp     — thumbnail span + img
+*           ├── .details_wrapp     — name / error / size spans (Dropzone data-dz-* binds)
+*           ├── .component.options — optional file-processor and target-component selects
+*           ├── .row_progress_bar  — per-file progress bar
+*           └── .row_buttons       — per-file start / cancel / delete / checkbox buttons
+*
+* Dropzone configuration notes:
+*   - autoQueue: false — files are NOT uploaded immediately on drop; the user must
+*     explicitly press Start (global or per-file) to enqueue them.
+*   - clickable: button_add_files — only that element opens the file picker;
+*     the rest of the dropzone area is drag-only.
+*   - url: DEDALO_API_URL — the PHP JSON API endpoint; the same URL used by all
+*     data_manager.request() calls.
+*   - (!) DEDALO_API_URL is not in the global declaration header of this file; ESLint
+*     will report a no-undef error. The variable is declared globally by the PHP
+*     template. Add DEDALO_API_URL to the global header block to suppress the warning.
+*   - self.active_dropzone is stored back on the instance so that subsequent
+*     renders (e.g. after a refresh) reuse the same Dropzone rather than creating
+*     a duplicate.
+*
+* Event handlers wired in this function:
+*   addedfile       — configures per-file button states; updates self.caller.files_data;
+*                     publishes 'drop_zone_addedfile'.
+*   removedfile     — removes the entry from self.caller.files_data; issues a
+*                     dd_utils_api::delete_uploaded_file API call if the file was
+*                     already on the server (file.url truthy or status 'success').
+*   totaluploadprogress — updates global_progress_bar width; compensates for files
+*                     already in SUCCESS state (Dropzone does not include them in its
+*                     totalBytes calculation).
+*   sending         — reveals the global progress bar; displays total bytes to upload.
+*   queuecomplete   — hides and resets the global progress bar.
+*   success         — displays the server-generated thumbnail; publishes
+*                     'drop_zone_success'; flips per-file button states.
+*
+* @param {Object} self - The service_dropzone instance.
+* @returns {Promise<DocumentFragment>} Fragment ready to be appended to content_data.
 */
 const render_template = async function(self) {
 
@@ -260,6 +399,9 @@ const render_template = async function(self) {
 		})
 
 		// button_add_files
+			// This element is passed as `clickable` in the Dropzone config below, so
+			// Dropzone attaches its own click handler.  The dz-clickable class keeps
+			// CSS cursor hints in sync with Dropzone's internal class management.
 			const button_add_files = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'success add dz-clickable',
@@ -268,6 +410,8 @@ const render_template = async function(self) {
 			})
 
 		// button_start_upload
+			// Global 'Start upload' button — enqueues ALL queued (ADDED-state) files.
+			// Its onclick is attached later (after current_dropzone is defined).
 			const button_submit_files = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'primary upload start',
@@ -276,6 +420,8 @@ const render_template = async function(self) {
 			})
 
 		// button_cancel_upload
+			// Global cancel — removes ALL files from the queue (passes true to also
+			// abort any in-progress uploads).
 			const button_cancel_upload = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'warning cancel',
@@ -287,6 +433,10 @@ const render_template = async function(self) {
 			});
 
 		// button_delete
+			// Global batch-delete button.  Its onclick iterates over checked
+			// per-file checkboxes and programmatically clicks each row's delete
+			// button so that the removedfile event fires per file (which triggers
+			// the server-side delete API call).
 			const button_delete = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'danger delete',
@@ -296,6 +446,10 @@ const render_template = async function(self) {
 			})
 
 		// delete_check_box
+			// Master 'select all' checkbox.  When toggled it sets every individual
+			// per-file .delete_checkbox to the same checked state.
+			// (!) Uses document.querySelectorAll — affects ALL dropzone instances on
+			//     the page if more than one is active simultaneously.
 			const delete_check_box = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'checkbox',
@@ -322,7 +476,8 @@ const render_template = async function(self) {
 				class_name		: 'fileupload-process',
 				parent			: column_right
 			})
-			// The global file processing state
+			// global_progress: shown (opacity 1) while any upload is in progress;
+			// hidden (opacity 0) at rest and after queuecomplete fires.
 				const global_progress = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'progress progress-striped active',
@@ -330,6 +485,7 @@ const render_template = async function(self) {
 				})
 				global_progress.style.opacity = "0";
 			// global_progress_bar
+				// Width is driven by the totaluploadprogress event handler below.
 				const global_progress_bar = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'progress-bar progress-bar-success',
@@ -340,6 +496,8 @@ const render_template = async function(self) {
 				global_progress_bar.style.width = '0%';
 
 			// total bytes
+				// global_total_bytes     — set once per 'sending' event (total MB to upload).
+				// global_total_bytes_sent — updated on every 'totaluploadprogress' tick (MB sent so far).
 				const global_total_bytes = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'progress-global_total_bytes',
@@ -354,12 +512,16 @@ const render_template = async function(self) {
 				})
 
 	// grid template used for rows
+		// previews_container is passed as Dropzone's `previewsContainer` option.
+		// Dropzone appends a rendered copy of previewTemplate here for each file.
 		const previews_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'table table-striped',
 			parent			: fragment
 		})
 		// template used for rows
+			// This element's innerHTML is extracted below as previewTemplate and then
+			// the element itself is removed from the DOM before Dropzone initialises.
 			const template = ui.create_dom_element({
 				id 				: 'template',
 				element_type	: 'div',
@@ -380,6 +542,8 @@ const render_template = async function(self) {
 					parent			: preview_wrapp
 				})
 			// image
+				// data-dz-thumbnail — Dropzone sets the src of this img to the file
+				// thumbnail; on upload success, it is replaced by the server-generated URL.
 				const preview_image = ui.create_dom_element({
 					element_type	: 'img',
 					dataset			: {dzThumbnail : ''},
@@ -417,6 +581,8 @@ const render_template = async function(self) {
 				})
 
 		// options_fragment
+			// Per-file options are built into a DocumentFragment so they can be
+			// conditionally omitted and appended as a single DOM operation.
 			const options_fragment = new DocumentFragment();
 
 			// row_options_wrapper
@@ -426,6 +592,8 @@ const render_template = async function(self) {
 					parent 			: options_fragment
 				})
 				// filter processor options of the files, it could be defined in the preferences or could be the caller
+				// ar_file_processor items have shape: {function_name, function_name_label, default?:boolean}.
+				// The blank first option acts as a 'no processing' sentinel.
 				const ar_file_processor = self.file_processor
 				if(ar_file_processor) {
 					// options process
@@ -446,6 +614,13 @@ const render_template = async function(self) {
 				}//end if(ar_file_processor)
 
 			// component options to store the file, normally the component_portal, it could be defined in the preferences or could be the caller
+				// ddo_option_components items have shape: {tipo, label, default?:boolean}.
+				// The option value (option.tipo) is the ontology tipo of the target component;
+				// it is sent along with the upload so the server knows which component to
+				// store the file in.
+				// (!) The ternary `(ddo_option_components) ? ddo_option_components : [...]`
+				//     is dead — the outer `if(ddo_option_components)` already guards the block,
+				//     so the fallback branch inside is never reached.
 				const ddo_option_components	= self.component_option
 				if(ddo_option_components){
 					const option_components = (ddo_option_components)
@@ -535,13 +710,23 @@ const render_template = async function(self) {
 				})
 
 	// Get the template HTML and remove it from the document
+		// Dropzone expects an HTML string for previewTemplate, not a live DOM node.
+		// We clear the id first to avoid duplicate IDs if the widget is re-rendered,
+		// then extract the innerHTML of the parent, then remove the template node so
+		// it does not appear as an empty row in the grid.
 		const previewNode		= template;
 		previewNode.id			= '';
 		const previewTemplate	= previewNode.parentNode.innerHTML;
 		previewNode.parentNode.removeChild(previewNode);
 
 	// dropzone init
+		// (!) DEDALO_API_URL is used here but is absent from the /*global*/ header.
+		//     It is injected by the PHP page template.  Add it to /*global*/ to
+		//     silence the ESLint no-undef warning.
 		const api_url	= DEDALO_API_URL
+		// Reuse an existing Dropzone instance if the service was already built once
+		// (service_dropzone.build stores it in self.active_dropzone).  Creating a
+		// second Dropzone on document.body would register duplicate event listeners.
 		const current_dropzone = self.active_dropzone || new Dropzone(document.body, { // Make the whole body a dropzone
 			url					: api_url,
 			// thumbnailWidth	: 192,
@@ -555,10 +740,15 @@ const render_template = async function(self) {
 			addRemoveLinks		: false,
 			acceptedFiles		: self.allowed_extensions.join(','),
 			params				: {
+				// key_dir is appended to every multipart upload POST so the server
+				// can route the file to the correct temporary sub-directory.
 				key_dir : self.key_dir
 			},
 			renameFile			: function (file) {
-
+				// Collision-avoidance: if a file with the same name already exists in
+				// files_data (uploaded during this session), append '(N)' before the
+				// extension, where N is the current length of the files_data array.
+				// Note: the count is not necessarily unique if files have been removed.
 				const files		= self.caller.files_data;
 				const { name }	= file; // equivalent to const name = file.name;
 
@@ -576,9 +766,13 @@ const render_template = async function(self) {
 				return name;
 			}
 		});
+		// Cache the instance so subsequent renders can reuse it.
 		self.active_dropzone = current_dropzone
 
 	// event addedfile
+		// Fires for both newly dropped/selected files (file.url is falsy) and for
+		// existing server files injected via displayExistingFile() (file.url is truthy).
+		// Button visibility differs: new files show Start/Cancel; existing files show Delete.
 		current_dropzone.on('addedfile', function(file) {
 
 			const button_start				= file.previewElement.querySelector('.start')
@@ -587,6 +781,7 @@ const render_template = async function(self) {
 			const button_delete_check_box	= file.previewElement.querySelector('.delete_checkbox')
 
 			if(file.url){
+				// File already on the server — hide upload controls, show delete.
 				button_start.disabled	= true;
 				button_cancel.disabled	= true;
 				button_delete.disabled	= false;
@@ -596,7 +791,7 @@ const render_template = async function(self) {
 				button_delete.classList.remove('hide')
 				button_delete_check_box.classList.remove('hide')
 			}else{
-
+				// New local file — show upload controls, hide delete.
 				button_start.disabled	= false;
 				button_cancel.disabled	= false;
 				button_delete.disabled	= true;
@@ -608,17 +803,24 @@ const render_template = async function(self) {
 			}
 
 			// check if the file comes from the server or from dropzone
+			// file.upload.filename is set only for files with a Dropzone upload object
+			// (i.e. files that have been through renameFile); fall back to file.name.
 			const current_name = (file.upload && file.upload.filename) ? file.upload.filename : file.name
 
 			// Hookup the start button
+			// Per-file Start button: enqueues only this file rather than the whole queue.
 			button_start.onclick = function() {
 				current_dropzone.enqueueFile(file);
 			};
 			// textContent (not innerHTML): filenames are user-supplied and round-trip
 			// through the server file listing, so innerHTML here is a stored-XSS vector.
 			file.previewElement.querySelector(".name").textContent = current_name
+			// Store the resolved file name as the checkbox value so the batch-delete
+			// handler can identify which server file to delete.
 			button_delete_check_box.value = current_name
 
+			// Register the file in the caller's in-memory registry so callers (tools)
+			// can iterate self.caller.files_data to act on uploaded files.
 			self.caller.files_data.push({
 				name			: current_name,
 				previewTemplate	: file.previewTemplate,
@@ -626,6 +828,7 @@ const render_template = async function(self) {
 				size			: file.size
 			})
 
+			// Notify subscribers (e.g. tool_import_files) that a file was added.
 			event_manager.publish('drop_zone_addedfile', {
 				file			: file
 			})
@@ -635,10 +838,16 @@ const render_template = async function(self) {
 		});
 
 	// event removedfile
+		// Fires when Dropzone removes a file (via removeFile / removeAllFiles or
+		// when the user clicks a dz-remove element).
+		// Two actions happen unconditionally: the entry is spliced from files_data.
+		// A server-side delete API call is issued only when the file was already on
+		// the server (file.url is truthy) or the upload completed (status 'success').
 		current_dropzone.on('removedfile', async function(file) {
 
 			const current_name = (file.upload && file.upload.filename) ? file.upload.filename : file.name;
 
+			// Reverse-iterate to safely splice while looping.
 			const data_length = self.caller.files_data.length
 			for (let i = data_length - 1; i >= 0; i--) {
 				const current_data = self.caller.files_data[i]
@@ -653,6 +862,8 @@ const render_template = async function(self) {
 					const source = create_source(self)
 
 				// rqo
+					// dd_utils_api::delete_uploaded_file removes the file from the
+					// server-side upload temp directory identified by key_dir.
 					const rqo = {
 						dd_api	: 'dd_utils_api',
 						action	: 'delete_uploaded_file',
@@ -672,6 +883,10 @@ const render_template = async function(self) {
 
 
 	// event totaluploadprogress. Update the total progress bar
+		// Dropzone's built-in totaluploadprogress calculation excludes already-finished
+		// (SUCCESS) files from totalBytes, so the bar would jump backwards when a
+		// new upload batch starts after earlier files completed.  We compensate by
+		// manually adding finished file sizes to both totals and recalculating progress.
 		current_dropzone.on('totaluploadprogress', function(progress, totalBytes, totalBytesSend) {
 			const finished_files = current_dropzone.getFilesWithStatus(Dropzone.SUCCESS);
 
@@ -720,6 +935,12 @@ const render_template = async function(self) {
 
 	// button_submit_files
 		// document.querySelector('#actions .cancel').onclick = function() {
+		// Global Start button behaviour:
+		//   1. Enqueue all ADDED-state files (i.e. files the user selected but has not
+		//      yet started uploading).
+		//   2. Cancel any currently UPLOADING files and reset their status to ADDED so
+		//      they will be re-uploaded in the next batch (this effectively implements
+		//      a 'restart' for in-progress uploads when the button is pressed again).
 		button_submit_files.onclick = function() {
 
 			current_dropzone.enqueueFiles(current_dropzone.getFilesWithStatus(Dropzone.ADDED))
@@ -734,12 +955,19 @@ const render_template = async function(self) {
 		}
 
 	// button_delete
+		// Global batch-delete handler.
+		// (!) Uses document.querySelectorAll('.delete_checkbox') — scoped to the
+		//     entire document, not just this Dropzone instance.  If multiple
+		//     service_dropzone widgets are active simultaneously, this handler will
+		//     affect checked checkboxes in ALL of them.
 		button_delete.onclick= async function() {
 
 			const delete_checkbox_nodes	= document.querySelectorAll('.delete_checkbox')
 			const len					= delete_checkbox_nodes.length
 			for (let i = len - 1; i >= 0; i--) {
 				if(delete_checkbox_nodes[i].checked){
+					// Trigger the row-level delete button so the Dropzone 'removedfile'
+					// event fires for each file, which cascades to the server-side delete.
 					const row_delete_node	= delete_checkbox_nodes[i].parentNode.querySelector('button.delete')
 					if(row_delete_node){
 						row_delete_node.click()
@@ -749,8 +977,13 @@ const render_template = async function(self) {
 		}
 
 	// event success
+		// Fires after the server returns a 2xx response.
+		// api_response is the parsed JSON body returned by dd_utils_api.
+		// Expected shape: { msg: string, file_data: { thumbnail_url: string } }.
 		current_dropzone.on('success', function(file, api_response) {
 
+			// Replace the client-side thumbnail with the server-generated one so the
+			// preview reflects the actual stored representation (e.g. a TIFF→JPEG proxy).
 			//showing an image created by the server after upload
 			this.emit('thumbnail', file, api_response.file_data.thumbnail_url);
 
@@ -764,6 +997,7 @@ const render_template = async function(self) {
 			const button_delete	= file.previewElement.querySelector('.delete')
 			const button_delete_check_box = file.previewElement.querySelector('.delete_checkbox')
 
+			// Upload done — disable Start/Cancel, enable Delete (same state as existing files).
 			button_start.disabled = true;
 			button_cancel.disabled = true;
 			button_delete.disabled = false;
@@ -773,9 +1007,13 @@ const render_template = async function(self) {
 			button_delete.classList.remove('hide')
 			button_delete_check_box.classList.remove('hide')
 
+			// Hide the per-file progress bar now that the upload is complete.
 			const row_progress_bar = file.previewElement.querySelector('.progress')
 			row_progress_bar.style.opacity = '0';
 
+			// Notify subscribers (e.g. tool_import_files) that a file was successfully
+			// uploaded.  Subscribers receive both the Dropzone file object and the raw
+			// API response so they can act on the stored file immediately.
 			event_manager.publish('drop_zone_success', {
 				file			: file,
 				api_response	: api_response
@@ -783,12 +1021,19 @@ const render_template = async function(self) {
 		});
 
 	// get the images in the server (uploaded previously), and display into the dropzone
+		// This is the async part that makes render_template an async function.
+		// It fetches all files already in the server-side upload temp dir for key_dir
+		// and injects them into the Dropzone preview grid as existing (non-uploadable)
+		// entries.  Each injected file triggers 'addedfile' with file.url set, which
+		// is how the handler above knows to show Delete rather than Start/Cancel.
 
 		// source. Note that second argument is the name of the function to manage the API request like 'delete'
 			// this generates a call as my_tool_name::my_function_name(options)
 			const source = create_source(self, 'list_uploaded_files')
 
 		// rqo
+			// prevent_lock: true — this is a read-only list request; do not acquire
+			// any write lock on the calling record.
 			const rqo = {
 				dd_api			: 'dd_utils_api',
 				action			: 'list_uploaded_files',
@@ -803,6 +1048,8 @@ const render_template = async function(self) {
 			const response = await data_manager.request({
 				body : rqo
 			})
+			// response.result is an Array of file descriptor objects with at minimum
+			// { name, url, size } — the same shape as a Dropzone mock file object.
 			const files = response.result
 
 		// Access to the original image sizes on your server,
@@ -812,6 +1059,8 @@ const render_template = async function(self) {
 		const callback			= null; // Optional callback when it's done
 		const crossOrigin		= null; // Added to the `img` tag for crossOrigin handling
 		const resizeThumbnail	= false; // Tells Dropzone whether it should resize the image first
+		// resizeThumbnail=false: we pass the server-provided URL directly; Dropzone
+		// should not re-download and resize it locally.
 
 		for (let i = 0; i < files_length; i++) {
 			const current_file = files[i]

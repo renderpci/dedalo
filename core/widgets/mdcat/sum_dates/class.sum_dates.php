@@ -168,6 +168,11 @@ class sum_dates extends widget_common {
 				// PHP DateTime::diff() can produce h > 0 for midnight-to-midnight spans that
 				// cross a DST boundary. Adding a full day compensates and keeps all durations
 				// expressed in whole days.
+				//
+				// (!) $ar_interval is implicitly created here as a new local array by the
+				//     [] append operator; it is intentionally separate from the $ar_interval
+				//     in the outer get_data() scope. This is safe because date_interval() is a
+				//     named function (not a closure) and does not capture outer variables.
 				if ($interval->h >0) {
 					$ar_interval[] = $interval;
 					$ar_interval[] = date_interval_create_from_date_string("1 day");
@@ -498,6 +503,11 @@ class sum_dates extends widget_common {
 			// Map each output slot to its corresponding local variable using variable
 			// variables ($$current_id). The variable name in $output must exactly match
 			// one of: $sum_intervals, $sum_estitmated_time_add, $estitmated_time_undefined.
+			//
+			// (!) $key here is the loop variable from the outer `foreach ($ipo as $key =>
+			//     $current_ipo)` iteration, NOT a locator index. For single-IPO configs this
+			//     is always 0, which is the conventional value used by render_sum_dates.js.
+			//     If multiple IPO entries exist the key advances per-IPO, not per-locator.
 			foreach ($output as $data_map) {
 				$current_id = $data_map->id;
 				$current_data = new stdClass();
@@ -527,7 +537,10 @@ class sum_dates extends widget_common {
 	* - Returns three keyed items: sum_intervals, sum_estitmated_time_add,
 	*   and estitmated_time_undefined
 	*
-	* @return array $data_parsed Array of formatted text items
+	* (!) Requires PHP 8.4+ for array_find(). Calling this on PHP < 8.4 will
+	*     produce a fatal "Call to undefined function array_find()" error.
+	*
+	* @return ?array $data_parsed Array of formatted text items, or null.
 	*/
 	public function get_data_parsed() : ?array  {
 
@@ -594,6 +607,11 @@ class sum_dates extends widget_common {
 				$estimated_month_label = ($sum_estitmated_time_add->m > 1)
 					? label::get_label( 'months' )
 					: label::get_label( 'month' );
+				// (!) Double-assignment: `$estimated_year_text` is overwritten here as a
+				//     side-effect of chaining `= $estimated_month_text = ...`. This clobbers
+				//     the previously built year text string (if years > 0) without using it.
+				//     The assignment to $estimated_year_text has no functional effect because
+				//     $estimated_year_text is not read again after this point.
 				$estimated_month_text = $estimated_year_text = $sum_estitmated_time_add->m.' '.$estimated_month_label;
 				$ar_sum_estitmated_time_add[] = $estimated_month_text;
 			}
@@ -616,6 +634,8 @@ class sum_dates extends widget_common {
 					if( !empty($ar_sum_estitmated_time_add) ){
 						$ar_indeterminate[] = ' + ';
 					}
+					// (!) Hardcoded Catalan string 'indeterminat' ('indeterminate' in English).
+					//     Should be replaced with a label::get_label() call for proper i18n.
 					$ar_indeterminate[] = 'indeterminat';
 				}
 			}

@@ -3,29 +3,107 @@
 include_once __DIR__ . '/class.install_hierarchy_manager.php';
 
 /**
- * CLASS INSTALL_CONFIG_MANAGER
- * Encapsulates install configuration, database status checks,
- * install-status file operations, and root-password setup.
- *
- * @package Dedalo
- * @subpackage Install
- */
+* CLASS INSTALL_CONFIG_MANAGER
+* Central configuration provider and state manager for the Dédalo installation
+* process.
+*
+* Responsibilities:
+* - Build the shared install-time configuration object (database names, file
+*   paths, table allow-lists, preserved TLDs) consumed by all other install
+*   manager classes.
+* - Open a PostgreSQL connection to the dedicated install database
+*   (`dedalo7_install`) that is separate from the live application database.
+* - Validate that the deployer has replaced every placeholder constant in
+*   `config/config.php` and that a real database connection can be established.
+* - Detect whether the application has already been fully installed by
+*   inspecting `matrix_users`.
+* - Write the root user's encrypted password during the very first install run,
+*   guarded by multiple safety checks that prevent accidental re-execution.
+* - Persist the `DEDALO_INSTALL_STATUS` constant to `config/config_core.php`,
+*   which is included on every request and acts as the single source of truth
+*   for whether the application is in install vs. running mode.
+*
+* This is a static-only utility class. Instantiation is intentionally blocked
+* by a private constructor. All external callers use the static interface.
+*
+* Relationships:
+* - Included by `class.install_hierarchy_manager.php` (via the include at the
+*   top of that file) and by `class.install.php` which orchestrates the full
+*   installation sequence.
+* - Delegates hierarchy typology discovery to `install_hierarchy_manager`.
+* - Calls `DBi::_getNewConnection()` for PostgreSQL connection management and
+*   `DBi::check_table_exists()` / `pg_query()` for schema introspection.
+* - Calls `login::check_root_has_default_password()` to gate the
+*   `set_root_pw()` action.
+* - Reads and writes `config/config_core.php` via plain file I/O (not the
+*   Dédalo component layer) because the install system must remain functional
+*   before any section/component infrastructure is available.
+*
+* @package Dédalo
+* @subpackage Install
+*/
 final class install_config_manager {
 
 	/**
-	 * Database name used for initial installation and setup.
-	 * @var string $db_install_name
-	 */
+	* Name of the dedicated PostgreSQL database used during installation.
+	* This database is separate from the live application database
+	* (DEDALO_DATABASE_CONN) and is pre-populated with seed data that the
+	* install process imports from `install/db/dedalo7_install.pgsql(.gz)`.
+	* @var string $db_install_name
+	*/
 	public static string $db_install_name = 'dedalo7_install';
 
 	/**
-	* Private constructor to prevent instantiation (static utility class)
+	* __CONSTRUCT
+	* Private constructor to prevent instantiation.
+	* All methods are static; this class must never be instantiated.
 	*/
 	private function __construct() {}
 
 	/**
 	* GET_CONFIG
-	* @return object $config
+	* Build and return the canonical install-time configuration object.
+	*
+	* Aggregates all install-related paths, database identifiers, table
+	* allow-lists, TLD preservation lists, and shell connection arguments into
+	* a single stdClass so that every other install manager can call
+	* `install_config_manager::get_config()` without re-deriving these values.
+	*
+	* Key properties of the returned object:
+	* - `db_install_name`           — name of the PostgreSQL install database.
+	* - `host_line`                  — shell-safe `-h <host>` fragment for psql
+	*                                 commands; falls back to the bare string
+	*                                 `'localhost'` when DEDALO_HOSTNAME_CONN is
+	*                                 empty (no `-h` flag in that case).
+	* - `port_line`                  — shell-safe `-p <port>` fragment; empty
+	*                                 string when DEDALO_DB_PORT_CONN is not set.
+	* - `to_preserve_tld`           — TLD prefixes whose records must NOT be
+	*                                 deleted during a "clean data" operation.
+	* - `to_clean_tables`           — matrix_* tables that are truncated when
+	*                                 resetting the install database, except for
+	*                                 `matrix_ontology` (which is handled
+	*                                 separately).
+	* - `valid_tables`              — exhaustive list of tables that should exist
+	*                                 in the target database; any other table
+	*                                 found there will be dropped.
+	* - `target_file_path`          — absolute path to the raw PostgreSQL dump
+	*                                 (`dedalo7_install.pgsql`).
+	* - `target_file_path_compress` — gzip-compressed variant of the dump.
+	* - `hierarchy_files_dir_path`  — directory containing `.copy.gz` hierarchy
+	*                                 import files.
+	* - `install_checked_default`   — TLD codes pre-selected in the install UI.
+	* - `hierarchy_typologies`      — decoded array from `hierarchies_typologies.json`.
+	* - `config_core_file_path`     — absolute path to `config/config_core.php`,
+	*                                 the runtime file where `DEDALO_INSTALL_STATUS`
+	*                                 is written.
+	*
+	* Security note (SEC-041): `host_line` and `port_line` apply
+	* `escapeshellarg()` to the constant values even though those constants come
+	* from a deployer-controlled filesystem file (`config/config.php`), not from
+	* HTTP input. This is defence-in-depth against unexpected whitespace or
+	* special characters that could alter the psql command line.
+	*
+	* @return object - stdClass configuration object; never null.
 	*/
 	public static function get_config() : object {
 
@@ -144,9 +222,21 @@ final class install_config_manager {
 
 	/**
 	* GET_DB_INSTALL_CONN
-	* Open connection to the new install database (not current, note the database name)
-	* @return PgSql\Connection|bool
-	* 	false on error
+	* Open a new PostgreSQL connection to the dedicated install database.
+	*
+	* The install database (`dedalo7_install`) is distinct from the live
+	* application database (DEDALO_DATABASE_CONN). This connection is used by
+	* install operations that need to read from or write to the seed database
+	* without touching production data.
+	*
+	* Connection credentials (host, username, password, port, socket) are taken
+	* directly from the global DEDALO_*_CONN constants defined in
+	* `config/config.php`. Only the database name differs from the normal runtime
+	* connection.
+	*
+	* @return PgSql\Connection|bool - a live PostgreSQL connection on success;
+	*         false when the connection attempt fails (e.g. database does not
+	*         exist yet, wrong credentials, or PostgreSQL is not reachable).
 	*/
 	public static function get_db_install_conn() : PgSql\Connection|bool {
 
@@ -166,9 +256,34 @@ final class install_config_manager {
 
 	/**
 	* GET_DB_STATUS
-	* Check if the config vars are empty or with default values
-	* Open connection to the new install database (not current, note the database name)
-	* @return object
+	* Validate the database configuration and test the live connection.
+	*
+	* Checks each mandatory constant against its known placeholder default:
+	* - DEDALO_DATABASE_CONN  must not be empty or 'dedalo_mydatabase'
+	* - DEDALO_USERNAME_CONN  must not be empty or 'myusername'
+	* - DEDALO_PASSWORD_CONN  must not be empty or 'mypassword'
+	* - DEDALO_INFORMATION    must not be empty or 'Dédalo install version'
+	* - DEDALO_INFO_KEY       must not be empty or 'my_entity_name'
+	*
+	* After checking each constant individually it also attempts to open a real
+	* PostgreSQL connection to confirm that the database is actually reachable
+	* with the configured credentials.
+	*
+	* The returned object has one boolean property per check, a composite
+	* `config_check` (true only when all individual checks pass), and a
+	* `global_status` that is false if any single property is false.
+	*
+	* Returned stdClass properties (all bool):
+	* - config_db_name_check
+	* - config_user_name_check
+	* - config_pw_check
+	* - config_information_check
+	* - config_info_key_check
+	* - config_check          — composite: all of the above
+	* - db_connection_check   — live connection succeeded
+	* - global_status         — all of the above including db_connection_check
+	*
+	* @return object - stdClass with the fields described above.
 	*/
 	public static function get_db_status() : object {
 
@@ -278,7 +393,18 @@ final class install_config_manager {
 
 	/**
 	* GET_DB_DATA_VERSION
-	* @return array|null $current_version_in_db
+	* Read the current data-version triplet from the live database.
+	*
+	* Delegates to the global helper `get_current_data_version()` (defined in
+	* `shared/core_functions.php`), which queries `matrix_updates` for the
+	* highest `dedalo_version` value. The result is an array such as
+	* `[7, 14, 3]` (major, minor, patch).
+	*
+	* Returns null when the function throws — for example during a fresh install
+	* where `matrix_updates` does not yet exist, or when the database connection
+	* is not yet available.
+	*
+	* @return array|null - version triplet on success; null on any exception.
 	*/
 	public static function get_db_data_version() : ?array {
 
@@ -295,7 +421,15 @@ final class install_config_manager {
 
 	/**
 	* TO_UPDATE
-	* @return object $response
+	* Mark the installation as complete and ready for the update cycle.
+	*
+	* Called at the end of the installation wizard to transition the system
+	* from install mode to normal running mode. Internally it is a thin wrapper
+	* around `set_install_status('installed')`, which writes
+	* `define('DEDALO_INSTALL_STATUS', 'installed')` into `config_core.php`.
+	*
+	* @return object - stdClass response from set_install_status with:
+	*                  `result` (bool) and `msg` (string).
 	*/
 	public static function to_update() : object {
 
@@ -306,7 +440,21 @@ final class install_config_manager {
 
 	/**
 	* SYSTEM_IS_ALREADY_INSTALLED
-	* @return object $response
+	* Determine whether Dédalo has previously been fully installed.
+	*
+	* The check is structural rather than relying on the `DEDALO_INSTALL_STATUS`
+	* constant, making it useful to detect partial or inconsistent states:
+	* 1. The `matrix_users` table must exist (schema has been loaded).
+	* 2. That table must contain more than one user record (the root user is
+	*    section_id = -1; a real install adds at least one normal user, bringing
+	*    the count above 1).
+	*
+	* The distinction between "table missing" and "table exists but count ≤ 1"
+	* is preserved so callers can display a more specific message.
+	*
+	* @return object - stdClass with:
+	*   - result (bool): true when the system appears to be fully installed.
+	*   - msg    (string): human-readable explanation of the result.
 	*/
 	public static function system_is_already_installed() : object {
 
@@ -353,13 +501,40 @@ final class install_config_manager {
 
 	/**
 	* SET_ROOT_PW
-	* This action is fired only in the installation process.
-	* if you want to change the root pw after installation process, you will need to do:
-	* 	1. To change the root pw in the section_id -1 in matrix_users table, set it with null data in this way:
-	*		string column: {"dd133": []}
-	* 	2. remove the installed status in config/config_auto file.
-	* @param object $options
-	* @return object $response
+	* Encrypt and persist the root user's password during the initial install.
+	*
+	* This method may only execute successfully when ALL of the following
+	* conditions are met; it returns an error response otherwise:
+	* 1. `DEDALO_INSTALL_STATUS` is NOT yet 'installed' — prevents re-execution
+	*    after a completed install.
+	* 2. `login::check_root_has_default_password()` returns true — the root
+	*    record in `matrix_users` must still hold its factory-default empty
+	*    password value, preventing accidental overwrite of a password set in a
+	*    previous (aborted) install run.
+	* 3. `$options->password` is non-empty after XSS sanitisation.
+	* 4. A round-trip encrypt → decrypt cycle produces the original plaintext,
+	*    confirming that the OpenSSL key material is configured correctly.
+	*
+	* On success the encrypted password is written directly via a parameterised
+	* SQL UPDATE to `matrix_users` for `section_id = -1`. Direct SQL is used
+	* because the normal Save() path refuses to write records with
+	* `section_id < 1` (a safety guard that also applies at runtime).
+	*
+	* The password is stored in the v7 JSONB string column format:
+	* `{"<DEDALO_USER_PASSWORD_TIPO>": [{"id":1, "value":"<encrypted>", "lang":"lg-nolan"}]}`
+	*
+	* The active session is cleared after a successful write so that any cached
+	* auth data is immediately invalidated.
+	*
+	* (!) If you need to change the root password AFTER a completed install:
+	*   1. Set the string column of section_id = -1 in matrix_users to
+	*      `{"dd133": []}` (empty array for the password component).
+	*   2. Remove the DEDALO_INSTALL_STATUS line from config/config_core.php.
+	*   Then re-run the install wizard and call this endpoint again.
+	*
+	* @param object $options - must contain `password` (string): the plaintext
+	*                          root password chosen by the deployer.
+	* @return object - stdClass with `result` (bool) and `msg` (string).
 	*/
 	public static function set_root_pw(object $options) : object {
 
@@ -433,10 +608,32 @@ final class install_config_manager {
 
 	/**
 	* SET_INSTALL_STATUS
-	* Fix current Dédalo app as installed
-	* @param string $status
-	* 	Options: 'installed'
-	* @return object $response
+	* Write or update the `DEDALO_INSTALL_STATUS` constant in config_core.php.
+	*
+	* `config/config_core.php` is loaded on every request via
+	* `config/config.php`. Writing `DEDALO_INSTALL_STATUS` there is the
+	* canonical way to signal that the system has finished installing. The
+	* constant gates the install wizard routes and the `set_root_pw()` action.
+	*
+	* Three code paths:
+	* 1. Constant already equals `$status` — no-op, returns success immediately.
+	* 2. Constant is absent from the file — appends a new `define()` line using
+	*    FILE_APPEND | LOCK_EX to avoid write races.
+	* 3. Constant exists but with a different value — replaces the existing line
+	*    via `preg_replace()`, then rewrites the whole file with LOCK_EX.
+	*
+	* If `config_core.php` does not exist yet it is created as an empty file
+	* before the append in path 2. A failure to create or write the file is
+	* logged as an ERROR and surfaced in the response message.
+	*
+	* The entire `$_SESSION['dedalo']` key is cleared after a successful write
+	* so that any cached session data derived from the old status is dropped.
+	*
+	* @param string $status - the status string to write; currently only
+	*                         'installed' is used in practice.
+	* @return object - stdClass with:
+	*   - result (bool): true on success or when the status was already set.
+	*   - msg    (string): human-readable outcome or error description.
 	*/
 	public static function set_install_status(string $status) : object {
 
