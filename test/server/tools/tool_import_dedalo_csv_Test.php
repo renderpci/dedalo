@@ -1277,7 +1277,9 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 
 		// Verify set_data_lang() doesn't silently drop items
 		$component->set_data_lang($conformed_value, DEDALO_DATA_LANG);
-		$saved_data = $component->get_data();
+		// Use get_data_lang to check only the items for the target language,
+		// avoiding false failures when DB already has data in other langs
+		$saved_data = $component->get_data_lang(DEDALO_DATA_LANG);
 		$this->assertTrue(
 			!empty($saved_data),
 			'Expected data to be saved (not silently dropped by set_data_lang)'

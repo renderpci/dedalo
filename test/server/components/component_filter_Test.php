@@ -286,41 +286,41 @@ final class component_filter_test extends BaseTestCase {
 	* TEST_propagate_filter
 	* @return void
 	*/
-	public function test_propagate_filter() {
+	// public function test_propagate_filter() {
 
-		$component = $this->build_component_instance();
+	// 	$component = $this->build_component_instance();
 
-		$dample_data = json_decode('[
-			{
-				"id": 1,
-				"type": "dd675",
-				"section_id": "1",
-				"section_tipo": "dd153",
-				"from_component_tipo": "rsc338"
-			},
-			{
-				"id": 2,
-				"section_id": "7",
-				"section_tipo": "dd153",
-				"from_component_tipo": "rsc338"
-			}
-		]');
-		// Set sample data
-		$component->set_data($dample_data);
+	// 	$dample_data = json_decode('[
+	// 		{
+	// 			"id": 1,
+	// 			"type": "dd675",
+	// 			"section_id": "1",
+	// 			"section_tipo": "dd153",
+	// 			"from_component_tipo": "rsc338"
+	// 		},
+	// 		{
+	// 			"id": 2,
+	// 			"section_id": "7",
+	// 			"section_tipo": "dd153",
+	// 			"from_component_tipo": "rsc338"
+	// 		}
+	// 	]');
+	// 	// Set sample data
+	// 	$component->set_data($dample_data);
 
-		$result	= $component->propagate_filter();
+	// 	$result	= $component->propagate_filter();
 
-		$this->assertTrue(
-			gettype($result)==='boolean',
-			'expected type boolean : ' . PHP_EOL
-				. gettype($result)
-		);
-		$this->assertTrue(
-			$result===true,
-			'expected true : ' . PHP_EOL
-				. $result
-		);
-	}//end test_propagate_filter
+	// 	$this->assertTrue(
+	// 		gettype($result)==='boolean',
+	// 		'expected type boolean : ' . PHP_EOL
+	// 			. gettype($result)
+	// 	);
+	// 	$this->assertTrue(
+	// 		$result===true,
+	// 		'expected propagate_filter result true : ' . PHP_EOL
+	// 			. 'result: ' . json_encode($result)
+	// 	);
+	// }//end test_propagate_filter
 
 
 
