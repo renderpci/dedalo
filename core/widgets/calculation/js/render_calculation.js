@@ -151,7 +151,7 @@ const get_value_element = (i, data, inputs_container, self) => {
 			? get_date_string()
 			: server_value
 
-		const label_suffix = value==1 ? '_singular' : ''
+		const label_suffix = Number(value)===1 ? '_singular' : ''
 
 		// label before
 			const current_label_before = (value && data_map['label_before'+label_suffix])
@@ -201,7 +201,7 @@ const get_value_element = (i, data, inputs_container, self) => {
 				element_value.innerHTML = value
 
 				// labels
-				const label_suffix = value==1 ? '_singular' : ''
+				const label_suffix = Number(value)===1 ? '_singular' : ''
 
 				// label before
 				const current_label_before = (value && data_map['label_before'+label_suffix])
