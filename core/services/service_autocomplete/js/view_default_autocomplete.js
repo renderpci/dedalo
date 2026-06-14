@@ -2,7 +2,26 @@
 /*global get_label, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
-
+/**
+* MODULE: view_default_autocomplete
+*
+* Default view layer for the service_autocomplete service.
+* Provides all DOM construction and event wiring for the autocomplete widget:
+* search input with debounced lookup, source / section / filter-by-list
+* checkboxes, operator ($or/$and) and result-limit selectors, a live datalist
+* of section_record rows, and an optional floating grid-chooser panel
+* (render_grid_choose / get_grid_choose_data).
+*
+* Public API is attached directly to the exported `view_default_autocomplete`
+* function object:
+*   - view_default_autocomplete.render         — build and return the widget wrapper
+*   - view_default_autocomplete.show           — remove the 'hide' CSS class
+*   - view_default_autocomplete.hide           — add the 'hide' CSS class
+*   - view_default_autocomplete.render_grid_choose — open the floating grid chooser
+*
+* All private helpers (get_content_data, render_source_selector, etc.) are
+* module-scoped `const` functions not exported.
+*/
 
 // imports
 	import {ui} from '../../../common/js/ui.js'
@@ -16,7 +35,10 @@
 
 /**
 * VIEW_DEFAULT_AUTOCOMPLETE
-* Manages the service's logic and appearance in client side
+* Constructor / namespace object for the default autocomplete view.
+* Returns true immediately; the real work is performed by the static methods
+* attached below (render, show, hide, render_grid_choose).
+* @returns {boolean} Always true
 */
 export const view_default_autocomplete = function() {
 
@@ -27,10 +49,25 @@ export const view_default_autocomplete = function() {
 
 /**
 * RENDER
-* Render node for use like button
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Build and return the full autocomplete widget wrapper (or content fragment
+* only when render_level === 'content').
+*
+* When render_level is 'full' (default):
+*  - creates the outer `.wrapper_service_autocomplete` div
+*  - wires mousedown/click stopPropagation so clicking inside the autocomplete
+*    panel does not deactivate the caller component (Alt+click is allowed through
+*    for accessibility)
+*  - mirrors the caller's 'search' mode and 'hilite_element' state to the wrapper
+*  - updates self.node and publishes the 'render_<id>' event
+*
+* When render_level is 'content':
+*  - returns the DocumentFragment produced by get_content_data() directly and
+*    fixes the self.node.content_data pointer; no wrapper div is created.
+*
+* @param {Object} self    - The service_autocomplete instance
+* @param {Object} options - Render options
+* @param {string} [options.render_level='full'] - 'full' or 'content'
+* @returns {Promise<HTMLElement>} The wrapper div (full) or content fragment (content)
 */
 view_default_autocomplete.render = async function (self, options) {
 
@@ -86,9 +123,36 @@ view_default_autocomplete.render = async function (self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Creates the DOM nodes of the service
-* @param object self
-* @return DocumentFragment fragment
+* Builds the full DOM tree of the autocomplete widget body and returns it as
+* a DocumentFragment ready for insertion.
+*
+* Validates that at least one target section_tipo is configured in
+* self.context.request_config before constructing any UI — renders an inline
+* debug error message and returns early if none are found.
+*
+* Sub-regions built (in order):
+*  1. options_container (.options_hidden) — hidden by default, toggled by gear button
+*     a. source_selector      — render_source_selector()
+*     b. sections_selector    — render_filters_selector()
+*     c. inputs_list          — render_inputs_list()
+*     d. operator_selector    — render_operator_selector()
+*  2. search_input             — render_search_input()
+*  3. button_options (.gear)   — toggles options_container visibility
+*  4. datalist_node (<ul>)     — populated by render_datalist() on each search
+*
+* Side-effects:
+*  - Adds a document-level 'keydown' handler (fn_service_autocomplete_keys) that
+*    delegates to self.service_autocomplete_keys(); the handler is removed when
+*    the 'deactivate_component' event fires for self.caller.
+*  - Stores the keydown handler at self._fn_keydown for external cleanup.
+*  - Fixes self.search_input, self.datalist, self.options_container pointers.
+*
+* (!) The subscription token for 'deactivate_component' is pushed into
+*     self.events_tokens — callers must drain this array on destroy to avoid
+*     memory leaks.
+*
+* @param {Object} self - The service_autocomplete instance
+* @returns {DocumentFragment} The fully assembled widget content
 */
 const get_content_data = function(self) {
 
@@ -202,14 +266,34 @@ const get_content_data = function(self) {
 
 
 	return fragment
-}//end render
+}//end render // (!) closing label should read '//end get_content_data'; pre-existing typo — do not rename
 
 
 
 /**
 * RENDER_SOURCE_SELECTOR
-* @param object self
-* @return HTMLElement source_selector
+* Build a labeled `<select>` drop-down that lets the user switch between the
+* available search sources (e.g. Dédalo, Zenon …) defined in
+* self.context.request_config.
+*
+* Each `<option>` value is the numeric string index of the corresponding
+* request_config entry. The option label is derived from the first
+* section_tipo's label; when multiple section_tipos are present a ", etc."
+* suffix is appended.
+*
+* On change:
+*  1. Resets self.search_cache.
+*  2. Clones the selected request_config entry and calls self.build() with it
+*     (first resetting self.status to 'initialized' so build() does not
+*     short-circuit its 'built' guard).
+*  3. Re-renders the content area and replaces self.node's children in place
+*     while keeping the options_container visible.
+*
+* (!) The commented-out `request_ddo` / `ddo_section` lines (lines ~245-246)
+*     are dead code from a previous API shape — left for reference.
+*
+* @param {Object} self - The service_autocomplete instance
+* @returns {HTMLElement} The assembled source_selector div
 */
 const render_source_selector = function(self) {
 
@@ -303,9 +387,28 @@ const render_source_selector = function(self) {
 
 /**
 * RENDER_SEARCH_INPUT
-* Create the HTML of input search autocomplete
-* @param object self
-* @return HTMLElement search_input
+* Create the text input element that drives the autocomplete search.
+*
+* Behaviour:
+*  - 'keyup' fires input_handler on every keystroke; navigation keys
+*    (Escape, Arrows, Ctrl, Meta, Alt, Shift, CapsLock, Enter) are ignored.
+*  - 'paste' fires input_handler immediately and sets is_searching to true to
+*    prevent a duplicate search from the subsequent keyup event.
+*  - input_handler debounces the API call: 320 ms by default, collapsed to 1 ms
+*    when the query is already cached (self.search_cache[q]).
+*  - A spinner `<div>` is inserted after the input while the request is in
+*    flight and removed on completion or error.
+*  - self.split_q() is called to distribute multi-field queries across
+*    self.filter_free_nodes when a separator is detected.
+*  - Results are cached in self.search_cache keyed by the raw query string q.
+*  - The is_searching flag prevents overlapping concurrent requests; it is
+*    reset in every exit path of the setTimeout callback.
+*
+* (!) The scroll-into-view focus listener is commented out (lines ~152-155) —
+*     left as dead code for future reference.
+*
+* @param {Object} self - The service_autocomplete instance
+* @returns {HTMLElement} The configured `<input type="text">` element
 */
 const render_search_input = function(self) {
 
@@ -481,8 +584,30 @@ const render_search_input = function(self) {
 
 /**
 * RENDER_FILTERS_SELECTOR
-* @param object self
-* @return HTMLElement filters_container
+* Build the filter panel that contains one or more checkbox groups:
+*
+*  1. Sections filter — one checkbox per entry in self.ar_search_section_tipo;
+*     toggling a checkbox adds/removes the section_tipo from ar_search_section_tipo
+*     and resets self.search_cache.
+*
+*  2. filter_by_list groups — one group per entry in
+*     self.rqo_search.sqo_options.filter_by_list (when present); each checkbox
+*     represents a relation value and pushes/splices entries into
+*     self.ar_filter_by_list. The filter value object carries a
+*     'relations_flat_fct_st_si' format for server-side evaluation.
+*
+* Checkbox state is persisted to localStorage under the key
+* `service_autocomplete_${self.id_base}` as a JSON array of active IDs.
+* On first render the full set of IDs is written; subsequent renders read
+* existing state.
+*
+* Side-effects: sets self.filters_container pointer.
+*
+* (!) The commented-out `css_autocomplete_hi_search_field` class name on the
+*     filters_container (line ~494) is a leftover from an older naming scheme.
+*
+* @param {Object} self - The service_autocomplete instance
+* @returns {HTMLElement} The populated filters_container div
 */
 const render_filters_selector = function(self) {
 
@@ -617,12 +742,27 @@ const render_filters_selector = function(self) {
 
 /**
 * BUILD_FILTER
-* Render filter node checkbox items
-* @param object self
-* @param array filter_items
-* @param string filter_name
-* @param string filter_id
-* @return HTMLElement filter_node
+* Render a labeled `<ul>` of checkbox items for a single filter group,
+* including an "All" master-checkbox that dispatches individual change events
+* to each child checkbox so their own handlers remain the single source of truth.
+*
+* Structure:
+*   <ul class="filter_node">
+*     <li class="all_selector">
+*       <label><input type="checkbox" id="<filter_id>_all"> All <filter_name></label>
+*     </li>
+*     <li>…render_option_checkbox() per item…</li>
+*   </ul>
+*
+* The "All" checkbox change handler iterates all child inputs and fires a
+* synthetic 'change' Event on each one that differs from the new state, so
+* localStorage and self.search_cache are updated consistently.
+*
+* @param {Object} self         - The service_autocomplete instance
+* @param {Array}  filter_items - Array of datalist item descriptors passed to render_option_checkbox
+* @param {string} filter_name  - Human-readable label for the group (e.g. "Sections")
+* @param {string} filter_id    - Base id string for the "All" checkbox element
+* @returns {HTMLElement} The assembled `<ul>` filter_node
 */
 const build_filter = function(self, filter_items, filter_name, filter_id) {
 
@@ -686,9 +826,11 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 
 /**
 * SAFE_JSON_PARSE
-* Parses JSON from localStorage with error handling
-* @param {string} key - localStorage key
-* @return {*} Parsed value or null on error
+* Parses JSON from localStorage with error handling.
+* Returns null instead of throwing when the stored value is absent or malformed.
+*
+* @param {string} key - localStorage key to read and parse
+* @returns {*} Parsed value, or null on parse error / missing key
 */
 const safe_json_parse = function(key) {
 	try {
@@ -702,10 +844,27 @@ const safe_json_parse = function(key) {
 
 /**
 * RENDER_OPTION_CHECKBOX
+* Build a single `<li>` containing a labeled checkbox for one filter option.
 *
-* @param object self
-* @param object datalist_item
-* @return HTMLElement li
+* Checkbox initial state defaults to checked (true); the state is then
+* reconciled against the localStorage array via safe_json_parse() — if the id
+* is present in the stored array the checkbox is checked, otherwise unchecked.
+* The datalist_item.change callback is invoked immediately during init when the
+* state needs to change, so the parent arrays (ar_sections / ar_filter_by_list)
+* stay consistent without a DOM event.
+*
+* On subsequent user interaction ('change' event):
+*  1. Calls datalist_item.change(this) to update the parent tracking array.
+*  2. Calls update_local_storage_ar_id() to sync localStorage.
+*  3. Fires self.autocomplete_search() and refreshes the datalist.
+*
+* The inner update_local_storage_ar_id closure reads the localStorage array,
+* splices/pushes the id, and re-serialises it. Returns the found index (or -1),
+* or false when the localStorage key is absent.
+*
+* @param {Object} self          - The service_autocomplete instance
+* @param {Object} datalist_item - Filter item descriptor with id, value, label, change
+* @returns {HTMLElement} The assembled `<li>` element
 */
 const render_option_checkbox = function(self, datalist_item) {
 
@@ -806,8 +965,27 @@ const render_option_checkbox = function(self, datalist_item) {
 
 /**
 * RENDER_INPUTS_LIST
-* @param object self
-* @return HTMLElement inputs_list
+* Build a set of labelled text inputs — one per filter_free item — that allow
+* the user to type per-field search terms independently of the main search input.
+*
+* Iterates self.rqo_search.sqo_options.filter_free (an object keyed by
+* operator, each value an array of filter items). For each filter item the last
+* element of filter_item.path carries the component label (HTML tags are
+* stripped before display).
+*
+* Each input:
+*  - Sets filter_item.q on 'change' then fires self.autocomplete_search() and
+*    calls render_datalist().
+*  - On 'keyup' stops propagation and triggers the change handler when Enter
+*    is pressed.
+*  - Stores a back-reference (component_input.filter_item = filter_item) so
+*    the main search input's input_handler can also update the q values via
+*    self.filter_free_nodes.
+*
+* Side-effect: pushes each component_input into self.filter_free_nodes.
+*
+* @param {Object} self - The service_autocomplete instance
+* @returns {HTMLElement} The `.inputs_list` div containing all field inputs
 */
 const render_inputs_list = function(self) {
 
@@ -890,8 +1068,24 @@ const render_inputs_list = function(self) {
 
 /**
 * RENDER_OPERATOR_SELECTOR
-* @param object self
-* @return HTMLElement operator_selector
+* Build the operator/limit control panel containing:
+*
+*  - A `<select>` for the boolean search operator ($or / $and) that updates
+*    self.operator and re-fires the search on change.
+*  - A numeric `<input>` (type="number") for the result limit that updates
+*    self.limit, persists the value to localStorage under
+*    'service_autocomplete_limit', and re-fires the search on change or Enter.
+*
+* The operator select's 'click' handler stops propagation to prevent the panel
+* from collapsing when interacting with the control.
+*
+* (!) fn_change and fn_keyup are declared as named function declarations inside
+*     the function body and referenced via addEventListener — hoisting makes
+*     them available before the addEventListener calls despite the reversed
+*     declaration order in the source.
+*
+* @param {Object} self - The service_autocomplete instance
+* @returns {HTMLElement} The `.search_operators_div` container
 */
 const render_operator_selector = function(self) {
 
@@ -1018,11 +1212,41 @@ const render_operator_selector = function(self) {
 
 /**
 * RENDER_DATALIST
-* Render result data as DOM nodes and place it into self.datalist container
-* @param object self
-* @param object result
-* 	api_response result
-* @return HTMLElement datalist
+* Render API search results as `<li>` rows inside the self.datalist `<ul>`.
+*
+* Steps:
+*  1. Clears the existing datalist children.
+*  2. Returns early (empty datalist) when result is falsy, missing data, or
+*     the 'sections' entry has no entries.
+*  3. Stores result on self.datum so that ddinfo column renderers can read
+*     autocomplete data instead of fetching section_records independently.
+*  4. Strips unused properties (publication dates, etc.) from entries to build
+*     a lean `value` array of {section_tipo, section_id, paginated_key}.
+*  5. Calls get_section_records() with a unique id_variant (timestamp-based) to
+*     avoid collisions with page-level component instances.
+*  6. Stores returned instances in self.ar_instances for later cleanup.
+*  7. For each section_record creates a `<li class="autocomplete_data_li">` with:
+*       - mouseenter/mouseleave: toggle 'selected' class
+*       - click: calls selection_handler (see below)
+*       - async render() call appended via .then() so the list appears
+*         progressively without blocking the loop
+*
+* selection_handler logic:
+*  - Checks self.properties.events for a custom 'add_value' event handler.
+*    If found, calls view_default_autocomplete[add_value.perform.function]()
+*    and opens the grid-choose panel; warns to console when the function is
+*    not defined on the view object.
+*  - Default (no custom event): calls self.caller.link_record(locator), clears
+*    the datalist and search input, and hides the service.
+*
+* (!) The commented-out `data` / `context` / `ar_search_sections` blocks
+*     (lines ~1058-1078) reflect an older API data shape — retained for history.
+* (!) id_variant is regenerated on every call so instances are never cached;
+*     this is intentional per the inline comment.
+*
+* @param {Object} self   - The service_autocomplete instance
+* @param {Object} result - The api_response.result object from autocomplete_search
+* @returns {Promise<HTMLElement>} The populated (or cleared) datalist `<ul>`
 */
 const render_datalist = async function(self, result) {
 
@@ -1253,8 +1477,10 @@ const render_datalist = async function(self, result) {
 
 /**
 * SHOW
-* Remove hide class from main node
-* @return bool
+* Remove the 'hide' CSS class from self.node to make the widget visible.
+* No-op when the node is absent or does not carry the 'hide' class.
+*
+* @returns {boolean} Always true
 */
 view_default_autocomplete.show = function () {
 
@@ -1269,8 +1495,10 @@ view_default_autocomplete.show = function () {
 
 /**
 * HIDE
-* Add hide class to main node
-* @return bool
+* Add the 'hide' CSS class to self.node to make the widget invisible.
+* No-op when the node is absent or already carries the 'hide' class.
+*
+* @returns {boolean} Always true
 */
 view_default_autocomplete.hide = function () {
 
@@ -1285,13 +1513,26 @@ view_default_autocomplete.hide = function () {
 
 /**
 * GET_LAST_DDO_DATA_VALUE
-* Recursive function
-* follow the path of the columns to get the correct data to the last component in the chain, the last component has the text to show.
-* all others ddo in the middle of the chain are portals with locator value, and only will show the last component.
-* @param array current_path
-* @param array value
-* @param array data
-* @return ddo object current_element_data
+* Recursive function that follows a column path through the API data tree to
+* reach the terminal component carrying the display text.
+*
+* All intermediate ddo items in the chain are portals whose value is a locator
+* array; only the final component in the chain holds the actual text data.
+* The function peels one ddo from the tail of current_path on each recursive
+* call, using the locator returned by the preceding level to locate the next
+* data row in the flat data array.
+*
+* Base cases:
+*  - current_element_data is not found → returns false (stops recursion)
+*  - current_path_length === 1          → returns current_element_data (leaf reached)
+*
+* (!) Only value[0] (the first locator) is ever processed per call; multiple
+*     locators in value are silently ignored in the current implementation.
+*
+* @param {Array}  current_path - Remaining ddo path array (mutated via pop on each level)
+* @param {Array}  value        - Array of locator objects; only index 0 is used
+* @param {Array}  data         - Flat data array from the API response
+* @returns {Object|boolean} The matching data element at the leaf, or false if not found
 */
 const get_last_ddo_data_value = function(current_path, value, data) {
 
@@ -1326,20 +1567,44 @@ const get_last_ddo_data_value = function(current_path, value, data) {
 
 /**
 * RENDER_GRID_CHOOSE
-* Render result data as DOM grid nodes and place it into document body as
-* float draggable div preserving position across calls
-* Used by 'numisdata575'
-* @param object self
-* @param object section_record
-* 	Current section_record instance
-* @param object params
-* sample:
-* {
-* 	mode: "list"
-*	request_config_type: "secondary"
-*	view: "tag"
-* }
-* @return HTMLElement grid_choose_container
+* Render result data as DOM grid nodes inside a floating, draggable panel
+* appended to document.body. The panel position is preserved across repeated
+* calls by reusing an existing `#choose_container` element.
+*
+* Designed for use as a custom 'add_value' event handler specified in
+* self.properties.events. Currently wired by 'numisdata575'.
+*
+* Workflow:
+*  1. Resolves the selected section_record's label from section_record.datum.
+*  2. Calls get_grid_choose_data() to fetch secondary API data.
+*  3. Reuses or creates `#choose_container` (.grid_choose_container.draggable).
+*     When freshly created, positions it relative to self.datalist's bounding
+*     rect + 20px offset.
+*  4. Adds a draggable header with the selected label and a close button.
+*     Drag is implemented via mousedown/mousemove/mouseup on document; boundary
+*     clamping keeps the panel within its parent element. Listeners are stored
+*     on `grid_choose_container._drag_listeners` for cleanup on close.
+*  5. Iterates ar_locator entries; for each locator iterates rqo_search.show.columns
+*     paths; calls get_last_ddo_data_value() per column to resolve data, then
+*     get_instance() + build() + render() to produce component nodes appended
+*     to the container.
+*
+* Early exits (returns null or partial container) when:
+*  - get_grid_choose_data() returns null
+*  - rqo_search.show.columns is absent or empty
+*
+* (!) Commented-out grid_item div blocks (lines ~1538-1545) represent an older
+*     per-row wrapping approach — retained for historical reference.
+* (!) The `data_locator` lookup (line ~1523) uses `==` (loose equality) between
+*     source tipo strings — pre-existing code, do not change.
+*
+* @param {Object} self           - The service_autocomplete instance
+* @param {Object} section_record - The section_record instance the user selected
+* @param {Object} params         - Configuration for the secondary request
+* @param {string} params.mode                - Component render mode (e.g. 'list')
+* @param {string} params.request_config_type - Key to look up in self.request_config
+* @param {string} params.view                - Component view (e.g. 'tag')
+* @returns {Promise<HTMLElement|null>} The populated grid_choose_container div, or null on failure
 */
 view_default_autocomplete.render_grid_choose = async function( self, section_record, params ) {
 
@@ -1603,19 +1868,31 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 
 /**
 * GET_GRID_CHOOSE_DATA
-* Used by render_grid_choose to call API and resolve
-* the data to display into the grid viewer
-* @param object self
-* @param object section_record
-* Current section_record instance
-* @param object params
-* sample:
-* {
-* 	mode: "list"
-*	request_config_type: "secondary"
-*	view: "tag"
-* }
-* @return object grid_choose_data
+* Fetch and prepare the secondary API data required by render_grid_choose.
+*
+* Steps:
+*  1. Finds the matching request_config entry by params.request_config_type;
+*     warns and returns undefined if not found.
+*  2. Calls self.caller.build_rqo_search() to obtain a fresh rqo_search object.
+*  3. Strips filter_free and filter_by_list from sqo_options (not relevant for
+*     grid-choose queries).
+*  4. Overrides sqo to pin the query to the selected section_record via
+*     filter_by_locators and limits section_tipo to that record's type.
+*  5. Raises the default limit to 200 to allow enough grid rows.
+*  6. Sends the request via data_manager with use_worker:true.
+*  7. Returns a grid_choose_data object with rqo_search, data[], and context[].
+*
+* Returns null (not undefined) for all failure branches after the initial
+* request_config lookup, so callers can use a strict null check.
+*
+* (!) The commented-out rebuild_search_query_object call (lines ~1640-1643)
+*     was an earlier approach to rqo construction — retained for reference.
+*
+* @param {Object} self           - The service_autocomplete instance
+* @param {Object} section_record - The section_record instance selected by the user
+* @param {Object} params         - Params forwarded from render_grid_choose
+* @param {string} params.request_config_type - Key to select the right request_config entry
+* @returns {Promise<Object|null>} grid_choose_data {rqo_search, data, context}, or null on failure
 */
 const get_grid_choose_data = async function(self, section_record, params) {
 
