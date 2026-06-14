@@ -12,33 +12,62 @@
 
 /**
 * DATAFRAME
-* Single JS authority for the dataframe pairing contract.
+* Client-side authority for the dataframe pairing contract.
 * See docs/core/components/component_dataframe.md
 *
-* Pairing contract: a dataframe locator pairs with ONE data item of its main
-* component through the item's stable `id` (never the array index).
-* Match predicate: (type, from_component_tipo, main_component_tipo, id_key)
-* Legacy (pre-migration) locators carry `section_id_key`/`section_tipo_key`
-* instead of `type`/`id_key` and are dual-read until the data migration runs.
+* A dataframe pairs an auxiliary frame record (stored in a dedicated target
+* section) with exactly ONE data item of a "main" component, using the item's
+* stable server-minted `id` as the pairing key. This lets callers attach
+* per-value metadata (uncertainty, sources, ratings, labels) without coupling
+* it to array positions or target-record ids.
+*
+* Exports:
+*  - DATAFRAME_TYPE            — relation-type marker constant
+*  - get_dataframe_keys        — builds the pairing key object for a data item
+*  - is_dataframe_entry        — detects dataframe locators in a relations bag
+*  - get_dataframe             — resolves a component_dataframe instance for one item
+*  - attach_dataframe_node     — render-glue for main components with explicit keys
+*  - attach_item_dataframe     — render-glue for literal/relation main components
+*  - delete_dataframe          — unlinks (soft-deletes) a frame from a main item
+*
+* Pairing contract (match predicate applied by every reader in this file):
+*   type === DATAFRAME_TYPE && main_component_tipo && id_key === item.id
+*
+* Dual-read: pre-migration locators carry `section_id_key` / `section_tipo_key`
+* instead of `type` / `id_key` and are accepted by all readers here until the
+* 7.0.1 dataframe_v7_migration update block rewrites them to the unified shape.
 */
 
 
 
-// DATAFRAME_TYPE. Relation type term marking dataframe pairing locators
-// (PHP constant: DEDALO_RELATION_TYPE_DATAFRAME)
+// DATAFRAME_TYPE. Ontology tipo used as the `type` field on every dataframe
+// pairing locator. Must stay in sync with the PHP constant
+// DEDALO_RELATION_TYPE_DATAFRAME (core/base/dd_tipos.php). Readers test for
+// this marker first and fall back to the legacy key-shape check only when the
+// marker is absent (dual-read, see IS_DATAFRAME_ENTRY below).
 export const DATAFRAME_TYPE = 'dd490'
 
 
 
 /**
 * GET_DATAFRAME_KEYS
-* Builds the pairing keys for a main component data item.
-* The pairing key is the item's stable `id`; an item without id cannot be
-* paired (it is not persisted yet) and calling this with one is a programming
-* error: the caller must use the save-then-attach flow.
-* @param object self - main component instance
-* @param object item - data item of the main component (must carry `id`)
-* @return object keys
+* Builds the minimal pairing-key object for one data item of a main component.
+* The returned object is spread into the options for GET_DATAFRAME or
+* ATTACH_DATAFRAME_NODE so the frame locator can be matched against the
+* relations bag.
+*
+* The pairing key is the item's stable, server-minted `id` — never the array
+* index. If the item has no `id` it has not been persisted yet, and attaching
+* a frame to it would create a locator that can never be matched on reload.
+* Callers must follow the save-then-attach flow and only call this after the
+* item has been saved and received its `id` from the server.
+*
+* (!) Throws instead of returning null so that callers fail visibly rather than
+* silently creating orphaned or mismatched frame locators.
+* @param {Object} self - main component instance (must have `section_tipo` and `tipo`)
+* @param {Object} item - data item of the main component; MUST carry a non-null `id`
+* @returns {Object} Pairing-key object: { section_id_key, section_tipo_key, main_component_tipo }
+* @throws {Error} When item is falsy or has no id
 */
 export const get_dataframe_keys = function(self, item) {
 
@@ -57,10 +86,16 @@ export const get_dataframe_keys = function(self, item) {
 
 /**
 * IS_DATAFRAME_ENTRY
-* Positive detection of dataframe pairing locators, type-first with
-* legacy shape fallback (pre-migration data).
-* @param object el
-* @return bool
+* Returns true when `el` is a dataframe pairing locator as opposed to any
+* other entry in a component's relations bag (e.g. a standard portal locator).
+*
+* Detection is type-first: the `type === DATAFRAME_TYPE` marker ('dd490') is
+* the unified contract. The legacy shape fallback — presence of either
+* `id_key` / `section_id_key` alongside `main_component_tipo` — handles data
+* written before the 7.0.1 migration. Both shapes are accepted until the
+* migration runs; after it all entries carry the type marker.
+* @param {*} el - candidate value from a relations array
+* @returns {boolean} true if el is a dataframe pairing locator
 */
 export const is_dataframe_entry = function(el) {
 
@@ -80,27 +115,48 @@ export const is_dataframe_entry = function(el) {
 
 /**
 * GET_DATAFRAME
-* Builds a component_dataframe instance paired to one data item of the
-* caller (main) component, resolving its data from the caller datum.
-* @param object options
-* {
-* 	self: object - main component instance
-* 	section_id: int|string|null
-* 	section_id_key: int - pairing key: the main data item `id` (id_key accepted as alias)
-* 	section_tipo_key: string - legacy, the main component section_tipo
-* 	main_component_tipo: string
-* 	view: string|null
-* 	mode: string|null
-* 	lang: string|null
-* }
-* @return object|null component_dataframe instance
-* 	A built component_dataframe instance (status = 'built')
+* Resolves and builds a component_dataframe instance that is paired to one
+* specific data item of a main component, injecting its data and context from
+* the caller's already-loaded datum rather than issuing a separate API call.
+*
+* Build flow:
+*  1. Validate pairing keys; return null on incomplete keys (logged as error).
+*  2. Locate the component_dataframe ddo in the caller's request_config.show.ddo_map;
+*     return null if not found (the slot is not wired in the ontology).
+*  3. Clone the ddo as instance_options and assign a unique id_variant so the
+*     instance cache can hold multiple frames for the same slot (one per item).
+*  4. Call get_instance() with the cloned options — this registers the instance
+*     but does NOT yet run build().
+*  5. Find the matching frame locator in self.datum.data using the dual-read
+*     match predicate (id_key ?? section_id_key). If none exists yet, synthesise
+*     a blank locator (no frame record attached but the pairing keys are set).
+*  6. Find the context entry from self.datum.context, return null if absent.
+*  7. Resolve view/mode from options → ddo → hard-coded defaults ('default'/'edit').
+*  8. Inject datum, data, context, and caller reference onto the instance, then
+*     call build(false) to produce the rendered DOM tree without a network round-trip.
+*
+* Time-machine: when self.matrix_id is set, the match predicate additionally
+* filters by matrix_id (TM rows can hold frames from several snapshots merged).
+*
+* @param {Object} options - build options
+* @param {Object} options.self - main component instance (must have datum, context, tipo, section_tipo, section_id)
+* @param {number|string|null} options.section_id - section_id to assign to the frame instance
+* @param {number|string} options.id_key - pairing key (unified name); the stable server-minted item id
+* @param {number|string} options.section_id_key - legacy alias for id_key; accepted via nullish-coalescing (id_key ?? section_id_key)
+* @param {string} options.section_tipo_key - the main component's section_tipo (legacy key; still required for match)
+* @param {string} options.main_component_tipo - the main component's tipo
+* @param {string|null} [options.view] - render view; falls back to ddo.view then 'default'
+* @param {string|null} [options.mode] - render mode; falls back to ddo.mode then 'edit'
+* @param {string|null} [options.lang] - language override passed to the instance
+* @returns {Promise<Object|null>} A built component_dataframe instance, or null on any
+*   unrecoverable error (incomplete keys, missing ddo, missing context)
 */
 export const get_dataframe = async function(options) {
 
 	// options
 	const self					= options.self
 	const section_id			= options.section_id
+	// id_key is the unified name; section_id_key is the legacy alias — accept both
 	const section_id_key		= options.id_key ?? options.section_id_key
 	const section_tipo_key		= options.section_tipo_key
 	const main_component_tipo	= options.main_component_tipo
@@ -124,7 +180,9 @@ export const get_dataframe = async function(options) {
 
 	const request_config = self.context?.request_config || null
 
-	// original_dataframe_ddo
+	// original_dataframe_ddo. Look up the component_dataframe ddo wired into
+	// the caller's ontology request_config. If the ontology does not define a
+	// dataframe slot for this main component, there is nothing to build.
 	const original_dataframe_ddo = request_config
 		? request_config[0]?.show?.ddo_map?.find(el => el.model === 'component_dataframe')
 		: null;
@@ -133,13 +191,19 @@ export const get_dataframe = async function(options) {
 		return null
 	}
 
-	// instance_options
+	// instance_options. Clone the ddo so mutations do not corrupt the cached
+	// request_config. The id_variant must be unique per (slot, item, caller)
+	// tuple so the instance registry can hold simultaneous frames without
+	// collision. Math.random() is appended as a tiebreaker when several renders
+	// of the same item co-exist (e.g. multiple list rows open at once).
 	const instance_options = clone(original_dataframe_ddo)
 	instance_options.section_id	= section_id
 	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_tipo_key}_${section_id_key}_${main_component_tipo}_${Math.random()}`
 	instance_options.standalone	= false
 
-	// matrix_id. time machine matrix_id
+	// matrix_id. When the caller is a time-machine view, propagate matrix_id
+	// so the frame instance fetches from the same TM snapshot. Also include it
+	// in the id_variant to avoid cache collisions across snapshots.
 	if (self.matrix_id) {
 		instance_options.matrix_id = self.matrix_id
 		instance_options.id_variant = `${instance_options.id_variant}_${self.matrix_id}`
@@ -148,19 +212,25 @@ export const get_dataframe = async function(options) {
 	// add lang if is defined from options
 	instance_options.lang = lang
 
-	// component_dataframe init instance
+	// component_dataframe init instance. Registers (or retrieves) the instance
+	// from the global instance cache; build() has not run yet at this point.
 	const component_dataframe = await get_instance(instance_options)
 
-	// data. Get his data from datum
-	// it get data from datum as section_record does (see section_record get_component_data() for portals)
-	// match predicate is dual-read: id_key (unified contract) or section_id_key (legacy)
+	// data. Retrieve the frame locator from the caller datum instead of issuing
+	// a separate API request — mirrors how section_record.get_component_data()
+	// works for portals. Datum.data is the flat relations bag of the main record;
+	// we filter it to the entry whose (tipo, section_tipo, section_id, id_key,
+	// main_component_tipo, section_tipo_key) match the target frame slot and item.
+	// Dual-read helper: normalises both unified (id_key) and legacy (section_id_key)
 	const entry_key = (el) => el.id_key ?? el.section_id_key
 	const data = self.datum?.data?.find( function(el) {
 		if( el.tipo						=== component_dataframe.tipo
 			&& el.section_tipo			=== component_dataframe.section_tipo
 			&& parseInt(el.section_id)	=== parseInt(component_dataframe.section_id)
 			){
-				// time machine case
+				// time machine case. TM rows merge frames from multiple snapshots;
+				// the matrix_id filters to the right snapshot before applying the
+				// full pairing predicate.
 				if( el.matrix_id && self.matrix_id){
 					return (
 						parseInt(el.matrix_id)			=== parseInt(self.matrix_id)
@@ -181,6 +251,9 @@ export const get_dataframe = async function(options) {
 		return false
 	})
 
+	// dataframe_data. If no locator found (the item has no frame yet), synthesise
+	// a blank locator so the instance renders with a create-able frame button.
+	// Both id_key and section_id_key are set for dual-read compatibility.
 	const dataframe_data = data
 		? data
 		: {
@@ -191,7 +264,10 @@ export const get_dataframe = async function(options) {
 			main_component_tipo	: main_component_tipo
 		}
 
-	// context
+	// context. Find the context entry for this dataframe slot from the caller
+	// datum; the context carries the component's ontology properties (label,
+	// request_config, css, …). Without a context entry the frame cannot resolve
+	// its own ontology properties and build() would produce a broken output.
 	const context = self.datum?.context?.find( el =>
 		el.tipo				=== component_dataframe.tipo
 		&& el.section_tipo	=== component_dataframe.section_tipo
@@ -215,13 +291,16 @@ export const get_dataframe = async function(options) {
 			? instance_options.mode
 			: 'edit'
 
-	// inject properties before build
+	// inject properties before build. The frame instance borrows the caller's
+	// full datum so it can resolve related-component data without its own fetch;
+	// caller is stored so the frame can trigger updates on its parent (e.g. after
+	// creating a new frame record the main component re-renders the frame button).
 	component_dataframe.datum	= self.datum
 	component_dataframe.data	= dataframe_data
 	component_dataframe.context	= context
 	component_dataframe.caller	= self
 
-	// build component
+	// build component. false = do not re-fetch data from server
 	await component_dataframe.build(false)
 
 
@@ -232,20 +311,27 @@ export const get_dataframe = async function(options) {
 
 /**
 * ATTACH_DATAFRAME_NODE
-* Render glue shared by main component edit/list views: builds the paired
-* dataframe instance, registers it as caller dependency, renders it and
-* appends the node to the given container.
-* @param object options
-* {
-* 	self: object - main component instance
-* 	item: object - main data item (pairing by item.id)
-* 	container: HTMLElement - node to append the dataframe node to
-* 	view: string|null
-* 	mode: string|null
-* 	lang: string|null
-* 	class_name: string|null - optional class added to the dataframe node
-* }
-* @return Promise<object|null> component_dataframe instance
+* Render glue for main-component edit/list views that already hold the
+* explicit pairing keys (item object with a stable `id`). Builds the paired
+* frame instance via GET_DATAFRAME, registers it in self.ar_instances (so the
+* main component's destroy() cascade reaches it), renders it, and appends the
+* resulting node to the given container.
+*
+* Use this variant when the caller supplies the item directly. For literal and
+* relation main components that need the opt-in `has_dataframe` check, use
+* ATTACH_ITEM_DATAFRAME instead.
+*
+* (!) Depends on GET_DATAFRAME_KEYS which throws if item lacks `id`. Callers
+* must only call this after the item has been persisted (save-then-attach flow).
+* @param {Object} options - build options
+* @param {Object} options.self - main component instance
+* @param {Object} options.item - main data item with a stable `id`
+* @param {HTMLElement} options.container - node to append the rendered frame to
+* @param {string|null} [options.view] - render view override
+* @param {string|null} [options.mode] - render mode override
+* @param {string|null} [options.lang] - language override
+* @param {string|null} [options.class_name] - optional CSS class added to the frame node
+* @returns {Promise<Object|null>} The built component_dataframe instance, or null on failure
 */
 export const attach_dataframe_node = async function(options) {
 
@@ -283,24 +369,34 @@ export const attach_dataframe_node = async function(options) {
 
 /**
 * ATTACH_ITEM_DATAFRAME
-* Standard literal-component view glue: renders the dataframe paired with
-* one data item and appends it to the given container. No-op unless the
-* component declares properties.has_dataframe.
-* Persisted items pair by their stable `id`; new blank rows use the next
-* counter value (self.data.counter+1) as PROVISIONAL render context only
-* (ids are minted server-side on save, see the pairing contract in
-* docs/core/components/component_dataframe.md).
-* @param object options
-* {
-* 	self: object - main component instance
-* 	item: object|null - data item of the main component (null for blank rows)
-* 	container: HTMLElement - node to append the dataframe node to
-* 	view: string|null
-* 	mode: string|null
-* 	lang: string|null
-* 	class_name: string|null - optional class added to the dataframe node
-* }
-* @return Promise<object|null> component_dataframe instance
+* Standard render-glue for literal and relation main components. Checks the
+* opt-in `has_dataframe` flag, derives the pairing keys from the item (or from
+* self.data.counter for blank rows), builds the frame via GET_DATAFRAME,
+* registers it, renders it, and appends the node to the container.
+*
+* The `has_dataframe` guard (checked against both context.properties and
+* self.properties for backward compatibility) ensures components that are not
+* wired up to any dataframe slot simply return null without producing errors.
+*
+* Pairing key resolution:
+*  - Persisted items  → item.id (stable server-minted id, never array index)
+*  - New blank rows   → self.data.counter + 1 (PROVISIONAL; matches the
+*    locator that the JSON controller's build_dataframe_subdatum() creates
+*    before the item is saved; will be replaced by the real id on save)
+*
+* The `has_dataframe` CSS class is added to the container unconditionally once
+* the guard passes, so the main component's layout can reserve space for the
+* frame button regardless of whether a frame record exists yet.
+* @param {Object} options - build options
+* @param {Object} options.self - main component instance (must have context.properties or properties, section_id, section_tipo, tipo, view, data.counter)
+* @param {Object|null} options.item - data item of the main component; null/undefined for new blank rows
+* @param {HTMLElement} options.container - node to receive the dataframe button
+* @param {string|null} [options.view] - render view override; falls back to self.view
+* @param {string|null} [options.mode] - render mode override
+* @param {string|null} [options.lang] - language override
+* @param {string|null} [options.class_name] - optional CSS class added to the frame node
+* @returns {Promise<Object|null>} The built component_dataframe instance, or null if
+*   has_dataframe is not set or the frame cannot be resolved
 */
 export const attach_item_dataframe = async function(options) {
 
@@ -355,15 +451,46 @@ export const attach_item_dataframe = async function(options) {
 
 /**
 * DELETE_DATAFRAME
-* Remove section in delete_mode 'delete_dataframe'.
-* (!) Single-writer rule: the server cascade (update_data_value 'remove')
-* is the authority for dataframe cleanup when a main item is removed.
-* Use this only for explicit user 'unlink frame' actions.
-* @param object options
-* {
-*	section_id : section_id
-* }
-* @return bool delete_section_result
+* Unlinks the frame record paired to one data item of a main component by
+* calling component_dataframe.unlink_record() on the already-registered
+* frame instance. Optionally destroys the instance afterwards.
+*
+* This is the client-side entry point for the explicit "unlink frame" action
+* triggered by the user in the frame modal's delete button. It is NOT the
+* path used when a main item is deleted: that cascade runs server-side via
+* trait.dataframe_common::remove_dataframe_data_by_id() (the single-writer
+* rule). Do not call this from cascade handlers.
+*
+* (!) Soft-unlink only: the target frame record is NOT hard-deleted. It is
+* preserved for the time machine to render previous states. Orphaned target
+* records are reclaimed by the dataframe GC maintenance task, or by the
+* 'delete_target' policy if configured on the slot node.
+*
+* Steps:
+*  1. Validate pairing keys (section_id_key, main_component_tipo); return false
+*     on failure (logged as error).
+*  2. Find the component_dataframe ddo in self.request_config_object.show.ddo_map;
+*     return false if absent.
+*  3. Find the matching live instance in the global instance registry using the
+*     full pairing predicate (dual-read: id_key ?? section_id_key).
+*  4. Call instance.unlink_record() to remove the locator from the relation bag.
+*  5. If delete_instace===true, call instance.destroy() to remove it from the
+*     registry and DOM.
+*
+* (!) Note: `delete_instace` has a typo in the options key (missing 'n'). This
+* is intentional preservation of the existing API; do NOT rename it.
+* @param {Object} options - delete options
+* @param {Object} options.self - main component instance (must have request_config_object)
+* @param {number|string} options.section_id - section_id of the frame record
+* @param {string} options.section_tipo - section_tipo of the frame record
+* @param {number|string} options.id_key - pairing key (unified name); the stable server-minted item id
+* @param {number|string} options.section_id_key - legacy alias for id_key; accepted via nullish-coalescing (id_key ?? section_id_key)
+* @param {string} options.section_tipo_key - main component's section_tipo (match predicate)
+* @param {string} options.main_component_tipo - main component's tipo
+* @param {*} [options.paginated_key=false] - passed to unlink_record (pagination context)
+* @param {*} [options.row_key=false] - passed to unlink_record as both paginated_key and row_key
+* @param {boolean} [options.delete_instace=false] - if true, destroy the frame instance after unlink
+* @returns {Promise<boolean>} true on success, false on any pre-condition failure
 */
 export const delete_dataframe = async function(options) {
 
@@ -391,15 +518,20 @@ export const delete_dataframe = async function(options) {
 		return false
 	}
 
-	// ddo_dataframe.
-	// check if the show has any ddo that call to any dataframe section.
+	// ddo_dataframe. Confirm the caller's ontology config actually wires a
+	// component_dataframe slot; without it there is no registered instance to
+	// unlink from, and the operation cannot proceed.
 		const ddo_dataframe = self.request_config_object?.show?.ddo_map?.find(el => el.model==='component_dataframe')
 
 		if(!ddo_dataframe){
 			return false
 		}
 
+		// entry_key. Dual-read normaliser: id_key (unified) or section_id_key (legacy)
 		const entry_key = (el) => el.id_key ?? el.section_id_key
+		// Look up the live frame instance by full pairing predicate so we operate
+		// on the exact instance that was registered during the current render,
+		// not a stale one from a previous render cycle.
 		const all_instances = get_all_instances()
 		const component_dataframe = all_instances.find(el =>
 			el.model							=== 'component_dataframe'
