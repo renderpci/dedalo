@@ -4,6 +4,62 @@
 
 
 
+/**
+ * RENDER_SEARCH
+ *
+ * Rendering layer for the Dédalo search interface. This module provides all
+ * DOM-construction functions consumed by `search` (core/search/js/search.js),
+ * which mixes them onto its prototype. The module itself exports the constructor
+ * stub `render_search`, plus the standalone helpers `render_filter`,
+ * `toggle_search_panel`, `toggle_fields`, `toggle_presets`, and `toggle_type`.
+ *
+ * Architecture overview
+ * ---------------------
+ * The search interface is split into three visual panels:
+ *
+ *  Left panel  — "Fields" (.search_container_selector)
+ *    A flat list of every component the user can drag into a filter group.
+ *    For thesaurus/ontology callers the list changes when the user picks
+ *    a typology or a subset of sections from the section-selector overlay.
+ *
+ *  Centre panel — "Filter canvas" (.search_container_selection)
+ *    Zero or more nested `$and`/`$or` groups, each containing zero or more
+ *    `search_component` rows. This is the editable query being built. The
+ *    structure is kept authoritative in the in-memory model (`self.filter_model`)
+ *    maintained by `search.js`; the DOM is a rendering of that model.
+ *
+ *  Right panel — "Presets" (.search_container_selection_presets)
+ *    A lazily-loaded list of saved user-search-presets stored as Dédalo
+ *    section records (section_tipo dd623). Presets can be loaded, edited,
+ *    saved, and deleted.
+ *
+ * Panel open/close state is persisted in the local IndexedDB via
+ * `data_manager.set_local_db_data` / `delete_local_db_data`, so that the
+ * last-used layout survives a page reload.
+ *
+ * Model ↔ DOM contract
+ * --------------------
+ * Every `.search_group` DOM node carries a `.__node` reference to its
+ * canonical group node ({node_type:'group', operator, children, …}). Every
+ * `.search_component` DOM node carries a `.__node` reference to its canonical
+ * component node ({node_type:'component', path, section_id, instance, …}).
+ * Mutations (add/remove/reorder) must be applied to the model via the helpers
+ * defined in search.js (`create_group_model_node`, `remove_model_node`,
+ * `move_model_node`) AND reflected in the DOM, never in the DOM alone.
+ * Serialisation (`serialize_filter_model`) reads the model tree exclusively.
+ *
+ * Caller context
+ * --------------
+ * `self` throughout this module is a `search` instance (see search.js).
+ * `self.caller` is the section or area instance that owns this search widget.
+ * `self.caller.model` discriminates between regular sections (`'section'`),
+ * `'area_thesaurus'`, and `'area_ontology'`, which affects which panels and
+ * options are displayed.
+ *
+ * @module render_search
+ */
+
+
 // imports
 	import {render_components_list} from '../../common/js/render_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -26,9 +82,12 @@
 
 /**
 * RENDER_SEARCH
-* Handles the rendering logic for the search interface.
+* Constructor stub for the render layer. All public methods are assigned to
+* `render_search.prototype` and then mixed onto `search.prototype` in search.js.
+* The constructor itself performs no work; it exists solely as the namespace
+* carrier for prototype-based method organisation.
 * @constructor
-* @return bool
+* @returns {boolean} Always true (Dédalo constructor convention)
 */
 export const render_search = function() {
 
@@ -39,9 +98,28 @@ export const render_search = function() {
 
 /**
 * LIST
-* Renders the search interface in list mode.
-* Includes fields list, filter canvas, and buttons.
-* @return promise HTMLElement - The search wrapper element
+* Entry-point render method for the search interface — wired as both
+* `search.prototype.list` and `search.prototype.edit` from search.js.
+*
+* Build order (all three blocks run concurrently where possible):
+*  1. `render_base()` — builds the empty DOM skeleton and stores node
+*     pointers on `self`.
+*  2. `get_section_elements()` → `render_components_list()` — populates the
+*     left "Fields" panel with the draggable component list.
+*  3. `render_filter()` — populates the centre canvas with the groups and
+*     components from the current `self.json_filter` preset (loaded during
+*     `search.build()`).
+*  4. `render_search_buttons()` — appends max/reset/apply controls.
+*  5. `get_panels_status()` — reads the persisted open/close state for each
+*     panel and fires the appropriate toggle helpers so the UI reflects the
+*     last-used layout.
+*
+* `use_real_sections` controls whether the fields panel shows generic model
+* sections (false, for regular sections like 'es1') or the actual loaded
+* thesaurus/ontology sections (true, for `area_thesaurus`/`area_ontology`
+* callers that expose `get_sections_selector_data`).
+*
+* @returns {Promise<HTMLElement>} The wrapper div inserted into the page
 */
 render_search.prototype.list = async function() {
 
@@ -114,8 +192,33 @@ render_search.prototype.list = async function() {
 
 /**
 * RENDER_BASE
-* Renders the basic DOM structure for the search interface.
-* @return HTMLElement - The search wrapper element
+* Constructs the complete DOM skeleton for the search interface and stores
+* node pointers on `self`. Returns a single top-level `wrapper` div that the
+* caller inserts into the page.
+*
+* DOM structure produced (class names shown):
+*
+*   .wrapper_search.full_width.<mode>
+*     [thesaurus_options_node]            — only for area_thesaurus / area_ontology
+*     .toggle_container_selector          — "Fields" accordion button
+*     .search_container_selector          — left fields list (initially hidden)
+*     .search_container_selection         — centre filter canvas (sticky)
+*       .search_group_container           — root of all $and/$or groups
+*     .search_container_selection_presets — right presets panel (initially hidden)
+*       .component_presets_label
+*         #button_new_preset              — "+" add preset button
+*       .button_save_preset               — "Save changes" (hidden until a preset is loaded)
+*     .toggle_container_selection_presets — "Preset" accordion button
+*
+* Notable side effects:
+* - `self.search_global_container`, `.search_container_selector`,
+*   `.search_group_container`, `.search_container_selection_presets`,
+*   `.wrapper_sections_selector` (thesaurus only), `.button_save_preset`,
+*   and `.wrapper` are all set here for use by later render methods.
+* - The sticky `top` of `.search_container_selection` is computed once the
+*   node enters the viewport, dynamically reading the menu bar height.
+*
+* @returns {HTMLElement} The outer `.wrapper_search` div
 */
 render_search.prototype.render_base = function() {
 
@@ -320,13 +423,33 @@ render_search.prototype.render_base = function() {
 
 /**
 * RENDER_FILTER
-* Renders the current filter group (components selected, max records, etc.).
-* @param object options
-* @param object options.self - The search instance
-* @param object options.editing_preset - The filter preset to render
-* @param bool options.clean_q - (Optional) Whether to clear input values
-* @param bool options.allow_duplicates - (Optional) Whether to allow duplicate fields
-* @return HTMLElement - The search group container
+* Reconstructs the entire filter canvas (`.search_group_container`) from a
+* JSON filter preset, replacing whatever was there before.
+*
+* Steps performed:
+*  1. Clears all children of `self.search_group_container`.
+*  2. Resets `self.ar_resolved_elements` (tracks which section_ids have already
+*     been rendered to avoid duplicate component loading).
+*  3. Resets `self.filter_model` to null — it will be rebuilt as a side effect
+*     of `build_dom_group` → `render_search_group` → `create_group_model_node`
+*     walking the preset structure.
+*  4. Calls `self.build_dom_group()` (search.js) which recursively creates
+*     `$and`/`$or` group nodes and loads each field component asynchronously.
+*
+* `editing_preset` must be the full preset object (with a `.value` property
+* holding `{"$and": [...]}` or similar). The plain `{"$and": []}` sentinel used
+* as the default in `search.init()` is safe to pass here.
+*
+* This function is exported because `render_user_preset_list` and external
+* callers (e.g., `toggle_presets` preset load) need to re-render the canvas
+* after loading a new preset without going through `list()` again.
+*
+* @param {Object} options
+* @param {Object} options.self - The search instance
+* @param {Object} options.editing_preset - Preset object; `.value` is the actual filter JSON
+* @param {boolean} [options.clean_q=false] - If true, component input values are cleared after render
+* @param {boolean} [options.allow_duplicates=false] - If true, the same field can appear more than once
+* @returns {HTMLElement} The `.search_group_container` node (now repopulated)
 */
 export const render_filter = function(options) {
 
@@ -365,8 +488,30 @@ export const render_filter = function(options) {
 
 /**
 * RENDER_SEARCH_BUTTONS
-* Renders the search action buttons (max, reload, show all, apply).
-* @return HTMLElement - The search buttons container
+* Builds and appends the action-button row at the bottom of the filter canvas
+* (`.search_group_container`). This row contains:
+*
+*  - Max input (.max_input): numeric field controlling `self.limit` (row count
+*    returned by search). On 'input' it updates `self.limit` and calls
+*    `update_local_db_pagination()`; on 'change' it triggers `exec_search()`.
+*
+*  - Recursive-children checkbox (.children_recursive): only created when the
+*    section has a `component_relation_children` and the section_map declares
+*    a 'thesaurus' scope. Stored as `self.search_children_recursive_node`.
+*
+*  - Reset button (.button.reload): calls `self.reset()` on mousedown, which
+*    clears the current filter and re-renders.
+*
+*  - Submit button (#button_submit): on mousedown it blurs the active element
+*    (to flush in-progress value edits), then schedules `exec_search()` via
+*    `dd_request_idle_callback` so the browser can update the UI first. After
+*    search completes, if the caller has results the filter panel is toggled
+*    closed so the results are visible.
+*
+* (!) `mousedown` rather than `click` is used for submit and reset to avoid
+* losing focus events that set component dato before the search fires.
+*
+* @returns {HTMLElement} The `.search_buttons_container` div
 */
 render_search.prototype.render_search_buttons = function(){
 
@@ -500,12 +645,36 @@ render_search.prototype.render_search_buttons = function(){
 
 /**
 * RENDER_SEARCH_GROUP
-* Renders a search group container ($and / $or) with operator selections.
-* @param HTMLElement parent_div - The parent element to append to
-* @param object options
-* @param string options.operator - The group operator ($and, $or)
-* @param bool options.is_root - Whether it's the root group
-* @return HTMLElement - The search group element
+* Creates a single `$and`/`$or` group container div (.search_group) and
+* appends it to `parent_div`. This is called recursively by `build_dom_group`
+* (search.js) when the preset contains nested groups.
+*
+* What this function builds inside the group:
+*  - A responsive-layout observer via `when_in_viewport` that adds
+*    `.column_2` / `.column_1` CSS classes based on actual rendered width.
+*  - A canonical group model node (`create_group_model_node`) linked to
+*    `parent_div.__node` (the parent group's model node). The root group sets
+*    `self.filter_model`; sub-groups are attached to their parent's children.
+*    The DOM node gets `.__node` set so close/operator-click handlers can
+*    reach the model directly without re-traversing the tree.
+*  - All drag-and-drop events (delegated to search_drag.js handlers).
+*  - An operator toggle element showing "AND [n]" / "OR [n]". Clicking it
+*    calls `toggle_operator_value()` to flip the display and also writes the
+*    new operator back to `search_group.__node.operator`.
+*  - A close button (non-root groups only) that calls `remove_model_node` then
+*    removes the DOM node.
+*  - A "+" button to add a nested sub-group by recursively calling this method.
+*
+* (!) The `data_set.id` counter value is derived from the total number of
+* `.search_group` elements already in `self.search_group_container` at the
+* time this function runs. It is display-only and is NOT stable across
+* re-renders — do not use it as a persistent identifier.
+*
+* @param {HTMLElement} parent_div - Element to append the new group to
+* @param {Object} [options={}]
+* @param {string} [options.operator='$and'] - Initial logical operator for this group
+* @param {boolean} [options.is_root=false] - True for the top-level group; omits the close button
+* @returns {HTMLElement} The new `.search_group` div
 */
 render_search.prototype.render_search_group = function(parent_div, options={}) {
 
@@ -629,15 +798,50 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 
 /**
 * BUILD_SEARCH_COMPONENT
-* Creates a component instance and renders it within a search group.
-* @param object options
-* @param HTMLElement options.parent_div - Parent element
-* @param string options.path_plain - JSON string of the field path
-* @param mixed options.entries - Current field values
-* @param string options.q_operator - Query operator
-* @param string options.q_lang - Query language
-* @param string options.section_id - Row ID
-* @return promise bool
+* Asynchronously instantiates a search-mode component and inserts it into
+* `parent_div` as a `.search_component` wrapper. This is the innermost
+* building block called by `build_dom_group` (search.js) for each field entry
+* in a preset group.
+*
+* Execution steps:
+*  1. Creates the `.search_component` wrapper div and sets `data-path` and
+*     `data-section_id` attributes.
+*  2. Creates a canonical component model node synchronously via
+*     `create_component_model_node` and sets `wrapper.__node`. The model node
+*     is created before the async component load so that insertion order in
+*     `parent_div.__node.children` matches DOM insertion order, even when
+*     multiple async calls run concurrently.
+*  3. Calls `get_component_instance()` with the last path element's identifiers
+*     (`section_tipo`, `component_tipo`, `model`, `ar_target_section_tipo`)
+*     and the injected `entries`, `q_operator`, `q_lang`.
+*  4. Calls `component_instance.render()` and appends the result. Falls back to
+*     an `.invalid_component.error` div if the instance could not be created.
+*  5. Binds `component_model_node.instance` now that the instance is ready.
+*  6. Adds a close button that calls `remove_model_node`, removes the DOM node,
+*     splices the instance from `self.ar_instances`, calls `instance.destroy()`,
+*     and refreshes up/down reorder buttons on remaining siblings.
+*  7. Adds up/down reorder buttons. Each button calls `move_model_node` to keep
+*     the canonical model in sync with the DOM order and then refreshes
+*     `.disabled` state via `update_reorder_buttons`.
+*  8. The inner `update_reorder_buttons` helper disables the up button on the
+*     first component and the down button on the last component in the group.
+*  9. If the `path` has more than one element (the component is reached through
+*     a portal or cross-section path), the source section name is prepended to
+*     any `.label_add` span already present in `parent_div`.
+*
+* `path_plain` is the JSON-serialised array of path-step objects. Each element
+* has `{section_tipo, component_tipo, model, name, …}`. The last element
+* identifies the actual component; earlier elements describe the traversal
+* through relations/portals.
+*
+* @param {Object} options
+* @param {HTMLElement} options.parent_div - The `.search_group` or nested group element
+* @param {string} options.path_plain - JSON string of the field path array
+* @param {*} options.entries - Existing filter values to pre-populate the component
+* @param {string} options.q_operator - Query operator (e.g. 'like', '=', 'in')
+* @param {string} options.q_lang - ISO language code scoping the query
+* @param {string} options.section_id - Row ID context (0 for search mode)
+* @returns {Promise<boolean>} Resolves to true when the component is fully rendered
 */
 render_search.prototype.build_search_component = async function(options) {
 
@@ -826,11 +1030,39 @@ render_search.prototype.build_search_component = async function(options) {
 
 /**
 * RENDER_USER_PRESET_LIST
-* Builds the DOM list of saved search presets.
-* @param array ar_elements - List of preset records
-* @param int permissions - User permission level
-* @param string target_section_tipo - Target section type
-* @return promise array - Array of LI nodes
+* Converts a flat array of preset record objects into an array of `<li>` nodes
+* ready to be appended to the presets panel `<ul>`. Each node provides:
+*
+*  - An icon-load button (.icon_bs.component_presets_button_load): loads the
+*    preset by calling `load_search_preset`, re-renders the filter canvas via
+*    `render_filter`, re-renders the buttons, and sets `self.user_preset_section_id`.
+*
+*  - A label span (.css_span_dato) showing `element.name`. For users with
+*    permissions >= 2 this span is also clickable and opens the preset editor
+*    modal (`edit_user_search_preset` + `render_preset_modal`). The on_close
+*    callback forces a full reload of the presets panel.
+*
+*  - An icon-delete button (.icon_bs.component_presets_button_delete): only
+*    rendered for users with permissions >= 2. Prompts via `confirm()` before
+*    calling `delete_user_search_preset`, then removes the `<li>` from the DOM
+*    and clears `self.user_preset_section_id` if the deleted preset was active.
+*
+*  - An empty `.div_edit` placeholder used for CSS-based edit-state indicators.
+*
+* The "default" preset selection logic uses `current_cookie_track`, which is
+* currently hardcoded to `false` (the prior cookie/IndexedDB mechanism is
+* commented out as WORK IN PROGRESS). When `current_cookie_track` is false, the
+* preset marked `element.default===true` is selected; otherwise the stored
+* `section_id` match determines the selected item.
+*
+* (!) `confirm()` is used directly for delete confirmation. This is a blocking
+* native dialog — production code should replace it with a non-blocking modal.
+*
+* @param {Array} ar_elements - Preset record objects from the API
+*   Each element: {section_id, name, json_preset, save_arguments, default}
+* @param {number} permissions - User permission level (0 = read-only, 2 = edit/delete)
+* @param {string} target_section_tipo - The section tipo being searched (used for cookie tracking)
+* @returns {Promise<Array|false>} Array of `<li>` HTMLElements, or false if ar_elements is empty
 */
 render_search.prototype.render_user_preset_list = async function(ar_elements, permissions, target_section_tipo) {
 
@@ -1019,9 +1251,34 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 
 /**
 * RENDER_SECTIONS_SELECTOR
-* Renders the section selector (Thesaurus/Ontology typology selection).
-* @param object self - The search instance
-* @return DocumentFragment
+* Builds the Thesaurus/Ontology section-selector overlay — a `<select>` of
+* typologies (e.g. "Thematic", "Toponymy") plus a checkbox list of the
+* individual loaded sections (e.g. countries) belonging to the selected
+* typology. The overlay is only rendered when `self.sections_selector_data`
+* is non-null (i.e. the caller is an `area_thesaurus` or `area_ontology`).
+*
+* The returned `DocumentFragment` is prepended to `search_global_container`
+* by `render_base()` before any other children.
+*
+* Interaction flow:
+*  1. The `<select>` (typology_selector) value change calls
+*     `build_sections_check_boxes` to repopulate the checkbox list and fires
+*     the `update_sections_list_<id>` event channel so drag-and-drop handlers
+*     can refresh the field list.
+*  2. The selected typology id is stored in `localStorage` under the key
+*     `selected_typology_<caller_model>` so the choice survives page reload.
+*  3. On first render, `build_sections_check_boxes` is called immediately
+*     with `typology_selector.value` (which will be the localStorage-restored
+*     value if present, or the first `<option>` otherwise).
+*
+* `self.sections_selector_data` shape:
+*  {
+*    typologies: [{section_id, label, order}, …],
+*    value: [{typology_section_id, target_section_tipo, target_section_name, …}, …]
+*  }
+*
+* @param {Object} self - The search instance
+* @returns {DocumentFragment|false} Fragment containing the overlay, or false if no data
 */
 const render_sections_selector = (self) => {
 
@@ -1114,13 +1371,39 @@ const render_sections_selector = (self) => {
 
 /**
 * BUILD_SECTIONS_CHECK_BOXES
-* Renders the checkbox list of available sections for a typology.
-* For example, for type 2 (Toponymy) the list display your loaded countries.
-* This list is interactive and updates the 'Fields' list on every change to
-* preserve the list coherence
-* @param object self - The search instance
-* @param int|string typology_id - Selected typology ID
-* @param HTMLElement parent - The UL element to append to
+* Populates the `<ul>` with one `<li>` checkbox per section belonging to the
+* given `typology_id`. A "Select all" checkbox is appended when there are two
+* or more sections.
+*
+* Checkbox state is persisted in `localStorage` under the key
+* `'selected_search_sections'` as a JSON object keyed by `typology_id`:
+*
+*   { "1": ["numisdata665"], "2": ["es1", "fr1"] }
+*
+* When no stored value exists for the current typology, all checkboxes are
+* checked by default.
+*
+* Side effects on `self`:
+*  - `self.target_section_tipo` is reset to an empty array and then rebuilt
+*    from the checked items. This array is the live filter of which sections
+*    appear in the left "Fields" panel and are included in the SQO.
+*  - An `update_sections_list_<id>` event subscription is pushed to
+*    `self.events_tokens` on every call. Each call to this function therefore
+*    adds a new subscription; the subscriptions are all cleaned up when the
+*    search instance is destroyed via `self.destroy()`.
+*
+* The internal `update_sections_list` async closure:
+*  - Adds the `.loading` class to `self.search_container_selector`.
+*  - Rebuilds `self.target_section_tipo` from checked boxes.
+*  - Calls `self.get_section_elements()` + `render_components_list()` to
+*    refresh the left fields list.
+*  - Persists the new selection to `localStorage`.
+*  - Removes the `.loading` class.
+*
+* @param {Object} self - The search instance
+* @param {string|number} typology_id - The section_id of the selected typology
+* @param {HTMLElement} parent - The `<ul>` element to populate (cleared first)
+* @returns {boolean} Always true
 */
 const build_sections_check_boxes = (self, typology_id, parent) => {
 
@@ -1295,9 +1578,24 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_SEARCH_PANEL
-	* Shows or hides the main search panel and persists the state.
-	* @param object self - The search instance
-	* @return promise void
+	* Shows or hides the main `.search_global_container` (the entire search UI).
+	* Persists the open/close state in the local IndexedDB via `data_manager`:
+	* open → `set_local_db_data({id, value:true}, 'status')`;
+	* close → `delete_local_db_data(id, 'status')`.
+	*
+	* The `status_id` key encodes both the caller's `tipo` and `mode` so that
+	* the state is scoped to the specific search widget instance rather than
+	* being shared globally.
+	*
+	* Exported so that the submit button inside `render_search_buttons` can
+	* close the panel after a successful search, and so that callers outside
+	* this module (e.g. `list()` panel-state restoration) can open it.
+	*
+	* (!) Guards against a missing `search_global_container` with a console.error
+	* and early return so the function is safe to call before full render.
+	*
+	* @param {Object} self - The search instance
+	* @returns {Promise<void>}
 	*/
 	export const toggle_search_panel = async (self) => {
 
@@ -1339,9 +1637,17 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_FIELDS
-	* Shows or hides the fields list panel.
-	* @param object self - The search instance
-	* @return bool
+	* Shows or hides the left "Fields" panel (`.search_container_selector`).
+	* Persists the open/close state via `self.track_show_panel({name:'fields_panel', action})`.
+	*
+	* Default state is hidden (`display_none`). The function toggles based on the
+	* current CSS class, so calling it twice returns the panel to its original state.
+	*
+	* Exported so that `list()` can restore the panel to its last-used state
+	* after the initial render.
+	*
+	* @param {Object} self - The search instance
+	* @returns {boolean} Always true
 	*/
 	export const toggle_fields = (self) => {
 
@@ -1380,9 +1686,26 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_PRESETS
-	* Shows or hides the search presets panel and loads presets if needed.
-	* @param object self - The search instance
-	* @return promise bool
+	* Shows or hides the right "Presets" panel
+	* (`.search_container_selection_presets`). On first open, lazily loads and
+	* renders the user's saved presets via `load_user_search_presets` and
+	* `user_presets_section.render()`.
+	*
+	* The panel is considered unloaded when `self.user_presets_section` is null
+	* (either initial state or after an edit that set it to null to force reload).
+	* While loading, a temporary "Loading.." span is shown inside the panel.
+	*
+	* State persistence: delegates to `self.track_show_panel` with the key
+	* `'presets_panel'`.
+	*
+	* (!) Guards against a missing or non-HTMLElement container with
+	* `console.error` and early return.
+	*
+	* Exported so that `list()` can restore the panel state and so that
+	* preset-edit `on_close` callbacks can force a reload.
+	*
+	* @param {Object} self - The search instance
+	* @returns {Promise<boolean>} Resolves to true once toggled (and loaded if opening)
 	*/
 	export const toggle_presets = async (self) => {
 
@@ -1432,9 +1755,21 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_OPERATOR_VALUE
-	* Toggles between AND/OR operators in a search group.
-	* @param HTMLElement element - The operator DOM element
-	* @return bool
+	* Flips the logical operator of a search group operator element between
+	* `$and` and `$or`, updating both its `data-value` attribute, its visible
+	* label (via `localize_operator`), and its CSS classes (`.and` / `.or`).
+	*
+	* The group counter number displayed after the operator label (e.g. "AND [1]")
+	* is extracted from the element's current `innerHTML` by splitting on space and
+	* taking the second token. This relies on the exact format produced by
+	* `render_search_group`: `localize_operator(op) + " [" + counter + "]"`.
+	*
+	* This is a pure DOM mutation helper. The caller in `render_search_group` is
+	* responsible for syncing the canonical model node's `operator` property after
+	* this function returns.
+	*
+	* @param {HTMLElement} element - The `.operator.search_group_operator` div
+	* @returns {boolean} Always true
 	*/
 	const toggle_operator_value = (element) => {
 
@@ -1470,9 +1805,21 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 	/**
 	* TOGGLE_TYPE
-	* Shows or hides the typology/type selector panel (Thesaurus/Ontology).
-	* @param object self - The search instance
-	* @return bool
+	* Shows or hides the typology/type selector panel
+	* (`.wrapper_sections_selector`) which is the area_thesaurus / area_ontology
+	* overlay for picking which sections to search.
+	*
+	* Returns false immediately and makes no DOM changes when
+	* `self.wrapper_sections_selector` is null (i.e. the caller is not a
+	* thesaurus/ontology area, so the panel was never created).
+	*
+	* Default state is hidden (`display_none`). State is persisted via
+	* `self.track_show_panel({name:'type_panel', action})`.
+	*
+	* Exported so that `list()` can restore the panel state on page load.
+	*
+	* @param {Object} self - The search instance
+	* @returns {boolean} true if the panel was toggled, false if it does not exist
 	*/
 	export const toggle_type = (self) => {
 
@@ -1516,9 +1863,19 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 /**
 * LOCALIZE_OPERATOR
-* Returns the localized version of a search operator ($and, $or).
-* @param string operator - The operator string
-* @return string localized - The localized text
+* Returns the i18n label for a MongoDB-style logical operator string.
+* Strips the leading `$` character and looks up the remainder in `get_label`
+* (the global label map injected by the Dédalo page globals).
+*
+* Examples:
+*   localize_operator('$and')  → get_label.and  (e.g. "AND" or "Y")
+*   localize_operator('$or')   → get_label.or   (e.g. "OR"  or "O")
+*
+* Falls back to an empty string if `get_label[name]` is undefined, which
+* prevents raw operator strings (e.g. "$and") from appearing in the UI.
+*
+* @param {string} operator - A query operator prefixed with '$' (e.g. '$and', '$or')
+* @returns {string} The localised operator label, or '' if unknown
 */
 const localize_operator = (operator) => {
 

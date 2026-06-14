@@ -4,6 +4,56 @@
 
 
 
+/**
+* MODULE search
+* Core search controller for the Dédalo v7 search UI.
+*
+* This module exports the `search` constructor function that manages the
+* in-browser search interface.  Each section or area that supports filtered
+* navigation instantiates one `search` object.  The instance owns:
+*
+*  - A canonical in-memory filter model (`filter_model`) — a tree of group and
+*    component nodes that is the single source of truth for the current filter
+*    structure.  The DOM is a rendering of this model; structural mutations
+*    always go through the model helpers (`create_group_model_node`,
+*    `create_component_model_node`, `remove_model_node`, `move_model_node`),
+*    not the DOM.
+*
+*  - The serialization path: `serialize_filter_model` walks the model tree to
+*    produce the json_filter `{$and:[…]}` / `{$or:[…]}` object; this is then
+*    wrapped by `parse_dom_to_json_filter` into a full `json_query_obj` and
+*    passed to `update_caller` which writes back to the caller's `rqo.sqo` and
+*    triggers navigation.
+*
+*  - Persistence of the filter as a "temp preset" (section dd655) in the server
+*    database, so a user's in-progress filter survives page refreshes.
+*    `build()` restores that preset on load; `update_state('changed')` saves it
+*    after every edit.
+*
+*  - User-defined named presets (section dd623) managed by `search_user_presets.js`.
+*
+* Rendering is delegated to `render_search.js` (prototype assignments below).
+* Drag-and-drop reordering is handled by `search_drag.js`.
+*
+* The `filter_model` contract:
+*  - Group node:     { node_type:'group',     id, operator:'$and'|'$or', children:[], parent, dom }
+*  - Component node: { node_type:'component', id, path, section_id, instance, parent, dom }
+*  - The root node is `self.filter_model` (a group node; parent===null).
+*  - `model_node_counter` is incremented monotonically to produce stable node ids.
+*
+* Callers:
+*  - `section` instances — standard record-list area.
+*  - `area_thesaurus` / `area_ontology` instances — thesaurus / ontology browsers.
+*
+* The `sqo` (Search Query Object) written to `caller.rqo.sqo` feeds the server
+* PHP `search` class (core/search/class.search.php) which translates it into a
+* parameterized JSONB SQL query.
+*
+* Main exports:
+*  - `search` (constructor)
+*  - `is_filter_empty` (re-exported from search_utils.js for consumer convenience)
+*/
+
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {is_empty} from '../../component_common/js/component_common.js'
@@ -32,6 +82,15 @@
 
 /**
 * SEARCH
+* Constructor for the search controller.
+*
+* Instances are created by `get_instance` (core/common/js/instances.js) before
+* `init()` is called.  The constructor is intentionally minimal — it only seeds
+* `id_variant` and `model` so that the instance-registration machinery can
+* distinguish search objects from component or section objects.
+*
+* `this.id` is set by `get_instance` immediately after construction and MUST
+* NOT be overwritten in `init()` (see comment inside init).
 */
 export const search = function() {
 
@@ -75,8 +134,25 @@ export const search = function() {
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Initialises a search instance after it is created by `get_instance`.
+*
+* Sets up all runtime state — event subscriptions, DOM-pointer slots, the
+* `filter_model` root, the component-exclusion list, and persistence keys.
+*
+* The `change_search_element` subscription drives the live-save loop:
+* every time a bound component changes its value in the search UI the handler
+* (1) re-serialises the filter model, (2) debounces a temp-preset save, and
+* (3) adds/removes the highlight class on the component wrapper.
+*
+* Side effects:
+*  - Pushes one event token into `self.events_tokens` (cleaned up by `destroy`).
+*  - Sets `self.is_init = true` to guard against duplicate init calls.
+*
+* @param {Object} options
+* @param {Object} options.caller - The section or area instance that owns this search.
+* @param {string} options.mode   - Render mode, e.g. 'list' or 'edit'.
+* @param {string} [options.lang] - Data language; falls back to `page_globals.dedalo_data_lang`.
+* @returns {Promise<boolean>} Always resolves to `true`.
 */
 search.prototype.init = async function(options) {
 
@@ -86,6 +162,8 @@ search.prototype.init = async function(options) {
 		if (typeof this.is_init!=='undefined') {
 			console.error('Duplicated init for element:', this);
 			if(SHOW_DEBUG===true) {
+				// (!) alert() here is intentional debug-only signaling; production code has
+				// SHOW_DEBUG===false, so this branch is never reached in normal operation.
 				alert('Duplicated init element');
 			}
 			return false
@@ -110,7 +188,12 @@ search.prototype.init = async function(options) {
 		self.components_list		= {}
 		self.source					= self.caller.rqo.source
 		self.sqo					= self.caller.rqo.sqo
+		// target_section_tipo: the section actually being searched, which may differ from
+		// the caller's own section_tipo (e.g. area_thesaurus searches a thesaurus section,
+		// not the area itself).
 		self.target_section_tipo	= self.sqo.section_tipo // can be different to section_tipo like area_thesaurus
+		// limit: records per page; prefers the SQO value, then mode-specific defaults,
+		// then the persisted local-DB value restored in build().
 		self.limit					= self.sqo.limit ?? (self.caller.mode==='edit' ? 1 : 10)
 		self.search_layout_state	= null
 		self.search_panel_is_open	= false
@@ -225,7 +308,22 @@ search.prototype.init = async function(options) {
 /**
 * BUILD
 * Load from API the user editing_preset (current state) and user_presets (stored states)
-* @return bool
+*
+* Runs two parallel async operations before the search UI is rendered:
+*
+*  1. Fetch the "temp preset" (section dd655) for the current user and
+*     section_tipo.  If found, the stored `json_filter` is restored into
+*     `self.json_filter` so the filter panel re-opens with the user's last
+*     in-progress filter.
+*
+*  2. Fetch the persisted pagination limit from the local IndexedDB store.
+*     If found, `self.limit` is overridden so the last-used page size is kept.
+*
+* Both are wrapped in `Promise.allSettled` so a failure in one does not
+* prevent the other from completing.  Errors are stored in `self.error` and
+* logged, but do not prevent the UI from loading with defaults.
+*
+* @returns {Promise<boolean>} Resolves to `true` when both requests settle.
 */
 search.prototype.build = async function() {
 
@@ -300,7 +398,12 @@ search.prototype.build = async function() {
 * This function persists the current pagination settings so they can be restored
 * when the search is rebuilt or the page is reloaded.
 *
-* @return Promise<void> - Resolves when the local DB is updated
+* Reads the existing record under the key `self.pagination_id` in the
+* `'pagination'` store.  If a record exists it is updated in place; otherwise a
+* fresh record is created.  In both cases `self.limit` and `self.offset` (or 0)
+* are written so they match the live state.
+*
+* @returns {Promise<void>} Resolves when the local DB is updated.
 */
 search.prototype.update_local_db_pagination = async function() {
 
@@ -336,8 +439,20 @@ search.prototype.update_local_db_pagination = async function() {
 
 /**
 * GET_SECTION_ELEMENTS
-* @return promise
-* 	resolve array section_elements
+* Returns the list of section elements (field descriptors) available to build
+* the search filter UI.
+*
+* Delegates to `get_section_elements_context` (from `common.prototype`) which
+* fetches ontology field metadata for `target_section_tipo`, excluding any
+* component models listed in `ar_components_exclude` (e.g. binary media
+* components that cannot be meaningfully searched).
+*
+* The `caller_tipo` is forwarded so the server can skip permission checks when
+* the caller is an area_thesaurus (which has a higher trust level than a plain
+* section user).
+*
+* @param {Object} [options={}] - Additional overrides merged over the defaults.
+* @returns {Promise<Array>} Resolves with the array of section element descriptors.
 */
 search.prototype.get_section_elements = async function(options) {
 
@@ -445,8 +560,17 @@ search.prototype.get_section_elements = async function(options) {
 
 /**
 * GET_SECTION_ID
-* Calculate tmp section id (incremental id)
-* @return string temp_section_id
+* Returns a monotonically incrementing synthetic section id for use as a
+* temporary key for filter-row component instances inside the search UI.
+*
+* Each component row added to the search filter requires a unique section_id
+* so that `get_instance` can create a distinct keyed instance for it.  The
+* generated ids are local to this search instance and are never persisted or
+* sent to the server as real section identifiers.
+*
+* Format: `'search_<n>'` where `<n>` starts at 1 and increments by one per call.
+*
+* @returns {string} Unique temporary section id string.
 */
 search.prototype.get_section_id = function() {
 
@@ -475,10 +599,20 @@ search.prototype.get_section_id = function() {
 
 	/**
 	* CREATE_GROUP_MODEL_NODE
-	* @param string operator '$and' | '$or'
-	* @param object|null parent_node parent group model node (null for root)
-	* @param HTMLElement dom .search_group element
-	* @return object group_node
+	* Creates and registers a new group node in the filter model tree.
+	*
+	* A group node is the container for a logical operator ($and / $or) applied
+	* to all of its children.  If a parent node is provided the new group is
+	* appended to `parent_node.children` immediately.
+	*
+	* The `dom` reference is set later by the render layer once the corresponding
+	* `.search_group` element is created; it is wired here as `null` (or supplied
+	* by the caller if already available).
+	*
+	* @param {string}          operator    - Logical operator: '$and' or '$or'.
+	* @param {Object|null}     parent_node - Parent group model node; null for root.
+	* @param {HTMLElement|null} dom        - The corresponding DOM `.search_group` element.
+	* @returns {Object} Newly created group node.
 	*/
 	search.prototype.create_group_model_node = function(operator, parent_node, dom) {
 
@@ -502,9 +636,20 @@ search.prototype.get_section_id = function() {
 
 	/**
 	* CREATE_COMPONENT_MODEL_NODE
-	* @param object options
-	*	{array path, string section_id, object|null instance, object|null parent_node, HTMLElement dom}
-	* @return object component_node
+	* Creates and registers a new component (leaf) node in the filter model tree.
+	*
+	* A component node represents one filter row: a specific field (`path`) with
+	* its bound component instance.  The node is appended to `options.parent_node`
+	* if provided.  The `instance` reference is filled in after `get_component_instance`
+	* resolves; until then it may be null.
+	*
+	* @param {Object}           options             - Node initialisation data.
+	* @param {Array|null}       options.path        - Component path array (section+component tipo pairs).
+	* @param {string|null}      options.section_id  - Temporary section id for the row instance.
+	* @param {Object|null}      options.instance    - Bound component instance (may be set after creation).
+	* @param {Object|null}      options.parent_node - Parent group node; null for detached nodes.
+	* @param {HTMLElement|null} options.dom         - Corresponding DOM row element.
+	* @returns {Object} Newly created component node.
 	*/
 	search.prototype.create_component_model_node = function(options) {
 
@@ -529,9 +674,18 @@ search.prototype.get_section_id = function() {
 
 	/**
 	* REMOVE_MODEL_NODE
-	* Detach a node (group or component) from its parent children array.
-	* @param object node
-	* @return bool
+	* Detaches a node (group or component) from its parent's children array.
+	*
+	* Locates the node by reference using `indexOf` and splices it out.
+	* Returns `false` without mutating anything if the node has no parent or the
+	* parent's children is not an array (e.g. already removed or detached root).
+	*
+	* Note: this does not destroy bound component instances — callers are
+	* responsible for calling `instance.destroy()` on component nodes before or
+	* after removal.
+	*
+	* @param {Object} node - The group or component model node to remove.
+	* @returns {boolean} `true` if removed; `false` if no parent or node not found.
 	*/
 	search.prototype.remove_model_node = function(node) {
 
@@ -552,11 +706,21 @@ search.prototype.get_section_id = function() {
 
 	/**
 	* MOVE_MODEL_NODE
-	* Reorder a node within its parent children, swapping with the adjacent
-	* component sibling (mirrors the DOM reorder guard in build_search_component).
-	* @param object node
-	* @param string direction 'up' | 'down'
-	* @return bool
+	* Reorders a node within its parent's children array by swapping it with an
+	* adjacent sibling, mirroring the DOM drag-and-drop reorder behaviour.
+	*
+	* Only swaps with an adjacent node whose `node_type === 'component'`.  Group
+	* nodes are not swapped (matching the DOM guard in `build_search_component`).
+	* Returns `false` without mutation if the neighbor does not exist or is not a
+	* component node.
+	*
+	* This does not re-render the DOM; callers must update the DOM independently
+	* (drag-and-drop updates the DOM first, then calls this to keep the model in
+	* sync).
+	*
+	* @param {Object} node      - The model node to move.
+	* @param {string} direction - 'up' to swap with the previous sibling; 'down' for the next.
+	* @returns {boolean} `true` if the swap happened; `false` otherwise.
 	*/
 	search.prototype.move_model_node = function(node, direction) {
 
@@ -588,10 +752,30 @@ search.prototype.get_section_id = function() {
 
 /**
 * BUILD_DOM_GROUP
-* @param object filter
-* @param HTMLElement dom_element
-* @param object options = {}
-* @return HTMLElement dom_group
+* Recursively walks a `json_filter` object (in the canonical `{$and:[…]}` /
+* `{$or:[…]}` shape) and creates the corresponding DOM structure and component
+* instances.
+*
+* Used on initial load to reconstruct the filter UI from a persisted preset.
+* The recursion mirrors the shape of the json_filter tree:
+*
+*  - A node whose key is `'path'` is a filter leaf: calls `build_search_component`
+*    to instantiate the component and add it to the DOM.
+*  - A node whose key starts with `'$'` is a group: calls `render_search_group`
+*    to create the DOM group container, then recurses into its children array.
+*
+* The `ar_resolved_elements` array tracks which temporary section_ids have
+* already been added, preventing duplicate filter rows from appearing when the
+* same component appears more than once in the preset.
+*
+* @param {Object}      filter      - A json_filter node (group or leaf shape).
+* @param {HTMLElement} dom_element - The DOM element to append children to.
+* @param {Object}      [options={}]
+* @param {boolean}     [options.allow_duplicates=false] - When true, skip the dedup guard.
+* @param {boolean}     [options.clean_q=false]          - When true, clear `q`/`q_operator`/`lang` values
+*                                                         (used when loading a preset as a template).
+* @param {boolean}     [options.is_root=false]          - Whether this call is for the root group node.
+* @returns {HTMLElement|null} The last-created DOM group element, or null for leaf nodes.
 */
 search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 
@@ -670,9 +854,40 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 
 /**
 * GET_COMPONENT_INSTANCE
-* Called by render.build_search_component to create the component instance
-* @param object options
-* @return object component_instance
+* Creates, builds, and configures a component instance for use as a filter row
+* in the search UI.
+*
+* Called by `render_search.build_search_component` when a user adds a field
+* to the filter panel.  The flow is:
+*
+*  1. Derive a unique key from section_tipo + section_id + component_tipo + lang
+*     + `performance.now()` to guarantee no collision with other instances or
+*     previous runs.
+*  2. Call `get_instance` to create the component instance.
+*  3. Inject `entries` before calling `build()` so portal components can use
+*     them in their `resolve_data` API call.
+*  4. Call `build(true)` (autoload=true). If it returns `false` the component is
+*     unusable (e.g. missing ontology entry) and null is returned.
+*  5. Re-inject `entries` after build (non-portal components may have reset them).
+*  6. Inject `permissions = 2` (full read/write) because the search filter is
+*     always editable regardless of the user's record permissions.
+*  7. Inject `q_operator`, `q_lang`, and the resolved `path` into `instance.data`.
+*  8. Register the instance in `self.ar_instances` for lifecycle management.
+*
+* The commented-out `context` and `source_add` blocks are retained as dead code
+* for reference; do not remove without reviewing the portal path.
+*
+* @param {Object}       options
+* @param {string}       options.section_id              - Temporary section id for the row.
+* @param {string}       options.section_tipo            - Section tipo the component belongs to.
+* @param {string}       options.component_tipo          - Component tipo (ontology identifier).
+* @param {string}       options.model                   - Component model name, e.g. 'component_input_text'.
+* @param {Array}        [options.entries=[]]            - Pre-loaded search value entries.
+* @param {string|null}  [options.q_operator]            - Search operator (e.g. 'AND', 'OR', 'NOT').
+* @param {string|null}  [options.q_lang]                - Language override for the search query.
+* @param {Array}        options.path                    - Component path array describing field nesting.
+* @param {Array|null}   [options.ar_target_section_tipo] - (Currently unused; retained for future portal filtering.)
+* @returns {Promise<Object|null>} The fully initialised component instance, or null if build failed.
 */
 search.prototype.get_component_instance = async function(options) {
 
@@ -760,12 +975,27 @@ search.prototype.get_component_instance = async function(options) {
 
 /**
 * PARSE_DOM_TO_JSON_FILTER
-* @param object options
-* {
-*	mode: string like "search",
-* 	save_arguments: undefined|boolean
-* }
-* @return object json_query_obj
+* Produces the full `json_query_obj` expected by `update_caller` by serialising
+* the current `filter_model` tree.
+*
+* This is the outer entry point for filter serialisation.  It wraps
+* `serialize_filter_model` (which produces the `{$and:[…]}` structure) with:
+*  - The `id` / `filter` envelope.
+*  - The `children_recursive` flag read from the dedicated checkbox DOM node.
+*
+* The `mode` parameter controls whether empty-value filter rows are included:
+*  - `'search'`   — only rows with a non-null `q` or non-empty `q_operator` are emitted.
+*  - any other    — all rows are emitted (used when saving a preset that should
+*                   preserve the selected fields even without values).
+*
+* The `save_arguments` option is a string `'true'`/`'false'` parsed into a
+* boolean that controls whether `q` values are serialised.  Passing `'false'` is
+* used when saving a "template" preset (field structure only, no values).
+*
+* @param {Object}           options
+* @param {string}           options.mode              - Serialisation mode: 'search' or 'default'.
+* @param {string|undefined} [options.save_arguments]  - String 'true'/'false'; controls value inclusion.
+* @returns {Object} `json_query_obj` shape: `{ id, filter, [children_recursive] }`.
 */
 search.prototype.parse_dom_to_json_filter = function(options) {
 
@@ -817,10 +1047,31 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 * Walk the canonical model tree producing the json filter group object.
 * Replaces the former DOM-walking recursive_groups: the structure comes from the
 * model, while each component value is read from its bound instance.
-* @param object group_node root or sub group model node
-* @param bool add_arguments
-* @param string mode
-* @return object query_group
+*
+* Called recursively: sub-group nodes call `serialize_filter_model` for their
+* own subtree, component nodes call `get_search_value` to read the live value.
+*
+* `get_search_value` inner function:
+*  - Prefers the component's own `get_search_value()` method (present on portal
+*    and relation components to strip locator properties not needed by the query).
+*  - Falls back to `component.data.entries` for simple components.
+*  - Normalises entries to `{value, id:1}` objects (id is always 1 for search).
+*
+* In `mode === 'search'`:
+*  - Rows where both `q` and `q_operator` are effectively empty are skipped so
+*    the server does not receive no-op filter clauses.
+*  - Rows that have an operator but no value use the special sentinel `q:'only_operator'`
+*    which the PHP search class interprets as a pure-operator filter (e.g.
+*    "has any value").
+*
+* In any other mode (preset save):
+*  - All rows are emitted, including empty ones, to preserve the field structure.
+*
+* @param {Object}  group_node    - Current group node from the filter model.
+* @param {boolean} add_arguments - When false, `q`/`q_operator` are not read from instances
+*                                  (structure-only serialisation for template presets).
+* @param {string}  mode         - 'search' (emit non-empty only) or 'default' (emit all).
+* @returns {Object} Serialised filter group: `{ $and: […] }` or `{ $or: […] }`.
 */
 search.prototype.serialize_filter_model = function(group_node, add_arguments, mode) {
 
@@ -1059,13 +1310,24 @@ search.prototype.serialize_filter_model = function(group_node, add_arguments, mo
 
 /**
 * UPDATE_STATE
-* Save editing preset
-* get the save state of the presets
-* @param object options
-* {
-*	"state": "changed"
-* }
-* @return bool
+* Handles UI state transitions and persists the current filter as a temp preset.
+*
+* Called after any structural or value change to the filter model.  Responsibilities:
+*
+*  1. Records the new layout state in `self.search_layout_state`.
+*  2. If a specific `editing_section_id` is provided (preset selection is active),
+*     stores it and its `save_arguments` flag in the preset selector DOM element's
+*     dataset.
+*  3. Shows or hides the "Save preset" button: visible only when the state is
+*     `'changed'` AND a named user preset is currently loaded (`self.user_preset_section_id`).
+*  4. When `state === 'changed'`, calls `save_temp_preset` to asynchronously
+*     persist the current filter to the server (section dd655).
+*
+* @param {Object}      options
+* @param {string}      options.state                 - New state string, e.g. 'changed'.
+* @param {string|null} [options.editing_section_id]  - Section id of the preset being edited.
+* @param {string|null} [options.editing_save_arguments] - Serialised boolean string for preset save mode.
+* @returns {Promise<boolean>} Resolves to `true` after all side effects complete.
 */
 search.prototype.update_state = async function(options) {
 
@@ -1124,7 +1386,16 @@ search.prototype.update_state = async function(options) {
 	* the caller instance (section or area) to execute the search.
 	* Includes race condition prevention via `self.searching` flag.
 	* Resets order and pagination offset (for sections) before dispatching.
-	* @return {Promise<bool|object>} - Resolves to `false` if already searching
+	*
+	* The `self.searching` flag prevents re-entrant calls that could result in
+	* duplicate concurrent navigations.  It is set to `true` at the start and
+	* cleared in a `finally` block so it resets even on error.
+	*
+	* `caller.search_tipos` is cleared before navigation so that any URL-derived
+	* ontology type restriction from the previous search does not persist; the
+	* new filter replaces it entirely.
+	*
+	* @returns {Promise<boolean|Object>} Resolves to `false` if already searching
 	*   or on error; otherwise returns the promise from `update_caller`.
 	*/
 	search.prototype.exec_search = async function() {
@@ -1192,8 +1463,14 @@ search.prototype.update_state = async function(options) {
 	/**
 	* SHOW_ALL
 	* Resets the search filter and updates the caller to show all records.
-	* @param HTMLElement button_node - The button element that triggered the action
-	* @return promise
+	*
+	* Sends an empty `{$and:[]}` filter and an empty `order` array so the caller
+	* displays its full unfiltered record set.  Pagination offset is reset to 0
+	* for section callers.  A CSS `loading` class is toggled on the button node
+	* to provide visual feedback while the navigation request is in flight.
+	*
+	* @param {HTMLElement} button_node - The button element that triggered the action.
+	* @returns {Promise<*>} Resolves with the result of `update_caller`.
 	*/
 	search.prototype.show_all = async function(button_node) {
 
@@ -1233,12 +1510,31 @@ search.prototype.update_state = async function(options) {
 
 	/**
 	* UPDATE_CALLER
-	* Modifies the caller instance's SQO (Search Query Object) and triggers navigation/refresh.
-	* @param object caller_instance - The section or area instance to update
-	* @param object json_query_obj - The search configuration object
-	* @param array|null filter_by_locators - (Optional) Locators filter
-	* @param object self - The search instance
-	* @return promise
+	* Modifies the caller instance's SQO (Search Query Object) and triggers
+	* navigation to execute the search.
+	*
+	* This is the final step in the search dispatch pipeline.  It:
+	*  1. Writes all SQO fields (limit, offset, filter, order, filter_by_locators,
+	*     children_recursive, section_tipo) back to `caller_instance.rqo.sqo`
+	*     and mirrors limit/offset into `caller_instance.request_config_object.sqo`
+	*     so both the RQO and the request-config layer are consistent.
+	*  2. For section callers: also resets the opposite-mode (list vs edit) local DB
+	*     pagination offset to 0 so a stale offset from the other mode is not applied
+	*     on the next navigation in that mode.
+	*  3. Dispatches navigation via `caller_instance.navigate()`:
+	*     - `area_thesaurus` / `area_ontology`: `navigation_history:false`, `action:'search'`.
+	*     - `section`: `navigation_history:true`, `action:'search'` (adds a browser history entry).
+	*
+	* The function is module-private (not assigned to the prototype) because it is
+	* a pure utility for `exec_search` and `show_all`; callers outside this module
+	* should never call it directly.
+	*
+	* @param {Object}     caller_instance       - The section or area instance to update.
+	* @param {Object}     json_query_obj        - The search configuration object from `parse_dom_to_json_filter`.
+	* @param {Array|null} filter_by_locators    - Optional locator-based filter; null to clear.
+	* @param {Object}     self                  - The owning `search` instance (for context/state).
+	* @returns {Promise<*>} Resolves with the return value of `caller_instance.navigate()`,
+	*   or `Promise.resolve(false)` for unknown caller models.
 	*/
 	const update_caller = async function(caller_instance, json_query_obj, filter_by_locators, self) {
 
@@ -1331,9 +1627,20 @@ search.prototype.update_state = async function(options) {
 
 /**
 * TRACK_SHOW_PANEL
-* Manage cookies of user opened/closed panels
-* @param object options
-* @return bool true
+* Persists the open/closed state of a named search UI panel to the local IndexedDB.
+*
+* All panels share the same key (`self.panels_status_id === 'search'`) so the
+* preferences are global across sections.  The record value is a plain object
+* keyed by panel name, each entry holding `{ is_open: boolean }`.
+*
+* The local DB record is read, the relevant panel entry is updated, and the
+* record is written back.  The write is not awaited at the call site (fire-and-
+* forget) because panel state persistence is non-critical.
+*
+* @param {Object} options
+* @param {string} options.name   - Panel identifier string (e.g. 'search_panel').
+* @param {string} options.action - 'open' to record as open; any other value records as closed.
+* @returns {Promise<boolean>} Resolves to `true` after the write is dispatched.
 */
 search.prototype.track_show_panel = async function(options) {
 
@@ -1374,8 +1681,13 @@ search.prototype.track_show_panel = async function(options) {
 
 /**
 * GET_PANELS_STATUS
-* Get local DDBB record if exists and return result object
-* @return object|undefined panels_status
+* Retrieves the persisted open/closed panel state object from the local IndexedDB.
+*
+* Returns the full record value so the caller can inspect individual panel states
+* (e.g. `panels_status.value['search_panel'].is_open`).  Returns `undefined` if
+* no record exists yet (first session, or cleared storage).
+*
+* @returns {Promise<Object|undefined>} The local DB record, or undefined if not found.
 */
 search.prototype.get_panels_status = async function() {
 
@@ -1447,13 +1759,25 @@ search.prototype.get_panels_status = async function() {
 
 
 
-
-
-
 /**
 * RESET
-* Reset form values
-* @return bool
+* Clears all search component values in the current filter and re-renders them.
+*
+* Iterates `self.ar_instances` in reverse so that any instance that removes
+* itself from the array during its `refresh()` call does not disturb the
+* remaining indices (defensive iteration order).
+*
+* For each instance:
+*  - `data.value` is cleared to `[]` (raw stored value).
+*  - `data.q_operator` is set to `null`.
+*  - `data.q_lang` is set to `null`.
+*  - `refresh({ build_autoload: false })` re-renders the component without
+*    triggering a new server data load.
+*
+* After all instances refresh, the cleared filter is persisted as the new
+* temp preset so the server state matches the cleared UI state.
+*
+* @returns {Promise<boolean>} Resolves to `true` when all instances have refreshed.
 */
 search.prototype.reset = async function () {
 
