@@ -1095,7 +1095,9 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 				tag_id	: tag_id
 			})
 		// Fire click into the image node of the tag
-			inserted_tag_in.firstChild.click()
+			if (inserted_tag_in?.firstChild) {
+				inserted_tag_in.firstChild.click()
+			}
 
 
 	return (range_clon)
@@ -1299,7 +1301,7 @@ component_text_area.prototype.add_component_history_note = async function(option
 			body : rqo
 		})
 		if (!api_response.result || api_response.result<1) {
-			console.error('Error on create matrix note record. api_response:', api_response);			
+			console.error('Error on create matrix note record. api_response:', api_response);
 			event_manager.publish('notification', {
 				msg			: api_response?.msg || 'Error on create matrix note record. api_response:',
 				type		: 'error',
