@@ -733,7 +733,7 @@ final class dd_utils_api {
 
 				// filename
 				$file_name		= $file_to_upload['name'];
-				$file_tmp_name	= $file_to_upload['tmp_name'];
+				$file_tmp_name	= $file_to_upload['tmp_name']; // Like: '/tmp/php9ecci0m0mr3q9rJk8n2'
 				$file_type 		= $file_to_upload['type']; // mime like 'image/tiff'
 
 				// blob case (componen_3d posterframe auto-generated)
@@ -742,7 +742,7 @@ final class dd_utils_api {
 				}
 
 				// extension
-				$extension	= strtolower( pathinfo($file_name, PATHINFO_EXTENSION) );
+				$extension= strtolower( pathinfo($file_name, PATHINFO_EXTENSION) );
 
 				// Do not trust $file_to_upload['mime'] VALUE !!
 				// Check MIME Type by yourself.

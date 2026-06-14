@@ -608,7 +608,6 @@ abstract class common {
 
 
 
-
 	/**
 	* IS_TRANSLATABLE
 	* @return bool

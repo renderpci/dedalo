@@ -169,14 +169,11 @@ component_portal.prototype.init = async function(options) {
 					if (SHOW_DEBUG===true) {
 						console.log('-> event fn_initiator_unlink locator:', locator);
 					}
-				
+
 					if (!locator.id) {
 						console.warn('Value to unlink not found in current entries');
 						return
 					}
-
-				// row_key
-					const row_key = current_entries[paginated_key].id || null
 
 				// remove locator selected
 					const result = await self.unlink_record(locator)

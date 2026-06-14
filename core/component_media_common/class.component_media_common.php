@@ -840,7 +840,7 @@ class component_media_common extends component_common {
 			if (!file_exists($source_file)) {
 				$response->msg .= ' Source file not found: ' . basename($source_file);
 				debug_log(__METHOD__
-					.' ' .$response->msg . PHP_EOL
+					.' Source file do not exists:' . $source_file . PHP_EOL
 					. ' source_file: ' . $source_file
 					, logger::ERROR
 				);
