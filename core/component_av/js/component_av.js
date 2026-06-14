@@ -64,7 +64,9 @@ export const component_av = function(){
 	// destructor. A retained, loaded/playing media element keeps its decoded
 	// buffers and network connection alive (media memory leak) and keeps firing
 	// timeupdate into a destroyed instance.
-	component_av.prototype.destroy				= function() {
+	// (!) forward the args so refresh()/dependency teardown behave correctly
+	// (see component_image.destroy for the same fix).
+	component_av.prototype.destroy				= function(delete_self, delete_dependencies, remove_dom) {
 		const self = this
 		if (self.video) {
 			try {
@@ -76,7 +78,7 @@ export const component_av = function(){
 			}
 			self.video = null
 		}
-		return common.prototype.destroy.call(self)
+		return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
 	}
 
 	// change data
@@ -212,6 +214,12 @@ component_av.prototype.get_data_tag = function() {
 component_av.prototype.get_current_tc = function() {
 
 	const self = this
+
+	// guard: the throttled 'timeupdate' listener can fire after destroy() has
+	// released self.video (video.load() emits events asynchronously)
+	if (!self.video) {
+		return ''
+	}
 
 	const tc = self.time_to_tc(self.video.currentTime)
 

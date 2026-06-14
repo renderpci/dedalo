@@ -54,12 +54,15 @@ export const component_image = function(){
 	component_image.prototype.refresh			= common.prototype.refresh
 	// destroy: release the vector editor's document-level listeners (if it was
 	// loaded) before delegating to the generic destructor.
-	component_image.prototype.destroy			= function() {
+	// (!) forward the args: refresh() calls destroy(false, true, false) to tear
+	// down dependencies while keeping self.node; dropping them ran the default
+	// (delete_self=true) and nulled the node, breaking refresh.
+	component_image.prototype.destroy			= function(delete_self, delete_dependencies, remove_dom) {
 		if (this.vector_editor && typeof this.vector_editor.destroy==='function') {
 			this.vector_editor.destroy()
 			this.vector_editor = null
 		}
-		return common.prototype.destroy.call(this)
+		return common.prototype.destroy.call(this, delete_self, delete_dependencies, remove_dom)
 	}
 
 	// change data
