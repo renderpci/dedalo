@@ -15,6 +15,27 @@
 
 /**
 * PAGINATOR
+* Client-side pagination controller that tracks the current position in a paginated
+* record list and coordinates navigation between pages.
+*
+* Responsibilities:
+* - Holds all pagination state: total record count, current page, page boundaries,
+*   and pre-calculated navigation offsets (first / prev / next / last).
+* - Delegates the actual total-count query to `this.caller.get_total()` so that
+*   the owning section or portal supplies the correct data source.
+* - Publishes named events (e.g. 'paginator_goto_<id>') that the owning section
+*   subscribes to in order to reload data at the new offset.
+* - Supports three render variants (full, mini, micro) via prototype delegation to
+*   render_paginator, render_paginator_mini, and render_paginator_micro.
+*
+* Lifecycle: construct → init() → build() → render() → destroy()
+* The constructor only declares properties; all real initialization is in init().
+*
+* Usage:
+*   const p = new paginator()
+*   p.init({ caller: section_instance, mode: 'list' })
+*   await p.build()
+*   const node = await p.render({ mode: 'micro' })
 */
 export const paginator = function() {
 
@@ -27,32 +48,35 @@ export const paginator = function() {
 
 	this.caller				= null
 
-	this.total				= null
-	this.total_pages		= null
-	this.page_number		= null
-	this.prev_page_offset	= null
-	this.next_page_offset	= null
+	// Pagination state — all set by _update_pagination_props() after get_total() resolves.
+	this.total				= null // {number} total record count returned by the data source
+	this.total_pages		= null // {number} Math.ceil(total / limit)
+	this.page_number		= null // {number} 1-based current page index
+	this.prev_page_offset	= null // {number} offset - limit (may be negative; checked before use)
+	this.next_page_offset	= null // {number} offset + limit
 
-	this.page_row_begin		= null
-	this.page_row_end		= null
+	this.page_row_begin		= null // {number} 1-based index of the first record on this page (for display)
+	this.page_row_end		= null // {number} 1-based index of the last record on this page (for display)
 
-	this.offset_first		= null
-	this.offset_prev		= null
-	this.offset_next		= null
-	this.offset_last		= null
+	// Pre-computed absolute offsets for navigation buttons.
+	this.offset_first		= null // {number} always 0
+	this.offset_prev		= null // {number} Math.max(0, offset - limit)
+	this.offset_next		= null // {number} offset + limit (caller must guard against overshooting total)
+	this.offset_last		= null // {number} limit * (total_pages - 1)
 
-	this.status				= null
+	this.status				= null // {string} lifecycle stage: 'initializing' | 'initialized' | 'building' | 'built' | 'rendered'
 
-	this.id_variant			= null
+	this.id_variant			= null // {string|null} optional suffix used when multiple paginators coexist
 
-	this.show_interface 	= null
+	this.show_interface 	= null // {Object} display-behaviour flags (e.g. { show_all: true })
 }//end paginator
 
 
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend paginator with shared prototype methods from common and render modules.
+* Render variants are bound here; the actual DOM logic lives in each render_* module.
 */
 // prototypes assign
 	paginator.prototype.edit			= render_paginator.prototype.edit
@@ -68,8 +92,21 @@ export const paginator = function() {
 
 /**
 * INIT
-* @param object options
-* @return bool true
+* Initialises the paginator instance with the provided options.
+* Must be called exactly once — a second call on the same instance logs an error
+* and (in debug mode) shows an alert, then returns false.
+*
+* Sets up the unique id ('paginator_' + caller.id), resolves show_interface defaults,
+* and transitions status to 'initialized'. Does NOT fetch totals or render DOM.
+*
+* @param {Object} options - Initialisation options
+* @param {Object} options.caller - Owning section/portal instance; must expose
+*   rqo.sqo.limit, rqo.sqo.offset, get_total(), id, mode, and status.
+* @param {string} [options.mode] - Render mode override; defaults to options.caller.mode
+* @param {Object} [options.show_interface] - Partial display-behaviour overrides
+*   merged with defaults ({ show_all: true }). Unknown keys from options are kept;
+*   missing keys fall back to the defaults defined inside this method.
+* @returns {boolean} true on success, false if already initialised (duplicate guard)
 */
 paginator.prototype.init = function(options) {
 
@@ -135,7 +172,13 @@ paginator.prototype.init = function(options) {
 
 /**
 * BUILD
-* @return bool
+* Async build step: inherits permissions from the caller and transitions status
+* to 'built'. Publishes the 'built_<id>' event so that orchestrators waiting on
+* the paginator's ready signal can proceed.
+*
+* Does not fetch data or render DOM — that happens in render().
+*
+* @returns {Promise<boolean>} Resolves to true when build is complete.
 */
 paginator.prototype.build = async function() {
 	// const t0 = performance.now()
@@ -162,7 +205,15 @@ paginator.prototype.build = async function() {
 
 /**
 * DESTROY
-* @return object result
+* Tears down the paginator instance by unsubscribing all registered event listeners.
+* Does not remove the DOM node — the caller is responsible for DOM cleanup.
+*
+* All tokens accumulated in self.events_tokens are passed to
+* event_manager.unsubscribe(). The returned array of results is stored in
+* result.delete_self for the caller to inspect if needed.
+*
+* @returns {Promise<Object>} result object with a `delete_self` array containing
+*   the return values of each event_manager.unsubscribe() call.
 */
 paginator.prototype.destroy = async function() {
 
@@ -307,7 +358,12 @@ paginator.prototype._update_pagination_props = function(total) {
 
 /**
 * GET_LIMIT
-* @return int limit
+* Reads the current page size (number of records per page) from the caller's
+* search query object. Warns if the value is undefined, which would cause
+* incorrect pagination calculations downstream.
+*
+* @returns {number|undefined} The limit value from caller.rqo.sqo.limit,
+*   or undefined if not yet set.
 */
 paginator.prototype.get_limit = function() {
 
@@ -323,7 +379,12 @@ paginator.prototype.get_limit = function() {
 
 /**
 * GET_OFFSET
-* @return int offset
+* Reads the current record offset (zero-based position of the first record on
+* the current page) from the caller's search query object. Warns if the value
+* is undefined, which would cause incorrect pagination calculations downstream.
+*
+* @returns {number|undefined} The offset value from caller.rqo.sqo.offset,
+*   or undefined if not yet set.
 */
 paginator.prototype.get_offset = function() {
 
@@ -339,10 +400,23 @@ paginator.prototype.get_offset = function() {
 
 /**
 * PAGINATE
-* Update self offset and publish a public event 'paginator_goto_' that is listened by section/portal to load another record data
-* @param int offset
-* @return promise
-*	bool (true on successful, false on error)
+* Navigates to the page starting at the given absolute record offset.
+*
+* Guards against calls that arrive before the owning section or the paginator
+* itself have finished rendering — both checks log a warning and return false
+* rather than triggering an overlapping data fetch.
+*
+* Side effects:
+* - Publishes the 'paginator_goto_<id>' event with the new offset; the owning
+*   section subscribes to this event via event_manager and calls update_pagination().
+* - Adds a 'loading' CSS class to self.node immediately for visual feedback, then
+*   subscribes a one-time handler to 'render_<caller.id>' that removes it.
+* - (!) The 'render_<self.id>' subscription at the end of this method is intentionally
+*   NOT added to events_tokens and therefore will NOT be cleaned up by destroy().
+*
+* @param {number} offset - Zero-based absolute record offset to navigate to.
+* @returns {Promise<boolean>} true when the navigation event was dispatched,
+*   false when the call was ignored because the element or paginator is not ready.
 */
 paginator.prototype.paginate = async function(offset) {
 
@@ -392,9 +466,16 @@ paginator.prototype.paginate = async function(offset) {
 
 /**
 * GET_PAGE_NUMBER
-* @param int item_per_page
-* @param int offset
-* @return int page_number
+* Converts a zero-based record offset and a page size into a 1-based page number.
+* Returns 1 for the first page (offset 0) or when item_per_page is zero or negative
+* (guard against division by zero).
+*
+* Formula: Math.ceil(offset / item_per_page) + 1 when offset > 0.
+*
+* @param {number} item_per_page - Number of records per page (the limit). Must be > 0
+*   for a meaningful result; values ≤ 0 return page 1 unconditionally.
+* @param {number} offset - Zero-based index of the first record on the current page.
+* @returns {number} 1-based current page number (always ≥ 1).
 */
 paginator.prototype.get_page_number = function(item_per_page, offset) {
 
@@ -415,10 +496,15 @@ paginator.prototype.get_page_number = function(item_per_page, offset) {
 
 /**
 * GET_PAGE_ROW_END
-* @param int page_row_begin
-* @param int item_per_page
-* @param int total_records
-* @return int page_row_end
+* Calculates the 1-based index of the last record visible on the current page,
+* clamped to total_records so the last page does not show a phantom end row.
+*
+* Returns 0 when there are no records (total_records === 0).
+*
+* @param {number} page_row_begin - 1-based index of the first record on this page.
+* @param {number} item_per_page - Number of records per page (the limit).
+* @param {number} total_records - Total number of records across all pages.
+* @returns {number} 1-based index of the last record on this page, or 0 if empty.
 */
 paginator.prototype.get_page_row_end = function(page_row_begin, item_per_page, total_records) {
 	if (total_records===0) {
@@ -436,9 +522,15 @@ paginator.prototype.get_page_row_end = function(page_row_begin, item_per_page, t
 
 /**
 * GO_TO_PAGE_JSON
-* Receive page value from input text and calculate offset and exec search_paginated
-* @param int page
-* @return bool
+* Navigates to an arbitrary page given its 1-based page number.
+* Validates that the target page is in range and differs from the current page
+* before computing the new offset and calling paginate().
+*
+* Used by render_paginator's "go-to-page" input field (Enter key handler).
+*
+* @param {number} page - 1-based page number to jump to.
+* @returns {boolean} true when navigation was triggered, false when the page
+*   is invalid (out of range, equal to the current page, or NaN-like).
 */
 paginator.prototype.go_to_page_json = function(page) {
 
@@ -469,8 +561,10 @@ paginator.prototype.go_to_page_json = function(page) {
 
 /**
 * NAVIGATE_TO_NEXT_PAGE
-* Navigates current list forward
-* @return bool
+* Convenience wrapper that advances to the page immediately after the current one.
+* Delegates to go_to_page_json(), which guards against navigating past the last page.
+*
+* @returns {boolean} true when navigation was triggered, false if already on the last page.
 */
 paginator.prototype.navigate_to_next_page = function() {
 
@@ -487,8 +581,10 @@ paginator.prototype.navigate_to_next_page = function() {
 
 /**
 * NAVIGATE_TO_PREVIOUS_PAGE
-* Navigates current list backwards
-* @return bool
+* Convenience wrapper that moves back to the page immediately before the current one.
+* Delegates to go_to_page_json(), which guards against navigating before page 1.
+*
+* @returns {boolean} true when navigation was triggered, false if already on the first page.
 */
 paginator.prototype.navigate_to_previous_page = function() {
 
@@ -505,9 +601,14 @@ paginator.prototype.navigate_to_previous_page = function() {
 
 /**
 * SHOW_ALL
-* Trigger event paginator_show_all_..
-* Caller is listen to set limit = 0 (all records) and refresh
-* @return bool
+* Publishes the 'paginator_show_all_<id>' event.
+* The owning section/portal subscribes to this event and responds by setting
+* rqo.sqo.limit = 0 (i.e. "no limit"), then refreshing the data.
+*
+* The show_interface.show_all flag (set during init) controls whether the
+* render layer exposes a "Show all" button to the user.
+*
+* @returns {boolean} Always true (fire-and-forget; no error path).
 */
 paginator.prototype.show_all = function() {
 
@@ -524,9 +625,14 @@ paginator.prototype.show_all = function() {
 
 /**
 * RESET_PAGINATOR
-* Set paginator limit to default value, previous to show_all
-* Caller is listen to set limit and refresh
-* @return bool
+* Publishes the 'reset_paginator_<id>' event, passing the desired limit value.
+* The owning section/portal subscribes to this event and restores the page size
+* to the given limit (the value saved before show_all() was triggered), then
+* refreshes the data. Used by the "Reset" button in micro/mini render variants.
+*
+* @param {number} limit - Page size to restore (typically the value stored in
+*   show_all_status.limit before show_all() was called).
+* @returns {boolean} Always true (fire-and-forget; no error path).
 */
 paginator.prototype.reset_paginator = function(limit) {
 

@@ -11,7 +11,46 @@
 
 /**
 * RENDER_PAGINATOR_MICRO
-* Manages the component's logic and appearance in client side
+* Compact ("micro") render mode for the paginator component.
+*
+* This module provides the `micro` prototype method mixed into `paginator` instances
+* (see core/paginator/js/paginator.js, `paginator.prototype.micro`).  The micro mode
+* renders a minimal navigation strip: a "Show all" toggle, a total-records count,
+* four icon-based nav buttons (first / prev / next / last), and a page-position
+* indicator (`<current>-<total>` pages).  A "Reset paginator" button is also shown
+* when the show-all state is active so the user can revert to the original limit.
+*
+* Compared with the `mini` mode (render_paginator_mini.js), micro omits the
+* row-range display and the locale-formatted total, favouring a smaller footprint
+* for contexts such as narrow sidebars or tiled mosaic views.
+*
+* Lifecycle:
+*   1. `paginator.prototype.micro(options)` — builds and returns the full wrapper
+*      (or just the inner content_data node when `render_level === 'content'`).
+*   2. `get_content_data(self)` — async helper; calls `self.get_total()` (which in
+*      turn delegates to `self.caller.get_total()`) and builds the DOM fragment.
+*   3. `add_events(wrapper, self)` — attaches mousedown/click capture handlers that
+*      stop event bubbling at the paginator boundary.
+*
+* Key interactions:
+*   - Navigation buttons call `self.paginate(offset)` which publishes the
+*     `paginator_goto_<id>` event consumed by the owning section/portal.
+*   - Show-all stores the previous limit in `self.show_all_status` and calls
+*     `self.show_all()`, publishing `paginator_show_all_<id>`.
+*   - Reset restores the previous limit via `self.reset_paginator(limit)`,
+*     publishing `reset_paginator_<id>`.
+*
+* @module render_paginator_micro
+*/
+
+
+
+/**
+* RENDER_PAGINATOR_MICRO
+* Constructor stub — all behaviour lives on the prototype.
+* Instances are never created directly; `paginator.prototype.micro` is assigned
+* from `render_paginator_micro.prototype.micro` in paginator.js.
+* @returns {boolean} Always true (matches the common paginator constructor contract).
 */
 export const render_paginator_micro = function() {
 
@@ -22,8 +61,21 @@ export const render_paginator_micro = function() {
 
 /**
 * MICRO
-* Render node for use in current mode
-* @return HTMLElement wrapper
+* Build the micro-mode paginator DOM node for the calling paginator instance.
+*
+* When `options.render_level === 'content'`, only the inner `content_data` element
+* is returned (used by `common.prototype.refresh` to swap content without
+* rebuilding the outer wrapper).  Otherwise the full wrapper is constructed,
+* `content_data` is appended to it, a back-reference (`wrapper.content_data`) is
+* stored for later refresh cycles, and generic bubble-stopping events are attached.
+*
+* The method is async because `get_content_data` must await `self.get_total()`.
+*
+* @param {Object} options - Render options forwarded by the paginator render pipeline.
+* @param {string} [options.render_level='full'] - 'full' builds the outer wrapper;
+*   'content' skips the wrapper and returns only the inner content node.
+* @returns {Promise<HTMLElement>} The wrapper div (full mode) or the content_data
+*   div (content mode).
 */
 render_paginator_micro.prototype.micro = async function(options) {
 
@@ -58,8 +110,15 @@ render_paginator_micro.prototype.micro = async function(options) {
 
 /**
 * ADD_EVENTS
-* Attach element generic events to wrapper
-* @return bool
+* Attach mousedown and click handlers to the paginator wrapper that stop event
+* propagation, preventing clicks inside the paginator from bubbling to the parent
+* section or mosaic container and accidentally triggering row-selection or other
+* container-level handlers.
+*
+* @param {HTMLElement} wrapper - The paginator wrapper element to attach events to.
+* @param {Object} self - The paginator instance (unused in handlers but kept for
+*   symmetry with add_events in other render_paginator_* modules).
+* @returns {boolean} Always true.
 */
 const add_events = (wrapper, self) => {
 
@@ -87,8 +146,38 @@ const add_events = (wrapper, self) => {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Async factory that constructs the paginator content DOM tree for the micro mode.
+*
+* Awaits `self.get_total()` (which delegates to `self.caller.get_total()` and
+* populates derived pagination props via `_update_pagination_props`).  All
+* pagination state is then read directly from the paginator instance.
+*
+* Visibility rules:
+* - When `total_pages` is falsy (0 / null) or less than 2 AND `show_all_status`
+*   is not set, a hidden placeholder div is returned so the caller's layout is not
+*   disrupted.
+* - When `total_pages >= 2`, the full navigation UI is rendered:
+*     • Optional "Show all" button (omitted when limit === 1, i.e. mosaic-of-one
+*       mode, or when `show_interface.show_all` is false).
+*     • A total-records count span.
+*     • First / Prev / Next / Last icon buttons; buttons pointing beyond the
+*       record boundary are marked `inactive` and receive no click handler.
+*     • A page-position info span (`<page_number>-<total_pages>`).
+* - When `show_all_status` is set (show-all mode is active) a "Reset paginator"
+*   button and a total count are appended regardless of page count.
+*
+* Offset guards used for button activation:
+*   - First/Prev active when `page_number > 1` or `prev_page_offset >= 0`.
+*   - Next active when `next_page_offset < total`.
+*   - Last active when `page_number < total_pages`.
+*
+* @param {Object} self - The paginator instance; must expose `get_total()`,
+*   `total_pages`, `page_number`, `prev_page_offset`, `next_page_offset`,
+*   `offset_first`, `offset_prev`, `offset_next`, `offset_last`, `limit`,
+*   `show_interface`, `show_all_status`, `paginate()`, `show_all()`, and
+*   `reset_paginator()`.
+* @returns {Promise<HTMLElement>} The assembled `content_data` div node containing
+*   the full navigation UI, or a hidden placeholder when pagination is not needed.
 */
 const get_content_data = async function(self) {
 
