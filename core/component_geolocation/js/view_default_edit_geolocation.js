@@ -12,7 +12,27 @@
 
 /**
 * VIEW_DEFAULT_EDIT_GEOLOCATION
-* Manages the component's logic and appearance in client side
+* Default edit view for component_geolocation.
+*
+* Builds the interactive editing shell for a single geolocation entry: a set of
+* coordinate text inputs (lat, lon, zoom, alt) wired to a Leaflet map.  Map
+* initialisation is deferred via when_in_viewport so the Leaflet instance is only
+* created when the container scrolls into view, avoiding hidden-element sizing bugs.
+*
+* Entry point: view_default_edit_geolocation.render() — called by
+* render_edit_component_geolocation when view is 'default', 'line', or 'print'.
+*
+* Coordinate value shape stored in self.current_value[0]:
+* {
+*   lat      : {number}  - latitude   (WGS-84 decimal degrees)
+*   lon      : {number}  - longitude  (WGS-84 decimal degrees)
+*   zoom     : {number}  - Leaflet zoom level (integer 0–19)
+*   alt      : {number}  - altitude in metres
+*   lib_data : {Array}   - Leaflet layer array managed by component_geolocation
+* }
+*
+* Public exports: view_default_edit_geolocation (namespace), get_content_data,
+* get_content_value, get_content_value_read.
 */
 export const view_default_edit_geolocation = function() {
 
@@ -23,10 +43,16 @@ export const view_default_edit_geolocation = function() {
 
 /**
 * RENDER
-* Render node for use in current view
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Build and return the full component wrapper for edit mode.
+*
+* Switches between a content-only fragment (render_level 'content') and a complete
+* wrapper element that includes optional buttons.  When view is 'line' the label
+* node is suppressed so the component fits inline.
+*
+* @param {Object} self    - component_geolocation instance
+* @param {Object} options - render options
+*   @param {string} [options.render_level='full'] - 'full' returns the wrapper; 'content' returns only content_data
+* @returns {Promise<HTMLElement>} wrapper element (or content_data when render_level is 'content')
 */
 view_default_edit_geolocation.render = async function(self, options) {
 
@@ -64,8 +90,18 @@ view_default_edit_geolocation.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Build the content_data container and populate it with the single geolocation input
+* element (read-only or editable depending on self.permissions).
+*
+* Geolocation is always a single-entry component (only one map per instance).
+* Initialises self.current_value[0] with a shallow copy of the stored entry so the
+* value is immediately available for save operations without waiting for the map to
+* load.
+*
+* Side effect: sets self.current_value[0] to a shallow clone of the current entry.
+*
+* @param {Object} self - component_geolocation instance
+* @returns {HTMLElement} content_data container with the input element attached as content_data[0]
 */
 export const get_content_data = function(self) {
 
@@ -100,18 +136,28 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @param int i
-* @param object current_value
-* Sample:
-* {
-* 	alt: 16
-* 	lat: 39.473844362398225
-*	lib_data: [{…}, {…}]
-*	lon: -0.26004109591099894
-*	zoom: 12
-* }
-* @param object self
-* @return HTMLElement content_value
+* Build the full editable geolocation input: four coordinate text inputs plus a
+* Leaflet map container wired with pan/zoom synchronisation.
+*
+* Layout (inside content_value):
+*   .map_inputs  — labels + inputs for lat, lon, zoom, alt; refresh button; add-point button
+*   .leaflet_map — Leaflet map container (initialised lazily via when_in_viewport)
+*
+* Coordinate change flow:
+*   user types in an input → 'change' event → fn_coord_change → self.handle_coord_change
+*   self.handle_coord_change updates self.current_value[i] and pans/zooms the map.
+*
+* Map drag/zoom events update the inputs via self.update_input_values but do NOT
+* trigger an auto-save (intentional — use the save button).
+*
+* A ResizeObserver calls self.refresh_map whenever the content_value element is resized
+* so Leaflet recalculates tile positions after CSS-driven layout changes.
+*
+* @param {number} i             - entry index (always 0 for geolocation)
+* @param {Object} current_value - initial coordinate object
+*   { lat: {number}, lon: {number}, zoom: {number}, alt: {number}, lib_data: {Array} }
+* @param {Object} self          - component_geolocation instance
+* @returns {HTMLElement} content_value element containing inputs and map container
 */
 export const get_content_value = (i, current_value, self) =>{
 
@@ -214,6 +260,9 @@ export const get_content_value = (i, current_value, self) =>{
 				.addEventListener('change', fn_coord_change)
 
 		// refresh
+			// Clicking the refresh button discards unsaved in-memory changes and restores the last
+			// persisted values from self.data.entries[i].  It also resets is_data_changed so the
+			// "unsaved changes" indicator disappears and triggers a full layer reload.
 			const refresh_node = ui.create_dom_element({
 				element_type	: 'span',
 				parent			: inputs_container,
@@ -258,6 +307,9 @@ export const get_content_value = (i, current_value, self) =>{
 			}//end fn_refresh
 
 		// create point
+			// Reads lat/lon from the text inputs and calls self.create_point to add a Leaflet
+			// marker at those coordinates, then persists it via update_draw_data.
+			// (!) Uses .lng (Leaflet LatLng property) in the point object, not .lon.
 			const add_point_node = ui.create_dom_element({
 				element_type	: 'span',
 				parent			: inputs_container,
@@ -280,6 +332,8 @@ export const get_content_value = (i, current_value, self) =>{
 			}//end fn_click_add_point
 
 	// map container
+		// data-key attribute stores the entry index so component methods (update_draw_data,
+		// update_input_values) can resolve map_container → parent content_value reliably.
 		const map_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'leaflet_map',
@@ -290,6 +344,8 @@ export const get_content_value = (i, current_value, self) =>{
 		content_value.map_container = map_container
 
 	// init the map with the wrapper when container node is in viewport
+		// Deferring map init until the element is visible avoids a known Leaflet issue where
+		// tiles are mis-sized when initialised inside a hidden/zero-height container.
 		when_in_viewport(
 			map_container,
 			() => {
@@ -315,18 +371,22 @@ export const get_content_value = (i, current_value, self) =>{
 
 /**
 * GET_CONTENT_VALUE_READ
-* @param int i
-* @param object current_value
-* Sample:
-* {
-* 	alt: 16
-* 	lat: 39.473844362398225
-*	lib_data: [{…}, {…}]
-*	lon: -0.26004109591099894
-*	zoom: 12
-* }
-* @param object self
-* @return HTMLElement content_value
+* Build a read-only geolocation display: a Leaflet map container with no coordinate
+* inputs or editing controls.
+*
+* Used when self.permissions === 1 (read-only) or when the component is rendered in
+* 'print' view (render_edit_component_geolocation forces permissions to 1 for print).
+* The map is still interactive (panning, zooming) — it is just not editable.
+*
+* Map initialisation is deferred via when_in_viewport for the same sizing reasons as
+* the editable variant (see get_content_value).
+*
+* @param {number} i             - entry index (always 0 for geolocation)
+* @param {Object} current_value - coordinate object (used only to satisfy caller contract;
+*                                 actual map centre comes from self.data via get_map)
+*   { lat: {number}, lon: {number}, zoom: {number}, alt: {number}, lib_data: {Array} }
+* @param {Object} self          - component_geolocation instance
+* @returns {HTMLElement} content_value element containing only the map container
 */
 export const get_content_value_read = (i, current_value, self) =>{
 
@@ -372,8 +432,25 @@ export const get_content_value_read = (i, current_value, self) =>{
 
 /**
 * GET_BUTTONS
-* @param object self
-* @return HTMLElement buttons_container
+* Build the button bar for the edit wrapper.
+*
+* Only called when self.permissions > 1 (see render).  Which buttons are rendered is
+* governed by self.show_interface, which is populated from ontology/properties config.
+*
+* Supported slots (all conditional):
+*   - tools            — standard toolbar via ui.add_tools
+*   - button_fullscreen — enters browser fullscreen on self.node; invalidates Leaflet
+*                         tile sizes afterwards so the map fills the new viewport
+*   - button_save      — calls self.build_changed_data_item(0) then self.change_value,
+*                         resets self.is_data_changed on success
+*
+* Buttons are wrapped in a .buttons_fold div (enables sticky positioning on tall
+* components) inside the standard buttons_container built by ui.component.
+*
+* (!) Save uses hard-coded key 0 because geolocation only ever has one entry.
+*
+* @param {Object} self - component_geolocation instance
+* @returns {HTMLElement} buttons_container element with all enabled buttons appended
 */
 const get_buttons = (self) => {
 

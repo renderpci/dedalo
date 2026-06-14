@@ -4,6 +4,28 @@
 
 
 
+/**
+* RENDER_EDIT_COMPONENT_GEOLOCATION
+* Edit-mode render module for the geolocation component.
+*
+* This module provides:
+* - `render_edit_component_geolocation`: the prototype constructor whose `.edit()` method
+*   is assigned to `component_geolocation.prototype.edit` in component_geolocation.js.
+* - `render_popup_text`: standalone helper that builds the HTML subtree shown in Leaflet
+*   layer popups (measurement labels + optional line separators).
+* - `render_color_picker`: standalone helper that builds an iro.js colour-picker widget
+*   embedded in layer popups, allowing the user to change the draw colour of a selected
+*   Leaflet layer without saving.
+*
+* The `.edit()` dispatcher on the prototype reads `self.context.view` to select among
+* the available layout variants ('mini', 'print', 'line', 'default').  The 'print' branch
+* intentionally falls through to 'default' after forcing read-only permissions
+* (self.permissions = 1), which causes the view to suppress all editing controls.
+*
+* External dependencies (globals injected at runtime, not imported):
+* - `iro`  — colour-picker library (iro.js), loaded on demand by component_geolocation.load_libs()
+*/
+
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_geolocation} from './view_default_edit_geolocation.js'
@@ -12,8 +34,9 @@
 
 
 /**
-* RENDER_EDIT_COMPONENT_geolocation
-* Manage the components logic and appearance in client side
+* RENDER_EDIT_COMPONENT_GEOLOCATION
+* Constructor function for the edit-mode renderer prototype.
+* Its methods are copied onto `component_geolocation.prototype` in component_geolocation.js.
 */
 export const render_edit_component_geolocation = function() {
 
@@ -24,9 +47,20 @@ export const render_edit_component_geolocation = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @param object options
-* @return HTMLElement wrapper
+* Dispatches rendering to the correct view template based on `self.context.view`.
+*
+* Supported views:
+* - 'mini'    → compact inline representation via view_mini_geolocation (e.g. autocomplete lists).
+* - 'print'   → same DOM as 'default' but forces self.permissions = 1 so inputs are read-only.
+*               Falls through intentionally; no break/return between 'print' and 'default'.
+* - 'line'    → suppresses the component label; otherwise identical to 'default'.
+* - 'default' → full interactive Leaflet map with coordinate inputs and draw toolbar.
+*
+* (!) The 'print' case mutates self.permissions before falling through.  Any caller that
+* caches the permissions value before calling edit() will observe the side effect.
+*
+* @param {Object} options - Render options forwarded verbatim to the chosen view renderer.
+* @returns {Promise<HTMLElement>} wrapper node produced by the selected view renderer.
 */
 render_edit_component_geolocation.prototype.edit = async function(options) {
 
@@ -62,8 +96,23 @@ render_edit_component_geolocation.prototype.edit = async function(options) {
 
 /**
 * RENDER_POPUP_TEXT
-* @param array ar_text_obj
-* @return HTMLElement text_container
+* Builds the text portion of a Leaflet layer popup from an array of label/measure objects.
+*
+* Each element in `ar_text_obj` may contain:
+* - `label`     {string} — human-readable text (e.g. "Center: (39.46, -0.38)").
+* - `messure`   {string} — unit string appended after the label (e.g. 'm', 'km²').
+*                           Note: the property name "messure" is a misspelling of "measure"
+*                           that is part of the data contract used across the geolocation module.
+* - `separator` {boolean} — when explicitly `false`, the trailing `<br>` element is omitted.
+*                            Defaults to true.
+*
+* The function creates one `<span>` per entry (label + space + messure) and optionally
+* appends a `<br>` so each measurement appears on its own line inside the popup.
+* The colour-picker widget is appended to the returned container by the caller
+* (component_geolocation.get_popup_content).
+*
+* @param {Array} ar_text_obj - Array of `{label, messure, separator}` descriptor objects.
+* @returns {HTMLElement} text_container - A `<div>` containing the assembled popup content.
 */
 export const render_popup_text = function(ar_text_obj) {
 
@@ -104,12 +153,30 @@ export const render_popup_text = function(ar_text_obj) {
 
 /**
 * RENDER_COLOR_PICKER
-* Render a new iro.ColorPicker to allow user change
-* item selected color
-* @param object self
-* @param object layer
-* @param string layer_id
-* @return HTMLElement color_container
+* Builds a colour-picker widget for a Leaflet draw layer and embeds it in the popup.
+*
+* The widget is a `<span>` container that holds:
+* 1. A coloured swatch `<span>` (button_color_picker) — clicking toggles the colour wheel.
+* 2. A text `<input>` showing the current hex colour — a 'change' event updates both the
+*    swatch and the layer style and calls self.update_draw_data() to stage the change for saving.
+* 3. A hidden `<div>` (color_wheel_contaniner) — contains the iro.ColorPicker instance.
+*    Visibility is toggled by mouseup on the swatch.
+*
+* The iro.js ColorPicker emits 'color:change' events.  The `color_selected` callback
+* updates the layer style via `layer.setStyle({color})`, syncs the swatch and text input,
+* and calls self.update_draw_data(layer_id) to keep the in-memory GeoJSON up to date.
+*
+* (!) `iro` is a runtime global loaded by component_geolocation.load_libs() — it is NOT
+* available before that async call resolves.  Calling this function before Leaflet and iro
+* are loaded will throw a ReferenceError.
+*
+* (!) The layer colour change is NOT automatically saved to the database.  The user must
+* click the explicit Save button to persist draw data.
+*
+* @param {Object} self      - The component_geolocation instance (provides update_draw_data).
+* @param {Object} layer     - A Leaflet layer (L.Circle, L.Polygon, L.Polyline, etc.).
+* @param {string} layer_id  - The layer identifier used to look up the layer in self.ar_layer_loaded.
+* @returns {HTMLElement} color_container - Assembled `<span>` containing swatch, input, and wheel.
 */
 export const render_color_picker = function(self, layer, layer_id) {
 
