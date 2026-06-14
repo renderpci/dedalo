@@ -554,10 +554,27 @@ abstract class backup {
 
 	/**
 	* WRITE_LANG_FILE
-	* Calculated labels for given lang and write a JS file with the result
-	* @param string $lang
-	* @return bool
-	* 	false if write error occurred, true if all is file is written successfully
+	* Compiles the full label map for a given language and writes it as a static
+	* JSON-content JS file consumed by the browser UI.
+	*
+	* The output file is written to:
+	*   DEDALO_CORE_PATH/common/js/lang/<lang>.js
+	* and contains the raw JSON object (no JS variable declaration) so it can be
+	* imported directly by the module bundler or loaded as a fetch target.
+	*
+	* After a successful write the server-side label cache file for that language
+	* is deleted so the next PHP request rebuilds the cache from the database
+	* rather than serving stale labels.
+	*
+	* On empty label fetch the file is still written (with a 'label_warning' sentinel
+	* key) so the browser does not break on a missing file; the error is logged
+	* separately at ERROR level.
+	*
+	* Called by area_maintenance when regenerating language assets and by
+	* update_code after an ontology or code update.
+	*
+	* @param string $lang - BCP-47-like language code, e.g. 'es', 'en', 'ca'.
+	* @return bool - true if the file was written successfully, false on write error.
 	*/
 	public static function write_lang_file(string $lang) : bool {
 
@@ -632,6 +649,10 @@ abstract class backup {
 			$response->msg		= '';
 
 		// databases
+		// API_WEB_USER_CODE_MULTIPLE is an array of publication-endpoint descriptors
+		// defined in config.php.  Each entry may carry a 'db_name' key that names
+		// the MariaDB database used by that publication endpoint.  We collect all
+		// distinct db_name values so that every publication DB gets its own dump.
 			$ar_database_name = [];
 			$api_publication_code = defined('API_WEB_USER_CODE_MULTIPLE')
 				? API_WEB_USER_CODE_MULTIPLE
@@ -676,8 +697,17 @@ abstract class backup {
 
 	/**
 	* GET_MYSQL_BACKUP_FILES
-	* Read MYSQL backup directory and get all SQL files name
-	* @return array $ar_files
+	* Scans the MariaDB/MySQL backup directory and returns metadata for every
+	* .sql file found, sorted by filename in descending order (newest first,
+	* because filenames start with a Y-m-d_His timestamp).
+	*
+	* Only files with the 'sql' extension are included; any other files (e.g.
+	* partial downloads, .tmp lock files) are silently skipped.
+	*
+	* Used by the maintenance area UI to populate the backup file list widget.
+	*
+	* @return array<int,object> - Each entry: {name: string, size: string (human-readable)}.
+	*   Empty array when the directory is empty or contains no .sql files.
 	*/
 	public static function get_mysql_backup_files() : array {
 
@@ -720,8 +750,18 @@ abstract class backup {
 
 	/**
 	* GET_BACKUP_FILES
-	* Read Dédalo PostgreSQL backup directory and get all files name
-	* @return array $ar_files
+	* Scans the Dédalo PostgreSQL backup directory (DEDALO_BACKUP_PATH/db/) and
+	* returns metadata for every pg_dump custom-format file (.backup), sorted by
+	* filename in descending order (newest first, since filenames start with a
+	* Y-m-d_H timestamp).
+	*
+	* Only files with the 'backup' extension are included; other files (e.g. partial
+	* downloads, progress output files) are silently skipped.
+	*
+	* Used by the maintenance area UI to populate the PostgreSQL backup file list widget.
+	*
+	* @return array<int,object> - Each entry: {name: string, size: string (human-readable)}.
+	*   Empty array when the directory is empty or contains no .backup files.
 	*/
 	public static function get_backup_files() : array {
 
@@ -764,33 +804,48 @@ abstract class backup {
 
 	/**
 	* IMPORT_FROM_COPY_FILE
-	* Import copy file like 'es1.copy'
-	* @param object $options
-	* {
-	* 	section_tipo: string|null = null
-	* 	file_path: string = ''
-	* 	matrix_table: string
-	* 	delete_table: bool = false
-	* 	columns: array = [
-	* 		'section_id',
-	* 		'section_tipo',
-	* 		'data',
-	* 		'relation',
-	* 		'string',
-	* 		'date',
-	* 		'iri',
-	* 		'geo',
-	* 		'number',
-	* 		'media',
-	* 		'misc',
-	* 		'relation_search',
-	* 		'meta'
-	* 	]
-	* @return object $response
-	* {
-	* 	result : bool,
-	* 	msg: string,
-	* 	errors: array
+	* Imports a gzip-compressed PostgreSQL COPY-format file (e.g. 'es1.copy.gz')
+	* into the specified matrix table using a four-step shell pipeline:
+	*   1. gunzip --keep --force   — decompress to a sibling file (keeps the .gz)
+	*   2. DELETE FROM <table>     — remove old rows for the section_tipo (or all rows)
+	*   3. \copy <table>(...) from — load decompressed COPY data via psql
+	*   4. setval(<table>_id_seq)  — resync the serial sequence to MAX(id)+1
+	* The decompressed file is deleted at the end regardless of step outcomes.
+	*
+	* Delete scope:
+	*   delete_table=false (default) — only rows WHERE section_tipo = $section_tipo
+	*                                   are removed, so imports can be scoped to a
+	*                                   single section type within a shared table.
+	*   delete_table=true           — the entire table is truncated before import,
+	*                                   typically used when re-loading a full matrix.
+	*
+	* Security:
+	*   - file_path must match /^[a-zA-Z0-9_\/\.\-]+$/ and have a .gz extension.
+	*   - matrix_table must match /^[a-zA-Z_][a-zA-Z0-9_]*$/.
+	*   - Each column name is validated against the identifier regex.
+	*   - section_tipo is escaped via str_replace("'","''") before insertion into SQL.
+	*   - file_path is passed through escapeshellarg() in shell commands.
+	*
+	* Sequence update failure is non-fatal: the import is still reported as
+	* successful with a WARNING log so callers are not blocked by a missing
+	* or exhausted sequence.
+	*
+	* Called by ontology_data_io when restoring section data from an import archive.
+	*
+	* @param object $options {
+	*   section_tipo  : string|null [= null]                — section tipo filter for
+	*                   scoped DELETE; required when delete_table is false
+	*   file_path     : string [= '']                       — absolute path to the .gz file
+	*   matrix_table  : string                              — target PostgreSQL table name
+	*   delete_table  : bool   [= false]                    — when true, delete all rows
+	*                   before import instead of scoping by section_tipo
+	*   columns       : array  [= matrix_db_manager::get_columns_name()] — ordered list
+	*                   of column names for the \copy column list
+	* }
+	* @return object $response {
+	*   result : bool   — true on full success, false on any validation or shell error
+	*   msg    : string — human-readable status (includes elapsed time on success)
+	*   errors : array  — error detail strings; populated on failure
 	* }
 	*/
 	public static function import_from_copy_file( object $options ) : object {
@@ -857,6 +912,8 @@ abstract class backup {
 			}
 
 		// determine uncompressed file path
+		// pathinfo()['filename'] strips the last extension only, so for
+		// 'es1.copy.gz' it yields 'es1.copy' — the expected uncompressed name.
 			$path_info = pathinfo($file_path);
 			if (strtolower($path_info['extension']) !== 'gz') {
 				$response->msg = 'Error. File must have .gz extension';
@@ -866,6 +923,9 @@ abstract class backup {
 			$uncompressed_file = $path_info['dirname'] . '/' . $path_info['filename'];
 
 		// decompress file using gunzip
+		// --keep  : preserve the original .gz so it can be re-imported without
+		//           re-uploading; --force overwrites an existing uncompressed file
+		//           from a previous failed run.
 			$file_path_escaped = escapeshellarg($file_path);
 			$command = 'gunzip --keep --force -v ' . $file_path_escaped;
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
@@ -922,6 +982,11 @@ abstract class backup {
 			debug_log(__METHOD__." Delete response: ".json_encode($command_output), logger::DEBUG);
 
 		// copy data from file with proper escaping
+		// '\copy' (client-side) is used instead of server-side COPY so that the
+		// file path is resolved relative to the psql client's working directory
+		// rather than the PostgreSQL server's filesystem; this works correctly
+		// even when the server runs as a different OS user with no access to
+		// DEDALO_BACKUP_PATH.
 			$columns_list = implode(',', array_map(function($col) { return '"' . $col . '"'; }, $columns));
 			$copy_query = '\copy "' . $matrix_table . '" (' . $columns_list . ') from ' . escapeshellarg($uncompressed_file);
 
@@ -946,6 +1011,10 @@ abstract class backup {
 			debug_log(__METHOD__." Copy response: ".json_encode($command_output), logger::DEBUG);
 
 		// update sequence value
+		// After a COPY the PostgreSQL serial sequence is not automatically advanced.
+		// We set it to MAX(id)+1 so subsequent INSERTs do not collide with the
+		// imported rows.  Failure here is non-fatal (the data is already loaded)
+		// but is logged at WARNING level for visibility.
 			$sequence_query = 'SELECT setval(\'' . $matrix_table . '_id_seq\', (SELECT MAX(id) FROM "' . $matrix_table . '")+1)';
 			$command = $command_base . ' --echo-errors -c ' . escapeshellarg($sequence_query);
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
