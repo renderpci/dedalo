@@ -13,7 +13,24 @@
 
 /**
 * RENDER_LIST_COMPONENT_AV
-* Manages the component's logic and appearance in client side
+* View-dispatcher for component_av in list and TM modes.
+*
+* This module acts as the render entry point for all list-context display of
+* audio/video components. It is mounted on component_av.prototype.list (and
+* reused for component_av.prototype.tm) from component_av.js.
+*
+* The constructor is a no-op placeholder required by the prototype-assignment
+* pattern: all behaviour lives in the prototype methods below.
+*
+* Supported views (controlled via self.context.view):
+*   'mini'    — compact thumbnail; used in relation pickers and inline grids
+*   'text'    — thumbnail inside a <span> wrapper; used when inline block
+*               layout is required (e.g. portal inline display)
+*   'column'  — alias for 'default'; included so that column-layout callers
+*               can name the view explicitly without falling through to the
+*               default case
+*   'default' — standard list column: wrapper + content_data with lazy-loaded
+*               thumbnail that opens the media viewer on click
 */
 export const render_list_component_av = function() {
 
@@ -24,14 +41,28 @@ export const render_list_component_av = function() {
 
 /**
 * LIST
-* Render node for use in modes: list
-* @return HTMLElement wrapper
+* View-dispatch entry point for component_av list and TM render modes.
+*
+* Reads `self.context.view` (set by the server context layer) to choose the
+* appropriate view module and delegates rendering entirely to it. Falls back
+* to 'default' when the view is absent or unrecognised.
+*
+* This method is also assigned to component_av.prototype.tm in component_av.js,
+* so the TM (time-machine) mode reuses the same list presentation.
+*
+* @param {Object} options - render options forwarded verbatim to the view module
+* @param {string} [options.render_level='full'] - 'full' builds the wrapper +
+*   content_data; 'content' returns only the content_data fragment (used when
+*   the caller controls the outer wrapper)
+* @returns {Promise<HTMLElement>} the rendered wrapper (or content_data fragment
+*   when render_level === 'content')
 */
 render_list_component_av.prototype.list = async function(options) {
 
 	const self = this
 
 	// view
+	// Resolve from the server-provided context; defaults to 'default' when absent.
 		const view = self.context.view || 'default'
 
 	switch(view) {

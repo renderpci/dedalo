@@ -4,6 +4,40 @@
 
 
 
+/**
+* COMPONENT_AV
+* Audio/video component for Dédalo: manages media playback, timecode handling,
+* fragment extraction, and posterframe management.
+*
+* Responsibilities:
+* - Wrapping the native HTMLMediaElement (self.video) with timecode utilities
+*   (tc_to_seconds, time_to_tc, go_to_time, play_pause, rewind, set_playback_rate).
+* - Building tag objects that pair a timecode label with structured tag data so that
+*   linked component_text_area instances can insert TC markers into rich-text content.
+* - Communicating with the server-side dd_component_av_api for operations that require
+*   backend processing: fragment download, media-stream inspection, and posterframe
+*   creation/deletion.
+* - Exposing two static helpers — open_av_player and download_av_fragment — consumed
+*   directly by dd_grid_indexation without a component instance.
+*
+* Event integration:
+*   The component subscribes to ontology-configured events (key_up_f2, key_up_esc,
+*   click_tag_tc) whose target DOM elements are declared in the component's ontology
+*   properties. See the note near the import block below.
+*
+* Prototype chain:
+*   Lifecycle and data-persistence methods are delegated to component_common / common.
+*   Rendering is dispatched to render_edit_component_av, render_list_component_av,
+*   and render_search_component_av (see the COMMON FUNCTIONS block).
+*
+* @module component_av
+* @exports {Function} component_av - constructor
+* @exports {Function} open_av_player - static: open a standalone AV viewer window
+* @exports {Function} download_av_fragment - static: request and download a time-range clip
+*/
+
+
+
 // imports
 	import {dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -20,9 +54,18 @@
 	// the component_av is configured by properties in the ontology,
 	// it has subscribed to some events that comes defined in properties as: key_up_f2, key_up_esc, click_tag_tc
 	// the events need to be linked to specific text_area and it's defined in ontology.
+	// Event bindings are therefore established by the render layer, not here.
 
 
 
+/**
+* COMPONENT_AV
+* Constructor for the audio/video component instance.
+* Properties are declared here so that tooling can discover them; they are
+* populated by component_common.prototype.init once the server context/data
+* is fetched. self.video is assigned by the render layer after the
+* HTMLMediaElement is inserted into the DOM.
+*/
 export const component_av = function(){
 
 	this.id
@@ -42,17 +85,19 @@ export const component_av = function(){
 	this.node
 
 	this.tools
-	this.video
-	this.quality
+	this.video    // HTMLMediaElement (<video> or <audio>) set by the render layer
+	this.quality  // active quality label, e.g. 'low' | 'medium' | 'high'
 
-	this.fragment = null
+	this.fragment = null  // optional in-progress fragment definition; null = no active fragment
 }//end  component_av
 
 
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend component_av with shared prototype methods from component_common and common.
+* AV-specific methods (timecode, media streams, posterframe) are defined further below
+* in this file; generic component behavior is injected here.
 */
 // prototypes assign
 	// lifecycle
@@ -70,9 +115,9 @@ export const component_av = function(){
 	component_av.prototype.set_changed_data		= component_common.prototype.set_changed_data
 	component_av.prototype.build_rqo			= common.prototype.build_rqo
 
-	// render
+	// render — delegates to mode-specific render modules
 	component_av.prototype.list					= render_list_component_av.prototype.list
-	component_av.prototype.tm					= render_list_component_av.prototype.list
+	component_av.prototype.tm					= render_list_component_av.prototype.list // TM mode reuses the list renderer
 	component_av.prototype.edit					= render_edit_component_av.prototype.edit
 	component_av.prototype.search				= render_search_component_av.prototype.search
 
@@ -82,23 +127,30 @@ export const component_av = function(){
 
 /**
 * GO_TO_TIME
-* the information could to come from in two ways:
-* 1 from a tag, with the information in tc format (00:00:08.000), the information in this case is stored in options.tag.data
-* 	usually fired by 'click_tag_tc' event
-* 2 direct in seconds (8)
-* the video player use seconds, if the information comes from tag it will convert this tc to seconds.
-* @param object options
-* Sample from component_text_area event :
-* {
-*  	caller : instance
-*	tag : object {node_name: 'img', type: 'tc', tag_id: '[TC_00:00:00.000_TC]', state: 'n', label: '00:00:00.000', …}
-*	text_editor : service_ckeditor instance
-* }
-* Sample from component_av direct call :
-* {
-*  	seconds : float 16
-* }
-* @return double-precision floating-point seconds
+* Seek the media element to a specific time, accepting either a raw second
+* value or a timecode string carried by a tag object.
+*
+* Two call patterns are supported:
+*  1. Tag-based (fired by the 'click_tag_tc' event from component_text_area):
+*       options = {
+*         caller       : <component_text_area instance>,
+*         tag          : { node_name: 'img', type: 'tc',
+*                          tag_id: '[TC_00:00:08.000_TC]', state: 'n',
+*                          label: '00:00:08.000', data: '00:00:08.000' },
+*         text_editor  : <service_ckeditor instance>
+*       }
+*     options.tag.data holds the TC string; it is converted via tc_to_seconds().
+*
+*  2. Direct seconds (called programmatically by the component itself):
+*       options = { seconds: 16 }
+*
+* Falls back to 0 if neither seconds nor tag.data is provided.
+* Returns false immediately when self.video has not been assigned by the render layer.
+*
+* @param {Object} options - call options (see patterns above)
+* @param {number} [options.seconds] - target position in seconds (pattern 2)
+* @param {Object} [options.tag] - tag object whose .data is a TC string (pattern 1)
+* @returns {number|boolean} target position in seconds, or false when no video element is set
 */
 component_av.prototype.go_to_time = function(options) {
 
@@ -109,6 +161,8 @@ component_av.prototype.go_to_time = function(options) {
 		return false
 	}
 
+	// Resolve target seconds: prefer options.seconds; fall back to TC string on the tag;
+	// default to 0 when neither is provided.
 	const seconds = options.seconds
 		? options.seconds
 		: (options.tag && options.tag.data)
@@ -124,8 +178,13 @@ component_av.prototype.go_to_time = function(options) {
 
 /**
 * PLAY_PAUSE
-* @param int rewind_seconds = 0
-* @return bool self.video.paused
+* Toggle playback state of the media element. When pausing, an optional
+* rewind_seconds offset is applied immediately after the pause so the
+* operator can re-hear a short lead-in before the pause point.
+* Returns false immediately when self.video is not yet set.
+*
+* @param {number} [rewind_seconds=0] - seconds to rewind after pausing; 0 disables rewind
+* @returns {boolean} self.video.paused state after the toggle, or false when no video element is set
 */
 component_av.prototype.play_pause = function(rewind_seconds=0) {
 
@@ -152,8 +211,13 @@ component_av.prototype.play_pause = function(rewind_seconds=0) {
 
 /**
 * REWIND
-* @param int seconds
-* @return float self.video.currentTime
+* Step the media element backward by the given number of seconds from its
+* current position. Typically called by play_pause when rewind_seconds > 0.
+* (!) Does not guard against self.video being null; callers must ensure the
+*     video element exists before calling this method.
+*
+* @param {number} seconds - number of seconds to rewind (must be > 0)
+* @returns {number} resulting self.video.currentTime after the seek
 */
 component_av.prototype.rewind = function(seconds) {
 
@@ -167,8 +231,20 @@ component_av.prototype.rewind = function(seconds) {
 
 /**
 * GET_DATA_TAG
-* Builds a tag object using current timecode
-* @return object data_tag
+* Build a tag descriptor object from the media element's current position.
+* The returned object is the canonical structure consumed by component_text_area
+* when inserting a TC marker into rich-text content.
+*
+* Shape of the returned object:
+*   {
+*     type   : 'tc',             // tag category
+*     tag_id : '00:00:08.000',  // timecode string used as the tag's unique key
+*     state  : 'n',             // 'n' = new / not yet saved
+*     label  : '00:00:08.000',  // human-readable display label
+*     data   : '00:00:08.000'   // raw TC data; parsed by tc_to_seconds when the tag is clicked
+*   }
+*
+* @returns {Object} data_tag - tag descriptor at the current playback position
 */
 component_av.prototype.get_data_tag = function() {
 
@@ -190,7 +266,10 @@ component_av.prototype.get_data_tag = function() {
 
 /**
 * GET_CURRENT_TC
-* Get current timecode
+* Read the media element's current playback position and format it as a
+* timecode string (HH:MM:SS.mmm) via time_to_tc.
+*
+* @returns {string} timecode string in 'HH:MM:SS.mmm' format
 */
 component_av.prototype.get_current_tc = function() {
 
@@ -205,9 +284,22 @@ component_av.prototype.get_current_tc = function() {
 
 /**
 * TC_TO_SECONDS
-* tc to seconds . convert tc like 00:12:19.878 to total seconds like 139.878
-* @param string tc
-* @return float total_seconds
+* Convert a timecode string in 'HH:MM:SS.mmm' format to a total number of
+* floating-point seconds. For example, '00:12:19.878' → 739.878.
+*
+* When the argument is already an integer (e.g. the caller pre-converted it),
+* it is returned as-is. This short-circuit avoids double-conversion when callers
+* pass a numeric value rather than a string.
+*
+* Parsing strategy:
+*   - Split on ':' to extract hours, minutes, and the SS.mmm portion.
+*   - Split the original string on '.' to extract the millisecond fragment
+*     independently (the seconds portion from the ':' split still carries '.mmm',
+*     but parseFloat on ar[2] discards the fraction — the milliseconds are
+*     reconstructed by reassembling as `total_seconds + '.' + mseconds`).
+*
+* @param {string|number} tc - timecode string 'HH:MM:SS.mmm' or a pre-computed integer
+* @returns {number} total_seconds - position in seconds as a float (e.g. 739.878)
 */
 component_av.prototype.tc_to_seconds = function(tc) {
 
@@ -224,6 +316,8 @@ component_av.prototype.tc_to_seconds = function(tc) {
 	const seconds	= parseFloat(ar[2])>0 ? parseFloat(ar[2]) : 0
 	const mseconds	= parseFloat(ar_ms[1])>0 ? parseFloat(ar_ms[1]) : 0
 
+	// Reconstruct as a string concatenation so the millisecond fragment is
+	// preserved exactly without floating-point rounding from arithmetic.
 	const total_seconds = parseFloat( (hours * 3600) + (minutes * 60) + seconds +'.'+ mseconds)
 
 
@@ -234,10 +328,25 @@ component_av.prototype.tc_to_seconds = function(tc) {
 
 /**
 * TIME_TO_TC
-* Get the time of the video and convert to tc
-* with the 00:00:00.000 format
-* @param float time
-* @return string tc
+* Convert a floating-point media position (in seconds) to a human-readable
+* timecode string in 'HH:MM:SS.mmm' format.
+*
+* Strategy: multiply the position by 1000 to get milliseconds and store it
+* in a zeroed-out Date object; then extract hours/minutes/seconds/ms via the
+* standard Date accessors. This lets the JS engine do the modular arithmetic
+* rather than duplicating it in hand-rolled integer division.
+*
+* Zero-padding helpers (local to the function):
+*   wrap(n)    → zero-pads single-digit integers (e.g. 9 → '09')
+*   wrap_ms(n) → zero-pads milliseconds to exactly 3 digits
+*
+* (!) The hours extraction applies a 12-hour modulo correction:
+*     `date.getHours() < 13 ? ... : date.getHours() - 12`. This means
+*     positions ≥ 12 h 0 m 0 s are silently clamped/offset. Media longer
+*     than 12 hours would produce incorrect TC output.
+*
+* @param {number} time - media position in seconds (floating-point)
+* @returns {string} tc - timecode string, e.g. '00:12:19.878'
 */
 component_av.prototype.time_to_tc = function(time) {
 
@@ -266,6 +375,8 @@ component_av.prototype.time_to_tc = function(time) {
 					: ms);
 	}
 
+	// (!) 12-hour correction: Date.getHours() returns 0–23; values ≥ 13 are
+	//     reduced by 12. Media longer than 12 hours will produce unexpected TC.
 	const hours		= wrap(date.getHours() < 13
 		? date.getHours()
 		: (date.getHours() - 12));
@@ -284,9 +395,18 @@ component_av.prototype.time_to_tc = function(time) {
 
 /**
 * SET_PLAYBACK_RATE
-* set the video playback to specific speed rate
-* @param int rate
-* @return float rate
+* Set the HTMLMediaElement's playback speed. The rate is normalised to a
+* one-significant-digit float (e.g. 1.5 → '2', 0.75 → '0.8') before being
+* assigned because toPrecision(1) is used. Typical values from the UI are
+* 0.5, 1.0, 1.5, 2.0.
+* Returns false immediately when self.video is not yet set.
+*
+* (!) toPrecision(1) on values ≥ 10 produces scientific notation ('1e+1'),
+*     which browsers will reject; pass only values in the range 0.1–9.9.
+*
+* @param {number} rate - desired playback rate (e.g. 1.0 for normal speed)
+* @returns {string|boolean} the normalised rate string assigned to playbackRate,
+*                           or false when no video element is set
 */
 component_av.prototype.set_playback_rate = function(rate) {
 
@@ -312,11 +432,21 @@ component_av.prototype.set_playback_rate = function(rate) {
 
 /**
 * OPEN_AV_PLAYER
-* static method called by dd_grid_indexation
-* Creates a new url with the vars needed to create a av player
-* and open it in a new window
-* @param object options
-* @return bool
+* Static helper (not a prototype method) called by dd_grid_indexation to open
+* the Dédalo AV viewer in a dedicated browser window. Builds a page URL with
+* all parameters needed for the page layer to instantiate a component_av in
+* 'viewer' mode, then delegates to open_window.
+*
+* The opened window's page layer reads tc_in / tc_out from the URL and seeks
+* the media element to those positions after load.
+*
+* @param {Object} options - viewer options
+* @param {string} options.component_tipo - ontology tipo of the AV component
+* @param {string} options.section_tipo - ontology tipo of the parent section
+* @param {string|number} options.section_id - record id of the parent section
+* @param {number} [options.tc_in_secs=0] - start position in seconds (default 0)
+* @param {number|null} [options.tc_out_secs=null] - end position in seconds; null = no limit
+* @returns {Promise<boolean>} always resolves true
 */
 export const open_av_player = async function(options) {
 
@@ -353,12 +483,37 @@ export const open_av_player = async function(options) {
 
 /**
 * DOWNLOAD_AV_FRAGMENT
-* static method called by dd_grid_indexation
-* Request to the API the creation of an av fragment and
-* force download the result URL of the created file
-* @param object options
-* @return promise
-* 	Resolve api_response
+* Static helper (not a prototype method) called by dd_grid_indexation to extract
+* and download a time-range clip from a media file. The server-side
+* dd_component_av_api 'download_fragment' action runs FFmpeg (or equivalent)
+* to produce the clip; the resulting file URL is returned in api_response.result.
+*
+* Flow:
+*  1. Adds a 'loading' CSS class to the optional button_caller element.
+*  2. Posts a 'download_fragment' request to dd_component_av_api via data_manager.
+*  3. On success, triggers a browser download via download_file().
+*  4. On failure, logs the error and shows a blocking alert().
+*  5. Removes the 'loading' class from button_caller in both cases.
+*
+* The request uses a 1-hour timeout because FFmpeg encoding of long clips can
+* take substantial time on the server.
+*
+* (!) Uses alert() for error feedback — blocking UI; no async-safe alternative
+*     is currently wired up. Do not change this without updating all callers.
+*
+* @param {Object} options - fragment request options
+* @param {string} options.tipo - ontology tipo of the AV component
+* @param {string} options.section_tipo - ontology tipo of the parent section
+* @param {string|number} options.section_id - record id of the parent section
+* @param {string} options.tag_id - tag identifier for the fragment (used server-side)
+* @param {string} options.lang - language code for multi-language media lookup
+* @param {string} options.quality - quality label, e.g. 'low' | 'medium' | 'high'
+* @param {number} [options.tc_in_secs=0] - fragment start in seconds
+* @param {number|null} [options.tc_out_secs=null] - fragment end in seconds; null = end of file
+* @param {boolean} [options.watermark=false] - whether to add a watermark to the output
+* @param {HTMLElement} [options.button_caller] - button that triggered the action;
+*        receives 'loading' class during the request
+* @returns {Promise<Object>} resolves with the raw api_response from dd_component_av_api
 */
 export const download_av_fragment = async function(options) {
 
@@ -424,7 +579,7 @@ export const download_av_fragment = async function(options) {
 				}
 			},
 			retries : 1, // one try only
-			timeout : 3600 * 1000 // 1 hour waiting response
+			timeout : 3600 * 1000 // 1 hour waiting response; encoding can be slow
 		})
 		.then(async function(api_response){
 
@@ -437,12 +592,11 @@ export const download_av_fragment = async function(options) {
 				// error case
 				const msg = api_response.msg || 'Error on create fragment'
 				console.error(msg)
-				alert(msg);
+				alert(msg); // (!) blocking alert; see doc-block note above
 
 			}else{
 
-				// success case
-
+				// success case — build a friendly filename from quality + original basename
 				const url		= api_response.result;
 				const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
 
@@ -461,9 +615,18 @@ export const download_av_fragment = async function(options) {
 
 /**
 * GET_MEDIA_STREAMS
-* 	Get media_streams info from default quality file calling API
-* @return promise
-* 	resolve object|null
+* Fetch technical stream metadata (video/audio tracks, codecs, durations,
+* resolutions, etc.) from the server for this component's default-quality file.
+* The data is provided by the server-side dd_component_av_api 'get_media_streams'
+* action, which typically calls FFprobe.
+*
+* On success, resolves with the 'streams' array from the API response.
+* On API error, logs the message and resolves with null (not rejected), allowing
+* callers to treat missing stream info as a graceful degradation rather than a
+* hard failure.
+*
+* @returns {Promise<Array|null>} resolves with the streams array on success,
+*                               or null if the API reports an error
 */
 component_av.prototype.get_media_streams = function() {
 
@@ -504,8 +667,7 @@ component_av.prototype.get_media_streams = function() {
 
 			}else{
 
-				// success case
-
+				// success case — extract streams array; default to [] if absent
 				const media_streams	= api_response.result?.streams || []
 
 				resolve(media_streams)
@@ -518,9 +680,23 @@ component_av.prototype.get_media_streams = function() {
 
 /**
 * CREATE_POSTERFRAME
-* Creates a new posterframe file from current_view overwriting old file if exists
-* @param object viewer
-* @return bool
+* Extract a still frame from the media file at the current playback position
+* and save it as the component's posterframe image on the server, overwriting
+* any previously existing posterframe for this record.
+*
+* The request passes self.video.currentTime so the server knows which frame to
+* extract. If self.video is not yet set (e.g. called before the player renders),
+* the optional-chaining fallback sends 0 (start of file).
+*
+* (!) The doc-block param '@param object viewer' in the original is inaccurate:
+*     the function signature takes no parameters — the instance (self) provides
+*     all required context via create_source(self).
+*
+* (!) SHOW_DEVELOPER is not declared in the global pragma at the top of this file.
+*     If it is undefined at runtime, the guard evaluates as false and the debug
+*     log is silently skipped.
+*
+* @returns {Promise<boolean>} api_response.result — true on success, false on error
 */
 component_av.prototype.create_posterframe = async function() {
 
@@ -532,7 +708,7 @@ component_av.prototype.create_posterframe = async function() {
 			action	: 'create_posterframe',
 			source	: create_source(self),
 			options	: {
-				current_time : self.video?.currentTime || 0
+				current_time : self.video?.currentTime || 0 // fallback to 0 when no video element
 			}
 		}
 
@@ -540,7 +716,7 @@ component_av.prototype.create_posterframe = async function() {
 		const api_response = await data_manager.request({
 			body : rqo,
 			retries : 1, // one try only
-			timeout : 3600 * 1000 // 1 hour waiting response
+			timeout : 3600 * 1000 // 1 hour waiting response; frame extraction can be slow
 		})
 
 	// debug
@@ -556,8 +732,17 @@ component_av.prototype.create_posterframe = async function() {
 
 /**
 * DELETE_POSTERFRAME
-* Deletes existing posterframe file
-* @return bool
+* Remove the existing posterframe file for this component from the server.
+* All context is derived from the component instance via create_source(self);
+* no additional options are currently required by the API action.
+*
+* (!) The inline comment '// move_file_to_dir' is a stale copy-paste label
+*     from a sibling action and does not describe the actual operation here.
+*
+* (!) SHOW_DEVELOPER is not declared in the global pragma at the top of this file —
+*     see the same note in create_posterframe above.
+*
+* @returns {Promise<boolean>} api_response.result — true on success, false on error
 */
 component_av.prototype.delete_posterframe = async function() {
 
