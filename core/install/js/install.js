@@ -4,6 +4,37 @@
 
 
 
+/**
+* INSTALL
+* Controller class for the Dédalo first-run installation wizard.
+*
+* This module is the client-side entry point for the pre-authentication
+* installation flow. Its sole purpose is to bootstrap the wizard UI:
+*
+*   1. On `init()`:  seed instance properties from the supplied `options` bag.
+*   2. On `build()`: optionally fetch the install context from the server via
+*      the `get_install_context` API action (which intentionally bypasses the
+*      normal authentication gate — the user is not yet logged in).
+*   3. On `render()` / `install()` / `list()` / `edit()`: delegate immediately
+*      to `render_install.prototype.render`, which constructs the multi-step
+*      wizard DOM (database init tests, config check, DB install, root-password
+*      setting, login, hierarchy import, and finish).
+*
+* The class follows the standard Dédalo UI lifecycle:
+*   `init → build → render → destroy`
+*
+* Prototype methods are provided by mixing in `common.prototype` and
+* `render_install.prototype`. No additional instance methods are defined
+* directly on `install.prototype` beyond the lifecycle overrides below.
+*
+* Security note: `get_install_context` runs WITHOUT a prior login; the server
+* must enforce that this action is unavailable once installation is complete.
+*
+* Exported symbols: `install` (constructor)
+*/
+
+
+
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common,create_source} from '../../common/js/common.js'
@@ -13,6 +44,23 @@
 
 /**
 * INSTALL
+* Constructor — seeds all well-known instance properties to a safe baseline.
+*
+* Properties declared here (all assigned concrete values by `init()`):
+*   id       — unique DOM/instance identifier (populated externally before init)
+*   model    — class name string, e.g. 'install'
+*   type     — fixed to 'install' (set in init)
+*   tipo     — ontology tipo for this element
+*   mode     — active render mode ('list', 'edit', 'install', …)
+*   lang     — active language tag, e.g. 'lg-eng'
+*   datum    — full datum array (usually null for install; no record context)
+*   context  — server-resolved context object from `get_install_context`
+*   data     — resolved data for the current record (set to {} after build)
+*   node     — root HTMLElement created by render(); null until then
+*   ar_instances — child instances managed by this element (starts empty)
+*   status   — lifecycle state string: 'initializing' → 'initialized' → …
+*
+* @returns {boolean} true — constructors in this codebase conventionally return true
 */
 export const install = function() {
 
@@ -42,6 +90,17 @@ export const install = function() {
 /**
 * COMMON FUNCTIONS
 * extend component functions from component common
+*
+* Prototype assignments wire the standard Dédalo UI contracts onto `install`:
+*   render   — common.prototype.render (lifecycle entry; resolves mode → method)
+*   install  — delegates to render_install.prototype.render (install-wizard DOM)
+*   list     — also render_install.prototype.render (same view for list context)
+*   edit     — also render_install.prototype.render (same view for edit context)
+*   destroy  — common.prototype.destroy (tears down events and child instances)
+*   refresh  — common.prototype.refresh (destroy deps → build → re-render)
+*
+* All three mode variants (install, list, edit) map to the same render function
+* because the install wizard has a single unified view regardless of mode.
 */
 // prototypes assign
 	install.prototype.render	= common.prototype.render
@@ -55,7 +114,33 @@ export const install = function() {
 
 /**
 * INIT
-* @return bool
+* Seeds all instance properties from the supplied `options` bag and sets the
+* one-shot `is_init` guard that prevents duplicate initialization.
+*
+* Must be called exactly once per instance. If called a second time on the
+* same instance (e.g., due to a duplicated DOM event firing), an error is
+* logged and `false` is returned immediately — the existing state is preserved.
+*
+* After a successful call:
+*   - `this.status` is 'initialized'
+*   - `this.is_init` is `true`
+*   - `this.node` is `null` (populated only after render())
+*   - `this.events_tokens` is a new empty array
+*   - `this.context`, `this.data`, `this.datum` hold the values from `options`
+*     (or `null` if not supplied)
+*
+* (!) `alert()` is shown in SHOW_DEBUG mode on a duplicate-init error. This is
+* a developer diagnostic tool only and is intentional.
+*
+* @param {Object} options - Initialization options bag
+* @param {string} options.model - Instance class name, e.g. 'install'
+* @param {string} options.tipo - Ontology tipo of this element
+* @param {string} options.mode - Render mode: 'install', 'edit', 'list', etc.
+* @param {string} options.lang - Active language tag, e.g. 'lg-eng'
+* @param {Object|null} [options.context=null] - Pre-fetched install context (omit to let build() fetch it)
+* @param {Object|null} [options.data=null] - Pre-resolved data (normally null for install)
+* @param {Array|null} [options.datum=null] - Full datum array (normally null for install)
+* @returns {boolean} true on success; false if the instance was already initialized
 */
 install.prototype.init = async function(options) {
 
@@ -103,9 +188,31 @@ install.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param bool autoload = true
-* @return promise
-*	bool true
+* Prepares the instance for rendering by optionally loading the install context
+* from the server.
+*
+* When `autoload` is `true` (the typical production path), this method sends a
+* `get_install_context` request to `dd_utils_api` and stores the matching result
+* entry on `self.context`. Unlike the normal `get_element_context` action used
+* by authenticated components, `get_install_context` does not require a session
+* token — the install wizard runs before any user is logged in.
+*
+* Response shape expected from `api_response.result`:
+*   An array of context objects (one per model). This method filters for the
+*   entry where `element.model === self.model` and stores it as `self.context`.
+*   `self.data` is then set to an empty object `{}` (no record-level data exists
+*   at install time).
+*
+* When `autoload` is `false`, the caller is responsible for populating
+* `self.context` and `self.data` before calling `render()`.
+*
+* The `create_source(self, null)` call builds the standard Dédalo source object
+* that identifies this instance to the server (model, tipo, mode, lang, etc.).
+* Passing `null` as the action means no specific data action is requested —
+* context retrieval is the sole purpose of this call.
+*
+* @param {boolean} [autoload=false] - When true, fetches install context from the API
+* @returns {Promise<boolean>} Resolves to true once the build phase is complete
 */
 install.prototype.build = async function(autoload=false) {
 

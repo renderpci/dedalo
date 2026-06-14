@@ -128,6 +128,9 @@ final class install_database_manager {
 			$config						= install_config_manager::get_config();
 			$target_file_path_compress	= $config->target_file_path_compress;
 			$uncompressed_file			= $config->target_file_path;
+			// $exec: dev-time guard; kept always-true so future dry-run debugging
+			// can be enabled by flipping a single local variable without touching
+			// control-flow. The pattern is shared by all methods in this class.
 			$exec						= true;
 
 		// check if file exists
@@ -169,6 +172,9 @@ final class install_database_manager {
 					, logger::WARNING
 				);
 
+				// empty output from psql usually means it could not authenticate
+				// (password prompt aborted silently), rather than a SQL error.
+				// The most common cause is a missing or mis-permissioned ~/.pgpass.
 				if (empty($command_res)) {
 
 					$php_whoami					= trim(shell_exec('whoami'));
@@ -176,6 +182,8 @@ final class install_database_manager {
 					$user_home_dir				= trim(shell_exec('echo $HOME'));
 					$pgpass_file_path			= $user_home_dir.'/.pgpass';
 					$pgpass_file_exists			= file_exists($pgpass_file_path);
+					// fileperms() returns a full 16-bit mode; the last 4 octal digits
+					// give the familiar Unix permission mask (e.g. '0600').
 					$pgpass_file_permissions	= $pgpass_file_exists
 						? substr(sprintf('%o', fileperms($pgpass_file_path)), -4)
 						: 'file not found!';
@@ -903,6 +911,9 @@ final class install_database_manager {
 
 				switch ($table) {
 					case 'matrix_ontology':
+						// In matrix_ontology each TLD's root record has section_tipo = TLD + '0'
+						// (e.g. 'dd0', 'rsc0').  Rows with any other section_tipo belong to
+						// project-specific ontology and must be removed from the install DB.
 						$ar_sections = array_map(function($tld){
 							return "'{$tld}0'";
 						}, $config->to_preserve_tld);
@@ -910,6 +921,12 @@ final class install_database_manager {
 						break;
 
 					case 'matrix_ontology_main':
+						// matrix_ontology_main holds the JSONB representation of each ontology
+						// node.  The hierarchy6 array inside the 'string' JSONB column encodes
+						// the node's ancestry path; the entry with lang='lg-nolan' contains the
+						// TLD identifier.  We keep only rows whose ancestry includes a preserved
+						// TLD value ('dd', 'rsc', etc.).  Rows that have no hierarchy6 at all
+						// are also deleted — they are orphaned or partially-migrated records.
 						$to_preserve_tld = array_map(function($tld){
 							return "'{$tld}'";
 						}, $config->to_preserve_tld);
@@ -925,9 +942,12 @@ final class install_database_manager {
 						break;
 
 					default:
+						// For all other listed tables: delete every row and reset the primary
+						// sequence to 1 so fresh installs always start IDs from a known baseline.
 						$sql = 'DELETE FROM "' . $table . '"; ALTER SEQUENCE IF EXISTS ' . $table . '_id_seq RESTART WITH 1;';
 						if ($table==='matrix_activity') {
-							// add special sequence matrix_activity_section_id_seq
+							// matrix_activity has a second sequence (section_id) independent of
+							// the primary id sequence; both must be reset to avoid gaps.
 							$sql .= 'ALTER SEQUENCE IF EXISTS matrix_activity_section_id_seq RESTART WITH 1;';
 						}
 						break;
