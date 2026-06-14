@@ -63,72 +63,382 @@
 class dd_object extends stdClass implements JsonSerializable {
 
 	/**
-	 * Identifies this structure as a DDO.
-	 * @var string
+	 * Literal marker that identifies any object carrying this property as a DDO.
+	 * Consumers (JS and PHP) check `typo === 'ddo'` to distinguish DDOs from
+	 * plain stdClass objects or other structured payloads.
+	 * @var string $typo
 	 */
 	public string $typo = 'ddo';
 
 	// Core identity
+
+	/**
+	 * Logical runtime type. One of the values in $ar_type_allowed
+	 * (e.g. 'section', 'component', 'tool'). Set via set_type() which
+	 * validates against the allowlist. Usually inferred from $model by the
+	 * constructor via resolve_type_from_model().
+	 * @var ?string $type
+	 */
 	protected ?string $type = null;
+
+	/**
+	 * Ontology tipo identifier (e.g. 'oh14', 'hierarchy25'). Every valid tipo
+	 * has a known top-level domain (TLD) prefix verified by get_tld_from_tipo().
+	 * Setting this also auto-resolves $model when $model is not already set.
+	 * @var ?string $tipo
+	 */
 	protected ?string $tipo = null;
+
+	/**
+	 * Section tipo(s) that contextualize this DDO. May be a single tipo string
+	 * (e.g. 'oh1') or an array of tipos when the DDO spans multiple sections.
+	 * @var string|array|null $section_tipo
+	 */
 	protected string|array|null $section_tipo = null;
+
+	/**
+	 * Parent section or portal tipo (e.g. 'oh2'). Must pass get_tld_from_tipo()
+	 * validation. Used to climb the containment hierarchy.
+	 * @var ?string $parent
+	 */
 	protected ?string $parent = null;
+
+	/**
+	 * Ontology grouper tipo that owns this element within the ontology tree.
+	 * Validated identically to $parent (must have a known TLD prefix).
+	 * @var ?string $parent_grouper
+	 */
 	protected ?string $parent_grouper = null;
+
+	/**
+	 * Active data language for this DDO (e.g. 'lg-eng', 'lg-spa').
+	 * Must start with the 'lg-' prefix; validated in set_lang().
+	 * @var ?string $lang
+	 */
 	protected ?string $lang = null;
+
+	/**
+	 * UI and data operation mode. Common values: 'list', 'edit', 'search', 'choose'.
+	 * Controls which rendering and data-retrieval paths are taken by the consumer.
+	 * @var ?string $mode
+	 */
 	protected ?string $mode = null;
+
+	/**
+	 * PHP class / JS module name for this element (e.g. 'component_input_text',
+	 * 'section', 'tool_export'). Used by the factory to instantiate the right class
+	 * and by resolve_type_from_model() to derive $type.
+	 * @var ?string $model
+	 */
 	protected ?string $model = null;
+
+	/**
+	 * Optional caller-assigned identifier. Distinguishes this DDO from sibling
+	 * DDOs inside a DDO_MAP chain when the same tipo appears more than once.
+	 * @var ?string $id
+	 */
 	protected ?string $id = null;
+
+	/**
+	 * Short human-readable annotation for debugging or logging
+	 * (e.g. 'Find(spot) - component_portal'). Never used in data logic.
+	 * @var ?string $info
+	 */
 	protected ?string $info = null;
+
+	/**
+	 * Custom, ontology-driven configuration object. Passed to the instantiated
+	 * component/section to override or supplement ontology properties at runtime.
+	 * Accepts either an object or an array depending on the caller.
+	 * @var object|array|null $properties
+	 */
 	protected object|array|null $properties = null;
+
+	/**
+	 * Permission level granted to the current user for this element.
+	 * 0 = read-only, 1 = read+write, 2 = read+write+delete, 3 = full (including create).
+	 * @var ?int $permissions
+	 */
 	protected ?int $permissions = null;
 
 	// Labels & translation
+
+	/**
+	 * Primary human-readable label for this element (e.g. 'Title').
+	 * Used in UI headers, column captions, and export column names.
+	 * @var ?string $label
+	 */
 	protected ?string $label = null;
+
+	/**
+	 * Alternative label variants (e.g. plural forms, short labels).
+	 * Mostly used by tools that need multiple display strings.
+	 * @var ?array $labels
+	 */
 	protected ?array $labels = null;
+
+	/**
+	 * Whether this element holds language-specific content that should be
+	 * replicated per language. False for structural elements such as portals;
+	 * true for text/value-bearing components.
+	 * @var ?bool $translatable
+	 */
 	protected ?bool $translatable = null;
 
 	// Composition / context
+
+	/**
+	 * Array of tool DDO definitions attached to this element. Each entry is a
+	 * minimal DDO describing one tool (tipo, model, label, …). Read-only from
+	 * nested context (see context-cache architecture note in MEMORY).
+	 * @var ?array $tools
+	 */
 	protected ?array $tools = null;
+
+	/**
+	 * Array of button DDO definitions attached to this element. Structure mirrors
+	 * $tools. Read-only from nested context.
+	 * @var ?array $buttons
+	 */
 	protected ?array $buttons = null;
+
+	/**
+	 * Arbitrary CSS option object passed through to the client renderer.
+	 * Shape is consumer-defined; no server-side validation is performed.
+	 * @var ?object $css
+	 */
 	protected ?object $css = null;
+
+	/**
+	 * Target section definitions used by relation or portal components to know
+	 * which sections they point to. Each entry is an object with at least
+	 * 'tipo' and 'label' (e.g. [{'tipo':'dd125','label':'Projects'}]).
+	 * @var ?array $target_sections
+	 */
 	protected ?array $target_sections = null;
+
+	/**
+	 * Request configuration metadata that governs how the section/component
+	 * fetches and shapes its data. Passed to the request_config builder.
+	 * See the request-config hardening memory entry for the 3-stage orchestrator.
+	 * @var ?array $request_config
+	 */
 	protected ?array $request_config = null;
+
+	/**
+	 * Column definitions for tabular/grid views. Each entry describes one column
+	 * (tipo, label, width, sortable, …) and maps to a component DDO.
+	 * @var ?array $columns_map
+	 */
 	protected ?array $columns_map = null;
 
 	// View
+
+	/**
+	 * Named rendering view for this element (e.g. 'list', 'edit', 'card').
+	 * Determines which template or render path the client uses.
+	 * @var ?string $view
+	 */
 	protected ?string $view = null;
+
+	/**
+	 * Named rendering view applied to child elements of this DDO (e.g. rows
+	 * inside a list). Allows parent and child to use different render strategies.
+	 * @var ?string $children_view
+	 */
 	protected ?string $children_view = null;
 
 	// Tools specifics
+
+	/**
+	 * Human-readable name of the tool (e.g. 'Export', 'Import CSV').
+	 * Displayed in the tools panel inspector.
+	 * @var ?string $name
+	 */
 	protected ?string $name = null;
+
+	/**
+	 * Extended description of the tool shown in the inspector panel.
+	 * @var ?string $description
+	 */
 	protected ?string $description = null;
+
+	/**
+	 * Icon identifier or path for the tool/button UI representation.
+	 * @var ?string $icon
+	 */
 	protected ?string $icon = null;
+
+	/**
+	 * Developer attribution string for the tool (e.g. team name or author).
+	 * Informational only; not used in data logic.
+	 * @var ?string $developer
+	 */
 	protected ?string $developer = null;
+
+	/**
+	 * Whether the tool should appear in the inspector panel sidebar.
+	 * When false the tool exists but is hidden from the UI tool list.
+	 * @var ?bool $show_in_inspector
+	 */
 	protected ?bool $show_in_inspector = null;
+
+	/**
+	 * When true, the resolved value includes ancestor term labels in
+	 * the display string (used by thesaurus hierarchy components).
+	 * @var ?bool $value_with_parents
+	 */
 	protected ?bool $value_with_parents = null;
+
+	/**
+	 * Whether the tool should also appear embedded inside the component UI
+	 * (as opposed to only appearing in the global tools panel).
+	 * @var ?bool $show_in_component
+	 */
 	protected ?bool $show_in_component = null;
+
+	/**
+	 * Tool-specific configuration object. Shape is defined per tool;
+	 * no validation is applied at the DDO level.
+	 * @var ?object $config
+	 */
 	protected ?object $config = null;
+
+	/**
+	 * Whether this column/component can be used as a sort key in list views.
+	 * @var ?bool $sortable
+	 */
 	protected ?bool $sortable = null;
+
+	/**
+	 * Separator string placed between field values when rendering multiple
+	 * component values inline (e.g. ', ').
+	 * @var ?string $fields_separator
+	 */
 	protected ?string $fields_separator = null;
+
+	/**
+	 * Separator string placed between multiple record blocks in a concatenated
+	 * output (e.g. ' | '). Used alongside $fields_separator in export/diffusion.
+	 * @var ?string $records_separator
+	 */
 	protected ?string $records_separator = null;
+
+	/**
+	 * When true, the consumer should load this element's data automatically
+	 * on initialization without waiting for a user action.
+	 * @var ?bool $autoload
+	 */
 	protected ?bool $autoload = null;
+
+	/**
+	 * Semantic role of this DDO within a tool's DDO_MAP chain
+	 * (e.g. 'main_component'). Lets a tool locate a specific DDO by role
+	 * rather than position.
+	 * @var ?string $role
+	 */
 	protected ?string $role = null;
+
+	/**
+	 * Scope-to-component mapping for thesaurus/section contexts. Maps semantic
+	 * role names ('term', 'parent', 'order', …) to concrete tipo strings so
+	 * tools and search can operate on them uniformly across different sections.
+	 * See the section_map resolver memory entry.
+	 * @var ?object $section_map
+	 */
 	protected ?object $section_map = null;
+
+	/**
+	 * Accent color for the section UI (e.g. '#f1f1f1'). Used by the client
+	 * to differentiate sections visually in the navigation tree.
+	 * @var ?string $color
+	 */
 	protected ?string $color = null;
+
+	/**
+	 * PostgreSQL JSONB matrix table name used to store this section's component
+	 * data (e.g. 'matrix_list'). Routes queries to the correct physical table.
+	 * @var ?string $matrix_table
+	 */
 	protected ?string $matrix_table = null;
+
+	/**
+	 * DEPRECATED. Use $fn instead.
+	 * Name of a custom PHP function called to retrieve calculation data for
+	 * this DDO (e.g. 'get_calculation_data'). Kept for backward compatibility
+	 * with legacy ontology entries (e.g. mdcat2431).
+	 * @var ?string $data_fn
+	 */
 	protected ?string $data_fn = null;
+
+	/**
+	 * v6 model name preserved for migration lookup. Used to map old autocomplete
+	 * or custom component models to their v7 equivalents during import/diffusion.
+	 * @var ?string $legacy_model
+	 */
 	protected ?string $legacy_model = null;
 
 	// Execution & Parsing
+
+	/**
+	 * Generic callback function name invoked in the execution context of this DDO
+	 * (e.g. a custom data-retrieval or rendering hook). Replaces the deprecated $data_fn.
+	 * @var ?string $fn
+	 */
 	protected ?string $fn = null;
+
+	/**
+	 * Diffusion node tipo that binds this DDO to a specific diffusion
+	 * configuration/node in the diffusion pipeline.
+	 * Note: the class header uses the public alias 'diffusion_node_tipo'; the
+	 * actual stored property is 'diffusion_tipo'.
+	 * @var ?string $diffusion_tipo
+	 */
 	protected ?string $diffusion_tipo = null;
+
+	/**
+	 * Generic options container for passing custom variables between DDOs or
+	 * down to component implementations without polluting named properties.
+	 * @var ?object $options
+	 */
 	protected ?object $options = null;
+
+	/**
+	 * Arguments forwarded to the diffusion parser when this DDO is processed
+	 * through the diffusion chain (e.g. rendering templates or RDF mappings).
+	 * @var ?object $parser_args
+	 */
 	protected ?object $parser_args = null;
+
+	/**
+	 * Windowing descriptor for partial data retrieval. Shape: {offset: int, length: int}.
+	 * Consumers use this to fetch a slice of a component's data array rather than
+	 * the full set (e.g. first image only).
+	 * @var ?object $data_slice
+	 */
 	protected ?object $data_slice = null;
+
+	/**
+	 * Allowlist of section tipos used by relation_list to restrict which sections
+	 * can appear as inverse references (e.g. ['oh1', 'oh2']).
+	 * @var ?array $section_filter
+	 */
 	protected ?array $section_filter = null;
+
+	/**
+	 * Allowlist of component tipos used by relation_list to restrict inverse
+	 * references to specific component columns (e.g. ['oh14', 'oh15']).
+	 * @var ?array $component_filter
+	 */
 	protected ?array $component_filter = null;
 
 	// Errors
+
+	/**
+	 * Accumulated error messages from the constructor and all set_* calls.
+	 * Null when no errors have occurred. Inspect with has_errors() / get_errors().
+	 * @var ?array $errors
+	 */
 	protected ?array $errors = null;
 
 
@@ -235,9 +545,14 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_TYPE
-	* Only allow types defined in dd_object::$ar_type_allowed
-	* @param string $value
-	* @return bool
+	* Sets the logical runtime type, validating it against the $ar_type_allowed allowlist.
+	*
+	* Rejects any value not present in the allowlist and records the rejection in
+	* $this->errors. This is the only write path for $type; callers should never
+	* assign $type directly.
+	*
+	* @param string $value - must be one of the values in dd_object::$ar_type_allowed
+	* @return bool - false when $value is not in the allowlist
 	*/
 	public function set_type(string $value) : bool  {
 
@@ -266,8 +581,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_TYPE
-	* Return property value
-	* @return string|null $this->type
+	* Returns the logical runtime type of this DDO (e.g. 'section', 'component', 'tool').
+	* @return string|null - null when type has not been set or could not be inferred from the model
 	*/
 	public function get_type() : ?string {
 
@@ -278,8 +593,16 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_TIPO
-	* @param string|null $value
-	* @return bool
+	* Sets the ontology tipo identifier, validating that it has a known TLD prefix.
+	*
+	* Side effects:
+	* - An empty/null value resets $tipo to null (clearing without error).
+	* - A non-empty value that fails get_tld_from_tipo() is rejected and logged as an error.
+	* - When $tipo is accepted and $model is not yet set, $model is auto-resolved via
+	*   ontology_node::get_model_by_tipo() so callers do not have to supply both.
+	*
+	* @param string|null $value - ontology tipo such as 'oh14'; null clears the field
+	* @return bool - false when $value is non-empty and fails TLD validation
 	*/
 	public function set_tipo( ?string $value ) : bool  {
 
@@ -316,8 +639,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_TIPO
-	* Return property value
-	* @return string|null $this->tipo
+	* Returns the ontology tipo identifier (e.g. 'oh14', 'hierarchy25').
+	* @return string|null - null when tipo has not been set
 	*/
 	public function get_tipo() : ?string {
 
@@ -328,9 +651,14 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_SECTION_TIPO
-	* @param string|array $value
-	* 	Could be array or string
-	* @return bool
+	* Sets the section tipo context for this DDO.
+	*
+	* Accepts either a single tipo string or an array of tipos when the DDO spans
+	* multiple sections. No TLD validation is performed here; validation is the
+	* caller's responsibility.
+	*
+	* @param string|array|null $value - single tipo, array of tipos, or null to clear
+	* @return bool - always true
 	*/
 	public function set_section_tipo(string|array|null $value) : bool  {
 
@@ -343,9 +671,9 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_SECTION_TIPO
-	* Return property value
-	* @return mixed $this->section_tipo
-	* 	array|string|null
+	* Returns the section tipo context: a single tipo string, an array of tipos,
+	* or null when not set.
+	* @return mixed - string|array|null depending on how it was set
 	*/
 	public function get_section_tipo() : mixed {
 
@@ -356,8 +684,13 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_PARENT
-	* @param string|null $value
-	* @return bool
+	* Sets the parent section or portal tipo, validating the TLD prefix.
+	*
+	* A null value is accepted without validation (clears the field).
+	* A non-null value that fails get_tld_from_tipo() is rejected as an error.
+	*
+	* @param string|null $value - parent tipo (e.g. 'oh2') or null to clear
+	* @return bool - false when $value is non-null and fails TLD validation
 	*/
 	public function set_parent(?string $value) : bool {
 
@@ -384,8 +717,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_PARENT
-	* Return property value
-	* @return string|null $this->parent
+	* Returns the parent section or portal tipo (e.g. 'oh2').
+	* @return string|null - null when parent has not been set
 	*/
 	public function get_parent() : ?string {
 
@@ -396,8 +729,13 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_PARENT_GROUPER
-	* @param string|null $value
-	* @return bool
+	* Sets the ontology grouper tipo, validating the TLD prefix.
+	*
+	* Validation mirrors set_parent(): null clears the field without error;
+	* any non-null value must have a recognized TLD prefix.
+	*
+	* @param string|null $value - grouper tipo or null to clear
+	* @return bool - false when $value is non-null and fails TLD validation
 	*/
 	public function set_parent_grouper(?string $value) : bool {
 
@@ -424,8 +762,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_PARENT_GROUPER
-	* Return property value
-	* @return string|null $this->parent_grouper
+	* Returns the ontology grouper tipo that owns this element in the ontology tree.
+	* @return string|null - null when parent_grouper has not been set
 	*/
 	public function get_parent_grouper() : ?string {
 
@@ -436,8 +774,14 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_LANG
-	* @param string|null $value
-	* @return bool
+	* Sets the active data language for this DDO.
+	*
+	* Validates that the value starts with the 'lg-' prefix (e.g. 'lg-eng', 'lg-spa').
+	* A null value is accepted without validation. Any non-null value lacking the prefix
+	* is rejected and added to $this->errors.
+	*
+	* @param string|null $value - language code prefixed with 'lg-', or null to clear
+	* @return bool - false when $value is non-null and missing the 'lg-' prefix
 	*/
 	public function set_lang(?string $value) : bool {
 
@@ -464,8 +808,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_LANG
-	* Return property value
-	* @return string|null $this->lang
+	* Returns the active data language (e.g. 'lg-eng').
+	* @return string|null - null when lang has not been set
 	*/
 	public function get_lang() : ?string {
 
@@ -476,8 +820,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_MODE
-	* @param string|null $value
-	* @return bool
+	* Sets the UI and data operation mode (e.g. 'list', 'edit', 'search', 'choose').
+	* No validation is applied; any string (or null) is accepted.
+	* @param string|null $value - mode name or null to clear
+	* @return bool - always true
 	*/
 	public function set_mode(?string $value) : bool {
 
@@ -490,8 +836,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_MODE
-	* Return property value
-	* @return string|null $this->mode
+	* Returns the UI and data operation mode (e.g. 'list', 'edit', 'search').
+	* @return string|null - null when mode has not been set
 	*/
 	public function get_mode() : ?string {
 
@@ -502,8 +848,11 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_MODEL
-	* @param string|null $value
-	* @return bool
+	* Sets the PHP class / JS module name for this DDO (e.g. 'component_input_text').
+	* The constructor calls this before iterating other properties so that
+	* type resolution via resolve_type_from_model() can rely on an already-set model.
+	* @param string|null $value - class/module name or null to clear
+	* @return bool - always true
 	*/
 	public function set_model(?string $value) : bool {
 
@@ -516,8 +865,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_MODEL
-	* Return property value
-	* @return string|null $this->model
+	* Returns the class/module model name (e.g. 'component_input_text', 'section').
+	* @return string|null - null when model has not been set
 	*/
 	public function get_model() : ?string {
 
@@ -528,8 +877,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_ID
-	* @param string|null $value
-	* @return bool
+	* Sets the optional caller-assigned identifier used to distinguish sibling DDOs
+	* in a DDO_MAP chain when the same tipo appears more than once.
+	* @param string|null $value - identifier string or null to clear
+	* @return bool - always true
 	*/
 	public function set_id(?string $value) : bool {
 
@@ -542,8 +893,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_ID
-	* Return property value
-	* @return string|null $this->id
+	* Returns the optional local identifier for this DDO within a DDO_MAP chain.
+	* @return string|null - null when id has not been set
 	*/
 	public function get_id() : ?string {
 
@@ -554,8 +905,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_INFO
-	* @param string|null $value
-	* @return bool
+	* Sets the short annotation string used for debugging context
+	* (e.g. 'Find(spot) - component_portal'). Never affects data logic.
+	* @param string|null $value - annotation text or null to clear
+	* @return bool - always true
 	*/
 	public function set_info(?string $value) : bool {
 
@@ -568,8 +921,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_INFO
-	* Return property value
-	* @return string|null $this->info
+	* Returns the short annotation string (debugging context only).
+	* @return string|null - null when info has not been set
 	*/
 	public function get_info() : ?string {
 
@@ -580,8 +933,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_LEGACY_MODEL
-	* @param string|null $value
-	* @return bool
+	* Sets the v6 model name preserved for migration lookup
+	* (e.g. 'component_autocomplete_hi').
+	* @param string|null $value - v6 model name or null to clear
+	* @return bool - always true
 	*/
 	public function set_legacy_model(?string $value) : bool {
 
@@ -594,8 +949,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_LEGACY_MODEL
-	* Return property value
-	* @return string|null $this->legacy_model
+	* Returns the v6 model name used for migration/import lookups.
+	* @return string|null - null when legacy_model has not been set
 	*/
 	public function get_legacy_model() : ?string {
 
@@ -606,10 +961,17 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_PROPERTIES
-	* Note hint parameter 'object' is not supported bellow php 7.2
+	* Sets the ontology-driven configuration payload for this DDO.
+	*
+	* Accepts 'mixed' because the PHP 'object' type hint was not available before PHP 7.2
+	* and callers may pass either an object or an array depending on context.
+	*
+	* (!) The 'mixed' signature is intentional — do not narrow it to 'object|array|null'
+	* without auditing all callers. Narrowing would silently coerce or reject some payloads.
+	*
 	* @see https://php.net/manual/en/functions.arguments.php#functions.arguments.type-declaration
-	* @param mixed $value
-	* @return bool
+	* @param mixed $value - configuration object or array; null to clear
+	* @return bool - always true
 	*/
 	public function set_properties(mixed $value) : bool {
 
@@ -622,8 +984,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_PROPERTIES
-	* Return property value
-	* @return mixed $this->properties
+	* Returns the ontology-driven configuration payload (object, array, or null).
+	* @return mixed - object|array|null depending on what was set
 	*/
 	public function get_properties() : mixed {
 
@@ -634,8 +996,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_PERMISSIONS
-	* @param int|null $value
-	* @return bool
+	* Sets the permission level for the current user on this element.
+	* 0 = read-only, 1 = read+write, 2 = read+write+delete, 3 = full (including create).
+	* @param int|null $value - permission level or null when not specified
+	* @return bool - always true
 	*/
 	public function set_permissions(?int $value) : bool {
 
@@ -648,8 +1012,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_PERMISSIONS
-	* Return property value
-	* @return int|null $this->permissions
+	* Returns the permission level (0–3) or null when not specified.
+	* @return int|null - permission level, or null if not set
 	*/
 	public function get_permissions() : ?int {
 
@@ -660,8 +1024,9 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_LABEL
-	* @param string|null $value
-	* @return bool
+	* Sets the primary human-readable label for this element (e.g. 'Title').
+	* @param string|null $value - label text or null to clear
+	* @return bool - always true
 	*/
 	public function set_label(?string $value) : bool {
 
@@ -674,8 +1039,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_LABEL
-	* Return property value
-	* @return string|null $this->label
+	* Returns the primary display label (e.g. 'Title').
+	* @return string|null - null when label has not been set
 	*/
 	public function get_label() : ?string {
 
@@ -686,9 +1051,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_LABELS
-	* Used by tools
-	* @param array|null $value
-	* @return bool
+	* Sets the alternative label variants for this element (e.g. plural or short forms).
+	* Primarily used by tools that need multiple display strings alongside $label.
+	* @param array|null $value - array of label strings or null to clear
+	* @return bool - always true
 	*/
 	public function set_labels(?array $value) : bool {
 
@@ -701,8 +1067,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_LABELS
-	* Return property value
-	* @return array|null $this->labels
+	* Returns the alternative label variants array.
+	* @return array|null - null when labels has not been set
 	*/
 	public function get_labels() : ?array {
 
@@ -713,8 +1079,11 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_TRANSLATABLE
-	* @param bool $value
-	* @return bool
+	* Sets whether this element holds language-specific content to be replicated
+	* per language (true) or is language-agnostic (false).
+	* Note the parameter is non-nullable bool (not ?bool) — callers must pass true/false.
+	* @param bool $value - true for translatable elements, false for structural ones
+	* @return bool - always true
 	*/
 	public function set_translatable(bool $value) : bool {
 
@@ -727,8 +1096,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_TRANSLATABLE
-	* Return property value
-	* @return bool|null $this->translatable
+	* Returns whether this element is translatable (true/false) or unset (null).
+	* @return bool|null - null when translatable has not been set
 	*/
 	public function get_translatable() : ?bool {
 
@@ -739,8 +1108,14 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_TOOLS
-	* @param array|null $value
-	* @return bool
+	* Sets the array of tool DDO definitions attached to this element.
+	* Each entry is a minimal DDO object describing one tool (tipo, model, label, …).
+	*
+	* Note: the validation block below was disabled (commented out) when the signature
+	* was tightened to ?array, making the runtime check redundant.
+	*
+	* @param array|null $value - array of tool DDO objects or null to clear
+	* @return bool - always true
 	*/
 	public function set_tools(?array $value) : bool {
 
@@ -768,8 +1143,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_TOOLS
-	* Return property value
-	* @return array|null $this->tools
+	* Returns the array of tool DDO definitions attached to this element.
+	* @return array|null - null when tools have not been set
 	*/
 	public function get_tools() : ?array {
 
@@ -780,8 +1155,14 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_BUTTONS
-	* @param array|null $value
-	* @return bool
+	* Sets the array of button DDO definitions attached to this element.
+	* Structure mirrors $tools: each entry is a minimal DDO for one button.
+	*
+	* Note: validation block disabled for the same reason as set_tools — the ?array
+	* type hint makes the runtime type check superfluous.
+	*
+	* @param array|null $value - array of button DDO objects or null to clear
+	* @return bool - always true
 	*/
 	public function set_buttons(?array $value) : bool {
 
@@ -809,8 +1190,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_BUTTONS
-	* Return property value
-	* @return array|null $this->buttons
+	* Returns the array of button DDO definitions attached to this element.
+	* @return array|null - null when buttons have not been set
 	*/
 	public function get_buttons() : ?array {
 
@@ -821,8 +1202,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_CSS
-	* @param object|null $value
-	* @return bool
+	* Sets the CSS options object passed through to the client renderer.
+	* Shape is consumer-defined; no validation is performed at the DDO level.
+	* @param object|null $value - CSS options object or null to clear
+	* @return bool - always true
 	*/
 	public function set_css(?object $value) : bool {
 
@@ -835,8 +1218,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_CSS
-	* Return property value
-	* @return object|null $this->css
+	* Returns the CSS options object for the client renderer.
+	* @return object|null - null when css has not been set
 	*/
 	public function get_css() : ?object {
 
@@ -847,8 +1230,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_TARGET_SECTIONS
-	* @param array|null $value
-	* @return bool
+	* Sets the target section definitions used by relation/portal components.
+	* Each entry describes one target section (at minimum 'tipo' and 'label').
+	* @param array|null $value - array of section descriptor objects or null to clear
+	* @return bool - always true
 	*/
 	public function set_target_sections(?array $value) : bool {
 
@@ -861,8 +1246,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_TARGET_SECTIONS
-	* Return property value
-	* @return array|null $this->target_sections
+	* Returns the target section descriptor array for relation/portal components.
+	* @return array|null - null when target_sections has not been set
 	*/
 	public function get_target_sections() : ?array {
 
@@ -873,8 +1258,11 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_REQUEST_CONFIG
-	* @param array|null $value
-	* @return bool
+	* Sets the request configuration metadata that governs how the section/component
+	* fetches and shapes its data. Passed to the 3-stage request_config orchestrator.
+	* See the request-config hardening memory entry for the full builder contract.
+	* @param array|null $value - request config array (e.g. [{'show': {'ddo_map': [...]}}]) or null
+	* @return bool - always true
 	*/
 	public function set_request_config(?array $value) : bool {
 
@@ -887,8 +1275,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_REQUEST_CONFIG
-	* Return property value
-	* @return array|null $this->request_config
+	* Returns the request configuration metadata array.
+	* @return array|null - null when request_config has not been set
 	*/
 	public function get_request_config() : ?array {
 
@@ -899,8 +1287,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_COLUMNS_MAP
-	* @param array|null $value
-	* @return bool
+	* Sets the column definitions for tabular/grid views. Each entry maps a component
+	* tipo to display metadata (label, width, sortable flag, …).
+	* @param array|null $value - array of column definition objects or null to clear
+	* @return bool - always true
 	*/
 	public function set_columns_map(?array $value) : bool {
 
@@ -913,8 +1303,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_COLUMNS_MAP
-	* Return property value
-	* @return array|null $this->columns_map
+	* Returns the column definitions array for tabular/grid views.
+	* @return array|null - null when columns_map has not been set
 	*/
 	public function get_columns_map() : ?array {
 
@@ -925,8 +1315,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_VIEW
-	* @param string|null $value
-	* @return bool
+	* Sets the named rendering view for this element (e.g. 'list', 'edit', 'card').
+	* Determines which template or render path the client uses for this DDO.
+	* @param string|null $value - view name or null to clear
+	* @return bool - always true
 	*/
 	public function set_view(?string $value) : bool {
 
@@ -939,8 +1331,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_VIEW
-	* Return property value
-	* @return string|null $this->view
+	* Returns the named rendering view for this element.
+	* @return string|null - null when view has not been set
 	*/
 	public function get_view() : ?string {
 
@@ -951,22 +1343,24 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_CHILDREN_VIEW
-	* @param string|null $value
-	* @return bool
+	* Sets the named rendering view applied to child elements of this DDO (e.g. rows
+	* inside a list). Allows parent and child to use different render strategies.
+	* @param string|null $value - child view name or null to clear
+	* @return bool - always true
 	*/
 	public function set_children_view(?string $value) : bool {
 
 		$this->children_view = $value;
 
 		return true;
-	}//end set_view
+	}//end set_children_view
 
 
 
 	/**
 	* GET_CHILDREN_VIEW
-	* Return property value
-	* @return string|null $this->children_view
+	* Returns the named rendering view for child elements of this DDO.
+	* @return string|null - null when children_view has not been set
 	*/
 	public function get_children_view() : ?string {
 
@@ -977,9 +1371,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_NAME
-	* Used by tools
-	* @param string|null $value
-	* @return bool
+	* Sets the human-readable name of the tool/element (e.g. 'Export', 'Import CSV').
+	* Displayed in the tools panel inspector. Primarily used by tools.
+	* @param string|null $value - name string or null to clear
+	* @return bool - always true
 	*/
 	public function set_name(?string $value) : bool {
 
@@ -992,8 +1387,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_NAME
-	* Return property value
-	* @return string|null $this->name
+	* Returns the human-readable name of the tool/element.
+	* @return string|null - null when name has not been set
 	*/
 	public function get_name() : ?string {
 
@@ -1004,9 +1399,9 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_DESCRIPTION
-	* Used by tools
-	* @param string|null $value
-	* @return bool
+	* Sets the extended description displayed in the inspector panel for tools.
+	* @param string|null $value - description text or null to clear
+	* @return bool - always true
 	*/
 	public function set_description(?string $value) : bool {
 
@@ -1019,8 +1414,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_DESCRIPTION
-	* Return property value
-	* @return string|null $this->description
+	* Returns the extended description text for the inspector panel.
+	* @return string|null - null when description has not been set
 	*/
 	public function get_description() : ?string {
 
@@ -1031,9 +1426,9 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_ICON
-	* Used by tools
-	* @param string|null $value
-	* @return bool
+	* Sets the icon identifier or path for the tool/button UI representation.
+	* @param string|null $value - icon key/path or null to clear
+	* @return bool - always true
 	*/
 	public function set_icon(?string $value) : bool {
 
@@ -1046,8 +1441,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_ICON
-	* Return property value
-	* @return string|null $this->icon
+	* Returns the icon identifier or path for this element.
+	* @return string|null - null when icon has not been set
 	*/
 	public function get_icon() : ?string {
 
@@ -1058,9 +1453,9 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_DEVELOPER
-	* Used by tools
-	* @param string|null $value
-	* @return bool
+	* Sets the developer attribution string for the tool (informational only).
+	* @param string|null $value - developer name/team string or null to clear
+	* @return bool - always true
 	*/
 	public function set_developer(?string $value) : bool {
 
@@ -1073,8 +1468,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_DEVELOPER
-	* Return property value
-	* @return string|null $this->developer
+	* Returns the developer attribution string for this tool.
+	* @return string|null - null when developer has not been set
 	*/
 	public function get_developer() : ?string {
 
@@ -1085,9 +1480,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_SHOW_IN_INSPECTOR
-	* Used by tools
-	* @param bool|null $value
-	* @return bool
+	* Sets whether the tool should appear in the inspector panel sidebar.
+	* When false the tool exists but is hidden from the UI tool list.
+	* @param bool|null $value - true to show, false to hide, null when unspecified
+	* @return bool - always true
 	*/
 	public function set_show_in_inspector(?bool $value) : bool {
 
@@ -1100,8 +1496,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_SHOW_IN_INSPECTOR
-	* Return property value
-	* @return bool|null $this->show_in_inspector
+	* Returns whether the tool is visible in the inspector panel.
+	* @return bool|null - null when show_in_inspector has not been set
 	*/
 	public function get_show_in_inspector() : ?bool {
 
@@ -1112,9 +1508,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_VALUE_WITH_PARENTS
-	* Used by tools
-	* @param bool|null $value
-	* @return bool
+	* Sets whether resolved values should include ancestor term labels in their
+	* display string (used by thesaurus hierarchy components to show the full path).
+	* @param bool|null $value - true to include parents, false to show leaf only, null when unspecified
+	* @return bool - always true
 	*/
 	public function set_value_with_parents(?bool $value) : bool {
 
@@ -1127,8 +1524,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_VALUE_WITH_PARENTS
-	* Return property value
-	* @return bool|null $this->value_with_parents
+	* Returns whether ancestor labels should be included in the value display.
+	* @return bool|null - null when value_with_parents has not been set
 	*/
 	public function get_value_with_parents() : ?bool {
 
@@ -1139,9 +1536,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_SHOW_IN_COMPONENT
-	* Used by tools
-	* @param bool|null $value
-	* @return bool
+	* Sets whether the tool should also appear embedded inside the component UI
+	* (as opposed to only in the global tools panel).
+	* @param bool|null $value - true to embed in component, false otherwise, null when unspecified
+	* @return bool - always true
 	*/
 	public function set_show_in_component(?bool $value) : bool {
 
@@ -1154,8 +1552,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_SHOW_IN_COMPONENT
-	* Return property value
-	* @return bool|null $this->show_in_component
+	* Returns whether the tool should be embedded inside the component UI.
+	* @return bool|null - null when show_in_component has not been set
 	*/
 	public function get_show_in_component() : ?bool {
 
@@ -1166,9 +1564,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_CONFIG
-	* Used by tools
-	* @param object|null $value
-	* @return bool
+	* Sets the tool-specific configuration object. Shape and semantics are
+	* defined per tool; no validation is performed at the DDO level.
+	* @param object|null $value - configuration object or null to clear
+	* @return bool - always true
 	*/
 	public function set_config(?object $value) : bool {
 
@@ -1181,8 +1580,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_CONFIG
-	* Return property value
-	* @return object|null $this->config
+	* Returns the tool-specific configuration object.
+	* @return object|null - null when config has not been set
 	*/
 	public function get_config() : ?object {
 
@@ -1193,9 +1592,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_SORTABLE
-	* Used by components (columns)
-	* @param bool|null $value
-	* @return bool
+	* Sets whether this column/component can be used as a sort key in list views.
+	* Used by component DDOs appearing inside a columns_map definition.
+	* @param bool|null $value - true when sortable, false when not, null when unspecified
+	* @return bool - always true
 	*/
 	public function set_sortable(?bool $value) : bool {
 
@@ -1208,8 +1608,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_SORTABLE
-	* Return property value
-	* @return bool|null $this->sortable
+	* Returns whether this column/component is sortable in list views.
+	* @return bool|null - null when sortable has not been set
 	*/
 	public function get_sortable() : ?bool {
 
@@ -1220,9 +1620,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_FIELDS_SEPARATOR
-	* Used by tools
-	* @param string|null $value
-	* @return bool
+	* Sets the separator string placed between field values when rendering multiple
+	* component values inline (e.g. ', '). Used in export and diffusion output.
+	* @param string|null $value - separator string or null to clear
+	* @return bool - always true
 	*/
 	public function set_fields_separator(?string $value) : bool {
 
@@ -1235,8 +1636,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_FIELDS_SEPARATOR
-	* Return property value
-	* @return string|null $this->fields_separator
+	* Returns the separator string for inline field values.
+	* @return string|null - null when fields_separator has not been set
 	*/
 	public function get_fields_separator() : ?string {
 
@@ -1247,9 +1648,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_RECORDS_SEPARATOR
-	* Used by tools
-	* @param string|null $value
-	* @return bool
+	* Sets the separator string placed between record blocks in concatenated output
+	* (e.g. ' | '). Used alongside $fields_separator in export and diffusion.
+	* @param string|null $value - separator string or null to clear
+	* @return bool - always true
 	*/
 	public function set_records_separator(?string $value) : bool {
 
@@ -1262,8 +1664,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_RECORDS_SEPARATOR
-	* Return property value
-	* @return string|null $this->records_separator
+	* Returns the separator string for record blocks in concatenated output.
+	* @return string|null - null when records_separator has not been set
 	*/
 	public function get_records_separator() : ?string {
 
@@ -1274,9 +1676,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_AUTOLOAD
-	* Used by tools
-	* @param bool|null $value
-	* @return bool
+	* Sets whether the consumer should load this element's data automatically on
+	* initialization without waiting for a user action.
+	* @param bool|null $value - true to autoload, false to defer, null when unspecified
+	* @return bool - always true
 	*/
 	public function set_autoload(?bool $value) : bool {
 
@@ -1289,8 +1692,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_AUTOLOAD
-	* Return property value
-	* @return bool|null $this->autoload
+	* Returns whether this element auto-loads its data on initialization.
+	* @return bool|null - null when autoload has not been set
 	*/
 	public function get_autoload() : ?bool {
 
@@ -1301,9 +1704,11 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_ROLE
-	* Used by tools
-	* @param string|null $value
-	* @return bool
+	* Sets the semantic role of this DDO within a tool's DDO_MAP chain
+	* (e.g. 'main_component'). Lets a tool locate a specific DDO by role name
+	* rather than by position in the array.
+	* @param string|null $value - role name string or null to clear
+	* @return bool - always true
 	*/
 	public function set_role(?string $value) : bool {
 
@@ -1316,8 +1721,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_ROLE
-	* Return property value
-	* @return string|null $this->role
+	* Returns the semantic role of this DDO within a tool's DDO_MAP chain.
+	* @return string|null - null when role has not been set
 	*/
 	public function get_role() : ?string {
 
@@ -1326,27 +1731,35 @@ class dd_object extends stdClass implements JsonSerializable {
 
 
 
-	/*
+	/**
 	* SET_SECTION_MAP
-	* Used to point specific components into common definitions
-	* ex:  "hierarchy25" in thesaurus or "tch152" components can be mapped to "term" to be searched in the same way
-	* term will be "hierarchy25" in thesaurus or will be object name in tangible heritage.
-	* Uses: 	to show children option in search panel
-	* 			to show the term in the thesaurus tree
-	* sample:
-	* 	{
-	* 		"thesaurus": {
-	* 			"term": "hierarchy25",
-	* 			"model": "hierarchy27",
-	* 			"order": "hierarchy48",
-	* 			"parent": "hierarchy36",
-	* 			"is_indexable": "hierarchy24",
-	* 			"is_descriptor": "hierarchy23"
-	* 		}
-	* 	}
-	* Used by tools
-	* @param object|null $value
-	* @return bool
+	* Sets the scope-to-component mapping that lets tools and search operate on
+	* thesaurus or section components uniformly across different section types.
+	*
+	* The object maps named scope keys (e.g. 'thesaurus') to inner objects where
+	* each key is a semantic role ('term', 'parent', 'order', 'model', …) and the
+	* value is the concrete tipo for that section. This indirection means a single
+	* tool can find "the term component" in any section without hardcoding tipos.
+	*
+	* Example:
+	*   {
+	*     "thesaurus": {
+	*       "term": "hierarchy25",
+	*       "model": "hierarchy27",
+	*       "order": "hierarchy48",
+	*       "parent": "hierarchy36",
+	*       "is_indexable": "hierarchy24",
+	*       "is_descriptor": "hierarchy23"
+	*     }
+	*   }
+	*
+	* Uses:
+	* - Show the "children" option in the search panel
+	* - Locate the term component in the thesaurus tree renderer
+	* See also: the section_map resolver memory entry for the global scope/term resolver.
+	*
+	* @param object|null $value - scope map object or null to clear
+	* @return bool - always true
 	*/
 	public function set_section_map(?object $value) : bool {
 
@@ -1359,8 +1772,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_SECTION_MAP
-	* Return property value
-	* @return object|null $this->section_map
+	* Returns the scope-to-component mapping object for this DDO.
+	* @return object|null - null when section_map has not been set
 	*/
 	public function get_section_map() : ?object {
 
@@ -1371,9 +1784,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_COLOR
-	* Used by sections
-	* @param string|null $value
-	* @return bool
+	* Sets the accent color for the section UI (e.g. '#f1f1f1'). Used by the
+	* client to differentiate sections visually in the navigation tree.
+	* @param string|null $value - CSS color string or null to clear
+	* @return bool - always true
 	*/
 	public function set_color(?string $value) : bool {
 
@@ -1386,8 +1800,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_COLOR
-	* Return property value
-	* @return string|null $this->color
+	* Returns the accent color for the section UI.
+	* @return string|null - null when color has not been set
 	*/
 	public function get_color() : ?string {
 
@@ -1398,8 +1812,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_MATRIX_TABLE
-	* @param string|null $value
-	* @return bool
+	* Sets the PostgreSQL JSONB matrix table name for this section's component data
+	* (e.g. 'matrix_list'). Routes queries to the correct physical storage table.
+	* @param string|null $value - table name or null to clear
+	* @return bool - always true
 	*/
 	public function set_matrix_table(?string $value) : bool {
 
@@ -1412,8 +1828,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_MATRIX_TABLE
-	* Return property value
-	* @return string|null $this->matrix_table
+	* Returns the JSONB matrix table name for this section.
+	* @return string|null - null when matrix_table has not been set
 	*/
 	public function get_matrix_table() : ?string {
 
@@ -1424,11 +1840,12 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_DATA_FN
-	* data_fn defines the function to be used to get data of the ddo
-	* example:
-	* "data_fn" : "get_calculation_data"
-	* @param string|null $value
-	* @return bool
+	* DEPRECATED — use set_fn() instead.
+	* Sets the legacy function name used to retrieve calculation data for this DDO
+	* (e.g. 'get_calculation_data'). Preserved for backward compatibility with
+	* legacy ontology entries (e.g. mdcat2431).
+	* @param string|null $value - function name or null to clear
+	* @return bool - always true
 	*/
 	public function set_data_fn(?string $value) : bool {
 
@@ -1441,8 +1858,9 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_DATA_FN
-	* Return property value
-	* @return string|null $this->data_fn
+	* DEPRECATED — use get_fn() instead.
+	* Returns the legacy function name for calculation data retrieval.
+	* @return string|null - null when data_fn has not been set
 	*/
 	public function get_data_fn() : ?string {
 
@@ -1453,8 +1871,11 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_FN
-	* @param string|null $value
-	* @return bool
+	* Sets the generic callback function name invoked in the execution context of
+	* this DDO (e.g. a custom data-retrieval or rendering hook).
+	* Replaces the deprecated $data_fn.
+	* @param string|null $value - function name or null to clear
+	* @return bool - always true
 	*/
 	public function set_fn(?string $value) : bool {
 
@@ -1467,7 +1888,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_FN
-	* @return string|null $this->fn
+	* Returns the generic callback function name for this DDO's execution context.
+	* @return string|null - null when fn has not been set
 	*/
 	public function get_fn() : ?string {
 
@@ -1478,8 +1900,12 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_DIFFUSION_TIPO
-	* @param string|null $value
-	* @return bool
+	* Sets the diffusion node tipo that binds this DDO to a specific diffusion
+	* configuration/node in the diffusion pipeline.
+	* Note: the class header uses the public alias 'diffusion_node_tipo'; the actual
+	* stored property is 'diffusion_tipo'.
+	* @param string|null $value - diffusion node tipo or null to clear
+	* @return bool - always true
 	*/
 	public function set_diffusion_tipo(?string $value) : bool {
 
@@ -1492,8 +1918,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_DIFFUSION_TIPO
-	* Return property value
-	* @return string|null $this->diffusion_tipo
+	* Returns the diffusion node tipo binding for this DDO.
+	* @return string|null - null when diffusion_tipo has not been set
 	*/
 	public function get_diffusion_tipo() : ?string {
 
@@ -1504,8 +1930,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_OPTIONS
-	* @param object|null $value
-	* @return bool
+	* Sets the generic options container for passing custom variables between DDOs
+	* or down to component implementations without polluting named properties.
+	* @param object|null $value - options object or null to clear
+	* @return bool - always true
 	*/
 	public function set_options(?object $value) : bool {
 
@@ -1518,7 +1946,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_OPTIONS
-	* @return object|null $this->options
+	* Returns the generic options container object.
+	* @return object|null - null when options has not been set
 	*/
 	public function get_options() : ?object {
 
@@ -1529,8 +1958,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_PARSER_ARGS
-	* @param object|null $value
-	* @return bool
+	* Sets arguments forwarded to the diffusion parser when this DDO is processed
+	* through the diffusion chain (e.g. rendering templates or RDF mappings).
+	* @param object|null $value - parser argument object or null to clear
+	* @return bool - always true
 	*/
 	public function set_parser_args(?object $value) : bool {
 
@@ -1543,7 +1974,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_PARSER_ARGS
-	* @return object|null $this->parser_args
+	* Returns the diffusion parser arguments object.
+	* @return object|null - null when parser_args has not been set
 	*/
 	public function get_parser_args() : ?object {
 
@@ -1554,11 +1986,11 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_DATA_SLICE
-	* Defines a data slice for pagination or partial data retrieval.
-	* Example: {"offset": 0, "length": 1}
-	*
-	* @param object|null $value Object with properties 'offset' (int) and 'length' (int)
-	* @return bool
+	* Sets the data slice windowing descriptor for partial data retrieval.
+	* Consumers use this to fetch a subset of a component's data array rather than
+	* the full set (e.g. first image only).
+	* @param object|null $value - object with 'offset' (int) and 'length' (int) properties, or null to clear
+	* @return bool - always true
 	*/
 	public function set_data_slice(?object $value) : bool {
 
@@ -1571,10 +2003,9 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_DATA_SLICE
-	* Returns the data slice definition if set.
-	* Example: {"offset": 0, "length": 1}
-	*
-	* @return object|null $this->data_slice Object with properties 'offset' (int) and 'length' (int)
+	* Returns the data slice windowing descriptor for partial data retrieval,
+	* or null when no slice has been configured.
+	* @return object|null - object with 'offset' (int) and 'length' (int) properties, or null if not set
 	*/
 	public function get_data_slice() : ?object {
 
@@ -1585,8 +2016,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_SECTION_FILTER
-	* @param array|null $value
-	* @return bool
+	* Sets the allowlist of section tipos used by relation_list to restrict which
+	* sections can appear as inverse references (e.g. ['oh1', 'oh2']).
+	* @param array|null $value - array of section tipo strings or null to clear
+	* @return bool - always true
 	*/
 	public function set_section_filter(?array $value) : bool {
 
@@ -1599,8 +2032,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_SECTION_FILTER
-	* Return property value
-	* @return array|null $this->section_filter
+	* Returns the section tipo allowlist for relation_list inverse reference filtering.
+	* @return array|null - null when section_filter has not been set
 	*/
 	public function get_section_filter() : ?array {
 
@@ -1611,8 +2044,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* SET_COMPONENT_FILTER
-	* @param array|null $value
-	* @return bool
+	* Sets the allowlist of component tipos used by relation_list to restrict inverse
+	* references to specific component columns (e.g. ['oh14', 'oh15']).
+	* @param array|null $value - array of component tipo strings or null to clear
+	* @return bool - always true
 	*/
 	public function set_component_filter(?array $value) : bool {
 
@@ -1625,8 +2060,8 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_COMPONENT_FILTER
-	* Return property value
-	* @return array|null $this->component_filter
+	* Returns the component tipo allowlist for relation_list inverse reference filtering.
+	* @return array|null - null when component_filter has not been set
 	*/
 	public function get_component_filter() : ?array {
 
@@ -1637,8 +2072,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* HAS_ERRORS
-	* Helper to know if constructor or setters have registered any error.
-	* @return bool
+	* Returns true if the constructor or any set_* call has registered an error.
+	* Use this as a quick guard before consuming the DDO; then call get_errors()
+	* for the full list of messages.
+	* @return bool - true when at least one error is present
 	*/
 	public function has_errors() : bool {
 
@@ -1649,8 +2086,10 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* GET_ERRORS
-	* Returns collected error messages (if any) as a flat array of strings
-	* @return array
+	* Returns all error messages accumulated by the constructor and set_* calls
+	* as a flat array of strings. Returns an empty array when there are no errors
+	* (safe to iterate without a has_errors() check).
+	* @return array - flat string array; empty when no errors have occurred
 	*/
 	public function get_errors() : array {
 
@@ -1661,9 +2100,19 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* RESOLVE_TYPE_FROM_MODEL
-	* Internal helper to infer "type" from "model"
-	* @param string|null $model
-	* @return string|null
+	* Maps the model name to a logical type string from $ar_type_allowed.
+	*
+	* Called by the constructor after all properties are set. The switch uses
+	* prefix tests (strpos === 0) rather than string equality so that the full
+	* range of component_ and tool_ model names resolve without enumeration.
+	* section::get_ar_grouper_models() is called once per construction to cover
+	* all registered grouper models dynamically.
+	*
+	* Returns null (and logs an error) when the model is empty or unrecognized;
+	* in that case the constructor skips set_type() rather than setting an invalid type.
+	*
+	* @param string|null $model - the model name to classify
+	* @return string|null - one of the values in $ar_type_allowed, or null if unrecognized
 	*/
 	private function resolve_type_from_model(?string $model) : ?string {
 
@@ -1885,7 +2334,14 @@ class dd_object extends stdClass implements JsonSerializable {
 
 	/**
 	* JSON_SERIALIZE
-	* @return mixed
+	* Implements JsonSerializable so that json_encode() produces a compact DDO payload.
+	*
+	* All object vars (including public dynamic properties added at runtime) are collected
+	* and then filtered to exclude null values. This matches the historic behavior of
+	* stdClass dynamic properties, which simply did not serialize absent keys, and keeps
+	* the JSON payload small for API responses and context-cache storage.
+	*
+	* @return mixed - associative array of non-null DDO properties
 	*/
 	public function jsonSerialize() : mixed {
 

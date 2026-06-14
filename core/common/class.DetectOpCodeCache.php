@@ -9,6 +9,14 @@ namespace DetectOpCodeCache;
  */
 final class DetectOpCodeCache
 {
+  /**
+   * Check whether any known opcode cache is active.
+   *
+   * Calls all individual has*() detectors and returns true as soon as one
+   * reports a positive match; false when none is found.
+   *
+   * @return bool
+   */
   final public static function checkAll()
   {
     return (self::hasXcache() ||
@@ -70,7 +78,7 @@ final class DetectOpCodeCache
   /**
    * check if we have ionCube Loader
    *
-   * @link http://www.php-accelerator.co.uk
+   * @link https://www.ioncube.com
    * @return bool
    */
   public static function hasIoncube()

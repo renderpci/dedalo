@@ -1,19 +1,54 @@
 <?php declare(strict_types=1);
 /**
-* CLASS EXEC COMMAND
+* CLASS EXEC_
+* Thin shell-execution layer for Dédalo background tasks and media processing.
 *
+* Provides three escalating levels of process management:
+* - exec_command: fire-and-forget synchronous shell command (e.g. ffmpeg poster frame).
+* - exec_sh_file: launch a pre-built .sh script in the background and capture its PID.
+* - request_cli: the primary background-task launcher used by tools and area_maintenance;
+*   serialises a class/method/params tuple into a JSON argument, spawns
+*   process_runner.php with `nohup nice`, and registers the resulting PID in
+*   the `processes` tracking store so callers can poll status via dd_utils_api.
 *
+* All methods escape shell arguments before interpolation (escapeshellcmd /
+* escapeshellarg). See the SEC-045 note below for removed helpers that did not.
+*
+* Known callers:
+* - exec_command  → core/media_engine/class.Ffmpeg.php (poster frame)
+* - exec_sh_file  → core/component_av/class.component_av.php (media transcode)
+* - request_cli   → core/api/v1/common/class.dd_tools_api.php
+*                   core/api/v1/common/class.dd_area_maintenance_api.php
+*
+* Also defines the `process` helper class (Linux-only) used to track, inspect, and
+* stop background OS processes by PID; see that class for full docs.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class exec_ {
 
 
 
 	/**
-	* EXEC COMMAND
-	* Exec the given command in the php CLI
-	* @param string $command
-	* @param string $to='2>&1'
-	* @return bool
+	* EXEC_COMMAND
+	* Run a synchronous shell command and return whether it produced any output.
+	*
+	* The command string is passed through escapeshellcmd() before execution.
+	* The caller controls where stdout/stderr are redirected via the $to parameter
+	* (default '2>&1' merges stderr into stdout so shell_exec can capture it).
+	*
+	* Returns false when shell_exec() produces no output at all — this is the
+	* primary signal that the command failed, because many CLI tools (e.g. ffmpeg)
+	* print at least one line of header text even on success. If the underlying
+	* process genuinely produces no output and succeeds, this method will
+	* incorrectly return false; callers that depend on that edge case must use
+	* exec() directly.
+	*
+	* @param string $command - raw shell command to execute (will be escapeshellcmd-escaped)
+	* @param string $to = '2>&1' - output redirection suffix appended after the command
+	* @return bool - true when the command ran and produced output; false on empty output or exception
+	* @throws Exception (caught internally) when $output is empty — logs and returns false
 	*/
 	public static function exec_command(string $command, string $to='2>&1') : bool {
 
@@ -62,9 +97,25 @@ class exec_ {
 
 
 	/**
-	* EXEC SH FILE
-	* @param string $file
-	* @return int|null $PID
+	* EXEC_SH_FILE
+	* Execute a pre-built shell script in the background and return its OS PID.
+	*
+	* The script is launched via `sh <file> > /dev/null & echo $!` so the PHP
+	* process does not block. stdout of the script is discarded (redirected to
+	* /dev/null); stderr is NOT redirected, so errors from the script reach the
+	* web-server error log.
+	*
+	* The PID is captured from $output[0] (the `echo $!` expansion). A null PID
+	* is returned — not an exception — when exec() produces no output, because
+	* the script may still be running; callers should treat null as "unknown".
+	*
+	* Security: $file must be a server-generated path. Currently the only caller
+	* is component_av::Save(), which passes a temp .sh file created by media_engine.
+	* escapeshellarg() provides defence-in-depth against future callers that might
+	* interpolate user-controlled paths.
+	*
+	* @param string $file - absolute path to the .sh file to execute
+	* @return ?int $PID - OS process ID of the spawned script, or null when unavailable
 	*/
 	public static function exec_sh_file(string $file) : ?int {
 
@@ -124,16 +175,43 @@ class exec_ {
 
 	/**
 	* REQUEST_CLI
-	* Exec given method in CLI using a process runner file
-	* @see /core/base/process_runner.php
-	* @param object $options
-	* {
-	* 	class_name: string "request_cli"
-	* 	method_name: string "export_records"
-	* 	class_file: string
-	*	params: object
+	* Spawn a background PHP process that invokes a given class method via process_runner.php.
+	*
+	* This is the standard mechanism for running long-lived or CPU-intensive Dédalo operations
+	* (tool exports, area_maintenance tasks, etc.) without blocking the HTTP request.
+	*
+	* Flow:
+	* 1. Serialises the target class/method/params and the current session context into JSON.
+	* 2. Writes the JSON as a shell argument to process_runner.php (run under `nohup nice -n 19`).
+	* 3. Captures the child PID from the `echo $!` shell expansion via the `process` helper.
+	* 4. Registers (user_id, PID, pfile) in the `processes` DB table so dd_utils_api can
+	*    poll status and stream the output file back to the client.
+	*
+	* The output file ($pfile) is stored in DEDALO_SESSIONS_PATH and receives whatever
+	* process_runner.php writes to stdout (JSON-encoded result). The client polls
+	* dd_utils_api::get_process_status with the pfile name to read progress.
+	*
+	* Params are passed through to process_runner.php WITHOUT safe_xss sanitization because
+	* they are application data (e.g. SQO filter values containing '>' operators) and not
+	* rendered as HTML. The runner now enforces the same rule on its side.
+	*
+	* (!) process_runner.php enforces authentication (login::is_logged) and an opt-in
+	* BACKGROUND_RUNNABLE allowlist on the target class; exec_::request_cli is not
+	* a way to bypass Dédalo's permission model.
+	*
+	* @param object $options - dispatch descriptor:
+	*   {
+	*     class_name:  string  - PHP class to invoke (e.g. 'tool_export')
+	*     method_name: string  - static method on that class (e.g. 'export_records')
+	*     class_file:  string  - optional absolute path to include before invoking
+	*     params:      object  - arbitrary options forwarded to the method as its sole argument
+	*   }
+	* @return object $response - {
+	*   result: bool,    - always true on the happy path (errors throw before returning)
+	*   pid:    int,     - OS PID of the spawned process_runner.php child
+	*   pfile:  string,  - process output filename (basename only; prepend get_process_path())
+	*   msg:    string   - human-readable status line
 	* }
-	* @return object response { result: mixed, msg: string }
 	*/
 	public static function request_cli(object $options) : object {
 
@@ -216,28 +294,81 @@ class exec_ {
 
 
 /**
- * An easy way to keep in track of external processes.
- * Ever wanted to execute a process in php, but you still wanted to have somewhat control of the process ? Well.. This is a way of doing it.
- * @compatibility: Linux only. (Windows does not work).
- * @author: Peec
- */
+* CLASS PROCESS
+* Lightweight Linux-only wrapper for tracking and controlling a single OS process by PID.
+*
+* Encapsulates the three operations that Dédalo needs over a background process:
+* - Launch a command via exec() and capture its PID (constructor with argument).
+* - Query whether the process is still alive (status → ps -p).
+* - Read the last line of its output file (read → tail -n 1).
+* - Send SIGTERM (stop → kill).
+*
+* Two usage patterns exist:
+*   a) Launch mode: `new process($command)` — runs the command and stores the PID.
+*   b) Attach mode: `new process()` then `setPid()` + `setFile()` — used by dd_utils_api
+*      to inspect a process that was spawned in a previous request.
+*
+* Also provides two static utility methods for process file naming:
+*   - get_unique_process_file() — builds a deterministic, per-user, per-millisecond filename.
+*   - get_process_path()        — resolves the directory where process output files are stored.
+*
+* Compatibility: Linux only. The `ps -p <pid>` and `kill <pid>` commands are POSIX
+* but the specific flag and output format assumed by status() targets Linux; macOS and
+* Windows are not supported.
+*
+* @package Dédalo
+* @subpackage Core
+*/
 class process {
 
-    /** @var int|null $pid */
+    /**
+    * OS process ID captured after exec() or injected via setPid().
+    * Null when the process has not yet been started or the PID is unavailable.
+    * @var ?int $pid
+    */
     private ?int $pid = null;
 
-    /** @var string|null $command */
+    /**
+    * Shell command string passed to the constructor and used by start() / runCom().
+    * Null when the instance is created in attach mode (no-arg constructor).
+    * @var ?string $command
+    */
     private ?string $command = null;
 
-    /** @var string|null $file */
+    /**
+    * Absolute path to the process output file read by read().
+    * Set externally via setFile(); not populated in launch mode.
+    * @var ?string $file
+    */
     private ?string $file = null;
 
+    /**
+    * __CONSTRUCT
+    * Create the process instance, optionally launching a command immediately.
+    *
+    * Launch mode: pass a non-empty command string; the constructor calls runCom()
+    * which executes the command and stores the resulting PID.
+    * Attach mode: omit the argument (or pass null); the caller must then call
+    * setPid() and setFile() to inspect a process from a previous request.
+    *
+    * @param ?string $cl - shell command to execute, or null for attach mode
+    */
     public function __construct(?string $cl=null) {
         if ($cl != false){
             $this->command = $cl;
             $this->runCom();
         }
     }
+
+    /**
+    * RUNCOM
+    * Execute $this->command via exec() and capture the spawned PID from output[0].
+    *
+    * The command is expected to end with `& echo $!` so that exec() receives the
+    * PID as the sole output line. Called automatically by __construct() in launch mode.
+    *
+    * @return void
+    */
     private function runCom() : void {
     	// reference command for non blocking process
 		// $command = 'nohup '.$this->command.' > /dev/null 2>&1 & echo $!';
@@ -256,14 +387,39 @@ class process {
         $this->pid = (int)$output[0];
     }
 
+    /**
+    * SETPID
+    * Inject a known PID into an attach-mode instance.
+    *
+    * Used by dd_utils_api::get_process_status when the process was spawned in a
+    * prior HTTP request and the caller holds only a stored PID.
+    *
+    * @param ?int $pid - OS process ID to track
+    * @return void
+    */
     public function setPid(?int $pid) : void {
         $this->pid = $pid;
     }
 
+    /**
+    * GETPID
+    * Return the OS process ID stored in this instance.
+    *
+    * @return ?int - PID set by the constructor or setPid(), or null if not yet set
+    */
     public function getPid() : ?int {
         return $this->pid;
     }
 
+    /**
+    * STATUS
+    * Check whether the tracked process is still alive.
+    *
+    * Runs `ps -p <pid>` and inspects the second output line; if it is absent the
+    * process has exited. The PID is int-cast before interpolation (SEC-043).
+    *
+    * @return bool - true when the process is running; false when it has exited or is unknown
+    */
     public function status() : bool {
         // SEC-043 defence-in-depth: cast pid to int. `setPid()` accepts arbitrary
         // input from `dd_utils_api::get_process_status` (which now does its own
@@ -275,6 +431,18 @@ class process {
         else return true;
     }
 
+    /**
+    * START
+    * Re-run the stored command, launching the process a second time.
+    *
+    * This method is a thin wrapper around runCom(). It is provided for symmetry with
+    * stop(), but in practice Dédalo always spawns processes through the constructor.
+    * Note: always returns true — even when $this->command is empty — which is a
+    * known quirk of the original implementation; callers should not rely on the
+    * return value to detect failure.
+    *
+    * @return bool - always true
+    */
     public function start() : bool {
         if ($this->command != '') {
             $this->runCom();
@@ -283,6 +451,15 @@ class process {
         return true;
     }
 
+    /**
+    * STOP
+    * Send SIGTERM to the tracked process and confirm it has exited.
+    *
+    * Runs `kill <pid>` then calls status() to verify the process is gone.
+    * The PID is int-cast before interpolation (SEC-043).
+    *
+    * @return bool - true when the process is no longer running; false when it survived the signal
+    */
     public function stop() : bool {
         // SEC-043 defence-in-depth: int-cast pid before shell interpolation.
         $command = 'kill '.(int)$this->pid;
@@ -291,10 +468,30 @@ class process {
         else return false;
     }
 
+    /**
+    * SETFILE
+    * Set the absolute path to the process output file to be read by read().
+    *
+    * Called by processes::get_process_item() before read() when inspecting a
+    * previously spawned background process in attach mode.
+    *
+    * @param ?string $file - absolute path to the process output file
+    * @return void
+    */
     public function setFile(?string $file) : void {
         $this->file = $file;
     }
 
+    /**
+    * READ
+    * Return the last line of the process output file.
+    *
+    * Uses `tail -n 1` on $this->file (shell-quoted via escapeshellarg, SEC-043).
+    * The file must first be set via setFile(). Returns an empty array when the
+    * file does not exist or is empty.
+    *
+    * @return array $output - array of output lines from exec() (typically a single-element array)
+    */
     public function read() : array {
         // SEC-043 defence-in-depth: shell-quote $this->file. Currently set only
         // through `processes::get_process_item()` (server-generated path from
@@ -307,8 +504,18 @@ class process {
 
     /**
 	* GET_UNIQUE_PROCESS_FILE
-	* Calculate unified unique process path name for files
-	* @return string $name
+	* Build a unique output-file basename for a background process.
+	*
+	* The name embeds the current user ID, a human-readable timestamp, and a
+	* high-resolution nanosecond counter (hrtime) so that two processes started
+	* by the same user in the same second receive different filenames.
+	*
+	* Example output: 'process_1_2024-03-31_23-47-36_3137757000'
+	*
+	* The returned value is a basename only (no directory component). Callers must
+	* prepend get_process_path() to obtain the full path.
+	*
+	* @return string $name - unique process file basename
 	*/
 	static function get_unique_process_file() : string {
 
@@ -319,9 +526,14 @@ class process {
 
 	/**
 	* GET_PROCESS_PATH
-	* Calculate common process path name
-	* Normally, it is stored in the session directory
-	* @return string $dir
+	* Resolve the directory where process output files are stored.
+	*
+	* Returns DEDALO_SESSIONS_PATH when that constant is defined (the normal
+	* production case), falling back to session_save_path() and then '/tmp'.
+	* Using the sessions directory co-locates process files with PHP session data,
+	* which keeps them on the same filesystem and subject to the same cleanup policy.
+	*
+	* @return string $dir - absolute directory path (no trailing slash)
 	*/
 	static function get_process_path() : string {
 
