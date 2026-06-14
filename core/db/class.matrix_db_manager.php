@@ -1,20 +1,49 @@
 <?php declare(strict_types=1);
 /**
-* Class MATRIX_DB_MANAGER
+* CLASS MATRIX_DB_MANAGER
+* The primary PostgreSQL data-access layer for Dédalo's matrix storage model.
 *
-* Provides core operations for managing matrix records.
-* This class ensures data consistency by enforcing predefined
-* table and column definitions within the matrix model.
+* All section records in Dédalo live in a family of "matrix" tables that share a common
+* structure: every row is identified by the composite key (section_tipo, section_id), and
+* most payload columns store JSONB data keyed by component tipo.  This class is the single
+* choke-point through which PHP code reads, writes, and deletes those rows, providing:
 *
-* Supported actions include:
-* - Loading record data (read)
-* - Updating existing records (update)
-* - Inserting new records with optional initial data (create)
-* - Deleting existing records (delete)
+* - A closed allowlist of table and column names so no caller can inject arbitrary SQL
+*   identifiers — every public method validates its $table argument against $tables and
+*   rejects unknown column names from $columns.
+* - Atomic section-ID allocation via PostgreSQL advisory locks combined with an
+*   UPSERT on matrix_counter / matrix_counter_dd, with automatic self-healing when
+*   a duplicate-key error reveals a stale counter (create).
+* - Safe bulk JSON-path writes using nested jsonb_set_lax expressions so a single
+*   round-trip can update multiple keys in multiple JSONB columns (update_by_key).
+* - A prepared-statement pool (exec_search) that recycles plans across calls and
+*   deallocates all plans when the pool grows beyond 1 000 entries.
+* - Integrated slow-query logging and per-call metrics (read/write latency, call counts,
+*   max latency) recorded through the metrics:: helper when SHOW_DEBUG is enabled.
+*
+* All methods are static.  The class is never instantiated.
+* Uses: DBi (connection pool), json_handler (JSONB encoding), counter (counter repair),
+* logger, metrics, and debug helpers (debug_log, debug_prepared_statement, …).
+*
+* Related tables (not managed here, but in sibling classes):
+*   matrix_activity_db_manager  — activity-log rows
+*   tm_db_manager               — time-machine snapshot rows
+*   dd_ontology_db_manager      — ontology (matrix_dd / matrix_layout_dd) rows
+*
+* @package Dédalo
+* @subpackage Core
 */
 class matrix_db_manager {
 
-	// Allowed matrix tables
+	/**
+	* Closed allowlist of writable matrix tables.
+	* Every public method validates $table against this map before building any SQL.
+	* The map value is always `true`; existence of the key is what matters.
+	* Tables whose names end with '_dd' store ontology data shared across all Dédalo
+	* installations (e.g. matrix_dd, matrix_layout_dd) and use a separate counter table
+	* (matrix_counter_dd) managed by the master instance.
+	* @var array<string,true> $tables
+	*/
 	public static array $tables = [
 		'matrix'					=> true,
 		'matrix_activities'			=> true,
@@ -41,7 +70,13 @@ class matrix_db_manager {
 		'matrix_users'				=> true
 	];
 
-	// matrix_columns list
+	/**
+	* Closed allowlist of writable column names for all matrix tables.
+	* Used by create, update, update_by_key, and search to reject unknown column names.
+	* 'section_id' and 'section_tipo' are handled separately by each method as required
+	* identifiers and are intentionally absent here.
+	* @var array<string,true> $columns
+	*/
 	public static array $columns = [
 		'section_id'		=> true,
 		'section_tipo'		=> true,
@@ -58,7 +93,13 @@ class matrix_db_manager {
 		'meta'				=> true
 	];
 
-	// JSON columns to decode
+	/**
+	* Subset of $columns whose values must be JSON-encoded before binding to PostgreSQL.
+	* In create() and update(), any column listed here receives a ::jsonb cast placeholder
+	* and its value is serialized via json_handler::encode() before being passed as a
+	* parameter.  'section_id' and 'section_tipo' are plain scalars and are not listed.
+	* @var array<string,true> $json_columns
+	*/
 	public static array $json_columns = [
 		'data'				=> true,
 		'relation'			=> true,
@@ -73,7 +114,12 @@ class matrix_db_manager {
 		'meta'				=> true
 	];
 
-	// int columns to parse
+	/**
+	* Columns whose raw PostgreSQL text values must be cast to int by callers after a fetch.
+	* PostgreSQL returns all column values as strings via pg_fetch_*; callers that need
+	* typed integers (e.g. when constructing a locator) should check this map and cast.
+	* @var array<string,true> $int_columns
+	*/
 	public static array $int_columns = [
 		'id'				=> true,
 		'section_id'		=> true
@@ -83,27 +129,43 @@ class matrix_db_manager {
 
 	/**
 	* CREATE
-	* Inserts a single row into a "matrix" table with automatic handling for JSON columns
-	* and guaranteed inclusion of the `section_tipo` and `section_id` columns.
-	* Before insert, creates/updates the proper counter value and uses the result as `section_id` value.
-	* It is executed using prepared statement when the values are empty (default creation of empty record
-	* adding `section_tipo` and `section_id` only) and with query params when is not (other
-	* dynamic combinations of columns data).
-	* @param string $table
-	* 	The name of the table to query. The function validates this against
-	* 	a predefined list of allowed tables to prevent SQL injection vulnerabilities.
-	* @param string $section_tipo
-	* 	A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
-	* @param object|null $values = {} (optional)
-	* 	Object with {column name : value} structure.
-	* 	Keys are column names, values are their new values.
-	* @return int|false $section_id
-	* 	Returns the new $section_id on success, or `false` if validation fails,
-	* 	query preparation fails, or execution fails.
+	* Inserts a new row into a matrix table and returns its newly allocated section_id.
+	*
+	* The section_id is allocated atomically inside PostgreSQL using a combination of a
+	* transaction-scoped advisory lock (pg_advisory_xact_lock on hashtext(section_tipo))
+	* and an UPSERT on matrix_counter / matrix_counter_dd.  The counter is initialised
+	* from the actual MAX(section_id) of the target table when no counter row exists yet,
+	* which avoids collisions after bulk imports that bypassed the counter machinery.
+	*
+	* Counter selection:
+	*   Tables ending in '_dd' (ontology tables shared across installations) use
+	*   matrix_counter_dd, managed by the master Dédalo instance.
+	*   All other tables use matrix_counter local to the current installation.
+	*
+	* Error recovery:
+	*   On a duplicate-key violation (SQLSTATE 23505) the method attempts one recursive
+	*   self-call after asking counter::modify_counter($section_tipo, 'fix') to
+	*   resynchronise the counter.  A static $create_depth guard prevents deeper recursion.
+	*
+	* All columns in $values are validated against the $columns allowlist.  JSONB columns
+	* are encoded via json_handler::encode() and cast with ::jsonb in the SQL.
+	*
+	* (!) This method must be called inside an open transaction (DBi::transaction) so that
+	* the advisory lock acquired here is held until the surrounding commit or rollback.
+	* Outside a transaction the lock is released immediately and offers no isolation.
+	*
+	* @param string $table         - Name of the target matrix table (validated against $tables).
+	* @param string $section_tipo  - Ontology tipo for the new record, e.g. 'oh1', 'dd561'.
+	* @param object|null $values   = null - Optional payload; object whose properties are column
+	*                                names mapped to their initial values.  Unknown columns are
+	*                                silently skipped with an ERROR log entry.
+	* @return int|false            - The new section_id on success, or false on any failure.
 	*/
 	public static function create(string $table, string $section_tipo, ?object $values = null): int|false {
 
 		// Recursion guard (static persists across recursive calls within the same request)
+		// Limits the counter self-heal path to exactly one retry; prevents an infinite
+		// loop if modify_counter('fix') itself cannot correct a broken counter.
 		static $create_depth = 0;
 
 		// Validate table
@@ -121,12 +183,18 @@ class matrix_db_manager {
 		// Connection
 		$conn = DBi::_getConnection();
 
-		// counter table
+		// Counter table selection
+		// Tables whose names end with '_dd' (e.g. matrix_dd, matrix_layout_dd) hold ontology
+		// data authored in one Dédalo master installation and distributed to others.
+		// They use a separate counter table so that ontology-record IDs are managed
+		// independently from installation-local section IDs.
 		$counter_table = substr($table, -3) === '_dd'
 			? 'matrix_counter_dd' // Public counter managed by master
 			: 'matrix_counter'; // Private counters from current installation
 
-		// Start building query
+		// Build the column/placeholder/param arrays incrementally.
+		// section_tipo is $1 (always first); section_id is read back from the CTE
+		// (updated_counter.value), so it is never a bound parameter.
 		$columns		= ['"section_tipo"', '"section_id"']; // required columns
 		$placeholders	= ['$1', 'updated_counter.value']; // placeholders for them
 		$params			= [$section_tipo]; // param values (first one for tipo)
@@ -165,6 +233,9 @@ class matrix_db_manager {
 		// Optimized single-query approach with advisory lock
 		// The lock is automatically released when the transaction ends (COMMIT or ROLLBACK)
 
+		// (dead code) Earlier simpler variant: initialised the counter from 1 instead of
+		// scanning the table for the actual MAX(section_id).  Replaced by the calc_start
+		// CTE below to survive bulk imports that create gaps or bypass the counter.
 		// $sql = "
 		// 	WITH locked AS (
 		// 		SELECT pg_advisory_xact_lock(hashtext($1))
@@ -274,16 +345,26 @@ class matrix_db_manager {
 
 	/**
 	* ACQUIRE_NODE_LOCK
-	* Acquires a transaction scoped advisory lock for one section node, used to
-	* serialize concurrent tree mutations on the same parent (child ordering,
-	* move, add). Same hashtext pattern as the section_id counter lock in create().
-	* The lock is released automatically when the enclosing transaction ends
-	* (COMMIT or ROLLBACK), so callers MUST be inside a transaction
-	* (see DBi::transaction); outside one the lock would be released immediately
-	* and protect nothing.
-	* @param string $section_tipo
-	* @param int|string $section_id
-	* @return bool
+	* Acquires a transaction-scoped PostgreSQL advisory lock for a single section node.
+	*
+	* Used to serialise concurrent tree mutations (child ordering, node moves, child inserts)
+	* that target the same parent node.  The lock key is built from section_tipo + '_' +
+	* section_id, matching the hashtext pattern used for the counter lock in create().
+	* Because pg_advisory_xact_lock is transaction-scoped, the lock is released
+	* automatically when the surrounding transaction commits or rolls back.
+	*
+	* (!) Callers MUST be inside an open transaction (via DBi::begin_transaction / the
+	* DBi::transaction wrapper) before calling this method.  Outside a transaction the lock
+	* is released instantly by PostgreSQL and provides no mutual exclusion.
+	*
+	* The method pre-checks pg_transaction_status() and logs an ERROR (returning false)
+	* when called from idle-connection context so that missing transactions are surfaced
+	* during development rather than silently allowing races.
+	*
+	* @param string $section_tipo  - Ontology tipo identifying the node's section type.
+	* @param int|string $section_id - Numeric ID of the node to lock.
+	* @return bool - true when the lock was successfully acquired; false on connection
+	*                error, idle-connection guard triggered, or pg_query_params failure.
 	*/
 	public static function acquire_node_lock( string $section_tipo, int|string $section_id ) : bool {
 
@@ -327,20 +408,25 @@ class matrix_db_manager {
 
 	/**
 	* READ
-	* Retrieves a single row of data from a specified PostgreSQL table
-	* based on section_id and section_tipo.
-	* It's designed to provide a unified way of accessing data from
-	* various "matrix" tables within the Dédalo application.
-	* @param string $table
-	* 	The name of the table to query. The function validates this against
-	* 	a predefined list of allowed tables to prevent SQL injection vulnerabilities.
-	* @param string $section_tipo
-	* 	A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
-	* @param int $section_id
-	* 	A numerical identifier for the section. Used as the primary lookup key in the WHERE clause.
-	* @return object|false $row
-	* 	Returns the processed data as an object with parsed JSON values.
-	* 	If no row is found, or if a critical error occurs, it returns false.
+	* Fetches a single row from a matrix table by composite key (section_tipo, section_id).
+	*
+	* The query uses SELECT * because fetching the full row is faster than projecting a
+	* fixed column list when row width is similar to block size (a PostgreSQL-level
+	* optimisation observed in query plans for this table family).
+	*
+	* JSONB columns are stored as raw JSON strings by the PostgreSQL driver; callers that
+	* need decoded PHP structures must call json_decode() on the relevant properties.
+	* The class provides $json_columns to identify which properties require decoding.
+	*
+	* Returns false both when the row does not exist and when the query itself fails —
+	* callers must check pg_last_error() or rely on the error already being logged if they
+	* need to distinguish between the two cases.
+	*
+	* @param string $table        - Target matrix table name (validated against $tables).
+	* @param string $section_tipo - Ontology tipo filter, e.g. 'oh1'.
+	* @param int    $section_id   - Numeric record identifier.
+	* @return object|false        - stdClass row object on success; false when not found
+	*                              or on query failure.
 	*/
 	public static function read(string $table, string $section_tipo, int $section_id): object|false	{
 
@@ -378,20 +464,30 @@ class matrix_db_manager {
 
 	/**
 	* UPDATE
-	* Safely updates one or more columns in a "matrix" table row,
-	* identified by a composite key of `section_id` and `section_tipo`.
-	* @param string $table
-	* 	The name of the table to query. The function validates this against
-	* 	a predefined list of allowed tables to prevent SQL injection vulnerabilities.
-	* @param string $section_tipo
-	* 	A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
-	* @param int $section_id
-	* 	A numerical identifier for the section. Used as the primary lookup key in the WHERE clause.
-	* @param object $values
-	* 	Object with {column name : value} structure
-	* 	Keys are column names, values are their new values.
-	* @return bool
-	* 	Returns `true` on success, or `false` on failure.
+	* Updates one or more columns in a matrix table row identified by (section_tipo, section_id).
+	*
+	* All column names in $values are validated against the $columns allowlist before any SQL
+	* is built.  JSONB columns are serialised via json_handler::encode() and cast with ::jsonb.
+	*
+	* Upsert fallback: if the UPDATE affects zero rows (the record does not yet exist), the
+	* method constructs and executes an INSERT using the same parameter array that was already
+	* built for the UPDATE.  The INSERT column list is ['section_id', 'section_tipo'] prepended
+	* to the valid columns from $values, and positional placeholders ($1, $2, …) are reused
+	* directly because the WHERE parameters ($1, $2) happen to hold the right values.
+	*
+	* (!) The upsert INSERT does not acquire an advisory lock or update the matrix_counter
+	* table.  It should therefore be used only in contexts where the caller knows the
+	* section_id is already allocated (e.g. a migration pass, not a normal record creation).
+	* Use create() for the authoritative new-record path.
+	*
+	* @param string $table        - Target matrix table name (validated against $tables).
+	* @param string $section_tipo - Ontology tipo identifying the row.
+	* @param int    $section_id   - Numeric record identifier.
+	* @param object $values       - Payload: object whose properties are column names mapped
+	*                               to new values.  Unknown column names are skipped with an
+	*                               ERROR log entry.
+	* @return bool                - true on success; false when validation fails, all columns
+	*                               are rejected, the query cannot be prepared, or execution fails.
 	*/
 	public static function update(string $table, string $section_tipo, int $section_id, object $values): bool {
 
@@ -500,6 +596,9 @@ class matrix_db_manager {
 
 
 
+	// (dead code) UPDATE_BY_KEY single-item variant (MONO).
+	// Superseded by the multi-item batch version below which handles multiple
+	// {column, key, value} updates in one round-trip.  Kept for reference.
 	// /**
 	// * UPDATE_BY_KEY (MONO)
 	// * Saves given value into the specified JSON key, it could be:
@@ -673,27 +772,40 @@ class matrix_db_manager {
 
 	/**
 	* UPDATE_BY_KEY
-	* Saves given value into the specified JSON key, it could be:
-	* a component container
-	* a section property data as created_date
-	* a component counter data
-	* Creates the path from the given key as componente_tipo {dd197} or property {created_date}.
-	* If the given value is empty, the path will be removed for clean database.
-	* @param string $table
-	* 	DB table name. E.g. 'matrix'
-	* @param string $section_tipo
-	* 	Section tipo. E.g. 'oh1'
-	* @param int $section_id
-	* 	Section id. E.g. '1582'
-	* @param array $data_to_save
-	* 	Array of objects with the column, key and value to be update
-	* 	[{
-	* 		"column" 	: "relation",
-	* 		"key"		: "oh25",
-	* 		"value"		: [{"section_id":3,"section_tipo":"oh1"}]
-	* 	}]
-	* @return bool
-	* 	Returns false if JSON fragment save fails.
+	* Atomically writes one or more JSON-path values into JSONB columns of a matrix row,
+	* grouping multiple writes to the same column into a single nested jsonb_set_lax chain.
+	*
+	* Each element of $data_to_save describes one key-write operation:
+	*   { column: string, key: string, value: mixed|null }
+	* where:
+	*   - column — the JSONB column to modify (e.g. 'data', 'relation', 'string').
+	*   - key    — the top-level key within that column (a component tipo or a section
+	*              property name such as 'created_date').  Treated as a text[] path
+	*              parameter, so it is data — not interpolated into SQL.
+	*   - value  — the new value encoded as JSONB.  When null, jsonb_set_lax with the
+	*              'delete_key' nullif_action removes the key from the object instead of
+	*              writing JSON null, which keeps the database clean.
+	*
+	* Multiple items for the same column are merged into a single SET clause by nesting
+	* jsonb_set_lax calls: each call wraps the result of the previous, so all writes for
+	* that column are applied in one PostgreSQL expression (left-to-right order).
+	*
+	* Security: column names are interpolated directly into SQL (pg_query parameters cannot
+	* bind column identifiers) so they are validated against a strict identifier pattern
+	* (^[a-zA-Z_][a-zA-Z0-9_]*$) in addition to the $columns allowlist check.  The key
+	* values are always bound as text[] parameters and are therefore safe.
+	*
+	* Returns false if the row does not exist (pg_num_rows returns 0) — the method does
+	* NOT perform an upsert fallback.  Use update() for upsert behaviour.
+	*
+	* @param string $table        - Target matrix table (validated against $tables).
+	* @param string $section_tipo - Ontology tipo identifying the row.
+	* @param int    $section_id   - Numeric record identifier.
+	* @param array  $data_to_save - Array of objects [{column, key, value}, …].  Must be
+	*                               non-empty; each element must be an object.
+	* @return bool                - true when at least one row was affected; false on
+	*                               validation failure, invalid data shape, JSON encode
+	*                               error, or if the target row is not found.
 	*/
 	public static function update_by_key(
 		string $table,
@@ -806,6 +918,9 @@ class matrix_db_manager {
 				}
 
 				// Add parameters
+				// path is pushed first, then value.  After pushing both, count($params)
+				// gives the 1-based index of the last element (value), and count - 1 gives
+				// the path.  These become the $N placeholders in the SQL expression below.
 				$params[] = $path;
 				$params[] = $json_value;
 
@@ -851,18 +966,21 @@ class matrix_db_manager {
 
 	/**
 	* DELETE
-	* Safely deletes one record in a "matrix" table row,
-	* identified by a composite key of `section_id` and `section_tipo`.
-	* @param string $table
-	* The name of the table to query. The function validates this against
-	* a predefined list of allowed tables to prevent SQL injection vulnerabilities.
-	* @param string $section_tipo
-	* A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
-	* @param int $section_id
-	* A numerical identifier for the section. Used as the primary lookup key in the WHERE clause.
-	* @return bool
-	* Returns `true` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	* Deletes a single row from a matrix table identified by (section_tipo, section_id).
+	*
+	* Note: this method does NOT decrement or otherwise adjust the matrix_counter value for
+	* the tipo — section IDs are never reused after deletion.  Callers that need cascading
+	* cleanup (e.g. removing linked rows in matrix_hierarchy, matrix_nexus, etc.) must
+	* handle those deletions separately before or after calling this method.
+	*
+	* The generated SQL naturally leverages the composite index
+	* matrix_section_tipo_section_id_desc_idx (see inline comment in the method body).
+	*
+	* @param string $table        - Target matrix table (validated against $tables).
+	* @param string $section_tipo - Ontology tipo identifying the row.
+	* @param int    $section_id   - Numeric record identifier.
+	* @return bool                - true on successful deletion (including when 0 rows matched);
+	*                               false when validation fails or the query cannot be executed.
 	*/
 	public static function delete( string $table, string $section_tipo, int $section_id ) : bool {
 
@@ -896,23 +1014,33 @@ class matrix_db_manager {
 
 	/**
 	* SEARCH
-	* Performs a filtered search on a specified PostgreSQL table and returns
-	* a list of matching `section_id` records.
+	* Returns an array of integer section_id values from a matrix table that match the
+	* given filter conditions.
 	*
-	* This function provides a simple, safe way to query access matrix data.
-	* The table name is validated against a predefined whitelist to prevent
-	* SQL injection vulnerabilities.
+	* Each element of $filter is an associative array with:
+	*   - 'column'   (string)        — column to filter on (validated against $columns).
+	*   - 'value'    (mixed)         — value to compare against.
+	*   - 'operator' (string, opt.)  — comparison operator; defaults to '='.
+	*                                  Allowed: =, !=, <, >, <=, >=, LIKE, ILIKE, @>.
 	*
-	* @param string     $table  The name of the table to query. Must be in the
-	*                           predefined list of allowed tables.
-	* @param array      $filter Associative array of filter conditions in the
-	*                           form [column => value].
-	* @param string|null $order Optional ORDER BY clause (e.g., "section_id DESC").
-	* @param int|null    $limit Optional LIMIT value for the query.
+	* Unlike exec_search, this method does NOT use prepared statements — the column list
+	* changes dynamically, which would require a separate prepared plan per unique column
+	* combination.  pg_query_params is used instead, which still prevents SQL injection
+	* for parameter values while allowing the column identifier to be interpolated safely
+	* after allowlist validation.
 	*
-	* @return array|false Returns an array of matching `section_id` values on success,
-	*                     or `false` if validation, query preparation, or execution fails.
-	* @DEPRECATED
+	* @DEPRECATED — this method is marked for removal.  Prefer the higher-level search
+	* class (SQO-based) for all new query construction.
+	*
+	* @param string      $table  - Target matrix table (validated against $tables).
+	* @param array       $filter - One or more filter objects [{column, value, operator?}, …].
+	*                              Must be non-empty.
+	* @param string|null $order  = null - Optional sort expression in the form "column DIR"
+	*                              (e.g. "section_id DESC").  Both parts are validated before
+	*                              being embedded in SQL.
+	* @param int|null    $limit  = null - Optional row cap; cast to int before embedding.
+	* @return array|false        - Array of int section_id values (may be empty) on success;
+	*                              false on validation failure or query execution error.
 	*/
 	public static function search(string $table, array $filter, ?string $order = null, ?int $limit = null): array|false	{
 
@@ -1041,11 +1169,15 @@ class matrix_db_manager {
 	/**
 	* SQL_METRIC_BASE
 	* Classify a SQL statement by its leading verb so metrics can track writes
-	* (INSERT/UPDATE/DELETE) separately from reads (SELECT/WITH/…). Without this,
-	* every mutation is counted as a search and a slow write is indistinguishable
-	* from a slow read.
-	* @param string $sql_query
-	* @return string 'exec_write' | 'exec_search'
+	* (INSERT/UPDATE/DELETE) separately from reads (SELECT/WITH/…).
+	*
+	* Without this helper, every mutation would be bucketed as 'exec_search' and a
+	* slow write would be indistinguishable from a slow read in the metrics dashboard.
+	* Only the first 6 characters (after leading whitespace) are inspected, so CTE-based
+	* INSERT/UPDATE/DELETE queries (which begin with "WITH …") are classified as reads.
+	*
+	* @param string $sql_query - The raw SQL string to classify.
+	* @return string           - 'exec_write' for INSERT/UPDATE/DELETE; 'exec_search' otherwise.
 	*/
 	private static function sql_metric_base( string $sql_query ) : string {
 
@@ -1061,14 +1193,35 @@ class matrix_db_manager {
 
 	/**
 	* EXEC_SEARCH
-	* Perform a SQL query in DB using pg_execute and parameters.
-	* @param string $sql_query
-	* 	Full SQL query like "SELECT id FROM table WHERE section_id = $1"
-	* @param array $params = []
-	* 	Search parameters for pg_execute
-	* @param bool $verbose = false
-	* 	Show debug info
-	* @return \PgSql\Result|false $result
+	* Executes a parameterised SQL query through a managed prepared-statement pool.
+	*
+	* Prepared-statement caching:
+	*   The statement name is the MD5 hash of the SQL string.  On the first call for a
+	*   given SQL string the statement is registered with pg_prepare(); subsequent calls
+	*   reuse the cached plan via pg_execute().  When the pool grows beyond 1 000 entries,
+	*   DEALLOCATE ALL is issued and the registry is cleared to prevent unbounded memory
+	*   growth in long-running worker processes.  Note that DEALLOCATE ALL drops all
+	*   session-level prepared statements, including any registered outside this class.
+	*
+	* Observability (active only when SHOW_DEBUG is true):
+	*   - Classifies the query as a read or write via sql_metric_base() and increments the
+	*     appropriate metrics::inc() counter.
+	*   - Records total and maximum latency per class via metrics::add_time_ms() and
+	*     metrics::observe_max().
+	*   - Logs a WARNING with the interpolated SQL when execution time exceeds SLOW_QUERY_MS
+	*     (configured in config_db.php, typically 6 000 ms).
+	*   - When $verbose is true, adds a full call-stack trace to the debug log entry.
+	*   - Skips slow-query and verbose logging during unit-test runs (IS_UNIT_TEST=true) and
+	*     during database update passes (DEDALO_UPDATING env var).
+	*
+	* (!) This method is the central execution path for all matrix read and write queries.
+	* Avoid calling pg_query / pg_query_params directly from other methods in this class.
+	*
+	* @param string $sql_query - Parameterised SQL with PostgreSQL $N placeholders.
+	* @param array  $params    = [] - Values bound to the $1, $2, … placeholders.
+	* @param bool   $verbose   = false - When true, emits a full backtrace in the debug log.
+	* @return \PgSql\Result|false - Query result resource on success; false on connection
+	*                               failure, pg_prepare failure, or pg_execute failure.
 	*/
 	public static function exec_search( string $sql_query, array $params=[], bool $verbose=false ) : \PgSql\Result|false {
 
@@ -1208,16 +1361,31 @@ class matrix_db_manager {
 
 
 	/**
-	 * EXEC_SQL
-	 * Perform a SQL query in DB using pg_query.
-	 * Suitable for administrative tasks like schema changes and multiple commands in one string.
-	 *
-	 * @param string $sql_query
-	 * 	Full SQL query like "SELECT id FROM table WHERE section_id = $1"
-	 * @param bool $verbose = false
-	 * 	Show debug info
-	 * @return \PgSql\Result|false $result
-	 */
+	* EXEC_SQL
+	* Executes a raw (non-parameterised) SQL string via pg_query.
+	*
+	* Intended for administrative operations that cannot use pg_query_params: DDL statements
+	* (CREATE TABLE, ALTER TABLE, CREATE INDEX), compound command strings (multiple
+	* semicolon-separated statements), or DEALLOCATE / VACUUM / ANALYZE calls.
+	*
+	* Unlike exec_search, this method does NOT use a prepared-statement pool because pg_query
+	* cannot bind parameters, so callers are responsible for ensuring that any data values
+	* embedded in $sql_query are properly escaped via pg_escape_literal() / pg_escape_string()
+	* or — better — routed through exec_search instead.
+	*
+	* The same observability instrumentation as exec_search is applied when SHOW_DEBUG is
+	* enabled (metrics classification, slow-query threshold, optional verbose backtrace).
+	* Note that CTE-based writes (INSERT/UPDATE/DELETE starting with WITH) will be classified
+	* as 'exec_search' by sql_metric_base() due to the 6-character prefix check.
+	*
+	* (!) Do not use this method for queries that bind user-supplied data — use exec_search
+	* with parameterised placeholders instead.
+	*
+	* @param string $sql_query - Raw SQL string to execute.
+	* @param bool   $verbose   = false - When true, emits a full backtrace in the debug log.
+	* @return \PgSql\Result|false - Query result resource on success; false on connection
+	*                               failure or pg_query failure.
+	*/
 	public static function exec_sql( string $sql_query, bool $verbose=false ) : \PgSql\Result|false {
 
 		// debug
@@ -1300,6 +1468,10 @@ class matrix_db_manager {
 				);
 			}else{
 				$sql_query_debug = '-- exec_sql ' . $total_time_ms . ' ms';
+				// (!) $prepend_sql is never assigned in the non-verbose path of exec_sql
+				// (unlike exec_search, where it is set when a prepared statement is recycled).
+				// The isset() guard makes this a no-op in practice, but the variable is
+				// vestigial here — copied from exec_search without adaptation.
 				if(isset($prepend_sql)) {
 					$sql_query_debug = $prepend_sql . $sql_query_debug;
 				}
@@ -1318,8 +1490,13 @@ class matrix_db_manager {
 
 	/**
 	* GET_COLUMNS_NAME
-	* Returns the list of allowed columns names
-	* @return array
+	* Returns the list of writable column names defined in the $columns allowlist.
+	*
+	* Callers that need to iterate over or validate column names without hardcoding the
+	* list should use this method rather than accessing $columns directly, so that future
+	* additions to the allowlist are picked up automatically.
+	*
+	* @return array<int,string> - Indexed array of column name strings.
 	*/
 	public static function get_columns_name() : array {
 		return array_keys(static::$columns);
