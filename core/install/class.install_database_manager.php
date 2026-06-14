@@ -307,6 +307,8 @@ final class install_database_manager {
 				$rows	= (array)pg_fetch_assoc($result); // returns 'f' for false, 't' for true
 				$value	= reset($rows);
 
+				// pg_fetch_assoc returns array ['exists' => 'f'] or ['exists' => 't']
+				// reset() picks the single value regardless of the column name
 				$db_exists = ($value==='t');
 				if ($db_exists===true && $skip_if_exists===true) {
 
@@ -353,6 +355,8 @@ final class install_database_manager {
 			}
 
 		// new db connection
+		// (!) A fresh connection is required here: the previous connection's autocommit
+		// context may be stale after the pg_terminate_backend call above returned.
 			$db_conn = DBi::_getNewConnection();
 
 		// drop target database
@@ -481,17 +485,37 @@ final class install_database_manager {
 	/**
 	* CLONE_DATABASE_DUMP
 	* Clones the current Dédalo database into the install database using a
-	* pg_dump | psql pipeline instead of CREATE DATABASE WITH TEMPLATE.
+	* `pg_dump | psql` pipeline — the lock-free alternative to `clone_database()`.
 	*
-	* The TEMPLATE approach (see `clone_database()`) requires an exclusive
-	* lock on the source database; any stray connection (web worker, cron,
-	* psql session) blocks the clone with "source database is being accessed
-	* by other users".  This function avoids that problem entirely:
-	* pg_dump reads the source with a consistent MVCC snapshot (no exclusive
-	* lock) and streams the output into a freshly-created target database.
+	* Why this method exists:
+	* `CREATE DATABASE … WITH TEMPLATE` (used by `clone_database()`) demands an
+	* exclusive lock on the source database for the full duration of the copy,
+	* which kills all live user sessions.  `pg_dump` reads the source using
+	* PostgreSQL's MVCC snapshot isolation: it never takes an exclusive lock, so
+	* regular read/write traffic can continue while the clone runs.
 	*
-	* @param bool $skip_if_exists  If true and the target DB already exists, return success immediately.
-	* @return object $response
+	* Steps:
+	*   1. Validate `db_install_name` against the safe-identifier regex.
+	*   2. Detect whether the target database already exists (`pg_catalog.pg_database`).
+	*   3. If the target exists and `$skip_if_exists` is true → return success early.
+	*   4. Terminate all non-self connections on the *target* DB (needed before DROP).
+	*   5. Open a maintenance connection to the `postgres` system database (required
+	*      because PostgreSQL will not allow DROP DATABASE on the currently-connected DB).
+	*   6. DROP the target database if it existed; CREATE it empty under the same owner.
+	*   7. Close the maintenance connection; it is no longer needed.
+	*   8. Run: `pg_dump --no-owner --no-privileges ... | psql -v ON_ERROR_STOP=1 ...`
+	*      A non-zero exit code from psql means at least one SQL statement failed.
+	*   9. Call `DBi::invalidate_connection_cache()` so the next database operation
+	*      gets a fresh connection (the long pipeline may have reset idle connections).
+	*
+	* (!) `--no-owner` and `--no-privileges` strip ownership and GRANT statements from
+	* the dump so that the restore does not fail if the install DB owner differs from
+	* the production DB owner.  The `--role` flag re-applies the target owner at
+	* restore time.
+	*
+	* @param bool $skip_if_exists - when true, return success immediately if the
+	*                               target database already exists
+	* @return object $response - result:true on success, result:false with msg on failure
 	*/
 	public static function clone_database_dump(bool $skip_if_exists) : object {
 
@@ -694,7 +718,28 @@ final class install_database_manager {
 
 	/**
 	* CLEAN_COUNTERS
-	* @return object $response
+	* Resets the section-ID counter tables and selectively prunes the ontology
+	* counter table (`main_dd`) in the install (target) database.
+	*
+	* Counter tables affected:
+	* - `matrix_counter`       — section-ID counters for project data
+	* - `matrix_counter_dd`    — section-ID counters for Dédalo ontology data
+	* Both are TRUNCATED and their auto-increment sequences are reset to 1.
+	* The counters are regenerated automatically the next time a new section is
+	* saved, so re-seeding from 1 is always safe on a freshly cloned install DB.
+	*
+	* Ontology counter pruning (`main_dd`):
+	* Rows whose `tld` column belongs to the whitelist defined in
+	* `$config->to_preserve_tld` (e.g. 'dd', 'rsc', 'lg') are kept so that
+	* the core Dédalo ontology retains its canonical counters.  All other rows
+	* (project-specific TLDs) are deleted to avoid collision with a different
+	* installation that may have different TLD counter state.
+	*
+	* The `main_dd` step is only executed when the table exists (guarded by
+	* `DBi::check_table_exists`) to tolerate minimal install DBs that have not
+	* yet run the ontology bootstrap.
+	*
+	* @return object $response - result:true on success, result:false with msg on failure
 	*/
 	public static function clean_counters() : object {
 
@@ -758,7 +803,37 @@ final class install_database_manager {
 
 	/**
 	* CLEAN_TABLES
-	* @return object $response
+	* Strips all project-specific data from the install (target) database while
+	* preserving the core Dédalo ontology and structural tables.
+	*
+	* Three passes are executed against the install database, in order:
+	*
+	*   Pass 1 — Drop non-official tables:
+	*     Any table in the install DB that is NOT listed in
+	*     `$config->valid_tables` is dropped with `DROP TABLE … CASCADE`.
+	*     This removes temporary, test, or development tables that were present
+	*     in the cloned source but should not ship in the install package.
+	*
+	*   Pass 2 — Clean whitelisted matrices:
+	*     Each table in `$config->to_clean_tables` is processed with
+	*     table-specific logic:
+	*     - `matrix_ontology`: DELETE rows whose `section_tipo` does not match
+	*       any preserved TLD root (TLD + '0' suffix, e.g. 'dd0').
+	*     - `matrix_ontology_main`: DELETE rows that lack a `hierarchy6` entry
+	*       whose 'lang' == 'lg-nolan' and 'value' is in the preserved TLD set.
+	*       Rows with a missing or empty `hierarchy6` array are also deleted.
+	*     - All other tables: DELETE all rows and restart the id_seq sequence at 1.
+	*       `matrix_activity` additionally resets `matrix_activity_section_id_seq`.
+	*
+	*   Pass 3 — Optimize:
+	*     `VACUUM ANALYZE` is run against every remaining table so that the
+	*     install DB is compact and has up-to-date planner statistics.
+	*
+	* Note: the `$response->errors` property (array) accumulates non-fatal
+	* error labels even when one pass fails and returns early, allowing callers
+	* to surface all errors rather than only the first.
+	*
+	* @return object $response - result:true on success, result:false with msg and errors[] on failure
 	*/
 	public static function clean_tables() : object {
 
@@ -899,9 +974,28 @@ final class install_database_manager {
 
 	/**
 	* CREATE_EXTENSIONS
-	* Add Dédalo mandatory PostgreSQL extensions and functions
-	* to current install database
-	* @return object $response
+	* Installs the PostgreSQL extensions and helper functions that Dédalo
+	* requires for full-text search and accent-insensitive indexing.
+	*
+	* Objects created (idempotent — uses `CREATE … IF NOT EXISTS` /
+	* `CREATE OR REPLACE`):
+	*
+	* - `unaccent`  — removes diacritics from text; used by full-text search
+	*                 across all component types that store textual data.
+	* - `pg_trgm`   — trigram similarity; backs the `%` LIKE operator used in
+	*                 the SQO ILIKE / trigram search paths.
+	* - `f_unaccent(text)`  — a thin IMMUTABLE SQL wrapper around
+	*                 `public.unaccent('public.unaccent', $1)`.  Declaring it
+	*                 IMMUTABLE allows PostgreSQL to use it inside functional
+	*                 indexes (e.g. `CREATE INDEX … ON matrix USING gin
+	*                 (f_unaccent(string::text) gin_trgm_ops)`).
+	*
+	* This method targets the *install* database connection returned by
+	* `install_config_manager::get_db_install_conn()`, not the production DB.
+	* It must be called after the target database has been created (either by
+	* `clone_database` / `clone_database_dump` or by `install_db_from_default_file`).
+	*
+	* @return object $response - result:true on success, result:false with msg on failure
 	*/
 	public static function create_extensions() : object {
 

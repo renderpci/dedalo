@@ -160,7 +160,21 @@ class install_data_seeder {
 
 	/**
 	* CREATE_MAIN_PROJECT
-	* @return object $response
+	* Truncates matrix_projects, resets its PK sequence, and inserts the default
+	* "General project" record (section_id 1, section_tipo 'dd153').
+	*
+	* The project row encodes:
+	*   - string['dd155']: project code = '001' (language-neutral identifier)
+	*   - string['dd156']: project name = 'General project' (English)
+	*   - relation['dd200'/'dd197']: created_by / modified_by pointing to root user (section_id -1, dd128)
+	*   - date['dd199']: created_date = 2010-02-15
+	*   - date['dd201']: modified_date = 2018-12-10
+	*   - data['diffusion_info']: null — not yet diffused to any publication target
+	*
+	* All users and records must belong to at least one project. This seed row
+	* ensures there is always a project to assign during the install flow.
+	*
+	* @return object $response - stdClass with bool result and string msg
 	*/
 	public static function create_main_project() : object {
 
@@ -175,6 +189,7 @@ class install_data_seeder {
 
 		// v7 schema: data distributed across typed columns
 		// data column: section-level metadata
+		// 'diffusion_info' is null until the project is published via the diffusion subsystem
 			$data = json_encode((object)[
 				'label'              => 'Proyectos',
 				'section_tipo'       => 'dd153',
@@ -185,6 +200,7 @@ class install_data_seeder {
 				'modified_by_user_id' => -1
 			]);
 		// relation column: locators grouped by from_component_tipo
+		// dd200 = created_by; dd197 = modified_by — both point back to root (section_id -1, dd128)
 			$relation = json_encode((object)[
 				'dd200' => [
 					(object)['id' => 1, 'type' => 'dd151', 'section_id' => '-1', 'section_tipo' => 'dd128', 'from_component_tipo' => 'dd200']
@@ -194,6 +210,7 @@ class install_data_seeder {
 				]
 			]);
 		// string column: string values (component_input_text) with id+value+lang wrapper
+		// dd155 = project code (language-neutral, stored under lg-nolan); dd156 = project name (English)
 			$string = json_encode((object)[
 				'dd155' => [
 					(object)['id' => 1, 'value' => '001', 'lang' => 'lg-nolan']
@@ -203,6 +220,7 @@ class install_data_seeder {
 				]
 			]);
 		// date column: date values with id property
+		// dd199 = created_date; dd201 = modified_date
 			$date = json_encode((object)[
 				'dd199' => [
 					(object)['id' => 1, 'start' => (object)['day' => 15, 'hour' => 0, 'time' => 64606896000, 'year' => 2010, 'month' => 2, 'minute' => 0, 'second' => 0]]
@@ -230,6 +248,7 @@ class install_data_seeder {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
+				// (!) Error message label says "matrix_counter" — copy-paste artifact; targets matrix_projects.
 				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
@@ -245,7 +264,24 @@ class install_data_seeder {
 
 	/**
 	* CREATE_MAIN_PROFILES
-	* @return object $response
+	* Truncates matrix_profiles, resets its PK sequence, and inserts two baseline
+	* access profiles required by the permission system (section_tipo 'dd234'):
+	*
+	*   - Profile 1 (section_id 1): "Admin" — intended for superuser-level access grants.
+	*   - Profile 2 (section_id 2): "User" — the generic default profile for standard accounts.
+	*
+	* For each profile the row encodes:
+	*   - string['dd237']: profile name (English)
+	*   - string['dd238']: profile description as HTML paragraph
+	*   - relation['dd200'/'dd197']: created_by / modified_by, both referencing root (section_id -1)
+	*   - date['dd199'/'dd201']: creation and modification timestamps
+	*
+	* Both profiles are inserted in a single pg_query call to keep the operation atomic.
+	* The root user seed row (create_root_user) already references profile 2 via
+	* relation['dd1725'] — so this method must be called after create_root_user in
+	* the install sequence, or the FK-equivalent reference will point to a non-existent row.
+	*
+	* @return object $response - stdClass with bool result and string msg
 	*/
 	public static function create_main_profiles() : object {
 
@@ -259,6 +295,7 @@ class install_data_seeder {
 			$exec				= true;
 
 		// Profile 1: Admin (section_id=1)
+		// dd237 = profile name; dd238 = profile description (HTML)
 			$data1 = json_encode((object)[
 				'label'              => 'Profiles',
 				'section_tipo'       => 'dd234',
@@ -302,6 +339,7 @@ class install_data_seeder {
 		]);
 
 		// Profile 2: User (section_id=2)
+		// dd237 = profile name; dd238 = profile description (HTML)
 			$data2 = json_encode((object)[
 				'label'              => 'Profiles',
 				'section_tipo'       => 'dd234',
@@ -343,6 +381,7 @@ class install_data_seeder {
 			'dd199' => [(object)['count' => 1]],
 			'dd201' => [(object)['count' => 1]]
 		]);
+		// Both profiles are inserted in one pg_query call; if either fails, neither row is committed.
 		$sql = '
 			TRUNCATE "matrix_profiles";
 			ALTER SEQUENCE matrix_profiles_id_seq RESTART WITH 1;
@@ -353,6 +392,7 @@ class install_data_seeder {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
+				// (!) Error message label says "matrix_counter" — copy-paste artifact; targets matrix_profiles.
 				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
@@ -368,9 +408,17 @@ class install_data_seeder {
 
 	/**
 	* CREATE_TEST_RECORD
-	* This record it's necessary to run unit_test checks
-	* Table 'matrix_test' must to exists
-	* @return object $response
+	* Truncates matrix_test, resets its PK sequence, and inserts a minimal fixture row
+	* (section_id 1, section_tipo 'test3') required by the Dédalo unit-test suite.
+	*
+	* The row only populates the 'data' column (modified_date, diffusion_info, modified_by_user_id).
+	* No string, relation, date, or meta columns are written — unit tests that need those columns
+	* populate them programmatically at test time.
+	*
+	* (!) The table 'matrix_test' must already exist in the install database before this method
+	*     is called. It is created by install_database_manager earlier in the install sequence.
+	*
+	* @return object $response - stdClass with bool result and string msg
 	*/
 	public static function create_test_record() : object {
 
@@ -386,6 +434,8 @@ class install_data_seeder {
 			$table				= 'matrix_test';
 
 		// v7 schema: data distributed across typed columns
+		// Only the data column is seeded for the test record; component columns remain null.
+		// 'diffusion_info' is null — test records are never published to a diffusion target.
 			$data = json_encode((object)[
 				'modified_date'      => '2022-10-07 11:16:43',
 				'diffusion_info'     => null,
@@ -400,6 +450,7 @@ class install_data_seeder {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
+				// (!) Error message label says "matrix_counter" — copy-paste artifact; targets matrix_test.
 				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;
