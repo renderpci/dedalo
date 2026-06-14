@@ -14,7 +14,26 @@
 
 /**
 * RENDER_EDIT_COMPONENT_TEXT_AREA
-* Manage the components logic and appearance in client side
+* Edit-mode render dispatcher for component_text_area.
+*
+* This module provides the constructor used as a prototype mixin on
+* component_text_area and two standalone exported helpers that other
+* components (component_image, component_geolocation, component_pdf) call
+* when they need to present interactive selectors inside the text editor:
+*
+*   - render_layer_selector  — inline widget listing selectable image/geo layers
+*   - render_page_selector   — modal dialog for picking a specific PDF page number
+*
+* The prototype method `edit` acts as a view router: it reads
+* `self.context.view` and delegates rendering to the appropriate view
+* module (view_default_edit_text_area, view_mini_text_area, or
+* view_line_edit_text_area).
+*
+* Supported view values:
+*   'default'   → full rich-text CKEditor wrapper (also used for 'html_text')
+*   'mini'      → compact single-value display, used in autocomplete / datalists
+*   'line'      → single-line editor, used for inline list editing
+*   'print'     → same layout as 'line' but forced to read-only (permissions=1)
 */
 export const render_edit_component_text_area = function() {
 
@@ -25,9 +44,17 @@ export const render_edit_component_text_area = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @param object options
-* @return HTMLElement wrapper
+* Route the edit-mode render to the correct view module based on context.view.
+*
+* Reads `self.context.view` (set from the ontology property definition) and
+* delegates to the matching view renderer. The 'print' case intentionally
+* falls through to 'line' after forcing read-only permissions so that the
+* same compact layout is used but no editing controls are shown.
+*
+* Side effect: in the 'print' case, `self.permissions` is mutated to 1
+* before the render call so downstream code treats the component as read-only.
+* @param {Object} options - render options forwarded to the view module
+* @returns {Promise<HTMLElement>} wrapper node returned by the chosen view renderer
 */
 render_edit_component_text_area.prototype.edit = async function(options) {
 
@@ -63,16 +90,36 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 
 /**
 * RENDER_LAYER_SELECTOR
-* Creates the user layers selection nodes
-* Used from component_image and component_geolocation
-* @param options
+* Build an inline layer-selection widget and attach it to the component node.
+*
+* Called by component_image and component_geolocation when the editor user
+* needs to choose which visual layer a 'draw' or 'geo' tag should reference.
+* The widget lists all available layers for the current media tag (received in
+* data_tag.layers) and, on selection, mutates data_tag in place and calls the
+* provided callback before removing itself.
+*
+* Singleton guard: if `self.node.layer_selector` is already set (a previous
+* selector is still open), the function returns null immediately to prevent
+* duplicate widgets. The pointer is cleared when the widget closes.
+*
+* The returned node is NOT automatically inserted into the DOM; the caller is
+* responsible for appending it (typically to `self.node`).
+*
+* data_tag shape:
 * {
-*	self: object (component_text_area instance sent by published event)
-* 	text_editor: object (service_ckeditor instance)
-* 	callback: function (to call in for each layer click event)
-* 	data_tag: object as {data:"",label:"",layers:[{},{}],type:"geo"}
+*   type     : {string}  tag type, e.g. 'geo' or 'draw'
+*   tag_id   : {string}  identifier of the tag being created/edited
+*   label    : {string}  display label (mutated on layer selection)
+*   data     : {Array}   data payload (mutated on layer selection)
+*   layers   : {Array}   array of layer descriptors: [{layer_id, user_layer_name}, …]
 * }
-* @return HTMLElement layer_selector
+*
+* @param {Object} options
+* @param {Object} options.self        - component_text_area instance (provides node reference)
+* @param {Object} options.text_editor - active service_ckeditor instance
+* @param {Function} options.callback  - invoked with {data_tag, text_editor} after layer selection
+* @param {Object} options.data_tag    - tag descriptor object (mutated in place on selection)
+* @returns {HTMLElement|null} the layer_selector node, or null if one is already open
 */
 export const render_layer_selector = function(options){
 
@@ -152,10 +199,15 @@ export const render_layer_selector = function(options){
 				element_type	: 'li',
 				parent			: layer_ul
 			})
+			// Each list item gets its own click_handler in closure over 'layer'.
+			// Note: this shadows the outer click_handler declared above for the
+			// close button — both are used in different contexts, no conflict.
 			const click_handler = (e) => {
 				e.preventDefault()
 				e.stopPropagation()
 
+				// Mutate data_tag in place: the label encodes "tag_id:layer_id"
+				// so parent components can reconstruct the locator from the tag.
 				data_tag.label = `${data_tag.tag_id}:${layer.layer_id}`
 				data_tag.data = [layer.layer_id]
 
@@ -219,8 +271,36 @@ export const render_layer_selector = function(options){
 
 /**
 * RENDER_PAGE_SELECTOR
-* Creates a modal dialog with page_selector options
-* @return bool true
+* Open a modal dialog that lets the user type a PDF page number to embed as a tag.
+*
+* Used by component_pdf (and potentially other document components) when the
+* user triggers an F2 keypress that resolves to a 'page' tag type.  The modal
+* validates the entered value against the document's page range (page_in to
+* page_out) before calling build_view_tag_obj and inserting the tag into the
+* editor.
+*
+* The function calls text_editor.save() before opening the modal to flush any
+* pending editor state, preventing conflicts between the modal component tree
+* and the open editor.
+*
+* data_tag shape expected by this function:
+* {
+*   total_pages : {number}  total page count in the document
+*   offset      : {number}  first page number (1-based document start page)
+*   type        : {string}  should be 'page'
+*   label       : {string}  (mutated) the user-entered page number as display label
+*   data        : {Array}   (mutated) single-element array with the relative page index
+* }
+*
+* (!) The 'ok' handler contains `modal.renove()` (line with typo — missing 'a')
+* at the null-value guard path, which is never reached because body_input.value
+* is always a string. The real removal is done by `modal.remove()` further down.
+*
+* @param {Object}  self        - component_text_area instance (provides build_view_tag_obj)
+* @param {Object}  data_tag    - tag descriptor with page range metadata (mutated in place)
+* @param {string}  tag_id      - identifier for the tag being created
+* @param {Object}  text_editor - active service_ckeditor instance
+* @returns {boolean} always returns true
 */
 export const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 
@@ -242,6 +322,11 @@ export const render_page_selector = function(self, data_tag, tag_id, text_editor
 			class_name		: 'body'
 		})
 
+		// (!) eval is used here to interpolate page_in/page_out into a localised
+		// label template string stored in get_label.choose_page_between.
+		// The template is controlled by the application's label system,
+		// not by user input, but eval should still be considered a risk
+		// if label content is ever user-editable.
 		const label = eval('`'+get_label.choose_page_between+'`')
 		const body_title = ui.create_dom_element({
 			element_type	: 'span',
@@ -257,6 +342,7 @@ export const render_page_selector = function(self, data_tag, tag_id, text_editor
 			parent			: body
 		})
 
+		// error_input: inline error message shown when the entered value is out of range
 		const error_input = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'body_title',
@@ -306,6 +392,9 @@ export const render_page_selector = function(self, data_tag, tag_id, text_editor
 			error_input.textContent = get_label.value_out_of_range || 'Value out of range'
 			return
 		}
+		// Convert the absolute user-entered page number to a relative page index
+		// by subtracting (offset - 1).  The editor stores relative indices so
+		// the PDF viewer can navigate correctly regardless of document start page.
 		const data		= body_input.value - (offset -1)
 		data_tag.label	= body_input.value
 		data_tag.data	= [data]

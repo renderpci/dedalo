@@ -13,10 +13,75 @@
 
 /**
 * RENDER_REFERENCE
+* Renders a modal dialog that lets the user assign or replace a "reference" tag
+* inside a rich-text component_text_area (CKEditor) selection.
 *
-* @param object options
-* @return bool
-* 	True if all is alright, false on missing vars or problems
+* A "reference" tag is a locator-based annotation: a span of text in the editor
+* is decorated with a `reference` CKEditor attribute whose value is a view-tag
+* object produced by `build_view_tag_obj`. That object points, via a locator, to
+* a thesaurus or catalogue record managed by a companion portal component
+* (the "tags_reference" component declared in the ontology under
+* `self.properties.tags_reference`).
+*
+* The dialog has three sections:
+*  1. NEW TAG — a live autocomplete portal (rendered as a temporal component with
+*     `section_id: 1`) that lets the user search and pick a new record to link.
+*  2. REUSE TAG — a list of locators that already exist inside the tags_reference
+*     portal for this text-area record, so the user can share a locator across
+*     multiple text spans without creating duplicates.
+*  3. FOOTER — "Delete" (removes the reference attribute and unlinks the locator)
+*     and "Apply" (saves the locator and writes the reference attribute via
+*     `text_editor.set_reference`).
+*
+* Called as `self.render_reference(options)` on a component_text_area instance.
+* The function is assigned to `component_text_area.prototype.render_reference`
+* in component_text_area.js.
+*
+* @module render_reference
+*/
+
+
+
+/**
+* RENDER_REFERENCE
+* Opens a modal for assigning or editing a "reference" tag on the active text
+* selection in the CKEditor instance.
+*
+* Flow:
+*  1. Locate the tags_reference companion component from the shared datum to
+*     retrieve existing locators (`datum.data` entries keyed by
+*     from_component_tipo / section_tipo / section_id).
+*  2. Build a temporal autocomplete component
+*     (`references_component_tipo` at `references_section_tipo`, section_id=1)
+*     and pre-populate it with the locator currently attached to `view_tag`,
+*     if any.
+*  3. Render the modal. "Apply" either:
+*       - saves a brand-new locator via `component_tags_reference.add_value()`
+*         and writes a view-tag to the editor via `text_editor.set_reference()`,
+*       - or reuses an existing locator (selected from the "Reuse" list) without
+*         writing a new entry.
+*  4. "Delete" calls `component_tags_reference.unlink_record()` to remove the
+*     locator entry then `text_editor.remove_reference()` to strip the attribute.
+*  5. On modal close the temporal component is reset and destroyed so its
+*     Session-side data is cleared and instance memory is released.
+*
+* @param {Object} options - Configuration bundle passed by the caller.
+* @param {Object} options.self - The component_text_area instance that owns this
+*   reference tag (provides `section_tipo`, `section_id`, `context`, `properties`,
+*   and helper methods such as `build_view_tag_obj`).
+* @param {Object} options.text_editor - Active service_ckeditor instance whose
+*   `set_reference()`, `remove_reference()`, and `set_dirty()` methods are called
+*   to mutate the editor model.
+* @param {number} options.i - Index of the tag inside the text_editor's internal
+*   tag list (passed through for caller reference; not used internally here).
+* @param {Object} options.tag - The view-tag object for the reference span that
+*   was clicked. Shape: `{ tag_id, tag_type, label, state, data, reuse? }`.
+*   `tag_id` identifies the reference span in both the editor markup and the
+*   locator entries stored in the tags_reference component.
+* @returns {Promise<boolean>} Resolves to `true` when the modal has been built
+*   and attached successfully; `false` when a prerequisite is missing (e.g.
+*   the tags_reference component instance cannot be found, or the user lacks
+*   permissions for the autocomplete component).
 */
 export const render_reference = async function(options) {
 
@@ -44,11 +109,18 @@ export const render_reference = async function(options) {
 			? found_instances[0]
 			: null
 
+		// (!) The tags_reference companion component must already be built (it lives in
+		// the same section context). If it is absent the ontology is misconfigured — the
+		// component tipo declared in `self.properties.tags_reference` must exist.
 		if(!component_tags_reference){
 			console.error("Error! misconfigured text area with references, the tags reference component is not available, create new one in the ontology, see rsc36 and rsc1368");
 			return false
 		}
 
+		// Locate this text-area's own datum entry inside the shared datum.data array.
+		// datum.data is the flat array shared across the section; entries are keyed by
+		// tipo + section_tipo + section_id. `found_tag_data.value` holds the array of
+		// locator objects for all reference tags recorded in this component.
 		const found_tag_data = component_tags_reference.datum.data.find(el =>
 			el.tipo===component_tags_reference.tipo &&
 			el.section_tipo===component_tags_reference.section_tipo &&
@@ -58,16 +130,28 @@ export const render_reference = async function(options) {
 			? found_tag_data.value
 			: []
 
+		// component_tags_reference.data.value is the live (potentially unsaved) array
+		// of locator entries. Each entry carries: tag_id, tag_type, from_component_tipo,
+		// section_tipo, section_id, and optionally fallback_value.
 		const ar_tags_values = component_tags_reference.data.value
 
+		// Find the locator entry that corresponds to the clicked reference span.
+		// `tag_type === 'reference'` distinguishes these from index/note/draw tags.
 		const locator = (ar_tags_values)
 			? ar_tags_values.filter(el => el.tag_id === view_tag.tag_id && el.tag_type === 'reference')
 			: null
 
+		// Build the list of reusable locators: iterate datum.data entries to enrich
+		// each locator with a human-readable fallback_value resolved by the server.
+		// Iterating in reverse so most-recently added entries appear first.
 		const existing_values = []
 		for (let i = all_tag_data.length - 1; i >= 0; i--) {
 			const current_locator = all_tag_data[i]
 
+			// Check whether a datum.data entry exists for this locator's pointed-at
+			// section (from_component_tipo + section_tipo + section_id). Only locators
+			// whose referenced record is present in datum get a fallback_value, which
+			// is an array of resolved display strings (one per language layer).
 			const found = component_tags_reference.datum.data.find(el =>
 				el.from_component_tipo === current_locator.from_component_tipo &&
 				el.section_tipo === current_locator.section_tipo &&
@@ -88,6 +172,10 @@ export const render_reference = async function(options) {
 		const references_component_model	= self.context.features.references_component_model
 
 	// reference_component
+		// Build a temporal (non-persisted) component instance to serve as the
+		// autocomplete search widget. `is_temporal: true` prevents the component from
+		// writing to the real database row; data changes are held in Session only.
+		// `section_id: 1` is a dummy placeholder — the real record is irrelevant here.
 		const instance_options = {
 			model			: references_component_model,
 			tipo			: references_component_tipo,
@@ -102,6 +190,8 @@ export const render_reference = async function(options) {
 			const reference_component = await get_instance(instance_options)
 										await reference_component.build(true)
 
+			// Permission guard: users without read access to the autocomplete component
+			// see a "No access" warning modal and we bail out early.
 			if(reference_component.permissions<1){
 				const label = get_label.no_access  || 'No access here'
 
@@ -123,6 +213,10 @@ export const render_reference = async function(options) {
 			reference_component.show_interface.save_animation = false
 
 		// change data to set empty value in the component (it saved in Session instead DDBB)
+			// Pre-populate the autocomplete with the locator already attached to this tag
+			// (if any), so the user sees the current selection and can change or clear it.
+			// `action: 'set_data'` replaces the component's in-memory value without a
+			// server round-trip; `value: null` clears if no prior locator exists.
 			const changed_data = [Object.freeze({
 				action	: 'set_data',
 				value	: locator || null
@@ -180,6 +274,11 @@ export const render_reference = async function(options) {
 				inner_html		: get_label.reuse_tag || 'Reuse tag',
 				parent			: existing_tags_container
 			})
+			// Build one clickable chip per reusable locator. The chip stores its locator
+			// as `.data` and uses a boolean `.activated` flag to track toggle state.
+			// Only one chip can be selected at a time; selecting a chip sets
+			// `selected_tag.reuse = true` and overwrites `selected_tag.tag_id` so that
+			// "Apply" uses the existing locator instead of creating a new one.
 			const ar_existing_value_node =[]
 			for (let i = 0; i < existing_values.length; i++) {
 
@@ -205,6 +304,7 @@ export const render_reference = async function(options) {
 						}
 					}
 					if(existing_value_node.activated){
+						// Second click on the same chip: deselect and revert to new-tag mode.
 						existing_value_node.activated = false
 						existing_value_node.classList.remove('selected_tag')
 						// reset the selected tag_id with the original tag_id
@@ -212,6 +312,8 @@ export const render_reference = async function(options) {
 						selected_tag.reuse = false
 						selected_tag.fallback_value = null
 					}else{
+						// First click: select this chip. Override selected_tag so "Apply"
+						// will reuse this locator's tag_id rather than creating a new one.
 						existing_value_node.activated = true
 						existing_value_node.classList.add('selected_tag')
 						// set the selected tag_id with the selection
@@ -279,12 +381,16 @@ export const render_reference = async function(options) {
 
 					const locator = reference_component.data.value
 
+					// If the autocomplete is empty (user clicked Apply without selecting
+					// a record), treat this as a delete: remove the tag from the editor.
 					if(!locator || locator.length === 0){
 						button_remove.click()
 						return
 					}
 
 					// set the tag_id and tag_type into the locator to be saved
+					// Stamp the tag_id and tag_type from the clicked view-tag onto the
+					// new locator so the server can correlate it back to this text span.
 					const new_locator = locator[0]
 						new_locator.tag_id = view_tag.tag_id
 						new_locator.tag_type = 'reference'
@@ -296,6 +402,11 @@ export const render_reference = async function(options) {
 					component_tags_reference.add_value(new_locator);
 
 					// get the data from the new locator
+					// Look up the datum.data entry for the newly added locator so we can
+					// read its server-resolved `fallback_value` (array of display strings).
+					// Matching on section_id + section_tipo is sufficient here because the
+					// portal has already disambiguated the entry by the time we reach this
+					// point (from_component_tipo is commented out — left for reference).
 					const locator_data = new_locator
 					 	? reference_component.datum.data.find(el =>
 					 		// el.from_component_tipo === new_locator.from_component_tipo &&
@@ -315,6 +426,9 @@ export const render_reference = async function(options) {
 				// create the new tag for the reference, it's necessary to change the referenceIn tag only
 					const tag_type		='reference'
 
+				// Build a fresh view-tag object from selected_tag's resolved state and
+				// pass it to `text_editor.set_reference()`. The view-tag's `data` field
+				// carries the tag_id that CKEditor serialises into the rich-text model.
 				const reference_tag = {
 					type	: tag_type,
 					label	: selected_tag.label,
@@ -349,6 +463,10 @@ export const render_reference = async function(options) {
 			// size	: 'small' // string size big|normal
 		})
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components
+		// (!) The temporal component holds Session-side state on the server. It must be
+		// explicitly reset (value → null) and then destroyed so the Session entry is
+		// cleared and the instance is removed from the instance registry. Failure to do
+		// so would leak the temporal component across navigation events.
 		modal.on_close = async () => {
 
 			if( reference_component.data.value){
