@@ -665,7 +665,13 @@ render_search.prototype.build_search_component = async function(options) {
 	const section_id		= options.section_id
 
 	// short vars
-		const path			= JSON.parse(path_plain)
+		let path
+		try {
+			path = JSON.parse(path_plain)
+		} catch (error) {
+			console.error('build_search_component: invalid path_plain JSON', path_plain, error)
+			return false
+		}
 		const last_item		= path[path.length-1]
 		const first_item	= path[0]
 
@@ -1151,9 +1157,14 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 	// cookie value (selected_search_sections)
 		const cookie_name						= 'selected_search_sections'
 		const selected_search_sections_value	= localStorage.getItem(cookie_name)
-		const selected_search_sections			= selected_search_sections_value
-			? JSON.parse(selected_search_sections_value)
-			: {}
+		let selected_search_sections = {}
+		if (selected_search_sections_value) {
+			try {
+				selected_search_sections = JSON.parse(selected_search_sections_value)
+			} catch (error) {
+				console.error('Invalid selected_search_sections in localStorage', error)
+			}
+		}
 		// sample expected parsed format
 			// {
 			// 	"1": [
