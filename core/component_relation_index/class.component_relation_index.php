@@ -5,38 +5,81 @@ include_once 'trait.search_component_relation_index.php';
 * Manages indexation references and inverse relations in Dédalo.
 *
 * Core Concept and Purpose:
-* - Inverse Relations: Identifies other sections/records that reference the current
-*   record ("who points to me"). Used to display records linking TO the current section.
-* - External Nature: Primarily calculated/dynamic. Resolves inverse locators rather than
-*   relying solely on stored values.
-* - Search Optimization: Values are saved to database to enable "Easy Search" without
-*   recalculating the entire relationship graph.
-* - Relation Type: Uses DEDALO_RELATION_TYPE_INDEX_TIPO (dd96) for reverse relations.
+* -------------------------
+* This component answers the question "who points to me?" — it identifies every
+* other section/record in the system that holds a relation locator targeting the
+* current record. Rather than storing its own data (like a normal editable
+* component), it works by querying the relation graph at read time and caching
+* the result for performance-critical paths such as bulk publication.
+*
+* The component serves two distinct but related roles:
+*
+* 1. DISPLAY — It fetches all inverse locators (incoming references) and, for
+*    each one, instantiates the pointing section in "related_list" mode so that
+*    the client receives a fully-resolved context + data tree. This allows a UI
+*    card for an "Artist" record, for example, to list every "Painting" that cites
+*    that artist via a relation component.
+*
+* 2. SEARCH INDEX — Although the data is computed dynamically, values are also
+*    persisted to the database so that standard full-text / operator searches
+*    ("has any reference" / "has no reference") can run as plain SQL IN/NOT IN
+*    clauses rather than re-traversing the relation graph on every query.
 *
 * Key Functionalities:
-* - Data Retrieval (get_data): Finds "Inverse Locators" using search_related.
-*   Asks "Find all records that relation-link to ME" with caching for performance.
-* - Context Resolution (get_related_section_context): Displays data from OTHER calling
-*   sections (e.g., list "Paintings" that cite this "Artist"). Groups by section_tipo,
-*   initializes samples for request_config, and merges into unified "Related List".
-* - Searching (resolve_query_object_sql):
-*   * `*` (Not Empty): Finds records cited by others
-*   * `!*` (Empty): Finds orphan records (not cited by anyone)
+* --------------------
+* - get_data / get_data_paginated:
+*     Calls search_related::get_referenced_locators() to discover every locator
+*     in any matrix table that points at the current section record via
+*     DEDALO_RELATION_TYPE_INDEX_TIPO (dd96). Results are page-aware and cached.
 *
-* Data Model:
-* Array of locator objects representing incoming links:
-* ```
-* [{
-*   "type": "dd96",
-*   "section_tipo": "...",
-*   "section_id": "...",
-*   "component_tipo": "...",
-*   "tag_id": "..."
-* }]
-* ```
+* - get_related_section_context:
+*     Groups the incoming references by pointing section_tipo, fetches one
+*     representative row per tipo, instantiates the section in "related_list"
+*     mode, and merges the resulting context/sub-context into the component
+*     output. This is triggered only on the first page load (offset === 0).
 *
-* Extends component_relation_common and uses search_component_relation_index trait
-* for inverse relation queries.
+* - get_section_datum_from_locator:
+*     Resolves context + data for a single related section identified by a
+*     locator. Mutates $this->context->request_config (merging ddo_map and
+*     section_tipo from the sub-section's dedalo api_engine config) so that
+*     subsequent JSON builds reflect all dynamically discovered sections.
+*
+* - resolve_query_object_sql (via search_component_relation_index trait):
+*     '*' (Not Empty) → section_id IN (list of section_ids that are referenced)
+*     '!*' (Empty)    → section_id NOT IN (same list) — orphan/uncited records
+*
+* Data shape stored / returned:
+* -----------------------------
+* An array of locator objects representing incoming links. Each entry uses the
+* dd96 relation type and identifies the *pointing* record (not the target):
+* ```
+* [
+*   {
+*     "type"                : "dd96",
+*     "section_tipo"        : "rsc170",
+*     "section_id"          : "1",
+*     "from_component_top_tipo" : "rsc1054"
+*   }, …
+* ]
+* ```
+* Note: parse_data() remaps fields from the raw search_related row format
+* (from_section_tipo / from_section_id / tag_component_tipo …) into standard
+* locator properties before returning the array.
+*
+* Static cache ($referended_locators_cache):
+* ------------------------------------------
+* During publication, many languages are resolved for every record; the inverse
+* locator set is identical across all languages. The class-static cache keyed by
+* "{relation_type}_{section_tipo}_{section_id}" prevents redundant DB lookups.
+* The cache is capped at 1 000 entries and fully flushed when the cap is reached
+* (see get_referenced_locators_with_cache).
+*
+* Inheritance / composition:
+* --------------------------
+* Extends component_relation_common (locator lifecycle, grid/export value
+* resolution, diffusion / import pipelines).
+* Uses trait search_component_relation_index (resolve_query_object_sql and
+* operator dispatcher methods).
 *
 * @package Dédalo
 * @subpackage Core
@@ -56,6 +99,7 @@ class component_relation_index extends component_relation_common {
 		/**
 		 * Static cache for referenced locators to avoid expensive lookups.
 		 * Stores inverse locator results during repetitive processes like publication.
+		 * Keyed by "{relation_type}_{section_tipo}_{section_id}"; flushed when count > 1000.
 		 * @var array $referended_locators_cache
 		 */
 		public static array $referended_locators_cache = [];
@@ -70,6 +114,7 @@ class component_relation_index extends component_relation_common {
 		/**
 		 * Properties used to verify duplicate locators when adding relations.
 		 * Array of property names that must match to consider two locators equal.
+		 * Used by the deduplication logic in the parent's locator-add pipeline.
 		 * @var array $test_equal_properties
 		 */
 		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'];
@@ -77,6 +122,8 @@ class component_relation_index extends component_relation_common {
 		/**
 		 * Default target section when not explicitly set in properties.
 		 * Value ['all'] means all related sections that reference the current record.
+		 * Used as the fallback in get_target_section() when neither $this->target_section
+		 * nor a request_config sqo->section_tipo is available.
 		 * @var array $default_target_section
 		 */
 		protected array $default_target_section = ['all'];
@@ -84,6 +131,8 @@ class component_relation_index extends component_relation_common {
 		/**
 		 * Target sections for filtering indexation references.
 		 * Array of section tipos to limit which referencing sections are displayed.
+		 * Can be injected at runtime (e.g., by dd_grid) to restrict results to a
+		 * specific subset of sections that point to the current record.
 		 * @var array $target_section
 		 */
 		public array $target_section = [];
@@ -92,12 +141,21 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_DATA
-	* Resolve indexation references data
-	* Note that this component data is always EXTERNAL (it doesn't manage data in database, it always resolve calling data, inverse locators or who is calling me)
-	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
-	* to current section
-	* But, values are saved too to allow easy search
-	* @return array|null $data
+	* Resolve and return the full (non-paginated) set of inverse locators for this record.
+	*
+	* Unlike most components, component_relation_index does NOT manage its own data in the
+	* database — its dato is always computed dynamically by searching the relation graph for
+	* every record that holds a dd96 locator targeting the current section/section_id.
+	*
+	* Values are also persisted to the matrix table to enable operator-based searches
+	* ('*' / '!*') without re-traversing the graph every time.
+	*
+	* The result is cached on $this->data_resolved so repeated calls within the same request
+	* are free. The inverse locator lookup itself uses the class-static
+	* $referended_locators_cache (see get_referenced_locators_with_cache).
+	*
+	* @return array|null $data  Array of locator objects representing incoming references,
+	*                           or null when the current record has no incoming references.
 	*/
 	public function get_data() : ?array {
 
@@ -130,13 +188,19 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_DATA_PAGINATED
-	* Resolve indexation references data
-	* Note that this component data is always EXTERNAL
-	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
-	* to current section
-	* But, values are saved too to allow easy search
-	* @param int|null $custom_limit = null
-	* @return array|null $data
+	* Resolve a single page of inverse locators for this record.
+	*
+	* Unlike get_data(), which returns the full set via the static cache, this method
+	* passes pagination parameters (limit / offset) and an optional target_section filter
+	* directly to search_related::get_referenced_locators() so that only the requested
+	* window of results is fetched from the database.
+	*
+	* Used by component_relation_index_json.php as the primary data source for the
+	* client-side list — the first page also triggers get_related_section_context()
+	* to build the per-section-tipo context that the client needs to render sub-records.
+	*
+	* @param int|null $custom_limit = null  Override pagination->limit when provided.
+	* @return array $data  Array of locator objects for the current page (may be empty).
 	*/
 	public function get_data_paginated( ?int $custom_limit=null ) : array {
 
@@ -169,8 +233,20 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* PARSE_DATA
-	* @param array $ar_inverse_locators
-	* @return array $parse_data
+	* Convert raw search_related result rows into standard locator objects.
+	*
+	* search_related::get_referenced_locators() returns rows using the naming
+	* convention of the relation matrix (from_section_tipo, from_section_id,
+	* tag_component_tipo, etc.). This static method re-maps those fields onto the
+	* standard locator API (set_section_tipo / set_section_id / set_component_tipo …)
+	* so the rest of the component stack can treat the result as ordinary locators.
+	*
+	* Only properties that actually exist on the raw row are copied; missing optional
+	* fields (tag_id, section_top_id, section_top_tipo, from_component_tipo) are
+	* silently skipped to keep the resulting locator lean.
+	*
+	* @param array $ar_inverse_locators  Raw result rows from search_related.
+	* @return array $parse_data          Array of locator instances ready for use as component data.
 	*/
 	public static function parse_data( array $ar_inverse_locators ) : array {
 
@@ -208,9 +284,16 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* COUNT_DATA
-	* Full count of data.
-	* Get the total sections that are calling the component (usually a thesaurus term)
-	* @return int $total
+	* Return the total number of sections that hold a reference to the current record.
+	*
+	* Builds a relation-mode SQO that filters by the current record's filter locator and
+	* asks the search engine for a full count (no data rows returned). The result is stored
+	* in $this->pagination->total so that subsequent calls within the same request are free.
+	*
+	* Typically called from component_relation_index_json.php to populate the pagination
+	* object that the client uses to determine how many pages of related records exist.
+	*
+	* @return int $total  Total number of referencing records across all section tipos.
 	*/
 	public function count_data() : int {
 
@@ -249,13 +332,21 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* COUNT_DATA_GROUP_BY
-	* Full count of records, but breakdown by a criteria
-	* Use the group_by variable to count by any criteria the records
-	* the result include the total as sum of all.
-	* @param array $group_by
-	*  as ['section_tipo']
-	* @param array|null $filter_locators = null
-	* @return object $count_data_group_by
+	* Count referencing records broken down by a given criteria, plus an overall total.
+	*
+	* Builds a relation-mode SQO with a group_by clause so the search engine returns one
+	* count row per unique value of the grouping key (e.g. section_tipo). The response
+	* object exposes both individual group counts ($count_data_group_by->totals_group)
+	* and an aggregate total.
+	*
+	* Primary consumer is get_related_section_context(), which passes ['section_tipo'] to
+	* discover all pointing section tipos and retrieve one representative record per tipo
+	* for context instantiation.
+	*
+	* @param array      $group_by         Fields to group by, e.g. ['section_tipo'].
+	* @param array|null $filter_locators  Optional override for the filter locators. When null,
+	*                                     the current record's own filter locator is used.
+	* @return object $count_data_group_by  Result object with totals_group and overall total.
 	*/
 	public function count_data_group_by( array $group_by, ?array $filter_locators=null ) : object {
 
@@ -287,19 +378,28 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_RELATED_SECTION_CONTEXT
-	* Get all calling sections and create his context and sub-context.
-	* As the relation_index use the calling sections to get his data,
-	* it's necessary to get all context of every the calling section.
-	* Relation_index has not a request_config definition in ontology,
-	* (is not possible create all combinations for every calling sections)
-	* his creation depends of the calling sections.
-	* When the original section is calling by a lot of other sections
-	* the context is not possible get it for the data.
-	* This function will ask for get all calling sections and all section_tipo
-	* and get 1 section_id to create a valid locator.
-	* The locator is necessary to calculate the sub-context of every calling section.
-	* The calculated context and sub-context will be mixed into the source section.
-	* @return array $context
+	* Build the context tree for every section tipo that holds a reference to this record.
+	*
+	* Because component_relation_index aggregates incoming links from many different section
+	* tipos simultaneously, and because a request_config cannot be pre-defined in the
+	* ontology for every possible combination of calling sections, this method resolves
+	* context dynamically at runtime:
+	*
+	*   1. Calls count_data_group_by(['section_tipo']) to get one count row per unique
+	*      pointing section tipo — this avoids fetching every locator row.
+	*   2. For each discovered section tipo, validates that a matrix table exists (skips
+	*      tipos from TLDs that are not installed/activated on the current instance).
+	*   3. Runs a limit-1 search to obtain any valid section_id for that tipo.
+	*   4. Delegates to get_section_datum_from_locator() which instantiates the section in
+	*      "related_list" mode, extracts its context/sub-context, and mutates
+	*      $this->context->request_config to accumulate the merged ddo_map.
+	*   5. Merges each datum's context array into the growing $context return value.
+	*
+	* This method is invoked only on the first page load (offset === 0) from
+	* component_relation_index_json.php, keeping subsequent paginated requests lightweight.
+	*
+	* @return array $context  Flat array of context objects (sections + their sub-contexts),
+	*                         ready to be appended to the component's own context array.
 	*/
 	public function get_related_section_context() : array {
 
@@ -380,16 +480,40 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_SECTION_DATUM_FROM_LOCATOR
-	* Retrieves the data and context of a related section identified by the provided locator.
-	* It also dynamically updates the component's internal request configuration by merging
-	* the target section's 'ddo_map' and 'section_tipo'. This ensures that any subsequent
-	* data resolution processes have the adequate config to format the related section properly.
+	* Resolve context + data for a single related section and merge its request_config
+	* into this component's own context.
 	*
-	* If the target section cannot be found or instantiated, it gracefully returns an empty
-	* datum object structure rather than throwing a fatal error.
+	* Responsibilities:
+	* -----------------
+	* a) Ensures $this->context exists (calculates it on first call).
+	* b) Instantiates the section identified by $locator in "related_list" mode and
+	*    adds a single section_record so that get_json() returns populated data.
+	* c) For each subcontext item emitted by the section whose tipo matches
+	*    $locator->section_tipo, extracts the "dedalo" api_engine request_config and
+	*    merges its sqo->section_tipo list and show->ddo_map into the component's own
+	*    $final_request_config. This accumulation ensures that subsequent data builds
+	*    reference every section tipo that has been discovered dynamically, without
+	*    duplicating section tipos.
+	* d) Stamps each subcontext item with `parent = $this->tipo` so the client JS
+	*    framework can locate sub-components within the component's context tree.
 	*
-	* @param locator $locator The reference object containing the target `section_tipo` and `section_id`
-	* @return stdClass $datum An object containing the solved `context` (array) and `data` (object/array) for the target section.
+	* Error handling:
+	* ---------------
+	* If section_tipo is empty, or if section::get_instance() fails, the method logs
+	* the error and returns an empty datum object ({context: [], data: []}) instead of
+	* throwing, keeping the rendering pipeline fault-tolerant.
+	*
+	* Side-effects:
+	* -------------
+	* (!) Mutates $this->context->request_config in place — adds section tipos and merges
+	* ddo_map entries from discovered sub-sections. This is intentional; the component
+	* has no static request_config of its own (it cannot enumerate all possible calling
+	* section tipos at ontology design time).
+	*
+	* @param locator $locator  Locator identifying the target section and record.
+	* @return object $datum    stdClass with:
+	*                            ->context  array  — sub-context items from the section
+	*                            ->data     mixed  — section data items (from get_json()->data)
 	*/
 	public function get_section_datum_from_locator( locator $locator ) : object {
 
@@ -541,10 +665,18 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* REMOVE_LOCATOR
-	* Iterate current component 'data' and if math requested locator, removes it the locator from the 'data' array
-	* NOTE: This method updates component 'data' and save
-	* @param object $locator
-	* @return bool
+	* Remove a matching locator from this component's stored data and persist the change.
+	*
+	* Clones the incoming locator to avoid mutating the caller's object, then fills in any
+	* missing fields ('type' and 'from_component_tipo') that are required for an unambiguous
+	* match before delegating to the parent's remove_locator_from_data().
+	*
+	* The match is performed across six properties:
+	*   type, section_tipo, section_id, component_tipo, tag_id, from_component_tipo
+	* All six must agree for a locator to be considered equal and removed.
+	*
+	* @param object $locator  Locator to remove. Must at minimum carry section_tipo and section_id.
+	* @return bool            True when the locator was found and removed; false otherwise.
 	*/
 	public function remove_locator( object $locator ) : bool {
 
@@ -582,12 +714,21 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_REFERENCES_TO_SECTION
-	* Get all references to current section tipo and relation type (indexation)
-	* This is used as intermediate search to get indexations from another
-	* sections to current section
-	* @param string $section_tipo
-	* @param string relation_type = null
-	* @return array $references
+	* Return all section_ids that have been indexed (referenced) by other records for a
+	* given section tipo and relation type.
+	*
+	* Used as an intermediate step by the search operator handlers in
+	* search_component_relation_index (resolve_relation_index_not_empty_sql /
+	* resolve_relation_index_empty_sql). Those handlers convert the returned id list into
+	* an SQL IN / NOT IN clause.
+	*
+	* The lookup is wrapped in get_referenced_locators_with_cache() so that calls for the
+	* same section_tipo during a single publication or search run are served from memory.
+	*
+	* @param string      $section_tipo   The target section tipo to look up (e.g. 'tch1').
+	* @param string|null $relation_type  Override the relation type; defaults to
+	*                                    DEDALO_RELATION_TYPE_INDEX_TIPO (dd96).
+	* @return array $references          Flat array of section_id values (strings).
 	*/
 	public static function get_references_to_section( string $section_tipo, ?string $relation_type=null ) : array {
 		$start_time=start_time();
@@ -632,13 +773,26 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_REFERENCED_LOCATORS_WITH_CACHE
-	* Get inverse locators using cache
-	* Note that, in publication process, many languages are resolved for every record and the result
-	* for all of them is the same. Use this cache-able function to prevent calculate inverse locators
-	* for every language
-	* @param object $locator
-	* @param string $cache_key
-	* @return array $referenced_locators
+	* Retrieve inverse locators from cache or, on miss, from search_related.
+	*
+	* During multi-language publication each language pass resolves the same relation graph
+	* for the same record, making the lookup redundant. This wrapper stores results in the
+	* class-static $referended_locators_cache indexed by $cache_key and returns the cached
+	* value on subsequent calls.
+	*
+	* Cache management:
+	* -----------------
+	* (!) The cache has no TTL. It is intentionally unbounded within a single PHP request /
+	* worker life-cycle. To prevent runaway memory growth the entire cache is cleared when
+	* the entry count exceeds 1 000. This is a coarse but predictable safety valve;
+	* callers should not rely on any specific eviction order.
+	*
+	* @param object $locator    Filter locator identifying the target record (type + section_tipo
+	*                           + optional section_id). Passed as a single-element array to
+	*                           search_related::get_referenced_locators().
+	* @param string $cache_key  Unique string key for this lookup, e.g.
+	*                           "dd96_tch1_42" (relation_type_section_tipo_section_id).
+	* @return array $referenced_locators  Array of raw locator result objects from search_related.
 	*/
 	public static function get_referenced_locators_with_cache( object $locator, string $cache_key ) : array {
 
@@ -666,11 +820,21 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_TARGET_SECTION
-	* Return the target section in different situations.
-	* target section could be defined in the request_config -> sqo -> section_tipo
-	* dd_grid could inject the target section selected by users, in this case use $this->target_section
-	* and target section could be not defined, in this case use the default_target_section defined in the class ['all']
-	* @return array $target_section
+	* Resolve the effective list of section tipos to filter indexation references by.
+	*
+	* Resolution priority (first match wins):
+	*   1. $this->target_section if non-empty — runtime injection by e.g. dd_grid
+	*      (user selects a specific section tipo from the UI).
+	*   2. $this->properties->source->request_config is set — extracts the section
+	*      tipo list from the component's ontology-defined request_config via
+	*      get_ar_target_section_tipo() (inherited from component_common).
+	*   3. $this->default_target_section (['all']) — no restriction; query all
+	*      sections that point to the current record.
+	*
+	* A final guard ensures an empty array is never returned (would crash the search
+	* query builder), replacing an empty result with the default ['all'] value.
+	*
+	* @return array $target_section  Non-empty array of section tipo strings, or ['all'].
 	*/
 	private function get_target_section() : array {
 
@@ -693,7 +857,17 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* GET_FILTER_LOCATOR
-	* @return locator $filter_locator
+	* Build a minimal locator object that identifies the current record as a lookup target.
+	*
+	* The returned locator carries:
+	*   - type         → $this->relation_type  (dd96 by default)
+	*   - section_tipo → the section tipo this component belongs to
+	*   - section_id   → the record id this component belongs to
+	*
+	* Used by get_data(), get_data_paginated(), and count_data() as the filter argument
+	* passed to search_related::get_referenced_locators() to retrieve all incoming links.
+	*
+	* @return locator $filter_locator  Locator identifying the current record as the lookup target.
 	*/
 	private function get_filter_locator() : locator {
 
@@ -710,16 +884,34 @@ class component_relation_index extends component_relation_common {
 
 	/**
 	* RESOLVE_EXPORT_DDO_CHILDREN
-	* component_relation_index has no export ddo paths (no request_config of
-	* its own): the ddo_map is self-computed per locator from the pointed
-	* section relation_list request_config, prefixing the target section_id
-	* ddo. Mirrors the legacy inline logic of get_grid_value.
+	* Dynamically compute the ddo_map and direct-children list for export resolution
+	* when the component has no pre-configured export ddo paths of its own.
+	*
+	* Background:
+	* -----------
+	* component_relation_index has no fixed request_config in the ontology because it
+	* aggregates pointing sections that are only known at runtime. When the export
+	* pipeline calls get_export_value() it needs a ddo_map and a set of direct children
+	* to iterate over child components. The parent class resolve_export_ddo_children()
+	* handles the normal (pre-configured) case; this override handles the dynamic case:
+	*
+	*   1. If $ddo_direct_children is already populated (caller supplied export ddo paths),
+	*      delegate immediately to the parent — no dynamic resolution needed.
+	*   2. Otherwise, call get_section_datum_from_locator() to obtain the pointing
+	*      section's context and extract its "dedalo" api_engine request_config.
+	*   3. Find the section's component_section_id child tipo so a ddo for the section_id
+	*      column can be prepended (mirrors the legacy get_grid_value inline logic).
+	*   4. Build resolved_ddo_map = [section_id_ddo, ...section_relation_list_ddo_map].
+	*   5. Filter resolved_ddo_map to direct children (parent === $this->tipo) and return
+	*      both arrays as a plain object for the export pipeline.
+	*
 	* @see component_relation_common::get_export_value
-	* @param array $ddo_map
-	* @param array $ddo_direct_children
-	* @param object $locator
-	* @return object
-	* 	{ddo_map: array, ddo_direct_children: array}
+	* @param array  $ddo_map             The current ddo_map from the export call context.
+	* @param array  $ddo_direct_children Direct-children ddos already resolved by the caller.
+	* @param object $locator             The locator of the pointing record being exported.
+	* @return object  stdClass with:
+	*                   ->ddo_map            array — full resolved ddo_map
+	*                   ->ddo_direct_children array — subset with parent === $this->tipo
 	*/
 	protected function resolve_export_ddo_children( array $ddo_map, array $ddo_direct_children, object $locator ) : object {
 
