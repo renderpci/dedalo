@@ -971,4 +971,96 @@ class system {
 
 
 
+	/**
+	* GET_IMAGEMAGICK_VERSION
+	* Get the ImageMagick binary version string
+	* Uses the Dédalo ImageMagick class which resolves the installed path from config
+	* @return string $version Empty string if not found
+	*/
+	public static function get_imagemagick_version() : string {
+
+		$cmd  = ImageMagick::get_imagemagick_installed_path();
+		$cmd .= ' -version | sed -n "s/Version: ImageMagick \([-0-9.]*\).*/\1/p;" ';
+
+		$version = trim(shell_exec($cmd) ?? '');
+
+		return $version;
+	}//end get_imagemagick_version
+
+
+
+	/**
+	* TEST_IMAGEMAGICK_VERSION_SUPPORTED
+	* Test if ImageMagick version meets Dédalo minimum requirements
+	* @param string $minimum_version = '6.9'
+	* @return bool
+	*/
+	public static function test_imagemagick_version_supported(string $minimum_version='6.9') : bool {
+
+		$version = system::get_imagemagick_version();
+
+		if (empty($version)) {
+			return false;
+		}
+
+		if (version_compare(trim($version), trim($minimum_version)) >= 0) {
+			return true;
+		}
+
+		debug_log(__METHOD__
+			." ImageMagick version ($version) is below minimum ($minimum_version)"
+			, logger::ERROR
+		);
+
+		return false;
+	}//end test_imagemagick_version_supported
+
+
+
+	/**
+	* GET_FFMPEG_VERSION
+	* Get the FFmpeg binary version string
+	* Uses the Dédalo Ffmpeg class which resolves the installed path from config
+	* @return string $version Empty string if not found
+	*/
+	public static function get_ffmpeg_version() : string {
+
+		$cmd  = Ffmpeg::get_ffmpeg_installed_path();
+		$cmd .= ' -version | sed -n "s/ffmpeg version \([-0-9.]*\).*/\1/p;" ';
+
+		$version = trim(shell_exec($cmd) ?? '');
+
+		return $version;
+	}//end get_ffmpeg_version
+
+
+
+	/**
+	* TEST_FFMPEG_VERSION_SUPPORTED
+	* Test if FFmpeg version meets Dédalo minimum requirements
+	* @param string $minimum_version = '4.4.2'
+	* @return bool
+	*/
+	public static function test_ffmpeg_version_supported(string $minimum_version='4.4.2') : bool {
+
+		$version = system::get_ffmpeg_version();
+
+		if (empty($version)) {
+			return false;
+		}
+
+		if (version_compare(trim($version), trim($minimum_version)) >= 0) {
+			return true;
+		}
+
+		debug_log(__METHOD__
+			." FFmpeg version ($version) is below minimum ($minimum_version)"
+			, logger::ERROR
+		);
+
+		return false;
+	}//end test_ffmpeg_version_supported
+
+
+
 }//end class system
