@@ -7,7 +7,7 @@
 	<link rel="shortcut icon" href="../../favicon.ico" />
 	<link rel="stylesheet" href="../../core/page/css/main.css" />
 	<link rel="stylesheet" href="../../lib/mocha/dist/mocha.css">
-	<link rel="stylesheet" href="css/unit_test.css" media="print" onload="this.media='all'; this.onload=null;">
+	<link rel="stylesheet" href="css/unit_test.css">
 	<script type="importmap">
 		{
 			"imports": {
@@ -17,17 +17,8 @@
 		}
 	</script>
 	<script src="../../lib/mocha/dist/mocha.js"></script>
-	<script>
-		mocha.setup({
-			ui			: 'bdd',
-			checkLeaks	: true,
-			asyncOnly	: true
-		});
-	</script>
 	<script src="../../lib/chai/chai.js"></script>
-	<script>
-		let assert = chai.assert;
-	</script>
+	<script src="js/test_bootstrap.js"></script>
 </head>
 <body>
 	<div id="terminal" class="terminal">

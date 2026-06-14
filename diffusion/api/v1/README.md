@@ -19,7 +19,7 @@ bun install
 
 # Copy and configure environment
 cp .env.example .env
-# Edit .env with your database, Redis, and PHP API settings
+# Edit .env with your database and PHP API settings
 
 # Run in development mode (with auto-reload)
 bun run dev
@@ -42,7 +42,7 @@ cp .env.example .env
 | --- | --- |
 | `SOCKET_PATH` | Path to the Unix socket (e.g., `/tmp/diffusion.sock`). **Apache must have write permissions to this file.** |
 | `DEDALO_API_URL` | The internal URL of your Dédalo PHP API (e.g., `http://localhost:8080/dedalo/core/api/v1/json/`). |
-| `DEDALO_MEDIA_PATH` | Filesystem path to the Dédalo media directory (e.g., `/var/www/html/dedalo/media/`). Bun writes merged RDF and ZIP files here. Must be writable by the Bun process. |
+| `DEDALO_MEDIA_PATH` | Filesystem path to the Dédalo media directory (e.g., `/var/www/html/dedalo/media/`). Bun writes merged RDF and ZIP files here. Must be writable by the Bun process. When set, the engine also maintains the **media publication markers** under `{DEDALO_MEDIA_PATH}/.publication/` (zero-byte files the web server stats to authorize anonymous media access when `DEDALO_MEDIA_ACCESS_MODE='publication'` — see `lib/media_index.ts`). Markers update on every publish/unpublish/delete; run `php diffusion/migration/helpers/rebuild_media_index.php` for a full resync. Leave unset to disable the markers. |
 | `DEDALO_MEDIA_URL` | Public URL prefix for the media directory (e.g., `/dedalo/media/`). Used to build download URLs returned to the client. |
 | `DB_*` | Standard credentials for the target MariaDB database where diffusion data should be inserted. |
 
@@ -95,19 +95,33 @@ To support complex PHP processing that can take more than 10 seconds per batch, 
 - **Buffer Padding (16KB)**: Each SSE chunk includes 16KB of trailing spaces to force Apache/Nginx to flush their internal buffers immediately, ensuring the user sees "Fetching data..." in real-time.
 
 
-## API Endpoints
+## API Actions
 
-### POST /api/v1/diffuse
-Main endpoint. Receives an RQO, calls PHP API, parses data, inserts into MariaDB.
+All actions are routed by the `action` field of a JSON POST body and are
+authenticated at the Bun side. Two auth mechanisms exist:
 
-### POST /api/v1/validate
-Pass-through to PHP validation.
+- **session** — the browser session cookie is validated against the PHP API.
+- **session or internal token** — server-to-server actions additionally accept
+  the `X-Diffusion-Internal-Token` header matching `DIFFUSION_INTERNAL_TOKEN`
+  in `.env` (= `DEDALO_DIFFUSION_INTERNAL_TOKEN` in the PHP config).
 
-### POST /api/v1/get_ontology_map
-Pass-through to PHP ontology map retrieval.
+| Action | Auth | Description |
+|---|---|---|
+| `diffuse` | session | Main publish action (SSE stream). Calls PHP per chunk, parses, writes MariaDB (sql) or generates files (rdf/xml). |
+| `get_diffusion_info` | session | Section diffusion configuration, enriched with per-node readiness. |
+| `get_diffusion_status` | session | Engine health (server, PHP bridge, SQL). |
+| `get_process_status` | session | SSE polling of a running process by `process_id`. |
+| `list_processes` | session | List active/finished processes. |
+| `cancel_process` | session | Cancel a running process. |
+| `validate` | session | Validates diffusion ontology configuration (PHP side, admin-gated). |
+| `get_ontology_map` | session | Raw ddo_map/parser definitions (PHP side, admin-gated). |
+| `retry_pending_deletions` | session | Retries pending delete propagation (PHP side, admin-gated). |
+| `delete_record` | session or token | Deletes published records from target databases (delete propagation). |
+| `check_database` | session or token | Checks MariaDB reachability + database existence. |
+| `backup_database` | session or token | Dumps a database with mysqldump to a target file. |
 
 ### GET /api/v1/health
-Health check.
+Simple health check (no auth).
 
 ## Tests
 
@@ -126,12 +140,22 @@ api/v1/
 │   ├── diffusion_processor.ts # Core parser pipeline
 │   ├── sql_generator.ts      # SQL INSERT/UPSERT generation
 │   ├── db.ts                 # MariaDB connection pool
-│   ├── session.ts            # Redis session validation
+│   ├── session.ts            # Cookie/CSRF header passthrough helpers
+│   ├── auth.ts               # Server-to-server auth (session OR internal token)
+│   ├── db_config.ts          # Shared MariaDB connection defaults
+│   ├── db_admin.ts           # check_database / backup_database (mysqldump)
+│   ├── delete_handler.ts     # delete_record execution
+│   ├── status.ts             # Health and readiness checks
+│   ├── progress_store.ts     # In-memory process tracking (SSE)
 │   └── parsers/
 │       ├── index.ts           # Parser registry & dispatcher
 │       ├── parser_text.ts     # text_format, default_join
 │       ├── parser_date.ts     # string_date
 │       └── parser_helper.ts    # merge, replace (${a}), count, get_first
 └── test/
-    └── parsers.test.ts       # Parser unit tests
+    ├── parsers.test.ts       # Parser unit tests
+    ├── sql_generation.test.ts
+    ├── deletion.test.ts      # fields:'delete' separation
+    ├── delete_record.test.ts # delete propagation validation/auth
+    └── db_admin.test.ts      # backup request validation
 ```

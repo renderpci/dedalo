@@ -92,4 +92,38 @@ final class component_date_Search_Test extends BaseTestCase {
             ]
         ];
     }
+
+
+
+    /**
+    * TEST_UNKNOWN_OPERATOR_COERCED_TO_EQUAL
+    * SEARCH-06 / SEARCH-01: an unrecognized date q_operator is coerced to '=' (the
+    * per-mode switches have no default case), so a malformed operator behaves like
+    * '=' instead of silently producing no SQL / an empty result set.
+    * @return void
+    */
+    public function test_unknown_operator_coerced_to_equal() : void {
+
+        $this->user_login();
+
+        $base = [
+            "q"           => "2024-01-01",
+            "path"        => [["name" => "date", "model" => "component_date", "section_tipo" => "test3", "component_tipo" => "test145"]],
+            "table_alias" => "te3",
+            "table"       => "matrix_test"
+        ];
+
+        $bad = component_date::resolve_query_object_sql(json_decode(json_encode($base + ["q_operator" => "INVALID_OP"])));
+        $eq  = component_date::resolve_query_object_sql(json_decode(json_encode($base + ["q_operator" => "="])));
+
+        // Both must behave identically: the unknown operator is coerced to '='.
+        $bad_sentence = ($bad === false) ? false : ($bad->sentence ?? null);
+        $eq_sentence  = ($eq  === false) ? false : ($eq->sentence  ?? null);
+
+        $this->assertSame(
+            $eq_sentence,
+            $bad_sentence,
+            'SEARCH-01: an unknown date q_operator must behave like "=" (coerced), not silently empty the search'
+        );
+    }//end test_unknown_operator_coerced_to_equal
 }

@@ -98,11 +98,20 @@ class component_text_area extends component_string_common {
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
+		// indexation_list mode keeps the legacy custom-columns grid: tag
+		// fragments rendered as interactive record_link/button cells with
+		// per-cell class_list and action objects (component_text_area_value.php)
+		// — structural/interactive shapes the scalar atoms contract does not
+		// carry by design. Every other mode uses the generic atoms adapter
+		// (component_common::get_grid_value).
+		if ($this->mode!=='indexation_list') {
+			return parent::get_grid_value($ddo);
+		}
+
 		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
+			$class_list		= $ddo?->class_list ?? null;
+			// read inside the component_text_area_value.php include
+			$format_columns	= $ddo?->format_columns ?? null;
 
 		// column_obj
 			$column_obj = $this->column_obj ?? (object)[
@@ -112,56 +121,17 @@ class component_text_area extends component_string_common {
 		// data
 			$data = $this->get_data_lang();
 
-		// processed_data
-			switch ($this->mode) {
-				case 'indexation_list':
-					// process data to build the indexation custom columns
-					$processed_data	= include 'component_text_area_value.php';
-					$cell_type		= null;
-					break;
-
-				default:
-					$processed_data = [];
-					if (!empty($data)) {
-						foreach ($data as $item) {
-							// $item = trim($item);
-							if (!$this->is_empty($item)) {
-								$processed_data[] = TR::add_tag_img_on_the_fly($item->value);
-							}
-						}
-					}
-					$cell_type = 'text'; // default
-					break;
-			}
+		// processed_data. indexation custom columns
+			$processed_data = include 'component_text_area_value.php';
+			$cell_type      = null;
 
 		// fallback_value
 			if (empty($data)) {
-
 				$data = $this->get_component_data_fallback(
 					$this->get_lang(), // string lang
 					DEDALO_DATA_LANG_DEFAULT // string main_lang
 				);
-
-				switch ($this->mode) {
-					case 'indexation_list':
-						// process data to build the indexation custom columns
-						$processed_fallback_value	= include 'component_text_area_value.php';
-						$cell_type					= null;
-						break;
-
-					default:
-						$processed_fallback_value = [];
-						if (!empty($data)) {
-							foreach ($data as $item) {
-								// $item = trim($item);
-								if (!$this->is_empty($item)) {
-									$processed_fallback_value[] = TR::add_tag_img_on_the_fly($item->value);
-								}
-							}
-						}
-						$cell_type = 'text'; // default
-						break;
-				}
+				$processed_fallback_value = include 'component_text_area_value.php';
 			}else{
 				$processed_fallback_value = []; // unnecessary to calculate
 			}
@@ -173,18 +143,14 @@ class component_text_area extends component_string_common {
 			$properties = $this->get_properties();
 
 		// fields_separator
-			$fields_separator = isset($fields_separator)
-				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ', ');
+			$fields_separator = $ddo?->fields_separator
+				?? $properties?->fields_separator
+				?? ', ';
 
 		// records_separator
-			$records_separator = isset($records_separator)
-				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
+			$records_separator = $ddo?->records_separator
+				?? $properties?->records_separator
+				?? ' | ';
 
 		// value
 			$dd_grid_cell_object = new dd_grid_cell_object();
@@ -206,6 +172,62 @@ class component_text_area extends component_string_common {
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
+
+
+
+	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One atom per non-empty data item (TR image tags resolved on the fly,
+	* as the legacy grid). Items join with fields_separator (legacy parity:
+	* the grid value was an array joined by resolve_value with fields_separator).
+	* The 'indexation_list' mode custom columns stay on the legacy grid path
+	* (indexation grid client); export never runs in that mode.
+	* Paragraph/entity cleanup is a tabulator concern (single chokepoint),
+	* atoms carry the same values the legacy grid carried.
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// own segment (base resolution: ddo > properties > joiner defaults)
+			$segment	= $this->build_export_path_segment($context);
+			$path		= [...$context->path_prefix, $segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data items. main lang first, fallback when empty
+			$data			= $this->get_data_lang();
+			$is_fallback	= false;
+			if (empty($data)) {
+				$data = $this->get_component_data_fallback(
+					$this->get_lang(), // string lang
+					DEDALO_DATA_LANG_DEFAULT // string main_lang
+				);
+				$is_fallback = true;
+			}
+			if (empty($data)) {
+				return $export_value;
+			}
+
+			$value_index = 0;
+			foreach ($data as $item) {
+				if ($this->is_empty($item)) {
+					continue;
+				}
+				$export_value->add_atom( new export_atom($path, TR::add_tag_img_on_the_fly($item->value), (object)[
+					'value_index'	=> $value_index++,
+					'lang'			=> $item->lang ?? $this->lang,
+					'is_fallback'	=> $is_fallback
+				]) );
+			}
+
+
+		return $export_value;
+	}//end get_export_value
 
 
 
@@ -1861,6 +1883,16 @@ class component_text_area extends component_string_common {
 				$value = [];
 				foreach ($import_value as $text_value) {
 
+					// numeric scalar values are admitted as text
+						if (is_int($text_value) || is_float($text_value)) {
+							$text_value = (string)$text_value;
+						}
+
+					// ignore non string values (objects, arrays, bool) to prevent substr TypeError
+						if (!is_string($text_value)) {
+							continue;
+						}
+
 					// ignore empty and null values
 						if (empty($text_value)) {
 							continue;
@@ -1914,24 +1946,37 @@ class component_text_area extends component_string_common {
 					}
 					$data_from_json = $normalized;
 				}else if (is_object($data_from_json)) {
-					foreach ($data_from_json as $key => $current_values) {
-						$ar_values = is_array($current_values)
-							? $current_values
-							: [$current_values];
 
-						$normalized = [];
-						foreach ($ar_values as $val) {
-							if (is_object($val) && property_exists($val, 'value')) {
-								$val->value = $normalize_value([$val->value])[0]->value ?? $val->value;
-								$normalized[] = $val;
-							}else if (is_object($val)) {
-								$normalized[] = $val;
-							}else{
-								$wrapped = $normalize_value([$val]);
-								$normalized = [...$normalized, ...$wrapped];
+					$first_key = array_key_first( (array)$data_from_json );
+					if ($first_key!==null && strpos($first_key, 'lg-')===0) {
+						// Multi-language object as {"lg-eng": "<p>My value</p>"}
+						// Keep it as object so the import tool can iterate languages calling set_data_lang(),
+						// but normalize every lang value into an array of v7 items
+						foreach ($data_from_json as $key => $current_values) {
+							$ar_values = is_array($current_values)
+								? $current_values
+								: [$current_values];
+
+							$normalized = [];
+							foreach ($ar_values as $val) {
+								if (is_object($val) && property_exists($val, 'value')) {
+									$val->value = $normalize_value([$val->value])[0]->value ?? $val->value;
+									$normalized[] = $val;
+								}else if (is_object($val)) {
+									$normalized[] = $val;
+								}else{
+									$wrapped = $normalize_value([$val]);
+									$normalized = [...$normalized, ...$wrapped];
+								}
 							}
+							$data_from_json->$key = $normalized;
 						}
-						$data_from_json->$key = $normalized;
+					}else{
+						// Single object item as {"value":"<p>x</p>"}. Wrap into an array
+						if (property_exists($data_from_json, 'value')) {
+							$data_from_json->value = $normalize_value([$data_from_json->value])[0]->value ?? $data_from_json->value;
+						}
+						$data_from_json = [$data_from_json];
 					}
 				}
 
@@ -1944,15 +1989,7 @@ class component_text_area extends component_string_common {
 		// string case
 			// check the begin and end of the value string, if it has a [] or other combination that seems array
 			// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
-			$begins_one	= substr($import_value, 0, 1);
-			$ends_one	= substr($import_value, -1);
-			$begins_two	= substr($import_value, 0, 2);
-			$ends_two	= substr($import_value, -2);
-
-			if (($begins_two !== '["' && $ends_two !== '"]') ||
-				($begins_two !== '["' && $ends_one !== ']') ||
-				($begins_one !== '[' && $ends_two !== '"]')
-				){
+			if (self::is_plain_bracket_string($import_value)) {
 
 				// import_value is a string
 				$value = !empty($import_value) || $import_value==='0'

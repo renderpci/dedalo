@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {view_default_edit_number} from './view_default_edit_number.js'
 	import {view_line_edit_number} from './view_line_edit_number.js'
 	import {view_mini_number} from './view_mini_number.js'
@@ -183,6 +184,14 @@ export const get_content_value = (i, current_value, self, options={}) => {
 			})
 		}
 
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+		attach_item_dataframe({
+			self		: self,
+			item		: current_value,
+			container	: content_value,
+			view		: self.view
+		})
+
 
 	return content_value
 }//end get_content_value
@@ -297,7 +306,19 @@ export const get_buttons = (self) => {
 export const change_handler = function(e, key, self) {
 
 	// set the value in the configured number format. e.g. 'float'
-	const parsed_value = self.fix_number_format(e.target.value)
+	const raw_value = e.target.value
+	const parsed_value = self.fix_number_format(raw_value)
+
+	// UIUX-03: give validation feedback. Non-empty input that fails to parse
+	// (parsed_value===null) is invalid: flag the field and do NOT silently save
+	// null over the user's entry. An empty input is a legitimate clear.
+	const had_input = typeof raw_value === 'string' && raw_value.trim() !== ''
+	if (had_input && parsed_value === null) {
+		ui.component.error(true, e.target)
+		return false
+	}
+	// valid value or intentional clear: clear any prior error state
+	ui.component.error(false, e.target)
 
 	if (parsed_value != e.target.value) {
 		// replace changed value

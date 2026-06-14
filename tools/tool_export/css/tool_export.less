@@ -192,6 +192,23 @@
 							}
 						}
 
+						// per-component 'export parents' checkbox (relation components)
+						>.export_component_parents {
+							display: flex;
+							align-items: center;
+							gap: 0.25rem;
+							font-size: 0.8rem;
+							color: @color_grey_7;
+							white-space: nowrap;
+							padding-right: 0.5rem;
+							cursor: pointer;
+
+							>.option_check_box {
+								cursor: pointer;
+								margin: 0;
+							}
+						}
+
 						&.dragging {
 							opacity: 0.2;
 							width: auto;
@@ -215,6 +232,189 @@
 				@media screen and (max-width: @width_break_point_1) {
 					background-color: unset;
 				}
+
+				// export_presets. User saved export configurations (per user, DB backed).
+				// Compact, themed, collapsible block at the top of the config column.
+				>.export_presets {
+					margin-bottom: 1.5rem;
+					border: 1px solid @color_grey_13;
+					border-radius: 3px;
+					overflow: hidden;
+
+					&.open {
+						background-color: @color_grey_15;
+					}
+
+					// header. title + new + collapse toggle
+					>.export_presets_header {
+						display: flex;
+						align-items: center;
+						gap: 0.33rem;
+						padding: 0.5rem 0.66rem;
+						background-color: @tool_color;
+						color: @color_white;
+						cursor: pointer;
+
+						>.export_presets_title {
+							flex: 1 1 auto;
+							font-weight: 600;
+							font-size: 0.9rem;
+							text-transform: uppercase;
+							letter-spacing: 1px;
+							white-space: nowrap;
+							overflow: hidden;
+							text-overflow: ellipsis;
+						}
+
+						// new (+) and toggle buttons
+						>.export_presets_new,
+						>.export_presets_toggle {
+							flex: 0 0 auto;
+							cursor: pointer;
+							display: flex;
+							align-items: center;
+							justify-content: center;
+							background-color: @color_white;
+							color: @tool_color;
+							width: 1.25rem;
+							height: 1.25rem;
+							border-radius: 2px;
+							position: relative;
+
+							&:hover {
+								background-color: var(--tool_export_lighten_40);
+							}
+						}
+
+						// new (+) glyph
+						>.export_presets_new {
+							font-size: 1.1rem;
+							font-weight: 700;
+							line-height: 1;
+						}
+
+						// collapse toggle chevron
+						>.export_presets_toggle:after {
+							content: "";
+							width: 0.4rem;
+							height: 0.4rem;
+							border-right: 2px solid @tool_color;
+							border-bottom: 2px solid @tool_color;
+							transform: translateY(-25%) rotate(45deg);
+						}
+					}//end .export_presets_header
+
+					// rotate chevron when the panel is open
+					&.open >.export_presets_header >.export_presets_toggle:after {
+						transform: translateY(25%) rotate(-135deg);
+					}
+
+					// panel. collapsible body
+					>.export_presets_panel {
+
+						&.display_none {
+							display: none;
+						}
+
+						// save changes button
+						>.export_presets_save {
+							display: block;
+							width: calc(100% - 1rem);
+							margin: 0.5rem;
+							background-color: @tool_color;
+							border-color: var(--tool_export_border);
+
+							&:hover {
+								background-color: var(--tool_export_lighten_10);
+							}
+
+							&.hide {
+								display: none;
+							}
+						}
+
+						// presets list (section list view)
+						>.export_presets_list {
+
+							.export_presets_loading {
+								display: block;
+								padding: 0.5rem;
+								font-size: 0.85rem;
+							}
+
+							>.wrapper_section {
+								padding: 0;
+
+								>.paginator_container {
+									height: unset;
+									padding: 0 0.5rem;
+								}
+
+								>.list_body {
+									display: block;
+
+									.section_record {
+										display: grid;
+										grid-template-columns: 1.4rem 1.2rem 1fr 1.4rem;
+										align-items: center;
+										border-top: 1px solid @color_grey_13;
+										padding: 0.15rem 0.5rem;
+										cursor: pointer;
+
+										&:hover {
+											background-color: var(--tool_export_lighten_40);
+										}
+
+										// applied / selected preset
+										&.selected {
+											background-color: @tool_color;
+											color: @color_white;
+
+											.button.icon {
+												background-color: @color_white;
+											}
+											.wrapper_component {
+												color: @color_white;
+											}
+										}
+
+										// name column. truncate long names
+										.column_section,
+										.wrapper_component {
+											min-width: 0;
+											pointer-events: none;
+
+											>span {
+												display: block;
+												overflow: hidden;
+												text-overflow: ellipsis;
+												white-space: nowrap;
+												padding: 0.1rem 0.25rem;
+												font-size: 0.85rem;
+											}
+										}
+
+										// control columns (apply / edit / delete)
+										.column {
+											outline: none;
+
+											.button.icon {
+												background-color: @color_grey_10;
+												margin: 0;
+												height: 1rem;
+												width: 1rem;
+											}
+										}
+
+										.column_apply_preset .button_apply_preset {
+											transform: scaleX(-1);
+										}
+									}
+								}
+							}
+						}//end .export_presets_list
+					}//end .export_presets_panel
+				}//end .export_presets
 
 				.section_label {
 					font-size: 1.25rem;

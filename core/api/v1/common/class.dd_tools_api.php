@@ -160,36 +160,65 @@ final class dd_tools_api {
 				return $response;
 			}
 
-		// load tool class file
-			$class_file = DEDALO_TOOLS_PATH . '/' . $tool_name . '/class.' . $tool_name .'.php';
-			if (!file_exists($class_file)) {
+		// load tool class file (multi-root aware, see tool_paths)
+			$class_file = tool_paths::get_tool_class_file($tool_name);
+			if ($class_file===null || !file_exists($class_file)) {
 				$response->msg = 'Error. tool class_file do not exists. Create a new one in format class.my_tool_name.php ';
 				if(SHOW_DEBUG===true) {
-					$response->msg .= '. file: '.$class_file;
+					$response->msg .= '. file: '.to_string($class_file);
 				}
 				return $response;
 			}
 			// SEC-069 / SEC-084: realpath confinement on top of the
 			// `sanitize_key_dir` + tool registry whitelist above. Refuse to
-			// `require` any file whose canonical path escapes
-			// DEDALO_TOOLS_PATH, even if the constants or symlinks have
-			// been tampered with at the filesystem level.
-			$tools_root = realpath(DEDALO_TOOLS_PATH);
-			$real_tool  = realpath($class_file);
-			if ($tools_root === false
-				|| $real_tool === false
-				|| !str_starts_with($real_tool, $tools_root . DIRECTORY_SEPARATOR)
-			) {
+			// `require` any file whose canonical path escapes the set of
+			// allowed tool roots (primary DEDALO_TOOLS_PATH plus any
+			// DEDALO_ADDITIONAL_TOOLS roots — already canonicalized and
+			// policy-checked by tool_paths::get_roots), even if constants
+			// or symlinks have been tampered with at the filesystem level.
+			$real_tool = realpath($class_file);
+			$confined  = false;
+			if ($real_tool !== false) {
+				foreach (tool_paths::get_roots() as $tools_root) {
+					if ($tools_root->path !== false
+						&& str_starts_with($real_tool, $tools_root->path . DIRECTORY_SEPARATOR)) {
+						$confined = true;
+						break;
+					}
+				}
+			}
+			if (!$confined) {
 				$response->errors[] = 'Tool path confinement failed';
 				debug_log(__METHOD__
-					. ' SEC-084 tool path escapes tools root.' . PHP_EOL
-					. ' tools_root: ' . to_string($tools_root) . PHP_EOL
+					. ' SEC-084 tool path escapes the allowed tool roots.' . PHP_EOL
 					. ' real_tool: ' . to_string($real_tool)
 					, logger::ERROR
 				);
 				return $response;
 			}
-			require_once $class_file;
+			// include the canonical path that was actually validated (avoids a
+			// symlink-swap TOCTOU between realpath() and the include)
+			require_once $real_tool;
+
+		// SEC-024: per-tool method allowlist (API_ACTIONS), enforced by default.
+			// Fail-fast on the allowlist before any reflection on the method.
+			// Tools must declare `public const API_ACTIONS` (list form or map form
+			// with declarative permission specs — see tool_security class docs).
+			// Installs migrating third-party tools may temporarily set
+			// `define('TOOLS_REQUIRE_API_ACTIONS', false);` to restore the historical
+			// "any public-static method" rule (logged as deprecated).
+			$action = tool_security::resolve_action($tool_name, $tool_method);
+			if ($action->ok !== true) {
+				debug_log(__METHOD__
+					. ' Error: tool method not in API_ACTIONS allowlist.' . PHP_EOL
+					. ' tool_name: ' . $tool_name . PHP_EOL
+					. ' tool_method: ' . $tool_method
+					, logger::ERROR
+				);
+				$response->msg = 'Error. tool method not allowed: ' . $tool_method;
+				$response->errors[] = 'unauthorized_method';
+				return $response;
+			}
 
 		// method (static) + signature validation
 			$is_valid       = false;
@@ -267,26 +296,18 @@ final class dd_tools_api {
 				return $response;
 			}
 
-		// SEC-024 (§9.2): opt-in per-tool method allowlist. When the tool class
-			// declares an API_ACTIONS class constant the method MUST appear in it;
-			// otherwise the historical "any public-static method" rule is preserved.
-			// The opt-in form is strongly preferred for new tools because
-			// `tool_request` is a generic dispatch surface that bypasses
-			// `dd_manager`'s own allowlist.
-			if (defined($tool_name . '::API_ACTIONS')) {
-				$tool_actions = constant($tool_name . '::API_ACTIONS');
-				if (!is_array($tool_actions) || !in_array($tool_method, $tool_actions, true)) {
-					debug_log(__METHOD__
-						. ' Error: tool method not in API_ACTIONS allowlist.' . PHP_EOL
-						. ' tool_name: ' . $tool_name . PHP_EOL
-						. ' tool_method: ' . $tool_method
-						, logger::ERROR
-					);
-					$response->msg = 'Error. tool method not allowed: ' . $tool_method;
-					$response->errors[] = 'unauthorized_method';
-					return $response;
-				}
-			}
+		// SEC-024 (§9.3): declarative per-action permission gate (map-form API_ACTIONS).
+			// MUST run here, BEFORE the background fork below: exec_::request_cli
+			// detaches a CLI process and reports success immediately, so any gate
+			// placed after it (or only inside the tool method body) would be
+			// unobservable by the HTTP caller. A thrown permission_exception
+			// propagates to dd_manager::request, which converts it to the
+			// standard 'permissions_denied' client response.
+			tool_security::assert_action_permission(
+				$action->spec,
+				$options,
+				__METHOD__ . ' ' . $tool_name . '::' . $tool_method
+			);
 
 		// background_running / direct cases
 			switch (true) {

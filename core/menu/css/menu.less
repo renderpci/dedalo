@@ -8,7 +8,7 @@
 @import (once) '../../page/css/layout/buttons';
 
 @menu_bg_color_active: @color_tag_indexation_normal;
-@menu_box_shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
+@menu_box_shadow: var(--shadow-3);
 
 .menu {
 	// vars
@@ -23,7 +23,7 @@
 	left: 0px;
 	z-index: 4;
 	background-color: var(--bg_menu);
-	box-shadow: var(--shadow_default);
+	box-shadow: var(--shadow-2);
 	min-height: var(--menu_heigth);
 
 	&.with_debug_info {

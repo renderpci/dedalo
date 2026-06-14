@@ -94,7 +94,11 @@
 # deployer creates those paths.
 <IfModule mod_rewrite.c>
 	RewriteEngine On
-	RewriteRule (^|/)(media|upload|tmp)/.+\.(phps?|phtml|phar|pht|inc|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$ - [F,L,NC]
+	# CONF-08: lib/ serves only client-side assets (js/css/images) and a few
+	# server-side-only includes (lessphp, included by filesystem path). No PHP/script
+	# under lib/ should ever be executed via a direct HTTP request — deny it (static
+	# .js/.css/.png assets are unaffected).
+	RewriteRule (^|/)(media|upload|tmp|lib)/.+\.(phps?|phtml|phar|pht|inc|cgi|pl|py|rb|sh|lua|asp|aspx|jsp)$ - [F,L,NC]
 </IfModule>
 
 # Browser caching FileETag control
@@ -152,6 +156,12 @@ Options -Indexes
 #     a full refactor.
 #   * `data:` and `blob:` are needed for dynamically generated images,
 #     media previews, and worker scripts (pdfjs worker, audio blobs).
+#   * `img-src` allows the external map tile hosts used by
+#     component_geolocation (Leaflet): OpenStreetMap (`*.tile.openstreetmap.org`,
+#     `*.tile.osm.org`), CartoDB dark tiles (`*.basemaps.cartocdn.com`),
+#     ArcGIS World Imagery (`server.arcgisonline.com`) and
+#     the DARE/Imperium historical tileset (`dh.gu.se`). Listed without scheme
+#     so they match on both http (dev) and https (prod) pages.
 #   * `object-src 'none'` blocks Flash/plugin embeds.
 #   * `base-uri 'self'` + `form-action 'self'` prevent <base> hijacking and
 #     cross-origin form posts.
@@ -173,10 +183,10 @@ Options -Indexes
 	RequestHeader unset Proxy
 
 	# Content Security Policy (enforced).
-	Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob:; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+	Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
 
 	# Report-Only version (for monitoring — swap with enforced line above if needed):
-	# Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob:; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+	# Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-eval' blob: 'sha256-tGMkWyBVqSrhE1glBFdD2I51om9BJkjuXVKgevMfXS4='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: *.tile.openstreetmap.org *.tile.osm.org *.basemaps.cartocdn.com server.arcgisonline.com dh.gu.se; media-src 'self' blob:; font-src 'self' data:; connect-src 'self' blob: http://127.0.0.1:* http://localhost:*; frame-src 'self' blob:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
 </IfModule>
 
 # Legacy header section preserved (commented) for reference.

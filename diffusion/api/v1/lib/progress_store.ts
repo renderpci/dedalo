@@ -315,6 +315,9 @@ function purge_old_entries(): void {
 	for (const [id, entry] of store) {
 		if (now - entry.started_at > MAX_AGE_MS) {
 			store.delete(id);
+			// DIFFTS-11: reclaim the matching listener Set too (delete_process clears
+			// both; the hourly purge previously left orphaned listeners behind).
+			listeners.delete(id);
 			console.log(`[progress_store] Purged stale process: ${id}`);
 		}
 	}

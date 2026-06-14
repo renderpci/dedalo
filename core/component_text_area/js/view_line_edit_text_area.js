@@ -8,6 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
+	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 
 
@@ -274,6 +275,15 @@ const get_content_value = (i, current_value, self) => {
 				content_value.addEventListener('mousedown', click_handler)
 			}
 		}//end if (self.show_interface.read_only!==true)
+
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+	// appended to content_value, outside the CKEditor value_container
+		attach_item_dataframe({
+			self		: self,
+			item		: current_value,
+			container	: content_value,
+			view		: self.view
+		})
 
 
 	return content_value

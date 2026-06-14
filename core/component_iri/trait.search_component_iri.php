@@ -1,10 +1,14 @@
 <?php declare(strict_types=1);
+include_once dirname(__DIR__).'/component_common/trait.search_component_sql_builder.php';
 /**
 * TRAIT SEARCH_COMPONENT_IRI
 * From class component_iri
 * Search methods for IRI component
 */
 trait search_component_iri {
+
+	// Shared search scaffolding: extract_normalized_q, split_search_terms, get_search_context
+	use search_component_sql_builder;
 
 
 
@@ -17,26 +21,21 @@ trait search_component_iri {
 	public static function resolve_query_object_sql(object $query_object) : object|false {
 
         // 1. Extract and Normalize search value (q)
-        $q = self::extract_normalized_iri_q($query_object);
+        $q = self::extract_normalized_q($query_object);
         if ($q === false) {
             return false;
         }
 
         // 2. Handle Query Splitting (if applicable)
         if (($query_object->q_split ?? false) === true && !search::is_literal($q)) {
-
-            // Pre-process q for splitting (join operators and wildcards)
-            $q_proc = preg_replace('/(\!=|==|!!|!*|=|-)\s+/', '$1', $q);
-            $q_proc = preg_replace('/\s+(\*)/', '$1', $q_proc);
-
-            $q_items = preg_split('/\s/', $q_proc, -1, PREG_SPLIT_NO_EMPTY);
+            $q_items = self::split_search_terms($q);
             if (count($q_items) > 1) {
                 return self::handle_query_splitting($query_object, $q_items, '$and');
             }
         }
 
         // 3. Gather Search Context (metadata, column, table, etc.)
-        $ctx = self::get_iri_search_context($query_object);
+        $ctx = self::get_search_context($query_object);
         if (!$ctx) {
             return false;
         }
@@ -47,54 +46,8 @@ trait search_component_iri {
 
 
 
-    /**
-    * EXTRACT_NORMALIZED_IRI_Q
-    * Extracts and normalizes the search query value (q) from the input object.
-    */
-    protected static function extract_normalized_iri_q(object $query_object) : string|false {
-
-        $q_raw = isset($query_object->q) && is_array($query_object->q)
-            ? $query_object->q[0]
-            : ($query_object->q ?? null);
-
-        if ((empty($q_raw) || (is_object($q_raw) && empty($q_raw->value))) && empty($query_object->q_operator)) {
-            return false;
-        }
-
-        $q = (is_object($q_raw) ? $q_raw->value : $q_raw) ?? '';
-        return stripslashes($q);
-    }
-
-
-
-    /**
-    * GET_IRI_SEARCH_CONTEXT
-    * Validates the path and collects necessary metadata for SQL generation.
-    */
-    protected static function get_iri_search_context(object $query_object) : object|false {
-
-        if (empty($query_object->path) || !is_array($query_object->path)) {
-            debug_log(__METHOD__ . " Invalid component path", logger::ERROR);
-            return false;
-        }
-
-        $path_end       = end($query_object->path);
-        $component_tipo = $path_end->component_tipo;
-
-        $ctx = new stdClass();
-        $ctx->component_tipo = $component_tipo;
-        $ctx->translatable   = ontology_node::get_translatable($component_tipo);
-        $ctx->column         = section_record_data::get_column_name(get_called_class());
-        $ctx->table_alias    = $query_object->table_alias;
-        $ctx->table          = $query_object->table;
-        $ctx->q_operator     = $query_object->q_operator ?? null;
-
-        // Set defaults on query_object
-        $query_object->type = 'string';
-        $query_object->lang = $query_object->lang ?? DEDALO_DATA_LANG;
-
-        return $ctx;
-    }
+    // extract_normalized_q(), split_search_terms() and get_search_context() are provided by
+    // the shared search_component_sql_builder trait (use'd above).
 
 
 
@@ -262,7 +215,12 @@ trait search_component_iri {
         $query_object->params = ['_Q1_' => $q_clean];
 
         $json_path = "$.{$ctx->component_tipo}[*]";
-        $lang_filter = ($query_object->lang === 'all') ? '' : " AND elem->>'lang' = '{$query_object->lang}'";
+        // lang parameterized (_Q2_) instead of inlined into the SQL string literal
+        $lang_filter = '';
+        if ($query_object->lang !== 'all') {
+            $query_object->params['_Q2_'] = $query_object->lang;
+            $lang_filter = " AND elem->>'lang' = _Q2_";
+        }
 
         $query_object->sentence  = "NOT EXISTS (" . PHP_EOL .
             "  SELECT 1" . PHP_EOL .

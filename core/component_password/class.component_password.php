@@ -124,66 +124,28 @@ class component_password extends component_common {
 
 
 	/**
-	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_data().
-	* overwrite in every different specific component
-	* Some the text components can set the value with the data directly
-	* the relation components need to process the locator to resolve the value
-	* @param object|null $ddo = null
-	*
-	* @return dd_grid_cell_object $dd_grid_cell_object
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* Single atom with the fake value: real password data is never exported
+	* @param export_context|null $context = null
+	* @return export_value
 	*/
-	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
+	public function get_export_value( ?export_context $context=null ) : export_value {
 
-		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
+		$context = $context ?? new export_context();
 
-		// column_obj
-			$column_obj = $this->column_obj ?? (object)[
-				'id' => $this->section_tipo.'_'.$this->tipo
-			];
+		// own segment
+			$segment	= $this->build_export_path_segment($context);
+			$path		= [...$context->path_prefix, $segment];
 
-		// short vars
-			$label		= $this->get_label();
-			$properties	= $this->get_properties();
-
-		// fields_separator
-			$fields_separator = isset($fields_separator)
-				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ', ');
-
-		// records_separator
-			$records_separator = isset($records_separator)
-				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
-
-		// value
-			$value = [$this->fake_value]; // array
-
-		// dd_grid_cell_object
-			$dd_grid_cell_object = new dd_grid_cell_object();
-				$dd_grid_cell_object->set_type('column');
-				$dd_grid_cell_object->set_label($label);
-				$dd_grid_cell_object->set_cell_type('text');
-				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				if(isset($class_list)){
-					$dd_grid_cell_object->set_class_list($class_list);
-				}
-				$dd_grid_cell_object->set_fields_separator($fields_separator);
-				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($value);
-				$dd_grid_cell_object->set_model(get_called_class());
-
-
-		return $dd_grid_cell_object;
-	}//end get_grid_value
+		return export_value::from_scalar(
+			$path,
+			$this->fake_value,
+			null, // atom options (cell_type text)
+			$this->get_label(),
+			get_called_class()
+		);
+	}//end get_export_value
 
 
 

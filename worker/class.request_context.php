@@ -71,7 +71,10 @@ final class request_context {
 
 		// Ensure essential server variables for Dédalo
 		$server['REQUEST_TIME_FLOAT'] = $server['REQUEST_TIME_FLOAT'] ?? microtime(true);
-		$server['REMOTE_ADDR']        = $server['REMOTE_ADDR'] ?? '127.0.0.1';
+		// AUTH-04: do NOT default a missing peer address to loopback. 127.0.0.1 must
+		// never appear here as it could be (mis)treated as a trusted proxy by
+		// get_client_ip_trusted; leave it empty so no trust is inferred.
+		$server['REMOTE_ADDR']        = $server['REMOTE_ADDR'] ?? '';
 		$host_header = $request->getHeaderLine('Host');
 		if (!empty($host_header)) {
 			$server['HTTP_HOST'] = $host_header;

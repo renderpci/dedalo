@@ -1708,6 +1708,24 @@ class ontology {
 				$properties = null;
 			}
 
+			// validate-on-save (non-blocking): structurally invalid
+			// request_config definitions are reported as warnings here so they
+			// surface at ontology update time instead of as an empty UI later.
+			// @see request_config_object::validate_config
+			if (isset($properties->source->request_config)) {
+				$config_issues = request_config_object::validate_config($properties->source->request_config);
+				if (!empty($config_issues)) {
+					$issues_msg = implode(PHP_EOL, array_map(function($issue){
+						return "[{$issue->level}] {$issue->path}: {$issue->message}";
+					}, $config_issues));
+					debug_log(__METHOD__
+						." Invalid request_config in ontology node '$tipo' properties:" . PHP_EOL
+						. $issues_msg
+						, logger::WARNING
+					);
+				}
+			}
+
 			// set the term into jet_dd_record
 			$ontology_node->set_properties( $properties );
 
@@ -2176,6 +2194,13 @@ class ontology {
 			$response->msg .= ' | ' . exec_time_unit($start_time, 'ms') . ' ms';
 		}
 
+		// dd_ontology changed: invalidate the persistent "sections with diffusion"
+		// map, which is derived purely from the ontology. Over-invalidation is
+		// harmless (one extra rebuild on the next read).
+		if ( $processed_count > 0 ) {
+			diffusion_utils::delete_section_map_cache_file();
+		}
+
 
 		return $response;
 	}//end set_records_in_dd_ontology
@@ -2307,6 +2332,12 @@ class ontology {
 			}
 			// total_insert dd_ontology records
 			$response->total_insert = $total_insert;
+
+		// dd_ontology nodes were reinserted directly (bypassing set_records), so
+		// invalidate the ontology-derived "sections with diffusion" map.
+			if ( $total_insert > 0 ) {
+				diffusion_utils::delete_section_map_cache_file();
+			}
 
 
 		return $response;
@@ -2574,6 +2605,10 @@ class ontology {
 			$response->msg			= empty($response->errors)
 				? 'OK. Request completed successfully'
 				: 'Warning. Request completed with errors';
+
+		// dd_ontology nodes were deleted: invalidate the ontology-derived
+		// "sections with diffusion" map.
+			diffusion_utils::delete_section_map_cache_file();
 
 
 		return $response;

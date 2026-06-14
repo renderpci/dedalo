@@ -43,15 +43,15 @@
 			max-width: 360px;
 			padding: 0.45rem 0.75rem;
 			font-size: 0.875rem;
-			background: var(--bg_default);
+			background: var(--bg_input);
 			border: 1px solid var(--border_default);
 			border-radius: 0.375rem;
 			color: var(--fg_default);
 
 			&:focus {
 				outline: none;
-				border-color: var(--border_strong);
-				box-shadow: 0 0 0 2px var(--shadow_default);
+				border-color: var(--focus_ring);
+				box-shadow: var(--shadow-focus);
 			}
 		}
 
@@ -59,7 +59,7 @@
 			appearance: none;
 			// padding: 0.45rem 1.75rem 0.45rem 0.6rem;
 			font-size: 0.8125rem;
-			background: var(--bg_default);
+			background: var(--bg_input);
 			border: 1px solid var(--border_default);
 			border-radius: 0.375rem;
 			color: var(--fg_default);
@@ -95,12 +95,12 @@
 		padding: 1rem 1rem 0.75rem 1rem;
 		overflow: hidden;
 		cursor: pointer;
-		transition: transform 0.12s ease, box-shadow 0.12s ease;
-		box-shadow: 0 1px 2px var(--shadow_default);
+		transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+		box-shadow: var(--shadow-1);
 
 		&:hover {
 			transform: translateY(-2px);
-			box-shadow: 0 4px 12px var(--shadow_default);
+			box-shadow: var(--shadow-3);
 		}
 
 		// color accent stripe on top
@@ -170,7 +170,7 @@
 		border: 1px solid var(--border_default);
 		border-radius: 0.5rem;
 		padding: 1.25rem;
-		box-shadow: 0 1px 2px var(--shadow_default);
+		box-shadow: var(--shadow-1);
 
 		.area_dashboard_chart_title {
 			font-size: 1rem;
@@ -194,7 +194,7 @@
 
 		.area_dashboard_chart_switcher {
 			display: inline-flex;
-			background: var(--bg_default);
+			background: var(--bg_input);
 			border: 1px solid var(--border_default);
 			border-radius: 0.375rem;
 			padding: 2px;
@@ -218,7 +218,7 @@
 					background: var(--bg_elevated);
 					color: var(--fg_default);
 					font-weight: 600;
-					box-shadow: 0 1px 2px var(--shadow_default);
+					box-shadow: var(--shadow-1);
 				}
 
 				&:focus-visible {
@@ -283,7 +283,7 @@
 					cursor: pointer;
 
 					&:hover {
-						background: var(--bg_default);
+						background: var(--bg_input);
 					}
 
 					&:focus-visible {
@@ -327,7 +327,7 @@
 		}
 
 		.area_dashboard_chart_sunburst_labels text {
-			fill: #fff;
+			fill: var(--fg_inverse);
 			font-size: 10px;
 			font-weight: 600;
 			text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
@@ -343,7 +343,7 @@
 
 			.area_dashboard_chart_treemap_tile {
 				position: absolute;
-				color: #fff;
+				color: var(--fg_inverse);
 				padding: 0.35rem 0.5rem;
 				box-sizing: border-box;
 				cursor: pointer;
@@ -356,7 +356,7 @@
 				}
 
 				&:focus-visible {
-					outline: 2px solid #fff;
+					outline: 2px solid var(--fg_inverse);
 					outline-offset: -2px;
 				}
 
@@ -472,7 +472,7 @@
 		border: 1px solid var(--border_default);
 		border-radius: 0.5rem;
 		padding: 1.25rem;
-		box-shadow: 0 1px 2px var(--shadow_default);
+		box-shadow: var(--shadow-1);
 		margin-top: 1.5rem;
 
 		// Header row: title + chart-type switcher + range selector
@@ -502,7 +502,7 @@
 
 		.area_dashboard_activity_range_select {
 			appearance: none;
-			background: var(--bg_default);
+			background: var(--bg_input);
 			border: 1px solid var(--border_default);
 			border-radius: 0.375rem;
 			padding: 0.3rem 2rem 0.3rem 0.6rem;

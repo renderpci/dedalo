@@ -111,6 +111,7 @@
     "name_to_field": "Sufix indica camp",
     "name_to_record_id": "Prefix indica ID",
     "presets_de_busqueda": "Configuracions de cerca",
+    "presets_de_exportacion": "Configuracions d'exportació",
     "search_options": "Opcions de cerca",
     "fields": "Camps",
     "and": "i",

@@ -20,7 +20,9 @@ class dd_diffusion_api {
 			'diffuse',
 			'get_diffusion_info',
 			'validate',
-			'get_ontology_map'
+			'get_ontology_map',
+			'retry_pending_deletions',
+			'rebuild_media_index'
 		];
 
 		/**
@@ -90,10 +92,27 @@ class dd_diffusion_api {
 		// deep resolution of linked secitons
 		$levels       	= $options->levels ?? DEDALO_DIFFUSION_RESOLVE_LEVELS; // 2
 
+		// Opportunistic retry of pending diffusion deletions (hybrid delete
+		// propagation): if the engine/targets are up for publishing, they are
+		// up for deleting. Fire-and-forget — never fails the publish run.
+		// Only on the first chunk (offset 0): Bun paginates large diffusions
+		// into many diffuse calls and the retry must run once per run, not per chunk.
+		if (empty($rqo->sqo->offset)) {
+			try {
+				diffusion_delete::retry_pending();
+			} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
+				debug_log(__METHOD__
+					. " Ignored retry_pending exception: " . $e->getMessage()
+					, logger::WARNING
+				);
+			}
+		}
+
 		try {
 			// 0. Reset caches for this request
 			diffusion_chain_processor::reset_cache();
 			diffusion_activity_logger::reset_cache();
+			diffusion_utils::reset_cache();
 			self::$datum = [];
 			self::$datum_unresolved = [];
 			self::$publishable_overrides = [];
@@ -126,16 +145,6 @@ class dd_diffusion_api {
 			}
 
 			// =====================================================
-			// BUILD LANGS
-			// =====================================================
-			$langs = self::build_langs();
-
-			// =====================================================
-			// BUILD MAIN (hierarchy UP to diffusion_domain)
-			// =====================================================
-			$main = self::build_main_hierarchy($diffusion_tipo);
-
-			// =====================================================
 			// BUILD DATUM (one object per section)
 			// =====================================================
 
@@ -147,14 +156,24 @@ class dd_diffusion_api {
 			$diffusion_elem_props = ontology_node::get_instance($diffusion_element_tipo)->get_properties(true);
 			$diffusion_type = $diffusion_elem_props->diffusion->type ?? null;
 
-			if ($diffusion_type === 'rdf') {
-				// Build langs and main hierarchy before early RDF dispatch
+			if ($diffusion_type === 'rdf' || $diffusion_type === 'xml') {
+				// RDF/XML early dispatch: file-based formats, langs + main
+				// hierarchy rooted at the diffusion element
 				$langs = self::build_langs();
 				$main  = self::build_main_hierarchy($diffusion_element_tipo);
-				$response = self::diffuse_rdf($diffusion_element_tipo, $main_section_tipo, $db_result, $langs, $main, $options);
-				dump($response, 'response +//////------>');
+				$response = $diffusion_type === 'rdf'
+					? self::diffuse_rdf($diffusion_element_tipo, $main_section_tipo, $db_result, $langs, $main, $options)
+					: self::diffuse_xml($diffusion_element_tipo, $main_section_tipo, $db_result, $langs, $main, $options);
 				return $response;
 			}
+
+			// =====================================================
+			// BUILD LANGS + MAIN (hierarchy UP to diffusion_domain)
+			// computed after the type dispatch: the RDF branch builds
+			// its own, rooted at the diffusion element
+			// =====================================================
+			$langs = self::build_langs();
+			$main  = self::build_main_hierarchy($diffusion_tipo);
 
 			// Store SQO filter to scope datum entries to only matching records
 			self::$sqo_filter_by_locators = $sqo_data->filter_by_locators ?? null;
@@ -189,9 +208,11 @@ class dd_diffusion_api {
 					}
 				}
 
-				if(SHOW_DEBUG) {
-					dump($diffusion_tipo, "Processing unresolved datum batch [Level: $current_level] -> " . count($unique_locators) . ' locators');
-				}
+				debug_log(__METHOD__
+					. " Processing unresolved datum batch [Level: $current_level] -> " . count($unique_locators) . ' locators' . PHP_EOL
+					. ' diffusion_tipo: ' . $diffusion_tipo
+					, logger::DEBUG
+				);
 
 				self::process_datum($diffusion_tipo, $unique_locators, $current_level, $options);
 			}
@@ -205,13 +226,11 @@ class dd_diffusion_api {
 			$response->datum  		= self::$datum;
 
 
-		} catch (Exception $e) {
+		} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
 			$response->msg = 'Error: ' . $e->getMessage();
 			$response->errors[] = $e->getMessage();
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
 		}
-
-		dump($response, 'response +//////');
 
 		return $response;
 	}
@@ -296,15 +315,169 @@ class dd_diffusion_api {
 
 	/**
 	 * VALIDATE
-	 * Validates the diffusion configuration for a given node.
+	 * Validates the diffusion ontology configuration against the flat virtual
+	 * diffusion tree. Checks one element (options.diffusion_element_tipo) or
+	 * every element of the diffusion domain when omitted.
+	 *
+	 * Per-element checks:
+	 *  - element resolvable as diffusion_element / diffusion_element_alias
+	 *  - properties->diffusion->type defined and in the known set
+	 *  - at least one section targeted by the element
+	 *  - sql/socrata: database name resolvable from the virtual tree
+	 *  - rdf: properties->diffusion->service_name defined
+	 *  - field nodes: ddo_map is an array when defined; parser entries carry
+	 *    a non-empty 'class::method' fn string
+	 *
+	 * @param object $rqo {
+	 *   action: "validate",
+	 *   options: { diffusion_element_tipo?: string }
+	 * }
+	 * @return object $response {
+	 *   result: bool, msg: string, errors: array,
+	 *   data: [{element_tipo, label, type, result, checks: [{check, result, msg}]}]
+	 * }
 	 */
 	public static function validate(object $rqo): object {
+
 		$response = new stdClass();
-		$response->result = true;
-		$response->msg = 'Validate mapping... (TBD)';
-		// TODO: Implement thorough validation logic
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// SEC: restrict to global admins (full diffusion configuration disclosure)
+		if (security::is_global_admin(logged_user_id()) !== true) {
+			$response->errors[] = 'insufficient permissions';
+			$response->msg = 'Error. Insufficient permissions to validate diffusion configuration.';
+			return $response;
+		}
+
+		$known_types = ['sql','rdf','xml','socrata'];
+
+		// elements to validate: the requested one or all elements of the domain
+		$requested_element_tipo = $rqo->options->diffusion_element_tipo ?? null;
+		$ar_element_tipo = [];
+		if (!empty($requested_element_tipo)) {
+			$ar_element_tipo[] = $requested_element_tipo;
+		}else{
+			foreach (diffusion_utils::get_ar_diffusion_map_elements() as $map_element) {
+				$ar_element_tipo[] = $map_element->element_tipo;
+			}
+		}
+
+		$data			= [];
+		$invalid_count	= 0;
+
+		foreach ($ar_element_tipo as $element_tipo) {
+
+			$checks = [];
+			$add_check = function(string $check, bool $result, string $msg) use (&$checks) : bool {
+				$checks[] = (object)[
+					'check'		=> $check,
+					'result'	=> $result,
+					'msg'		=> $msg
+				];
+				return $result;
+			};
+
+			// 1. element resolvable
+			$resolved	= diffusion_utils::resolve_node_with_alias($element_tipo);
+			$is_element	= ($resolved->model==='diffusion_element' || $resolved->model==='diffusion_element_alias');
+			$add_check('element_resolvable', $is_element, $is_element
+				? "Element '$element_tipo' resolved (model: {$resolved->model})"
+				: "Tipo '$element_tipo' is not a diffusion_element (model: ".to_string($resolved->model).")"
+			);
+
+			// 2. diffusion type
+			$type = $resolved->properties->diffusion->type ?? null;
+			$add_check('diffusion_type', in_array($type, $known_types, true), in_array($type, $known_types, true)
+				? "Diffusion type: '$type'"
+				: "Missing or unknown properties->diffusion->type: ".to_string($type)." (expected one of: ".implode(', ', $known_types).")"
+			);
+
+			// 3. targeted sections
+			$ar_sections = $is_element
+				? diffusion_utils::get_diffusion_sections_from_diffusion_element($element_tipo)
+				: [];
+			$add_check('target_sections', !empty($ar_sections), !empty($ar_sections)
+				? count($ar_sections) . ' section(s) targeted: ' . implode(', ', $ar_sections)
+				: 'No sections targeted by this element (check table/owl:Class section relations)'
+			);
+
+			// 4. type-specific checks
+			if ($type==='sql' || $type==='socrata') {
+				$database_name = diffusion_utils::get_database_name_for_element($element_tipo);
+				$add_check('database', !empty($database_name), !empty($database_name)
+					? "Database: '$database_name'"
+					: 'Unable to resolve database name (define a database or database_alias child)'
+				);
+			}
+			if ($type==='rdf' || $type==='xml') {
+				$service_name = $resolved->properties->diffusion->service_name ?? null;
+				$add_check('service_name', !empty($service_name), !empty($service_name)
+					? "Service name: '$service_name'"
+					: "Missing properties->diffusion->service_name (required for ".strtoupper($type)." file paths)"
+				);
+			}
+
+			// 5. field nodes: ddo_map shape and parser fn strings
+			foreach ($ar_sections as $section_tipo) {
+				$section_node = diffusion_utils::get_section_node_for_element($element_tipo, $section_tipo);
+				foreach ($section_node->children ?? [] as $child) {
+
+					$child_properties = ontology_node::get_instance($child->tipo)->get_properties();
+					if (empty($child_properties)) {
+						continue;
+					}
+
+					// ddo_map must be an array of objects when defined
+					if (isset($child_properties->process->ddo_map) && !is_array($child_properties->process->ddo_map)) {
+						$add_check('ddo_map', false, "Field '{$child->tipo}' ({$child->label}): process->ddo_map is not an array");
+					}
+
+					// parser entries must carry a 'class::method' fn
+					$parser = $child_properties->process->parser ?? null;
+					if ($parser!==null) {
+						$ar_parser = is_array($parser) ? $parser : [$parser];
+						foreach ($ar_parser as $parser_item) {
+							$fn = is_object($parser_item) ? ($parser_item->fn ?? null) : null;
+							if (empty($fn) || !is_string($fn) || !str_contains($fn, '::')) {
+								$add_check('parser_fn', false, "Field '{$child->tipo}' ({$child->label}): invalid parser fn ".to_string($fn)." (expected 'class::method')");
+							}
+						}
+					}
+				}
+			}
+
+			// element result
+			$element_result = true;
+			foreach ($checks as $check) {
+				if ($check->result===false) {
+					$element_result = false;
+					break;
+				}
+			}
+			if (!$element_result) {
+				$invalid_count++;
+			}
+
+			$data[] = (object)[
+				'element_tipo'	=> $element_tipo,
+				'label'			=> $resolved->label,
+				'type'			=> $type,
+				'result'		=> $element_result,
+				'checks'		=> $checks
+			];
+		}//end foreach ($ar_element_tipo as $element_tipo)
+
+		$response->result	= true;
+		$response->msg		= $invalid_count===0
+			? 'OK. ' . count($data) . ' element(s) validated without issues'
+			: 'Warning. ' . $invalid_count . ' of ' . count($data) . ' element(s) have configuration issues';
+		$response->data		= $data;
+
+
 		return $response;
-	}
+	}//end validate
 
 
 	/**
@@ -340,6 +513,183 @@ class dd_diffusion_api {
 
 		return $response;
 	}
+
+
+	/**
+	 * RETRY_PENDING_DELETIONS
+	 * Retries delete propagation for records whose deletion could not reach
+	 * one or more diffusion targets (dd1758 rows with action=unpublish_pending).
+	 * With options.count_only=true, only returns the pending count (used by
+	 * the tool_diffusion UI to display the badge without triggering a retry).
+	 *
+	 * @param object $rqo {
+	 *   action: "retry_pending_deletions",
+	 *   options: { count_only?: bool, limit?: int }
+	 * }
+	 * @return object $response
+	 */
+	public static function retry_pending_deletions(object $rqo): object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// SEC: restrict to global admins (cross-section operation over diffusion targets)
+		if (security::is_global_admin(logged_user_id()) !== true) {
+			$response->errors[] = 'insufficient permissions';
+			$response->msg = 'Error. Insufficient permissions to retry pending deletions.';
+			return $response;
+		}
+
+		$count_only	= $rqo->options->count_only ?? false;
+		$limit		= (int)($rqo->options->limit ?? 100);
+
+		try {
+			if ($count_only===true) {
+				$pending_count = diffusion_delete::count_pending();
+				$response->result	= (object)['pending' => $pending_count];
+				$response->msg		= 'OK. '.$pending_count.' pending deletion(s)';
+				return $response;
+			}
+
+			$retry_response = diffusion_delete::retry_pending($limit);
+
+			$response->result	= (object)[
+				'total'		=> $retry_response->total,
+				'retried'	=> $retry_response->retried,
+				'remaining'	=> $retry_response->remaining
+			];
+			$response->msg = $retry_response->msg;
+
+		} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
+			$response->msg = 'Error: ' . $e->getMessage();
+			$response->errors[] = $e->getMessage();
+			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
+		}
+
+
+		return $response;
+	}//end retry_pending_deletions
+
+
+
+	/**
+	 * REBUILD_MEDIA_INDEX
+	 * Full resync of the media publication markers (the filesystem allowlist
+	 * the web server checks to authorize anonymous media access) from the
+	 * publication databases. Used for initial migration and drift repair.
+	 *
+	 * PHP resolves the SQL targets {database_name, table_name, section_tipo}
+	 * from the diffusion ontology (the Bun engine never interprets the
+	 * ontology) and delegates the diff-sync to the Bun action of the same
+	 * name. MariaDB is a Bun responsibility.
+	 *
+	 * @param object $rqo {
+	 *   action: "rebuild_media_index",
+	 *   options: {}
+	 * }
+	 * @return object $response
+	 */
+	public static function rebuild_media_index(object $rqo): object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// SEC: restrict to global admins (cross-section operation over diffusion targets)
+		if (security::is_global_admin(logged_user_id()) !== true) {
+			$response->errors[] = 'insufficient permissions';
+			$response->msg = 'Error. Insufficient permissions to rebuild the media index.';
+			return $response;
+		}
+
+		try {
+			$targets = self::resolve_media_index_targets();
+
+			$bun_response = diffusion_api_client::call((object)[
+				'action'	=> 'rebuild_media_index',
+				'targets'	=> $targets
+			]);
+
+			$response->result	= $bun_response->result ?? false;
+			$response->msg		= $bun_response->msg ?? 'Error. Empty engine response';
+			if (!empty($bun_response->errors)) {
+				$response->errors = array_merge($response->errors, (array)$bun_response->errors);
+			}
+			$response->markers	= $bun_response->markers ?? 0;
+			$response->targets	= count($targets);
+
+		} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
+			$response->msg = 'Error: ' . $e->getMessage();
+			$response->errors[] = $e->getMessage();
+			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
+		}
+
+
+		return $response;
+	}//end rebuild_media_index
+
+
+	/**
+	 * RESOLVE_MEDIA_INDEX_TARGETS
+	 * Walks the diffusion ontology and returns every SQL publication target
+	 * as {database_name, table_name, section_tipo} objects for the Bun
+	 * rebuild_media_index action. Covers all publication databases defined
+	 * in the ontology ("published in ANY database" union semantics).
+	 *
+	 * @return array $targets
+	 */
+	public static function resolve_media_index_targets(): array {
+
+		$targets	= [];
+		$seen		= []; // "db|table|section" dedupe
+
+		foreach (diffusion_utils::get_ar_diffusion_map_elements() as $map_element) {
+
+			$element_tipo	= $map_element->element_tipo;
+			$resolved		= diffusion_utils::resolve_node_with_alias($element_tipo);
+			$type			= $resolved->properties->diffusion->type ?? null;
+			if ($type!=='sql' && $type!=='socrata') {
+				continue; // file-based formats have no publication tables
+			}
+
+			$database_name = diffusion_utils::get_database_name_for_element($element_tipo);
+			if (empty($database_name)) {
+				debug_log(__METHOD__
+					. " Ignored media index target without database name" . PHP_EOL
+					. ' element_tipo: ' . $element_tipo
+					, logger::WARNING
+				);
+				continue;
+			}
+
+			$ar_sections = diffusion_utils::get_diffusion_sections_from_diffusion_element($element_tipo);
+			foreach ($ar_sections as $section_tipo) {
+
+				$section_node = diffusion_utils::get_section_node_for_element($element_tipo, $section_tipo);
+				$table_name = $section_node->label ?? null;
+				if (empty($table_name)) {
+					continue;
+				}
+
+				$key = $database_name .'|'. $table_name .'|'. $section_tipo;
+				if (isset($seen[$key])) {
+					continue;
+				}
+				$seen[$key] = true;
+
+				$targets[] = (object)[
+					'database_name'	=> $database_name,
+					'table_name'	=> $table_name,
+					'section_tipo'	=> $section_tipo
+				];
+			}
+		}
+
+		return $targets;
+	}//end resolve_media_index_targets
 
 
 	/**
@@ -494,7 +844,7 @@ class dd_diffusion_api {
 		$combined_ddo_map = [];
 		$context = [];
 		foreach ($ar_children as $node_tipo) {
-			$ddo_map = diffusion_data::get_ddo_map($node_tipo, $main_section_tipo);
+			$ddo_map = diffusion_utils::get_ddo_map($node_tipo, $main_section_tipo);
 			$combined_ddo_map[$node_tipo] = $ddo_map;
 
 			// Build context for each node (field definitions)
@@ -855,7 +1205,130 @@ class dd_diffusion_api {
 			$response->sub_path        		= $sub_path;
 			$response->datum         		= [$datum];
 
-		} catch (Exception $e) {
+		} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
+			$response->msg	= 'Error: ' . $e->getMessage();
+			$response->errors[]	= $e->getMessage();
+			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
+		}
+
+		return $response;
+	}
+
+
+
+	/**
+	 * DIFFUSE_XML
+	 * XML publication, symmetric to diffuse_rdf (DIFFU-01). Dispatches each record
+	 * of $db_result to diffusion_xml::update_record (which renders + saves one
+	 * deterministic file per record under /xml/{service_name}/, shared with
+	 * delete_record_file for delete propagation), then builds a single
+	 * diffusion_datum describing the produced files.
+	 * @param string $diffusion_element_tipo
+	 * @param string $section_tipo
+	 * @param mixed $db_result
+	 * @param array $langs
+	 * @param array $main
+	 * @param object $options
+	 * @return object
+	 */
+	private static function diffuse_xml(string $diffusion_element_tipo, string $section_tipo, $db_result, array $langs, array $main, object $options): object {
+
+		$response = new stdClass();
+			$response->result = false;
+			$response->msg    = 'Error. XML diffusion failed';
+			$response->errors = [];
+
+		try {
+			include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_xml.php';
+
+			$diffusion_data = [];
+			$datum_data     = [];
+			$parent         = ontology_node::get_instance($diffusion_element_tipo)->get_parent();
+			$xml_term       = ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG);
+			$properties     = ontology_node::get_instance($diffusion_element_tipo)->get_properties();
+			$service_name   = $properties->diffusion->service_name ?? '';
+			$sub_path       = '/xml/' . $service_name . '/';
+
+			// build one instance per element (loads parsers once); the per-record
+			// diffusion-object structure is shared via diffusion_xml's static cache.
+			diffusion_xml::reset_cache();
+			$xml_instance = new diffusion_xml((object)[
+				'diffusion_element_tipo' => $diffusion_element_tipo
+			]);
+
+			foreach ($db_result as $locator) {
+
+				if (diffusion_chain_processor::is_used($locator->section_tipo, intval($locator->section_id))) {
+					continue;
+				}
+				diffusion_chain_processor::mark_used($locator->section_tipo, intval($locator->section_id));
+
+				$xml_response = $xml_instance->update_record((object)[
+					'section_tipo'			 => $locator->section_tipo,
+					'section_id'			 => $locator->section_id,
+					'diffusion_element_tipo' => $diffusion_element_tipo,
+					'save_file'				 => true,
+					'skip_publication_check' => $options->skip_publication_state_check ?? false
+				]);
+
+				if (!empty($xml_response->diffusion_data)) {
+					$diffusion_data = array_merge($diffusion_data, $xml_response->diffusion_data);
+				}
+				if (!empty($xml_response->errors)) {
+					$response->errors = array_merge($response->errors, (array)$xml_response->errors);
+				}
+
+				// XML update_record saves to file and returns the file_url (not the
+				// raw document body), so the datum value carries the file_url.
+				$file_url = $xml_response->diffusion_data[0]->file_url ?? null;
+
+				$entries = new stdClass();
+				$xml_value = new stdClass();
+					$xml_value->tipo  = $diffusion_element_tipo;
+					$xml_value->lang  = null;
+					$xml_value->value = $file_url;
+				if (!empty($file_url)) {
+					$xml_value->file_url = $file_url;
+				}
+				$entries->{$diffusion_element_tipo} = [$xml_value];
+
+				$datum_data[] = (object)[
+					'section_id' => $locator->section_id,
+					'entries' => $entries
+				];
+			}
+
+			// Build XML datum using canonical diffusion datum semantics
+			$datum = new diffusion_datum();
+				$datum->set_diffusion_tipo($diffusion_element_tipo);
+				$datum->set_section_tipo($section_tipo);
+				$datum->set_term($xml_term);
+				$datum->set_model('diffusion_element');
+				$datum->set_parent($parent);
+				$datum->set_context([
+					(object)[
+						'term' => $xml_term,
+						'tipo' => $diffusion_element_tipo,
+						'model' => 'diffusion_element',
+						'parent' => $parent,
+						'parser' => new stdClass(),
+						'output_format' => 'xml',
+						'columns' => []
+					]
+				]);
+				$datum->set_data($datum_data);
+
+			$response->result        		= true;
+			$response->msg           		= 'OK. XML diffusion done';
+			$response->langs         		= $langs;
+			$response->main_lang     		= DEDALO_DATA_LANG_DEFAULT;
+			$response->main          		= $main;
+			$response->DEDALO_MEDIA_PATH 	= DEDALO_MEDIA_PATH;
+			$response->DEDALO_MEDIA_URL  	= DEDALO_MEDIA_URL;
+			$response->sub_path        		= $sub_path;
+			$response->datum         		= [$datum];
+
+		} catch (\Throwable $e) {
 			$response->msg	= 'Error: ' . $e->getMessage();
 			$response->errors[]	= $e->getMessage();
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);

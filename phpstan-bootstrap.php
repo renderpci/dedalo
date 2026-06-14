@@ -18,6 +18,7 @@ define('DEDALO_CORE_PATH', __DIR__ . '/core');
 define('DEDALO_DIFFUSION_PATH', __DIR__ . '/diffusion');
 define('DEDALO_SHARED_PATH', __DIR__ . '/shared');
 define('DEDALO_TOOLS_PATH', __DIR__ . '/tools');
+define('DEDALO_TOOLS_URL', '/tools');
 define('DEDALO_LIB_PATH', __DIR__ . '/lib');
 
 require_once DEDALO_CORE_PATH . '/base/class.loader.php';

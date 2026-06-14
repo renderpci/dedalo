@@ -18,6 +18,10 @@ export interface RateLimitConfig {
 interface Bucket {
 	tokens: number;
 	lastRefill: number;
+	// DIFFTS-10: real last-access time, updated on every consume(). Cleanup must use
+	// this (not lastRefill, which only advances on a >=1-token refill) so an active,
+	// throttled client isn't evicted early — which would reset its limit.
+	lastSeen: number;
 }
 
 /**
@@ -61,7 +65,7 @@ export class TokenBucketRateLimiter {
 	private getBucket(key: string): Bucket {
 	  let bucket = this.store.get(key);
 	  if (!bucket) {
-	    bucket = { tokens: this.capacity, lastRefill: Date.now() };
+	    bucket = { tokens: this.capacity, lastRefill: Date.now(), lastSeen: Date.now() };
 	    this.store.set(key, bucket);
 	  }
 	  return bucket;
@@ -95,6 +99,7 @@ export class TokenBucketRateLimiter {
 	 */
 	consume(key: string, tokens = 1): { allowed: boolean; remaining: number; retryAfterMs: number } {
 	  const bucket = this.getBucket(key);
+	  bucket.lastSeen = Date.now(); // DIFFTS-10: track real activity for cleanup
 	  this.refill(bucket);
 
 	  if (bucket.tokens >= tokens) {
@@ -134,7 +139,7 @@ export class TokenBucketRateLimiter {
 	  const now = Date.now();
 	  let removed = 0;
 	  for (const [key, bucket] of this.store) {
-	    if (now - bucket.lastRefill > threshold) {
+	    if (now - bucket.lastSeen > threshold) { // DIFFTS-10: idleness by real activity
 	      this.store.delete(key);
 	      removed++;
 	    }

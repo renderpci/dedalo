@@ -659,4 +659,63 @@ final class component_geolocation_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_conform_import_data
+	* @return void
+	*/
+	public function test_conform_import_data() {
+
+		$component = $this->build_component_instance();
+
+		// 1. flat string 'lat, lon, zoom'
+		$response = $component->conform_import_data('39.4625, -0.3762, 15', self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertIsArray($response->result);
+		$this->assertEquals(39.4625, $response->result[0]->lat);
+		$this->assertEquals(-0.3762, $response->result[0]->lon);
+		$this->assertEquals(15, $response->result[0]->zoom);
+		$this->assertEquals(0, $response->result[0]->alt);
+
+		// 2. flat string malformed
+		$response = $component->conform_import_data('not, coordinates', self::$tipo);
+		$this->assertTrue(!empty($response->errors), 'expected errors for malformed coordinates');
+		$this->assertNull($response->result);
+
+		// 3. flat string out of range
+		$response = $component->conform_import_data('120, 0', self::$tipo);
+		$this->assertTrue(!empty($response->errors), 'expected errors for out of range latitude');
+
+		// 4. full v7 dato
+		$v7_dato = '[{"id":3,"alt":16,"lat":28.760289,"lon":-17.879814,"zoom":17}]';
+		$response = $component->conform_import_data($v7_dato, self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertEquals(28.760289, $response->result[0]->lat);
+		$this->assertEquals(17, $response->result[0]->zoom);
+
+		// 5. bare GeoJSON FeatureCollection (coordinates are [lon, lat])
+		$geojson = '{"type":"FeatureCollection","features":[{"type":"Feature","properties":{},"geometry":{"type":"Point","coordinates":[-0.3762,39.4625]}}]}';
+		$response = $component->conform_import_data($geojson, self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertEquals(39.4625, $response->result[0]->lat);
+		$this->assertEquals(-0.3762, $response->result[0]->lon);
+		$this->assertTrue(
+			isset($response->result[0]->lib_data[0]->layer_data->type),
+			'expected lib_data layer with the FeatureCollection'
+		);
+
+		// 6. legacy lang keyed object (raw export)
+		$legacy = '{"lg-nolan":[{"id":3,"alt":0,"lat":28.760289,"lon":-17.879814,"zoom":17}]}';
+		$response = $component->conform_import_data($legacy, self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertEquals(28.760289, $response->result[0]->lat);
+
+		// 7. empty value clears data
+		$response = $component->conform_import_data('', self::$tipo);
+		$this->assertTrue(empty($response->errors));
+		$this->assertNull($response->result);
+		$this->assertEquals('OK', $response->msg);
+	}//end test_conform_import_data
+
+
+
 }//end class component_geolocation_test

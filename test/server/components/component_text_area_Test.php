@@ -1817,6 +1817,25 @@ final class component_text_area_test extends BaseTestCase {
 				.' expected: <p>Test content in <strong>JSON</strong></p>' . PHP_EOL
 				.' value: '.to_string($value->result[0])
 		);
+
+		// 7 Non-string 'value' properties must not crash (TypeError regression guard)
+		$value = $component->conform_import_data('[{"value":{"nested":"object"}}]', 'column_name');
+		$this->assertTrue(
+			gettype($value)==='object' && empty($value->errors),
+			'expected no crash and no errors for object value: '.to_string($value->errors ?? null)
+		);
+		// the item passes through unchanged (the value is not normalizable as text)
+		$this->assertTrue(
+			is_object($value->result[0]->value ?? null),
+			'expected non-string value passed through unchanged'
+		);
+
+		// 8 Numeric scalar values are admitted as text
+		$value = $component->conform_import_data('[{"value":5}]', 'column_name');
+		$this->assertTrue(
+			($value->result[0]->value ?? null)==='<p>5</p>',
+			'expected numeric value normalized as text: '.to_string($value->result[0] ?? null)
+		);
 	}//end test_conform_import_data
 
 

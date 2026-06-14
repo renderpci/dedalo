@@ -1,0 +1,73 @@
+/**
+* media_control
+*
+* Included from area_maintenance.less file
+*/
+.wrapper_widget.media_control {
+
+	.media_control_content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.66rem;
+	}
+
+	.media_control_status {
+		display: grid;
+		grid-template-columns: max-content 1fr;
+		gap: 0.2rem 1rem;
+		align-items: baseline;
+	}
+
+	.media_control_row {
+		display: contents;
+	}
+
+	.media_control_label {
+		font-weight: 500;
+		white-space: nowrap;
+	}
+
+	.media_control_value {
+		word-break: break-word;
+
+		&.mode_off {
+			color: @color_danger;
+			font-weight: 600;
+		}
+		&.mode_private,
+		&.mode_publication {
+			color: @color_success;
+			font-weight: 600;
+		}
+		&.warning_text {
+			color: @color_danger;
+		}
+	}
+
+	.media_control_selector,
+	.media_control_rebuild {
+		display: flex;
+		align-items: center;
+		gap: 0.66rem;
+		flex-wrap: wrap;
+	}
+
+	.media_control_mode_select {
+		max-width: 100%;
+	}
+
+	.media_control_note {
+		opacity: 0.7;
+		font-size: 0.9em;
+		line-height: 1.2em;
+	}
+
+	.body_response {
+		white-space: pre-wrap;
+		word-break: break-word;
+
+		&:empty {
+			display: none;
+		}
+	}
+}

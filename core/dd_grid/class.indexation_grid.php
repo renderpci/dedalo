@@ -47,11 +47,14 @@ class indexation_grid {
 		protected ?object $pagination = null;
 
 		/**
-		 * Target section tipo to filter indexation results.
-		 * Limits the indexation grid to records from this specific section type.
-		 * @var ?string $target_section
+		 * Target section tipos to filter indexation results.
+		 * Array of section tipo like ['rsc205','tchi1'] (the related-mode SQO
+		 * carries one or various sections; 'all' sentinel allowed). Limits the
+		 * indexation grid to records from these sections and is passed as is
+		 * to search_related::get_referenced_locators (array typed).
+		 * @var ?array $target_section
 		 */
-		protected ?string $target_section = null;
+		protected ?array $target_section = null;
 
 		/**
 		 * Search Query Object for building the indexation filter.
@@ -107,8 +110,12 @@ class indexation_grid {
 			$this->pagination->offset	= $sqo->offset ?? 0;
 			$this->pagination->total	= $sqo->total ?? null;
 
-		//target section tipo
-			$this->target_section		= $sqo->section_tipo ?? null;
+		// target section tipo(s). Normalized to array: the SQO section_tipo
+		// can carry a single string or an array of sections (related mode)
+			$target_section			= $sqo->section_tipo ?? null;
+			$this->target_section	= empty($target_section)
+				? null
+				: (array)$target_section;
 
 		// set filter section
 			if( empty($this->target_section) ){

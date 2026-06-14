@@ -28,7 +28,8 @@
 		get_tld_from_tipo,
 		get_section_id_from_tipo,
 		clone,
-		load_style
+		load_style,
+		tool_base_url
 	} from '../../common/js/utils/index.js'
 
 
@@ -45,6 +46,218 @@ export const render_inspector = function() {
 
 
 
+// Persisted UI state (IndexedDB table 'status', global keys shared across sections)
+	const RAIL_STATE_KEY	= 'inspector_rail_state' // {value:true} => collapsed to rail
+	const WIDTH_KEY			= 'inspector_width'      // {value:'24rem'} user chosen width
+	const DEFAULT_WIDTH		= '19rem'                // matches --inspector_width default
+	const RAIL_WIDTH_VAR	= 'var(--inspector_rail_width)'
+
+
+
+/**
+* SET_INSPECTOR_WIDTH
+* Writes --inspector_width on :root. The section content width and the panel
+* position are calc() consumers of this var, so the layout reflows automatically.
+* @param string value
+* @return void
+*/
+const set_inspector_width = (value) => {
+	document.documentElement.style.setProperty('--inspector_width', value)
+}//end set_inspector_width
+
+
+
+/**
+* IS_NARROW_VIEWPORT
+* Below @width_break_point_0 (1024px) the inspector is inline full-width;
+* rail collapse and resize are inert there.
+* @return bool
+*/
+const is_narrow_viewport = () => window.matchMedia('(max-width: 1024px)').matches
+
+
+
+/**
+* TOGGLE_INSPECTOR_RAIL
+* Collapses the inspector to / expands it from the icon rail, reflowing content
+* via --inspector_width, and persists the new state.
+* @param object self
+* 	inspector instance (uses self._saved_width)
+* @return bool
+*/
+export const toggle_inspector_rail = (self) => {
+
+	if (is_narrow_viewport()) {
+		return false
+	}
+
+	const container = document.getElementById('inspector_container')
+	if (!container) {
+		return false
+	}
+
+	const collapsing = !container.classList.contains('inspector_rail')
+	container.classList.toggle('inspector_rail', collapsing)
+	self._rail_collapsed = collapsing
+
+	set_inspector_width(
+		collapsing
+			? RAIL_WIDTH_VAR
+			: (self._saved_width || DEFAULT_WIDTH)
+	)
+
+	// persist
+	data_manager.set_local_db_data(
+		{ id: RAIL_STATE_KEY, value: collapsing },
+		'status'
+	)
+
+	return true
+}//end toggle_inspector_rail
+
+
+
+/**
+* APPLY_INSPECTOR_STATE
+* Applies the persisted rail/width state to the freshly created inspector_container
+* BEFORE it is attached to the DOM, so the first paint is already correct (no flicker).
+* @param object inspector
+* 	inspector instance (uses _rail_collapsed and _saved_width stashed in edit())
+* @param HTMLElement container
+* 	#inspector_container element
+* @return bool
+*/
+export const apply_inspector_state = (inspector, container) => {
+
+	if (!container) {
+		return false
+	}
+
+	const railed = inspector?._rail_collapsed===true && !is_narrow_viewport()
+	if (railed) {
+		container.classList.add('inspector_rail')
+		set_inspector_width(RAIL_WIDTH_VAR)
+	} else {
+		container.classList.remove('inspector_rail')
+		set_inspector_width(inspector?._saved_width || DEFAULT_WIDTH)
+	}
+
+	return true
+}//end apply_inspector_state
+
+
+
+/**
+* INIT_INSPECTOR_RESIZE
+* Wires the left-edge drag handle to resize the panel live (rAF-coalesced),
+* clamped, persisting the chosen width on release. Disabled while railed or narrow.
+* @param HTMLElement handle
+* @param object inspector
+* 	inspector instance (updates _saved_width)
+* @return bool
+*/
+export const init_inspector_resize = (handle, inspector) => {
+
+	if (!handle) {
+		return false
+	}
+
+	const REM		= parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+	const MIN		= 14 * REM
+	const get_max	= () => Math.min(window.innerWidth * 0.6, 40 * REM)
+
+	let start_x		= 0
+	let start_w		= 0
+	let raf_id		= null
+	let pending_w	= null
+
+	const apply_pending = () => {
+		raf_id = null
+		if (pending_w!==null) {
+			set_inspector_width(pending_w + 'px')
+		}
+	}
+
+	const on_move = (e) => {
+		// handle is on the LEFT edge: dragging left (smaller clientX) grows the panel
+		const dx = start_x - e.clientX
+		let w = start_w + dx
+		w = Math.max(MIN, Math.min(get_max(), w))
+		pending_w = w
+		if (raf_id===null) {
+			raf_id = requestAnimationFrame(apply_pending)
+		}
+	}
+
+	const on_up = (e) => {
+		window.removeEventListener('pointermove', on_move)
+		window.removeEventListener('pointerup', on_up)
+		if (raf_id!==null) {
+			cancelAnimationFrame(raf_id)
+			apply_pending()
+		}
+		document.body.classList.remove('inspector_resizing')
+		try { handle.releasePointerCapture(e.pointerId) } catch(err) {}
+
+		// persist the resolved width
+		const w = getComputedStyle(document.documentElement)
+			.getPropertyValue('--inspector_width').trim()
+		if (w) {
+			inspector._saved_width = w
+			data_manager.set_local_db_data({ id: WIDTH_KEY, value: w }, 'status')
+		}
+	}
+
+	handle.addEventListener('pointerdown', (e) => {
+		const container = document.getElementById('inspector_container')
+		// disabled while railed or on the inline narrow layout
+		if (!container || container.classList.contains('inspector_rail') || is_narrow_viewport()) {
+			return
+		}
+		e.preventDefault()
+		e.stopPropagation()
+		start_x = e.clientX
+		start_w = parseFloat(getComputedStyle(container).width) || MIN
+		document.body.classList.add('inspector_resizing')
+		try { handle.setPointerCapture(e.pointerId) } catch(err) {}
+		window.addEventListener('pointermove', on_move)
+		window.addEventListener('pointerup', on_up)
+	})
+
+	return true
+}//end init_inspector_resize
+
+
+
+/**
+* DECORATE_BLOCK_HEADER
+* Adds a leading mask icon and a text-label wrapper to a collapsible block header,
+* so the text can hide in rail mode while the icon remains.
+* @param HTMLElement header
+* @param string icon_class
+* 	one of: info|gear|link|history|note|activity|inspector
+* @param string label_html
+* @return HTMLElement header
+*/
+const decorate_block_header = (header, icon_class, label_html) => {
+
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'block_icon ' + icon_class,
+		parent			: header
+	})
+	ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'block_label',
+		inner_html		: label_html,
+		parent			: header
+	})
+
+	return header
+}//end decorate_block_header
+
+
+
 /**
 * EDIT
 * Render node for use in this mode
@@ -58,6 +271,15 @@ render_inspector.prototype.edit = async function(options) {
 	// options
 		const render_level = options.render_level || 'full'
 
+	// persisted rail / width state (global keys). Read before first paint so the
+	// container can be sized correctly in view_default_edit_section (no flicker)
+		const [rail_rec, width_rec] = await Promise.all([
+			data_manager.get_local_db_data(RAIL_STATE_KEY, 'status', true),
+			data_manager.get_local_db_data(WIDTH_KEY, 'status', true)
+		])
+		self._rail_collapsed	= rail_rec?.value===true
+		self._saved_width		= width_rec?.value || DEFAULT_WIDTH
+
 	// content data
 		const content_data = get_content_data(self)
 		if (render_level==='content') {
@@ -67,8 +289,22 @@ render_inspector.prototype.edit = async function(options) {
 	// label
 		const label = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'label icon_arrow up',
-			inner_html		: get_label.inspector || 'Inspector'
+			class_name		: 'label icon_arrow up'
+		})
+		// leading inspector icon + text wrapper (text hides in rail mode).
+		// modifier is 'panel' (not 'inspector') to avoid colliding with the
+		// .inspector wrapper class on the same span.
+		decorate_block_header(label, 'panel', get_label.inspector || 'Inspector')
+		// rail collapse / expand toggle
+		const rail_toggle = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'inspector_rail_toggle',
+			title			: get_label.collapse || 'Collapse / expand',
+			parent			: label
+		})
+		rail_toggle.addEventListener('click', (e) => {
+			e.stopPropagation() // do not trigger the label's collapse-content toggle
+			toggle_inspector_rail(self)
 		})
 		// track collapse toggle state of content
 		ui.collapse_toggle_track({
@@ -139,6 +375,30 @@ const get_content_data = function(self) {
 		content_data.addEventListener('mousedown', function(e) {
 			e.stopPropagation();
 		})
+		// rail: clicking a block header while collapsed expands the panel and opens
+		// that block. Capture phase + stopPropagation pre-empts the per-block
+		// collapse_toggle_track handler; the programmatic re-click then runs normally
+		// (the container is no longer railed) and opens the body.
+		content_data.addEventListener('click', function(e) {
+			const container = document.getElementById('inspector_container')
+			if (!container || !container.classList.contains('inspector_rail')) {
+				return
+			}
+			const header = e.target.closest('[class*="_head"]')
+			if (!header || !content_data.contains(header)) {
+				return
+			}
+			e.stopPropagation()
+			// expand the panel
+			toggle_inspector_rail(self)
+			// open the clicked block if its body is collapsed. Defer one frame so the
+			// re-click is not suppressed by the click-in-progress flag when the original
+			// event was itself produced by HTMLElement.click() (re-entrancy guard).
+			const body = header.nextElementSibling
+			if (body && body.classList.contains('hide')) {
+				requestAnimationFrame(() => header.click())
+			}
+		}, true)
 
 	// paginator container
 		const paginator_container = ui.create_dom_element({
@@ -331,7 +591,7 @@ const get_content_data = function(self) {
 			for (let i = 0; i < inspector_tools_length; i++) {
 				const tool_context = inspector_tools[i]
 				// load tool CSS
-				const tool_css_url = DEDALO_TOOLS_URL + '/' + tool_context.model + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
+				const tool_css_url = tool_base_url(tool_context.model) + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
 				load_style(tool_css_url)
 				// tool_button
 					// bg color. E.g. '--tool_ontology_color'
@@ -1055,9 +1315,9 @@ const render_element_info = function(self) {
 		const element_info_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'element_info_head label icon_arrow up',
-			inner_html		: get_label.informacion || "Info",
 			parent			: element_info_wrap
 		})
+		decorate_block_header(element_info_head, 'info', get_label.informacion || "Info")
 
 	// element_info_container (body)
 		const element_info_body = ui.create_dom_element({
@@ -1109,9 +1369,9 @@ const render_project_block = function(self) {
 		const project_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'project_head icon_arrow up',
-			inner_html		: get_label.project || "Project",
 			parent			: project_wrap
 		})
+		decorate_block_header(project_head, 'gear', get_label.project || "Project")
 
 	// project container
 		const project_container_body = ui.create_dom_element({
@@ -1187,9 +1447,9 @@ const render_relation_list = function(self) {
 		const relation_list_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'relation_list_head icon_arrow',
-			text_content	: get_label.relations || "Relations",
 			parent			: relation_list_container
 		})
+		decorate_block_header(relation_list_head, 'link', get_label.relations || "Relations")
 
 	// relation_list_body
 		const relation_list_body = ui.create_dom_element({
@@ -1306,9 +1566,9 @@ export const render_time_machine_list = function(self) {
 		const time_machine_list_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'time_machine_list_head icon_arrow',
-			inner_html		: get_label.latest_changes || 'Latest changes',
 			parent			: time_machine_list_wrap
 		})
+		decorate_block_header(time_machine_list_head, 'history', get_label.latest_changes || 'Latest changes')
 
 	// time_machine_list_body
 		const time_machine_list_body = ui.create_dom_element({
@@ -1476,9 +1736,9 @@ const render_component_history = function(self) {
 		const component_history_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'component_history_head icon_arrow',
-			text_content	: get_label.component_history || 'Component history',
 			parent			: component_history_wrap
 		})
+		decorate_block_header(component_history_head, 'note', get_label.component_history || 'Component history')
 
 	// component_history_body
 		const component_history_body = ui.create_dom_element({
@@ -1647,9 +1907,9 @@ const render_activity_info = function(self) {
 		const activity_info_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'activity_info_head icon_arrow',
-			inner_html		: get_label.activity || 'Activity',
 			parent			: wrapper
 		})
+		decorate_block_header(activity_info_head, 'activity', get_label.activity || 'Activity')
 
 	// activity_info_body (bubbles_notification_container)
 		const activity_info_body = ui.create_dom_element({

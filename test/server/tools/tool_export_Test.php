@@ -770,59 +770,572 @@ final class tool_export_test extends BaseTestCase {
 
 
 	/**
+	* BUILD_EXPORT_TOOL
+	* Instance-level test access: constructs the tool, runs setup() (protected)
+	* and optionally injects a small pre-fetched records set. Since setup()
+	* forces the 'ALL' limit sentinel (the export serialises the whole
+	* selection by design), tests must bound their dataset by injecting
+	* $tool_export->records — otherwise every test would export the full
+	* test3 section (3000+ records).
+	* @param object $options get_export_grid_options() shape
+	* @param int|null $records_limit = null
+	* @return tool_export
+	*/
+	private function build_export_tool( object $options, ?int $records_limit=null ) : tool_export {
+
+		$tool_export = new tool_export(null, $options->section_tipo);
+
+		$setup = new ReflectionMethod(tool_export::class, 'setup');
+		$setup->invoke($tool_export, (object)[
+			'data_format'		=> $options->data_format,
+			'breakdown'			=> $options->breakdown ?? 'default',
+			'fill_the_gaps'		=> $options->fill_the_gaps ?? true,
+			'value_with_parents'=> $options->value_with_parents ?? false,
+			'ar_ddo_map'		=> $options->ar_ddo_to_export,
+			'sqo'				=> $options->sqo,
+			'model'				=> $options->model,
+			'section_tipo'		=> $options->section_tipo
+		]);
+
+		if ($records_limit!==null) {
+			// server-built sqo (does not pass the client gate)
+			$records_sqo = json_handler::decode('{"section_tipo":["'.$options->section_tipo.'"],"limit":'.$records_limit.',"offset":0}');
+			$sections = sections::get_instance(null, $records_sqo, $options->section_tipo);
+			$tool_export->records = $sections->get_data();
+		}
+
+		return $tool_export;
+	}//end build_export_tool
+
+
+
+	/**
+	* DRAIN_EXPORT_LINES
+	* Collects iterate_export_lines() into the buffered flat-table shape
+	* @param tool_export $tool_export
+	* @return object {meta, columns, rows, end}
+	*/
+	private function drain_export_lines( tool_export $tool_export ) : object {
+
+		$export_grid = new stdClass();
+			$export_grid->meta		= null;
+			$export_grid->columns	= [];
+			$export_grid->rows		= [];
+			$export_grid->end		= null;
+
+		foreach ($tool_export->iterate_export_lines() as $line) {
+			switch ($line->t) {
+				case 'meta':	$export_grid->meta		= $line; break;
+				case 'col':		$export_grid->columns[]	= $line; break;
+				case 'row':		$export_grid->rows[]	= $line; break;
+				case 'end':		$export_grid->end		= $line; break;
+				default: break;
+			}
+		}
+
+		return $export_grid;
+	}//end drain_export_lines
+
+
+
+	/**
+	* ASSERT_PROTOCOL_INVARIANTS
+	* Shared invariants of the export flat-table protocol:
+	* - meta present and first-class
+	* - every row cell references a declared column ordinal
+	* - end.columns is a permutation of all declared column ordinals
+	* - end totals match the emitted lines
+	* @param object $export_grid {meta, columns, rows, end}
+	* @param string $label
+	* @return void
+	*/
+	private function assert_protocol_invariants( object $export_grid, string $label ) : void {
+
+		$this->assertNotNull($export_grid->meta, "expected meta line ($label)");
+		$this->assertSame('meta', $export_grid->meta->t, "($label)");
+		$this->assertNotNull($export_grid->end, "expected end line ($label)");
+
+		// declared ordinals
+			$declared = [];
+			foreach ($export_grid->columns as $col) {
+				$this->assertSame('col', $col->t, "($label)");
+				$this->assertIsInt($col->i, "($label)");
+				$this->assertFalse(isset($declared[$col->i]), "expected unique column ordinal ($label)");
+				$declared[$col->i] = true;
+			}
+
+		// every cell ordinal declared
+			foreach ($export_grid->rows as $row) {
+				$this->assertSame('row', $row->t, "($label)");
+				foreach ((array)$row->c as $ordinal => $cell_value) {
+					$this->assertTrue(
+						isset($declared[(int)$ordinal]),
+						"expected cell ordinal $ordinal declared by a col line ($label)"
+					);
+					$this->assertTrue(
+						$cell_value===null || is_scalar($cell_value),
+						"expected scalar cell ($label)"
+					);
+				}
+			}
+
+		// end.columns permutation-complete
+			$end_columns = $export_grid->end->columns;
+			sort($end_columns);
+			$declared_ordinals = array_keys($declared);
+			sort($declared_ordinals);
+			$this->assertSame(
+				$declared_ordinals,
+				$end_columns,
+				"expected end.columns to be a permutation of all declared ordinals ($label)"
+			);
+
+		// totals
+			$this->assertSame(sizeof($export_grid->rows), $export_grid->end->rows, "($label)");
+	}//end assert_protocol_invariants
+
+
+
+	/**
+	* TEST_export_ignores_client_limit
+	* The export serialises the WHOLE filtered selection: any client-sent
+	* sqo limit/offset (which the API gate clamps anyway) is replaced by the
+	* internal 'ALL' sentinel in setup(). Regression guard for the bug where
+	* exports silently truncated at DEDALO_SEARCH_CLIENT_MAX_LIMIT rows.
+	* @return void
+	*/
+	public function test_export_ignores_client_limit() {
+
+		$this->user_login();
+
+		// expected total: independent server-built sqo with the 'ALL' sentinel
+		// (the same pattern tool_export::get_records uses internally)
+			$count_sqo = json_handler::decode('{"section_tipo":["test3"],"limit":"ALL","offset":0}');
+			$sections	= sections::get_instance(null, $count_sqo, 'test3');
+			$expected_records = $sections->get_data()->row_count();
+			$this->assertGreaterThan(
+				2,
+				$expected_records,
+				'fixture guard: test3 must hold more records than the client limit under test'
+			);
+
+		// export with a small client limit/offset (simulates the gate-clamped value).
+		// Use the full static entry (get_export_grid) and a single ddo column
+		// (section_id) to keep the full-section export fast.
+			$options = $this->get_export_grid_options('value');
+			$options->ar_ddo_to_export = [ $options->ar_ddo_to_export[0] ]; // section_id only
+			$options->sqo->limit	= 2;
+			$options->sqo->offset	= 5;
+
+			$response = tool_export::get_export_grid( $options );
+			$this->assertTrue(gettype($response->result)==='object');
+
+		// the whole selection was exported, ignoring the client limit/offset
+			$this->assertSame(
+				$expected_records,
+				$response->result->end->records,
+				'expected the export to serialise ALL records regardless of the client sqo limit'
+			);
+			$this->assertSame(
+				$expected_records,
+				sizeof($response->result->rows),
+				'expected one row per record in value format'
+			);
+	}//end test_export_ignores_client_limit
+
+
+
+	/**
 	* TEST_get_export_grid
+	* All three data formats produce a protocol-valid flat table
+	* (bounded records set: setup() forces the full selection, see
+	* build_export_tool / test_export_ignores_client_limit)
 	* @return void
 	*/
 	public function test_get_export_grid() {
 
-		// value (standard)
-			$options	= $this->get_export_grid_options('value');
-			$response	= tool_export::get_export_grid( $options );
+		$this->user_login();
 
-			$this->assertTrue(
-				gettype($response)==='object',
-				'expected gettype result is object'
-					.' and is : '.gettype($response)
-			);
+		foreach (['value', 'grid_value', 'dedalo_raw'] as $data_format) {
 
-			$this->assertTrue(
-				gettype($response->result)==='array',
-				'expected gettype result is array'
-					.' and is : '.gettype($response->result)
-			);
+			$options		= $this->get_export_grid_options($data_format);
+			$tool_export	= $this->build_export_tool($options, 3);
+			$export_grid	= $this->drain_export_lines($tool_export);
 
-		// grid_value (Break down)
-			$options	= $this->get_export_grid_options('grid_value');
-			$response	= tool_export::get_export_grid( $options );
+			$this->assert_protocol_invariants($export_grid, $data_format);
 
-			$this->assertTrue(
-				gettype($response)==='object',
-				'expected gettype result is object'
-					.' and is : '.gettype($response)
-			);
-
-			$this->assertTrue(
-				gettype($response->result)==='array',
-				'expected gettype result is array'
-					.' and is : '.gettype($response->result)
-			);
-
-		// dedalo_raw
-			$options	= $this->get_export_grid_options('dedalo_raw');
-			$response	= tool_export::get_export_grid( $options );
-
-			$this->assertTrue(
-				gettype($response)==='object',
-				'expected gettype result is object'
-					.' and is : '.gettype($response)
-			);
-
-			$this->assertTrue(
-				gettype($response->result)==='array',
-				'expected gettype result is array'
-					.' and is : '.gettype($response->result)
-			);
+			$this->assertNotEmpty($export_grid->columns, "expected columns ($data_format)");
+			$this->assertNotEmpty($export_grid->rows, "expected rows ($data_format)");
+			$this->assertSame(3, $export_grid->end->records, "expected injected records count ($data_format)");
+		}
 	}//end test_get_export_grid
+
+
+
+	/**
+	* TEST_get_export_grid_breakdown_modes
+	* grid_value in the three breakdown modes: protocol-valid; rows mode
+	* never mints '|n' suffixed columns; columns mode emits exactly one
+	* row per record
+	* @return void
+	*/
+	public function test_get_export_grid_breakdown_modes() {
+
+		$this->user_login();
+
+		foreach (['default', 'rows', 'columns'] as $breakdown) {
+
+			$options = $this->get_export_grid_options('grid_value');
+			$options->breakdown = $breakdown;
+
+			$tool_export	= $this->build_export_tool($options, 3);
+			$export_grid	= $this->drain_export_lines($tool_export);
+
+			$this->assert_protocol_invariants($export_grid, "breakdown:$breakdown");
+
+			$this->assertSame($breakdown, $export_grid->meta->breakdown, "($breakdown)");
+
+			if ($breakdown==='rows') {
+				foreach ($export_grid->columns as $col) {
+					$this->assertStringNotContainsString(
+						'|',
+						$col->key,
+						'rows mode explodes vertically: no |n suffixed columns expected'
+					);
+				}
+			}
+
+			if ($breakdown==='columns') {
+				foreach ($export_grid->rows as $row) {
+					$this->assertSame(0, $row->sub, 'columns mode emits one row per record');
+				}
+			}
+		}
+	}//end test_get_export_grid_breakdown_modes
+
+
+
+	/**
+	* TEST_export_value_format_parity
+	* The 'value' format cells must equal the legacy component flat value
+	* (resolve_value of get_grid_value) for direct (single-path) ddos,
+	* modulo the server-side text cleanup that replaced the client one.
+	* @return void
+	*/
+	public function test_export_value_format_parity() {
+
+		$this->user_login();
+
+		$options		= $this->get_export_grid_options('value');
+		$tool_export	= $this->build_export_tool($options, 2);
+		$export_grid	= $this->drain_export_lines($tool_export);
+
+		// column key => ordinal
+			$ordinal_by_key = [];
+			foreach ($export_grid->columns as $col) {
+				$ordinal_by_key[$col->key] = $col->i;
+			}
+
+		// first record row
+			$first_row	= $export_grid->rows[0];
+			$cells		= (array)$first_row->c;
+			$section_id	= $first_row->rec;
+
+		$compared = 0;
+		foreach ($options->ar_ddo_to_export as $ddo) {
+
+			// direct components only: multi-path ddos (portals) need the
+			// legacy request_config injection to compare, covered by the
+			// component-level parity test instead
+			if (sizeof($ddo->path) > 1) {
+				continue;
+			}
+
+			$first_path	= $ddo->path[0];
+			$key		= $first_path->section_tipo.'_'.$first_path->component_tipo;
+			if (!isset($ordinal_by_key[$key])) {
+				continue;
+			}
+
+			// legacy reference (same lang/mode resolution as the export)
+				$is_translatable	= ontology_node::get_translatable($first_path->component_tipo);
+				$component			= component_common::get_instance(
+					$first_path->model,
+					$first_path->component_tipo,
+					$section_id,
+					'edit',
+					$is_translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
+					$first_path->section_tipo,
+					false
+				);
+				$component->set_caller('tool_export'); // legacy absolute media URLs
+				$legacy_flat = dd_grid_cell_object::resolve_value( $component->get_grid_value() );
+				$legacy_flat = export_tabulator::clean_text_value($legacy_flat);
+
+			$export_cell = isset($cells[$ordinal_by_key[$key]])
+				? (string)$cells[$ordinal_by_key[$key]]
+				: '';
+
+			// accepted deviations (same allowlist as export_value_parity_Test):
+			// (1) relation components without ddo children produced
+			//     separator-only strings in the legacy grid; atoms: ''
+			// (2) relation records whose children resolve to nothing left
+			//     empty row segments in the legacy join; atoms drop them
+				if ($export_cell==='' && trim($legacy_flat, ' |,')==='') {
+					continue;
+				}
+				$drop_empty_records = function(string $value) : string {
+					$segments = array_filter(
+						array_map('trim', explode(' | ', $value)),
+						fn($segment) => $segment!==''
+					);
+					return implode(' | ', $segments);
+				};
+				if ($export_cell!==$legacy_flat && $export_cell===$drop_empty_records($legacy_flat)) {
+					$compared++;
+					continue;
+				}
+
+			$this->assertSame(
+				$legacy_flat,
+				$export_cell,
+				"expected value format parity for $key ($first_path->model)"
+			);
+			$compared++;
+		}
+
+		$this->assertGreaterThan(3, $compared, 'expected meaningful direct-ddo coverage');
+	}//end test_export_value_format_parity
+
+
+
+	/**
+	* TEST_export_dedalo_raw_cells
+	* dedalo_raw cells must be byte-equal to the legacy get_raw_value
+	* encoding ({"dedalo_data":...} / plain int section_id) and the
+	* headers must follow the import grammar (tipo / 'section_id')
+	* @return void
+	*/
+	public function test_export_dedalo_raw_cells() {
+
+		$this->user_login();
+
+		$options		= $this->get_export_grid_options('dedalo_raw');
+		$tool_export	= $this->build_export_tool($options, 2);
+		$export_grid	= $this->drain_export_lines($tool_export);
+
+		$col_by_ordinal = [];
+		foreach ($export_grid->columns as $col) {
+			$col_by_ordinal[$col->i] = $col;
+		}
+
+		$first_row	= $export_grid->rows[0];
+		$cells		= (array)$first_row->c;
+		$section_id	= $first_row->rec;
+
+		$compared = 0;
+		foreach ($cells as $ordinal => $cell_value) {
+
+			$col		= $col_by_ordinal[(int)$ordinal];
+			$first_path	= null;
+			foreach ($options->ar_ddo_to_export as $ddo) {
+				$fp = $ddo->path[0];
+				if ($fp->section_tipo.'_'.$fp->component_tipo === $col->key) {
+					$first_path = $fp;
+					break;
+				}
+			}
+			if ($first_path===null) {
+				continue;
+			}
+
+			// legacy reference
+				$is_translatable	= ontology_node::get_translatable($first_path->component_tipo);
+				$component			= component_common::get_instance(
+					$first_path->model,
+					$first_path->component_tipo,
+					$section_id,
+					'edit',
+					$is_translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
+					$first_path->section_tipo,
+					false
+				);
+				$legacy_raw = $component->get_raw_value();
+
+			if ($col->label==='section_id') {
+				// plain int (record key on re-import)
+					$this->assertIsInt($cell_value, "expected int section_id cell");
+			}else{
+				// byte-equal pre-encoded string + import grammar header (tipo)
+					$this->assertSame(
+						json_encode($legacy_raw->value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+						$cell_value,
+						"expected raw byte parity for $col->key"
+					);
+					$this->assertSame(
+						$first_path->component_tipo,
+						$col->label,
+						'expected raw header = component tipo (import grammar)'
+					);
+			}
+			$compared++;
+		}
+
+		$this->assertGreaterThan(3, $compared, 'expected meaningful raw coverage');
+	}//end test_export_dedalo_raw_cells
+
+
+
+	/**
+	* TEST_value_with_parents_per_ddo
+	* The 'export parents' option is honored per export column: the per-ddo
+	* flag (current_ddo->value_with_parents, per-component checkbox) enables
+	* the ancestor chain for that column only; the global option (setup
+	* value_with_parents, general checkbox) enables it for every column.
+	* Uses a synthetic row (relation data injected, no DB writes) whose
+	* portal locator targets test3 record 1, which has parents (test71).
+	* @return void
+	*/
+	public function test_value_with_parents_per_ddo() {
+
+		$this->user_login();
+
+		// fixture: seed a resolvable thesaurus term (test3 thesaurus.term =
+		// test52) on every record of record 1 CURRENT parent chain (lifecycle
+		// tests rewrite the parent locator across runs), then bust the ts
+		// session term cache (earlier tests may have cached empty values)
+			$ar_parents = component_relation_parent::get_parents_recursive(1, 'test3');
+			$this->assertNotEmpty($ar_parents, 'fixture guard: test3 record 1 must have parents (test71)');
+			foreach ($ar_parents as $parent_locator) {
+				$term_component = component_common::get_instance(
+					'component_input_text', 'test52', (string)$parent_locator->section_id,
+					'edit', DEDALO_DATA_LANG, 'test3', false
+				);
+				if (empty($term_component->get_data())) {
+					$term_component->set_data(['Parent term ' . $parent_locator->section_id]);
+					$this->assertNotFalse($term_component->Save(), 'fixture seed: failed saving the parent term');
+				}
+			}
+			ts_object::clear();
+
+		// export column: portal (test80) resolving the target section_id (test102)
+			$build_portal_ddo = function(bool $with_parents) : object {
+				$ddo = json_handler::decode('{
+					"id": "test3_test80_test3_test102_list_lg-nolan",
+					"tipo": "test80",
+					"section_tipo": "test3",
+					"model": "component_portal",
+					"parent": "test3",
+					"lang": "lg-nolan",
+					"label": "Portal",
+					"path": [
+						{"section_tipo":"test3","component_tipo":"test80","model":"component_portal","name":"Portal"},
+						{"section_tipo":"test3","component_tipo":"test102","model":"component_section_id","name":"Id"}
+					]
+				}');
+				if ($with_parents) {
+					$ddo->value_with_parents = true;
+				}
+				return $ddo;
+			};
+
+		// synthetic row: host record 2 (NOT 1: autoreference locators are
+		// dropped) with the portal locator injected as row relation data
+			$row = (object)[
+				'section_tipo'	=> 'test3',
+				'section_id'	=> 2,
+				'relation'		=> (object)[
+					'test80' => [ (object)['section_tipo'=>'test3', 'section_id'=>'1'] ]
+				]
+			];
+
+		// helper: run get_record_atoms and collect the parents atoms
+			$get_parents_atoms = function(object $options_tpl, object $ddo, object $row) : array {
+				$options = clone $options_tpl;
+				$options->ar_ddo_to_export = [$ddo];
+				$tool_export = $this->build_export_tool($options);
+				$get_record_atoms = new ReflectionMethod(tool_export::class, 'get_record_atoms');
+				$ar_entries = $get_record_atoms->invoke($tool_export, $options->ar_ddo_to_export, $row);
+				$this->assertCount(1, $ar_entries);
+				return array_values(array_filter($ar_entries[0]->value->atoms, function($atom){
+					return $atom->get_leaf_segment()->sub_id==='parents';
+				}));
+			};
+
+		$options_tpl = $this->get_export_grid_options('value');
+
+		// per-ddo flag ON (global off): parents atoms present
+			$parents_on = $get_parents_atoms($options_tpl, $build_portal_ddo(true), $row);
+			$this->assertNotEmpty($parents_on, 'expected parents atoms with the per-ddo flag on');
+
+		// per-ddo flag OFF and global OFF (defaults): no parents atoms
+			$parents_off = $get_parents_atoms($options_tpl, $build_portal_ddo(false), $row);
+			$this->assertSame([], $parents_off, 'expected NO parents atoms with both flags off');
+
+		// global ON, per-ddo absent: parents atoms present (general checkbox)
+			$options_global = clone $options_tpl;
+			$options_global->value_with_parents = true;
+			$parents_global = $get_parents_atoms($options_global, $build_portal_ddo(false), $row);
+			$this->assertNotEmpty($parents_global, 'expected parents atoms with the global flag on');
+
+		// same chain in both enabled variants
+			$this->assertSame(
+				array_map(fn($a) => $a->value, $parents_on),
+				array_map(fn($a) => $a->value, $parents_global)
+			);
+	}//end test_value_with_parents_per_ddo
+
+
+
+	/**
+	* TEST_iterate_export_lines_order
+	* The generator yields meta first, then col/row lines (every col
+	* before any row that uses it), end last
+	* @return void
+	*/
+	public function test_iterate_export_lines_order() {
+
+		$this->user_login();
+
+		$options		= $this->get_export_grid_options('grid_value');
+		$tool_export	= $this->build_export_tool($options, 2);
+
+		// setup() must have replaced the client limit/offset with the
+		// internal full-selection sentinel (regression guard)
+			$this->assertSame('ALL', $tool_export->sqo->limit, 'expected setup() to force the ALL sentinel');
+			$this->assertSame(0, $tool_export->sqo->offset, 'expected setup() to reset the offset');
+
+		$seen_meta	= false;
+		$seen_end	= false;
+		$declared	= [];
+		$line_count	= 0;
+		foreach ($tool_export->iterate_export_lines() as $line) {
+			$line_count++;
+			$this->assertFalse($seen_end, 'no lines after end');
+			switch ($line->t) {
+				case 'meta':
+					$this->assertSame(1, $line_count, 'meta must be the first line');
+					$seen_meta = true;
+					break;
+				case 'col':
+					$declared[$line->i] = true;
+					break;
+				case 'row':
+					$this->assertTrue($seen_meta);
+					foreach ((array)$line->c as $ordinal => $v) {
+						$this->assertTrue(
+							isset($declared[(int)$ordinal]),
+							'every col line must precede the rows that use it'
+						);
+					}
+					break;
+				case 'end':
+					$seen_end = true;
+					break;
+			}
+		}
+		$this->assertTrue($seen_meta && $seen_end, 'expected complete protocol stream');
+	}//end test_iterate_export_lines_order
 
 
 

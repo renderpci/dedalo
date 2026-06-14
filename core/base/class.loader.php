@@ -46,6 +46,7 @@ include DEDALO_CORE_PATH . '/common/class.counter.php';
 include DEDALO_CORE_PATH . '/common/class.label.php';
 include DEDALO_CORE_PATH . '/common/class.exec_.php';
 include DEDALO_CORE_PATH . '/common/class.locator.php';
+include DEDALO_CORE_PATH . '/common/class.dataframe_caller.php'; // dataframe pairing caller DTO
 include DEDALO_CORE_PATH . '/common/class.dd_date.php';
 include DEDALO_CORE_PATH . '/common/class.request_config_presets.php';
 include DEDALO_CORE_PATH . '/common/class.dd_object.php'; // new 12-06-2019
@@ -72,6 +73,11 @@ include DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php';
 // dd grid
 include DEDALO_CORE_PATH . '/dd_grid/class.dd_grid_cell_object.php'; // new 27-07-2021
 include DEDALO_CORE_PATH . '/dd_grid/class.indexation_grid.php'; // new 28-07-2021
+// export contract (atoms based component export value)
+include DEDALO_CORE_PATH . '/dd_grid/class.export_path_segment.php';
+include DEDALO_CORE_PATH . '/dd_grid/class.export_atom.php';
+include DEDALO_CORE_PATH . '/dd_grid/class.export_value.php';
+include DEDALO_CORE_PATH . '/dd_grid/class.export_context.php';
 // component_common
 include DEDALO_CORE_PATH . '/component_common/class.component_common.php';
 include DEDALO_CORE_PATH . '/component_common/class.lock_components.php';
@@ -85,14 +91,27 @@ include DEDALO_CORE_PATH . '/search/class.search_tm.php';
 include DEDALO_CORE_PATH . '/search/class.search_related.php';
 include DEDALO_CORE_PATH . '/widgets/widget_common/class.widget_common.php';
 // Diffusion
-include DEDALO_DIFFUSION_PATH . '/class.diffusion.php';
+// DEDALO_DIFFUSION_CUSTOM: optional custom overrides file defined in config
+// (legacy constant name DIFFUSION_CUSTOM is still accepted as fallback)
+$diffusion_custom_file = defined('DEDALO_DIFFUSION_CUSTOM') && !empty(DEDALO_DIFFUSION_CUSTOM)
+	? DEDALO_DIFFUSION_CUSTOM
+	: ((defined('DIFFUSION_CUSTOM') && !empty(DIFFUSION_CUSTOM)) ? DIFFUSION_CUSTOM : null);
+if ($diffusion_custom_file!==null) {
+	if (!include_once $diffusion_custom_file) {
+		debug_log(__METHOD__
+			. " Diffusion custom file not found" . PHP_EOL
+			. ' file: ' . to_string($diffusion_custom_file)
+			, logger::ERROR
+		);
+	}
+}
+unset($diffusion_custom_file);
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_section_stats.php';
-include DEDALO_DIFFUSION_PATH . '/class.diffusion_sql.php';
-include DEDALO_DIFFUSION_PATH . '/class.diffusion_mysql.php';
-include DEDALO_DIFFUSION_PATH . '/class.diffusion_object.php';
+include DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php';
+include DEDALO_DIFFUSION_PATH . '/class.diffusion_api_client.php';
+include DEDALO_DIFFUSION_PATH . '/class.diffusion_delete.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_chain_processor.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_utils.php';
-include DEDALO_DIFFUSION_PATH . '/class.diffusion_data.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_data_object.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_datum.php';
 include DEDALO_DIFFUSION_PATH . '/class.diffusion_fn.php';
@@ -114,6 +133,9 @@ include DEDALO_CORE_PATH . '/api/v1/common/class.dd_mcp_api.php';
 include DEDALO_CORE_PATH . '/api/v1/common/class.dd_agent_api.php';
 // tools
 include DEDALO_TOOLS_PATH . '/tool_common/class.tool_common.php';
+// tool_paths is included unconditionally (not autoloaded) because the
+// autoloader itself consults it for multi-root tool resolution
+include DEDALO_TOOLS_PATH . '/tool_common/class.tool_paths.php';
 // Shared
 include DEDALO_SHARED_PATH . '/class.TR.php';
 include DEDALO_SHARED_PATH . '/class.OptimizeTC.php';
@@ -228,8 +250,17 @@ class class_loader {
 
 			// tools
 			case (str_starts_with($class_name, 'tool')):
-				$directory	= ($class_name==='tools_register') ? 'tool_common' : $class_name;
-				$file_path	= DEDALO_TOOLS_PATH . '/' . $directory . '/class.' . $class_name . '.php';
+				// classes that live inside tool_common (subsystem infrastructure)
+				$tool_common_classes = ['tools_register','tool_ontology_map','tool_security','tool_paths'];
+				if (in_array($class_name, $tool_common_classes, true)) {
+					$file_path = DEDALO_TOOLS_PATH . '/tool_common/class.' . $class_name . '.php';
+					break;
+				}
+				// multi-root resolution (DEDALO_ADDITIONAL_TOOLS); falls back to
+				// the primary root path when the tool exists in no root so the
+				// historical "file not found" error stays unchanged
+				$file_path = tool_paths::get_tool_class_file($class_name)
+					?? DEDALO_TOOLS_PATH . '/' . $class_name . '/class.' . $class_name . '.php';
 				break;
 
 			// diffusion
@@ -255,6 +286,13 @@ class class_loader {
 			defined('DEDALO_DIFFUSION_PATH') ? realpath(DEDALO_DIFFUSION_PATH) : false,
 			defined('DEDALO_SHARED_PATH')    ? realpath(DEDALO_SHARED_PATH)    : false,
 		]);
+		// additional tools roots (DEDALO_ADDITIONAL_TOOLS), already
+		// realpath-canonicalized and policy-checked by tool_paths
+		if (class_exists('tool_paths', false)) {
+			foreach (array_slice(tool_paths::get_roots(), 1) as $additional_root) {
+				$ok_roots[] = $additional_root->path;
+			}
+		}
 		if ($real_path === false || empty($ok_roots)) {
 			// Fall through — `include` below will error out loudly. We do not
 			// hard-fail here because some unit-test bootstraps use virtual

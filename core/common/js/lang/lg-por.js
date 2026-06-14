@@ -111,6 +111,7 @@
     "name_to_field": "Sufixo indica campo",
     "name_to_record_id": "Prefixo indica ID",
     "presets_de_busqueda": "Configuração de procura",
+    "presets_de_exportacion": "Configuração de exportação",
     "search_options": "Opções de procura",
     "fields": "Campos",
     "and": "e",

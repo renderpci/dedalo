@@ -1,267 +1,221 @@
 <?php declare(strict_types=1);
-
 require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
+require_once dirname(dirname(__FILE__)) . '/diffusion/class.diffusion_test_helper.php';
+
+/**
+* DD_DIFFUSION_API_TEST
+* Tests the PHP half of the diffusion publish pipeline and the auxiliary
+* API actions. Ontology-guarded: skips cleanly on databases without a
+* usable diffusion ontology (e.g. an outdated install dump).
+*/
+final class dd_diffusion_api_Test extends BaseTestCase {
+
+	public static $model = 'dd_diffusion_api';
+
+	protected function setUp(): void {
+		parent::setUp();
+		$this->user_login();
+	}
 
 
-final class dd_diffusion_api_test extends BaseTestCase {
 
-    protected function setUp(): void {
-       
-    $this->markTestSkipped('This entire class is currently disabled.');
+	/**
+	* TEST_VALIDATE_ACTION
+	* validate() checks the diffusion ontology configuration against the
+	* virtual tree and reports per-element findings.
+	*/
+	public function test_validate_action(): void {
 
-        // Ensure we are logged in as superuser for tests
-        login_Test::force_login(1);
-    }
+		$config = diffusion_test_helper::require_diffusion_ontology($this);
 
-    /**
-     * TEST_GET_ONTOLOGY_MAP
-     * Verifies that the API returns the correct ddo_map for a diffusion node.
-     */
-    public function test_get_ontology_map(): void {
-        
-        $source_tipo = 'numisdata411'; // A table with migrated ddo_map
-        
-        $rqo = (object)[
-            'dd_api' => 'dd_diffusion_api',
-            'action' => 'get_ontology_map',
-            'source' => (object)[
-                'diffusion_tipo' => $source_tipo
-            ]
-        ];
+		// single element validation
+		$response = dd_diffusion_api::validate((object)[
+			'action'	=> 'validate',
+			'options'	=> (object)['diffusion_element_tipo' => $config->element_tipo]
+		]);
 
-        $_ENV['DEDALO_LAST_ERROR'] = null;
-        $response = dd_diffusion_api::get_ontology_map($rqo);
+		$this->assertTrue($response->result, 'validate() failed: ' . to_string($response->msg));
+		$this->assertIsArray($response->data);
+		$this->assertCount(1, $response->data);
 
-        $this->assertTrue(empty($_ENV['DEDALO_LAST_ERROR']), 'Should run without errors');
-        $this->assertTrue($response->result === true, 'Response result should be true');
-        $this->assertIsObject($response->data, 'Should return data as object');
-        
-        if (empty((array)$response->data)) {
-            $this->markTestSkipped('No process property found for ' . $source_tipo . '. Skipping ddo_map checks.');
-            return;
-        }
+		$element_report = $response->data[0];
+		$this->assertSame($config->element_tipo, $element_report->element_tipo);
+		$this->assertIsArray($element_report->checks);
 
-        $this->assertIsArray($response->data->ddo_map, 'Should return ddo_map as array');
-        $this->assertGreaterThan(0, count($response->data->ddo_map), 'ddo_map should not be empty');
-        
-        // Verify structure of first item
-        $first_item = $response->data->ddo_map[0];
-        $this->assertObjectHasProperty('tipo', $first_item);
-        $this->assertObjectHasProperty('parent', $first_item);
-        $this->assertObjectHasProperty('section_tipo', $first_item);
-    }
+		$check_names = array_map(fn($c) => $c->check, $element_report->checks);
+		$this->assertContains('element_resolvable', $check_names);
+		$this->assertContains('diffusion_type', $check_names);
+		$this->assertContains('target_sections', $check_names);
+		$this->assertContains('database', $check_names, 'SQL element must be checked for database');
 
-    /**
-     * TEST_VALIDATE
-     * Verifies the validation of a diffusion request.
-     */
-    public function test_validate(): void {
-        
-        $rqo = (object)[
-            'dd_api' => 'dd_diffusion_api',
-            'action' => 'validate',
-            'source' => (object)[
-                'diffusion_tipo' => 'numisdata411'
-            ],
-            'sqo' => (object)[
-                'section_tipo' => ['numisdata3'],
-                'limit' => 1
-            ]
-        ];
+		// the guarded element is usable: its core checks must pass
+		foreach ($element_report->checks as $check) {
+			if (in_array($check->check, ['element_resolvable','diffusion_type','target_sections'])) {
+				$this->assertTrue($check->result, "Check '{$check->check}' failed for usable element: {$check->msg}");
+			}
+		}
 
-        $_ENV['DEDALO_LAST_ERROR'] = null;
-        $response = dd_diffusion_api::validate($rqo);
-
-        $this->assertTrue(empty($_ENV['DEDALO_LAST_ERROR']), 'Should run without errors');
-        $this->assertTrue($response->result === true, 'Validation should pass');
-    }
-
-    /**
-     * TEST_DIFFUSE
-     * Verifies the full diffusion process for a specific record.
-     */
-    public function test_diffuse(): void {
-        
-        // Use a section that is likely to have data or just check execution
-        $rqo = (object)[
-            'dd_api' => 'dd_diffusion_api',
-            'action' => 'diffuse',
-            'source' => (object)[
-                'diffusion_tipo' => 'numisdata411'
-            ],
-            'sqo' => (object)[
-                'section_tipo' => ['numisdata3'],
-                'limit' => 1
-            ],
-            'options' => (object)[
-                'include_debug' => true,
-                'levels' => 3
-            ]
-        ];
-
-        $_ENV['DEDALO_LAST_ERROR'] = null;
-        $response = dd_diffusion_api::diffuse($rqo);
-
-        $this->assertTrue(empty($_ENV['DEDALO_LAST_ERROR']), 'Should run without errors. ' . ($_ENV['DEDALO_LAST_ERROR'] ?? ''));
-        $this->assertTrue($response->result === true, 'Diffusion should succeed');
-        $this->assertIsArray($response->langs, 'Should return langs array');
-        $this->assertIsArray($response->main, 'Should return main hierarchy');
-        $this->assertIsArray($response->datum, 'Should return datum array');
-        
-        if (count($response->datum) > 0) {
-            $first_datum = $response->datum[0];
-            $this->assertObjectHasProperty('diffusion_node', $first_datum);
-            $this->assertObjectHasProperty('section_tipo', $first_datum);
-            $this->assertObjectHasProperty('context', $first_datum);
-            $this->assertObjectHasProperty('data', $first_datum);
-        }
-    }
+		// full domain validation returns one report per element
+		$response_all = dd_diffusion_api::validate((object)['action' => 'validate']);
+		$this->assertTrue($response_all->result);
+		$this->assertGreaterThanOrEqual(1, count($response_all->data));
+	}//end test_validate_action
 
 
-    /**
-     * TEST_MISSING_PARAMS
-     * Verifies error handling for missing parameters.
-     */
-    public function test_missing_params(): void {
-        
-        $rqo = (object)[
-            'dd_api' => 'dd_diffusion_api',
-            'action' => 'diffuse',
-            'source' => (object)[] // Missing diffusion_tipo
-        ];
 
-        $_ENV['DEDALO_LAST_ERROR'] = null;
-        $response = dd_diffusion_api::diffuse($rqo);
+	/**
+	* TEST_RETRY_PENDING_DELETIONS_COUNT
+	*/
+	public function test_retry_pending_deletions_count(): void {
 
-        $this->assertFalse($response->result, 'Should fail without required params');
-        $this->assertNotEmpty($response->errors, 'Should contain error messages');
-    }
+		diffusion_test_helper::require_activity_action_ontology($this);
+
+		$response = dd_diffusion_api::retry_pending_deletions((object)[
+			'action'	=> 'retry_pending_deletions',
+			'options'	=> (object)['count_only' => true]
+		]);
+
+		$this->assertNotEmpty($response->result, 'count_only request failed: ' . to_string($response->msg));
+		$this->assertIsInt($response->result->pending);
+		$this->assertGreaterThanOrEqual(0, $response->result->pending);
+	}//end test_retry_pending_deletions_count
 
 
-     /**
-     * TEST_NEW_PROPERTIES
-     * Verifies that the API returns the correct ddo_map for a diffusion node.
-     */
-    public function test_new_properties(): void {
-        
-        $source_tipo = 'rsc275'; // A table with migrated ddo_map
-        
-         // Use a section that is likely to have data or just check execution
-        $rqo = (object)[
-            'dd_api' => 'dd_diffusion_api',
-            'action' => 'diffuse',
-            'source' => (object)[
-                'diffusion_tipo' => $source_tipo
-            ],
-            'sqo' => (object)[
-                'select' => [],
-                'section_tipo' => ['rsc167'],
-                'limit' => 1,
-                'offset' => 1
-            ],
-            'options' => (object)[
-                'include_debug' => true,
-                'levels' => 1
-            ]
-        ];
 
-        $_ENV['DEDALO_LAST_ERROR'] = null;
-        $response = dd_diffusion_api::diffuse($rqo);
+	/**
+	* TEST_RESOLVE_MEDIA_INDEX_TARGETS
+	* Every SQL/socrata publication target resolved from the ontology must
+	* carry the full {database_name, table_name, section_tipo} triple the
+	* Bun rebuild_media_index action requires.
+	*/
+	public function test_resolve_media_index_targets(): void {
 
-        dump($response, ' response +++++++++++++++++++++++ // +++++++++++++++++++++++++ '.to_string());
-        $this->assertIsArray($response->datum, 'Should return datum array');
-        
-        if (count($response->datum) > 0) {
-            $first_datum = $response->datum[0];
-            $this->assertObjectHasProperty('diffusion_node', $first_datum);
-            $this->assertObjectHasProperty('context', $first_datum);
-            $this->assertObjectHasProperty('data', $first_datum);
-        }
-    }
+		$config = diffusion_test_helper::require_diffusion_ontology($this);
 
-    /**
-     * TEST_VERIFY_RSC267_RESOLUTION
-     * Runs diffusion on rsc264 (which uses rsc267/rsc28 for cross-section) and checks output
-     */
-    public function test_verify_rsc267_resolution(): void {
-        
-        $source_tipo = 'rsc264';
-        
-        $rqo = (object)[
-            'dd_api' => 'dd_diffusion_api',
-            'action' => 'diffuse',
-            'source' => (object)[
-                'diffusion_tipo' => $source_tipo,
-                'lang' => 'lg-eng'
-            ],
-            'sqo' => (object)[
-                'section_tipo' => ['rsc170'],
-                'limit'        => 1
-            ],
-            'options' => (object)[
-                'include_debug' => true,
-                'include_empty' => true
-            ]
-        ];
+		$targets = dd_diffusion_api::resolve_media_index_targets();
 
-        $response = dd_diffusion_api::diffuse($rqo);
-        
-        if (empty($response->datum)) {
-            print_r($response);
-            $this->fail("RESPONSE ERROR: datum is empty.");
-        }
+		$this->assertIsArray($targets);
+		$this->assertNotEmpty($targets, 'usable SQL diffusion ontology must yield at least one media index target');
 
-        $datum    = $response->datum[0] ?? null;
-        if (!$datum) { 
-            print_r($response);
-            $this->fail("Datum is null"); 
-        }
-        
-        // Data is now inside datum->value (not data property, typically) or datum->data?
-        // Standard DDO from API has 'data' as array of records.
-        $entries = $datum->data[0]->entries ?? null;
-        if ($entries === null) {
-            print_r($datum);
-            $this->fail("Entries is null inside data[0]!");
-        }
+		$seen = [];
+		foreach ($targets as $target) {
+			$this->assertNotEmpty($target->database_name);
+			$this->assertNotEmpty($target->table_name);
+			$this->assertNotEmpty($target->section_tipo);
+			// dedupe contract
+			$key = $target->database_name .'|'. $target->table_name .'|'. $target->section_tipo;
+			$this->assertArrayNotHasKey($key, $seen, 'duplicated media index target: ' . $key);
+			$seen[$key] = true;
+		}
 
-        // Verify rsc927 (Project) - rsc28 maps to rsc927 diffusion node
-        if (property_exists($entries, 'rsc927')) { // Using diffusion node tipo as key
-             $rsc28_val = $entries->rsc927;
-             
-             // Should be list of values
-             $this->assertIsArray($rsc28_val, "rsc927 value should be an array");
-             
-             if (!empty($rsc28_val)) {
-                $first_item = $rsc28_val[0];
-                echo "DEBUG: rsc927 item[0]: " . print_r($first_item, true) . PHP_EOL;
-                
-                // VERIFY: It should be a diffusion_data_object (The "New Object" requested by user)
-                $this->assertInstanceOf(diffusion_data_object::class, $first_item, "rsc927 item should be a diffusion_data_object");
-                
-                // Verify Metadata
-                $this->assertNotEmpty($first_item->diffusion_tipo, "DDO should have diffusion_tipo");
-                // Expected: oh112 (Project) or similar
-                
-                // Verify Deep Data Resolution
-                // The value of this DDO should contain the project's resolved data (entries)
-                $target_value = $first_item->value;
-                $this->assertIsArray($target_value, "DDO value should be an array (entries list)");
-                $this->assertNotEmpty($target_value, "DDO value should not be empty");
-                
-                // Check content of target entries if possible (e.g. project name)
-                // $target_entry = $target_value[0];
-                
-                echo "SUCCESS: rsc927 contains valid EXPANDED DDO." . PHP_EOL;
-             } else {
-                 echo "WARNING: rsc927 value is empty." . PHP_EOL;
-             }
-        } else {
-             // Try check if key is not rsc28 but something else?
-             // Standard api uses diffusion keys usually.. but if component resolution uses component key..
-             // Let's print keys
-             print_r(array_keys((array)$entries));
-             $this->fail("rsc927 field not found within rsc264 entries.");
-        }
-    }
-}
+		// the guarded element's section must be covered
+		$section_tipos = array_column($targets, 'section_tipo');
+		$this->assertContains($config->section_tipo, $section_tipos);
+	}//end test_resolve_media_index_targets
+
+
+
+	/**
+	* TEST_GET_DIFFUSION_INFO
+	*/
+	public function test_get_diffusion_info(): void {
+
+		$config = diffusion_test_helper::require_diffusion_ontology($this);
+
+		$response = dd_diffusion_api::get_diffusion_info((object)[
+			'action'	=> 'get_diffusion_info',
+			'options'	=> (object)['section_tipo' => $config->section_tipo]
+		]);
+
+		$this->assertNotEmpty($response->result, 'get_diffusion_info failed: ' . to_string($response->msg));
+		$this->assertIsArray($response->result->section_diffusion_nodes);
+		$this->assertNotEmpty($response->result->section_diffusion_nodes, 'Section with diffusion returned no nodes');
+		$this->assertIsInt($response->result->resolve_levels);
+	}//end test_get_diffusion_info
+
+
+
+	/**
+	* TEST_DIFFUSE_PIPELINE
+	* The PHP half of the publish pipeline: search + chain resolution +
+	* datum assembly. Asserts the response carries the canonical wire shape
+	* (no Bun involved). Uses an existing record of the guarded section.
+	*/
+	public function test_diffuse_pipeline(): void {
+
+		$config = diffusion_test_helper::require_diffusion_ontology($this);
+
+		// find one existing record of the guarded section
+		$conn	= DBi::_getConnection();
+		$table	= common::get_matrix_table_from_tipo($config->section_tipo) ?? 'matrix';
+		$result	= pg_query_params(
+			$conn,
+			'SELECT section_id FROM "' . $table . '" WHERE section_tipo = $1 ORDER BY section_id ASC LIMIT 1',
+			[$config->section_tipo]
+		);
+		$row = pg_fetch_object($result);
+		if (empty($row)) {
+			$this->markTestSkipped("No records exist in section {$config->section_tipo} to diffuse");
+		}
+		$section_id = (int)$row->section_id;
+
+		// the diffusion node (table) of the section for the guarded element
+		$diffusion_tipo = diffusion_utils::get_table_tipo($config->element_tipo, $config->section_tipo);
+		$this->assertNotEmpty($diffusion_tipo, 'No diffusion table tipo resolved');
+
+		// minimal SQO restricted to the chosen record
+		$locator = new locator();
+			$locator->set_section_tipo($config->section_tipo);
+			$locator->set_section_id($section_id);
+
+		$rqo = (object)[
+			'action'	=> 'diffuse',
+			'source'	=> (object)['type' => 'diffuse'],
+			'sqo'		=> (object)[
+				'section_tipo'			=> [$config->section_tipo],
+				'filter_by_locators'	=> [$locator],
+				'limit'					=> 1
+			],
+			'options'	=> (object)[
+				'diffusion_tipo'			=> $diffusion_tipo,
+				'diffusion_element_tipo'	=> $config->element_tipo,
+				'levels'					=> 1
+			]
+		];
+
+		$response = dd_diffusion_api::diffuse($rqo);
+
+		$this->assertTrue($response->result, 'diffuse() failed: ' . to_string($response->msg));
+		$this->assertIsArray($response->langs);
+		$this->assertNotEmpty($response->main_lang);
+		$this->assertIsArray($response->main);
+		$this->assertIsArray($response->datum);
+		$this->assertNotEmpty($response->datum, 'diffuse() produced no datum');
+
+		// canonical datum_group container + wire key order
+		$datum = $response->datum[0];
+		$this->assertInstanceOf(diffusion_datum::class, $datum);
+		$keys = array_keys((array)json_decode(json_encode($datum)));
+		$this->assertSame(
+			['diffusion_tipo','section_tipo','term','model','parent','context','data'],
+			$keys,
+			'datum_group wire key order changed'
+		);
+
+		// context fields carry the column definitions
+		$this->assertNotEmpty($datum->get_context());
+		$context_field = $datum->get_context()[0];
+		foreach (['term','tipo','model','parent','parser','columns'] as $key) {
+			$this->assertObjectHasProperty($key, $context_field, "context field missing '$key'");
+		}
+
+		// the requested record is in the datum data
+		$data = $datum->get_data();
+		$this->assertNotEmpty($data, 'datum data is empty');
+		$ids = array_map(fn($r) => (int)$r->section_id, $data);
+		$this->assertContains($section_id, $ids, 'Requested record missing from datum');
+	}//end test_diffuse_pipeline
+
+
+
+}//end class dd_diffusion_api_Test

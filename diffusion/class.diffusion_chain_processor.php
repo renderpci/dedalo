@@ -97,10 +97,11 @@ class diffusion_chain_processor {
 	/**
 	 * RESOLVE_DDO_VALUE
 	 * Resolves a single DDO node, either getting terminal data or recursing.
-	 * Supports fn property for custom method dispatch:
-	 * - Component methods: "fn": "get_section_id"
-	 * - Class methods: "fn": "diffusion_sql::map_to_terminoID"
-	 * 
+	 * Supports the `fn` property for custom component-method dispatch, e.g.
+	 * "fn": "get_section_id". (DIFFU-05: the unused "Class::method" string-dispatch
+	 * helper was removed; component fn resolution lives in
+	 * component_common::get_diffusion_data.)
+	 *
 	 * @param object $ddo
 	 * @param array $ddo_map
 	 * @param string $section_tipo
@@ -187,9 +188,11 @@ class diffusion_chain_processor {
 		}
 
 		// Fetch linked diffusion node settings to check for explicit publish override
-		$diffusion_tipo = $ddo->diffusion_tipo;
+		// DIFFU-06: fall back to $current_tipo when diffusion_tipo is absent (matches
+		// the fallback used elsewhere) and null-guard the node before get_properties().
+		$diffusion_tipo = $ddo->diffusion_tipo ?? $current_tipo;
 		$diffusion_node = ontology_node::get_instance($diffusion_tipo);
-		$properties = $diffusion_node->get_properties();
+		$properties = $diffusion_node ? $diffusion_node->get_properties() : null;
 		$publishable = $properties->is_publishable ?? null;
 
 
@@ -212,6 +215,19 @@ class diffusion_chain_processor {
 		$is_first_ddo = $ddo_map[0]->tipo === $current_tipo;
 
 		foreach ($ar_locators as $locator) {
+
+			// Guard: component diffusion values may contain scalars (non-locator
+			// data); only locator objects can be resolved through the chain.
+			// A TypeError here would abort the whole publish run.
+			if (!is_object($locator) || !isset($locator->section_tipo)) {
+				debug_log(__METHOD__
+					. " Ignored non-locator value in relation chain resolution" . PHP_EOL
+					. ' ddo tipo: ' . to_string($current_tipo) . PHP_EOL
+					. ' value: ' . to_string($locator)
+					, logger::WARNING
+				);
+				continue;
+			}
 
 			// Check publishability of the LINKED section (not the parent section).
 			// $publishable (from diffusion node properties) overrides the live check.
@@ -293,11 +309,14 @@ class diffusion_chain_processor {
 				if(!empty($valid_sections_tipo) && !in_array($locator->section_tipo, $valid_sections_tipo)){
 					continue;
 				}else{
-					// Fallback: If no children resolved (either bypassed due to not being in the 
-					// whitelist, or child resolution returned empty), simply return the raw 
-					// locator object itself without extracting deeper data of that linked section.
-					$new_diffusion_data[0]->value[] = $locator;
-					$relation_values = $new_diffusion_data;
+					// Fallback: If no children resolved (either bypassed due to not being in the
+					// whitelist, or child resolution returned empty), use the raw locator
+					// object itself as the value without extracting deeper data.
+					// DIFFU-09: APPEND to the accumulator. The previous
+					// `$relation_values = $new_diffusion_data` reassigned it, discarding
+					// every value collected from earlier locators in this loop (and mixing
+					// the wrapper shape into the flat value-item list that line 319 expects).
+					$relation_values[] = $locator;
 				}
 			}
 		}
@@ -368,46 +387,6 @@ class diffusion_chain_processor {
 
 
 
-	/**
-	 * BUILD_ENTRIES
-	 * Groups resolved diffusion_data_objects by their DDO id.
-	 * 
-	 * @param array $resolved_data Array of diffusion_data_object
-	 * @return object Object with keys as DDO ids
-	 */
-	public function build_entries(array $resolved_data): object {
-		
-		$entries = new stdClass();
-
-		foreach ($resolved_data as $ddo_res) {
-			// Use id as key if present (preferred for multiple child chains), fallback to node_tipo
-			$key = $ddo_res->id ?? $ddo_res->node_tipo ?? null;
-			if (!$key) continue;
-
-			if (!isset($entries->{$key})) {
-				// First value: keep exactly as obtained
-				$entries->{$key} = $ddo_res;
-			} else {
-				// Merge subsequent values: ensure we have an array
-				$current_value  = $entries->{$key}->value;
-				$incoming_value = $ddo_res->value;
-
-				if (!is_array($current_value)) {
-					$current_value = [$current_value];
-				}
-				
-				if (is_array($incoming_value)) {
-					$current_value = array_merge($current_value, $incoming_value);
-				} else {
-					$current_value[] = $incoming_value;
-				}
-
-				$entries->{$key}->value = $current_value;
-			}
-		}
-
-		return $entries;
-	}
 
 
 
@@ -419,73 +398,6 @@ class diffusion_chain_processor {
 		return (object)[
 			'chain_string' => implode(' → ', array_unique($this->debug_chain))
 		];
-	}
-
-
-
-	/**
-	 * DISPATCH_CLASS_METHOD
-	 * Calls a custom static class method handler configured in the DDO map.
-	 * format "ClassName::methodName"
-	 * 
-	 * Enables executing specialized external resolution hooks (e.g., custom SQL mappings, 
-	 * thesaurus lookups, or value transformations) where standard component getters 
-	 * do not suffice for the export format structure.
-	 * 
-	 * @param string $fn Static method identifier string (e.g., "diffusion_sql::map_to_terminoID")
-	 * @param object $element The Component instance executing within the scope
-	 * @param object $ddo DDO configuration map context
-	 * @return array<diffusion_data_object> Uniform array of resolved output payload items
-	 */
-	private function dispatch_class_method(string $fn, object $element, object $ddo): array {
-		
-		// Parse string for static method call convention segments
-		$parts = explode('::', $fn);
-		if (count($parts) !== 2) {
-			debug_log(__METHOD__ . " Invalid class method format: $fn", logger::ERROR);
-			return [];
-		}
-
-		$class_name  = $parts[0];
-		$method_name = $parts[1];
-
-		// Verify execution target safely prior to attempting dynamic call triggers
-		if (!class_exists($class_name) || !method_exists($class_name, $method_name)) {
-			debug_log(__METHOD__ . " Class or method not found: $fn", logger::ERROR);
-			return [];
-		}
-
-		try {
-			// Call static method supplying the active component and configuration DDO
-			$result = $class_name::$method_name($element, $ddo);
-
-			// Normalize single result items into iterable containers standard arrays
-			if (!is_array($result)) {
-				$result = [$result];
-			}
-
-			$ar_results = [];
-			foreach ($result as $item) {
-				if ($item instanceof diffusion_data_object) {
-					$ar_results[] = $item;
-				} else {
-					
-					// Wrap raw values into structured datasets standard output container payload structs
-					$ar_results[] = new diffusion_data_object((object)[
-						'tipo'  => $ddo->tipo,
-						'lang'  => null,
-						'value' => $item,
-						// missing id from ddo->id review this ???
-					]);
-				}
-			}
-
-			return $ar_results;
-
-		} catch (Exception $e) {
-			debug_log(__METHOD__ . " Error calling $fn: " . $e->getMessage(), logger::ERROR);
-			return [];
-		}
 	}
 
 

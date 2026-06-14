@@ -6,12 +6,19 @@
 
 
 // imports
-	import {clone} from '../../../core/common/js/utils/index.js'
 	import {render_components_list} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {dd_request_idle_callback, when_in_viewport} from '../../../core/common/js/events.js'
 	import {downloadZip} from './lib/client-zip/index.js'
+	import {
+		presets_section_tipo,
+		load_user_export_presets,
+		create_new_export_preset,
+		save_export_preset,
+		edit_user_export_preset
+	} from './export_user_presets.js'
+	import {render_preset_modal, select_preset} from '../../../core/section/js/view_export_user_presets.js'
 
 
 
@@ -21,6 +28,35 @@
 */
 export const render_tool_export = function() {
 }//end render_tool_export
+
+
+
+/**
+* RELATION_MODELS
+* Mirror of component_relation_common::get_components_with_relations() (PHP).
+* Used to decide which selected export components get the per-component
+* 'parents' checkbox (ancestor chain export of their locator targets)
+*/
+const relation_models = new Set([
+	'component_autocomplete',
+	'component_autocomplete_hi',
+	'component_check_box',
+	'component_filter',
+	'component_filter_master',
+	'component_portal',
+	'component_publication',
+	'component_radio_button',
+	'component_relation_children',
+	'component_relation_index',
+	'component_relation_model',
+	'component_relation_parent',
+	'component_relation_related',
+	'component_relation_struct',
+	'component_select',
+	'component_select_lang',
+	'component_inverse',
+	'component_dataframe'
+])
 
 
 
@@ -115,6 +151,8 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'user_selection_list',
 			parent			: selection_list_contaniner
 		})
+		// store reference so user presets (apply_export_preset) can rebuild the selection
+		self.user_selection_list = user_selection_list
 		// empty_space
 		const empty_space = ui.create_dom_element({
 			element_type	: 'div',
@@ -161,6 +199,9 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'export_buttons_config',
 			parent			: grid_top
 		})
+
+		// user presets (save/load export configurations per user, DB backed)
+			render_presets_ui(self, export_buttons_config)
 
 		// records info
 			ui.create_dom_element({
@@ -240,6 +281,8 @@ const get_content_data_edit = async function(self) {
 					self.data_format = select_data_format_export.value
 					// store to preserve across reloads
 					localStorage.setItem('selected_data_format_export', select_data_format_export.value);
+					// breakdown mode only applies to the breakdown format
+					update_breakdown_state()
 				}
 				select_data_format_export.addEventListener('change', change_handler)
 
@@ -265,9 +308,70 @@ const get_content_data_edit = async function(self) {
 					parent			: select_data_format_export
 				})
 
-				// fix selector value
-				self.data_format = localStorage.getItem('selected_data_format_export') || 'standard'
+				// fix selector value (note: stored legacy 'standard' value maps to 'value')
+				const stored_data_format = localStorage.getItem('selected_data_format_export')
+				self.data_format = (stored_data_format && ['value','grid_value','dedalo_raw'].includes(stored_data_format))
+					? stored_data_format
+					: 'value'
 				select_data_format_export.value = self.data_format
+
+		// breakdown mode selector (relation explosion, only for the breakdown format)
+			const breakdown_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'data_format breakdown_mode',
+				inner_html		: (get_label.breakdown || 'Breakdown'),
+				parent			: export_buttons_config
+			})
+			const select_breakdown_export = ui.create_dom_element({
+				element_type	: 'select',
+				class_name		: 'select_breakdown_export',
+				parent			: breakdown_container
+			})
+			const breakdown_change_handler = () => {
+				self.breakdown = select_breakdown_export.value
+				localStorage.setItem('selected_breakdown_export', select_breakdown_export.value);
+			}
+			select_breakdown_export.addEventListener('change', breakdown_change_handler)
+
+			// default: legacy semantics (first relation level rows, nested columns)
+			ui.create_dom_element({
+				element_type	: 'option',
+				inner_html		: get_label.standard || 'Default',
+				value			: 'default',
+				parent			: select_breakdown_export
+			})
+			// rows: every relation item becomes an extra row
+			ui.create_dom_element({
+				element_type	: 'option',
+				inner_html		: get_label.rows || 'Rows',
+				value			: 'rows',
+				parent			: select_breakdown_export
+			})
+			// columns: every relation item becomes extra columns (one row per record)
+			ui.create_dom_element({
+				element_type	: 'option',
+				inner_html		: get_label.columns || 'Columns',
+				value			: 'columns',
+				parent			: select_breakdown_export
+			})
+
+			const stored_breakdown = localStorage.getItem('selected_breakdown_export')
+			self.breakdown = (stored_breakdown && ['default','rows','columns'].includes(stored_breakdown))
+				? stored_breakdown
+				: 'default'
+			select_breakdown_export.value = self.breakdown
+
+			// enable the selector only when the breakdown format is active;
+			// the parents checkbox applies to value/breakdown formats only
+			// (dedalo_raw exports the dato as is)
+			const update_breakdown_state = () => {
+				select_breakdown_export.disabled = (self.data_format!=='grid_value')
+				const parents_check = document.querySelector('.value_with_parents_check')
+				if (parents_check) {
+					parents_check.disabled = (self.data_format==='dedalo_raw')
+				}
+			}
+			update_breakdown_state()
 
 		// Options to check
 			const options_to_check = ui.create_dom_element({
@@ -303,6 +407,26 @@ const get_content_data_edit = async function(self) {
 					class_name		: 'option_check_box show_tipo_in_label_check',
 					parent			: show_tipo_in_label
 				})
+
+			// value_with_parents check_box. Export the ancestor chain of
+			// relation targets (thesaurus/hierarchy, e.g. component_autocomplete_hi)
+			// as sibling 'parents' columns. Default unchecked (disallow).
+			// Not applicable to the dedalo_raw format (raw exports the dato as is).
+				const value_with_parents_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'check_label value_with_parents',
+					inner_html		: self.get_tool_label('value_with_parents') || 'Export parents',
+					parent			: options_to_check
+				})
+				const value_with_parents_check = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					class_name		: 'option_check_box value_with_parents_check',
+					parent			: value_with_parents_node
+				})
+				value_with_parents_check.checked	= false
+				// initial state (update_breakdown_state ran before this node existed)
+				value_with_parents_check.disabled	= (self.data_format==='dedalo_raw')
 
 		// button_export
 			const button_export = ui.create_dom_element({
@@ -344,29 +468,37 @@ const get_content_data_edit = async function(self) {
 					})
 					const show_tipo_in_label	= show_tipo_in_label_check.checked;
 					const fill_the_gaps			= fill_the_gaps_check.checked;
+					const value_with_parents	= value_with_parents_check.checked;
 
 				// loading class elements
 					[button_export, components_list_container, selection_list_contaniner, export_buttons_options].forEach(
 						el => el?.classList.add('loading')
 					)
 
-				// export_grid
+				// export_grid (flat table protocol)
 					const export_grid_options = {
 						data_format			: self.data_format,
+						breakdown			: self.breakdown,
 						ar_ddo_to_export	: self.ar_ddo_to_export,
 						show_tipo_in_label	: show_tipo_in_label,
 						fill_the_gaps		: fill_the_gaps,
-						view				: 'table'
+						value_with_parents	: value_with_parents
 					}
-					const dd_grid = await self.get_export_grid(export_grid_options)
+					const flat_table = await self.get_export_grid(export_grid_options)
 
-					if(dd_grid) {
-						// Render grid node
-						const dd_grid_export_node = await dd_grid.render()
-						// Appemd DOM node to export_data_container
-						if (dd_grid_export_node) {
-							export_data_container.appendChild(dd_grid_export_node)
-							// export_buttons_options.scrollIntoView(true)
+					if (flat_table) {
+						// mount the live preview table; streamed rows append into it
+						const table_node = flat_table.render_table()
+						export_data_container.appendChild(table_node)
+
+						// media availability is recomputed when the stream ends:
+						// breakdown columns (and their leaf models) can arrive mid-stream
+						flat_table.on_end = () => {
+							if (button_download_media) {
+								self.media_components_in_data = get_media_models_in_data(self)
+								const style_action = self.media_components_in_data.length ? 'remove' : 'add'
+								button_download_media.classList[style_action]('loading')
+							}
 						}
 					}else{
 						response_container.innerHTML = 'No data to export'
@@ -378,22 +510,6 @@ const get_content_data_edit = async function(self) {
 					}
 					if(spinner) {
 						spinner.remove()
-					}
-
-				// check if some allowed media component is present in the data
-				// if not, the button_download_media will be lock to prevent use it
-					if (button_download_media) {
-						// fix values from grid data parsing models in portals
-						self.grid_values = get_parsed_grid_values(self)
-
-						const models_in_data		= self.grid_values.map(item => item.model)
-						const models_in_data_unique	= [...new Set(models_in_data)];
-
-						// set updated value
-						self.media_components_in_data = models_in_data_unique.filter(el => self.media_components.has(el));
-
-						const style_action = self.media_components_in_data.length ? 'remove' : 'add'
-						button_download_media.classList[style_action]('loading')
 					}
 
 				// hide class remove
@@ -446,6 +562,7 @@ const get_content_data_edit = async function(self) {
 							lang			: ddo.lang,
 							mode			: ddo.mode,
 							label			: ddo.label,
+							value_with_parents	: false, // per-component parents export (checkbox in the item)
 							path			: path // full path from current section replaces ddo single path
 						}
 
@@ -510,11 +627,10 @@ const get_content_data_edit = async function(self) {
 			})
 			button_export_csv.addEventListener('click', async function() {
 
-				// dd_grid
-					const dd_grid		= self.dd_grid
-					dd_grid.view		= 'csv'
-					await dd_grid.build(false)
-					const csv_string	= await dd_grid.render()
+				if (!self.flat_table) return
+
+				// flat table to CSV (';' separated, RFC quoted)
+					const csv_string = self.flat_table.to_delimited(';', true)
 
 				// Download it
 					const file	= filename + '.csv';
@@ -537,11 +653,10 @@ const get_content_data_edit = async function(self) {
 			})
 			button_export_tsv.addEventListener('click', async function() {
 
-				// dd_grid
-					const dd_grid		= self.dd_grid
-					dd_grid.view		= 'tsv'
-					await dd_grid.build(false)
-					const tsv_string	= await dd_grid.render()
+				if (!self.flat_table) return
+
+				// flat table to TSV (tab separated, unquoted)
+					const tsv_string = self.flat_table.to_delimited('\t', false)
 
 				// Download it
 					const file	= filename + '.tsv';
@@ -563,13 +678,14 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 			button_export_ods.addEventListener('click', async function() {
+
+				if (!self.flat_table) return
+
 				// Download it
 					const file	= filename+ '.ods';
 
-					const dd_grid		= self.dd_grid
-					dd_grid.view		= 'table_export'
-					await dd_grid.build(false)
-					const table_export	= await dd_grid.render()
+					// plain text-only table (sheetjs input)
+					const table_export = self.flat_table.render_table({plain: true})
 
 					self.export_table_with_xlsx_lib({
 						table		: table_export,
@@ -585,13 +701,14 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 			button_export_excel.addEventListener('click', async function() {
+
+				if (!self.flat_table) return
+
 				// Download it
 				const file	= filename+ '.xlsx';
 
-				const dd_grid		= self.dd_grid
-				dd_grid.view		= 'table_export'
-				await dd_grid.build(false)
-				const table_export	= await dd_grid.render()
+				// plain text-only table (sheetjs input)
+				const table_export = self.flat_table.render_table({plain: true})
 
 				self.export_table_with_xlsx_lib({
 					table		: table_export,
@@ -680,6 +797,238 @@ const get_content_data_edit = async function(self) {
 
 
 /**
+* RENDER_PRESETS_UI
+* Builds the user export presets toolbar: a panel (hidden by default) holding
+* the presets list plus 'New preset' / 'Save preset' buttons, and a toggle
+* button that opens the panel and lazy-loads the list.
+* Mirrors the search presets UI (core/search/js/render_search.js).
+* @param object self - The tool_export instance
+* @param HTMLElement parent
+* @return HTMLElement presets_block
+*/
+const render_presets_ui = function(self, parent) {
+
+	// presets_block. Themed, collapsible block placed at the top of the config column
+		const presets_block = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_presets',
+			parent			: parent
+		})
+
+	// header. Always visible: title + New + collapse toggle
+		const presets_header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_presets_header',
+			parent			: presets_block
+		})
+		// title
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'export_presets_title',
+			inner_html		: get_label.presets_de_exportacion || 'Export presets',
+			parent			: presets_header
+		})
+		// button_new_preset
+		const button_add_preset = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'export_presets_new',
+			inner_html		: '+',
+			title			: get_label.new || 'New',
+			parent			: presets_header
+		})
+		// toggle chevron (visual; the whole header is the click target)
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'export_presets_toggle',
+			title			: get_label.preset || 'Presets',
+			parent			: presets_header
+		})
+
+	// panel. Collapsible body: save button + presets list (collapsed by default)
+		const presets_panel = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_presets_panel display_none',
+			parent			: presets_block
+		})
+		self.export_presets_panel = presets_panel
+
+		// button_save_preset (hidden until a preset is selected)
+		const button_save_preset = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'export_presets_save button_save_preset hide',
+			inner_html		: (get_label.save || 'Save') + ' ' + (get_label.changes || 'changes'),
+			parent			: presets_panel
+		})
+		self.button_save_preset = button_save_preset
+
+		// list container (the presets section list mounts here)
+		const presets_list = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'export_presets_list',
+			parent			: presets_panel
+		})
+		self.export_presets_list = presets_list
+
+	// events
+
+		// new preset
+		button_add_preset.addEventListener('click', async (e) => {
+			e.stopPropagation()
+
+			// make sure the panel is open so the new preset is visible in the list
+			open_export_presets(self)
+
+			// create_new_export_preset (stores current config as the new preset)
+			const section_id = await create_new_export_preset({
+				self			: self,
+				section_tipo	: presets_section_tipo
+			})
+			if (!section_id) {
+				return
+			}
+
+			// launch the editor for name / public / default
+			const section = await edit_user_export_preset(self, section_id)
+
+			// open modal to edit the new preset
+			render_preset_modal({
+				caller		: section,
+				section_id	: section_id,
+				on_close	: async () => {
+
+					// force refresh the presets list
+					if (self.user_presets_section) {
+						self.user_presets_section.total = null
+						await self.user_presets_section.refresh()
+					}
+
+					// activate created preset (mark selected, do not re-apply)
+					dd_request_idle_callback(
+						() => {
+							const button_apply = document.getElementById('apply_preset_' + section_id)
+							if (button_apply) {
+								select_preset({
+									self			: self,
+									section_id		: section_id,
+									button_apply	: button_apply,
+									load_preset		: false
+								})
+							}
+						}
+					)
+				}
+			})
+		})
+
+		// save current config to the selected preset
+		button_save_preset.addEventListener('click', (e) => {
+			e.stopPropagation()
+
+			// check user_preset_section_id is already set
+			if (!self.user_preset_section_id) {
+				return
+			}
+
+			save_export_preset({
+				self			: self,
+				section_id		: self.user_preset_section_id,
+				section_tipo	: presets_section_tipo
+			})
+			.then(function(response){
+				if (response && response.result) {
+					button_save_preset.classList.add('hide')
+				}
+			})
+		})
+
+		// toggle the panel (clicking anywhere on the header except the New button)
+		presets_header.addEventListener('click', function(){
+			toggle_export_presets(self)
+		})
+
+
+	return presets_block
+}//end render_presets_ui
+
+
+
+/**
+* TOGGLE_EXPORT_PRESETS
+* Shows or hides the export presets panel and lazy-loads the presets list on
+* first open.
+* @param object self - The tool_export instance
+* @return promise bool
+*/
+const toggle_export_presets = async function(self) {
+
+	const panel = self.export_presets_panel
+
+	// validate
+		if (!panel || !(panel instanceof HTMLElement)) {
+			console.error('toggle_export_presets: panel not found or invalid');
+			return
+		}
+
+	// close case
+		if (!panel.classList.contains('display_none')) {
+			panel.classList.add('display_none')
+			self.export_presets_panel.parentNode?.classList.remove('open')
+			return true
+		}
+
+	// open case
+		await open_export_presets(self)
+
+
+	return true
+}//end toggle_export_presets
+
+
+
+/**
+* OPEN_EXPORT_PRESETS
+* Opens the export presets panel and lazy-loads the presets list on first open.
+* @param object self - The tool_export instance
+* @return promise bool
+*/
+const open_export_presets = async function(self) {
+
+	const panel	= self.export_presets_panel
+	const list	= self.export_presets_list
+
+	// validate
+		if (!panel || !(panel instanceof HTMLElement)) {
+			return false
+		}
+
+	// reveal panel
+		panel.classList.remove('display_none')
+		panel.parentNode?.classList.add('open')
+
+	// load presets list on first open
+		if (!self.user_presets_section && list) {
+
+			// loading message
+			const loading_node = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'export_presets_loading notes loading',
+				inner_html		: (get_label.loading || 'Loading') + '..',
+				parent			: list
+			})
+
+			self.user_presets_section = await load_user_export_presets(self)
+			const user_presets_node = await self.user_presets_section.render()
+			loading_node.remove()
+			list.appendChild(user_presets_node)
+		}
+
+
+	return true
+}//end open_export_presets
+
+
+
+/**
 * BUILD_EXPORT_COMPONENT
 * Creates export_component DOM item
 * @param object ddo
@@ -710,6 +1059,41 @@ render_tool_export.prototype.build_export_component = async function(ddo) {
 				inner_html		: label + '<span> [' + ddo.tipo + '] ' + ddo.model + '</span>',
 				parent			: export_component
 			})
+
+	// parents check (relation components only). Per-component override of the
+	// global 'Export parents' option: exports the ancestor chain of this
+	// component locator targets as a sibling 'parents' column. Persisted with
+	// the ddo in the local DB config (update_local_db_data saves whole ddos).
+		if (relation_models.has(ddo.model)) {
+			const parents_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'export_component_parents',
+				title			: self.get_tool_label('value_with_parents') || 'Export parents',
+				parent			: export_component
+			})
+			const parents_check = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				class_name		: 'option_check_box export_component_parents_check',
+				parent			: parents_label
+			})
+			parents_check.checked = ddo.value_with_parents===true
+			ui.create_dom_element({
+				element_type	: 'span',
+				inner_html		: get_label.parents || 'parents',
+				parent			: parents_label
+			})
+			// prevent the click/drag of the checkbox from triggering the
+			// item sort drag handlers (the export_component is draggable)
+			parents_label.addEventListener('click', e => e.stopPropagation())
+			parents_label.addEventListener('mousedown', e => e.stopPropagation())
+			parents_label.draggable = false
+			parents_check.addEventListener('change', () => {
+				ddo.value_with_parents = parents_check.checked
+				// save local db data (ddo reference is shared with ar_ddo_to_export)
+				self.update_local_db_data()
+			})
+		}
 
 	// button close
 		const export_component_button_close = ui.create_dom_element({
@@ -861,6 +1245,7 @@ const do_sortable = function(element, self) {
 							lang			: ddo.lang,
 							mode			: ddo.mode,
 							label			: ddo.label,
+							value_with_parents	: false, // per-component parents export (checkbox in the item)
 							path			: path // full path from current section replaces ddo single path
 						}
 
@@ -896,35 +1281,43 @@ const do_sortable = function(element, self) {
 
 
 /**
-* GET_PARSED_GRID_VALUES
-* Get dd_grid values and overwrites models base in the
-* self.ar_ddo_to_export (user components selection)
+* GET_MEDIA_COLUMNS
+* Flat table columns holding media values. The column 'model' is the
+* LEAF component model resolved by the server (portals deep-resolve
+* correctly: a portal>image column reports component_image)
 * @param object self
 * 	tool_export instance
-* @return array grid_values
+* @return array columns
 */
-export const get_parsed_grid_values = (self) => {
+export const get_media_columns = (self) => {
 
-	if(!self.dd_grid) return []
+	if (!self.flat_table) return []
 
-	// grid_values from dd_grid extract values from dd_grid data
-	const grid_values = self.dd_grid.get_grid_values(self.dd_grid.data)
-
-	// overwrite model from grid_values with more accurate ar_ddo_to_export
-	// this solves portals deep resolution inconsistencies
-	const ar_ddo_to_export = self.ar_ddo_to_export
-	ar_ddo_to_export.forEach(el => {
-		const id = el.path.map(item => item.section_tipo +'_'+ item.component_tipo).join('_')
-		const found = grid_values.filter(el => el.ar_columns_obj[0].id===id)
-		if (found) {
-			// overwrite the model as component_portal -> component_image
-			found.map(f => f.model = el.model)
+	const media_columns = []
+	for (const col of self.flat_table.cols.values()) {
+		if (col.model && self.media_components.has(col.model)) {
+			media_columns.push(col)
 		}
-	})
+	}
+
+	return media_columns
+}//end get_media_columns
 
 
-	return grid_values
-}//end get_parsed_grid_values
+
+/**
+* GET_MEDIA_MODELS_IN_DATA
+* Unique media component models present in the export columns
+* @param object self
+* 	tool_export instance
+* @return array models
+*/
+export const get_media_models_in_data = (self) => {
+
+	const models = get_media_columns(self).map(col => col.model)
+
+	return [...new Set(models)]
+}//end get_media_models_in_data
 
 
 
@@ -1117,9 +1510,11 @@ export const render_download_modal = (self) => {
 
 /**
 * DOWNLOAD_MEDIA
-* Search media files in dd_grid data and download the found media files fetching the URL
-* Default quality is used (e.g. '1.5MB' in images) in grid data. If we want to map to another
-* quality (e.g. 'original') we set the 'quality_parse' object value.
+* Search media files in the export flat table and download the found media
+* files fetching the URL.
+* Default quality is used (e.g. '1.5MB' in images) in the cells. If we want
+* to map to another quality (e.g. 'original') we set the 'quality_parse'
+* object value.
 * @param object self
 * 	tool_export instance
 * @param object|undefined quality_parse
@@ -1155,121 +1550,80 @@ const download_media = async function (self, quality_parse) {
 		return false
 	}
 
-	// grid_values (already calculated on submit with button export)
-	const grid_values = self.grid_values
-
 	// list of media models to parse
 	const ar_models_set = new Set(self.media_components_in_data)
 
-	// get value recursively from grid item
-	const get_value = (item) => {
+	// media columns of the flat table (leaf model resolved by the server)
+	const media_columns = get_media_columns(self).filter(col => ar_models_set.has(col.model))
 
-		if (!item || !item.value) {
-			return null
-		}
-
-		if (item.model && ar_models_set.has(item.model)) {
-			return {
-				url		: item.value,
-				model	: item.model
-			}
-		}
-
-		if (Array.isArray(item.value)) {
-			const ar_value = item.value.reduce((acc, inner_item) => {
-				const current_value = get_value(inner_item);
-				if (current_value) {
-					acc.push(current_value);
-				}
-				return acc;
-			}, []);
-			return ar_value.length ? ar_value : null;
-		}
-
+	const rows = self.flat_table ? self.flat_table.rows : []
+	if (!media_columns.length || !rows.length) {
 		return null
 	}
 
-	// extract values from grid data
-	const ar_values = []
-	const grid_values_length = grid_values.length
-	for (let i = 0; i < grid_values_length; i++) {
-
-		const item = grid_values[i]
-
-		const value = get_value(item)
-
-		if (value) {
-
-			if (Array.isArray(value)) {
-				value.forEach(el => {
-					ar_values.push(el)
-				})
-			}else{
-				ar_values.push(value)
-			}
-		}
-	}
-
-	// no values case
-	const ar_values_length = ar_values.length
-	if (!ar_values_length) {
-		return null
-	}
+	const is_raw = self.flat_table.meta && self.flat_table.meta.data_format==='dedalo_raw'
 
 	const failed_files = []
 	const url_list = []
-	const fill_url_list = (ar_values) => {
 
-		const ar_values_length = ar_values.length
-		for (let i = 0; i < ar_values_length; i++) {
+	for (const row of rows) {
+		for (const col of media_columns) {
 
-			const el = clone( ar_values[i] )
+			const cell = row.c[col.i]
+			if (cell===null || cell===undefined || cell==='') {
+				continue
+			}
 
-			if (Array.isArray(el)) {
-				fill_url_list(el)
-			}else{
+			const source_quality = get_quality(col.model, 'source')
+			const target_quality = get_quality(col.model, 'target')
 
-				const source_quality = get_quality(el.model, 'source')
-				const target_quality = get_quality(el.model, 'target')
-
-				// dedalo_raw case
-				// If export data format is dedalo_raw, the url is inside 'files_info' property
-				const nolan = 'lg-nolan'
-				if (el.url[nolan] && el.url[nolan][0].files_info) {
-
-					const found = el.url[nolan][0].files_info.find(el => el.quality===target_quality)
+			if (is_raw) {
+				// dedalo_raw case: the cell is the pre-encoded {"dedalo_data": <dato>}
+				// string (or {dato, dataframe}); the URL is inside 'files_info'
+				try {
+					const parsed = JSON.parse(String(cell))
+					let dato = parsed ? parsed.dedalo_data : null
+					if (dato && !Array.isArray(dato) && dato.dato) {
+						dato = dato.dato // {dato, dataframe} variant
+					}
+					const item			= Array.isArray(dato) ? dato[0] : null
+					const files_info	= item && item.files_info ? item.files_info : null
+					if (!files_info) {
+						continue
+					}
+					const found = files_info.find(el => el.quality===target_quality)
 					if (found) {
-						// overwrite URL
-						el.url = DEDALO_MEDIA_URL + found.file_path
+						url_list.push(DEDALO_MEDIA_URL + found.file_path)
 					}else{
 						// find thumb
-						const thumb = el.url[nolan][0].files_info.find(el => el.quality===page_globals.dedalo_quality_thumb)
-						if (thumb) {
-							failed_files.push( thumb.file_name )
-						}else{
-							failed_files.push( JSON.stringify( el.url[nolan][0].files_info ) )
-						}
-						continue; // skip item
+						const thumb = files_info.find(el => el.quality===page_globals.dedalo_quality_thumb)
+						failed_files.push(thumb ? thumb.file_name : JSON.stringify(files_info))
+					}
+				} catch (error) {
+					if(SHOW_DEBUG===true) {
+						console.log('Ignored unparsable raw media cell:', cell, error);
 					}
 				}
+				continue
+			}
 
-				const ar_url = Array.isArray(el.url) ? el.url : el.url.split(' | ')
-				ar_url.forEach(item => {
+			// standard/breakdown case: the cell holds the media URL(s),
+			// records_separator joined when multiple
+			const ar_url = String(cell).split(' | ')
+			for (const item of ar_url) {
 
-					if (!item || !item.length) {
-						return
-					}
+				if (!item || !item.length) {
+					continue
+				}
 
-					const url = (source_quality && target_quality && source_quality!==target_quality)
-						? item.replace('/'+source_quality+'/','/'+target_quality+'/')
-						: item
+				const url = (source_quality && target_quality && source_quality!==target_quality)
+					? item.replace('/'+source_quality+'/','/'+target_quality+'/')
+					: item
 
-					url_list.push(url)
-				})
+				url_list.push(url)
 			}
 		}
 	}
-	fill_url_list(ar_values)
 
 	const fetch_list = []
 	url_list.flat().forEach(function(url) {

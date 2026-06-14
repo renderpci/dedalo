@@ -960,6 +960,54 @@ final class component_date_test extends BaseTestCase {
 
 
 	/**
+	* TEST_conform_import_data_invalid
+	* Malformed dates must be reported as errors (standard failed objects)
+	* @return void
+	*/
+	public function test_conform_import_data_invalid() {
+
+		$component = $this->build_component_instance();
+
+		// invalid day and month
+		$response = $component->conform_import_data(
+			'45/13/2023', // import_value
+			self::$tipo . '_dmy' // column_name
+		);
+		$this->assertTrue(
+			!empty($response->errors),
+			'expected errors for invalid date 45/13/2023'
+		);
+		// errors are standard failed objects, not plain strings
+		foreach ($response->errors as $current_error) {
+			$this->assertIsObject($current_error, 'expected error to be a failed object');
+			$this->assertTrue(
+				property_exists($current_error, 'msg'),
+				'expected failed object to have msg property'
+			);
+		}
+
+		// valid v7 dato with 'id' property must not produce errors
+		$response = $component->conform_import_data(
+			'[{"start":{"year":2023,"month":10,"day":26},"id":1}]',
+			self::$tipo
+		);
+		$this->assertTrue(
+			empty($response->errors),
+			'expected empty errors for valid v7 dato with id property: '.to_string($response->errors)
+		);
+		$this->assertEquals(2023, $response->result[0]->start->year);
+
+		// malformed JSON items (plain strings) must be rejected, not stored nor crash
+		$response = $component->conform_import_data('["2023"]', self::$tipo);
+		$this->assertTrue(
+			!empty($response->errors),
+			'expected errors for JSON array of strings as date input'
+		);
+	}//end test_conform_import_data_invalid
+
+
+
+	/**
 	* TEST_update_data_version
 	* @return void
 	*/

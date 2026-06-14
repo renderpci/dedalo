@@ -123,10 +123,6 @@ trait request_config_v5 {
 			$request_config_object->set_show($show);
 			$request_config_object->set_sqo($sqo);
 
-		// LEGACY: Store ddo_map in dd_core_api for backward compatibility
-		// Some legacy code accesses this directly
-		dd_core_api::$context_dd_objects = $ddo_map;
-
 		return [$request_config_object];
 	}//end build_request_config_v5
 

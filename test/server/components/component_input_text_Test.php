@@ -331,33 +331,33 @@ final class component_input_text_test extends BaseTestCase {
 				. to_string($result->cell_type)
 		);
 
-		// value
+		// value. Atoms adapter shape: one element per data item (the clients
+		// join with records_separator, rendering the same ' | ' string the
+		// legacy pre-joined cell produced)
 		$items = array_filter($sample_data, function($el){
 			return $el->lang === 'lg-spa';
 		});
-		$values = array_map(function($el){
+		$values = array_values(array_map(function($el){
 			return $el->value;
-		}, $items);
-		$value_plain = implode(' | ', $values);
+		}, $items));
 		$this->assertTrue(
-			$result->value === [$value_plain],
+			$result->value === $values,
 			'expected value do not match:' . PHP_EOL
-				. 'expected: ' . to_string($value_plain) . PHP_EOL
+				. 'expected: ' . to_string($values) . PHP_EOL
 				. 'value: ' . to_string($result->value)
 		);
-
-		// fallback_value
-		$items = array_filter($sample_data, function($el){
-			return $el->lang === 'lg-eng';
-		});
-		$values = array_map(function($el){
-			return $el->value;
-		}, $items);
-		$value_plain = implode(' | ', $values);
+		// records_separator drives the client join (legacy pre-join glue)
 		$this->assertTrue(
-			$result->fallback_value === [$value_plain],
-			'expected fallback_value do not match:' . PHP_EOL
-				. 'expected: ' . to_string($value_plain) . PHP_EOL
+			$result->records_separator === ' | ',
+			'expected records_separator " | ": ' . to_string($result->records_separator)
+		);
+
+		// fallback_value. Atoms adapter: fallback atoms are emitted ONLY when
+		// the current lang has no data (lazy, unlike the legacy eager compute);
+		// with lg-spa data present the fallback is an empty array
+		$this->assertTrue(
+			$result->fallback_value === [],
+			'expected empty fallback_value when the current lang has data:' . PHP_EOL
 				. 'value: ' . to_string($result->fallback_value)
 		);
 

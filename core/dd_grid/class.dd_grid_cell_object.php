@@ -531,7 +531,17 @@ class dd_grid_cell_object {
 
 	/**
 	* RESOLVE_VALUE
-	* Get given dd_grid and flat his columns and rows join it as string value
+	* Get given dd_grid and flat his columns and rows join it as string value.
+	*
+	* LEGACY REFERENCE ONLY (atoms convergence): production value resolution
+	* runs on the atoms contract (component_common::get_value ->
+	* export_value::to_flat_string, which replicates these join semantics).
+	* This method has ZERO production callers and is kept as the legacy-join
+	* reference for the parity gates of the remaining structural
+	* get_grid_value overrides (relation/info/inverse) — see
+	* test/server/components/export_value_parity_Test.php. Do not call it
+	* from new code; delete it when those overrides converge.
+	*
 	* @param dd_grid_cell_object $dd_grid
 	* @return string $column_value|$row_value
 	*/

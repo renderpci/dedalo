@@ -1,5 +1,4 @@
-<?php
-// declare(strict_types=1); // NOT IN UNIT TEST !
+<?php declare(strict_types=1);
 /**
 * DIFFUSION_RDF
 * Used to publish data to RDF
@@ -11,8 +10,8 @@ class diffusion_rdf {
 	public $section_id;
 	public $rdf_wrapper;	// Array of RDF wrapper lines to inject body content at element $rdf_wrapper[rdf_value]
 
-	public $service_name;	// From propiedades of diffusion_element (Fixed on update_record)
-	public $service_type;	// From propiedades of diffusion_element (Fixed on update_record)
+	public $service_name;	// From properties of diffusion_element (Fixed on update_record)
+	public $service_type;	// From properties of diffusion_element (Fixed on update_record)
 	public $external_ontology_tipo; // the diffusion element tipo
 	// public $entity_section_id; //Fixed on update_record
 	public $ar_records; // Inject data here by tool diffusion when update_record
@@ -64,7 +63,6 @@ class diffusion_rdf {
 	* UPDATE_RECORD
 	* Unified diffusion start point to publish one record.
 	* Creates an RDF file with the resultant nodes of process given record.
-	* @see diffusion_sql::generate_rdf (called from)
 	* @param object $options
 	* @return object $response
 	*/
@@ -90,14 +88,13 @@ class diffusion_rdf {
 
 		// target_section_tipo
 			$ontology_node			= ontology_node::get_instance($diffusion_element_tipo);
-			$propiedades			= $ontology_node->get_propiedades(true);
-			// $target_section_tipo	= $propiedades->diffusion->target_section_tipo;
+			$properties				= $ontology_node->get_properties(true);
 
 		// Fix vars
 			$this->external_ontology_tipo	= $diffusion_element_tipo;
-			$this->service_name				= $propiedades->diffusion->service_name;
-			$this->service_type				= $propiedades->diffusion->service_type;
-			$this->name_space				= $propiedades->xmlns;
+			$this->service_name				= $properties->diffusion->service_name ?? null;
+			$this->service_type				= $properties->diffusion->service_type ?? null;
+			$this->name_space				= $properties->xmlns ?? null;
 			$this->entity_locator			= $this->resolve_entity_locator();
 
 		// search records
@@ -111,7 +108,26 @@ class diffusion_rdf {
 
 		// filter to publish records
 			if ($pure === false && $skip_publication_check === false) {
-				$ar_section_id = self::get_to_publish_rows($section_tipo, $ar_section_id);
+				$requested_ar_section_id	= array_map('strval', $ar_section_id);
+				$ar_section_id				= self::get_to_publish_rows($section_tipo, $ar_section_id);
+
+				// unpublish parity with the SQL path (fields:'delete'): records
+				// filtered out as not publishable get their published RDF file
+				// removed and the action logged as unpublished.
+				$publishable_ar_section_id	= array_map('strval', $ar_section_id);
+				$excluded_ar_section_id		= array_diff($requested_ar_section_id, $publishable_ar_section_id);
+				foreach ($excluded_ar_section_id as $excluded_section_id) {
+					$delete_response = self::delete_record_file($diffusion_element_tipo, $section_tipo, $excluded_section_id);
+					if ($delete_response->result===true && !empty($delete_response->deleted_files)) {
+						include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php';
+						diffusion_activity_logger::log(
+							$section_tipo,
+							(int)$excluded_section_id,
+							$diffusion_element_tipo,
+							diffusion_activity_logger::ACTION_UNPUBLISHED
+						);
+					}
+				}
 			}
 
 		// if empty ar_section_id stop
@@ -139,9 +155,6 @@ class diffusion_rdf {
 		}
 
 		// diffusion rdf
-			$current_date	= new DateTime();
-			$date			= $current_date->format('Y-m-d H_i_s');
-
 			$ar_owl_class_tipo	= ontology_node::get_ar_tipo_by_model_and_relation(
 				$diffusion_element_tipo,
 				'owl:Class',
@@ -191,28 +204,33 @@ class diffusion_rdf {
 			$response->data		= $build_response->data;
 			$response->msg		= array_merge($response->msg, $build_response->msg);
 
-		// saves publication data
+		// log publication activity (dd1758: who/when/what/where + action)
+		// one row per published record, replacing the legacy per-record
+		// publication metadata components (update_publication_data, removed in v7)
 		if ($pure === false) {
-			diffusion::update_publication_data($section_tipo, $section_id);
+			include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php';
+			foreach ($ar_section_id as $published_section_id) {
+				diffusion_activity_logger::log(
+					$section_tipo,
+					(int)$published_section_id,
+					$diffusion_element_tipo,
+					diffusion_activity_logger::ACTION_PUBLISHED
+				);
+			}
 		}
 
 		// save file
 			if ($save_file===true) {
 
-				$rdf_name = ontology_node::get_term_by_tipo($owl_class_tipo) ?? '';
-
-				$name_parts = [
-					$rdf_name,
-					$section_tipo,
-					$section_id,
-					logged_user_id(),
-					$date
-				];
-
-				$file_name			= sanitize_file_name(implode('_', $name_parts));
-				$rdf_file_name		= $file_name .'.rdf';
-				$save_to_file_path	= DEDALO_MEDIA_PATH . $sub_path . $rdf_file_name;
-				$url_file			= DEDALO_MEDIA_URL  . $sub_path . $rdf_file_name;
+				// deterministic name: one current file per record, overwritten
+				// on each re-publish (who/when live in the dd1758 activity log)
+				$file_info = self::get_record_file_path($diffusion_element_tipo, $section_tipo, $section_id);
+				if ($file_info===null) {
+					$response->msg[] = 'Error. Unable to resolve RDF file path';
+					return $response;
+				}
+				$save_to_file_path	= $file_info->file_path;
+				$url_file			= $file_info->file_url;
 				$data				= $build_response->data;
 
 				if( file_put_contents($save_to_file_path, $data)!==false ){
@@ -245,6 +263,159 @@ class diffusion_rdf {
 
 
 	/**
+	* GET_RECORD_FILE_PATH
+	* Resolves the canonical (deterministic) published RDF file path of a record:
+	* {rdf_name}_{section_tipo}_{section_id}.rdf inside /rdf/{service_name}/.
+	* Single source of truth shared by publish (update_record) and delete
+	* (delete_record_file / diffusion_delete) so re-publishing always overwrites
+	* the same file and deleting always targets it.
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return object|null {
+	* 	service_name: string,
+	* 	sub_path: string,
+	* 	file_name: string,
+	* 	file_path: string,
+	* 	file_url: string
+	* } or null when service_name/owl_class are not resolvable
+	*/
+	public static function get_record_file_path( string $diffusion_element_tipo, string $section_tipo, string|int $section_id ) : ?object {
+
+		// service_name from diffusion_element properties
+			$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
+			$properties		= $ontology_node->get_properties(true);
+			$service_name	= $properties->diffusion->service_name ?? null;
+			if (empty($service_name)) {
+				debug_log(__METHOD__
+					. " Unable to resolve service_name from diffusion_element properties" . PHP_EOL
+					. ' diffusion_element_tipo: ' . $diffusion_element_tipo
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// owl_class related to this section (the rdf_name source)
+			$owl_class_tipo		= null;
+			$ar_owl_class_tipo	= ontology_node::get_ar_tipo_by_model_and_relation(
+				$diffusion_element_tipo,
+				'owl:Class',
+				'children',
+				true // bool search_exact
+			);
+			foreach ($ar_owl_class_tipo as $current_class_tipo) {
+				$ar_current_section_tipo = ontology_node::get_ar_tipo_by_model_and_relation(
+					$current_class_tipo,
+					'section',
+					'related',
+					true // bool search_exact
+				);
+				$current_section_tipo = reset($ar_current_section_tipo);
+				if($current_section_tipo===$section_tipo) {
+					$owl_class_tipo = $current_class_tipo;
+					break;
+				}
+			}
+			if ($owl_class_tipo===null) {
+				debug_log(__METHOD__
+					. " Unable to resolve owl_class_tipo for section" . PHP_EOL
+					. ' diffusion_element_tipo: ' . $diffusion_element_tipo . PHP_EOL
+					. ' section_tipo: ' . $section_tipo
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// deterministic file name (one current file per record; user/date live
+		// in the dd1758 activity log and the publication metadata components)
+			$rdf_name	= ontology_node::get_term_by_tipo($owl_class_tipo) ?? '';
+			$file_name	= sanitize_file_name(implode('_', [
+				$rdf_name,
+				$section_tipo,
+				$section_id
+			])) . '.rdf';
+			$sub_path	= '/rdf/' . $service_name . '/';
+
+		$file_info = new stdClass();
+			$file_info->service_name	= $service_name;
+			$file_info->sub_path		= $sub_path;
+			$file_info->file_name		= $file_name;
+			$file_info->file_path		= DEDALO_MEDIA_PATH . $sub_path . $file_name;
+			$file_info->file_url		= DEDALO_MEDIA_URL  . $sub_path . $file_name;
+
+
+		return $file_info;
+	}//end get_record_file_path
+
+
+
+	/**
+	* DELETE_RECORD_FILE
+	* Removes the published RDF file of a record: the canonical deterministic
+	* file plus any legacy timestamped variants ({base}_*.rdf) written before
+	* the deterministic naming. Missing files = idempotent success.
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return object {result: bool, msg: string, file_path: string|null, deleted_files: array}
+	*/
+	public static function delete_record_file( string $diffusion_element_tipo, string $section_tipo, string|int $section_id ) : object {
+
+		$response = new stdClass();
+			$response->result			= false;
+			$response->msg				= '';
+			$response->file_path		= null;
+			$response->deleted_files	= [];
+
+		$file_info = self::get_record_file_path($diffusion_element_tipo, $section_tipo, $section_id);
+		if ($file_info===null) {
+			$response->msg = "RDF delete: unable to resolve file path for element '$diffusion_element_tipo', section $section_tipo $section_id";
+			return $response;
+		}
+		$response->file_path = $file_info->file_path;
+
+		// canonical file + legacy timestamped variants
+			$dir		= dirname($file_info->file_path);
+			$base_name	= pathinfo($file_info->file_name, PATHINFO_FILENAME);
+			$to_unlink	= [];
+			if (file_exists($file_info->file_path)) {
+				$to_unlink[] = $file_info->file_path;
+			}
+			$legacy_files = is_dir($dir)
+				? (glob($dir .'/'. $base_name .'_*.rdf') ?: [])
+				: [];
+			$to_unlink = array_merge($to_unlink, $legacy_files);
+
+		if (empty($to_unlink)) {
+			// nothing published (or already removed): idempotent success
+			$response->result	= true;
+			$response->msg		= 'RDF delete: no file found (already removed)';
+			return $response;
+		}
+
+		$all_ok = true;
+		foreach ($to_unlink as $file_path) {
+			if (unlink($file_path)) {
+				$response->deleted_files[] = $file_path;
+			}else{
+				$all_ok = false;
+				$response->msg = "RDF delete: failed to unlink file '$file_path' (check permissions)";
+				debug_log(__METHOD__ .' '. $response->msg, logger::ERROR);
+			}
+		}
+
+		$response->result = $all_ok;
+		if ($all_ok) {
+			$response->msg = 'RDF delete: removed '. count($response->deleted_files) .' file(s)';
+		}
+
+
+		return $response;
+	}//end delete_record_file
+
+
+
+	/**
 	* BUILD_RDF_XML
 	* Pure RDF/XML string generator. No file save, no publication side effects.
 	* Used by SQL field-level RDF embedding via diffusion_chain_processor.
@@ -266,37 +437,6 @@ class diffusion_rdf {
 
 		return $response->data ?? null;
 	}//end build_rdf_xml
-
-
-
-	/**
-	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
-	* Used to determine when show publication button in sections
-	* Called from class diffusion to get the RDF portion of sections
-	* @see diffusion::get_diffusion_sections_from_diffusion_element
-	* @param string $diffusion_element_tipo
-	* @param string|null $class_name = null
-	* @return array $ar_diffusion_sections
-	*/
-	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
-
-		$ar_diffusion_sections = array();
-
-		// XML elements
-		$elements = ontology_node::get_ar_tipo_by_model_and_relation($diffusion_element_tipo, 'owl:Class', 'children', true);
-		foreach ($elements as $current_element_tipo) {
-
-			# Pointer to section
-			$ar_related = common::get_ar_related_by_model('section', $current_element_tipo);
-
-			if (isset($ar_related[0])) {
-				$ar_diffusion_sections[] = $ar_related[0];
-			}
-		}
-
-
-		return $ar_diffusion_sections;
-	}//end get_diffusion_sections_from_diffusion_element
 
 
 
@@ -408,7 +548,7 @@ class diffusion_rdf {
 		$object_name		= ontology_node::get_term_by_tipo($ObjectProperty_tipo);
 		$object_model_name	= ontology_node::get_model_by_tipo($ObjectProperty_tipo);
 		$ontology_node		= ontology_node::get_instance($ObjectProperty_tipo);
-		$properties			= $ontology_node->get_propiedades(true);
+		$properties			= $ontology_node->get_properties(true);
 		// result of the recursion, to be used in the component_portals to check if the resource linked has data
 		// if yes, it will create the resource link in the graph, else, it will doesn't create the link
 		$result = false;
@@ -469,7 +609,7 @@ class diffusion_rdf {
 				$owl_class_tipo		= reset($ar_owl_class_tipo);
 
 				// max_items. (!) Notice that here we use the user configurable DEDALO_DIFFUSION_RESOLVE_LEVELS value as n items resolve (Example: 1 coins for current type)
-					$max_items = diffusion::get_resolve_levels();
+					$max_items = diffusion_utils::get_resolve_levels();
 
 				// process data locators
 					$data_length = empty($data) ? 0 : count($data);
@@ -483,7 +623,7 @@ class diffusion_rdf {
 						$current_locator = $data[$i];
 
 						// Check target is publicable
-							$current_is_publicable = diffusion_utils::get_is_publicable($current_locator);
+							$current_is_publicable = diffusion_utils::is_publishable($current_locator);
 							if ($current_is_publicable!==true) {
 								$max_items++;
 								continue;
@@ -1434,21 +1574,6 @@ class diffusion_rdf {
 		// Working here
 		debug_log(__METHOD__." Called unfinished class. Nothing is done ".to_string(), logger::WARNING);
 	}//end diffusion_complete_dump
-
-
-
-	/**
-	* GET_DIFFUSION_ELEMENT_TABLES_MAP
-	* @return object $diffusion_element_tables_map
-	*/
-	public function get_diffusion_element_tables_map() {
-
-		$diffusion_element_tables_map = new stdClass();
-
-		# Working here
-
-		return $diffusion_element_tables_map;
-	}//end get_diffusion_element_tables_map
 
 
 

@@ -91,7 +91,10 @@ function resolve_database_name(main: main_node[]): string {
 
 	// Look for database definition in the hierarchy (model: "database")
 	for (const node of main) {
-		if (node.model === 'database' || node.model === 'database_alias' && node.term) {
+		// DIFFTS-04: parenthesize — && binds tighter than ||, so without parens a
+		// plain 'database' node entered the branch even without a term and returned
+		// undefined. Require a term for both model kinds.
+		if ((node.model === 'database' || node.model === 'database_alias') && node.term) {
 			return node.term;
 		}
 	}
@@ -167,6 +170,7 @@ function process_datum_group(
 	return {
 		database_name,
 		table_name,
+		section_tipo: datum.section_tipo,
 		records,
 		deletions,
 		columns_context,

@@ -432,12 +432,14 @@ class component_relation_common extends component_common {
 				$current_path			= $locator->section_tipo.'_'.$ddo->tipo;
 				$translatable			= ontology_node::get_translatable($ddo->tipo);
 				// if the component has a dataframe component, create his caller_dataframe to related with the locator
+				// unified pairing: the key is the main data item id (locator->id)
 				$caller_dataframe 		= ($ddo->model === 'component_dataframe')
 					? (object)[
-						'section_tipo'			=> $ddo->section_tipo,
-						'section_id_key'		=> $locator->section_id,
-						'section_tipo_key'		=> $locator->section_tipo_key ?? null,
-						'main_component_tipo'	=> $locator->main_component_tipo ?? null
+						'section_tipo'			=> is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo,
+						'id_key'				=> $locator->id ?? null,
+						'section_id_key'		=> $locator->id ?? $locator->section_id_key ?? null, // legacy alias
+						'section_tipo_key'		=> $locator->section_tipo_key ?? $this->get_section_tipo(),
+						'main_component_tipo'	=> $locator->main_component_tipo ?? $this->tipo
 					  ]
 					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
@@ -609,6 +611,282 @@ class component_relation_common extends component_common {
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
+
+
+
+	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* Component driven recursion: for every data locator and every direct
+	* child ddo of this component in the ddo_map, the child component is
+	* instantiated and resolved; its atoms are merged extending the path.
+	* The child own segment carries the locator position (item_index), so
+	* row/column explosion is a tabulator decision — the legacy
+	* sub_columns_division flag and the request_config/column_obj instance
+	* injections are not ported (the ddo_map travels in the export_context).
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// request_config. The component own default; the legacy injected
+		// request_config is replaced by context->ddo_map
+			$request_config = isset($this->request_config)
+				? $this->request_config
+				: $this->build_request_config();
+			$dedalo_request_config = array_find($request_config, function($el){
+				return $el->api_engine==='dedalo';
+			});
+
+		// ddo_map. Export injection (context) wins, else the component default
+			$ddo_map = !empty($context->ddo_map)
+				? $context->ddo_map
+				: (is_object($dedalo_request_config) && isset($dedalo_request_config->show)
+					? ($dedalo_request_config->show->ddo_map ?? [])
+					: []);
+
+		// separators. legacy precedence: ddo > request_config->show > properties > joiner defaults
+			$properties			= $this->get_properties();
+			$fields_separator	= $context->ddo?->fields_separator
+				?? $dedalo_request_config?->show?->fields_separator
+				?? $properties?->fields_separator
+				?? null;
+			$records_separator	= $context->ddo?->records_separator
+				?? $dedalo_request_config?->show?->records_separator
+				?? $properties?->records_separator
+				?? null;
+
+		// own segment
+			$own_segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model'				=> $this->get_model(),
+				'fields_separator'	=> $fields_separator,
+				'records_separator'	=> $records_separator,
+				'item_index'		=> $context->item_index,
+				'section_id'		=> $context->item_section_id
+			]);
+			$base_path = [...$context->path_prefix, $own_segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data. locators
+			$data = $this->get_data() ?? [];
+
+		// direct children of this component in the ddo_map
+		// (component_relation_index recomputes them per locator, see hook)
+			$ddo_direct_children = array_filter($ddo_map, function($el){
+				return $el->parent === $this->tipo;
+			});
+			if (empty($ddo_direct_children) && get_called_class()!=='component_relation_index') {
+				debug_log(__METHOD__
+					. " WARNING! Empty ddo_direct_children for tipo: $this->tipo" .PHP_EOL
+					. 'ddo_map: ' . to_string($ddo_map) .PHP_EOL
+					. 'tipo: ' . to_string($this->tipo)
+					, logger::WARNING
+				);
+			}
+
+		foreach ($data as $current_key => $locator) {
+
+			// locator validations (as legacy get_grid_value)
+				if (empty($locator) || !isset($locator->section_tipo)) {
+					debug_log(__METHOD__
+						. ' Ignored empty or invalid locator' . PHP_EOL
+						. ' locator: ' . json_encode($locator)
+						, logger::ERROR
+					);
+					continue;
+				}
+				$tipo_is_valid = ontology_utils::check_tipo_is_valid($locator->section_tipo);
+				if (!$tipo_is_valid) {
+					debug_log(__METHOD__
+						. " Ignored locator with invalid target section. Install the missing TLD (".get_tld_from_tipo($locator->section_tipo).") or remove this locator from data " . PHP_EOL
+						. ' section_tipo: ' . to_string($locator->section_tipo) . PHP_EOL
+						. ' locator: ' . to_string($locator)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+			// per-locator children resolution (component_relation_index hook)
+				$resolved				= $this->resolve_export_ddo_children($ddo_map, $ddo_direct_children, $locator);
+				$current_ddo_map		= $resolved->ddo_map;
+				$current_ddo_children	= $resolved->ddo_direct_children;
+				if (empty($current_ddo_children)) {
+					continue;
+				}
+
+			foreach ($current_ddo_children as $ddo) {
+
+				// model check (as legacy)
+					if (!isset($ddo->model)) {
+						$ddo->model = ontology_node::get_model_by_tipo($ddo->tipo,true);
+						debug_log(__METHOD__
+							. " ddo without model ! Added calculated model: $ddo->model" . PHP_EOL
+							. ' ddo: ' . to_string($ddo)
+							, logger::WARNING
+						);
+					}
+					if (empty($ddo->model)) {
+						debug_log(__METHOD__
+							. " Ignored non existing ddo element (model is empty). Maybe the TLD is not installed " . PHP_EOL
+							. ' tipo: ' . to_string($ddo->tipo)
+							, logger::WARNING
+						);
+						continue;
+					}
+
+				// sub_ddo_map. descendant chain of this child in the ddo_map
+					$sub_ddo_map = $this->get_export_ddo_descendants($current_ddo_map, $ddo);
+
+				// cache. Children resolved deeper carry an injected ddo_map context;
+				// kept disabled for them as the legacy path did (parity / perf-neutral).
+				// Leaf children are cacheable.
+					$use_cache = empty($sub_ddo_map);
+
+				// the ddo can have multiple section_tipo (such as toponymy component_autocomplete)
+					$tmp_section_tipo		= $ddo->section_tipo;
+					$ddo_section_tipo		= is_array($tmp_section_tipo) ? reset($tmp_section_tipo) : $tmp_section_tipo;
+					$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo;
+
+				// lang / model
+					$translatable		= ontology_node::get_translatable($ddo->tipo);
+					$current_lang		= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+					$component_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
+
+				// if the component has a dataframe component, create his caller_dataframe to relate with the locator
+				// unified pairing: the key is the main data item id (locator->id)
+					$caller_dataframe = ($ddo->model === 'component_dataframe')
+						? (object)[
+							'section_tipo'			=> $ddo_section_tipo,
+							'id_key'				=> $locator->id ?? null,
+							'section_id_key'		=> $locator->id ?? $locator->section_id_key ?? null, // legacy alias
+							'section_tipo_key'		=> $locator->section_tipo_key ?? $this->get_section_tipo(),
+							'main_component_tipo'	=> $locator->main_component_tipo ?? $this->tipo
+						  ]
+						: null;
+
+				// create the child component with the ddo definition
+				// dataframe case: the data of the component_dataframe is inside the same section
+				// than the caller, so his section_tipo and section_id are the caller ones
+					$current_component = component_common::get_instance(
+						$component_model,
+						$ddo->tipo,
+						($ddo->model === 'component_dataframe')
+							? $this->section_id
+							: $locator->section_id,
+						$this->mode,
+						$current_lang,
+						($ddo->model === 'component_dataframe')
+							? $this->section_tipo
+							: $locator->section_tipo,
+						$use_cache,
+						$caller_dataframe
+					);
+					// set the locator to the new component, it will be used to know who created it
+					$current_component->set_locator($this->locator);
+
+				// child context. ddo_map and traversal position travel as arguments
+					$child_context = $context->descend(
+						$base_path, // array path_prefix
+						$sub_ddo_map, // array sub_ddo_map
+						$ddo, // object ddo
+						(int)$current_key, // int item_index
+						isset($locator->section_id) ? (int)$locator->section_id : null // int item_section_id
+					);
+
+				// merge the child atoms
+					$export_value->merge( $current_component->get_export_value($child_context) );
+			}//end foreach ($current_ddo_children as $ddo)
+
+			// parents. Optional ancestor chain of the locator target as a
+			// sibling 'parents' sub-column (export tool checkbox; mirrors the
+			// list-view ddinfo value_with_parents). One atom per ancestor,
+			// joined in the cell with ' > '. Targets without hierarchy
+			// (no component_relation_parent data) emit nothing.
+				if ($context->value_with_parents===true) {
+					$ar_parents_value = component_relation_common::get_locator_value(
+						$locator, // object locator
+						DEDALO_DATA_LANG, // string lang
+						true, // bool show_parents
+						null, // array|null ar_components_related
+						false // bool include_self (the term is already the main child value)
+					) ?? [];
+
+					if (!empty($ar_parents_value)) {
+						$parents_segment = new export_path_segment($locator->section_tipo, $this->tipo, (object)[
+							'sub_id'			=> 'parents',
+							'item_index'		=> (int)$current_key,
+							'section_id'		=> isset($locator->section_id) ? (int)$locator->section_id : null,
+							'fields_separator'	=> ' > '
+						]);
+						$parents_path = [...$base_path, $parents_segment];
+
+						$value_index = 0;
+						foreach ($ar_parents_value as $parent_value) {
+							if (empty($parent_value)) {
+								continue;
+							}
+							$export_value->add_atom( new export_atom($parents_path, $parent_value, (object)[
+								'value_index' => $value_index++
+							]) );
+						}
+					}
+				}
+		}//end foreach ($data as $current_key => $locator)
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
+	/**
+	* RESOLVE_EXPORT_DDO_CHILDREN
+	* Hook for per-locator ddo children resolution in get_export_value().
+	* Default: the given map and children are returned unchanged.
+	* component_relation_index overrides it to self-compute the ddo_map from
+	* the target section relation_list config (it has no export ddo paths).
+	* @param array $ddo_map
+	* @param array $ddo_direct_children
+	* @param object $locator
+	* @return object
+	* 	{ddo_map: array, ddo_direct_children: array}
+	*/
+	protected function resolve_export_ddo_children( array $ddo_map, array $ddo_direct_children, object $locator ) : object {
+
+		return (object)[
+			'ddo_map'				=> $ddo_map,
+			'ddo_direct_children'	=> $ddo_direct_children
+		];
+	}//end resolve_export_ddo_children
+
+
+
+	/**
+	* GET_EXPORT_DDO_DESCENDANTS
+	* All ddo_map elements that depend on the given ddo (recursive children chain)
+	* @param array $ddo_map
+	* @param object $dd_object
+	* @return array
+	*/
+	protected function get_export_ddo_descendants( array $ddo_map, object $dd_object ) : array {
+
+		$ar_children = [];
+		foreach ($ddo_map as $ddo) {
+			if ($ddo->parent===$dd_object->tipo) {
+				$ar_children[] = $ddo;
+				$result = $this->get_export_ddo_descendants($ddo_map, $ddo);
+				if (!empty($result)) {
+					$ar_children = [...$ar_children, ...$result];
+				}
+			}
+		}
+
+		return $ar_children;
+	}//end get_export_ddo_descendants
 
 
 
@@ -895,7 +1173,13 @@ class component_relation_common extends component_common {
 
 						$removed = true;
 						// Remove dataframe
-						$this->remove_dataframe_data( $current_locator );
+						// unified pairing: cascade by the removed item id when available
+						// (legacy target-keyed cascade for pre-migration items without id)
+						if (isset($current_locator->id)) {
+							$this->remove_dataframe_data_by_id( (int)$current_locator->id );
+						}else{
+							$this->remove_dataframe_data( $current_locator );
+						}
 					}else{
 
 						$new_relations[] = $current_locator;
@@ -1089,7 +1373,7 @@ class component_relation_common extends component_common {
 	* @param ?string $diffusion_element_tipo
 	* @return array $diffusion_data
 	*
-	* @see class.diffusion_data.php
+	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
 	* @test false
 	*/
 	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo = null ) : array {
@@ -2624,6 +2908,194 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* SORT_DATA_BY_COLUMN
+	* Persistently reorders the full locator array by the value of a column
+	* component in the target section(s). The new order is resolved with a
+	* search over the target section restricted to the linked section_id list,
+	* ordered by the column component order path. Locators are never dropped:
+	* entries without a matching search row (deleted/unreadable targets) fall
+	* to the end preserving their relative order.
+	* Used by changed_data action 'sort_by_column' (see component_common::update_data_value)
+	* (!) Not save the result. The caller save flow (dd_core_api::save) persists it.
+	* @param object $changed_data
+	* 	Expected: { action:'sort_by_column', component_tipo:'oh28', direction:'ASC'|'DESC', value:null }
+	* @param string $lang
+	* @return bool
+	*/
+	public function sort_data_by_column( object $changed_data, string $lang ) : bool {
+
+		// sort_by_column property. Mandatory gate: the portal ontology properties
+		// must enable column sorting as boolean true or array of allowed column tipos
+			$properties		= $this->get_properties();
+			$sort_by_column	= $properties->sort_by_column ?? false;
+			if ($sort_by_column!==true && !is_array($sort_by_column)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. Property 'sort_by_column' is not enabled in component properties"
+					.' tipo: ' . $this->tipo . PHP_EOL
+					.' section_tipo: ' . $this->section_tipo
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// direction. Allowlist ASC|DESC
+			$direction = strtoupper( (string)($changed_data->direction ?? '') );
+			if (!in_array($direction, ['ASC','DESC'], true)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. Invalid direction: " . to_string($changed_data->direction ?? null)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// component_tipo. Must be one of the current component show ddo_map columns
+		// (prevents ordering by arbitrary injected tipos)
+			$component_tipo = (string)($changed_data->component_tipo ?? '');
+			$request_config = $this->build_request_config(); // memoized; assigns $this->request_config
+			$request_config_item = array_find($request_config, function($el){
+				return isset($el->api_engine) && $el->api_engine==='dedalo';
+			}) ?? reset($request_config);
+			$show_ddo_map = $request_config_item->show->ddo_map ?? [];
+			$ddo = array_find($show_ddo_map, function($el) use($component_tipo) {
+				return isset($el->tipo) && $el->tipo===$component_tipo;
+			});
+			if (empty($ddo)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. component_tipo '$component_tipo' is not a show ddo_map column of component: " . $this->tipo
+					, logger::ERROR
+				);
+				return false;
+			}
+			// allowlist case. When the property is an array, it restricts the sortable column tipos
+			if (is_array($sort_by_column) && !in_array($component_tipo, $sort_by_column, true)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. component_tipo '$component_tipo' is not allowed by the 'sort_by_column' property of component: " . $this->tipo
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// target_section_tipo. From the validated ddo ('self' resolves to current section_tipo)
+			$target_section_tipo = array_map(function($el){
+				return $el==='self' ? $this->section_tipo : $el;
+			}, (array)($ddo->section_tipo ?? []));
+			if (empty($target_section_tipo)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. Unable to resolve target section_tipo from ddo: " . to_string($ddo)
+					, logger::ERROR
+				);
+				return false;
+			}
+			$first_target_section_tipo = reset($target_section_tipo);
+
+		// data. Full stored locator array (never paginated server side)
+			$data_lang = $this->get_data_lang($lang) ?? [];
+			if (count($data_lang) < 2) {
+				// nothing to reorder
+				return true;
+			}
+			// remove possible client paginated_key marks (get_data_paginated mutates memoized objects)
+			foreach ($data_lang as $current_locator) {
+				if (is_object($current_locator)) {
+					unset($current_locator->paginated_key);
+				}
+			}
+
+		// ar_section_id. Unique linked ids to restrict the search
+			$ar_section_id = array_values(array_unique(array_map(function($el){
+				return (int)($el->section_id ?? 0);
+			}, $data_lang)));
+
+		// order path. Built from a fresh target component instance so subclass
+		// get_order_path overrides apply (date/number column literals, relation ddo hop)
+		// without the caller hop a portal child instance would prepend.
+			$model = ontology_node::get_model_by_tipo($component_tipo, true);
+			if (empty($model)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. Unable to resolve model of component_tipo: $component_tipo"
+					, logger::ERROR
+				);
+				return false;
+			}
+			$target_component = component_common::get_instance(
+				$model,
+				$component_tipo,
+				null, // section_id
+				'list', // mode
+				DEDALO_DATA_NOLAN, // lang
+				$first_target_section_tipo // section_tipo
+			);
+			if (in_array($model, component_relation_common::get_components_with_relations(), true)) {
+				// relation overrides of get_order_path (portal, related) require request_config
+				$target_component->build_request_config();
+			}
+			$order_path = $target_component->get_order_path($component_tipo, $first_target_section_tipo);
+			if (empty($order_path)) {
+				debug_log(__METHOD__
+					." Error on sort_by_column. Empty order path for component_tipo: $component_tipo - section_tipo: $first_target_section_tipo"
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// order item
+		// note that lang is intentionally not set: trait.order resolves it as
+		// DEDALO_DATA_LANG for translatable columns (same as section list ordering,
+		// whose client order items never carry lang). The save rqo lang would be
+		// wrong here: relation components are always lg-nolan.
+			$order_item = new stdClass();
+				$order_item->direction	= $direction;
+				$order_item->path		= $order_path;
+
+		// filter. section_id = ANY(ar_section_id) over the target section
+		// same shape as search::generate_children_recursive_search
+			$path_item = new stdClass();
+				$path_item->section_tipo	= $first_target_section_tipo;
+				$path_item->component_tipo	= 'section_id';
+				$path_item->model			= 'component_section_id';
+				$path_item->name			= 'Id';
+			$filter_item = new stdClass();
+				$filter_item->q				= implode(',', $ar_section_id);
+				$filter_item->q_operator	= null;
+				$filter_item->path			= [$path_item];
+			$filter = new stdClass();
+				$filter->{'$or'} = [$filter_item];
+
+		// search. Resolve the (section_tipo, section_id) pairs ordered by the column value
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo( $target_section_tipo );
+				$sqo->set_limit( 0 );
+				$sqo->set_skip_projects_filter( true ); // portal display already grants min read (see get_subdatum)
+				$sqo->set_filter( $filter );
+				$sqo->set_order( [$order_item] );
+			$search		= search::get_instance($sqo);
+			$db_result	= $search->search();
+			$ar_rows	= $db_result->fetch_all();
+
+		// rank map. "{section_tipo}_{section_id}" => order position
+			$rank = [];
+			foreach ($ar_rows as $key => $row) {
+				$rank[ $row->section_tipo.'_'.$row->section_id ] = $key;
+			}
+
+		// stable sort. Unmatched locators keep relative order at the end
+			$max_rank = PHP_INT_MAX;
+			usort($data_lang, function($a, $b) use($rank, $max_rank) {
+				$rank_a = $rank[ ($a->section_tipo ?? '').'_'.(int)($a->section_id ?? 0) ] ?? $max_rank;
+				$rank_b = $rank[ ($b->section_tipo ?? '').'_'.(int)($b->section_id ?? 0) ] ?? $max_rank;
+				return $rank_a <=> $rank_b;
+			});
+
+		// set the reordered data (the caller flow saves it)
+			$this->set_data_lang($data_lang, $lang);
+
+
+		return true;
+	}//end sort_data_by_column
+
+
+
+	/**
 	* GET_LIST_VALUE
 	* Unified value list output
 	* By default, list value is equivalent to data. Override in other cases.
@@ -2682,7 +3154,9 @@ class component_relation_common extends component_common {
 			$value			= $import_value;
 
 		// no value case
+		// empty cell is valid: result null clears the existing component data
 			if (empty($value)) {
+				$response->msg = 'OK';
 				return $response;
 			}
 
@@ -3011,66 +3485,24 @@ class component_relation_common extends component_common {
 
 	/**
 	* MAP_LOCATOR_TO_TERM_ID [diffusion]
-	* Alias of diffusion_sql::map_locator_to_term_id
-	* Used in diffusion by component_autocomplete and component_portal (!)
-	* @see Ontology term properties 'rsc863' or 'mdcat2242'
-	* @return string|null $term_id
+	* v6-only diffusion method (was an alias of diffusion_sql::map_locator_to_term_id,
+	* removed in v7). Diffusion values are processed by the Bun engine parsers now;
+	* ontology process_dato configs were converted by the migration script
+	* (diffusion/migration/migrate_diffusion_properties.php). Any call reaching this
+	* method comes from an unmigrated config: it resolves as null and is reported.
+	* @return string|null $term_id Always null
 	*/
-	public function map_locator_to_term_id() { // Diffusion method
+	public function map_locator_to_term_id() : ?string {
 
-		$term_id = null;
+		debug_log(__METHOD__
+			. " UNMIGRATED v6 process_dato config detected (map_locator_to_term_id). Value resolved as null." . PHP_EOL
+			. " Migrate this ontology config to v7 parsers (see diffusion/migration/migrate_diffusion_properties.php)." . PHP_EOL
+			. ' tipo: ' . to_string($this->tipo ?? null) . PHP_EOL
+			. ' section_tipo: ' . to_string($this->section_tipo ?? null)
+			, logger::ERROR
+		);
 
-		$data = $this->get_data();
-
-		if (!empty($data)) {
-
-			// arguments from properties->process_dato_arguments->custom_arguments
-				$args 	 = func_get_args(); // is array of objects
-				$options = new stdClass();
-				if (!empty($args)) {
-					foreach ($args as $value_obj) {
-						foreach ($value_obj as $key => $value) {
-							$options->{$key} = $value;
-						}
-					}
-				}
-
-			// add parents option
-				if (isset($options->add_parents) && $options->add_parents===true) {
-					$new_data = [];
-					# calculate parents and add to data
-					foreach ((array)$data as $current_locator) {
-						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-						$ar_parents = component_relation_parent::get_parents_recursive(
-							$current_locator->section_id,
-							$current_locator->section_tipo
-						);
-						foreach ($ar_parents as $parent_locator) {
-							$new_data[] = $parent_locator;
-						}
-					}
-					$data = [...$data, ...$new_data];
-				}
-
-			// send to diffusion for normalize formats
-				$map_options = null;
-				$check_publishable = $options->check_publishable ?? false;
-				if ($check_publishable) {
-
-					// Pass 'check_publishable' value to diffusion_sql to apply (mupreva138 case)
-					// path: $process_dato_arguments = $options->properties->process_dato_arguments
-					$map_options = new stdClass();
-						$map_options->properties = (object)[
-							'process_dato_arguments' => (object)[
-								'check_publishable' => true
-							]
-						];
-				}
-			// send to diffusion for normalize formats
-				$term_id = diffusion_sql::map_locator_to_term_id($map_options, $data);
-		}
-
-		return $term_id;
+		return null;
 	}//end map_locator_to_term_id
 
 

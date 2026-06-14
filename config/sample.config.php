@@ -83,8 +83,21 @@
 		define('DEDALO_API_URL',			DEDALO_CORE_URL . '/api/v1/json/');
 
 	// Diffusion engine API
+	// All MariaDB operations of the diffusion system are executed by the Bun
+	// engine (diffusion/api/v1): PHP is a client of these endpoints.
+	// Related constants defined further below: DEDALO_DIFFUSION_LANGS,
+	// DEDALO_DIFFUSION_DOMAIN, DEDALO_DIFFUSION_RESOLVE_LEVELS,
+	// DEDALO_DIFFUSION_CUSTOM, EXCLUDE_DIFFUSION_ELEMENTS.
 		define('DEDALO_DIFFUSION_PATH', 	DEDALO_ROOT_PATH.'/diffusion');
 		define('DEDALO_DIFFUSION_API_URL',	DEDALO_ROOT_WEB . '/diffusion/api/v1/');
+		// Unix socket of the Bun diffusion engine. Preferred for server-to-server
+		// calls (delete propagation): avoids the Apache round-trip. Set to null
+		// to force HTTP calls through DEDALO_DIFFUSION_API_URL (remote Bun).
+		define('DEDALO_DIFFUSION_SOCKET_PATH', '/tmp/diffusion.sock');
+		// Internal token for server-to-server diffusion calls without a session
+		// (CLI/cron retry of pending deletions). Must match DIFFUSION_INTERNAL_TOKEN
+		// in diffusion/api/v1/.env. Leave empty to disable token auth.
+		define('DEDALO_DIFFUSION_INTERNAL_TOKEN', '');
 
 
 
@@ -611,6 +624,33 @@
 	// tool import
 	define('DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH',	DEDALO_MEDIA_PATH . '/import/files');
 
+	// TOOLS_REQUIRE_API_ACTIONS (bool). Default: true (SEC-024).
+	// When true (or undefined), a tool class that does not declare
+	// `public const API_ACTIONS` cannot be called through
+	// dd_tools_api::tool_request — its methods are refused with
+	// 'unauthorized_method'. All tools shipped with Dédalo declare the
+	// constant. Set to false ONLY as a temporary migration aid for
+	// third-party tools that have not yet adopted the allowlist; legacy
+	// dispatch is then allowed and logged as deprecated.
+	// define('TOOLS_REQUIRE_API_ACTIONS', true);
+
+	// DEDALO_ADDITIONAL_TOOLS (array). Default: none.
+	// Extra tool roots so third-party tools can live OUTSIDE the Dédalo
+	// checkout (surviving git updates, independently versioned).
+	// Each entry needs:
+	//   'path' : absolute filesystem directory containing tool_* folders
+	//   'url'  : same-origin web URL serving that directory (the browser
+	//            loads tool JS modules and CSS from it — configure a web
+	//            server alias or place it inside the document root)
+	// Rules enforced at load (see tool_paths class):
+	//   - the in-repo /tools root always wins on name collisions
+	//   - roots under media/cache/tmp/session dirs or world-writable are refused
+	//   - tools there still require registration (Maintenance > Register tools)
+	//     and per-profile authorization, like any in-repo tool
+	// define('DEDALO_ADDITIONAL_TOOLS', [
+	// 	['path' => '/srv/custom_tools', 'url' => '/custom_tools']
+	// ]);
+
 
 
 // lock_components
@@ -619,7 +659,47 @@
 
 
 
-// protect media files, when active the access to media files are controlled and only register users can access to it.
+// media access control
+	// DEDALO_MEDIA_ACCESS_MODE. Media file access control enforced by the web
+	// server (Apache: generated media/.htaccess; Nginx: see config/nginx.conf.sample):
+	//   false         : no protection — media files are world-readable
+	//   'private'     : only logged-in Dédalo users can read media files
+	//                   (auth cookie set at login, validated with one stat())
+	//   'publication' : logged-in users read everything; anonymous users read
+	//                   ONLY media of published records (publication markers
+	//                   maintained by the Bun diffusion engine) and only in
+	//                   the DEDALO_MEDIA_PUBLIC_QUALITIES folders.
+	// When enabling 'publication' on an instance with existing publications,
+	// run once: php diffusion/migration/helpers/rebuild_media_index.php
+	// The diffusion engine needs DEDALO_MEDIA_PATH set in its .env
+	// (diffusion/api/v1/.env) with the same value as the PHP constant.
+	define('DEDALO_MEDIA_ACCESS_MODE', false);
+
+	// DEDALO_MEDIA_PUBLIC_QUALITIES. Optional. Quality folders (relative to the
+	// media root) anonymous users may read when the record is published
+	// ('publication' mode). 'original'/'modified' folders are always refused.
+	// Default when undefined: web-delivery qualities
+	// ['av/404','av/posterframe','av/subtitles','image/1.5MB','image/thumb','pdf/web','svg/web','3d/web']
+	// define('DEDALO_MEDIA_PUBLIC_QUALITIES', [
+	// 	DEDALO_AV_FOLDER .'/'. DEDALO_AV_QUALITY_DEFAULT,
+	// 	DEDALO_AV_FOLDER .'/posterframe',
+	// 	DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER,
+	// 	DEDALO_IMAGE_FOLDER .'/'. DEDALO_IMAGE_QUALITY_DEFAULT,
+	// 	DEDALO_IMAGE_FOLDER .'/'. DEDALO_QUALITY_THUMB,
+	// 	DEDALO_PDF_FOLDER .'/'. DEDALO_PDF_QUALITY_DEFAULT,
+	// 	DEDALO_SVG_FOLDER .'/'. DEDALO_SVG_QUALITY_DEFAULT,
+	// 	DEDALO_3D_FOLDER .'/'. DEDALO_3D_QUALITY_DEFAULT
+	// ]);
+
+	// MEDIA_HTACCESS_ADDONS. Optional. JSON array of raw lines appended to the
+	// generated media/.htaccess before the final deny rule (replaces the legacy
+	// INIT_COOKIE_AUTH_ADDONS, whose lines targeted the removed <RequireAny>
+	// block). Example — allow an internal network unconditionally:
+	// define('MEDIA_HTACCESS_ADDONS', '["RewriteCond %{REMOTE_ADDR} ^10\\\\.0\\\\.","RewriteRule ^ - [L]"]');
+
+	// DEDALO_PROTECT_MEDIA_FILES. Deprecated: legacy boolean kept for
+	// back-compat — true behaves as DEDALO_MEDIA_ACCESS_MODE='private' when
+	// DEDALO_MEDIA_ACCESS_MODE is not defined.
 	define('DEDALO_PROTECT_MEDIA_FILES', false);
 
 
@@ -639,6 +719,15 @@
 // dedalo_filter_user_records_by_id
 	// Activate user records filter restriction
 	define('DEDALO_FILTER_USER_RECORDS_BY_ID', false);
+
+
+
+// dedalo_search_client_max_limit
+	// Ceiling applied to client-supplied SQO limits (HTTP API). Untrusted clients cannot
+	// request unbounded result sets: 'all', non-positive and out-of-range limits are clamped
+	// to this value. Server-internal search builders bypass this gate (see
+	// search_query_object::sanitize_client_sqo). int default 1000
+	define('DEDALO_SEARCH_CLIENT_MAX_LIMIT', 1000);
 
 
 
@@ -662,9 +751,10 @@
 	// bool Defines how the paths of the media files will be treated in diffusion processing. Default: false
 	// on true, the paths will be simplified to the file name like 'rsc37_rsc176_34.pdf' from '/dedalo/media/pdf/web/0/rsc37_rsc176_34.pdf'
 	define('DEDALO_PUBLICATION_CLEAN_URL',		false);
-	// diffusion_custom
-	// Optional custom class to manipulate diffusion options. string|bool . Default: false
-	define('DIFFUSION_CUSTOM', false);
+	// diffusion custom
+	// Optional custom file to manipulate diffusion options. string|bool . Default: false
+	// (legacy constant name DIFFUSION_CUSTOM is still accepted as fallback by the loader)
+	define('DEDALO_DIFFUSION_CUSTOM', false);
 	// api (publication). This definition is used only in area maintenance to auto-fill main vars
 	// Note that in the public server config file, you need to define again this values because
 	// the public API files could be place in another location/server as independent files
@@ -830,7 +920,9 @@
 	// 		'http://allowed-domain.org'
 	// 	],
 	// 	'allowed_methods' => ['GET', 'POST', 'PUT', 'OPTIONS'],
-	// 	'allowed_headers' => ['Content-Type', 'Content-Range', 'Authorization', 'X-Requested-With'],
+	// 	// API-04: X-Dedalo-Csrf-Token is required for the SEC-008 CSRF header path on
+	// 	// cross-origin deployments (the browser preflight must permit the custom header).
+	// 	'allowed_headers' => ['Content-Type', 'Content-Range', 'Authorization', 'X-Requested-With', 'X-Dedalo-Csrf-Token'],
 	// 	'max_age' => 86400,  // 24 hours
 	// ]);
 

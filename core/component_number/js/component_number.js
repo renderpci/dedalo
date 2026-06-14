@@ -164,7 +164,8 @@ component_number.prototype.fix_number_format = function( value ) {
 	//    clean_value is expected to return a cleaned string (e.g., "17.2") or null.
 	let cleaned_string = self.clean_value(value);
 
-	// If cleaning resulted in no valid numeric characters, return null.
+	// UIUX-02: clean_value returns null for input with no numeric chars. Guard
+	// BEFORE split() — calling null.split('.') threw a TypeError on non-numeric input.
 	if (cleaned_string === null) {
 		return null;
 	}

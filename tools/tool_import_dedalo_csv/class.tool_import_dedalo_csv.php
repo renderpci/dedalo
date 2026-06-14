@@ -10,6 +10,25 @@
 * - Validation of component tipos against ontology definitions
 * - Progress tracking and error reporting for large batch operations
 *
+* Accepted cell formats (handled by every component conform_import_data):
+* - dedalo_data wrapper: {"dedalo_data": <dato>} as produced by tool_export 'dedalo_raw'
+*   format. Unwrapped transparently before conforming (see component_common::unwrap_dedalo_data).
+* - v7 dato (canonical): JSON array of objects, e.g. [{"value":"hello"}] for text/number/email,
+*   [{"start":{"year":2023}}] for dates, [{"iri":"https://..."}] for iri, locators for relations,
+*   [{"lat":39.46,"lon":-0.37}] for geolocation.
+* - v6 dato (legacy, auto-normalized): JSON array of plain values, e.g. ["hello"] or [104,-75.35].
+* - Multi-language JSON object: {"lg-eng":[...],"lg-spa":[...]} saved per lang via set_data_lang().
+* - Flat strings: plain text, numbers, emails ('a@b.com | c@d.com'), dates ('2023/10/26<>2023/10/27'),
+*   uris ('label, https://... | https://...'), relation section_id lists ('1,4,6'),
+*   geolocation coordinates ('lat, lon[, zoom[, alt]]'), lang codes ('lg-spa, lg-eng').
+* The 'id' and 'lang' item properties are auto-assigned on save and must not be supplied.
+*
+* Empty cell semantics: an empty CSV cell conforms to null and CLEARS the existing
+* component data for that record (and lang, when translatable).
+*
+* Report channels: failed_rows (value ignored) and warning_rows (value imported,
+* needs user attention; e.g. select_lang codes not in the project languages).
+*
 * @package Dedalo
 * @subpackage Tools
 */
@@ -102,7 +121,10 @@ class tool_import_dedalo_csv extends tool_common {
 			$response->errors	= [];
 
 		// options
-			$dir = $options->files_path ?? tool_import_dedalo_csv::get_files_path();
+			// TOOLS-02: ignore any client-supplied files_path. Reading arbitrary
+			// directories is an authenticated arbitrary-file-read; always scope to
+			// the caller's own per-user import dir.
+			$dir = tool_import_dedalo_csv::get_files_path();
 
 		// read_files
 			$files_list	= tool_common::read_files(
@@ -259,7 +281,9 @@ class tool_import_dedalo_csv extends tool_common {
 					$item = (object)[
 						'dir'					=> $dir,
 						'name'					=> $current_file_name,
-						'data'					=> $ar_data, // $ar_data,
+						// TOOLS-07: do not ship the full parsed contents of every CSV in the
+						// listing response — clients use 'sample_data' for preview and load
+						// full rows only at import time.
 						'n_records'				=> $n_records,
 						'n_columns'				=> $n_columns,
 						'file_info'				=> $file_info,
@@ -307,10 +331,20 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// options
 			$file_name	= $options->file_name ?? '';
-			$dir		= $options->files_path ?? tool_import_dedalo_csv::get_files_path();
+			// TOOLS-01: ignore any client-supplied files_path and confine to the
+			// per-user import dir; basename-confine the file name so '../' cannot
+			// rename/delete files outside the user's own staging area.
+			$dir		= tool_import_dedalo_csv::get_files_path();
 
 		// remove file is exists
-			$file_full_path = $dir .'/'. $file_name;
+			try {
+				$file_full_path = safe_upload_target($dir, $file_name, false);
+			} catch (\Throwable $e) {
+				$response->msg = 'Error. Invalid file name';
+				$response->errors[] = 'invalid file name';
+				debug_log(__METHOD__ .' Rejected unsafe file_name: '. $e->getMessage(), logger::ERROR);
+				return $response;
+			}
 			if (file_exists($file_full_path)) {
 
 				// check is file (prevent to delete directories accidentally)
@@ -584,6 +618,7 @@ class tool_import_dedalo_csv extends tool_common {
 				$created_rows	= [];
 				$updated_rows	= [];
 				$failed_rows	= [];
+				$warning_rows	= [];
 
 			$counter		= 0;
 			if (empty($ar_csv_data)) {
@@ -749,8 +784,28 @@ class tool_import_dedalo_csv extends tool_common {
 								// To optimize save process in scripts of importation, you can disable this option if is not really necessary
 								$component->update_diffusion_info_propagate_changes = false;
 
+						// unwrap the dedalo_data wrapper when present
+						// raw exported data ('dedalo_raw' format) is wrapped as {"dedalo_data": <dato>}
+						// to identify externally that the value is Dédalo format data.
+						// Plain (un-wrapped) v6/v7 values are returned unchanged.
+							$unwrap_response = component_common::unwrap_dedalo_data($value);
+							$value = $unwrap_response->value;
+							// the flag allows components as component_json to disambiguate
+							// a v7 envelope from a literal JSON value with the same shape
+							$component->import_data_is_wrapped = $unwrap_response->wrapped;
+							// dataframe envelope: frames paired with the component items,
+							// written after the component data is set (see import_dataframe_data)
+							$import_dataframe	= $unwrap_response->dataframe ?? null;
+							$import_has_dato	= $unwrap_response->has_dato ?? true;
+
 						// conform imported value with every component rules.
 							$conform_import_data_response = $component->conform_import_data($value, $column_map->column_name);
+							// if the component has warnings (non fatal), include them into warning rows
+							if(!empty($conform_import_data_response->warnings)){
+								foreach ($conform_import_data_response->warnings as $current_warning) {
+									$warning_rows[] = $current_warning;
+								}
+							}
 							// if the component has errors, include it into failed rows
 							if(!empty($conform_import_data_response->errors)){
 								foreach ($conform_import_data_response->errors as $current_error) {
@@ -837,7 +892,15 @@ class tool_import_dedalo_csv extends tool_common {
 										// Use set_data_lang() instead of set_data() to ensure 'lang' property
 										// is assigned on all data items (including pre-existing objects from conform_import_data)
 										$component->set_data_lang( $v_value, $v_key );
-										$component->import_save();
+										$save_result = $component->import_save();
+										if ($save_result===false) {
+											$failed = new stdClass();
+												$failed->section_id		= $section_id;
+												$failed->data			= $v_value;
+												$failed->component_tipo	= $component->get_tipo();
+												$failed->msg			= 'IGNORED: component rejected the data on save (lang: '.$v_key.')';
+											$failed_rows[] = $failed;
+										}
 									}else{
 										debug_log(__METHOD__
 											. " ERROR ON IMPORT VALUE FROM $model_name [$component_tipo]"
@@ -874,31 +937,96 @@ class tool_import_dedalo_csv extends tool_common {
 										$conformed_value	= $conformed_value->{$nolan};
 									}
 
-								// set dato
-									if ( is_object($conformed_value) &&
-										 property_exists($conformed_value, 'dataframe') &&
-										!property_exists($conformed_value, 'dato')) {
-										// Element without dato. Only the dataframe is saved
-									}else{
-
-										// Removed direct call
-										// unified with API calls with changed_data_item object
-											// $component->set_data( $conformed_value );
-											// $component->observable_dato = ($component->model === 'component_relation_related')
-											// 	? $component->get_data_with_references()
-											// 	: $conformed_value;
-
-										// added changed data object to set data and observable data
-										$changed_data_item = new stdClass();
-											$changed_data_item->action = 'set_data';
-											$changed_data_item->value = $conformed_value;
-
-										$component->update_data_value($changed_data_item);
+								// multi-language flat array check
+								// v7 stored data is a flat array where every item carries its own lang, as:
+								// [{"value":"hello","lang":"lg-eng"},{"value":"hola","lang":"lg-spa"}]
+								// it is the format produced by the raw export (dedalo_data wrapper).
+								// When the items define langs, group them by lang and save each lang
+								// separately with set_data_lang() to preserve all the translations
+								// (the default set_data action would force every item to the import lang)
+									$ar_lang_groups = [];
+									if ($translate===true && is_array($conformed_value)) {
+										$has_lang_items = false;
+										foreach ($conformed_value as $current_item) {
+											$item_lang = (is_object($current_item) && !empty($current_item->lang))
+												? $current_item->lang
+												: $component->get_lang();
+											if (is_object($current_item) && !empty($current_item->lang)) {
+												$has_lang_items = true;
+											}
+											$ar_lang_groups[$item_lang][] = $current_item;
+										}
+										if ($has_lang_items===false) {
+											// no lang defined in any item: use the default set dato path
+											$ar_lang_groups = [];
+										}
 									}
 
-								// Save of course
-								// Note that $component->save_to_database = false, avoid real save.
-									$component->import_save();
+								if (!empty($ar_lang_groups)) {
+
+									// set every lang group separately
+									foreach ($ar_lang_groups as $group_lang => $group_items) {
+										$component->set_data_lang($group_items, $group_lang);
+									}
+
+									// Save of course
+									$save_result = $component->import_save();
+									if ($save_result===false) {
+										$failed = new stdClass();
+											$failed->section_id		= $section_id;
+											$failed->data			= $conformed_value;
+											$failed->component_tipo	= $component->get_tipo();
+											$failed->msg			= 'IGNORED: component rejected the data on save';
+										$failed_rows[] = $failed;
+									}
+								}else{
+
+									// set dato
+										if ( $import_dataframe!==null && $import_has_dato===false ) {
+											// dataframe-only envelope: the component data is not
+											// touched, only the frames are written below
+										}else{
+
+											// Removed direct call
+											// unified with API calls with changed_data_item object
+												// $component->set_data( $conformed_value );
+												// $component->observable_dato = ($component->model === 'component_relation_related')
+												// 	? $component->get_data_with_references()
+												// 	: $conformed_value;
+
+											// added changed data object to set data and observable data
+											$changed_data_item = new stdClass();
+												$changed_data_item->action = 'set_data';
+												$changed_data_item->value = $conformed_value;
+
+											$component->update_data_value($changed_data_item);
+										}
+
+									// Save of course
+										$save_result = $component->import_save();
+										if ($save_result===false) {
+											$failed = new stdClass();
+												$failed->section_id		= $section_id;
+												$failed->data			= $conformed_value;
+												$failed->component_tipo	= $component->get_tipo();
+												$failed->msg			= 'IGNORED: component rejected the data on save';
+											$failed_rows[] = $failed;
+										}
+								}
+
+								// dataframe envelope: write the frames pairing the
+								// (already saved) component items
+									if (!empty($import_dataframe)) {
+										$dataframe_result = $component->import_dataframe_data($import_dataframe);
+										if ($dataframe_result===false) {
+											$failed = new stdClass();
+												$failed->section_id		= $section_id;
+												$failed->data			= $import_dataframe;
+												$failed->component_tipo	= $component->get_tipo();
+												$failed->msg			= 'IGNORED: component rejected the dataframe data on save';
+											$failed_rows[] = $failed;
+										}
+									}
 							}
 							break;
 					}//end switch (true)
@@ -932,10 +1060,11 @@ class tool_import_dedalo_csv extends tool_common {
 		// response
 			if (!empty($updated_rows) || !empty($created_rows)) {
 				$response->result		= true;
-				$response->msg			= 'Section: '.$section_tipo.'. Total records created:'.count($created_rows).' - updated:'.count($updated_rows).' - failed:'.count($failed_rows);
+				$response->msg			= 'Section: '.$section_tipo.'. Total records created:'.count($created_rows).' - updated:'.count($updated_rows).' - failed:'.count($failed_rows).' - warnings:'.count($warning_rows);
 				$response->created_rows	= $created_rows;
 				$response->updated_rows	= $updated_rows;
 				$response->failed_rows	= $failed_rows;
+				$response->warning_rows	= $warning_rows;
 			}
 			$response->time = exec_time_unit($start_time,'ms');
 
@@ -1453,14 +1582,22 @@ class tool_import_dedalo_csv extends tool_common {
 			// }
 
 		// short vars
+			// TOOLS-03: name, key_dir and tmp_name are all client-supplied; sanitize
+			// key_dir and confine the source path before any filesystem use.
 			$name		= $file_data->name; // string original file name like 'name-rsc197.csv'
-			$key_dir	= $file_data->key_dir; // string upload caller name like 'tool_upload'
+			$key_dir	= sanitize_key_dir($file_data->key_dir ?? ''); // upload caller name like 'tool_upload'
 			$tmp_name	= $file_data->tmp_name; // string like 'phpJIQq4e'
 
 			$user_id = logged_user_id();
 			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
-			$source_file = $tmp_dir . '/' . $tmp_name;
+			try {
+				$source_file = safe_upload_target($tmp_dir, $tmp_name, false);
+			} catch (\Throwable $e) {
+				$response->msg .= ' Invalid source file name.';
+				debug_log(__METHOD__ .' Rejected unsafe source: '. $e->getMessage(), logger::ERROR);
+				return $response;
+			}
 
 		// check source file file
 			if (!file_exists($source_file)) {
@@ -1472,10 +1609,6 @@ class tool_import_dedalo_csv extends tool_common {
 				);
 				return $response;
 			}
-
-		// target_file
-			$dir			= tool_import_dedalo_csv::get_files_path();
-			$target_file	= $dir . '/' . $name;
 
 		// check target directory
 			$dir = tool_import_dedalo_csv::get_files_path();
@@ -1493,6 +1626,17 @@ class tool_import_dedalo_csv extends tool_common {
 					." CREATED DIR: $dir "
 					, logger::DEBUG
 				);
+			}
+
+		// target_file
+			// TOOLS-03: confine the client-supplied $name under the per-user dir
+			// (computed after the dir exists so realpath confinement applies).
+			try {
+				$target_file = safe_upload_target($dir, $name, false);
+			} catch (\Throwable $e) {
+				$response->msg .= ' Invalid target file name.';
+				debug_log(__METHOD__ .' Rejected unsafe target: '. $e->getMessage(), logger::ERROR);
+				return $response;
 			}
 
 		// move file

@@ -11,7 +11,6 @@
 	import {view_line_edit_iri} from './view_line_edit_iri.js'
 	import {view_mini_iri} from './view_mini_iri.js'
 	import {get_dataframe} from '../../component_common/js/component_common.js'
-	import {delete_dataframe} from '../../component_common/js/component_common.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
 
 
@@ -123,22 +122,27 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'content_value'
 		})
 
-	// If the value is empty, return the empty node
+	// If the value is empty, resolve the dataframe pairing context
 		const value_is_empty = !current_value || Object.keys(current_value).length === 0
-		if(value_is_empty){
-			if (transliterate_value?.id) {
-				current_value.id = transliterate_value.id
-			}else{
-				current_value.id = self.data.counter+1
-			}
+		if(value_is_empty && transliterate_value?.id){
+			// the entry exists in another language: share its real id
+			// so the update pairs across languages
+			current_value.id = transliterate_value.id
 		}
+
+	// dataframe_id_key
+	// Persisted rows pair by their real item id. New blank rows use the next
+	// counter value as PROVISIONAL render context only: it is never written
+	// into the value (ids are minted server-side on save, see I1/I3 in
+	// docs/core/components/component_dataframe.md)
+		const dataframe_id_key = current_value.id ?? (self.data.counter+1)
 
 	// dataframe
 	// Get a built component_datataframe instance ready for render
 		get_dataframe({
 			self				: self,
 			section_id			: self.section_id,
-			section_id_key		: current_value.id,
+			section_id_key		: dataframe_id_key,
 			section_tipo_key	: self.section_tipo,
 			main_component_tipo	: self.tipo,
 			view				: 'line',
@@ -537,16 +541,20 @@ const get_content_value_read = (i, current_value, self) => {
 			class_name		: 'content_value read_only'
 		})
 
-	// dataframe
-		get_dataframe({
-			self				: self,
-			section_id			: self.section_id,
-			section_id_key		: current_value.id,
-			section_tipo_key	: self.section_tipo,
-			main_component_tipo	: self.tipo,
-			view				: 'line',
-			mode				: 'list'
-		})
+	// dataframe (only for rows with id: the pairing key is the item id)
+		const dataframe_promise = (typeof current_value.id!=='undefined')
+			? get_dataframe({
+				self				: self,
+				section_id			: self.section_id,
+				section_id_key		: current_value.id,
+				section_tipo_key	: self.section_tipo,
+				main_component_tipo	: self.tipo,
+				view				: 'line',
+				mode				: 'list'
+			})
+			: Promise.resolve(null)
+
+		dataframe_promise
 		.then(async function(component_dataframe){
 
 			// dataframe
@@ -701,17 +709,9 @@ const _do_remove_iri_entry = async function(self, current_value, i, button_remov
 			refresh			: true
 		})
 
-		// remove dataframe
-		// delete_dataframe_record
-		await delete_dataframe({
-			self				: self,
-			section_id			: self.section_id,
-			section_tipo		: self.section_tipo,
-			section_id_key		: current_value.id,
-			section_tipo_key	: self.section_tipo,
-			paginated_key		: false,
-			row_key				: false
-		})
+		// dataframe cleanup is server-authoritative: update_data_value 'remove'
+		// cascades the paired dataframe rows (single-writer rule). No client
+		// delete_dataframe call here.
 
 		// Refresh caller instances (tool_lang_multi case)
 		if (self.caller?.ar_instances) {

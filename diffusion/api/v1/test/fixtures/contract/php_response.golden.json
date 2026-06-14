@@ -1,0 +1,100 @@
+{
+	"result": true,
+	"msg": "OK. Request done",
+	"langs": {
+		"lg-eng": "English",
+		"lg-spa": "Spanish"
+	},
+	"main_lang": "lg-eng",
+	"main": [
+		{
+			"diffusion_tipo": "test1",
+			"term": "web_test_diffusion",
+			"model": "database"
+		},
+		{
+			"diffusion_tipo": "test5",
+			"term": "interview",
+			"model": "table",
+			"parent": "test1"
+		}
+	],
+	"datum": [
+		{
+			"diffusion_tipo": "test5",
+			"section_tipo": "test3",
+			"term": "interview",
+			"model": "table",
+			"parent": "test1",
+			"context": [
+				{
+					"term": "code",
+					"tipo": "test10",
+					"model": "field_text",
+					"parent": "test5",
+					"parser": {},
+					"columns": []
+				},
+				{
+					"term": "title",
+					"tipo": "test11",
+					"model": "field_text",
+					"parent": "test5",
+					"parser": {},
+					"columns": []
+				}
+			],
+			"data": [
+				{
+					"section_id": 1,
+					"fields": {
+						"test10": [
+							{
+								"tipo": "test60",
+								"lang": null,
+								"entries": [
+									{
+										"value": "CODE-001",
+										"errors": []
+									}
+								],
+								"id": null
+							}
+						],
+						"test11": [
+							{
+								"tipo": "test61",
+								"lang": "lg-eng",
+								"entries": [
+									{
+										"value": "English title",
+										"errors": []
+									}
+								],
+								"id": "a"
+							},
+							{
+								"tipo": "test61",
+								"lang": "lg-spa",
+								"entries": [
+									{
+										"value": "Título español",
+										"errors": [],
+										"meta": {
+											"note": "extra prop passthrough"
+										}
+									}
+								],
+								"id": "a"
+							}
+						]
+					}
+				},
+				{
+					"section_id": 2,
+					"fields": "delete"
+				}
+			]
+		}
+	]
+}

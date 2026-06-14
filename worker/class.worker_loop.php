@@ -118,6 +118,13 @@ final class worker_loop {
 
 		// 1. Reset per-request state
 		$this->cache->reset();
+		// Clear any header() state left by the previous request for EVERY branch
+		// (normal/SSE/preflight). The SSE branch never reaches response_builder::build(),
+		// so without this a header()/Set-Cookie emitted while streaming would bleed
+		// into the next request's response. (WORKER-02)
+		if (!headers_sent()) {
+			header_remove();
+		}
 
 		// 2. Hydrate PHP globals from PSR-7
 		$ctx = request_context::from_request($request, $this->upload_normalizer);
@@ -154,8 +161,9 @@ final class worker_loop {
 		// 8. Respond
 		$psr7_worker->respond($response);
 
-		// 9. Session close
-		$this->session->close();
+		// WORKER-05: the session is already closed inside handle_normal_request()
+		// (after the API executes, before inject_cookie reads session_id()/params,
+		// which remain valid after write-close). No second close() here.
 	}
 
 	/**
@@ -219,6 +227,13 @@ final class worker_loop {
 		if ($rqo === null) {
 			return (object)['result' => false, 'msg' => 'Invalid JSON for SSE request'];
 		}
+
+		// SQO + ddo_map security scrub. This is an untrusted HTTP entry point, exactly
+		// like core/api/v1/json/index.php; without this scrub a client could smuggle
+		// raw SQL fields or flip skip_projects_filter through the stream path. Shared
+		// gate so the two entry points cannot drift. (WORKER-01)
+		// @see dd_manager::sanitize_client_rqo
+		$rqo = \dd_manager::sanitize_client_rqo($rqo);
 
 		// Replicate the API entry point logic minimally for streaming
 		// CSRF bootstrap

@@ -439,4 +439,131 @@ class component_json extends component_common {
 
 
 
+	/**
+	* CONFORM_IMPORT_DATA
+	* Because component_json stores any arbitrary JSON as its value, a v7 envelope
+	* like [{"value":1}] is indistinguishable from a literal JSON value with the same shape.
+	* To disambiguate, the import uses the 'dedalo_data' wrapper produced by the raw export:
+	* 	{"dedalo_data":[{"value":<any JSON>,"id":1}]}
+	* The import tool unwraps it and sets the flag 'import_data_is_wrapped' on the component.
+	* Rules:
+	* 1. Wrapped input (flag set): the unwrapped array is the v7 envelope.
+	*    Items must be objects with a 'value' property.
+	* 2. Any other input: the ENTIRE decoded value (or the raw string when it is not
+	*    valid JSON) becomes the single monovalue as [{"value": <data>}]
+	* Empty value returns null (clears the existing component data)
+	* @param string $import_value
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->msg		= 'Error. Request failed';
+
+		// empty case. Result null clears the existing component data
+			if(empty($import_value) && $import_value!=='0') {
+
+				$response->result	= null;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+		// wrapped case. The value was exported as {"dedalo_data": ...} and the import
+		// tool has already unwrapped it, so the value is the v7 envelope itself
+			if ($this->import_data_is_wrapped===true) {
+
+				$data_from_json = json_handler::is_json($import_value)
+					? json_handler::decode($import_value)
+					: null;
+
+				if (!is_array($data_from_json)) {
+					$failed = new stdClass();
+						$failed->section_id		= $this->section_id;
+						$failed->data			= stripslashes( $import_value );
+						$failed->component_tipo	= $this->get_tipo();
+						$failed->msg			= 'IGNORED: dedalo_data wrapper must contain an array of items';
+					$response->errors[] = $failed;
+
+					return $response;
+				}
+
+				foreach ($data_from_json as $current_item) {
+					if (!is_object($current_item) || !property_exists($current_item, 'value')) {
+						$failed = new stdClass();
+							$failed->section_id		= $this->section_id;
+							$failed->data			= stripslashes( $import_value );
+							$failed->component_tipo	= $this->get_tipo();
+							$failed->msg			= 'IGNORED: dedalo_data items must be objects with a value property';
+						$response->errors[] = $failed;
+
+						return $response;
+					}
+				}
+
+				$response->result	= $data_from_json;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+		// un-wrapped case. The entire value, whatever it is, becomes the single monovalue
+			if (json_handler::is_json($import_value)) {
+
+				// arrays and objects
+				$decoded = json_handler::decode($import_value);
+				if ($decoded===null && $import_value!=='null') {
+					$failed = new stdClass();
+						$failed->section_id		= $this->section_id;
+						$failed->data			= stripslashes( $import_value );
+						$failed->component_tipo	= $this->get_tipo();
+						$failed->msg			= 'IGNORED: JSON decode failed';
+					$response->errors[] = $failed;
+
+					return $response;
+				}
+
+				// legacy raw export case as {"lg-nolan":[{"value":<any JSON>,"id":1}]}
+				// a single lang keyed object whose value is an array of items with 'value'
+				// property is interpreted as the legacy envelope and extracted
+				if (is_object($decoded)) {
+					$ar_keys = array_keys((array)$decoded);
+					if (count($ar_keys)===1 && strpos($ar_keys[0], 'lg-')===0) {
+						$lang_value = $decoded->{$ar_keys[0]};
+						$is_envelope = is_array($lang_value) && !empty($lang_value) &&
+							count(array_filter($lang_value, function($v){
+								return is_object($v) && property_exists($v, 'value');
+							}))===count($lang_value);
+						if ($is_envelope===true) {
+							$response->result	= $lang_value;
+							$response->msg		= 'OK';
+
+							return $response;
+						}
+					}
+				}
+
+				$value = $decoded;
+			}else{
+				// scalars. Decode JSON scalars when possible ('42' to int, 'true' to bool),
+				// else keep the raw string
+				$decoded = json_decode($import_value);
+				$value = (json_last_error()===JSON_ERROR_NONE)
+					? $decoded
+					: $import_value;
+			}
+
+		$response->result	= [(object)['value' => $value]];
+		$response->msg		= 'OK';
+
+
+		return $response;
+	}//end conform_import_data
+
+
+
 }//end class component_json

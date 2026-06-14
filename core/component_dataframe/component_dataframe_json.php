@@ -19,7 +19,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 	$properties			= $this->get_properties() ?? new stdClass();
 	$caller_dataframe	= $this->get_caller_dataframe();
 	// debug. Check caller_dataframe
-	if ( $mode!=='search' && ( empty($caller_dataframe) || !isset($caller_dataframe->section_id_key) || !isset($caller_dataframe->section_tipo_key) || !isset($caller_dataframe->main_component_tipo) ) ){
+	// pairing key dual-read: id_key (unified contract) or section_id_key (legacy)
+	if ( $mode!=='search' && ( empty($caller_dataframe) || ( !isset($caller_dataframe->id_key) && !isset($caller_dataframe->section_id_key) ) || !isset($caller_dataframe->main_component_tipo) ) ){
 		$bt = debug_backtrace();
 		debug_log(__METHOD__
 			. " Mandatory caller_dataframe not found " . PHP_EOL
@@ -98,12 +99,13 @@ if (!isset($this)) { http_response_code(404); exit; }
 					'offset'	=> $offset
 				];
 				// specific properties for dataframe
+				// pairing key dual-read: id_key (unified contract) + legacy aliases
 				if ( !empty($caller_dataframe)
-					&& isset($caller_dataframe->section_id_key)
-					&& isset($caller_dataframe->section_tipo_key)
+					&& ( isset($caller_dataframe->id_key) || isset($caller_dataframe->section_id_key) )
 					&& isset($caller_dataframe->main_component_tipo)  ) {
-					$item->section_id_key		= $caller_dataframe->section_id_key;
-					$item->section_tipo_key		= $caller_dataframe->section_tipo_key;
+					$item->id_key				= $caller_dataframe->id_key ?? $caller_dataframe->section_id_key;
+					$item->section_id_key		= $caller_dataframe->id_key ?? $caller_dataframe->section_id_key;
+					$item->section_tipo_key		= $caller_dataframe->section_tipo_key ?? $this->get_section_tipo();
 					$item->main_component_tipo	= $caller_dataframe->main_component_tipo;
 				}
 

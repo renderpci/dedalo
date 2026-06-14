@@ -91,6 +91,116 @@ trait utils {
 
 
     /**
+	* IS_VALID_TIPO
+	* Validates that a tipo is a well-formed ontology tipo (e.g. 'oh1', 'rsc453').
+	* Security gate for the few places a tipo must be interpolated verbatim into raw
+	* SQL (JSONB keys, where parameterization is not possible). Unlike trim_tipo(),
+	* it does NOT transform the value (which would corrupt a JSONB relation key like
+	* 'rsc453' -> 'rs453'), it only validates the format.
+	* @param string $tipo
+	* @return bool
+	*/
+	public static function is_valid_tipo( string $tipo ) : bool {
+
+		return preg_match('/^[a-z]+[0-9]+$/', $tipo) === 1;
+	}//end is_valid_tipo
+
+
+
+    /**
+	* IS_VALID_LANG
+	* Validates that a lang value is a well-formed Dédalo language code (e.g. 'lg-spa',
+	* 'lg-nolan') or the 'all' sentinel. Security gate for the few places lang is
+	* interpolated verbatim into raw SQL jsonpath/string literals (where the jsonpath
+	* `vars` mechanism is not used). A lang carrying a single quote would otherwise escape
+	* the surrounding SQL literal.
+	* @param string $lang
+	* @return bool
+	*/
+	public static function is_valid_lang( string $lang ) : bool {
+
+		return preg_match('/^(lg-[a-z0-9_]+|all)$/', $lang) === 1;
+	}//end is_valid_lang
+
+
+
+    /**
+	* IS_VALID_DATA_COLUMN
+	* Security allowlist of real matrix column identifiers, used wherever a column name
+	* from the client SQO (select/order/format) is interpolated verbatim into SQL (it
+	* cannot be parameterized). Mirrors the matrix table schema (data columns +
+	* structural columns + time machine columns).
+	* @param string $column
+	* @return bool
+	*/
+	public static function is_valid_data_column( string $column ) : bool {
+
+		static $valid_columns = [
+			// matrix data columns (jsonb) — see section_record_data::$columns_name
+			'data','relation','string','date','iri','geo','number','media','misc','relation_search','meta',
+			// structural columns
+			'section_id','section_tipo',
+			// time machine columns (matrix_time_machine)
+			'id','tipo','lang','type'
+		];
+
+		return in_array($column, $valid_columns, true);
+	}//end is_valid_data_column
+
+
+
+    /**
+	* SANITIZE_SQL_LIMIT
+	* Normalizes a SQO limit value to a safe SQL fragment.
+	* Incoming SQO arrives as a raw json_decode'd stdClass (the typed
+	* search_query_object::set_limit() cast is never applied), so limit/offset must
+	* be coerced here before concatenation into the query tail.
+	* @param mixed $value
+	* @return string|null
+	* 	'ALL' (unlimited sentinel), a positive integer as string, or null when no LIMIT applies
+	*/
+	public static function sanitize_sql_limit( mixed $value ) : ?string {
+
+		// 'all'/'ALL' sentinel means no limit (PostgreSQL 'LIMIT ALL')
+		if (is_string($value) && strtolower(trim($value))==='all') {
+			return 'ALL';
+		}
+
+		$int = (int)$value;
+
+		return $int > 0 ? (string)$int : null;
+	}//end sanitize_sql_limit
+
+
+
+    /**
+	* BUILD_LIMIT_OFFSET_SQL
+	* Builds the safe LIMIT/OFFSET tail for the current SQO.
+	* Centralizes the int coercion so no raw client value reaches the SQL string.
+	* @return string
+	*/
+	public function build_limit_offset_sql() : string {
+
+		$sql = '';
+
+		// limit
+		$limit_sql = self::sanitize_sql_limit($this->sqo->limit ?? null);
+		if ($limit_sql !== null) {
+			$sql .= PHP_EOL . 'LIMIT ' . $limit_sql;
+		}
+
+		// offset
+		$offset = (int)($this->sqo->offset ?? 0);
+		if ($offset > 0) {
+			$sql .= ' OFFSET ' . $offset;
+		}
+
+		return $sql;
+	}//end build_limit_offset_sql
+
+
+
+    /**
 	* GET_QUERY_PATH
 	* Recursive function to obtain final complete path of each element in json query object
 	* Used in component common and section to build components path for select
@@ -306,22 +416,31 @@ trait utils {
 	* GET_PLACEHOLDER
 	* Gets the placeholder for a given value.
 	* If it exists, returns it, otherwise returns the next available placeholder.
-	* @param string $value Like 'oh1'
+	* @param mixed $value Like 'oh1' (string|int|float|bool|null)
 	* @return string $placeholder Like $1, $2, $3, ...
 	*/
 	public function get_placeholder(mixed $value) : string {
 
-		if(isset($this->params[$value])){
-			// Recycle placeholder and param
-			$placeholder = $this->params[$value];
-		}else{
-			$current_param_key = $this->params_counter++; // Uses value before increment
-			$placeholder = '$' . $current_param_key;
-			$this->params[$value] = $placeholder;
+		// Params are stored as a 0-indexed sequential list of values (the order pg_execute
+		// expects). Dedup uses a STRICT comparison so distinct typed values never collapse
+		// onto the same placeholder. The previous implementation keyed $this->params by the
+		// value itself, which silently corrupted non-string params via PHP array-key coercion
+		// (1.5 -> 1, true -> 1, null -> '').
+		// SEARCH-03 (known characteristic, not currently a bottleneck): this array_search
+		// is a linear scan, so assembling N params is O(n^2). It is invoked once per
+		// filter item / IN-member, and real filters are small. If a pathological filter
+		// ever puts this on the hot path, add a side-index keyed by a type-tagged string
+		// (e.g. gettype(value)."\0".serialized-key) -> placeholder index for O(1) lookup,
+		// preserving the strict type-distinct semantics above. Left as-is to avoid
+		// touching the prepared-params model for a non-demonstrated cost.
+		$idx = array_search($value, $this->params, true);
+		if ($idx === false) {
+			$this->params[] = $value;
+			$idx = array_key_last($this->params);
 		}
 
-		return $placeholder;
-	}//end get_placeholders
+		return '$' . ($idx + 1);
+	}//end get_placeholder
 
 
 
@@ -354,7 +473,7 @@ trait utils {
 		$conn = DBi::_getConnection();
 		$sql_query_debug = debug_prepared_statement(
 			$this->sql_query,
-			array_keys($this->params),
+			$this->params,
 			$conn
 		);
 

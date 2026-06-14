@@ -203,8 +203,12 @@ class matrix_db_manager {
 			 SELECT $1, next_start FROM calc_start
 			 ON CONFLICT (tipo)
 			 DO UPDATE
-			  -- Step 3: If the counter exists, ignore the calculation and just increment
-			  SET value = matrix_counter.value + 1
+			  -- Step 3: If the counter exists, ignore the calculation and just increment.
+			  -- DB-01: reference the actual conflict-target table ($counter_table),
+			  -- not a hardcoded 'matrix_counter'. For '_dd' sections the target is
+			  -- 'matrix_counter_dd'; hardcoding raised 'missing FROM-clause entry for
+			  -- table matrix_counter' on the second insert (DO UPDATE) of those tables.
+			  SET value = $counter_table.value + 1
 			  RETURNING value
 			)
 			INSERT INTO $table (" . implode(', ', $columns) . ")
@@ -265,6 +269,59 @@ class matrix_db_manager {
 		// Cast to INT always (received is string by default)
 		return (int)$section_id;
 	}//end create
+
+
+
+	/**
+	* ACQUIRE_NODE_LOCK
+	* Acquires a transaction scoped advisory lock for one section node, used to
+	* serialize concurrent tree mutations on the same parent (child ordering,
+	* move, add). Same hashtext pattern as the section_id counter lock in create().
+	* The lock is released automatically when the enclosing transaction ends
+	* (COMMIT or ROLLBACK), so callers MUST be inside a transaction
+	* (see DBi::transaction); outside one the lock would be released immediately
+	* and protect nothing.
+	* @param string $section_tipo
+	* @param int|string $section_id
+	* @return bool
+	*/
+	public static function acquire_node_lock( string $section_tipo, int|string $section_id ) : bool {
+
+		$conn = DBi::_getConnection();
+		if ($conn === false) {
+			debug_log(__METHOD__ . ' Error. No DB connection available', logger::ERROR);
+			return false;
+		}
+
+		if (pg_transaction_status($conn) === PGSQL_TRANSACTION_IDLE) {
+			debug_log(__METHOD__
+				. ' Error. acquire_node_lock called outside a transaction; lock would be ineffective' . PHP_EOL
+				. ' section_tipo: ' . $section_tipo . PHP_EOL
+				. ' section_id: ' . $section_id
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		$result = pg_query_params(
+			$conn,
+			'SELECT pg_advisory_xact_lock(hashtext($1))',
+			[$section_tipo . '_' . $section_id]
+		);
+
+		if ($result === false) {
+			debug_log(__METHOD__
+				. ' Error. Unable to acquire node advisory lock' . PHP_EOL
+				. ' section_tipo: ' . $section_tipo . PHP_EOL
+				. ' section_id: ' . $section_id . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		return true;
+	}//end acquire_node_lock
 
 
 
@@ -700,6 +757,15 @@ class matrix_db_manager {
 			$column		= $data->column;
 			$key		= $data->key;
 			$value		= $data->value;
+
+			// DB-05: $column is interpolated directly into the UPDATE SET clause
+			// (SQL column names cannot be bound as parameters), so it MUST be a bare
+			// identifier — reject anything that could carry SQL. ($key below is bound
+			// as a text[] path parameter, so it is data, not SQL.)
+			if (!is_string($column) || !preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $column)) {
+				debug_log(__METHOD__ . ' Rejected invalid column identifier: ' . to_string($column), logger::ERROR);
+				return false;
+			}
 
 			// Group by column
 			if (!isset($columns_data[$column])) {

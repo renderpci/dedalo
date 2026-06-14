@@ -87,6 +87,15 @@ abstract class component_common extends common {
 		public bool $update_diffusion_info_propagate_changes = true;
 
 		/**
+		 * Whether the current import value was wrapped as {"dedalo_data": <dato>}.
+		 * Set by the import tool after unwrap_dedalo_data() and before conform_import_data().
+		 * Allows components as component_json to disambiguate a v7 envelope from a
+		 * literal JSON value with the same shape.
+		 * @var bool $import_data_is_wrapped
+		 */
+		public bool $import_data_is_wrapped = false;
+
+		/**
 		 * Database matrix record ID (primary key of the matrix row).
 		 * Used for direct database operations and Time Machine references.
 		 * @var string|int|null $matrix_id
@@ -433,10 +442,10 @@ abstract class component_common extends common {
 						}else{
 							$ar_modified_section_tipos = section::get_metadata_definition_tipos();
 							// add publication info
-								$ar_modified_section_tipos[] = diffusion::$publication_first_tipo;
-								$ar_modified_section_tipos[] = diffusion::$publication_last_tipo;
-								$ar_modified_section_tipos[] = diffusion::$publication_first_user_tipo;
-								$ar_modified_section_tipos[] = diffusion::$publication_last_user_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_first_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_last_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_first_user_tipo;
+								$ar_modified_section_tipos[] = diffusion_utils::$publication_last_user_tipo;
 							if (true===in_array($tipo, $ar_modified_section_tipos)) {
 								# skip verification
 							}else{
@@ -909,12 +918,14 @@ abstract class component_common extends common {
 			}
 
 			// Set the counter with the max id when the counter is below it.
+			// Explicit ids (imports, migrations, restored data) are absorbed
+			// atomically so concurrent allocations cannot reuse them.
 			if (!empty($ar_id)) {
 				$max_id = max($ar_id);
 				$counter = $this->get_counter();
 				if( $counter < $max_id ){
-					// set the new counter with the id
-					$this->set_counter( $max_id );
+					$section_record = $this->get_my_section_record();
+					$section_record->raise_component_counter( $this->tipo, $max_id );
 				}
 			}
 		}
@@ -1088,19 +1099,19 @@ abstract class component_common extends common {
 			if ( is_array($data_tm) && (in_array($current_model, $relation_components) || $is_literal_with_dataframe) ){
 
 				// Get only the component data. Remove possible dataframe data
-				if($current_model==='component_iri'){
-					// component_iri: filter by iri property
+				// (TM rows store main + dataframe data merged; the dataframe
+				// entries are identified positively with is_dataframe_entry:
+				// type marker first, legacy pairing-keys shape as fallback)
+				if( $is_literal_with_dataframe ){
+					// Literal main components with dataframe: filter out dataframe locators
 					$data_tm = array_values( array_filter( $data_tm, function($el) {
-						return is_object($el) && property_exists($el, 'iri');
+						return is_object($el) && !self::is_dataframe_entry($el);
 					}));
-				}elseif( $is_literal_with_dataframe ){
-					// Literal main components with dataframe: filter out dataframe locators.
-					// Dataframe locators always have section_id_key, section_tipo_key and main_component_tipo.
-					$data_tm = array_values( array_filter( $data_tm, function($el) {
-						return is_object($el) && !isset($el->section_id_key);
-					}));
-				}else{
-					// any other relation component
+				}elseif($current_model!=='component_dataframe'){
+					// any other relation component: keep valid locator-shaped objects.
+					// (!) dataframe entries are intentionally NOT excluded here to
+					// preserve pre-migration behavior: relation components filter
+					// their own locators by from_component_tipo downstream
 					$data_tm = array_values( array_filter( $data_tm, function($el) {
 						if(is_object($el)) {
 							// Note that TM data locators could or could not have the property "from_component_tipo."
@@ -1122,18 +1133,13 @@ abstract class component_common extends common {
 					}));
 				}
 
-				// If the component is a dataframe filter the tm data with the section_id_key also.
+				// If the component is a dataframe filter the tm data with the pairing keys also.
 				if($current_model==='component_dataframe' && isset($this->caller_dataframe)){
 
-					$section_id_key			= $this->caller_dataframe->section_id_key;
-					$section_tipo_key		= $this->caller_dataframe->section_tipo_key;
-					$main_component_tipo	= $this->caller_dataframe->main_component_tipo;
+					$caller_dataframe = $this->caller_dataframe;
 
-					$data_tm = array_values( array_filter( $data_tm, function($el) use($section_id_key, $section_tipo_key, $main_component_tipo) {
-						return is_object($el)
-							&& ( isset($el->section_id_key) && (int)$el->section_id_key===(int)$section_id_key )
-							&& ( isset($el->section_tipo_key) && $el->section_tipo_key===$section_tipo_key )
-							&& ( isset($el->main_component_tipo) && $el->main_component_tipo===$main_component_tipo );
+					$data_tm = array_values( array_filter( $data_tm, function($el) use($caller_dataframe) {
+						return self::dataframe_entry_matches($el, $caller_dataframe);
 					}));
 				}
 			}
@@ -1263,22 +1269,21 @@ abstract class component_common extends common {
 
 	/**
 	* SET_DATA_ITEM_COUNTER
+	* Assigns a new server-minted item id to the given data item.
+	* Item ids are the dataframe pairing keys: allocation is atomic
+	* (advisory-locked, see section_record::allocate_component_ids) so
+	* concurrent processes editing the same record cannot mint the same id.
 	* @param object $data_item
 	* @return object $data_item // added the id for the item
 	*/
 	public function set_data_item_counter( object $data_item ) : object {
 
-		// get the component counter
-		// it's the last counter used
-			$counter = $this->get_counter();
-			$counter++;
-			$id = $counter;
+		// allocate one id atomically
+			$section_record	= $this->get_my_section_record();
+			$ar_id			= $section_record->allocate_component_ids( $this->tipo, 1 );
 
 		// Set the new id to the data
-			$data_item->id = $id;
-
-		// set the counter to use next value
-			$this->set_counter( $id );
+			$data_item->id = $ar_id[0];
 
 		return $data_item;
 	}//end set_data_item_counter
@@ -1434,7 +1439,9 @@ abstract class component_common extends common {
 			}
 
 			// Compares id. If is the same, result the array key value.
-			if($current_value->id === $id){
+			// COMP-04: cast the stored id — it may be a string in the data while $id
+			// is typed int; a strict === would then miss the match.
+			if((int)$current_value->id === $id){
 				return (int)$key;
 			}
 		}
@@ -1503,99 +1510,126 @@ abstract class component_common extends common {
 	/**
 	* GET_VALUE
 	* Get the string value of the components.
-	* Use dd_grid to resolve his value
-	* first it get the dd_grid_value
-	* second it flat the dd_grid to obtain a string
+	* Flat-string facade over the atoms export contract: resolves
+	* get_export_value() with a default export_context (component default
+	* ddo_map for relations, relative media URLs, no parents) and joins
+	* the atoms with the legacy resolve_value() semantics
+	* (see export_value::to_flat_string, parity tested per model).
 	* @return string|null $value
-	* 	dd_grid_cell_object
 	*/
 	public function get_value() : ?string {
 
-		$grid_value	= $this->get_grid_value();
-		$value		= dd_grid_cell_object::resolve_value($grid_value);
-
-		return $value;
+		return $this->get_export_value()->to_flat_string();
 	}//end get_value
 
 
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_data().
-	* overwrite in every different specific component
-	* Some the text components can set the value with the data directly
-	* the relation components need to process the locator to resolve the value
+	* Visual grid cell of the component (dd_grid_cell_object, the CLIENT
+	* rendering format used by the thesaurus indexation grid, the time
+	* machine matrix and the descriptors widget).
+	*
+	* The data resolution is the atoms export contract (get_export_value):
+	* this default implementation is a generic atoms->cell adapter covering
+	* uniform-leaf components. Components producing STRUCTURAL trees keep
+	* visual-only overrides: component_relation_common (rows/columns
+	* recursion), component_info (widget multi-column), component_inverse
+	* (per-pair columns), component_text_area in 'indexation_list' mode
+	* (interactive tag fragment cells).
+	*
 	* @param object|null $ddo = null
+	* 	Optional caller customs: fields_separator, records_separator, class_list
 	* @return dd_grid_cell_object $dd_grid_cell_object
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
+		// atoms. Single data-resolution authority (same values the export resolves).
+		// absolute_urls reproduces the legacy media/av/3d caller switch.
+			$context = new export_context((object)[
+				'ddo'			=> $ddo,
+				'caller'		=> $this->caller ?? '',
+				'absolute_urls'	=> (($this->caller ?? null)==='tool_export')
+			]);
+			$export_value = $this->get_export_value($context);
 
-		// column_obj
+		return $this->export_value_to_grid_cell($export_value, $ddo);
+	}//end get_grid_value
+
+
+
+	/**
+	* EXPORT_VALUE_TO_GRID_CELL
+	* Generic atoms -> dd_grid_cell_object conversion (VISUAL layer only).
+	*
+	* Shape contract pinned by the client views (see grid_value_snapshot_Test):
+	* - 'value' and 'fallback_value' are ALWAYS arrays, never null
+	*   (view_descriptors dereferences fallback_value[0])
+	* - 'ar_columns_obj' is ALWAYS set (component_relation_common spreads it)
+	* - the injected $this->column_obj is honored (indexation/relation
+	*   recursion contact point); the own id keeps the '{section_tipo}_{tipo}'
+	*   grammar (view_indexation get_section_id_column splits it)
+	* - one value element per atom (clients join with records_separator;
+	*   rendered output identical to the legacy pre-joined strings)
+	*
+	* @param export_value $export_value
+	* @param object|null $ddo = null
+	* @return dd_grid_cell_object
+	*/
+	final protected function export_value_to_grid_cell( export_value $export_value, ?object $ddo=null ) : dd_grid_cell_object {
+
+		// column_obj. Injected by relation_common / indexation_grid, else own identity
 			$column_obj = $this->column_obj ?? (object)[
 				'id' => $this->section_tipo.'_'.$this->tipo
 			];
 
-		// short vars
-			$raw_data	= $this->get_data();
-			$label		= $this->get_label();
-			$properties	= $this->get_properties();
-
-		// data
-			$data = empty($raw_data)
-				? null
-				: array_map(function($el){
-					if (is_array($el) || is_object($el)) {
-						return json_encode($el);
-					}
-					return $el;
-				}, $raw_data);
-
-		// fields_separator
-			$fields_separator = isset($fields_separator)
-				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ', ');
-
-		// records_separator
-			$records_separator = isset($records_separator)
-				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
-
-		// fallback value. Overwrite in translatable components like input_text or text_area
-			$fallback_value = (isset($data) && $this->is_translatable())
-				? $data
+		// leaf segment. Uniform-leaf components share the own segment on every atom
+			$leaf_segment = isset($export_value->atoms[0])
+				? $export_value->atoms[0]->get_leaf_segment()
 				: null;
 
-		// value
-			$value = $data; // array|null
+		// separators. ddo > leaf segment (already ddo>properties resolved) > joiner defaults
+			$records_separator	= $ddo?->records_separator ?? $leaf_segment?->records_separator ?? ' | ';
+			$fields_separator	= $ddo?->fields_separator  ?? $leaf_segment?->fields_separator  ?? ', ';
+
+		// value / fallback partition (is_fallback atoms), atom order preserved
+			$value			= [];
+			$fallback_value	= [];
+			foreach ($export_value->atoms as $atom) {
+				if ($atom->is_fallback===true) {
+					$fallback_value[] = $atom->value;
+				}else{
+					$value[] = $atom->value;
+				}
+			}
+
+		// cell_type from atoms (uniform per leaf)
+			$cell_type = isset($export_value->atoms[0])
+				? $export_value->atoms[0]->cell_type
+				: 'text';
 
 		// dd_grid_cell_object
 			$dd_grid_cell_object = new dd_grid_cell_object();
 				$dd_grid_cell_object->set_type('column');
-				$dd_grid_cell_object->set_label($label);
-				$dd_grid_cell_object->set_cell_type('text');
+				$dd_grid_cell_object->set_label($export_value->label ?? $this->get_label());
+				$dd_grid_cell_object->set_cell_type($cell_type);
 				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				if(isset($class_list)){
-					$dd_grid_cell_object->set_class_list($class_list);
+				if (isset($ddo->class_list)) {
+					$dd_grid_cell_object->set_class_list($ddo->class_list);
 				}
 				$dd_grid_cell_object->set_fields_separator($fields_separator);
 				$dd_grid_cell_object->set_records_separator($records_separator);
 				$dd_grid_cell_object->set_value($value);
 				$dd_grid_cell_object->set_fallback_value($fallback_value);
+				if ($cell_type==='section_id') {
+					// legacy component_section_id parity (client record-link button)
+					$dd_grid_cell_object->set_row_count(1);
+				}
 				$dd_grid_cell_object->set_model(get_called_class());
 
 
 		return $dd_grid_cell_object;
-	}//end get_grid_value
+	}//end export_value_to_grid_cell
 
 
 
@@ -1618,21 +1652,17 @@ abstract class component_common extends common {
 					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
 			}
 
-		// data
-			$data = $this->get_data();
+		// data + cell_type. Shared chokepoint with get_raw_export_value
+		// so the dedalo_data wire shape cannot drift between paths.
+			$raw_export_data	= $this->build_raw_export_data();
+			$data				= $raw_export_data->data;
+			$cell_type			= $raw_export_data->cell_type;
 
 		// get the total of locators of the data, it will be use to render the rows separated.
 			$row_count = 1; // sizeof($data);
 
 		// label
 			$label = $this->get_label();
-
-		// cell_type
-		// Exception for comoponent_section_id. As section_id must be used as int, 
-		// avoid to use the json cell type to render it as int instead an array [3]
-			$cell_type = $this->get_model()==='component_section_id' 
-				? 'section_id' 
-				: 'json';
 
 		// raw_value
 			$raw_value = new dd_grid_cell_object();
@@ -1650,45 +1680,179 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_GRID_FLAT_VALUE
-	* Get the flat value of the components (text version of data).
-	* overwrite in every different specific component
-	* @return dd_grid_cell_object $flat_value
-	* 	dd_grid_cell_object
+	* BUILD_RAW_EXPORT_DATA
+	* Shared chokepoint for the 'dedalo_raw' export wire shape, used by both
+	* get_raw_value() (legacy grid path) and get_raw_export_value() (atoms path).
+	*
+	* dedalo_data wrapper:
+	* Raw exported data is wrapped as {"dedalo_data": <dato>} to identify externally
+	* that the value is Dédalo format data and not any other generic value.
+	* The import process unwraps it transparently (see unwrap_dedalo_data).
+	* component_section_id is excluded: it must remain a plain int to be used
+	* as the record key on re-import. Null data is not wrapped (empty export cell).
+	* Note that the wrapper is an associative array because set_value() expects
+	* ?array; it serializes to JSON as the {"dedalo_data": ...} object.
+	* Components with paired dataframe rows ship them alongside the dato as
+	* {"dedalo_data": {"dato": <dato>, "dataframe": <frame locators>}} so the
+	* round-trip re-creates the pairing (see import_dataframe_data).
+	*
+	* @return object
+	* 	{data: array|null, cell_type: string}
 	*/
-	public function get_grid_flat_value() : dd_grid_cell_object {
+	private function build_raw_export_data() : object {
 
-		// column_obj
-			if(isset($this->column_obj)){
-				$column_obj = $this->column_obj;
-			}else{
-				$column_obj = new stdClass();
-					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+		// data
+			$data = $this->get_data();
+
+		// cell_type
+		// Exception for comoponent_section_id. As section_id must be used as int,
+		// avoid to use the json cell type to render it as int instead an array [3]
+			$cell_type = $this->get_model()==='component_section_id'
+				? 'section_id'
+				: 'json';
+
+		// dedalo_data wrapper (see method doc)
+			if ($cell_type!=='section_id' && $data!==null) {
+				$dataframe_data = $this->get_export_dataframe_data();
+				$data = ($dataframe_data!==null)
+					? ['dedalo_data' => ['dato' => $data, 'dataframe' => $dataframe_data]]
+					: ['dedalo_data' => $data];
 			}
 
-		// Resolve the complex grid value into a flat string
-			$grid_value = $this->get_grid_value();
-			$value = dd_grid_cell_object::resolve_value($grid_value);
-
-		// get the total of locators of the data, it will be use to render the rows separated.
-			$row_count = 1; // sizeof($value);
-
-		// label
-			$label = $this->get_label();
-
-		// flat_value
-			$flat_value = new dd_grid_cell_object();
-				$flat_value->set_type('column');
-				$flat_value->set_label($label);
-				$flat_value->set_cell_type('text');
-				$flat_value->set_ar_columns_obj([$column_obj]);
-				$flat_value->set_row_count($row_count);
-				$flat_value->set_value([$value]); // array
-				$flat_value->set_model(get_called_class());
+		return (object)[
+			'data'		=> $data,
+			'cell_type'	=> $cell_type
+		];
+	}//end build_raw_export_data
 
 
-		return $flat_value;
-	}//end get_grid_flat_value
+
+	/**
+	* GET_RAW_EXPORT_VALUE
+	* Atoms based version of get_raw_value() for the 'dedalo_raw' export format.
+	* One atom per component: the value is the pre-encoded {"dedalo_data": ...}
+	* JSON string (byte-fixed here so the tabulator and the client emit it
+	* verbatim), or a plain int for component_section_id (record key on
+	* re-import), or null for empty data (empty export cell).
+	* Final: components must never override the raw wire shape.
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	final public function get_raw_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// shared chokepoint with get_raw_value()
+			$raw_export_data = $this->build_raw_export_data();
+
+		// path. Raw export does not recurse: single segment after the prefix
+			$segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model' => $this->get_model()
+			]);
+			$path = [...$context->path_prefix, $segment];
+
+		// scalar value
+			if ($raw_export_data->cell_type==='section_id') {
+				$data	= $raw_export_data->data;
+				$first	= is_array($data) ? reset($data) : $data;
+				$value	= isset($first) ? (int)$first : null;
+			}else{
+				$value = ($raw_export_data->data===null)
+					? null
+					: json_encode($raw_export_data->data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			}
+
+		return export_value::from_scalar(
+			$path,
+			$value,
+			(object)['cell_type' => $raw_export_data->cell_type],
+			$this->get_label(),
+			get_called_class()
+		);
+	}//end get_raw_export_value
+
+
+
+	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract. Base implementation: one atom per data
+	* item, arrays/objects json_encoded (parity with get_grid_value base).
+	* Overwrite in every different specific component; relation components
+	* resolve their children and merge the child atoms extending the path.
+	*
+	* Replaces the polymorphic get_grid_value() tree for the export path:
+	* the result is always a flat list of scalar atoms whose structured
+	* paths carry column identity and relation item indexes
+	* (see core/dd_grid/class.export_atom.php).
+	*
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// own segment. Separators precedence: ddo override > properties > joiner default
+			$segment		= $this->build_export_path_segment($context);
+			$path			= [...$context->path_prefix, $segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data. One atom per item
+			$raw_data = $this->get_data();
+			if (empty($raw_data) || !is_array($raw_data)) {
+				return $export_value;
+			}
+
+			$is_translatable = $this->is_translatable();
+			foreach ($raw_data as $key => $item) {
+				// parity with get_grid_value base: arrays/objects as plain json_encode
+				$value = (is_array($item) || is_object($item))
+					? json_encode($item)
+					: $item;
+
+				$export_value->add_atom( new export_atom($path, $value, (object)[
+					'value_index'	=> (int)$key,
+					'lang'			=> $is_translatable ? $this->lang : null
+				]) );
+			}
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
+	/**
+	* BUILD_EXPORT_PATH_SEGMENT
+	* Builds the component own path segment for get_export_value().
+	* Separators precedence matches the legacy get_grid_value resolution:
+	* ddo override > component properties > null (joiner defaults ', ' / ' | ')
+	* @param export_context $context
+	* @return export_path_segment
+	*/
+	protected function build_export_path_segment( export_context $context ) : export_path_segment {
+
+		$properties	= $this->get_properties();
+		$ddo		= $context->ddo;
+
+		$fields_separator	= $ddo?->fields_separator
+			?? $properties?->fields_separator
+			?? null;
+		$records_separator	= $ddo?->records_separator
+			?? $properties?->records_separator
+			?? null;
+
+		return new export_path_segment($this->section_tipo, $this->tipo, (object)[
+			'model'				=> $this->get_model(),
+			'fields_separator'	=> $fields_separator,
+			'records_separator'	=> $records_separator,
+			// relation traversal position (set by the calling relation via descend)
+			'item_index'		=> $context->item_index,
+			'section_id'		=> $context->item_section_id
+		]);
+	}//end build_export_path_segment
 
 
 
@@ -2483,9 +2647,16 @@ abstract class component_common extends common {
 					? md5(json_encode($filter_for_hash))
 					: 'full';
 
+				// COMP-01: include the logged user id in the cache key. The SQO below
+				// is project-filtered per requesting user (search::set_up defaults
+				// skip_projects_filter=false), so the option list is user-specific.
+				// Without the user id, the persistent worker would serve one user's
+				// project-filtered list to another (cross-tenant over/under-exposure).
+				// Pairs with the per-request cache clear (COMP-03).
+				$uid_user = (string) logged_user_id();
 				$uid = !empty($ar_sections_tipo)
-					? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id
-					: $this->tipo .'_'. $lang . '_'. $hash_id;
+					? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id . '_u' . $uid_user
+					: $this->tipo .'_'. $lang . '_'. $hash_id . '_u' . $uid_user;
 
 				if (isset(self::$list_of_values_data_cache[$uid])) {
 
@@ -2734,6 +2905,35 @@ abstract class component_common extends common {
 
 
 	/**
+	* SET_CALLER_DATAFRAME
+	* Sets the dataframe pairing caller context, normalizing legacy stdClass
+	* shapes ({section_id_key, section_tipo_key, ...}) into the typed
+	* dataframe_caller DTO when possible. Overrides the magic set accessor.
+	* @param object $caller_dataframe
+	* @return void
+	*/
+	public function set_caller_dataframe( object $caller_dataframe ) : void {
+
+		if (!($caller_dataframe instanceof dataframe_caller)) {
+			$normalized = dataframe_caller::from_legacy($caller_dataframe);
+			if ($normalized!==null) {
+				$caller_dataframe = $normalized;
+			}else{
+				debug_log(__METHOD__
+					. ' Unable to normalize caller_dataframe to dataframe_caller DTO. Keeping raw object' . PHP_EOL
+					. ' caller_dataframe: ' . to_string($caller_dataframe) . PHP_EOL
+					. ' component tipo: ' . $this->tipo
+					, logger::WARNING
+				);
+			}
+		}
+
+		$this->caller_dataframe = $caller_dataframe;
+	}//end set_caller_dataframe
+
+
+
+	/**
 	* GET_DATAFRAME_DDO
 	* get the components dataframe when they are defined in RQO
 	* if the component has not a dataframe return null
@@ -2877,7 +3077,7 @@ abstract class component_common extends common {
 	* @param ?string $diffusion_element_tipo
 	* @return array $diffusion_data
 	*
-	* @see class.diffusion_data.php
+	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
 	* @test false
 	*/
 	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo = null ) : array {
@@ -2941,10 +3141,13 @@ abstract class component_common extends common {
 						. " error: " . $e->getMessage()
 						, logger::ERROR
 					);
-					$fn_data = null;
+					// DIFFU-04: this method is typed `: array`. On a fn failure return
+					// an empty array, not null, or the return below raises a TypeError
+					// (and the catch hides the original fn error behind it).
+					$fn_data = [];
 				}
-				// overwrite default diffusion data
-				$diffusion_data = $fn_data;
+				// overwrite default diffusion data (coerce null defensively)
+				$diffusion_data = $fn_data ?? [];
 
 				return $diffusion_data;
 			}
@@ -3566,7 +3769,7 @@ abstract class component_common extends common {
 	* @see dd_core_api update
 	*
 	* @param object $changed_data The data change request object with the following structure:
-	*   - action: (string) The operation to perform. One of: 'insert', 'update', 'remove', 'set_data', 'sort_data', 'add_new_element', 'force_save'
+	*   - action: (string) The operation to perform. One of: 'insert', 'update', 'remove', 'set_data', 'sort_data', 'sort_by_column', 'add_new_element', 'force_save'
 	*   - id: (string|null) The unique identifier of the data entry to modify
 	*     - For 'remove': id of entry to remove, or null to remove all entries
 	*     - For 'update': id of entry to update (required for targeted update)
@@ -3616,6 +3819,14 @@ abstract class component_common extends common {
 	*   "source_key": 0,
 	*   "target_key": 2,
 	*   "value": { "section_id": "1", "section_tipo": "dd123" }
+	* }
+	*
+	* @example Sort all entries by a column value (relation components, gated by 'sort_by_column' property):
+	* {
+	*   "action": "sort_by_column",
+	*   "component_tipo": "dd456",
+	*   "direction": "ASC",
+	*   "value": null
 	* }
 	*
 	* @example Add new element (creates new section and links it):
@@ -3693,6 +3904,15 @@ abstract class component_common extends common {
 
 				// Extract the id from the change request
 				$id = $changed_data->id ?? null;
+				// COMP-02: normalize a numeric client id to int. Data-item ids are
+				// integers, but the id arrives from raw client JSON and may be a
+				// string ("5"); a string-vs-int mismatch made the strict === match
+				// below fall through to the "not found" branch and APPEND a duplicate
+				// entry instead of updating the existing one.
+				if (is_string($id) && is_numeric($id)) {
+					$id = (int)$id;
+					$changed_data->id = $id;
+				}
 
 				// Translatable literal components id resolution across languages
 				// When id is null and key is provided, resolve the id from other languages
@@ -3806,13 +4026,12 @@ abstract class component_common extends common {
 					$this->observable_data = $all_data;
 
 					// DATAFRAME DELETION for translatable literal components
+					// Single-writer cascade (server-authoritative): the entry was
+					// removed from ALL languages, so the paired dataframe rows
+					// (lang-agnostic, keyed by the item id) are removed too.
 					$dataframe_ddo = $this->get_dataframe_ddo();
 					if (!empty($dataframe_ddo)) {
-						// Build a virtual locator for dataframe deletion
-						$locator = new locator();
-						$locator->set_section_tipo($this->section_tipo);
-						$locator->set_section_id($id);
-						$this->remove_dataframe_data($locator);
+						$this->remove_dataframe_data_by_id( (int)$id );
 					}
 
 					$this->set_data($new_data);
@@ -3853,32 +4072,36 @@ abstract class component_common extends common {
 					: $data;
 
 				// DATAFRAME DELETION
+				// Single-writer cascade (server-authoritative)
 				$dataframe_ddo = $this->get_dataframe_ddo();
 				if( !empty($dataframe_ddo) && $id !== null ){
 
-					$locator = array_find($data_lang, fn($locator) => is_object($locator) && isset($locator->id) && $locator->id === $id);
-					if( !empty($locator) ){
-						$remove_relation_components = component_relation_common::get_components_with_relations();
-						if( !in_array(get_called_class(), $remove_relation_components) && isset($locator->id) ){
+					$remove_relation_components = component_relation_common::get_components_with_relations();
+					if( !in_array(get_called_class(), $remove_relation_components) ){
 
-							$current_section_id = $locator->id;
-
-							$locator = new locator();
-								$locator->set_section_tipo($this->section_tipo);
-								$locator->set_section_id($current_section_id);
-
-							if( $lang!==DEDALO_DATA_NOLAN ){
-								$id_exists_in_nolan = $this->get_key_from_id( $current_section_id, DEDALO_DATA_NOLAN);
-								if( $id_exists_in_nolan !== null ){
-									$locator = null;
-								}
+						// literal main: cascade by item id, but only when the
+						// removed id no longer exists in any OTHER language
+						// (frames are lang-agnostic, paired by the item id)
+						$all_data		= $this->get_data() ?? [];
+						$occurrences	= 0;
+						foreach ($all_data as $data_item) {
+							if (is_object($data_item) && isset($data_item->id) && $data_item->id === $id) {
+								$occurrences++;
 							}
 						}
+						// the current-language copy is still present in $all_data
+						// (removal not persisted yet): cascade only when it is the last one
+						if ($occurrences <= 1) {
+							$this->remove_dataframe_data_by_id( (int)$id );
+						}
+					}else{
 
-						if ($locator !== null) {
+						// relation main (legacy target-keyed semantics until the
+						// data migration runs): cascade keyed by the removed locator
+						$locator = array_find($data_lang, fn($locator) => is_object($locator) && isset($locator->id) && $locator->id === $id);
+						if( !empty($locator) ){
 							$this->remove_dataframe_data( $locator );
 						}
-
 					}
 				}
 
@@ -4003,6 +4226,35 @@ abstract class component_common extends common {
 				$this->observable_data = (get_called_class() === 'component_relation_related')
 					? $this->get_data_with_references()
 					: $new_data;
+				break;
+
+			// SORT_BY_COLUMN ACTION
+			// Persistently reorders the full locator array by the value of a column
+			// component in the target section(s). Used by portals to apply a global
+			// ASC|DESC order by any sortable column (e.g. a component_date).
+			// Relation components only; gated by the 'sort_by_column' ontology property.
+			case 'sort_by_column':
+
+				// Only relation components store locator arrays that can be column-sorted
+				if (!($this instanceof component_relation_common)) {
+					debug_log(__METHOD__
+						.' Error on sort_by_column. Action is only available for relation components.' .PHP_EOL
+						.' model: ' . get_called_class() .PHP_EOL
+						.' tipo: ' . $this->tipo
+						, logger::ERROR
+					);
+					return false;
+				}
+
+				// Resolve the new order and update the component data (not saved here)
+				if ($this->sort_data_by_column($changed_data, $lang) !== true) {
+					return false;
+				}
+
+				// Set observable data for event notifications
+				$this->observable_data = (get_called_class() === 'component_relation_related')
+					? $this->get_data_with_references()
+					: $this->get_data_lang($lang);
 				break;
 
 			// ADD_NEW_ELEMENT ACTION
@@ -4210,6 +4462,17 @@ abstract class component_common extends common {
 	*/
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
+		// static cache. The path is ontology-derived: it depends only on the tipos
+		// and the portal origin (from_component_tipo/from_section_tipo).
+		// Stored in common::$cache_order_path so common::clear() purges it across
+		// worker requests. A deep copy is returned because subclass overrides
+		// (component_section_id, component_date, component_number) mutate the
+		// path items ($path[0]->column) after calling parent::get_order_path().
+			$cache_key = $component_tipo .'_'. $section_tipo .'_'. ($this->from_component_tipo ?? '') .'_'. ($this->from_section_tipo ?? '');
+			if (isset(common::$cache_order_path[$cache_key])) {
+				return unserialize(serialize( common::$cache_order_path[$cache_key] ));
+			}
+
 		// get standard search query path. This get component path downwards
 			$path = search::get_query_path($component_tipo, $section_tipo);
 
@@ -4228,6 +4491,10 @@ abstract class component_common extends common {
 				]);
 			}
 
+		// cache add. Store a deep copy so the caller's array (returned below and
+		// possibly mutated by subclass overrides) cannot alter the cached value
+			common::$cache_order_path[$cache_key] = unserialize(serialize($path));
+			common::manage_cache_size(common::$cache_order_path);
 
 		return $path;
 	}//end get_order_path
@@ -4253,6 +4520,91 @@ abstract class component_common extends common {
 
 		return $list_value;
 	}//end get_list_value
+
+
+
+	/**
+	* UNWRAP_DEDALO_DATA
+	* Raw exported data (tool_export 'dedalo_raw' format) is wrapped as:
+	* 	{"dedalo_data": <dato>}
+	* to identify externally that the value is Dédalo format data and not any other
+	* generic value (see get_raw_value).
+	* This method detects the wrapper in an import value and returns the inner dato
+	* re-encoded as JSON string, with a flag indicating whether the value was wrapped.
+	* Un-wrapped values are returned unchanged, so both wrapped and plain v6/v7
+	* import values are accepted.
+	* Called by the import tool before conform_import_data.
+	* @param string $import_value
+	* @return object $response
+	*	- value: string The unwrapped (or original) import value
+	*	- wrapped: bool True when the dedalo_data wrapper was detected and removed
+	*/
+	public static function unwrap_dedalo_data(string $import_value) : object {
+
+		$response = new stdClass();
+			$response->value		= $import_value;
+			$response->wrapped		= false;
+			$response->dataframe	= null;
+			$response->has_dato		= true;
+
+		if (json_handler::is_json($import_value)) {
+			$decoded = json_handler::decode($import_value);
+			// the wrapper must be an object with 'dedalo_data' as its ONLY property.
+			// Objects with additional properties are legitimate values (e.g. a component_json
+			// value that happens to contain a 'dedalo_data' property) and pass through unchanged
+			if (is_object($decoded) &&
+				property_exists($decoded, 'dedalo_data') &&
+				count((array)$decoded)===1 ) {
+
+				$inner = $decoded->dedalo_data;
+
+				// dataframe envelope: {"dedalo_data": {"dato": ..., "dataframe": [...]}}
+				// recognized only when the inner object's properties are a subset of
+				// {dato, dataframe} with 'dataframe' present (a plain dato object can
+				// not collide: datos are arrays or lang-keyed lg-* objects)
+				if (is_object($inner)
+					&& property_exists($inner, 'dataframe')
+					&& empty(array_diff(array_keys((array)$inner), ['dato','dataframe'])) ) {
+
+					$response->dataframe	= is_array($inner->dataframe) ? $inner->dataframe : null;
+					$response->has_dato		= property_exists($inner, 'dato');
+					$inner					= $inner->dato ?? null;
+				}
+
+				if ($inner===null) {
+					// wrapped null dato: treat as an empty cell (clears the existing data).
+					// Note that the exporter never wraps null datos; this case only happens
+					// with hand written CSV files or dataframe-only envelopes
+					$response->value	= '';
+					$response->wrapped	= false;
+				}else{
+					// re-encode with the same flags used by the export (tool_export)
+					// to keep the inner JSON identical to the original stored dato
+					$response->value	= json_encode($inner, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+					$response->wrapped	= true;
+				}
+			}
+		}
+
+		return $response;
+	}//end unwrap_dedalo_data
+
+
+
+	/**
+	* IS_PLAIN_BRACKET_STRING
+	* Check if a string value that is not valid JSON can be admitted as plain text.
+	* Sometimes the value text could be '[Ac]', as numismatic legends; it is admitted,
+	* but if the text begins with '["' or ends with '"]' it is considered a malformed
+	* JSON array of strings and it is not admitted.
+	* Used by conform_import_data implementations.
+	* @param string $value
+	* @return bool
+	*/
+	public static function is_plain_bracket_string(string $value) : bool {
+
+		return !(str_starts_with($value, '["') || str_ends_with($value, '"]'));
+	}//end is_plain_bracket_string
 
 
 
@@ -4300,7 +4652,7 @@ abstract class component_common extends common {
 		}else{
 			// Non-JSON string case
 
-			if(empty($import_value)) {
+			if(empty($import_value) && $import_value!=='0') {
 				$import_value = null;
 			}else{
 				// Non-JSON non-empty value: wrap into v7 format for components_using_value_property
@@ -4324,28 +4676,51 @@ abstract class component_common extends common {
 			}
 		}
 
-		// Normalize: ensure array items are v7-compliant objects
-		if (is_array($import_value)) {
+		// Normalize into the conform contract:
+		// array of v7 items | object keyed by lang ('lg-*') with array values | null
+		$is_value_property_model = in_array($this->model, self::$components_using_value_property);
+		$normalize_items = function(array $items) use($is_value_property_model) : array {
 			$normalized = [];
-			foreach ($import_value as $val) {
-				if (!is_object($val)) {
+			foreach ($items as $val) {
+				if (!is_object($val) && $is_value_property_model) {
 					// Wrap plain values into objects with 'value' property for components_using_value_property
-					if (in_array($this->model, self::$components_using_value_property)) {
-						$normalized[] = (object)['value' => $val];
-					}else{
-						// For non-value-property components (locators, etc.), pass through as-is
-						// set_data() will handle wrapping if needed
-						$normalized[] = $val;
-					}
+					$normalized[] = (object)['value' => $val];
 				}else{
+					// Objects and non-value-property items (locators, etc.) pass through as-is
+					// set_data() will handle wrapping if needed
 					$normalized[] = $val;
 				}
 			}
-			$import_value = $normalized;
+			return $normalized;
+		};
+
+		if (is_array($import_value)) {
+
+			$import_value = $normalize_items($import_value);
+
+		}else if (is_object($import_value)) {
+
+			$first_key = array_key_first( (array)$import_value );
+			if ($first_key!==null && strpos($first_key, 'lg-')===0) {
+				// Multi-language object as {"lg-eng": "My value", "lg-spa": "Mi valor"}
+				// Keep it as object so the import tool can iterate languages calling set_data_lang(),
+				// but normalize every lang value into an array of v7 items
+				foreach ($import_value as $lang => $lang_value) {
+					$ar_lang_value = is_array($lang_value)
+						? $lang_value
+						: [$lang_value];
+					$import_value->$lang = $normalize_items($ar_lang_value);
+				}
+			}else{
+				// Single object item as {"value":"x"} or a locator object. Wrap into an array
+				$item = ($is_value_property_model && !property_exists($import_value, 'value'))
+					? (object)['value' => $import_value]
+					: $import_value;
+				$import_value = [$item];
+			}
 		}
 
-		// Convert objects to arrays to ensure compatibility with set_data_lang()
-		$response->result = is_object($import_value) ? (array)$import_value : $import_value;
+		$response->result = $import_value;
 		$response->msg = 'OK';
 
 		return $response;

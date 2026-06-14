@@ -84,6 +84,68 @@ class tool_common {
 
 
 	/**
+	* TOOL_DECLARES_AVAILABILITY
+	* True when the tool class declares the optional availability hook:
+	*
+	*   public static function is_available(object $context) : bool
+	*
+	* Contract: `common::get_tools()` calls the hook with a context object
+	* {caller_model, called_class, is_component, tipo, section_tipo, mode}
+	* AFTER the affected_models/affected_tipos match; returning anything but
+	* true excludes the tool for that element. Implementations must be fast
+	* and side-effect-free (results are cached per user/tipo/section_tipo).
+	* Lifecycle hooks like this one must NEVER be listed in API_ACTIONS.
+	*
+	* tool_common deliberately does NOT declare a default is_available, so
+	* method_exists is true only for tools that opt in.
+	*
+	* @param string $tool_name Tool class name, e.g. 'tool_diffusion'
+	* @return bool
+	*/
+	public static function tool_declares_availability(string $tool_name) : bool {
+
+		static $memo = [];
+		if (isset($memo[$tool_name])) {
+			return $memo[$tool_name];
+		}
+
+		if (!class_exists($tool_name, false)) {
+			$class_file = tool_paths::get_tool_class_file($tool_name);
+			if ($class_file!==null && is_file($class_file)) {
+				try {
+					require_once $class_file;
+				} catch (\Throwable $e) {
+					// a tool class that cannot load declares nothing
+					debug_log(__METHOD__
+						. " Tool class failed to load: $tool_name " . $e->getMessage()
+						, logger::WARNING
+					);
+				}
+			}
+		}
+
+		return $memo[$tool_name] = (class_exists($tool_name, false) && method_exists($tool_name, 'is_available'));
+	}//end tool_declares_availability
+
+
+
+	/**
+	* RESET_STATIC_CACHES
+	* Clears all in-memory static caches of this class.
+	* Called by `tools_register::invalidate_all_tool_caches()` so every
+	* tool write path resets the full cache set in one place.
+	* @return void
+	*/
+	public static function reset_static_caches() : void {
+		self::$all_registered_tools_cache	= null;
+		self::$active_tools_cache			= null;
+		self::$cache_config_tool			= [];
+		self::$user_tools_cache				= [];
+	}//end reset_static_caches
+
+
+
+	/**
 	* __CONSTRUCT
 	* @param string|int|null $section_id Section ID of the record being processed. Null in list mode.
 	* @param string $section_tipo Section tipo (ontology identifier) where the tool is invoked
@@ -325,13 +387,15 @@ class tool_common {
 		// lang
 			$lang = DEDALO_APPLICATION_LANG;
 
-		// css
+		// css. Multi-root aware: resolved per request (never stored in cache
+		// files), so DEDALO_ADDITIONAL_TOOLS changes apply without staleness
+			$tool_base_url = tool_paths::get_tool_url($name);
 			$css = (object)[
-				'url' => DEDALO_TOOLS_URL . '/' . $name . '/css/' .$name. '.css'
+				'url' => $tool_base_url . '/css/' .$name. '.css'
 			];
 
 		// icon
-			$icon = DEDALO_TOOLS_URL . '/' . $name . '/img/icon.svg';
+			$icon = $tool_base_url . '/img/icon.svg';
 
 		// context
 			$dd_object = new dd_object((object)[
@@ -389,13 +453,14 @@ class tool_common {
 					$tool_label = $tool_object->name ?? 'Unknown';
 				}
 
-			// css
+			// css. Multi-root aware (see tool_paths)
+				$tool_base_url = tool_paths::get_tool_url($tool_object->name);
 				$css = (object)[
-					'url' => DEDALO_TOOLS_URL . '/' . $tool_object->name . '/css/' .$tool_object->name. '.css'
+					'url' => $tool_base_url . '/css/' .$tool_object->name. '.css'
 				];
 
 			// icon
-				$icon = DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
+				$icon = $tool_base_url . '/img/icon.svg';
 
 			// developer
 				$developer = isset($tool_object->developer[0])
@@ -537,7 +602,13 @@ class tool_common {
 			if (isset(self::$all_registered_tools_cache)) {
 				return self::$all_registered_tools_cache;
 			}
-			// file cache
+			// file cache.
+			// Note: an empty array is treated as a read MISS on purpose. This shared
+			// entity-level cache is never legitimately empty on an installed system
+			// (a real install always has registered tools), so honoring a cached []
+			// would make a transiently-poisoned [] file (e.g. written during a failed
+			// search or mid-import) a sticky "no tools" state. Read-miss + the write
+			// guard below make any empty file self-heal on the next request.
 			$all_registered_tools = dd_cache::cache_from_file((object)[
 				'file_name'	=> self::get_all_registered_tools_cache_name(),
 				'prefix' => ''
@@ -594,14 +665,22 @@ class tool_common {
 
 		// cache
 		if ($use_cache===true) {
-			// static
+			// static (always, for request consistency)
 			self::$all_registered_tools_cache = $registered_tools;
-			// file cache
-			dd_cache::cache_to_file((object)[
-				'file_name' => self::get_all_registered_tools_cache_name(),
-				'prefix' => '',
-				'data' => $registered_tools
-			]);
+			// file cache.
+			// Fix C: never persist a failure/empty state. Writing only when the
+			// search succeeded ($db_result !== false) AND produced tools prevents
+			// poisoning this shared file with [] on a failed search or transient
+			// empty compute. A genuinely empty result (fresh, pre-import install)
+			// simply recomputes per request — one cheap indexed search — until
+			// import_tools runs and clean_cache() lets the real list be cached.
+			if ($db_result !== false && !empty($registered_tools)) {
+				dd_cache::cache_to_file((object)[
+					'file_name' => self::get_all_registered_tools_cache_name(),
+					'prefix' => '',
+					'data' => $registered_tools
+				]);
+			}
 		}
 
 
@@ -641,13 +720,13 @@ class tool_common {
 								'section_id' => '1',
 								'section_tipo' => 'dd64',
 								'type' => 'dd151',
-								'from_component_tipo' => 'dd1354'
+								'from_component_tipo' => tool_ontology_map::ACTIVE
 							],
 							'q_operator' => null,
 							'path' => [
 								(object)[
 									'section_tipo' => DEDALO_REGISTER_TOOLS_SECTION_TIPO,
-									'component_tipo' => 'dd1354',
+									'component_tipo' => tool_ontology_map::ACTIVE,
 									'model' => 'component_radio_button',
 									'name' => 'Active'
 								]
@@ -778,6 +857,56 @@ class tool_common {
 
 
 	/**
+	* GET_CONFIG_VALUE
+	* Resolves a single tool config key with per-key precedence:
+	*   1. user/install config record (section dd996)
+	*   2. registry default config (section dd1324, default configuration)
+	*   3. given $default
+	* Unlike get_config(), which falls back wholesale (the dd996 array wins
+	* as a whole when the record exists), this method resolves PER KEY, so a
+	* dd996 record that sets only one key inherits the rest from defaults.
+	* Property objects are unwrapped to their `value` when present.
+	* @param string $tool_name The name of the tool (same as class name)
+	* @param string $key The config property key
+	* @param mixed $default Fallback value when the key is not defined anywhere
+	* @return mixed
+	*/
+	public static function get_config_value(string $tool_name, string $key, mixed $default=null) : mixed {
+
+		$resolve = function(?array $config_item) use ($key) : mixed {
+			$config = $config_item['config'] ?? null;
+			if (is_object($config)) {
+				$config = (array)$config;
+			}
+			if (!is_array($config) || !array_key_exists($key, $config)) {
+				return null;
+			}
+			$prop = $config[$key];
+
+			return is_object($prop)
+				? ($prop->value ?? $prop)
+				: $prop;
+		};
+
+		// 1. user/install config (dd996)
+			$user_value = $resolve( tools_register::get_all_config()[$tool_name] ?? null );
+			if ($user_value !== null) {
+				return $user_value;
+			}
+
+		// 2. registry default config (dd1324)
+			$default_value = $resolve( tools_register::get_all_default_config()[$tool_name] ?? null );
+			if ($default_value !== null) {
+				return $default_value;
+			}
+
+		// 3. fallback
+		return $default;
+	}//end get_config_value
+
+
+
+	/**
 	* READ_FILES
 	*
 	* Reads files from a directory and returns an array of filenames,
@@ -876,6 +1005,12 @@ class tool_common {
 
 		// open file in read mode
 			$f = fopen($file, "r");
+			// TOOLS-06: fopen can fail (missing file, permissions, TOCTOU). Bail out
+			// cleanly instead of passing false to fgetcsv() (a TypeError/fatal).
+			if ($f === false) {
+				debug_log(__METHOD__ . ' Could not open CSV file for reading: ' . $file, logger::ERROR);
+				return [];
+			}
 
 		// read contents line by line and store data
 			$csv_array			= array();
@@ -1123,24 +1258,34 @@ class tool_common {
 		// Add resolved tool_config property to cached file
 		// Will be used later to get resolved user tools config from cache
 		// for example in get_structure_context or get_buttons_context
-			foreach ($user_tools as $tool) {
-				// Clone to avoid mutating the shared all_registered_tools_cache objects by reference
-				$tool = clone $tool;
-				$tool->tool_config = tool_common::get_config($tool->name);
+			foreach ($user_tools as $idx => $tool) {
+				// Clone to avoid mutating the shared all_registered_tools_cache objects by reference.
+				// The clone must be written back into the array; assigning only to the loop
+				// variable would silently drop the resolved tool_config.
+				$cloned_tool = clone $tool;
+				$cloned_tool->tool_config = tool_common::get_config($cloned_tool->name);
+				$user_tools[$idx] = $cloned_tool;
 			}
 
 		// 5. Save Cache
 			if ($use_file_cache===true) {
 
-				// static cache
+				// static cache (always, for request consistency)
 				self::$user_tools_cache[$cache_key] = $user_tools;
 
-				// cache file write
-				dd_cache::cache_to_file((object)[
-					'data'		=> $user_tools,
-					'file_name'	=> $cache_file_name,
-					'prefix'    => $cache_prefix // Same prefix as reading
-				]);
+				// cache file write.
+				// Skip writing an empty list: the file reader treats [] as a miss
+				// (to avoid sticky empty poisoning), so persisting [] would just be
+				// rewritten every request. An empty resolution (user authorized for
+				// zero tools, or registry not yet built) recomputes cheaply — the
+				// registry itself comes from the shared file cache.
+				if (!empty($user_tools)) {
+					dd_cache::cache_to_file((object)[
+						'data'		=> $user_tools,
+						'file_name'	=> $cache_file_name,
+						'prefix'    => $cache_prefix // Same prefix as reading
+					]);
+				}
 			}
 
 

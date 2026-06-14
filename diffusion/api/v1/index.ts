@@ -16,6 +16,10 @@ import { check_bun_health, enrich_diffusion_info_with_readiness } from './lib/st
 import { process_response }           from './lib/diffusion_processor';
 import { insert_table_data }          from './lib/db';
 import { close_all_pools }            from './lib/db';
+import { delete_records, validate_delete_targets } from './lib/delete_handler';
+import { apply_table_state, reconcile, rebuild, validate_rebuild_targets, get_status as get_media_index_status } from './lib/media_index';
+import { check_database_exists, backup_database } from './lib/db_admin';
+import { check_server_auth, check_privileged_action } from './lib/auth';
 import { extract_cookie_header, extract_csrf_token } from './lib/session';
 import {
 	create_process,
@@ -29,7 +33,7 @@ import {
 	cancel_process,
 	is_process_cancelled,
 }                                     from './lib/progress_store';
-import { merge_rdf_parts, create_zip } from './lib/rdf_file_utils';
+import { merge_rdf_parts, merge_xml_parts, create_zip } from './lib/rdf_file_utils';
 import { writeFileSync }              from 'fs';
 import path                           from 'path';
 import type {
@@ -103,8 +107,8 @@ async function run_background_diffusion(
 		// we paginated the query (SQO) with limit/offset batches.
 		const DEFAULT_CHUNK_SIZE = 1;
 		const options     = request_rqo.options ?? {};
-		const total       = (options as any).total       ?? 0;
-		const chunk_size  = (options as any).chunk_size   ?? DEFAULT_CHUNK_SIZE;
+		const total       = options.total       ?? 0;
+		const chunk_size  = options.chunk_size   ?? DEFAULT_CHUNK_SIZE;
 		const use_chunks  = total > 0 && total > chunk_size;
 		const chunk_count = use_chunks ? Math.ceil(total / chunk_size) : 1;
 
@@ -202,6 +206,23 @@ async function run_background_diffusion(
 					const prev_count = table_records_count_map.get(table.table_name) ?? 0;
 					table_records_count_map.set(table.table_name, prev_count + unique_ids.size);
 
+					// Media publication markers: mirror the committed write into the
+					// filesystem allowlist (no-op when DEDALO_MEDIA_PATH is unset).
+					// Marker failures are reported but never fail the diffusion.
+					try {
+						await apply_table_state(
+							table.database_name,
+							table.table_name,
+							table.section_tipo,
+							[...unique_ids],
+							table.deletions
+						);
+					} catch (marker_error: unknown) {
+						const marker_msg = marker_error instanceof Error ? marker_error.message : String(marker_error);
+						console.error(`[diffuse] Media marker update failed for "${table.table_name}":`, marker_error);
+						errors.push(`Media markers "${table.table_name}": ${marker_msg}`);
+					}
+
 					const elapsed     = Date.now() - start_time;
 					const record_time = Date.now() - record_start;
 
@@ -282,10 +303,14 @@ function handle_diffuse_stream(request_rqo: rqo, cookie_header: string | null, c
 
 	const start_time = Date.now();
 	const options     = request_rqo.options ?? {};
-	const total       = (options as any).total       ?? 0;
+	const total       = options.total       ?? 0;
 	const estimated_total = total > 0 ? total : 0;
 	
-	const process_id = options.process_id || crypto.randomUUID();
+	// DIFFTS-02: always server-generate the process id. Honoring a client-supplied
+	// id let an attacker choose/guess another user's id and cancel their diffusion
+	// or read its progress (IDOR). An unguessable server UUID acts as a capability
+	// the owner learns from the stream; it cannot be enumerated.
+	const process_id = crypto.randomUUID();
 	create_process(estimated_total, process_id);
 
 	// 1. Kick off the background process independently
@@ -378,8 +403,8 @@ async function run_background_rdf_diffusion(
 		// 1. CHUNKING STRATEGY (identical to SQL path)
 		const DEFAULT_CHUNK_SIZE = 100;
 		const options    = request_rqo.options ?? {};
-		const total      = (options as any).total      ?? 0;
-		const chunk_size = (options as any).chunk_size ?? DEFAULT_CHUNK_SIZE;
+		const total      = options.total      ?? 0;
+		const chunk_size = options.chunk_size ?? DEFAULT_CHUNK_SIZE;
 		const use_chunks = total > 0 && total > chunk_size;
 		const chunk_count = use_chunks ? Math.ceil(total / chunk_size) : 1;
 
@@ -503,7 +528,7 @@ async function run_background_rdf_diffusion(
 
 		const date_tag    = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
 		const type_label  = diffusion_type === 'xml' ? 'xml' : 'rdf';
-		const merged_name = `diffusion_${type_label}_merged_${date_tag}.rdf`;
+		const merged_name = `diffusion_${type_label}_merged_${date_tag}.${type_label}`;
 		const zip_name    = `diffusion_${type_label}_${date_tag}.zip`;
 		const merged_path = path.join(DEDALO_MEDIA_PATH + sub_path, merged_name);
 		const zip_path    = path.join(DEDALO_MEDIA_PATH + sub_path, zip_name);
@@ -513,8 +538,10 @@ async function run_background_rdf_diffusion(
 		let consolidated_files: { merged_url: string; zip_url: string } | undefined;
 
 		try {
-			// Merge all raw XML parts into one RDF document
-			const merged_content = merge_rdf_parts(raw_xml_parts);
+			// Merge all raw parts into one consolidated document (type-aware)
+			const merged_content = diffusion_type === 'xml'
+				? merge_xml_parts(raw_xml_parts)
+				: merge_rdf_parts(raw_xml_parts);
 			if (merged_content) {
 				writeFileSync(merged_path, merged_content, 'utf8');
 				// Include the merged file itself in the zip
@@ -573,9 +600,10 @@ function handle_diffuse_rdf_stream(
 
 	const start_time      = Date.now();
 	const options         = request_rqo.options ?? {};
-	const total           = (options as any).total ?? 0;
+	const total           = options.total ?? 0;
 	const estimated_total = total > 0 ? total : 0;
-	const process_id      = (options as any).process_id || crypto.randomUUID();
+	// DIFFTS-02: always server-generate the process id (unguessable capability).
+	const process_id      = crypto.randomUUID();
 
 	create_process(estimated_total, process_id);
 
@@ -657,15 +685,24 @@ function handle_get_process_status(body: { process_id?: string; update_rate?: nu
 		});
 	}
 
+	// DIFFTS-03: hoist the timer handles so cancel() (client disconnect) can tear
+	// them down — otherwise the heartbeat interval and poll timeout leak and keep
+	// enqueueing onto a closed controller.
+	let heartbeat: ReturnType<typeof setInterval> | undefined;
+	let poll_timer: ReturnType<typeof setTimeout> | undefined;
+	let cancelled = false;
+
 	const stream = new ReadableStream({
 		start(controller) {
 
 			// Heartbeat to prevent proxy disconnects
-			const heartbeat = setInterval(() => {
+			heartbeat = setInterval(() => {
 				try { controller.enqueue(encoder.encode(':\n')); } catch { /* ignore */ }
 			}, 15000);
 
 			const poll = () => {
+
+				if (cancelled) return;
 
 				const snapshot = get_progress(process_id);
 
@@ -695,14 +732,17 @@ function handle_get_process_status(body: { process_id?: string; update_rate?: nu
 				}
 
 				// Schedule next poll
-				setTimeout(poll, update_rate);
+				poll_timer = setTimeout(poll, update_rate);
 			};
 
 			// Start polling
 			poll();
 		},
 		cancel() {
-			// cleanup if client aborts early
+			// DIFFTS-03: client aborted — stop the heartbeat and any pending poll.
+			cancelled = true;
+			if (heartbeat) clearInterval(heartbeat);
+			if (poll_timer) clearTimeout(poll_timer);
 		}
 	});
 
@@ -783,13 +823,17 @@ async function handle_get_ontology_map(request_rqo: rqo, cookie_header: string |
 
 
 // =====================================================
-// SERVER
+// REQUEST HANDLER
 // =====================================================
 
-const server = Bun.serve({
-	unix:        SOCKET_PATH,
-	idleTimeout: 120, // 2 minutes (matches PHP_CLIENT timeout)
-	async fetch(request: Request): Promise<Response> {
+/**
+ * HANDLE_REQUEST
+ * Routes every incoming request of the diffusion engine.
+ * Exported so the action switch (auth, validation, dispatch) is directly
+ * testable with plain Request objects (see test/handler.test.ts) without
+ * opening the unix socket.
+ */
+export async function handle_request(request: Request): Promise<Response> {
 
 		const url    = new URL(request.url);
 		const method = request.method;
@@ -842,7 +886,7 @@ const server = Bun.serve({
 						);
 					}
 
-					const diffusion_type = (body.options as any)?.type ?? 'sql';
+					const diffusion_type = body.options?.type ?? 'sql';
 
 					switch (diffusion_type) {
 						case 'rdf':
@@ -883,11 +927,37 @@ const server = Bun.serve({
 					return handle_get_process_status(body as any);
 				}
 				case 'validate': {
+					const is_auth_validate = await check_auth(cookie_header);
+					if (!is_auth_validate) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
 					const result = await handle_validate(body, cookie_header, csrf_token);
 					return Response.json(result);
 				}
 				case 'get_ontology_map': {
+					const is_auth_map = await check_auth(cookie_header);
+					if (!is_auth_map) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
 					const result = await handle_get_ontology_map(body, cookie_header, csrf_token);
+					return Response.json(result);
+				}
+				case 'retry_pending_deletions': {
+					// Pass-through to PHP (admin permission check + retry run on PHP side)
+					const is_auth_retry = await check_auth(cookie_header);
+					if (!is_auth_retry) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const result = await call_dd_diffusion_api(body, cookie_header ?? undefined, csrf_token ?? undefined);
 					return Response.json(result);
 				}
 				case 'list_processes': {
@@ -936,8 +1006,112 @@ const server = Bun.serve({
 					return Response.json({ result: health.result, msg: health.msg, data: health });
 				}
 				case 'get_diffusion_info': {
+					const is_auth_info = await check_auth(cookie_header);
+					if (!is_auth_info) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
 					const result = await handle_get_diffusion_info(body, cookie_header, csrf_token);
 					return Response.json(result);
+				}
+				case 'delete_record': {
+					// Server-to-server delete propagation. DIFFTS-01: require the
+					// internal token, not a bare session cookie — the publicly
+					// proxied socket must not let a low-priv user delete arbitrary
+					// rows. PHP's diffusion_api_client always attaches the token,
+					// including on the interactive delete path.
+					const is_auth_delete = check_privileged_action(request);
+					if (!is_auth_delete) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const targets = (body as any).targets;
+					const validation_error = validate_delete_targets(targets);
+					if (validation_error) {
+						return Response.json(
+							{ result: false, msg: validation_error, deleted: [], errors: [validation_error] },
+							{ status: 400 }
+						);
+					}
+					const delete_result = await delete_records(targets);
+					return Response.json(delete_result);
+				}
+				case 'media_index_status': {
+					// Server-to-server: read-only status of the media publication
+					// marker store (used by the area_maintenance media_control
+					// widget to report engine-side configuration).
+					const is_auth_status = await check_server_auth(cookie_header, request);
+					if (!is_auth_status) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const media_index_status = await get_media_index_status();
+					return Response.json({
+						result: true,
+						msg:    'OK. Media index status',
+						...media_index_status,
+					});
+				}
+				case 'rebuild_media_index': {
+					// Server-to-server: full resync of the media publication
+					// markers (filesystem allowlist) from the publication
+					// databases. PHP resolves the targets from the diffusion
+					// ontology; this engine only executes the diff-sync.
+					// DIFFTS-01: admin/server-only — require the internal token.
+					const is_auth_rebuild = check_privileged_action(request);
+					if (!is_auth_rebuild) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const rebuild_targets = (body as any).targets;
+					const rebuild_validation_error = validate_rebuild_targets(rebuild_targets);
+					if (rebuild_validation_error) {
+						return Response.json(
+							{ result: false, msg: rebuild_validation_error, markers: 0, errors: [rebuild_validation_error] },
+							{ status: 400 }
+						);
+					}
+					const rebuild_result = await rebuild(rebuild_targets);
+					return Response.json(rebuild_result);
+				}
+				case 'check_database': {
+					// Server-to-server: PHP asks Bun whether a target MariaDB
+					// database is reachable/exists (MariaDB is a Bun responsibility).
+					// DIFFTS-01: admin/server-only — require the internal token.
+					const is_auth_check = check_privileged_action(request);
+					if (!is_auth_check) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const check_result = await check_database_exists((body as any).database_name);
+					return Response.json(check_result);
+				}
+				case 'backup_database': {
+					// Server-to-server: PHP asks Bun to dump a target MariaDB
+					// database with mysqldump (MariaDB is a Bun responsibility).
+					// DIFFTS-01: admin/server-only — require the internal token.
+					const is_auth_backup = check_privileged_action(request);
+					if (!is_auth_backup) {
+						return Response.json(
+							{ result: false, msg: 'Authentication required', errors: ['not_logged'] },
+							{ status: 401 }
+						);
+					}
+					const backup_result = await backup_database(
+						(body as any).database_name,
+						(body as any).target_file
+					);
+					return Response.json(backup_result);
 				}
 				default:
 					return Response.json(
@@ -953,28 +1127,52 @@ const server = Bun.serve({
 				{ status: 500 }
 			);
 		}
-	},
-} as any);
-
-console.log(`[diffusion] Listening on unix socket: ${SOCKET_PATH}`);
+}//end handle_request
 
 
 
 // =====================================================
-// GRACEFUL SHUTDOWN
+// SERVER
+// Started only when this file is the entry point (bun run index.ts):
+// importing it from tests does NOT open the unix socket.
 // =====================================================
 
-async function shutdown(): Promise<void> {
-	console.log('[diffusion] Shutting down...');
-	server.stop();
-	await close_all_pools();
-	// Remove the socket file
-	try {
-		const fs = await import('fs');
-		fs.unlinkSync(SOCKET_PATH);
-	} catch { /* ignore */ }
-	process.exit(0);
+if (import.meta.main) {
+
+	const server = Bun.serve({
+		unix:        SOCKET_PATH,
+		idleTimeout: 120, // 2 minutes (matches PHP_CLIENT timeout)
+		fetch:       handle_request,
+	} as any);
+
+	console.log(`[diffusion] Listening on unix socket: ${SOCKET_PATH}`);
+
+	// Heal media publication marker drift (crash between SQL commit and
+	// marker apply): derive pub/ from the dbs/ ground truth. Pure FS diff,
+	// no SQL; no-op when DEDALO_MEDIA_PATH is unset.
+	reconcile()
+		.then(result => {
+			if (result !== null) {
+				console.log(`[diffusion] Media marker reconcile: +${result.added} / -${result.removed}`);
+			}
+		})
+		.catch(error => {
+			console.error('[diffusion] Media marker reconcile failed:', error);
+		});
+
+	// graceful shutdown
+	const shutdown = async (): Promise<void> => {
+		console.log('[diffusion] Shutting down...');
+		server.stop();
+		await close_all_pools();
+		// Remove the socket file
+		try {
+			const fs = await import('fs');
+			fs.unlinkSync(SOCKET_PATH);
+		} catch { /* ignore */ }
+		process.exit(0);
+	};
+
+	process.on('SIGINT',  shutdown);
+	process.on('SIGTERM', shutdown);
 }
-
-process.on('SIGINT',  shutdown);
-process.on('SIGTERM', shutdown);

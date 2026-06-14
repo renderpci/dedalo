@@ -389,23 +389,88 @@ This resolves the ddo_map from a `section_map` child term, useful for sharing co
 
 ### Session Override
 
-Sections can store user preference in session:
+Sections can store user preference in session, accessed through the
+`section::get_session_sqo($sqo_id)` / `section::set_session_sqo($sqo_id, $sqo)`
+accessors (do not touch the superglobal directly):
 
 ```php
-$_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit = 25;
+section::set_session_sqo($sqo_id, $sqo); // $sqo->limit = 25;
 ```
+
+## Construction Flow (orchestration)
+
+`common::build_request_config()` orchestrates three named stages:
+
+1. **RQO-derived** (`build_request_config_from_rqo`) — when the client API
+   request targets this element with an explicit `show`, the config is rebuilt
+   from the rqo. Client-sent ddos pass the **same validation as ontology
+   configs**: whitelist scrub at the API gate
+   (`request_config_object::sanitize_client_ddo_map` in
+   `core/api/v1/json/index.php`), then tipo/TLD validation and permission
+   filtering server-side (`common::validate_requested_ddo`).
+2. **Base build** (`get_ar_request_config`) — deterministic, cacheable config
+   from ontology properties (V6) or the ontology-derived default builder (V5),
+   optionally overridden by a user layout preset. Preset application never
+   mutates `$this->properties`: the override travels as a parameter
+   (`resolve_preset_properties`).
+3. **Overlay** (`overlay_request_state`) — per-call request-scoped state
+   (rqo/session sqo merge) applied to the instance's private copy, never to
+   the cached base.
 
 ## Caching
 
-Results are cached in a static array with key:
+The base config is cached in a static array (`common::$resolved_request_properties_parsed`).
+
+**The cache boundary is immutable**: `cache_request_config` stores a deep-cloned
+snapshot and `get_cached_request_config` returns a deep clone — callers can
+mutate their copy (the overlay stage does) without poisoning the shared base.
+
+Cache key:
 
 ```
 {tipo}_{section_tipo}_{external}_{mode}_{section_id}
+  _u{user_id}                  // permissions/buttons are user-specific
+  _pg{limit}-{offset}          // instance pagination is baked into the payload
+  _rq{rqo_limit}               // API rqo limit override (when targeting this tipo)
+  _ss{session_limit}           // session sqo limit (sections only)
+  _v{view}                     // tm mode only (dataframe ddo view)
+  _p{preset_hash}              // user layout preset builds (when applied)
 ```
 
-Cache is cleared when:
-- Array exceeds 1000 entries (safety limit)
-- `fixed_filter` is used (section_id dependent)
+Caching is skipped entirely (per build) when:
+- `fixed_filter` is present (resolves record data, no invalidation path)
+- `filter_by_list` is present (resolves a live list of values from the DB)
+
+The cache is bounded to 1000 entries (`common::manage_cache_size`) and emptied
+per request in worker mode by `common::clear()`.
+
+## Error Contract
+
+| Class | Cases | Behavior |
+|-------|-------|----------|
+| **FATAL** (throw) | v5-unsupported components (`component_relation_parent/children` without v6 config); structurally invalid `request_config` when the element is the direct API source target | Exception → API response `errors` channel |
+| **DROP + WARN** | invalid tipo, inactive TLD, no permissions, malformed `get_ddo_map`, malformed client ddos | element removed; recorded in the per-instance collector |
+| **DEFAULT + NOTICE** | missing `show` | default applied; recorded |
+
+Every drop/default is recorded via `common::add_request_config_warning()`:
+- always logged through `debug_log`
+- counted in `metrics::$request_config_drops_total_calls`
+- under `SHOW_DEBUG`, surfaced in the element context as `config_warnings`
+  so an unexpectedly empty UI self-explains
+
+## Validation and Audit
+
+- `request_config_object::validate_config($request_config)` — pure structural
+  validator (shape, tipo grammar, ddo_map sections, `get_ddo_map`); returns
+  issue objects `{level, path, message}`.
+- Validate-on-save: `ontology::parse_section_record_to_ontology_node` runs the
+  validator (non-blocking warning) whenever saved properties contain
+  `source->request_config`.
+- Batch audit (CLI, cron/CI friendly — exit code 1 on errors):
+
+```bash
+php core/ontology/audit_request_config.php [--errors-only]
+```
 
 ## Interface Controls
 

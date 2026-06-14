@@ -1,11 +1,13 @@
 ---
 name: dedalo-context-data-layers
-description: How Dédalo builds, structures, and consumes the context and data layers in JSON API output for sections, components, and portals.
+description: How Dédalo builds, structures, and consumes the context and data layers in JSON API output for sections, components, and portals — including the core/stamp structure-context cache, subdatum resolution, and the mutation/injection rules callers must follow.
 ---
 
 # Dédalo Context & Data Layers Skill
 
-This skill covers the two-layer JSON architecture that every Dédalo API response follows: **`context`** (structural/configuration) and **`data`** (instance-specific values). Understanding the boundary between these layers is essential for modifying JSON controllers, debugging missing data, and deciding where new properties belong.
+This skill covers the two-layer JSON architecture that every Dédalo API response follows: **`context`** (structural/configuration) and **`data`** (instance-specific values). Understanding the boundary between these layers — and the caching contract behind context — is essential for modifying JSON controllers, debugging missing data, and deciding where new properties belong.
+
+> Architecture note (June 2026): the structure-context build was refactored into a **core/stamp split** with a semantically transparent cache (commit `ccd9e510d` + hardening pass). If you remember the old single-method `get_structure_context` with a `{tipo}_{section_tipo}_{mode}` cache key, that design is gone. The new rules are documented below and enforced by `test/server/common/context_cache_determinism_Test.php` (9 tests) — keep that suite passing.
 
 ---
 
@@ -21,226 +23,155 @@ Every `get_json()` call returns:
 }
 ```
 
-Built by `common::build_element_json_output($context, $data)` at `core/common/class.common.php:1221`.
+Built by `common::build_element_json_output($context, $data)` at `core/common/class.common.php:1299`. Entry point: `common::get_json()` at `:1321`, which includes the element's `{model}_json.php` controller in instance scope.
 
 ---
 
 ## Context Layer
 
 ### Purpose
-Context describes **what** an element is and **how** to display it. It is structural, relatively stable, and can be cached per `tipo` + `section_tipo` + `mode`.
+Context describes **what** an element is and **how** to display it. It is structural and cacheable; per-call fields are stamped on top (see "Build pipeline").
 
-### Builder
-`common::get_structure_context(int $permissions, bool $add_request_config)` at `core/common/class.common.php:1312`.
+### Build pipeline (core/stamp split)
 
-Returns a `dd_object` with these core properties:
+`get_structure_context(int $permissions, bool $add_request_config)` (`core/common/class.common.php:1390`) and `get_structure_context_simple(...)` (`:1989`) are thin wrappers over:
+
+1. **`build_structure_context_core(bool $add_request_config, bool $simple)`** (`:1520`) — builds and caches the **invariant** part: deep-cloned ontology `properties` (+ `section_list` override in list mode), `css`, `tools`, `buttons`, `label`, `legacy_model`, `translatable`, `sortable`, base `columns_map`, `filter_by_list`, `state_of_component` (resolved msgs), `search_operators_info`/`new_dataframe`, `show_interface` for shared sections, and section extras (`section_map`, `config->relation_list_tipo`, `matrix_table`).
+   - **Cache key:** `{user_id}_{tipo}_{section_tipo}_{mode}_{add_request_config}_{simple}`, with `section_tipo` json_encoded when it is an array, **plus** `_p{md5(properties)}` when properties were injected (see below). Cache: `common::$cache_structure_context`, bounded by `manage_cache_size()`, purged by `common::clear()` (worker mode runs this per request).
+2. **`build_structure_context($permissions, $add_request_config, $simple)`** (`:1410`) — **clones** the cached core (never returns the cache entry by reference), **deep-clones `properties`** onto the clone, then **stamps the variant fields per call**:
+   - `permissions` (callers inject inherited/capped values — see subdatum)
+   - `parent` via `resolve_context_parent()` (`:1922`): session ddo → injected `from_parent` → `section_tipo` → ontology parent
+   - `parent_grouper` (instance override wins over structure value)
+   - `lang`, `view`, `children_view` (all injectable per ddo)
+   - `request_config` (instance-memoized `build_request_config()`; subdatum injects narrowed children configs) and `columns_map` (null when request_config absent)
+   - sortable `path` via `get_order_path()` (memoized in `common::$cache_order_path`, deep-copied both ways because subclasses mutate `$path[0]->column`)
+   - `sqo_session` (sections), search-mode `config->parent_grouper_label` (clones `config` first)
+
+**Invariant:** a cache hit returns exactly what a fresh build would return for that instance and call. Never rely on (or reintroduce) "first caller wins" behavior.
+
+### Context types
+- **`default`**: full context — includes tools, buttons.
+- **`simple`**: `get_structure_context_simple()` skips tools/buttons computation via the `simple` flag (separate cache key). It does **not** mutate the instance (the old version force-emptied `$this->tools`/`$this->buttons_context` and set permissions — that corruption is gone).
+
+### Core context properties
 
 | Property | Type | Description |
 |----------|------|-------------|
-| `tipo` | string | Ontology identifier |
-| `section_tipo` | string | Target section |
-| `model` | string | Class name (e.g. `component_text_area`) |
-| `legacy_model` | string\|null | Pre-v6 model name |
-| `parent` | string | Parent tipo (resolved from session → `from_parent` → section_tipo → ontology) |
-| `parent_grouper` | string\|null | Structure parent for grouping |
-| `lang` | string | Current language |
-| `mode` | string | Display mode (`edit`, `list`, `tm`, `search`) |
-| `label` | string | Human-readable label (overridable via `properties->label`) |
-| `translatable` | bool | Whether the element supports translation |
-| `properties` | object | Ontology properties (cloned to prevent mutation) |
-| `css` | string\|null | CSS class (removed in list mode for non-sections) |
-| `permissions` | int | User permission level (0=none, 1=read, 2=write) |
-| `tools` | array | Tool context objects (edit mode for components, list mode for sections) |
-| `buttons` | array | Button context objects |
-| `request_config` | array\|null | Only when `add_request_config=true` |
-| `columns_map` | array\|null | Only when `request_config` is present |
-| `sortable` | bool | Whether the element can be sorted |
-| `view` | string | View variant (default `"default"`) |
-| `children_view` | string\|null | Forced view for children |
+| `tipo` / `section_tipo` / `model` / `legacy_model` | string | Identity (core) |
+| `parent` | string | Hierarchy link, **stamped per call** — client matches data↔context with it |
+| `parent_grouper` | string\|null | Structure parent for grouping (stamped) |
+| `lang` / `mode` / `view` / `children_view` | string | Display state (lang/view stamped) |
+| `label` / `translatable` / `css` | mixed | Presentation (core) |
+| `properties` | object | Ontology properties — **deep-cloned per call, safe to mutate** |
+| `permissions` | int | 0=none, 1=read, 2=write (stamped) |
+| `tools` / `buttons` | array | **Shared with the cache entry — treat as read-only** |
+| `request_config` / `columns_map` | array\|null | Only when `add_request_config=true` (stamped) |
+| `sortable` / `path` | bool / array | Column sorting (path stamped) |
 
-### Component-specific context additions
-Components add extra context properties in `get_structure_context()`:
+Sections add `section_map`, `config->relation_list_tipo`, `matrix_table` (core) and `sqo_session` (stamped). Components add `new_dataframe`, `filter_by_list`, `state_of_component`, search-mode `search_operators_info`/`search_options_title`.
 
-| Property | When | Description |
-|----------|------|-------------|
-| `path` | `sortable=true` | Order path for column sorting |
-| `search_operators_info` | `mode=search` | Search operator tooltips |
-| `search_options_title` | `mode=search` | Search panel title |
-| `new_dataframe` | `mode!=search` | Dataframe child tipo |
-| `show_interface` | shared sections | Button visibility overrides |
-| `filter_by_list` | `properties->source->filter_by_list` | Pre-resolved filter options |
-| `state_of_component` | `properties->state_of_component` | Widget state config |
+### Mutation & injection rules (critical)
 
-### Section-specific context additions
-Sections add:
-
-| Property | Description |
-|----------|-------------|
-| `section_map` | Maps generic names to specific tipos (e.g. `term` → `hierarchy25`) |
-| `config->relation_list_tipo` | The `relation_list` child tipo |
-| `matrix_table` | DB table name for the section |
-| `sqo_session` | Synced SQO from session for pagination consistency |
-
-### Context types
-- **`default`**: Full context via `get_structure_context()` — includes tools, buttons, permissions.
-- **`simple`**: Lightweight context via `get_structure_context_simple()` — skips tools, buttons, permission calculation. Used for filter lists, autocomplete targets, etc.
-
-### Caching
-- Cache key: `{tipo}_{section_tipo}_{mode}`
-- Stored in `self::$cache_structure_context`
-- Cache size managed via `manage_cache_size()` (prevents memory leaks)
-- Context is **not** request-scoped — same tipo/mode returns the same dd_object across section_ids
+1. **Never write `$element->properties = ...` directly — always `$element->set_properties($value)`.** The setter raises `properties_injected`, which extends the core cache key with a properties hash. A direct write silently bakes per-request values into (or serves stale values from) the shared cache. `dd_core_api`'s area branch is the reference fix.
+2. **The returned context is a clone**: adding top-level properties (`target_section_tipo`, `set_config(...)`, `section_id`) is safe. Mutating nested `properties` is safe (deep-cloned). Mutating nested `tools`/`buttons`/`section_map` is **not** — they are shared with the cache entry.
+3. **New static caches** must be class-level properties cleared in `common::clear()` and bounded with `manage_cache_size()` — never function-local `static` (invisible to the worker's per-request purge → stale data for the life of the worker process).
+4. A context that needs `request_config` later (e.g. for `get_subdatum`) must request it explicitly with `add_request_config=true` — it is never present "by cache luck".
 
 ---
 
 ## Data Layer
 
 ### Purpose
-Data contains the **instance-specific** values for a given section_id. It is dynamic, request-scoped, and cannot be cached across section_ids.
+Data contains the **instance-specific** values for a given section_id. Dynamic, request-scoped, never cached across instances.
 
 ### Builder
-Each component's `{model}_json.php` file builds data items. The base pattern is:
+Each component's `{model}_json.php` controller builds data items around `component_common::get_data_item($value)` (`core/component_common/class.component_common.php:3550`):
 
-```php
-$item = $this->get_data_item($value);
-$data[] = $item;
-```
-
-### Data Item Structure
-`component_common::get_data_item($value)` at `core/common/class.common.php:3529` returns:
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `section_id` | int | Record identifier |
-| `section_tipo` | string | Record section |
-| `tipo` | string | Component tipo |
-| `mode` | string | Current mode |
-| `lang` | string | Current language |
-| `from_component_tipo` | string | Origin component (for portal children) |
-| `entries` | mixed | The actual data value(s) |
+| Property | Description |
+|----------|-------------|
+| `section_id` / `section_tipo` | Record identity |
+| `tipo` / `mode` / `lang` | Component identity and state |
+| `from_component_tipo` | Origin component (portal children) |
+| `entries` | The actual value(s) |
+| `literal` | Resolved value (only `mode==='solved'`) |
 
 ### Mode-dependent value resolution
 
-| Mode | Typical method | Description |
-|------|---------------|-------------|
-| `edit` | `get_data_lang()` | Full data in the current language |
-| `list` | `get_value()` / `get_list_value()` | Display-ready label(s) |
-| `tm` | `get_value()` / `get_list_value()` | Time Machine version of list data |
-| `search` | `get_data()` | Raw data for search indexing |
-| `solved` | `get_value()` | Resolved literal value |
+| Mode | Typical method | Notes |
+|------|---------------|-------|
+| `edit` | `get_data_lang()` | Lang-filtered full data |
+| `list` / `tm` | `get_value()` / `get_list_value()` / `get_data_paginated()` | Display-ready |
+| `search` | `get_data()` | Raw data |
+| `solved` | `get_value()` | Resolved literal |
+
+`get_data()` memoizes per instance (`$this->data_resolved`), so repeated calls within one controller are cheap.
 
 ### Component-specific data additions
-Components extend the base data item with extra properties:
-
-| Component | Property | Description |
-|-----------|----------|-------------|
-| `component_select` | `datalist` | Available options for the dropdown |
-| `component_radio_button` | `datalist` | Available radio options |
-| `component_check_box` | `datalist` | Available checkbox options |
-| `component_portal` | `pagination`, `parent_tipo`, `parent_section_id` | Portal row metadata |
-| `component_text_area` | `fallback_value`, `tags_persons`, `related_sections` | Rich text extras |
-| `component_text_area` (tm) | `parent_section_id`, `matrix_id`, `created_by_user_id` | Time Machine metadata |
+`component_select`/`radio_button`/`check_box` add `datalist`; `component_portal` adds `pagination`, `parent_tipo`, `parent_section_id`; `component_text_area` adds `fallback_value`, `tags_persons`, and TM metadata in tm mode.
 
 ---
 
 ## The Context vs. Data Boundary
 
-### Rule of thumb
-- **Context**: Would be the same regardless of which `section_id` is loaded. Structural, cacheable, per-tipo.
-- **Data**: Changes per `section_id`. Dynamic, request-scoped, not cacheable across instances.
-
-### Common decision points
+Rule of thumb: *"If I load this for section_id=1 vs section_id=2, does it change?"* → **Yes: data. No: context.**
 
 | Property | Layer | Why |
 |----------|-------|-----|
-| `datalist` (select options) | **data** | Depends on lang, filters, and sometimes section_id (dynamic filters) |
-| `request_config` | **context** | Defines how to search, same structure for all records |
-| `properties` | **context** | Ontology definition, same for all instances |
-| `tools` | **context** | Available tools don't change per record |
-| `permissions` | **context** | Component-level permission (same for all records of that tipo) |
-| `filter_by_list` | **context** | Pre-resolved filter options (computed once) |
-| `pagination` | **data** | Depends on the specific record's data volume |
-| `fallback_value` | **data** | Computed from the record's actual data |
-| `target_sections` | **context** | Which sections the component can point to |
-
-### When in doubt
-Ask: *"If I load this component for section_id=1 vs section_id=2, would this property be different?"*
-- **Yes** → `data`
-- **No** → `context`
+| `datalist` | data | Depends on lang/filters/record |
+| `request_config`, `properties`, `tools` | context | Same structure for all records |
+| `pagination`, `fallback_value` | data | Per-record |
+| `permissions` | context | Per-tipo (but stamped per call — portal children may differ from direct access) |
 
 ---
 
 ## Subdatum
 
-Portal and section JSON controllers resolve **child elements** (columns, related components) via `common::get_subdatum()` at `core/common/class.common.php:1848`.
+`common::get_subdatum(?string $from_parent, array $ar_locators)` at `core/common/class.common.php:2008` resolves child elements (portal columns, related components). Signature note: a third `$subdatum_options` parameter existed historically but was dead code and has been removed.
 
 ### Flow
-1. Collect `request_config` from `$this->context->request_config`
-2. Build `full_ddo_map` from all request_config objects (show + hide)
-3. For each locator in the portal's data:
-   - Match DDOs by `section_tipo`
-   - Instantiate each child element (section or component)
-   - Inject `request_config`, `from_parent`, permissions, view
-   - Call `get_json()` on each child → merge child's `context` and `data` into parent arrays
-4. Return `{context: [...], data: [...]}`
+1. Requires `$this->context->request_config` (returns empty otherwise — a frequent "empty subdatum" cause).
+2. Builds `full_ddo_map` from all request_config objects (show + hide), dedupes by `tipo_parent_section_tipo`, pre-groups by section_tipo (dataframes separate).
+3. Per locator × ddo: instantiate the child (instances cached per tipo+section_id), inject permissions, lang, view, narrowed `request_config` (children resolved recursively, cached per ddo+api_engine; `component_request_config` pre-indexed by api_engine), `from_parent`, and ddo `properties` (via `set_properties` → hash-keyed context cache).
+4. Calls `get_json()` per child; merges child data with `row_section_id` + `parent_tipo` for row coherence.
+5. **Subcontext is deduplicated inline** by `common::context_key()` — first occurrence wins.
 
-### Key behaviors
-- **Permissions inheritance**: If user can read the portal but not the target section, child components get minimum read permission (1)
-- **Mode propagation**: `tm` mode propagates from parent; otherwise DDO mode or parent mode is used
-- **Dataframe special case**: Dataframes use the main component's section_tipo (not the locator's) and the main section_id
-- **Row coherence**: Each subdata item gets `row_section_id` and `parent_tipo` to preserve row identity
+### Permissions inheritance
+Component callers grant children minimum read (1) when the user lacks target-section access, and cap children at 1 when the caller is read-only. The stamped `permissions` makes this per-call correct (no cache freezing).
+
+### Context dedup helpers
+- `common::context_key(object $item)` (`:50`) — identity = `tipo + section_tipo + mode` (arrays json_encoded so they can't collide with strings). This matches how the client `.find()`s context, so dropping later duplicates is lossless by design.
+- `common::merge_unique_context(array $context, array $items)` (`:72`) — use this in JSON controllers instead of hand-rolled dedup loops (used by `section_json.php`, `component_portal_json.php`; `sections_json.php` uses the incremental variant).
 
 ---
 
 ## JSON Controller Pattern
 
-Every `{model}_json.php` file follows the same scaffold:
-
 ```php
 <?php declare(strict_types=1);
 if (!isset($this)) { http_response_code(404); exit; }
 
-// 1. Configuration vars
 $permissions = $this->get_component_permissions();
 $mode        = $this->get_mode();
 
-// 2. Context
+// context
 $context = [];
-if ($options->get_context === true) {
-    switch ($options->context_type) {
-        case 'simple':
-            $this->context = $this->get_structure_context_simple($permissions, $add_request_config);
-            break;
-        default:
-            $this->context = $this->get_structure_context($permissions, $add_request_config);
-            // ... component-specific context additions
-            break;
-    }
-    $context[] = $this->context;
-}
+$this->context = $this->get_structure_context($permissions, true); // true if subdatum needed
+$context[] = $this->context;
 
-// 3. Data
+// data (skip entirely when permissions === 0)
 $data = [];
-if ($options->get_data === true && $permissions > 0) {
-    // mode-dependent value
-    switch ($mode) {
-        case 'list': case 'tm': $value = ...; break;
-        case 'edit': default:   $value = ...; break;
-    }
-
-    $item = $this->get_data_item($value);
-    // ... component-specific data additions (datalist, pagination, etc.)
+if ($permissions > 0) {
+    $value = /* mode-dependent resolution */;
+    $item  = $this->get_data_item($value);
     $data[] = $item;
 
-    // subdatum (if portal/dataframe children exist)
     if (!empty($value) && !empty($this->context->request_config)) {
         $subdatum = $this->get_subdatum($this->tipo, $value);
-        array_push($context, ...$subdatum->context);
+        $context  = common::merge_unique_context($context, $subdatum->context);
         array_push($data, ...$subdatum->data);
     }
 }
 
-// 4. Return
 return common::build_element_json_output($context, $data);
 ```
 
@@ -248,39 +179,39 @@ return common::build_element_json_output($context, $data);
 
 ## Client Consumption
 
-The client receives the JSON and splits it:
+- **context** matched by `tipo` (+ `section_tipo`, + `mode`) via `.find()` — first match wins, one context per identity key.
+- **data** matched by `tipo + section_tipo + section_id + parent` (`row_section_id` preserves portal row identity).
 
-- **`self.context`** → `self.datum.context[i]` matched by `tipo` + `section_tipo` + `mode`
-- **`self.data`** → `self.datum.data[i]` matched by `tipo` + `section_tipo` + `section_id` + `parent`
+Key files: `core/common/js/common.js`, `core/section/js/section_record.js`, `core/component_common/js/common.js`.
 
-Key client files:
-- `core/common/js/common.js` — `get_columns_map`, context/data matching
-- `core/section/js/section_record.js` — instance creation from context+data
-- `core/component_common/js/common.js` — `build` method populates `self.data` and `self.context`
+---
+
+## Worker mode (RoadRunner)
+
+`worker/class.cache_manager.php` runs `\common::clear()` at the start of every worker request, purging `$cache_structure_context`, `$cache_order_path`, tools/buttons caches, etc. The context cache key also embeds `logged_user_id()` as defense in depth — cross-user context leakage is impossible even if a clearer is disabled.
 
 ---
 
 ## Debugging
 
 ### Missing data item
-1. Check `permissions > 0` — data is skipped entirely when permissions are 0
-2. Check `$options->get_data === true` — some calls request context only
-3. Verify the component's `get_data_lang()` / `get_value()` returns non-empty data
+1. `permissions > 0`? Data is skipped entirely at 0.
+2. `$options->get_data === true`?
+3. Does the mode-resolution method return non-empty data?
 
-### Missing context item
-1. Check `$options->get_context === true`
-2. Verify `get_structure_context()` is not hitting a cached stale entry
-3. Check `context_type` — `simple` mode omits tools, buttons, permissions
+### Missing / wrong context item
+1. `$options->get_context === true`?
+2. Needs `request_config` but was built with `add_request_config=false`? It will be `null` — deterministically, not cache-dependent.
+3. Injected properties not reflected? The injection must go through `set_properties()` (check `properties_injected`).
+4. Stale value after mutating `tools`/`buttons`? Those are shared with the cache — you mutated the cache entry; copy first.
 
 ### Subdatum empty
-1. Verify `request_config` exists in `$this->context->request_config`
-2. Check `ddo_map` has entries for the target section_tipo
-3. Ensure locators have the correct `section_tipo` matching DDO definitions
+1. `$this->context->request_config` present? (Build context with `add_request_config=true`.)
+2. `ddo_map` has entries for the locator's `section_tipo`?
+3. Non-direct children (ddo `parent !== $this->tipo`) are intentionally skipped — they resolve through their parent.
 
-### Context/data mismatch on client
-1. The client matches by `tipo` + `section_tipo` + `mode` (context) and `tipo` + `section_tipo` + `section_id` (data)
-2. Duplicated context items are filtered in `sections_json.php` by `tipo + section_tipo + mode`
-3. If a component appears in multiple portal rows, each data item gets `row_section_id` for row coherence
+### Regression safety
+Run `test/server/common/context_cache_determinism_Test.php` (from `test/server/`: `../../vendor/bin/phpunit common/context_cache_determinism_Test.php`). Its 9 tests encode the cache-transparency invariants (per-call permissions/parent/request_config, simple/full isolation, no cache pollution top-level or nested, injected-properties isolation, order-path memo isolation). Also `common_Test.php` `test_get_cache_structure_context` asserts equal-but-not-same on cache hits.
 
 ---
 
@@ -288,22 +219,27 @@ Key client files:
 
 | What | File | Line |
 |------|------|------|
-| `build_element_json_output` | `core/common/class.common.php` | ~1221 |
-| `get_json` | `core/common/class.common.php` | ~1243 |
-| `get_structure_context` | `core/common/class.common.php` | ~1312 |
-| `get_structure_context_simple` | `core/common/class.common.php` | ~1815 |
-| `get_subdatum` | `core/common/class.common.php` | ~1848 |
-| `get_data_item` | `core/component_common/class.component_common.php` | ~3529 |
-| Section JSON controller | `core/section/section_json.php` | 1-56 |
-| Portal JSON controller | `core/component_portal/component_portal_json.php` | 1-129 |
-| Select JSON controller | `core/component_select/component_select_json.php` | 1-131 |
-| Text area JSON controller | `core/component_text_area/component_text_area_json.php` | 1-271 |
+| `context_key` / `merge_unique_context` | `core/common/class.common.php` | 50 / 72 |
+| `clear` (worker purge) | `core/common/class.common.php` | 427 |
+| `build_element_json_output` / `get_json` | `core/common/class.common.php` | 1299 / 1321 |
+| `get_structure_context` (wrapper) | `core/common/class.common.php` | 1390 |
+| `build_structure_context` (stamp) | `core/common/class.common.php` | 1410 |
+| `build_structure_context_core` (cached core) | `core/common/class.common.php` | 1520 |
+| `resolve_context_parent` | `core/common/class.common.php` | 1922 |
+| `get_structure_context_simple` | `core/common/class.common.php` | 1989 |
+| `get_subdatum` | `core/common/class.common.php` | 2008 |
+| `get_data_item` | `core/component_common/class.component_common.php` | 3550 |
+| `get_order_path` (memoized) | `core/component_common/class.component_common.php` | 4232 |
+| Section / sections / portal controllers | `core/section/section_json.php`, `core/sections/sections_json.php`, `core/component_portal/component_portal_json.php` | — |
+| Determinism regression tests | `test/server/common/context_cache_determinism_Test.php` | — |
+
+(Line numbers drift with edits — confirm with grep when precision matters.)
 
 ---
 
 ## Related Skills
 
-- **dedalo-datalist-resolution** — How `datalist` (a data-layer property) is resolved for selection components
-- **dedalo-request-config** — How `request_config` (a context-layer property) is built from ontology
+- **dedalo-datalist-resolution** — How `datalist` (data-layer) is resolved for selection components
+- **dedalo-request-config** — How `request_config` (context-layer) is built from ontology
 - **dedalo-flow-analysis** — Tracing data from API response through the client lifecycle
-- **dedalo-ontology-mapping** — How ontology properties feed into both context and data resolution
+- **dedalo-ontology-mapping** — How ontology properties feed both layers

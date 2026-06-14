@@ -971,6 +971,156 @@ final class component_relation_parent_test extends BaseTestCase {
 
 
 	/**
+	* BUILD_PARENT_CHAIN
+	* Helper: builds the chain 1 → 2 → 3 (section 1 has parent 2, section 2 has
+	* parent 3) persisting each component, and returns the per-section instances
+	* together with their previous data for restoration.
+	* @return array
+	*/
+	private function build_parent_chain() : array {
+
+		$this->user_login();
+
+		$instances = [];
+		foreach ([1, 2, 3] as $section_id) {
+			$component = component_common::get_instance(
+				self::$model,
+				self::$tipo,
+				$section_id,
+				'edit',
+				DEDALO_DATA_NOLAN,
+				self::$section_tipo
+			);
+			$instances[$section_id] = (object)[
+				'component'	=> $component,
+				'old_data'	=> $component->get_data()
+			];
+			// clean slate
+			$component->set_data(null);
+			$component->save();
+		}
+
+		// 1 → parent 2
+			$locator = new locator();
+				$locator->set_section_tipo(self::$section_tipo);
+				$locator->set_section_id(2);
+			$instances[1]->component->add_parent($locator);
+			$instances[1]->component->save();
+
+		// 2 → parent 3
+			$locator = new locator();
+				$locator->set_section_tipo(self::$section_tipo);
+				$locator->set_section_id(3);
+			$instances[2]->component->add_parent($locator);
+			$instances[2]->component->save();
+
+		return $instances;
+	}//end build_parent_chain
+
+
+
+	/**
+	* RESTORE_PARENT_CHAIN
+	* Helper: restores the data snapshots taken by build_parent_chain
+	* @param array $instances
+	* @return void
+	*/
+	private function restore_parent_chain( array $instances ) : void {
+
+		foreach ($instances as $item) {
+			$item->component->set_data($item->old_data);
+			$item->component->save();
+		}
+	}//end restore_parent_chain
+
+
+
+	/**
+	* TEST_IS_ANCESTOR
+	* With the chain 1 → 2 → 3, node 3 is an ancestor of 1 (and of 2),
+	* but 1 is not an ancestor of 3.
+	* @return void
+	*/
+	public function test_is_ancestor() {
+
+		$instances = $this->build_parent_chain();
+
+		try {
+
+			$this->assertTrue(
+				component_relation_parent::is_ancestor(self::$section_tipo, 3, self::$section_tipo, 1),
+				'expected 3 to be ancestor of 1'
+			);
+			$this->assertTrue(
+				component_relation_parent::is_ancestor(self::$section_tipo, 2, self::$section_tipo, 1),
+				'expected 2 to be ancestor of 1'
+			);
+			$this->assertFalse(
+				component_relation_parent::is_ancestor(self::$section_tipo, 1, self::$section_tipo, 3),
+				'expected 1 NOT to be ancestor of 3'
+			);
+			$this->assertFalse(
+				component_relation_parent::is_ancestor(self::$section_tipo, 1, self::$section_tipo, 1),
+				'expected node NOT to be its own ancestor'
+			);
+
+		} finally {
+			$this->restore_parent_chain($instances);
+		}
+	}//end test_is_ancestor
+
+
+
+	/**
+	* TEST_ADD_PARENT_REJECTS_DESCENDANT_CYCLE
+	* With the chain 1 → 2 → 3, adding 1 as parent of 3 would make node 3
+	* an ancestor of itself: add_parent must reject and leave data untouched.
+	* @return void
+	*/
+	public function test_add_parent_rejects_descendant_cycle() {
+
+		$instances = $this->build_parent_chain();
+
+		try {
+
+			$component_3 = $instances[3]->component;
+
+			$locator = new locator();
+				$locator->set_section_tipo(self::$section_tipo);
+				$locator->set_section_id(1);
+
+			$result = $component_3->add_parent($locator);
+
+			$this->assertFalse(
+				$result,
+				'expected false adding a descendant as parent (cycle) : ' . to_string($result)
+			);
+
+			// data untouched: section 3 still has no parent
+			$data = $component_3->get_data();
+			$this->assertTrue(
+				$data===null || (is_array($data) && count($data)===0),
+				'expected section 3 parent data untouched after rejected cycle : ' . to_string($data)
+			);
+
+			// a valid (non-cycle) parent is still accepted afterwards
+			$valid_locator = new locator();
+				$valid_locator->set_section_tipo(self::$section_tipo);
+				$valid_locator->set_section_id(4);
+			$valid_result = $component_3->add_parent($valid_locator);
+			$this->assertTrue(
+				$valid_result,
+				'expected true adding a valid parent after rejected cycle'
+			);
+
+		} finally {
+			$this->restore_parent_chain($instances);
+		}
+	}//end test_add_parent_rejects_descendant_cycle
+
+
+
+	/**
 	* TEST_MAKE_ME_YOUR_PARENT
 	* @return void
 	*/

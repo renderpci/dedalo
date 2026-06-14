@@ -7,8 +7,16 @@ require_once(DEDALO_CORE_PATH . '/db/class.matrix_activity_diffusion_db_manager.
  */
 class diffusion_activity_logger {
 
+	// Action component (dd1767, component_select on dd1758) pointing to the
+	// 'Diffusion action types' value-list section (dd1774)
+	const ACTION_TIPO				= 'dd1767';
+	const ACTION_SECTION_TIPO		= 'dd1774';
+	const ACTION_PUBLISHED			= 1;
+	const ACTION_UNPUBLISHED		= 2;
+	const ACTION_UNPUBLISH_PENDING	= 3;
+
 	// Cache to ensure unique logging per processed section in the current request
-	// Key format: "{section_tipo}_{section_id}"
+	// Key format: "{section_tipo}_{section_id}_{action}_{diffusion_element_tipo}"
 	private static array $logged_sections = [];
 
 	/**
@@ -17,12 +25,16 @@ class diffusion_activity_logger {
 	 *
 	 * @param string $section_tipo
 	 * @param int $section_id
+	 * @param string|null $diffusion_element_tipo = null
+	 * @param int $action = self::ACTION_PUBLISHED
+	 * 	One of ACTION_PUBLISHED | ACTION_UNPUBLISHED | ACTION_UNPUBLISH_PENDING
 	 * @return bool True if logged, false if already logged or error
 	 */
-	public static function log(string $section_tipo, int $section_id, ?string $diffusion_element_tipo=null): bool {
+	public static function log(string $section_tipo, int $section_id, ?string $diffusion_element_tipo=null, int $action=self::ACTION_PUBLISHED): bool {
 
-		// 1. Debounce check
-		$cache_key = "{$section_tipo}_{$section_id}";
+		// 1. Debounce check (action and element are part of the key: the same
+		// record may legitimately produce one row per action/element pair)
+		$cache_key = "{$section_tipo}_{$section_id}_{$action}_" . ($diffusion_element_tipo ?? '');
 		if (isset(self::$logged_sections[$cache_key])) {
 			return false; // Already logged
 		}
@@ -153,6 +165,24 @@ class diffusion_activity_logger {
 					$data->$column_name->$component_tipo = [$locator];
 				}
 			}
+		}
+
+		// ACTION (dd1767 - published / unpublished / unpublish_pending)
+		$component_tipo = self::ACTION_TIPO;
+		$model			= ontology_node::get_model_by_tipo($component_tipo);
+		$column_name	= $model ? section_record_data::get_column_name($model) : null;
+
+		if ($column_name) {
+			if (!isset($data->$column_name)) {
+				$data->$column_name = new stdClass();
+			}
+			$locator = new locator();
+				$locator->set_section_id($action);
+				$locator->set_section_tipo(self::ACTION_SECTION_TIPO);
+				$locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$locator->set_from_component_tipo($component_tipo);
+
+			$data->$column_name->$component_tipo = [$locator];
 		}
 
 		// 3. Save

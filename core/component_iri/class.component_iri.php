@@ -366,9 +366,13 @@ class component_iri extends component_common {
 				if( property_exists($value, 'label_id') ){
 
 					// create new dataframe locator to be set as new data
+					// type stamps the locator as a dataframe pairing entry (unified contract);
+					// legacy section_id_key/section_tipo_key are kept until the data migration runs
 					$locator = new locator();
+					$locator->set_type( DEDALO_RELATION_TYPE_DATAFRAME );
 					$locator->set_section_tipo( component_iri::$label_target_section_tipo );
 					$locator->set_section_id( $value->label_id );
+					$locator->set_id_key( (int)$value->id );
 					$locator->set_section_id_key( $value->id );
 					$locator->set_section_tipo_key( $this->section_tipo );
 					$locator->set_main_component_tipo( $this->tipo );
@@ -480,92 +484,95 @@ class component_iri extends component_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the component as a dd_grid_cell_object.
+	* Generic atoms adapter cell (cell_type 'iri' comes from the atoms)
+	* plus the raw 'data' payload kept for the legacy iri grid renderers
+	* (view_table_dd_grid render_iri_column; likely dead, flagged for
+	* removal once confirmed unused).
 	* @param object|null $ddo = null
 	* @return dd_grid_cell_object $value
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
-		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
+		$dd_grid_cell_object = parent::get_grid_value($ddo);
+		$dd_grid_cell_object->set_data( $this->get_data_lang() );
 
-		// column_obj
-			$column_obj = $this->column_obj ?? (object)[
-				'id' => $this->section_tipo.'_'.$this->tipo
-			];
+		return $dd_grid_cell_object;
+	}//end get_grid_value
 
-		// set the label of the component as column label
-			$label = $this->get_label();
 
-		// properties
-			$properties = $this->get_properties();
 
-		// fields_separator. set the separator text that will be used to render the column
-			$fields_separator = isset($fields_separator)
-				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ', ');
+	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One atom per data item: iri and resolved title (dataframe paired label)
+	* joined with fields_separator, cell_type 'iri'.
+	* The leaf segment fields_separator is set to the resolved
+	* records_separator because the legacy grid pre-joined the items with
+	* records_separator (flat output parity).
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
 
-		// records_separator
-			$records_separator = isset($records_separator)
-				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
+		$context = $context ?? new export_context();
 
-		// ar_values
-			$ar_values	= [];
-			$data		= $this->get_data_lang();
-			if (!empty($data)) {
-				foreach ($data as $current_value) {
+		// separators. resolved as the legacy get_grid_value
+			$properties			= $this->get_properties();
+			$fields_separator	= $context->ddo?->fields_separator
+				?? $properties?->fields_separator
+				?? ', ';
+			$records_separator	= $context->ddo?->records_separator
+				?? $properties?->records_separator
+				?? ' | ';
 
-					$ar_parts = [];
+		// own segment. items join with records_separator (legacy pre-join parity)
+			$segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model'				=> $this->get_model(),
+				'fields_separator'	=> $records_separator,
+				'records_separator'	=> $records_separator,
+				// relation traversal position (set by the calling relation via descend)
+				'item_index'		=> $context->item_index,
+				'section_id'		=> $context->item_section_id
+			]);
+			$path = [...$context->path_prefix, $segment];
 
-					// iri property
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data items
+			$data = $this->get_data_lang();
+			if (empty($data)) {
+				return $export_value;
+			}
+
+			$value_index = 0;
+			foreach ($data as $current_value) {
+
+				$ar_parts = [];
+
+				// iri property
 					$current_iri = $current_value->iri ?? null;
 					if ($current_iri) {
 						$ar_parts[] = $current_iri;
 					}
 
-					// title property
+				// title property (resolved, never assigned back into live data;
+				// see get_grid_value note about the title duality)
 					$current_title = $this->resolve_title( $current_value );
 					if (!empty($current_title)) {
 						$ar_parts[] = $current_title;
-						// set the title of the data as label of the dataframe
-						$current_value->title = $current_title;
 					}
 
-					// set a flat version to be downloaded
-					$ar_values[] = implode($fields_separator, $ar_parts);
-				}
+				$export_value->add_atom( new export_atom($path, implode($fields_separator, $ar_parts), (object)[
+					'cell_type'		=> 'iri',
+					'value_index'	=> $value_index++,
+					'lang'			=> $current_value->lang ?? $this->lang
+				]) );
 			}
 
-		// value. flat_value (array of one value full resolved)
-			$value = [implode($records_separator, $ar_values)]; // array
 
-		// value
-			$dd_grid_cell_object = new dd_grid_cell_object();
-				$dd_grid_cell_object->set_type('column');
-				$dd_grid_cell_object->set_label($label);
-				$dd_grid_cell_object->set_cell_type('iri'); // text
-				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				if(isset($class_list)){
-					$dd_grid_cell_object->set_class_list($class_list);
-				}
-				$dd_grid_cell_object->set_fields_separator($fields_separator);
-				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($value);
-				$dd_grid_cell_object->set_fallback_value($value);
-				$dd_grid_cell_object->set_data($data);
-				$dd_grid_cell_object->set_model(get_called_class());
-
-
-		return $dd_grid_cell_object;
-	}//end get_grid_value
+		return $export_value;
+	}//end get_export_value
 
 
 
@@ -578,7 +585,7 @@ class component_iri extends component_common {
 	* @param ?string $diffusion_element_tipo
 	* @return array $diffusion_data
 	*
-	* @see class.diffusion_data.php
+	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
 	* @test false
 	*/
 	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo=null ) : array {
@@ -630,57 +637,29 @@ class component_iri extends component_common {
 	*/
 	public function resolve_title( object $value ) : ?string {
 
-		// component dataframe of the component_iri
-		$caller_dataframe = new stdClass();
-		$caller_dataframe->section_tipo = $this->section_tipo;
-		$caller_dataframe->section_id_key = $value->id;
-		$caller_dataframe->section_tipo_key = $this->section_tipo;
-		$caller_dataframe->main_component_tipo = $this->tipo;
+		// rows without id cannot pair a frame (very old data): literal fallback
+		if (!isset($value->id)) {
+			return $value->title ?? null;
+		}
 
-		// Build the component
-		$component_dataframe_label = component_common::get_instance(
-			'component_dataframe', // string model
-			DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, // string tipo
-			$this->section_id, // string section_id
-			'list', // string mode
-			DEDALO_DATA_NOLAN, // string lang
-			$this->section_tipo ,// string section_tipo,
-			false, //cache
-			$caller_dataframe // caller dataframe
+		// dataframe label paired by the item id (trait single authority path)
+		$component_dataframe_label = $this->get_dataframe_instance(
+			(int)$value->id, // item id (pairing key)
+			DEDALO_COMPONENT_IRI_LABEL_DATAFRAME // dataframe slot tipo
 		);
 		// dataframe value as string
-		$dataframe_label = $component_dataframe_label->get_value();
+		$dataframe_label = $component_dataframe_label
+			? $component_dataframe_label->get_value()
+			: null;
 
-		// Set title with fallback from dataframe value to data item value (old values).
+		// Set title with fallback from dataframe value to data item value
+		// (deprecated literal `title`, kept readable until the title
+		// materialization migration runs).
 		$title = $dataframe_label ?? $value->title ?? null;
 
 
 		return $title;
 	}//end resolve_title
-
-
-
-	/**
-	* GET_GRID_FLAT_VALUE
-	* Get the flat value of the components (text version of data).
-	* overwrite in every different specific component
-	* @return dd_grid_cell_object $flat_value
-	* 	dd_grid_cell_object
-	*/
-	public function get_grid_flat_value() : dd_grid_cell_object {
-
-		$flat_value = parent::get_grid_flat_value();
-
-		// overwrite cell_type (custom case)
-		$flat_value->set_cell_type('iri');
-
-		// add data (custom case)
-		$data = $this->get_data();
-		$flat_value->set_data($data);
-
-
-		return $flat_value;
-	}//end get_grid_flat_value
 
 
 
@@ -773,26 +752,6 @@ class component_iri extends component_common {
 				$response->errors	= [];
 				$response->msg		= 'Error. Request failed';
 
-		// valid_string
-		// check the begin and end of the value string, if it has a [] or other combination that seems array
-		// if the text has [" or "] it's not admitted, because it's a bad array of strings.
-			$is_valid_string = function(string $text_value) : bool {
-
-				$begins_one	= substr($text_value, 0, 1);
-				$ends_one	= substr($text_value, -1);
-				$begins_two	= substr($text_value, 0, 2);
-				$ends_two	= substr($text_value, -2);
-
-				if (($begins_two !== '["' && $ends_two !== '"]') ||
-					($begins_two !== '["' && $ends_one !== ']') ||
-					($begins_one !== '[' && $ends_two !== '"]')
-					){
-						return true;
-				}
-
-				return false;
-			};
-
 		// object | array case
 			// Check if is a JSON stringified. Is yes, decode
 			// if data is a object | array it will be the Dédalo format and check if the IRI is OK.
@@ -851,6 +810,17 @@ class component_iri extends component_common {
 								if(is_object($iri_object)){
 
 									if(!empty($iri_object->iri)){
+										// iri must be a string
+										if (!is_string($iri_object->iri)) {
+											$failed = new stdClass();
+												$failed->section_id		= $this->section_id;
+												$failed->data			= to_string($import_value);
+												$failed->component_tipo	= $this->get_tipo();
+												$failed->msg			= 'IGNORED: malformed data, iri must be a string '. to_string($import_value);
+											$response->errors[] = $failed;
+
+											return $response;
+										}
 										// remove unused spaces or other invalid code as \t \n, etc
 										$iri_object->iri = trim($iri_object->iri);
 										$result = $this->has_protocol($iri_object->iri);
@@ -902,7 +872,7 @@ class component_iri extends component_common {
 										? $properties->fields_separator
 										: ', ';
 
-									$valid_string			= $is_valid_string($iri_object);
+									$valid_string			= self::is_plain_bracket_string($iri_object);
 									$has_field_separator	= strpos($iri_object, $fields_separator.'http')!==false;
 									$with_protocol			= $this->has_protocol($iri_object);
 
@@ -947,6 +917,21 @@ class component_iri extends component_common {
 						$iri_object = new stdClass();
 						if(isset($data_from_json->iri)){
 
+							// iri must be a string
+							if (!is_string($data_from_json->iri)) {
+								$failed = new stdClass();
+									$failed->section_id		= $this->section_id;
+									$failed->data			= to_string($data_from_json);
+									$failed->component_tipo	= $this->get_tipo();
+									$failed->msg			= 'IGNORED: malformed data, iri must be a string '. to_string($data_from_json);
+								$response->errors[] = $failed;
+
+								return $response;
+							}
+
+							// remove unused spaces or other invalid code as \t \n, etc
+							$data_from_json->iri = trim($data_from_json->iri);
+
 							$result = $this->has_protocol($data_from_json->iri);
 							if($result===false){
 
@@ -983,6 +968,24 @@ class component_iri extends component_common {
 						// set the title given - Deprecated
 						if(isset($data_from_json->title)){
 							$iri_object->title = $data_from_json->title;
+						}
+						// set the lang given. Preserve it: component_iri supports translation
+						// and flat data items carry their own lang (raw export format)
+						if(isset($data_from_json->lang)){
+							$iri_object->lang = $data_from_json->lang;
+						}
+
+						// empty object check. Do not save data as [{}]
+						if (empty((array)$iri_object)) {
+
+							$failed = new stdClass();
+								$failed->section_id		= $this->section_id;
+								$failed->data			= to_string($data_from_json);
+								$failed->component_tipo	= $this->get_tipo();
+								$failed->msg			= 'IGNORED: object without iri data '. to_string($data_from_json);
+							$response->errors[] = $failed;
+
+							return $response;
 						}
 
 						$value = [$iri_object];
@@ -1045,6 +1048,20 @@ class component_iri extends component_common {
 
 							if(isset($current_value->iri)){
 
+								// iri must be a string
+								if (!is_string($current_value->iri)) {
+									$failed = new stdClass();
+										$failed->section_id		= $this->section_id;
+										$failed->data			= to_string($current_value);
+										$failed->component_tipo	= $this->get_tipo();
+										$failed->msg			= 'IGNORED: malformed data, iri must be a string '. to_string($current_value);
+									$response->errors[] = $failed;
+
+									return $response;
+								}
+								// remove unused spaces or other invalid code as \t \n, etc
+								$current_value->iri = trim($current_value->iri);
+
 								$result = $this->has_protocol($current_value->iri);
 								if($result===false){
 
@@ -1082,6 +1099,11 @@ class component_iri extends component_common {
 							if(isset($current_value->title)){
 								$iri_object->title = $current_value->title;
 							}
+							// set the lang given. Preserve it: component_iri supports translation
+							// and flat data items carry their own lang (raw export format)
+							if(isset($current_value->lang)){
+								$iri_object->lang = $current_value->lang;
+							}
 
 							$value[] = $iri_object;
 						}
@@ -1114,7 +1136,7 @@ class component_iri extends component_common {
 		// label_id is the target section_id for label dataframe of the values: dédalo, nomisma and wikidata
 		// the label dataframe will be created when the component save
 		// @see Save()
-			$valid = $is_valid_string($import_value);
+			$valid = self::is_plain_bracket_string($import_value);
 			if ($valid===false) {
 
 				// import value seems to be a JSON malformed.
@@ -1338,7 +1360,7 @@ class component_iri extends component_common {
 	* @param string $label "dedalo"
 	* @return null|int $target_section_id
 	*/
-	private static function save_label_dataframe_from_string( string $label ) : ?int {
+	public static function save_label_dataframe_from_string( string $label ) : ?int {
 
 		// Remove spaces
 		$new_label = trim(strip_tags($label));
@@ -1438,9 +1460,13 @@ class component_iri extends component_common {
 		);
 
 		// create new dataframe locator to be set as new data
+		// type stamps the locator as a dataframe pairing entry (unified contract);
+		// legacy section_id_key/section_tipo_key are kept until the data migration runs
 		$new_locator = new locator();
+			$new_locator->set_type( DEDALO_RELATION_TYPE_DATAFRAME );
 			$new_locator->set_section_tipo( component_iri::$label_target_section_tipo );
 			$new_locator->set_section_id( $target_section_id );
+			$new_locator->set_id_key( (int)$section_id_key );
 			$new_locator->set_section_id_key( $section_id_key );
 			$new_locator->set_section_tipo_key( $section_tipo );
 			$new_locator->set_main_component_tipo( $component_tipo );

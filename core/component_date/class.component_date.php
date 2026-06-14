@@ -188,84 +188,61 @@ class component_date extends component_common {
 
 
 	/**
-	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_data().
-	* overwrite in every different specific component
-	* Some the text components can set the value with the data directly
-	* the relation components need to process the locator to resolve the value
-	* @param object|null $ddo = null
-	* @return dd_grid_cell_object $value
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One atom per data item resolved with data_item_to_value().
+	* The leaf segment fields_separator is set to the resolved
+	* records_separator because the legacy grid pre-joined the items with
+	* records_separator (flat output parity). Empty items are dropped by
+	* the joiner (legacy kept empty slots between separators; accepted
+	* deviation, documented in the export plan).
+	* @param export_context|null $context = null
+	* @return export_value
 	*/
-	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
+	public function get_export_value( ?export_context $context=null ) : export_value {
 
-		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
+		$context = $context ?? new export_context();
 
-		// column_obj
-			$column_obj = $this->column_obj ?? (object)[
-				'id' => $this->section_tipo.'_'.$this->tipo
-			];
+		// records_separator. resolved as the legacy get_grid_value
+			$properties			= $this->get_properties();
+			$records_separator	= $context->ddo?->records_separator
+				?? $properties?->records_separator
+				?? ' | ';
 
-		// short vars
-			$label		= $this->get_label();
-			$properties	= $this->get_properties();
-			$date_mode	= $this->get_date_mode();
+		// own segment. items join with records_separator (legacy pre-join parity)
+			$segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model'				=> $this->get_model(),
+				'fields_separator'	=> $records_separator,
+				'records_separator'	=> $records_separator,
+				// relation traversal position (set by the calling relation via descend)
+				'item_index'		=> $context->item_index,
+				'section_id'		=> $context->item_section_id
+			]);
+			$path = [...$context->path_prefix, $segment];
 
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
 
-		// records_separator
-			$records_separator = isset($records_separator)
-				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
-
-		// fields_separator
-			$fields_separator = isset($fields_separator)
-				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ' <> ');
-
-		// ar_values
-			$ar_values	= [];
-			$data		= $this->get_data();
-			if (!empty($data)) {
-				foreach ($data as $key => $current_data) {
-
-					$ar_values[$key] = ''; // default
-
-					if(empty($current_data)) {
-						continue;
-					}
-
-					$ar_values[$key] = self::data_item_to_value($current_data, $date_mode);
-				}//end foreach ($data as $key => $current_data)
+		// data items
+			$data = $this->get_data();
+			if (empty($data)) {
+				return $export_value;
 			}
 
-		// value. flat_value (array of one value full resolved)
-			$value = [implode($records_separator, $ar_values)]; // array
+			$date_mode = $this->get_date_mode();
+			foreach ($data as $key => $current_data) {
+				$item_value = empty($current_data)
+					? ''
+					: self::data_item_to_value($current_data, $date_mode);
 
-		// dd_grid_cell_object
-			$dd_grid_cell_object = new dd_grid_cell_object();
-				$dd_grid_cell_object->set_type('column');
-				$dd_grid_cell_object->set_label($label);
-				$dd_grid_cell_object->set_cell_type('text');
-				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				if(isset($class_list)){
-					$dd_grid_cell_object->set_class_list($class_list);
-				}
-				$dd_grid_cell_object->set_fields_separator($fields_separator);
-				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($value);
-				$dd_grid_cell_object->set_fallback_value($value);
-				$dd_grid_cell_object->set_model(get_called_class());
+				$export_value->add_atom( new export_atom($path, $item_value, (object)[
+					'value_index' => (int)$key
+				]) );
+			}
 
 
-		return $dd_grid_cell_object;
-	}//end get_grid_value
+		return $export_value;
+	}//end get_export_value
 
 
 
@@ -908,7 +885,12 @@ class component_date extends component_common {
 									// 	$dd_date->set_year((int)$ar_date_parts[1]);
 									// }
 									// Do not resolve date in this case because day without month is not valid
-									$response->errors[] = 'Invalid mdy date format for current_date: ' . to_string($current_date);
+									$failed = new stdClass();
+										$failed->section_id		= $this->section_id;
+										$failed->data			= stripslashes( $import_value );
+										$failed->component_tipo	= $this->get_tipo();
+										$failed->msg			= 'IGNORED: Invalid mdy date format for current_date: ' . to_string($current_date);
+									$response->errors[] = $failed;
 								}
 								// moth, day, year (USA dates) : 04/25/2022
 								elseif($lenght === 3){
@@ -959,13 +941,35 @@ class component_date extends component_common {
 			}
 
 		// check values (informative of errors)
-			if(!empty($value)){
+		// value is expected to be an array of date objects with start/end properties;
+		// JSON input could decode to other shapes (scalar, object): skip them safely
+			if(!empty($value) && is_array($value)){
 
 				foreach ($value as $current_date) {
+
+					// expected object items only. Reject malformed items as plain strings
+					// to prevent storing invalid date data
+						if (!is_object($current_date)) {
+
+							$failed = new stdClass();
+								$failed->section_id		= $this->section_id;
+								$failed->data			= stripslashes( $import_value );
+								$failed->component_tipo	= $this->get_tipo();
+								$failed->msg			= 'IGNORED: malformed data, expected date object and get: '.gettype($current_date);
+							$response->errors[] = $failed;
+
+							return $response;
+						}
+
 					foreach ($current_date as $key => $current_dd_date) {
 
+						// only check date properties (skip 'id', 'lang' and other non date properties)
+							if ($key!=='start' && $key!=='end') {
+								continue;
+							}
+
 						// don't check null values
-							if (!is_null($current_dd_date)) {
+							if (is_null($current_dd_date)) {
 								continue;
 							}
 
@@ -985,17 +989,25 @@ class component_date extends component_common {
 								continue;
 							}
 
-						$dd_date = new dd_date($current_dd_date, true);
+						// normalize dd_date instances to plain objects: dd_date properties
+						// are private and would not iterate in the validation constructor
+						$current_date_obj = ($current_dd_date instanceof dd_date)
+							? json_decode(json_encode($current_dd_date))
+							: $current_dd_date;
+
+						$dd_date = new dd_date($current_date_obj, true);
 
 						// errors check
-						if(!empty($dd_date->errors)){
+						// note that dd_date errors property is private: use the getter
+						$dd_date_errors = $dd_date->get_errors();
+						if(!empty($dd_date_errors)){
 
 							$failed = new stdClass();
 								$failed->section_id		= $this->section_id;
 								$failed->data			= stripslashes( $import_value );
 								$failed->component_tipo	= $this->get_tipo();
 								$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
-								$failed->errors			= $dd_date->errors;
+								$failed->errors			= $dd_date_errors;
 
 							$response->errors[] = $failed;
 						}

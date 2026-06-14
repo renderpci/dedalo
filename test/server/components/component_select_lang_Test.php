@@ -947,4 +947,74 @@ final class component_select_lang_test extends BaseTestCase {
 
 
 
+	/**
+	* TEST_conform_import_data
+	* @return void
+	*/
+	public function test_conform_import_data() {
+
+		$component = $this->build_component_instance();
+
+		// lang resolution requires the languages section in the test DB
+		$resolvable = lang::get_section_id_from_code('lg-spa');
+		if ($resolvable===null) {
+			$this->markTestSkipped('languages section is not available in the test DB');
+		}
+
+		// 1. flat lang code
+		$response = $component->conform_import_data('lg-spa', self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertIsArray($response->result);
+		$this->assertCount(1, $response->result);
+		$this->assertEquals(DEDALO_LANGS_SECTION_TIPO, $response->result[0]->section_tipo);
+		$this->assertEquals($resolvable, (int)$response->result[0]->section_id);
+		$this->assertEquals($component->get_relation_type(), $response->result[0]->type);
+		$this->assertEquals(self::$tipo, $response->result[0]->from_component_tipo);
+
+		// 2. multiple lang codes
+		$response = $component->conform_import_data('lg-spa, lg-eng', self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertCount(2, $response->result);
+
+		// 3. JSON array of lang codes
+		$response = $component->conform_import_data('["lg-spa","lg-eng"]', self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertCount(2, $response->result);
+
+		// 4. invalid lang code
+		$response = $component->conform_import_data('lg-zzzzz', self::$tipo);
+		$this->assertTrue(!empty($response->errors), 'expected errors for invalid lang code');
+		$this->assertNull($response->result);
+
+		// 5. warning for langs not configured in the project
+		$project_langs = common::get_ar_all_langs();
+		$ar_test_codes = ['lg-ita','lg-deu','lg-fra','lg-rus'];
+		foreach ($ar_test_codes as $test_code) {
+			if (!in_array($test_code, $project_langs) && lang::get_section_id_from_code($test_code)!==null) {
+				$response = $component->conform_import_data($test_code, self::$tipo);
+				$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+				$this->assertCount(1, $response->result, 'expected the lang to be imported');
+				$this->assertTrue(
+					!empty($response->warnings),
+					'expected a warning for lang not configured in the project'
+				);
+				break;
+			}
+		}
+
+		// 6. JSON locator delegates to component_relation_common
+		$locator_json = '[{"section_tipo":"'.DEDALO_LANGS_SECTION_TIPO.'","section_id":"'.$resolvable.'"}]';
+		$response = $component->conform_import_data($locator_json, self::$tipo);
+		$this->assertTrue(empty($response->errors), 'expected empty errors: '.to_string($response->errors));
+		$this->assertEquals($resolvable, (int)$response->result[0]->section_id);
+
+		// 7. empty value clears data
+		$response = $component->conform_import_data('', self::$tipo);
+		$this->assertTrue(empty($response->errors));
+		$this->assertNull($response->result);
+		$this->assertEquals('OK', $response->msg);
+	}//end test_conform_import_data
+
+
+
 }//end class component_select_lang_test

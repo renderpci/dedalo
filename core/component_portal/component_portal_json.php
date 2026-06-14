@@ -104,10 +104,9 @@ if (!isset($this)) { http_response_code(404); exit; }
 				// subdatum
 					$subdatum = $this->get_subdatum($tipo, $value);
 
-					$ar_subcontext = $subdatum->context;
-					foreach ($ar_subcontext as $current_context) {
-						$context[] = $current_context;
-					}
+				// subcontext add. get_subdatum already dedups internally; guard here against
+				// items colliding with the already-added portal context (tipo+section_tipo+mode)
+					$context = common::merge_unique_context($context, $subdatum->context);
 
 					$ar_subdata = $subdatum->data;
 					foreach ($ar_subdata as $sub_value) {

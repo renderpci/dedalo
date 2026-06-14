@@ -229,83 +229,48 @@ class component_media_common extends component_common {
 
 
 	/**
-	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_data().
-	* overwrite in every different specific component
-	* Some the text components can set the value with the data directly
-	* the relation components need to process the locator to resolve the value
-	* @param object|null $ddo = null
-	* @return dd_grid_cell_object $grid_cell_object
-	* @test true
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* Single atom with the media URL, cell_type 'img'.
+	* URL absoluteness comes from the export_context (replaces the legacy
+	* $this->caller==='tool_export' switch)
+	* @param export_context|null $context = null
+	* @return export_value
 	*/
-	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
+	public function get_export_value( ?export_context $context=null ) : export_value {
 
-		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
+		$context = $context ?? new export_context();
 
-		// column_obj
-			$column_obj = $this->column_obj ?? (object)[
-				'id' => $this->section_tipo.'_'.$this->tipo
-			];
+		// own segment
+			$segment	= $this->build_export_path_segment($context);
+			$path		= [...$context->path_prefix, $segment];
 
 		// current_url. get from data
 			$data = $this->get_data();
-			if(isset($data)){
+			if (isset($data)) {
 
 				$element_quality = ($this->mode==='edit')
 					? $this->get_default_quality()
 					: $this->get_thumb_quality();
 
-				// Caller class name, the name of who instantiate the component
-				// the URI resolution of the data depends of the caller
-				// when is caller by tool_export it needs to be absolute (with the protocol and domain)
-				// when is caller by tool_diffusion it needs to be relative (without the protocol and domain)
-				switch ($this->caller) {
-					case 'tool_export':
-						$absolute = true;
-						break;
-
-					default:
-						$absolute = false;
-						break;
-				}
-				// get the URI of the data
 				$current_url = $this->get_url(
 					$element_quality, // string quality
 					false, // bool test_file
-					$absolute,  // bool absolute
+					$context->absolute_urls, // bool absolute
 					false // bool default_add
 				);
 			}else{
 				$current_url = '';
 			}
 
-		// label
-			$label = $this->get_label();
-
-		// value
-			$value = [$current_url]; // array
-
-		// dd_grid_cell_object
-			$dd_grid_cell_object = new dd_grid_cell_object();
-				$dd_grid_cell_object->set_type('column');
-				$dd_grid_cell_object->set_label($label);
-				$dd_grid_cell_object->set_cell_type('img');
-				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				if(isset($class_list)){
-					$dd_grid_cell_object->set_class_list($class_list);
-				}
-				$dd_grid_cell_object->set_fields_separator($fields_separator);
-				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($value);
-				$dd_grid_cell_object->set_model(get_called_class());
-
-
-		return $dd_grid_cell_object;
-	}//end get_grid_value
+		return export_value::from_scalar(
+			$path,
+			$current_url,
+			(object)['cell_type' => 'img'],
+			$this->get_label(),
+			get_called_class()
+		);
+	}//end get_export_value
 
 
 
@@ -362,7 +327,7 @@ class component_media_common extends component_common {
 	* @param ?string $diffusion_element_tipo
 	* @return array $diffusion_data
 	*
-	* @see class.diffusion_data.php
+	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
 	* @test false
 	*/
 	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo = null ) : array {
@@ -2490,20 +2455,34 @@ class component_media_common extends component_common {
 	* @return string $media_path
 	* @test true
 	*/
-	public function get_media_path_dir(string $quality) : string {
+	/**
+	* SANITIZE_QUALITY
+	* SEC-065 / MEDIA-04 / MEDIA-05: $quality is interpolated into filesystem paths
+	* and URLs. Restrict it to a strict identifier grammar (alphanumeric, underscore,
+	* hyphen, dot) — note '<' is NOT allowed — and reject pure-dot tokens ('.'/'..')
+	* so it cannot escape the media root. Falls back to the original quality on mismatch.
+	* @param string $quality
+	* @return string
+	*/
+	private function sanitize_quality(string $quality) : string {
 
-		// SEC-065: `$quality` is interpolated into a filesystem path; an unchecked
-		// value (e.g. "../..") would escape the media root. We restrict $quality
-		// to the same strict identifier grammar we use for key_dir (alphanumeric,
-		// underscore, hyphen, dot) and fall back to the original quality on
-		// mismatch. No caller legitimately needs path separators in $quality.
-		if (preg_match('/^[A-Za-z0-9_\-\.\<]+$/', $quality) !== 1) {
+		if ($quality==='.' || $quality==='..' || preg_match('/^[A-Za-z0-9_\-\.]+$/', $quality) !== 1) {
 			debug_log(__METHOD__
-				. ' SEC-065: rejecting unsafe quality: ' . to_string($quality)
+				. ' SEC-065/MEDIA-04: rejecting unsafe quality: ' . to_string($quality)
 				, logger::ERROR
 			);
-			$quality = (string)$this->get_original_quality();
+			return (string)$this->get_original_quality();
 		}
+
+		return $quality;
+	}//end sanitize_quality
+
+
+
+	public function get_media_path_dir(string $quality) : string {
+
+		// SEC-065 / MEDIA-05: confine $quality before it reaches the filesystem path.
+		$quality = $this->sanitize_quality($quality);
 
 		if(isset($this->external_source)) {
 
@@ -2534,6 +2513,10 @@ class component_media_common extends component_common {
 	* @test true
 	*/
 	public function get_media_url_dir(string $quality) : string {
+
+		// MEDIA-04: validate $quality here too (parity with get_media_path_dir) so the
+		// URL and filesystem path stay consistent and no raw client value is reflected.
+		$quality = $this->sanitize_quality($quality);
 
 		$initial_media_path	= $this->initial_media_path;
 		$additional_path	= $this->additional_path;

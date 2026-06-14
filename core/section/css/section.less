@@ -4,6 +4,12 @@
 * Included from main.less file
 */
 
+// while dragging the inspector resize handle: suppress selection and force the cursor
+body.inspector_resizing {
+	user-select: none;
+	cursor: col-resize;
+}
+
 .section {
 	display: table;
 	width: 100%;
@@ -87,6 +93,119 @@
 				max-height: 50%;
 			}
 
+			// resize handle. Sits on the panel's left edge, drives --inspector_width
+			>.inspector_resize_handle {
+				position: absolute;
+				left: -3px;
+				top: 0px;
+				width: 6px;
+				height: 100%;
+				cursor: col-resize;
+				z-index: 3;
+				touch-action: none;
+
+				&:hover {
+					background-color: var(--focus_ring);
+					opacity: 0.3;
+				}
+			}
+
+			// rail mode. Whole panel collapses to a thin vertical strip of icons.
+			// Only above the desktop breakpoint; below it the panel is inline full-width.
+			&.inspector_rail {
+			@media screen and (min-width: (@width_break_point_0 + 1)) {
+
+				// hide the resize handle while railed
+				>.inspector_resize_handle {
+					display: none;
+				}
+
+				// rail toggle flips to point the other way (expand)
+				.inspector_rail_toggle {
+					transform: rotate(180deg);
+				}
+
+				// keep the assistant out of the rail
+				>.assistant_container {
+					display: none;
+				}
+
+				.wrapper_inspector.inspector {
+					// center the main header and show only the toggle
+					>.label {
+						justify-content: center;
+						padding-left: 0px;
+						padding-right: 0px;
+
+						.block_label,
+						.block_icon {
+							display: none;
+						}
+						// chevron is meaningless in the rail
+						&:after {
+							display: none;
+						}
+					}
+
+					// chrome that has no icon representation is hidden
+					.paginator_container,
+					.selection_info,
+					.buttons_container.bottom {
+						display: none;
+					}
+
+					// every block collapses to its centered icon header
+					.inspector_content_data > div {
+						margin: 0.25rem 0.3rem;
+					}
+
+					.element_info_head,
+					.project_head,
+					.relation_list_head,
+					.time_machine_list_head,
+					.component_history_head,
+					.activity_info_head {
+						justify-content: center;
+						padding-left: 0px;
+						padding-right: 0px;
+
+						.block_label {
+							display: none;
+						}
+						// chevron is meaningless in the rail
+						&:after {
+							display: none;
+						}
+						.block_icon {
+							width: 1.4em;
+							height: 1.4em;
+						}
+					}
+
+					// block bodies stay hidden regardless of per-block state
+					.element_info,
+					.project_container,
+					.relation_list_body,
+					.time_machine_list_body,
+					.component_history_body,
+					.activity_info_body {
+						display: none;
+					}
+
+					// stack the top action buttons vertically as rail icons
+					.buttons_container.top,
+					.tools_container.top {
+						flex-direction: column;
+						align-items: center;
+
+						>button {
+							margin-left: 0px;
+						}
+					}
+				}
+			}//end @media min-width
+			}//end &.inspector_rail
+
 			@media screen and (max-width: @width_break_point_0) {
 				display: inline;
 				width: 100%;
@@ -97,6 +216,12 @@
 					>.label {
 						background-color: @color_grey_13
 					}
+				}
+
+				// rail + resize do not apply on the inline full-width layout
+				>.inspector_resize_handle,
+				.inspector_rail_toggle {
+					display: none;
 				}
 			}
 		}//end .inspector_container

@@ -178,6 +178,37 @@ class component_email extends component_string_common {
 						}
 					}
 					$data_from_json = $normalized;
+				}else if (is_object($data_from_json)) {
+
+					$first_key = array_key_first( (array)$data_from_json );
+					if ($first_key!==null && strpos($first_key, 'lg-')===0) {
+						// Lang keyed object as {"lg-nolan":["user@example.com"]} (legacy raw export)
+						// component_email is non translatable: extract the first lang value
+						// and normalize it into an array of v7 items
+						$lang_value = $data_from_json->{$first_key};
+						$ar_lang_value = is_array($lang_value)
+							? $lang_value
+							: [$lang_value];
+						$normalized = [];
+						foreach ($ar_lang_value as $val) {
+							$normalized[] = (is_object($val))
+								? $val
+								: (object)['value' => $val];
+						}
+						$data_from_json = $normalized;
+					}else if (property_exists($data_from_json, 'value')) {
+						// Single object item as {"value":"user@example.com"}. Wrap into an array
+						$data_from_json = [$data_from_json];
+					}else{
+						$failed = new stdClass();
+							$failed->section_id		= $this->section_id;
+							$failed->data			= stripslashes( $import_value );
+							$failed->component_tipo	= $this->get_tipo();
+							$failed->msg			= 'IGNORED: object without value property '. to_string($import_value);
+						$response->errors[] = $failed;
+
+						return $response;
+					}
 				}
 
 				$response->result	= $data_from_json;
@@ -198,10 +229,20 @@ class component_email extends component_string_common {
 			}
 
 		// convert value
-			$value = trim($import_value);
+			// multiple emails can be imported using the ' | ' separator
+			// as 'user@example.com | admin@example.com'
+			$ar_values = explode(' | ', $import_value);
+			$result = [];
+			foreach ($ar_values as $current_value) {
+				$current_value = trim($current_value);
+				if ($current_value==='') {
+					continue;
+				}
+				$result[] = (object)['value' => $current_value];
+			}
 
 		// response OK
-			$response->result	= [(object)['value' => $value]];
+			$response->result	= !empty($result) ? $result : null;
 			$response->msg		= 'OK';
 
 

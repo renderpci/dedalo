@@ -111,6 +111,7 @@
     "name_to_field": "Sufijo indica campo",
     "name_to_record_id": "Prefijo indica ID",
     "presets_de_busqueda": "Config. de búsqueda",
+    "presets_de_exportacion": "Config. de exportación",
     "search_options": "Opciones de búsqueda",
     "fields": "Campos",
     "and": "y",

@@ -50,11 +50,15 @@ final class session_manager {
 		}
 
 		// Detect session ID from cookies BEFORE starting manager
+		// WORKER-04: key the '_ssl' suffix off the same HTTPS predicate as
+		// cookie_secure (DEDALO_PROTOCOL) so the session name and the cookie's
+		// Secure flag cannot disagree (isset($_SERVER['HTTPS']) is true even for "off").
 		$dedalo_session_name = 'dedalo_' . DEDALO_MAJOR_VERSION . '_' . DEDALO_ENTITY
-			. (isset($_SERVER['HTTPS']) ? '_ssl' : '');
+			. (DEDALO_PROTOCOL === 'https://' ? '_ssl' : '');
 		$dedalo_session_name = str_replace([',', '.'], '_', $dedalo_session_name);
 
-		worker_bootstrap::debug_log('RR Worker: Incoming Cookies: ' . json_encode($_COOKIE));
+		// AUTH-05: log cookie names only, never their values (one is the session id).
+		worker_bootstrap::debug_log('RR Worker: Incoming Cookie names: ' . implode(',', array_keys($_COOKIE ?? [])));
 		worker_bootstrap::debug_log('RR Worker: Target Session Name: ' . $dedalo_session_name);
 
 		$cookies = $request->getCookieParams();
@@ -93,8 +97,11 @@ final class session_manager {
 			'prevent_session_lock' => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
 		]);
 
-		worker_bootstrap::debug_log('RR Worker: Session started. ID: ' . session_id());
-		worker_bootstrap::debug_log('RR Worker: Session data after start: ' . json_encode($_SESSION));
+		// AUTH-05: never log session/cookie secrets verbatim (the session id IS the
+		// auth token; $_SESSION holds csrf/salt_secure). Log only a short id hash and
+		// the set of keys, so leaving debug on does not leak forgeable credentials.
+		worker_bootstrap::debug_log('RR Worker: Session started. ID#: ' . substr(hash('sha256', (string)session_id()), 0, 8));
+		worker_bootstrap::debug_log('RR Worker: Session keys after start: ' . implode(',', array_keys($_SESSION ?? [])));
 	}
 
 	/**
@@ -148,12 +155,17 @@ final class session_manager {
 		if ($params['httponly']) {
 			$parts[] = 'HttpOnly';
 		}
-		if (!empty($params['samesite'])) {
-			$parts[] = sprintf('SameSite=%s', $params['samesite']);
-		}
+		// AUTH-09: always emit SameSite; fall back to a safe default when the
+		// session cookie params don't carry one (Strict in prod, Lax in dev), so the
+		// cookie is never sent without a SameSite policy.
+		$samesite = !empty($params['samesite'])
+			? $params['samesite']
+			: ((defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) ? 'Lax' : 'Strict');
+		$parts[] = sprintf('SameSite=%s', $samesite);
 
 		$cookie_str = implode('; ', $parts);
-		worker_bootstrap::debug_log('RR Worker: Injecting Set-Cookie: ' . $cookie_str);
+		// AUTH-05: do not log the cookie value (the session id); log the name only.
+		worker_bootstrap::debug_log('RR Worker: Injecting Set-Cookie for: ' . $cookie_name);
 
 		return $response->withAddedHeader('Set-Cookie', $cookie_str);
 	}

@@ -83,9 +83,8 @@ class diffusion_socrata {
 			}
 
 		// table
-			$table_tipo			= diffusion::get_table_tipo($diffusion_element_tipo, $section_tipo);
-			$ontology_node		= ontology_node::get_instance($table_tipo);
-			$table_properties	= $ontology_node->get_propiedades(true) ?? new stdClass();
+			$table_tipo			= diffusion_utils::get_table_tipo($diffusion_element_tipo, $section_tipo);
+			$table_properties	= self::get_table_properties($table_tipo) ?? new stdClass();
 
 		// ar_rows. Build data (array of json_row objects) for each lang
 			$ar_rows = [];
@@ -204,21 +203,19 @@ class diffusion_socrata {
 
 				#$ar_socrata_rows = [$ar_socrata_rows[1]];
 
-		// Get socrata path from 'table' item
-			$tables_map	= diffusion_sql::get_diffusion_element_tables_map($diffusion_element_tipo);
-			$table_obj	= $tables_map->{$section_tipo} ?? null;
-			if (empty($table_obj)) {
-				dump($tables_map, ' diffusion_element_tables_map ++ '.to_string());
+		// Get socrata path from 'table' item (v7: resolved from the flat virtual diffusion tree)
+			$table_node = diffusion_utils::get_section_node_for_element($diffusion_element_tipo, $section_tipo);
+			if (empty($table_node)) {
 				$response->msg[] = 'Error. this section ('.$section_tipo.') do not have Socrata diffusion';
-				$response->errors[] = 'Section ('.$section_tipo.') is not in the diffusion_element_tables_map';
+				$response->errors[] = 'Section ('.$section_tipo.') is not in the diffusion virtual tree for element '.$diffusion_element_tipo;
 				return $response;
 			}
-			$socrata_config	= (object)SOCRATA_CONFIG;
-			$path			= $socrata_config->mode==='pro'
-				? $table_obj->properties->path_pro // production mode
-				: $table_obj->properties->path_pre; // pre-production mode
+			$table_properties	= self::get_table_properties($table_node->tipo);
+			$socrata_config		= (object)SOCRATA_CONFIG;
+			$path				= $socrata_config->mode==='pro'
+				? ($table_properties->path_pro ?? null) // production mode
+				: ($table_properties->path_pre ?? null); // pre-production mode
 			if (empty($path)) {
-				dump($tables_map, ' diffusion_element_tables_map ++ '.to_string());
 				$response->msg[] = 'Error. empty section ('.$section_tipo.') Socrata path';
 				$response->errors[] = 'Section ('.$section_tipo.') do not has properties paths defined';
 				return $response;
@@ -233,8 +230,18 @@ class diffusion_socrata {
 			$result	= isset($result_obj->error) ? false : true;
 			$msg	= isset($result_obj->message) ? $result_obj->message : to_string($result);
 
-		// saves publication data
-			diffusion::update_publication_data($section_tipo, $section_id);
+		// log publication activity (dd1758: who/when/what/where + action)
+		// replaces the legacy per-record publication metadata components
+		// (update_publication_data, removed in v7)
+			if ($result===true) {
+				include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php';
+				diffusion_activity_logger::log(
+					$section_tipo,
+					(int)$section_id,
+					$diffusion_element_tipo,
+					diffusion_activity_logger::ACTION_PUBLISHED
+				);
+			}
 
 		// response
 			$response->result	= $result;
@@ -249,6 +256,228 @@ class diffusion_socrata {
 
 		return $response;
 	}//end update_record
+
+
+
+	/**
+	* BUILD_ID
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @param string $lang
+	* @return string $id like 'oh1_1_lg-eng'
+	*/
+	private static function build_id(string $section_tipo, string|int $section_id, string $lang) : string {
+
+		$id = $section_tipo .'_'. $section_id .'_'. $lang ;
+
+		return $id;
+	}//end build_id
+
+
+
+	/**
+	* BUILD_JSON_ROW
+	* Builds one Socrata row object with all field : field_value in given lang.
+	* (Moved from legacy class diffusion, removed in v7)
+	* @param object $options
+	* @return object $json_row
+	*/
+	private function build_json_row(object $options) : stdClass {
+
+		// options
+			$section_tipo			= $options->section_tipo ?? null;
+			$section_id				= $options->section_id ?? null;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
+			$lang					= $options->lang ?? null;
+
+		// fields (v7: resolved from the flat virtual diffusion tree)
+			$ar_fields = diffusion_utils::get_table_fields( $diffusion_element_tipo, $section_tipo );
+
+		// value
+			$row = new stdClass();
+
+				// fixed columns
+					$item = new stdClass();
+						$item->value = self::build_id($section_tipo, $section_id, $lang);
+						$item->model = 'field_text';
+					$row->id = $item;
+
+					$item = new stdClass();
+						$item->value = $section_tipo;
+						$item->model = 'field_text';
+					$row->section_tipo = $item;
+
+					$item = new stdClass();
+						$item->value = $section_id;
+						$item->model = 'field_int';
+					$row->section_id = $item;
+
+					$item = new stdClass();
+						$item->value = $lang;
+						$item->model = 'field_text';
+					$row->lang = $item;
+
+					$item = new stdClass();
+						$item->value = date('Y-m-d H:i:s');
+						$item->model = 'field_date';
+					$row->publish_date = $item;
+
+				// other columns. Resolve each field
+				foreach ($ar_fields as $field) {
+
+					$value = self::get_field_value($field->tipo, $section_tipo, $section_id, $lang, $options);
+
+					$diffusion_model = ontology_node::get_model_by_tipo($field->tipo,true);
+
+					$item = new stdClass();
+						$item->value = $value;
+						$item->model = $diffusion_model;
+
+					// Add value
+					$row->{$field->label} = $item;
+				}
+
+
+		return $row;
+	}//end build_json_row
+
+
+
+	/**
+	* GET_FIELD_VALUE
+	* (Moved from legacy class diffusion, removed in v7)
+	* @param string $tipo
+	*	Tipo of diffusion 'field' like 'oh111'
+	* @param string $section_tipo
+	*	Current working section tipo like 'oh1'
+	* @param int $section_id
+	*	Current section_id like 1
+	* @param string $lang
+	*	Current lang like 'lg-eng'
+	* @param object $request_options
+	*	Is pass-through update record request_options param
+	* @return mixed $field_value
+	*	Is the diffusion value of component called by field. Can be null, array, string, int
+	*/
+	private static function get_field_value(string $tipo, string $section_tipo, $section_id, string $lang, object $request_options) {
+
+		$field_value = null;
+
+		// Diffusion element (current column/field)
+			$diffusion_term		= ontology_node::get_instance($tipo);
+			$properties			= $diffusion_term->get_properties(true);	# Format: {"data_to_be_used": "dato"}
+
+		// Component
+			$ar_related			= common::get_ar_related_by_model('component_', $tipo, false);
+			$component_tipo		= reset($ar_related);
+			$model_name			= ontology_node::get_model_by_tipo($component_tipo,true);
+			$current_component	= component_common::get_instance(
+				$model_name,
+				$component_tipo,
+				$section_id,
+				'list', // Note that 'list' mode have dato fallback (in section)
+				$lang,
+				$section_tipo,
+				false
+			);
+
+			// dato
+			$dato = (is_object($properties) && property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method))
+				? $current_component->{$properties->get_field_value->get_dato_method}()
+				: $current_component->get_dato();
+
+
+		# switch cases
+			switch (true) {
+
+				case ($model_name==='component_publication'):
+					$field_value = (isset($dato[0]->section_id) && (int)$dato[0]->section_id===NUMERICAL_MATRIX_VALUE_YES) ? true : false;
+					break;
+
+				case (is_object($properties) && property_exists($properties, 'data_to_be_used')):
+					switch ($properties->data_to_be_used) {
+						case 'dato':
+							# Unresolved data
+							$field_value = $dato;
+							break;
+						// NEED TO BE FIXED NEW DATAFRAME
+						case 'ds':
+							$ar_term_ds = [];
+							foreach ((array)$dato as $current_locator) {
+								if (isset($current_locator->ds)) foreach ($current_locator->ds as $ar_locator_ds) {
+									foreach ($ar_locator_ds  as $locator_ds) {
+										$ar_term_ds[] = ts_object::get_term_by_locator($locator_ds, $lang, true);
+									}
+								}
+							}
+							if (!empty($ar_term_ds)) {
+								$field_value = implode('|', $ar_term_ds);
+							}
+							break;
+						// NEED TO BE FIXED NEW DATAFRAME
+						case 'dataframe':
+							$ar_term_dataframe = [];
+							foreach ((array)$dato as $current_locator) {
+								if (isset($current_locator->dataframe)) foreach ($current_locator->dataframe as $locator_dataframe) {
+									$ar_term_dataframe[] = ts_object::get_term_by_locator($locator_dataframe, $lang, true);
+								}
+							}
+							if (!empty($ar_term_dataframe)) {
+								$field_value = implode('|', $ar_term_dataframe);
+							}
+							break;
+						default:
+							debug_log(__METHOD__
+								." INVALID DATA_TO_BE_USED MODE (ignored tipo: $component_tipo) 'data_to_be_used': ".to_string($properties->data_to_be_used)
+								, logger::ERROR
+							);
+							break;
+					}
+					break;
+
+				case (is_object($properties) && property_exists($properties, 'process_dato')):
+					// Process dato with function
+					$options = $request_options;
+						$options->properties		= $properties;
+						$options->tipo				= $tipo;
+						$options->component_tipo	= $component_tipo;
+						$options->section_id		= $section_id;
+
+					$function_name 	= $properties->process_dato;
+					$field_value 	= call_user_func($function_name, $options, $dato);
+					break;
+
+				default:
+					// Set unified diffusion value
+					$field_value = $current_component->get_diffusion_value($lang);
+					break;
+			}//switch (true)
+
+
+		return $field_value;
+	}//end get_field_value
+
+
+
+	/**
+	* GET_TABLE_PROPERTIES
+	* Resolves the v7 properties of a table node. The given tipo is usually
+	* the virtual (alias-preferred) tipo from the diffusion virtual tree;
+	* resolve_node_with_alias applies the alias contract (alias properties
+	* win, inherited from the real node when the alias has none).
+	* @param string|null $table_tipo
+	* @return object|null
+	*/
+	private static function get_table_properties( ?string $table_tipo ) : ?object {
+
+		if (empty($table_tipo)) {
+			return null;
+		}
+
+		$resolved = diffusion_utils::resolve_node_with_alias($table_tipo);
+
+		return $resolved->properties ?: null;
+	}//end get_table_properties
 
 
 
@@ -311,68 +540,6 @@ class diffusion_socrata {
 
 		return $response;
 	}//end upsert_data
-
-
-
-	/**
-	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
-	* Resolves Ontology all related sections (linked from socrata tables) ready to publish in Socrata.
-	* It is used to determine whether the current section has a Diffusion button to publish the content.
-	* @param string $diffusion_element_tipo
-	* @param string|null $class_name = null
-	* @return array $ar_diffusion_sections
-	* sample:
-	* [
-	*	"dmm1023",
-	*	"oh1",
-	*	"rsc205",
-	*	"mdcat757",
-	*	"mdcat813"
-	* ]
-	*/
-	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
-
-		$ar_diffusion_sections = [];
-
-		// tables
-		$tables = ontology_node::get_ar_tipo_by_model_and_relation(
-			$diffusion_element_tipo,
-			'table',
-			'children_recursive',
-			false // bool search_exact
-		);
-		foreach ($tables as $current_table_tipo) {
-
-			$model_name = ontology_node::get_model_by_tipo($current_table_tipo,true);
-			switch ($model_name) {
-				case 'table_alias':
-					// First try section (thesaurus needed)
-					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
-					if (!isset($ar_related[0])) {
-						// If not, We search 'table' now
-						$ar_table = common::get_ar_related_by_model('table', $current_table_tipo);
-						if (isset($ar_table[0])) {
-							$ar_related = common::get_ar_related_by_model('section', $ar_table[0]);
-						}
-					}
-					break;
-
-				case 'table':
-				default:
-					// Pointer to section
-					$ar_related = common::get_ar_related_by_model('section', $current_table_tipo);
-					break;
-			}
-
-			// add section
-			if (isset($ar_related[0])) {
-				$ar_diffusion_sections[] = $ar_related[0];
-			}
-		}//end foreach ($tables as $current_table_tipo)
-
-
-		return $ar_diffusion_sections;
-	}//end get_diffusion_sections_from_diffusion_element
 
 
 

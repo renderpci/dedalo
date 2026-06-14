@@ -28,7 +28,16 @@ class RoadRunnerSessionHandler implements SessionHandlerInterface
 
     public function read($id): string
     {
-        return (string)$this->storage->get($id) ?: '';
+        // AUTH-06: a storage error must not bubble as a fatal. Consistent with
+        // write()/destroy(): log it and fail to an empty session (PHP's session API
+        // cannot signal a hard read failure), so a transient backend outage degrades
+        // to "no session" rather than a 500 — and is visible in the logs.
+        try {
+            return (string)$this->storage->get($id) ?: '';
+        } catch (\Throwable $e) {
+            error_log("RoadRunnerSessionHandler Read Error: " . $e->getMessage());
+            return '';
+        }
     }
 
     public function write($id, $data): bool

@@ -12,7 +12,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {area_common} from '../../area_common/js/area_common.js'
-	import {search} from '../../search/js/search.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {render_area_graph} from './render_area_graph.js'
@@ -281,12 +281,16 @@ area_graph.prototype.build = async function(autoload=true) {
 
 	// filter
 		if (!self.filter) {
-			self.filter = new search()
-			self.filter.init({
-				caller	: self,
-				mode	: self.mode
+			// keyed, registered instance. id_variant separates this area search
+			// from a section search sharing section_tipo/mode/lang.
+			self.filter = await get_instance({
+				model			: 'search',
+				section_tipo	: self.section_tipo,
+				mode			: self.mode,
+				lang			: self.lang,
+				id_variant		: self.model,
+				caller			: self
 			})
-			// self.filter.build()
 		}
 
 	// debug

@@ -73,7 +73,7 @@ trait count {
 			$count_sql_query = $this->parse_sql_query();
 			$count_result = matrix_db_manager::exec_search(
 				$count_sql_query,
-				array_keys($this->params), // Form array as ['oh1' => $1, 'oh2' => $2, ...]
+				$this->params, // 0-indexed sequential list of bound values ($1..$n)
 			);
 
 			if ($count_result===false) {
@@ -82,28 +82,27 @@ trait count {
 
 			// Note that in some cases, such as "relationship search", more than one total is given.
 			// because UNION is used for tables
+			// ($count_result===false already returned above, so it is always a valid result here)
 			$total = 0;
 			$totals_group = [];
-			if ($count_result!==false) {
-				while($row = pg_fetch_assoc($count_result)) {
+			while($row = pg_fetch_assoc($count_result)) {
 
-					// get the total as the sum of all rows
-					$full_count = $row['full_count'] ?? 0;
-					$total = $total + (int)$full_count;
+				// get the total as the sum of all rows
+				$full_count = $row['full_count'] ?? 0;
+				$total = $total + (int)$full_count;
 
-					// group by
-					// get the specific total of the group_by concept (as section_tipo)
-					if( isset($this->sqo->group_by) ){
-						$current_totals_object = new stdClass();
-						$ar_keys = [];
-						foreach($this->sqo->group_by as $current_group){
-							$ar_keys[] = $row[$current_group];
-						}
-						$current_totals_object->key		= $ar_keys;
-						$current_totals_object->value	= (int)$full_count;
-
-						$totals_group[] = $current_totals_object;
+				// group by
+				// get the specific total of the group_by concept (as section_tipo)
+				if( isset($this->sqo->group_by) ){
+					$current_totals_object = new stdClass();
+					$ar_keys = [];
+					foreach($this->sqo->group_by as $current_group){
+						$ar_keys[] = $row[$current_group];
 					}
+					$current_totals_object->key		= $ar_keys;
+					$current_totals_object->value	= (int)$full_count;
+
+					$totals_group[] = $current_totals_object;
 				}
 			}
 
@@ -119,7 +118,7 @@ trait count {
 				$this->sqo->generated_time		= $exec_time;
 
 				$conn = DBi::_getConnection();
-				$sql_query_debug = debug_prepared_statement($count_sql_query, array_keys($this->params), $conn);
+				$sql_query_debug = debug_prepared_statement($count_sql_query, $this->params, $conn);
 
 				dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $sql_query_debug;
 

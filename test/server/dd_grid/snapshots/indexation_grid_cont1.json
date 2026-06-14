@@ -1,0 +1,1711 @@
+[
+    {
+        "id": null,
+        "class_list": null,
+        "type": "row",
+        "label": null,
+        "row_count": 5,
+        "column_count": null,
+        "column_labels": null,
+        "fields_separator": null,
+        "records_separator": null,
+        "cell_type": null,
+        "action": null,
+        "value": [
+            {
+                "id": null,
+                "class_list": "caption section rsc205 publication",
+                "type": "column",
+                "label": "Publicaciones",
+                "row_count": null,
+                "column_count": null,
+                "column_labels": null,
+                "fields_separator": null,
+                "records_separator": null,
+                "cell_type": null,
+                "action": null,
+                "value": [
+                    {
+                        "id": null,
+                        "class_list": "head publication",
+                        "type": "row",
+                        "label": null,
+                        "row_count": 2,
+                        "column_count": null,
+                        "column_labels": null,
+                        "fields_separator": null,
+                        "records_separator": null,
+                        "cell_type": null,
+                        "action": null,
+                        "value": [
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Imagen identificativa",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "img",
+                                "action": null,
+                                "value": [
+                                    ""
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc228"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_image"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Título",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": " | ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [
+                                    "Empúries"
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc140"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_input_text"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Fecha de publicación",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": " | ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [
+                                    "1989"
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc224"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_date"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Código",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": " | ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [
+                                    "3NM4RVKV"
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc137"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_input_text"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Autoría y responsabilidad",
+                                "row_count": 2,
+                                "column_count": 2,
+                                "column_labels": null,
+                                "fields_separator": " - ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [
+                                    {
+                                        "id": null,
+                                        "class_list": null,
+                                        "type": "row",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": null,
+                                        "action": null,
+                                        "value": [
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Nombre",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "R."
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc139_rsc197_rsc85",
+                                                        "group": "rsc205_rsc139_rsc197"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            },
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Apellidos",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "Marcet"
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc139_rsc197_rsc86",
+                                                        "group": "rsc205_rsc139_rsc197"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            }
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    },
+                                    {
+                                        "id": null,
+                                        "class_list": null,
+                                        "type": "row",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": null,
+                                        "action": null,
+                                        "value": [
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Nombre",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "Enric"
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc139_rsc197_rsc85",
+                                                        "group": "rsc205_rsc139_rsc197"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            },
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Apellidos",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "Sanmartí Grego"
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc139_rsc197_rsc86",
+                                                        "group": "rsc205_rsc139_rsc197"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            }
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    }
+                                ],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc139_rsc197_rsc85",
+                                        "group": "rsc205_rsc139_rsc197"
+                                    },
+                                    {
+                                        "id": "rsc205_rsc139_rsc197_rsc86",
+                                        "group": "rsc205_rsc139_rsc197"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_portal"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Idioma de la publicación",
+                                "row_count": 1,
+                                "column_count": 0,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [],
+                                "features": null,
+                                "model": "component_select_lang"
+                            }
+                        ],
+                        "fallback_value": null,
+                        "data": null,
+                        "render_label": false,
+                        "column": null,
+                        "ar_columns_obj": null,
+                        "features": null,
+                        "model": null
+                    },
+                    {
+                        "id": null,
+                        "class_list": "line publication",
+                        "type": "row",
+                        "label": null,
+                        "row_count": 0,
+                        "column_count": null,
+                        "column_labels": null,
+                        "fields_separator": null,
+                        "records_separator": null,
+                        "cell_type": null,
+                        "action": null,
+                        "value": [
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Transcripción / descripción",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [
+                                    {
+                                        "id": null,
+                                        "class_list": "record_link",
+                                        "type": "column",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": "record_link",
+                                        "action": null,
+                                        "value": [
+                                            {
+                                                "section_id": "181",
+                                                "section_tipo": "rsc205"
+                                            }
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    },
+                                    {
+                                        "id": null,
+                                        "class_list": "tag_id",
+                                        "type": "column",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": "text",
+                                        "action": null,
+                                        "value": [
+                                            ""
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    },
+                                    {
+                                        "id": null,
+                                        "class_list": "text_fragment",
+                                        "type": "column",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": "text",
+                                        "action": null,
+                                        "value": [
+                                            ""
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    }
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc210"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_text_area"
+                            }
+                        ],
+                        "fallback_value": null,
+                        "data": null,
+                        "render_label": false,
+                        "column": null,
+                        "ar_columns_obj": null,
+                        "features": null,
+                        "model": null
+                    },
+                    {
+                        "id": null,
+                        "class_list": "head publication",
+                        "type": "row",
+                        "label": null,
+                        "row_count": 3,
+                        "column_count": null,
+                        "column_labels": null,
+                        "fields_separator": null,
+                        "records_separator": null,
+                        "cell_type": null,
+                        "action": null,
+                        "value": [
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Imagen identificativa",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "img",
+                                "action": null,
+                                "value": [
+                                    ""
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc228"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_image"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Título",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": " | ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [
+                                    "Segobriga IV: Hallazgos monetarios"
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc140"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_input_text"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Fecha de publicación",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": " | ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [
+                                    "2008"
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc224"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_date"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Código",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": " | ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [
+                                    "7GA4A65X"
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc137"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_input_text"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Autoría y responsabilidad",
+                                "row_count": 3,
+                                "column_count": 2,
+                                "column_labels": null,
+                                "fields_separator": " - ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [
+                                    {
+                                        "id": null,
+                                        "class_list": null,
+                                        "type": "row",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": null,
+                                        "action": null,
+                                        "value": [
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Nombre",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "Juan Manuel"
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc139_rsc197_rsc85",
+                                                        "group": "rsc205_rsc139_rsc197"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            },
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Apellidos",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "Abascal Palazón"
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc139_rsc197_rsc86",
+                                                        "group": "rsc205_rsc139_rsc197"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            }
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    },
+                                    {
+                                        "id": null,
+                                        "class_list": null,
+                                        "type": "row",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": null,
+                                        "action": null,
+                                        "value": [
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Nombre",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "Antonio"
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc139_rsc197_rsc85",
+                                                        "group": "rsc205_rsc139_rsc197"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            },
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Apellidos",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "Alberola Belda"
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc139_rsc197_rsc86",
+                                                        "group": "rsc205_rsc139_rsc197"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            }
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    },
+                                    {
+                                        "id": null,
+                                        "class_list": null,
+                                        "type": "row",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": null,
+                                        "action": null,
+                                        "value": [
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Nombre",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "Rosario"
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc139_rsc197_rsc85",
+                                                        "group": "rsc205_rsc139_rsc197"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            },
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Apellidos",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "Cebrián Fernández"
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc139_rsc197_rsc86",
+                                                        "group": "rsc205_rsc139_rsc197"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            }
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    }
+                                ],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc139_rsc197_rsc85",
+                                        "group": "rsc205_rsc139_rsc197"
+                                    },
+                                    {
+                                        "id": "rsc205_rsc139_rsc197_rsc86",
+                                        "group": "rsc205_rsc139_rsc197"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_portal"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Idioma de la publicación",
+                                "row_count": 1,
+                                "column_count": 1,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [
+                                    {
+                                        "id": null,
+                                        "class_list": null,
+                                        "type": "row",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": null,
+                                        "action": null,
+                                        "value": [
+                                            {
+                                                "id": null,
+                                                "class_list": null,
+                                                "type": "column",
+                                                "label": "Término",
+                                                "row_count": null,
+                                                "column_count": null,
+                                                "column_labels": null,
+                                                "fields_separator": " | ",
+                                                "records_separator": " | ",
+                                                "cell_type": "text",
+                                                "action": null,
+                                                "value": [
+                                                    "Castellano"
+                                                ],
+                                                "fallback_value": [],
+                                                "data": null,
+                                                "render_label": null,
+                                                "column": null,
+                                                "ar_columns_obj": [
+                                                    {
+                                                        "id": "rsc205_rsc251_lg1_hierarchy25",
+                                                        "group": "rsc205_rsc251_lg1"
+                                                    }
+                                                ],
+                                                "features": null,
+                                                "model": "component_input_text"
+                                            }
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    }
+                                ],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc251_lg1_hierarchy25",
+                                        "group": "rsc205_rsc251_lg1"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_select_lang"
+                            }
+                        ],
+                        "fallback_value": null,
+                        "data": null,
+                        "render_label": false,
+                        "column": null,
+                        "ar_columns_obj": null,
+                        "features": null,
+                        "model": null
+                    },
+                    {
+                        "id": null,
+                        "class_list": "line publication",
+                        "type": "row",
+                        "label": null,
+                        "row_count": 0,
+                        "column_count": null,
+                        "column_labels": null,
+                        "fields_separator": null,
+                        "records_separator": null,
+                        "cell_type": null,
+                        "action": null,
+                        "value": [
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Transcripción / descripción",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [
+                                    {
+                                        "id": null,
+                                        "class_list": "record_link",
+                                        "type": "column",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": "record_link",
+                                        "action": null,
+                                        "value": [
+                                            {
+                                                "section_id": "504",
+                                                "section_tipo": "rsc205"
+                                            }
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    },
+                                    {
+                                        "id": null,
+                                        "class_list": "tag_id",
+                                        "type": "column",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": "text",
+                                        "action": null,
+                                        "value": [
+                                            ""
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    },
+                                    {
+                                        "id": null,
+                                        "class_list": "text_fragment",
+                                        "type": "column",
+                                        "label": null,
+                                        "row_count": null,
+                                        "column_count": null,
+                                        "column_labels": null,
+                                        "fields_separator": null,
+                                        "records_separator": null,
+                                        "cell_type": "text",
+                                        "action": null,
+                                        "value": [
+                                            "<p></p><p>SEGOBRIGA IV.<br />\nHALLAZGOS MONETARIOS EN SEGOBRIGA<br />\n<br />\nJuan Manuel Abascal - Antonio Alberola - Rosario Cebrián<br />\n<br />\nMadrid 2008<br />\n<br />\n</p><p>ÍNDICE<br />\nPRÓLOGO<br />\nPRESENTACIÓN<br />\nBIBLIOGRAFÍA<br />\nINTRODUCCIÓN<br />\nNOTICIAS AISLADAS DE...</p>"
+                                        ],
+                                        "fallback_value": null,
+                                        "data": null,
+                                        "render_label": null,
+                                        "column": null,
+                                        "ar_columns_obj": null,
+                                        "features": null,
+                                        "model": null
+                                    }
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "rsc205_rsc210"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_text_area"
+                            }
+                        ],
+                        "fallback_value": null,
+                        "data": null,
+                        "render_label": false,
+                        "column": null,
+                        "ar_columns_obj": null,
+                        "features": null,
+                        "model": null
+                    }
+                ],
+                "fallback_value": null,
+                "data": null,
+                "render_label": true,
+                "column": null,
+                "ar_columns_obj": null,
+                "features": {
+                    "color": "#6c72b6"
+                },
+                "model": null
+            }
+        ],
+        "fallback_value": null,
+        "data": null,
+        "render_label": null,
+        "column": null,
+        "ar_columns_obj": null,
+        "features": null,
+        "model": null
+    },
+    {
+        "id": null,
+        "class_list": null,
+        "type": "row",
+        "label": null,
+        "row_count": 3,
+        "column_count": null,
+        "column_labels": null,
+        "fields_separator": null,
+        "records_separator": null,
+        "cell_type": null,
+        "action": null,
+        "value": [
+            {
+                "id": null,
+                "class_list": "caption section tchi1 tch",
+                "type": "column",
+                "label": "Inmuebles",
+                "row_count": null,
+                "column_count": null,
+                "column_labels": null,
+                "fields_separator": null,
+                "records_separator": null,
+                "cell_type": null,
+                "action": null,
+                "value": [
+                    {
+                        "id": null,
+                        "class_list": "line tch",
+                        "type": "row",
+                        "label": null,
+                        "row_count": 1,
+                        "column_count": null,
+                        "column_labels": null,
+                        "fields_separator": null,
+                        "records_separator": null,
+                        "cell_type": null,
+                        "action": null,
+                        "value": [
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Id",
+                                "row_count": 1,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "section_id",
+                                "action": null,
+                                "value": [
+                                    807
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi10"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_section_id"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Imagen identificativa",
+                                "row_count": 1,
+                                "column_count": 0,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [],
+                                "features": null,
+                                "model": "component_portal"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Nombre",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": " | ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [
+                                    "Casal dos Cabeços (Santana da Carnota)"
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi15"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_input_text"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Datación",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi20"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_date"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Código",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi13"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_input_text"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Periodo",
+                                "row_count": 1,
+                                "column_count": 0,
+                                "column_labels": null,
+                                "fields_separator": " - ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [],
+                                "features": null,
+                                "model": "component_portal"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Tipología",
+                                "row_count": 1,
+                                "column_count": 0,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [],
+                                "features": null,
+                                "model": "component_portal"
+                            }
+                        ],
+                        "fallback_value": null,
+                        "data": null,
+                        "render_label": false,
+                        "column": null,
+                        "ar_columns_obj": null,
+                        "features": null,
+                        "model": null
+                    },
+                    {
+                        "id": null,
+                        "class_list": "line tch",
+                        "type": "row",
+                        "label": null,
+                        "row_count": 1,
+                        "column_count": null,
+                        "column_labels": null,
+                        "fields_separator": null,
+                        "records_separator": null,
+                        "cell_type": null,
+                        "action": null,
+                        "value": [
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Id",
+                                "row_count": 1,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "section_id",
+                                "action": null,
+                                "value": [
+                                    808
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi10"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_section_id"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Imagen identificativa",
+                                "row_count": 1,
+                                "column_count": 0,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [],
+                                "features": null,
+                                "model": "component_portal"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Nombre",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": " | ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [
+                                    "Coiço"
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi15"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_input_text"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Datación",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi20"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_date"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Código",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi13"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_input_text"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Periodo",
+                                "row_count": 1,
+                                "column_count": 0,
+                                "column_labels": null,
+                                "fields_separator": " - ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [],
+                                "features": null,
+                                "model": "component_portal"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Tipología",
+                                "row_count": 1,
+                                "column_count": 0,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [],
+                                "features": null,
+                                "model": "component_portal"
+                            }
+                        ],
+                        "fallback_value": null,
+                        "data": null,
+                        "render_label": false,
+                        "column": null,
+                        "ar_columns_obj": null,
+                        "features": null,
+                        "model": null
+                    },
+                    {
+                        "id": null,
+                        "class_list": "line tch",
+                        "type": "row",
+                        "label": null,
+                        "row_count": 1,
+                        "column_count": null,
+                        "column_labels": null,
+                        "fields_separator": null,
+                        "records_separator": null,
+                        "cell_type": null,
+                        "action": null,
+                        "value": [
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Id",
+                                "row_count": 1,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "section_id",
+                                "action": null,
+                                "value": [
+                                    863
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi10"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_section_id"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Imagen identificativa",
+                                "row_count": 1,
+                                "column_count": 0,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [],
+                                "features": null,
+                                "model": "component_portal"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Nombre",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": " | ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [
+                                    "Chão de Lamas"
+                                ],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi15"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_input_text"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Datación",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi20"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_date"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Código",
+                                "row_count": null,
+                                "column_count": null,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": "text",
+                                "action": null,
+                                "value": [],
+                                "fallback_value": [],
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [
+                                    {
+                                        "id": "tchi1_tchi13"
+                                    }
+                                ],
+                                "features": null,
+                                "model": "component_input_text"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Periodo",
+                                "row_count": 1,
+                                "column_count": 0,
+                                "column_labels": null,
+                                "fields_separator": " - ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [],
+                                "features": null,
+                                "model": "component_portal"
+                            },
+                            {
+                                "id": null,
+                                "class_list": null,
+                                "type": "column",
+                                "label": "Tipología",
+                                "row_count": 1,
+                                "column_count": 0,
+                                "column_labels": null,
+                                "fields_separator": ", ",
+                                "records_separator": " | ",
+                                "cell_type": null,
+                                "action": null,
+                                "value": [],
+                                "fallback_value": null,
+                                "data": null,
+                                "render_label": null,
+                                "column": null,
+                                "ar_columns_obj": [],
+                                "features": null,
+                                "model": "component_portal"
+                            }
+                        ],
+                        "fallback_value": null,
+                        "data": null,
+                        "render_label": false,
+                        "column": null,
+                        "ar_columns_obj": null,
+                        "features": null,
+                        "model": null
+                    }
+                ],
+                "fallback_value": null,
+                "data": null,
+                "render_label": true,
+                "column": null,
+                "ar_columns_obj": null,
+                "features": {
+                    "color": "#455c8c"
+                },
+                "model": null
+            }
+        ],
+        "fallback_value": null,
+        "data": null,
+        "render_label": null,
+        "column": null,
+        "ar_columns_obj": null,
+        "features": null,
+        "model": null
+    }
+]

@@ -55,8 +55,12 @@ export function geojson(data: data_item[] | null, options: parser_options): data
 
 	const result: data_item[] = [];
 
-	const layer_array: geo_layer[] = [];
 	for (const item of data) {
+
+		// DIFFTS-07: per-item layers. layer_array was declared outside the loop and
+		// accumulated across all items, so each item pushed a result containing the
+		// growing combined set. Scope it to the current item.
+		const layer_array: geo_layer[] = [];
 
 		const raw = item.value;
 		if (raw === null || raw === undefined) continue;
@@ -90,7 +94,9 @@ export function geojson(data: data_item[] | null, options: parser_options): data
 			}
 		}
 
-		if (layer_array) {
+		// DIFFTS-07: only emit a result when this item actually produced layers
+		// (the previous `if (layer_array)` was always truthy).
+		if (layer_array.length > 0) {
 			result.push({
 				...item,
 				value: layer_array

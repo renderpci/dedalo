@@ -1,0 +1,31 @@
+{
+	"result": true,
+	"msg": "OK. Request done",
+	"langs": { "lg-eng": "English" },
+	"main_lang": "lg-eng",
+	"main": [
+		{ "diffusion_tipo": "test1", "term": "web_test_diffusion", "model": "database" }
+	],
+	"datum": [
+		{
+			"diffusion_tipo": "test5",
+			"section_tipo": "test3",
+			"term": "minimal",
+			"model": "table",
+			"parent": "test1",
+			"context": [
+				{ "term": "code", "tipo": "test10", "model": "field_text", "parent": "test5", "parser": {}, "columns": [] }
+			],
+			"data": [
+				{
+					"section_id": 7,
+					"fields": {
+						"test10": [
+							{ "tipo": "test60", "lang": null, "entries": [ { "value": "only-value", "errors": [] } ], "id": null }
+						]
+					}
+				}
+			]
+		}
+	]
+}

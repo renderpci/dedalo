@@ -91,6 +91,8 @@ class ontology_node {
 		 */
 		public static array $label_by_tipo_cache = [];
 		const MAX_LABEL_CACHE_SIZE = 5000;
+		// COMP-05: same bound for the sibling model cache (was unbounded).
+		const MAX_MODEL_CACHE_SIZE = 5000;
 
 		/**
 		 * Static cache mapping tipos to their model (component/section type) names.
@@ -957,6 +959,11 @@ class ontology_node {
 		$model = $ontology_node->get_model();
 
 		// cache
+		// COMP-05: bound the cache like label_by_tipo_cache so a long-lived worker
+		// process resolving many distinct tipos cannot grow it without limit.
+		if (count(self::$model_by_tipo_cache) >= self::MAX_MODEL_CACHE_SIZE) {
+			self::$model_by_tipo_cache = array_slice(self::$model_by_tipo_cache, -self::MAX_MODEL_CACHE_SIZE, null, true);
+		}
 		self::$model_by_tipo_cache[$cache_uid] = $model;
 
 

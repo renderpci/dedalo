@@ -122,6 +122,13 @@ search.prototype.init = async function(options) {
 	// json_filter default value
 		self.json_filter = {"$and": []};
 
+	// filter_model. Canonical in-memory model and single source of truth for the
+	// filter STRUCTURE (groups, operators, ordering and participating components).
+	// The DOM is a rendering of this model; structural mutations flow through the
+	// model helpers and serialization reads the model, never the DOM tree.
+		self.filter_model		= null
+		self.model_node_counter	= 0
+
 	// DOM stored pointers
 		self.wrapper							= null
 		self.search_global_container			= null
@@ -135,9 +142,17 @@ search.prototype.init = async function(options) {
 		self.node								= null
 
 	// other
-		self.id									= 'search'
+		// NOTE: self.id is the keyed instance id assigned by get_instance before
+		// init runs. It must NOT be overwritten here: event channels (built_/render_/
+		// destroy_/update_sections_list_) and the instances_map registration all
+		// depend on it being unique per caller.
 		self.section_id							= 0
 		self.pagination_id 						= `${self.section_tipo}_${self.mode}`
+
+	// panels_status_id. Stable, deliberately global namespace used to persist the
+	// search UI panel open/close state. Decoupled from self.id so the preference
+	// stays shared across sections (preserving the prior 'search'-keyed behavior).
+		self.panels_status_id					= 'search'
 
 		// ar_components_exclude. Custom list of elements to exclude in the left list (section fields)
 		self.ar_components_exclude = [
@@ -448,6 +463,128 @@ search.prototype.get_section_id = function() {
 
 
 
+// MODEL (canonical filter structure)
+// These helpers own the in-memory model tree. Group nodes hold an operator and
+// an ordered children array (groups + components); component nodes reference the
+// row's component instance and its search path. The DOM created in render_search
+// links back to each node (node.dom / dom.__node) so drag&drop still operates on
+// the DOM while the model stays authoritative.
+
+
+
+	/**
+	* CREATE_GROUP_MODEL_NODE
+	* @param string operator '$and' | '$or'
+	* @param object|null parent_node parent group model node (null for root)
+	* @param HTMLElement dom .search_group element
+	* @return object group_node
+	*/
+	search.prototype.create_group_model_node = function(operator, parent_node, dom) {
+
+		const node = {
+			node_type	: 'group',
+			id			: ++this.model_node_counter,
+			operator	: operator || '$and',
+			children	: [],
+			parent		: parent_node || null,
+			dom			: dom || null
+		}
+
+		if (parent_node) {
+			parent_node.children.push(node)
+		}
+
+		return node
+	}//end create_group_model_node
+
+
+
+	/**
+	* CREATE_COMPONENT_MODEL_NODE
+	* @param object options
+	*	{array path, string section_id, object|null instance, object|null parent_node, HTMLElement dom}
+	* @return object component_node
+	*/
+	search.prototype.create_component_model_node = function(options) {
+
+		const node = {
+			node_type	: 'component',
+			id			: ++this.model_node_counter,
+			path		: options.path || null,
+			section_id	: options.section_id || null,
+			instance	: options.instance || null,
+			parent		: options.parent_node || null,
+			dom			: options.dom || null
+		}
+
+		if (options.parent_node) {
+			options.parent_node.children.push(node)
+		}
+
+		return node
+	}//end create_component_model_node
+
+
+
+	/**
+	* REMOVE_MODEL_NODE
+	* Detach a node (group or component) from its parent children array.
+	* @param object node
+	* @return bool
+	*/
+	search.prototype.remove_model_node = function(node) {
+
+		const parent = node?.parent
+		if (!parent || !Array.isArray(parent.children)) {
+			return false
+		}
+
+		const index = parent.children.indexOf(node)
+		if (index!==-1) {
+			parent.children.splice(index, 1)
+		}
+
+		return true
+	}//end remove_model_node
+
+
+
+	/**
+	* MOVE_MODEL_NODE
+	* Reorder a node within its parent children, swapping with the adjacent
+	* component sibling (mirrors the DOM reorder guard in build_search_component).
+	* @param object node
+	* @param string direction 'up' | 'down'
+	* @return bool
+	*/
+	search.prototype.move_model_node = function(node, direction) {
+
+		const parent = node?.parent
+		if (!parent || !Array.isArray(parent.children)) {
+			return false
+		}
+
+		const children	= parent.children
+		const index		= children.indexOf(node)
+		if (index===-1) {
+			return false
+		}
+
+		const neighbor_index	= direction==='up' ? index-1 : index+1
+		const neighbor			= children[neighbor_index]
+		// only swap with an adjacent component (same guard as the DOM handler)
+		if (!neighbor || neighbor.node_type!=='component') {
+			return false
+		}
+
+		children[neighbor_index]	= node
+		children[index]				= neighbor
+
+		return true
+	}//end move_model_node
+
+
+
 /**
 * BUILD_DOM_GROUP
 * @param object filter
@@ -643,29 +780,26 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 			filter	: {}
 		}
 
-	// First level
-		const root_search_group = self.root_search_group
+	// First level. Canonical model root (no longer derived by walking the DOM)
+		const root_node = self.filter_model
 
 	// Add arguments. Used to exclude search arguments on save preset in this mode
 		const add_arguments = typeof save_arguments!=='undefined' && (save_arguments==='true' || save_arguments==='false')
 			? JSON.parse(save_arguments)
 			: true
 
-	// Calculate recursively all groups inside
-		const filter_obj = self.recursive_groups(root_search_group, add_arguments, mode)
+	// Serialize the model tree to the json filter group object
+		const filter_obj = root_node
+			? self.serialize_filter_model(root_node, add_arguments, mode)
+			: {"$and": []}
 		if(SHOW_DEBUG===true) {
 			console.warn("[parse_dom_to_json_filter] filter_obj: ", filter_obj);
 		}
 
-	// children_recursive checkbox
+	// children_recursive checkbox (UI-only toggle, read from the DOM control)
 		if (self.search_children_recursive_node) {
 			const children_recursive_node = self.search_children_recursive_node
-			// modify filter_obj
-			if (children_recursive_node.checked===true) {
-				json_query_obj.children_recursive = true
-			}else{
-				json_query_obj.children_recursive = false
-			}
+			json_query_obj.children_recursive = children_recursive_node.checked===true
 		}
 
 	// Add object with groups to filter array
@@ -678,30 +812,29 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 
 
 /**
-* RECURSIVE_GROUPS
-* @param HTMLElement group_dom_obj
+* SERIALIZE_FILTER_MODEL
+* Walk the canonical model tree producing the json filter group object.
+* Replaces the former DOM-walking recursive_groups: the structure comes from the
+* model, while each component value is read from its bound instance.
+* @param object group_node root or sub group model node
 * @param bool add_arguments
 * @param string mode
 * @return object query_group
 */
-search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode) {
+search.prototype.serialize_filter_model = function(group_node, add_arguments, mode) {
 
 	const self = this
 
 	// Validate input
-	if (!group_dom_obj) {
-		console.error('Error: group_dom_obj is required');
+	if (!group_node) {
+		console.error('Error: group_node is required');
 		return {};
 	}
 
-	const operator = self.get_search_group_operator(group_dom_obj)
+	const operator = group_node.operator || '$and'
 
 	const query_group = {}
 		  query_group[operator] = []
-
-	// elements inside
-	// let ar_elements = group_dom_obj.querySelectorAll(":scope > .search_component,:scope > .search_group") //
-	const ar_elements = group_dom_obj?.children || []
 
 	// get_search_value. Get the search value from the component or apply the default method
 	const get_search_value = (component) => {
@@ -731,158 +864,117 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 		return parsed_entries;
 	}
 
-	const len = ar_elements.length
+	const children	= group_node.children || []
+	const len		= children.length
 	for (let i = 0; i < len; i++) {
 
-		const element = ar_elements[i]
+		const child = children[i]
 
-		// if the element is a search_group (the element with the operator) do a recursion
-		if (element.classList.contains('search_group') ) {
-			// Add group (recursion)
-			query_group[operator].push( self.recursive_groups(element, add_arguments, mode) )
+		// sub group → recursion
+		if (child.node_type==='group') {
+			query_group[operator].push( self.serialize_filter_model(child, add_arguments, mode) )
+			continue
 		}
-		// else the element is a component element
-		else if( element.classList.contains('search_component') ) {
 
-			// Q . Search argument
-			// Get value from component wrapper dataset (previously fixed on change value)
-			let q			= null // default
-			let q_operator	= null // default
-			let q_split		= false // default is false
-			let q_lang		= null // default is null
+		// component node
+		// Q . Search argument
+		let q			= null // default
+		let q_operator	= null // default
+		let q_split		= false // default is false
+		let q_lang		= null // default is null
 
-			// add_arguments . if true, calculate and save inputs value to preset (temp preset)
-			if (add_arguments !== false) {
+		// add_arguments . if true, calculate and save inputs value to preset (temp preset)
+		if (add_arguments !== false) {
 
-				const component_wrapper	 = element.querySelector('.wrapper_component')
-				const component_instance = component_wrapper?.id
-					? self.ar_instances.find(instance => instance && instance.id===component_wrapper.id)
-					: null
-
-				if(!component_instance){
-					console.error('Error. Ignored not found component instance id:', component_wrapper?.id);
-					continue
-				}
-
-				// get the search value
-				// if the component has a specific function get the value from his function (ex: portal remove some properties from his locator before search)
-				// else get the value as search value.
-				const search_value = get_search_value(component_instance);
-				if(SHOW_DEBUG) {
-					console.log("[recursive_groups] search_value:", search_value);
-				}
-
-				// overwrite
-				q			= (search_value && search_value.length > 0) ? search_value : null
-				q_operator	= component_instance.data.q_operator
-
-				// q_split
-				q_split = component_instance.q_split ?? false
-
-				// lang
-				//if the component is translatable it can set if the search is with all langs or selective(null) only for the current lang
-				q_lang = component_instance.data.q_lang ?? null
+			const component_instance = child.instance
+			if(!component_instance){
+				console.error('Error. Ignored model node without bound instance:', child.id);
+				continue
 			}
 
-			// Parse path with error handling
-			let path;
-			try {
-			    path = JSON.parse(element.dataset.path);
-			} catch (e) {
-			    console.error('Invalid JSON in dataset.path:', element.dataset.path);
-			    continue;
+			// get the search value
+			// if the component has a specific function get the value from his function (ex: portal remove some properties from his locator before search)
+			// else get the value as search value.
+			const search_value = get_search_value(component_instance);
+			if(SHOW_DEBUG) {
+				console.log("[serialize_filter_model] search_value:", search_value);
 			}
 
-			// create the search options with the component data.
-			const search_options = {
-				q			: q,
-				q_operator	: q_operator,
-				path		: path,
-				q_split		: q_split,
-				type		: 'jsonb'
-			}
+			// overwrite
+			q			= (search_value && search_value.length > 0) ? search_value : null
+			q_operator	= component_instance.data.q_operator
 
-			// set the lang only when the component has this option.
-			if(q_lang){
-				search_options.lang = q_lang
-			}
+			// q_split
+			q_split = component_instance.q_split ?? false
 
-			// Add component
-			if ( mode === 'search' ) {
-
-				// Add only if not empty
-
-				// Normalize q to always work with arrays for consistency
-				const q_array = Array.isArray(q) ? q : [q];
-
-				// Check for valid query content
-				const has_valid_query = (
-					q_array.length > 0 &&
-					q_array[0] !== null &&
-					q_array[0] !== undefined &&
-					q_array[0] !== '' &&
-					q_array[0] !== false
-				) || q === 0;
-
-				// Check for valid operator
-				const has_valid_operator = q_operator && q_operator.length > 0;
-
-				// Proceed if we have either valid query or operator
-				if (has_valid_query || has_valid_operator) {
-					// If no valid query but we have an operator, set placeholder
-					if (!has_valid_query && has_valid_operator) {
-						// Overwrites q
-						search_options.q = 'only_operator';
-					}
-
-					// Add search_options value
-					query_group[operator].push(search_options);
-				}
-
-			}else{
-				// Add always
-				query_group[operator].push(search_options)
-			}
-
+			// lang
+			//if the component is translatable it can set if the search is with all langs or selective(null) only for the current lang
+			q_lang = component_instance.data.q_lang ?? null
 		}
+
+		// path from the model node
+		const path = child.path
+		if (!path) {
+			console.error('Invalid path in model node:', child.id);
+			continue
+		}
+
+		// create the search options with the component data.
+		const search_options = {
+			q			: q,
+			q_operator	: q_operator,
+			path		: path,
+			q_split		: q_split,
+			type		: 'jsonb'
+		}
+
+		// set the lang only when the component has this option.
+		if(q_lang){
+			search_options.lang = q_lang
+		}
+
+		// Add component
+		if ( mode === 'search' ) {
+
+			// Add only if not empty
+
+			// Normalize q to always work with arrays for consistency
+			const q_array = Array.isArray(q) ? q : [q];
+
+			// Check for valid query content
+			const has_valid_query = (
+				q_array.length > 0 &&
+				q_array[0] !== null &&
+				q_array[0] !== undefined &&
+				q_array[0] !== '' &&
+				q_array[0] !== false
+			) || q === 0;
+
+			// Check for valid operator
+			const has_valid_operator = q_operator && q_operator.length > 0;
+
+			// Proceed if we have either valid query or operator
+			if (has_valid_query || has_valid_operator) {
+				// If no valid query but we have an operator, set placeholder
+				if (!has_valid_query && has_valid_operator) {
+					// Overwrites q
+					search_options.q = 'only_operator';
+				}
+
+				// Add search_options value
+				query_group[operator].push(search_options);
+			}
+
+		}else{
+			// Add always
+			query_group[operator].push(search_options)
+		}
+
 	}//end for (let i = 0; i < len; i++)
 
 
 	return query_group
-}//end recursive_groups
-
-
-
-/**
-* GET_SEARCH_GROUP_OPERATOR
-* Resolves current group operator from DOM
-* @param HTMLElement search_group
-* 	<div class="search_group column_2" data-id="1"><div class="operator search_group_operator and" data-value="$and">and [1]</div>..</div>
-* @return string operator_value
-* 	Like '$and' | '$or'
-*/
-search.prototype.get_search_group_operator = function(search_group) {
-
-	const default_operator = '$and'
-
-	if (!search_group) {
-		return default_operator // Default (first level)
-	}
-
-	// Get search_group direct children
-	const children = search_group.children || []
-
-	// Iterate to find .search_group_operator div
-	const len = children.length
-	for (let i = 0; i < len; i++) {
-		if(children[i].classList.contains('search_group_operator')) {
-			// operator found
-			return children[i].dataset.value;
-		}
-	}
-
-	return default_operator // Default (first level)
-}//end get_search_group_operator
+}//end serialize_filter_model
 
 
 
@@ -1251,7 +1343,7 @@ search.prototype.track_show_panel = async function(options) {
 		const action	= options.action
 
 	const saved_search_state = await data_manager.get_local_db_data(
-		self.id,
+		self.panels_status_id,
 		'context'
 	)
 	const value = saved_search_state
@@ -1265,7 +1357,7 @@ search.prototype.track_show_panel = async function(options) {
 
 	// local_db_data save
 		const data = {
-			id		: self.id,
+			id		: self.panels_status_id,
 			value	: value
 		}
 		data_manager.set_local_db_data(
@@ -1290,7 +1382,7 @@ search.prototype.get_panels_status = async function() {
 
 	// local_db_data. get value if exists
 		const panels_status = await data_manager.get_local_db_data(
-			self.id,
+			self.panels_status_id,
 			'context'
 		)
 

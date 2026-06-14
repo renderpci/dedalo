@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
 
 
@@ -43,6 +44,15 @@ view_default_list_email.render = async function(self, options) {
 			e.stopPropagation()
 			activate_edit_in_list(self, e, { mode: 'modal', modal_width: '40rem' })
 		})
+
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+		for (const entry of entries) {
+			await attach_item_dataframe({
+				self		: self,
+				item		: entry,
+				container	: wrapper
+			})
+		}
 
 	return wrapper
 }//end list

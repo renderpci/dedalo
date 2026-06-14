@@ -24,106 +24,71 @@ class component_input_text extends component_string_common {
 
 
 	/**
-	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_data().
-	* overwrite in every different specific component
-	* Some the text components can set the value with the data directly
-	* the relation components need to process the locator to resolve the value
-	* @param object|null $ddo = null
-	* @return dd_grid_cell_object $value
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One atom per data item in the current lang; when the current lang is
+	* empty, fallback items are emitted flagged as is_fallback.
+	* Note that the leaf segment fields_separator is set to the resolved
+	* records_separator because the legacy grid pre-joined the items with
+	* records_separator (flat output parity).
+	* @param export_context|null $context = null
+	* @return export_value
 	*/
-	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
+	public function get_export_value( ?export_context $context=null ) : export_value {
 
-		// ddo customs
-			$fields_separator	= $ddo?->fields_separator ?? null;
-			$records_separator	= $ddo?->records_separator ?? null;
-			$format_columns		= $ddo?->format_columns ?? null;
-			$class_list			= $ddo?->class_list ?? null;
+		$context = $context ?? new export_context();
 
-		// column_obj
-			$column_obj = $this->column_obj ?? (object)[
-				'id' => $this->section_tipo.'_'.$this->tipo
-			];
+		// records_separator. resolved as the legacy get_grid_value
+			$properties			= $this->get_properties();
+			$records_separator	= $context->ddo?->records_separator
+				?? $properties?->records_separator
+				?? ' | ';
 
-		// properties
-			$properties = $this->get_properties();
+		// own segment. items join with records_separator (legacy pre-join parity)
+			$segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+				'model'				=> $this->get_model(),
+				'fields_separator'	=> $records_separator,
+				'records_separator'	=> $records_separator,
+				// relation traversal position (set by the calling relation via descend)
+				'item_index'		=> $context->item_index,
+				'section_id'		=> $context->item_section_id
+			]);
+			$path = [...$context->path_prefix, $segment];
 
-		// records_separator
-			$records_separator = isset($records_separator)
-				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
 
-		// fields_separator
-			$fields_separator = isset($fields_separator)
-				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ', ');
-
-		// data
-			$data = $this->get_data_lang();
-
-		// value. flat_value (array of one value full resolved)
-			$value = [];
-			if (!empty($data)) {
-				$ar_values = [];
-				foreach ($data as $item) {
-					$item_value = $item->value ?? '';
-					// Handle case where value is an object (convert to JSON string)
-					if (is_object($item_value)) {
-						$item_value = json_encode($item_value);
-					}
-					$ar_values[] = $item_value;
-				}
-				$value = [
-					implode($records_separator, $ar_values)
-				];
+		// data items. main lang first, fallback when empty
+			$data			= $this->get_data_lang();
+			$is_fallback	= false;
+			if (empty($data)) {
+				$data = $this->get_component_data_fallback(
+					$this->get_lang(), // string lang
+					DEDALO_DATA_LANG_DEFAULT // string main_lang
+				);
+				$is_fallback = true;
+			}
+			if (empty($data)) {
+				return $export_value;
 			}
 
-		// fallback_value
-			$flat_fallback_value = [];
-			$fallback_value = $this->get_component_data_fallback(
-				$this->get_lang(), // string lang
-				DEDALO_DATA_LANG_DEFAULT // string main_lang
-			);
-			if (!empty($fallback_value)) {
-				$ar_fallback_values = [];
-				foreach ($fallback_value as $item) {
-					$item_value = $item->value ?? '';
-					// Handle case where value is an object (convert to JSON string)
-					if (is_object($item_value)) {
-						$item_value = json_encode($item_value);
-					}
-					$ar_fallback_values[] = $item_value;
+			$value_index = 0;
+			foreach ($data as $item) {
+				$item_value = $item->value ?? '';
+				// Handle case where value is an object (convert to JSON string)
+				if (is_object($item_value)) {
+					$item_value = json_encode($item_value);
 				}
-				$flat_fallback_value = [
-					implode($records_separator, $ar_fallback_values)
-				];
+				$export_value->add_atom( new export_atom($path, $item_value, (object)[
+					'value_index'	=> $value_index++,
+					'lang'			=> $item->lang ?? $this->lang,
+					'is_fallback'	=> $is_fallback
+				]) );
 			}
 
-		// label
-			$label = $this->get_label();
 
-		// dd_grid_cell_object
-			$dd_grid_cell_object = new dd_grid_cell_object();
-				$dd_grid_cell_object->set_type('column');
-				$dd_grid_cell_object->set_label($label);
-				$dd_grid_cell_object->set_cell_type('text');
-				$dd_grid_cell_object->set_ar_columns_obj([$column_obj]);
-				if(isset($class_list)){
-					$dd_grid_cell_object->set_class_list($class_list);
-				}
-				$dd_grid_cell_object->set_fields_separator($fields_separator);
-				$dd_grid_cell_object->set_records_separator($records_separator);
-				$dd_grid_cell_object->set_value($value); // array
-				$dd_grid_cell_object->set_fallback_value($flat_fallback_value);
-				$dd_grid_cell_object->set_model(get_called_class());
-
-
-		return $dd_grid_cell_object;
-	}//end get_grid_value
+		return $export_value;
+	}//end get_export_value
 
 
 
@@ -213,10 +178,10 @@ class component_input_text extends component_string_common {
 				// try to JSON decode (null on not decode)
 				$data_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 
-				// Normalize: ensure array items are objects with 'value' property (v7 format)
-				if (is_array($data_from_json)) {
+				// normalize_items: ensure array items are objects with 'value' property (v7 format)
+				$normalize_items = function(array $items) : array {
 					$normalized = [];
-					foreach ($data_from_json as $val) {
+					foreach ($items as $val) {
 						if (!is_object($val)) {
 							$normalized[] = (object)['value' => $val];
 						}else if (!property_exists($val, 'value') && !property_exists($val, 'section_id')) {
@@ -226,7 +191,30 @@ class component_input_text extends component_string_common {
 							$normalized[] = $val;
 						}
 					}
-					$data_from_json = $normalized;
+					return $normalized;
+				};
+
+				if (is_array($data_from_json)) {
+
+					$data_from_json = $normalize_items($data_from_json);
+
+				}else if (is_object($data_from_json)) {
+
+					$first_key = array_key_first( (array)$data_from_json );
+					if ($first_key!==null && strpos($first_key, 'lg-')===0) {
+						// Multi-language object as {"lg-eng": "My value", "lg-spa": "Mi valor"}
+						// Keep it as object so the import tool can iterate languages calling set_data_lang(),
+						// but normalize every lang value into an array of v7 items
+						foreach ($data_from_json as $lang => $lang_value) {
+							$ar_lang_value = is_array($lang_value)
+								? $lang_value
+								: [$lang_value];
+							$data_from_json->$lang = $normalize_items($ar_lang_value);
+						}
+					}else{
+						// Single object item as {"value":"x"}. Wrap into an array
+						$data_from_json = $normalize_items([$data_from_json]);
+					}
 				}
 
 				$response->result	= $data_from_json;
@@ -238,15 +226,7 @@ class component_input_text extends component_string_common {
 		// string case
 			// check the begin and end of the value string, if it has a [] or other combination that seems array
 			// sometimes the value text could be [Ac], as numismatic legends, it's admit, but if the text has [" or "] it's not admitted.
-			$begins_one	= substr($import_value, 0, 1);
-			$ends_one	= substr($import_value, -1);
-			$begins_two	= substr($import_value, 0, 2);
-			$ends_two	= substr($import_value, -2);
-
-			if (($begins_two !== '["' && $ends_two !== '"]') ||
-				($begins_two !== '["' && $ends_one !== ']') ||
-				($begins_one !== '[' && $ends_two !== '"]')
-				){
+			if (self::is_plain_bracket_string($import_value)) {
 				// Wrap plain string into v7 format: [(object)['value' => $import_value]]
 				// set_data_lang() requires object items; plain strings would be silently dropped
 				$value = !empty($import_value) || $import_value==='0'

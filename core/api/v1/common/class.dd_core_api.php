@@ -49,13 +49,6 @@ final class dd_core_api {
 	public static ?object $rqo = null;
 
 	/**
-	 * Cache for calculated context dd_objects.
-	 * Stores resolved ontology and data objects to prevent redundant calculations.
-	 * @var ?array $context_dd_objects
-	 */
-	public static ?array $context_dd_objects = null;
-
-	/**
 	 * The complete calculated response context object.
 	 * Holds the final structure and data to be returned to the client.
 	 * @var ?object $context
@@ -387,9 +380,14 @@ final class dd_core_api {
 							// structure_context
 							// Using 'get_structure_context_simple' instead 'get_structure_context'
 							// skips the calculation of tools and buttons that are not needed in the current step
+							// (!) request_config is needed when a session SQO must be restored or a
+							// section_id filter must be injected below; the context cache used to make
+							// this work only when warm — now it must be requested explicitly.
+								$add_request_config = (isset($session_key) && isset($_SESSION['dedalo']['config']['sqo'][$session_key]))
+									|| !empty($section_id);
 								$current_context = $section->get_structure_context_simple(
 									1, // permissions
-									false // add_request_config
+									$add_request_config // add_request_config
 								);
 
 							// section_tool config
@@ -791,10 +789,17 @@ final class dd_core_api {
 		// options
 			$sqo			= $rqo->sqo ?? null;
 			$options		= $rqo->options ?? null;
-			$section_tipo	= $rqo->options->section_tipo;
-			$tipo			= $options->tipo;
+			$section_tipo	= $rqo->options->section_tipo ?? null;
+			$tipo			= $options->tipo ?? null;
+			// API-05: tipo is required to resolve the model below; fail cleanly instead
+			// of dereferencing a missing property (PHP warning) then hitting a TypeError.
+			if (empty($tipo)) {
+				$response->msg .= 'Empty options \'tipo\' (is mandatory)';
+				$response->errors[] = 'empty options tipo';
+				return $response;
+			}
 			$model			= $options->model ?? ontology_node::get_model_by_tipo($tipo);
-			$type 			= $options->type;
+			$type 			= $options->type ?? null;
 
 		// permissions check for the section
 			$permissions = common::get_permissions($section_tipo, $section_tipo);
@@ -1128,6 +1133,7 @@ final class dd_core_api {
 	* 	remove		// removes a item value from the component data array
 	* 	set_data	// set the whole data sent by the client without check the array key (bulk insert or update)
 	* 	sort_data	// re-organize the whole component data based on target key given. Used by portals to sort rows
+	* 	sort_by_column	// re-organize the whole component data ordered by a target section column value. Used by portals (gated by 'sort_by_column' property)
 	* @param object $rqo
 	* sample:
 		* {
@@ -2188,7 +2194,11 @@ final class dd_core_api {
 
 						// areas
 							$element = area::get_instance($model, $tipo, $mode);
-							$element->properties = $element->get_properties() ?? new stdClass();
+							// (!) use set_properties (not a direct property write) so the
+							// properties_injected flag fires: the request-specific values
+							// injected below (action, sqo, thesaurus vars) must not be
+							// served from / baked into the shared structure context cache
+							$element->set_properties( $element->get_properties() ?? new stdClass() );
 
 						// thesaurus_mode
 							if (isset($ddo_source->properties->thesaurus_mode)) {
@@ -2780,9 +2790,11 @@ final class dd_core_api {
 			// entity
 			$obj->dedalo_entity						= DEDALO_ENTITY;
 			$obj->dedalo_entity_id					= DEDALO_ENTITY_ID;
-			// version
-			$obj->dedalo_version					= DEDALO_VERSION;
-			$obj->dedalo_build						= DEDALO_BUILD;
+			// version (API-03: the exact build is a version-disclosure recon aid;
+			// expose it only to authenticated callers. entity stays public for the
+			// pre-auth login page branding.)
+			$obj->dedalo_version					= $obj->is_logged ? DEDALO_VERSION : null;
+			$obj->dedalo_build						= $obj->is_logged ? DEDALO_BUILD : null;
 			// mode
 			$obj->mode								= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
 			// lang
@@ -2851,8 +2863,8 @@ final class dd_core_api {
 			$obj->dedalo_quality_thumb			= defined('DEDALO_QUALITY_THUMB') ? DEDALO_QUALITY_THUMB : 'thumb';
 			// tag_id
 			$obj->tag_id						= isset($_REQUEST['tag_id']) ? safe_xss($_REQUEST['tag_id']) : null;
-			// dedalo_protect_media_files
-			$obj->dedalo_protect_media_files	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
+			// dedalo_protect_media_files ('private' or 'publication' media access mode active)
+			$obj->dedalo_protect_media_files	= media_protection::get_mode()!==false ? 1 : 0;
 			// notifications
 			$obj->DEDALO_NOTIFICATIONS			= defined('DEDALO_NOTIFICATIONS') ? (int)DEDALO_NOTIFICATIONS : 0;
 			// ip_api
@@ -2941,6 +2953,10 @@ final class dd_core_api {
 			'DEDALO_ROOT_WEB'						=> DEDALO_ROOT_WEB,
 			'DEDALO_MEDIA_URL'						=> DEDALO_MEDIA_URL,
 			'DEDALO_TOOLS_URL'						=> DEDALO_TOOLS_URL,
+			// tool_name => base_url map for tools living in DEDALO_ADDITIONAL_TOOLS
+			// roots only. An absent key = primary root (client keeps its historical
+			// URL building). Exposes only directory names, never filesystem paths.
+			'DEDALO_TOOLS_URLS'						=> tool_paths::get_additional_tools_url_map(),
 			'SHOW_DEBUG'							=> SHOW_DEBUG,
 			'SHOW_DEVELOPER'						=> SHOW_DEVELOPER,
 			'DEVELOPMENT_SERVER'					=> DEVELOPMENT_SERVER,
@@ -3043,7 +3059,8 @@ final class dd_core_api {
 				return $response;
 			}
 
-		$tipo = $source->tipo;
+		// API-05: read defensively; safe_tipo() below returns a clean 'Bad tipo' error.
+		$tipo = $source->tipo ?? null;
 
 		// tipo check
 			if ( safe_tipo($tipo)===false ) {

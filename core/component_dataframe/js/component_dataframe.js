@@ -7,6 +7,7 @@
 // imports
 	import {component_portal} from '../../component_portal/js/component_portal.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {DATAFRAME_TYPE} from '../../component_common/js/dataframe.js'
 
 
 
@@ -44,6 +45,21 @@ component_dataframe.prototype.create_new_section = async function(options) {
 
 	const data = options.data || {}
 
+	// save-then-attach (single-writer rule, I3): the pairing key must be a
+	// server-minted item id. If the caller (main component) has pending
+	// unsaved changes, persist them first and abort this attach: the refresh
+	// re-renders the dataframe buttons paired with the real ids, so the user
+	// action is repeated on a correctly-keyed button.
+	const caller = self.caller
+	if (caller?.data?.changed_data?.length) {
+		await caller.change_value({
+			changed_data	: caller.data.changed_data,
+			refresh			: true
+		})
+		console.warn('create_new_section: caller pending changes were saved first; attach aborted (re-rendered with real item ids). Repeat the action.')
+		return false
+	}
+
 	const target_section_tipo = self.request_config_object.sqo.section_tipo[0].tipo
 
 	// data_manager. create new section
@@ -63,6 +79,7 @@ component_dataframe.prototype.create_new_section = async function(options) {
 		const section_id = api_response.result
 
 		const locator = {
+			type				: DATAFRAME_TYPE,
 			section_tipo		: target_section_tipo,
 			section_id			: section_id,
 			section_id_key		: data.section_id_key,

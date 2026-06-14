@@ -895,17 +895,31 @@ export const ui = {
 		*/
 		error : (error, input_wrap) => {
 
+			// UIUX-05: tolerate callers that pass the input element itself instead of
+			// the wrapper. Resolve the wrapper (climb to it when given a field) and
+			// the focusable field in both cases, and no-op safely on a null arg.
+			if (!input_wrap || !input_wrap.classList) {
+				return false
+			}
+			const is_field = typeof input_wrap.matches === 'function'
+				&& input_wrap.matches('input, textarea, select')
+			const wrapper = is_field
+				? (input_wrap.closest('.wrapper_component, .input_component, .component') || input_wrap)
+				: input_wrap
+
 			if (error) {
 
-				input_wrap.classList.add('error')
+				wrapper.classList.add('error')
 
-				const input_node = input_wrap.querySelector('input')
+				const input_node = is_field
+					? input_wrap
+					: wrapper.querySelector('input, textarea, select')
 				if(input_node){
 					input_node.focus();
 				}
 
 			}else{
-				input_wrap.classList.remove('error')
+				wrapper.classList.remove('error')
 			}
 
 			return true
@@ -2484,7 +2498,7 @@ export const ui = {
 						})
 
 						// add sort column icons
-							if (self.constructor.name==='section' && current_column.sortable===true) {
+							if (ui.allow_column_order(self, current_column)===true) {
 								const sort_node = ui.add_column_order_set(self, current_column, header_wrapper)
 								sort_nodes.push(sort_node)
 								sub_header_item.appendChild(sort_node)
@@ -2492,7 +2506,7 @@ export const ui = {
 					}
 				}else{
 					// add sort column icons
-						if (self.constructor.name==='section' && column.sortable===true) {
+						if (ui.allow_column_order(self, column)===true) {
 							const sort_node = ui.add_column_order_set(self, column, header_wrapper)
 							sort_nodes.push(sort_node)
 							header_item.appendChild(sort_node)
@@ -2530,6 +2544,50 @@ export const ui = {
 
 
 	/**
+	* ALLOW_COLUMN_ORDER
+	* Checks if the given column accepts order/sort buttons in the list header
+	* Section lists order results with a sqo order (view time, not stored)
+	* component_portal applies a persistent re-order of the stored locators
+	* when the ontology property 'sort_by_column' is enabled (boolean true to
+	* allow all sortable columns or array of column tipos as allowlist)
+	* @see add_column_order_set
+	* @param object self
+	* 	Instance of section/component_portal
+	* @param object column
+	* 	columns_map item
+	* @return bool
+	*/
+	allow_column_order(self, column) {
+
+		// column must be sortable in any case (calculated from context 'sortable')
+			if (column.sortable!==true) {
+				return false
+			}
+
+		// section case. All sortable columns are orderable
+			if (self.constructor.name==='section') {
+				return true
+			}
+
+		// component_portal case. Edit mode with edit permissions and
+		// non external source only, gated by the 'sort_by_column' property
+			if (self.model==='component_portal'
+				&& self.mode==='edit'
+				&& self.permissions > 1
+				&& self.context?.properties?.source?.mode!=='external'
+				) {
+				const sort_by_column = self.context?.properties?.sort_by_column
+				return sort_by_column===true
+					|| (Array.isArray(sort_by_column) && sort_by_column.includes(column.tipo))
+			}
+
+
+		return false
+	},//end allow_column_order
+
+
+
+	/**
 	* ADD_COLUMN_ORDER_SET
 	* Creates the arrows to sort list by column and
 	* place it into the header_item node
@@ -2544,25 +2602,34 @@ export const ui = {
 
 		// short vars
 			const path				= column.path
+			const is_portal			= self.model==='component_portal'
 			const title_asc			= (get_label.sort || 'Sort') + ' ' + (get_label.ascending || 'ascending')
 			const title_desc		= (get_label.sort || 'Sort') + ' ' + (get_label.descending || 'descending')
 			let default_direction	= 'DESC'
 			let current_direction	= undefined
 
-		// current_direction. current order current_direction check from sqo
-		// default is undefined
-			const sqo_order = self.rqo.sqo.order || null
-			if (sqo_order) {
+		// current_direction. default is undefined
+			if (is_portal) {
+				// portal case. Last applied column order (ephemeral, advisory only:
+				// manual drag and drop can change the stored order at any time)
+				if (self.column_order_state && self.column_order_state.tipo===column.tipo) {
+					current_direction = self.column_order_state.direction
+				}
+			}else{
+				// section case. current order current_direction check from sqo
+				const sqo_order = self.rqo?.sqo?.order || null
+				if (sqo_order) {
 
-				const sqo_order_length = sqo_order.length
-				for (let i = 0; i < sqo_order_length; i++) {
+					const sqo_order_length = sqo_order.length
+					for (let i = 0; i < sqo_order_length; i++) {
 
-					const item = sqo_order[i]
+						const item = sqo_order[i]
 
-					const last_path	= item.path[item.path.length-1]
-					if (last_path.component_tipo===column.tipo) {
-						current_direction = item.direction
-						break;
+						const last_path	= item.path[item.path.length-1]
+						if (last_path.component_tipo===column.tipo) {
+							current_direction = item.direction
+							break;
+						}
 					}
 				}
 			}
@@ -2570,36 +2637,48 @@ export const ui = {
 		// exec_order function
 			const exec_order = (direction) => {
 
-				// sample
-					// [
-					//    {
-					//        "direction": "DESC",
-					//        "path": [
-					//            {
-					//                "name": "Code",
-					//                "model": "component_input_text",
-					//                "section_tipo": "oh1",
-					//                "component_tipo": "oh14"
-					//            }
-					//        ]
-					//    }
-					// ]
+				// FEJS-01: capture the portal re-order promise so the click handler
+				// can await it (loading state + error surfacing). undefined for the
+				// section case (navigate handles its own lifecycle).
+				let order_promise = null
+				if (is_portal) {
 
-				// order sqo build
-					const order = [{
-						direction : direction, // ASC|DESC
-						path : path
-					}]
+					// portal case. Persistently re-order the stored locator array
+					// by the column value (the order is resolved and saved in the server)
+						order_promise = self.sort_by_column(column, direction)
+				}else{
 
-				// update rqo (removed way. navigate from page directly wit a user_navigation event bellow)
-				// note that navigate only refresh current instance content_data, not the whole page
-					self.navigate({
-						callback : async () => { // callback
-							self.request_config_object.sqo.order	= order
-							self.rqo.sqo.order						= order
-						},
-						navigation_history : true // bool navigation_history save
-					})
+					// sample
+						// [
+						//    {
+						//        "direction": "DESC",
+						//        "path": [
+						//            {
+						//                "name": "Code",
+						//                "model": "component_input_text",
+						//                "section_tipo": "oh1",
+						//                "component_tipo": "oh14"
+						//            }
+						//        ]
+						//    }
+						// ]
+
+					// order sqo build
+						const order = [{
+							direction : direction, // ASC|DESC
+							path : path
+						}]
+
+					// update rqo (removed way. navigate from page directly wit a user_navigation event bellow)
+					// note that navigate only refresh current instance content_data, not the whole page
+						self.navigate({
+							callback : async () => { // callback
+								self.request_config_object.sqo.order	= order
+								self.rqo.sqo.order						= order
+							},
+							navigation_history : true // bool navigation_history save
+						})
+				}
 
 				// update current_direction
 					current_direction = direction
@@ -2618,6 +2697,8 @@ export const ui = {
 					sort_node.title = direction==='DESC'
 						? title_asc
 						: title_desc
+
+				return order_promise
 			}
 
 		// title
@@ -2655,14 +2736,34 @@ export const ui = {
 				}
 			})
 			// click
-			sort_node.addEventListener('click', function(e){
+			sort_node.addEventListener('click', async function(e){
 				e.stopPropagation()
+
+				// FEJS-01: the portal re-order is a server round-trip. Guard against
+				// double-clicks while it runs, show a loading state, and surface
+				// errors instead of discarding the (previously unawaited) promise.
+				if (sort_node.classList.contains('loading')) {
+					return
+				}
 
 				const direction = current_direction
 					? current_direction==='ASC' ? 'DESC' : 'ASC' // reverse current value
 					: default_direction // defaults
 
-				exec_order(direction)
+				sort_node.classList.add('loading')
+				try {
+					await exec_order(direction)
+				} catch (err) {
+					console.error('Error sorting by column', err)
+					if (typeof ui.notification?.create === 'function') {
+						ui.notification.create({
+							msg		: 'Error sorting by column',
+							type	: 'error'
+						})
+					}
+				} finally {
+					sort_node.classList.remove('loading')
+				}
 			})
 
 
@@ -3182,6 +3283,25 @@ export const ui = {
 
 		return text_color;
 	},//end get_text_color
+
+
+
+	/**
+	* CSS_VAR
+	* Resolves a CSS custom property declared on :root to its concrete value
+	* for the active theme, with a literal fallback. Useful when a color must
+	* be passed to code that can't accept a `var(...)` string (e.g. get_text_color,
+	* SVG attributes, canvas).
+	* @param string name e.g. '--color_primary'
+	* @param string fallback literal value if the property is unset
+	* @return string resolved value (e.g. '#2b77c7')
+	*/
+	css_var : function(name, fallback) {
+
+		const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+
+		return value || fallback;
+	},//end css_var
 
 
 

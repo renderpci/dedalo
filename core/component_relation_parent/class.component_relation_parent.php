@@ -83,6 +83,29 @@ class component_relation_parent extends component_relation_common {
 				return false; // Avoid auto-references
 			}
 
+		// descendant cycle case. Reject when the prospective parent is a descendant
+		// of the current node: linking would make the node an ancestor of itself.
+		// Checked here (and not only in API callers) so every entry point is covered.
+			if (true===self::is_ancestor($this->section_tipo, $this->section_id, $locator->section_tipo, (int)$locator->section_id)) {
+				debug_log(__METHOD__
+					. " Error: Ignored invalid locator received to add parent (descendant cycle) " . PHP_EOL
+					. ' locator: ' . to_string($locator) . PHP_EOL
+					. ' this->tipo: ' . to_string($this->tipo) . PHP_EOL
+					. ' this->section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+					. ' this->section_id: ' . to_string($this->section_id) . PHP_EOL
+					, logger::ERROR
+				);
+				self::$errors[] = (object)[
+					'type'	=> 'add_parent',
+					'msg'	=> 'cycle',
+					'info'	=> (object)[
+						'section_tipo'	=> $this->section_tipo,
+						'section_id'	=> $this->section_id
+					]
+				];
+				return false; // Avoid descendant cycles
+			}
+
 		// from_component_tipo check
 			if (!isset($locator->from_component_tipo)) {
 				debug_log(__METHOD__
@@ -296,6 +319,46 @@ class component_relation_parent extends component_relation_common {
 		// Return the values of the populated ancestor list as a numerically indexed array.
 		return array_values($unique_ancestors);
 	}//end get_parents_recursive
+
+
+
+	/**
+	* IS_ANCESTOR
+	* True when the node (node_section_tipo, node_section_id) is an ancestor of
+	* the node (of_section_tipo, of_section_id), walking the parent chain upwards.
+	* Used as the descendant-cycle guard on tree mutations: a node must never be
+	* moved or linked under its own descendant. Walking the ancestors of the
+	* prospective parent (tree depth) is far cheaper than enumerating the node's
+	* descendants (subtree width).
+	* @param string $node_section_tipo
+	* @param int|string $node_section_id
+	* @param string $of_section_tipo
+	* @param int|string $of_section_id
+	* @return bool
+	*/
+	public static function is_ancestor( string $node_section_tipo, int|string $node_section_id, string $of_section_tipo, int|string $of_section_id ) : bool {
+
+		// same node is not its own ancestor (the auto-reference case is
+		// handled separately by callers)
+		if ($node_section_tipo===$of_section_tipo && (int)$node_section_id===(int)$of_section_id) {
+			return false;
+		}
+
+		$node_key	= $node_section_tipo . '_' . (int)$node_section_id;
+		$ancestors	= self::get_parents_recursive($of_section_id, $of_section_tipo);
+
+		foreach ($ancestors as $ancestor) {
+			if (!is_object($ancestor) || !isset($ancestor->section_tipo, $ancestor->section_id)) {
+				continue;
+			}
+			$ancestor_key = $ancestor->section_tipo . '_' . (int)$ancestor->section_id;
+			if ($ancestor_key===$node_key) {
+				return true;
+			}
+		}
+
+		return false;
+	}//end is_ancestor
 
 
 
@@ -561,6 +624,23 @@ class component_relation_parent extends component_relation_common {
 	* @return bool
 	*/
 	protected function set_child_order(string $parent_section_tipo, int $parent_section_id) : bool {
+
+		// Count-then-write is only race-free when the caller holds the parent
+		// advisory lock inside a transaction (see matrix_db_manager::acquire_node_lock).
+		// Flag unprotected call sites.
+		if (SHOW_DEBUG===true) {
+			$conn = DBi::_getConnection();
+			if ($conn!==false && pg_transaction_status($conn)===PGSQL_TRANSACTION_IDLE) {
+				debug_log(__METHOD__
+					. " Warning: set_child_order called outside a transaction; concurrent adds may collide on order values" . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+					. ' parent: ' . $parent_section_tipo . '_' . $parent_section_id
+					, logger::WARNING
+				);
+			}
+		}
+
 		$section_map = section::get_section_map($this->section_tipo);
 		$order_tipo = $section_map->thesaurus->order ?? null;
 		if (empty($order_tipo)) {

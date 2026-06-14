@@ -1078,6 +1078,44 @@ const render_final_report = function(options){
 						}
 					}//end if(current_rensponse.failed_rows.length>0)
 
+				// warning_rows info. Non fatal: data was imported but needs user attention
+					const warning_rows = current_rensponse.warning_rows || []
+					if(warning_rows.length>0) {
+
+						const header = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'header',
+							parent			: result_info_container
+						})
+
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'label',
+							inner_html		: self.get_tool_label('warnings') || 'Warnings' + ':',
+							parent			: header
+						})
+
+						const warning_rows_len = warning_rows.length
+						for (let g = 0; g < warning_rows_len; g++) {
+
+							const warning = warning_rows[g]
+
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'failed_container warning',
+								inner_html		: warning.section_id +' | '+warning.component_tipo + ' | ' +warning.msg,
+								parent			: result_info_container
+							})
+
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'failed_data_container warning',
+								inner_html		: JSON.stringify( warning.data ),
+								parent			: result_info_container
+							})
+						}
+					}//end if(warning_rows.length>0)
+
 				// created_rows info
 					if(current_rensponse.created_rows.length>0) {
 

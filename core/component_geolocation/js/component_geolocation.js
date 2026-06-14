@@ -15,6 +15,29 @@
 
 
 
+// OSM tile URLs per theme
+// To switch to MapTiler dark tiles once you have an API key, replace TILE_URLS.dark with:
+// 'https://api.maptiler.com/maps/streets-v4-dark/{z}/{x}/{y}.png?key=YOUR_KEY'
+const TILE_URLS = {
+	light : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+	dark  : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+}
+const TILE_ATTR = {
+	light : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+	dark  : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+}
+const fn_is_dark   = () => document.documentElement.dataset.theme === 'dark'
+const fn_osm_layer = (options = {}) => {
+	const dark = fn_is_dark()
+	return L.tileLayer(dark ? TILE_URLS.dark : TILE_URLS.light, {
+		attribution : dark ? TILE_ATTR.dark : TILE_ATTR.light,
+		maxZoom     : 19,
+		...options
+	})
+}
+
+
+
 export const component_geolocation = function(){
 
 	this.id
@@ -49,7 +72,14 @@ export const component_geolocation = function(){
 // prototypes assign
 	component_geolocation.prototype.build				= component_common.prototype.build
 	component_geolocation.prototype.render				= common.prototype.render
-	component_geolocation.prototype.destroy				= common.prototype.destroy
+	component_geolocation.prototype.destroy				= async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+		const self = this
+		if (self.theme_observer) {
+			self.theme_observer.disconnect()
+			self.theme_observer = null
+		}
+		return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
+	}
 	component_geolocation.prototype.refresh				= common.prototype.refresh
 	component_geolocation.prototype.save				= component_common.prototype.save
 	component_geolocation.prototype.load_data			= component_common.prototype.load_data
@@ -86,6 +116,8 @@ component_geolocation.prototype.init = async function(options) {
 	// short vars
 		self.ar_layer_loaded	= null
 		self.map				= null
+		self.tile_layer			= null
+		self.theme_observer		= null
 		self.layer_control		= false
 
 	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
@@ -272,11 +304,15 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		switch(self.context.features.geo_provider) {
 
 			case 'OSM':
-				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
-				L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-					attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors',
-					maxZoom: 19
-				}).addTo(self.map);
+				self.map = new L.Map(map_container, {center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom})
+				self.tile_layer = fn_osm_layer().addTo(self.map)
+
+				// swap tile layer when the user toggles dark/light mode
+				self.theme_observer = new MutationObserver(() => {
+					self.map.removeLayer(self.tile_layer)
+					self.tile_layer = fn_osm_layer().addTo(self.map)
+				})
+				self.theme_observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
 				break;
 
 			case 'GOOGLE':
@@ -308,7 +344,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 				arcgis = new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
-				osm = new L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom: 19, maxNativeZoom: 19});
+				osm = fn_osm_layer({ maxNativeZoom: 19 });
 
 				// MAP
 				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
@@ -327,7 +363,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 			case 'VARIOUS':
 				// LAYER
 				arcgis = new L.tileLayer('//server.arcgisonline.com/ArcGIS/' + 'rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-				osm = new L.tileLayer('//{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+				osm = fn_osm_layer();
 				// MAP
 				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 

@@ -1,5 +1,14 @@
 <?php declare(strict_types=1);
-require_once dirname(__FILE__, 3) .'/lib/vendor/autoload.php';
+// CONF-01: EasyRdf (sweetrdf/easyrdf) is a composer dependency installed under
+// the repo-root vendor/ (the old path lib/vendor/autoload.php never existed).
+// The application already loads this autoloader at bootstrap; require it
+// defensively here only when the tool is loaded in isolation.
+if (!class_exists('\EasyRdf\Graph')) {
+	$dedalo_vendor_autoload = dirname(__FILE__, 3) . '/vendor/autoload.php';
+	if (is_file($dedalo_vendor_autoload)) {
+		require_once $dedalo_vendor_autoload;
+	}
+}
 /**
 * CLASS TOOL_IMPORT_RDF
 * Handles the import and processing of RDF (Resource Description Framework) data into Dédalo
@@ -56,15 +65,16 @@ class tool_import_rdf extends tool_common {
 			return;
 		}
 
-		// EasyRdf library files
-		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Graph.php';
-		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/RdfNamespace.php';
-		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Format.php';
-		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/TypeMapper.php';
-		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Resource.php';
-		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Literal.php';
-		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Utils.php';
-		include_once DEDALO_LIB_PATH . '/vendor/sweetrdf/easyrdf/lib/Serialiser.php';
+		// CONF-01: EasyRdf is PSR-4 autoloaded by composer ("EasyRdf\\" => lib), so
+		// no manual file includes are needed (the previous DEDALO_LIB_PATH/vendor
+		// paths did not exist). Fail loudly if the dependency is missing, so a
+		// deployer running `composer install --no-dev` without easyrdf gets a clear
+		// signal instead of a cryptic class-not-found later.
+		if (!class_exists('\EasyRdf\Graph')) {
+			throw new \RuntimeException(
+				'EasyRdf is not installed. Run `composer install` (sweetrdf/easyrdf is a runtime dependency).'
+			);
+		}
 
 		self::$easyrdf_loaded = true;
 	}//end load_easyrdf
@@ -755,7 +765,7 @@ class tool_import_rdf extends tool_common {
 				: '{
 					"$and": [
 						{
-							"q": "'.$value.'",
+							"q": '.json_encode((string)$value).',
 							"q_operator": "==",
 							"q_split": false,
 							"unaccent": false,
@@ -765,12 +775,14 @@ class tool_import_rdf extends tool_common {
 									"section_tipo"		: "'.$section_tipo.'",
 									"component_tipo"	: "'.$component_tipo.'",
 									"model"				: "'.$model_name.'",
-									"name"				: "'.$name.'"
+									"name"				: '.json_encode((string)$name).'
 								}
 							]
 						}
 					]
 				  }';
+				// TOOLS-04: $value (a remote RDF literal) and $name are json_encode'd so
+				// quotes/backslashes can't break the JSON filter document.
 
 		// sqo
 			$sqo = json_decode('{
@@ -1003,10 +1015,11 @@ class tool_import_rdf extends tool_common {
 
 			$lang = ontology_node::get_translatable( $component_tipo ) ? 'all' : DEDALO_DATA_NOLAN;
 		// filter
+			// TOOLS-04: json_encode the remote RDF literal so it can't break the filter JSON.
 			$filter = '{
 				"$and": [
 					{
-						"q": "'.$value.'",
+						"q": '.json_encode((string)$value).',
 						"q_split": false,
 						"unaccent": false,
 						"lang": "'.$lang.'",

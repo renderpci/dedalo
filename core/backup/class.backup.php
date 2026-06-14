@@ -451,8 +451,10 @@ abstract class backup {
 
 	/**
 	* MAKE_MYSQL_BACKUP
-	* Make a backup of the MySQL database(s)
-	* @deprecated This method uses deprecated diffusion_mysql class. Consider migrating to dd_diffusion_api.
+	* Make a backup of the MariaDB database(s).
+	* MariaDB management is a Bun engine responsibility: PHP computes the
+	* target file path and asks the Bun diffusion API ('backup_database')
+	* to run mysqldump (replaces v6 diffusion_mysql::backup_database).
 	* @return object $response
 	* {
 	* 	result: array|bool [result: true, msg: Backup done web_my_ddbb,..]
@@ -460,9 +462,6 @@ abstract class backup {
 	* }
 	*/
 	public static function make_mysql_backup() : object {
-
-		// Log deprecation warning
-		debug_log(__METHOD__ . " WARNING: This method uses deprecated diffusion_mysql class. Consider migrating to dd_diffusion_api.", logger::WARNING);
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -482,7 +481,24 @@ abstract class backup {
 			$response->result = [];
 			foreach ($ar_database_name as $database_name) {
 
-				$backup = diffusion_mysql::backup_database($database_name);
+				// target file (path layout preserved from v6: DEDALO_BACKUP_PATH/mysql/)
+				$file_name		= date('Y-m-d_His') .'_'. $database_name .'_'. logged_user_id() .'.sql';
+				$target_file	= DEDALO_BACKUP_PATH . '/mysql/' . $file_name;
+
+				// Bun engine executes mysqldump and writes the file
+				$backup = diffusion_api_client::call((object)[
+					'action'		=> 'backup_database',
+					'database_name'	=> $database_name,
+					'target_file'	=> $target_file
+				], 600); // long timeout: dumps of large databases take time
+
+				if (empty($backup->result)) {
+					debug_log(__METHOD__
+						. " Backup failed for database '$database_name'" . PHP_EOL
+						. ' msg: ' . to_string($backup->msg ?? null)
+						, logger::ERROR
+					);
+				}
 
 				$response->result[] = $backup;
 			}

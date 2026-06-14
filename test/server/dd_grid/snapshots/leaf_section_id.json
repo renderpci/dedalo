@@ -1,0 +1,27 @@
+{
+    "id": null,
+    "class_list": null,
+    "type": "column",
+    "label": "section_id",
+    "row_count": 1,
+    "column_count": null,
+    "column_labels": null,
+    "fields_separator": ", ",
+    "records_separator": " | ",
+    "cell_type": "section_id",
+    "action": null,
+    "value": [
+        1
+    ],
+    "fallback_value": [],
+    "data": null,
+    "render_label": null,
+    "column": null,
+    "ar_columns_obj": [
+        {
+            "id": "test3_test102"
+        }
+    ],
+    "features": null,
+    "model": "component_section_id"
+}

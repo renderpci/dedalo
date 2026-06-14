@@ -1,0 +1,154 @@
+[
+    {
+        "api_engine": "dedalo",
+        "type": "main",
+        "sqo": {
+            "id": null,
+            "section_tipo": [
+                {
+                    "typo": "ddo",
+                    "tipo": "test3",
+                    "model": "section",
+                    "permissions": 3,
+                    "label": "Unit Test Section (using matrix_test table)",
+                    "buttons": [
+                        {
+                            "model": "button_new",
+                            "permissions": 3
+                        },
+                        {
+                            "model": "button_delete",
+                            "permissions": 3
+                        }
+                    ],
+                    "color": "#b9b9b9",
+                    "matrix_table": "matrix_test"
+                }
+            ],
+            "mode": null,
+            "filter": null,
+            "limit": null,
+            "offset": null,
+            "total": null,
+            "full_count": null,
+            "group_by": null,
+            "order": null,
+            "filter_by_locators": null,
+            "filter_by_locators_op": null,
+            "allow_sub_select_by_id": null,
+            "children_recursive": null,
+            "remove_distinct": null,
+            "skip_projects_filter": null,
+            "parsed": null,
+            "breakdown": null,
+            "tables": null,
+            "select": null,
+            "generated_time": null
+        },
+        "show": {
+            "ddo_map": [
+                {
+                    "typo": "ddo",
+                    "tipo": "test52",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_input_text",
+                    "label": "input_text"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test17",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_text_area",
+                    "label": "text_area"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test211",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_number",
+                    "label": "number"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test145",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_date",
+                    "label": "date"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test91",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_select",
+                    "label": "select"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test85",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_pdf",
+                    "label": "pdf"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test177",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_svg",
+                    "label": "svg"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test26",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_3d",
+                    "label": "3d"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test94",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_av",
+                    "label": "av"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test99",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_image",
+                    "label": "image"
+                }
+            ],
+            "sqo_config": {
+                "full_count": false,
+                "limit": 10,
+                "offset": 0,
+                "mode": "list",
+                "operator": "$or"
+            }
+        },
+        "search": null,
+        "choose": null,
+        "hide": null,
+        "api_config": null
+    }
+]

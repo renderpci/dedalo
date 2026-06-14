@@ -778,6 +778,66 @@
               "lang": "lg-nep",
               "name": "rows_total",
               "value": "पङ्क्तिहरू"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "pending_deletions",
+              "value": "Pending deletions"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "pending_deletions",
+              "value": "Eliminaciones pendientes"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "pending_deletions",
+              "value": "Eliminacions pendents"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "pending_deletions",
+              "value": "Suppressions en attente"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "pending_deletions",
+              "value": "Eliminazioni in sospeso"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "pending_deletions",
+              "value": "Ausstehende Löschungen"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "retry",
+              "value": "Retry"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "retry",
+              "value": "Reintentar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "retry",
+              "value": "Reintentar"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "retry",
+              "value": "Réessayer"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "retry",
+              "value": "Riprova"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "retry",
+              "value": "Erneut versuchen"
             }
           ]
         ]

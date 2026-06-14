@@ -92,7 +92,7 @@ const render_content_value = function(options) {
 	// short vars
 		const data		= self.data || {}
 		const entries	= data.entries || []
-		const default_bk_color = '#006ed2';
+		const default_bk_color = ui.css_var('--color_blue_3', '#006ed2');
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -175,7 +175,13 @@ const render_content_value = function(options) {
 			self.create_new_section({
 				data : data
 			})
-			.then(function() {
+			.then(function(response) {
+
+				// aborted attach (save-then-attach flushed pending caller
+				// changes and re-rendered): do not open the modal
+				if (response===false) {
+					return
+				}
 
 				// open modal
 				open_target_section(self)

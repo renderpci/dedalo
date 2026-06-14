@@ -9,6 +9,7 @@
 	import {
 		get_instance,
 		add_instance,
+		delete_instance,
 		get_instance_by_id,
 		get_all_instances,
 		get_instances_custom_map
@@ -90,6 +91,10 @@ export const ts_object = function() {
 	this.status
 	// instances
 	this.ar_instances = []
+	// promise|null children_request. In-flight get_children_data request (dedup)
+	this.children_request = null
+	// string|null children_request_signature. Request signature of children_request
+	this.children_request_signature = null
 
 	// int permissions_button_delete. Values from 0,1,2,3
 	this.permissions_button_delete
@@ -253,6 +258,64 @@ export const key_instances_builder = function(options) {
 	// join all non empty elements in an string used as ID for the instance
 	return 'ts_object_' + key_parts.join('_')
 }//end key_instances_builder
+
+
+
+/**
+* REKEY
+* Re-registers the instance in the global instances map after key-part
+* changes (e.g. ts_parent updated by swap_parent). Without this, the
+* instance stays cached under its old key and a later get_instance for
+* the same term under the new parent would create a duplicate while this
+* instance still owns the DOM node.
+* Note: ts_parent is deliberately part of key_order — one instance owns one
+* DOM node, and the same term visible in two contexts (e.g. relation mode
+* and tree) must not steal nodes from each other.
+* @return bool
+*/
+ts_object.prototype.rekey = function() {
+
+	const self = this
+
+	const old_id = self.id
+
+	// new key from current key-part properties
+	const new_key = key_instances_builder({
+		section_tipo		: self.section_tipo,
+		section_id			: self.section_id,
+		children_tipo		: self.children_tipo,
+		target_section_tipo	: null,
+		thesaurus_mode		: self.thesaurus_mode,
+		ts_parent			: self.ts_parent
+	})
+	if (new_key===old_id) {
+		return true // nothing to do
+	}
+
+	// re-register in the global instances map
+	delete_instance(old_id)
+	self.id = new_key
+	add_instance(new_key, self)
+
+	// sync the DOM dataset id (read by drag and drop on_drop)
+	if (self.node?.dataset) {
+		self.node.dataset.id = new_key
+	}
+
+	// migrate the persisted expand state to the new id
+	data_manager.get_local_db_data(old_id, 'status')
+	.then((status) => {
+		if (status?.value) {
+			data_manager.delete_local_db_data(old_id, 'status')
+			data_manager.set_local_db_data(
+				{ id: new_key, value: status.value },
+				'status'
+			)
+		}
+	})
+
+	return true
+}//end rekey
 
 
 
@@ -499,60 +562,83 @@ ts_object.prototype.get_children_data = async function(options) {
 			return self.children_data
 		}
 
-	try {
+	// in-flight dedup. A second identical call (rapid double-click on the
+	// expand arrow) joins the running request instead of firing a new one.
+		const request_signature = JSON.stringify({p: pagination, c: children})
+		if (self.children_request && self.children_request_signature===request_signature) {
+			return self.children_request
+		}
 
-		// API call
-		const rqo = {
-			dd_api			: 'dd_ts_api',
-			prevent_lock	: true,
-			action			: 'get_children_data',
-			source			: {
-				section_id		: section_id,
-				section_tipo	: section_tipo,
-				children_tipo	: children_tipo,
-				model			: model,
-				children		: children,
-				build_options	: {
-					terms_are_model : terms_are_model
+	const request_promise = (async () => {
+
+		try {
+
+			// API call
+			const rqo = {
+				dd_api			: 'dd_ts_api',
+				prevent_lock	: true,
+				action			: 'get_children_data',
+				source			: {
+					section_id		: section_id,
+					section_tipo	: section_tipo,
+					children_tipo	: children_tipo,
+					model			: model,
+					children		: children,
+					build_options	: {
+						terms_are_model : terms_are_model
+					}
+				},
+				options : {
+					pagination			: pagination,
+					thesaurus_view_mode	: thesaurus_view_mode
 				}
-			},
-			options : {
-				pagination			: pagination,
-				thesaurus_view_mode	: thesaurus_view_mode
 			}
+
+			const api_response = await data_manager.request({
+				use_worker	: false,
+				body		: rqo
+			})
+			// debug
+			if(SHOW_DEBUG===true) {
+				console.warn('get_children_data api_response:', api_response);
+			}
+
+			if (api_response && api_response.result) {
+
+				// success case
+
+				// Sort by order (ascending)
+				api_response.result.ar_children_data.sort((a, b) => a.order - b.order);
+
+				return api_response.result
+
+			}else{
+
+				// error case
+
+				console.warn("[get_children_data] Error, api_response.result is null or undefined");
+				throw new Error("API response did not contain a valid result.");
+			}
+		} catch (error) {
+			// Catch network errors or explicit throws
+			console.error("[get_children_data] API request failed:", error);
+			// Propagate the error by re-throwing or rejecting the promise
+			throw error;
 		}
+	})()
+	.finally(() => {
+		// release the in-flight slot (resolved value stays cached in
+		// self.children_data by callers when applicable)
+		self.children_request = null
+		self.children_request_signature = null
+	})
 
-		const api_response = await data_manager.request({
-			use_worker	: false,
-			body		: rqo
-		})
-		// debug
-		if(SHOW_DEBUG===true) {
-			console.warn('get_children_data api_response:', api_response);
-		}
+	// register in-flight request
+		self.children_request = request_promise
+		self.children_request_signature = request_signature
 
-		if (api_response && api_response.result) {
 
-			// success case
-
-			// Sort by order (ascending)
-			api_response.result.ar_children_data.sort((a, b) => a.order - b.order);
-
-			return api_response.result
-
-		}else{
-
-			// error case
-
-			console.warn("[get_children_data] Error, api_response.result is null or undefined");
-			throw new Error("API response did not contain a valid result.");
-		}
-	} catch (error) {
-		// Catch network errors or explicit throws
-		console.error("[get_children_data] API request failed:", error);
-		// Propagate the error by re-throwing or rejecting the promise
-		throw error;
-	}
+	return request_promise
 }//end get_children_data
 
 
@@ -597,6 +683,7 @@ ts_object.prototype.add_children_item = function ( children_data ) {
 	if (this.children_data.ar_children_data.length===1) {
 		this.data.has_descriptor_children = this.has_descriptor_children = true
 		this.is_open = true // Forces is_open to allow to see the added children in new renders
+		this.sync_open_dom()
 	}
 
 	return true
@@ -653,6 +740,7 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 	if (this.children_data.ar_children_data.length===0) {
 		this.data.has_descriptor_children = this.has_descriptor_children = false
 		this.is_open = false
+		this.sync_open_dom()
 		this.link_children_element = null
 	}
 
@@ -695,6 +783,138 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 
 	return true
 }//end remove_children_item
+
+
+
+/**
+* SET_OPEN
+* Single entry point for expand/collapse. Owns the is_open state:
+* updates self.is_open synchronously (so concurrent calls observe the
+* transition), loads + renders children when needed, projects the state
+* to the DOM via sync_open_dom() and persists it.
+* @param bool is_open
+* @param object options
+* {
+* 	persist: bool (default true) - persist the state in the local db 'status' table
+* 	force_reload: bool (default false) - discard cached children_data and reload from API
+* }
+* @return promise<bool>
+*/
+ts_object.prototype.set_open = async function(is_open, options={}) {
+
+	const self = this
+
+	// options
+		const {
+			persist = true,
+			force_reload = false
+		} = options
+
+	// children_container. Non descriptor nodes have nothing to open
+		if (!self.children_container) {
+			return false
+		}
+
+	// state first. The flag is the single source of truth; DOM classes are
+	// a projection of it (see sync_open_dom)
+		self.is_open = is_open
+
+	// load and render children when opening an empty (or force reloaded) container
+		if (is_open===true) {
+
+			const must_load = force_reload===true || !self.children_container.hasChildNodes()
+			if (must_load) {
+
+				// add loading_spinner style
+				if (self.link_children_element) {
+					self.link_children_element.classList.add('loading_spinner')
+				}
+
+				if (force_reload===true) {
+					// Clean children data to force reload
+					self.children_data = null
+				}
+
+				const children_data = await self.get_children_data({
+					pagination	: self.pagination,
+					children	: null
+				})
+
+				// remove loading_spinner style
+				if (self.link_children_element) {
+					self.link_children_element.classList.remove('loading_spinner')
+				}
+
+				if (!children_data?.ar_children_data) {
+					console.error('[ts_object.set_open] Error getting children data. children_data:', children_data);
+					self.is_open = false
+					self.sync_open_dom()
+					return false
+				}
+
+				// Fix children_data
+				self.children_data = children_data
+
+				// Add children nodes into self.children_container or nd_container
+				await self.render_children({
+					clean_children_container	: true,
+					children_data				: children_data
+				})
+			}
+		}
+
+	// project state to DOM
+		self.sync_open_dom()
+
+	// persist. Tracks element open children status in the local db
+		if (persist===true) {
+			if (is_open===true) {
+				data_manager.set_local_db_data(
+					{
+						id		: self.id,
+						value	: 1
+					}, // mixed data
+					'status' // string table
+				)
+			}else{
+				data_manager.delete_local_db_data(self.id, 'status')
+			}
+		}
+
+
+	return true
+}//end set_open
+
+
+
+/**
+* SYNC_OPEN_DOM
+* Projects self.is_open onto the DOM: children_container visibility ('hide')
+* and expand arrow state ('open'). The ONLY place these classes change.
+* @return bool
+*/
+ts_object.prototype.sync_open_dom = function() {
+
+	const self = this
+
+	if (self.children_container) {
+		if (self.is_open===true) {
+			self.children_container.classList.remove('hide')
+		}else{
+			self.children_container.classList.add('hide')
+		}
+	}
+
+	if (self.link_children_element) {
+		if (self.is_open===true) {
+			self.link_children_element.classList.add('open')
+		}else{
+			self.link_children_element.classList.remove('open')
+		}
+	}
+
+	return true
+}//end sync_open_dom
 
 
 
@@ -768,14 +988,9 @@ ts_object.prototype.update_children_state = async function(options = {}) {
 
 	// 5. SHOW CHILDREN (if requested and has children)
 	if (show_children && self.has_descriptor_children) {
+		self.is_open = true
 		requestAnimationFrame(() => {
-			if (self.children_container) {
-				self.children_container.classList.remove('hide')
-			}
-			if (self.link_children_element) {
-				self.link_children_element.classList.add('open')
-			}
-			self.is_open = true
+			self.sync_open_dom()
 		})
 	}
 
@@ -1189,9 +1404,19 @@ ts_object.prototype.delete_term = async function(options) {
 	// destroy section after use it
 		section.destroy()
 
-	// refresh parent children data
+	// refresh parent children data and reclaim the deleted node
 		if (delete_section_result && self.caller) {
 			self.caller?.remove_children_item(self.data)
+
+			// remove the persisted expand state of the deleted node
+			data_manager.delete_local_db_data(self.id, 'status')
+
+			// destroy self: instance map entry, events, dependencies and DOM
+			await self.destroy(
+				true, // delete_self
+				true, // delete_dependencies
+				true // remove_dom
+			)
 		}
 
 		if(SHOW_DEBUG) {
@@ -1297,6 +1522,19 @@ ts_object.prototype.swap_parent = async function (options) {
 	// It is important to allow the term to be moved again without causing any inconsistencies.
 	moving_instance.caller		= target_instance
 	moving_instance.ts_parent	= target_instance.ts_id
+
+	// rekey. ts_parent is part of the instances map key: re-register under
+	// the new key to prevent stale-key duplicates on later get_instance calls
+	moving_instance.rekey()
+
+	// move the instance between the parents' destroy cascades (ar_instances)
+	const old_index = old_parent_instance.ar_instances.indexOf(moving_instance)
+	if (old_index!==-1) {
+		old_parent_instance.ar_instances.splice(old_index, 1)
+	}
+	if (!target_instance.ar_instances.includes(moving_instance)) {
+		target_instance.ar_instances.push(moving_instance)
+	}
 
 	// Move moving instance node from old parent to the new one (current dropped)
 	target_instance.children_container.appendChild( moving_instance.node );
@@ -1592,6 +1830,12 @@ ts_object.prototype.show_indexations = async function(options) {
 	// pagination vars
 		const total = options.total || null
 
+	// check mandatory target_div (the node's indexations_container)
+		if (!target_div) {
+			console.error('[ts_object.show_indexations] Error: target_div is mandatory. options:', options);
+			return false
+		}
+
 	// get the filter section
 		const target_section = totals_group.map(el => el.key)
 
@@ -1738,21 +1982,67 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 		to_hilite.map(el => `${el.section_tipo}_${el.section_id}`)
 	);
 
-	// Map of rendered search instances based on received data list
-	const search_instances_map = new Map()
+	// 1. Build the node info map from the plain result data and make sure the
+	// root instances exist and are rendered. Non-root nodes are NOT created
+	// here: they are rendered by their parent's render_child, so a child's
+	// wrapper is never created before its parent container exists (this
+	// removes the detached-node race the old depth-sort workaround patched).
+	const node_info = await build_search_instances(self, data)
 
-	// Set node to scroll. Used to scroll page when is needed.
-	let node_to_scroll = null
+	// Reset possible previous hilites.
+	self.reset_hilites()
 
-	// --------------------------------------------------------------------------------
-	// 1. CREATE OR RETRIEVE INSTANCES AND RENDER
-	// --------------------------------------------------------------------------------
+	// 2. Hierarchize: link every child data to its parent info and collect the
+	// branches to open. Orphans (results whose ancestor is missing from the
+	// server data) are reported instead of silently skipped.
+	const { to_open, orphans } = hierarchize_search_instances(node_info)
 
-	// Iterate 'data' and creates the non already existing instances.
-	// 'data' is an array of all terms needed to create the results paths, that means, from the root
-	// terms to the last node matching the search like a branch path [term_root, term_middle1, term_middle2, term_matched]
-	// Every data item is an object with ts_node properties like section_tipo, section_id, permissions, ar_elements..
-	// See param sample at docblock.
+	if (orphans.length > 0) {
+		console.error('[parse_search_result] Orphaned results, ancestor missing from data:', orphans);
+		event_manager.publish('notification', {
+			msg			: `Some results could not be placed in the tree (${orphans.length})`,
+			type		: 'warning',
+			remove_time	: 6000
+		})
+	}
+
+	// 3. Open the branches, top-down by construction (explicit recursion:
+	// a child branch only opens after its parent rendered it)
+	await open_search_branches(node_info, to_open)
+
+	// 4. Hilite found nodes and scroll to the first one
+	hilite_search_results(node_info, hilite_set, to_hilite.length)
+
+	// debug
+	if(SHOW_DEBUG===true) {
+		console.log(`_*_Time to parse search result: ${(performance.now() - start_time).toFixed(2)}ms`);
+	}
+
+
+	return true
+}//end parse_search_result
+
+
+
+/**
+* BUILD_SEARCH_INSTANCES
+* Phase 1 of parse_search_result.
+* Builds a plain-data node info map from the search result rows and ensures
+* the ROOT instances exist, are switched to 'search' mode and are rendered
+* (roots are attached to the DOM by the area).
+* @param object self
+* 	ts_object instance whose parse_search_result was called (area-level)
+* @param array data
+* 	search result rows (ts node data objects, full paths root → matched)
+* @return promise<Map> node_info
+* 	Map keyed by ts_id of {key, data, children}
+*/
+const build_search_instances = async function(self, data) {
+
+	const node_info = new Map()
+
+	const root_caller = self.caller // area_thesaurus | area_ontology
+
 	const data_length = data.length
 	for (let i = 0; i < data_length; i++) {
 
@@ -1763,210 +2053,250 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 		data_item.thesaurus_mode = self.thesaurus_mode
 
 		const key = key_instances_builder(data_item); // normalized id of the instance
-		const found_instance = get_instance_by_id(key); // Look in all Dédalo instances Map
 
-		// callers (needed in both cache-hit and new-instance paths)
-		const root_caller	= self.caller // area_thesaurus
-		const caller		= (data_item.ts_parent === 'root') ? self.caller : self // area_thesaurus|ts_object
-
-		if (found_instance) {
-
-			// Instance already exists — refresh mutable (non-key) props
-			if(SHOW_DEBUG===true) {
-				console.log('==== Matched already existing instance. found_instance:', key, found_instance);
-			}
-			found_instance.caller		= caller
-			found_instance.linker		= self.linker
-			found_instance.area_model	= root_caller.model
-			found_instance.is_ontology	= (root_caller.model === 'area_ontology')
-			found_instance.mode			= 'search'
-			found_instance.data			= data_item
-
-			// Add to map
-			const map_id = `${found_instance.section_tipo}_${found_instance.section_id}`
-			search_instances_map.set(map_id, found_instance);
-
-		}else{
-
-			// New instance — pass all props (key-parts + non-key) in a single call
-			const new_instance = await ts_object.get_instance({
-				// key_parts
-				section_tipo		: data_item.section_tipo,
-				section_id			: data_item.section_id,
-				children_tipo		: data_item.children_tipo,
-				target_section_tipo	: null,
-				thesaurus_mode		: self.thesaurus_mode,
-				ts_parent			: data_item.ts_parent,
-				// non-key props
-				caller				: caller,
-				linker				: self.linker,
-				is_root_node		: data_item.ts_parent === 'root',
-				ts_id				: data_item.ts_id,
-				order				: data_item.order,
-				area_model			: root_caller.model,
-				is_ontology			: root_caller.model === 'area_ontology',
-				mode				: 'search', // hide some elements like 'order'
-				data				: data_item  // inject row as data itself
-			})
-			if(SHOW_DEBUG===true) {
-				console.log('++++ Created new instance. new_instance:', key, new_instance);
-			}
-
-			// Build the instance without load from API (data is already injected)
-			await new_instance.build(false)
-			// Render the instance
-			await new_instance.render()
-
-			// Add to search instances map
-			const map_id = `${new_instance.section_tipo}_${new_instance.section_id}`
-			search_instances_map.set(map_id, new_instance);
-		}
-	}
-
-	// Reset possible previous hilites.
-	self.reset_hilites()
-
-	// --------------------------------------------------------------------------------
-	// 2. HIERARCHIZE INSTANCES AND COLLECT PARENTS TO OPEN
-	// --------------------------------------------------------------------------------
-
-	// Hierarchize instances. Add child instances data and DOM nodes to their parents.
-	const instances_to_open = new Map()
-	const instances_to_hilite = new Map()
-	// const search_instances_length = search_instances.length
-	// for (let i = 0; i < search_instances_length; i++) {
-	for(const [key, instance] of search_instances_map) {
-
-		// Hilite. Remark search result from the 'hilite_set'.
-		if (hilite_set.has(instance.ts_id)) {
-			instances_to_hilite.set(instance.ts_id, instance);
-		}
-
-		// Look for parent_instance. If not found, this instance is a root term. Continue without changes.
-		const parent_instance = search_instances_map.get(instance.ts_parent);
-		if (!parent_instance) {
-			continue; // root nodes case
-		}
-
-		// Ensure parent's children data structure is initialized.
-		parent_instance.children_data = parent_instance.children_data || {};
-		parent_instance.children_data.ar_children_data = parent_instance.children_data.ar_children_data || [];
-
-		// Inspect parent children data to check if current instance is already added.
-		// If not, update the parent instance adding the current instance data as child.
-		const child_found = parent_instance.children_data.ar_children_data.some(
-			el => el.ts_id === instance.ts_id
-		);
-		if (!child_found) {
-			// Update parent children data adding current instance data as child
-			parent_instance.add_children_item(instance.data);
-		}
-
-		// Update current instance caller.
-		instance.caller = parent_instance
-
-		// Set to open the parent children
-		instances_to_open.set(parent_instance.ts_id, parent_instance)
-	}
-
-	// --------------------------------------------------------------------------------
-	// 3. OPEN PARENTS (ASYNC)
-	// --------------------------------------------------------------------------------
-
-	// Open all parents to render and display they children.
-	// Ensure that all rendering children are complete before highlighting the nodes.
-	// IMPORTANT: instances must be opened top-down (ancestors first) so that each
-	// parent's render_child() updates children_container on its children BEFORE
-	// those children's own render_children() reads self.children_container.
-	// Processing concurrently (Promise.all) creates a race condition where a child
-	// instance reads its stale (Phase-1 detached) children_container.
-	const sorted_instances_to_open = Array.from(instances_to_open.values()).sort((a, b) => {
-		// Ancestors have ts_parent closer to 'root'; sort by depth (shallow first)
-		const depth = (instance) => {
-			let d = 0
-			let current = instance
-			while (current.ts_parent && current.ts_parent !== 'root') {
-				current = search_instances_map.get(current.ts_parent) || instances_to_open.get(current.ts_parent)
-				if (!current) break
-				d++
-			}
-			return d
-		}
-		return depth(a) - depth(b)
-	})
-
-	for (const parent_instance of sorted_instances_to_open) {
-		if(SHOW_DEBUG===true) {
-			console.log('Opening Hierarchized instance parent:',parent_instance.ts_id, parent_instance);
-		}
-
-		// Render and add children nodes into self.children_container or parent_nd_container
-		await parent_instance.render_children({
-			clean_children_container	: true,
-			children_data				: parent_instance.children_data
+		node_info.set(data_item.ts_id, {
+			key			: key,
+			data		: data_item,
+			children	: [] // filled by hierarchize_search_instances
 		})
 
-		// Update styles. Note that unsync (requestAnimationFrame) is used.
-		// This allows the children render to be completed before apply the styles.
-		requestAnimationFrame(() => {
-			// show children container
-			if (parent_instance.children_container) {
-				parent_instance.children_container.classList.remove('hide')
-			}
-			// set arrow open (link_children_element may be null when has_descriptor_children was false at render time)
-			if (parent_instance.link_children_element) {
-				parent_instance.link_children_element.classList.add('open')
-			}
-			// set is_open flag to sync with toggle logic
-			parent_instance.is_open = true
-		})
-	}
-	// Clear Maps when done
-	instances_to_open.clear();
+		// root items only: ensure instance exists and is rendered
+		if (data_item.ts_parent === 'root') {
 
-	// --------------------------------------------------------------------------------
-	// 4. HILITE AND SCROLL (IDLE/ANIMATION FRAME)
-	// --------------------------------------------------------------------------------
+			const found_instance = get_instance_by_id(key)
+			if (found_instance) {
 
-	// Hilite instances
-	dd_request_idle_callback(()=>{
-		instances_to_hilite.forEach(instance => {
-			if (instance.term_node) {
+				// Instance already exists — refresh mutable (non-key) props
 				if(SHOW_DEBUG===true) {
-					console.log('Hiliting instance:', instance.ts_id, instance);
+					console.log('==== Matched already existing root instance:', key, found_instance);
 				}
-				requestAnimationFrame(() => {
-					instance.hilite_element(instance.term_node, false)
-				});
-				if (!node_to_scroll) {
-					// scroll page to first found element
-					node_to_scroll = instance.term_node
-					when_in_dom(node_to_scroll, ()=> {
-						scroll_to_node(node_to_scroll)
-					});
+				found_instance.caller		= root_caller
+				found_instance.linker		= self.linker
+				found_instance.area_model	= root_caller.model
+				found_instance.is_ontology	= (root_caller.model === 'area_ontology')
+				found_instance.mode			= 'search'
+				found_instance.data			= data_item
+
+			}else{
+
+				// New root instance
+				const new_instance = await ts_object.get_instance({
+					// key_parts
+					section_tipo		: data_item.section_tipo,
+					section_id			: data_item.section_id,
+					children_tipo		: data_item.children_tipo,
+					target_section_tipo	: null,
+					thesaurus_mode		: self.thesaurus_mode,
+					ts_parent			: data_item.ts_parent,
+					// non-key props
+					caller				: root_caller,
+					linker				: self.linker,
+					is_root_node		: true,
+					ts_id				: data_item.ts_id,
+					order				: data_item.order,
+					area_model			: root_caller.model,
+					is_ontology			: root_caller.model === 'area_ontology',
+					mode				: 'search', // hide some elements like 'order'
+					data				: data_item  // inject row as data itself
+				})
+				if(SHOW_DEBUG===true) {
+					console.log('++++ Created new root instance:', key, new_instance);
 				}
+
+				// Build the instance without load from API (data is already injected)
+				await new_instance.build(false)
+				// Render the instance
+				await new_instance.render()
 			}
-		});
+		}
+	}
+
+	return node_info
+}//end build_search_instances
+
+
+
+/**
+* HIERARCHIZE_SEARCH_INSTANCES
+* Phase 2 of parse_search_result.
+* Links every node data item to its parent info entry (filling info.children)
+* and collects the set of branches to open. Pure data transformation: no
+* instances, no DOM.
+* @param Map node_info
+* 	Map built by build_search_instances
+* @return object {to_open: Set<ts_id>, orphans: array}
+*/
+const hierarchize_search_instances = function(node_info) {
+
+	const to_open = new Set()
+	const orphans = []
+
+	for (const [ts_id, info] of node_info) {
+
+		// root nodes have no parent to link
+		if (info.data.ts_parent === 'root') {
+			continue;
+		}
+
+		const parent_info = node_info.get(info.data.ts_parent)
+		if (!parent_info) {
+			// ancestor missing from the server data: report (do not vanish)
+			orphans.push(ts_id)
+			continue;
+		}
+
+		// add as child of the parent (dedupe by ts_id)
+		const child_found = parent_info.children.some(el => el.ts_id === ts_id)
+		if (!child_found) {
+			parent_info.children.push(info.data)
+		}
+
+		// the parent branch must be opened to show this node
+		to_open.add(info.data.ts_parent)
+	}
+
+	return { to_open, orphans }
+}//end hierarchize_search_instances
+
+
+
+/**
+* OPEN_SEARCH_BRANCHES
+* Phase 3 of parse_search_result.
+* Opens the collected branches with explicit recursion: a node's branch is
+* only processed after its parent's render_children created (and attached)
+* its wrapper, so the open order is top-down BY CONSTRUCTION — no depth
+* sorting, no detached containers.
+* Relies on render_children attaching nodes synchronously before resolving.
+* @param Map node_info
+* @param Set to_open
+* @return promise<bool>
+*/
+const open_search_branches = async function(node_info, to_open) {
+
+	const open_branch = async (ts_id) => {
+
+		if (!to_open.has(ts_id)) {
+			return // leaf: nothing to open below
+		}
+
+		const info = node_info.get(ts_id)
+
+		// resolve the live instance. For roots it was rendered in phase 1;
+		// for deeper nodes the parent's render_children just created it
+		// (same key: key parts are identical to render_child's)
+		const instance = get_instance_by_id(info.key)
+		if (!instance) {
+			console.error('[open_search_branches] Instance not found for node:', ts_id, info.key);
+			return
+		}
+
+		if(SHOW_DEBUG===true) {
+			console.log('Opening hierarchized branch:', ts_id, instance);
+		}
+
+		// merge the hierarchized children into the instance children_data
+		// (preserves children already visible when the node was open before
+		// the search, exactly like the previous add_children_item flow)
+		instance.children_data = instance.children_data || {
+			ar_children_data	: [],
+			pagination			: null
+		}
+		instance.children_data.ar_children_data = instance.children_data.ar_children_data || []
+		for (const child_data of info.children) {
+			const exists = instance.children_data.ar_children_data.some(el => el.ts_id === child_data.ts_id)
+			if (!exists) {
+				instance.children_data.ar_children_data.push(child_data)
+			}
+		}
+
+		// Render and attach children nodes (synchronous attach: when this
+		// resolves the children wrappers and containers exist)
+		await instance.render_children({
+			clean_children_container	: true,
+			children_data				: instance.children_data
+		})
+
+		// project open state
+		instance.is_open = true
+		instance.sync_open_dom()
+
+		// recurse into the children branches
+		for (const child_data of info.children) {
+			await open_branch(child_data.ts_id)
+		}
+	}
+
+	// start from root-level nodes (their parent is 'root' or not part of the
+	// opened set, i.e. already visible)
+	for (const ts_id of to_open) {
+		const info = node_info.get(ts_id)
+		if (!info) {
+			continue
+		}
+		const parent_in_set = to_open.has(info.data.ts_parent)
+		if (!parent_in_set) {
+			await open_branch(ts_id)
+		}
+	}
+
+	return true
+}//end open_search_branches
+
+
+
+/**
+* HILITE_SEARCH_RESULTS
+* Phase 4 of parse_search_result.
+* Hilites the found nodes and scrolls the page to the first one.
+* @param Map node_info
+* @param Set hilite_set
+* 	Set of ts_id strings to hilite
+* @param int total_found
+* @return void
+*/
+const hilite_search_results = function(node_info, hilite_set, total_found) {
+
+	// Set node to scroll. Used to scroll page when is needed.
+	let node_to_scroll = null
+
+	dd_request_idle_callback(()=>{
+
+		for (const ts_id of hilite_set) {
+
+			const info = node_info.get(ts_id)
+			if (!info) {
+				continue
+			}
+			const instance = get_instance_by_id(info.key)
+			if (!instance || !instance.term_node) {
+				continue
+			}
+
+			if(SHOW_DEBUG===true) {
+				console.log('Hiliting instance:', ts_id, instance);
+			}
+			requestAnimationFrame(() => {
+				instance.hilite_element(instance.term_node, false)
+			});
+
+			if (!node_to_scroll) {
+				// scroll page to first found element
+				node_to_scroll = instance.term_node
+				when_in_dom(node_to_scroll, ()=> {
+					scroll_to_node(node_to_scroll)
+				});
+			}
+		}
+
 		// Display result info
-		const total_found = to_hilite.length
 		event_manager.publish('notification', {
 			msg			: `Displaying ${total_found} records`,
 			type		: total_found > 0 ? 'success' : 'warning',
 			remove_time	: total_found == 1 ? 1000 : 6000
 		})
-		// Clear Maps when done
-		instances_to_hilite.clear();
-		search_instances_map.clear();
 	})
-
-	// debug
-	if(SHOW_DEBUG===true) {
-		console.log(`_*_Time to parse search result: ${(performance.now() - start_time).toFixed(2)}ms`);
-	}
-
-
-	return true
-}//end parser_search_result
+}//end hilite_search_results
 
 
 

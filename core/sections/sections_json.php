@@ -217,6 +217,12 @@ if (!isset($this)) { http_response_code(404); exit; }
 			}
 
 		// subdatum
+			// seen_context. Keyed dedup (tipo+section_tipo+mode) instead of a linear
+			// search per item; seed it with any context already collected above.
+			$seen_context = [];
+			foreach ($context as $context_item) {
+				$seen_context[ common::context_key($context_item) ] = true;
+			}
 			foreach ($section_instances as $section_tipo => $section) {
 
 				$section_json = $section->get_json();
@@ -224,21 +230,17 @@ if (!isset($this)) { http_response_code(404); exit; }
 				// CONTEXT. prevent duplicated context. Get the unique context and subcontext that will be need to used in client.
 				// it's necessary to have all context called but only one it's necessary, in a list the context its calculated for every row and column, getting duplicated context and subcontext
 				// include the context that wasn't included in the previous loops.
-					$current_context = $section_json->context;
-					foreach ($current_context as $context_item) {
-						$found = array_find($context, function($el) use($context_item){
-							return 	$el->tipo===$context_item->tipo &&
-									$el->section_tipo===$context_item->section_tipo &&
-									$el->mode===$context_item->mode;
-						});
-						if ($found===null) {
-							// add if not already exists
-							$context[] = $context_item;
+					foreach ($section_json->context as $context_item) {
+						$context_item_key = common::context_key($context_item);
+						if (isset($seen_context[$context_item_key])) {
+							continue;
 						}
+						$seen_context[$context_item_key] = true;
+						$context[] = $context_item;
 					}
 
 				// data
-					$data = [...$data, ...$section_json->data];
+					array_push($data, ...$section_json->data);
 			}
 
 	}//end if (empty($sections_data))

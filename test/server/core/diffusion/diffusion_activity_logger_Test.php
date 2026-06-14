@@ -82,4 +82,85 @@ final class diffusion_activity_logger_Test extends BaseTestCase {
             $this->assertEquals('oh0', $loc->section_tipo, "Diffusion Element Tipo: Expected oh0");
         }
     }
+
+
+    /**
+     * TEST_LOG_ACTIONS
+     * The dd1767 action component (→ value list dd1774) records the action
+     * of every activity row: published / unpublished / unpublish_pending.
+     * The debounce key includes the action: the same (record, element) can
+     * legitimately produce one row per distinct action.
+     */
+    public function test_log_actions(): void {
+
+        require_once dirname(__DIR__, 2) . '/diffusion/class.diffusion_test_helper.php';
+
+        $this->user_login();
+        diffusion_test_helper::require_activity_action_ontology($this);
+
+        $baseline = diffusion_test_helper::activity_baseline();
+        diffusion_activity_logger::reset_cache();
+
+        try {
+            $section_tipo = 'rsc170';
+            $section_id   = 990001; // fabricated: never a real record
+            $element_tipo = 'oh63';
+
+            $actions = [
+                diffusion_activity_logger::ACTION_PUBLISHED,
+                diffusion_activity_logger::ACTION_UNPUBLISHED,
+                diffusion_activity_logger::ACTION_UNPUBLISH_PENDING,
+            ];
+
+            // 1. one row per distinct action for the same (record, element)
+            foreach ($actions as $action) {
+                $logged = diffusion_activity_logger::log($section_tipo, $section_id, $element_tipo, $action);
+                $this->assertTrue($logged, "Action $action was debounced but is a distinct action");
+            }
+
+            // 2. debounce: repeating the same (record, element, action) returns false
+            $repeat = diffusion_activity_logger::log(
+                $section_tipo, $section_id, $element_tipo,
+                diffusion_activity_logger::ACTION_PUBLISHED
+            );
+            $this->assertFalse($repeat, 'Same (record, element, action) must be debounced');
+
+            // 3. reset_cache re-allows logging
+            diffusion_activity_logger::reset_cache();
+            $after_reset = diffusion_activity_logger::log(
+                $section_tipo, $section_id, $element_tipo,
+                diffusion_activity_logger::ACTION_PUBLISHED
+            );
+            $this->assertTrue($after_reset, 'reset_cache must clear the debounce');
+
+            // 4. rows carry the dd1767 locator to the dd1774 value list
+            $conn   = DBi::_getConnection();
+            $result = pg_query_params(
+                $conn,
+                'SELECT relation FROM matrix_activity_diffusion WHERE section_id > $1 ORDER BY section_id ASC',
+                [$baseline]
+            );
+            $found_actions = [];
+            while ($row = pg_fetch_object($result)) {
+                $relation    = json_decode($row->relation);
+                $action_tipo = diffusion_activity_logger::ACTION_TIPO;
+                $this->assertTrue(isset($relation->{$action_tipo}), "Action ($action_tipo) locator missing in relation column");
+                $locator = $relation->{$action_tipo}[0];
+                $this->assertEquals(
+                    diffusion_activity_logger::ACTION_SECTION_TIPO,
+                    $locator->section_tipo,
+                    'Action locator must point to the value-list section'
+                );
+                $found_actions[] = (int)$locator->section_id;
+            }
+
+            foreach ($actions as $action) {
+                $this->assertContains($action, $found_actions, "No row recorded action $action");
+            }
+
+        } finally {
+            diffusion_test_helper::cleanup_activity_rows($baseline);
+            diffusion_activity_logger::reset_cache();
+        }
+    }//end test_log_actions
 }

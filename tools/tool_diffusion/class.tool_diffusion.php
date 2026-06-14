@@ -22,4 +22,24 @@ class tool_diffusion extends tool_common {
 
 
 
+	/**
+	* IS_AVAILABLE
+	* Availability hook called by common::get_tools() (moved here from the
+	* previously hardcoded core case). Components are never in the diffusion
+	* map; sections require a diffusion definition in the Ontology.
+	* Lifecycle hook: never list in API_ACTIONS.
+	* @param object $context {caller_model, called_class, is_component, tipo, section_tipo, mode}
+	* @return bool
+	*/
+	public static function is_available(object $context) : bool {
+
+		if ($context->is_component === true) {
+			return false;
+		}
+
+		return diffusion_utils::have_section_diffusion($context->tipo) !== false;
+	}//end is_available
+
+
+
 }//end class tool_diffusion

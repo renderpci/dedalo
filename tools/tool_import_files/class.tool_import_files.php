@@ -599,7 +599,8 @@ class tool_import_files extends tool_common {
 			// components_temp_data. array of objects like: '[{"section_id":"tmp","section_tipo":"rsc170","tipo":"rsc23","lang":"lg-eng","from_component_tipo":"rsc23","value":[],"parent_tipo":"rsc23","parent_section_id":"tmp","fallback_value":[null],"debug":{"exec_time":"0.740 ms"},"debug_model":"component_input_text","debug_label":"Title","debug_mode":"edit"}]'
 			$components_temp_data		= $options->components_temp_data ?? null;
 			// key_dir. string like: 'oh17_oh1' (contraction section_tipo + component tipo)
-			$key_dir					= $options->key_dir ?? null;
+			// TOOLS-05: client-supplied; sanitize before it builds a filesystem path.
+			$key_dir					= sanitize_key_dir($options->key_dir ?? '');
 			// custom_target_quality. Optional media quality to store uploaded files
 			$custom_target_quality		= $options->custom_target_quality ?? null;
 
@@ -687,7 +688,18 @@ class tool_import_files extends tool_common {
 					}
 
 				// Check file exists
-					$file_full_path = $tmp_dir .'/'. $current_file_name;
+					// TOOLS-05: confine the url-decoded client name under $tmp_dir
+					// before any filesystem access (rawurldecode can expand %2e%2e/).
+					try {
+						$file_full_path = safe_upload_target($tmp_dir, $current_file_name, false);
+					} catch (\Throwable $e) {
+						$msg = "File ignored (invalid name) $current_file_name";
+						$ar_msg[] = $msg;
+						debug_log(__METHOD__ ." $msg: ". $e->getMessage(), logger::ERROR);
+						$response->errors[] = $msg;
+						common::$pdata->errors[] = $msg;
+						continue; // Skip file
+					}
 					if (!file_exists($file_full_path)) {
 						$msg = "File ignored (not found) $current_file_name";
 						$ar_msg[] = $msg;

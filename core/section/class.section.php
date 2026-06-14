@@ -954,7 +954,7 @@ class section extends common {
 
 	/**
 	* GET_PUBLICATION_DATE
-	* @see class.diffusion definitions for publication_first_tipo, publication_last_tipo, etc.
+	* @see class.diffusion_utils definitions for publication_first_tipo, publication_last_tipo, etc.
 	* @param string $component_tipo
 	* @return string|null $local_date
 	*/
@@ -1387,12 +1387,8 @@ class section extends common {
 			// In those cases the component_dataframe manage its data as other components with whole data.
 			if($model === 'component_dataframe' && isset($caller_dataframe) ) {
 
-				if (
-					( isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo)
-					&& ( isset($current_locator->section_id_key) && intval($current_locator->section_id_key)===intval($caller_dataframe->section_id_key) )
-					&& ( isset($current_locator->section_tipo_key) && $current_locator->section_tipo_key===$caller_dataframe->section_tipo_key)
-					&& ( isset($current_locator->main_component_tipo) && $current_locator->main_component_tipo===$caller_dataframe->main_component_tipo)
-					){
+				// central match predicate (dual-read: id_key unified contract / section_id_key legacy)
+				if ( component_common::dataframe_entry_matches($current_locator, $caller_dataframe, $component_tipo) ){
 						$ar_deleted_locators[] = $current_locator;
 
 						debug_log(__METHOD__
@@ -1667,6 +1663,45 @@ class section extends common {
 
 		return $sqo_id;
 	}//end build_sqo_id
+
+
+
+	/**
+	* GET_SESSION_SQO
+	* Accessor for the section navigation SQO stored in session
+	* ($_SESSION['dedalo']['config']['sqo'][$sqo_id]). Use this instead of
+	* touching the superglobal directly so the storage shape stays in one place.
+	* @param string $sqo_id
+	* 	Key built by section::build_sqo_id()
+	* @return object|null $session_sqo
+	*/
+	public static function get_session_sqo(string $sqo_id) : ?object {
+
+		$session_sqo = $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
+
+		return is_object($session_sqo)
+			? $session_sqo
+			: null;
+	}//end get_session_sqo
+
+
+
+	/**
+	* SET_SESSION_SQO
+	* Stores (or removes, on null) the section navigation SQO in session.
+	* @param string $sqo_id
+	* @param object|null $sqo
+	* @return void
+	*/
+	public static function set_session_sqo(string $sqo_id, ?object $sqo) : void {
+
+		if ($sqo===null) {
+			unset($_SESSION['dedalo']['config']['sqo'][$sqo_id]);
+			return;
+		}
+
+		$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+	}//end set_session_sqo
 
 
 

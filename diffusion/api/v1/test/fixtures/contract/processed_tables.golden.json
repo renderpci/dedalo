@@ -1,0 +1,46 @@
+[
+	{
+		"database_name": "web_test_diffusion",
+		"table_name": "interview",
+		"section_tipo": "test3",
+		"records": [
+			{
+				"section_id": 1,
+				"lang": "lg-eng",
+				"columns": {
+					"code": "CODE-001",
+					"title": "English title"
+				}
+			},
+			{
+				"section_id": 1,
+				"lang": "lg-spa",
+				"columns": {
+					"code": "CODE-001",
+					"title": "Título español"
+				}
+			}
+		],
+		"deletions": [
+			2
+		],
+		"columns_context": {
+			"code": {
+				"term": "code",
+				"tipo": "test10",
+				"model": "field_text",
+				"parent": "test5",
+				"parser": {},
+				"columns": []
+			},
+			"title": {
+				"term": "title",
+				"tipo": "test11",
+				"model": "field_text",
+				"parent": "test5",
+				"parser": {},
+				"columns": []
+			}
+		}
+	}
+]

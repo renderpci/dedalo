@@ -5,7 +5,7 @@
 
 
 // imports
-	import {clone, url_vars_to_object, object_to_url_vars, dd_console, load_style} from '../../common/js/utils/index.js'
+	import {clone, url_vars_to_object, object_to_url_vars, dd_console, load_style, tool_base_url} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance, get_all_instances} from '../../common/js/instances.js'
@@ -22,7 +22,6 @@
 	import {ui} from '../../common/js/ui.js'
 	import {check_unsaved_data} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
-	import {search} from '../../search/js/search.js'
 	import {toggle_search_panel} from '../../search/js/render_search.js'
 	import {inspector} from '../../inspector/js/inspector.js'
 	import {render_edit_section} from './render_edit_section.js'
@@ -538,10 +537,16 @@ section.prototype.build = async function(autoload=false) {
 
 	// filter search
 		if (self.filter===null && self.mode!=='tm') {
-			self.filter = new search()
-			await self.filter.init({
-				caller	: self,
-				mode	: self.mode
+			// keyed, registered instance (no longer a bare `new search()`).
+			// id_variant disambiguates section searches from area searches that
+			// could otherwise share section_tipo/mode/lang.
+			self.filter = await get_instance({
+				model			: 'search',
+				section_tipo	: self.section_tipo,
+				mode			: self.mode,
+				lang			: self.lang,
+				id_variant		: self.model,
+				caller			: self
 			})
 			// preload search (experimental disable now)
 			const pre_built_search = false
@@ -1036,7 +1041,7 @@ section.prototype.load_section_tool_files = function() {
 
 	// css file load
 		const model	= self.config.tool_context.model
-		const url	= DEDALO_TOOLS_URL + '/' + model + '/css/' + model + '.css'
+		const url	= tool_base_url(model) + '/css/' + model + '.css'
 		load_style(url)
 
 	// debug

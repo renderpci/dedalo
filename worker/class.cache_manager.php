@@ -71,39 +71,57 @@ final class cache_manager {
 			// }
 		});
 
-		// hierarchy
+		// hierarchy — main lang map, section map elements, section instances
 		$this->register('hierarchy', function(): void {
-			// if (class_exists('\hierarchy') && method_exists('\hierarchy', 'clear')) {
-			// 	\hierarchy::clear();
-			// }
+			if (class_exists('\hierarchy', false)) {
+				\hierarchy::clear();
+			}
 		});
 
-		// component_common
+		// ts_object — term resolution cache + resolved children cache.
+		// Stale across requests in worker mode otherwise (a term edited in one
+		// request would keep serving its old cached string in the next).
+		$this->register('ts_object', function(): void {
+			if (class_exists('\ts_object', false)) {
+				\ts_object::clear();
+			}
+		});
+
+		// component_common — list_of_values (datalist) caches. COMP-03: these are
+		// process-wide statics holding per-user, project-filtered option lists; left
+		// uncleared they leak one user's options to the next request in the worker
+		// (the class contract documents clear() as the reset hook). Pairs with the
+		// user-scoped cache key in component_common::get_list_of_values (COMP-01).
 		$this->register('component_common', function(): void {
-			// if (class_exists('\component_common') && method_exists('\component_common', 'clear')) {
-			// 	\component_common::clear();
-			// }
+			if (class_exists('\component_common', false) && method_exists('\component_common', 'clear')) {
+				\component_common::clear();
+			}
 		});
 
-		// ontology
+		// ontology — WORKER-06: intentionally NOT cleared per request. The ontology
+		// is (near-)static structural data shared by all users; clearing it every
+		// request would be a large performance regression with no correctness benefit.
+		// (Memory growth of its per-tipo caches is bounded separately — see COMP-05.)
 		$this->register('ontology', function(): void {
-			// if (class_exists('\ontology') && method_exists('\ontology', 'clear')) {
-			// 	\ontology::clear();
-			// }
+			// intentionally a no-op; see comment above.
 		});
 
-		// section_record_instances_cache
+		// section_record_instances_cache — WORKER-06: per-request record instances.
+		// Left uncleared, a section_record loaded for one user/request can be served
+		// from cache to the next request in the persistent worker (stale/cross-user
+		// data). Clear it every request.
 		$this->register('section_record_instances_cache', function(): void {
-			// if (class_exists('\section_record_instances_cache') && method_exists('\section_record_instances_cache', 'clear')) {
-			// 	\section_record_instances_cache::clear();
-			// }
+			if (class_exists('\section_record_instances_cache', false) && method_exists('\section_record_instances_cache', 'clear')) {
+				\section_record_instances_cache::clear();
+			}
 		});
 
-		// component_instances_cache
+		// component_instances_cache — WORKER-06: per-request component instances; same
+		// cross-request bleed risk as above. Clear it every request.
 		$this->register('component_instances_cache', function(): void {
-			// if (class_exists('\component_instances_cache') && method_exists('\component_instances_cache', 'clear')) {
-			// 	\component_instances_cache::clear();
-			// }
+			if (class_exists('\component_instances_cache', false) && method_exists('\component_instances_cache', 'clear')) {
+				\component_instances_cache::clear();
+			}
 		});
 	}
 

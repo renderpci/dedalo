@@ -672,17 +672,20 @@ final class component_common_test extends BaseTestCase {
 					'expected get_grid_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
 				);
 			}else{
-				if (in_array($element->model, component_relation_common::get_components_with_relations())) {
-					$this->assertTrue(
-						gettype($dd_grid_cell_object->value)==='array',
-						'expected get_grid_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
-					);
-				}else{
-					$this->assertTrue(
-						gettype($dd_grid_cell_object->value)==='array',
-						'expected get_grid_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
-					);
-				}
+				// raw values are wrapped as {"dedalo_data": <dato>} to identify
+				// externally that the value is Dédalo format data (see get_raw_value)
+				$this->assertTrue(
+					is_array($dd_grid_cell_object->value),
+					'expected get_raw_value type is array. ' .gettype($dd_grid_cell_object->value) ." ($element->model)"
+				);
+				$this->assertTrue(
+					array_key_exists('dedalo_data', $dd_grid_cell_object->value),
+					'expected get_raw_value to have "dedalo_data" key' ." ($element->model)"
+				);
+				$this->assertTrue(
+					gettype($dd_grid_cell_object->value['dedalo_data'])==='array',
+					'expected wrapped dedalo_data type is array. ' .gettype($dd_grid_cell_object->value['dedalo_data']) ." ($element->model)"
+				);
 			}
 		}//end foreach (get_elements() as $element)
 	}//end test_get_raw_value
@@ -690,10 +693,12 @@ final class component_common_test extends BaseTestCase {
 
 
 	/**
-	* TEST_GET_GRID_FLAT_VALUE
+	* TEST_GET_EXPORT_VALUE
+	* Atoms based export contract: structural assertions for all fixture elements
+	* (per-component flat parity is asserted in each component own test)
 	* @return void
 	*/
-	public function test_get_grid_flat_value() {
+	public function test_get_export_value() {
 
 		$this->user_login();
 
@@ -711,31 +716,241 @@ final class component_common_test extends BaseTestCase {
 				false
 			);
 
-			$dd_grid_cell_object = $component->get_grid_flat_value();
-				// dump($dd_grid_cell_object, ' raw_value dd_grid_cell_object ++ '.to_string($element->model));
+			$export_value = $component->get_export_value();
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
+				'expected running without errors' . PHP_EOL
+				.'$_ENV[DEDALO_LAST_ERROR]: ' . to_string($_ENV['DEDALO_LAST_ERROR']) ." ($element->model)"
 			);
 
-			$this->assertTrue(
-				gettype($dd_grid_cell_object)==='object',
-				'expected get_grid_value type is object. ' .gettype($dd_grid_cell_object) ." ($element->model)"
-			);
+			$this->assertInstanceOf(export_value::class, $export_value, "($element->model)");
 
-			$this->assertInstanceOf(dd_grid_cell_object::class, $dd_grid_cell_object);
+			foreach ($export_value->atoms as $atom) {
 
-			if (!empty($dd_grid_cell_object->value)) {
+				$this->assertInstanceOf(export_atom::class, $atom, "($element->model)");
+
+				// atom values are strictly scalar or null
 				$this->assertTrue(
-					gettype($dd_grid_cell_object->value)==='string' || gettype($dd_grid_cell_object->value)==='array',
-					'expected get_grid_value type is string or array. type:' .gettype($dd_grid_cell_object->value) . PHP_EOL
-					." ($element->model)" . PHP_EOL
-					. json_encode($dd_grid_cell_object)
+					$atom->value===null || is_scalar($atom->value),
+					'expected scalar|null atom value. ' . gettype($atom->value) ." ($element->model)"
+				);
+
+				// path: non-empty list of export_path_segment, leaf resolvable
+				$this->assertNotEmpty($atom->path, "expected non empty atom path ($element->model)");
+				foreach ($atom->path as $segment) {
+					$this->assertInstanceOf(export_path_segment::class, $segment, "($element->model)");
+				}
+				$this->assertNotEmpty(
+					$atom->get_base_key(),
+					"expected non empty base_key ($element->model)"
 				);
 			}
-		}
-	}//end test_get_grid_flat_value
+
+			// to_flat_string never fails and returns string
+			$this->assertTrue(
+				gettype($export_value->to_flat_string())==='string',
+				"expected to_flat_string string ($element->model)"
+			);
+		}//end foreach (get_elements() as $element)
+	}//end test_get_export_value
+
+
+
+	/**
+	* TEST_GET_RAW_EXPORT_VALUE
+	* The atoms raw path must match the legacy get_raw_value() wire shape
+	* exactly (shared build_raw_export_data chokepoint): decoded atom value
+	* equals the legacy grid value for every component
+	* @return void
+	*/
+	public function test_get_raw_export_value() {
+
+		$this->user_login();
+
+		// default data
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			// legacy reference
+				$legacy_raw = $component->get_raw_value();
+
+			// atoms path
+				$raw_export_value = $component->get_raw_export_value();
+
+			// some components initialize their data on first read (null -> []),
+			// e.g. component_relation_children computing references: recompute
+			// the legacy reference after the atoms call so both paths observe
+			// the same data state
+				$legacy_recheck = $component->get_raw_value();
+				if (json_encode($legacy_recheck->value)!==json_encode($legacy_raw->value)) {
+					$legacy_raw = $legacy_recheck;
+				}
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors' . PHP_EOL
+				.'$_ENV[DEDALO_LAST_ERROR]: ' . to_string($_ENV['DEDALO_LAST_ERROR']) ." ($element->model)"
+			);
+
+			$this->assertInstanceOf(export_value::class, $raw_export_value, "($element->model)");
+			$this->assertCount(1, $raw_export_value->atoms, "expected single raw atom ($element->model)");
+
+			$atom = $raw_export_value->atoms[0];
+			$this->assertSame(
+				$legacy_raw->cell_type,
+				$atom->cell_type,
+				"expected raw cell_type parity ($element->model)"
+			);
+
+			if ($atom->cell_type==='section_id') {
+				// plain int (record key on re-import) or null when empty
+				$legacy_first = is_array($legacy_raw->value) ? reset($legacy_raw->value) : $legacy_raw->value;
+				$expected = isset($legacy_first) ? (int)$legacy_first : null;
+				$this->assertSame($expected, $atom->value, "expected raw section_id parity ($element->model)");
+				continue;
+			}
+
+			if ($legacy_raw->value===null) {
+				$this->assertNull($atom->value, "expected null raw value parity ($element->model)");
+				continue;
+			}
+
+			// pre-encoded {"dedalo_data": ...} string: byte-equal to the legacy
+			// value encoded with the same flags (what the wire/CSV carries)
+				$this->assertTrue(
+					is_string($atom->value),
+					"expected pre-encoded raw string ($element->model)"
+				);
+				$this->assertSame(
+					json_encode($legacy_raw->value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+					$atom->value,
+					"expected raw value byte parity ($element->model)"
+				);
+		}//end foreach (get_elements() as $element)
+	}//end test_get_raw_export_value
+
+
+
+	/**
+	* TEST_UNWRAP_DEDALO_DATA
+	* @return void
+	*/
+	public function test_unwrap_dedalo_data() {
+
+		// wrapped case
+		$wrapped = '{"dedalo_data":[{"value":"Hello","lang":"lg-eng","id":1}]}';
+		$response = component_common::unwrap_dedalo_data($wrapped);
+		$this->assertTrue(
+			$response->wrapped===true,
+			'expected wrapped true'
+		);
+		$decoded = json_decode($response->value);
+		$this->assertIsArray($decoded);
+		$this->assertEquals('Hello', $decoded[0]->value);
+
+		// plain v7 case (un-wrapped, returned unchanged)
+		$plain = '[{"value":"Hello"}]';
+		$response = component_common::unwrap_dedalo_data($plain);
+		$this->assertTrue(
+			$response->wrapped===false,
+			'expected wrapped false'
+		);
+		$this->assertEquals($plain, $response->value);
+
+		// plain string case (not JSON, returned unchanged)
+		$response = component_common::unwrap_dedalo_data('Hello world');
+		$this->assertTrue($response->wrapped===false);
+		$this->assertEquals('Hello world', $response->value);
+
+		// object without the marker (returned unchanged)
+		$other = '{"lg-eng":["Hello"]}';
+		$response = component_common::unwrap_dedalo_data($other);
+		$this->assertTrue($response->wrapped===false);
+		$this->assertEquals($other, $response->value);
+
+		// object containing 'dedalo_data' among OTHER properties is a legitimate
+		// value (e.g. a component_json value), NOT the wrapper: returned unchanged
+		$not_wrapper = '{"dedalo_data":1,"other":2}';
+		$response = component_common::unwrap_dedalo_data($not_wrapper);
+		$this->assertTrue($response->wrapped===false, 'expected wrapped false for object with extra properties');
+		$this->assertEquals($not_wrapper, $response->value);
+
+		// wrapped null dato: treated as an empty cell (clears data)
+		$response = component_common::unwrap_dedalo_data('{"dedalo_data":null}');
+		$this->assertTrue($response->wrapped===false, 'expected wrapped false for null dato');
+		$this->assertSame('', $response->value, 'expected empty value for wrapped null dato');
+
+		// slashes are preserved un-escaped on re-encode (export fidelity)
+		$wrapped_iri = '{"dedalo_data":[{"iri":"https://dedalo.dev/docs","id":1}]}';
+		$response = component_common::unwrap_dedalo_data($wrapped_iri);
+		$this->assertTrue($response->wrapped===true);
+		$this->assertStringContainsString('https://dedalo.dev/docs', $response->value, 'expected un-escaped slashes');
+	}//end test_unwrap_dedalo_data
+
+
+
+	/**
+	* TEST_IS_PLAIN_BRACKET_STRING
+	* @return void
+	*/
+	public function test_is_plain_bracket_string() {
+
+		// admitted plain strings
+		$this->assertTrue(component_common::is_plain_bracket_string('Hello'));
+		$this->assertTrue(component_common::is_plain_bracket_string('[Ac]'));
+		$this->assertTrue(component_common::is_plain_bracket_string('[1,2,3]'));
+
+		// rejected malformed JSON array of strings
+		$this->assertFalse(component_common::is_plain_bracket_string('["Hello'));
+		$this->assertFalse(component_common::is_plain_bracket_string('Hello"]'));
+		$this->assertFalse(component_common::is_plain_bracket_string('["Hello"]'));
+	}//end test_is_plain_bracket_string
+
+
+
+	/**
+	* TEST_CONFORM_IMPORT_DATA_MULTILANG
+	* Multi-language JSON objects must be kept as objects with normalized
+	* per-lang arrays of v7 items (not cast to associative arrays)
+	* @return void
+	*/
+	public function test_conform_import_data_multilang() {
+
+		$this->user_login();
+
+		$component = component_common::get_instance(
+			'component_input_text',
+			'test52',
+			1,
+			'list',
+			DEDALO_DATA_LANG,
+			'test3'
+		);
+
+		// multi-lang object with plain string values
+		$response = $component->conform_import_data('{"lg-eng":"My value","lg-spa":"Mi valor"}', 'test52');
+		$this->assertTrue(empty($response->errors), 'expected empty errors');
+		$conformed = $response->result;
+		$this->assertIsObject($conformed, 'expected object result for multi-lang input');
+		$lg_eng = 'lg-eng';
+		$this->assertIsArray($conformed->$lg_eng, 'expected array lang value');
+		$this->assertEquals('My value', $conformed->$lg_eng[0]->value);
+
+		// '0' value must not be lost
+		$response = $component->conform_import_data('0', 'test52');
+		$this->assertTrue(!empty($response->result), "expected '0' value to be conformed, not nulled");
+	}//end test_conform_import_data_multilang
 
 
 

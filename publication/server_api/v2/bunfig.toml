@@ -1,0 +1,9 @@
+[install]
+peer = false
+
+[test]
+coverage = true
+coverageThreshold = { lines = 0.8, functions = 0.8 }
+
+[run]
+bun = true

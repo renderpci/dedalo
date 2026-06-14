@@ -6,6 +6,16 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 
 
+// css_var. Reads a CSS custom property from :root with a literal fallback, so the
+// dashboard's default colors follow the active theme instead of being hardcoded.
+	const css_var = (name, fallback) => {
+		const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+		return v || fallback
+	}
+	// Default accent / muted used when a section has no configured color.
+	const DEFAULT_SECTION_COLOR	= css_var('--color_primary', '#3b82f6')
+	const DEFAULT_MUTED_COLOR	= css_var('--color_grey_7', '#94a3b8')
+
 
 /**
 * DASHBOARD
@@ -284,7 +294,7 @@ const build_card = function(section, dashboard_data) {
 
 	const card = document.createElement('div')
 	card.classList.add('area_dashboard_card')
-	card.style.setProperty('--accent', section.color || '#3b82f6')
+	card.style.setProperty('--accent', section.color || DEFAULT_SECTION_COLOR)
 
 	// click → SPA navigation (same as menu tree)
 	const url = build_section_url(section)
@@ -406,14 +416,14 @@ const build_sparkline = function(section, dashboard_data) {
 
 	const fill = document.createElementNS(SVG_NS, 'path')
 	fill.setAttribute('d', area)
-	fill.setAttribute('fill', section.color || '#3b82f6')
+	fill.setAttribute('fill', section.color || DEFAULT_SECTION_COLOR)
 	fill.setAttribute('fill-opacity', '0.18')
 	svg.appendChild(fill)
 
 	const stroke = document.createElementNS(SVG_NS, 'path')
 	stroke.setAttribute('d', line)
 	stroke.setAttribute('fill', 'none')
-	stroke.setAttribute('stroke', section.color || '#3b82f6')
+	stroke.setAttribute('stroke', section.color || DEFAULT_SECTION_COLOR)
 	stroke.setAttribute('stroke-width', '1.25')
 	stroke.setAttribute('stroke-linecap', 'round')
 	stroke.setAttribute('stroke-linejoin', 'round')
@@ -424,7 +434,7 @@ const build_sparkline = function(section, dashboard_data) {
 	dot.setAttribute('cx', String((peak_idx * step).toFixed(2)))
 	dot.setAttribute('cy', String(y_for(max).toFixed(2)))
 	dot.setAttribute('r', '1.6')
-	dot.setAttribute('fill', section.color || '#3b82f6')
+	dot.setAttribute('fill', section.color || DEFAULT_SECTION_COLOR)
 	svg.appendChild(dot)
 
 	// Tooltip
@@ -694,7 +704,7 @@ const render_bar_chart = function(d3, host, dashboard_data, expanded = false) {
 		.attr('y', 0)
 		.attr('width', d => Math.max(1, x(d.total) - padding_left))
 		.attr('height', y.bandwidth())
-		.attr('fill', d => d.color || '#3b82f6')
+		.attr('fill', d => d.color || DEFAULT_SECTION_COLOR)
 		.append('title')
 		.text(d => `${d.label}: ${format_number(d.total)} — click to open`)
 
@@ -797,7 +807,7 @@ const render_pie_chart = function(d3, host, dashboard_data) {
 		.join('path')
 		.attr('class', 'area_dashboard_chart_pie_slice')
 		.attr('d', arc)
-		.attr('fill', d => d.data.color || '#3b82f6')
+		.attr('fill', d => d.data.color || DEFAULT_SECTION_COLOR)
 		.attr('stroke', 'var(--bg_elevated)')
 		.attr('stroke-width', 1.5)
 		.style('cursor', d => d.data._is_other ? 'default' : 'pointer')
@@ -862,7 +872,7 @@ const render_pie_chart = function(d3, host, dashboard_data) {
 		}
 		const dot = document.createElement('span')
 		dot.classList.add('area_dashboard_chart_pie_legend_dot')
-		dot.style.backgroundColor = r.color || '#3b82f6'
+		dot.style.backgroundColor = r.color || DEFAULT_SECTION_COLOR
 		item.appendChild(dot)
 		const lbl = document.createElement('span')
 		lbl.classList.add('area_dashboard_chart_pie_legend_label')
@@ -938,7 +948,7 @@ const render_treemap_chart = function(d3, host, dashboard_data) {
 		tile.style.top		= leaf.y0 + 'px'
 		tile.style.width	= w + 'px'
 		tile.style.height	= h + 'px'
-		tile.style.backgroundColor = d.color || '#3b82f6'
+		tile.style.backgroundColor = d.color || DEFAULT_SECTION_COLOR
 
 		const pct = grand_total > 0 ? ((d.total / grand_total) * 100).toFixed(1) : '0'
 		tile.title = `${d.label}: ${format_number(d.total)} (${pct}%) — click to open`
@@ -1041,14 +1051,14 @@ const render_sunburst_chart = function(d3, host, dashboard_data) {
 
 	// Average a list of hex colors for the inner-ring group color.
 	const average_hex = function(hex_list) {
-		if (!hex_list.length) return '#94a3b8'
+		if (!hex_list.length) return DEFAULT_MUTED_COLOR
 		let r = 0, g = 0, b = 0, n = 0
 		for (const hex of hex_list) {
 			const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || '')
 			if (!m) continue
 			r += parseInt(m[1], 16); g += parseInt(m[2], 16); b += parseInt(m[3], 16); n++
 		}
-		if (n === 0) return '#94a3b8'
+		if (n === 0) return DEFAULT_MUTED_COLOR
 		r = Math.round(r / n); g = Math.round(g / n); b = Math.round(b / n)
 		return `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`
 	}
@@ -1060,7 +1070,7 @@ const render_sunburst_chart = function(d3, host, dashboard_data) {
 			const child_colors = (d.children || []).map(c => c.data.section && c.data.section.color)
 			return average_hex(child_colors.filter(Boolean))
 		}
-		return (d.data.section && d.data.section.color) || '#3b82f6'
+		return (d.data.section && d.data.section.color) || DEFAULT_SECTION_COLOR
 	}
 
 	const svg = d3.select(host)
@@ -1179,7 +1189,7 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 	// Build section colour map from existing dashboard sections
 	const section_color = {}
 	for (const s of dashboard_data.sections) {
-		section_color[s.section_tipo] = s.color || '#3b82f6'
+		section_color[s.section_tipo] = s.color || DEFAULT_SECTION_COLOR
 	}
 
 	// Build section label map (from all dashboard sections, not just current data)
@@ -1384,7 +1394,7 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 				.data(layers)
 				.join('g')
 				.attr('class', 'area_dashboard_activity_bar_layer')
-				.attr('fill', d => section_color[d.key] || '#3b82f6')
+				.attr('fill', d => section_color[d.key] || DEFAULT_SECTION_COLOR)
 				.each(function(layer) {
 					d3.select(this).selectAll('rect')
 						.data(layer)
@@ -1416,7 +1426,7 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 				.join('path')
 				.attr('class', 'area_dashboard_activity_line')
 				.attr('fill', 'none')
-				.attr('stroke', d => section_color[d.tipo] || '#3b82f6')
+				.attr('stroke', d => section_color[d.tipo] || DEFAULT_SECTION_COLOR)
 				.attr('stroke-width', 1.75)
 				.attr('stroke-linecap', 'round')
 				.attr('stroke-linejoin', 'round')
@@ -1442,7 +1452,7 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 			layers_g.selectAll('path')
 				.data(layers)
 				.join('path')
-				.attr('fill', d => section_color[d.key] || '#3b82f6')
+				.attr('fill', d => section_color[d.key] || DEFAULT_SECTION_COLOR)
 				.attr('d', area)
 				.attr('opacity', 0.82)
 				.append('title')
@@ -1485,7 +1495,7 @@ const render_activity_timeline = function(d3, host, dashboard_data) {
 			item.classList.add('area_dashboard_activity_legend_item')
 			const dot = document.createElement('span')
 			dot.classList.add('area_dashboard_activity_legend_dot')
-			dot.style.backgroundColor = section_color[tipo] || '#3b82f6'
+			dot.style.backgroundColor = section_color[tipo] || DEFAULT_SECTION_COLOR
 			item.appendChild(dot)
 			const lbl = document.createElement('span')
 			lbl.textContent = section_label[tipo] || tipo

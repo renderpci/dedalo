@@ -10,12 +10,34 @@ class tool_time_machine extends tool_common {
 
 	/**
 	* SEC-024 (§9.2): explicit allowlist of methods callable via
-	* `dd_tools_api::tool_request`.
+	* `dd_tools_api::tool_request`, in map form (§9.3): the framework
+	* (dd_tools_api via tool_security) enforces these declarative permission
+	* gates BEFORE dispatch. The imperative security::assert_* calls inside
+	* the method bodies stay as defense in depth: they also cover the
+	* CLI/background execution path, which bypasses dd_tools_api.
+	* Note: for apply_value on a section restore, tipo === section_tipo, so
+	* the 'tipo' gate is equivalent to the section gate.
 	*/
 	public const API_ACTIONS = [
-		'apply_value',
-		'bulk_revert_process'
+		'apply_value'         => ['permission' => 'tipo',    'min_level' => 2],
+		'bulk_revert_process' => ['permission' => 'section', 'min_level' => 2]
 	];
+
+
+
+	/**
+	* IS_AVAILABLE
+	* Availability hook called by common::get_tools() (moved here from the
+	* previously hardcoded core case). component_relation_children has no
+	* time-machine data, so the tool is hidden there.
+	* Lifecycle hook: never list in API_ACTIONS.
+	* @param object $context {caller_model, called_class, is_component, tipo, section_tipo, mode}
+	* @return bool
+	*/
+	public static function is_available(object $context) : bool {
+
+		return $context->called_class !== 'component_relation_children';
+	}//end is_available
 
 
 

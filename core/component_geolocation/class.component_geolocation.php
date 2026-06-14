@@ -165,10 +165,9 @@ class component_geolocation extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE_SOCRATA
 	* Calculate current component diffusion value for target field in socrata
-	* Used for diffusion_mysql to unify components diffusion value call to publish in socrata
+	* Used by diffusion to unify components diffusion value call to publish in socrata
 	* @return object $diffusion_value_socrata
 	*
-	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value_socrata() : ?object {
 
@@ -235,7 +234,6 @@ class component_geolocation extends component_common {
 		*    }
 		* ]
 	* @see ontology publication use in mdcat4091
-	* @see diffusion_sql::build_geolocation_data_geojson
 	* @return string $value
 	* 	Encoded GEOJSON data
 	*/
@@ -316,6 +314,233 @@ class component_geolocation extends component_common {
 
 		return false;
 	}//end get_sortable
+
+
+
+	/**
+	* CONFORM_IMPORT_DATA
+	* Accepted import formats:
+	* 1. Full v7 dato (JSON array of items):
+	* 	[{"lat":39.4625,"lon":-0.3762,"zoom":16,"alt":0,"lib_data":[{"layer_id":1,"layer_data":{FeatureCollection}}]}]
+	* 2. A single bare item (JSON object):
+	* 	{"lat":39.4625,"lon":-0.3762}
+	* 3. A bare GeoJSON FeatureCollection (JSON object). The map center is taken
+	*    from the first 'Point' feature and the collection is stored as lib_data layer 1.
+	*    Note that GeoJSON coordinates are [lon, lat]
+	* 4. A flat string as 'lat, lon[, zoom[, alt]]' with dot decimals:
+	* 	39.4625, -0.3762, 16
+	*    Note that, unlike GeoJSON, the flat string order is latitude first (human convention)
+	* Empty value returns null (clears the existing component data)
+	* @param string $import_value
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->msg		= 'Error. Request failed';
+
+		// failed factory. Build the standard failed object used by the import tool report
+			$build_failed = function(string $msg) use(&$response, $import_value) : object {
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= stripslashes( $import_value );
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= $msg;
+				$response->errors[] = $failed;
+				return $response;
+			};
+
+		// conform_item. Validates and normalizes one dato item {lat, lon, zoom, alt, lib_data}
+		// Returns null on invalid item (and fills $error_msg)
+			$error_msg = null;
+			$conform_item = function(object $item) use(&$error_msg) : ?object {
+
+				// lat/lon are mandatory and must be numeric in valid ranges
+				if (!isset($item->lat) || !is_numeric($item->lat) ||
+					!isset($item->lon) || !is_numeric($item->lon) ) {
+					$error_msg = 'lat and lon numeric properties are mandatory';
+					return null;
+				}
+				$lat = (float)$item->lat;
+				$lon = (float)$item->lon;
+				if ($lat < -90 || $lat > 90 || $lon < -180 || $lon > 180) {
+					$error_msg = 'lat or lon values are out of range';
+					return null;
+				}
+				$item->lat	= $lat;
+				$item->lon	= $lon;
+				$item->zoom	= isset($item->zoom) && is_numeric($item->zoom) ? (int)$item->zoom : 16;
+				$item->alt	= isset($item->alt)  && is_numeric($item->alt)  ? (int)$item->alt  : 0;
+
+				// lib_data. Optional drawn shapes as [{layer_id, layer_data:{FeatureCollection}}]
+				if (isset($item->lib_data)) {
+					if (!is_array($item->lib_data)) {
+						$error_msg = 'lib_data must be an array of layers';
+						return null;
+					}
+					foreach ($item->lib_data as $layer) {
+						if (!is_object($layer) || !isset($layer->layer_id) ||
+							!isset($layer->layer_data->type) || $layer->layer_data->type!=='FeatureCollection' ||
+							!isset($layer->layer_data->features) || !is_array($layer->layer_data->features) ) {
+							$error_msg = 'lib_data layers must define layer_id and layer_data as GeoJSON FeatureCollection';
+							return null;
+						}
+					}
+				}
+
+				return $item;
+			};
+
+		// JSON case
+			if(json_handler::is_json($import_value)){
+
+				// try to JSON decode (null on not decode)
+				$data_from_json = json_handler::decode($import_value);
+				if ($data_from_json===null) {
+					return $build_failed('IGNORED: JSON decode failed');
+				}
+
+				// lang keyed object case as {"lg-nolan":[{"lat":39.46,...}]} (legacy raw export)
+				// component_geolocation is non translatable: extract the first lang value
+				if (is_object($data_from_json)) {
+					$first_key = array_key_first( (array)$data_from_json );
+					if ($first_key!==null && strpos($first_key, 'lg-')===0) {
+						$data_from_json = $data_from_json->{$first_key};
+						if (empty($data_from_json)) {
+							$response->result	= null;
+							$response->msg		= 'OK';
+							return $response;
+						}
+					}
+				}
+
+				// bare GeoJSON FeatureCollection case
+				// build one item taking the center from the first Point feature
+				if (is_object($data_from_json) &&
+					isset($data_from_json->type) && $data_from_json->type==='FeatureCollection') {
+
+					if (!isset($data_from_json->features) || !is_array($data_from_json->features)) {
+						return $build_failed('IGNORED: FeatureCollection without features array');
+					}
+
+					// find the first Point feature to use as map center
+					$center = null;
+					foreach ($data_from_json->features as $feature) {
+						if (isset($feature->geometry->type) && $feature->geometry->type==='Point' &&
+							isset($feature->geometry->coordinates[0]) && isset($feature->geometry->coordinates[1])) {
+							// GeoJSON coordinates are [lon, lat]
+							$center = $feature->geometry->coordinates;
+							break;
+						}
+					}
+					if ($center===null) {
+						return $build_failed('IGNORED: FeatureCollection without any Point feature to set the map center');
+					}
+
+					// stamp layer_id in features properties when missing
+					foreach ($data_from_json->features as $feature) {
+						if (!isset($feature->properties)) {
+							$feature->properties = new stdClass();
+						}
+						if (!isset($feature->properties->layer_id)) {
+							$feature->properties->layer_id = 1;
+						}
+					}
+
+					$item = new stdClass();
+						$item->lat		= $center[1];
+						$item->lon		= $center[0];
+						$item->lib_data	= [(object)[
+							'layer_id'		=> 1,
+							'layer_data'	=> $data_from_json
+						]];
+
+					$conformed = $conform_item($item);
+					if ($conformed===null) {
+						return $build_failed('IGNORED: malformed data. '.$error_msg);
+					}
+
+					$response->result	= [$conformed];
+					$response->msg		= 'OK';
+
+					return $response;
+				}
+
+				// single bare item case as {"lat":39.4625,"lon":-0.3762}
+				if (is_object($data_from_json)) {
+					$data_from_json = [$data_from_json];
+				}
+
+				// full v7 dato case (array of items)
+				if (is_array($data_from_json)) {
+
+					$value = [];
+					foreach ($data_from_json as $current_item) {
+						if (!is_object($current_item)) {
+							return $build_failed('IGNORED: malformed data. Expected object item and get: '.gettype($current_item));
+						}
+						$conformed = $conform_item($current_item);
+						if ($conformed===null) {
+							return $build_failed('IGNORED: malformed data. '.$error_msg);
+						}
+						$value[] = $conformed;
+					}
+
+					$response->result	= !empty($value) ? $value : null;
+					$response->msg		= 'OK';
+
+					return $response;
+				}
+
+				return $build_failed('IGNORED: unrecognized geolocation data');
+			}
+
+		// empty case. Result null clears the existing component data
+			if(empty($import_value)) {
+
+				$response->result	= null;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+		// flat string case as 'lat, lon[, zoom[, alt]]'
+			$ar_parts = array_map('trim', explode(',', $import_value));
+			$len_parts = count($ar_parts);
+			if ($len_parts < 2 || $len_parts > 4) {
+				return $build_failed('IGNORED: malformed coordinates. Expected \'lat, lon[, zoom[, alt]]\' and get: '.to_string($import_value));
+			}
+			foreach ($ar_parts as $current_part) {
+				if (!is_numeric($current_part)) {
+					return $build_failed('IGNORED: malformed coordinates. Non numeric value: '.to_string($current_part));
+				}
+			}
+
+			$item = new stdClass();
+				$item->lat = (float)$ar_parts[0];
+				$item->lon = (float)$ar_parts[1];
+				if (isset($ar_parts[2])) {
+					$item->zoom = (int)$ar_parts[2];
+				}
+				if (isset($ar_parts[3])) {
+					$item->alt = (int)$ar_parts[3];
+				}
+
+			$conformed = $conform_item($item);
+			if ($conformed===null) {
+				return $build_failed('IGNORED: malformed coordinates. '.$error_msg);
+			}
+
+		$response->result	= [$conformed];
+		$response->msg		= 'OK';
+
+
+		return $response;
+	}//end conform_import_data
 
 
 

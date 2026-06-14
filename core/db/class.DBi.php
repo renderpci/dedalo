@@ -39,6 +39,22 @@ abstract class DBi {
 		 */
 		public static array $prepared_statements = [];
 
+		/**
+		 * Current transaction nesting depth.
+		 * Depth 0 means no Dédalo managed transaction is active. Depth 1 maps to a real
+		 * BEGIN/COMMIT block; deeper levels map to SAVEPOINTs so nested callers compose.
+		 * @var int $tx_depth
+		 */
+		private static int $tx_depth = 0;
+
+		/**
+		 * True when depth 1 issued the real BEGIN. False when the connection was
+		 * already inside an externally opened transaction and level 1 was mapped
+		 * to a SAVEPOINT (commit/rollback must then never touch the outer block).
+		 * @var bool $tx_owns_begin
+		 */
+		private static bool $tx_owns_begin = false;
+
 
 
 	/**
@@ -163,7 +179,199 @@ abstract class DBi {
 	public static function invalidate_connection_cache() : void {
 		self::$pg_conn_cache = null;
 		self::$pg_conn_valid_until = 0;
+		// DB-02: prepared statements are bound to the (now dead) connection. The
+		// tracking map must be cleared too, otherwise exec_search sees a stale
+		// md5 key, skips re-preparing on the fresh connection and then fails with
+		// "prepared statement does not exist".
+		self::$prepared_statements = [];
 	}//end invalidate_connection_cache
+
+
+
+	/**
+	* BEGIN_TRANSACTION
+	* Starts a managed transaction on the cached connection.
+	* At depth 0 issues a real BEGIN; deeper calls create a SAVEPOINT so that
+	* nested transactional code composes safely (inner rollback only undoes
+	* the inner block).
+	* If the connection is already inside an externally opened transaction
+	* (e.g. an advisory xact lock block), the first level is mapped to a
+	* SAVEPOINT too, never a second BEGIN.
+	* @return bool
+	*/
+	public static function begin_transaction() : bool {
+
+		$conn = self::_getConnection();
+		if ($conn === false) {
+			debug_log(__METHOD__ . ' Error. No DB connection available', logger::ERROR);
+			return false;
+		}
+
+		if (self::$tx_depth === 0 && pg_transaction_status($conn) === PGSQL_TRANSACTION_IDLE) {
+			$result = pg_query($conn, 'BEGIN');
+			$owns_begin = true;
+		} else {
+			$savepoint	= 'dd_tx_' . (self::$tx_depth + 1);
+			$result		= pg_query($conn, 'SAVEPOINT ' . $savepoint);
+			$owns_begin = (self::$tx_depth === 0) ? false : self::$tx_owns_begin;
+		}
+
+		if ($result === false) {
+			debug_log(__METHOD__
+				. ' Error. Unable to begin transaction (depth: '. self::$tx_depth .')' . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		if (self::$tx_depth === 0) {
+			self::$tx_owns_begin = $owns_begin;
+		}
+		self::$tx_depth++;
+
+		return true;
+	}//end begin_transaction
+
+
+
+	/**
+	* COMMIT_TRANSACTION
+	* Commits the current managed transaction level.
+	* At depth 1 issues a real COMMIT (refused if the transaction is in an
+	* aborted state); deeper levels release their SAVEPOINT.
+	* @return bool
+	*/
+	public static function commit_transaction() : bool {
+
+		if (self::$tx_depth < 1) {
+			debug_log(__METHOD__ . ' Error. commit_transaction called without active transaction', logger::ERROR);
+			return false;
+		}
+
+		$conn = self::_getConnection();
+		if ($conn === false) {
+			debug_log(__METHOD__ . ' Error. No DB connection available', logger::ERROR);
+			return false;
+		}
+
+		// Never commit an aborted transaction block
+		if (pg_transaction_status($conn) === PGSQL_TRANSACTION_INERROR) {
+			debug_log(__METHOD__ . ' Error. Transaction is in aborted state; rolling back instead of commit', logger::ERROR);
+			self::rollback_transaction();
+			return false;
+		}
+
+		if (self::$tx_depth === 1 && self::$tx_owns_begin === true) {
+			$result = pg_query($conn, 'COMMIT');
+		} else {
+			$savepoint	= 'dd_tx_' . self::$tx_depth;
+			$result		= pg_query($conn, 'RELEASE SAVEPOINT ' . $savepoint);
+		}
+
+		if ($result === false) {
+			debug_log(__METHOD__
+				. ' Error. Unable to commit transaction (depth: '. self::$tx_depth .')' . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			return false;
+		}
+
+		self::$tx_depth--;
+
+		return true;
+	}//end commit_transaction
+
+
+
+	/**
+	* ROLLBACK_TRANSACTION
+	* Rolls back the current managed transaction level.
+	* At depth 1 issues a real ROLLBACK; deeper levels roll back to their
+	* SAVEPOINT (outer levels remain usable).
+	* @return bool
+	*/
+	public static function rollback_transaction() : bool {
+
+		if (self::$tx_depth < 1) {
+			debug_log(__METHOD__ . ' Error. rollback_transaction called without active transaction', logger::ERROR);
+			return false;
+		}
+
+		$conn = self::_getConnection();
+		if ($conn === false) {
+			debug_log(__METHOD__ . ' Error. No DB connection available', logger::ERROR);
+			return false;
+		}
+
+		if (self::$tx_depth === 1 && self::$tx_owns_begin === true) {
+			$result = pg_query($conn, 'ROLLBACK');
+		} else {
+			$savepoint	= 'dd_tx_' . self::$tx_depth;
+			$result		= pg_query($conn, 'ROLLBACK TO SAVEPOINT ' . $savepoint . '; RELEASE SAVEPOINT ' . $savepoint);
+		}
+
+		if ($result === false) {
+			debug_log(__METHOD__
+				. ' Error. Unable to rollback transaction (depth: '. self::$tx_depth .')' . PHP_EOL
+				. ' error: ' . pg_last_error($conn)
+				, logger::ERROR
+			);
+			// Decrement anyway; the connection level guard in _getConnection
+			// will recover abandoned transaction blocks on pooled connections.
+			self::$tx_depth--;
+			return false;
+		}
+
+		self::$tx_depth--;
+
+		return true;
+	}//end rollback_transaction
+
+
+
+	/**
+	* TRANSACTION
+	* Runs the given callable inside a managed transaction.
+	* Commits on success and returns the callable result; on any Throwable
+	* rolls back and rethrows so callers can build their error response.
+	* Nested calls compose via SAVEPOINTs (see begin_transaction).
+	* @param callable $fn
+	* @return mixed
+	* @throws Throwable
+	*/
+	public static function transaction( callable $fn ) : mixed {
+
+		if (self::begin_transaction() === false) {
+			throw new RuntimeException(__METHOD__ . ' Unable to begin database transaction');
+		}
+
+		try {
+			$result = $fn();
+		} catch (Throwable $e) {
+			self::rollback_transaction();
+			throw $e;
+		}
+
+		if (self::commit_transaction() === false) {
+			throw new RuntimeException(__METHOD__ . ' Unable to commit database transaction');
+		}
+
+		return $result;
+	}//end transaction
+
+
+
+	/**
+	* IN_TRANSACTION
+	* True when a Dédalo managed transaction is active.
+	* @return bool
+	*/
+	public static function in_transaction() : bool {
+
+		return self::$tx_depth > 0;
+	}//end in_transaction
 
 
 
@@ -259,9 +467,15 @@ abstract class DBi {
 		}
 
 		// PDO
+			// DB-07: include the port in the DSN (it was accepted as a param but
+			// dropped), so this helper connects consistently with _getConnection on
+			// non-default ports.
+			$dsn = 'pgsql:host=' . $host
+				. (!empty($port) ? ';port=' . $port : '')
+				. ';dbname=' . $database . ';';
 			try {
 				$pdo_conn = new PDO(
-					'pgsql:host=' . $host . ';dbname=' . $database . ';', $user, $password, array(
+					$dsn, $user, $password, array(
 						PDO::ATTR_ERRMODE =>  PDO::ERRMODE_EXCEPTION,
 					)
 				);

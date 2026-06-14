@@ -206,6 +206,12 @@ class request_config_object extends stdClass {
 		public ?object $choose = null;
 
 		/**
+		 * Configuration of elements resolved for internal use but not displayed.
+		 * @var ?object $hide
+		 */
+		public ?object $hide = null;
+
+		/**
 		 * API-specific configuration parameters.
 		 * Engine-specific settings for external API connections (e.g., Zenon API options).
 		 * @var ?object $api_config
@@ -357,118 +363,212 @@ class request_config_object extends stdClass {
 
 
 	/**
-	* PARSE_REQUEST_CONFIG_ITEM
-	* Parses normalized request_config objects resolving 'self' vars
-	* and adding label, model, etc. to complete usable ddo_map elements.
-	* Used frequently to parse Layout map user presets.
-	* Based on common->get_ar_request_config method ddo_map parser for view, search, chose and hide
-	* @see request_config_presets::get_all_request_config()
-	* @return object $parsed_request_config
-	* @working
+	* VALIDATE_CONFIG
+	* Pure structural validation of a properties->source->request_config
+	* definition (user-edited ontology JSON). Returns a list of issue objects
+	* {level, path, message} — empty array means structurally valid.
+	* Levels: 'error' (the runtime will drop/degrade this) and 'warning'
+	* (suspicious but tolerated).
+	*
+	* Reusable from: ontology save hooks (non-blocking warnings), batch
+	* audits (CLI/maintenance) and tests. It deliberately performs NO
+	* ontology lookups (tipo existence is runtime/installation dependent);
+	* only shape and grammar are checked, so it is side-effect free.
+	*
+	* @param mixed $request_config The raw properties->source->request_config value
+	* @return array Array of issue objects {level:string, path:string, message:string}
 	*/
-	public static function parse_request_config_item( object $request_config_object, string $section_tipo) : object {
+	public static function validate_config(mixed $request_config) : array {
 
-		// TODO: implement this method to atomize the big common->get_ar_request_config method
-		// Working on
-		throw new Error('This method is not implement yet');
+		$issues = [];
+		$add_issue = function(string $level, string $path, string $message) use (&$issues) : void {
+			$issues[] = (object)[
+				'level'		=> $level,
+				'path'		=> $path,
+				'message'	=> $message
+			];
+		};
 
-		// clone deeply to preserve the original object
-		$parsed_request_config = json_decode( json_encode($request_config_object) );
+		// tipo grammar: tld (letters) + digits, or the 'self' placeholder
+		$valid_tipo = function($tipo) : bool {
+			return is_string($tipo) && ($tipo==='self' || preg_match('/^[a-zA-Z][a-zA-Z_]*[0-9]+$/', $tipo)===1);
+		};
 
-		// resolve self vars
-		$ar_ddo_self_list = ['show','hide','search','choose'];
-		foreach ($ar_ddo_self_list as $ddo_name) {
-			$ddo_map = $parsed_request_config->{$ddo_name}->ddo_map ?? null;
-			if ($ddo_map) {
-
-				$final_ddo_map = [];
-
-				foreach ($ddo_map as $current_ddo) {
-
-					// check mandatory tipo
-						if (!isset($current_ddo->tipo)) {
-							debug_log(__METHOD__
-								.' ERROR. Ignored current_ddo: don\'t have tipo: '
-								.' section_tipo: ' . to_string($section_tipo) . PHP_EOL
-								.' current_ddo: ' . to_string($current_ddo) . PHP_EOL
-								.' ddo_map type: ' . gettype($ddo_map) . PHP_EOL
-								.' ddo_map: ' . json_encode($ddo_map, JSON_PRETTY_PRINT)
-								, logger::ERROR
-							);
-							continue;
-						}
-
-					// check valid tipo (The model is unsolvable)
-						$tipo_is_valid = ontology_utils::check_tipo_is_valid( $current_ddo->tipo );
-						if ( $tipo_is_valid === false ) {
-							debug_log(__METHOD__
-								.' WARNING. Ignored current_ddo: is invalid '
-								.' current_ddo->tipo: ' . to_string($current_ddo->tipo) . PHP_EOL
-								.' current_ddo: ' . to_string($current_ddo) . PHP_EOL
-								.' ddo_map type: ' . gettype($ddo_map) . PHP_EOL
-								.' ddo_map: ' . json_encode($ddo_map, JSON_PRETTY_PRINT) . PHP_EOL
-								.' section_tipo: ' . $section_tipo . PHP_EOL
-								.' current_model: ' . ontology_node::get_model_by_tipo($current_ddo->tipo)
-								, logger::WARNING
-							);
-							continue;
-						}
-
-					// check if the ddo is active into the ontology
-						$is_active = ontology_utils::check_active_tld($current_ddo->tipo);
-						if( $is_active === false ){
-							debug_log(__METHOD__
-								. " Removed ddo from ddo_map->show definition because the tld is not installed " . PHP_EOL
-								. to_string($current_ddo)
-								, logger::WARNING
-							);
-							continue;
-						}
-
-					// model. Calculated always to prevent errors
-						$current_ddo->model = ontology_node::get_model_by_tipo($current_ddo->tipo, true);
-
-					// label. Add to all ddo_map items
-						if (!isset($current_ddo->label)) {
-							$current_ddo->label = ontology_node::get_term_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
-						}
-
-					// section_tipo. Set the default "self" value to the current section_tipo (the section_tipo of the parent)
-						if (isset($current_ddo->section_tipo) && $current_ddo->section_tipo==='self') {
-							$current_ddo->section_tipo = $section_tipo;
-						}
-
-					// parent. Set the default "self" value to the current tipo (the parent)
-						if (isset($current_ddo->parent) && $current_ddo->parent==='self') {
-							$current_ddo->parent = $section_tipo;
-						}
-
-					// fixed_mode. When the mode is set in properties or is set by tool or user templates
-					// set the fixed_mode to true, to preserve the mode across changes in render process
-						if( isset($current_ddo->mode) ) {
-							$current_ddo->fixed_mode = true;
-						}
-
-					// permissions check
-						if($current_ddo->model==='section') {
-							$check_section_tipo = is_array($current_ddo->section_tipo) ? reset($current_ddo->section_tipo) : $current_ddo->section_tipo;
-							$permissions = common::get_permissions($check_section_tipo, $current_ddo->tipo);
-							if($permissions<1){
-								continue;
-							}
-						}
-
-					$final_ddo_map[] = $current_ddo;
-				}
-
-				// update current ddo_map ('show','hide','search','choose')
-				$parsed_request_config->{$ddo_name}->ddo_map = $final_ddo_map;
-			}
+		// top level: must be an array of objects
+		if (!is_array($request_config)) {
+			$add_issue('error', 'request_config', 'Expected array, got ' . gettype($request_config));
+			return $issues;
 		}
 
+		$known_item_keys = ['api_engine','type','sqo','show','search','choose','hide','api_config'];
+		$ddo_sections	 = ['show','search','choose','hide'];
 
-		return $parsed_request_config;
-	}//end parse_request_config_item
+		foreach ($request_config as $i => $item) {
+
+			$item_path = "request_config[$i]";
+
+			if (!is_object($item)) {
+				$add_issue('error', $item_path, 'Expected object, got ' . gettype($item));
+				continue;
+			}
+
+			// unknown top-level keys
+			foreach (array_keys(get_object_vars($item)) as $key) {
+				if (!in_array($key, $known_item_keys, true)) {
+					$add_issue('warning', "$item_path.$key", "Unknown request_config key '$key'");
+				}
+			}
+
+			// api_engine / type
+			if (isset($item->api_engine) && !is_string($item->api_engine)) {
+				$add_issue('error', "$item_path.api_engine", 'Expected string api_engine');
+			}
+			if (isset($item->type) && !is_string($item->type)) {
+				$add_issue('error', "$item_path.type", 'Expected string type');
+			}
+
+			// sqo
+			if (isset($item->sqo)) {
+				if (!is_object($item->sqo)) {
+					$add_issue('error', "$item_path.sqo", 'Expected object sqo, got ' . gettype($item->sqo));
+				} else {
+					if (isset($item->sqo->section_tipo) && !is_array($item->sqo->section_tipo)) {
+						$add_issue('error', "$item_path.sqo.section_tipo", 'Expected array section_tipo');
+					}
+					if (isset($item->sqo->fixed_filter) && !is_array($item->sqo->fixed_filter)) {
+						$add_issue('error', "$item_path.sqo.fixed_filter", 'Expected array fixed_filter');
+					}
+					if (isset($item->sqo->filter_by_list) && !is_array($item->sqo->filter_by_list)) {
+						$add_issue('error', "$item_path.sqo.filter_by_list", 'Expected array filter_by_list');
+					}
+					if (isset($item->sqo->limit) && !is_int($item->sqo->limit) && $item->sqo->limit!=='ALL') {
+						$add_issue('warning', "$item_path.sqo.limit", "Expected integer (or 'ALL') limit");
+					}
+				}
+			}
+
+			// show is the only section the runtime expects (defaults applied otherwise)
+			if (!isset($item->show)) {
+				$add_issue('warning', "$item_path.show", 'Missing show definition: the runtime applies an empty default');
+			}
+
+			// ddo sections
+			foreach ($ddo_sections as $section_name) {
+				if (!isset($item->{$section_name})) {
+					continue;
+				}
+				$section = $item->{$section_name};
+				$section_path = "$item_path.$section_name";
+
+				if (!is_object($section)) {
+					$add_issue('error', $section_path, 'Expected object, got ' . gettype($section));
+					continue;
+				}
+
+				// get_ddo_map shape
+				if (isset($section->get_ddo_map) && $section->get_ddo_map!==false) {
+					if (!is_object($section->get_ddo_map)
+						|| !isset($section->get_ddo_map->model)
+						|| !is_array($section->get_ddo_map->columns ?? null)) {
+						$add_issue('error', "$section_path.get_ddo_map", "Expected object with 'model' and 'columns' array");
+					}
+				}
+
+				// ddo_map
+				if (isset($section->ddo_map)) {
+					if (!is_array($section->ddo_map)) {
+						$add_issue('error', "$section_path.ddo_map", 'Expected array ddo_map, got ' . gettype($section->ddo_map));
+						continue;
+					}
+					foreach ($section->ddo_map as $j => $ddo) {
+						$ddo_path = "$section_path.ddo_map[$j]";
+						if (!is_object($ddo)) {
+							$add_issue('error', $ddo_path, 'Expected object ddo, got ' . gettype($ddo));
+							continue;
+						}
+						if (!isset($ddo->tipo) || !is_string($ddo->tipo) || $ddo->tipo==='') {
+							$add_issue('error', "$ddo_path.tipo", 'Missing or invalid ddo tipo (the runtime drops this ddo)');
+						} elseif (!$valid_tipo($ddo->tipo)) {
+							$add_issue('error', "$ddo_path.tipo", "Invalid tipo grammar '{$ddo->tipo}' (expected tld+number or 'self')");
+						}
+						if (isset($ddo->section_tipo)
+							&& !is_string($ddo->section_tipo)
+							&& !is_array($ddo->section_tipo)) {
+							$add_issue('error', "$ddo_path.section_tipo", 'Expected string or array section_tipo');
+						}
+						if (isset($ddo->parent) && !is_string($ddo->parent)) {
+							$add_issue('error', "$ddo_path.parent", 'Expected string parent');
+						}
+					}
+				}
+			}
+		}//end foreach ($request_config as $i => $item)
+
+		return $issues;
+	}//end validate_config
+
+
+
+	/**
+	* SANITIZE_CLIENT_DDO_MAP
+	* Security scrub for ddo_map arrays received from the HTTP API
+	* (rqo->show / rqo->search). The client is the only untrusted ddo source:
+	* every ddo is reduced to the whitelisted display fields below; anything
+	* else (injected properties, server-only flags, nested payloads) is
+	* stripped before the rqo reaches build_request_config_from_rqo.
+	* Tipo/TLD validity and user permissions are enforced later, server-side,
+	* in common::validate_requested_ddo.
+	*
+	* @param array $ddo_map Raw client ddo_map
+	* @return array Sanitized ddo_map (objects with whitelisted fields only)
+	*/
+	public static function sanitize_client_ddo_map(array $ddo_map) : array {
+
+		// Fields a client may legitimately define for a display ddo.
+		// 'model' is recalculated server-side; 'permissions' and other
+		// server-authoritative fields are intentionally absent.
+		static $allowed_fields = [
+			'typo',
+			'tipo',
+			'section_tipo',
+			'section_id',
+			'parent',
+			'mode',
+			'lang',
+			'view',
+			'label',
+			'fields_separator',
+			'records_separator',
+			'value_with_parents',
+			'column_id',
+			'width',
+			'in_mosaic',
+			'hover'
+		];
+
+		$sanitized = [];
+		foreach ($ddo_map as $current_ddo) {
+
+			if (!is_object($current_ddo)) {
+				debug_log(__METHOD__
+					.' Removed non-object client ddo: ' . to_string($current_ddo)
+					, logger::WARNING
+				);
+				continue;
+			}
+
+			$clean_ddo = new stdClass();
+			foreach ($allowed_fields as $field) {
+				if (property_exists($current_ddo, $field)) {
+					$clean_ddo->{$field} = $current_ddo->{$field};
+				}
+			}
+
+			$sanitized[] = $clean_ddo;
+		}
+
+		return $sanitized;
+	}//end sanitize_client_ddo_map
 
 
 

@@ -164,9 +164,20 @@ class component_relation_children extends component_relation_common {
 				$offset
 			);
 
-		// set total (count all children)
-			$data = $this->get_data();
-			$this->pagination->total = is_array($data) ? count($data) : 0;
+		// set total (count all children) only when the caller did not provide
+		// it already: loading every child row just to count defeats pagination
+			if (!isset($this->pagination->total)) {
+				$total = self::count_children(
+					$this->section_id,
+					$this->section_tipo,
+					$this->tipo
+				);
+				if ($total===null) {
+					$data = $this->get_data();
+					$total = is_array($data) ? count($data) : 0;
+				}
+				$this->pagination->total = $total;
+			}
 
 
 		return $data_paginated;
@@ -496,6 +507,60 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
+	* COUNT_CHILDREN
+	* Counts children of the given section with a SQL count query, without
+	* loading the children rows. Used for pagination totals where the previous
+	* implementation loaded all children just to count them.
+	* @param int|string $section_id
+	* @param string $section_tipo
+	* @param string|null $component_tipo = null
+	* @return int|null $total
+	* 	null when the count could not be resolved (caller should fall back
+	* 	to counting loaded data)
+	*/
+	public static function count_children( int|string $section_id, string $section_tipo, ?string $component_tipo=null ) : ?int {
+
+		// Locate component children in section when is not received
+			if (empty($component_tipo)) {
+				$component_tipo = component_relation_children::get_children_tipo($section_tipo);
+			}
+
+		// get the ontology node tipo of the related component_relation_parent assigned to my tipo.
+			$ar_parent_tipo = component_relation_children::get_ar_related_parent_tipo( $component_tipo, $section_tipo );
+			if( empty($ar_parent_tipo) || !isset($ar_parent_tipo[0])){
+				return 0;
+			}
+			$parent_tipo = $ar_parent_tipo[0];
+
+		// build SQO using unified builder (no order: irrelevant for counting)
+			$sqo = self::build_children_sqo(
+				$section_id,
+				$section_tipo,
+				$component_tipo,
+				$parent_tipo,
+				[
+					'limit'	=> 0,
+					'order'	=> false
+				]
+			);
+			if ($sqo === null) {
+				return null;
+			}
+			$sqo->set_full_count(true);
+
+		$search			= search::get_instance($sqo);
+		$records_data	= $search->count();
+
+		if (!isset($records_data->total)) {
+			return null;
+		}
+
+		return (int)$records_data->total;
+	}//end count_children
+
+
+
+	/**
 	* GET_CHILDREN_OF_TYPE
 	* Get children filtered by descriptor type (descriptor or non_descriptor).
 	* Uses the unified build_children_sqo() with descriptor_type option.
@@ -593,6 +658,79 @@ class component_relation_children extends component_relation_common {
 
 		return $all_children;
 	}//end get_children_recursive
+
+
+
+	/**
+	* GET_CHILDREN_RECURSIVE_BATCH
+	* Resolves the recursive children of many root records in a single pass, sharing one
+	* cycle-detection/visited set across all roots. This avoids re-walking subtrees that are
+	* shared between roots (the per-root get_children_recursive() always starts with an empty
+	* visited set, so a node reachable from N roots is expanded N times).
+	* Used by search::search_children_recursive to collapse its per-parent-row N+1 loop.
+	* @param array $roots
+	* 	List of objects/locators exposing ->section_id and ->section_tipo
+	* @param ?string $component_tipo = null
+	* @return array $all_children
+	* 	Flat list of descendant locators (deduplicated by section_tipo+section_id)
+	*/
+	public static function get_children_recursive_batch( array $roots, ?string $component_tipo=null ) : array {
+
+		$visited		= [];
+		$all_children	= [];
+
+		foreach ($roots as $root) {
+
+			$section_id		= $root->section_id ?? null;
+			$section_tipo	= $root->section_tipo ?? null;
+			if ($section_id===null || $section_tipo===null) {
+				continue;
+			}
+
+			// Shared $visited (passed by reference) prevents re-expanding subtrees already
+			// reached from a previous root, and dedups the returned descendants.
+			$descendants = self::get_children_recursive_shared($section_id, $section_tipo, $component_tipo, $visited);
+			if (!empty($descendants)) {
+				$all_children = [...$all_children, ...$descendants];
+			}
+		}
+
+		return $all_children;
+	}//end get_children_recursive_batch
+
+
+
+	/**
+	* GET_CHILDREN_RECURSIVE_SHARED
+	* Same as get_children_recursive but takes $visited BY REFERENCE so a single accumulator
+	* can be shared across multiple root expansions (see get_children_recursive_batch). A node
+	* already in $visited is skipped, so each node is expanded at most once per batch.
+	* @param int|string $section_id
+	* @param string $section_tipo
+	* @param ?string $component_tipo
+	* @param array $visited (by reference)
+	* @return array $all_children
+	*/
+	public static function get_children_recursive_shared(int|string $section_id, string $section_tipo, ?string $component_tipo, array &$visited) : array {
+
+		// Cycle / shared-subtree detection
+		$current_node_key = $section_tipo . '_' . $section_id;
+		if (isset($visited[$current_node_key])) {
+			return [];
+		}
+		$visited[$current_node_key] = true;
+
+		$all_children = component_relation_children::get_children($section_id, $section_tipo, $component_tipo);
+
+		foreach ($all_children as $child) {
+			$descendants = self::get_children_recursive_shared($child->section_id, $child->section_tipo, $component_tipo, $visited);
+			if (!empty($descendants)) {
+				$all_children = [...$all_children, ...$descendants];
+			}
+		}
+
+		return $all_children;
+	}//end get_children_recursive_shared
 
 
 

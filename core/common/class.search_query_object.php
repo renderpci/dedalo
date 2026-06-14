@@ -641,4 +641,108 @@ class search_query_object extends stdClass {
 
 
 
+	/**
+	* SANITIZE_CLIENT_SQO
+	* Scrubs a client-supplied (json_decode'd) SQO before it is trusted by the search
+	* pipeline. The HTTP API is the only untrusted SQO source; server-internal builders
+	* construct a search_query_object and call search directly, so they bypass this gate.
+	*
+	* It removes server-only fields that, if supplied by a client, would reach raw SQL
+	* without going through the component conform pipeline:
+	*  - sentence / params : pre-built SQL fragment + bound values (always regenerated)
+	*  - column_sql        : trusted server-built ORDER fragment (see trait.order.php)
+	*  - table / table_alias : server-computed in conform_filter
+	* It also strips client-supplied ACL/control flags that would weaken access control
+	* (skip_projects_filter, skip_duplicated, include_negative).
+	* It forces parsed=false (a client must never be able to skip parse_sqo) and
+	* coerces offset/total to safe numeric types. The limit is clamped to
+	* DEDALO_SEARCH_CLIENT_MAX_LIMIT (the 'all' sentinel and out-of-range values are
+	* coerced to the ceiling) so untrusted clients cannot request unbounded result sets.
+	*
+	* @param mixed $sqo
+	* 	Raw SQO (object) or any other value (passed through untouched)
+	* @return mixed
+	*/
+	public static function sanitize_client_sqo( mixed $sqo ) : mixed {
+
+		// only process objects (raw json_decode'd sqo)
+		if (!is_object($sqo)) {
+			return $sqo;
+		}
+
+		// server-only fields that a client SQO must never carry, at any depth.
+		// Two groups:
+		//  - SQL/identifier fields that bypass the component conform pipeline
+		//    (sentence/params/column_sql/table/table_alias)
+		//  - ACL / control flags that, if client-supplied, weaken access control:
+		//      skip_projects_filter : disables the per-user projects WHERE filter (set_up honors it)
+		//      skip_duplicated      : only valid inside the component '!!' duplicated pipeline;
+		//                             a client value silently drops sibling filters
+		//      include_negative     : currently a search instance property (not read from the SQO),
+		//                             stripped defensively against future regressions
+		$server_only_keys = [
+			'sentence','params','column_sql','table','table_alias',
+			'skip_projects_filter','skip_duplicated','include_negative'
+		];
+		self::strip_keys_recursive($sqo, $server_only_keys);
+
+		// never let the client mark the SQO as already parsed (would skip the component
+		// conform pipeline and send the raw filter straight to SQL building)
+		if (property_exists($sqo, 'parsed')) {
+			$sqo->parsed = false;
+		}
+
+		// numeric coercions (the typed setters are not applied to a raw stdClass)
+		if (isset($sqo->offset)) {
+			$sqo->offset = (int)$sqo->offset;
+		}
+		if (isset($sqo->total) && $sqo->total!==null) {
+			$sqo->total = (int)$sqo->total;
+		}
+		// limit: clamp the client-supplied limit to a safe ceiling. Untrusted clients
+		// must not request unbounded result sets: the 'all'/'ALL' sentinel, non-positive
+		// values and values above the ceiling are all coerced to DEDALO_SEARCH_CLIENT_MAX_LIMIT.
+		// Server-internal builders construct a search_query_object directly and bypass this
+		// gate, so they keep full access to 'all'.
+		if (isset($sqo->limit)) {
+			$max_limit	= defined('DEDALO_SEARCH_CLIENT_MAX_LIMIT') ? (int)DEDALO_SEARCH_CLIENT_MAX_LIMIT : 1000;
+			$is_all		= is_string($sqo->limit) && strtolower(trim($sqo->limit))==='all';
+			$int_limit	= (int)$sqo->limit;
+			$sqo->limit	= ($is_all || $int_limit <= 0 || $int_limit > $max_limit)
+				? $max_limit
+				: $int_limit;
+		}
+
+		return $sqo;
+	}//end sanitize_client_sqo
+
+
+
+	/**
+	* STRIP_KEYS_RECURSIVE
+	* Recursively unset the given keys from every object found in the node tree.
+	* @param mixed $node
+	* @param array $keys
+	* @return void
+	*/
+	private static function strip_keys_recursive( mixed $node, array $keys ) : void {
+
+		if (is_object($node)) {
+			foreach ($keys as $k) {
+				if (property_exists($node, $k)) {
+					unset($node->{$k});
+				}
+			}
+			foreach (get_object_vars($node) as $v) {
+				self::strip_keys_recursive($v, $keys);
+			}
+		} elseif (is_array($node)) {
+			foreach ($node as $v) {
+				self::strip_keys_recursive($v, $keys);
+			}
+		}
+	}//end strip_keys_recursive
+
+
+
 }//end search_query_object

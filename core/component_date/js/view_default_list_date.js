@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {activate_edit_in_list} from '../../component_common/js/component_common.js'
+	import {activate_edit_in_list, attach_item_dataframe} from '../../component_common/js/component_common.js'
 	import {get_ar_raw_data_value} from './render_edit_component_date.js'
 
 
@@ -45,6 +45,16 @@ view_default_list_date.render = async function(self, options) {
 			e.stopPropagation()
 			activate_edit_in_list(self, e, { mode: 'modal' })
 		})
+
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+		const entries = self.data.entries || []
+		for (const entry of entries) {
+			await attach_item_dataframe({
+				self		: self,
+				item		: entry,
+				container	: wrapper
+			})
+		}
 
 
 	return wrapper

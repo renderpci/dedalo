@@ -8,9 +8,9 @@
 	import {clone} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	import {get_instance} from '../../../core/common/js/instances.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_export} from './render_tool_export.js'
+	import {flat_table} from './flat_table.js'
 	import {
 		on_dragstart,
 		// on_dragend,
@@ -188,15 +188,16 @@ tool_export.prototype.get_section_id = function() {
  * GET_EXPORT_GRID
  * High-performance data fetcher using Fetch ReadableStreams and NDJSON.
  *
- * Replaces the traditional monolithic JSON buffer with an incremental row-by-row
- * delivery system.
+ * Consumes the flat-table export protocol (see flat_table.js and
+ * tools/tool_export/class.export_tabulator.php): every line is a JSON
+ * object discriminated by 't' (meta | col | row | end). Lines are
+ * dispatched to a flat_table accumulator that also drives the live
+ * HTML preview; CSV/TSV/XLSX downloads read the same flat data.
  *
- * Protocol: NDJSON (Newline Delimited JSON)
- * - First line: Header metadata (dd_grid configuration)
- * - Subsequent lines: Individual row data objects
- *
- * @param {Object} options - Request options including data_format and filters
- * @returns {Promise<Object>} The dd_grid instance, resolved once the header arrives
+ * @param {Object} options - Request options: data_format, breakdown,
+ *   fill_the_gaps, show_tipo_in_label, ar_ddo_to_export
+ * @returns {Promise<Object|null>} The flat_table instance, resolved once
+ *   the meta line arrives (rows keep streaming in afterwards)
  */
 tool_export.prototype.get_export_grid = async function(options) {
 
@@ -204,12 +205,17 @@ tool_export.prototype.get_export_grid = async function(options) {
 
 	// options
 		const data_format			= options.data_format
+		const breakdown				= options.breakdown || 'default'
 		const ar_ddo_to_export		= options.ar_ddo_to_export
-		const view					= options.view || 'table'
 		const show_tipo_in_label	= options.show_tipo_in_label
 		const fill_the_gaps			= options.fill_the_gaps
+		const value_with_parents	= options.value_with_parents || false
 
 	// sqo
+	// note: limit/offset values are informational only. The API client gate
+	// clamps any client-sent limit, and tool_export::setup() forces the
+	// internal 'ALL' sentinel server-side: the export always serialises the
+	// whole filtered selection.
 		const sqo = clone(self.sqo)
 		sqo.limit	= 0
 		sqo.offset	= 0
@@ -228,9 +234,12 @@ tool_export.prototype.get_export_grid = async function(options) {
 				section_tipo		: self.caller.section_tipo, // section that call to the tool, it will be used to get the records from db
 				model				: self.caller.model,
 				data_format			: data_format, // format selected by the user to get data
+				breakdown			: breakdown, // relation explosion mode: default | rows | columns
+				fill_the_gaps		: fill_the_gaps, // server-side fill of spanning values
+				value_with_parents	: value_with_parents, // export relation target ancestor chains as 'parents' sub-columns
 				ar_ddo_to_export	: ar_ddo_to_export, // array with the ddo map and paths to get the info
 				sqo					: sqo,
-				ndjson_stream       : true
+				ndjson_stream		: true
 			}
 		}
 
@@ -242,11 +251,16 @@ tool_export.prototype.get_export_grid = async function(options) {
 		return null;
 	}
 
+	// flat_table accumulator (also the live preview renderer)
+		const table = new flat_table()
+		table.config.show_tipo_in_label = show_tipo_in_label
+		self.flat_table = table
+
 	const reader	= stream.getReader();
 	const decoder	= new TextDecoder();
 	let buffer		= '';
-	let first_chunk = true;
-	let rows_processed = 0;
+	let resolved	= false;
+	let records_processed = 0;
 	if (self.progress_ui) {
 		self.progress_ui.container.classList.remove('no_visible');
 		self.progress_ui.bar.style.width = '0%';
@@ -256,7 +270,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 		self.progress_ui.text_fg.style.clipPath = 'inset(0 100% 0 0)';
 	}
 
-	// Use a promise to resolve with the grid instance as soon as the first chunk (header) arrives
+	// Use a promise to resolve with the flat_table as soon as the meta line arrives
 	return new Promise(async (resolve, reject) => {
 		try {
 			while (true) {
@@ -285,7 +299,9 @@ tool_export.prototype.get_export_grid = async function(options) {
 					if (self.button_export) {
 						self.button_export.classList.remove('loading');
 					}
-					resolve(null);
+					if (!resolved) {
+						resolve(null);
+					}
 					break;
 				}
 
@@ -296,47 +312,41 @@ tool_export.prototype.get_export_grid = async function(options) {
 				buffer = lines.pop(); // Keep partial line for next chunk
 
 				for (const line of lines) {
-					if (!line.trim()) continue;
-					const chunk_data = JSON.parse(line);
+					if (!line.trim()) continue; // skip padding / blank lines
+					const line_data = JSON.parse(line);
 
-					if (first_chunk) {
-						// The first chunk is the header row
-						const dd_grid = await self._init_grid_with_data(chunk_data, view, show_tipo_in_label, fill_the_gaps, data_format);
-						self.dd_grid = dd_grid;
-						first_chunk = false;
-						resolve(dd_grid);
+					// dispatch to the accumulator (renders the preview too)
+					table.process_line(line_data);
 
-						// Pause the stream processing until the grid is mounted in the DOM.
-						// This prevents a race condition where rows are added to dd_grid.data
-						// and rendered by both dd_grid.render() and _append_row_to_grid_ui().
-						let wait_cycles = 0;
-						while((!self.dd_grid.node || !(self.dd_grid.node instanceof Node) || !document.body.contains(self.dd_grid.node)) && wait_cycles < 100) {
-							await new Promise(r => setTimeout(r, 50));
-							wait_cycles++;
-						}
-					} else {
-						// Subsequent chunks are rows
-						if (self.dd_grid) {
-							// Append row to data
-							self.dd_grid.data.push(chunk_data);
-
-							// Update header columns dynamically
-							self._update_header_columns(chunk_data);
-
-							rows_processed++;
-							if (self.progress_ui && self.total_records) {
-								const percent = Math.min(100, Math.round((rows_processed / self.total_records) * 100));
-								self.progress_ui.bar.style.width = percent + '%';
-								const current_text = `${rows_processed} / ${self.total_records}`;
-								self.progress_ui.text_bg.innerText = current_text;
-								self.progress_ui.text_fg.innerText = current_text;
-								self.progress_ui.text_fg.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
+					switch (line_data.t) {
+						case 'meta':
+							// total from the server when available
+							if (line_data.total) {
+								self.total_records = line_data.total;
 							}
+							if (!resolved) {
+								resolved = true;
+								resolve(table);
+							}
+							break;
 
-							// Trigger incremental render update if grid is already built
-							// Note: This logic might need refinement depending on dd_grid/view_table_dd_grid capabilities
-							self._append_row_to_grid_ui(chunk_data);
-						}
+						case 'row':
+							// progress per record (sub rows belong to the same record)
+							if (line_data.sub===0) {
+								records_processed++;
+								if (self.progress_ui && self.total_records) {
+									const percent = Math.min(100, Math.round((records_processed / self.total_records) * 100));
+									self.progress_ui.bar.style.width = percent + '%';
+									const current_text = `${records_processed} / ${self.total_records}`;
+									self.progress_ui.text_bg.innerText = current_text;
+									self.progress_ui.text_fg.innerText = current_text;
+									self.progress_ui.text_fg.style.clipPath = `inset(0 ${100 - percent}% 0 0)`;
+								}
+							}
+							break;
+
+						default:
+							break;
 					}
 				}
 			}
@@ -350,335 +360,6 @@ tool_export.prototype.get_export_grid = async function(options) {
 		}
 	});
 }//end get_export_grid
-
-
-
-/**
-* _INIT_GRID_WITH_DATA
-* Helper to initialize dd_grid with initial data (header)
-* @private
-*/
-tool_export.prototype._init_grid_with_data = async function(data, view, show_tipo_in_label, fill_the_gaps, data_format) {
-	const self = this;
-
-	const dd_grid = self.dd_grid || await get_instance({
-		model				: 'dd_grid',
-		section_tipo		: self.caller.section_tipo,
-		tipo				: self.caller.section_tipo,
-		mode				: 'list',
-		view				: view,
-		config				: {
-			show_tipo_in_label	: show_tipo_in_label,
-			fill_the_gaps		: fill_the_gaps,
-			data_format			: data_format
-		},
-		lang				: page_globals.dedalo_data_lang,
-		data				: [data] // Initial data is only the header
-	});
-
-	if (self.dd_grid) {
-		self.dd_grid.data = [data];
-		self.dd_grid.view = view;
-		self.dd_grid.config = { ...self.dd_grid.config, show_tipo_in_label, fill_the_gaps, data_format };
-	}
-
-	await dd_grid.build(false);
-	self.dd_grid = dd_grid;
-	if (!self.ar_instances.includes(dd_grid)) {
-		self.ar_instances.push(dd_grid);
-	}
-
-	return dd_grid;
-}
-
-
-
-/**
-* _UPDATE_HEADER_COLUMNS
-* Dynamically updates the header (data[0]) with any new columns found in the row.
-* Required for breakdown exports where portals can dynamically expand the number of columns.
-* Uses row_data.ar_columns_obj (row-level property) as the authoritative source of columns,
-* rather than iterating cell-level ar_columns_obj which may be incomplete or absent.
-*/
-tool_export.prototype._update_header_columns = function(row_data) {
-	const self = this;
-	if (!self.dd_grid || !self.dd_grid.data || self.dd_grid.data.length === 0) return;
-
-	const header = self.dd_grid.data[0];
-	if (!header || !header.value || !Array.isArray(header.value)) return;
-
-	// Get column objects from the row-level property (authoritative source).
-	// Each streamed row carries ar_columns_obj with all columns for that row,
-	// set by PHP: $row_grid->set_ar_columns_obj($ar_row_value->ar_columns_obj)
-	const row_columns = Array.isArray(row_data.ar_columns_obj)
-		? row_data.ar_columns_obj
-		: (row_data.ar_columns_obj && typeof row_data.ar_columns_obj === 'object')
-			? [row_data.ar_columns_obj]
-			: [];
-
-	if (row_columns.length === 0) return;
-
-	// Use a persistent Set cached on the instance to avoid rebuilding for every row.
-	// This is critical for performance with thousands of rows.
-	if (!self._header_column_ids) {
-		self._header_column_ids = new Set();
-		for (const header_cell of header.value) {
-			if (header_cell.ar_columns_obj && header_cell.ar_columns_obj.id) {
-				self._header_column_ids.add(header_cell.ar_columns_obj.id);
-			}
-		}
-	}
-	const existing_ids = self._header_column_ids;
-
-	// Fast path: if row has no new columns (common case), skip entirely
-	let has_new = false;
-	for (const col_obj of row_columns) {
-		if (col_obj && col_obj.id && !existing_ids.has(col_obj.id)) {
-			has_new = true;
-			break;
-		}
-	}
-	if (!has_new) return;
-
-	let dom_updated = false;
-
-	for (const col_obj of row_columns) {
-		if (!col_obj || !col_obj.id) continue;
-
-		// Skip if already in header
-		if (existing_ids.has(col_obj.id)) continue;
-
-		// Create a new header cell
-		const new_header_cell = {
-			type		: 'column',
-			cell_type	: 'header',
-			ar_columns_obj	: col_obj,
-			render_label	: true,
-			class_list	: 'caption section'
-		};
-
-		// Find correct insert position
-		let insert_index = header.value.length;
-		const parts = (col_obj.id || '').split('|');
-		if (parts.length > 1) {
-			// Find the last column with the same group
-			for (let i = 0; i < header.value.length; i++) {
-				if (header.value[i].ar_columns_obj && header.value[i].ar_columns_obj.group === col_obj.group) {
-					insert_index = i + 1;
-				}
-			}
-		}
-
-		// Insert into header data
-		header.value.splice(insert_index, 0, new_header_cell);
-		existing_ids.add(col_obj.id);
-		dom_updated = true;
-
-		// Update DOM if table is already rendered.
-		// Note: view_table_dd_grid renders <tr> directly inside <table> (no thead/tbody).
-		// The header row has class "row_header".
-		if (self.dd_grid.node && document.body.contains(self.dd_grid.node)) {
-			const table = self.dd_grid.node.querySelector('table') || self.dd_grid.node;
-			if (table && table.tagName === 'TABLE') {
-				const header_tr = table.querySelector('tr.row_header');
-				if (header_tr) {
-					// Build TH label from ar_labels (same logic as render_header_column)
-					const ar_labels = col_obj.ar_labels || [];
-					const labels = [];
-					for (let i = 0; i < ar_labels.length; i++) {
-						if (i % 2 !== 1) continue;
-						labels.push(ar_labels[i] || '');
-					}
-					const label_text = labels.length > 0
-						? labels.join(' | ')
-						: (col_obj.label || '');
-
-					const th = document.createElement('th');
-					th.innerHTML = label_text;
-
-					// Insert into correct position in header TR
-					const ths = header_tr.querySelectorAll('th');
-					if (insert_index < ths.length) {
-						header_tr.insertBefore(th, ths[insert_index]);
-					} else {
-						header_tr.appendChild(th);
-					}
-
-					// All existing body TRs need an empty TD at this index
-					const all_trs = table.querySelectorAll('tr:not(.row_header)');
-					for (const body_tr of all_trs) {
-						const td = document.createElement('td');
-						const tds = body_tr.querySelectorAll('td');
-						if (insert_index < tds.length) {
-							body_tr.insertBefore(td, tds[insert_index]);
-						} else {
-							body_tr.appendChild(td);
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (dom_updated) {
-		// Update header column count
-		header.column_count = header.value.length;
-	}
-};//end _update_header_columns
-
-
-
-/**
- * _APPEND_ROW_TO_GRID_UI
- * Progressive rendering engine for streamed data.
- *
- * Implements a queuing and batching mechanism to ensure smooth UI performance:
- * - Row Queue: Ensures rows are rendered in strict arrival order.
- * - Batch Processing: Renders rows in chunks (e.g. 20) via requestAnimationFrame
- *   to maintain 60fps even during high-throughput transmission.
- * - DOM Sync: Automatically schedules retries if the parent table isn't fully
- *   mounted in the DOM yet.
- *
- * @private
- * @param {Object} row_data - Data for a single grid row
- */
-tool_export.prototype._append_row_to_grid_ui = function(row_data) {
-	const self = this;
-
-	// Always add to queue to maintain order
-	self._row_queue = self._row_queue || [];
-	self._row_queue.push(row_data);
-
-	// Start processing loop if not already running
-	if (self._is_processing_queue) return;
-	self._is_processing_queue = true;
-
-	if (SHOW_DEBUG) console.log("Stream: Started processing row queue", { queue_length: self._row_queue.length });
-
-	const try_process = async () => {
-		// Check if the grid node is actually in the document body
-		// Note: dd_grid.node is set after dd_grid.render() completes
-		if (self.dd_grid && self.dd_grid.node && document.body.contains(self.dd_grid.node)) {
-
-			// Load the module once before processing the queue
-			if (!self._view_table_dd_grid) {
-				const module = await import('../../../core/dd_grid/js/view_table_dd_grid.js');
-				self._view_table_dd_grid = module.view_table_dd_grid;
-			}
-
-			// Process rows in batches to avoid blocking the main thread while maintaining high throughput
-			const BATCH_SIZE = 20;
-
-			// Cache table reference and column map outside the loop
-			const table = self.dd_grid.node.querySelector('table') || self.dd_grid.node;
-			if (!table || table.tagName !== 'TABLE') {
-				self._is_processing_queue = false;
-				return;
-			}
-			const header_row = self.dd_grid.data[0];
-
-			while (self._row_queue.length > 0) {
-				// Take a batch of rows
-				const batch = self._row_queue.splice(0, BATCH_SIZE);
-
-				// Apply batch to DOM in a single animation frame using DocumentFragment
-				await new Promise(resolve => {
-					requestAnimationFrame(() => {
-						// Get or rebuild cached column map (invalidated when header changes)
-						if (!self._cached_ar_columns_obj || self._cached_ar_columns_obj_version !== header_row.value.length) {
-							self._cached_ar_columns_obj = header_row.value.map(item => item.ar_columns_obj);
-							self._cached_ar_columns_obj_version = header_row.value.length;
-						}
-
-						const fragment = document.createDocumentFragment();
-						for (const row of batch) {
-							const row_fragment = self._view_table_dd_grid.render_row(
-								self.dd_grid, row, self._cached_ar_columns_obj
-							);
-							fragment.appendChild(row_fragment);
-						}
-						// Single DOM append per batch = single layout reflow
-						table.appendChild(fragment);
-						resolve();
-					});
-				});
-
-				// Brief yield to allow other async tasks (like stream reading) to run
-				await new Promise(resolve => setTimeout(resolve, 0));
-			}
-
-			self._is_processing_queue = false;
-			if (SHOW_DEBUG) console.log("Stream: Finished processing row queue");
-		} else {
-			// If not yet in DOM, wait and try again
-			// In theory, render_tool_export.js should append it soon after header arrives
-			setTimeout(try_process, 50);
-		}
-	};
-
-	try_process();
-}
-
-
-
-/**
-* _DO_APPEND_ROW
-* Actual DOM insertion of a row (used for single-row appends outside batching)
-* @private
-*/
-tool_export.prototype._do_append_row = async function(row_data) {
-	const self = this;
-	if (!self.dd_grid || !self.dd_grid.node || !self._view_table_dd_grid) return;
-
-	const table = self.dd_grid.node.querySelector('table') || self.dd_grid.node;
-	if (!table || table.tagName !== 'TABLE') return;
-
-	const header_row = self.dd_grid.data[0];
-	const ar_columns_obj = Array.isArray(header_row.value)
-		? header_row.value.map(item => item.ar_columns_obj)
-		: [];
-
-	const row_fragment = self._view_table_dd_grid.render_row(self.dd_grid, row_data, ar_columns_obj);
-	table.appendChild(row_fragment);
-}
-
-
-
-/**
-* GET_EXPORT_CSV
-* Load the export grid data
-*/
-	// tool_export.prototype.get_export_csv = async function () {
-
-	// 	const self = this
-
-	// 	// dd_grid
-	// 	const new_dd_grid = await get_instance({
-	// 		model			: 'dd_grid',
-	// 		section_tipo	: self.caller.section_tipo,
-	// 		// section_id	: section_id,
-	// 		tipo			: self.caller.section_tipo,
-	// 		mode			: 'list',
-	// 		view			: 'csv',
-	// 		lang			: page_globals.dedalo_data_lang,
-	// 		// data_format	: data_format,
-	// 		rqo				: self.rqo,
-	// 		id_variant 		: 'csv_'
-	// 	})
-	// console.log('self.data:---------------------------<>', self);
-
-	// 	if (self.data) {
-	// 		new_dd_grid.data = self.data
-	// 		await new_dd_grid.build(false)
-	// 	}else{
-
-	// 		await new_dd_grid.build(true)
-	// 	}
-
-	// 	const csv_string = await new_dd_grid.render()
-
-	// 	return csv_string
-	// }//end get_export_csv
 
 
 

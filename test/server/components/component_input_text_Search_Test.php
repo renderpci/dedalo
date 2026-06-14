@@ -115,7 +115,7 @@ final class component_input_text_Search_Test extends BaseTestCase {
             ],
             '5b. Operator - (lang = lg-eng)' => [
                 ["q" => [["value" => "-cat"]], "q_operator" => null, "path" => [["name" => "input_text", "model" => "component_input_text", "section_tipo" => "test3", "component_tipo" => "test52"]], "q_split" => true, "type" => "jsonb", "lang" => "lg-eng", "table_alias" => "te3", "table" => "matrix_test", "component_path" => ["test52"]],
-                ["params" => ["_Q1_" => "cat"], "sentence" => "NOT EXISTS ( SELECT 1 FROM jsonb_path_query(te3.string, '$.test52[*]') AS elem WHERE elem->>'value' IS NOT NULL AND f_unaccent(elem->>'value') ~* f_unaccent(_Q1_) AND elem->>'lang' = 'lg-eng' )"],
+                ["params" => ["_Q1_" => "cat", "_Q2_" => "lg-eng"], "sentence" => "NOT EXISTS ( SELECT 1 FROM jsonb_path_query(te3.string, '$.test52[*]') AS elem WHERE elem->>'value' IS NOT NULL AND f_unaccent(elem->>'value') ~* f_unaccent(_Q1_) AND elem->>'lang' = _Q2_ )"],
                 'Case 5b'
             ],
             '6. Ends With (*cat) (lang = all)' => [

@@ -559,6 +559,414 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 
 
 	/**
+	* TEST_import_files_v7_formats
+	* End to end import exercising the v7 input formats:
+	* dedalo_data wrapper, flat date, multiple flat emails, flat geolocation
+	* coordinates, arbitrary JSON value and select_lang lang code.
+	* Self-contained: copies its own fixture, imports it and deletes it.
+	* @return void
+	*/
+	public function test_import_files_v7_formats() {
+
+		$this->user_login();
+
+		$file_name = 'import_v7_formats-test3.csv';
+
+		// copy the fixture to the user CSV import directory
+			$source_file = $this->get_test_files_path() . '/' . $file_name;
+			$target_dir  = tool_import_dedalo_csv::get_files_path();
+			$target_file = $target_dir . '/' . $file_name;
+			$this->assertTrue(
+				copy($source_file, $target_file),
+				'expected fixture file copied to: '.$target_file
+			);
+
+		// import options
+		// note that 'tipo' must match the raw CSV header name (head comparison),
+		// including suffixed headers as 'test145_dmy'; 'map_to' is the component tipo
+			$build_column = function(string $header, string $model, string $map_to) {
+				return (object)[
+					'tipo'			=> $header,
+					'label'			=> $map_to,
+					'model'			=> $model,
+					'column_name'	=> $header,
+					'checked'		=> true,
+					'map_to'		=> $map_to
+				];
+			};
+			$ar_columns_map = [
+				(object)[
+					'tipo'			=> 'section_id',
+					'label'			=> '',
+					'model'			=> 'section_id',
+					'column_name'	=> 'section_id',
+					'checked'		=> true,
+					'map_to'		=> 'test102'
+				],
+				$build_column('test52',      'component_input_text',  'test52'),
+				$build_column('test145_dmy', 'component_date',        'test145'),
+				$build_column('test208',     'component_email',       'test208'),
+				$build_column('test100',     'component_geolocation', 'test100'),
+				$build_column('test18',      'component_json',        'test18'),
+				$build_column('test89',      'component_select_lang', 'test89')
+			];
+			$options = (object)[
+				'files' => [(object)[
+					'file'					=> $file_name,
+					'section_tipo'			=> 'test3',
+					'bulk_process_label'	=> 'import v7 formats test',
+					'ar_columns_map'		=> $ar_columns_map
+				]],
+				'time_machine_save' => false
+			];
+
+		// import
+			$response = tool_import_dedalo_csv::import_files($options);
+
+			$this->assertIsObject($response);
+			$this->assertIsArray($response->result);
+
+			$file_result = $response->result[0];
+			$this->assertTrue(
+				$file_result->result===true,
+				'expected file import result true: ' . json_encode($file_result, JSON_PRETTY_PRINT)
+			);
+			$this->assertTrue(
+				empty($file_result->failed_rows),
+				'expected empty failed_rows: ' . json_encode($file_result->failed_rows ?? null, JSON_PRETTY_PRINT)
+			);
+
+		// verify saved data per component
+			$get_component_data = function(string $model, string $tipo, string $lang) {
+				$component = component_common::get_instance(
+					$model,
+					$tipo,
+					1,
+					'list',
+					$lang,
+					'test3',
+					false // cache
+				);
+				return $component->get_data();
+			};
+
+			// input_text. Wrapped dedalo_data flat multi-language array (raw export shape):
+			// every item carries its own lang and all the translations must be preserved
+			$data = $get_component_data('component_input_text', 'test52', DEDALO_DATA_LANG);
+			$lang_values = [];
+			foreach ($data ?? [] as $item) {
+				$lang_values[$item->lang ?? ''][] = $item->value;
+			}
+			$this->assertContains('WrappedHello', $lang_values['lg-eng'] ?? [], 'expected lg-eng wrapped value saved');
+			$this->assertContains('HolaEnvuelto', $lang_values['lg-spa'] ?? [], 'expected lg-spa wrapped value saved');
+
+			// date. Flat dmy string
+			$data = $get_component_data('component_date', 'test145', DEDALO_DATA_NOLAN);
+			$this->assertEquals(2023, $data[0]->start->year ?? null, 'expected date year saved');
+			$this->assertEquals(10,   $data[0]->start->month ?? null, 'expected date month saved');
+			$this->assertEquals(26,   $data[0]->start->day ?? null, 'expected date day saved');
+
+			// email. Multiple flat values with ' | ' separator
+			$data = $get_component_data('component_email', 'test208', DEDALO_DATA_NOLAN);
+			$values = array_map(function($item){ return $item->value; }, $data ?? []);
+			$this->assertContains('a@b.com', $values, 'expected first email saved');
+			$this->assertContains('c@d.com', $values, 'expected second email saved');
+
+			// geolocation. Flat 'lat, lon, zoom' string
+			$data = $get_component_data('component_geolocation', 'test100', DEDALO_DATA_NOLAN);
+			$this->assertEquals(39.4625, $data[0]->lat ?? null, 'expected geolocation lat saved');
+			$this->assertEquals(-0.3762, $data[0]->lon ?? null, 'expected geolocation lon saved');
+			$this->assertEquals(15, $data[0]->zoom ?? null, 'expected geolocation zoom saved');
+
+			// json. Arbitrary JSON value goes entirely inside 'value'
+			$data = $get_component_data('component_json', 'test18', DEDALO_DATA_NOLAN);
+			$this->assertEquals(1, $data[0]->value->config->a ?? null, 'expected json value saved');
+
+			// select_lang. Lang code resolved to locator (when languages section is available)
+			if (lang::get_section_id_from_code('lg-spa')!==null) {
+				$data = $get_component_data('component_select_lang', 'test89', DEDALO_DATA_NOLAN);
+				$this->assertEquals(
+					DEDALO_LANGS_SECTION_TIPO,
+					$data[0]->section_tipo ?? null,
+					'expected select_lang locator saved'
+				);
+			}
+
+		// clean. Delete the fixture from the user CSV import directory
+			$delete_response = tool_import_dedalo_csv::delete_csv_file((object)[
+				'file_name' => $file_name
+			]);
+			$this->assertTrue(
+				$delete_response->result!==false,
+				'expected fixture file deleted'
+			);
+	}//end test_import_files_v7_formats
+
+
+
+	/**
+	* BUILD_IMPORT_COLUMNS_MAP
+	* Helper. Builds the ar_columns_map for a simple header list where every
+	* header name matches its component tipo (plus the mandatory section_id column)
+	* @param array $ar_components as [tipo => model]
+	* @return array $ar_columns_map
+	*/
+	private function build_import_columns_map(array $ar_components) : array {
+
+		$ar_columns_map = [
+			(object)[
+				'tipo'			=> 'section_id',
+				'label'			=> '',
+				'model'			=> 'section_id',
+				'column_name'	=> 'section_id',
+				'checked'		=> true,
+				'map_to'		=> 'test102'
+			]
+		];
+		foreach ($ar_components as $tipo => $model) {
+			$ar_columns_map[] = (object)[
+				'tipo'			=> $tipo,
+				'label'			=> $tipo,
+				'model'			=> $model,
+				'column_name'	=> $tipo,
+				'checked'		=> true,
+				'map_to'		=> $tipo
+			];
+		}
+
+		return $ar_columns_map;
+	}//end build_import_columns_map
+
+
+
+	/**
+	* CANONICALIZE_DATA
+	* Helper. Converts a dato to a normalized array form with recursively sorted
+	* object keys, so datos can be compared ignoring property order.
+	* The data is JSON round-tripped first to apply the same serialization used
+	* by the DB storage (e.g. dd_date::jsonSerialize), because in-memory datos
+	* can contain live class instances as dd_date
+	* @param mixed $data
+	* @return mixed
+	*/
+	private function canonicalize_data( $data ) {
+
+		// serialize as the DB storage does (resolves JsonSerializable instances)
+		$data = json_decode( json_encode($data) );
+
+		$sort_keys = null;
+		$sort_keys = function($data) use (&$sort_keys) {
+			if (is_object($data)) {
+				$vars = (array)$data;
+				ksort($vars);
+				$result = [];
+				foreach ($vars as $k => $v) {
+					$result[$k] = $sort_keys($v);
+				}
+				return $result;
+			}
+			if (is_array($data)) {
+				return array_map($sort_keys, $data);
+			}
+			return $data;
+		};
+
+		return $sort_keys($data);
+	}//end canonicalize_data
+
+
+
+	/**
+	* TEST_import_files_raw_export_round_trip
+	* Critical workflow: data exported in 'dedalo_raw' format (dedalo_data wrapper,
+	* produced by component_common::get_raw_value) must re-import producing EXACTLY
+	* the same stored datos. Builds a CSV from the real raw export values of record 1
+	* and verifies every component dato is unchanged after the import.
+	* @return void
+	*/
+	public function test_import_files_raw_export_round_trip() {
+
+		$this->user_login();
+
+		$section_tipo	= 'test3';
+		$section_id		= 1;
+		$file_name		= 'import_round_trip-test3.csv';
+
+		$ar_test_components = [
+			'test52'  => 'component_input_text',
+			'test145' => 'component_date',
+			'test208' => 'component_email',
+			'test100' => 'component_geolocation',
+			'test18'  => 'component_json',
+			'test89'  => 'component_select_lang',
+			'test88'  => 'component_check_box'
+		];
+
+		// snapshot current datos and build the CSV cells from the REAL
+		// raw export values (get_raw_value is the 'dedalo_raw' chokepoint)
+			$snapshots	= [];
+			$header		= ['section_id'];
+			$cells		= [(string)$section_id];
+			foreach ($ar_test_components as $tipo => $model) {
+
+				$component = component_common::get_instance(
+					$model,
+					$tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_LANG,
+					$section_tipo,
+					false
+				);
+				$snapshots[$tipo] = json_encode( $this->canonicalize_data($component->get_data()) );
+
+				$raw_value	= $component->get_raw_value();
+				$cell_data	= $raw_value->value; // ['dedalo_data' => dato] | null
+				$cell_string = is_null($cell_data)
+					? ''
+					: json_encode($cell_data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+				$header[]	= $tipo;
+				$cells[]	= $cell_string;
+			}
+
+		// build the CSV file (delimiter ';', RFC 4180 quoting)
+			$quote = function(string $v) : string {
+				return (strpos($v, ';')!==false || strpos($v, '"')!==false || strpos($v, "\n")!==false)
+					? '"'.str_replace('"', '""', $v).'"'
+					: $v;
+			};
+			$csv_content = implode(';', array_map($quote, $header)) . "\n"
+						 . implode(';', array_map($quote, $cells))  . "\n";
+
+			$target_file = tool_import_dedalo_csv::get_files_path() . '/' . $file_name;
+			$this->assertNotFalse(
+				file_put_contents($target_file, $csv_content),
+				'expected round trip CSV file written'
+			);
+
+		// import
+			$options = (object)[
+				'files' => [(object)[
+					'file'					=> $file_name,
+					'section_tipo'			=> $section_tipo,
+					'bulk_process_label'	=> 'import raw export round trip test',
+					'ar_columns_map'		=> $this->build_import_columns_map($ar_test_components)
+				]],
+				'time_machine_save' => false
+			];
+			$response = tool_import_dedalo_csv::import_files($options);
+
+			$file_result = $response->result[0] ?? null;
+			$this->assertTrue(
+				($file_result->result ?? null)===true,
+				'expected file import result true: ' . json_encode($file_result, JSON_PRETTY_PRINT)
+			);
+			$this->assertTrue(
+				empty($file_result->failed_rows),
+				'expected empty failed_rows: ' . json_encode($file_result->failed_rows ?? null, JSON_PRETTY_PRINT)
+			);
+
+		// verify every dato is EXACTLY the same as before the round trip
+			foreach ($ar_test_components as $tipo => $model) {
+
+				$component = component_common::get_instance(
+					$model,
+					$tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_LANG,
+					$section_tipo,
+					false
+				);
+				$this->assertEquals(
+					$snapshots[$tipo],
+					json_encode( $this->canonicalize_data($component->get_data()) ),
+					"round trip dato changed for $tipo ($model)"
+				);
+			}
+
+		// clean
+			tool_import_dedalo_csv::delete_csv_file((object)[
+				'file_name' => $file_name
+			]);
+	}//end test_import_files_raw_export_round_trip
+
+
+
+	/**
+	* TEST_import_files_lang_keyed_object
+	* End to end import of the multi-language lang keyed object format:
+	* {"lg-eng":"...","lg-spa":"..."} saved per lang via set_data_lang
+	* @return void
+	*/
+	public function test_import_files_lang_keyed_object() {
+
+		$this->user_login();
+
+		$file_name = 'import_lang_keyed-test3.csv';
+
+		// CSV with a lang keyed object cell for component_input_text test52
+			$csv_content = 'section_id;test52' . "\n"
+				. '1;"{""lg-eng"":""KeyedHello"",""lg-spa"":""HolaClave""}"' . "\n";
+
+			$target_file = tool_import_dedalo_csv::get_files_path() . '/' . $file_name;
+			$this->assertNotFalse(
+				file_put_contents($target_file, $csv_content),
+				'expected lang keyed CSV file written'
+			);
+
+		// import
+			$options = (object)[
+				'files' => [(object)[
+					'file'					=> $file_name,
+					'section_tipo'			=> 'test3',
+					'bulk_process_label'	=> 'import lang keyed object test',
+					'ar_columns_map'		=> $this->build_import_columns_map([
+						'test52' => 'component_input_text'
+					])
+				]],
+				'time_machine_save' => false
+			];
+			$response = tool_import_dedalo_csv::import_files($options);
+
+			$file_result = $response->result[0] ?? null;
+			$this->assertTrue(
+				($file_result->result ?? null)===true,
+				'expected file import result true: ' . json_encode($file_result, JSON_PRETTY_PRINT)
+			);
+			$this->assertTrue(
+				empty($file_result->failed_rows),
+				'expected empty failed_rows: ' . json_encode($file_result->failed_rows ?? null, JSON_PRETTY_PRINT)
+			);
+
+		// verify both langs saved
+			$component = component_common::get_instance(
+				'component_input_text',
+				'test52',
+				1,
+				'list',
+				DEDALO_DATA_LANG,
+				'test3',
+				false
+			);
+			$data = $component->get_data();
+			$lang_values = [];
+			foreach ($data ?? [] as $item) {
+				$lang_values[$item->lang ?? ''][] = $item->value;
+			}
+			$this->assertContains('KeyedHello', $lang_values['lg-eng'] ?? [], 'expected lg-eng keyed value saved');
+			$this->assertContains('HolaClave', $lang_values['lg-spa'] ?? [], 'expected lg-spa keyed value saved');
+
+		// clean
+			tool_import_dedalo_csv::delete_csv_file((object)[
+				'file_name' => $file_name
+			]);
+	}//end test_import_files_lang_keyed_object
+
+
+
+	/**
 	* TEST_delete_csv_file
 	* 	Execute this function at end to clean temporal file (!)
 	* @return void
@@ -966,30 +1374,37 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 
 	/**
 	* TEST_get_csv_files_with_custom_path
-	* Test get_csv_files with custom files_path option
+	* TOOLS-02 (2026-06 audit): a client-supplied files_path MUST be ignored.
+	* get_csv_files always reads the caller's own per-user import dir; honouring an
+	* arbitrary files_path was an authenticated arbitrary-directory read. This test
+	* now asserts the secure contract: passing a custom files_path yields the same
+	* result as not passing one (the custom directory's contents are never leaked).
 	* @return void
 	*/
 	public function test_get_csv_files_with_custom_path() {
 
-		$response = tool_import_dedalo_csv::get_csv_files((object)[
+		// a custom files_path pointing at the test fixture dir (which has CSVs)
+		$with_custom = tool_import_dedalo_csv::get_csv_files((object)[
 			'files_path' => $this->get_test_files_path()
 		]);
+		// the same call without any custom path (per-user dir only)
+		$without_custom = tool_import_dedalo_csv::get_csv_files((object)[]);
 
-		$this->assertTrue(
-			gettype($response)==='object',
-			'expected gettype result is object'
-				.' and is : '.gettype($response)
+		$this->assertSame(
+			'object',
+			gettype($with_custom),
+			'expected response object'
 		);
-		$this->assertTrue(
-			gettype($response->result)==='array',
-			'expected gettype result is array'
-				.' and is : '.gettype($response->result)
+		$this->assertSame(
+			'array',
+			gettype($with_custom->result),
+			'expected result array'
 		);
-		// Should find the test CSV files
-		$this->assertTrue(
-			count($response->result) >= 2,
-			'expected at least 2 CSV files'
-				.' and found : '.count($response->result)
+		// the client files_path must be ignored: same file set as the default call.
+		$this->assertSame(
+			count($without_custom->result),
+			count($with_custom->result),
+			'TOOLS-02: a client-supplied files_path must be ignored (must not read an arbitrary directory)'
 		);
 	}//end test_get_csv_files_with_custom_path
 
@@ -1276,6 +1691,9 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 		}
 
 		// Verify set_data_lang() doesn't silently drop items
+		// Note that get_data() returns all langs data: previous values of other langs
+		// may exist in the test DB, so locate the item by DEDALO_DATA_LANG instead of
+		// asserting on a fixed position
 		$component->set_data_lang($conformed_value, DEDALO_DATA_LANG);
 		// Use get_data_lang to check only the items for the target language,
 		// avoiding false failures when DB already has data in other langs
@@ -1284,27 +1702,25 @@ final class tool_import_dedalo_csv_test extends BaseTestCase {
 			!empty($saved_data),
 			'Expected data to be saved (not silently dropped by set_data_lang)'
 		);
+		$lang_item = null;
+		foreach ($saved_data as $item) {
+			if (is_object($item) && ($item->lang ?? null)===DEDALO_DATA_LANG) {
+				$lang_item = $item;
+				break;
+			}
+		}
 		$this->assertTrue(
-			is_object($saved_data[0]),
-			'Expected saved data item to be object'
+			is_object($lang_item),
+			'Expected a saved data item with lang DEDALO_DATA_LANG'
 		);
 		$this->assertTrue(
-			property_exists($saved_data[0], 'value'),
+			property_exists($lang_item, 'value'),
 			'Expected saved data item to have "value" property'
-		);
-		$this->assertTrue(
-			property_exists($saved_data[0], 'lang'),
-			'Expected saved data item to have "lang" property'
 		);
 		$this->assertEquals(
 			'Hello',
-			$saved_data[0]->value,
+			$lang_item->value,
 			'Expected saved value to match input'
-		);
-		$this->assertEquals(
-			DEDALO_DATA_LANG,
-			$saved_data[0]->lang,
-			'Expected saved lang to match DEDALO_DATA_LANG'
 		);
 	}//end test_conform_import_data_set_data_lang_compatibility
 

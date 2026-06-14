@@ -182,7 +182,8 @@
 			color: @color_white ;
 			background-color: @color_green_success;
 			position: relative;
-			border-radius: 4px;
+			border-radius: var(--radius-md);
+			box-shadow: var(--shadow-2);
 			margin-bottom: 1px;
 
 			&.warning {
@@ -796,7 +797,8 @@
 			color: @color_white;
 			padding: 1em;
 			line-height: 1.5em;
-			border-radius: 5px;
+			border-radius: var(--radius-lg);
+			box-shadow: var(--shadow-2);
 			font-size: 0.8em;
 			width: 100%;
 			max-width: 20em;
@@ -849,5 +851,50 @@
 			background-color: var(--input_bg);
 			color: var(--input_fg);
 			outline: var(--input_outline);
+		}
+	}
+
+/* UIUX-08: keyboard focus visibility on form fields.
+   --input_outline:none removes the input outline at rest AND on focus (both
+   themes), which traps keyboard users. The global :where() rule below does NOT
+   cover input/textarea/select, so restore a visible :focus-visible ring here. */
+	input[type='text'], input[type='number'], input[type='url'], input[type='password'], button[type='submit'], textarea, select, .contenteditable {
+		&:focus-visible {
+			outline: 2px solid var(--focus_ring);
+			outline-offset: 1px;
+		}
+	}
+
+/* keyboard focus: global fallback
+   ------------------------------------------------------- */
+	// Specificity-0 (:where) so any component that defines its own focus wins.
+	// Gives every interactive element a single, theme-aware ring on keyboard
+	// focus without touching each component file.
+	:where(a, button, [role="button"], summary, [tabindex]):focus-visible {
+		outline: 2px solid var(--focus_ring);
+		outline-offset: 1px;
+	}
+
+/* reduced motion
+   ------------------------------------------------------- */
+	// Honor the OS "reduce motion" preference. Durations collapse to ~0 (the
+	// minifier normalizes 0.001ms → 0s). This is safe here: the only end-event
+	// dependency is notifications.js `onanimationend`, and zero-duration CSS
+	// *animations* still fire animationstart/animationend (unlike transitions);
+	// the codebase has no transitionend listeners. Spinner / blink are frozen
+	// visible rather than stuck mid-frame.
+	@media (prefers-reduced-motion: reduce) {
+		*, *::before, *::after {
+			animation-duration: 0.001ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.001ms !important;
+			scroll-behavior: auto !important;
+		}
+		.spinner {
+			animation: none !important;
+		}
+		.blink {
+			animation: none !important;
+			visibility: visible !important;
 		}
 	}

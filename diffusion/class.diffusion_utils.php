@@ -1,102 +1,145 @@
 <?php declare(strict_types=1);
 
-use PhpParser\Node\Stmt\Foreach_;
-
 /**
- * DIFFUSION_UTILS
- * Utility class for common diffusion mapping and resolution logic.
- * Extracted from diffusion_sql to support the new format-agnostic API.
- */
+* DIFFUSION_UTILS
+* v7 core of the diffusion system: ontology resolution (flat virtual
+* diffusion tree), publication checks and shared diffusion helpers.
+*
+* Conventions:
+* - Resolution is always based on the flat virtual diffusion tree
+*   (get_virtual_diffusion_tree / get_section_diffusion_nodes): flat array
+*   of objects like {"tipo":"oh88","model":"database","label":"web_default"}.
+* - Only v7 ontology `properties` are read (never v6 `propiedades`).
+* - Public API methods return {result: bool, msg: string, errors: array}
+*   response objects; simple resolution helpers return values/null and
+*   boolean checks return bool.
+*/
 class diffusion_utils {
 
 
-    /**
-     * GET_IS_PUBLICABLE
-     * Compatibility wrapper for legacy callers.
-     */
-    public static function get_is_publicable(object $locator): bool {
+	// publication metadata component tipos (legacy v6 per-record components;
+	// publication tracking in v7 is the dd1758 activity log — see
+	// diffusion_activity_logger. Kept because component_common references
+	// them to detect modified publication-related components)
+	public static $publication_first_tipo		= 'dd271';
+	public static $publication_last_tipo		= 'dd1223';
+	public static $publication_first_user_tipo	= 'dd1224';
+	public static $publication_last_user_tipo	= 'dd1225';
 
-        return self::is_publishable($locator);
-    }
+	// request-scoped caches (cleared by reset_cache at request boundaries:
+	// dd_diffusion_api::diffuse step 0, long-running CLI loops)
+	private static ?array	$virtual_tree_cache			= null;
+	private static array	$is_publishable_cache		= [];
+	private static array	$diffusion_map_cache		= [];
+	// request-scoped mirror of the persistent "sections with diffusion" map
+	// (see get_section_diffusion_map). null = not yet loaded this request.
+	private static ?array	$section_diffusion_map_cache	= null;
 
-    /**
-     * IS_PUBLISHABLE
-     * Locate component_publication in requested locator section and get its boolean value.
-     */
-    public static function is_publishable(object $locator): bool {
 
-        $section_tipo = $locator->section_tipo;
-        $section_id   = $locator->section_id;
-        $uid          = $section_tipo . '_' . $section_id;
 
-        static $resolved_is_publishable;
-        if (isset($resolved_is_publishable[$uid])) {
-            return $resolved_is_publishable[$uid];
-        }
+	/**
+	* RESET_CACHE
+	* Clears the request-scoped static caches. Call at request boundaries
+	* (dd_diffusion_api::diffuse step 0) and between iterations of
+	* long-running CLI processes that may change the ontology or records.
+	* @return void
+	*/
+	public static function reset_cache() : void {
 
-        // Locate component_publication in current section
-        $ar_children = section::get_ar_children_tipo_by_model_name_in_section(
-            $section_tipo,
-            ['component_publication'],
-            true,
-            true,
-            true,
-            true
-        );
+		self::$virtual_tree_cache	= null;
+		self::$is_publishable_cache	= [];
+		self::$diffusion_map_cache	= [];
+		// Reset the request-scoped mirror only. The PERSISTENT map file is NOT
+		// deleted here: reset_cache runs on every publish (dd_diffusion_api::diffuse
+		// step 0) but the map depends only on the ontology, which publishing does
+		// not change. Ontology mutations invalidate the file through
+		// delete_section_map_cache_file (called from the ontology write chokepoints
+		// and tools_register::invalidate_all_tool_caches).
+		self::$section_diffusion_map_cache	= null;
+	}//end reset_cache
 
-        if (empty($ar_children)) {
-            return true;
-        }
 
-        $component_publication_tipo = reset($ar_children);
-        $is_publishable = (bool)self::get_component_publication_bool_value($component_publication_tipo, $section_id, $section_tipo);
+	/**
+	 * IS_PUBLISHABLE
+	 * Locate component_publication in requested locator section and get its boolean value.
+	 */
+	public static function is_publishable(object $locator): bool {
 
-        $resolved_is_publishable[$uid] = $is_publishable;
+		$section_tipo = $locator->section_tipo;
+		$section_id   = $locator->section_id;
+		$uid          = $section_tipo . '_' . $section_id;
 
-        return $is_publishable;
-    }
+		if (isset(self::$is_publishable_cache[$uid])) {
+			return self::$is_publishable_cache[$uid];
+		}
 
-    /**
-     * GET_COMPONENT_PUBLICATION_BOOL_VALUE
-     */
-    public static function get_component_publication_bool_value(string $component_publication_tipo, string|int $section_id, string $section_tipo): bool {
+		// Locate component_publication in current section
+		$ar_children = section::get_ar_children_tipo_by_model_name_in_section(
+			$section_tipo,
+			['component_publication'],
+			true,
+			true,
+			true,
+			true
+		);
 
-        $component_publication = component_common::get_instance(
-            'component_publication',
-            $component_publication_tipo,
-            $section_id,
-            'list',
-            DEDALO_DATA_NOLAN,
-            $section_tipo,
-            false
-        );
-        $data = $component_publication->get_data();
+		if (empty($ar_children)) {
+			// DIFFU-07: cache the early-true result too (a section with no
+			// component_publication is always publishable), so repeated calls for the
+			// same record skip the get_ar_children lookup.
+			self::$is_publishable_cache[$uid] = true;
+			return true;
+		}
 
-        if (isset($data[0]) &&
-            isset($data[0]->section_tipo) && $data[0]->section_tipo === DEDALO_SECTION_SI_NO_TIPO &&
-            isset($data[0]->section_id)   && (int)$data[0]->section_id === NUMERICAL_MATRIX_VALUE_YES) {
+		$component_publication_tipo = reset($ar_children);
+		$is_publishable = (bool)self::get_component_publication_bool_value($component_publication_tipo, $section_id, $section_tipo);
 
-            return true;
-        }
+		self::$is_publishable_cache[$uid] = $is_publishable;
 
-        return false;
-    }
+		return $is_publishable;
+	}
 
-    /**
-     * GET_RELATED_SECTION_TIPO
-     * Finds the section node tipo related to any ontology node.
-     * Searches unidirectional relations.
-     * @param string $tipo
-     * @return string|null
-     */
-    public static function get_related_section_tipo(string $tipo): ?string {
-        $node = ontology_node::get_instance($tipo);
-        if (!$node) return null;
+	/**
+	 * GET_COMPONENT_PUBLICATION_BOOL_VALUE
+	 */
+	public static function get_component_publication_bool_value(string $component_publication_tipo, string|int $section_id, string $section_tipo): bool {
 
-        $ar_section_tipos = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section', 'related', true);
-        if (!empty($ar_section_tipos)) {
-            return reset($ar_section_tipos);
-        }
+		$component_publication = component_common::get_instance(
+			'component_publication',
+			$component_publication_tipo,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$section_tipo,
+			false
+		);
+		$data = $component_publication->get_data();
+
+		if (isset($data[0]) &&
+			isset($data[0]->section_tipo) && $data[0]->section_tipo === DEDALO_SECTION_SI_NO_TIPO &&
+			isset($data[0]->section_id)   && (int)$data[0]->section_id === NUMERICAL_MATRIX_VALUE_YES) {
+
+			return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * GET_RELATED_SECTION_TIPO
+	 * Finds the section node tipo related to any ontology node.
+	 * Searches unidirectional relations.
+	 * @param string $tipo
+	 * @return string|null
+	 */
+	public static function get_related_section_tipo(string $tipo): ?string {
+		$node = ontology_node::get_instance($tipo);
+		if (!$node) return null;
+
+		$ar_section_tipos = ontology_node::get_ar_tipo_by_model_and_relation($tipo, 'section', 'related', true);
+		if (!empty($ar_section_tipos)) {
+			return reset($ar_section_tipos);
+		}
 
 		$model = $node->get_model();
 		if (str_contains($model, '_alias')) {
@@ -109,17 +152,17 @@ class diffusion_utils {
 			return self::get_related_section_tipo($related_tipo);
 		}
 
-        return null;
-    }
+		return null;
+	}
 
 
 
-    /**
-     * GET_DIFFUSION_ELEMENT
-     * Recursively searches for the diffusion element in the ontology tree.
-     * @param string $ontology_node_tipo
-     * @return string|null
-     */
+	/**
+	 * GET_DIFFUSION_ELEMENT
+	 * Recursively searches for the diffusion element in the ontology tree.
+	 * @param string $ontology_node_tipo
+	 * @return string|null
+	 */
 	public static function get_diffusion_element(string $ontology_node_tipo): ?string {
 
 		$node = ontology_node::get_instance($ontology_node_tipo);
@@ -142,60 +185,16 @@ class diffusion_utils {
 
 
 	/**
-	 * GET_SECTION_DIFFUSION_NODES
-	 * Builds a hierarchical tree of diffusion nodes mapped to a specific section.
-	 *
-	 * This method traverses the ontology tree starting from `DEDALO_DIFFUSION_DOMAIN`
-	 * to find all diffusion configurations that target the given section. For each
-	 * matching diffusion node, it constructs:
-	 *
-	 * - **Parents chain**: Ascending hierarchy from the section up to `diffusion_domain`,
-	 *   including diffusion elements with their type property (e.g., 'sql', 'xml')
-	 *
-	 * - **Children nodes**: Descending tree of all components/elements under the section,
-	 *   with their related ontology references
-	 *
-	 * Logic flow:
-	 * 1. Get all recursive children under `DEDALO_DIFFUSION_DOMAIN`
-	 * 2. For each diffusion node, resolve related sections via ontology relations
-	 * 3. Filter to only nodes that map to the requested `section_tipo`
-	 * 4. Build parent chain:
-	 *    - Traverse upward via `get_parent()` until reaching `diffusion_domain`
-	 *    - For `diffusion_element` nodes, extract `diffusion->type` from properties
-	 *    - Log error and mark if diffusion type is missing
-	 * 5. Build children list:
-	 *    - Get all recursive children of the section
-	 *    - Include relation information for each child
-	 * 6. Return array of source element objects with full hierarchy
-	 *
-	 * @param string $section_tipo The section tipo to get diffusion nodes for
-	 *
-	 * @return array Array of source element objects, each containing:
-	 *         {
-	 *             string $tipo    : The diffusion node tipo
-	 *             string $model   : The ontology model name
-	 *             string $label   : Human-readable label
-	 *             array  $parents : Ascending hierarchy to diffusion_domain
-	 *             array  $children: Descending nodes with relations
-	 *         }
-	 *
-	 * @see ontology_node::get_ar_recursive_children() For tree traversal
-	 * @see ontology_node::get_ar_tipo_by_model_and_relation() For relation resolution
-	 */
-	/**
-	 * GET_SECTION_DIFFUSION_NODES
+	 * GET_VIRTUAL_DIFFUSION_TREE
 	 * Walks down the virtual diffusion tree (resolving aliases) to find nodes
 	 * that match the specified section_tipo. Preserves the exact alias hierarchy.
 	 *
-	 * @param string $section_tipo The section to find diffusion nodes for
 	 * @return array Array of matching source elements mapped with their alias tree parents
 	 */
 	public static function get_virtual_diffusion_tree() : array {
 
-		static $virtual_tree_cache = null;
-
-		if ($virtual_tree_cache !== null) {
-			return $virtual_tree_cache;
+		if (self::$virtual_tree_cache !== null) {
+			return self::$virtual_tree_cache;
 		}
 
 		$diffusion_domain_tipo = self::get_diffusion_domain_tipo();
@@ -230,8 +229,8 @@ class diffusion_utils {
 			$consumed_by_alias
 		);
 
-		$virtual_tree_cache = $all_virtual_nodes;
-		return $virtual_tree_cache;
+		self::$virtual_tree_cache = $all_virtual_nodes;
+		return self::$virtual_tree_cache;
 	}
 
 
@@ -594,75 +593,156 @@ class diffusion_utils {
 
 	/**
 	* HAVE_SECTION_DIFFUSION
-	* Return correspondence of current section in diffusion domain
-	* Note: For better control, sections are related terms of diffusion_elements.
-	* This correspondence always must exists in diffusion map
+	* Checks if the given section is targeted by at least one diffusion element,
+	* resolved from the v7 flat virtual diffusion tree (type-agnostic: works for
+	* sql, rdf, xml, socrata and any future diffusion type).
+	*
+	* This runs on EVERY section API request (via tool_diffusion::is_available in
+	* common::get_tools). Rebuilding the virtual tree per request cost ~70-175ms,
+	* so the answer for every section is precomputed once into a persistent map
+	* (get_section_diffusion_map) and this method is now an O(1) lookup. The map is
+	* semantically equivalent to calling the previous walk for each section_tipo.
+	*
 	* @param string $section_tipo
-	* @param array|null $ar_diffusion_map_elements = null
 	* @return bool $have_section_diffusion
 	*/
-	public static function have_section_diffusion( string $section_tipo, ?array $ar_diffusion_map_elements=null ) : bool {
+	public static function have_section_diffusion( string $section_tipo ) : bool {
 
-		// cache
-			// $use_cache = true;
-			// if ($use_cache===true) {
-			// 	// session
-			// 	if (isset($_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo])) {
-			// 		return $_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo];
-			// 	}
-			// }
+		return isset(self::get_section_diffusion_map()[$section_tipo]);
+	}//end have_section_diffusion
 
-		// default is false
-		$have_section_diffusion = false;
 
-		// diffusion_map_elements
-		$ar_diffusion_map_elements = $ar_diffusion_map_elements ?? self::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
 
-		// iterate ar_diffusion_map_elements to check sections with diffusion allowed
-		foreach ($ar_diffusion_map_elements as $obj_value) {
+	/**
+	* GET_SECTION_DIFFUSION_MAP_CACHE_NAME
+	* Entity-level (shared, empty-prefix) cache file name for the persistent
+	* "sections with diffusion" map. Same naming pattern as the tool caches.
+	* @return string
+	*/
+	public static function get_section_diffusion_map_cache_name() : string {
+		return DEDALO_ENTITY . '_cache_diffusion_section_map.php';
+	}//end get_section_diffusion_map_cache_name
 
-			$current_diffusion_element_tipo = $obj_value->element_tipo ?? null;
-			if (empty($current_diffusion_element_tipo)) {
-				debug_log(__METHOD__
-					. " Ignored bad diffusion obj_value: element_tipo is mandatory!" . PHP_EOL
-					. ' obj_value : ' . to_string($obj_value)
-					, logger::ERROR
-				);
-				continue;
-			}
 
-			$current_type = $obj_value->type ?? null;
-			if (empty($current_type)) {
-				debug_log(__METHOD__
-					. " Ignored bad diffusion obj_value: type is mandatory!" . PHP_EOL
-					. " To fix this error, go to Ontology definition node and set the proper diffusion type config." . PHP_EOL
-					. ' Sample: ' . json_encode(json_decode('{ "diffusion" : { "type" : "sql" } }'), JSON_PRETTY_PRINT) . PHP_EOL
-					. ' obj_value : ' . to_string($obj_value)
-					, logger::ERROR
-				);
-				continue;
-			}
 
-			$ar_related = self::get_diffusion_sections_from_diffusion_element(
-				$current_diffusion_element_tipo,
-				$current_type
-			);
+	/**
+	* GET_SECTION_DIFFUSION_MAP
+	* Builds (and persists) the map of every section targeted by at least one
+	* diffusion element: [ section_tipo => true ]. `isset($map[$s])` is identical
+	* to the legacy `have_section_diffusion($s)` for every $s.
+	*
+	* The map depends ONLY on the diffusion ontology, so it is cached at the
+	* entity level and invalidated by delete_section_map_cache_file() from the
+	* ontology write chokepoints (ontology::set_records_in_dd_ontology /
+	* regenerate_records_in_dd_ontology / delete_ontology), from
+	* tools_register::invalidate_all_tool_caches (import_tools rewrites the tool
+	* tld) and from install_ontology_manager::clean_ontology.
+	*
+	* The on-disk payload is a WRAPPER ['domain'=>..., 'map'=>...], never a bare
+	* array: it lets the domain config self-invalidate the file and avoids the
+	* "cached empty array == miss" ambiguity (the wrapper is never empty).
+	*
+	* @return array $map [ section_tipo => true ]
+	*/
+	public static function get_section_diffusion_map() : array {
 
-			if(in_array($section_tipo, $ar_related)) {
-				$have_section_diffusion = true;
-				break;
+		// request-scoped static
+		if (self::$section_diffusion_map_cache !== null) {
+			return self::$section_diffusion_map_cache;
+		}
+
+		// recovery mode: ontology reads are redirected to dd_ontology_recovery, so
+		// never read/write the live-ontology cache file. Compute fresh, static only.
+		$recovery_mode = ($_ENV['DEDALO_RECOVERY_MODE'] ?? false) === true;
+
+		// persistent file read (accept only a well-formed wrapper for the current domain)
+		if ($recovery_mode === false) {
+			$cached = dd_cache::cache_from_file((object)[
+				'file_name'	=> self::get_section_diffusion_map_cache_name(),
+				'prefix'	=> ''
+			]);
+			if (is_array($cached)
+				&& ($cached['domain'] ?? null) === DEDALO_DIFFUSION_DOMAIN
+				&& isset($cached['map']) && is_array($cached['map'])
+			) {
+				self::$section_diffusion_map_cache = $cached['map'];
+				return $cached['map'];
 			}
 		}
 
-		// cache
-		// if ($use_cache===true) {
-		// 	// session
-		// 	$_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo] = $have_section_diffusion;
-		// }
+		// compute: ONE virtual-tree walk, exact semantic clone of the per-section path
+		// (get_section_diffusion_nodes + the parents element-model test in the old
+		// have_section_diffusion).
+		$map = [];
+
+		// misconfig / fresh install: no domain -> empty map, NOT persisted (mirrors
+		// the early return in get_virtual_diffusion_tree)
+		if (self::get_diffusion_domain_tipo() === null) {
+			self::$section_diffusion_map_cache = $map;
+			return $map;
+		}
+
+		$all_virtual_nodes = self::get_virtual_diffusion_tree();
+		foreach ($all_virtual_nodes as $vnode) {
+
+			// cheap filter first: the node must sit under a diffusion element
+			$under_element = false;
+			foreach ($vnode->parents ?? [] as $path_item) {
+				if ($path_item->model==='diffusion_element' || $path_item->model==='diffusion_element_alias') {
+					$under_element = true;
+					break;
+				}
+			}
+			if ($under_element === false) {
+				continue;
+			}
+
+			// related sections of the node, with the real_tipo fallback ONLY when
+			// empty (replicates get_section_diffusion_nodes exactly)
+			$ar_related_sections = ontology_node::get_ar_tipo_by_model_and_relation($vnode->tipo, 'section', 'related', true);
+			if (empty($ar_related_sections) && $vnode->real_tipo) {
+				$ar_related_sections = ontology_node::get_ar_tipo_by_model_and_relation($vnode->real_tipo, 'section', 'related', true);
+			}
+
+			foreach ($ar_related_sections as $current_section_tipo) {
+				$map[$current_section_tipo] = true;
+			}
+		}
+
+		// persist (wrapper). Skip the file write in recovery mode.
+		if ($recovery_mode === false) {
+			dd_cache::cache_to_file((object)[
+				'file_name'	=> self::get_section_diffusion_map_cache_name(),
+				'prefix'	=> '',
+				'data'		=> [
+					'domain'	=> DEDALO_DIFFUSION_DOMAIN,
+					'map'		=> $map
+				]
+			]);
+		}
+
+		self::$section_diffusion_map_cache = $map;
+		return $map;
+	}//end get_section_diffusion_map
 
 
-		return $have_section_diffusion;
-	}//end have_section_diffusion
+
+	/**
+	* DELETE_SECTION_MAP_CACHE_FILE
+	* Invalidates the persistent "sections with diffusion" map: resets the
+	* request-scoped static and deletes the entity-level cache file. Call from
+	* every ontology write chokepoint (see get_section_diffusion_map docblock).
+	* @return bool
+	*/
+	public static function delete_section_map_cache_file() : bool {
+
+		self::$section_diffusion_map_cache = null;
+
+		return dd_cache::delete_cache_files(
+			[ self::get_section_diffusion_map_cache_name() ],
+			'' // shared, empty prefix
+		);
+	}//end delete_section_map_cache_file
 
 
 
@@ -700,7 +780,7 @@ class diffusion_utils {
 	*	        {
 	*	            "element_tipo": "murapa3",
 	*	            "name": "Publicar en web",
-	*	            "type": "diffusion_mysql",
+	*	            "type": "sql",
 	*	            "database_name": "web_murapa",
 	*	            "database_tipo": "murapa4"
 	*	        }
@@ -710,10 +790,9 @@ class diffusion_utils {
 	public static function get_diffusion_map( string $diffusion_domain_name=DEDALO_DIFFUSION_DOMAIN, $connection_status=false ) : object {
 
 		// cache
-		static $diffusion_map_cache;
 		$cache_key = $diffusion_domain_name .'_' . to_string($connection_status);
-		if (isset($diffusion_map_cache[$cache_key])) {
-			return $diffusion_map_cache[$cache_key];
+		if (isset(self::$diffusion_map_cache[$cache_key])) {
+			return self::$diffusion_map_cache[$cache_key];
 		}
 
 		$diffusion_map = new stdClass();
@@ -873,7 +952,7 @@ class diffusion_utils {
 		}//end foreach ($ar_diffusion_group as $diffusion_group_tipo)
 
 		// cache
-		$diffusion_map_cache[$cache_key] = $diffusion_map;
+		self::$diffusion_map_cache[$cache_key] = $diffusion_map;
 
 
 		return $diffusion_map;
@@ -892,54 +971,22 @@ class diffusion_utils {
 	public static function get_connection_status( object $item ) : ?object {
 
 		$connection_status = null;
-		$conn = null;
 
 		switch ($item->type) {
 
 			case 'sql':
-				// check connection
-				try {
-
-					if ($conn===null || $conn===false) {
-						// try again. Note that if there are multiple connections, they must be checked for each database.
-						$conn = DBi::_getConnection_mysql(
-							MYSQL_DEDALO_HOSTNAME_CONN,
-							MYSQL_DEDALO_USERNAME_CONN,
-							MYSQL_DEDALO_PASSWORD_CONN,
-							$item->database_name,
-							MYSQL_DEDALO_DB_PORT_CONN,
-							MYSQL_DEDALO_SOCKET_CONN
-						);
-					}
-
-				} catch (Exception $e) {
-					$conn = false;
-					debug_log(__METHOD__
-						."  Caught exception on connect to MySQL (database_name: $item->database_name): ". PHP_EOL
-						. $e->getMessage()
-						, logger::WARNING
-					);
-				}
-				if ($conn===false) {
-					$connection_status = (object)[
+				// MariaDB checks are a Bun engine responsibility: a single
+				// 'check_database' call covers server reachability + existence
+				$db_available = self::database_exits($item->database_name);
+				$connection_status = $db_available===true
+					? (object)[
+						'result'	=> true,
+						'msg'		=> 'Database is ready.'
+					]
+					: (object)[
 						'result'	=> false,
-						'msg'		=> 'Unable to connect to database '. $item->database_name
+						'msg'		=> 'Database is NOT ready (missing or engine unreachable).'
 					];
-				}else{
-					// check database
-					$db_available = diffusion_mysql::database_exits($item->database_name);
-					if ($db_available===true) {
-						$connection_status = (object)[
-							'result'	=> true,
-							'msg'		=> 'Database is ready.'
-						];
-					}else{
-						$connection_status = (object)[
-							'result'	=> false,
-							'msg'		=> 'Database is NOT ready.'
-						];
-					}
-				}
 				// error log when fails
 					if ($connection_status->result===false) {
 						debug_log(__METHOD__
@@ -961,6 +1008,37 @@ class diffusion_utils {
 
 
 	/**
+	* DATABASE_EXITS
+	* Check if target MariaDB database exists.
+	* MariaDB management is a Bun engine responsibility: PHP never connects
+	* to MariaDB directly — this method asks the Bun API ('check_database').
+	* @param string $database_name
+	* @return bool
+	*/
+	public static function database_exits( string $database_name ) : bool {
+
+		$response = diffusion_api_client::call((object)[
+			'action'		=> 'check_database',
+			'database_name'	=> $database_name
+		]);
+
+		if (empty($response->result)) {
+			debug_log(__METHOD__
+				. " Unable to check database through diffusion engine" . PHP_EOL
+				. ' database_name: ' . $database_name . PHP_EOL
+				. ' msg: ' . to_string($response->msg ?? null)
+				, logger::WARNING
+			);
+			return false;
+		}
+
+
+		return (bool)($response->exists ?? false);
+	}//end database_exits
+
+
+
+	/**
 	* GET_AR_DIFFUSION_MAP_ELEMENTS
 	* @param string $diffusion_domain_name = DEDALO_DIFFUSION_DOMAIN
 	* @return array $ar_diffusion_map_elements
@@ -969,7 +1047,7 @@ class diffusion_utils {
 	*	    "murapa3": {
 	*	        "element_tipo": "murapa3",
 	*	        "name": "Publish to web",
-	*	        "type": "diffusion_mysql",
+	*	        "type": "sql",
 	*	        "database_name": "web_murapa",
 	*	        "database_tipo": "murapa4"
 	*	    }
@@ -993,51 +1071,44 @@ class diffusion_utils {
 
 	/**
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
-	* @param string $diffusion_element_tipo
-	* @param string $type
-	* @return array $ar_diffusion_sections
+	* Resolves all section tipos targeted by the given diffusion element,
+	* from the v7 flat virtual diffusion tree (type-agnostic: works for sql,
+	* rdf, xml, socrata and any future diffusion type).
+	* @param string $diffusion_element_tipo Alias or real element tipo
+	* @return array $ar_diffusion_sections Array of section tipos
 	*/
-	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $type) : array {
+	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo) : array {
 
-		// cache
-			// static $diffusion_sections_from_diffusion_element;
-			// if (isset($diffusion_sections_from_diffusion_element[$diffusion_element_tipo])) {
-			// 	return $diffusion_sections_from_diffusion_element[$diffusion_element_tipo];
-			// }
+		$ar_diffusion_sections = [];
 
-		try {
-			$class_name = 'diffusion_'.$type;
-			$file_path = DEDALO_DIFFUSION_PATH . '/class.'.$class_name.'.php';
+		$virtual_tree = self::get_virtual_diffusion_tree();
+		foreach ($virtual_tree as $vnode) {
 
-			include_once $file_path;
-
-			if ( method_exists($class_name, 'get_diffusion_sections_from_diffusion_element')) {
-				$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
-			}else{
-				debug_log(__METHOD__
-					. " Ignored diffusion class without mandatory method: 'get_diffusion_sections_from_diffusion_element'." . PHP_EOL
-					. ' type: ' . to_string($type) . PHP_EOL
-					. ' method: ' . 'get_diffusion_sections_from_diffusion_element' . PHP_EOL
-					. ' file_path: ' . $file_path
-					, logger::WARNING
-				);
+			// only nodes under the given diffusion element
+			$in_element = false;
+			foreach ($vnode->parents ?? [] as $path_item) {
+				if (self::element_path_matches($path_item, $diffusion_element_tipo)) {
+					$in_element = true;
+					break;
+				}
+			}
+			if (!$in_element) {
+				continue;
 			}
 
-		} catch (Exception $e) {
-			error_log( 'Caught exception: ' . $e->getMessage() );
-			debug_log(__METHOD__
-				. " Caught exception: " . $e->getMessage() . PHP_EOL
-				. ' diffusion_element_tipo: ' . to_string($diffusion_element_tipo) . PHP_EOL
-				. ' type: ' . to_string($type)
-				, logger::ERROR
-			);
+			// section related to the node (alias contract applied)
+			$related_section_tipo = self::get_related_section_tipo($vnode->tipo);
+			if (empty($related_section_tipo) && !empty($vnode->real_tipo)) {
+				$related_section_tipo = self::get_related_section_tipo($vnode->real_tipo);
+			}
+
+			if (!empty($related_section_tipo) && !in_array($related_section_tipo, $ar_diffusion_sections)) {
+				$ar_diffusion_sections[] = $related_section_tipo;
+			}
 		}
 
-		// cache
-			// $diffusion_sections_from_diffusion_element[$diffusion_element_tipo] = $ar_diffusion_sections;
 
-
-		return $ar_diffusion_sections ?? [];
+		return $ar_diffusion_sections;
 	}//end get_diffusion_sections_from_diffusion_element
 
 
@@ -1047,9 +1118,191 @@ class diffusion_utils {
 
 
 	/**
+	* ELEMENT_PATH_MATCHES
+	* Checks if a virtual-tree path item is the given diffusion element.
+	* Path items hold the virtual (alias-aware) tipo; callers may pass either
+	* the alias tipo or the resolved real element tipo, so both are matched.
+	* @param object $path_item Virtual tree path item {tipo, model, label, type?}
+	* @param string $diffusion_element_tipo
+	* @return bool
+	*/
+	private static function element_path_matches( object $path_item, string $diffusion_element_tipo ) : bool {
+
+		if ($path_item->model!=='diffusion_element' && $path_item->model!=='diffusion_element_alias') {
+			return false;
+		}
+
+		if ($path_item->tipo===$diffusion_element_tipo) {
+			return true;
+		}
+
+		// alias path item: match against the resolved real element tipo
+		if ($path_item->model==='diffusion_element_alias') {
+			$resolved = self::resolve_node_with_alias($path_item->tipo);
+			if (($resolved->real_tipo ?? null)===$diffusion_element_tipo) {
+				return true;
+			}
+		}
+
+		return false;
+	}//end element_path_matches
+
+
+
+	/**
+	* GET_SECTION_NODE_FOR_ELEMENT
+	* Resolves the published artifact node of a given diffusion element and
+	* section from the v7 flat virtual diffusion tree: the table/table_alias
+	* node for SQL elements, the owl:Class node for RDF, etc.
+	* The returned node is the flat virtual object produced by
+	* get_section_diffusion_nodes: {tipo, model, label, parents, children}.
+	* @param string $diffusion_element_tipo Alias or real element tipo
+	* @param string $section_tipo
+	* @return object|null
+	*/
+	public static function get_section_node_for_element( string $diffusion_element_tipo, string $section_tipo ) : ?object {
+
+		$nodes = self::get_section_diffusion_nodes($section_tipo);
+		foreach ($nodes as $node) {
+			foreach ($node->parents ?? [] as $path_item) {
+				if ($path_item->model!=='diffusion_element' && $path_item->model!=='diffusion_element_alias') {
+					continue;
+				}
+				// first element found in the path decides this node's element
+				if (self::element_path_matches($path_item, $diffusion_element_tipo)) {
+					return $node;
+				}
+				break;
+			}
+		}
+
+		return null;
+	}//end get_section_node_for_element
+
+
+
+	/**
+	* GET_DATABASE_NAME_FOR_ELEMENT
+	* Resolves the target database name of a diffusion element from the v7
+	* flat virtual diffusion tree: the node with model 'database' (or
+	* 'database_alias' — alias label wins) whose parents path contains the
+	* element. E.g. {"tipo":"oh88","model":"database","label":"web_default"}
+	* resolves to 'web_default'.
+	* @param string $diffusion_element_tipo Alias or real element tipo
+	* @return string|null $database_name
+	*/
+	public static function get_database_name_for_element( string $diffusion_element_tipo ) : ?string {
+
+		$virtual_tree = self::get_virtual_diffusion_tree();
+		foreach ($virtual_tree as $vnode) {
+			if ($vnode->model!=='database' && $vnode->model!=='database_alias') {
+				continue;
+			}
+			foreach ($vnode->parents ?? [] as $path_item) {
+				if (self::element_path_matches($path_item, $diffusion_element_tipo)) {
+					return $vnode->label;
+				}
+			}
+		}
+
+		return null;
+	}//end get_database_name_for_element
+
+
+
+	/**
+	* GET_TABLE_TIPO
+	* Resolve the table tipo (alias preferred) of given diffusion element and
+	* section, using the v7 flat virtual diffusion tree (the virtual node tipo
+	* is already the alias tipo when the table is aliased).
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @return string|null $table_tipo
+	*/
+	public static function get_table_tipo( string $diffusion_element_tipo, string $section_tipo ) : ?string {
+
+		$node = self::get_section_node_for_element($diffusion_element_tipo, $section_tipo);
+
+		return $node->tipo ?? null;
+	}//end get_table_tipo
+
+
+
+	/**
+	* GET_DDO_MAP
+	* Builds the ddo_map (diffusion data objects map) of a diffusion field node:
+	* from properties->process->ddo_map when defined in the ontology, else
+	* auto-created from the node related components.
+	* (Moved from class diffusion_data, dissolved in v7)
+	* @param string $diffusion_tipo
+	* @param string $section_tipo
+	* @return array $ddo_map Array of dd_object
+	*/
+	public static function get_ddo_map( string $diffusion_tipo, string $section_tipo ) : array {
+
+		// ddo_map create or get from properties
+		$ddo_map = [];
+
+		$ontology_node	= ontology_node::get_instance($diffusion_tipo);
+		$properties		= $ontology_node->get_properties();
+
+		// check if the ontology has his own ddo_map defined, if not, it will create a ddo_map with related components.
+		if(isset($properties->process, $properties->process->ddo_map)){
+
+			foreach ($properties->process->ddo_map as $ddo) {
+
+				// resolve the 'self' value for section_tipo or parent, if this properties are defined use it.
+				// If not defined or empty, assume it's the main section_tipo
+				if(isset($ddo->section_tipo) && $ddo->section_tipo === 'self'){
+					$ddo->section_tipo = $section_tipo;
+				}
+				$ddo->parent = (empty($ddo->parent) || $ddo->parent === 'self') ? $section_tipo : $ddo->parent;
+
+				// set diffusion_tipo to be used as final entry key
+				$ddo->diffusion_tipo = $diffusion_tipo;
+
+				// add a new safe ddo
+				$ddo_map[] = new dd_object($ddo);
+			}
+
+		}else{
+
+			// check if the node has defined any general function
+			$fn = $properties->process->fn ?? null;
+			$ar_related_dd_tipo	= ontology_node::get_relation_nodes(
+				$diffusion_tipo,
+				true,
+				true
+			);
+			// create new ddo_map when the ontology doesn't has one ddo_map
+			foreach ($ar_related_dd_tipo as $current_tipo) {
+
+				$ddo = new dd_object((object)[
+					'tipo'				=> $current_tipo,
+					'section_tipo'		=> $section_tipo,
+					'parent'			=> $section_tipo,
+					'diffusion_tipo'	=> $diffusion_tipo
+				]);
+
+				if ($fn) {
+					$ddo->fn = $fn;
+				}
+
+				$ddo_map[] = $ddo;
+			}
+		}
+
+
+		return $ddo_map;
+	}//end get_ddo_map
+
+
+
+	/**
 	* GET_TABLE_FIELDS
-	* Resolve all fields of a 'table' element inside a given 'diffusion_element'
-	* Uses diffusion MYSQL tables model
+	* Resolve all fields of a 'table' element inside a given 'diffusion_element',
+	* using the v7 flat virtual diffusion tree. The section node children are
+	* already merged alias + real (alias overrides win).
 	* @param string $diffusion_element_tipo
 	* @param string $section_tipo
 	* @return array $ar_table_fields
@@ -1057,39 +1310,23 @@ class diffusion_utils {
 	*/
 	public static function get_table_fields(string $diffusion_element_tipo, string $section_tipo) : array {
 
-		$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
-
-		// table
-		$table = $diffusion_element_tables_map->{$section_tipo}->table ?? null;
-		if (!$table) {
+		$node = self::get_section_node_for_element($diffusion_element_tipo, $section_tipo);
+		if ($node===null) {
 			debug_log(__METHOD__
 				. " No table available for this section " . PHP_EOL
+				. ' diffusion_element_tipo: ' . to_string($diffusion_element_tipo) . PHP_EOL
 				. ' section_tipo: ' . to_string($section_tipo)
 				, logger::WARNING
 			);
 			return [];
 		}
 
-		$ontology_node 	   = ontology_node::get_instance($table);
-		$ar_table_children = $ontology_node->get_ar_children_of_this();
-
-		// Add children from table alias
-		$table_alias_tipo = $diffusion_element_tables_map->{$section_tipo}->from_alias ?? null;
-		if (!empty($table_alias_tipo)) {
-
-			$ontology_node_alias 	 = ontology_node::get_instance($table_alias_tipo);
-			$ar_table_alias_children = $ontology_node_alias->get_ar_children_of_this();
-
-			// Merge all
-			$ar_table_children = array_merge($ar_table_children, $ar_table_alias_children);
-		}
-
 		$ar_table_fields = [];
-		foreach ($ar_table_children as $tipo) {
+		foreach ($node->children ?? [] as $child) {
 
 			$item = new stdClass();
-				$item->tipo 	= $tipo;
-				$item->label 	= ontology_node::get_term_by_tipo($tipo, DEDALO_STRUCTURE_LANG, true);
+				$item->tipo 	= $child->tipo;
+				$item->label 	= $child->label;
 
 			$ar_table_fields[] = $item;
 		}

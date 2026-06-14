@@ -1,0 +1,810 @@
+openapi: 3.1.0
+info:
+  title: Dédalo Publication API v2
+  description: |
+    Read-only REST API for accessing published cultural heritage data from Dédalo.
+
+    ## Overview
+    Resource-oriented API over the publication MariaDB databases. Data is public,
+    read-only, and produced by the Dédalo diffusion process. An installation can
+    publish more than one database; every data route is scoped by database name:
+
+    ```
+    /databases                                  list public databases
+    /{db}/tables                                list tables
+    /{db}/tables/{table}                        table schema
+    /{db}/tables/{table}/records                list/filter records
+    /{db}/tables/{table}/records/{id}           single record (all language variants)
+    /{db}/tables/{table}/search?q=...           fulltext search
+    /{db}/tables/{table}/records/{id}/fragments      text fragments
+    /{db}/tables/{table}/records/{id}/av-fragments   audiovisual fragments
+    /{db}/av-indexation-fragment                locator resolution
+    /batch                                      multiple GET queries in one request
+    ```
+
+    ## Records and languages
+    Records are identified by `section_id`. Multilingual values are stored as one
+    row per language (`lang` column, `lg-xxx` format). `GET .../records/{id}`
+    returns **all language variants** as an array; pass `?lang=lg-eng` to narrow
+    to one variant. Tables without a `lang` column (e.g. thesaurus tables) do not
+    accept the `lang` parameter.
+
+    ## Filtering
+    Filters use bracketed query parameters: `filter[field][operator]=value`.
+    The operator defaults to `eq` when omitted: `filter[field]=value`.
+    Repeated filter parameters are combined with AND.
+
+    Operators: `eq`, `ne`, `gt`, `gte`, `lt`, `lte`, `like`, `in`, `not_in`,
+    `is_null`, `is_not_null`. For `in`/`not_in`, values are pipe-separated.
+
+    Examples:
+    - `filter[section_id]=1` → `WHERE section_id = 1`
+    - `filter[code][like]=OH-%` → `WHERE code LIKE 'OH-%'`
+    - `filter[section_id][in]=1|2|3` → `WHERE section_id IN (1,2,3)`
+    - `filter[date][gte]=1936&filter[date][lte]=1939` → range query
+    - `filter[parent][is_null]=` → `WHERE parent IS NULL`
+
+    ## Sorting
+    `sort` is a comma-separated field list; prefix a field with `-` for
+    descending order: `sort=title,-section_id` → `ORDER BY title ASC, section_id DESC`.
+
+    ## Pagination
+    List endpoints accept `limit` (default 100, max 1000; `0` for count-only
+    requests) and `offset`. Responses use the envelope
+    `{ "data": [...], "pagination": { "limit", "offset", "total"? } }`.
+    `total` is included only when `count=true` is passed (it costs an extra
+    COUNT query). An RFC 8288 `Link` header carries `rel="next"` and
+    `rel="prev"` URLs when more pages exist.
+
+    ## Caching
+    Responses include `Cache-Control: public, max-age=N` and a weak `ETag`.
+    Conditional requests with `If-None-Match` are answered with `304 Not Modified`.
+
+    ## Response timing
+    Every JSON success response carries the total server processing time (in
+    milliseconds) under `meta.response_time_ms`, in addition to the
+    `X-Response-Time` header. The timing value is excluded from `ETag`
+    computation, so it never affects cache validation.
+
+    ## Errors
+    All errors are RFC 9457 Problem Details (`application/problem+json`) with
+    `type`, `title`, `status`, `detail` and `instance` members. Validation
+    errors add an `errors` array of `{ pointer, message }` items.
+
+    ## Authentication
+    Optional API key via `X-API-Key` header. If configured on the server, all
+    requests require a valid key; by default the API is open.
+
+    ## Rate limiting
+    Default: 100 requests per minute per IP address. Exceeding it returns
+    a 429 problem response.
+  version: 2.1.0
+  contact:
+    name: Dédalo Support
+    url: https://dedalo.dev
+  license:
+    name: GPL-3.0
+    url: https://www.gnu.org/licenses/gpl-3.0.html
+
+servers:
+  - url: /publication/server_api/v2
+    description: Default Apache deployment
+
+tags:
+  - name: Discovery
+    description: API index and database discovery
+  - name: Schema
+    description: Table and column introspection
+  - name: Records
+    description: Record listing, filtering and retrieval
+  - name: Search
+    description: Fulltext search and fragment extraction
+  - name: Batch
+    description: Multiple queries in one request
+  - name: Meta
+    description: Health and documentation
+
+paths:
+  /:
+    get:
+      summary: API index
+      description: Entry point with links to the main resources.
+      operationId: getApiIndex
+      tags: [Discovery]
+      responses:
+        '200':
+          description: API index
+          content:
+            application/json:
+              example:
+                name: Dédalo Publication API
+                version: 2.1.0
+                links:
+                  databases: /publication/server_api/v2/databases
+                  docs: /publication/server_api/v2/docs
+                  openapi: /publication/server_api/v2/openapi.yaml
+                  health: /publication/server_api/v2/health
+
+  /databases:
+    get:
+      summary: List public databases
+      description: Lists the databases exposed by this API. Use the returned names as the `{db}` path segment.
+      operationId: listDatabases
+      tags: [Discovery]
+      responses:
+        '200':
+          description: Database list
+          content:
+            application/json:
+              example:
+                data:
+                  - name: dedalo_web
+                    links:
+                      tables: /publication/server_api/v2/dedalo_web/tables
+
+  /{db}/tables:
+    get:
+      summary: List tables
+      description: Lists the tables of a database with row and column counts. Results are cached for 30 seconds.
+      operationId: listTables
+      tags: [Schema]
+      parameters:
+        - $ref: '#/components/parameters/Db'
+      responses:
+        '200':
+          description: Table list
+          content:
+            application/json:
+              example:
+                data:
+                  - name: interview
+                    row_count: 142
+                    column_count: 12
+                  - name: audiovisual
+                    row_count: 142
+                    column_count: 8
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{db}/tables/{table}:
+    get:
+      summary: Get table schema
+      description: Returns the columns (name and SQL type) and row count of one table.
+      operationId: getTable
+      tags: [Schema]
+      parameters:
+        - $ref: '#/components/parameters/Db'
+        - $ref: '#/components/parameters/Table'
+      responses:
+        '200':
+          description: Table schema
+          content:
+            application/json:
+              example:
+                data:
+                  name: interview
+                  row_count: 142
+                  columns:
+                    - { name: section_id, type: int }
+                    - { name: lang, type: varchar }
+                    - { name: code, type: varchar }
+                    - { name: title, type: varchar }
+                    - { name: transcription, type: longtext }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{db}/tables/{table}/records:
+    get:
+      summary: List records
+      description: |
+        Lists records with filtering, sorting, pagination, field selection and
+        relation resolution. See the API description for the filter and sort grammar.
+      operationId: listRecords
+      tags: [Records]
+      parameters:
+        - $ref: '#/components/parameters/Db'
+        - $ref: '#/components/parameters/Table'
+        - $ref: '#/components/parameters/Filter'
+        - $ref: '#/components/parameters/Sort'
+        - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/Count'
+        - $ref: '#/components/parameters/ResolveRelations'
+        - $ref: '#/components/parameters/ResolveInverseRelations'
+      responses:
+        '200':
+          description: Paginated records
+          headers:
+            Link:
+              $ref: '#/components/headers/Link'
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordList'
+              example:
+                data:
+                  - section_id: 1
+                    lang: lg-eng
+                    code: OH-001
+                    title: Interview with María
+                pagination:
+                  limit: 100
+                  offset: 0
+                  total: 142
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{db}/tables/{table}/records/{id}:
+    get:
+      summary: Get a record
+      description: |
+        Returns a record by `section_id`. The response `data` is always an array:
+        one row per language variant (ordered by `lang`), or a single row when
+        `lang` is given. `meta.languages` lists the available variants.
+      operationId: getRecord
+      tags: [Records]
+      parameters:
+        - $ref: '#/components/parameters/Db'
+        - $ref: '#/components/parameters/Table'
+        - $ref: '#/components/parameters/RecordId'
+        - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/ResolveRelations'
+        - $ref: '#/components/parameters/ResolveInverseRelations'
+      responses:
+        '200':
+          description: Record with language variants
+          headers:
+            Content-Language:
+              description: Echoed when the `lang` parameter narrows the response.
+              schema: { type: string }
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              example:
+                data:
+                  - section_id: 1
+                    lang: lg-eng
+                    code: OH-001
+                    title: Interview with María
+                  - section_id: 1
+                    lang: lg-spa
+                    code: OH-001
+                    title: Entrevista con María
+                meta:
+                  section_id: 1
+                  languages: [lg-eng, lg-spa]
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{db}/tables/{table}/search:
+    get:
+      summary: Fulltext search
+      description: |
+        MariaDB FULLTEXT search (`MATCH ... AGAINST` in boolean mode) over an
+        indexed text column. Each result row includes a `relevance` score and a
+        `fragments` array with highlighted excerpts.
+      operationId: searchTable
+      tags: [Search]
+      parameters:
+        - $ref: '#/components/parameters/Db'
+        - $ref: '#/components/parameters/Table'
+        - name: q
+          in: query
+          required: true
+          description: 'Search query. Supports boolean operators: `+word`, `-word`, `"phrase"`.'
+          schema: { type: string, maxLength: 512 }
+          example: guerra
+        - name: column
+          in: query
+          description: 'FULLTEXT-indexed column to search (default: transcription).'
+          schema: { type: string, default: transcription }
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Count'
+        - $ref: '#/components/parameters/ResolveRelations'
+        - $ref: '#/components/parameters/ResolveInverseRelations'
+      responses:
+        '200':
+          description: Paginated search results
+          headers:
+            Link:
+              $ref: '#/components/headers/Link'
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecordList'
+              example:
+                data:
+                  - section_id: 7
+                    lang: lg-spa
+                    title: Entrevista con María
+                    relevance: 11.2
+                    fragments:
+                      - text: '...durante la <mark>guerra</mark> civil...'
+                        position: 1204
+                pagination:
+                  limit: 100
+                  offset: 0
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{db}/tables/{table}/records/{id}/fragments:
+    get:
+      summary: Extract text fragments
+      description: |
+        Extracts highlighted excerpts around each occurrence of the search terms
+        in a large text column (books, thesis, transcriptions). Fragments include
+        the page number derived from `[page-n-X]` markers when present.
+      operationId: getTextFragments
+      tags: [Search]
+      parameters:
+        - $ref: '#/components/parameters/Db'
+        - $ref: '#/components/parameters/Table'
+        - $ref: '#/components/parameters/RecordId'
+        - $ref: '#/components/parameters/Terms'
+        - name: column
+          in: query
+          description: 'Column containing the text (default: transcription).'
+          schema: { type: string, default: transcription }
+        - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/MaxCharacters'
+        - $ref: '#/components/parameters/MaxOccurrences'
+      responses:
+        '200':
+          description: Text fragments
+          content:
+            application/json:
+              example:
+                data:
+                  - text: '...the <mark>war</mark> started when...'
+                    page: 27
+                    position: 5340
+                meta:
+                  section_id: 4
+                  terms: war
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{db}/tables/{table}/records/{id}/av-fragments:
+    get:
+      summary: Extract audiovisual fragments
+      description: |
+        Extracts transcription excerpts with their `[tc-in-out]` timecode ranges
+        and media URLs, joining the `audiovisual` table for video and image assets.
+      operationId: getAvFragments
+      tags: [Search]
+      parameters:
+        - $ref: '#/components/parameters/Db'
+        - $ref: '#/components/parameters/Table'
+        - $ref: '#/components/parameters/RecordId'
+        - $ref: '#/components/parameters/Terms'
+        - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/MaxCharacters'
+        - $ref: '#/components/parameters/MaxOccurrences'
+      responses:
+        '200':
+          description: Audiovisual fragments
+          content:
+            application/json:
+              example:
+                data:
+                  - transcription: '...we crossed the <mark>border</mark> at night...'
+                    media:
+                      video_url: /dedalo/media/video.mp4?vbegin=120&vend=180
+                      image_url: /dedalo/media/poster.jpg
+                      tc_in: 120
+                      tc_out: 180
+                    speakers: []
+                meta:
+                  section_id: 4
+                  terms: border
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /{db}/av-indexation-fragment:
+    get:
+      summary: Resolve an indexation locator
+      description: |
+        Resolves a thesaurus indexation locator to an audiovisual fragment:
+        transcription slice between timecodes, media URLs, speakers and
+        associated thesaurus terms.
+      operationId: getAvIndexationFragment
+      tags: [Search]
+      parameters:
+        - $ref: '#/components/parameters/Db'
+        - name: section_id
+          in: query
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: section_tipo
+          in: query
+          schema: { type: string }
+        - name: component_tipo
+          in: query
+          schema: { type: string }
+        - name: tag_id
+          in: query
+          schema: { type: integer }
+        - name: tc_in
+          in: query
+          schema: { type: number, minimum: 0 }
+        - name: tc_out
+          in: query
+          schema: { type: number, minimum: 0 }
+      responses:
+        '200':
+          description: Audiovisual indexation fragment
+          content:
+            application/json:
+              example:
+                data:
+                  locator: { section_id: 1, tag_id: 3, tc_in: 120, tc_out: 180 }
+                  transcription: 'We crossed the border at night...'
+                  media:
+                    video_url: /dedalo/media/video.mp4?vbegin=120&vend=180
+                    image_url: /dedalo/media/posterframe/poster.jpg
+                    tc_in: 120
+                    tc_out: 180
+                  speakers:
+                    - { name: María García, role: informant }
+                  terms:
+                    - { term_id: ts1_23, term: Exile }
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /batch:
+    post:
+      summary: Execute multiple queries
+      description: |
+        Runs up to 20 GET data queries in parallel. Each query names a `path`
+        (any GET data route of this API, without query string) and optional
+        `params`. Array param values become repeated keys, so bracketed filters
+        work. Each result carries the per-query HTTP status with either `data`
+        or a `problem` (RFC 9457 body). Meta endpoints (`/docs`, `/health`,
+        `/mcp`, `/openapi.yaml`, `/batch`) are not allowed.
+      operationId: executeBatch
+      tags: [Batch]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchRequest'
+            example:
+              queries:
+                - id: interviews
+                  path: /dedalo_web/tables/interview/records
+                  params:
+                    filter[code][like]: 'OH-%'
+                    sort: '-section_id'
+                    limit: 5
+                - id: themes
+                  path: /dedalo_web/tables/ts_themes/records
+                  params: { limit: 10 }
+      responses:
+        '200':
+          description: Batch results (per-query status inside the body)
+          content:
+            application/json:
+              example:
+                results:
+                  - id: interviews
+                    status: 200
+                    data:
+                      data: [{ section_id: 142, code: OH-142 }]
+                      pagination: { limit: 5, offset: 0 }
+                  - id: themes
+                    status: 404
+                    problem:
+                      type: https://dedalo.dev/api/problems/not-found
+                      title: Not Found
+                      status: 404
+                      detail: 'Unknown table: ts_themes'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /health:
+    get:
+      summary: Health check
+      description: Pings every configured database. Returns 503 when any is unreachable. Never cached.
+      operationId: getHealth
+      tags: [Meta]
+      responses:
+        '200':
+          description: Healthy
+          content:
+            application/json:
+              example:
+                status: ok
+                databases: { dedalo_web: connected }
+                uptime: 3600.5
+                timestamp: '2026-06-10T12:00:00.000Z'
+                version: 2.1.0
+        '503':
+          description: One or more databases unreachable
+
+components:
+  securitySchemes:
+    ApiKey:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Only enforced when the server has API_KEYS configured.
+
+  parameters:
+    Db:
+      name: db
+      in: path
+      required: true
+      description: Database name (see `GET /databases`).
+      schema: { type: string }
+      example: dedalo_web
+    Table:
+      name: table
+      in: path
+      required: true
+      description: Table name (see `GET /{db}/tables`).
+      schema: { type: string, pattern: '^[A-Za-z_][A-Za-z0-9_]*$' }
+      example: interview
+    RecordId:
+      name: id
+      in: path
+      required: true
+      description: Record `section_id`.
+      schema: { type: integer, minimum: 1 }
+      example: 1
+    Filter:
+      name: filter
+      in: query
+      description: |
+        Bracketed filter conditions: `filter[field][operator]=value`
+        (`operator` defaults to `eq`). Repeat for AND. Operators: eq, ne, gt,
+        gte, lt, lte, like, in, not_in, is_null, is_not_null; `in`/`not_in`
+        take pipe-separated values.
+      style: deepObject
+      explode: true
+      schema:
+        type: object
+        additionalProperties: true
+      example:
+        code: { like: 'OH-%' }
+    Sort:
+      name: sort
+      in: query
+      description: 'Comma-separated sort fields; prefix with `-` for descending. Example: `title,-section_id`.'
+      schema: { type: string }
+      example: '-section_id'
+    Fields:
+      name: fields
+      in: query
+      description: Comma-separated list of columns to return.
+      schema: { type: string }
+      example: section_id,code,title
+    Limit:
+      name: limit
+      in: query
+      description: Page size (default 100, max 1000). `0` together with `count=true` returns only the total.
+      schema: { type: integer, minimum: 0, maximum: 1000, default: 100 }
+    Offset:
+      name: offset
+      in: query
+      description: Number of rows to skip.
+      schema: { type: integer, minimum: 0, default: 0 }
+    Lang:
+      name: lang
+      in: query
+      description: Language code in `lg-xxx` format (e.g. `lg-eng`).
+      schema: { type: string, pattern: '^lg-[a-z]{2,5}$' }
+      example: lg-eng
+    Count:
+      name: count
+      in: query
+      description: When true, include `pagination.total` (costs an extra COUNT query).
+      schema: { type: boolean, default: false }
+    Terms:
+      name: terms
+      in: query
+      required: true
+      description: Whitespace-separated search terms (matched literally, case-insensitive).
+      schema: { type: string, maxLength: 512 }
+      example: guerra exilio
+    MaxCharacters:
+      name: max_characters
+      in: query
+      description: Context size per fragment.
+      schema: { type: integer, minimum: 10, maximum: 5000, default: 320 }
+    MaxOccurrences:
+      name: max_occurrences
+      in: query
+      description: Maximum fragments per term.
+      schema: { type: integer, minimum: 1, maximum: 10, default: 1 }
+    ResolveRelations:
+      name: resolve_relations
+      in: query
+      description: |
+        JSON object mapping columns to target tables for forward relation
+        resolution, e.g. `{"image":"image"}`. Dot notation resolves nested
+        relations (`{"eventos.documentos":"image"}`); `"auto"` resolves link
+        columns dynamically.
+      schema: { type: string }
+    ResolveInverseRelations:
+      name: resolve_inverse_relations
+      in: query
+      description: |
+        Resolves the `dd_relations` column. Pass `true` to load the
+        section_tipo→table mapping from `publication_schema`, or a JSON object
+        like `{"rsc170":"interview"}`.
+      schema: { type: string }
+
+  headers:
+    Link:
+      description: RFC 8288 pagination links (`rel="next"`, `rel="prev"`).
+      schema: { type: string }
+    ETag:
+      description: Weak entity tag for conditional requests (`If-None-Match`).
+      schema: { type: string }
+    CacheControl:
+      description: '`public, max-age=N` (configurable).'
+      schema: { type: string }
+
+  schemas:
+    Pagination:
+      type: object
+      required: [limit, offset]
+      properties:
+        limit: { type: integer }
+        offset: { type: integer }
+        total:
+          type: integer
+          description: Present only when `count=true` was requested.
+
+    RecordList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+        meta:
+          $ref: '#/components/schemas/Meta'
+
+    Meta:
+      type: object
+      description: Response metadata. Always carries `response_time_ms`; endpoint-specific keys (e.g. `section_id`, `languages`, `terms`) are added where relevant.
+      properties:
+        response_time_ms:
+          type: number
+          description: Total server processing time in milliseconds.
+      additionalProperties: true
+
+    BatchRequest:
+      type: object
+      required: [queries]
+      properties:
+        queries:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items:
+            type: object
+            required: [id, path]
+            properties:
+              id:
+                type: string
+                description: Unique identifier echoed in the result.
+              path:
+                type: string
+                description: GET data route, without query string.
+              params:
+                type: object
+                description: Query parameters; arrays become repeated keys.
+                additionalProperties: true
+
+    Problem:
+      type: object
+      description: RFC 9457 Problem Details.
+      required: [type, title, status, detail, instance]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+        errors:
+          type: array
+          description: Per-field validation issues (validation errors only).
+          items:
+            type: object
+            properties:
+              pointer: { type: string }
+              message: { type: string }
+
+  responses:
+    ValidationError:
+      description: Invalid request parameters
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://dedalo.dev/api/problems/validation-error
+            title: Validation Error
+            status: 400
+            detail: 'Invalid filter operator: "lke". Valid: eq, ne, gt, gte, lt, lte, like, in, not_in, is_null, is_not_null'
+            instance: /dedalo_web/tables/interview/records?filter[code][lke]=OH-%
+    NotFound:
+      description: Unknown database, table, record or route
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://dedalo.dev/api/problems/not-found
+            title: Not Found
+            status: 404
+            detail: 'Record not found: interview/9999'
+            instance: /dedalo_web/tables/interview/records/9999
+    InternalServerError:
+      description: Unexpected server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+          example:
+            type: https://dedalo.dev/api/problems/internal-error
+            title: Internal Server Error
+            status: 500
+            detail: An unexpected error occurred
+            instance: /dedalo_web/tables/interview/records
+
+security:
+  - {}
+  - ApiKey: []

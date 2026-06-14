@@ -108,6 +108,46 @@ final class dd_manager {
 
 
 	/**
+	* SANITIZE_CLIENT_RQO
+	* Security scrub for a request object arriving from an UNTRUSTED HTTP client.
+	* Strips server-only SQO fields (sentence/params/column_sql/table aliases),
+	* forces parsed=false, clamps limit/offset/total, and reduces client-sent
+	* show/search ddo_maps to the whitelisted display fields.
+	*
+	* MUST be called at every untrusted HTTP entry point (the JSON API entrypoint
+	* and the worker SSE entrypoint) BEFORE manage_request(). It MUST NOT be called
+	* on internal, server-built rqo's: those legitimately set sentence/params and
+	* would be corrupted by the scrub. This is why the scrub lives here as an
+	* explicit entry-point gate and not inside manage_request().
+	* @see search_query_object::sanitize_client_sqo
+	* @see request_config_object::sanitize_client_ddo_map
+	* @param object $rqo
+	* @return object The same $rqo, mutated in place.
+	*/
+	public static function sanitize_client_rqo( object $rqo ) : object {
+
+		// SQO security scrub
+		if (isset($rqo->sqo)) {
+			$rqo->sqo = search_query_object::sanitize_client_sqo($rqo->sqo);
+		}
+		if (isset($rqo->options->sqo)) {
+			$rqo->options->sqo = search_query_object::sanitize_client_sqo($rqo->options->sqo);
+		}
+
+		// ddo_map security scrub
+		if (isset($rqo->show->ddo_map) && is_array($rqo->show->ddo_map)) {
+			$rqo->show->ddo_map = request_config_object::sanitize_client_ddo_map($rqo->show->ddo_map);
+		}
+		if (isset($rqo->search->ddo_map) && is_array($rqo->search->ddo_map)) {
+			$rqo->search->ddo_map = request_config_object::sanitize_client_ddo_map($rqo->search->ddo_map);
+		}
+
+		return $rqo;
+	}//end sanitize_client_rqo
+
+
+
+	/**
 	* GET_CSRF_TOKEN_FROM_REQUEST
 	* Pull the client-supplied token from the request, preferring the dedicated
 	* header but accepting a body field for clients that cannot set headers.

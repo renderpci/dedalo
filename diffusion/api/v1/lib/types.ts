@@ -37,6 +37,7 @@ export interface rqo_options {
 	process_id?:    string;
 	diffusion_element_tipo?: string;
 	diffusion_tipo?:         string;
+	type?:          'sql' | 'rdf' | 'xml' | 'socrata';
 }
 
 
@@ -135,7 +136,7 @@ export interface entry_value {
 
 // Re-used for parser inputs, matches entry_value closely
 export interface data_item {
-	id:    string | null;
+	id?:   string | null;
 	value: any;
 	tipo?: string;
 	lang?: string | null;
@@ -152,6 +153,7 @@ export interface data_item {
 export interface processed_table {
 	database_name:   string;
 	table_name:      string;
+	section_tipo:    string;                // work-system section tipo (media publication markers)
 	records:         processed_record[];
 	deletions:       (string | number)[];   // section_ids to DELETE
 	columns_context: Record<string, context_field>; // Map: sanitized_name -> context
@@ -184,6 +186,31 @@ export interface engine_response {
 	tables?:             { table_name: string; records_affected: number; records_count: number }[];
 	diffusion_data?:     diffusion_file_entry[];
 	consolidated_files?: consolidated_files;
+}
+
+
+// =====================================================
+// Delete record propagation (work-system record deleted
+// → remove its published copies from target databases)
+// =====================================================
+
+export interface delete_target {
+	database_name: string;
+	table_name:    string;
+	section_ids:   (string | number)[];
+	section_tipo?: string; // optional (back-compat): enables media publication marker removal
+}
+
+export interface delete_record_request {
+	action:  'delete_record';
+	targets: delete_target[];
+}
+
+export interface delete_record_response {
+	result:  boolean;
+	msg:     string;
+	deleted: { database_name: string; table_name: string; affected: number }[];
+	errors?: string[];
 }
 
 

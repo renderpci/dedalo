@@ -73,10 +73,11 @@ if (defined('DEDALO_CORS')) {
 
 // CORS preflight OPTIONS requests area ignored
 if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+	// API-06: a CORS preflight is a normal, expected request — not an error.
+	// Respond without writing to the PHP error log on every OPTIONS request.
 	$response = new stdClass();
 	$response->result	= false;
 	$response->msg		= 'Ignored preflight call ' . $_SERVER['REQUEST_METHOD'];
-	error_log('Error: ' . $response->msg);
 	echo json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	return;
 }
@@ -133,7 +134,17 @@ if (!empty($_FILES)) {
 		// which already sanitize via safe_xss / safe_xss_recursive. Without this, payloads
 		// passed through the legacy `rqo` form/query parameter reach dd_manager unsanitized.
 		if (is_object($rqo) || is_array($rqo)) {
+			// SEARCH-05: HTML-encoding the whole rqo corrupts SQO search operators
+			// ('>', '<', '!', '*', ...) and values. Preserve the sqo objects — they
+			// are scrubbed by the shared sanitize_client_rqo gate below, exactly like
+			// the php://input path — and safe_xss only the rest of the rqo (SEC-010).
+			$preserved_sqo         = is_object($rqo) ? ($rqo->sqo ?? null) : null;
+			$preserved_options_sqo = (is_object($rqo) && isset($rqo->options) && is_object($rqo->options)) ? ($rqo->options->sqo ?? null) : null;
 			$rqo = safe_xss_recursive($rqo);
+			if (is_object($rqo)) {
+				if ($preserved_sqo !== null)         { $rqo->sqo = $preserved_sqo; }
+				if ($preserved_options_sqo !== null) { $rqo->options->sqo = $preserved_options_sqo; }
+			}
 		}
 	} else {
 		$rqo = (object)[
@@ -172,6 +183,18 @@ if (in_array($action, ['diffuse', 'validate', 'get_ontology_map'])) {
 	$rqo->dd_api = 'dd_diffusion_api';
 }
 $rqo->dd_api = $rqo->dd_api ?? 'dd_core_api';
+
+
+
+// SQO + ddo_map security scrub. The HTTP API is an untrusted rqo source: strip
+// server-only SQO fields (sentence/params/column_sql/table aliases), force
+// parsed=false, coerce limit/offset/total, and reduce client-sent show/search
+// ddo_maps to the whitelisted display fields. Shared with the worker SSE entry
+// point so the two entry points cannot drift.
+// @see dd_manager::sanitize_client_rqo
+if (isset($rqo)) {
+	$rqo = dd_manager::sanitize_client_rqo($rqo);
+}
 
 
 

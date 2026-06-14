@@ -208,7 +208,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 
 		// dataframe
 			instance_options.id_variant = (instance_options.model==='component_dataframe')
-				? `${section_record_id_variant}_${current_data.section_tipo_key}_${current_data.section_id_key}_${current_data.main_component_tipo}`
+				? `${section_record_id_variant}_${current_data.section_tipo_key}_${current_data.id_key ?? current_data.section_id_key}_${current_data.main_component_tipo}`
 				: instance_options.id_variant
 
 	// component / section group. Create the instance options for build it, the instance is reflect of the context and section_id
@@ -560,8 +560,9 @@ section_record.prototype.get_component_data = function(options) {
 		const matrix_id		= options.matrix_id || null
 
 	// section_id_key
+	// pairing key dual-read: id_key (unified contract) or section_id_key (legacy)
 		const section_id_key = (ddo.caller_dataframe)
-			? ddo.caller_dataframe.section_id_key
+			? ddo.caller_dataframe.id_key ?? ddo.caller_dataframe.section_id_key
 			: self.section_id
 
 	// section_tipo_key
@@ -614,7 +615,11 @@ section_record.prototype.get_component_data = function(options) {
 
 				if (ddo.model==='component_dataframe') {
 
-					return parseInt(el.section_id_key)===parseInt(section_id_key) && el.section_tipo_key === section_tipo_key && el.main_component_tipo === main_component_tipo
+					// pairing key dual-read: id_key (unified contract) or section_id_key (legacy)
+					const el_key = el.id_key ?? el.section_id_key
+					return parseInt(el_key)===parseInt(section_id_key)
+						&& (typeof el.section_tipo_key==='undefined' || el.section_tipo_key === section_tipo_key)
+						&& el.main_component_tipo === main_component_tipo
 				}
 
 				return true
@@ -638,6 +643,7 @@ section_record.prototype.get_component_data = function(options) {
 
 			if (ddo.model==='component_dataframe') {
 				// add section_id_key, section_tipo_key and main_component_tipo
+				empty_data.id_key				= section_id_key
 				empty_data.section_id_key		= section_id_key
 				empty_data.section_tipo_key		= section_tipo_key
 				empty_data.main_component_tipo	= main_component_tipo

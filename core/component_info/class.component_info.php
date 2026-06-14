@@ -605,19 +605,60 @@ class component_info extends component_common {
 
 
 	/**
-	* GET_GRID_FLAT_VALUE
-	* @param object|null $ddo = null
-	* @return dd_grid_cell_object
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One atom per widget IPO output: the output id travels as the segment
+	* sub_id (own column per output, label = output id verbatim).
+	* Replaces the legacy '_widget_' string-suffixed column ids.
+	* @param export_context|null $context = null
+	* @return export_value
 	*/
-	public function get_grid_flat_value( ?object $ddo=null ) : dd_grid_cell_object {
+	public function get_export_value( ?export_context $context=null ) : export_value {
 
-		$grid_value = $this->get_grid_value($ddo);
+		$context = $context ?? new export_context();
 
-		// Resolve the complex grid value into a flat string
-		// $grid_value->value = dd_grid_cell_object::resolve_value($grid_value);
+		// own segment
+			$own_segment	= $this->build_export_path_segment($context);
+			$base_path		= [...$context->path_prefix, $own_segment];
 
-		return $grid_value;
-	}//end get_grid_flat_value
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// short vars
+			$data		= $this->get_data_parsed(); // data parsed to be processed by the widget if needed. see mdcat->sum_dates
+			$widgets	= $this->get_widgets();
+
+		// every widget IPO output object creates one atom (one column per output)
+			foreach ($widgets as $item) {
+				foreach ($item->ipo as $current_ipo) {
+					foreach ($current_ipo->output as $data_map) {
+
+						$current_id = $data_map->id;
+
+						// get the data of the widget to match with the column
+							$found = array_find($data ?? [], function($item) use($current_id){
+								return isset($item->id) && $item->id===$current_id;
+							});
+							$value = is_object($found)
+								? $found->value
+								: null;
+							if (is_object($value) || is_array($value)) {
+								$value = json_encode($value);
+							}
+
+						// output sub segment. sub_id discriminates the column
+							$sub_segment = new export_path_segment($this->section_tipo, $this->tipo, (object)[
+								'sub_id' => $current_id
+							]);
+
+						$export_value->add_atom( new export_atom([...$base_path, $sub_segment], $value) );
+					}
+				}
+			}
+
+
+		return $export_value;
+	}//end get_export_value
 
 
 
@@ -628,7 +669,6 @@ class component_info extends component_common {
 	* @param object|null $option_obj = null
 	* @return string|null $diffusion_value
 	*
-	* @see class.diffusion_mysql.php
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 

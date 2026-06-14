@@ -15,6 +15,19 @@ trait where {
 
 
 	/**
+	* RESET_FILTER_USER_RECORDS_CACHE
+	* Purges the per-user filter_user_records cache. Safe to call between requests in a
+	* long-running worker (the cache is keyed by user_id and would otherwise outlive the
+	* request that populated it). Wired into common::clear().
+	* @return void
+	*/
+	public static function reset_filter_user_records_cache() : void {
+		self::$filter_user_records_cache = [];
+	}//end reset_filter_user_records_cache
+
+
+
+	/**
 	* BUILD_MAIN_WHERE
 	* Build and fix main_where_sql filter.
 	* @return void
@@ -96,7 +109,10 @@ trait where {
 				$filter_by_user_records .= "\n-- filter_user_records_by_id --".PHP_EOL;
 			}
 
-			$filter = implode( ',', $filter_user_records_by_id[$section_tipo] );
+			// SEARCH-04: section_ids are integers — int-cast every element before
+			// interpolating into IN(...), so no non-integer value can reach the SQL.
+			$ids = array_map('intval', (array)$filter_user_records_by_id[$section_tipo]);
+			$filter = implode( ',', $ids );
 			$filter_by_user_records .= $section_alias . '.section_id IN ( ' . $filter . ' )';
 
 			$this->sql_obj->where[] = $filter_by_user_records;
@@ -156,9 +172,6 @@ trait where {
 	*/
 	public function filter_parser(string $op, array $ar_value) : string {
 
-		$string_query = '';
-
-		$total		= count($ar_value);
 		$operator	= strtoupper( substr($op, 1) );
 
 		// Allowlist of valid logical operators (security: $op is the user-supplied
@@ -174,7 +187,12 @@ trait where {
 			return '';
 		}
 
-		foreach ($ar_value as $key => $search_object) {
+		// Collect only the non-empty SQL fragments, then join them with the operator.
+		// Building the string this way (instead of appending the operator inline per
+		// iteration) avoids the dangling-operator class of bugs: a later filter item that
+		// resolves to an empty fragment can no longer leave a trailing ' AND '/' OR '.
+		$fragments = [];
+		foreach ($ar_value as $search_object) {
 
 			if( $search_object===false ) {
 				continue;
@@ -182,20 +200,13 @@ trait where {
 
 			if (!property_exists($search_object, 'path')) {
 
-				// Case operator
+				// Case operator (nested group). Recurse and wrap the non-empty result.
+				$op2		= array_key_first(get_object_vars($search_object));
+				$ar_value2	= $search_object->$op2;
 
-				$op2 = array_key_first(get_object_vars($search_object));
-
-				$ar_value2 	= $search_object->$op2;
-
-				// recursion filter_parser
 				$parsed_string = $this->filter_parser($op2, $ar_value2);
 				if (!empty($parsed_string)) {
-					$string_query .= '( ' . $parsed_string . ' )';
-
-					if ($key+1 < $total) {
-						$string_query .= ' '.$operator.' ';
-					}
+					$fragments[] = '( ' . $parsed_string . ' )';
 				}
 
 			}else{
@@ -212,19 +223,23 @@ trait where {
 					continue;
 				}
 
-				$string_query .= $search_object_sql;
-
-				// if the where get empty value don' add operator
-				if ($key+1 !== $total && !empty($string_query)) {
-					$string_query .= PHP_EOL . ' ' . $operator . ' ';
-				}
-
+				$fragments[] = $search_object_sql;
 			}
 
-		}//end foreach ($ar_value as $key => $search_object)
+		}//end foreach ($ar_value as $search_object)
 
+		if (empty($fragments)) {
+			return '';
+		}
 
-		return $string_query;
+		// AND/OR join the fragments. NOT/NAND/NOR are negations of the AND/OR join
+		// (a single NOT operand is simply NOT(x); multiple operands behave as NAND/NOR).
+		return match ($operator) {
+			'AND'			=> implode(PHP_EOL . ' AND ', $fragments),
+			'OR'			=> implode(PHP_EOL . ' OR ', $fragments),
+			'NOT', 'NAND'	=> 'NOT (' . implode(PHP_EOL . ' AND ', $fragments) . ')',
+			'NOR'			=> 'NOT (' . implode(PHP_EOL . ' OR ', $fragments) . ')',
+		};
 	}//end filter_parser
 
 
@@ -300,7 +315,19 @@ trait where {
 				}
 
 				// join array_elements as relations
+				// Security: $component_tipo is a client-supplied SQO path value interpolated
+				// verbatim as a JSONB relation key (it cannot be parameterized and must keep
+				// its exact form, so trim_tipo() is not usable here). Validate the tipo format
+				// and fail closed on anything that is not a well-formed ontology tipo.
 				$component_tipo = $path[$key-1]->component_tipo;
+				if (!self::is_valid_tipo((string)$component_tipo)) {
+					debug_log(__METHOD__
+						. " Rejected invalid component_tipo in join path (possible injection attempt) " . PHP_EOL
+						. ' component_tipo: ' . to_string($component_tipo)
+						, logger::ERROR
+					);
+					throw new Exception("Error: invalid component_tipo in search path", 1);
+				}
 				$sql_join .= PHP_EOL . "LEFT JOIN LATERAL jsonb_array_elements({$current_key}.relation->'{$component_tipo}') AS {$t_relation} on true";
 
 				// join table by setion_tipo and section_id matches
@@ -507,15 +534,23 @@ trait where {
 					##### USERS ###########################################################
 					case ($section_tipo===DEDALO_SECTION_USERS_TIPO) :
 
-						# AREAS FILTER
-							if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
-								$sql_filter .= "\n-- filter_users_by_profile_areas -- ";
-							}
-							$sql_filter .= PHP_EOL .'AND '.$section_alias.'.section_id > 0 AND ';
-							$sql_filter .= PHP_EOL . $section_alias.'.'.$datos_container.' @>\'{"created_by_userID":'.$user_id.'}\'::jsonb OR ' .PHP_EOL;
-							$sql_filter .= '((';
+						// A non global admin may see users in the section that either:
+						//  - were created by the logged user, OR
+						//  - share at least one of the logged user's projects,
+						// and never the root/negative user records (section_id > 0).
+						//
+						// Note: this filter is appended to $this->sql_obj->where (like the default
+						// branch). The previous implementation built a $sql_filter string with
+						// v6-style 'AND ' prefixes and broken parenthesis grouping and never pushed
+						// it to sql_obj->where, so non-admins received NO filter on the users section.
 
-						# PROJECTS FILTER
+						# created_by filter
+							// $user_id is a server-side int (logged_user_id); cast defensively and
+							// parameterize the jsonb literal (json_encode does not escape single quotes).
+							$created_by_placeholder = $this->get_placeholder(json_encode(['created_by_userID' => (int)$user_id]));
+							$created_by_sql = $section_alias.'.'.$datos_container.' @> '.$created_by_placeholder.'::jsonb';
+
+						# projects filter
 							$component_filter_master_model	= ontology_node::get_model_by_tipo(DEDALO_FILTER_MASTER_TIPO,true);
 							$component_filter_master		= component_common::get_instance(
 								$component_filter_master_model, // 'component_filter_master',
@@ -534,9 +569,6 @@ trait where {
 									);
 									throw new Exception("Error Processing Request. Invalid filter master data", 1);
 								}
-							if(SHOW_DEBUG===true) {
-								$sql_filter .= "\n-- filter_by_projects --";
-							}
 							# Filter by any of user projects
 							$ar_query = [];
 							foreach ((array)$filter_master_dato as $current_project_locator) {
@@ -545,11 +577,26 @@ trait where {
 									$search_locator->set_section_id($current_project_locator->section_id);
 									$search_locator->set_type($current_project_locator->type);
 
-								$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
+								// Parameterize the jsonb literal instead of inlining it inside a
+								// single-quoted SQL string (json_encode does not escape single quotes).
+								$placeholder = $this->get_placeholder('['.json_encode($search_locator).']');
+								$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\' @> '.$placeholder.'::jsonb';
 							}
-							$sql_filter .= PHP_EOL . 'AND (' . implode(' OR ',$ar_query) . ')';
 
-							$sql_filter .= ')';
+						# combine: exclude root/negative AND (created_by OR shares a project)
+							$access_clauses = [$created_by_sql];
+							if (!empty($ar_query)) {
+								$access_clauses[] = '(' . implode(' OR ', $ar_query) . ')';
+							}
+
+							$users_filter = '';
+							if(SHOW_DEBUG===true || DEVELOPMENT_SERVER===true) {
+								$users_filter .= "-- filter_users_by_profile_areas / filter_by_projects --" . PHP_EOL;
+							}
+							$users_filter .= '(' . $section_alias.'.section_id > 0'
+								. ' AND (' . implode(' OR ', $access_clauses) . '))';
+
+							$this->sql_obj->where[] = $users_filter;
 						break;
 					##### DEFAULT #########################################################
 					default:
@@ -576,6 +623,18 @@ trait where {
 						}
 
 						$component_filter_tipo = $ar_component_filter[0];
+
+						// Security: $component_filter_tipo is interpolated as a JSONB key below.
+						// It is ontology-sourced (server-side), but validate the tipo format for
+						// defense-in-depth before it reaches raw SQL.
+						if (!self::is_valid_tipo((string)$component_filter_tipo)) {
+							debug_log(__METHOD__
+								." Rejected invalid component_filter_tipo " . PHP_EOL
+								.' component_filter_tipo: ' . to_string($component_filter_tipo)
+								, logger::ERROR
+							);
+							return;
+						}
 
 						$ar_projects = component_filter_master::get_user_projects($user_id); // return array of locators
 						if (empty($ar_projects)) {
@@ -627,7 +686,16 @@ trait where {
 		$column_name = isset($query_object->column_name) ? $query_object->column_name : false;
 		if($column_name===false) {
 			debug_log(__METHOD__
-				." Invalid column_name: " . $column_name
+				." Invalid column_name: " . to_string($column_name)
+				, logger::ERROR
+			);
+			return false;
+		}
+		// Security: $column_name is interpolated as a bare SQL identifier (it cannot be
+		// parameterized). Restrict it to real matrix columns. Reject anything else.
+		if (!self::is_valid_data_column((string)$column_name)) {
+			debug_log(__METHOD__
+				." Rejected invalid column_name (not a known matrix column): " . to_string($column_name)
 				, logger::ERROR
 			);
 			return false;

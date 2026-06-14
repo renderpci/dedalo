@@ -1,0 +1,26 @@
+{
+    "component_input_text_test3_test52": [
+        "tool_lang",
+        "tool_lang_multi",
+        "tool_propagate_component_data",
+        "tool_time_machine"
+    ],
+    "section_oh1": [
+        "tool_export",
+        "tool_import_dedalo_csv",
+        "tool_time_machine",
+        "tool_update_cache"
+    ],
+    "section_test3": [
+        "tool_export",
+        "tool_import_dedalo_csv",
+        "tool_time_machine",
+        "tool_update_cache"
+    ],
+    "section_dd15": [
+        "tool_export"
+    ],
+    "component_relation_children_test3_test201": [
+        "tool_propagate_component_data"
+    ]
+}

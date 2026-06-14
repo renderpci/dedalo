@@ -194,4 +194,61 @@ class component_inverse extends component_common {
 
 
 
+	/**
+	* GET_EXPORT_VALUE
+	* Atoms based export contract (see component_common::get_export_value).
+	* One atom per inverse locator. The (from_section_tipo, from_component_tipo)
+	* pair travels as a sub segment, so each calling pair gets its own column;
+	* multiple callers of the same pair join inside the cell with fields_separator.
+	* @param export_context|null $context = null
+	* @return export_value
+	*/
+	public function get_export_value( ?export_context $context=null ) : export_value {
+
+		$context = $context ?? new export_context();
+
+		// own segment
+			$own_segment	= $this->build_export_path_segment($context);
+			$base_path		= [...$context->path_prefix, $own_segment];
+
+		// export_value
+			$export_value = new export_value([], $this->get_label(), get_called_class());
+
+		// data. inverse locators
+			$data = $this->get_data();
+			if (empty($data)) {
+				return $export_value;
+			}
+
+			$ar_value_index = []; // running index per pair column
+			foreach ($data as $current_locator) {
+
+				$from_section_tipo		= $current_locator->from_section_tipo ?? null;
+				$from_component_tipo	= $current_locator->from_component_tipo ?? null;
+				$from_section_id		= $current_locator->from_section_id ?? null;
+				if (empty($from_section_tipo) || empty($from_component_tipo)) {
+					continue;
+				}
+
+				// from-pair sub segment (column identity per calling pair)
+					$sub_segment = new export_path_segment($from_section_tipo, $from_component_tipo);
+
+				$pair_key = $sub_segment->get_identity_key();
+				$ar_value_index[$pair_key] = isset($ar_value_index[$pair_key])
+					? $ar_value_index[$pair_key] + 1
+					: 0;
+
+				$export_value->add_atom( new export_atom(
+					[...$base_path, $sub_segment],
+					isset($from_section_id) ? (int)$from_section_id : null,
+					(object)['value_index' => $ar_value_index[$pair_key]]
+				) );
+			}
+
+
+		return $export_value;
+	}//end get_export_value
+
+
+
 }//end class component_inverse

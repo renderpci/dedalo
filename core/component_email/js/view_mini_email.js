@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {attach_item_dataframe} from '../../component_common/js/component_common.js'
 
 
 
@@ -41,6 +42,16 @@ view_mini_email.render = async function(self, options) {
 
 	// Set value
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
+
+	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
+		for (const entry of entries) {
+			await attach_item_dataframe({
+				self		: self,
+				item		: entry,
+				container	: wrapper,
+				view		: 'mini'
+			})
+		}
 
 	return wrapper
 }//end render

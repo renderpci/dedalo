@@ -403,6 +403,8 @@ export const fetch_section_datum = async function(self, section_tipo, section_id
 			rqo.source.typo			= 'sections'
 			rqo.source.mode			= 'edit'
 			rqo.source.view			= 'default' // avoid graph view dispatch on the server
+			rqo.source.session_save	= false // never overwrite the central section navigation session SQO (graph reads are lookups, not navigation)
+			delete rqo.source.session_key
 			delete rqo.source.section_id
 			delete rqo.id
 			delete rqo.show

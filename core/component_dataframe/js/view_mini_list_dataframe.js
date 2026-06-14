@@ -117,12 +117,12 @@ const render_content_value = function(options) {
 					? rating_data.datalist.find(el => el.section_id === rating_value.section_id )
 					: {
 						hide:[{
-							literal: '#006ed2' // gray when the datalist is empty (the rating is not set)
+							literal: ui.css_var('--color_blue_3', '#006ed2') // default when the datalist is empty (rating not set)
 						}]
 					}
 
 				// update background color
-					const bg_color = rating.hide[0].literal || '#f78a1c'
+					const bg_color = rating.hide[0].literal || ui.css_var('--color_orange_dedalo', '#f78a1c')
 					button_activate.style.backgroundColor = bg_color
 
 				// update text color based on background

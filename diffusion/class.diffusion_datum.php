@@ -7,9 +7,24 @@
 class diffusion_datum extends stdClass {
 
 
+	// Properties declared explicitly in the canonical order of the
+	// 'datum_group' JSON consumed by the Bun engine (diffusion/api/v1/lib/types.ts).
+	// Declaration order defines the serialized key order: do not reorder.
+	public ?string	$diffusion_tipo	= null;
+	public ?string	$section_tipo	= null;
+	public ?string	$term			= null;
+	public ?string	$model			= null;
+	public ?string	$parent			= null;
+	public ?array	$context		= null;
+	public ?array	$data			= null;
+
+
 
 	/**
 	* __CONSTRUCT
+	* Hydrates the datum from an object/array routing every key through its
+	* setter. Unknown keys are an error: the datum_group shape is a frozen
+	* contract with the Bun engine.
 	* @param object|array|null $data = null
 	* @return void
 	*/
@@ -24,41 +39,24 @@ class diffusion_datum extends stdClass {
 			$data = (object)$data;
 		}
 
-		// Nothing to do on construct (for now)
-		if (!is_object($data)) {
-
-			$msg = " wrong data format. object or array expected. Given type: ".gettype($data);
-			debug_log(__METHOD__
-				. $msg
-				.' data: ' . to_string($data)
-				, logger::ERROR
-			);
-			if(SHOW_DEBUG===true) {
-				dump(debug_backtrace()[0], $msg);
-			}
-
-			// $this->errors[] = $msg;
-			return;
-		}
-		
 		// set all properties
 		foreach ($data as $key => $value) {
 			$method = 'set_'.$key;
 			if (method_exists($this, $method)) {
 
-				$set_value = $this->{$method}($value);
-				// if($set_value===false && empty($this->errors)) {
-				// 	$this->errors[] = 'Invalid value for: '.$key.' . value: '.to_string($value);
-				// }
+				$this->{$method}($value);
 
 			}else{
 
+				$msg = ' Ignored unknown property: "'.$key.'". The datum_group shape is a frozen contract.';
 				debug_log(__METHOD__
-					.' Ignored received property: "'.$key.'"" not defined as set method.'. PHP_EOL
+					. $msg . PHP_EOL
 					.' data: ' . to_string($data)
 					, logger::ERROR
 				);
-				// $this->errors[] = 'Ignored received property: '.$key.' not defined as set method. Data: '. json_encode($data, JSON_PRETTY_PRINT);
+				if (defined('SHOW_DEBUG') && SHOW_DEBUG===true) {
+					throw new InvalidArgumentException(__METHOD__ . $msg);
+				}
 			}
 		}
 	}//end __construct
@@ -244,27 +242,6 @@ class diffusion_datum extends stdClass {
 
 		return $this->data ?? null;
 	}//end get_data
-
-
-
-	/**
-	* GET METHODS
-	* By accessors. When property exists, return property value,
-	* else return null
-	* @param string $name
-	* @return mixed
-	*/
-	final public function __get( string $name ) {
-
-		if (isset($this->{$name})) {
-			return $this->{$name};
-		}		
-
-		return null;
-	}
-	final public function __set( string $name, $value ) {
-		$this->{$name} = $value;
-	}
 
 
 

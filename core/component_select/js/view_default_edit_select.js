@@ -121,19 +121,19 @@ const get_content_value = (i, current_value, self) => {
 			const change_handler = async function(e) {
 
 				// when user changes the value of the select, remove its dataframe
+				// (explicit unlink: a select value change is an 'update' action and
+				// does not fire the server remove cascade)
 				// read current entry values dynamically (they change after each save)
+				// pairing key is the data item id, never the target section_id
 					const current_entry = self.data.entries?.[0] || null
-					const current_section_id = current_entry?.section_id || null
-					const current_section_tipo = current_entry?.section_tipo || null
-					const current_main_component_tipo = current_entry?.main_component_tipo || null
-					if(current_section_id){
+					if(current_entry?.id){
 						delete_dataframe({
 							self				: self,
 							section_id			: self.section_id,
 							section_tipo		: self.section_tipo,
-							section_id_key		: current_section_id,
-							section_tipo_key	: current_section_tipo,
-							main_component_tipo	: current_main_component_tipo,
+							section_id_key		: current_entry.id,
+							section_tipo_key	: self.section_tipo,
+							main_component_tipo	: self.tipo,
 							delete_instance		: true
 						})
 					}
@@ -148,15 +148,15 @@ const get_content_value = (i, current_value, self) => {
 						if (parsed_value) {
 							select.button_edit.classList.remove('hide')
 
-							const value_section_id		= parsed_value.section_id
-							const value_section_tipo	= parsed_value.section_tipo
+							// pairing key is the data item id (re-read after save)
+							const value_item_id = self.data.entries?.[0]?.id ?? parsed_value.id
 
 							const component_dataframe = await get_dataframe({
 								self				: self,
 								section_id			: self.section_id,
 								section_tipo		: self.section_tipo,
-								section_id_key		: value_section_id,
-								section_tipo_key	: value_section_tipo,
+								section_id_key		: value_item_id,
+								section_tipo_key	: self.section_tipo,
 								main_component_tipo	: self.tipo,
 								view				: 'default'
 							})
@@ -284,15 +284,16 @@ const get_content_value = (i, current_value, self) => {
 		}
 
 	// first dataframe load if the component has data
-		if(current_value){
+	// pairing key is the data item id, never the target section_id
+		if(current_value?.id){
 
 			const component_dataframe = get_dataframe({
 				self				: self,
 				section_id			: self.section_id,
 				section_tipo		: self.section_tipo,
-				section_id_key		: current_value.section_id,
-				section_tipo_key	: current_value.section_tipo,
-				main_component_tipo	: current_value.main_component_tipo,
+				section_id_key		: current_value.id,
+				section_tipo_key	: self.section_tipo,
+				main_component_tipo	: self.tipo,
 				view				: 'default'
 			}).then(async function(component_dataframe){
 

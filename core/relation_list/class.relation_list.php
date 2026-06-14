@@ -420,7 +420,7 @@ class relation_list extends common {
 					$locator->set_section_id($current_locator->from_section_id);
 
 			// Check target is publishable
-				$current_is_publicable = diffusion::get_is_publicable($locator);
+				$current_is_publicable = diffusion_utils::is_publishable($locator);
 				if ($current_is_publicable!==true) {
 					// debug_log(__METHOD__." + Skipped locator not publishable: ".to_string($locator), logger::DEBUG);
 					continue;
@@ -549,7 +549,7 @@ class relation_list extends common {
 						$custom_locator->set_section_id($current_locator->from_section_id);
 
 					// Check target is publishable
-						$current_is_publicable = diffusion::get_is_publicable($custom_locator);
+						$current_is_publicable = diffusion_utils::is_publishable($custom_locator);
 						if ($current_is_publicable!==true) {
 							debug_log(__METHOD__
 								." + Skipped locator not publishable: " . PHP_EOL
@@ -684,7 +684,7 @@ class relation_list extends common {
 												$filtered_custom_locator->set_section_id($filtered_value->section_id);
 
 											// Check target is publicable
-												$filtered_current_is_publicable = diffusion::get_is_publicable($filtered_custom_locator);
+												$filtered_current_is_publicable = diffusion_utils::is_publishable($filtered_custom_locator);
 												if ($filtered_current_is_publicable!==true) {
 													debug_log(__METHOD__
 														." + Skipped locator not publicable: ". PHP_EOL
@@ -695,13 +695,16 @@ class relation_list extends common {
 												}
 
 											// current_value
-												$current_dato			= [$filtered_custom_locator];
-												$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
-													$process_dato_arguments->lang = $lang;
-												$current_value = diffusion_sql::resolve_value(
-													$process_dato_arguments, // mixed options
-													$current_dato, // mixed dato
-													' | ' // string default_separator
+												// v6 'process_dato' resolution (diffusion_sql::resolve_value) was
+												// removed in v7: diffusion values are processed by the Bun engine
+												// parsers. An ontology config reaching this point was not migrated.
+												$current_value = null;
+												debug_log(__METHOD__
+													. " UNMIGRATED v6 process_dato config detected (resolve_value). Value resolved as null." . PHP_EOL
+													. " Migrate this ontology config to v7 parsers (see diffusion/migration/migrate_diffusion_properties.php)." . PHP_EOL
+													. ' tipo: ' . to_string($this->tipo) . PHP_EOL
+													. ' map_obj: ' . json_encode($map_obj)
+													, logger::ERROR
 												);
 
 											if ($is_related===false) {
@@ -738,22 +741,41 @@ class relation_list extends common {
 								$process_dato_arguments	= $map_obj->process_dato_arguments;
 								$process_dato_arguments->lang = $lang;
 
-								// function_handler
-								$function_handler = $map_obj->process_dato; // like 'diffusion_sql::return_fixed_value'
+								// function_handler. Configured in ontology properties as 'class::method'.
+								// v6 handlers (diffusion_sql::*) were removed in v7: unmigrated configs
+								// resolve as null and are reported for migration.
+								$function_handler = $map_obj->process_dato;
 
-								$current_properties = new stdClass();
-									$current_properties->process_dato_arguments = $process_dato_arguments;
-								$current_options = new stdClass();
-									$current_options->properties = $current_properties;
-								$current_value = $function_handler($current_options, $current_dato);
+								if (is_callable($function_handler)) {
+									$current_properties = new stdClass();
+										$current_properties->process_dato_arguments = $process_dato_arguments;
+									$current_options = new stdClass();
+										$current_options->properties = $current_properties;
+									$current_value = $function_handler($current_options, $current_dato);
+								}else{
+									$current_value = null;
+									debug_log(__METHOD__
+										. " UNMIGRATED v6 process_dato config detected (not callable). Value resolved as null." . PHP_EOL
+										. " Migrate this ontology config to v7 parsers (see diffusion/migration/migrate_diffusion_properties.php)." . PHP_EOL
+										. ' function_handler: ' . to_string($function_handler) . PHP_EOL
+										. ' tipo: ' . to_string($this->tipo)
+										, logger::ERROR
+									);
+								}
 
 							}else{
 
-								// default case (resolve_value)
-								$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
-								$process_dato_arguments->lang = $lang;
-
-								$current_value = diffusion_sql::resolve_value($process_dato_arguments, $current_dato, $separator=' | ');
+								// v6 'process_dato' resolution (diffusion_sql::resolve_value) was removed
+								// in v7: diffusion values are processed by the Bun engine parsers.
+								// An ontology config reaching this point was not migrated.
+								$current_value = null;
+								debug_log(__METHOD__
+									. " UNMIGRATED v6 process_dato config detected (resolve_value). Value resolved as null." . PHP_EOL
+									. " Migrate this ontology config to v7 parsers (see diffusion/migration/migrate_diffusion_properties.php)." . PHP_EOL
+									. ' tipo: ' . to_string($this->tipo) . PHP_EOL
+									. ' map_obj: ' . json_encode($map_obj)
+									, logger::ERROR
+								);
 							}
 
 							$value_obj->{$map_key} = $current_value;
@@ -781,7 +803,7 @@ class relation_list extends common {
 						$current_locator->set_section_id($inverse_reference->section_id);
 
 					// Check target is publicable
-					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					$current_is_publicable = diffusion_utils::is_publishable($current_locator);
 					if ($current_is_publicable!==true) {
 						debug_log(__METHOD__
 							." + Skipped locator not publishable: ". PHP_EOL
@@ -807,7 +829,7 @@ class relation_list extends common {
 						$current_locator->set_section_id($inverse_reference->section_id);
 
 					// Check target is publicable
-					$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					$current_is_publicable = diffusion_utils::is_publishable($current_locator);
 					if ($current_is_publicable!==true) {
 						debug_log(__METHOD__
 							." + Skipped locator not publishable: ". PHP_EOL
@@ -940,7 +962,7 @@ class relation_list extends common {
 					// foreach ($ar_inverse_references as $current_locator) {
 
 					// 	// Check target is publicable
-					// 	$current_is_publicable = diffusion::get_is_publicable($current_locator);
+					// 	$current_is_publicable = diffusion_utils::is_publishable($current_locator);
 					// 	if ($current_is_publicable!==true) {
 					// 		debug_log(__METHOD__." + Skipped locator not publicable: ".to_string($current_locator), logger::DEBUG);
 					// 		continue;
@@ -1054,7 +1076,7 @@ class relation_list extends common {
 	* @param ?string $diffusion_element_tipo
 	* @return array $diffusion_data
 	*
-	* @see class.diffusion_data.php
+	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
 	* @test false
 	*/
 	public function get_diffusion_data( object $ddo, ?string $diffusion_element_tipo=null ) : array {

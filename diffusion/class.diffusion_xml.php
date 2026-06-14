@@ -1,10 +1,12 @@
 <?php declare(strict_types=1);
 /**
 * CLASS DIFFUSION_XML
-* @deprecated 6.0.0 Use dd_diffusion_api and diffusion_utils instead.
-* Manages publication on XML format
+* Manages publication on XML format.
+* v7 flow: dd_diffusion_api::diffuse_xml dispatches per record to
+* update_record; files use deterministic names (one current file per
+* record) shared with delete_record_file (delete propagation).
 */
-class diffusion_xml extends diffusion  {
+class diffusion_xml {
 
 
 
@@ -18,6 +20,9 @@ class diffusion_xml extends diffusion  {
 	public $lang;
 	// saved_files. Array of strings as ['/path/file1.xml','/path/file2.xml']
 	public static $saved_files = [];
+	// request-scoped caches (cleared by reset_cache)
+	private static ?array	$diffusion_objects_cache	= null;
+	private static bool		$parsers_loaded				= false;
 
 
 
@@ -38,10 +43,206 @@ class diffusion_xml extends diffusion  {
 		// lang. Language for XML diffusion will be English always. This value diverges from
 		// historical 'lg-spa' (DEDALO_STRUCTURE_LANG) and is adopted from now for new diffusion code revisions.
 		$this->lang = 'lg-eng';
-
-
-		parent::__construct($options);
 	}//end __construct
+
+
+
+	/**
+	 * GET_DIFFUSION_OBJECTS
+	 * Collect all diffusion objects from diffusion_element_tipo
+	 * (Moved from legacy class diffusion, removed in v7)
+	 * @param string $root_tipo
+	 * @param bool $include_self=false
+	 * @param string $lang = DEDALO_STRUCTURE_LANG
+	 * @return array $diffusion_objects
+	 */
+	public function get_diffusion_objects(string $root_tipo, bool $include_self=false, string $lang=DEDALO_STRUCTURE_LANG): array {
+
+		// diffusion_objects_cache. Cache for performance on multiple records
+		if (self::$diffusion_objects_cache !== null) {
+			return self::$diffusion_objects_cache;
+		}
+
+		$diffusion_objects = [];
+
+		// Get recursively all children and iterate it
+		$children_objects = self::get_children_objects($root_tipo);
+
+		// include_self optional
+		if ($include_self) {
+			// add the self root tipo at beginning of the array
+			array_unshift($children_objects, (object)[
+				'tipo' => $root_tipo,
+				'parent' => null
+			]);
+		}
+
+		foreach ($children_objects as $child_object) {
+
+			$child_tipo = $child_object->tipo;
+			$parent =  $child_object->parent;
+
+			$ontology_node = ontology_node::get_instance($child_tipo);
+			$properties = $ontology_node->get_properties();
+			// all properties value is a request_config_object
+			$request_config_object = $properties ?? null;
+			$process = $request_config_object->process ?? null;
+
+			// column / node name (from the Ontology term value)
+			$name = ontology_node::get_term_by_tipo($child_tipo, $lang);
+
+			// create a new diffusion object (plain object: container class diffusion_object removed in v7)
+			$diffusion_object = (object)[
+				'tipo'		=> $child_tipo,
+				'parent'	=> $parent,
+				'name'		=> $name,
+				'model'		=> ontology_node::get_model_by_tipo($child_tipo,true),
+				'process'	=> $process
+			];
+
+			// add
+			$diffusion_objects[] = $diffusion_object;
+		}
+
+		// cache
+		self::$diffusion_objects_cache = $diffusion_objects;
+
+
+		return $diffusion_objects;
+	}//end get_diffusion_objects
+
+
+
+	/**
+	 * GET_CHILDREN_OBJECTS
+	 * Resolve ontology children nodes recursively using
+	 * properties->children definition as fallback.
+	 * Using objects as {parent:a,tipo:b}
+	 * (Moved from legacy class diffusion, removed in v7)
+	 * @param string $tipo
+	 * @return array $children_objects
+	 */
+	protected static function get_children_objects( string $tipo ) : array {
+
+		$children_objects = [];
+
+		// Ontology typical resolution
+		$children = ontology_node::get_ar_children($tipo);
+		if (empty($children)) {
+			// fallback to properties definition
+			$ontology_node = ontology_node::get_instance($tipo);
+			$properties = $ontology_node->get_properties();
+			$children = $properties->children ?? [];
+		}
+
+		if (!empty($children)) {
+
+			// Create the pairs object tipo/parent
+			$children_objects = array_map(function ($el) use ($tipo) {
+				return (object)[
+					'tipo' => $el,
+					'parent' => $tipo
+				];
+			}, $children);
+
+			// recursion
+			foreach ($children as $child) {
+				$children_objects = array_merge(
+					$children_objects,
+					self::get_children_objects($child)
+				);
+			}
+		}
+
+
+		return $children_objects;
+	} //end get_children_objects
+
+
+
+	/**
+	 * LOAD_PARSERS
+	 * Include the classes of the parsers based on the diffusion_element
+	 * properties definitions.
+	 * (Moved from legacy class diffusion, removed in v7)
+	 * @param string $diffusion_element_tipo
+	 * @return bool
+	 */
+	public function load_parsers( string $diffusion_element_tipo ) : bool {
+
+		if (self::$parsers_loaded===true) {
+			return true;
+		}
+
+		$ontology_node	= ontology_node::get_instance($diffusion_element_tipo);
+		$properties		= $ontology_node->get_properties();
+		$parser			= $properties->diffusion->parser ?? null;
+		// SEC-051: `$parser` comes from ontology properties which are
+		// writable by admin/developer users. Concatenating the value onto
+		// DEDALO_ROOT_PATH without realpath containment would let a
+		// privileged user point parsers at arbitrary files (e.g. a hostile
+		// `.php` uploaded elsewhere). Confine each include to the known
+		// roots where legitimate parsers live.
+		$allowed_roots = array_filter([
+			defined('DEDALO_CORE_PATH')      ? realpath(DEDALO_CORE_PATH)      : null,
+			defined('DEDALO_DIFFUSION_PATH') ? realpath(DEDALO_DIFFUSION_PATH) : null,
+			defined('DEDALO_TOOLS_PATH')     ? realpath(DEDALO_TOOLS_PATH)     : null,
+		]);
+		if ($parser) {
+			foreach ((array)$parser as $file_path) {
+				try {
+					$full_path = DEDALO_ROOT_PATH . trim($file_path, " .");
+					$real = realpath($full_path);
+					$inside = false;
+					if ($real !== false) {
+						foreach ($allowed_roots as $root) {
+							if (strncmp($real, $root . DIRECTORY_SEPARATOR, strlen($root) + 1) === 0) {
+								$inside = true;
+								break;
+							}
+						}
+					}
+					if (!$inside) {
+						debug_log(__METHOD__
+							. ' SEC-051 refused parser outside allowed roots.' . PHP_EOL
+							. ' file_path: ' . to_string($file_path) . PHP_EOL
+							. ' full_path: ' . to_string($full_path)
+							, logger::ERROR
+						);
+						continue;
+					}
+					include_once $real;
+				} catch (Exception $e) {
+					debug_log(__METHOD__
+						. ' Ignored parser class file. File do not exists' . PHP_EOL
+						. ' file_path: ' . to_string($file_path) . PHP_EOL
+						. $e->getMessage()
+						, logger::ERROR
+					);
+				}
+			}
+		}
+
+		self::$parsers_loaded = true;
+
+
+		return true;
+	}//end load_parsers
+
+
+
+	/**
+	 * RESET_CACHE
+	 * Clears the request-scoped static caches. Call at request boundaries
+	 * and between iterations of long-running CLI processes.
+	 * Note: $parsers_loaded is intentionally NOT reset — parser class files
+	 * stay included for the lifetime of the PHP process.
+	 * @return void
+	 */
+	public static function reset_cache() : void {
+
+		self::$diffusion_objects_cache = null;
+	}//end reset_cache
 
 
 
@@ -197,10 +398,10 @@ class diffusion_xml extends diffusion  {
 	* 		<row>First informant</row>
 	* 		<row>Second informant</row>
 	* 	</informant>
-	* @param diffusion_object $diffusion_object
+	* @param object $diffusion_object
 	* @return array $diffusion_object_rows
 	*/
-	private function resolve_data_rows( diffusion_object $diffusion_object ) : array {
+	private function resolve_data_rows( object $diffusion_object ) : array {
 
 		$data = $diffusion_object->data ?? [];
 
@@ -210,12 +411,13 @@ class diffusion_xml extends diffusion  {
 			return $diffusion_object_rows;
 		}
 
-		// create the data groups by the unique key of the data.
-		// every ddo data as a unique key (with the main section_tipo and section_id)
-		// so group the data into an array
+		// create the data groups by the unique key of the data: the related
+		// record each item belongs to. Chain-processor wrappers carry the
+		// record in section_tipo/section_id (on the wrapper or on its inner
+		// value items) — items of the same related record form one row.
 		$grouped = [];
 		foreach ($data as $item) {
-			$key = $item->key;
+			$key = self::resolve_row_key($item);
 			if (!isset($grouped[$key])) {
 				$grouped[$key] = [];
 			}
@@ -236,15 +438,15 @@ class diffusion_xml extends diffusion  {
 		// if the grouper has multiple datasets
 		// creates new diffusion object for grouping the datasets
 		// it is a clone of the original diffusion group
-		// create the new diffusion_object for current lang
-		$grouper_diffusion_object = new diffusion_object((object)[
+		// create the new diffusion object for current lang
+		$grouper_diffusion_object = (object)[
 			'tipo'		=> $diffusion_object->tipo,
 			'parent'	=> $diffusion_object->parent,
 			'name'		=> $diffusion_object->name,
 			'model'		=> ontology_node::get_model_by_tipo($diffusion_object->tipo, true),
 			'process'	=> $diffusion_object->process,
 			'data'		=> []
-		]);
+		];
 		$diffusion_object_rows[] = $grouper_diffusion_object;
 
 
@@ -252,15 +454,15 @@ class diffusion_xml extends diffusion  {
 		// if the grouper has multiple datasets use the `row` name and link they to the diffusion object grouper.
 		foreach ($grouped as $key => $data_group) {
 
-			// create the new diffusion_object for current lang
-			$new_diffusion_object = new diffusion_object((object)[
+			// create the new diffusion object for current dataset
+			$new_diffusion_object = (object)[
 				'tipo'		=> $key . $diffusion_object->tipo,
 				'parent'	=> $diffusion_object->tipo,
 				'name'		=> 'row',
 				'model'		=> ontology_node::get_model_by_tipo($diffusion_object->tipo, true),
 				'process'	=> $diffusion_object->process,
 				'data'		=> $data_group
-			]);
+			];
 
 			// adds it to the final array
 			$diffusion_object_rows[] = $new_diffusion_object;
@@ -269,6 +471,177 @@ class diffusion_xml extends diffusion  {
 
 		return $diffusion_object_rows;
 	}//end resolve_data_rows
+
+
+
+	/**
+	* RESOLVE_ROW_KEY
+	* Derives the row grouping key of a resolved data item: the related
+	* record it belongs to (section_tipo_section_id), read from the
+	* chain-processor wrapper or from its inner value items. Items without
+	* record scoping share a single default row.
+	* @param object $item
+	* @return string
+	*/
+	private static function resolve_row_key( object $item ) : string {
+
+		if (isset($item->section_id)) {
+			return ($item->section_tipo ?? '') .'_'. $item->section_id;
+		}
+
+		$first_inner = (is_array($item->value ?? null) && isset($item->value[0]) && is_object($item->value[0]))
+			? $item->value[0]
+			: null;
+		if ($first_inner!==null && isset($first_inner->section_id)) {
+			return ($first_inner->section_tipo ?? '') .'_'. $first_inner->section_id;
+		}
+
+		return '';
+	}//end resolve_row_key
+
+
+
+	/**
+	* FLATTEN_TO_INNER_ITEMS
+	* Chain-processor wrappers hold their per-field values as an array of
+	* inner items {tipo, lang, value, id} in ->value. The lang/tipo logic of
+	* resolve_langs operates on INNER items: flatten wrappers (cloning, langs
+	* normalized so null reads as nolan) and pass plain items through.
+	* @param array $data
+	* @return array
+	*/
+	private static function flatten_to_inner_items( array $data ) : array {
+
+		$flat = [];
+		foreach ($data as $data_item) {
+
+			$inner_items = (is_array($data_item->value ?? null)
+				&& isset($data_item->value[0])
+				&& is_object($data_item->value[0])
+				&& property_exists($data_item->value[0], 'value'))
+					? $data_item->value
+					: [$data_item];
+
+			foreach ($inner_items as $inner) {
+				$item = clone $inner;
+				$item->lang = $item->lang ?? DEDALO_DATA_NOLAN;
+				$flat[] = $item;
+			}
+		}
+
+		return $flat;
+	}//end flatten_to_inner_items
+
+
+
+	/**
+	* GET_RECORD_FILE_PATH
+	* Resolves the canonical (deterministic) published XML file path of a
+	* record: {section_tipo}_{section_id}.xml inside /xml/{service_name}/.
+	* Single source of truth shared by publish (write_file) and delete
+	* (delete_record_file) so re-publishing always overwrites the same file
+	* and deleting always targets it.
+	* @param string $diffusion_element_tipo Alias or real element tipo
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return object|null {service_name, sub_path, file_name, file_path, file_url}
+	* 	Null when properties->diffusion->service_name is not defined
+	* 	(run the 'validate' API action to locate unconfigured elements)
+	*/
+	public static function get_record_file_path( string $diffusion_element_tipo, string $section_tipo, string|int $section_id ) : ?object {
+
+		// service_name from element properties (alias contract applied)
+		$resolved		= diffusion_utils::resolve_node_with_alias($diffusion_element_tipo);
+		$service_name	= $resolved->properties->diffusion->service_name ?? null;
+		if (empty($service_name)) {
+			debug_log(__METHOD__
+				. " Unable to resolve service_name from diffusion_element properties" . PHP_EOL
+				. ' diffusion_element_tipo: ' . $diffusion_element_tipo
+				, logger::ERROR
+			);
+			return null;
+		}
+
+		$file_name	= $section_tipo .'_'. $section_id .'.xml';
+		$sub_path	= '/xml/' . $service_name . '/';
+
+		$file_info = new stdClass();
+			$file_info->service_name	= $service_name;
+			$file_info->sub_path		= $sub_path;
+			$file_info->file_name		= $file_name;
+			$file_info->file_path		= DEDALO_MEDIA_PATH . $sub_path . $file_name;
+			$file_info->file_url		= DEDALO_MEDIA_URL  . $sub_path . $file_name;
+
+
+		return $file_info;
+	}//end get_record_file_path
+
+
+
+	/**
+	* DELETE_RECORD_FILE
+	* Removes the published XML file of a record: the canonical deterministic
+	* file plus any legacy timestamped variants ({base}_*.xml) written before
+	* the deterministic naming. Missing files = idempotent success.
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return object {result: bool, msg: string, file_path: string|null, deleted_files: array}
+	*/
+	public static function delete_record_file( string $diffusion_element_tipo, string $section_tipo, string|int $section_id ) : object {
+
+		$response = new stdClass();
+			$response->result			= false;
+			$response->msg				= '';
+			$response->file_path		= null;
+			$response->deleted_files	= [];
+
+		$file_info = self::get_record_file_path($diffusion_element_tipo, $section_tipo, $section_id);
+		if ($file_info===null) {
+			$response->msg = "XML delete: unable to resolve file path for element '$diffusion_element_tipo', section $section_tipo $section_id";
+			return $response;
+		}
+		$response->file_path = $file_info->file_path;
+
+		// canonical file + legacy timestamped variants (incl. legacy flat /xml/ dir)
+			$base_name	= pathinfo($file_info->file_name, PATHINFO_FILENAME);
+			$to_unlink	= [];
+			if (file_exists($file_info->file_path)) {
+				$to_unlink[] = $file_info->file_path;
+			}
+			foreach ([dirname($file_info->file_path), DEDALO_MEDIA_PATH . '/xml'] as $dir) {
+				if (is_dir($dir)) {
+					$to_unlink = array_merge($to_unlink, glob($dir .'/'. $base_name .'_*.xml') ?: []);
+				}
+			}
+			$to_unlink = array_unique($to_unlink);
+
+		if (empty($to_unlink)) {
+			// nothing published (or already removed): idempotent success
+			$response->result	= true;
+			$response->msg		= 'XML delete: no file found (already removed)';
+			return $response;
+		}
+
+		$all_ok = true;
+		foreach ($to_unlink as $file_path) {
+			if (unlink($file_path)) {
+				$response->deleted_files[] = $file_path;
+			}else{
+				$all_ok = false;
+				$response->msg = "XML delete: failed to unlink file '$file_path' (check permissions)";
+				debug_log(__METHOD__ .' '. $response->msg, logger::ERROR);
+			}
+		}
+
+		$response->result = $all_ok;
+		if ($all_ok) {
+			$response->msg = 'XML delete: removed '. count($response->deleted_files) .' file(s)';
+		}
+
+
+		return $response;
+	}//end delete_record_file
 
 
 
@@ -287,25 +660,24 @@ class diffusion_xml extends diffusion  {
 			$response->file_path	= null;
 			$response->file_url		= null;
 
-		// name compound
-		$name_parts = [
-			$this->section_tipo,
-			$this->section_id,
-			logged_user_id(),
-			date('Y-m-d') // date now as 2025-01-23
-		];
-		$file_name		= implode('_', $name_parts);
-		$xml_file_name	= $file_name .'.xml';
-		$xml_dir		= '/xml';
-		$base_path		= DEDALO_MEDIA_PATH . $xml_dir;
+		// deterministic name: one current file per record, overwritten on
+		// each re-publish (who/when live in the dd1758 activity log).
+		// Shared with delete_record_file (delete propagation).
+		$file_info = self::get_record_file_path($this->diffusion_element_tipo, $this->section_tipo, $this->section_id);
+		if ($file_info===null) {
+			$response->errors[] = 'unable to resolve XML file path (check properties->diffusion->service_name of the element)';
+			$response->msg = 'Error resolving XML file path';
+			return $response;
+		}
+		$base_path = dirname($file_info->file_path);
 		// Check that the target directory exists. If not, create it.
 		if(!create_directory($base_path)){
 			$response->errors[] = 'unable to access/create the target directory: ' . $base_path;
 			$response->msg = 'Error accessing target directory: ' . $base_path;
 			return $response;
 		}
-		$file_path	= DEDALO_MEDIA_PATH . $xml_dir .'/'. $xml_file_name;
-		$file_url	= DEDALO_MEDIA_URL  . $xml_dir .'/'. $xml_file_name;
+		$file_path	= $file_info->file_path;
+		$file_url	= $file_info->file_url;
 
 		// save DOM nodes to file. Return the number of bytes, or false on failure.
 		$result = $doc->save( $file_path );
@@ -321,7 +693,7 @@ class diffusion_xml extends diffusion  {
 			return $response;
 		}
 
-		// save file path to collect files (used when combine_files is called)
+		// save file path to collect files (per-process accumulation)
 		diffusion_xml::$saved_files[] = $file_path;
 
 		// success response
@@ -372,6 +744,9 @@ class diffusion_xml extends diffusion  {
 
 			// file_url
 			$response->file_url	= $write_file_response->file_url ?? null;
+
+			// raw rendered XML (consumed by diffuse_xml datum / Bun consolidation)
+			$response->data = $doc->saveXML();
 
 			// result
 			$response->result = $write_file_response->result ?? false;
@@ -487,11 +862,11 @@ class diffusion_xml extends diffusion  {
 	/**
 	* GET_DEFAULT_PROCESS_PARSER
 	* Get the default parser based on data items number and the model.
-	* @param diffusion_object $diffusion_object
+	* @param object $diffusion_object
 	* @return array
 	* 	Array of objects (parsers)
 	*/
-	public function get_default_process_parser( diffusion_object $diffusion_object ) : array {
+	public function get_default_process_parser( object $diffusion_object ) : array {
 
 		// default parser
 		$default_parser = [(object)[
@@ -709,7 +1084,7 @@ class diffusion_xml extends diffusion  {
 
 		$ar_data = [];
 
-		$ddo_map = diffusion_data::get_ddo_map($tipo, $section_tipo);
+		$ddo_map = diffusion_utils::get_ddo_map($tipo, $section_tipo);
 
 		if( empty($ddo_map) ){
 			return $ar_data;
@@ -722,8 +1097,10 @@ class diffusion_xml extends diffusion  {
 			$resolve_options->parent		= $section_tipo;
 			$resolve_options->section_tipo	= $section_tipo;
 			$resolve_options->section_id	= $section_id;
+			$resolve_options->is_publishable = true;
 
-		$ar_data = diffusion_data::get_ddo_map_value( $resolve_options );
+		$processor	= new diffusion_chain_processor();
+		$ar_data	= $processor->resolve_chain( $resolve_options );
 
 
 		return $ar_data;
@@ -758,6 +1135,10 @@ class diffusion_xml extends diffusion  {
 			$diffusion_object_langs[] = $diffusion_object;
 			return $diffusion_object_langs;
 		}
+
+		// flatten chain-processor wrappers into their inner value items:
+		// langs/tipos live on the inner items, not on the wrappers
+		$data = self::flatten_to_inner_items($data);
 
 		// create unique array with all languages of the data, it will used to fill the gaps in the components that has to be joined and doesn't has done the translation
 		$ar_langs = [];
@@ -831,15 +1212,14 @@ class diffusion_xml extends diffusion  {
 			$lang_tld2 = lang::get_alpha2_from_code($current_lang);
 			$lang_tipo = str_replace('lg-', '', $current_lang);
 
-			// create the new diffusion_object for current lang
-			$new_diffusion_object = new diffusion_object((object)[
+			// create the new diffusion object for current lang
+			$new_diffusion_object = (object)[
 				'tipo'		=> $lang_tipo . $diffusion_object->tipo,
 				'parent'	=> $diffusion_object->tipo,
 				'name'		=> $lang_tld2,
-				// 'model'		=> ontology_node::get_model_by_tipo($diffusion_object->tipo,true),
 				'process'	=> $diffusion_object->process,
 				'data'		=> $lang_data
-			]);
+			];
 
 			// add
 			$diffusion_object_langs[] = $new_diffusion_object;
@@ -853,37 +1233,6 @@ class diffusion_xml extends diffusion  {
 
 		return $diffusion_object_langs;
 	}//end resolve_langs
-
-
-
-	/**
-	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
-	* Used to determine when show publication button in sections
-	* Called from class diffusion to get the XML portion of sections
-	* @see diffusion::get_diffusion_sections_from_diffusion_element
-	* @param string $diffusion_element_tipo
-	* @param string|null $class_name = null
-	* @return array $ar_diffusion_sections
-	*/
-	public static function get_diffusion_sections_from_diffusion_element( string $diffusion_element_tipo, ?string $class_name=null ) : array {
-
-		$ar_diffusion_sections = array();
-
-		// XML elements
-		$elements = ontology_node::get_ar_tipo_by_model_and_relation($diffusion_element_tipo, 'xml', 'children', true);
-		foreach ($elements as $current_element_tipo) {
-
-			// Pointer to section
-			$ar_related = common::get_ar_related_by_model('section', $current_element_tipo);
-
-			if (isset($ar_related[0])) {
-				$ar_diffusion_sections[] = $ar_related[0];
-			}
-		}
-
-
-		return $ar_diffusion_sections;
-	}//end get_diffusion_sections_from_diffusion_element
 
 
 
@@ -920,138 +1269,7 @@ class diffusion_xml extends diffusion  {
 
 
 
-	/**
-	* COMBINE_XML_FILES
-	* Combines multiple XML files into a single XML file.
-	* @param array $xml_files The list of XML files to combine.
-	* @param string $output_file_path The full path and filename for the output XML file.
-	* @param string $root_element_name The name of the root element for the new combined XML file.
-	* @param string $nodes_to_import_query An optional XPath query to select specific nodes to import from each source XML file.
-	* If not provided, the entire document element (root) of each source file will be imported.
-	* @return object True on success, false on failure.
-	*/
-	protected function combine_xml_files(
-		array $xml_files,
-		string $output_file_path,
-		string $root_element_name = 'combined_data', // combined_data
-		string $nodes_to_import_query = ''
-		): object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
-			$response->errors	= [];
-
-		// 1. Create a new DOMDocument for the consolidated file
-		$output_dom = new DOMDocument('1.0', 'UTF-8');
-		$output_dom->formatOutput = true; // For nice formatting of the output XML
-
-		// Create the root element for the new combined XML file
-		$root_element = $output_dom->createElement($root_element_name);
-		$output_dom->appendChild($root_element);
-
-		if (empty($xml_files)) {
-			$response->msg = 'Error. Empty XML files list';
-			return $response;
-		}
-
-		foreach ($xml_files as $xml_file) {
-
-			// 2. Load each individual XML file
-			$input_dom = new DOMDocument();
-			if (!$input_dom->load($xml_file)) {
-				$response->errors[] = "Error: Could not load XML file: {$xml_file}";
-				continue; // Skip to the next file
-			}
-
-			// 3. Import nodes
-			if (!empty($nodes_to_import_query)) {
-				// Use XPath to select specific nodes to import
-				$xpath = new DOMXPath($input_dom);
-				$nodes_to_import = $xpath->query($nodes_to_import_query);
-
-				if ($nodes_to_import) {
-					foreach ($nodes_to_import as $node) {
-						$imported_node = $output_dom->importNode($node, true); // true for deep import (including children)
-						$root_element->appendChild($imported_node);
-					}
-				} else {
-					$response->errors[] = "Warning: No nodes found for query '{$nodes_to_import_query}' in file: {$xml_file}";
-				}
-			} else {
-				// If no specific query, import the entire document element (root)
-				$imported_node = $output_dom->importNode($input_dom->documentElement, true);
-				$root_element->appendChild($imported_node);
-			}
-		}
-
-		// 5. Save the consolidated file
-		if (!$output_dom->save($output_file_path)) {
-			$response->msg = "Error: Could not save the combined XML file to: {$output_file_path}";
-			return $response;
-		}
-
-		// response success
-		$response->result	= $output_file_path;
-		$response->msg		= empty($response->errors)
-			? 'OK. Successfully combined XML file'
-			: 'Warning. Combined XML file with errors';
-
-
-		return $response;
-	}//end combine_xml_files
-
-
-
-	/**
-	* COMBINE_RENDERED_FILES
-	* Combines files saved previously on every 'update_record' execution in a
-	* single one XML file, reading and parsing file by file and combining the XML nodes inside.
-	* @param object $options
-	* 	{
-	* 		diffusion_data : array
-	* 	}
-	* @return object $response
-	*/
-	public static function combine_rendered_files( object $options ) : object {
-
-		$response = new stdClass();
-			$response->result			= false;
-			$response->msg				= 'Error. Request failed';
-			$response->errors			= [];
-			$response->diffusion_data	= null;
-
-		// xml_files. Values saved previously on every 'update_record' execution
-		$xml_files = diffusion_xml::$saved_files;
-		if (empty($xml_files)) {
-			return $response;
-		}
-
-		// output_file_path
-		$first_file = $xml_files[0];
-		$output_file_path = str_replace('.xml', '_combined.xml', $first_file);
-
-		$diffusion_xml = new diffusion_xml();
-
-		$response = $diffusion_xml->combine_xml_files(
-			$xml_files,
-			$output_file_path
-		);
-
-		// diffusion_data
-		// Overwrite
-		$file_url = str_replace(DEDALO_ROOT_PATH, DEDALO_ROOT_WEB, $output_file_path);
-		$response->diffusion_data = [
-			[
-				(object)[
-					'file_url' => $file_url
-				]
-			]
-		];
-
-
-		return $response;
-	}//end combine_rendered_files
 
 
 

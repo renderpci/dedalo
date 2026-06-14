@@ -4212,7 +4212,7 @@ class web_data {
 
 
 		/**
-		* GET_GEOLOCATION_DATA -> moved to class.diffusion_sql.php
+		* GET_GEOLOCATION_DATA -> removed (v6 diffusion_sql, deleted in v7)
 		* @return
 		*/
 		public static function get_geolocation_data( $request_options ) {
@@ -4794,7 +4794,7 @@ class web_data {
 					}
 				}
 
-				// (!) Remember to add filters too in diffusion_mysql::save_global_search_data
+				// (!) v6 note: global_search filters were maintained in diffusion_mysql (removed in v7)
 
 				// Added 09-12-2021. Is the same as above but in bulk mode
 					foreach ([

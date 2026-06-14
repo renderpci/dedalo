@@ -24,43 +24,43 @@ class tools_register {
 		 * Component tipo for tool name identifier. E.g. 'tool_transcription'.
 		 * @var string $tipo_tool_name
 		 */
-		public static string $tipo_tool_name = 'dd1326';
+		public static string $tipo_tool_name = tool_ontology_map::TOOL_NAME;
 
 		/**
 		 * Component tipo for tool label display name.
 		 * @var string $tipo_tool_label
 		 */
-		public static string $tipo_tool_label = 'dd799';
+		public static string $tipo_tool_label = tool_ontology_map::TOOL_LABEL;
 
 		/**
 		 * Component tipo for tool ontology definition reference.
 		 * @var string $tipo_ontology
 		 */
-		public static string $tipo_ontology = 'dd1334';
+		public static string $tipo_ontology = tool_ontology_map::ONTOLOGY;
 
 		/**
 		 * Component tipo for tool version number.
 		 * @var string $tipo_version
 		 */
-		public static string $tipo_version = 'dd1327';
+		public static string $tipo_version = tool_ontology_map::VERSION;
 
 		/**
 		 * Component tipo for tool developer/author name.
 		 * @var string $tipo_developer
 		 */
-		public static string $tipo_developer = 'dd1644';
+		public static string $tipo_developer = tool_ontology_map::DEVELOPER;
 
 		/**
 		 * Component tipo for tool description text.
 		 * @var string $tipo_description
 		 */
-		public static string $tipo_description = 'dd612';
+		public static string $tipo_description = tool_ontology_map::DESCRIPTION;
 
 		/**
 		 * Component tipo for minimum required Dédalo version.
 		 * @var string $tipo_dedalo_version_minimal
 		 */
-		public static string $tipo_dedalo_version_minimal = 'dd1328';
+		public static string $tipo_dedalo_version_minimal = tool_ontology_map::DEDALO_VERSION_MIN;
 
 		/**
 		 * Section tipo for 'Tools Configuration' section (dd996).
@@ -74,41 +74,51 @@ class tools_register {
 		 * Defines which component/section models the tool applies to.
 		 * @var string $tipo_affected_models
 		 */
-		public static string $tipo_affected_models = 'dd1330';
+		public static string $tipo_affected_models = tool_ontology_map::AFFECTED_MODELS;
 
 		/**
 		 * Component tipo for tool properties configuration (component_json).
 		 * @var string $tipo_properties
 		 */
-		public static string $tipo_properties = 'dd1335';
+		public static string $tipo_properties = tool_ontology_map::PROPERTIES;
 
 		/**
 		 * Component tipo for 'always active' flag.
 		 * Controls whether tool is available without explicit activation.
 		 * @var string $tipo_always_active
 		 */
-		public static string $tipo_always_active = 'dd1601';
+		public static string $tipo_always_active = tool_ontology_map::ALWAYS_ACTIVE;
 
 		/**
 		 * Component tipo for tools configuration JSON (dd999).
 		 * Runtime configuration storage for tool behavior.
 		 * @var string $tools_configuration
 		 */
-		public static string $tools_configuration = 'dd999';
+		public static string $tools_configuration = tool_ontology_map::CONFIG;
 
 		/**
 		 * Component tipo for tools default configuration JSON (dd1633).
 		 * Factory default settings for tool initialization.
 		 * @var string $tools_default_configuration
 		 */
-		public static string $tools_default_configuration = 'dd1633';
+		public static string $tools_default_configuration = tool_ontology_map::DEFAULT_CONFIG;
 
 		/**
 		 * Component tipo for tool active status (component_radio_button, dd1354).
 		 * Boolean flag to enable/disable the tool in the system.
 		 * @var string $tipo_active
 		 */
-		public static string $tipo_active = 'dd1354';
+		public static string $tipo_active = tool_ontology_map::ACTIVE;
+
+		/**
+		 * In-memory caches for the config list getters.
+		 * Class properties (instead of function-local statics) so
+		 * invalidate_all_tool_caches() can reset them.
+		 */
+		protected static ?array $all_config_cache = null;
+		protected static ?array $all_default_config_cache = null;
+		protected static ?array $all_config_tool_client_cache = null;
+		protected static ?array $all_default_config_tool_client_cache = null;
 
 
 	/**
@@ -130,8 +140,13 @@ class tools_register {
 		$info_objects_parsed 	= [];
 		$counter 				= 0;
 
-		// 1. Scan filesystem for valid tool directories
-		$tool_directories = self::get_valid_tool_directories();
+		// 1. Scan filesystem for valid tool directories (all roots).
+		// Shadowed duplicates across roots land in the report as errors.
+		$collisions       = [];
+		$tool_directories = self::get_valid_tool_directories($collisions);
+		foreach ($collisions as $collision) {
+			$info_file_processed[] = $collision;
+		}
 
 		// 2. Process each directory and extract data
 		foreach ($tool_directories as $current_dir_tool) {
@@ -140,6 +155,10 @@ class tools_register {
 			$result   = self::process_tool_directory($current_dir_tool, $basename, $counter);
 
 			if ($result->skipped) {
+				// keep the failure visible in the import report when available
+				if ($result->file_info) {
+					$info_file_processed[] = $result->file_info;
+				}
 				continue;
 			}
 
@@ -186,38 +205,88 @@ class tools_register {
 	/**
 	 * GET_VALID_TOOL_DIRECTORIES
 	 *
-	 * Scans the DEDALO_TOOLS_PATH and filters for valid tool folders (starting with tool_).
+	 * Scans every tool root (primary DEDALO_TOOLS_PATH plus any
+	 * DEDALO_ADDITIONAL_TOOLS roots, see tool_paths) and filters for valid
+	 * tool folders (starting with tool_).
 	 *
+	 * Collision policy: first-root-wins. A tool directory shadowed by an
+	 * earlier root is skipped and reported through $collisions so the
+	 * Maintenance import report shows it — never a silent override.
+	 *
+	 * @param array $collisions Reference; receives report objects for shadowed duplicates.
 	 * @return array List of absolute paths to valid tool directories.
 	 */
-	private static function get_valid_tool_directories() : array {
-		$ar_tools 	= (array)glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
-		$valid_dirs = [];
+	private static function get_valid_tool_directories(array &$collisions=[]) : array {
 
-		foreach ($ar_tools as $current_dir_tool) {
-			$basename = basename($current_dir_tool);
+		$valid_dirs	= [];
+		$seen		= []; // basename => winning dir
 
-			// System folders to ignore
-			if (in_array($basename, ['tool_common', 'acc'])) {
-				continue;
+		foreach (tool_paths::get_roots() as $root) {
+
+			$ar_tools = (array)glob($root->path . '/*', GLOB_ONLYDIR);
+
+			foreach ($ar_tools as $current_dir_tool) {
+				$basename = basename($current_dir_tool);
+
+				// System folders to ignore
+				if (in_array($basename, ['tool_common', 'acc'])) {
+					continue;
+				}
+
+				// Development template only visible in developer mode
+				if ($basename === 'tool_dev_template' && SHOW_DEVELOPER !== true) {
+					continue;
+				}
+
+				// Pattern check (must follow tool_ naming convention)
+				if (!str_starts_with($basename, 'tool_')) {
+					debug_log(__METHOD__ . " Ignored non-tool directory: $basename", logger::WARNING);
+					continue;
+				}
+
+				// Collision: first-root-wins, reported
+				if (isset($seen[$basename])) {
+					$msg = "Duplicate tool directory '$basename' in '$current_dir_tool' shadowed by '" . $seen[$basename] . "'";
+					debug_log(__METHOD__ . ' ERROR. ' . $msg, logger::ERROR);
+					$collisions[] = (object)[
+						'dir'      => $current_dir_tool,
+						'name'     => $basename,
+						'version'  => null,
+						'imported' => false,
+						'errors'   => [$msg]
+					];
+					continue;
+				}
+
+				$seen[$basename] = $current_dir_tool;
+				$valid_dirs[]    = $current_dir_tool;
 			}
-
-			// Development template only visible in developer mode
-			if ($basename === 'tool_dev_template' && SHOW_DEVELOPER !== true) {
-				continue;
-			}
-
-			// Pattern check (must follow tool_ naming convention)
-			if (!str_starts_with($basename, 'tool_')) {
-				debug_log(__METHOD__ . " Ignored non-tool directory: $basename", logger::WARNING);
-				continue;
-			}
-
-			$valid_dirs[] = $current_dir_tool;
 		}
 
 		return $valid_dirs;
 	}
+
+
+	/**
+	 * STRIP_TOOLS_ROOT
+	 *
+	 * Returns the tool dir path relative to its containing root (for the
+	 * import report 'dir' field), multi-root aware.
+	 *
+	 * @param string $current_dir_tool Absolute tool directory path.
+	 * @return string e.g. '/tool_lang'
+	 */
+	private static function strip_tools_root(string $current_dir_tool) : string {
+
+		foreach (tool_paths::get_roots() as $root) {
+			if (str_starts_with($current_dir_tool, $root->path . DIRECTORY_SEPARATOR)) {
+				return substr($current_dir_tool, strlen($root->path));
+			}
+		}
+
+		return str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool);
+	}//end strip_tools_root
+
 
 
 	/**
@@ -250,12 +319,43 @@ class tools_register {
 		$info_object = json_handler::decode(file_get_contents($info_file));
 		if (!$info_object) {
 			debug_log(__METHOD__ . " ERROR. Invalid register.json in: $current_dir_tool", logger::ERROR);
-			$result->skipped = true;
+			$result->skipped	= true;
+			$result->file_info	= (object)[
+				'dir'      => self::strip_tools_root($current_dir_tool),
+				'name'     => $basename,
+				'version'  => null,
+				'imported' => false,
+				'errors'   => ['Invalid register.json: file is not valid JSON']
+			];
 			return $result;
 		}
 
-		// Handle legacy v6 data format if present
-		$new_info_object = self::convert_register_v6_to_v7(clone $info_object);
+		// Format detection and normalization to the column-keyed v7 section data object:
+		// - legacy v6 matrix dump: top-level 'components'/'relations' keys
+		// - v7 authoring format: top-level 'name' key (see register.schema.json)
+		// - already column-keyed: passed through
+		$new_info_object = (isset($info_object->name) && !isset($info_object->components) && !isset($info_object->data))
+			? self::convert_register_authoring_to_v7($info_object)
+			: self::convert_register_v6_to_v7(clone $info_object);
+
+		// Validate the converted object (one gate for every input format)
+		$validation_errors = self::validate_register($new_info_object, $basename);
+		if (!empty($validation_errors)) {
+			debug_log(__METHOD__
+				. " ERROR. Invalid tool registration for '$basename': " . PHP_EOL
+				. implode(PHP_EOL, $validation_errors)
+				, logger::ERROR
+			);
+			$result->skipped	= true;
+			$result->file_info	= (object)[
+				'dir'      => self::strip_tools_root($current_dir_tool),
+				'name'     => $basename,
+				'version'  => null,
+				'imported' => false,
+				'errors'   => $validation_errors
+			];
+			return $result;
+		}
 
 		// Local helper for value extraction
 		$get_val = function(object $obj, string $tipo) {
@@ -263,6 +363,67 @@ class tools_register {
 			$column = section_record_data::get_column_name($model);
 			return $obj->{$column}->{$tipo}[0]->value ?? null;
 		};
+
+		// Local helper for skip-with-report results
+		$skip_with_errors = function(array $errors) use ($result, $current_dir_tool, $basename) : object {
+			debug_log(__METHOD__
+				. " ERROR. Tool registration refused for '$basename': " . PHP_EOL
+				. implode(PHP_EOL, $errors)
+				, logger::ERROR
+			);
+			$result->skipped	= true;
+			$result->file_info	= (object)[
+				'dir'      => self::strip_tools_root($current_dir_tool),
+				'name'     => $basename,
+				'version'  => null,
+				'imported' => false,
+				'errors'   => $errors
+			];
+			return $result;
+		};
+
+		$warnings = [];
+
+		// Class contract check: class.{tool}.php must exist, load and extend tool_common
+			$class_file = $current_dir_tool . '/class.' . $basename . '.php';
+			if (!file_exists($class_file)) {
+				return $skip_with_errors(["Missing tool class file: class.$basename.php"]);
+			}
+			try {
+				require_once $class_file;
+			} catch (\Throwable $e) {
+				// e.g. the class file requires a vendor lib that is not installed.
+				// Such a tool would fatal at first invocation anyway: refuse it here
+				// with a clear message instead.
+				return $skip_with_errors([
+					"Tool class failed to load: " . $e->getMessage()
+				]);
+			}
+			if (!class_exists($basename, false)) {
+				return $skip_with_errors(["Tool class '$basename' not found in class.$basename.php (class name must match the directory name)"]);
+			}
+			if (!is_subclass_of($basename, 'tool_common')) {
+				return $skip_with_errors(["Tool class '$basename' must extend tool_common"]);
+			}
+			// SEC-024: tools without an API_ACTIONS allowlist are rejected at dispatch
+			// (see dd_tools_api::tool_request); surface the problem at registration time
+			if (!defined($basename . '::API_ACTIONS')) {
+				$warning = "Tool class '$basename' does not declare const API_ACTIONS: its methods will be refused by dd_tools_api::tool_request";
+				debug_log(__METHOD__ . ' WARNING. ' . $warning, logger::WARNING);
+				$warnings[] = $warning;
+			}
+
+		// Minimum Dédalo version check (dd1328)
+			$min_version = $get_val($new_info_object, self::$tipo_dedalo_version_minimal);
+			if (!empty($min_version) && is_string($min_version)) {
+				// DEDALO_VERSION may carry a '.dev' suffix on development installs
+				$dedalo_version = preg_replace('/\.dev$/', '', DEDALO_VERSION);
+				if (version_compare($dedalo_version, $min_version, '<')) {
+					return $skip_with_errors([
+						"Tool '$basename' requires Dédalo >= $min_version but this install is $dedalo_version"
+					]);
+				}
+			}
 
 		// Prepare and renumerate ontology structure if defined
 		$tipo_ontology = self::$tipo_ontology;
@@ -273,6 +434,33 @@ class tools_register {
 				$ontology_value = [$ontology_value];
 			}
 			$new_ontology_value 	= self::renumerate_term_id($ontology_value, $counter);
+
+			// Ontology integrity: no duplicate tipos after renumeration
+				$seen_tipos = [];
+				foreach ($new_ontology_value as $node) {
+					$node_tipo = $node->tipo ?? null;
+					if ($node_tipo===null) {
+						continue;
+					}
+					if (isset($seen_tipos[$node_tipo])) {
+						return $skip_with_errors([
+							"Duplicate ontology tipo '$node_tipo' after renumeration in tool '$basename'"
+						]);
+					}
+					$seen_tipos[$node_tipo] = true;
+				}
+				// warn about parent references outside the tool ontology set
+				foreach ($new_ontology_value as $node) {
+					$parent = $node->parent ?? null;
+					if (!empty($parent) && str_starts_with((string)$parent, 'tool') && !isset($seen_tipos[$parent])) {
+						debug_log(__METHOD__
+							. " WARNING. Ontology node '" . ($node->tipo ?? '?') . "' of tool '$basename'"
+							. " references missing parent '$parent'"
+							, logger::WARNING
+						);
+					}
+				}
+
 			$result->ontology_data 	= $new_ontology_value;
 
 			// Inject renumerated ontology back into the object for saving
@@ -288,9 +476,10 @@ class tools_register {
 		$version = $get_val($new_info_object, self::$tipo_version);
 
 		$result->file_info = (object)[
-			'dir'     => str_replace(DEDALO_TOOLS_PATH, '', $current_dir_tool),
-			'name'    => $name,
-			'version' => $version
+			'dir'      => self::strip_tools_root($current_dir_tool),
+			'name'     => $name,
+			'version'  => $version,
+			'warnings' => $warnings
 		];
 
 		return $result;
@@ -358,7 +547,7 @@ class tools_register {
 			}
 
 			// Remove dd1353 (simple_tool_object) if exists in source file (/current_tool/register.json)
-			$simple_tool_object_tipo = 'dd1353';
+			$simple_tool_object_tipo = tool_ontology_map::SIMPLE_TOOL_OBJECT;
 			$model = ontology_node::get_model_by_tipo($simple_tool_object_tipo, true);
 			$column = section_record_data::get_column_name($model);
 			if( isset($current_tool_section_data->{$column}->{$simple_tool_object_tipo}) ) {
@@ -370,6 +559,22 @@ class tools_register {
 
 			if (!$current_section_id) {
 				continue;
+			}
+
+			// lifecycle hook: optional `public static function on_register(): void`.
+			// Sanctioned place for tool setup (e.g. creating its dd996 config
+			// record) instead of first-request hacks. The class is already loaded
+			// by the registration contract check in process_tool_directory.
+			// A broken hook never fails the import.
+			if (method_exists($tool_name, 'on_register')) {
+				try {
+					$tool_name::on_register();
+				} catch (\Throwable $e) {
+					debug_log(__METHOD__
+						. " on_register hook failed for '$tool_name': " . $e->getMessage()
+						, logger::ERROR
+					);
+				}
 			}
 
 			// Update report with success status
@@ -454,6 +659,24 @@ class tools_register {
 			});
 
 			if ($found_on_disk === null) {
+
+				// lifecycle hook: optional `public static function on_remove(): void`.
+				// Best effort only — the tool directory is usually already gone, so
+				// the class is callable only if it was loaded earlier in this
+				// request. Removal never fails on a broken hook.
+				if (is_string($tool_name_on_db)
+					&& class_exists($tool_name_on_db, false)
+					&& method_exists($tool_name_on_db, 'on_remove')) {
+					try {
+						$tool_name_on_db::on_remove();
+					} catch (\Throwable $e) {
+						debug_log(__METHOD__
+							. " on_remove hook failed for '$tool_name_on_db': " . $e->getMessage()
+							, logger::ERROR
+						);
+					}
+				}
+
 				$section_record = section_record::get_instance(self::$section_registered_tools_tipo, $current_section_id);
 				$section_record->delete();
 			}
@@ -482,18 +705,13 @@ class tools_register {
 		$m_developer  = ontology_node::get_model_by_tipo(self::$tipo_developer, true);
 		$col_developer = section_record_data::get_column_name($m_developer);
 
-		$files = glob(DEDALO_TOOLS_PATH . '/*', GLOB_ONLYDIR);
+		// all roots, first-root-wins (collisions silently skipped here:
+		// this list feeds the development area UI; the import report is
+		// where collisions are surfaced)
+		$files = self::get_valid_tool_directories();
 
 		foreach ($files as $path) {
 			$tool_name = basename($path);
-
-			// Filter for valid tool folders
-			if (!str_starts_with($tool_name, 'tool_') || $tool_name === 'tool_common') {
-				continue;
-			}
-			if ($tool_name === 'tool_dev_template' && SHOW_DEVELOPER !== true) {
-				continue;
-			}
 
 			$item = (object)[
 				'name'              => $tool_name,
@@ -648,14 +866,14 @@ class tools_register {
 		})();
 
 		// affected_tipos
-		$tool_object->affected_tipos = self::get_val($section_id, $section_tipo, 'dd1350', DEDALO_DATA_NOLAN, true)[0]->value ?? null;
+		$tool_object->affected_tipos = self::get_val($section_id, $section_tipo, tool_ontology_map::AFFECTED_TIPOS, DEDALO_DATA_NOLAN, true)[0]->value ?? null;
 
 		// Boolean flags (represented as value 1 in database)
 		$flags = [
-			'show_in_inspector'        => 'dd1331',
-			'show_in_component'        => 'dd1332',
+			'show_in_inspector'        => tool_ontology_map::SHOW_IN_INSPECTOR,
+			'show_in_component'        => tool_ontology_map::SHOW_IN_COMPONENT,
 			'always_active'            => self::$tipo_always_active, // 'dd1601'
-			'requirement_translatable' => 'dd1333'
+			'requirement_translatable' => tool_ontology_map::REQUIRE_TRANSLATABLE
 		];
 
 		foreach ($flags as $prop => $tipo) {
@@ -668,7 +886,7 @@ class tools_register {
 		$json_props = [
 			'ontology'   => self::$tipo_ontology,
 			'properties' => self::$tipo_properties,
-			'labels'     => 'dd1372'
+			'labels'     => tool_ontology_map::LABELS
 		];
 
 		foreach ($json_props as $prop => $tipo) {
@@ -795,10 +1013,8 @@ class tools_register {
 	 * @return array List of config objects {name, config}.
 	 */
 	public static function get_all_config() : array {
-		static $cache;
-		if (isset($cache)) return $cache;
-
-		return $cache = self::get_config_list(self::$section_tools_config_tipo, self::$tools_configuration);
+		return self::$all_config_cache
+			??= self::get_config_list(self::$section_tools_config_tipo, self::$tools_configuration);
 	}
 
 
@@ -810,10 +1026,8 @@ class tools_register {
 	 * @return array List of default config objects {name, config}.
 	 */
 	public static function get_all_default_config() : array {
-		static $cache;
-		if (isset($cache)) return $cache;
-
-		return $cache = self::get_config_list(self::$section_registered_tools_tipo, self::$tools_default_configuration);
+		return self::$all_default_config_cache
+			??= self::get_config_list(self::$section_registered_tools_tipo, self::$tools_default_configuration);
 	}
 
 
@@ -839,13 +1053,17 @@ class tools_register {
 		$use_cache = true;
 		if ($use_cache===true) {
 
-			// file cache
+			// file cache.
+			// An empty array IS a legitimate, common value here (e.g. zero dd996
+			// install-config records), so a cached [] must be honored as a HIT
+			// (is_array), not treated as a miss. cache_from_file returns null only
+			// when the file is missing/unreadable, which is the real miss case.
 			$key = $section_tipo;
 			$config_list = dd_cache::cache_from_file((object)[
 				'file_name'	=> self::get_config_list_cache_name($key),
 				'prefix' => ''
 			]);
-			if (!empty($config_list)) {
+			if (is_array($config_list)) {
 				return $config_list;
 			}
 		}
@@ -859,6 +1077,16 @@ class tools_register {
 
 		$search = search::get_instance($sqo);
 		$result = $search->search();
+
+		// Fix C: never cache a failure state. On search failure, return empty
+		// without writing the cache (also guards the foreach below against false).
+		if ($result === false) {
+			debug_log(__METHOD__
+				. " Search failed for section_tipo: $section_tipo (config not cached)"
+				, logger::ERROR
+			);
+			return [];
+		}
 
 		$config_list = [];
 		foreach ($result as $record) {
@@ -893,11 +1121,8 @@ class tools_register {
 	 * @return array
 	 */
 	public static function get_all_config_tool_client() : array {
-		static $cache;
-		if (isset($cache)) return $cache;
-
-		$full_configs = self::get_all_config();
-		return $cache = self::filter_client_config($full_configs);
+		return self::$all_config_tool_client_cache
+			??= self::filter_client_config( self::get_all_config() );
 	}
 
 
@@ -909,11 +1134,8 @@ class tools_register {
 	 * @return array
 	 */
 	public static function get_all_default_config_tool_client() : array {
-		static $cache;
-		if (isset($cache)) return $cache;
-
-		$full_configs = self::get_all_default_config();
-		return $cache = self::filter_client_config($full_configs);
+		return self::$all_default_config_tool_client_cache
+			??= self::filter_client_config( self::get_all_default_config() );
 	}
 
 
@@ -941,19 +1163,53 @@ class tools_register {
 
 
 	/**
-	 * CLEAN_CACHE
+	 * RESET_STATIC_CACHES
 	 *
-	 * Purges the tool-related cache files for ALL users.
-	 * Also clears in-memory static caches to prevent stale data
-	 * in the current and concurrent requests.
+	 * Clears the in-memory config list caches of this class.
+	 * Part of invalidate_all_tool_caches(); rarely useful alone.
+	 *
+	 * @return void
+	 */
+	public static function reset_static_caches() : void {
+		self::$all_config_cache						= null;
+		self::$all_default_config_cache				= null;
+		self::$all_config_tool_client_cache			= null;
+		self::$all_default_config_tool_client_cache	= null;
+	}//end reset_static_caches
+
+
+
+	/**
+	 * INVALIDATE_ALL_TOOL_CACHES
+	 *
+	 * Single orchestrating entry point for tool cache invalidation.
+	 * Every write path that touches tool registry (dd1324), tool configuration
+	 * (dd996) or user tools profiles MUST call this method. It clears:
+	 *  - all in-memory static caches (tool_common, tools_register, common)
+	 *  - the shared file caches (registered tools list, config lists)
+	 *  - the per-user authorization file caches
 	 *
 	 * @return bool Success status.
 	 */
-	public static function clean_cache() : bool {
+	public static function invalidate_all_tool_caches() : bool {
 
 		// Clear static caches immediately to prevent stale data in current request
-			tool_common::$user_tools_cache = [];
-			common::$cache_get_tools = [];
+			tool_common::reset_static_caches();
+			self::reset_static_caches();
+			common::$cache_get_tools		= [];
+			common::$cache_buttons_tools	= [];
+
+		// Delete shared file caches (entity-level, empty prefix: names are already fully qualified)
+			dd_cache::delete_cache_files([
+				tool_common::get_all_registered_tools_cache_name(),
+				self::get_config_list_cache_name(self::$section_registered_tools_tipo),
+				self::get_config_list_cache_name(self::$section_tools_config_tipo)
+			], '');
+
+		// Invalidate the persistent "sections with diffusion" map too: import_tools
+		// rewrites the `tool` tld in dd_ontology, which can change diffusion-relevant
+		// nodes. Also gives belt-and-braces coverage via section_record::save_event.
+			diffusion_utils::delete_section_map_cache_file();
 
 		// Delete all per-user file caches.
 		// File naming convention: {entity}_{user_id}_cache_user_tools.php
@@ -977,6 +1233,20 @@ class tools_register {
 			}
 
 		return true;
+	}//end invalidate_all_tool_caches
+
+
+
+	/**
+	 * CLEAN_CACHE
+	 *
+	 * Back-compat alias of invalidate_all_tool_caches().
+	 * Kept because existing callers (section, section_record, tests) use this name.
+	 *
+	 * @return bool Success status.
+	 */
+	public static function clean_cache() : bool {
+		return self::invalidate_all_tool_caches();
 	}
 
 
@@ -1014,8 +1284,307 @@ class tools_register {
 
 		$result = matrix_db_manager::exec_search($sql_query, $params);
 
+		// Direct SQL delete bypasses section_record::save_event; invalidate explicitly
+		if ($result !== false) {
+			self::invalidate_all_tool_caches();
+		}
+
 		return ($result !== false);
 	}
+
+
+	/**
+	 * CONVERT_REGISTER_AUTHORING_TO_V7
+	 *
+	 * Converts the hand-authorable v7 register.json format (flat keys: name,
+	 * version, label, ...; see tools/tool_common/register.schema.json) into the
+	 * column-keyed section data object that update_tool_registry_sections()
+	 * persists — the same shape convert_register_v6_to_v7() emits.
+	 *
+	 * Defaults applied: active=true, show_in_*=false, require_translatable=false,
+	 * always_active=false, affected_tipos=[]. A single-language label is enough;
+	 * the client resolves labels with language fallback.
+	 *
+	 * @param object $json Decoded authoring register.json
+	 * @return object Column-keyed section data object
+	 */
+	public static function convert_register_authoring_to_v7(object $json) : object {
+
+		// base section data object. All standard columns present (update_tool_registry_sections
+		// requires 'data' and 'relation' to be set)
+			$out = (object)[
+				'label'				=> $json->name ?? '',
+				'section_id'		=> null,
+				'section_tipo'		=> DEDALO_REGISTER_TOOLS_SECTION_TIPO,
+				'data'				=> new stdClass(),
+				'relation_search'	=> new stdClass(),
+				'relation'			=> new stdClass(),
+				'string'			=> new stdClass(),
+				'date'				=> new stdClass(),
+				'number'			=> new stdClass(),
+				'geo'				=> new stdClass(),
+				'media'				=> new stdClass(),
+				'iri'				=> new stdClass(),
+				'misc'				=> new stdClass(),
+				'meta'				=> new stdClass()
+			];
+
+		// helper. Assign component items to its resolved column + meta counter
+			$set_component = function(string $tipo, array $items) use ($out) : void {
+				if (empty($items)) {
+					return;
+				}
+				$model	= ontology_node::get_model_by_tipo($tipo, true);
+				$column	= section_record_data::get_column_name($model);
+				$out->{$column}->{$tipo}	= $items;
+				$out->meta->{$tipo}			= [(object)['count' => count($items)]];
+			};
+
+		// helper. Non-translatable string value
+			$string_items = function(?string $value) : array {
+				return ($value===null || $value==='')
+					? []
+					: [(object)['value' => $value, 'id' => 1, 'lang' => DEDALO_DATA_NOLAN]];
+			};
+
+		// helper. Translatable string values from a {lg-xxx: text} object
+			$lang_string_items = function(?object $values) : array {
+				$items = [];
+				if (is_object($values)) {
+					foreach ((array)$values as $lang => $value) {
+						if (is_string($value) && $value!=='') {
+							$items[] = (object)['value' => $value, 'id' => 1, 'lang' => $lang];
+						}
+					}
+				}
+				return $items;
+			};
+
+		// helper. JSON (misc) component value
+			$json_items = function(mixed $value) : array {
+				return ($value===null)
+					? []
+					: [(object)['value' => $value, 'id' => 1]];
+			};
+
+		// helper. Boolean as dd64 (Yes/No) relation locator. section_id 1=yes, 2=no
+			$bool_items = function(string $tipo, bool $value) : array {
+				return [(object)[
+					'type'					=> 'dd151',
+					'section_id'			=> $value===true ? '1' : '2',
+					'section_tipo'			=> 'dd64',
+					'from_component_tipo'	=> $tipo,
+					'id'					=> 1
+				]];
+			};
+
+		// identity strings
+			$set_component(tool_ontology_map::TOOL_NAME,			$string_items($json->name ?? null));
+			$set_component(tool_ontology_map::VERSION,				$string_items($json->version ?? null));
+			$set_component(tool_ontology_map::DEDALO_VERSION_MIN,	$string_items($json->dedalo_version_min ?? null));
+			$set_component(tool_ontology_map::DEVELOPER,			$string_items($json->developer ?? null));
+			$set_component(tool_ontology_map::TOOL_LABEL,			$lang_string_items($json->label ?? null));
+			$set_component(tool_ontology_map::DESCRIPTION,			$lang_string_items($json->description ?? null));
+
+		// boolean flags (defaults: active=true, everything else=false)
+			$set_component(tool_ontology_map::ACTIVE,				$bool_items(tool_ontology_map::ACTIVE,				(bool)($json->active ?? true)));
+			$set_component(tool_ontology_map::SHOW_IN_INSPECTOR,	$bool_items(tool_ontology_map::SHOW_IN_INSPECTOR,	(bool)($json->show_in_inspector ?? false)));
+			$set_component(tool_ontology_map::SHOW_IN_COMPONENT,	$bool_items(tool_ontology_map::SHOW_IN_COMPONENT,	(bool)($json->show_in_component ?? false)));
+			$set_component(tool_ontology_map::REQUIRE_TRANSLATABLE,$bool_items(tool_ontology_map::REQUIRE_TRANSLATABLE,(bool)($json->require_translatable ?? false)));
+			$set_component(tool_ontology_map::ALWAYS_ACTIVE,		$bool_items(tool_ontology_map::ALWAYS_ACTIVE,		(bool)($json->always_active ?? false)));
+
+		// affected models: names resolved against the models section (dd1342)
+			$affected_models = array_values(array_filter((array)($json->affected_models ?? []), 'is_string'));
+			if (!empty($affected_models)) {
+				$locators = self::resolve_affected_model_locators($affected_models);
+				$set_component(tool_ontology_map::AFFECTED_MODELS, $locators);
+			}
+
+		// JSON components (defaults: affected_tipos=[])
+			$set_component(tool_ontology_map::AFFECTED_TIPOS,	$json_items($json->affected_tipos ?? []));
+			$set_component(tool_ontology_map::PROPERTIES,		$json_items($json->properties ?? null));
+			$set_component(tool_ontology_map::LABELS,			$json_items($json->labels ?? null));
+			$set_component(tool_ontology_map::ONTOLOGY,			$json_items($json->ontology ?? null));
+			$set_component(tool_ontology_map::CONFIG,			$json_items($json->config ?? null));
+			$set_component(tool_ontology_map::DEFAULT_CONFIG,	$json_items($json->default_config ?? null));
+
+		return $out;
+	}//end convert_register_authoring_to_v7
+
+
+
+	/**
+	 * RESOLVE_AFFECTED_MODEL_LOCATORS
+	 *
+	 * Resolves component/section model names (e.g. 'component_input_text') to
+	 * relation locators pointing at the models section (dd1342), as stored in
+	 * the affected models component (dd1330).
+	 *
+	 * @param string[] $model_names
+	 * @return object[] Locators. Unresolvable names are skipped with an ERROR log.
+	 */
+	public static function resolve_affected_model_locators(array $model_names) : array {
+
+		$models_section_tipo	= 'dd1342';
+		$model_name_tipo		= 'dd1345';
+
+		$locators	= [];
+		$id			= 1;
+		foreach ($model_names as $model_name) {
+
+			$sqo_data = (object)[
+				'section_tipo'	=> [$models_section_tipo],
+				'filter'		=> (object)[
+					'$and' => [
+						(object)[
+							'q'				=> [$model_name],
+							'q_operator'	=> '=',
+							'path'			=> [
+								(object)[
+									'section_tipo'		=> $models_section_tipo,
+									'component_tipo'	=> $model_name_tipo,
+									'model'				=> 'component_input_text',
+									'name'				=> 'Name'
+								]
+							],
+							'type' => 'jsonb'
+						]
+					]
+				],
+				'select'		=> [],
+				'limit'			=> 1,
+				'full_count'	=> false
+			];
+			$sqo	= new search_query_object($sqo_data);
+			$search	= search::get_instance($sqo);
+			$result	= $search->search();
+			$row	= $result ? $result->fetch_one() : false;
+
+			if (empty($row->section_id)) {
+				debug_log(__METHOD__
+					. " Unresolvable affected model name: '$model_name'. Skipped."
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$locators[] = (object)[
+				'type'					=> 'dd151',
+				'section_id'			=> (string)$row->section_id,
+				'section_tipo'			=> $models_section_tipo,
+				'from_component_tipo'	=> tool_ontology_map::AFFECTED_MODELS,
+				'id'					=> $id++
+			];
+		}
+
+		return $locators;
+	}//end resolve_affected_model_locators
+
+
+
+	/**
+	 * VALIDATE_REGISTER
+	 *
+	 * Validates a CONVERTED (column-keyed) tool registration object, so one
+	 * gate covers v6, v7-authoring and pass-through inputs. Mirror of the
+	 * editor-facing JSON Schema (tools/tool_common/register.schema.json):
+	 * keep both in sync when adding rules.
+	 *
+	 * @param object $info_object Column-keyed section data object
+	 * @param string $basename Tool directory basename; must equal the tool name
+	 * @return string[] Error messages. Empty array = valid.
+	 */
+	public static function validate_register(object $info_object, string $basename) : array {
+
+		$errors = [];
+
+		// helper. Read all items of a component tipo
+			$get_items = function(string $tipo) use ($info_object) : ?array {
+				$model	= ontology_node::get_model_by_tipo($tipo, true);
+				$column	= section_record_data::get_column_name($model);
+				$items	= $info_object->{$column}->{$tipo} ?? null;
+				return is_array($items) ? $items : null;
+			};
+
+		// structure: required columns
+			if (!isset($info_object->data) || !isset($info_object->relation)) {
+				$errors[] = "Invalid structure: missing 'data'/'relation' columns after conversion";
+				return $errors; // unusable; stop here
+			}
+
+		// name
+			$name = $get_items(tool_ontology_map::TOOL_NAME)[0]->value ?? null;
+			if (empty($name) || !is_string($name)) {
+				$errors[] = "Missing required 'name' (tool name, component ".tool_ontology_map::TOOL_NAME.")";
+			} else {
+				if (preg_match('/^tool_[a-z0-9_]+$/', $name) !== 1) {
+					$errors[] = "Invalid tool name '$name': must match ^tool_[a-z0-9_]+$ (snake_case, ASCII)";
+				}
+				if ($name !== $basename) {
+					$errors[] = "Tool name '$name' does not match its directory name '$basename'";
+				}
+			}
+
+		// version
+			$version = $get_items(tool_ontology_map::VERSION)[0]->value ?? null;
+			if (empty($version) || !is_string($version)) {
+				$errors[] = "Missing required 'version'";
+			} elseif (preg_match('/^\d+\.\d+(\.\d+)?([.-][0-9A-Za-z.]+)?$/', $version) !== 1) {
+				$errors[] = "Invalid version '$version': expected semantic version like 1.0.0";
+			}
+
+		// label: at least one language with non-empty value
+			$label_items	= $get_items(tool_ontology_map::TOOL_LABEL) ?? [];
+			$valid_label	= array_find($label_items, function($item) {
+				return is_object($item) && !empty($item->value) && is_string($item->value);
+			});
+			if ($valid_label === null) {
+				$errors[] = "Missing required 'label': at least one language label is required";
+			}
+
+		// JSON components: items must carry a 'value' property when present
+			$json_tipos = [
+				'ontology'			=> tool_ontology_map::ONTOLOGY,
+				'properties'		=> tool_ontology_map::PROPERTIES,
+				'labels'			=> tool_ontology_map::LABELS,
+				'config'			=> tool_ontology_map::CONFIG,
+				'default_config'	=> tool_ontology_map::DEFAULT_CONFIG,
+				'affected_tipos'	=> tool_ontology_map::AFFECTED_TIPOS
+			];
+			foreach ($json_tipos as $field => $tipo) {
+				$items = $get_items($tipo);
+				if ($items === null) {
+					continue; // not present: fine
+				}
+				foreach ($items as $item) {
+					if (!is_object($item) || !property_exists($item, 'value')) {
+						$errors[] = "Invalid '$field' (component $tipo): items must be objects carrying a 'value'";
+						break;
+					}
+				}
+			}
+
+		// relation components: locator sanity when present
+			$relation_tipos = [
+				'affected_models'	=> tool_ontology_map::AFFECTED_MODELS,
+				'active'			=> tool_ontology_map::ACTIVE
+			];
+			foreach ($relation_tipos as $field => $tipo) {
+				$items = $get_items($tipo);
+				if ($items === null) {
+					continue;
+				}
+				foreach ($items as $item) {
+					if (!is_object($item) || empty($item->section_tipo) || !isset($item->section_id)) {
+						$errors[] = "Invalid '$field' (component $tipo): items must be locators with section_tipo/section_id";
+						break;
+					}
+				}
+			}
+
+		return $errors;
+	}//end validate_register
+
 
 
 	/**

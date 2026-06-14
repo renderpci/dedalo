@@ -1,0 +1,25 @@
+{
+    "id": null,
+    "class_list": null,
+    "type": "column",
+    "label": "number",
+    "row_count": null,
+    "column_count": null,
+    "column_labels": null,
+    "fields_separator": ", ",
+    "records_separator": " | ",
+    "cell_type": "text",
+    "action": null,
+    "value": [],
+    "fallback_value": [],
+    "data": null,
+    "render_label": null,
+    "column": null,
+    "ar_columns_obj": [
+        {
+            "id": "test3_test211"
+        }
+    ],
+    "features": null,
+    "model": "component_number"
+}

@@ -7,6 +7,7 @@ describe('sql_generator column types', () => {
 	const mock_table: processed_table = {
 		database_name: 'test_db',
 		table_name:    'test_table',
+		section_tipo:  'test3',
 		records: [
 			{
 				section_id: 1,

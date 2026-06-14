@@ -1,0 +1,38 @@
+{
+    "section_id": "1",
+    "section_tipo": "test3",
+    "tipo": "test52",
+    "mode": "list",
+    "lang": "lg-spa",
+    "from_component_tipo": "test52",
+    "entries": {
+        "id": null,
+        "class_list": null,
+        "type": "column",
+        "label": "input_text",
+        "row_count": null,
+        "column_count": null,
+        "column_labels": null,
+        "fields_separator": " | ",
+        "records_separator": " | ",
+        "cell_type": "text",
+        "action": null,
+        "value": [
+            "tm fixed value"
+        ],
+        "fallback_value": [],
+        "data": null,
+        "render_label": null,
+        "column": null,
+        "ar_columns_obj": [
+            {
+                "id": "test3_test52"
+            }
+        ],
+        "features": null,
+        "model": "component_input_text"
+    },
+    "debug_model": "component_input_text",
+    "debug_label": "input_text",
+    "debug_dataframe": null
+}

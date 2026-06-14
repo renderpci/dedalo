@@ -40,6 +40,54 @@ abstract class common {
 
 
 	/**
+	* CONTEXT_KEY
+	* Builds the identity key of a context item as the client matches it:
+	* tipo + section_tipo + mode. Used to deduplicate context items before
+	* sending them to the client (only the first occurrence is meaningful).
+	* @param object $item
+	* @return string
+	*/
+	public static function context_key(object $item) : string {
+		$section_tipo = $item->section_tipo ?? '';
+		if (is_array($section_tipo)) {
+			// json_encode (not implode) so an array value can never collide
+			// with a string value: ['a'] -> '["a"]' stays distinct from 'a'
+			$section_tipo = json_encode($section_tipo);
+		}
+		return ($item->tipo ?? '') .'_'. $section_tipo .'_'. ($item->mode ?? '');
+	}
+
+
+
+	/**
+	* MERGE_UNIQUE_CONTEXT
+	* Appends the given context items to the given context array skipping
+	* items whose identity key (see context_key: tipo+section_tipo+mode)
+	* is already present. First occurrence wins, matching the client
+	* matching criteria and the sections_json dedup behavior.
+	* @param array $ar_context
+	* @param array $ar_items
+	* @return array $ar_context
+	*/
+	public static function merge_unique_context(array $ar_context, array $ar_items) : array {
+		$seen = [];
+		foreach ($ar_context as $context_item) {
+			$seen[ self::context_key($context_item) ] = true;
+		}
+		foreach ($ar_items as $context_item) {
+			$context_item_key = self::context_key($context_item);
+			if (isset($seen[$context_item_key])) {
+				continue;
+			}
+			$seen[$context_item_key] = true;
+			$ar_context[] = $context_item;
+		}
+		return $ar_context;
+	}
+
+
+
+	/**
 	* CLASS VARS
 	*/
 		/**
@@ -173,6 +221,15 @@ abstract class common {
 		public object|false|null $properties = null;
 
 		/**
+		 * Whether properties were injected with set_properties() (overriding the
+		 * ontology definition). When true, the structure context core cache key
+		 * is extended with a hash of the injected properties: a plain
+		 * ontology-derived cache entry would not reflect them.
+		 * @var bool $properties_injected
+		 */
+		public bool $properties_injected = false;
+
+		/**
 		 * Parent tipo used to link context DDO elements in nested structures.
 		 * Establishes hierarchy relationships between components.
 		 * @var ?string $from_parent
@@ -201,11 +258,38 @@ abstract class common {
 		public ?array $request_config = null;
 
 		/**
+		 * Hash of the user layout preset applied to this instance request_config.
+		 * Set by build_request_config when a request_config_presets entry
+		 * overrides the ontology properties; included in the request_config
+		 * cache key so preset builds never share entries with plain builds.
+		 * @var ?string $request_config_preset_hash
+		 */
+		public ?string $request_config_preset_hash = null;
+
+		/**
+		 * Collector of request_config build issues for this instance:
+		 * dropped elements (invalid tipo, inactive tld, no permissions, ...)
+		 * and applied defaults. Surfaced in the context as 'config_warnings'
+		 * under SHOW_DEBUG so a misconfigured (empty) UI self-explains;
+		 * counted in metrics for production audits.
+		 * See add_request_config_warning().
+		 * @var array $request_config_warnings
+		 */
+		public array $request_config_warnings = [];
+
+		/**
 		 * Static cache for resolved structure context objects.
 		 * Avoids re-calculating context for elements with the same tipo and mode.
 		 * @var array $cache_structure_context
 		 */
 		public static array $cache_structure_context = [];
+
+		/**
+		 * Static cache for resolved component order paths (see component_common::get_order_path).
+		 * Declared here so common::clear() can purge it across worker requests.
+		 * @var array $cache_order_path
+		 */
+		public static array $cache_order_path = [];
 
 		/**
 		 * Static cache mapping section/component tipos to their matrix table names.
@@ -362,6 +446,7 @@ abstract class common {
 		*/
 		public static function clear() : void {
 			self::$cache_structure_context = [];
+			self::$cache_order_path = [];
 			self::$cache_matrix_table_from_tipo = [];
 			self::$cache_tables_with_relations = null;
 			self::$current_main_lang = [];
@@ -370,6 +455,11 @@ abstract class common {
 			self::$cache_get_tools = [];
 			self::$cache_buttons_tools = [];
 			self::$pdata = null;
+
+			// purge search per-user filter cache (class-static, would otherwise leak across requests)
+			if (class_exists('search', false)) {
+				search::reset_filter_user_records_cache();
+			}
 		}
 
 
@@ -1085,6 +1175,10 @@ abstract class common {
 		// Fix properties object|null
 		$this->properties = $properties;
 
+		// mark as injected: the structure context core cache key will include
+		// a hash of these properties instead of serving the ontology-derived entry
+		$this->properties_injected = true;
+
 		return true;
 	}//end set_properties
 
@@ -1207,7 +1301,6 @@ abstract class common {
 			DEDALO_RELATION_TYPE_RELATED_TIPO,
 			// DEDALO_RELATION_TYPE_EQUIVALENT_TIPO,
 			DEDALO_RELATION_TYPE_INDEX_TIPO,
-			DEDALO_RELATION_TYPE_STRUCT_TIPO,
 			DEDALO_RELATION_TYPE_MODEL_TIPO,
 			DEDALO_RELATION_TYPE_LINK,
 			DEDALO_RELATION_TYPE_FILTER
@@ -1319,6 +1412,26 @@ abstract class common {
 	*/
 	public function get_structure_context(int $permissions=0, bool $add_request_config=false) : dd_object {
 
+		return $this->build_structure_context($permissions, $add_request_config, false);
+	}//end get_structure_context
+
+
+
+	/**
+	* BUILD_STRUCTURE_CONTEXT
+	* Resolves the full element context: gets the cached invariant core
+	* (build_structure_context_core) and stamps the per-call / per-instance
+	* variant fields (permissions, parent, lang, request_config, columns_map,
+	* view, ...) on a clone of it. A cache hit returns exactly what a fresh
+	* build would return for this instance and call.
+	* @param int $permissions
+	* @param bool $add_request_config
+	* @param bool $simple
+	* 	When true, tools and buttons are not calculated (used by get_structure_context_simple)
+	* @return dd_object $dd_object
+	*/
+	protected function build_structure_context(int $permissions, bool $add_request_config, bool $simple) : dd_object {
+
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 			// metrics
@@ -1329,20 +1442,142 @@ abstract class common {
 			$model			= get_class($this);
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
+			$mode			= $this->get_mode();
+
+		// core. Invariant, cached part of the context
+			$core = $this->build_structure_context_core($add_request_config, $simple);
+
+		// clone. Never expose the cache entry by reference: callers add top-level
+		// properties to the returned context (e.g. target_section_tipo) and would
+		// pollute the cache.
+			$dd_object = clone $core;
+
+		// properties. Deep clone: known callers mutate nested context properties
+		// (component_relation_*_json set show_interface->button_add=false,
+		// dd_core_api area cases inject thesaurus vars into context properties).
+		// With a shallow clone those writes would land in the shared cache entry
+		// and pollute every later caller of the same key. Other nested core
+		// properties (tools, buttons, section_map) remain shared with the cache
+		// entry and must be treated as read-only.
+			if (is_object($core->properties)) {
+				$dd_object->properties = unserialize(serialize($core->properties));
+			}
+
+		// stamp variant (per-call / per-instance) fields
+			// permissions. Callers inject inherited/capped permissions (see get_subdatum)
+				$dd_object->permissions = $permissions;
+			// parent. Depends on session ddo and the injected from_parent
+				$dd_object->parent = $this->resolve_context_parent();
+			// parent_grouper. Instance value (injected by get_subdatum) wins over the structure one
+				$dd_object->parent_grouper = !empty($this->parent_grouper)
+					? $this->parent_grouper
+					: $core->parent_grouper;
+			// lang. Instance lang (children langs can be switched per ddo or to their original lang)
+				$dd_object->lang = $this->get_lang();
+			// request_config. Per-instance: get_subdatum injects a narrowed children config
+				$request_config = ($add_request_config===true)
+					? $this->build_request_config() // array
+					: null;
+				$dd_object->request_config = $request_config;
+				// config_warnings. Surface build issues (dropped ddos, applied
+				// defaults) in debug environments so an empty UI self-explains
+				if (SHOW_DEBUG===true && $add_request_config===true && !empty($this->request_config_warnings)) {
+					$dd_object->config_warnings = $this->request_config_warnings;
+				}
+			// columns_map (the final calculation was moved to common JS)
+				$dd_object->columns_map = !empty($request_config)
+					? ($core->columns_map ?? [])
+					: null;
+			// path. Component order path; depends on instance request_config and from_section_tipo
+				if (str_starts_with($model, 'component_') && $dd_object->sortable===true) {
+					// add component path to allow sort columns properly
+					$dd_object->path = isset($this->request_config)
+						? $this->get_order_path($tipo, $section_tipo)
+						: [];
+				}
+			// view, all components has view, used to change the render view.
+			// the default value is "default" except in component_portal
+				$dd_object->view = $this->get_view();
+			// children_view. Sometimes the component defines the view of his children (see rsc368)
+				$dd_object->children_view = $this->get_children_view();
+			// sqo from session. Add to sync client and server sqo across calls (propagation data problem)
+			// this sqo will be injected into the section instance 'request_config_object' and 'rqo' when it is built
+				if ($model==='section') {
+					$sqo_id = section::build_sqo_id($this->tipo);
+					$dd_object->sqo_session = section::get_session_sqo($sqo_id);
+				}
+			// search. parent_grouper_label follows the stamped parent_grouper
+				if ($mode==='search' && isset($dd_object->parent_grouper)) {
+					// clone config: the core config object is shared with the cache entry
+					$config = isset($core->config)
+						? clone $core->config
+						: new stdClass();
+					$config->parent_grouper_label = ontology_node::get_term_by_tipo($dd_object->parent_grouper);
+					$dd_object->config = $config;
+				}
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$time = exec_time_unit($start_time,'ms');
+				// metrics
+				metrics::$structure_context_total_time += $time;
+				$debug = new stdClass();
+					$debug->exec_time = $time.' ms';
+				$dd_object->debug = $debug;
+			}
+
+		return $dd_object;
+	}//end build_structure_context
+
+
+
+	/**
+	* BUILD_STRUCTURE_CONTEXT_CORE
+	* Builds and caches the invariant part of the element context: everything
+	* derived from the ontology and the logged user (properties, css, tools,
+	* buttons, label, section_map, ...). Variant per-call fields are stamped by
+	* build_structure_context() on a clone of the returned object.
+	* (!) The returned dd_object is the cache entry itself: callers must clone
+	* it before any mutation.
+	* @param bool $add_request_config
+	* 	Only affects the cached core through the show_interface calculation
+	* @param bool $simple
+	* 	When true, tools and buttons are not calculated (empty arrays)
+	* @return dd_object $dd_object
+	*/
+	protected function build_structure_context_core(bool $add_request_config, bool $simple) : dd_object {
+
+		if(SHOW_DEBUG===true) {
+			$start_time = start_time();
+		}
+
+		// short vars
+			$model			= get_class($this);
+			$tipo			= $this->get_tipo();
+			$section_tipo	= $this->get_section_tipo();
 			$translatable	= $this->ontology_node->get_is_translatable();
 			$mode			= $this->get_mode();
 			$label			= $this->get_label();
-			$lang			= $this->get_lang();
 			$sortable		= $this->get_sortable() ?? false; // Used by section columns to sort list
 
-		// cache structure_context using ddo_key
-			// (!) Note that 'sections_json.php' will filter out duplicated context items using this criteria:
-			// 	$el->tipo===$context_item->tipo &&
-			// 	$el->section_tipo===$context_item->section_tipo &&
-			// 	$el->mode===$context_item->mode;
+		// cache structure_context core using ddo_key
+			// The key covers every input the core depends on: user (tools, buttons,
+			// show_interface), tipo, section_tipo, mode, add_request_config and simple.
+			// Per-call / per-instance fields are NOT part of the core (they are stamped
+			// by build_structure_context), so they don't need to be in the key.
+			// Instances with injected properties (set_properties) extend the key with
+			// a hash of the injected properties: their context does not match the
+			// ontology-derived one, but identical injections (e.g. the same ddo
+			// properties injected on every row of a column) can share one entry.
 				$use_cache = true;
 				if ($use_cache===true) {
-					$ddo_key = $tipo.'_'.$section_tipo.'_'.$mode;
+					$safe_section_tipo = is_array($section_tipo)
+						? json_encode($section_tipo)
+						: $section_tipo;
+					$ddo_key = (logged_user_id() ?? '').'_'.$tipo.'_'.$safe_section_tipo.'_'.$mode.'_'.(int)$add_request_config.'_'.(int)$simple;
+					if ($this->properties_injected===true) {
+						$ddo_key .= '_p'.md5( json_encode($this->properties) );
+					}
 					if (isset(self::$cache_structure_context[$ddo_key])) {
 						if(SHOW_DEBUG===true) {
 							$len = !empty($this->tipo)
@@ -1364,8 +1599,10 @@ abstract class common {
 		// properties
 			$properties_source = $this->get_properties();
 			if (is_object($properties_source)) {
-				// Clone to prevent accidental mutations of cached properties (SEC-023)
-				$properties = clone $properties_source;
+				// Deep clone to prevent accidental mutations of cached properties (SEC-023).
+				// A shallow clone is not enough: nested objects (filter_by_list, state_of_component,
+				// show_interface) are mutated below and would leak into the instance properties cache.
+				$properties = unserialize(serialize($properties_source));
 			} else {
 				$properties = new stdClass();
 			}
@@ -1418,96 +1655,13 @@ abstract class common {
 			}
 
 		// parent
-			// 1 . From requested context
-				// if (isset(dd_core_api::$dd_request)) {
-
-				// 	$dd_request		= dd_core_api::$dd_request;
-				// 	$request_ddo	= array_find($dd_request, function($item){
-				// 		return $item->typo==='request_ddo';
-				// 	});
-
-				// 	// ar_dd_objects . Array of all dd objects in requested context
-				// 		// $ar_dd_objects = array_values( array_filter($dd_request, function($item) {
-				// 		// 	 if($item->typo==='ddo') return $item;
-				// 		// }) );
-				// 		$ar_dd_objects = $request_ddo
-				// 			? $request_ddo->value
-				// 			: [];
-
-				// 	if (isset($this->from_parent)) {
-				// 		$current_from_parent = $this->from_parent;
-				// 		$request_dd_object = array_reduce($ar_dd_objects, function($carry, $item) use($tipo, $section_tipo, $current_from_parent){
-				// 			if ($item->tipo===$tipo && $item->section_tipo===$section_tipo && $item->parent===$current_from_parent) {
-				// 				return $item;
-				// 			}
-				// 			return $carry;
-				// 		});
-				// 	}else{
-				// 	 	$request_dd_object = array_reduce($ar_dd_objects, function($carry, $item) use($tipo, $section_tipo){
-				// 			if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
-				// 				return $item;
-				// 			}
-				// 			return $carry;
-				// 		});
-				// 	}
-				// 	if (!empty($request_dd_object->parent)) {
-				// 		// set
-				// 		$parent = $request_dd_object->parent;
-				// 	}
-				// }
-
-			// 1 . From session
-				if (isset($_SESSION['dedalo']['config']['ddo'][$section_tipo])) {
-
-					$section_ddo = $_SESSION['dedalo']['config']['ddo'][$section_tipo];
-
-					if (isset($this->from_parent)) {
-						$current_from_parent = $this->from_parent;
-						$dd_object = array_reduce($section_ddo, function($carry, $item) use($tipo, $section_tipo, $current_from_parent){
-							if ($item->tipo===$tipo && $item->section_tipo===$section_tipo && $item->parent===$current_from_parent) {
-								return $item;
-							}
-							return $carry;
-						});
-					}else{
-						$dd_object = array_reduce($section_ddo, function($carry, $item) use($tipo, $section_tipo){
-							if ($item->tipo===$tipo && $item->section_tipo===$section_tipo) {
-								return $item;
-							}
-							return $carry;
-						});
-					}
-					if (!empty($dd_object->parent)) {
-						// set
-						$parent = $dd_object->parent;
-					}
-				}
-
-			// 2 . From injected 'from_parent'
-				if (!isset($parent) && isset($this->from_parent)) {
-
-					// injected by the element
-					$parent = $this->from_parent;
-				}
-
-			// 3 . From structure (fallback)
-				if (!isset($parent)) {
-
-					// use section tipo as parent
-					$parent = $this->get_section_tipo();
-				}
-
-			// 4 . From structure (area case)
-				if (empty($parent)) {
-
-					// use structure term tipo as parent
-					$parent = $this->ontology_node->get_parent();
-				}
+			// (!) parent depends on per-instance state (session ddo, injected from_parent)
+			// and is stamped per call by build_structure_context() using resolve_context_parent()
 
 		// parent_grouper (structure parent)
-			$parent_grouper = !empty($this->parent_grouper)
-				? $this->parent_grouper
-				: $this->ontology_node->get_parent();
+			// (!) the instance-injected parent_grouper (see get_subdatum) is stamped per call
+			// by build_structure_context(); the core stores only the structure (ontology) value
+			$parent_grouper = $this->ontology_node->get_parent();
 
 		// tools
 			$tools = [];
@@ -1515,7 +1669,9 @@ abstract class common {
 			// get the component tools in edit
 			// (!) Note that some tools like 'tool_upload' are used in list mode,
 			// but they can load tools using only the name if needed
-			if(( ($model==='section' || str_starts_with($model, 'area')) && $this->mode==='list') || ($this->mode!=='list')){
+			// simple mode skips tools calculation entirely
+			if( $simple===false &&
+				((($model==='section' || str_starts_with($model, 'area')) && $this->mode==='list') || ($this->mode!=='list')) ){
 				$tools_list	= $this->get_tools();
 				foreach ($tools_list as $tool_object) {
 
@@ -1569,13 +1725,14 @@ abstract class common {
 				}//end foreach ($tools_list as $tool_object)
 			}
 
-		// buttons
-			$buttons = $this->get_buttons_context();
+		// buttons. simple mode skips buttons calculation (it also involves permissions)
+			$buttons = ($simple===false)
+				? $this->get_buttons_context()
+				: [];
 
 		// request_config
-			$request_config = ($add_request_config===true)
-				? $this->build_request_config() // array
-				: null;
+			// (!) per-instance (get_subdatum injects a narrowed children config):
+			// stamped per call by build_structure_context()
 
 		// label
 		// To overwrite the label using a user preset, add the
@@ -1592,32 +1749,33 @@ abstract class common {
 				}
 			}
 
-		// columns_map (the final calculation was moved to common JS)
-			$columns_map = !empty($request_config)
-				? ($this->get_columns_map() ?? [])
+		// columns_map. Base ontology-derived value; final exposure is gated per call
+		// by build_structure_context() (null when request_config is not requested).
+		// Skip the calculation entirely on add_request_config=false keys: the
+		// stamping always discards it there (add_request_config is part of the key)
+			$columns_map = ($add_request_config===true)
+				? $this->get_columns_map()
 				: null;
 
 		// legacy_model
 			$legacy_model = ontology_node::get_legacy_model_by_tipo($this->tipo);
 
 		// dd_object
+		// (!) variant fields (parent, lang, permissions, request_config, view, ...)
+		// are not part of the core: build_structure_context() stamps them per call
 			$dd_object = new dd_object((object)[
 				'label'				=> $label, // *
 				'tipo'				=> $tipo,
 				'section_tipo'		=> $section_tipo, // *
 				'model'				=> $model, // *
 				'legacy_model'		=> $legacy_model,
-				'parent'			=> $parent, // *
 				'parent_grouper'	=> $parent_grouper,
-				'lang'				=> $lang,
 				'mode'				=> $mode,
 				'translatable'		=> $translatable,
 				'properties'		=> $properties,
 				'css'				=> $css,
-				'permissions'		=> $permissions,
 				'tools'				=> $tools,
 				'buttons'			=> $buttons,
-				'request_config'	=> $request_config,
 				'columns_map'		=> $columns_map,
 				'sortable'			=> $sortable
 			]);
@@ -1655,15 +1813,9 @@ abstract class common {
 						}
 					}
 
-					if ($sortable===true) {
-						// add component path to allow sort columns properly
-						// ? remove if because forbids cache list mode uniformly
-						// if (!empty($this->from_parent)) {
-							$dd_object->path = isset($this->request_config)
-								? $this->get_order_path($tipo, $section_tipo)
-								: [];
-						// }
-					}
+					// path. Depends on instance request_config and from_section_tipo:
+					// stamped per call by build_structure_context()
+
 					if ($mode==='search') {
 						// search operators info (tool tips)
 						$dd_object->search_operators_info	= $this->search_operators_info();
@@ -1747,31 +1899,14 @@ abstract class common {
 					// section matrix_table
 						$dd_object->matrix_table = common::get_matrix_table_from_tipo( $section_tipo );
 
-					// sqo from session. Add to sync client and server sqo across calls (propagation data problem)
-					// this sqo will be injected into the section instance 'request_config_object' and 'rqo' when it is built
-						$sqo_id = section::build_sqo_id($this->tipo);
-						$dd_object->sqo_session = $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
+					// sqo_session. Session pagination state changes between calls:
+					// stamped per call by build_structure_context()
 				}
 
-			// view, all components has view, used to change the render view.
-			// the default value is "default" except in component_portal
-				$dd_object->view = $this->get_view();
+			// view / children_view. Injectable per instance (see get_subdatum):
+			// stamped per call by build_structure_context()
 
-			// children_view. Sometimes the component defines the view of his children (see rsc368)
-				$dd_object->children_view = $this->get_children_view();
-
-			// search
-				if ($this->mode==='search') {
-					// parent_grouper_label
-					if (isset($parent_grouper)) {
-						if (!isset($dd_object->config)) {
-							$dd_object->config = new stdClass();
-						}
-						$dd_object->config->parent_grouper_label = ontology_node::get_term_by_tipo($parent_grouper);
-					}
-				}
-
-		// cache. fix context dd_object
+		// cache. fix context core dd_object
 			if ($use_cache===true) {
 				self::$cache_structure_context[$ddo_key] = $dd_object;
 				// Manage cache size to prevent memory leaks
@@ -1781,14 +1916,6 @@ abstract class common {
 		// Debug
 			if(SHOW_DEBUG===true) {
 				$time = exec_time_unit($start_time,'ms');
-
-				// metrics
-				metrics::$structure_context_total_time += $time;
-
-				$debug = new stdClass();
-					$debug->exec_time = $time.' ms';
-
-				$dd_object->debug = $debug;
 
 				if ($time>15) {
 					$time_string = $time>15
@@ -1801,14 +1928,79 @@ abstract class common {
 						? (14 - $len)
 						: 0;
 					$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-					$msg = "--- SLOW get_structure_context --- " . "$tipo_line $time_string ms" . " ---- $model - parent:" . $parent . ' ' . json_encode($add_request_config);
+					$msg = "--- SLOW get_structure_context --- " . "$tipo_line $time_string ms" . " ---- $model " . json_encode($add_request_config);
 					debug_log($msg, logger::WARNING);
 				}
 			}
 
 
 		return $dd_object;
-	}//end get_structure_context
+	}//end build_structure_context_core
+
+
+
+	/**
+	* RESOLVE_CONTEXT_PARENT
+	* Resolves the context 'parent' value for this instance.
+	* Depends on per-instance / per-call state (session ddo, injected from_parent),
+	* so it is calculated on every build_structure_context() call instead of
+	* being cached in the structure context core.
+	* @return string|null $parent
+	*/
+	protected function resolve_context_parent() : ?string {
+
+		// short vars
+			$tipo			= $this->get_tipo();
+			$section_tipo	= $this->get_section_tipo();
+
+		// 1 . From session
+			if (isset($_SESSION['dedalo']['config']['ddo'][$section_tipo])) {
+
+				$section_ddo = $_SESSION['dedalo']['config']['ddo'][$section_tipo];
+
+				// last matching item wins (preserves the previous array_reduce
+				// semantics); iterate in reverse and stop on the first match,
+				// as this runs on every context build
+				$current_from_parent = $this->from_parent ?? null;
+				$dd_object = null;
+				$section_ddo = array_values($section_ddo); // ensure list keys
+				for ($i = count($section_ddo)-1; $i >= 0; $i--) {
+					$item = $section_ddo[$i];
+					if ($item->tipo===$tipo && $item->section_tipo===$section_tipo
+						&& ($current_from_parent===null || $item->parent===$current_from_parent)) {
+						$dd_object = $item;
+						break;
+					}
+				}
+				if (!empty($dd_object->parent)) {
+					// set
+					$parent = $dd_object->parent;
+				}
+			}
+
+		// 2 . From injected 'from_parent'
+			if (!isset($parent) && isset($this->from_parent)) {
+
+				// injected by the element
+				$parent = $this->from_parent;
+			}
+
+		// 3 . From structure (fallback)
+			if (!isset($parent)) {
+
+				// use section tipo as parent
+				$parent = $this->get_section_tipo();
+			}
+
+		// 4 . From structure (area case)
+			if (empty($parent)) {
+
+				// use structure term tipo as parent
+				$parent = $this->ontology_node->get_parent();
+			}
+
+		return $parent;
+	}//end resolve_context_parent
 
 
 
@@ -1816,26 +2008,15 @@ abstract class common {
 	* GET_STRUCTURE_CONTEXT_SIMPLE
 	* Calculates the structure_context but ignoring some properties
 	* such as tools, permissions, buttons context..
+	* (!) Unlike previous versions, it does not mutate the instance
+	* (tools, buttons_context and permissions are left untouched).
 	* @param int $permissions = 0
 	* @param bool $add_request_config = false
 	* @return dd_object $ddo
 	*/
 	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : dd_object {
 
-		// tools. Force set $this->tools to prevent calculate tools in simple mode
-		$this->tools = [];
-
-		// buttons_context. Force to avoid calculate buttons_context (also involves calculating permissions)
-		$this->buttons_context = [];
-
-		// permissions. Force set $this->permissions to prevent calculate permissions in simple mode
-		$this->set_permissions($permissions);
-
-		// call general method
-		$ddo = $this->get_structure_context($permissions, $add_request_config);
-
-
-		return $ddo;
+		return $this->build_structure_context($permissions, $add_request_config, true);
 	}//end get_structure_context_simple
 
 
@@ -1849,11 +2030,10 @@ abstract class common {
 	* For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
 	* @param string|null $from_parent = null
 	* @param array $ar_locators = []
-	* @param object|null $subdatum_options = null
 	* @return object $subdatum
 	* 	Object with two properties: context, data
 	*/
-	public function get_subdatum( ?string $from_parent=null, array $ar_locators=[], ?object $subdatum_options=null ) : object {
+	public function get_subdatum( ?string $from_parent=null, array $ar_locators=[] ) : object {
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1873,6 +2053,10 @@ abstract class common {
 
 		$ar_subcontext	= [];
 		$ar_subdata		= [];
+		// seen_context. Tracks already-added context items by tipo+section_tipo+mode.
+		// Context is identical for every row of the same column, so only the first
+		// occurrence is added (same criteria used by sections_json.php and the client).
+		$seen_context	= [];
 
 		// request_config. On empty, return empty context and data object
 			$request_config = $this->context->request_config ?? null;
@@ -2031,8 +2215,11 @@ abstract class common {
 								? reset($dd_object->section_tipo)
 								: $dd_object->section_tipo;
 
-							$section_id_key		= $current_locator->section_id; // section_id_key link the dataframe data to the main locator
-							$section_tipo_key	= $current_locator->section_tipo; // section_tipo_key link the dataframe data to the main locator
+							// unified pairing: the key is the main data item id.
+							// Relation mains carry it as locator->id; literal mains
+							// build pseudo-locators whose section_id IS the item id
+							$section_id_key		= $current_locator->id ?? $current_locator->section_id;
+							$section_tipo_key	= $this->get_section_tipo(); // host section (legacy alias, demoted to consistency check)
 							$section_id			= $this->get_section_id(); // the section that call to component, not the component
 
 						}else{
@@ -2196,6 +2383,11 @@ abstract class common {
 								// the main component has all config, his children has specific config (only his own part)
 									// get the component rqo to be updated with the current config
 									$component_request_config = $current_element->build_request_config();
+									// pre-index by api_engine (first occurrence) to avoid a linear search per request_config item
+									$rc_by_api_engine = [];
+									foreach ($component_request_config as $rc_item) {
+										$rc_by_api_engine[$rc_item->api_engine] ??= $rc_item;
+									}
 									foreach ($request_config as $request_config_object) {
 
 										// use the current api_engine to ensure the inheritance has correct relation dd_engine -> dd_engine, zenon - >zenon
@@ -2225,9 +2417,7 @@ abstract class common {
 											$children_hide		= $children_cache[$cache_key]['hide'];
 
 										// select the current api_engine
-											$new_request_config_object = array_find($component_request_config, function($el) use($api_engine){
-												return $el->api_engine===$api_engine;
-											});
+											$new_request_config_object = $rc_by_api_engine[$api_engine] ?? null;
 											if (empty($new_request_config_object) || !is_object($new_request_config_object)) {
 												// debug_log(__METHOD__
 												// 	. " Error. Expected request config but value is empty from component_request_config " . PHP_EOL
@@ -2320,8 +2510,13 @@ abstract class common {
 									// force tipo from ddo. If not forced, time_machine_list cannot match context ddo column
 									$data_item->tipo = $current_tipo;
 								// data add
-									$ar_subdata[]		= $data_item;
-									$ar_subcontext[]	= $dd_object;
+									$ar_subdata[] = $data_item;
+								// context add (deduplicated by tipo+section_tipo+mode)
+									$dd_object_key = common::context_key($dd_object);
+									if (!isset($seen_context[$dd_object_key])) {
+										$seen_context[$dd_object_key] = true;
+										$ar_subcontext[] = $dd_object;
+									}
 								break;
 
 							// others case
@@ -2362,8 +2557,15 @@ abstract class common {
 									$item_options->get_data		= true;
 								$element_json = $current_element->get_json($item_options);
 
-							// ar_subcontext
-								array_push($ar_subcontext, ...$element_json->context);
+							// ar_subcontext. Deduplicate by tipo+section_tipo+mode (first occurrence wins)
+								foreach ($element_json->context as $context_item) {
+									$context_item_key = common::context_key($context_item);
+									if (isset($seen_context[$context_item_key])) {
+										continue;
+									}
+									$seen_context[$context_item_key] = true;
+									$ar_subcontext[] = $context_item;
+								}
 
 							// row_section_id
 							// add parent_section_id with the main locator section_id that define the row, to preserve row coherence between all columns
@@ -2521,234 +2723,64 @@ abstract class common {
 	public function build_request_config() : array {
 		$start_time=start_time();
 
-		// 1. Return if already calculated in this instance
+		// ORCHESTRATION (three named stages):
+		// 1. RQO-derived: when the client API request targets this element with
+		//    an explicit show, the config is rebuilt from the rqo (short-circuit)
+		// 2. Base build: deterministic, cacheable config from ontology properties
+		//    (optionally overridden by a user layout preset) — get_ar_request_config
+		// 3. Overlay: per-call request-scoped state (rqo/session sqo merge) applied
+		//    to this instance's private copy, never to the cached base
+
+		// memo. Return if already calculated in this instance
 			if (isset($this->request_config)) {
 				return $this->request_config;
 			}
 
-		// 2. Attempt to retrieve from static cache
-		// No use cache here. Atomic cache is used instead
+		// rqo. Read the API request ONCE here and pass it down (static state)
+			$rqo			= dd_core_api::$rqo ?? null;
+			$requested_sqo	= $rqo->sqo ?? null;
 
-		// 3. Attempt to build from the client's API request (RQO)
-			// requested_source is fixed from RQO calls to API when they exists like
-			// {
-			//     "typo": "source",
-			//     "action": "search",
-			//     "model": "section",
-			//     "tipo": "dd64",
-			//     "section_tipo": "dd64",
-			//     "section_id": null,
-			//     "mode": "edit",
-			//     "lang": "lg-eng"
-			// }
-			$requested_source	= dd_core_api::$rqo->source ?? null;
-			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
+		// STAGE 1. Attempt to build from the client's API request (RQO)
+			$rqo_request_config = $this->build_request_config_from_rqo($rqo);
+			if ($rqo_request_config !== null) {
 
-			if( isset($requested_source) &&
-				($requested_source->tipo===$this->tipo ||
-					(isset($requested_sqo) && in_array($this->tipo, (array)$requested_sqo->section_tipo)))
-				) {
+				metrics::add_metric('request_config_source_rqo_total_calls');
+				metrics::add_metric('request_config_total_calls');
+				metrics::add_metric('request_config_total_time', $start_time);
 
-				// set the request_config with the API rqo sent by client
+				// fix request_config
+				$this->request_config = $rqo_request_config;
 
-				// requested_show. get the rqo sent to the API
-				$requested_show = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->show)
-					? unserialize(serialize(dd_core_api::$rqo->show))
-					: false;
+				return $this->request_config; // we have finished ! Note we stop here (!)
+			}
 
-				if (!empty($requested_show)) {
-
-					// consolidate ddo items properties
-						$new_show_ddo_map = [];
-						foreach ($requested_show->ddo_map as $key => $current_ddo) {
-							// get the direct ddo linked by the source
-							$new_ddo = unserialize(serialize($current_ddo));
-							if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
-								// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
-								if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
-									$new_ddo->parent		= $this->tipo;
-									$new_ddo->section_tipo	= $this->tipo;
-								}
-							}
-
-							// added label & mode if not are already defined
-							if(!isset($new_ddo->label)) {
-								$new_ddo->label = ontology_node::get_term_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
-							}
-							if(!isset($new_ddo->mode)) {
-								$new_ddo->mode = $this->mode;
-							}
-							$new_show_ddo_map[] = $new_ddo;
-						}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
-
-					// request_config_object. Create the new request_config_object with the caller
-						$request_config_object = new request_config_object();
-							$request_config_object->api_engine		= 'dedalo';
-							$request_config_object->type			= 'main';
-							$request_config_object->show			= new stdClass();
-							$request_config_object->show->ddo_map	= $new_show_ddo_map;
-
-						// requested_search
-							$requested_search = isset(dd_core_api::$rqo) && isset(dd_core_api::$rqo->search)
-								? unserialize(serialize(dd_core_api::$rqo->search))
-								: false;
-							if (!empty($requested_search)) {
-
-								$new_search_ddo_map = [];
-								// consolidate ddo items properties
-								foreach ($requested_search->ddo_map as $key => $current_ddo) {
-
-									// new_ddo. Get the direct ddo linked by the source
-										$new_ddo = unserialize(serialize($current_ddo));
-										if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
-											// check if the section_tipo of the current_ddo, is compatible with the section_tipo of the current instance
-											if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
-												$new_ddo->parent		= $this->tipo;
-												$new_ddo->section_tipo	= $this->tipo;
-											}
-										}
-
-									// label add if not are already defined
-										if(!isset($new_ddo->label)) {
-											$new_ddo->label = ontology_node::get_term_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
-										}
-
-									// mode add if not are already defined
-										if(!isset($new_ddo->mode)) {
-											$new_ddo->mode = $this->mode;
-										}
-
-									// add to search ddo_map
-										$new_search_ddo_map[] = $new_ddo;
-								}//end foreach ($requested_show->ddo_map as $key => $current_ddo)
-
-								$request_config_object->search			= new stdClass();
-								$request_config_object->search->ddo_map	= $new_search_ddo_map;
-							}//end if (!empty($requested_search))
-
-						// sqo add
-							if (isset(dd_core_api::$rqo->sqo)) {
-								$sqo = unserialize(serialize(dd_core_api::$rqo->sqo));
-								$sqo->section_tipo = array_map(function($el){
-									return (object)[
-										'tipo' => $el
-									];
-								}, $sqo->section_tipo);
-								$request_config_object->sqo = $sqo;
-							}
-
-						// fix request_config
-							$this->request_config = [$request_config_object];
-
-					return $this->request_config; // we have finished ! Note we stop here (!)
-				}//end if (!empty($requested_show))
-			}//end if( isset($requested_source) &&...
-
-		// Create a new fresh request_config with fallback options
-
-			// short vars
+		// short vars
 			$mode			= $this->get_mode();
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
 
-		// 4. Attempt to build from user presets (section 'dd1244' Layout map (request config) presets)
-		// Currently, only sections can modify their default request configuration. It is possible that components could be added in time.
-			if (get_called_class()==='section') {
+		// STAGE 2. Base build from Ontology, optionally with user preset
+		// (section 'dd1244' Layout map presets). The preset override travels as
+		// a parameter — instance properties are never mutated.
+			$properties_override = $this->resolve_preset_properties($tipo, $section_tipo, $mode);
 
-				$user_preset = request_config_presets::get_request_config(
-					$tipo,
-					$section_tipo,
-					$mode
-				);
-				if (!empty($user_preset)) {
-
-					// set resolved request_config value
-					// $request_config = $user_preset; // OLD WAY < 10-06-2025
-
-					// Overwrite properties request_config to allow get_ar_request_config do the unified hard work
-					$this->properties = $this->get_properties() ?? new stdClass();
-					if (!isset($this->properties->source)) {
-						$this->properties->source = new stdClass();
-					}
-					$this->properties->source->request_config = $user_preset;
-
-					debug_log(__METHOD__.
-						" request_config calculated from request_config_presets [$section_tipo-$tipo] ",
-						logger::DEBUG
-					);
-				}
-			}
-
-		// 5. Attempt to build from Ontology
-			if (empty($request_config)) {
-
-				$request_config = $this->get_ar_request_config();
-			}
+			$request_config = $this->get_ar_request_config($properties_override);
 
 		// fix request_config value
 			$this->request_config = $request_config;
 
-		// fix ddo_map (dd_core_api static var)
-			$dedalo_request_config = array_find($request_config, function($el){
-				return isset($el->api_engine) && $el->api_engine==='dedalo';
-			});
-			if (is_object($dedalo_request_config)) {
+		// STAGE 3. Overlay per-call request-scoped state (rqo/session sqo).
+		// Safe: $request_config is this instance's private copy (the static
+		// cache stores/serves deep clones — see cache_request_config)
+			$this->overlay_request_state($request_config, $requested_sqo, $tipo);
 
-				// fix missing type
-				$dedalo_request_config->type = $dedalo_request_config->type ?? 'main';
-
-				// sqo. Preserves filter across calls using session sqo if exists
-				$model	= ontology_node::get_model_by_tipo($tipo, true);
-				$sqo_id	= ($model==='section')
-					? section::build_sqo_id($tipo)
-					: null; // cache key sqo_id
-				if ($model==='section') {
-					// dd_core_api::$rqo->sqo is set case
-					// Fixed in dd_core_api::start if user browser has SQO value for this section on local DDBB
-					// Note that $requested_sqo is dd_core_api::$rqo->sqo
-					if (!empty($requested_sqo)) {
-						foreach ($requested_sqo as $sqo_key => $sqo_value) {
-
-							// sqo. Crete once
-							if (!isset($dedalo_request_config->sqo)) {
-								$dedalo_request_config->sqo = new stdClass();
-							}
-
-							// ignore section_tipo
-							if ($sqo_key==='section_tipo') {
-								continue;
-							}
-
-							if ($sqo_key==='limit') {
-								// limit null value from server NOT overwrite request config value if exists
-								$dedalo_request_config->sqo->{$sqo_key} = $sqo_value ?? $dedalo_request_config->sqo->{$sqo_key} ?? null;
-							}else{
-								$dedalo_request_config->sqo->{$sqo_key} = $sqo_value;
-							}
-						}
-					}
-					// fallback to session (note that always is saved navigation SQO in session to allow preserve records on tools like tool_export)
-					// Here it is mainly used to preserve the navigation of section_tool because the 'tipo' is different from real section
-					else if (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-						// replace default sqo with the already stored in session (except section_tipo to prevent to
-						// loose labels and limit to avoid overwrite list in edit and vice-versa)
-						foreach ($_SESSION['dedalo']['config']['sqo'][$sqo_id] as $key => $value) {
-							if($key==='section_tipo' || $key==='generated_time') continue;
-							// limit. Do no t apply null value. instead leave to calculate defaults
-							if ($key==='limit' && $value===null) {
-								continue;
-							}
-							if (!isset($dedalo_request_config->sqo)) {
-								$dedalo_request_config->sqo = new stdClass();
-							}
-							$dedalo_request_config->sqo->{$key} = $value;
-						}
-					}
-				}
-			}//end if ($model==='section')
+		// metrics
+			metrics::add_metric('request_config_total_calls');
+			metrics::add_metric('request_config_total_time', $start_time);
 
 		// debug
 			if(SHOW_DEBUG===true) {
+				$time = exec_time_unit($start_time,'ms');
 				$len = !empty($this->tipo)
 					? strlen($this->tipo)
 					: 0;
@@ -2756,15 +2788,397 @@ abstract class common {
 					? (21 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-				debug_log(
-					"--- build_request_config --------- {$tipo_line} ". number_format(exec_time_unit($start_time,'ms'),3). " ms - " . get_called_class() . " - {$this->tipo} - {$this->section_tipo} - {$this->section_id}",
-					logger::DEBUG
-				);
+				if ($time>15) {
+					// SLOW builds surface as warnings (structure_context convention)
+					$time_string = sprintf("\033[31m%s\033[0m", number_format($time,3));
+					debug_log(
+						"--- SLOW build_request_config ---- {$tipo_line} {$time_string} ms - " . get_called_class() . " - {$this->tipo} - {$this->section_tipo} - {$this->section_id}",
+						logger::WARNING
+					);
+				} else {
+					debug_log(
+						"--- build_request_config --------- {$tipo_line} ". number_format($time,3). " ms - " . get_called_class() . " - {$this->tipo} - {$this->section_tipo} - {$this->section_id}",
+						logger::DEBUG
+					);
+				}
 			}
 
 
 		return $this->request_config;
 	}//end build_request_config
+
+
+
+	/**
+	* BUILD_REQUEST_CONFIG_FROM_RQO
+	* STAGE 1 of build_request_config: when the client API request (RQO)
+	* targets this element (source tipo match or tipo in sqo section_tipo)
+	* and carries an explicit show, the request_config is rebuilt from the
+	* rqo instead of the ontology.
+	*
+	* requested_source is fixed from RQO calls to API when they exist like
+	* {
+	*     "typo": "source",
+	*     "action": "search",
+	*     "model": "section",
+	*     "tipo": "dd64",
+	*     "section_tipo": "dd64",
+	*     "section_id": null,
+	*     "mode": "edit",
+	*     "lang": "lg-eng"
+	* }
+	*
+	* @param object|null $rqo The client API request (dd_core_api::$rqo)
+	* @return array|null Array of request_config_object, or null when the rqo
+	* 	does not target this element (caller falls through to the base build)
+	*/
+	protected function build_request_config_from_rqo(?object $rqo) : ?array {
+
+		$requested_source	= $rqo->source ?? null;
+		$requested_sqo		= $rqo->sqo ?? null;
+
+		// gate: the rqo must target this element
+		if( !isset($requested_source) ||
+			($requested_source->tipo!==$this->tipo &&
+				(!isset($requested_sqo) || !in_array($this->tipo, (array)$requested_sqo->section_tipo)))
+			) {
+			return null;
+		}
+
+		// requested_show. get the rqo sent to the API
+		$requested_show = isset($rqo->show)
+			? unserialize(serialize($rqo->show))
+			: false;
+
+		if (empty($requested_show)) {
+			return null;
+		}
+
+		// validate + consolidate ddo items properties
+		// SECURITY: client-sent ddos pass the same tipo/TLD validation and
+		// permission filtering as ontology-defined configs (validate_requested_ddo)
+			$new_show_ddo_map = [];
+			foreach ($requested_show->ddo_map as $current_ddo) {
+				if ($this->validate_requested_ddo($current_ddo, 'show')===false) {
+					continue;
+				}
+				$new_show_ddo_map[] = $this->consolidate_requested_ddo($current_ddo, $requested_source);
+			}
+
+		// request_config_object. Create the new request_config_object with the caller
+			$request_config_object = new request_config_object();
+				$request_config_object->api_engine		= 'dedalo';
+				$request_config_object->type			= 'main';
+				$request_config_object->show			= new stdClass();
+				$request_config_object->show->ddo_map	= $new_show_ddo_map;
+
+			// requested_search
+				$requested_search = isset($rqo->search)
+					? unserialize(serialize($rqo->search))
+					: false;
+				if (!empty($requested_search)) {
+
+					// validate + consolidate ddo items properties
+					$new_search_ddo_map = [];
+					foreach ($requested_search->ddo_map as $current_ddo) {
+						if ($this->validate_requested_ddo($current_ddo, 'search')===false) {
+							continue;
+						}
+						$new_search_ddo_map[] = $this->consolidate_requested_ddo($current_ddo, $requested_source);
+					}
+
+					$request_config_object->search			= new stdClass();
+					$request_config_object->search->ddo_map	= $new_search_ddo_map;
+				}//end if (!empty($requested_search))
+
+			// sqo add
+				if (isset($rqo->sqo)) {
+					$sqo = unserialize(serialize($rqo->sqo));
+					// section_tipo: validate (client input) and normalize to the
+					// same enriched ddo objects the v5/v6 builders emit, so the
+					// client receives one section_tipo shape from every path
+					$ar_section_tipo = [];
+					foreach ((array)($sqo->section_tipo ?? []) as $current_section_tipo) {
+						if (!is_string($current_section_tipo) || ontology_utils::check_tipo_is_valid($current_section_tipo)===false) {
+							$this->add_request_config_warning('drop', 'Removed client sqo section_tipo: invalid tipo', $current_section_tipo);
+							continue;
+						}
+						$ar_section_tipo[] = $current_section_tipo;
+					}
+					$sqo->section_tipo = $this->build_sqo_section_tipo_ddo($ar_section_tipo);
+					$request_config_object->sqo = $sqo;
+				}
+
+		return [$request_config_object];
+	}//end build_request_config_from_rqo
+
+
+
+	/**
+	* RESOLVE_PRESET_PROPERTIES
+	* STAGE 2 helper of build_request_config: resolves the user layout preset
+	* (section 'dd1244' Layout map presets) into a properties override object.
+	* Currently only sections can modify their default request configuration.
+	*
+	* The instance properties are NOT mutated: the override is returned as a
+	* deep clone and travels as a parameter into get_ar_request_config, so the
+	* preset never leaks into other readers of $this->properties.
+	*
+	* Side effect: sets $this->request_config_preset_hash so the request_config
+	* cache key separates preset builds from plain builds.
+	*
+	* @param string $tipo
+	* @param string $section_tipo
+	* @param string $mode
+	* @return object|null Properties override or null when no preset applies
+	*/
+	protected function resolve_preset_properties(string $tipo, string $section_tipo, string $mode) : ?object {
+
+		if (get_called_class()!=='section') {
+			return null;
+		}
+
+		$user_preset = request_config_presets::get_request_config(
+			$tipo,
+			$section_tipo,
+			$mode
+		);
+		if (empty($user_preset)) {
+			return null;
+		}
+
+		// build the override on a deep clone of the instance properties
+		$base_properties		= $this->get_properties() ?? new stdClass();
+		$properties_override	= json_decode(json_encode($base_properties)) ?? new stdClass();
+		if (!isset($properties_override->source)) {
+			$properties_override->source = new stdClass();
+		}
+		$properties_override->source->request_config = $user_preset;
+
+		// mark the preset in the request_config cache key so this
+		// build never shares a cache entry with plain builds
+		$this->request_config_preset_hash = md5(json_encode($user_preset));
+
+		metrics::add_metric('request_config_source_preset_total_calls');
+
+		debug_log(__METHOD__.
+			" request_config calculated from request_config_presets [$section_tipo-$tipo] ",
+			logger::DEBUG
+		);
+
+		return $properties_override;
+	}//end resolve_preset_properties
+
+
+
+	/**
+	* OVERLAY_REQUEST_STATE
+	* STAGE 3 of build_request_config: applies per-call request-scoped state
+	* to the instance's private copy of the base config:
+	* - missing type default
+	* - rqo sqo merge (client navigation state sent with the API request)
+	* - session sqo fallback (preserves navigation across calls, e.g. for
+	*   section_tool / tool_export whose tipo differs from the real section)
+	*
+	* MUST be called only on a private copy: the cached base config is pristine
+	* and shared (by clone) with every caller.
+	*
+	* @param array $request_config This instance's config (mutated in place)
+	* @param object|null $requested_sqo dd_core_api::$rqo->sqo
+	* @param string $tipo
+	* @return void
+	*/
+	protected function overlay_request_state(array $request_config, ?object $requested_sqo, string $tipo) : void {
+
+		$dedalo_request_config = array_find($request_config, function($el){
+			return isset($el->api_engine) && $el->api_engine==='dedalo';
+		});
+		if (!is_object($dedalo_request_config)) {
+			return;
+		}
+
+		// fix missing type
+		$dedalo_request_config->type = $dedalo_request_config->type ?? 'main';
+
+		// sqo. Preserves filter across calls using session sqo if exists
+		$model = ontology_node::get_model_by_tipo($tipo, true);
+		if ($model!=='section') {
+			return;
+		}
+		$sqo_id = section::build_sqo_id($tipo); // cache key sqo_id
+
+		// dd_core_api::$rqo->sqo is set case
+		// Fixed in dd_core_api::start if user browser has SQO value for this section on local DDBB
+		if (!empty($requested_sqo)) {
+			foreach ($requested_sqo as $sqo_key => $sqo_value) {
+
+				// sqo. Create once
+				if (!isset($dedalo_request_config->sqo)) {
+					$dedalo_request_config->sqo = new stdClass();
+				}
+
+				// ignore section_tipo
+				if ($sqo_key==='section_tipo') {
+					continue;
+				}
+
+				if ($sqo_key==='limit') {
+					// limit null value from server NOT overwrite request config value if exists
+					$dedalo_request_config->sqo->{$sqo_key} = $sqo_value ?? $dedalo_request_config->sqo->{$sqo_key} ?? null;
+				}else{
+					$dedalo_request_config->sqo->{$sqo_key} = $sqo_value;
+				}
+			}
+		}
+		// fallback to session (note that always is saved navigation SQO in session to allow preserve records on tools like tool_export)
+		// Here it is mainly used to preserve the navigation of section_tool because the 'tipo' is different from real section
+		else if (($session_sqo = section::get_session_sqo($sqo_id)) !== null) {
+			// replace default sqo with the already stored in session (except section_tipo to prevent to
+			// loose labels and limit to avoid overwrite list in edit and vice-versa)
+			foreach ($session_sqo as $key => $value) {
+				if($key==='section_tipo' || $key==='generated_time') continue;
+				// limit. Do not apply null value. instead leave to calculate defaults
+				if ($key==='limit' && $value===null) {
+					continue;
+				}
+				if (!isset($dedalo_request_config->sqo)) {
+					$dedalo_request_config->sqo = new stdClass();
+				}
+				$dedalo_request_config->sqo->{$key} = $value;
+			}
+		}
+	}//end overlay_request_state
+
+
+
+	/**
+	* ADD_REQUEST_CONFIG_WARNING
+	* Records a request_config build issue in the per-instance collector.
+	* Error contract:
+	* - 'drop'    : an element was silently removed from the config (invalid
+	*               tipo, inactive tld, no permissions, malformed definition).
+	*               Counted in metrics request_config_drops for production audits.
+	* - 'default' : an expected definition was missing and a default applied.
+	* The collector is surfaced as context 'config_warnings' under SHOW_DEBUG
+	* (see build_structure_context), so an unexpectedly empty UI self-explains.
+	* Fatal misconfigurations are NOT collected: they throw and reach the
+	* client through the API response 'errors' channel.
+	*
+	* @param string $type 'drop'|'default'
+	* @param string $message
+	* @param mixed $data = null Optional offending definition for inspection
+	* @return void
+	*/
+	protected function add_request_config_warning(string $type, string $message, mixed $data=null) : void {
+
+		$warning = (object)[
+			'type'		=> $type,
+			'message'	=> $message
+		];
+		if ($data !== null) {
+			$warning->data = $data;
+		}
+
+		$this->request_config_warnings[] = $warning;
+
+		if ($type==='drop') {
+			metrics::add_metric('request_config_drops_total_calls');
+		}
+	}//end add_request_config_warning
+
+
+
+	/**
+	* VALIDATE_REQUESTED_DDO
+	* Security validation of a ddo received in the client API request,
+	* enforcing the SAME rules applied to ontology-defined configs:
+	* - tipo is mandatory and must resolve to a model (validate_ddo_tipo)
+	* - the tipo's TLD must be installed (validate_ddo_tipo)
+	* - for sections, the user must have read permissions on the element
+	* Rejected ddos are recorded in the request_config_warnings collector.
+	*
+	* @param mixed $current_ddo
+	* @param string $map_type 'show'|'search'
+	* @return bool True when the ddo is acceptable
+	*/
+	protected function validate_requested_ddo(mixed $current_ddo, string $map_type) : bool {
+
+		// shape: must be an object with a string tipo
+		if (!is_object($current_ddo) || empty($current_ddo->tipo) || !is_string($current_ddo->tipo)) {
+			debug_log(__METHOD__
+				.' Removed client '.$map_type.' ddo: missing or invalid tipo'
+				.' current_ddo: ' . to_string($current_ddo)
+				, logger::WARNING
+			);
+			$this->add_request_config_warning('drop', "Removed client {$map_type} ddo: missing or invalid tipo", $current_ddo);
+			return false;
+		}
+
+		// tipo validity and active TLD (same gate as ontology configs)
+		$ddo_context = (object)[
+			'tipo' => $this->tipo
+		];
+		if (!$this->validate_ddo_tipo($current_ddo->tipo, $ddo_context, $map_type)) {
+			return false;
+		}
+
+		// permissions. Sections filter elements the user cannot read
+		// (components inherit permissions from their parent section)
+		if (get_called_class()==='section') {
+			$check_section_tipo = ($current_ddo->section_tipo ?? 'self')==='self'
+				? $this->tipo
+				: (is_array($current_ddo->section_tipo) ? reset($current_ddo->section_tipo) : $current_ddo->section_tipo);
+			$permissions = common::get_permissions($check_section_tipo, $current_ddo->tipo);
+			if ($permissions < 1) {
+				debug_log(__METHOD__
+					." Removed client {$map_type} ddo '{$current_ddo->tipo}': user has no permissions"
+					, logger::WARNING
+				);
+				$this->add_request_config_warning('drop', "Removed client {$map_type} ddo '{$current_ddo->tipo}': user has no permissions");
+				return false;
+			}
+		}
+
+		return true;
+	}//end validate_requested_ddo
+
+
+
+	/**
+	* CONSOLIDATE_REQUESTED_DDO
+	* Normalizes a ddo received in the client API request (RQO show/search ddo_map)
+	* against the current instance:
+	* - parent 'self' (or matching the requested source tipo) resolves to the instance tipo
+	* - section_tipo 'self' (or compatible with the instance) resolves to the instance tipo
+	* - label and mode are filled in when missing
+	* The received ddo is cloned, never mutated.
+	* @param object $current_ddo
+	* @param object $requested_source
+	* @return object $new_ddo
+	*/
+	private function consolidate_requested_ddo(object $current_ddo, object $requested_source) : object {
+
+		// clone to avoid mutating the API rqo
+		$new_ddo = unserialize(serialize($current_ddo));
+
+		if ($new_ddo->parent===$requested_source->tipo || $new_ddo->parent==='self') {
+			// check if the section_tipo of the current_ddo is compatible with the section_tipo of the current instance
+			if(in_array($this->tipo, (array)$new_ddo->section_tipo) || $new_ddo->section_tipo==='self'){
+				$new_ddo->parent		= $this->tipo;
+				$new_ddo->section_tipo	= $this->tipo;
+			}
+		}
+
+		// label & mode if not already defined
+		if(!isset($new_ddo->label)) {
+			$new_ddo->label = ontology_node::get_term_by_tipo($new_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
+		}
+		if(!isset($new_ddo->mode)) {
+			$new_ddo->mode = $this->mode;
+		}
+
+		return $new_ddo;
+	}//end consolidate_requested_ddo
 
 
 
@@ -2790,9 +3204,13 @@ abstract class common {
 	* 6. Build request config using V6 or V5 strategy
 	* 7. Cache and return result
 	*
+	* @param object|null $properties_override = null
+	* 	Properties to use instead of the instance/ontology ones (e.g. a user
+	* 	layout preset resolved by resolve_preset_properties). Travels as a
+	* 	parameter so instance properties are never mutated.
 	* @return array $ar_request_config Array of request_config_object instances
 	*/
-	public function get_ar_request_config() : array {
+	public function get_ar_request_config(?object $properties_override=null) : array {
 
 		// 1. EXTRACT CONTEXT VARIABLES
 		// These define the current element being processed
@@ -2823,13 +3241,18 @@ abstract class common {
 		// Return cached result if available
 		$cached = $this->get_cached_request_config($resolved_key);
 		if ($cached !== null) {
+			// Side-effect parity with the build path: replicate the instance
+			// pagination update that parse_show_config / build_request_config_v5
+			// perform during a fresh build (consumed by *_json.php controllers)
+			$this->sync_pagination_from_config($cached);
+			metrics::add_metric('request_config_total_calls_cached');
 			return $cached;
 		}
 
 		// 4. RESOLVE SOURCE PROPERTIES
 		// In list mode, properties may come from 'section_list' child term
 		// This allows different display configurations for list vs edit views
-		$properties = $this->resolve_source_properties($tipo, $mode, $model);
+		$properties = $this->resolve_source_properties($tipo, $mode, $model, $properties_override);
 
 		// 5. CALCULATE PAGINATION DEFAULTS
 		// Limit/offset values come from multiple sources with priority:
@@ -2842,23 +3265,35 @@ abstract class common {
 		// Two strategies based on ontology version:
 		// - V6: properties->source->request_config exists (modern approach)
 		// - V5: fallback using ontology relation nodes (legacy compatibility)
-		// Context object passes all needed data to strategy methods
+		// Context object passes all needed data to strategy methods.
+		// use_cache: builders flip it to false when the result depends on
+		// record data (fixed_filter, filter_by_list) and must not be cached.
 		$context = (object)[
 			'tipo'			=> $tipo,
 			'section_tipo'	=> $section_tipo,
 			'section_id'	=> $section_id,
 			'mode'			=> $mode,
-			'model'			=> $model
+			'model'			=> $model,
+			'use_cache'		=> true
 		];
 
 		// Choose V6 or V5 strategy
-		$ar_request_query_objects = isset($properties->source->request_config)
-			? $this->build_request_config_v6($properties, $context, $pagination)
-			: $this->build_request_config_v5($context, $pagination);
+		if (isset($properties->source->request_config)) {
+			metrics::add_metric('request_config_source_v6_total_calls');
+			$ar_request_query_objects = $this->build_request_config_v6($properties, $context, $pagination);
+		} else {
+			metrics::add_metric('request_config_source_v5_total_calls');
+			$ar_request_query_objects = $this->build_request_config_v5($context, $pagination);
+		}
 
 		// 7. CACHE AND RETURN
-		// Store result for future requests with same context
-		$this->cache_request_config($resolved_key, $ar_request_query_objects);
+		// Store result for future requests with same context.
+		// Configs resolved from record data are never cached: the data can
+		// change within the request/worker lifecycle and there is no
+		// invalidation path for it.
+		if ($context->use_cache===true) {
+			$this->cache_request_config($resolved_key, $ar_request_query_objects);
+		}
 
 		return $ar_request_query_objects;
 	}//end get_ar_request_config
@@ -2963,105 +3398,6 @@ abstract class common {
 
 
 
-	/**
-	* RESOLVE_GET_DDO_MAP
-	* @param array $ar_section_tipo
-	* @param object $get_ddo_map
-	* @return array $ar_ddo_calcutaled
-	*/
-	private function resolve_get_ddo_map(array $ar_section_tipo, $get_ddo_map) : array {
-
-		if ($get_ddo_map === false) {
-			return [];
-		}
-
-		$ar_ddo_calcutaled	= [];
-
-		switch ($get_ddo_map->model) {
-
-			case 'section_map':
-				$procesed_component_tipo = [];
-				foreach ($ar_section_tipo as $current_section_tipo) {
-
-					$section_map = section::get_section_map( $current_section_tipo );
-					if(empty($section_map)) {
-						debug_log(__METHOD__
-							." Ignored section_tipo without section_map (1) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
-							.' tipo: ' . $this->tipo . PHP_EOL
-							.' section_tipo: ' . $this->section_tipo . PHP_EOL
-							.' section_id: ' . $this->section_id
-							, logger::WARNING
-						);
-						continue;
-					}
-					foreach ($get_ddo_map->columns as $original_column) {
-
-
-						$current_column = is_array($original_column)
-							? (object)[ // compatibility with previous version ontology of 10-08-2024
-								'path' => $original_column
-							  ]
-							: $original_column;
-
-						$current_column_path = $current_column->path;
-
-						$section_map_value = get_object_property($section_map, $current_column_path);
-
-						// ignore value
-						if(empty($section_map_value)){
-							debug_log(__METHOD__
-								." Ignored section_tipo without section_map (2) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
-								.' tipo: ' . $this->tipo . PHP_EOL
-								.' section_tipo: ' . ($this->section_tipo ?? null) . PHP_EOL
-								.' section_id: ' . $this->section_id
-								, logger::WARNING
-							);
-							continue;
-						}
-						$ar_component_tipo = (array)$section_map_value;
-
-						foreach ($ar_component_tipo as $current_component_tipo) {
-							if(in_array($current_component_tipo, $procesed_component_tipo)){
-
-								$to_change_ddo = array_find($ar_ddo_calcutaled, function($ddo) use($current_component_tipo){
-									return $ddo->tipo === $current_component_tipo;
-								});
-								if (is_object($to_change_ddo)) {
-									$to_change_ddo->section_tipo = [...(array)$to_change_ddo->section_tipo, $current_section_tipo];
-								}
-
-							}else{
-								// $column_name = end($current_column_path);
-								$ddo = new dd_object();
-									$ddo->set_tipo($current_component_tipo);
-									$ddo->set_section_tipo($current_section_tipo);
-									$ddo->set_parent( $this->get_tipo() );
-									// $ddo->set_column($column_name);
-
-								foreach ($current_column as $current_column_key => $current_column_value) {
-
-									if($current_column_key === 'path'){
-										continue;
-									}
-									$set_ddo_key = 'set_'.$current_column_key;
-									$ddo->{$set_ddo_key}($current_column_value);
-								}
-
-								$procesed_component_tipo[] = $current_component_tipo;
-								$ar_ddo_calcutaled[] = $ddo;
-							}
-						}
-					}
-				}//end foreach ($ar_section_tipo as $current_section_tipo)
-				break;
-
-			default:
-				// Nothing to do
-				break;
-		}//end switch ($get_ddo_map->model)
-
-		return $ar_ddo_calcutaled;
-	}// end resolve_get_ddo_map()
 
 
 
@@ -3478,6 +3814,18 @@ abstract class common {
 			$properties			= $this->get_properties();
 			$with_lang_versions	= $this->with_lang_versions;
 
+		// availability context passed to optional tool::is_available($context).
+		// Tools declare their own availability conditions instead of core
+		// hardcoding per-tool rules here (see tool_common docblock contract).
+			$tool_context = (object)[
+				'caller_model'	=> $model,
+				'called_class'	=> get_called_class(),
+				'is_component'	=> $is_component,
+				'tipo'			=> $tipo,
+				'section_tipo'	=> $this->get_section_tipo(),
+				'mode'			=> $this->mode ?? null
+			];
+
 		// element tools
 			foreach ($user_tools as $tool) {
 
@@ -3499,26 +3847,20 @@ abstract class common {
 							}
 						}
 
-					// diffusion case. Skip non diffusion defined (in Ontology) sections
-						if ($tool->name==='tool_diffusion') {
-							// components are never in the diffusion map, skip the expensive check
-							if ($is_component) {
-								continue;
-							}
-							$have_section_diffusion = diffusion_utils::have_section_diffusion($tipo);
-							if ($have_section_diffusion===false) {
-								continue;
-							}
-						}
-
-					// time machine case
-						if ($tool->name==='tool_time_machine' && get_called_class()==='component_relation_children') {
-							// skip tool for component_relation_children because it has no data
+					// dd15 section case. Only tool_export is allowed for time machine section.
+					// This is element-centric policy about the time machine section, not a
+					// tool capability, so it stays in core.
+						if ($this->get_section_tipo()===DEDALO_TIME_MACHINE_SECTION_TIPO && $tool->name!=='tool_export') {
 							continue;
 						}
 
-					// dd15 section case. Only tool_export is allowed for time machine section
-						if ($this->get_section_tipo()===DEDALO_TIME_MACHINE_SECTION_TIPO && $tool->name!=='tool_export') {
+					// tool-declared availability. Replaces the previous hardcoded
+					// tool_diffusion / tool_time_machine cases: a tool class may declare
+					// `public static function is_available(object $context): bool` to
+					// add its own availability conditions. Cost is amortized by the
+					// per-(user, tipo, section_tipo) cache of this method.
+						if (tool_common::tool_declares_availability($tool->name)
+							&& $tool->name::is_available($tool_context) !== true) {
 							continue;
 						}
 

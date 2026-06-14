@@ -1,187 +1,35 @@
 {
-  "label": "Desarrollo de herramientas",
-  "relations": [
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd200"
-    },
-    {
-      "type": "dd675",
-      "section_id": "1",
-      "section_tipo": "dd153",
-      "from_component_tipo": "dd1337"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1332"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1601"
-    },
-    {
-      "type": "dd151",
-      "section_id": "17",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1331"
-    },
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd197"
-    }
-  ],
-  "components": {
-    "dd199": {
-      "inf": "created_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 9,
-              "hour": 19,
-              "time": 65045705861,
-              "year": 2023,
-              "month": 10,
-              "minute": 37,
-              "second": 41
-            }
-          }
-        ]
-      }
-    },
-    "dd201": {
-      "inf": "modified_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 7,
-              "hour": 17,
-              "time": 65048202650,
-              "year": 2023,
-              "month": 11,
-              "minute": 10,
-              "second": 50
-            }
-          }
-        ]
-      }
-    },
-    "dd612": {
-      "inf": "Descripción [component_text_area]",
-      "dato": {
-        "lg-eng": [
-          "<p>This a sample of Dédalo tool.</p><p>You can use it as start point to create new tools and maybe, to contribute to the community with your work.</p>"
-        ]
-      }
-    },
-    "dd799": {
-      "inf": "Etiqueta [component_input_text]",
-      "dato": {
-        "lg-eng": [
-          "Tool Development Template"
-        ]
-      }
-    },
-    "dd1326": {
-      "inf": "Nombre de la herramienta [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "tool_dev_template"
-        ]
-      }
-    },
-    "dd1327": {
-      "inf": "Versión [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "1.0.1"
-        ]
-      }
-    },
-    "dd1328": {
-      "inf": "Versión Dédalo mínima [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "6.0.0"
-        ]
-      }
-    },
-    "dd1335": {
-      "inf": "Propiedades [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "open_as": "window",
-            "windowFeatures": null
-          }
-        ]
-      }
-    },
-    "dd1372": {
-      "inf": "Etiquetas [component_json]",
-      "dato": {
-        "lg-nolan": [
-          [
-            {
-              "lang": "lg-spa",
-              "name": "my_first_label",
-              "value": "Mi primera etiqueta"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "my_first_label",
-              "value": "My first label"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "my_second_label",
-              "value": "Mi segunda etiqueta"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "my_second_label",
-              "value": "My second label"
-            }
-          ]
-        ]
-      }
-    },
-    "dd1644": {
-      "inf": "Desarollador [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "Dédalo team"
-        ]
-      }
-    }
-  },
-  "section_id": 18,
-  "created_date": "2023-10-09 19:37:41",
-  "section_tipo": "dd1340",
-  "modified_date": "2023-11-07 17:10:50",
-  "diffusion_info": null,
-  "created_by_userID": -1,
-  "section_real_tipo": "dd73",
-  "modified_by_userID": -1
+	"$schema": "../tool_common/register.schema.json",
+	"name": "tool_dev_template",
+	"version": "2.0.0",
+	"label": {
+		"lg-eng": "Tool Development Template",
+		"lg-spa": "Plantilla de desarrollo de herramientas"
+	},
+	"description": {
+		"lg-eng": "<p>Production-shaped sample of a Dédalo tool.</p><p>Use it as the starting point to create new tools: copy and rename it, or scaffold a new tool with tools/tool_common/cli/create_tool.php.</p>",
+		"lg-spa": "<p>Ejemplo de herramienta Dédalo con forma de producción.</p><p>Úsala como punto de partida para crear nuevas herramientas: cópiala y renómbrala, o genera una nueva con tools/tool_common/cli/create_tool.php.</p>"
+	},
+	"developer": "Dédalo team",
+	"dedalo_version_min": "7.0.0",
+	"affected_models": ["component_geolocation"],
+	"show_in_component": true,
+	"show_in_inspector": false,
+	"require_translatable": false,
+	"always_active": false,
+	"active": true,
+	"properties": {
+		"open_as": "window",
+		"windowFeatures": null
+	},
+	"labels": [
+		{ "lang": "lg-eng", "name": "my_first_label",    "value": "My first label" },
+		{ "lang": "lg-spa", "name": "my_first_label",    "value": "Mi primera etiqueta" },
+		{ "lang": "lg-eng", "name": "my_second_label",   "value": "My second label" },
+		{ "lang": "lg-spa", "name": "my_second_label",   "value": "Mi segunda etiqueta" },
+		{ "lang": "lg-eng", "name": "upload_file",       "value": "Upload generic file" },
+		{ "lang": "lg-spa", "name": "upload_file",       "value": "Subir archivo genérico" },
+		{ "lang": "lg-eng", "name": "upload_image_file", "value": "Upload image file" },
+		{ "lang": "lg-spa", "name": "upload_image_file", "value": "Subir archivo de imagen" }
+	]
 }

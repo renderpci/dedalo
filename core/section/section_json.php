@@ -32,15 +32,13 @@ if (!isset($this)) { http_response_code(404); exit; }
 		$value = $this->section_records;
 
 		// subdata add
-		$subdatum_options = (object)[
-			'skip_subdatum' => ['component_portal']
-		];
-		$subdatum = $this->get_subdatum($tipo, $value, $subdatum_options);
+		// Note: a 'skip_subdatum' option was passed here historically but was never
+		// implemented by get_subdatum; removed to avoid a false affordance.
+		$subdatum = $this->get_subdatum($tipo, $value);
 
-		$ar_subcontext = $subdatum->context;
-		foreach ($ar_subcontext as $current_context) {
-			$context[] = $current_context;
-		}
+		// subcontext add. get_subdatum already dedups internally; guard here against
+		// items colliding with the already-added section context (tipo+section_tipo+mode)
+		$context = common::merge_unique_context($context, $subdatum->context);
 
 		$ar_subdata	= $subdatum->data;
 		foreach ($ar_subdata as $sub_value) {
