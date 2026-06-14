@@ -29,14 +29,35 @@ class component_password extends component_common {
 
 
 
-	// string . Fake value to show in grid
-
+	/**
+	* Placeholder shown in grid/list views and diffusion exports instead of the real credential.
+	* Prevents password hashes (or legacy ciphertext) from leaking into UI responses or downstream
+	* diffusion pipelines that would render the value in a public-facing context.
+	* The component_password_json.php controller reads this property directly when building the
+	* data payload; it intentionally never calls get_data() in the password flow.
+	* @var string $fake_value
+	*/
 	public string $fake_value = '****************';
 
 
 
 	/**
 	* __CONSTRUCT
+	* Initialises the component with the language forced to DEDALO_DATA_NOLAN (language-neutral),
+	* ignoring whatever $lang the caller supplies. Passwords are never language-specific; storing
+	* them under a language key would create orphan rows during language iteration and make
+	* verification impossible when the session language changes.
+	*
+	* The $mode default is overridden to 'list' (rather than the base class 'edit') because
+	* passwords are almost always read in read-only contexts; callers that need to write must
+	* pass 'edit' explicitly.
+	*
+	* @param string $tipo - Ontology tipo of the component (e.g. DEDALO_USER_PASSWORD_TIPO)
+	* @param mixed $section_id = null - Database record id of the parent section
+	* @param string $mode = 'list' - Rendering mode; normally 'list' or 'edit'
+	* @param string $lang = DEDALO_DATA_NOLAN - Ignored; always overridden to DEDALO_DATA_NOLAN
+	* @param string|null $section_tipo = null - Ontology tipo of the parent section
+	* @param bool $cache = true - Whether to enable instance-level caching
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
@@ -49,10 +70,16 @@ class component_password extends component_common {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	* Overwrite component_common method
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
+	* Overrides component_common::get_diffusion_value() to prevent the password hash (or legacy
+	* AES ciphertext) from propagating into diffusion targets (SQL, RDF, XML). Returns the
+	* fake_value sentinel instead of any actual credential.
+	*
+	* Diffusion pipelines must never receive real password data; this override is the single
+	* enforcement point for that invariant.
+	*
+	* @param string|null $lang = null - Language (unused; passwords are language-neutral)
+	* @param object|null $option_obj = null - Diffusion options (unused)
+	* @return string|null $diffusion_value - Always returns fake_value ('****************')
 	*
 	* @see class.diffusion_mysql.php
 	*/
@@ -83,8 +110,10 @@ class component_password extends component_common {
 	*/
 	public function set_data( ?array $data ) : bool {
 
-		// Normalize data to objects if it's not already
-		// This is required before calling is_empty_data as it eventually calls is_empty(?object $data_item)
+		// Normalize scalar elements to stdClass { value }
+		// is_empty_data() delegates to is_empty(?object $data_item), so each element must be
+		// an object before the call. Raw arrays or plain strings from client requests are
+		// normalised here rather than rejected so that callers need not wrap values manually.
 		if (is_array($data)) {
 			foreach ($data as &$element) {
 				if (!is_object($element) && $element !== null) {
@@ -102,7 +131,7 @@ class component_password extends component_common {
 		$safe_data = [];
 		foreach ($data as $data_element) {
 
-			// At this point data_element is guaranteed to be an object due to normalization above
+			// Clone to avoid mutating the caller's array; each element is now guaranteed to be an object
 			$safe_data_element = clone $data_element;
 			$value_to_store   = (string)($data_element->value ?? '');
 
@@ -125,10 +154,15 @@ class component_password extends component_common {
 
 	/**
 	* GET_EXPORT_VALUE
-	* Atoms based export contract (see component_common::get_export_value).
-	* Single atom with the fake value: real password data is never exported
-	* @param export_context|null $context = null
-	* @return export_value
+	* Overrides the atoms-based export contract from component_common::get_export_value() to ensure
+	* the real credential is never emitted in export payloads (tool_export, flat_table, etc.).
+	*
+	* Returns a single-atom export_value whose scalar is always fake_value. The atom path follows
+	* the same build_export_path_segment() logic as every other component so that column headers
+	* and positional metadata remain consistent with the rest of the export row.
+	*
+	* @param export_context|null $context = null - Export context carrying path prefix and ddo options
+	* @return export_value - Single atom containing fake_value; label sourced from get_label()
 	*/
 	public function get_export_value( ?export_context $context=null ) : export_value {
 
@@ -141,7 +175,7 @@ class component_password extends component_common {
 		return export_value::from_scalar(
 			$path,
 			$this->fake_value,
-			null, // atom options (cell_type text)
+			null, // atom options: null → default cell_type 'text'
 			$this->get_label(),
 			get_called_class()
 		);
@@ -231,8 +265,18 @@ class component_password extends component_common {
 
 	/**
 	* IS_LEGACY_HASH
-	* @param string $stored
-	* @return bool True when $stored looks like the legacy reversible AES blob.
+	* Returns true when $stored is the legacy reversible AES blob produced by encrypt_password()
+	* (i.e. a base64-encoded OpenSSL ciphertext), and false when it is a modern password_hash()
+	* output (Argon2id or bcrypt). Note the logic is the inverse of is_stored_credential(): this
+	* method distinguishes *between* credential formats, while is_stored_credential() only tests
+	* *whether* the value is any kind of stored credential.
+	*
+	* Used by verify_password() to select the correct verification branch: modern hashes go through
+	* password_verify(); legacy blobs are re-encrypted with encrypt_password() and compared with
+	* hash_equals() before triggering the lazy-upgrade rehash.
+	*
+	* @param string $stored - The value as read from the 'string' column of matrix_users
+	* @return bool - True when $stored is the legacy AES blob, false when it is a modern hash
 	*/
 	public static function is_legacy_hash(string $stored) : bool {
 
@@ -292,11 +336,23 @@ class component_password extends component_common {
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $request_options
-	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	* Stub override of component_common::update_data_version(). Called by migration scripts
+	* (tool_update_cache and similar) when schema upgrades need to rewrite stored component data.
+	*
+	* component_password does not participate in versioned data migrations: the SEC-001 credential
+	* upgrade from legacy AES blobs to Argon2id is handled lazily at login time via verify_password()
+	* and login::Login(), never through a batch update_data_version pass. That design is intentional
+	* because batch migration would require the plaintext password, which is not available server-side.
+	*
+	* Response result codes (inherited contract from component_common):
+	*   result = 0 → component does not have an applicable migration; action is ignored.
+	*   result = 1 → (unused here) component updated and saved the data.
+	*   result = 2 → (unused here) component inspected the data but no change was needed.
+	*
+	* @param object $request_options - Options object; recognised keys: update_version (array),
+	*   data_unchanged (mixed), reference_id (string|null), tipo (string|null),
+	*   section_id (mixed), section_tipo (string|null), context (string)
+	* @return object $response - {result: int, msg: string}; always result=0 for this class
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -331,14 +387,31 @@ class component_password extends component_common {
 
 
 	/**
-	 * GET_V6_ROOT_PASSWORD_DATA
-	 * PROVISIONAL! TO BE USED IN THE V6 TO V7 TRANSITION
-	 * REMOVE IT IN VERSIONS > 7.0.0
-	 * @return string|null $data
-	 */
+	* GET_V6_ROOT_PASSWORD_DATA
+	* Reads the 'root' superuser password directly from the legacy v6 'datos' JSONB column of
+	* matrix_users, bypassing the v7 matrix column layout. Used as a last-resort fallback in
+	* login::Login() when the v7 'string' column is empty for section_id = '-1' (the root user),
+	* which is the expected state immediately after a v6→v7 migration before the first root login.
+	*
+	* The v6 datos JSON path navigated here is:
+	*   datos -> 'components' -> 'dd133' -> 'dato' -> 'lg-nolan' ->> 0
+	* where 'dd133' is the ontology tipo for the password component in the v6 schema and
+	* 'lg-nolan' is the language-neutral locale key used by legacy records.
+	*
+	* Returns null immediately when the 'datos' column no longer exists (post-migration cleanup),
+	* ensuring the method is safe to call after the column has been dropped.
+	*
+	* (!) PROVISIONAL — v6→v7 transition only. Remove when versions > 7.0.0 are released and the
+	* v6 'datos' column can no longer be present.
+	*
+	* @return string|null $data - The raw credential string from the v6 column, or null if
+	*   the column is absent, the query returns no rows, or the value is not a string
+	*/
 	public function get_v6_root_password_data() : ?string {
 
-		// If the 'datos' column does not exist, it means the migration is complete and we can no longer use this method
+		// Guard: 'datos' column only exists during the v6→v7 migration window.
+		// Once the upgrade scripts drop it, this method can no longer serve its purpose
+		// and returns null so login::Login() treats the root user as having no stored credential.
 		if (!DBi::check_column_exists('matrix_users', 'datos')) {
 			return null;
 		}
