@@ -1,9 +1,28 @@
 <?php declare(strict_types=1);
 /**
  * CLASS DD_ERROR
+ * Centralized PHP error and exception handler for the Dédalo platform.
  *
- * Centralized error and exception handling for Dédalo.
- * Provides consistent error capture, logging, and reporting across different environments.
+ * Registers three PHP handler hooks (set_error_handler, set_exception_handler,
+ * register_shutdown_function) that funnel all runtime failures into a single
+ * log_error() pipeline. The pipeline:
+ *   1. Optionally writes a colorized summary to STDOUT via print_cli() (CLI + debug only).
+ *   2. Writes a one-line PREFIX + message to the PHP error log via error_log().
+ *   3. Writes a structured dump of the error context (file, line, trace …) via error_log().
+ *
+ * The class is intentionally stateless — every method is static. There is no
+ * public state or instance API. All three handler types converge on the same
+ * log_error() / format_error_message() path so the output format stays uniform.
+ *
+ * The file auto-registers by calling dd_error::initialize() at the bottom of
+ * the file. Callers that need to alter PHP's error-reporting level (e.g. unit
+ * tests) must call initialize() again after including this file.
+ *
+ * Dependencies:
+ *   - Global function safe_xss()        (shared/core_functions.php) — XSS-strips exception messages.
+ *   - Global function running_in_cli()   (shared/core_functions.php) — detects CLI vs. web SAPI.
+ *   - Global function print_cli()        (shared/core_functions.php) — JSON-encodes a status object to STDOUT.
+ *   - Global constant SHOW_DEBUG         (defined by the application bootstrap).
  *
  * @package Dédalo
  * @subpackage base
@@ -11,9 +30,14 @@
 class dd_error {
 
 	// ANSI color codes for terminal output
+	// The sprintf format string wraps the inserted text in a yellow-background ANSI escape.
+	// Used only in error_log() output — the PHP error_log target may or may not render ANSI.
 	private const ANSI_YELLOW_BG = "\033[43m%s\033[0m";
 
 	// Error type constants
+	// Internal discriminator values passed to log_error() and resolved to method
+	// names by get_handler_name(). Kept as constants so the match table in
+	// get_handler_name() is exhaustive and grep-able.
 	private const ERROR_TYPE_ERROR = 'error';
 	private const ERROR_TYPE_EXCEPTION = 'exception';
 	private const ERROR_TYPE_SHUTDOWN = 'shutdown';
@@ -21,8 +45,21 @@ class dd_error {
 
 
 	/**
-	 * Initialize error handlers
-	 * Call this method explicitly to register all error handlers
+	 * INITIALIZE
+	 * Registers all PHP error/exception/shutdown handlers and configures error_reporting.
+	 *
+	 * Must be called once during application bootstrap (the file auto-calls it at the
+	 * bottom). Re-calling is safe — each call replaces the previously registered handlers.
+	 *
+	 * Behavior differs by SHOW_DEBUG:
+	 *   - SHOW_DEBUG === true  : error_reporting(E_ALL); errors are never echoed to the browser
+	 *     (display_errors=0) but ARE written to the log and printed to CLI in debug mode.
+	 *   - SHOW_DEBUG === false : error_reporting(0); errors are silenced entirely except for
+	 *     shutdown/fatal errors which bypass error_reporting.
+	 *
+	 * (!) display_errors is always set to '0' regardless of SHOW_DEBUG. Browser exposure of
+	 * raw PHP errors is never acceptable in Dédalo's deployment model.
+	 *
 	 * @return void
 	 */
 	public static function initialize() : void {
@@ -46,12 +83,20 @@ class dd_error {
 
 	/**
 	 * CAPTURE ERROR
-	 * Handles catchable PHP errors (warnings, notices, etc.)
+	 * Handles catchable PHP errors (warnings, notices, etc.) registered via set_error_handler().
 	 *
-	 * @param int $number - Error number/level
-	 * @param string $message - Error message
-	 * @param string $file - File where error occurred
-	 * @param int $line - Line number where error occurred
+	 * Builds a structured error_data array from the four arguments PHP passes to the
+	 * custom error handler, forwards the data to log_error(), and then stores the
+	 * JSON-encoded context in $_ENV['DEDALO_LAST_ERROR'] so that the active API response
+	 * handler can include it in the response payload if needed.
+	 *
+	 * (!) This method does NOT call the default PHP error handler. Returning without
+	 * returning false suppresses PHP's built-in error output for the matched error levels.
+	 *
+	 * @param int    $number  - PHP error level constant (E_WARNING, E_NOTICE, etc.)
+	 * @param string $message - Human-readable error description
+	 * @param string $file    - Absolute path of the file that triggered the error
+	 * @param int    $line    - Line number within $file
 	 * @return void
 	 */
 	public static function captureError(int $number, string $message, string $file, int $line) : void {
@@ -71,6 +116,8 @@ class dd_error {
 		);
 
 		// Store in environment for later retrieval
+		// $_ENV['DEDALO_LAST_ERROR'] is a string slot readable by API response assemblers
+		// that want to include error context in the JSON response body.
 		$_ENV['DEDALO_LAST_ERROR'] = json_encode($error_data);
 	}//end captureError
 
@@ -78,9 +125,20 @@ class dd_error {
 
 	/**
 	 * CAPTURE EXCEPTION
-	 * Handles uncaught exceptions
+	 * Handles uncaught exceptions registered via set_exception_handler().
 	 *
-	 * @param Throwable $exception - The exception to handle
+	 * The exception message is sanitized with safe_xss() before logging to prevent
+	 * attacker-controlled strings from injecting markup into any log viewer that renders HTML.
+	 *
+	 * An inner try/catch guards against exceptions thrown by safe_xss() or log_error()
+	 * themselves (e.g. a database-backed logger going down). If a nested exception occurs,
+	 * handle_nested_exception() is called so both the original and the nested failure are
+	 * preserved in error_log() without re-entering this handler recursively.
+	 *
+	 * After log_error(), the full raw exception object is also dumped via error_log(print_r())
+	 * to capture fields not present in getTraceAsString() (e.g. exception chaining via $previous).
+	 *
+	 * @param Throwable $exception - The uncaught exception or error to handle
 	 * @return void
 	 */
 	public static function captureException(Throwable $exception) : void {
@@ -104,10 +162,14 @@ class dd_error {
 			);
 
 			// Log full exception dump for debugging
+			// print_r() of the Throwable captures chained $previous exceptions
+			// and additional public properties not exposed by the interface methods.
 			error_log(print_r($exception, true));
 
 		} catch (Throwable $nested_exception) {
 			// Handle exceptions that occur while processing the original exception
+			// A nested Throwable here usually means safe_xss() or log_error() failed
+			// (e.g. db-backed logger unavailable). Delegate to avoid infinite recursion.
 			self::handle_nested_exception($exception, $nested_exception);
 		}
 	}//end captureException
@@ -116,7 +178,15 @@ class dd_error {
 
 	/**
 	 * CAPTURE SHUTDOWN
-	 * Handles fatal errors that occur during shutdown
+	 * Handles fatal errors that occur during PHP shutdown, registered via register_shutdown_function().
+	 *
+	 * PHP's shutdown function runs after script execution ends, catching fatal errors
+	 * (E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR) that bypass set_error_handler().
+	 * error_get_last() is checked first; if no error occurred during the request the
+	 * function returns immediately to avoid generating spurious log entries.
+	 *
+	 * (!) This handler fires for both clean shutdowns and fatal-error shutdowns.
+	 * The null-guard on error_get_last() is the only way to distinguish between them.
 	 *
 	 * @return void
 	 */
@@ -125,6 +195,7 @@ class dd_error {
 		$error = error_get_last();
 
 		// Only process if there was actually an error
+		// A null return from error_get_last() means the script ended cleanly.
 		if ($error === null) {
 			return;
 		}
@@ -147,12 +218,19 @@ class dd_error {
 
 
 	/**
-	 * LOG ERROR
-	 * Centralized error logging with consistent formatting
+	 * LOG_ERROR
+	 * Centralized error logging pipeline shared by all three capture handlers.
 	 *
-	 * @param string $error_type - Type of error (error|exception|shutdown)
-	 * @param string $message - Error message
-	 * @param array $error_data - Additional error data
+	 * Produces two error_log() lines for every error:
+	 *   1. A colorized one-line summary: "ERROR [dd_error::<handler>]: <message>"
+	 *   2. A print_r() dump of the full $error_data array (file, line, trace, etc.)
+	 *
+	 * When running in CLI with SHOW_DEBUG enabled, also emits the summary to STDOUT
+	 * via print_cli() so that background worker processes can surface errors inline.
+	 *
+	 * @param string $error_type - One of ERROR_TYPE_* constants ('error'|'exception'|'shutdown')
+	 * @param string $message    - Human-readable error message (should be XSS-clean for exceptions)
+	 * @param array  $error_data - Structured error context (type, file, line, trace, code …)
 	 * @return void
 	 */
 	private static function log_error(string $error_type, string $message, array $error_data) : void {
@@ -160,15 +238,21 @@ class dd_error {
 		$handler_name = self::get_handler_name($error_type);
 
 		// Output to CLI if in debug mode and running in CLI environment
+		// Skipped for web requests — print_cli() is a no-op outside CLI anyway,
+		// but the guard here avoids the function call overhead in web context.
 		if (SHOW_DEBUG === true && running_in_cli() === true) {
 			self::output_cli_error($message, $handler_name);
 		}
 
 		// Format and log to error log
+		// The ANSI escape codes are part of the formatted string but are harmless in
+		// plain-text log files; they render as colored output in terminal-based log viewers.
 		$formatted_message = self::format_error_message($handler_name, $message);
 		error_log($formatted_message);
 
 		// Log detailed error data
+		// A second error_log() call with the full context array gives developers
+		// file/line/trace without truncating the one-liner summary above.
 		$error_dump = print_r($error_data, true);
 		error_log($error_dump);
 	}//end log_error
@@ -176,11 +260,19 @@ class dd_error {
 
 
 	/**
-	 * HANDLE NESTED EXCEPTION
-	 * Handles exceptions that occur while processing another exception
+	 * HANDLE_NESTED_EXCEPTION
+	 * Handles exceptions that occur while processing another exception inside captureException().
 	 *
-	 * @param Throwable $original_exception - The original exception
-	 * @param Throwable $nested_exception - The exception that occurred during handling
+	 * This is a last-resort fallback: when log_error() or safe_xss() throws, the outer
+	 * try/catch in captureException() delegates here. Both the original and nested
+	 * exceptions are serialized directly via error_log() without going through log_error()
+	 * again, to avoid the risk of a further cascade.
+	 *
+	 * (!) Do not call log_error() from this method — doing so risks infinite recursion
+	 * if the logging subsystem itself is the source of the failure.
+	 *
+	 * @param Throwable $original_exception - The exception that captureException() was handling
+	 * @param Throwable $nested_exception   - The exception thrown during that handling
 	 * @return void
 	 */
 	private static function handle_nested_exception(Throwable $original_exception, Throwable $nested_exception) : void {
@@ -202,11 +294,23 @@ class dd_error {
 
 
 	/**
-	 * OUTPUT CLI ERROR
-	 * Outputs error information to CLI
+	 * OUTPUT_CLI_ERROR
+	 * Emits a structured error summary to STDOUT via print_cli() for CLI consumers.
 	 *
-	 * @param string $message - Error message
-	 * @param string $handler_name - Name of the handler that caught the error
+	 * Constructs a minimal stdClass with 'msg' and 'errors' keys that matches the
+	 * shape expected by print_cli() (shared/core_functions.php), which JSON-encodes
+	 * it and writes to STDOUT with a trailing newline.
+	 *
+	 * Called only when SHOW_DEBUG === true and running_in_cli() === true, so this
+	 * never emits output in web-request or production CLI contexts.
+	 *
+	 * (!) $message is typed non-nullable (string), so the null-coalescing operator
+	 * '?? "Unknown error"' in the object literal is unreachable for valid callers
+	 * within this class. It acts as a defensive guard if the method is ever called
+	 * from outside the class or if strict_types coercion changes.
+	 *
+	 * @param string $message      - Error message to display
+	 * @param string $handler_name - Handler method name used as an error tag (e.g. 'captureError')
 	 * @return void
 	 */
 	private static function output_cli_error(string $message, string $handler_name) : void {
@@ -220,12 +324,17 @@ class dd_error {
 
 
 	/**
-	 * FORMAT ERROR MESSAGE
-	 * Formats error message with ANSI colors for terminal output
+	 * FORMAT_ERROR_MESSAGE
+	 * Produces the one-line log prefix formatted with ANSI yellow-background highlighting.
 	 *
-	 * @param string $handler_name - Name of the handler
-	 * @param string $message - Error message
-	 * @return string - Formatted error message
+	 * Output shape: "\033[43mERROR [dd_error::<handler>]: <message>\033[0m"
+	 *
+	 * The ANSI escape sequence is always included. Whether it renders as color depends
+	 * on the log viewer or terminal attached to PHP's error_log() target.
+	 *
+	 * @param string $handler_name - Method name of the handling function (e.g. 'captureError')
+	 * @param string $message      - Human-readable error or exception message
+	 * @return string - ANSI-colored single-line log entry
 	 */
 	private static function format_error_message(string $handler_name, string $message) : string {
 
@@ -236,11 +345,18 @@ class dd_error {
 
 
 	/**
-	 * GET HANDLER NAME
-	 * Returns the handler method name based on error type
+	 * GET_HANDLER_NAME
+	 * Maps an ERROR_TYPE_* constant value to the corresponding public handler method name.
 	 *
-	 * @param string $error_type - Type of error
-	 * @return string - Handler method name
+	 * The returned string is used both as a human-readable log tag and as the 'errors'
+	 * array entry passed to print_cli(). It always matches the actual method name on
+	 * this class, making log entries grep-able back to source.
+	 *
+	 * Returns 'unknown' for any value not covered by the three ERROR_TYPE_* constants;
+	 * this is a defensive fallback and should never occur in normal operation.
+	 *
+	 * @param string $error_type - One of ERROR_TYPE_ERROR | ERROR_TYPE_EXCEPTION | ERROR_TYPE_SHUTDOWN
+	 * @return string - Handler method name or 'unknown' for unrecognised types
 	 */
 	private static function get_handler_name(string $error_type) : string {
 
@@ -259,4 +375,8 @@ class dd_error {
 
 
 // Initialize error handlers
+// (!) Auto-registration: this call runs when the file is first included by the
+// application bootstrap. All three PHP handler hooks are installed immediately.
+// Re-including the file (e.g. in tests) is safe — initialize() replaces the
+// previously registered handlers rather than stacking them.
 dd_error::initialize();
