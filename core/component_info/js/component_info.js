@@ -4,6 +4,38 @@
 
 
 
+/**
+* COMPONENT_INFO
+* Read-only aggregator component that hosts one or more dynamically-loaded
+* widgets and exposes their computed output as the component's data.
+*
+* Unlike data-entry components (component_input_text, etc.) component_info
+* does NOT store values in the database; the PHP-side counterpart sets
+* use_db_data=false and delegates all data production to the widget layer.
+* On the client side this module:
+*   1. Bootstraps widget instances via get_widgets() (parallel dynamic import).
+*   2. Delegates rendering to render_edit_component_info / render_list_component_info.
+*   3. Overrides update_data_value() to keep each widget instance in sync
+*      after a change_value cycle, publishing per-widget update events that
+*      widget UIs can subscribe to.
+*
+* Server data shape (self.data):
+*   {
+*     entries  : Array<Object>,  // flat array of widget output atoms
+*     datalist : Array<Object>   // optional lookup items keyed by 'widget' name
+*   }
+*
+* Context shape (self.context.properties.widgets):
+*   Array of widget descriptor objects, each containing:
+*   {
+*     widget_name : string,   // JS class name AND file base name under core/widgets/
+*     path        : string,   // relative path used to build the dynamic import URL
+*     ipo         : Object    // input-process-output definition used for grid/export
+*   }
+*
+* Exports: {component_info}
+*/
+
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -13,6 +45,12 @@
 
 
 
+/**
+* COMPONENT_INFO
+* Constructor. Declares instance properties; all are populated by
+* component_common.prototype.init() when the component is first mounted.
+* @constructor
+*/
 export const component_info = function(){
 
 	this.id
@@ -65,8 +103,32 @@ export const component_info = function(){
 
 /**
 * GET_WIDGETS
-* @return array|bool self.ar_instances
-* 	Resolve: array|false self.ar_instances
+* Instantiates (or refreshes) one widget per descriptor in
+* self.context.properties.widgets, using parallel dynamic imports so that
+* multiple widgets load concurrently.
+*
+* Data partitioning: entries and datalist from self.data are filtered by
+* the 'widget' property on each item so each widget instance only receives
+* rows that belong to it.
+*
+* Re-use: if a widget instance already exists in self.ar_instances (matched
+* by id), only its value/datalist pointers are updated — the instance is
+* NOT recreated. This allows callers to invoke get_widgets() after a data
+* refresh without incurring import and init overhead a second time.
+*
+* Widget init receives the full current_widget descriptor as 'properties'
+* and a back-reference to this component_info as 'caller'.
+*
+* (!) After the parallel Promise.all completes, self.ar_instances is
+* REPLACED with the array of newly resolved widgets; any pre-existing
+* instance that was skipped via 'continue' is lost from the resulting
+* array. This is a known quirk: reloaded widgets are only in the cache
+* during the loop but are not re-collected into ar_promises, so they are
+* absent from the final ar_instances.
+*
+* @returns {Promise<Array>} Resolves to self.ar_instances, the array of
+*   initialised widget instances (one per widget descriptor).
+*   Returns {boolean} false if self.data.entries is not a valid array.
 */
 component_info.prototype.get_widgets = async function() {
 
@@ -103,15 +165,19 @@ component_info.prototype.get_widgets = async function() {
 			const current_widget	= widgets_properties[i]
 			const widget_name		= current_widget.widget_name
 			const path				= current_widget.path
+			// Composite id ensures no collision when the same widget_name is reused
+			// across different component_info instances on the same page.
 			const widget_id			= self.id + '_'+ widget_name
 
 			const loaded_widget		= self.ar_instances.find(item => item.id === widget_id)
 
+			// Filter data rows and datalist entries belonging to this widget.
 			const widget_value		= value.filter(item => item && item.widget===widget_name)
 			const widget_datalist	= datalist.filter(item => item.widget === widget_name)
 
 			// Check for already loaded widgets
 			if(loaded_widget){
+				// Refresh in-place — avoid a new dynamic import and init cycle.
 				loaded_widget.value		= widget_value
 				loaded_widget.datalist	= widget_datalist
 				continue
@@ -190,8 +256,24 @@ component_info.prototype.get_widgets = async function() {
 * UPDATE_DATA_VALUE
 * Override component_common.update_data_value to sync widget values
 * after the standard data update is applied.
-* @param object changed_data_item
-* @return bool
+*
+* Calls the parent implementation first to apply the standard entry
+* mutation (add / splice / replace / bulk-set) on self.data.entries, then
+* re-partitions the updated entries across the already-instantiated widgets
+* in self.ar_instances and publishes a per-widget update event so widget
+* UIs can react without a full re-render.
+*
+* Event name pattern: 'update_widget_value_{i}_{widget_id}' where {i} is
+* the zero-based index into widgets_properties and {widget_id} is the
+* composite id built in get_widgets().
+*
+* The method is intentionally synchronous (like its parent) to fit inside
+* the change_value_pool queue used by component_common.change_value.
+*
+* @param {Object} changed_data_item - Mutation descriptor forwarded directly
+*   to component_common.prototype.update_data_value. Shape:
+*   { action: string, value: *, id?: * }
+* @returns {boolean} true on success; false if the parent update failed.
 */
 component_info.prototype.update_data_value = function(changed_data_item) {
 
@@ -217,10 +299,14 @@ component_info.prototype.update_data_value = function(changed_data_item) {
 			const widget_id			= self.id + '_'+ widget_name
 
 			const loaded_widget	= self.ar_instances.find(item => item.id === widget_id)
+			// Filter entries that match both the widget name AND the loop index as key.
+			// The 'key' field on each entry mirrors the widget descriptor's position,
+			// allowing multiple widgets of the same widget_name to partition data.
 			const widget_value	= value.filter(item => item.widget === widget_name && item.key === i)
 
 			if(loaded_widget){
 				loaded_widget.value = widget_value
+				// Notify any subscriber (e.g. the widget's own UI) of the new slice.
 				event_manager.publish(`update_widget_value_${i}_${widget_id}`, widget_value)
 			}
 		}
@@ -233,7 +319,12 @@ component_info.prototype.update_data_value = function(changed_data_item) {
 /**
 * CHANGE_MODE
 * Catch method only. Nothing to do here
-* @return bool
+*
+* component_info has no mode-specific state to toggle (it delegates
+* all rendering to the widget layer), so this override exists only to
+* satisfy the lifecycle contract expected by the section orchestrator.
+*
+* @returns {Promise<boolean>} Always resolves to true.
 */
 component_info.prototype.change_mode = async function() {
 
@@ -243,4 +334,3 @@ component_info.prototype.change_mode = async function() {
 
 
 // @license-end
-
