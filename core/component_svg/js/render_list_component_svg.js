@@ -14,7 +14,15 @@
 
 /**
 * RENDER_LIST_COMPONENT_SVG
-* Manage the components logic and appearance in client side
+* Constructor for the list-mode render object of component_svg.
+*
+* This module provides the `list` prototype method that is assigned to both
+* component_svg.prototype.list and component_svg.prototype.tm in component_svg.js.
+* It dispatches to the appropriate view module based on `self.context.view`:
+*   - 'mini'    → view_mini_list_svg    (compact image thumbnail, e.g. autocomplete)
+*   - 'text'    → view_text_list_svg    (inline <span>/<img> with error fallback)
+*   - 'tag'     → view_tag_list_svg     (image with dataset metadata for autocomplete grids)
+*   - 'default' → view_default_list_svg (standard list thumbnail with click-to-upload/viewer)
 */
 export const render_list_component_svg = function() {
 
@@ -25,9 +33,24 @@ export const render_list_component_svg = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @param object options
-* @return HTMLElement wrapper
+* Builds and returns the DOM node for the SVG component in list (and tm) mode.
+*
+* Reads `self.context.view` to choose the view module and delegates to its static
+* `render(self, options)` method. Falls through to 'default' for any unrecognised
+* view value. The method is declared `async` although none of the current view
+* modules return a Promise — they all return an HTMLElement synchronously.
+*
+* This method is assigned to both component_svg.prototype.list and
+* component_svg.prototype.tm so that thesaurus-mode rendering uses the same
+* view dispatch as the regular record list (see component_svg.js).
+*
+* @param {Object} options - Render options forwarded verbatim to the selected view
+*   module. Relevant keys vary by view; `view_default_list_svg` reads
+*   `options.render_level` ('full'|'content') to support partial re-renders.
+* @returns {Promise<HTMLElement>} Resolves to the assembled wrapper node ready to
+*   be inserted into the page by the caller (common.prototype.render).
+*   In practice all current view modules return synchronously, but the async
+*   declaration allows future view implementations to be genuinely asynchronous.
 */
 render_list_component_svg.prototype.list = async function(options) {
 

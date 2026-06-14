@@ -12,7 +12,20 @@
 
 /**
 * RENDER_EDIT_COMPONENT_SVG
-* Manage the components logic and appearance in client side
+* Edit-mode render controller for component_svg.
+*
+* Acts as the prototype source for component_svg.prototype.edit (assigned in
+* component_svg.js). Its sole responsibility is to inspect the component
+* instance's `self.context.view` property and delegate rendering to the
+* correct view module:
+*
+*  - view_line_edit_svg    — compact single-row layout (no label)
+*  - view_default_edit_svg — full editable layout with tool buttons and optional
+*                            fullscreen toggle; also used for print rendering
+*                            (with forced read-only permissions)
+*
+* Exported symbols:
+*  - render_edit_component_svg  constructor (prototype host for .edit)
 */
 export const render_edit_component_svg = function() {
 
@@ -23,8 +36,36 @@ export const render_edit_component_svg = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @return HTMLElement wrapper
+* Entry point for edit-mode rendering. Reads `self.context.view` to select the
+* appropriate view module and delegates rendering to it.
+*
+* Supported views:
+*  - 'line'    — compact row layout via view_line_edit_svg; no component label
+*                is rendered and an exit-edit button is appended inside
+*                content_data
+*  - 'print'   — read-only rendering: sets self.permissions = 1 to force the
+*                read-only content_value path, then falls through to 'default'
+*                so view_default_edit_svg builds the DOM; the wrapper element
+*                will carry the CSS class 'view_print' so stylesheets can
+*                differentiate it visually (e.g. hide upload controls)
+*  - 'default' — full editable layout with lazy-loaded SVG preview, tool
+*                buttons, and optional fullscreen button
+*
+* (!) The 'print' case intentionally falls through to 'default' — there is no
+*     break after `self.permissions = 1`. This is by design so that the print
+*     view reuses the default DOM layout while rendering content read-only.
+*     Do not insert a break or return here without considering that contract.
+*
+* (!) View is read from `self.context.view`, not `self.view`. This differs from
+*     the analogous component_image controller which reads `self.view` directly.
+*     The context object is the server-authoritative source for view in this
+*     component.
+*
+* @param {Object} options - render options forwarded verbatim to the active view
+*   module; at minimum `options.render_level` ('full' | 'content') controls
+*   whether the full wrapper or only content_data is returned
+* @returns {Promise<HTMLElement>} the wrapper (or content_data) element produced
+*   by the chosen view module
 */
 render_edit_component_svg.prototype.edit = async function(options) {
 
