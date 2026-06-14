@@ -13,6 +13,44 @@
 
 
 
+/**
+* COMPONENT_PDF
+* Client-side controller for PDF document components in Dédalo.
+*
+* Manages the full lifecycle of a single PDF component instance: initialisation,
+* rendering (edit / list / search / TM views), viewer interaction, and in-viewer
+* page navigation driven by annotation tags from linked text-area components.
+*
+* Key responsibilities:
+* - Delegates lifecycle and data-change operations to component_common / common prototypes.
+* - Exposes view-specific render methods by aliasing the corresponding render_* module
+*   prototypes (edit, list, search, tm).
+* - Owns the pdf_viewer reference (a PDF.js-based viewer instance set during build).
+*   The viewer is the single source of truth for the current page; go_to_page() drives
+*   navigation into it from external tag clicks.
+* - Exposes change_handler for updating lib_data.offset (and other viewer state) on the
+*   active entry, serialising the change through component_common's change_value pipeline.
+* - Provides get_data_tag / go_to_page to integrate with component_text_area annotation
+*   tagging: a tag carries the page number; clicking it calls go_to_page on this instance.
+*
+* Data shape (self.data.entries[]):
+*   {
+*     id       : string|null            // entry identifier (null for new entries)
+*     lib_data : {
+*       offset : number                 // current viewer page offset (0-based page index)
+*       [key]  : *                      // additional viewer state keys set via change_handler
+*     }
+*   }
+*
+* Context features consumed (self.context.features):
+*   {
+*     allowed_extensions      : Array<string>  // file extensions the PDF component accepts
+*     default_target_quality  : string         // quality level used for initial rendering
+*   }
+*
+* @package Dédalo
+* @subpackage Core
+*/
 export const component_pdf = function(){
 
 	this.id
@@ -70,14 +108,15 @@ export const component_pdf = function(){
 /**
 * CHANGE_HANDLER
 * Unified handler for component data changes across all views.
-* Handles lib_data updates (offset, etc.) using change_value.
-* @param object options
-* {
-*	key		: string,	// lib_data property name (e.g. 'offset')
-*	value	: mixed,	// new value for the property
-*	index	: int		// data entry index (default 0)
-* }
-* @return void
+* Merges the incoming key/value pair into the lib_data object of the specified
+* entry index, then delegates persistence to component_common.change_value.
+* The change is sent without triggering a DOM refresh (refresh: false), so the
+* caller is responsible for any visual update.
+* @param {Object} options - handler options
+* @param {string} options.key - lib_data property name to update (e.g. 'offset')
+* @param {*} options.value - new value for the lib_data property
+* @param {number} [options.index=0] - zero-based index into self.data.entries
+* @returns {void}
 */
 component_pdf.prototype.change_handler = function(options) {
 
@@ -117,8 +156,18 @@ component_pdf.prototype.change_handler = function(options) {
 
 /**
 * BUILD
-* @param bool autoload = false
-* @return bool
+* Extends component_common.prototype.build with PDF-specific post-build setup.
+* After the generic build completes (which fetches context + data from the server),
+* this method seeds pdf_viewer to null (the viewer is only mounted by the render
+* view, not during build) and caches the two context features most frequently used
+* by render views: allowed_extensions and default_target_quality.
+*
+* (!) The end-label reads `build_custom` but the method is registered as `build` on
+*     the prototype. This is a pre-existing label mismatch — do not rename the method.
+*
+* @param {boolean} [autoload=false] - when true, the component fetches its own data
+*   without waiting for a parent section trigger
+* @returns {Promise<boolean>} resolves with the result of component_common.prototype.build
 */
 component_pdf.prototype.build = async function(autoload=false) {
 
@@ -142,13 +191,21 @@ component_pdf.prototype.build = async function(autoload=false) {
 
 /**
 * GO_TO_PAGE
-* called by the click into the tag (in component_text_area)
-* the tag will send the ar_layer_id that it's pointing to
-* @param object options
-* {
-* 	tag : object
-* }
-* @return void
+* Navigates the active PDF.js viewer to the page referenced by an annotation tag.
+* Called by component_text_area when the user clicks a tag of type 'page' that
+* was created by this component via get_data_tag.
+*
+* tag.dataset.data is expected to be a JSON-serialised array where the first
+* element (index 0) is the 1-based page number to display. The array format
+* matches the data_tag.data shape written during tag creation.
+*
+* (!) Requires self.pdf_viewer to be mounted and ready. Calling this before the
+*     viewer is initialised (i.e. before the edit view has rendered) will throw
+*     because self.pdf_viewer is null after build().
+*
+* @param {Object} options - handler options
+* @param {HTMLElement} options.tag - the clicked tag element; must have dataset.data
+* @returns {Promise<void>}
 */
 component_pdf.prototype.go_to_page = async function(options) {
 
@@ -168,7 +225,31 @@ component_pdf.prototype.go_to_page = async function(options) {
 
 /**
 * GET_DATA_TAG
-* Send the data_tag to the text_area when it need create a new tag
+* Builds and returns a tag descriptor for creating a new page annotation tag in a
+* linked component_text_area. Called by the text-area when the user initiates a tag
+* referencing this PDF component's current viewer position.
+*
+* The returned object captures the current page offset (from lib_data.offset of
+* the first entry) and the total page count (from the live viewer) so that the
+* text-area can store a meaningful cross-reference.
+*
+* When no lib_data exists yet (the PDF has never been saved with viewer state),
+* offset defaults to 0.
+*
+* (!) Requires self.pdf_viewer to be mounted. self.pdf_viewer.pagesCount is read
+*     directly from the live PDF.js viewer object; calling this before the viewer
+*     has loaded a document will return an undefined total_pages.
+*
+* @returns {Object} data_tag - tag descriptor with shape:
+*   {
+*     type        : 'page',
+*     tag_id      : null,
+*     state       : 'n',          // 'n' = new / unsaved
+*     label       : '',
+*     data        : '',
+*     offset      : number,       // 0-based viewer page offset from lib_data
+*     total_pages : number        // total pages reported by the PDF.js viewer
+*   }
 */
 component_pdf.prototype.get_data_tag = function() {
 
@@ -194,6 +275,25 @@ component_pdf.prototype.get_data_tag = function() {
 
 
 ///// not used
+/**
+* GET_TEXT
+* (!) DEAD CODE — never called. Retained for reference.
+* Experimental utility that attempted to extract plain-text content from a
+* specific PDF page using the PDF.js text-layer API (textContentItemsStr /
+* textDivs). The intent was to reconstruct the reading order by comparing
+* offsetTop values of text divs and inserting newlines at sentence boundaries
+* detected by a small set of terminal punctuation characters.
+*
+* The function references the module-scope `self` implicitly, which means it
+* relies on `self` being set in the enclosing scope at call time — this will
+* throw a ReferenceError in strict ES-module context. Likewise, the `distance`
+* variable is declared but never used.
+*
+* The large commented-out block inside explores an alternative approach using
+* pdfPage.getTextContent() + viewport.transform to position each text span.
+*
+* @returns {void}
+*/
 function get_text() {
 
 	const ar_text = self.pdf_viewer.pdfViewer.getPageView(8).textLayer.textContentItemsStr
@@ -288,6 +388,23 @@ function get_text() {
 }//end
 
 ///// not used
+/**
+* GETHIGHTLIGHTCOORDS
+* (!) DEAD CODE — never called. Retained for reference.
+* Experimental utility that computes PDF coordinate rectangles for the user's
+* current text selection within a PDF.js page canvas. It reads the selection
+* rects from the browser's Selection API, maps them into PDF-space coordinates
+* using viewport.convertToPdfPoint(), and returns an object describing the page
+* index and the array of coordinate quads.
+*
+* Intended companion to showHighlight() — the coords it returns would be passed
+* there to draw pink overlay divs over the selected region.
+*
+* (!) References `self` from the module scope implicitly; same caveat as get_text().
+* Note: the function name has a typo — "Hightlight" should be "Highlight".
+*
+* @returns {Object} - { page: number, coords: Array<Array<number>> }
+*/
 function getHightlightCoords() {
 	const pageIndex			= self.pdf_viewer.pdfViewer.currentPageNumber - 1;
 	const page				= self.pdf_viewer.pdfViewer.getPageView(pageIndex);
@@ -303,6 +420,22 @@ function getHightlightCoords() {
 }//end getHightlightCoords
 
 ///// not used
+/**
+* SHOWHIGHLIGHT
+* (!) DEAD CODE — never called. Retained for reference.
+* Experimental utility that renders pink overlay <div> elements over a set of
+* PDF coordinate rectangles obtained from getHightlightCoords(). Each rect in
+* selected.coords is converted from PDF-space to viewport-space with
+* viewport.convertToViewportRectangle(), then a positioned <div> is appended to
+* the page's canvas parent element.
+*
+* (!) References `self` from the module scope implicitly; same caveat as get_text().
+*
+* @param {Object} selected - value returned by getHightlightCoords()
+* @param {number} selected.page - zero-based page index
+* @param {Array<Array<number>>} selected.coords - PDF coordinate quads to highlight
+* @returns {void}
+*/
 function showHighlight(selected) {
 	const pageIndex		= selected.page;
 	const page			= self.pdf_viewer.pdfViewer.getPageView(pageIndex);

@@ -12,8 +12,18 @@
 
 
 /**
-* RENDER_LIST_COMPONENT_pdf
-* Manage the components logic and appearance in client side
+* RENDER_LIST_COMPONENT_PDF
+* Constructor for the list-mode render object of component_pdf.
+*
+* This module provides the `list` prototype method that component_pdf.prototype.list
+* and component_pdf.prototype.tm are both assigned to (see component_pdf.js).
+* It dispatches to the appropriate view module based on the context view value:
+*   - 'mini'    → view_mini_pdf     (compact thumbnail for autocomplete / inline results)
+*   - 'text'    → view_text_list_pdf (span-based fallback with a generic PDF icon)
+*   - 'default' → view_default_list_pdf (standard list thumbnail with click-to-open viewer)
+*
+* The constructor itself is a no-op stub — all rendering logic lives in the view
+* modules imported above. The real entry point is the `list` prototype method below.
 */
 export const render_list_component_pdf = function() {
 
@@ -24,8 +34,26 @@ export const render_list_component_pdf = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @return HTMLElement wrapper
+* Builds and returns the DOM node for the PDF component in list (and tm) mode.
+*
+* Reads `self.context.view` to select the appropriate view module and delegates
+* to its static `render(self, options)` method. Falls through to 'default' for
+* any unrecognised view value.
+*
+* This method is assigned to both component_pdf.prototype.list and
+* component_pdf.prototype.tm so that thesaurus-mode renders share the same
+* view dispatch as the regular record list (see component_pdf.js).
+*
+* View routing:
+*   - 'mini'    → compact thumbnail, used in autocomplete dropdowns and relation chips
+*   - 'text'    → icon-only span element; used in plain-text export contexts
+*   - 'default' → full thumbnail with mousedown handler that opens the PDF viewer popup
+*
+* @param {Object} options - Render options forwarded verbatim to the chosen view module.
+*   Individual view modules may read specific keys (e.g. render_level); see
+*   view_default_list_pdf, view_mini_pdf, and view_text_list_pdf for details.
+* @returns {Promise<HTMLElement>} The assembled wrapper node ready to be inserted
+*   into the page by the caller (common.prototype.render).
 */
 render_list_component_pdf.prototype.list = async function(options) {
 
