@@ -3,18 +3,49 @@
 * CLASS LOCK_COMPONENTS
 * Manages component-level locking for real-time collaborative editing.
 *
-* Prevents concurrent edit conflicts by tracking which users are actively
-* working on specific components. Stores lock state in the matrix_notifications table
-* with automatic expiration after a configurable timeout period.
+* Prevents concurrent-edit conflicts by tracking which user currently has focus
+* on a specific component within a section record. Every focus/blur event sent
+* from the browser is written into the shared lock registry; on focus, the class
+* checks whether another user already holds the same component and refuses
+* (returns in_use=true) if a conflict is detected.
 *
-* Key features:
-* - Tracks user focus and blur events on components
-* - Maintains lock state with automatic expiration (5 hours default)
-* - Provides real-time conflict detection for concurrent editing
-* - Notifies users when components are locked by others
+* Responsibilities:
+* - update_lock_components_state() — process focus/blur/delete_user_section_locks events
+*   and update the lock registry in the database accordingly.
+* - force_unlock_all_components()  — remove every lock held by a given user (or all
+*   users), called on logout and session expiry.
+* - get_active_users()             — return the raw list of active focus locks (used
+*   by the API layer and by get_active_users_full()).
+* - get_active_users_full()        — enrich each lock entry with ontology labels for
+*   display in the maintenance area.
+* - clean_locks_garbage()          — prune stale locks whose timestamp exceeds
+*   MAXIMUM_LOCK_EVENT_TIME, run at boot via dd_init_test.php.
+* - equal_elements()               — helper for comparing two event objects by
+*   section_id, section_tipo, component_tipo, and action.
 *
-* Used by the notification system to coordinate multi-user access
-* and prevent data loss from simultaneous edits.
+* Storage layout:
+*   Table : LOCK_COMPONENTS_TABLE ('matrix_notifications')
+*   Row   : id = RECORD_ID (1)  — shared with no other class (processes uses id=2)
+*   Column: data (text)         — JSON array of event-element objects:
+*     [{ "section_id": string, "section_tipo": string, "component_tipo": string,
+*        "action": "focus"|"blur", "user_id": int, "full_username": string,
+*        "date": "YYYY-MM-DD HH:MM:SS" }, …]
+*
+* The array stores only active-focus locks; blur events remove entries rather than
+* appending them. Array keys are normalised with array_values() before every DB
+* write to avoid PostgreSQL treating a sparse PHP array as a JSON object.
+*
+* Activation:
+*   The feature is opt-in and guarded by the global constant DEDALO_LOCK_COMPONENTS.
+*   Callers (class.dd_core_api, class.login, dd_init_test) check that constant before
+*   invoking any method here. The class itself does not check the constant; enforcement
+*   is the caller's responsibility.
+*
+* Known callers:
+* - dd_utils_api::update_lock_components_state() — API entry point for browser events.
+* - dd_area_maintenance_api::lock_components_actions() — admin get/force-unlock API.
+* - class.login::logout_user() / ::expire_session() — force-unlock on session end.
+* - dd_init_test.php — bootstrap garbage collection.
 *
 * @package Dédalo
 * @subpackage Core
@@ -23,27 +54,72 @@ class lock_components {
 
 
 
+	/**
+	* Name of the PostgreSQL table used as the lock registry.
+	* 'matrix_notifications' is an UNLOGGED table shared by both lock_components (row id=1)
+	* and the processes class (row id=2). UNLOGGED for write performance — do not add
+	* critical transactional data here.
+	* @var string LOCK_COMPONENTS_TABLE
+	*/
 	const LOCK_COMPONENTS_TABLE		= 'matrix_notifications';
+
+	/**
+	* Maximum age (in hours) a focus lock event may exist before being considered stale.
+	* clean_locks_garbage() removes entries older than this threshold. Five hours covers
+	* a full working day; locks surviving longer almost certainly belong to a crashed or
+	* disconnected browser session.
+	* @var int MAXIMUM_LOCK_EVENT_TIME
+	*/
 	const MAXIMUM_LOCK_EVENT_TIME	= 5; // hours
+
+	/**
+	* Fixed row ID within LOCK_COMPONENTS_TABLE where the lock registry JSON is stored.
+	* Row 1 belongs exclusively to lock_components; row 2 is owned by the processes class.
+	* @var int RECORD_ID
+	*/
 	const RECORD_ID					= 1;
 
 
 
 	/**
 	* UPDATE_LOCK_COMPONENTS_STATE
-	* Update the lock components state based on the event element.
-	* @param object $event_element
-	* sample:
-	* {
-	*	"section_id": "1",
-	*	"section_tipo": "rsc167",
-	*	"component_tipo": "rsc27",
-	*	"action": "focus",
-	*	"user_id": 1,
-	*	"full_username": "Render user",
-	*	"date": "2023-11-09 20:23:44"
-	* }
+	* Process a single browser lock event and synchronise the registry row in the database.
+	*
+	* Three actions are recognised:
+	*   'focus'                    — the user is entering a component.
+	*     - All previous locks from the same user on the same section/section_tipo are
+	*       removed (prevents ghost locks when the user switches fields without triggering
+	*       blur on the previous one).
+	*     - If a *different* user already holds an active focus lock on the exact same
+	*       component, the write is rejected and $response->in_use is set to true. The
+	*       caller should surface the returned full_username to the end user.
+	*     - On success the new event_element is appended to the registry.
+	*   'blur'                     — the user left the component.
+	*     - Removes the matching entry for this user+section+component combination.
+	*   'delete_user_section_locks' — clear all locks this user holds within a section_tipo
+	*     (used when a user navigates away from a section entirely).
+	*
+	* The database update uses pg_send_query_params / pg_get_result (async send with
+	* synchronous wait) rather than pg_query_params to allow session_write_close()
+	* to run in the API layer before this call without losing the response.
+	*
+	* @param object $event_element - lock event descriptor:
+	*   {
+	*     "section_id"    : string,   // record identifier within the section
+	*     "section_tipo"  : string,   // ontology tipo of the section, e.g. "rsc167"
+	*     "component_tipo": string,   // ontology tipo of the component, e.g. "rsc27"
+	*     "action"        : string,   // "focus" | "blur" | "delete_user_section_locks"
+	*     "user_id"       : int,      // numeric user ID from the session
+	*     "full_username" : string,   // display name shown in conflict warnings
+	*     "date"          : string    // "YYYY-MM-DD HH:MM:SS" timestamp of the event
+	*   }
 	* @return object $response
+	*   {
+	*     "result"  : bool,    // true on successful write; false on conflict or error
+	*     "msg"     : string,  // human-readable status or conflict message
+	*     "dato"    : array|null, // current lock array at the time of evaluation
+	*     "in_use"  : bool     // true only when a different user holds the same component
+	*   }
 	*/
 	public static function update_lock_components_state( object $event_element ) : object {
 
@@ -88,6 +164,8 @@ class lock_components {
 						if ($current_event_element->user_id==$event_element->user_id) {
 
 							// same user (reset) delete all from this section
+							// A user switching between components on the same record should never
+							// accumulate stale focus locks for fields they are no longer editing.
 							if (   $current_event_element->section_id==$event_element->section_id
 								&& $current_event_element->section_tipo===$event_element->section_tipo
 								) {
@@ -98,6 +176,9 @@ class lock_components {
 						}else{
 
 							// different user . advice if component is already selected
+							// Conflict detection: the exact triple (section_id, section_tipo,
+							// component_tipo) must match for a conflict to be reported. Two users
+							// may edit different fields of the same record concurrently.
 							if (   $current_event_element->section_id==$event_element->section_id
 								&& $current_event_element->section_tipo===$event_element->section_tipo
 								&& $current_event_element->component_tipo===$event_element->component_tipo
@@ -137,6 +218,10 @@ class lock_components {
 					break;
 
 				case 'delete_user_section_locks':
+					// Remove all locks this user holds within the given section_tipo across
+					// all section_id values. Used when the user closes or navigates away from
+					// a section entirely. Note: the section_id condition is intentionally
+					// commented out to cover navigation between records of the same section.
 					foreach ($data as $key => $current_event_element) {
 
 						if (
@@ -209,6 +294,9 @@ class lock_components {
 			if ($update_lock_elements===true) {
 
 				// recreate data array keys
+				// (!) PHP unset() on a foreach-iterated array leaves gaps in the numeric keys.
+				// array_values() resets them to 0-based integers so json_encode() produces
+				// a JSON array ([…]) instead of a JSON object ({"1":…,"3":…}).
 					$new_data	= array_values($new_data);	// Recreate array keys to avoid produce json objects instead array
 					$new_data	= json_encode($new_data);		// Convert again to text before save to database
 					$strQuery	= "UPDATE \"$table\" SET data = $1 WHERE id = $2";
@@ -230,9 +318,20 @@ class lock_components {
 
 	/**
 	* EQUAL_ELEMENTS
-	* @param object $event_element
-	* @param object $event_element2
-	* @return bool
+	* Compare two event-element objects for logical equality.
+	*
+	* Two events are considered equal when they refer to the same physical component
+	* in the same record and carry the same action type. Used internally to deduplicate
+	* lock entries before writing.
+	*
+	* Note: section_id is compared with loose equality (==) because it arrives as a
+	* string from the client but may be stored as an integer in certain code paths.
+	* section_tipo, component_tipo, and action use strict equality (===) because they
+	* are always ontology tipo strings that must match exactly.
+	*
+	* @param object $event_element  - first event descriptor
+	* @param object $event_element2 - second event descriptor
+	* @return bool - true when the two events address the same component+action
 	*/
 	protected static function equal_elements( object $event_element, object $event_element2 ) : bool {
 
@@ -251,9 +350,25 @@ class lock_components {
 
 	/**
 	* FORCE_UNLOCK_ALL_COMPONENTS
-	* Force unlock all components for current user (delete record) for current user
-	* @param int|string|null $user_id
+	* Remove active focus locks from the registry, optionally scoped to one user.
+	*
+	* Called in three situations:
+	*  1. User logout (class.login::logout_user) — removes locks for the logging-out user.
+	*  2. Session expiry — same as logout.
+	*  3. Admin action via dd_area_maintenance_api::lock_components_actions() — may pass
+	*     null to clear locks for all users simultaneously.
+	*
+	* Only entries whose 'action' property equals 'focus' are candidates for removal.
+	* Stale entries from previous implementation iterations that lack an 'action' property
+	* are also skipped (isset guard).
+	*
+	* @param int|string|null $user_id = null - user whose locks to remove;
+	*   null or falsy value removes locks for all users
 	* @return object $response
+	*   {
+	*     "result": bool,   // false when the registry row does not exist yet
+	*     "msg"   : string  // description of outcome including removed count
+	*   }
 	*/
 	public static function force_unlock_all_components( int|string|null $user_id=null ) : object {
 
@@ -290,6 +405,8 @@ class lock_components {
 			$removed_elements=0;
 			foreach ($data as $key => $current_event_element) {
 
+				// Only remove focus locks; blur events are transient and should never
+				// accumulate, but guard anyway to avoid touching unexpected entry shapes.
 				if (isset($current_event_element->action) && $current_event_element->action==='focus') {
 
 					if ( empty($user_id) ) {
@@ -333,8 +450,23 @@ class lock_components {
 
 	/**
 	* GET_ACTIVE_USERS
-	* Get active users from lock_components table
+	* Return the raw list of active focus locks from the lock registry.
+	*
+	* Reads the JSON array stored in the single registry row and filters it to
+	* only those entries with action === 'focus'. Entries without an 'action'
+	* property (legacy shape from earlier versions) are silently skipped.
+	*
+	* The result is consumed by:
+	*  - get_active_users_full() — enriches entries with ontology labels.
+	*  - dd_area_maintenance_api::lock_components_actions() — surfaces the list
+	*    to administrators via the maintenance area UI.
+	*
 	* @return object $response
+	*   {
+	*     "result"         : bool,    // false when registry row is absent
+	*     "msg"            : string,  // status description including active count
+	*     "ar_user_actions": array    // array of focus-event objects (only on result=true)
+	*   }
 	*/
 	public static function get_active_users() : object {
 
@@ -391,8 +523,22 @@ class lock_components {
 
 	/**
 	* GET_ACTIVE_USERS_FULL
-	* Get all active users with full details (user id, element_id, component_id, timestamp)
-	* @return array $ar_user_actions
+	* Return active focus locks enriched with human-readable ontology labels.
+	*
+	* Delegates to get_active_users() to obtain the raw lock list, then resolves
+	* each entry's component_tipo and section_tipo through ontology_node to add:
+	*  - component_model : the ontology model string for the component tipo
+	*  - component_label : the display term for the component in the data language
+	*  - section_label   : the display term for the section in the data language
+	*
+	* Each entry is cloned with clone before being augmented to avoid mutating
+	* the underlying data retrieved from get_active_users().
+	*
+	* Used by dd_area_maintenance_api::lock_components_actions() to return a
+	* display-ready payload to the maintenance area UI.
+	*
+	* @return array - array of enriched event-element objects; empty array when
+	*   there are no active locks or when get_active_users() returns result=false
 	*/
 	public static function get_active_users_full() : array {
 
@@ -405,6 +551,8 @@ class lock_components {
 				$item = clone $current_event_element;
 
 				// add some useful information
+				// Resolve ontology labels at this point (not at storage time) so that
+				// the labels stay current even after ontology term renames.
 					$item->component_model	= ontology_node::get_model_by_tipo($current_event_element->component_tipo, true);
 					$item->component_label	= ontology_node::get_term_by_tipo($current_event_element->component_tipo, DEDALO_DATA_LANG, true);
 					$item->section_label	= ontology_node::get_term_by_tipo($current_event_element->section_tipo, DEDALO_DATA_LANG, true);
@@ -421,18 +569,35 @@ class lock_components {
 
 	/**
 	* CLEAN_LOCKS_GARBAGE
-	* Clean locks garbage (old locks without any active user)
-	* Event format
+	* Remove stale focus locks whose timestamp exceeds MAXIMUM_LOCK_EVENT_TIME hours.
+	*
+	* Called by dd_init_test.php on every bootstrap when DEDALO_LOCK_COMPONENTS is
+	* enabled. Stale locks accumulate when a browser session is closed abruptly (crash,
+	* network loss, force-quit) without sending a blur or logout event.
+	*
+	* The expiry calculation adds MAXIMUM_LOCK_EVENT_TIME hours to the stored 'date'
+	* value and compares the result against the current server time. Entries that have
+	* passed expiry are dropped; fresh entries are kept and re-written unchanged.
+	*
+	* A WARNING-level log entry is emitted for each expired lock to aid debugging of
+	* connectivity issues or abnormally long user sessions.
+	*
+	* Event format stored in the registry:
 	* {
-	*     "date": "2017-02-23 11:43:34",
-	*     "action": "focus",
-	*     "user_id": -1,
-	*     "section_id": "1",
-	*     "section_tipo": "dd234",
-	*     "full_username": "Debug user",
+	*     "date"          : "2017-02-23 11:43:34",
+	*     "action"        : "focus",
+	*     "user_id"       : -1,
+	*     "section_id"    : "1",
+	*     "section_tipo"  : "dd234",
+	*     "full_username" : "Debug user",
 	*     "component_tipo": "dd249"
 	* }
+	*
 	* @return object $response
+	*   {
+	*     "result": bool,   // false when the registry row is absent
+	*     "msg"   : string  // outcome description ("OK" when nothing expired)
+	*   }
 	*/
 	public static function clean_locks_garbage() : object {
 
@@ -470,6 +635,9 @@ class lock_components {
 				$data	= (array)json_decode($data);
 
 			// interval
+			// Build the expiry interval once and reuse it across the loop; DateTime
+			// objects are mutable, so a new $expires is derived per iteration via add()
+			// on a fresh clone of $event_date rather than mutating the shared $interval.
 				$hours		= lock_components::MAXIMUM_LOCK_EVENT_TIME;
 				$interval	= date_interval_create_from_date_string($hours." hours");
 				$now		= new DateTime();
@@ -478,6 +646,9 @@ class lock_components {
 			$deleted_elements = false;
 			foreach ($data as $event_element) {
 
+				// (!) DateTime::add() mutates the object in place and returns $this.
+				// A new DateTime is constructed from $event_element->date each iteration
+				// to avoid reusing an already-modified object from a previous loop pass.
 				$event_date	= new DateTime($event_element->date);
 				$expires	= $event_date->add($interval);
 				if ( $expires < $now ) {
