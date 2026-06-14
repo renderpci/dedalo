@@ -4,6 +4,29 @@
 
 
 
+/**
+* DATA_MANAGER
+* Central client-to-server request layer for Dédalo v7.
+*
+* Responsibilities:
+* - Building and dispatching all API calls to the PHP JSON endpoint
+*   (`api/v1/json/`) with configurable HTTP options (method, mode, credentials).
+* - Retry-with-exponential-backoff and per-attempt timeout via
+*   `_fetch_with_retry_and_timeout`.
+* - CSRF token management (SEC-008): reads the token from `page_globals.csrf_token`,
+*   injects it as `X-Dedalo-Csrf-Token`, refreshes it from every response, and
+*   performs a single transparent retry on CSRF rejection.
+* - Short-circuit caching against the browser's IndexedDB (`cache_handler: {handler:'localdb'}`).
+* - SSE / NDJSON streaming support via `request_stream` / `request_fetch_stream` /
+*   `read_stream`.
+* - Persisting UI state and cached lookups to IndexedDB through the
+*   `*_local_db*` family of methods.
+* - Convenience download helpers (`download_url`, `download_data`).
+*
+* Main exports: `data_manager` (namespace object), `check_server_health`,
+* `render_msg_to_inspector`, `download_url`, `download_data`.
+*/
+
 // imports
 	import {JSON_parse_safely} from '../../../core/common/js/utils/util.js'
 	import {event_manager} from './event_manager.js'
@@ -11,8 +34,15 @@
 
 
 
-// Custom error classes
-// @see _fetch_with_retry_and_timeout
+/**
+* CLASS HTTPERROR
+* Custom Error subclass representing an HTTP-level failure (non-2xx response).
+* Raised by `_fetch_with_retry_and_timeout` so that retry logic can inspect
+* the HTTP status code separately from a generic network `TypeError`.
+* Retryable statuses: 408, 429, 500, 502, 503, 504.
+* Non-retryable 4xx errors are re-thrown immediately without further attempts.
+* @see _fetch_with_retry_and_timeout
+*/
 class HttpError extends Error {
 	constructor(status, statusText, response) {
 		super(`HTTP ${status}: ${statusText}`);
@@ -27,7 +57,10 @@ class HttpError extends Error {
 
 /**
 * DATA_MANAGER
-* Class to manage API requests and local storage (IndexedDB)
+* Namespace / static object that owns all client-to-server communication.
+* All API calls pass through `data_manager.request`; streaming calls use
+* `data_manager.request_stream` or `data_manager.request_fetch_stream`.
+* IndexedDB access is mediated by the `*_local_db*` methods.
 */
 export const data_manager = function() { }
 
@@ -35,21 +68,28 @@ export const data_manager = function() { }
 
 /**
 * CREDENTIALS
-* Fetch credentials default.
-* include, *same-origin, omit . Default Dédalo: 'same-origin' (use 'include' for cross origin API)
+* Default `credentials` option for all `fetch()` calls.
+* `'same-origin'` sends cookies only to the same origin (Dédalo default).
+* Set to `'include'` when the API is on a different origin (cross-domain setup).
+* @type {string}
 */
 data_manager.credentials = 'same-origin'
 
 /**
 * MODE
-* Fetch mode default.
-* no-cors, cors, *same-origin
+* Default `mode` option for all `fetch()` calls.
+* `'cors'` allows cross-origin requests subject to CORS headers.
+* @type {string}
 */
 data_manager.mode = 'cors'
 
 /**
 * URL
-* API URL default. Endpoint to make API requests.
+* Derived API endpoint URL.
+* Prefers the global `DEDALO_API_URL` constant (set during page bootstrap)
+* and falls back to the relative path `'../api/v1/json/'` for same-host installs.
+* Accessed as a getter so it always reflects the current global value.
+* @type {string}
 */
 Object.defineProperty(data_manager, 'url', {
 	get: function() {
@@ -64,8 +104,10 @@ Object.defineProperty(data_manager, 'url', {
 
 /**
 * HEALTH_URL
-* API Health URL default. Endpoint to check the network status of the connection.
-* It is used to check if the server is alive and responsive.
+* Derived URL of the lightweight health-check endpoint (`<url>health/`).
+* Called by `check_server_health` to determine whether a slow main request
+* is still being processed or the server is truly unreachable.
+* @type {string}
 */
 Object.defineProperty(data_manager, 'health_url', {
 	get: function() {
@@ -77,8 +119,13 @@ Object.defineProperty(data_manager, 'health_url', {
 
 /**
 * CHECK_SERVER_HEALTH
-* Checks a lightweight PHP endpoint specifically for health checks.
-* @return bool
+* Probes the lightweight PHP health endpoint to verify the server is reachable
+* and responding without triggering the full API bootstrap.
+* Cache-busted with `performance.now()` + random number to prevent CDN / proxy
+* caching from masking a real outage.
+* Used by `_fetch_with_retry_and_timeout` to distinguish a long-running process
+* (server alive but busy) from a genuine server failure.
+* @returns {Promise<boolean>} true when the server responds with HTTP 2xx
 */
 export const check_server_health = async () => {
 	try {
@@ -98,11 +145,45 @@ export const check_server_health = async () => {
 
 /**
 * REQUEST
-* Make a fetch request to server API
-* Receives a JSON string to be parsed
-* @param object options
-* @return api_response
-* 	Promise
+* Central API call dispatcher. Serializes `options.body` to JSON, attaches the
+* CSRF token (SEC-008), dispatches through `_fetch_with_retry_and_timeout`, parses
+* the JSON response, and returns a normalized API response object.
+*
+* Key behaviors:
+* - Merges caller-supplied options with safe defaults (5 retries, 500 ms base
+*   delay, 5 000 ms timeout). All defaults can be overridden per call.
+* - If `options.cache_handler.handler === 'localdb'`, looks up the result from
+*   IndexedDB before going to the network and stores a successful response back
+*   on idle.
+* - Injects `recovery_mode: true` into every body when
+*   `page_globals.recovery_mode` is set, so server-side operations skip
+*   non-essential side effects.
+* - On CSRF rejection (`errors` includes `'csrf_failed'`), retries the request
+*   exactly once with the fresh token obtained from the rejection response.
+*   The `_csrf_retried` flag on options prevents an infinite loop.
+* - Logs structured error objects to `page_globals.api_errors` (captured by the
+*   page renderer to display user-visible error banners).
+* - Publishes `'api_response_errors'` events via `event_manager` when the
+*   server returns non-fatal `errors` alongside a valid result.
+*
+* @param {Object} options - Request configuration
+* @param {string} [options.url] - Override the default API URL
+* @param {string} [options.method='POST'] - HTTP method
+* @param {string} [options.cache='no-cache'] - Fetch cache mode
+* @param {string} [options.mode] - Fetch mode (defaults to `data_manager.mode`)
+* @param {string} [options.credentials] - Fetch credentials (defaults to `data_manager.credentials`)
+* @param {Object} [options.headers] - HTTP request headers
+* @param {string} [options.redirect='follow'] - Fetch redirect mode
+* @param {string} [options.referrer='no-referrer'] - Fetch referrer
+* @param {Object|string|null} [options.body=null] - Request payload; objects are JSON-stringified
+* @param {boolean} [options.use_worker=false] - Route through a Web Worker (currently deactivated)
+* @param {number} [options.retries=5] - Maximum retry attempts
+* @param {number} [options.base_delay=500] - Base exponential-backoff delay in ms
+* @param {number} [options.timeout=5000] - Per-attempt timeout in ms
+* @param {Object} [options.cache_handler] - IndexedDB cache descriptor `{handler:'localdb', id:string}`
+* @param {boolean} [options._csrf_retried] - Internal flag; prevents recursive CSRF retry
+* @returns {Promise<Object>} Parsed API response. Always an object; on failure:
+*   `{ result: false, msg: string, error: *, errors: string[] }`
 */
 data_manager.request = async function(options) {
 
@@ -385,21 +466,32 @@ data_manager.request = async function(options) {
 
 /**
 * _FETCH_WITH_RETRY_AND_TIMEOUT
-* Make a fetch request to server API
-* Receives a JSON string to be parsed
-* Note: Revised by Chat GPT Copilot
-* @param string url
-* 	The URL for the fetch request.
-* @param object options = {}
-* 	Additional options for the fetch (such as headers, method, etc.).
-* @param int retries = 5
-* 	Number of times the fetch will retry in case of failure.
-* @param int base_delay = 500
-* 	The initial delay between retries (in milliseconds). It will exponentially increase with each failed attempt.
-* @param int timeout = 5000
-* 	The timeout limit for the request (in milliseconds). If the request exceeds this time, it will be aborted.
-* @return response
-* 	Promise APi response
+* Low-level fetch driver with exponential-backoff retry and per-attempt timeout.
+* This is the only place that calls the native `fetch()` for regular (non-streaming)
+* requests; `data_manager.request` delegates here after preparing the request body.
+*
+* Algorithm per attempt:
+*  1. Compute `delay = base_delay * 2^(attempt-1)` (exponential backoff).
+*  2. Create a fresh `AbortController`; schedule `controller.abort()` after
+*     `timeout + delay` ms (growing with each retry to give later attempts more time).
+*  3. Schedule a mid-attempt health probe at `timeout / 2` ms. If the server
+*     responds to the health check, the main-request abort is cancelled so the
+*     long-running process can finish naturally.
+*  4. On a successful 2xx response, clear both timers and return the `Response`.
+*  5. On `HttpError`: retry only for statuses in `[408, 429, 500, 502, 503, 504]`;
+*     throw immediately for all other 4xx.
+*  6. On `AbortError` or `TypeError` (network failure): log, notify the user via
+*     `render_msg_to_inspector`, and loop.
+*  7. After all retries exhausted, throw to let `data_manager.request` catch and
+*     return a normalized error response.
+*
+* @param {string} url - Full API endpoint URL
+* @param {Object} [options={}] - Native `fetch()` init options (headers, method, body, …)
+* @param {number} [retries=5] - Maximum number of attempts
+* @param {number} [base_delay=500] - Base delay in ms for exponential backoff
+* @param {number} [timeout=5000] - Abort timeout in ms for the first attempt
+* @returns {Promise<Response>} Resolved with the raw `Response` on success
+* @throws {Error} When all retries are exhausted or a non-retryable HTTP error occurs
 */
 async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, base_delay = 500, timeout = 5000) {
 
@@ -532,8 +624,24 @@ async function _fetch_with_retry_and_timeout(url, options = {}, retries = 5, bas
 
 /**
 * _FETCH_WITH_RACE
-* Launch n retries in a race promise and abort all on finish.
-* @return object api_response
+* Alternative fetch strategy: fires up to `retries` staggered fetch attempts
+* simultaneously and resolves with whichever finishes first (`Promise.race`).
+* All remaining in-flight requests are aborted via a shared `AbortController`
+* once a winner is determined.
+*
+* This function is NOT currently used by `data_manager.request` — the active
+* strategy is `_fetch_with_retry_and_timeout`. It is retained as an experimental
+* alternative for comparison.
+*
+* (!) Retries share a single AbortController: aborting one aborts all.
+*
+* @param {string} url - Full API endpoint URL
+* @param {Object} [options={}] - Native `fetch()` init options
+* @param {number} [retries=5] - Number of parallel staggered attempts
+* @param {number} [base_delay=500] - Stagger delay increment between attempts in ms
+* @param {number} [timeout=5000] - Overall race timeout in ms (total_timeout = timeout * retries)
+* @returns {Promise<Response>} The first successful response, extended with `controller`
+* @throws {Error} When the race is lost or all attempts fail
 */
 async function _fetch_with_race(url, options = {}, retries = 5, base_delay = 500, timeout = 5000) {
 
@@ -592,11 +700,14 @@ async function _fetch_with_race(url, options = {}, retries = 5, base_delay = 500
 
 /**
 * RENDER_MSG_TO_INSPECTOR
-* Manages the inspector notifications using a 'notification' event
-* @param string msg
-* @param string type
-* @param int|null remove_time
-* @return void
+* Publishes a user-visible notification via the `event_manager` 'notification' channel.
+* The inspector UI subscribes to this event and renders a temporary banner.
+* Used throughout the data layer to surface network errors, retry warnings,
+* and server-busy notices without coupling the data layer to a specific UI component.
+* @param {string} msg - Human-readable notification text
+* @param {string} type - Severity level: `'error'`, `'warning'`, or `'info'`
+* @param {number|null} remove_time - Auto-dismiss delay in ms; pass `null` for sticky notifications
+* @returns {void}
 */
 export const render_msg_to_inspector = (msg, type, remove_time) => {
 
@@ -611,11 +722,21 @@ export const render_msg_to_inspector = (msg, type, remove_time) => {
 
 /**
 * _HANDLE_WORKER_REQUEST
-* Manages the worker API request
-* @param string url
-* @param object body
-* @param object options
-* @return api_response
+* Routes an API call through a short-lived Web Worker (`worker_data.js`)
+* so the main thread is not blocked during low-priority network calls
+* (e.g., `update_lock_components_state`).
+*
+* Each call spawns a fresh Worker, posts `{url, body}`, waits for the
+* `api_response` message, then terminates the worker. Errors at any stage
+* (worker creation, onerror, missing `api_response`) are caught and resolved
+* as a normalized error response so callers never receive a rejected promise.
+*
+* (!) Currently deactivated in `data_manager.request` (see the commented-out
+* block) while network issue debugging is in progress.
+*
+* @param {string} url - API endpoint URL
+* @param {Object} body - Request payload (not yet JSON-stringified)
+* @returns {Promise<Object>} Resolved with the parsed API response object
 */
 data_manager._handle_worker_request = function(url, body) {
 
@@ -662,11 +783,14 @@ data_manager._handle_worker_request = function(url, body) {
 
 /**
 * _RECORD_API_ERROR
-* Internal method to record API errors in page_globals
-* @param string error_type
-* @param string message
-* @param string trace
-* @param mixed details
+* Appends a structured error entry to `page_globals.api_errors`.
+* The array is reset to `[]` at the start of every `data_manager.request` call
+* and inspected by the page renderer to decide whether to show an error overlay.
+* @param {string} error_type - Category label (e.g. `'data_manager'`)
+* @param {string} message - Human-readable error description
+* @param {string} trace - Code location identifier for debugging (e.g. `'data_manager catch error'`)
+* @param {*} [details=null] - Optional raw error object or additional context
+* @returns {void}
 */
 data_manager._record_api_error = function(error_type, message, trace, details = null) {
 	page_globals.api_errors.push({
@@ -681,10 +805,13 @@ data_manager._record_api_error = function(error_type, message, trace, details = 
 
 /**
 * _CREATE_ERROR_RESPONSE
-* Helper to create a standardized error response object
-* @param string msg
-* @param mixed error
-* @return object
+* Builds a normalized failure response object matching the shape that callers
+* of `data_manager.request` expect when the API cannot be reached.
+* Ensures downstream code can always destructure `{ result, msg, error, errors }`
+* without null-checking.
+* @param {string} msg - Human-readable error description
+* @param {*} error - Original error object or message string
+* @returns {Object} `{ result: false, msg, error, errors: [msg] }`
 */
 data_manager._create_error_response = function(msg, error) {
 	return {
@@ -699,13 +826,24 @@ data_manager._create_error_response = function(msg, error) {
 
 /**
 * REQUEST_STREAM
-* Make a fetch request_stream to server API
-* Note that, unlike 'request', this method receives a stream that must be read by a reader 'getReader'.
-* The 'is_stream' body property indicates that server must parse the result as readable stream
-* with header("Content-Type: text/event-stream")
-* @see ReadableStream: https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/ReadableStream
-* @param object options
-* @return api_response
+* Opens a Server-Sent Events (SSE) streaming connection to the API.
+* Unlike `data_manager.request`, this method does not parse JSON — it resolves
+* with the raw `ReadableStream` from `response.body`, which must then be consumed
+* by `data_manager.read_stream`.
+*
+* The body is force-patched with `is_stream: true` before serialization, signalling
+* to the PHP endpoint that it should switch to `Content-Type: text/event-stream`
+* and flush chunks incrementally.
+*
+* Also carries the CSRF token (SEC-008) in the `X-Dedalo-Csrf-Token` header.
+*
+* @see https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/ReadableStream
+* @param {Object} options - Request configuration (same shape as `data_manager.request`)
+* @param {Object} options.body - Request payload; `is_stream` is appended automatically
+* @param {string} [options.url] - Override the default API URL
+* @param {string} [options.method='POST'] - HTTP method
+* @param {Object} [options.headers] - HTTP headers; `Accept: text/event-stream` set by default
+* @returns {Promise<ReadableStream>} Resolved with the raw `response.body` stream
 */
 data_manager.request_stream = async function(options) {
 
@@ -767,14 +905,27 @@ data_manager.request_stream = async function(options) {
 
 
 /**
- * REQUEST_FETCH_STREAM
- * Generic fetch stream request using ReadableStreams.
- * Unlike request_stream (SSE), this target is agnostic and suitable for NDJSON or other binary streams.
- * It's primarily used to bypass the overhead of EventSource for long-running row-by-row exports.
- *
- * @param {object} options - Request options (url, method, headers, body)
- * @returns {Promise<ReadableStream>} The response body stream
- */
+* REQUEST_FETCH_STREAM
+* Generic fetch stream request using the `ReadableStream` API.
+* Intended for NDJSON or other binary/line-delimited streams, as opposed to
+* `request_stream` which is SSE-specific (`Content-Type: text/event-stream`).
+* Primarily used by `tool_export` to stream rows row-by-row without the overhead
+* of `EventSource`.
+*
+* Unlike `request_stream`, this method does NOT set `is_stream` on the body; the
+* caller is responsible for signalling the desired transfer mode in the body payload.
+* Throws immediately on a non-2xx response instead of wrapping in a Promise.
+*
+* Also carries the CSRF token (SEC-008) via `X-Dedalo-Csrf-Token`.
+*
+* @param {Object} options - Request configuration
+* @param {string} [options.url] - Override the default API URL
+* @param {string} [options.method='POST'] - HTTP method
+* @param {Object} [options.headers] - HTTP headers; defaults to `application/x-ndjson` Accept
+* @param {Object} options.body - Request payload (will be JSON-stringified)
+* @returns {Promise<ReadableStream>} Raw `response.body` stream for NDJSON consumption
+* @throws {Error} On non-2xx HTTP response
+*/
 data_manager.request_fetch_stream = async function(options) {
 
 	const self = this
@@ -814,15 +965,30 @@ data_manager.request_fetch_stream = async function(options) {
 
 /**
 * READ_STREAM
-* Read a SSE ReadableStream from server API response
-* @see ReadableStream: https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/getReader
-* @param ReadableStream stream
-* 	from fetch response.body
-* @param function on_read
-* 	callback function fired for each reader chunk
-* @param function on_done
-* 	callback function fired on reader done (close read)
-* @return void
+* Reads an SSE `ReadableStream` chunk-by-chunk and dispatches parsed SSE messages
+* to caller-supplied callbacks.
+*
+* SSE transport quirks handled here:
+* - HTTP servers may split a single `data:\n…\n\n` message across multiple chunks
+*   (partial message). The `ar_chunks` accumulator collects pieces until the
+*   terminating `\n\n` (byte values 10, 10) is detected at the end of the current
+*   chunk.
+* - The server may also merge two messages into one chunk. In that case the chunk
+*   contains `\n\ndata:\n` as an internal separator; the older partial message is
+*   discarded (its reassembly is complex and it is never the final message).
+* - Each complete message payload is decoded via `TextDecoder`, split on `data:\n`,
+*   and the last non-empty part is taken as the current message fragment.
+* - JSON parsing uses `JSON_parse_safely` to avoid breaking the read loop on
+*   malformed messages; invalid JSON yields a synthetic error SSE response.
+*
+* The reader is pushed into `page_globals.stream_readers` so that navigation away
+* from the page can abort all in-flight readers.
+*
+* @see https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/getReader
+* @param {ReadableStream} stream - Body stream obtained from `response.body`
+* @param {Function} on_read - Called for each complete SSE message: `on_read(sse_response, reader)`
+* @param {Function} on_done - Called once when the stream is fully consumed: `on_done(true)`
+* @returns {void}
 */
 data_manager.read_stream = function(stream, on_read, on_done) {
 
@@ -942,17 +1108,31 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 
 /**
 * GET_ELEMENT_CONTEXT
-* Resolves full element context based on minimal source vars
-* Like:
-*	source = {
-*		model: "component_input_text"
-*		tipo: "test159"
-*		section_tipo: "test65"
-*		section_id: null
-*		mode: "search"
-*	}
-* @param object source
-* @return promise api_response
+* Fetches the full server-side context object for an element identified by a
+* minimal source descriptor. The server resolves the model class, ontology
+* relationships, and data-layer metadata from the given `tipo` / `section_tipo`.
+*
+* Typical source shape:
+* ```js
+* {
+*   model        : 'component_input_text',
+*   tipo         : 'test159',
+*   section_tipo : 'test65',
+*   section_id   : null,
+*   mode         : 'search'
+* }
+* ```
+*
+* Always sends `prevent_lock: true` to avoid acquiring a section lock just for
+* a context lookup.
+*
+* @param {Object} source - Minimal element locator descriptor
+* @param {string} source.tipo - Ontology tipo of the element
+* @param {string} [source.section_tipo] - Ontology tipo of the parent section
+* @param {string|null} [source.section_id] - Record ID (null for non-record contexts)
+* @param {string} [source.mode] - Rendering mode (`'edit'`, `'search'`, `'list'`, …)
+* @param {string} [source.model] - Component model class name (optional; server resolves if omitted)
+* @returns {Promise<Object>} Full API response containing the resolved context
 */
 data_manager.get_element_context = async function(source) {
 
@@ -973,12 +1153,17 @@ data_manager.get_element_context = async function(source) {
 
 /**
 * RESOLVE_MODEL
-* Resolves element simple context and extract the model
-* from the response object
-* Used in ts_object.js to resolve components model to load
-* @param string tipo
-* @param string section_tipo
-* @return string|null model
+* Resolves the PHP component model class name for a given ontology `tipo`.
+* Fetches a lightweight `simple` context from the server (skips data resolution)
+* and caches the result in `page_globals.models` keyed by `tipo` to avoid
+* repeated API calls within the same page session.
+*
+* Used by `ts_object.js` to determine which JS/PHP component class to load
+* when only the `tipo` is known at construction time.
+*
+* @param {string} tipo - Ontology tipo of the element (e.g. `'dd345'`)
+* @param {string} section_tipo - Ontology tipo of the parent section
+* @returns {Promise<string|null>} Model class name (e.g. `'component_input_text'`) or `null` if unresolvable
 */
 data_manager.resolve_model = async function(tipo, section_tipo) {
 
@@ -1016,10 +1201,13 @@ data_manager.resolve_model = async function(tipo, section_tipo) {
 
 /**
 * GET_MATRIX_ONTOLOGY_LOCATOR
-* Request API info about current tipo, resolving
-* section_tipo and section_id from given tipo
-* @param string tipo
-* @return object ontology_info
+* Resolves the ontology matrix locator for a given `tipo`, returning the
+* `section_tipo` and `section_id` (i.e. the matrix row/column coordinates)
+* required to read or write the ontology matrix entry for that tipo.
+* Results are cached in `page_globals.ontology_info` keyed by `tipo`.
+* @param {string} tipo - Ontology tipo to locate (e.g. `'dd345'`)
+* @returns {Promise<Object|false>} Locator object `{ section_tipo, section_id, … }`
+*   or `false` when the tipo cannot be resolved
 */
 data_manager.get_matrix_ontology_locator = async function(tipo) {
 
@@ -1056,18 +1244,28 @@ data_manager.get_matrix_ontology_locator = async function(tipo) {
 
 /**
 * GET_PAGE_ELEMENT
-* Get full page element
-* Expected options:
+* Fetches a fully rendered page element from the server, including all context,
+* data, and child components needed to mount it in the browser.
+* The server action `get_page_element` accepts the following PHP-side properties
+* (all optional, resolved from ontology when omitted):
 *
-*	$tipo 			= $options->tipo ?? null;
-*	$model 			= $options->model ?? (isset($tipo) ? ontology_node::get_model_by_tipo($tipo,true) : null);
-*	$lang 			= $options->lang ?? DEDALO_DATA_LANG;
-*	$mode 			= $options->mode ?? 'list';
-*	$section_id 	= $options->section_id ?? null;
-*	$component_tipo = $options->component_tipo ?? null;
+* ```
+* $tipo           = $options->tipo         ?? null;
+* $model          = $options->model        ?? ontology_node::get_model_by_tipo($tipo, true);
+* $lang           = $options->lang         ?? DEDALO_DATA_LANG;
+* $mode           = $options->mode         ?? 'list';
+* $section_id     = $options->section_id   ?? null;
+* $component_tipo = $options->component_tipo ?? null;
+* ```
 *
-* @param object options
-* @return promise api_response
+* @param {Object} options - PHP-side options forwarded verbatim as the `options` body property
+* @param {string} [options.tipo] - Ontology tipo of the page element
+* @param {string} [options.model] - PHP model class name (resolved server-side when omitted)
+* @param {string} [options.lang] - Language code (server default when omitted)
+* @param {string} [options.mode='list'] - Rendering mode
+* @param {string|null} [options.section_id] - Record ID
+* @param {string} [options.component_tipo] - Specific component tipo within the element
+* @returns {Promise<Object>} Full API response with the rendered page element
 */
 data_manager.get_page_element = async function(options) {
 
@@ -1087,9 +1285,25 @@ data_manager.get_page_element = async function(options) {
 
 /**
 * GET_LOCAL_DB
-* Get local indexedDB from browser
-* If browser version is lower than current try, onupgradeneeded event is launched and browser indexedDB will be upgraded
-* @return promise
+* Opens (and if necessary upgrades) the browser's IndexedDB `'dedalo'` database
+* at schema version 11.
+*
+* Object stores managed:
+* - `rqo`        — cached request/query objects
+* - `context`    — component/section context cache
+* - `status`     — UI state (e.g. section_group collapsed/expanded)
+* - `data`       — generic transient data (e.g. menu datum resolution)
+* - `ontology`   — ontology node cache
+* - `pagination` — pagination state (replaced the now-deleted `sqo` store)
+*
+* The `onupgradeneeded` handler is idempotent: it only creates stores that do not
+* already exist, and deletes the legacy `sqo` store if still present.
+*
+* Resolves with `false` (via the `.catch` handler) if IndexedDB is unavailable
+* or blocked (e.g. in private browsing on some browsers). Callers must guard
+* against a falsy result before proceeding.
+*
+* @returns {Promise<IDBDatabase|false>} Opened database instance, or `false` on failure
 */
 data_manager.get_local_db = async function() {
 
@@ -1171,21 +1385,28 @@ data_manager.get_local_db = async function() {
 
 /**
 * SET_LOCAL_DB_DATA
-* Save data into the browser local database (IndexdDB)
-* @param object data
-* @param string table
-* 	Tables:
-* 		status : element stored status like collapsed, etc.
-* 		rqo : rqo cache data
-* 		ontology ;: ontology cache data
-* 		data : generic data like menu resolution
-* 		context : context cache data
-* Calling sample:
-* 	current_data_manager.set_local_db_data(
-* 		rqo, // mixed data
-* 		'rqo' // string table
-* 	)
-* @return promise
+* Writes (upserts) a record into the specified IndexedDB object store using
+* `IDBObjectStore.put()`. The record must have an `id` property matching the
+* store's `keyPath`.
+*
+* Available tables / stores:
+* - `'status'`   — UI element state (collapsed, expanded, …)
+* - `'rqo'`      — request/query object cache
+* - `'ontology'` — ontology node cache
+* - `'data'`     — generic transient data (e.g. menu datum resolution)
+* - `'context'`  — component/section context cache
+* - `'pagination'` — pagination state
+*
+* Example:
+* ```js
+* data_manager.set_local_db_data({ id: 'my_key', value: 42 }, 'data')
+* ```
+*
+* Resolves `false` if IndexedDB is unavailable.
+*
+* @param {Object} data - Record to store; must contain `id` (keyPath)
+* @param {string} table - Name of the IndexedDB object store
+* @returns {Promise<IDBValidKey|false>} Resolved with the record key on success, `false` on failure
 */
 data_manager.set_local_db_data = async function(data, table) {
 
@@ -1238,15 +1459,35 @@ data_manager.set_local_db_data = async function(data, table) {
 
 
 /**
-* GET_LOCAL_DB_DATA
-* @param string id
-* @param string table
-* @param bool use_cache = false
-* Calling sample:
-*	current_data_manager.get_local_db_data('tool_export_config', 'data')
-* @return promise
+* @var {Map<string, IDBDatabase>} db_table_cache
+* Module-level cache mapping store names to open `IDBDatabase` instances.
+* Populated by `get_local_db_data` when `use_cache=true` to avoid re-opening
+* the database on every call within the same page session.
 */
 const db_table_cache = new Map();
+
+/**
+* GET_LOCAL_DB_DATA
+* Reads a single record from the specified IndexedDB object store by its `id` key.
+*
+* When `use_cache=true`, the open `IDBDatabase` handle is stored in the module-level
+* `db_table_cache` map (keyed by table name) and reused on subsequent calls,
+* avoiding the overhead of repeated `indexedDB.open()` calls.
+*
+* Throws and re-throws on unexpected errors so that callers can decide how to
+* handle them; returns `false` when IndexedDB is unavailable.
+*
+* Example:
+* ```js
+* const cached = await data_manager.get_local_db_data('tool_export_config', 'data')
+* ```
+*
+* @param {string} id - Key of the record to retrieve (must match the store's `keyPath`)
+* @param {string} table - Name of the IndexedDB object store
+* @param {boolean} [use_cache=false] - Whether to cache the open DB handle for this table
+* @returns {Promise<*|false>} The stored record value, `undefined` when not found, or `false` on unavailability
+* @throws {Error} On IndexedDB transaction or request errors
+*/
 data_manager.get_local_db_data = async function(id, table, use_cache=false) {
 
 	const self = this
@@ -1321,10 +1562,12 @@ data_manager.get_local_db_data = async function(id, table, use_cache=false) {
 
 /**
 * DELETE_LOCAL_DB_DATA
-* Delete specified element form DB table by id
-* @param string id
-* @param string table
-* @return promise
+* Deletes a single record from the specified IndexedDB object store by its `id` key.
+* Uses a `'readwrite'` transaction and `IDBObjectStore.delete()`.
+* Resolves `false` if IndexedDB is unavailable.
+* @param {string} id - Key of the record to delete
+* @param {string} table - Name of the IndexedDB object store
+* @returns {Promise<IDBValidKey|false>} Resolved with the delete result on success, `false` on failure
 */
 data_manager.delete_local_db_data = async function(id, table) {
 
@@ -1377,11 +1620,16 @@ data_manager.delete_local_db_data = async function(id, table) {
 
 /**
 * DELETE_LOCAL_DB_DATA_BY_PREFIX
-* Delete specified element form DB table by prefix.
-* Used to delete prefix grouped caches like 'menu_'.
-* @param string prefix
-* @param string table
-* @return promise
+* Deletes all records in the specified IndexedDB object store whose `id` key
+* begins with `prefix`, using an `IDBKeyRange.bound` range from `prefix` to
+* `prefix + '￿'` (Unicode high surrogate — effectively "all strings starting
+* with prefix").
+* Useful for bulk-invalidating namespaced cache groups, e.g. `'menu_'` entries.
+* (!) Note: the parameter order is `(table, prefix)`, not `(prefix, table)`.
+* @param {string} table - Name of the IndexedDB object store
+* @param {string} prefix - Key prefix; all matching records will be deleted
+* @returns {Promise<void>} Resolves when deletion is complete
+* @throws {Error} On IndexedDB errors
 */
 data_manager.delete_local_db_data_by_prefix = async function(table, prefix) {
 
@@ -1419,9 +1667,15 @@ data_manager.delete_local_db_data_by_prefix = async function(table, prefix) {
 
 /**
 * DELETE_WHOLE_LOCAL_DB
-* Clean whole local indexed DB.
-* Useful when important changes were made because an update
-* @return promise
+* Deletes the entire `'dedalo'` IndexedDB database from the browser.
+* Triggers `get_local_db` to recreate and re-migrate the schema on the next
+* call. Use after major application updates that change the stored data shape.
+*
+* The `onblocked` handler fires when another tab still has the database open;
+* the deletion is deferred until all connections are closed (page reload required).
+*
+* @returns {Promise<*>} Resolves on successful deletion
+* @throws {Error} (via rejection) when deletion fails
 */
 data_manager.delete_whole_local_db = async function() {
 
@@ -1449,10 +1703,12 @@ data_manager.delete_whole_local_db = async function() {
 
 /**
 * CLEAR_LOCAL_DB_TABLE
-* Clean selected objectStore (table) from indexedDB.
-* Useful when important changes were made because an update
-* @param string table
-* @return promise
+* Empties a single IndexedDB object store without deleting the store itself
+* or affecting other stores. Uses `IDBObjectStore.clear()`.
+* Useful after application updates that invalidate cached data for one category
+* (e.g. clearing all `'context'` entries after an ontology change).
+* @param {string} table - Name of the IndexedDB object store to clear
+* @returns {Promise<boolean>} Resolves `true` on success, rejects `false` on transaction error
 */
 data_manager.clear_local_db_table = async function(table) {
 
@@ -1490,9 +1746,13 @@ data_manager.clear_local_db_table = async function(table) {
 
 /**
 * DOWNLOAD_URL
-* @param string url
-* @param string filename
-* Download url blob data and create a temporal auto-fired link
+* Fetches the resource at `url` as a binary blob and triggers a browser download
+* using a temporary `<a>` element with the `download` attribute.
+* The object URL is not explicitly revoked after the click; the browser handles
+* cleanup when the document is unloaded.
+* @param {string} url - URL of the resource to download
+* @param {string} filename - Suggested filename for the downloaded file
+* @returns {void}
 */
 export function download_url(url, filename) {
 	fetch(url).then(function(response) {
@@ -1510,9 +1770,12 @@ export function download_url(url, filename) {
 
 /**
 * DOWNLOAD_DATA
-* @param mixed data
-* @param string filename
-* Download data blob data and create a temporal auto-fired link
+* Serializes `data` to a pretty-printed JSON string, wraps it in an
+* `octet/stream` Blob, and triggers a browser download via a temporary `<a>`
+* element. The object URL is revoked immediately after the click to free memory.
+* @param {*} data - Any JSON-serializable value
+* @param {string} filename - Suggested filename for the downloaded file
+* @returns {boolean} Always `true` (download triggered)
 */
 export function download_data(data, filename) {
 
