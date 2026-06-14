@@ -184,6 +184,19 @@ class section_record {
 				// Also invalidate per-user tool resolution caches (tool_config changed)
 				tools_register::clean_cache();
 				break;
+
+			case DEDALO_ONTOLOGY_SECTION_TIPO : // ontology35
+				// Invalidate shared diffusion data cache used by diffusion_utils.
+				// Diffusion-derived data (map, virtual tree, section map) changes
+				// whenever the ontology is modified
+				$cache_file_name = diffusion_utils::get_diffusion_cache_file_name();
+				dd_cache::delete_cache_files(
+					[$cache_file_name],
+					''
+				);
+				// Also clear in-memory static caches so the current request
+				// does not continue using stale data
+				diffusion_utils::clear();
 				break;
 
 			default:
