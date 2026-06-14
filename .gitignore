@@ -179,4 +179,4 @@ mcp/dedalo-work-mcp/.env
 *.map
 mcp/.env
 .opencode
-.analysis
+analysis
