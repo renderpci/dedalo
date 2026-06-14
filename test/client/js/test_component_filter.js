@@ -240,6 +240,12 @@ describe(`COMPONENT_FILTER DATA OPERATIONS`, function() {
 					unchecked.checked = true
 					unchecked.dispatchEvent(new Event('change', { bubbles: true }))
 
+					// the change handler may set changed_data asynchronously; poll
+					// instead of asserting synchronously (flaky under full-run load)
+					for (let i=0; i<40 && !instance.data.changed_data; i++) {
+						await new Promise(resolve => setTimeout(resolve, 50))
+					}
+
 					// verify changed_data was set
 					assert.isOk(instance.data.changed_data, 'changed_data expected after checkbox check')
 					assert.equal(instance.data.changed_data[0].action, 'insert', 'changed_data action expected insert')

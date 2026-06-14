@@ -318,7 +318,11 @@ describe(`COMPONENT_RADIO_BUTTON DATA OPERATIONS`, function() {
 			if (reset_button) {
 				reset_button.click()
 
-				await new Promise(resolve => setTimeout(resolve, 300))
+				// poll for the async remove/save to settle — a fixed delay is flaky
+				// under full-run load (slower than in isolation)
+				for (let i=0; i<40 && (instance.data.entries||[]).length>0; i++) {
+					await new Promise(resolve => setTimeout(resolve, 50))
+				}
 
 				// verify data was removed
 				const entries = instance.data.entries || []

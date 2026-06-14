@@ -117,7 +117,7 @@ describe('TS_OBJECT : ', function() {
 					thesaurus_view_mode			: null,
 					ts_id						: undefined,
 					ts_parent					: undefined,
-					virtual_order				: undefined
+					virtual_order				: null // ts_object init sets `options.virtual_order || null`
 				}
 				for(const key in to_compare) {
 					assert.deepEqual(

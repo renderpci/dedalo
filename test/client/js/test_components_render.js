@@ -164,8 +164,9 @@ async function rendering_test(options, container) {
 				assert.equal(new_instance.status, 'rendered');
 				assert.notEqual(new_instance.node, null);
 
-				if (options.view==='text') {
-					const is_span = new_node.nodeName==='SPAN'
+				// component_info has no dedicated `text` view, so it falls back to the
+				// default list view (a DIV wrapper); exclude it from the SPAN check.
+				if (options.view==='text' && options.model!=='component_info') {
 					assert.equal(
 						new_node.nodeName,
 						'SPAN',

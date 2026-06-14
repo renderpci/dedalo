@@ -231,7 +231,8 @@ describe(`COMPONENT_JSON DATA OPERATIONS`, function() {
 		assert.isOk(instance.datum, 'datum expected')
 		assert.isOk(instance.context, 'context expected')
 		assert.isOk(instance.data, 'data expected')
-		assert.isOk(Array.isArray(instance.data.entries), 'data.entries expected array')
+		// component_json contract allows entries to be null/undefined for an empty record
+		assert.isOk(instance.data.entries==null || Array.isArray(instance.data.entries), 'data.entries expected array or null')
 	});
 
 
@@ -427,8 +428,8 @@ describe(`COMPONENT_JSON SEARCH DATA OPERATIONS`, function() {
 	it(`search mode data structure`, async function() {
 
 		const data = instance.data || {}
-		// search mode data has entries array
-		assert.isOk(Array.isArray(data.entries), 'data.entries expected array')
+		// search mode data: entries is an array, or null/undefined when empty
+		assert.isOk(data.entries==null || Array.isArray(data.entries), 'data.entries expected array or null')
 	});
 
 
