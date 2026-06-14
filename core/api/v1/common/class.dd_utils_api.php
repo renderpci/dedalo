@@ -1,17 +1,43 @@
 <?php declare(strict_types=1);
 /**
-* DD_UTILS_API
-* Manage API REST data with Dédalo
+* CLASS DD_UTILS_API
+* Cross-cutting REST API handler for Dédalo infrastructure and utility operations.
 *
+* Acts as the single entry point for all API calls that do not belong to a
+* specific domain (sections, components, tools). Responsibilities include:
+*
+* - Session lifecycle: login, logout, language switching
+* - Initial context delivery: login page context, install wizard context
+* - File management: upload (single + chunked), chunk-join, listing, deletion
+* - Background-process monitoring: SSE stream (get_process_status),
+*   polling (get_process_status_poll), and stop
+* - Installation and upgrade bootstrapping (wraps class install)
+* - Collaborative lock management (component focus/blur notifications)
+* - Distributed update infrastructure: code-server and ontology-server
+*   readiness checks and version metadata queries
+* - Diagnostic helpers: system info, SQL debug of a raw SQO
+*
+* All methods are declared `public static` and dispatched through the API
+* router (core/api/v1/json/index.php). Only methods listed in API_ACTIONS
+* are reachable as remote calls (SEC-024 allowlist).
+*
+* This class has no instance state; all data flows through the $rqo
+* (request-query object) parameter and the returned $response object.
+*
+* @package Dédalo
+* @subpackage Core
 */
 final class dd_utils_api {
 
 
 
 	/**
-	* SEC-024: explicit allowlist of methods callable as remote API actions.
-	* Adding a new public-static method does NOT make it remotely callable;
-	* it must also be added here.
+	* Explicit allowlist of methods callable as remote API actions (SEC-024).
+	* Adding a new public-static method does NOT automatically make it reachable
+	* from the network — the method must also be listed here. The API router
+	* (core/api/v1/json/index.php) validates the requested action against this
+	* constant before dispatching, so omitting an entry is a hard block.
+	* @var array<string>
 	*/
 	public const API_ACTIONS = [
 		'get_login_context',
@@ -40,11 +66,20 @@ final class dd_utils_api {
 
 	/**
 	* GET_LOGIN_CONTEXT
-	* This function is not used in normal login behavior (login is called directly in start API).
-	* It could be called when the instance of the login has been build with autoload in true.
-	* This function could be called by external processes as install to get the context of the login
-	* and to create the login instance
-	* Login only need context, it not needed data to render.
+	* Builds and returns the login component's rendering context (no data payload).
+	*
+	* Not called during the normal login flow — the API start handler calls
+	* class login directly. This method exists for two secondary cases:
+	*   1. External processes (e.g. the install wizard) that need to instantiate
+	*      the login UI without going through the standard session startup.
+	*   2. Autoload=true configurations where the client triggers a context-only
+	*      fetch before credentials are available.
+	*
+	* Before building the login instance, this method runs a v6→v7 database
+	* migration preflight (checks for dd_ontology table; runs v6_to_v7::pre_update
+	* if missing). If pre_update fails the method returns immediately with an error
+	* response so the install wizard can surface the problem.
+	*
 	* @param object $rqo
 	* {
 	*	action	: 'get_login_context',
@@ -52,6 +87,9 @@ final class dd_utils_api {
 	*	source	: source
 	* }
 	* @return object $response
+	* - result: object|false  Login component context on success, false on error
+	* - msg:    string        Human-readable status or error message
+	* - errors: array         Populated with error strings on failure
 	*/
 	public static function get_login_context(object $rqo) : object {
 
@@ -116,14 +154,21 @@ final class dd_utils_api {
 
 	/**
 	* GET_INSTALL_CONTEXT
-	* This function is an alias of get_element_context and does not need to login before
+	* Returns the install component's rendering context without requiring authentication.
+	*
+	* The install wizard runs before any user session exists, so this endpoint is
+	* intentionally unauthenticated. It mirrors the pattern of get_login_context
+	* but for class install — building the context-only JSON of the install UI.
+	*
 	* @param object $rqo
 	* {
 	*	action	: 'get_install_context',
 	*	dd_api	: 'dd_utils_api',
 	*	source	: source
-	*  }
+	* }
 	* @return object $response
+	* - result: object|false  Install component context on success, false on error
+	* - msg:    string        Human-readable status or error message
 	*/
 	public static function get_install_context(object $rqo) : object {
 
@@ -153,8 +198,11 @@ final class dd_utils_api {
 
 
 	/**
-	* DEDALO_VERSION (UNUSED !)
-	* Use environment page_globals instead !
+	* DEDALO_VERSION (UNUSED — dead/commented-out code)
+	* Use environment page_globals instead.
+	* This method was removed from API_ACTIONS and commented out; it is kept
+	* here only for historical reference. Callers should read DEDALO_VERSION
+	* from the page_globals object delivered during the initial page load.
 	* @param object $rqo
 	* @return object $response
 	*/
@@ -182,8 +230,21 @@ final class dd_utils_api {
 
 	/**
 	* GET_SYSTEM_INFO
+	* Returns PHP-side system configuration values used by the upload and
+	* maintenance UIs to validate client-side behaviour.
+	*
+	* The returned object includes the effective maximum upload size (the
+	* smaller of post_max_size and upload_max_filesize), the temp-directory
+	* paths, session cache expiry, the chunk-upload flag, and whether a PDF
+	* OCR engine is configured.
+	*
+	* No authentication guard is enforced here; the API router's session check
+	* already requires a valid login before any API_ACTIONS method is reached.
+	*
 	* @param object $rqo
-	* @return object response
+	* @return object $response
+	* - result: object  System info payload with the fields described above
+	* - msg:    string  Status message
 	*/
 	public static function get_system_info(object $rqo) : object {
 
@@ -214,7 +275,10 @@ final class dd_utils_api {
 
 
 	/**
-	* BUILD_STRUCTURE_CSS **** DEPRECATED ! ****
+	* BUILD_STRUCTURE_CSS (DEPRECATED — dead/commented-out code)
+	* Was used to trigger a server-side rebuild of the LESS-compiled structure
+	* CSS. Removed as part of the v7 build pipeline refactor; CSS is now
+	* compiled offline. The method body is kept commented out for reference.
 	* @param object $rqo
 	* @return object $response
 	*/
@@ -239,6 +303,27 @@ final class dd_utils_api {
 
 	/**
 	* CONVERT_SEARCH_OBJECT_TO_SQL_QUERY
+	* Diagnostic tool: executes a raw SQO (search query object) and returns the
+	* generated SQL together with the matched section_id list.
+	*
+	* Restricted to global-admin users. Useful during development to verify that
+	* a client-built SQO produces the expected PostgreSQL query without running
+	* a full section render cycle.
+	*
+	* The $rqo->options field carries the SQO, either as a JSON string or as a
+	* pre-decoded object. Because this endpoint receives the SQO via options
+	* (not the standard $rqo->sqo path), it is not automatically scrubbed by
+	* the API ingress handler in index.php — this method applies
+	* search_query_object::sanitize_client_sqo() explicitly before passing the
+	* object to the search pipeline.
+	*
+	* Response on success includes:
+	*   - result:        true
+	*   - msg:           Resolved SQL with substituted placeholders (for human reading)
+	*   - sql:           Raw SQL with positional placeholders ($1, $2, …)
+	*   - ar_section_id: Deduplicated list of matching section IDs
+	*   - db_data:       Full raw row array from the database result
+	*
 	* @param object $rqo
 	* @return object $response
 	*/
@@ -302,16 +387,32 @@ final class dd_utils_api {
 
 	/**
 	* CHANGE_LANG
+	* Updates the active data and/or application language for the current session
+	* and (optionally) triggers a background rebuild of the security-access cache
+	* for the new language.
+	*
+	* Language values are XSS-sanitized before being written to $_SESSION. When
+	* the DEDALO_DATA_LANG_SYNC constant is true the two languages are kept in
+	* sync: whichever is supplied drives the other.
+	*
+	* If the DEDALO_CACHE_MANAGER constant is configured and the user is logged
+	* in, the method checks whether a pre-computed security-access tree exists
+	* for the target application language. If not found, it spawns a background
+	* process (dd_cache::process_and_cache_to_file with wait=false) so that the
+	* next page load can serve the cached tree instead of rebuilding it inline.
+	*
 	* @param object $rqo
 	* {
 	*	action	: 'change_lang',
 	*	dd_api	: 'dd_utils_api',
 	*	options	: {
-	*		dedalo_data_lang		: lang,
-	*		dedalo_application_lang	: lang
+	*		dedalo_data_lang        : string  BCP-47 language tag, e.g. 'es-ES'
+	*		dedalo_application_lang : string  BCP-47 language tag, e.g. 'es-ES'
 	*	}
-	*  }
+	* }
 	* @return object $response
+	* - result: true
+	* - msg:    string  Confirmation message including which languages changed
 	*/
 	public static function change_lang(object $rqo) : object {
 
@@ -398,16 +499,23 @@ final class dd_utils_api {
 
 	/**
 	* LOGIN
+	* Thin adapter that forwards credentials from the $rqo to login::Login().
+	*
+	* The raw password is passed as $options->auth; login::Login() handles
+	* hashing, session initialisation, and profile loading. All error handling
+	* (invalid credentials, locked accounts, SAML redirects) is performed
+	* inside login::Login and surfaced through its returned object.
+	*
 	* @param object $rqo
 	* {
 	*	action	: 'login',
 	*	dd_api	: 'dd_utils_api',
 	*	options	: {
-	*		username	: username,
-	*		auth		: auth
+	*		username : string  Plain-text username
+	*		auth     : string  Plain-text password (hashed inside login::Login)
 	*	}
 	* }
-	* @return object $response
+	* @return object $response  Forwarded from login::Login; shape is documented there
 	*/
 	public static function login(object $rqo) : object {
 
@@ -428,6 +536,18 @@ final class dd_utils_api {
 
 	/**
 	* QUIT
+	* Logs the current user out, destroys the session, and optionally returns
+	* a SAML single-logout redirect URL.
+	*
+	* The login_type is read from $_SESSION before the session is destroyed so
+	* the SAML redirect can still be generated after logout. After login::Quit()
+	* completes, session_write_close() is called to release the session lock
+	* and prevent stale session data from persisting.
+	*
+	* When SAML is active (SAML_CONFIG['active'] === true) and a logout URL is
+	* configured, the response carries a `saml_redirect` field that the client
+	* must follow to complete the SAML single-logout flow.
+	*
 	* @param object $rqo
 	* {
 	*	action	: 'quit',
@@ -435,6 +555,9 @@ final class dd_utils_api {
 	*	options	: {}
 	* }
 	* @return object $response
+	* - result:        bool    true when logout succeeded
+	* - msg:           string  Status message
+	* - saml_redirect: string  (only present when SAML is active) IdP logout URL
 	*/
 	public static function quit(object $rqo) : object {
 
@@ -474,16 +597,34 @@ final class dd_utils_api {
 
 	/**
 	* INSTALL
-	* Control the install process calls to be re-direct to the correct actions
+	* Dispatcher for the install-wizard sub-actions. Routes $options->action to
+	* the matching install:: class method, enforcing the following guards:
+	*
+	* - When DEDALO_INSTALL_STATUS === 'installed', all sub-actions are blocked
+	*   EXCEPT 'install_hierarchies' (which may run post-install to add new
+	*   ontology hierarchies and requires an active session).
+	* - 'install_db_from_default_file' additionally checks that the target
+	*   database is empty (no matrix_users table) before importing, preventing
+	*   data loss on an already-initialized database.
+	* - 'install_hierarchies' requires login::is_logged() === true.
+	*
+	* Supported sub-actions and their delegates:
+	*   install_db_from_default_file → install::install_db_from_default_file()
+	*   to_update                    → install::to_update()
+	*   install_hierarchies          → install::install_hierarchies()
+	*   set_root_pw                  → install::set_root_pw()
+	*   install_finish               → install::set_install_status('installed')
+	*
 	* @param object $rqo
 	* {
 	*	action	: 'install',
 	*	dd_api	: 'dd_utils_api',
 	*	options	: {
-	*		action : 'to_update'
+	*		action : string  One of the sub-actions listed above
+	*		...              Additional fields consumed by the delegate method
 	*	}
 	* }
-	* @return object $response
+	* @return object $response  Shape varies by sub-action; always has result and msg
 	*/
 	public static function install(object $rqo) : object {
 
@@ -572,31 +713,66 @@ final class dd_utils_api {
 
 	/**
 	* UPLOAD
-	* Manages given upload file
-	* Sample expected $json_data:
-	* {
-		"action": "upload",
-		"dd_api": "dd_utils_api",
-		"options": {
-			"key_dir": "av",
-			"file_name": "foc-intro.mp4",
-			"chunked": "true",
-			"start": "2097152",
-			"end": "4194304",
-			"chunk_index": "1",
-			"total_chunks": "19",
-			"file_to_upload": {
-				"name": "blob",
-				"full_path": "blob",
-				"type": "application/octet-stream",
-				"tmp_name": "/private/var/tmp/phprfdEk5",
-				"error": 0,
-				"size": 2097152
-			}
-		}
-	* }
+	* Validates and stores a single uploaded file (or one chunk of a chunked upload)
+	* into the per-user upload staging area (DEDALO_UPLOAD_TMP_DIR/<user_id>/<key_dir>).
+	*
+	* Security model (applied in order):
+	*   1. Permission gate: when $options->tipo is provided the caller must have
+	*      at least write permission (level 2) on the target section type;
+	*      tipo-less uploads (scratch / tool_upload) fall through to the
+	*      historical logged-only check because they are unbound until a
+	*      component's save flow consumes and validates them.
+	*   2. PHP upload-error check: all UPLOAD_ERR_* codes are handled explicitly.
+	*   3. MIME-type allowlist: finfo::file() is used to detect the real MIME
+	*      type (not the client-supplied Content-Type). Unknown MIMEs are rejected.
+	*   4. Extension allowlist: the extension extracted from the file name must
+	*      appear in get_known_mime_types().
+	*   5. MIME–extension cross-validation: the extension must belong to the same
+	*      allowlist entry as the finfo-detected MIME (prevents e.g. uploading a
+	*      PHP file renamed to .jpg).
+	*   6. Path confinement: safe_upload_target() confines the destination path
+	*      inside $tmp_dir using basename + realpath, rejecting path-traversal
+	*      sequences (API-01).
+	*   7. Move: supports both native PHP move_uploaded_file() and PSR-7
+	*      UploadedFileInterface::moveTo() (for RoadRunner workers).
+	*
+	* For chunked uploads (options->chunked === 'true') each chunk is stored as
+	*   "<chunk_index>-<tmp_name>.blob" and the MIME check uses
+	*   'application/octet-stream', which always passes. The final assembled
+	*   file is validated in join_chunked_files_uploaded (SEC-066).
+	*
+	* The 'web' key_dir is a special case for rich-text editor image uploads:
+	* the file is moved directly to DEDALO_MEDIA_PATH/image/<WEB_FOLDER>/ and
+	* the response carries a plain { url } object (not the standard envelope).
+	*
+	* Thumbnails are generated immediately for non-chunked images, videos, and
+	* PDFs via create_thumbnail(). Chunked thumbnails are generated after
+	* join_chunked_files_uploaded completes.
+	*
+	* (!) Activity logging for completed uploads is intentionally done inside
+	*     tool_upload::process_uploaded_file, not here, because chunk order is
+	*     non-deterministic and this method cannot reliably detect the last chunk.
+	*
 	* @param object $rqo
+	* {
+	*	action: 'upload',
+	*	dd_api: 'dd_utils_api',
+	*	options: {
+	*		key_dir       : string  Upload category / component tipo contraction, e.g. 'av'
+	*		file_name     : string  (chunked only) Final assembled file name
+	*		chunked       : string  'true' | 'false'
+	*		start         : string  (chunked) Byte offset of this chunk
+	*		end           : string  (chunked) End byte of this chunk
+	*		chunk_index   : string  (chunked) Zero-based chunk index
+	*		total_chunks  : string  (chunked) Total number of chunks
+	*		tipo          : string  (optional) Target component tipo for permission check
+	*		file_to_upload: array   PHP $_FILES entry, optionally augmented with 'psr7' key
+	*	}
+	* }
 	* @return object $response
+	* - result:    bool
+	* - msg:       string
+	* - file_data: object  (on success) File metadata; shape varies by chunked/non-chunked
 	*/
 	public static function upload(object $rqo) : object {
 		$start_time=start_time();
@@ -1007,17 +1183,46 @@ final class dd_utils_api {
 
 
 	/**
-	* GET_SYSTEM_INFO
-	* @param object $rqo
+	* JOIN_CHUNKED_FILES_UPLOADED
+	* Assembles individual chunk files written by upload() into a single final file.
 	*
-	*	dd_api	: 'dd_utils_api',
-	*	action	: 'join_chunked_files_uploaded',
-	*	options	: {
-	*		file_data		: file_data,
-	*		files_chunked	: files_chunked
+	* After all chunks have been uploaded (each stored as
+	* "<chunk_index>-<tmp_name>.blob" in the user's staging directory), the
+	* client sends this request with the ordered list of chunk filenames in
+	* $options->files_chunked. The method:
+	*   1. Validates and confines each chunk path inside the upload tree (API-02)
+	*      to prevent path-traversal on client-supplied chunk names.
+	*   2. Appends each chunk's content to a temporary assembled file using
+	*      FILE_APPEND | LOCK_EX.
+	*   3. Deletes each chunk after appending.
+	*   4. Validates the extension of the assembled file name against the MIME
+	*      allowlist and rejects unknown extensions (with deletion of the
+	*      assembled file, SEC-066).
+	*   5. Runs finfo::file() on the fully assembled file and cross-validates
+	*      the detected MIME type against the client-supplied extension —
+	*      closing the attack window where a hostile payload is streamed as
+	*      legitimate-extension chunks and the joined file escapes MIME
+	*      validation (SEC-066).
+	*   6. Generates a thumbnail via create_thumbnail().
+	*   7. Returns the updated file_data object for the client to use in
+	*      subsequent component-save calls.
+	*
+	* (!) The end-of-function comment label reads 'get_system_info' — that is a
+	*     copy-paste error in the original source; this is join_chunked_files_uploaded.
+	*
+	* @param object $rqo
+	* {
+	*	dd_api : 'dd_utils_api',
+	*	action : 'join_chunked_files_uploaded',
+	*	options: {
+	*		file_data     : object    Metadata from the upload() response (key_dir, name, …)
+	*		files_chunked : string[]  Ordered list of chunk filenames to assemble
 	*	}
 	* }
-	* @return object response
+	* @return object $response
+	* - result:    bool
+	* - msg:       string
+	* - file_data: object  Updated file_data with tmp_name, extension, thumbnail_url
 	*/
 	public static function join_chunked_files_uploaded(object $rqo) : object {
 
@@ -1187,16 +1392,29 @@ final class dd_utils_api {
 
 	/**
 	* LIST_UPLOADED_FILES
-	* Used by the upload lib (Dropzone) to get the list of already uploaded files on server
+	* Returns the list of files already staged in the current user's upload
+	* directory for a given key_dir. Called by the Dropzone upload widget on
+	* initial render to pre-populate the file list with previously uploaded
+	* (but not yet saved) items.
+	*
+	* Only files owned by the currently logged-in user are visible: the path
+	* is scoped to DEDALO_UPLOAD_TMP_DIR/<user_id>/<key_dir>. Dotfiles and
+	* subdirectory entries are skipped.
+	*
+	* The session is explicitly unlocked (session_write_close) before scanning
+	* the filesystem so that concurrent requests from the same session are not
+	* blocked.
+	*
 	* @param object $rqo
-	* 	Object with only the key_dir name like { key_dir: 'oh1_4' }
+	* {
+	*	options: {
+	*		key_dir: string  Upload category identifier, e.g. 'oh1_4'
+	*	}
+	* }
 	* @return object $response
-	* 	response->result:
-	* 	Array of objects like: [{
-	* 		url : server generated thumbnail url,
-	* 		name : file name like 'my_photo51.jpg',
-	* 		size : informative file size in bytes like 6528743 (from original file, not from the thumb)
-	* 	}]
+	* - result: array  Array of objects with shape:
+	*   { url: string (thumbnail URL), name: string (file name), size: int (bytes) }
+	* - msg:    string  Status message
 	*/
 	public static function list_uploaded_files(object $rqo) : object {
 
@@ -1248,12 +1466,30 @@ final class dd_utils_api {
 
 	/**
 	* DELETE_UPLOADED_FILE
-	* Used by the upload lib (Dropzone) to delete already uploaded files on server
+	* Removes one or more staged uploaded files (and their thumbnails) from the
+	* current user's upload staging directory. Called by the Dropzone widget when
+	* the user removes a file from the upload queue before saving.
+	*
+	* Accepts a single file name or an array of names in $options->file_name.
+	* Each name is sanitized with sanitize_file_name() before being used to
+	* build the path, preventing path-traversal attacks via client-supplied names.
+	* The corresponding thumbnail (thumbnail/<basename>.jpg) is also deleted
+	* when it exists.
+	*
+	* The method sets result = false and appends to msg if any individual unlink
+	* call fails, but continues processing the remaining names in the array.
+	* The final response is result = true only when all deletions succeeded.
+	*
 	* @param object $rqo
-	* 	Object like { file_name: 'my_photo_452.jpg', key_dir: 'rsc29_rsc176' }
+	* {
+	*	options: {
+	*		file_name : string|string[]  One or more staged file names to delete
+	*		key_dir   : string           Upload category identifier
+	*	}
+	* }
 	* @return object $response
-	* 	response->result
-	* 	Returns false if file do not exists or the unlink call do not return true
+	* - result: bool    false if any unlink failed or file did not exist
+	* - msg:    string  Status message (error detail on failure)
 	*/
 	public static function delete_uploaded_file(object $rqo) : object {
 
@@ -1323,38 +1559,39 @@ final class dd_utils_api {
 
 	/**
 	* UPDATE_LOCK_COMPONENTS_STATE
-	* Connects to database and updates user lock components state
-	* on focus or blur user actions
+	* Records a component focus or blur event in the collaborative lock table,
+	* then returns the current lock state so the UI can show/hide the "in use by
+	* another user" indicator.
+	*
+	* Called on every focus/blur of an editable component. The session is
+	* released immediately (session_write_close) so that concurrent lock-poll
+	* requests from the same user session are not serialized.
+	*
+	* Security: the caller must have at least read permission (level 1) on the
+	* target section_tipo. Without this check any logged-in user could fabricate
+	* focus events on sections they are not authorized to view.
+	*
+	* The response also carries the current DEDALO_NOTIFICATION /
+	* DEDALO_NOTIFICATION_CUSTOM value so the client can update any visible
+	* maintenance banner in a single round-trip.
+	*
 	* @param object $rqo
-	* 	Sample:
-	* 	{
-	*	    "dd_api": "dd_utils_api",
-	*	    "action": "update_lock_components_state",
-	*	    "options": {
-	*	        "component_tipo": "hierarchy24",
-	*	        "section_tipo": "sv1",
-	*	        "section_id": "1",
-	*	        "action": "focus"
-	*	    }
+	* {
+	*	dd_api  : 'dd_utils_api',
+	*	action  : 'update_lock_components_state',
+	*	options : {
+	*		component_tipo : string  Tipo of the focused component
+	*		section_tipo   : string  Tipo of the parent section
+	*		section_id     : string  Record ID within the section
+	*		action         : string  'focus' | 'blur' | 'delete_user_section_locks'
 	*	}
+	* }
 	* @return object $response
-	* 	Sample:
-	* 	{
-	*	    "result": true,
-	*	    "msg": "Updated db lock elements",
-	*	    "data": [
-	*	        {
-	*	            "date": "2024-03-08 09:30:10",
-	*	            "action": "focus",
-	*	            "user_id": null,
-	*	            "section_id": "1",
-	*	            "section_tipo": "test3",
-	*	            "full_username": "Unknown",
-	*	            "component_tipo": "test94"
-	*	        }
-	*	    ],
-	*	    "in_use": false
-	*	}
+	* - result:              bool
+	* - msg:                 string
+	* - data:                array   Current lock entries (see lock_components::update_lock_components_state)
+	* - in_use:              bool    true when another user currently holds a focus lock
+	* - dedalo_notification: string|null  Current maintenance notification text
 	*/
 	public static function update_lock_components_state(object $rqo) : object {
 
@@ -1412,10 +1649,34 @@ final class dd_utils_api {
 
 	/**
 	* GET_DEDALO_FILES
-	* Connects to database and updates user lock components state
-	* on focus or blur user actions
+	* Returns a manifest of all Dédalo JS and CSS files (core + tools) that the
+	* client service worker should pre-cache.
+	*
+	* The result is used by the service worker (worker_cache.js) to build its
+	* cache on install or when a new DEDALO_VERSION is detected. The method
+	* walks the filesystem rather than maintaining a static list so that newly
+	* added files are automatically included.
+	*
+	* Filter rules applied to core JS files:
+	*   - Only files inside a /js/ directory are included.
+	*   - Excluded subtrees: /acc/, /themes/, /ontology/, /old/, /lib/,
+	*     /test/, /plug-ins/, /fonts/, worker_cache.js, /sw.js.
+	*
+	* Filter rules for tool JS/CSS files:
+	*   - Only files at depth <tool_dir>/js/ or <tool_dir>/css/ are included.
+	*   - Excluded subtrees: /acc/, /old/, /lib/.
+	*
+	* The main.css file is added first (its path under /page/css/ does not
+	* follow the /js/ pattern so it would otherwise be skipped).
+	*
+	* The response also includes the current DEDALO_VERSION so the client can
+	* invalidate stale service-worker caches.
+	*
 	* @param object $rqo
 	* @return object $response
+	* - result:         array   Objects with { type: 'js'|'css', url: string }
+	* - dedalo_version: string  Current DEDALO_VERSION constant
+	* - msg:            string  Status message
 	*/
 	public static function get_dedalo_files(object $rqo) : object {
 
@@ -1517,10 +1778,44 @@ final class dd_utils_api {
 
 	/**
 	* GET_PROCESS_STATUS
-	* Used for SSE events to get info about know background process
-	* Note that PID (process id) and PFILE (process file name) are mandatory
+	* Opens a Server-Sent Events (SSE) stream that polls a background process
+	* and pushes its current status to the client at a configurable interval.
+	*
+	* Under RoadRunner (DEDALO_RR_WORKER defined) this method immediately
+	* delegates to get_process_status_stream(), which yields SSE chunks instead
+	* of echoing directly, because RoadRunner's worker protocol requires a
+	* generator to stream responses correctly.
+	*
+	* Under standard PHP-FPM the method:
+	*   1. Sets max_execution_time to 10 hours so long processes are not cut off.
+	*   2. Releases the session lock (session_write_close) to allow concurrent
+	*      requests from the same session.
+	*   3. Checks authentication — unauthenticated callers receive an error
+	*      string via die() (the raw SSE stream has no JSON envelope at this
+	*      point).
+	*   4. Enforces ownership: the process entry must belong to the logged user
+	*      (or the caller must be DEDALO_SUPERUSER) to prevent information
+	*      leakage between users via guessed/leaked pid values.
+	*   5. Emits SSE headers and enters an event loop:
+	*      - reads is_running + data from the process file on each iteration,
+	*      - pads the JSON payload to 4096 bytes on HTTP/1.1 to work around
+	*        Apache's tendency to coalesce small chunks,
+	*      - writes `data:\n{json}\n\n` frames,
+	*      - breaks when is_running is false or the client disconnects.
+	*   6. Calls processes::delete_process_item() and die() on loop exit.
+	*
+	* (!) This method does NOT return an object — it terminates via die().
+	*     The @return annotation is kept as 'die()' for historical clarity.
+	*
 	* @param object $rqo
-	* @return die()
+	* {
+	*	options: {
+	*		pid:   int|string  System process ID
+	*		pfile: string      Process output file name (relative to process::get_process_path())
+	*	}
+	*	update_rate?: int  Polling interval in milliseconds (default 1000)
+	* }
+	* @return void  Terminates via die() after the SSE stream ends
 	*/
 	public static function get_process_status(object $rqo) {
 
@@ -1704,31 +1999,35 @@ final class dd_utils_api {
 	/**
 	* GET_PROCESS_STATUS_POLL
 	* One-shot polling version of get_process_status.
-	* Reads the process file once and returns a standard JSON response.
-	* Unlike the SSE version (`get_process_status`), this method does NOT use
-	* streaming, die(), or blocking loops — making it compatible with both
-	* PHP-FPM and RoadRunner worker contexts.
+	* Reads the process file once and returns a standard JSON response object,
+	* making it compatible with both PHP-FPM and RoadRunner worker contexts.
 	*
-	* The client calls this endpoint repeatedly via setInterval to monitor
-	* process progress with the same functional result as SSE at 1s update_rate.
+	* Unlike the SSE version (get_process_status), this method does NOT use
+	* streaming, die(), or blocking loops. The client calls this endpoint
+	* repeatedly via setInterval to achieve the same monitoring effect as SSE,
+	* with a 1 s interval equivalent to the default update_rate.
+	*
+	* The same authentication and ownership checks as the SSE variant are
+	* applied: the caller must be logged in, and the process entry must belong
+	* to the logged user (or the caller must be DEDALO_SUPERUSER). When the
+	* process finishes (is_running === false) the database entry is cleaned up
+	* via processes::delete_process_item before returning.
 	*
 	* @param object $rqo
 	* {
 	*   options: {
-	*     pid:   int    Process ID
-	*     pfile: string Process output file name
+	*     pid:   int|string  System process ID
+	*     pfile: string      Process output file name
 	*   }
 	* }
 	* @return object $response
-	* {
-	*   result:     bool
-	*   pid:        int
-	*   pfile:      string
-	*   is_running: bool
-	*   data:       object  { msg, counter, total, ... }
-	*   time:       string  Current server time
-	*   errors:     array
-	* }
+	* - result:     bool
+	* - pid:        int|string
+	* - pfile:      string
+	* - is_running: bool
+	* - data:       object  Decoded last line of process output { msg, counter, total, … }
+	* - time:       string  Current server timestamp (Y-m-d H:i:s)
+	* - errors:     array   Empty on success
 	*/
 	public static function get_process_status_poll(object $rqo) : object {
 
@@ -1820,12 +2119,28 @@ final class dd_utils_api {
 	* GET_PROCESS_STATUS_STREAM
 	* RoadRunner-compatible generator version of get_process_status.
 	*
-	* Produces the same SSE event stream but yields chunks instead of
-	* echoing + die(), allowing the RoadRunner worker to forward them
-	* frame-by-frame via HttpWorker::respondStream().
+	* Produces the same SSE event stream as get_process_status but uses PHP
+	* generator syntax (yield) instead of echo + die(), so the RoadRunner
+	* worker can forward yielded chunks frame-by-frame via
+	* HttpWorker::respondStream() without blocking the worker slot.
+	*
+	* Key differences from the PHP-FPM SSE variant:
+	*   - Never calls die() or echo; control returns to the caller between yields.
+	*   - Includes a max-iteration guard (max_execution_time is ignored under the
+	*     CLI SAPI used by RoadRunner; ~10-hour cap based on update_rate).
+	*   - Catches \Spiral\RoadRunner\Http\Exception\StreamStoppedException so
+	*     that a client disconnect triggers graceful cleanup instead of a fatal.
+	*   - Skips the Apache HTTP/1.1 padding when DEDALO_RR_WORKER is defined
+	*     because RoadRunner streams via its own binary framing protocol.
+	*
+	* Applies the same authentication and ownership checks as the FPM variant.
+	*
+	* This method is not listed in API_ACTIONS and is not called directly by
+	* the router; it is invoked internally by get_process_status() when
+	* DEDALO_RR_WORKER is defined.
 	*
 	* @param object $rqo
-	* @return \Generator Yields SSE formatted strings "data:\n{json}\n\n"
+	* @return \Generator  Yields SSE-formatted strings "data:\n{json}\n\n"
 	*/
 	public static function get_process_status_stream(object $rqo) : \Generator {
 
@@ -2001,8 +2316,24 @@ final class dd_utils_api {
 
 	/**
 	* STOP_PROCESS
+	* Sends a termination signal to a running background process.
+	*
+	* Delegates to processes::stop(), passing the integer PID and the user ID.
+	* If $rqo->options->user_id is omitted the currently logged-in user's ID is
+	* used, which is the normal case; the field exists to allow superuser tools
+	* to stop processes on behalf of other users.
+	*
+	* When pid is null the method returns immediately with result = false, because
+	* a null PID has no associated system process and kill(null) would be unsafe.
+	*
 	* @param object $rqo
-	* @return object $response
+	* {
+	*	options: {
+	*		pid:     int|null     System process ID to stop
+	*		user_id: int|null     (optional) Override user ID; defaults to logged user
+	*	}
+	* }
+	* @return object $response  Forwarded from processes::stop(); always has result and msg
 	*/
 	public static function stop_process(object $rqo) : object {
 
@@ -2036,11 +2367,29 @@ final class dd_utils_api {
 
 	/**
 	* GET_SERVER_READY_STATUS
-	* Check if the server is a ontology server or not.
-	* Ontology servers can provide specific ontology files as master
-	* Non ontology server will refuse to use his ontology files by other installations
+	* Returns whether this Dédalo instance is configured to act as a specific
+	* type of distribution server.
+	*
+	* Called by remote clients (other Dédalo instances) before attempting an
+	* update to verify that the target server is ready to serve content:
+	*   - 'ontology_server': checks IS_AN_ONTOLOGY_SERVER === true.
+	*   - 'code_server':     checks IS_A_CODE_SERVER === true.
+	*
+	* If the relevant constant is not defined or is false, the method returns
+	* result = false with a generic error message. This endpoint is intentionally
+	* minimal and does not require authentication, so that remote Dédalo instances
+	* can probe availability before opening an authenticated session.
+	*
 	* @param object $rqo
+	* {
+	*	options: {
+	*		check: string  'ontology_server' | 'code_server'
+	*	}
+	* }
 	* @return object $response
+	* - result: bool    true when the requested server type is active
+	* - msg:    string  Descriptive status or error text
+	* - errors: array   Empty on success
 	*/
 	public static function get_server_ready_status( object $rqo ) : object {
 
@@ -2088,16 +2437,34 @@ final class dd_utils_api {
 
 	/**
 	* GET_ONTOLOGY_UPDATE_INFO
-	* Ontology server provide information about the ontology that it can provide.
-	* Client needs to provide his version and the code for this server.
+	* Returns metadata about ontology files this server can distribute to the
+	* requesting Dédalo client.
+	*
+	* This endpoint is called by remote Dédalo instances (clients) that want to
+	* update their local ontology from a trusted ontology server. The server must
+	* have IS_AN_ONTOLOGY_SERVER === true and ONTOLOGY_DATA_IO_URL defined.
+	*
+	* Authorization is code-based (no user session required):
+	*   - The client sends a shared secret in $options->code.
+	*   - The server validates it against ONTOLOGY_SERVER_CODE (preferred) or
+	*     against the codes in ONTOLOGY_SERVERS array (fallback).
+	*   - An invalid or missing code returns result = false immediately.
+	*
+	* Version validation:
+	*   - The client sends its own DEDALO_VERSION as $options->version (e.g. '7.3.1').
+	*   - The first two segments are validated as numeric. Non-numeric segments
+	*     return an error response.
+	*   - The parsed $ar_version is forwarded to ontology_data_io::get_ontology_update_info,
+	*     which uses it to filter ontology files compatible with the caller's version.
+	*
 	* @param object $rqo
 	* {
-	* 	options: {
-	* 		version: string
-	* 		code: string
-	* 	}
+	*	options: {
+	*		version : string  Client's DEDALO_VERSION, e.g. '7.3.1'
+	*		code    : string  Shared secret authorizing access to this server's ontology
+	*	}
 	* }
-	* @return object $response
+	* @return object $response  Forwarded from ontology_data_io::get_ontology_update_info
 	*/
 	public static function get_ontology_update_info( object $rqo ) : object {
 
@@ -2196,10 +2563,34 @@ final class dd_utils_api {
 
 	/**
 	* GET_CODE_UPDATE_INFO
-	* Ontology server provide information about the ontology that it can provide.
-	* Client needs to provide his version and the code for this server.
+	* Returns metadata about Dédalo code update packages this server can
+	* distribute to the requesting Dédalo client.
+	*
+	* Mirrors get_ontology_update_info but for code (PHP/JS) updates rather
+	* than ontology data. The server must have IS_A_CODE_SERVER === true and
+	* DEDALO_CODE_FILES_DIR defined.
+	*
+	* Authorization is code-based via CODE_SERVERS array (no ONTOLOGY_SERVER_CODE
+	* fallback — only the array-based lookup is used here).
+	*
+	* Version validation:
+	*   - Three segments (major.minor.patch) are validated as numeric.
+	*   - Segments beyond index 2 are ignored (break at key > 2).
+	*   - Parsed integer segments are assembled into $client_version[0..2] and
+	*     forwarded to update_code::get_code_update_info.
+	*
+	* (!) The end-of-function comment label reads 'get_ontology_update_info' —
+	*     that is a copy-paste error in the original source; this method is
+	*     get_code_update_info.
+	*
 	* @param object $rqo
-	* @return object $response
+	* {
+	*	options: {
+	*		version : string  Client's DEDALO_VERSION, e.g. '7.3.1'
+	*		code    : string  Shared secret authorizing access to this server's code packages
+	*	}
+	* }
+	* @return object $response  Forwarded from update_code::get_code_update_info
 	*/
 	public static function get_code_update_info( object $rqo ) : object {
 
@@ -2302,8 +2693,15 @@ final class dd_utils_api {
 
 	/**
 	* ERROR_NUMBER_TO_TEXT
-	* @param int $f_error_number
-	* @return string $f_error_text
+	* Converts a PHP upload error code (UPLOAD_ERR_* constant value) to a
+	* localized human-readable string via the label system.
+	*
+	* Returns an empty string for unknown error codes. Code 0 (UPLOAD_ERR_OK)
+	* returns a "file uploaded successfully" label. Codes 1–8 map to specific
+	* i18n label keys.
+	*
+	* @param int $f_error_number  PHP upload error code (0–8)
+	* @return string $f_error_text  Localized description; empty string for unknown codes
 	*/
 	private static function error_number_to_text(int $f_error_number) : string {
 
@@ -2332,8 +2730,15 @@ final class dd_utils_api {
 
 	/**
 	* FILE_UPLOAD_MAX_SIZE
-	* Returns a file size limit in bytes based on the PHP upload_max_filesize and post_max_size.
-	* @return int
+	* Returns the effective maximum upload file size in bytes, computed from the
+	* PHP ini settings post_max_size and upload_max_filesize.
+	*
+	* The effective limit is the smaller of the two values (because PHP enforces
+	* both). A value of 0 for either means "no limit" and is treated as infinity
+	* for comparison purposes. The result is cached in a static variable so the
+	* ini lookups are only performed once per request.
+	*
+	* @return int  Maximum upload size in bytes; -1 when no limit is configured
 	*/
 	private static function file_upload_max_size() : int {
 
@@ -2361,8 +2766,15 @@ final class dd_utils_api {
 
 	/**
 	* PARSE_SIZE
-	* @param string $size
-	* @return int
+	* Converts a PHP ini size string (e.g. '8M', '512K', '2G') to bytes.
+	*
+	* The unit suffix is matched case-insensitively against the ordered string
+	* 'bkmgtpezy'; its position in that string is the power of 1024 to apply.
+	* When no unit suffix is present, the value is returned as-is (rounded to
+	* the nearest integer). Used exclusively by file_upload_max_size().
+	*
+	* @param string $size  PHP ini size string, e.g. '8M', '2G', '512'
+	* @return int          Size in bytes
 	*/
 	private static function parse_size(string $size) : int {
 
@@ -2380,7 +2792,29 @@ final class dd_utils_api {
 
 	/**
 	* GET_KNOWN_MIME_TYPES
-	* @return array $mime_types
+	* Returns the upload allowlist: an array of MIME-type/extension pairs that
+	* Dédalo accepts as uploaded files.
+	*
+	* Each entry is an associative array:
+	*   ['mime' => string, 'extension' => string[]]
+	*
+	* The upload() method uses this list for a three-stage check:
+	*   1. Is the finfo-detected MIME type in the list?
+	*   2. Is the extension in any list entry?
+	*   3. Do the detected MIME and the extension belong to the SAME entry?
+	*
+	* Notable omissions (intentional security decisions):
+	*   - text/html (.html, .htm): stored-XSS vector (MEDIA-01).
+	*   - application/javascript (.js): script injection.
+	*   - application/x-shockwave-flash (.swf): Flash-based XSS.
+	*   - application/x-msdownload (.exe, .msi): executable upload prevention.
+	*
+	* Notable inclusions with serving-layer requirements:
+	*   - application/xml, image/svg+xml: legitimate import/component use, but
+	*     must be served with Content-Disposition: attachment or a strict CSP to
+	*     prevent inline-rendering attacks.
+	*
+	* @return array<int, array{mime: string, extension: string[]}>
 	*/
 	private static function get_known_mime_types() : array {
 
@@ -2621,11 +3055,30 @@ final class dd_utils_api {
 
 	/**
 	* CREATE_THUMBNAIL
-	* Used by tool_import_files to create temporal thumbnails in list
-	* of uploaded files
+	* Generates a JPEG thumbnail for an uploaded file and places it in the
+	* <tmp_dir>/thumbnail/ subdirectory. Returns the public URL of the thumbnail.
+	*
+	* Dispatches to the appropriate conversion utility based on the finfo-detected
+	* MIME type of the source file:
+	*   - application/pdf  → ImageMagick::convert at 72 dpi, 12.5% resize, q50
+	*   - image/*          → ImageMagick::convert with thumbnail=true
+	*   - video/*          → Ffmpeg::create_posterframe at timecode 10s
+	*   - all others       → returns null (no thumbnail produced)
+	*
+	* Called from both upload() (non-chunked uploads) and
+	* join_chunked_files_uploaded() (after all chunks are assembled). The
+	* returned URL is served from DEDALO_UPLOAD_TMP_URL under the user's
+	* staging directory, so it is only accessible while the file remains staged.
+	*
 	* @see dd_utils_api::upload
+	* @see dd_utils_api::join_chunked_files_uploaded
 	* @param object $options
-	* @return string $thumbnail_url
+	* - tmp_dir:     string  Absolute path of the user's staging directory
+	* - name:        string  File name within tmp_dir (source file basename)
+	* - target_path: string  Absolute path of the source file
+	* - key_dir:     string  Upload category identifier used to build the URL
+	* - user_id:     int     Current logged-in user ID used to build the URL
+	* @return string|null  Public URL of the generated thumbnail, or null on failure/unsupported type
 	*/
 	private static function create_thumbnail(object $options) : ?string {
 
