@@ -83,14 +83,15 @@ const get_content_value = (i, current_value, self) => {
 
 	// short vars
 		const data					= self.data || {}
-		const datalist				= data.datalist || []
 
-	// add empty option at beginning of the datalist array
+	// add empty option at beginning of the datalist array.
+	// Build a new array instead of mutating the shared/cached data.datalist,
+	// which would accumulate duplicate empty options on every re-render.
 		const empty_option = {
 			label	: '',
 			value	: null
 		}
-		datalist.unshift(empty_option);
+		const datalist				= [empty_option, ...(data.datalist || [])]
 
 	// content_value
 		const content_value = ui.create_dom_element({
