@@ -90,7 +90,9 @@ const t0 = performance.now()
 
 // scroll window. Improve performance in browser scroll
 	let lastScrollY, scheduledAnimationFrame
-	const readAndUpdatePage = (e) => {
+	const readAndUpdatePage = () => {
+		// reset the flag so subsequent scroll events can schedule a new frame
+		scheduledAnimationFrame = false
 	}
 	function onScroll (evt) {
 
