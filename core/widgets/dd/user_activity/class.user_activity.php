@@ -112,7 +112,7 @@ class user_activity extends widget_common {
 	*   "value":     { who: {...}, what: {...}, where: {...}, when: [...], publish: {...} }
 	* }
 	*
-	* @return array|null $data - One stdClass item per IPO entry, or null if IPO is empty.
+	* @return array $data - One stdClass item per IPO entry; empty array when IPO is empty.
 	*   Each item has: widget (string), key (int), widget_id (string), value (?object).
 	*   value is null when no activity was found on any tier.
 	*/
