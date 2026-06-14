@@ -13,6 +13,38 @@
 
 
 
+/**
+* MENU
+* Top-level application navigation bar for Dédalo v7.
+*
+* Manages the persistent horizontal menu that appears at the top of every page.
+* Renders the area/section hierarchy tree (desktop), the mobile hamburger icon,
+* the current-section label, language selectors, ontology shortcut, and user
+* administration access.
+*
+* Lifecycle follows the standard Dédalo pattern:
+*   init → build (loads context+data from server or local cache) → render
+*   → refresh (clears cache, re-builds, re-renders) → destroy
+*
+* The full server response (`datum`) is cached in IndexedDB keyed by language,
+* Dédalo version, and user id (see `build_cache_id`). On logout ('quit' event)
+* the cache is wiped via `delete_cache`.
+*
+* Key properties set during init and used across the lifecycle:
+*   tipo           - ontology tipo identifying this menu instance (default 'dd85')
+*   model          - class name string identifying the menu model
+*   datum          - full server response object {context:[], data:[]}
+*   context        - context entry matching this instance's model+tipo
+*   data           - data entry matching this instance's model+tipo
+*   node           - root HTMLElement once rendered; null until render() completes
+*   li_nodes       - flat list of rendered <li> menu-item nodes
+*   ul_nodes       - flat list of rendered <ul> submenu nodes
+*   ar_instances   - child component instances owned by this menu
+*   events_tokens  - active event_manager subscription tokens for cleanup
+*   caller         - parent instance that created this menu, or null
+*
+* Main exports: `menu` constructor (prototype-based class).
+*/
 export const menu = function(){
 
 	this.id
@@ -38,7 +70,9 @@ export const menu = function(){
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend instance with shared prototype methods from common and render modules.
+* Individual prototype.x assignments are not doc-blocked here; see the source
+* definitions in common.js and render_menu.js for their contracts.
 */
 // prototypes assign
 	// lifecycle
@@ -55,8 +89,26 @@ export const menu = function(){
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Initializes the menu instance with a fixed baseline of well-known properties.
+* Unlike other Dédalo elements, menu.init() is synchronous and does NOT call
+* common.prototype.init() — it mirrors the same guard pattern but seeds only
+* the properties the menu requires (no section_tipo, no section_id, etc.).
+*
+* Subscribes to the global 'quit' event so that IndexedDB cache entries are
+* wiped when the user logs out, preventing stale menu data from appearing on
+* the next login.
+*
+* (!) Calling init() a second time on the same instance is detected and logged
+* as an error; the call returns false and SHOW_DEBUG triggers an alert().
+*
+* @param {Object} options - Initialization options bag
+* @param {string} [options.tipo='dd85'] - Ontology tipo for this menu, defaults to 'dd85'
+* @param {string} options.model - Model class name, e.g. 'menu'
+* @param {Object} [options.datum] - Pre-loaded server datum; if provided, build() skips the API call
+* @param {Object} [options.context] - Pre-loaded server context entry for this instance
+* @param {Object} [options.data] - Pre-loaded server data entry for this instance
+* @param {Object|null} [options.caller=null] - Parent instance that owns this menu
+* @returns {boolean} true on success, false if the instance was already initialized
 */
 menu.prototype.init = function(options) {
 
@@ -91,6 +143,8 @@ menu.prototype.init = function(options) {
 		self.update_section_label_n_try	= 0
 
 	// quit event
+	// Wipe the local cache whenever the user logs out, so that the next
+	// login cannot inherit a previous session's cached menu structure.
 		const quit_handler = () => {
 			self.delete_cache()
 		}
@@ -109,8 +163,23 @@ menu.prototype.init = function(options) {
 
 /**
 * BUILD
-* @param bool autoload
-* @return bool
+* Loads context and data for the menu from the server (or IndexedDB cache) and
+* sets `self.context` and `self.data` to the entries matching `self.model` and
+* `self.tipo`.
+*
+* When `autoload` is true (the default), an API 'read' request with action
+* 'get_data' is issued. The response is stored in IndexedDB under the key
+* produced by `build_cache_id()` so that subsequent builds in the same session
+* (e.g. after soft navigation) avoid a network round-trip.
+*
+* When `autoload` is false, `self.datum` must already be populated (e.g. passed
+* via `options.datum` during init) — the API call is skipped entirely.
+*
+* The request uses `prevent_lock: true` because the menu must be available even
+* while other sections are loading.
+*
+* @param {boolean} [autoload=true] - Whether to fetch datum from the server
+* @returns {Promise<boolean>} true on success; false on missing datum or bad API response
 */
 menu.prototype.build = async function(autoload=true) {
 	const t0 = (SHOW_DEBUG === true) ? performance.now() : null
@@ -163,6 +232,8 @@ menu.prototype.build = async function(autoload=true) {
 		}
 
 	// set context and data to current instance
+	// Locate the entries whose model AND tipo match this instance within the
+	// flat context/data arrays returned by the server.
 		self.context	= self.datum.context.find(element => element.model===self.model && element.tipo===self.tipo);
 		self.data		= self.datum.data.find(element => element.model===self.model &&  element.tipo===self.tipo)
 
@@ -183,8 +254,15 @@ menu.prototype.build = async function(autoload=true) {
 /**
 * REFRESH
 * Deletes the local menu database and call common refresh
-* @param object options = {}
-* @return bool
+*
+* Extends the generic `common.prototype.refresh` by first invalidating the
+* IndexedDB cache entry so that the subsequent build always fetches fresh
+* data from the server. Pass `build_autoload: false` to skip cache deletion
+* (e.g. when refreshing without a new server round-trip is desired).
+*
+* @param {Object} [options={}] - Refresh options forwarded to common.prototype.refresh
+* @param {boolean} [options.build_autoload=true] - When true, deletes local cache before rebuilding
+* @returns {Promise<boolean>} Result from common.prototype.refresh
 */
 menu.prototype.refresh = async function(options={}) {
 
@@ -211,8 +289,13 @@ menu.prototype.refresh = async function(options={}) {
 * OPEN_ONTOLOGY
 * Shared function to manage open Ontology window
 * from regular menu and mobile menu
-* @param event e
-* @return void
+*
+* Opens the v5 ontology editor in a new browser tab using the configured
+* `DEDALO_CORE_URL` global. Called by click handlers in both the desktop
+* menu bar and the mobile overlay menu.
+*
+* @param {Event} e - DOM event; `stopPropagation` is called to prevent bubbling
+* @returns {void}
 */
 menu.prototype.open_ontology = function(e) {
 	e.stopPropagation()
@@ -230,7 +313,14 @@ menu.prototype.open_ontology = function(e) {
 * DELETE_CACHE
 * Removes all menu local cache data.
 * It is fired when login 'quit' event is published (subscription in menu init).
-* @return void
+*
+* Deletes every IndexedDB entry in the 'data' table whose key starts with
+* 'menu_cache_', covering all language/version/user variants that may have
+* been written during the session. Uses a prefix range delete rather than
+* enumerating individual keys, so new variants created in future do not
+* require changes here.
+*
+* @returns {Promise<void>}
 */
 menu.prototype.delete_cache = async function() {
 	// Delete menus in all langs
@@ -242,7 +332,14 @@ menu.prototype.delete_cache = async function() {
 /**
 * OPEN_TOOL_USER_ADMIN_HANDLER
 * Shared function to manage open tool tool_user_admin
-* @return void
+*
+* Looks up the 'tool_user_admin' entry in `self.context.tools` and opens
+* it via the standard `open_tool` helper (which handles window management,
+* positioning, and tool lifecycle). Logs a console error and returns early
+* if the tool is not available in the current user's profile, which is
+* expected for users without administrator rights.
+*
+* @returns {void}
 */
 menu.prototype.open_tool_user_admin_handler = function() {
 
@@ -268,9 +365,20 @@ menu.prototype.open_tool_user_admin_handler = function() {
 * BUILD_CACHE_ID
 * Unifies function to build the id of the stored local DB value
 * It used one for each language as menu_dd85_lg-nep
-* @param string lang
-* 	Optional. Default page_globals.dedalo_application_lang fallback
-* @return string
+*
+* Builds an IndexedDB storage key that uniquely identifies a cached menu
+* response for a given language, Dédalo version, and logged-in user. Using
+* all three factors prevents stale cache hits after upgrades or user switches.
+*
+* Key format: `menu_cache_<lang>_<version>_<userId>`
+* Example:    `menu_cache_lg-spa_7.0.3_42`
+*
+* Falls back gracefully when `page_globals` or any sub-property is absent
+* (e.g. during early page load) by using empty strings.
+*
+* @param {string} [lang] - Language tag (e.g. 'lg-spa'). Defaults to
+*   `page_globals.dedalo_application_lang` when omitted.
+* @returns {string} The IndexedDB cache key for this menu's response
 */
 menu.prototype.build_cache_id = function(lang) {
 
@@ -298,13 +406,29 @@ menu.prototype.build_cache_id = function(lang) {
 * UPDATE_SECTION_LABEL
 * Change the menu section label value
 * Is called from section when rendering is finished
-* @param object options
-* {
-*  value : string as 'Oral History',
-*  mode : string as 'edit',
-*  section_label_on_click : callback function
-* }
-* @return bool
+*
+* Updates the section-label slot in the already-rendered menu DOM with the
+* label text of the currently active section. Because this is called by the
+* section after it finishes rendering, the menu node may not yet be in the
+* DOM. A retry mechanism (max 3 attempts, 1 s apart) accommodates race
+* conditions during initial page load.
+*
+* In 'edit' mode the new label becomes clickable (activates the section
+* inspector) and the "toggle inspector" button is shown. In other modes
+* (e.g. 'list', 'search') the label is inert and the inspector button is
+* hidden to avoid confusion.
+*
+* The method replaces the existing `.section_label` node in-place and
+* re-registers the click handler on the new node. The `self.node.content_data`
+* pointer is updated so subsequent calls target the new node.
+*
+* @param {Object} options - Update options
+* @param {string} [options.value=''] - HTML string to inject as the label text
+* @param {string} options.mode - Current render mode: 'edit' or other (e.g. 'list')
+* @param {Function} [options.section_label_on_click] - Mousedown handler attached
+*   to the new label node when mode is 'edit'; toggles the section inspector panel
+* @returns {boolean|undefined} true on success; false if the node or label element
+*   is unavailable; undefined after scheduling a retry
 */
 menu.prototype.update_section_label = function(options) {
 
@@ -316,6 +440,8 @@ menu.prototype.update_section_label = function(options) {
 		const section_label_on_click	= options.section_label_on_click
 
 	// check availability
+	// Guard against calling this before the menu has been rendered. Retries
+	// up to 3 times at 1-second intervals before giving up with a warning.
 		const update_section_label_n_try = self.update_section_label_n_try ?? 0
 		if (!self.node) {
 			if (update_section_label_n_try>=3) {
@@ -342,6 +468,9 @@ menu.prototype.update_section_label = function(options) {
 		const button_toggle_inspector	= self.node.content_data.button_toggle_inspector
 
 	// new_section_label
+	// Build a fresh DOM node, inject the label HTML, then swap it with the
+	// existing node. Re-point the content_data reference so future updates
+	// always act on the current node.
 		const new_section_label = render_section_label(self)
 		new_section_label.insertAdjacentHTML('afterbegin', value);
 		section_label.replaceWith(new_section_label);
@@ -349,6 +478,9 @@ menu.prototype.update_section_label = function(options) {
 		self.node.content_data.section_label = new_section_label
 
 	// toggle inspector view
+	// In edit mode, the section label is a clickable affordance for the
+	// inspector panel and the inspector toggle button is visible. In other
+	// modes both are suppressed so read-only views remain uncluttered.
 		if (mode==='edit') {
 			if (typeof section_label_on_click==='function') {
 				new_section_label.addEventListener('mousedown', section_label_on_click)
@@ -373,13 +505,21 @@ menu.prototype.update_section_label = function(options) {
 /**
 * CHANGE_LANG
 * Exec API request of selected lang (e.target.value)
-* @param object options
-* 	{
-* 		lang_type	: 'dedalo_data_lang',
-*		lang_value	: 'lg-spa'
-* 	}
-* @return promise
-* 	API request response
+*
+* Sends a 'change_lang' action to the server via the `dd_utils_api` endpoint,
+* persisting the user's language preference for either the interface language
+* or the data content language. After the server confirms the change, the
+* 'change_lang' event is published so that open sections can invalidate their
+* own caches and reload with the new language.
+*
+* The request is routed through a web worker (`use_worker: true`) to keep the
+* main thread responsive during the network call.
+*
+* @param {Object} options - Language-change options
+* @param {string} options.lang_type - The lang preference key to update, e.g.
+*   'dedalo_data_lang' (content language) or 'dedalo_application_lang' (UI language)
+* @param {string} options.lang_value - The new language tag, e.g. 'lg-spa'
+* @returns {Promise<Object>} API response object from the server
 */
 menu.prototype.change_lang = async function(options) {
 

@@ -4,6 +4,41 @@
 
 
 
+/**
+* VIEW_DEFAULT_EDIT_MENU
+* Default edit-mode view implementation for the Dédalo top navigation menu.
+*
+* This module is the HTML-building layer called by render_menu.prototype.edit
+* (via view_default_edit_menu.render). It owns the full DOM tree of the
+* horizontal menu bar that appears at the top of every Dédalo edit-mode page.
+*
+* Responsibilities:
+*  - Build the outer `.menu_wrapper` element and decorate it with entity /
+*    role CSS classes (is_root, is_global_admin, dedalo_entity, version).
+*  - Delegate area/section tree rendering to render_menu_tree (desktop) and
+*    render_menu_mobile (hamburger overlay).
+*  - Wire the quit button, Dédalo icon, language selectors, theme toggle,
+*    AI-assistant panel, section-label breadcrumb, and inspector toggle.
+*  - Show the debug info bar (version, DB name, PG/PHP stats, service-worker
+*    indicator, RR-worker badge) only when SHOW_DEVELOPER or SHOW_DEBUG is
+*    true.
+*  - Handle compact-mode switching via ResizeObserver: when `.content_data`
+*    overflows its row (height > 50 px) the desktop tree is hidden and the
+*    mobile hamburger icon is shown instead.
+*  - Manage the AI assistant panel lifecycle: lazy-load tool_assistant,
+*    check user permissions via the tools API, re-parent the container
+*    across page navigations, and synchronise its position with the menu
+*    height in standalone (non-inspector) mode.
+*
+* Main exports:
+*   view_default_edit_menu          — constructor (stub; used as namespace)
+*   view_default_edit_menu.render   — async factory; returns the wrapper element
+*
+* Module-level state (not exported):
+*   sync_standalone_position        — helper: aligns assistant panel to menu height
+*   _assistant_nav_subscribed       — guard: ensures a single user_navigation listener
+*/
+
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
@@ -15,6 +50,19 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {toggle_theme} from '../../page/js/theme.js'
 
+/**
+* SYNC_STANDALONE_POSITION
+* Align the assistant panel's top offset and height to the current menu wrapper
+* height so the panel fills exactly the viewport below the menu bar.
+*
+* Called in standalone mode (no inspector_container present, e.g. list views)
+* whenever the assistant panel is shown or re-parented after navigation.
+* The menu can be taller than expected when the debug_info_bar is visible,
+* so querying offsetHeight is necessary rather than using a hardcoded value.
+*
+* @param {HTMLElement} ac - The `.assistant_container` element to reposition
+* @returns {void}
+*/
 // sync standalone assistant top/height with actual menu wrapper size (accounts for debug_info_bar)
 	const sync_standalone_position = (ac) => {
 		const menu_wrapper = document.querySelector('.menu_wrapper')
@@ -26,7 +74,11 @@
 		}
 	}
 
-// module-level assistant re-parenting on navigation (persists across menu re-renders)
+// module-level assistant re-parenting on navigation (persists across menu re-renders).
+// A single 'user_navigation' subscription is registered once at module load time.
+// Each navigation event attempts to re-attach a visible assistant panel to the
+// current inspector_container (edit mode) or document.body (standalone mode),
+// retrying up to 30 times at 150 ms intervals to wait for the new DOM to settle.
 	let _assistant_nav_subscribed = false
 	if (!_assistant_nav_subscribed) {
 		_assistant_nav_subscribed = true
@@ -63,7 +115,12 @@
 
 /**
 * VIEW_DEFAULT_EDIT_MENU
-* Manages the component's logic and appearance in client side
+* Namespace constructor for the default edit-mode menu view.
+*
+* Acts as a pure namespace object: the constructor body is intentionally empty.
+* All functionality is attached to `view_default_edit_menu.render` and the
+* module-level private helpers. Follows the Dédalo pattern used by render_menu.js
+* and other view modules where the constructor serves only as a named container.
 */
 export const view_default_edit_menu = function() {
 
@@ -74,10 +131,36 @@ export const view_default_edit_menu = function() {
 
 /**
 * RENDER
-* Render node for use in current view
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Build and return the full `.menu_wrapper` HTMLElement for the edit-mode menu.
+*
+* Entry point called by render_menu.prototype.edit. Constructs the outer wrapper,
+* delegates inner content to get_content_data_edit, and optionally appends the
+* debug info bar when SHOW_DEVELOPER or SHOW_DEBUG is active.
+*
+* When `options.render_level` is `'content'` the function returns the inner
+* `.content_data` DocumentFragment directly, bypassing the wrapper — used by
+* callers that need to refresh only the menu content without re-creating the
+* outer shell.
+*
+* The wrapper receives CSS classes for:
+*   - '.menu_wrapper' and '.menu' (always)
+*   - page_globals.dedalo_entity (e.g. 'my_institution') — used for entity theming
+*   - 'is_root' or 'is_global_admin' — controls visibility of the left colour band
+*   - 'v7_0_x' (version slug) — applied lazily once the element enters the viewport
+*   - 'with_debug_info' — only when the debug bar is present
+*
+* A ResizeObserver on `.content_data` drives the compact/expanded toggle:
+* when the content row wraps to a second line (height > 50 px) the class
+* 'compact' is added, hiding the desktop tree and showing the hamburger icon.
+* The edge viewport-width is stored on `content_data._compact_edge` so the
+* observer can restore the expanded state when the viewport grows back past it.
+*
+* @param {Object} self    - Menu instance (from menu.js constructor)
+* @param {Object} options - Render options
+*   @param {string} [options.render_level='full'] - 'full' for wrapper+content;
+*     'content' to return only the inner content node
+* @returns {Promise<HTMLElement>} Resolves to `.menu_wrapper` (full) or
+*   `.content_data` (content level)
 */
 view_default_edit_menu.render = async function(self, options) {
 
@@ -128,7 +211,13 @@ view_default_edit_menu.render = async function(self, options) {
 
 	// events
 		// compact toggle. Detect content_data overflow to switch between
-		// desktop menu_hierarchy and mobile menu_mobile_icon
+		// desktop menu_hierarchy and mobile menu_mobile_icon.
+		// The menu bar is a single flex row; when all items fit, height stays ~50 px.
+		// When the viewport narrows enough that items wrap, height exceeds 50 px and
+		// 'compact' hides the desktop tree, showing the hamburger icon instead.
+		// _compact_edge records the viewport width at which compaction was triggered
+		// so we can un-compact only when the viewport grows back past that threshold,
+		// preventing oscillation at boundary widths.
 		const resize_observer = new ResizeObserver((entries) => {
 			for (const entry of entries) {
 				const height = entry.contentRect.height;
@@ -142,10 +231,14 @@ view_default_edit_menu.render = async function(self, options) {
 			}
 		});
 
-		// fire events when_in_viewport
+		// fire events when_in_viewport.
+		// The observer is started and the version class applied lazily once the wrapper
+		// enters the viewport, avoiding unnecessary ResizeObserver callbacks before the
+		// element is visible (e.g. during server-side pre-rendering or tab switches).
 		when_in_viewport(wrapper, () => {
 			resize_observer.observe(content_data);
 			// update class from version
+			// version dots replaced with underscores to form a valid CSS class, e.g. 'v7_0_3'
 			wrapper.classList.add('v'+page_globals.dedalo_version.replaceAll('.','_'))
 		})
 
@@ -157,10 +250,42 @@ view_default_edit_menu.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* Render node for use in edit
-* @param object self
-*  instance of menu
-* @return HTMLElement wrapper
+* Build the inner `.content_data` DOM element containing all interactive menu items.
+*
+* Creates a DocumentFragment, populates it with every interactive menu item in
+* left-to-right visual order, then wraps it in a `.content_data` div which is
+* returned for appending into the outer wrapper produced by `render`.
+*
+* Items built (in DOM order within the fragment):
+*  1. quit_button          — triggers login.quit(); keyboard-accessible
+*  2. dedalo_icon          — opens https://dedalo.dev in a new window
+*  3. menu_hierarchy       — desktop area/section tree (render_menu_tree.render_tree)
+*  4. menu_mobile_icon     — hamburger trigger for mobile; lazily initialises
+*                            render_menu_mobile on first click and subscribes to
+*                            user_navigation to auto-hide the overlay on navigation
+*  5. [ontology_link]      — commented out; preserved for future restoration
+*  6. logged_user_name     — shows current username; for non-root users opens
+*                            tool_user_admin via self.open_tool_user_admin_handler()
+*  7. application lang selector — uses ui.build_select_lang; calls change_lang with
+*                            lang_type='dedalo_application_lang'
+*  8. data lang selector   — visible only when page_globals.dedalo_data_lang_selector
+*                            is true; calls change_lang with lang_type='dedalo_data_lang'
+*  9. menu_spacer          — flex spacer that pushes right-side items to the right edge
+* 10. theme_toggle         — calls toggle_theme(); keyboard-accessible
+* 11. ai_assistant_button  — lazy-loads tool_assistant, checks permissions via dd_tools_api,
+*                            and manages the floating assistant panel (see inline comments)
+* 12. section_label_container — holds render_section_label output plus button_toggle_inspector
+*
+* Side effects:
+*  - Sets self.menu_active = false (reset on each render)
+*  - Initialises self.events_tokens array if not already present (??=)
+*  - Pushes a user_navigation token into self.events_tokens for the mobile menu
+*
+* @param {Object} self - Menu instance (from menu.js constructor); must expose
+*   self.data.username, self.open_tool_user_admin_handler(), self.change_lang()
+* @returns {HTMLElement} The `.content_data` div with pointer properties:
+*   content_data.section_label            - the section label element
+*   content_data.button_toggle_inspector  - the inspector toggle button element
 */
 const get_content_data_edit = function(self) {
 
@@ -232,6 +357,9 @@ const get_content_data_edit = function(self) {
 			menu_mobile_icon.tabIndex = 0
 			menu_mobile_icon.setAttribute('role', 'button')
 
+			// menu_mobile_wrapper is created lazily on first hamburger click to avoid
+			// building a second DOM tree on every render. The variable persists in
+			// the handler closure across subsequent clicks.
 			let menu_mobile_wrapper = null
 			// click event
 			const menu_mobile_click_handler = (e) => {
@@ -243,9 +371,13 @@ const get_content_data_edit = function(self) {
 						tipo	: 'dd1'
 					})
 					// insert after section_label_container
+					// (!) section_label_container is declared later in this function but the
+					// click handler only fires after the full function has returned, so the
+					// closure captures the correct reference via hoisting of the let declaration.
 					if (section_label_container && section_label_container.parentNode) {
 						section_label_container.parentNode.insertBefore(menu_mobile_wrapper, section_label_container.nextSibling);
 					}
+					// auto-hide the mobile menu on any navigation event; token stored for cleanup
 					const user_navigation_handler = (e) => {
 						if (!menu_mobile_wrapper.classList.contains('hide')) {
 							menu_mobile_wrapper.classList.add('hide')
@@ -255,6 +387,7 @@ const get_content_data_edit = function(self) {
 						event_manager.subscribe('user_navigation', user_navigation_handler)
 					)
 				}else{
+					// on subsequent clicks simply toggle visibility
 					menu_mobile_wrapper.classList.toggle('hide')
 				}
 			}
@@ -262,6 +395,9 @@ const get_content_data_edit = function(self) {
 			menu_mobile_icon.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') menu_mobile_click_handler(e) })
 
 	// ontology link
+	// (!) Commented out: the ontology shortcut was conditionally rendered when
+	// self.data.show_ontology===true. Kept for potential future restoration;
+	// do not remove.
 		// if (self.data && self.data.show_ontology===true) {
 		// 	const ontology_link = ui.create_dom_element({
 		// 		element_type	: 'div',
@@ -281,6 +417,7 @@ const get_content_data_edit = function(self) {
 			text_content	: username,
 			parent			: fragment
 		})
+		// root user has no personal admin panel; suppress click events entirely
 		if (username==='root') {
 			logged_user_name.classList.add('is_root','noevents')
 		}else{
@@ -316,6 +453,10 @@ const get_content_data_edit = function(self) {
 		fragment.appendChild(dedalo_aplication_langs_selector)
 
 	// data lang selector
+	// Shown only when the installation exposes multiple data languages
+	// (page_globals.dedalo_data_lang_selector is set server-side per-entity).
+	// Labels are prefixed with 'data: ' to visually distinguish from the
+	// application (UI) language selector that precedes it.
 		const show_data_lang_selector = page_globals.dedalo_data_lang_selector ?? false
 		if (show_data_lang_selector) {
 			const lang_datalist_data = lang_datalist.map(item =>{
@@ -374,7 +515,11 @@ const get_content_data_edit = function(self) {
 		ai_assistant_button.addEventListener('mousedown', (e) => {
 			e.stopPropagation()
 		})
-		// assistant panel state (persists across section navigations)
+		// assistant panel state (persists across section navigations).
+		// Closure variables shared across every click invocation for this menu render:
+		//   assistant_instance  — the ai_assistant class instance (holds chat state)
+		//   assistant_container — the .assistant_container HTMLElement (created once)
+		//   assistant_visible   — tracks visibility to implement toggle behaviour
 			let assistant_instance	= null
 			let assistant_container	= null
 			let assistant_visible	= false
@@ -382,6 +527,8 @@ const get_content_data_edit = function(self) {
 			e.stopPropagation()
 			try {
 				// find the current inspector_container in the page (edit mode)
+				// inspector_container is re-queried on every click because section navigation
+				// replaces the DOM element; we cannot cache a reference across navigations.
 					const inspector_container = document.getElementById('inspector_container')
 					const is_standalone = !inspector_container
 				// toggle off: hide the panel
@@ -393,8 +540,11 @@ const get_content_data_edit = function(self) {
 						return
 					}
 				// first time: create the panel and init the assistant
+				// guard: assistant_container===null means the tool has never been opened
 					if (!assistant_container) {
-						// check user has permission to use the tool
+						// check user has permission to use the tool.
+						// 'user_tools' returns only the tools the logged-in user may access.
+						// If tool_assistant is absent from the result the button silently does nothing.
 							const api_response = await data_manager.request({
 								body : {
 									action	: 'user_tools',
@@ -408,7 +558,9 @@ const get_content_data_edit = function(self) {
 							const tool_context = api_response.result.find(t => t.name === 'tool_assistant')
 							if (!tool_context) return
 
-						// build the tool instance to get assistant_config
+						// build the tool instance to get assistant_config.
+						// tool_instance.build(true) populates tool_instance.assistant_config
+						// with the server-side configuration for this user/entity.
 							const { get_instance } = await import('../../common/js/instances.js')
 							const instance_options = Object.assign({ caller : self }, tool_context)
 							const tool_instance = await get_instance(instance_options)
@@ -430,7 +582,9 @@ const get_content_data_edit = function(self) {
 								e.stopPropagation()
 							})
 
-						// init ai_assistant and build chat UI
+						// init ai_assistant and build chat UI.
+						// Both imports are dynamic to avoid bundling tool_assistant into the main
+						// menu chunk; they only download when the user first opens the panel.
 							const { ai_assistant } = await import('../../../tools/tool_assistant/js/ai_assistant.js')
 							assistant_instance = new ai_assistant({
 								tool_config	: tool_instance.assistant_config || {},
@@ -441,6 +595,10 @@ const get_content_data_edit = function(self) {
 					}
 				// re-attach / re-parent the container if needed
 				// (section navigation recreates inspector_container, or mode changed list↔edit)
+				// Three conditions that require a move:
+				//  1. parentNode is null (detached after DOM replacement)
+				//  2. parentNode is disconnected from the live document
+				//  3. parentNode is the wrong target (e.g. mode switched between edit and list)
 					const desired_parent = inspector_container || document.body
 					const needs_move = !assistant_container.parentNode
 						|| !assistant_container.parentNode.isConnected
@@ -454,6 +612,8 @@ const get_content_data_edit = function(self) {
 					if (is_standalone) {
 						sync_standalone_position(assistant_container)
 					} else {
+						// clear inline styles set by sync_standalone_position when switching back
+						// to inspector (non-standalone) mode
 						assistant_container.style.top = ''
 						assistant_container.style.height = ''
 						assistant_container.style.maxHeight = ''
@@ -516,10 +676,31 @@ const get_content_data_edit = function(self) {
 
 /**
 * RENDER_DEBUG_INFO_BAR
-* Must to be rendered only for developers (SHOW_DEVELOPER===true || SHOW_DEBUG===true)
-* @param object self
-* 	menu instance
-* @return HTMLElement debug_info_bar
+* Build a diagnostic status bar appended below the main menu content.
+*
+* Rendered only when SHOW_DEVELOPER===true or SHOW_DEBUG===true (checked by the
+* caller in `render`). Exposes server-side environment values from two sources in
+* priority order: self.data.info_data (server response) falls back to page_globals
+* (bootstrap globals) so the bar works even if info_data is missing.
+*
+* Elements rendered (left to right):
+*   dedalo_version  — code version + build stamp; adds class 'beta' for v7.0.x builds
+*   dedalo_db_name  — active PostgreSQL database name
+*   pg_version      — PostgreSQL server version string
+*   php_version     — PHP interpreter version
+*   php_memory      — PHP memory_limit or current usage
+*   php_sapi_name   — PHP SAPI (fpm-fcgi, cli, etc.)
+*   dedalo_entity   — entity identifier (institution slug)
+*   dedalo_entity_id — numeric entity id (coerced to string for text content)
+*   service_worker  — shown only when a service worker scriptURL is found; removed
+*                     from the DOM when no worker is registered (async, best-effort)
+*   environment     — click opens the environment.js.php diagnostic page in a new tab.
+*                     (!) Uses the undeclared global DEDALO_ROOT_WEB — flagged below.
+*   rr_worker       — badge shown only when DEDALO_RR_WORKER===true
+*   ip_server       — IP address of the application server
+*
+* @param {Object} self - Menu instance; reads self.data.info_data for server-provided values
+* @returns {HTMLElement} The `.debug_info_bar` div, ready to append to the menu wrapper
 */
 const render_debug_info_bar = (self) => {
 
@@ -541,6 +722,7 @@ const render_debug_info_bar = (self) => {
 		})
 
 	// dedalo_version
+	// Adds the 'beta' CSS class for v7.0.x builds to visually mark pre-stable releases
 		const version_style = dedalo_version.indexOf('7.0')!==-1
 			? ' beta'
 			: ''
@@ -608,6 +790,9 @@ const render_debug_info_bar = (self) => {
 		})
 
 	// service_worker_active
+	// Created hidden; revealed asynchronously only when a registered and active service
+	// worker is found. If no worker is registered the element is removed from the DOM
+	// entirely (rather than kept hidden) to avoid occupying flex space.
 		if ('serviceWorker' in navigator) {
 			const service_worker_active = ui.create_dom_element({
 				element_type	: 'div',
@@ -630,6 +815,9 @@ const render_debug_info_bar = (self) => {
 		}
 
 	// environment
+	// (!) DEDALO_ROOT_WEB is not declared in the /*global*/ header at the top of this file
+	// and is not listed in page_globals. It is expected to be a globally injected constant
+	// from the PHP bootstrap; if absent at runtime this will throw a ReferenceError.
 		const environment_link = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'environment',
@@ -648,6 +836,9 @@ const render_debug_info_bar = (self) => {
 		environment_link.addEventListener('click', environment_click_handler)
 
 	// Worker
+	// DEDALO_RR_WORKER is a bootstrap global (not declared in /*global*/) that signals
+	// the RoadRunner persistent-worker mode is active. The typeof guard avoids a
+	// ReferenceError in environments where the constant is not injected.
 		if(typeof DEDALO_RR_WORKER !== 'undefined' && DEDALO_RR_WORKER===true) {
 			ui.create_dom_element({
 				element_type	: 'div',
@@ -674,14 +865,23 @@ const render_debug_info_bar = (self) => {
 
 /**
 * CHANGE_LANG
-* Exec API request of selected lang (e.target.value)
-* @param object options
-* 	{
-* 		lang_type : 'dedalo_data_lang',
-*		lang_value : 'lg-spa',
-* 		self : object (menu instance)
-* 	}
-* @return bool
+* Persist the user's language selection to the server then reload the page.
+*
+* Delegates to self.change_lang() (a menu prototype method that POSTs
+* the new lang value to the Dédalo API) and triggers a full page reload
+* once the server has confirmed the change. The reload uses false (use
+* cached HTML) which is correct because language changes invalidate server-side
+* data, not the static page shell.
+*
+* Sets the `#main` element's CSS class to 'loading' while the API call
+* is in flight to provide visual feedback.
+*
+* @param {Object} options - Change language parameters
+*   @param {string} options.lang_type  - Which lang slot to update:
+*     'dedalo_application_lang' (UI strings) or 'dedalo_data_lang' (record data)
+*   @param {string} options.lang_value - BCP-47-style language code, e.g. 'lg-spa'
+*   @param {Object} options.self       - Menu instance with a change_lang() method
+* @returns {Promise<boolean>} Always resolves to true (reload fires before return)
 */
 const change_lang = async function(options) {
 
