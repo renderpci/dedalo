@@ -154,13 +154,22 @@ which avoids a lot of confusion.
 | --- | --- | --- |
 | **`section`** | `section` | The runtime representation of one section *type* (the "table with logic"). Owns instancing, record creation/duplication/deletion, the relations API and permissions. One `section` object can iterate over many records in list mode. |
 | **`section_record`** | — | The runtime representation of **one record row** in the PHP space. This is the object that actually talks to the database (`read`, `save`, `delete`, `duplicate`). It delegates the column store to `section_record_data`. |
-| **`section_group`** | `section_group` | A pure **layout grouper**. It is a child node of a section under which components are visually grouped. It has no data of its own and even short-circuits `get_tools()` to return `[]`. |
-| **`section_tab`** | `section_tab` | Another **layout grouper**: a tab inside a section's form. Like `section_group`, it carries no data and returns no tools. |
+| **[`section_group`](section_group.md)** | `section_group` | A pure **layout grouper**. It is a child node of a section under which components are visually grouped. It has no data of its own and even short-circuits `get_tools()` to return `[]`. |
+| **[`section_tab`](section_tab.md)** | `section_tab` | Another **layout grouper**: a tab inside a section's form. Like `section_group`, it carries no data and returns no tools. |
 
 A fifth class, **`sections`** (plural), is not a single section: it is the
 multi-record loader that, given a set of locators or a search query object,
 resolves and returns many section records at once (used by list views and
 portals).
+
+!!! info "Per-class reference docs"
+    This page is the conceptual overview. Each class has its own API reference:
+
+    - **[`section`](section.md)** — the table abstraction & orchestrator (instancing, record creation, relations, permissions, children, search).
+    - **[`section_record`](section_record.md)** — the physical per-record DB I/O (`read`/`save`/`delete`/`duplicate`, `save_component_data`, counters, metadata), plus `section_record_data` (the typed-column container) and `section_record_temp`.
+    - **[`sections`](sections.md)** — the plural collection helper over many records of one `section_tipo`.
+    - **[`section_group`](section_group.md)** · **[`section_tab`](section_tab.md)** — the layout groupers (visual grouping and tabs inside a section's form; no data, no tools).
+    - **[`section_list`](section_list.md)** — the client list view that renders many records of a `section_tipo`.
 
 ### section vs section_record — who owns the database
 
@@ -527,6 +536,9 @@ abstraction.
 
 ## See also
 
+- [`section` class reference](section.md) · [`section_record` class reference](section_record.md) · [`sections` class reference](sections.md) — the PHP class APIs.
+- [`section_group`](section_group.md) · [`section_tab`](section_tab.md) — the layout groupers that organise a section's form.
+- [`section_list`](section_list.md) — the client list view for many records of a section.
 - [Components](../components/index.md) — the fields that live inside a section.
 - [Ontology](../ontology/index.md) — how sections, components and relations are
   defined as nodes.
