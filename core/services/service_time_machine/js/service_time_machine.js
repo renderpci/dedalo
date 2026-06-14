@@ -16,7 +16,39 @@
 
 /**
 * SERVICE_TIME_MACHINE
-* Time machine data logic service
+* Data-logic service for Dédalo's Time Machine feature.
+*
+* Manages the full lifecycle — init → build → render → refresh — for listing
+* historical snapshots of a section or component stored in the matrix time-machine
+* table (section_tipo 'dd15', DEDALO_TIME_MACHINE_SECTION_TIPO).
+*
+* The service is always used as a child instance launched by tool_time_machine or
+* the inspector panel; it is never standalone. The owning caller passes a `config`
+* object that drives three key behaviours:
+*
+*   1. MODEL ROUTING — `config.model` selects the SQO filter strategy:
+*      - 'section'   → lists deleted sections via a tipo-column filter
+*      - 'dd_grid'   → lists all changes to a section record (inspector history)
+*      - <component> → lists changes to a single component locator
+*
+*   2. DDO MAP CONSTRUCTION — build_request_config() assembles the ddo_map that
+*      describes which activity columns to display (when, who, where, …).  All ddos
+*      force mode='tm' and permissions=1 at build time (see build() inline note) to
+*      prevent components from entering edit mode against TM (read-only) data.
+*
+*   3. PAGINATION — a paginator instance is created during build(); navigation
+*      subscribes to 'paginator_goto_<id>' events and calls refresh().
+*
+* Prototype methods are mixed in from common (lifecycle) and from
+* render_service_time_machine_list (list/tm rendering).
+*
+* Activity-log ontology tipos used for display columns (all from section dd15):
+*   dd559  — when     (modification date, component_date)
+*   dd578  — who      (modifier user id, component_autocomplete)
+*   dd577  — where    (context path, component_input_text)
+*   dd1371 — bulk_process_id (batch process number, component_number)
+*   dd1574 — tm_value (raw component data column, component_json — debug only)
+*   rsc329 — annotations (component_text_area — tool view only, section_tipo rsc832)
 */
 export const service_time_machine = function () {
 
@@ -37,7 +69,7 @@ export const service_time_machine = function () {
 
 /**
 * COMMON FUNCTIONS
-* extend config functions from common
+* Extend instance with shared prototype methods from common / render modules.
 */
 // prototypes assign
 	service_time_machine.prototype.build_rqo_show	= common.prototype.build_rqo_show
@@ -45,6 +77,7 @@ export const service_time_machine = function () {
 	service_time_machine.prototype.destroy			= common.prototype.destroy
 	service_time_machine.prototype.refresh			= common.prototype.refresh
 	service_time_machine.prototype.render			= common.prototype.render
+	// list rendering entry-point (also aliased as 'tm' for back-compat caller resolution)
 	service_time_machine.prototype.list				= render_service_time_machine_list.prototype.list
 	service_time_machine.prototype.tm				= render_service_time_machine_list.prototype.list
 
@@ -52,8 +85,33 @@ export const service_time_machine = function () {
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Seeds all instance properties from the options bag and validates the
+* duplicate-init guard. Does NOT fetch data — call build() afterwards.
+*
+* Notable property assignments:
+*   - tipo / section_tipo are always set to 'dd15' (the virtual time-machine section)
+*   - section_tipo_caller / section_id_caller refer to the ORIGINATING section whose
+*     history is being browsed, not the dd15 internal section
+*   - mode is fixed to 'list'; type / data_source are fixed to 'tm'
+*   - request_config is pre-built synchronously via build_request_config()
+*
+* @param {Object} options - Initialization bag passed by the owning tool/inspector
+* @param {string} [options.model] - Caller model identifier (e.g. 'section', 'dd_grid', or a component model name)
+* @param {string} options.section_tipo - section_tipo of the originating section being inspected
+* @param {string|number} options.section_id - section_id of the originating record being inspected
+* @param {string} [options.view='default'] - View variant: 'default', 'mini', 'tool', 'history'
+* @param {string} options.lang - Active language tag (e.g. 'lg-eng')
+* @param {string} [options.caller_tipo] - Ontology tipo of the component/section that opened this service
+* @param {Object} [options.caller] - Parent instance (tool_time_machine or inspector)
+* @param {Array}  [options.columns_map=[]] - Pre-built columns_map; overridden after build()
+* @param {Object} [options.config={}] - Extended config object forwarded to build_request_config()
+* @param {string} [options.id_variant] - Unique variant suffix to disambiguate multiple TM instances
+* @param {Object} [options.datum] - Pre-fetched datum (data + context arrays) if already loaded by caller
+* @param {Object} [options.context] - Pre-fetched context object if already available
+* @param {Object} [options.data] - Pre-fetched data object if already available
+* @param {number} [options.limit=10] - Page size for pagination
+* @param {number} [options.offset=0] - Initial pagination offset
+* @returns {Promise<boolean>} true on success; false if already initialized
 */
 service_time_machine.prototype.init = async function(options) {
 
@@ -73,13 +131,18 @@ service_time_machine.prototype.init = async function(options) {
 		self.status = 'initializing'
 
 	self.model					= options.model || 'service_time_machine'
+	// (!) tipo and section_tipo always point to dd15 — the internal virtual section that
+	// stores time-machine rows — not to the originating (caller) section.
 	self.tipo					= 'dd15'
 	self.section_tipo			= 'dd15'
+	// Originating section reference. These are the section/record whose history is browsed.
 	self.section_tipo_caller 	= options.section_tipo
 	self.section_id_caller		= options.section_id
+	// mode is always 'list'; individual ddos are later forced to mode='tm' in build()
 	self.mode					= 'list' // only allowed 'tm'
 	self.view					= options.view || 'default'
 	self.lang					= options.lang
+	// caller_tipo: the component or section tipo that triggered the TM viewer
 	self.caller_tipo			= options.caller_tipo || null
 
 	self.caller			= options.caller || null
@@ -96,6 +159,8 @@ service_time_machine.prototype.init = async function(options) {
 	self.context		= options.context
 	self.data			= options.data
 
+	// data_source='tm' instructs create_source() to attach this flag to every
+	// RQO source block so the server reads from the time-machine matrix table.
 	self.data_source	= 'tm';
 
 	self.type			= 'tm'
@@ -107,6 +172,7 @@ service_time_machine.prototype.init = async function(options) {
 	self.limit			= options.limit ?? 10
 	self.offset			= options.offset ?? 0
 
+	// Build the full request_config synchronously here so build() can use it immediately.
 	self.request_config	= self.build_request_config()
 
 	// status update
@@ -120,9 +186,23 @@ service_time_machine.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param bool autoload = false
-* @return bool
-*	resolve bool true
+* Constructs the RQO, optionally fetches data from the API, creates the paginator,
+* and resolves the columns_map ready for rendering.
+*
+* Workflow:
+*   1. Generate the RQO via build_rqo_show() (uses the request_config built in init()).
+*   2. Force all ddos in rqo.show.ddo_map to mode='tm' and permissions=1. This is
+*      critical: if any ddo kept mode='edit' the component would trigger its default-
+*      data save path and overwrite the real record with TM (historical) data.
+*   3. If autoload=true, call the API, validate the response, and populate self.datum,
+*      self.data, and self.context from the result.
+*   4. Create and wire a paginator instance (one-shot guard via `if (!self.paginator)`).
+*      The paginator_goto event updates rqo.sqo.offset and calls self.refresh().
+*   5. Derive columns_map via get_columns_map() from the resolved context.
+*
+* @param {boolean} [autoload=false] - When true, fetch context+data from the API during build;
+*   when false, data must have been passed as options to init() or loaded externally.
+* @returns {Promise<boolean>} true on success; false on API error or destroyed state
 */
 service_time_machine.prototype.build = async function(autoload=false) {
 
@@ -153,6 +233,7 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					: {}
 			}else{
 				// request_config_object. get the request_config_object from request_config
+				// (used on first build before any API response has returned a context)
 				self.request_config_object = self.request_config
 					? self.request_config.find(el => el.api_engine==='dedalo')
 					: {}
@@ -205,7 +286,9 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 			// set the result to the datum
 				self.datum		= api_response.result || []
+				// self.data: find the dd15 sections data block within the datum data array
 				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')
+				// self.context: find the root section context descriptor
 				self.context	= self.datum.context.find(el => el.type==='section')
 
 			// debug
@@ -276,7 +359,25 @@ service_time_machine.prototype.build = async function(autoload=false) {
 * Build a new service_time_machine custom request config based on caller requirements
 * Note that columns 'matrix id', 'modification date' and 'modification user id' are used only for context, not for data
 * Data for this config is calculated always from section in tm mode using a custom method: 'get_tm_ar_subdata'
-* @return object context
+*
+* Constructs a complete request_config array (Dédalo API engine format) with:
+*   - An SQO tailored to one of three model strategies (section / dd_grid / component)
+*   - A default_ddo_map with activity columns (bulk_process_id, when, who, where)
+*   - Optional extra columns: annotations (tool view + component model only) and a
+*     raw-value debug column (SHOW_DEBUG only)
+*   - Caller-defined ignore_columns list applied to prune unwanted columns
+*   - Extra ddo entries from config.ddo_map merged in (parent/section_tipo normalized to dd15)
+*
+* SQO model strategy summary:
+*   'section'  → filter on section tipo column, ORDER BY section_id ASC (deleted sections)
+*   'dd_grid'  → filter_by_locators for the full section record (all-field history)
+*   <component>→ filter_by_locators for the specific component locator (lang-aware)
+*
+* All ddos set section_tipo to 'dd15' (DEDALO_TIME_MACHINE_SECTION_TIPO) because the
+* time-machine matrix table stores rows under that virtual section, not the caller's section.
+*
+* @returns {Array|null} request_config array with one 'dedalo' api_engine entry, or null
+*   if config is absent/empty (programming error — logged to console)
 */
 service_time_machine.prototype.build_request_config = function() {
 
@@ -495,6 +596,8 @@ service_time_machine.prototype.build_request_config = function() {
 				const config_ddo_map_length = config_ddo_map.length
 				for (let i = 0; i < config_ddo_map_length; i++) {
 					const item = config_ddo_map[i]
+					// Normalize parent and section_tipo to dd15 so the server
+					// resolves the ddo against the time-machine virtual section.
 					item.parent 		= section_tipo
 					item.section_tipo 	= section_tipo
 					ddo_map.push(item)
@@ -524,8 +627,19 @@ service_time_machine.prototype.build_request_config = function() {
 
 /**
 * GET_TOTAL
-* Exec a async API call to count the current sqo records
-* @return int self.total
+* Async API call to count the total number of time-machine rows matching the
+* current SQO (excluding limit/offset/select/generated_time).
+*
+* The count RQO is derived by cloning self.rqo.sqo and stripping pagination fields
+* so the server returns a full count. The result is cached in self.total and the
+* paginator uses it to calculate the total number of pages.
+*
+* Guard against concurrent calls: if a count request is already in flight
+* (self.loading_total_status === 'resolving') the method re-calls itself after
+* 100 ms until the first call has stored self.total.
+*
+* @returns {Promise<number|undefined>} self.total — the row count from the server,
+*   or undefined on API error
 */
 service_time_machine.prototype.get_total = async function() {
 
