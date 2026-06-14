@@ -1511,7 +1511,7 @@ const readable_area = function (area, metric=true) {
 		} else if (area >= 10000 ) {
 			area_string = turf.round(turf.convertArea(area, 'meters', 'hectares'), precision['ha']) + ' ha';
 		} else {
-			area + ' m²';
+			area_string = area + ' m²';
 		}
 	} else {
 		if (area >= 2589986.9952) { //2589986,9952 square meters are 1 square mile
