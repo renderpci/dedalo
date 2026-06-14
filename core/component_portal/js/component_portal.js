@@ -175,9 +175,6 @@ component_portal.prototype.init = async function(options) {
 						return
 					}
 
-				// row_key
-					const row_key = current_entries[paginated_key].id || null
-
 				// remove locator selected
 					const result = await self.unlink_record(locator)
 					if (result===false) {
@@ -812,9 +809,7 @@ component_portal.prototype.link_record = async function(value) {
 
 	// total check (after save)
 		const current_data	= api_response.result.data.find(el => el.tipo===self.tipo)
-		const total			= current_data
-			? current_data.pagination.total
-			: 0
+		const total			= current_data?.pagination?.total ?? 0
 		// error on add value case
 		if (total===0) {
 			console.warn("// link_record api_response.result.data (unexpected total):", api_response.result.data);
