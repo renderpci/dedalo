@@ -614,7 +614,9 @@ const render_template = async function(self) {
 			button_start.onclick = function() {
 				current_dropzone.enqueueFile(file);
 			};
-			file.previewElement.querySelector(".name").innerHTML = current_name
+			// textContent (not innerHTML): filenames are user-supplied and round-trip
+			// through the server file listing, so innerHTML here is a stored-XSS vector.
+			file.previewElement.querySelector(".name").textContent = current_name
 			button_delete_check_box.value = current_name
 
 			self.caller.files_data.push({
