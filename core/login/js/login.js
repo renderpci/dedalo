@@ -18,6 +18,22 @@
 
 /**
 * LOGIN
+* Manages the Dédalo authentication lifecycle on the client side.
+*
+* Responsibilities:
+* - Render the login form via the delegated render_login prototype methods.
+* - Issue the `login` API call and dispatch results (redirect, files-cache warm-up, SAML flow).
+* - Provide the `quit` static method for session teardown (SW deregistration, cache purge,
+*   preference reset, and redirect).
+* - Orchestrate the post-login file-caching animation via run_service_worker or run_worker_cache.
+*
+* Instance properties are populated by init() and build() — they remain null/undefined until
+* those methods run. build() only performs a remote context fetch when autoload===true; the
+* normal path receives an already-resolved context injected by page.instantiate_page_element().
+*
+* The instance is a prototype-assignment module: render and lifecycle methods are copied from
+* render_login and common. The static quit() is called directly on the constructor function,
+* not on instances.
 */
 export const login = function() {
 
@@ -54,8 +70,24 @@ export const login = function() {
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Initialises the login instance with the supplied options.
+* Must be called exactly once per instance. A second call is a programming error and will
+* log a console error (and an alert in SHOW_DEBUG mode) before returning false.
+*
+* Sets instance state (model, tipo, mode, lang, context, data, datum, events_tokens) and
+* transitions status: null → 'initializing' → 'initialized'.
+*
+* @param {Object} options - Initialisation options
+* @param {string} options.model - Component model identifier (e.g. 'login')
+* @param {string} options.tipo - Structure tipo of the component
+* @param {string} options.mode - Display mode (e.g. 'edit')
+* @param {string} options.lang - Active language code
+* @param {boolean} [options.add_select_lang=true] - Whether to include a language selector in the form
+* @param {Object|null} [options.context=null] - Pre-resolved context object (injected by page)
+* @param {Object|null} [options.data=null] - Pre-resolved data object (injected by page)
+* @param {Object|null} [options.datum=null] - Current datum if available
+* @param {Function} [options.custom_action_dispatch] - Optional override for post-login dispatch logic
+* @returns {Promise<boolean>} true on success, false if a duplicate init is detected
 */
 login.prototype.init = async function(options) {
 
@@ -104,8 +136,21 @@ login.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param bool autoload = false
-* @return bool
+* Prepares the login instance for rendering. Transitions status:
+* 'initialized' → 'building' → 'built'.
+*
+* When autoload===true (rare — used when no page injected context is available),
+* issues a `get_login_context` API call via dd_utils_api and populates self.context
+* from the result. This is intentionally different from most components, which default
+* autoload to true: login usually receives context from page.instantiate_page_element()
+* so remote fetching is normally unnecessary.
+*
+* When the context carries a saml_config property, dynamically imports the SAML module
+* and attaches a saml instance to self.saml. Import errors are caught and logged without
+* aborting the build.
+*
+* @param {boolean} [autoload=false] - When true, fetch context from API instead of relying on injected context
+* @returns {Promise<boolean>} true on success, false if the autoload API call fails
 */
 login.prototype.build = async function(autoload=false) {
 
@@ -145,6 +190,8 @@ login.prototype.build = async function(autoload=false) {
 		}
 
 	// saml
+	// If the login context defines a SAML configuration, dynamically load the SAML module
+	// and attach it to this instance so the render layer can activate the SSO flow.
 		const saml_config = self.context?.properties?.saml_config
 		if (saml_config) {
 			try {
@@ -171,12 +218,19 @@ login.prototype.build = async function(autoload=false) {
 /**
 * LOGIN
 * Exec the login action against the API
-* @param object options
-* {
-* 	username: string
-* 	auth: string
-* }
-* @return object response
+*
+* Sends credentials to dd_utils_api and returns the raw API response. After a successful
+* API call, attempts to delete the 'dedalo_files' service-worker cache so that a fresh
+* set of assets can be pulled on the next load. Cache deletion failures are caught and
+* logged without aborting the call.
+*
+* Callers should check api_response.result===true before trusting the rest of the response.
+* Use action_dispatch() to handle post-login navigation and file loading.
+*
+* @param {Object} options - Login credentials
+* @param {string} options.username - The user's login name
+* @param {string} options.auth - The pre-hashed authentication token
+* @returns {Promise<Object>} Raw API response object from data_manager.request()
 */
 login.prototype.login = async function(options) {
 
@@ -202,6 +256,8 @@ login.prototype.login = async function(options) {
 		}
 
 	// delete dedalo_files caches (only HTTPS)
+	// Purge the service-worker file cache immediately after login so any
+	// updated assets are pulled through the new SW registration below.
 		if ('serviceWorker' in navigator) {
 			try {
 
@@ -227,12 +283,24 @@ login.prototype.login = async function(options) {
 * If the service worker is registered (this happens when logging in), his registration
 * shall be de-registered and the cache deleted.
 * At the end, a page reload/redirection is made
-* @param object options = {}
-* Sample:
-* {
-* 	caller : object like: { menu {id: 'menu_dd85_dd85_edit_lg-eng'.. }
-* }
-* @return void
+*
+* Called as a static method: login.quit(). This means `this` is the login constructor,
+* not a login instance — the function does not rely on instance state.
+*
+* Post-quit navigation rules:
+* - SAML sessions: follow api_response.saml_redirect (IdP single-logout endpoint).
+* - Developer users: reload the current URL (preserves query string for dev tooling).
+* - Normal users: redirect to DEDALO_ROOT_WEB to force the default section landing page.
+* - Any API failure: also redirect to DEDALO_ROOT_WEB as a safe fallback.
+*
+* The 'loading' class on document.body is added at entry and removed in the finally block
+* so the loading indicator is always cleaned up even if an exception is thrown.
+*
+* User preference keys cleared from local-DB on successful quit:
+*   inspector_time_machine_list, inspector_component_history_block,
+*   inspector_relation_list, open_search_panel
+*
+* @returns {Promise<void>}
 */
 login.quit = async function() {
 
@@ -245,9 +313,11 @@ login.quit = async function() {
 	event_manager.publish('quit', self)
 
 	// is_developer. Determine if the user is a developer
+	// page_globals may be absent when quit is called from a minimal page (install, etc.)
 	const is_developer = typeof page_globals !== 'undefined' ? (page_globals.is_developer ?? false) : false;
 
 	// Dédalo root web. Main http dir for Dédalo files (usually '/dedalo')
+	// DEDALO_ROOT_WEB may be absent in non-standard page contexts; fall back to site root.
 	const dedalo_root_web = typeof DEDALO_ROOT_WEB !== 'undefined' ? DEDALO_ROOT_WEB : '/'
 
 	try {
@@ -265,6 +335,7 @@ login.quit = async function() {
 		if (api_response.result===true) {
 
 			// reset some user preferences status from local database
+			// These keys hold panel open/closed state and should not persist across sessions.
 			[
 				'inspector_time_machine_list',
 				'inspector_component_history_block',
@@ -276,6 +347,8 @@ login.quit = async function() {
 			})
 
 			// Check for SAML redirection first
+			// When the server signals a SAML single-logout redirect, follow it before
+			// doing any SW cleanup — the IdP redirect will navigate away regardless.
 			if (api_response.saml_redirect && api_response.saml_redirect.length > 2) {
 				window.location.href = api_response.saml_redirect;
 			}else{
@@ -332,20 +405,46 @@ login.quit = async function() {
 * After API login call, it's possible to go to some different pages,
 * the normal behavior will reload the page to go to the section in session or page caller
 * when install the login only need to set the section but it's not necessary load any other page.
-* @param object api_response
-* @return bool
+*
+* Handles three distinct post-login outcomes in priority order:
+* 1. custom_action_dispatch: if the caller injected its own handler, delegate entirely and return.
+* 2. Successful login (api_response.result===true): warm the file cache (via SW or worker),
+*    show the animated progress ring, then navigate to the correct page once the worker reports
+*    'finish'. Navigation priority: server-supplied redirect → URL ?tipo param → user
+*    default_section → plain reload.
+* 3. Failed login: publishes 'login_failed' — the render layer is responsible for showing the
+*    error message; this function does not navigate on failure.
+*
+* The 'raspa_loading' CSS class (added to self.node when user_id===-1 on a development server)
+* triggers a decorative loading animation reserved for the superuser (DEDALO_SUPERUSER = -1).
+*
+* @param {Object} api_response - Raw response object returned by login.prototype.login()
+* @param {boolean} api_response.result - true on successful authentication
+* @param {Object} [api_response.result_options] - Extra data returned on success
+* @param {number} [api_response.result_options.user_id] - Numeric ID of the logged-in user;
+*   DEDALO_SUPERUSER (-1) activates the raspa_loading animation
+* @param {string} [api_response.result_options.user_image] - URL of the user's avatar; falls
+*   back to the default Dédalo icon SVG when absent
+* @param {string} [api_response.result_options.redirect] - When present, overrides all other
+*   navigation targets (used by dd_init_test to force the maintenance area)
+* @param {string} [api_response.default_section] - Tipo string for the user's default section
+* @param {string} [api_response.saml_redirect] - SAML SSO redirect URL (handled by quit, not here)
+* @returns {Promise<boolean>} Always resolves to true
 */
 login.prototype.action_dispatch = async function(api_response) {
 
 	const self = this
 
 	// publish event always
+	// Subscribers (e.g. analytics, session monitors) can react to both outcomes.
 		const event_name = api_response.result===true
 			? 'login_successful'
 			: 'login_failed'
 		event_manager.publish(event_name, api_response)
 
 	// custom_action_dispatch. Injected by caller
+	// When a caller (e.g. an embedded login widget inside another page) needs non-default
+	// post-login behaviour, it injects a function here that fully replaces the default flow.
 		if(self.custom_action_dispatch && typeof self.custom_action_dispatch==='function'){
 			// stop here !
 			return self.custom_action_dispatch(api_response)
@@ -359,12 +458,15 @@ login.prototype.action_dispatch = async function(api_response) {
 			const is_development_server	= typeof DEVELOPMENT_SERVER!=='undefined' && DEVELOPMENT_SERVER===true
 
 			// hide component_message OK
+			// The render layer may show a success banner; clear it before the transition animation starts.
 				const component_message = self.node?.content_data?.querySelector('.component_message.ok')
 				if (component_message) {
 					component_message.classList.add('hide')
 				}
 
 			// user image load
+			// Preload the avatar so the CSS transition starts only when the image is ready.
+			// Falls back to the bundled grey icon if no user image is available.
 				const bg_image = (api_response.result_options && api_response.result_options.user_image)
 					? api_response.result_options.user_image
 					: DEDALO_ROOT_WEB + '/core/themes/default/icons/dedalo_icon_grey.svg'
@@ -415,6 +517,8 @@ login.prototype.action_dispatch = async function(api_response) {
 					}
 
 					// has_tipo in url
+					// If the current URL already targets a specific section tipo, reloading
+					// (rather than replacing with the default section) preserves that intent.
 						const urlParams	= new URLSearchParams(window.location.search);
 						const has_tipo	= urlParams.has('tipo')
 
@@ -438,6 +542,7 @@ login.prototype.action_dispatch = async function(api_response) {
 
 			// handlers
 				// ready handler. Fired when ready status is triggered in workers
+				// Shows the progress ring and hides the login form elements.
 					const ready_handler = () => {
 						// hide things
 						if (self.node?.content_data) {
@@ -453,6 +558,8 @@ login.prototype.action_dispatch = async function(api_response) {
 						self.node?.content_data?.top?.classList.remove('hide')
 
 						// raspa_loading Development local only
+						// user_id === -1 is DEDALO_SUPERUSER (the root/superuser account).
+						// The 'active' class triggers an additional CSS animation in that case.
 						if (user_id===-1) {
 							requestAnimationFrame(()=>{
 								self.node.classList.add('active')
@@ -475,6 +582,8 @@ login.prototype.action_dispatch = async function(api_response) {
 						)
 					}
 			// on_message. Handle worker message events
+			// Routes SW / worker message events to the appropriate handler above.
+			// The three expected statuses correspond to the worker's lifecycle stages.
 				const on_message = (event) => {
 					switch (event.data.status) {
 
@@ -498,6 +607,9 @@ login.prototype.action_dispatch = async function(api_response) {
 				}
 
 			// service worker registry (uses service worker as cache proxy)
+			// (!) use_service_worker defaults to true; it is set to false on development servers
+			// to prevent the SW from masking source changes behind stale caches.
+			// The condition is inverted: !use_service_worker → run worker cache (no SW).
 				if (!this.use_service_worker) {
 					// development server deactivate service worker by default to prevent unwanted caches
 					run_worker_cache({
@@ -538,12 +650,24 @@ login.prototype.action_dispatch = async function(api_response) {
 * RUN_SERVICE_WORKER
 * Prepares the service worker to manage the files cache
 * and the login sequence (circle animation, etc.)
-* @param object options
-* {
-* 	on_message : function on_message
-* }
-* @return bool
-* 	True if registration succeed, false if fails
+*
+* Registers the Dédalo service worker located at DEDALO_ROOT_WEB + '/core/sw.js'.
+* Once registered, posts the 'update_files' message so the SW refreshes its cached
+* asset list immediately. Attaches the caller-supplied on_message listener to
+* navigator.serviceWorker so worker progress events (ready/loading/finish) reach
+* the login animation callbacks.
+*
+* Returns false in any of these situations:
+* - The browser does not support service workers ('serviceWorker' not in navigator).
+* - registration.active is null when the ready promise resolves (SW installed but not yet active).
+* - Any exception thrown during registration.
+*
+* Service workers require HTTPS (or localhost). Callers should fall back to
+* run_worker_cache() when this function returns false.
+*
+* @param {Object} options - Options object
+* @param {Function} options.on_message - Message event handler for SW messages
+* @returns {Promise<boolean>} true if registration succeeded, false otherwise
 */
 export const run_service_worker = async (options) => {
 
@@ -601,11 +725,22 @@ export const run_service_worker = async (options) => {
 * On finish, exec the callback ('load_finish' function)
 * Worker cache is used as browser cache proxy, instead the
 * default memory cache. This allow improved control about the cached files
-* @param object options
-* {
-* 	on_message : function on_message
-* }
-* @return void
+*
+* Spawns a module Worker from DEDALO_CORE_URL + '/page/js/worker_cache.js' and
+* immediately posts a 'clear_cache' action so the worker invalidates its previous
+* cache before re-fetching. The api URL is resolved from DEDALO_API_URL when
+* available, with a relative fallback for environments where the constant is undefined.
+*
+* Progress events from the worker ('ready', 'loading', 'finish') are forwarded to the
+* on_message handler supplied in options — the same handler shape used by
+* run_service_worker — allowing the caller to treat both paths uniformly.
+*
+* (!) This function does not return the worker instance. The caller cannot terminate
+* the worker explicitly; it finishes naturally after posting 'finish'.
+*
+* @param {Object} options - Options object
+* @param {Function} options.on_message - Message event handler receiving worker progress events
+* @returns {void}
 */
 export const run_worker_cache = (options) => {
 

@@ -4,6 +4,64 @@
 
 
 
+/**
+* RENDER_LOGIN
+* Client-side rendering layer for the Dédalo login screen.
+*
+* This module is responsible for building every DOM node that the login UI
+* requires. It is intentionally kept separate from the business logic that
+* lives in login.js so that the rendering contract (what nodes are created,
+* which class names they carry, and which DOM pointers are exposed) can be
+* understood and maintained in isolation.
+*
+* Main exports:
+*  - render_login         — prototype-assignment constructor; its sole
+*                           prototype method `edit` is mixed into the login
+*                           instance by login.js.
+*  - render_files_loader  — standalone factory for the circular SVG progress
+*                           indicator shown while the service worker loads
+*                           Dédalo's JS/CSS asset cache after a successful
+*                           authentication.
+*  - render_relogin       — async factory that creates a full overlay login
+*                           form inside an already-running Dédalo page session,
+*                           used to re-authenticate after a server timeout
+*                           without a full page reload.
+*
+* Internal (module-private) helpers:
+*  - get_content_data     — builds the login form fragment (language selector,
+*                           username/password inputs, browser info panel,
+*                           SAML container, and powered-by footer).
+*  - get_browser_info     — parses navigator.userAgent and returns browser
+*                           name + major version.
+*  - validate_browser     — compares the detected browser version against
+*                           minimum requirements and calls alert() when the
+*                           browser is unsupported.
+*
+* Data shape expected on the login instance (self):
+*  - self.context.properties.login_items  {Array}   Ontology-resolved form
+*      fields; each item has `tipo` (ontology id) and `label` (translated
+*      string). Required tipos: dd255 (username), dd256 (password), dd259
+*      (submit button label).
+*  - self.context.properties.info         {Array}   Installation metadata
+*      items, each with `{ type, label, value }`. Displayed in the info
+*      panel below the form. The `data_version` type triggers an auto-
+*      redirect to the maintenance area when the DB schema is outdated.
+*  - self.add_select_lang                 {boolean} Whether to render the
+*      language switcher above the form.
+*  - self.saml                            {Object|null} Optional SAML
+*      instance (built by login.build()). When present its render() method
+*      is called and the resulting node is placed in the saml_container.
+*  - self.use_service_worker              {boolean} Toggled by a developer-
+*      mode checkbox; controls whether login.action_dispatch() uses the
+*      service worker or the plain worker_cache fallback.
+*  - self.status                          {string}  Guards against double-
+*      submission ('login' sentinel blocks concurrent clicks).
+*  - self.login(options)                  {Function} Async method (from
+*      login.js) that POSTs credentials to dd_utils_api action 'login'.
+*  - self.action_dispatch(api_response)   {Function} Post-login routing hook
+*      (from login.js) that handles redirect/reload after authentication.
+*/
+
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
@@ -14,7 +72,13 @@
 
 /**
 * RENDER_LOGIN
-* Manages the component's logic and appearance in client side
+* Constructor for the login render prototype.
+*
+* Acts as a mixin host: login.js assigns render_login.prototype.edit to
+* login.prototype.edit so that login instances acquire the edit() rendering
+* method without inheriting from render_login directly. The constructor
+* itself performs no work — it simply returns true as a truthy initialiser
+* signal consistent with other Dédalo render constructors.
 */
 export const render_login = function() {
 
@@ -25,9 +89,30 @@ export const render_login = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @param object options
-* @return HTMLElement wrapper
+* Builds and returns the top-level login wrapper node.
+*
+* Called by common.prototype.render() and assigned to login.prototype.edit
+* by login.js. Two modes are supported via `options.render_level`:
+*  - 'full' (default) — wraps content_data in an outer `.login` div, runs
+*    browser validation, and schedules auto-focus on the username input.
+*  - 'content' — returns only the inner content_data element (used when the
+*    caller needs to embed the form without the outer wrapper, e.g. for the
+*    re-login overlay).
+*
+* Side effects:
+*  - Calls validate_browser(), which may call alert() for unsupported browsers.
+*  - Schedules a 600 ms setTimeout to focus the #username input so the user
+*    can start typing immediately without a manual click.
+*
+* The returned wrapper exposes a `content_data` pointer for callers that need
+* to manipulate individual child regions after render (e.g. login.action_dispatch
+* references wrapper.content_data.top and wrapper.content_data.form).
+*
+* @param {Object} options - Render options passed from common.prototype.render()
+* @param {string} [options.render_level='full'] - 'full' returns the outer wrapper;
+*        'content' returns only the inner content_data element
+* @returns {Promise<HTMLElement>} The `.login` wrapper div (render_level='full') or
+*          the inner content_data div (render_level='content')
 */
 render_login.prototype.edit = async function(options) {
 
@@ -55,6 +140,8 @@ render_login.prototype.edit = async function(options) {
 		validate_browser()
 
 	// auto-focus username
+		// (!) 600 ms delay ensures the DOM is fully painted and any CSS
+		// transitions have begun before focus is applied.
 		setTimeout(()=>{
 			const username = content_data.querySelector('#username')
 			if (username) {
@@ -70,8 +157,54 @@ render_login.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @param instance self
-* @return HTMLElement content_data
+* Builds the complete login form fragment and returns it wrapped in a
+* content_data div.
+*
+* Constructs all visible regions of the login page in document order:
+*  1. `.top`              — initially hidden; revealed by login.action_dispatch
+*                           after successful authentication to host the circular
+*                           files-loader progress indicator.
+*  2. Language selector   — present only when self.add_select_lang is truthy.
+*                           Persists the choice via dd_utils_api 'change_lang'
+*                           then forces a full page reload so ontology labels
+*                           are regenerated in the new language.
+*  3. `.login_form`       — HTML <form> with username + password inputs and
+*                           submit button; native <form> submit is intercepted
+*                           and forwarded to the button's mousedown handler.
+*  4. Developer options   — service-worker toggle rendered only when the
+*                           DEVELOPMENT_SERVER global is truthy. The service
+*                           worker is disabled by default in dev environments
+*                           to prevent stale-cache issues.
+*  5. Demo user           — auto-fills credentials for the public demo
+*                           installation (entity 'dedalo_demo'). The check is
+*                           intentionally harmless on production, where the
+*                           'dedalo_demo' entity value will never match.
+*  6. `.info_container`   — installation metadata panel built from
+*                           self.context.properties.info items (DB version,
+*                           Dédalo version, browser info, etc.). The
+*                           'data_version' item triggers an immediate redirect
+*                           to the maintenance area (dd88) when the major
+*                           version is below 6 (pre-v7 DB schema).
+*  7. `.saml_container`   — placeholder for the optional SAML SSO login button.
+*                           Revealed asynchronously if self.saml.render()
+*                           resolves successfully.
+*  8. `.powered_by`       — Dédalo logo + external link.
+*  9. `.messages_container` — target for ui.show_message() error/success banners.
+*
+* Guard clause: if login_items is absent or missing the username tipo (dd255),
+* the ontology tables are likely unreachable. The 'recovery' URL param triggers
+* a 3 s auto-reload (server may be finishing recovery); otherwise a fatal error
+* element is returned.
+*
+* DOM pointers set on the returned content_data element:
+*  .top                — div for files-loader injection post-login
+*  .select_lang        — the language <select> node (or undefined when not rendered)
+*  .form               — the <form> element
+*  .info_container     — the info panel div
+*  .messages_container — the banner-target div
+*
+* @param {Object} self - The login instance (see module-level data-shape notes)
+* @returns {HTMLElement} The assembled content_data div containing all login regions
 */
 const get_content_data = function(self) {
 
@@ -112,6 +245,8 @@ const get_content_data = function(self) {
 			})
 			fragment.appendChild(select_lang)
 			// fix
+			// Store reference on self so login.action_dispatch() can hide
+			// the selector after a successful login.
 			self.select_lang = select_lang
 		}
 
@@ -121,6 +256,13 @@ const get_content_data = function(self) {
 			class_name		: 'login_form',
 			parent			: fragment
 		})
+		// Intercept the native <form> submit (Enter key press) and delegate
+		// to the button_enter mousedown handler so a single code path handles
+		// all submission triggers.
+		// (!) button_enter is declared later in this function; the submit_handler
+		// closure captures it via the shared lexical scope — it is not a TDZ
+		// problem here because submit_handler is only ever called after button_enter
+		// is assigned.
 		const submit_handler = (e) => {
 			e.preventDefault()
 			// fire button enter mousedown event
@@ -129,6 +271,8 @@ const get_content_data = function(self) {
 		form.addEventListener('submit', submit_handler)
 
 	// login_items
+		// Ontology-resolved field descriptors. Each item: { tipo: string, label: string }.
+		// Absence signals the ontology tables are unreachable (DB down, first install, etc.).
 		const login_items = self.context?.properties?.login_items
 
 	// check login_items. If there were problems with type resolution, maybe the Ontology tables are not reachable
@@ -159,6 +303,7 @@ const get_content_data = function(self) {
 		}
 
 	// User name input
+		// dd255 — ontology tipo for the username field label
 		const login_item_username = login_items.find(el => el.tipo==='dd255')
 		const user_input = ui.create_dom_element({
 			id				: 'username',
@@ -167,9 +312,11 @@ const get_content_data = function(self) {
 			placeholder		: strip_tags(login_item_username.label),
 			parent			: form
 		})
+		// Hint to password managers / browser autofill to fill the username slot
 		user_input.autocomplete	= 'username'
 
 	// Authorization input
+		// dd256 — ontology tipo for the password field label
 		const login_item_password = login_items.find(el => el.tipo==='dd256')
 		const auth_input = ui.create_dom_element({
 			id				: 'auth',
@@ -178,9 +325,13 @@ const get_content_data = function(self) {
 			placeholder		: strip_tags(login_item_password.label),
 			parent			: form
 		})
+		// Hint to password managers / browser autofill to fill the password slot
 		auth_input.autocomplete= 'current-password'
 
 	// development server. Value is set in environment as global var (set in server config file)
+		// (!) Only rendered when DEVELOPMENT_SERVER===true (injected via PHP config).
+		// Sets self.use_service_worker=false by default so developer reloads never
+		// serve stale service-worker–cached assets. The checkbox re-enables it.
 		if (typeof DEVELOPMENT_SERVER !== 'undefined' && DEVELOPMENT_SERVER) {
 
 			// set self.use_service_worker as false by default
@@ -219,6 +370,9 @@ const get_content_data = function(self) {
 	// DEMO user
 	// add demo user if the installation is the open public demo: demo.dedalo.dev
 	// do not use this user pw and entity in production
+	// (!) The 'dedalo_demo' entity value is only present on the public demo server.
+	// On any other installation, dedalo_entity will be absent or have a different
+	// value, so this block is a no-op in production.
 		const dedalo_entity =  info_data.find(el => el.type === 'dedalo_entity')
 		if(dedalo_entity && dedalo_entity.value === 'dedalo_demo'){
 			const dedalo_demo_user = info_data.find(el => el.type === 'demo_user')
@@ -229,6 +383,7 @@ const get_content_data = function(self) {
 		}
 
 	// button submit
+		// dd259 — ontology tipo for the submit button label ('Enter' / translated)
 		const login_item_enter = login_items.find(el => el.tipo==='dd259')
 		const button_enter = ui.create_dom_element({
 			element_type	: 'button',
@@ -237,12 +392,14 @@ const get_content_data = function(self) {
 			parent			: form
 		})
 		// button_enter_loading
+		// Spinner visible only while the API call is in flight (class 'hide' toggled)
 			const button_enter_loading = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'spinner button_enter_loading hide',
 				parent			: button_enter
 			})
 		// button_enter_label
+		// Ontology-resolved label; hidden while the spinner is active
 			const button_enter_label = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button_enter_label',
@@ -250,11 +407,15 @@ const get_content_data = function(self) {
 				parent			: button_enter
 			})
 		// event click
+		// Bound to 'mousedown' (not 'click') so the handler fires before the
+		// form's native 'submit' can re-trigger; the submit_handler above
+		// also delegates here via dispatchEvent.
 		const click_handler = async (e) => {
 			e.stopPropagation()
 			e.preventDefault()
 
 			// username check
+			// Minimum 2 characters — prevents accidental empty-string submissions
 				const username = user_input.value
 				if (username.length<2) {
 					const message = `Invalid username ${username}!`
@@ -263,6 +424,7 @@ const get_content_data = function(self) {
 				}
 
 			// auth check
+			// Minimum 2 characters — same guard as username
 				const auth = auth_input.value
 				if (auth.length<2) {
 					const message = `Invalid auth code!`
@@ -271,6 +433,8 @@ const get_content_data = function(self) {
 				}
 
 			// check status
+			// Guard against concurrent submissions: if an API call is already
+			// in flight ('login' sentinel), silently return to prevent double-login.
 				if (self.status==='login') {
 					return
 				}
@@ -279,6 +443,8 @@ const get_content_data = function(self) {
 				self.status = 'login'
 
 			// show spinner and hide button label
+			// Visual feedback: replace button text with spinner and hide SAML
+			// options while waiting for the API response.
 				button_enter_label.classList.add('hide')
 				button_enter_loading.classList.remove('hide')
 				button_enter.classList.add('white')
@@ -286,6 +452,8 @@ const get_content_data = function(self) {
 				saml_container.classList.add('hide')
 
 			// login : data_manager API call
+			// Calls login.prototype.login (defined in login.js) which POSTs to
+			// dd_utils_api action 'login' and returns the raw API response object.
 				const api_response = await self.login({
 					username	: username,
 					auth		: auth
@@ -294,7 +462,8 @@ const get_content_data = function(self) {
 				if (api_response.result===false) {
 
 					// errors found
-
+					// Prefer api_response.errors array; fall back to api_response.msg string;
+					// final fallback to a generic message.
 					const message	= api_response.errors && api_response.errors.length>0
 						? api_response.errors
 						: api_response.msg || ['Unknown login error happen']
@@ -302,6 +471,7 @@ const get_content_data = function(self) {
 					ui.show_message(messages_container, message, msg_type, 'component_message', true)
 
 					// hide spinner and show button label
+					// Reset UI so the user can correct credentials and retry.
 					button_enter_label.classList.remove('hide')
 					button_enter_loading.classList.add('hide')
 					button_enter.classList.remove('white')
@@ -310,7 +480,9 @@ const get_content_data = function(self) {
 				}else{
 
 					// success case
-
+					// Even on result!==false, the API may include soft errors
+					// (e.g. dd_init.test warnings about dirs/vars). These do NOT
+					// prevent login but pause the flow to let the user acknowledge.
 					const message	= api_response.msg
 					const msg_type	= 'ok';
 					ui.show_message(messages_container, message, msg_type, 'component_message', true)
@@ -332,6 +504,8 @@ const get_content_data = function(self) {
 						)
 						button_enter_loading.classList.add('hide')
 
+						// Render a 'Continue' button so the user can acknowledge soft errors
+						// and proceed to action_dispatch manually (instead of auto-redirecting).
 						const button_continue = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'button_continue warning white',
@@ -354,11 +528,17 @@ const get_content_data = function(self) {
 				}
 
 				// status update
+				// Reset status so future submissions (e.g. session timeout re-login)
+				// are not blocked by the 'login' sentinel.
 					self.status = 'rendered'
 		}
 		button_enter.addEventListener('mousedown', click_handler)
 
 	// info
+		// Append the detected browser name + version to the server-supplied info_data
+		// array so it is displayed alongside the Dédalo and DB version entries.
+		// This is done client-side because the server cannot know the UA at context-
+		// build time.
 		// web version add
 		const browser_info = get_browser_info()
 		info_data.push({
@@ -384,16 +564,23 @@ const get_content_data = function(self) {
 				})
 
 			// class_name custom for value
+		// Apply type-specific display logic: 'data_version' gets outdated detection
+		// and auto-redirect; other array values are joined for HTML rendering.
 				let class_name	= ''
 				let value		= item.value
 				switch(item.type){
 					case 'data_version': {
+						// item.value is a semver array e.g. [6, 2, 1]. Major version
+						// below 6 means the database is on the pre-v7 schema.
 						const is_outdated = item.value[0]<6
 						if (is_outdated) {
 							class_name	= 'error'
 							value		= item.value.join('.') + ' - Outdated!'
 							// if version is outdated, jump to area development to update
+							// dd88 is the ontology tipo for the maintenance/development area
 							const area_maintenance_tipo = 'dd88'
+							// Guard: only redirect if not already on the maintenance area URL
+							// to prevent an infinite redirect loop.
 							if (window.location.search.indexOf(area_maintenance_tipo)===-1) {
 								const base_url = window.location.origin + window.location.pathname
 								const target_url = base_url + '?t=' + area_maintenance_tipo
@@ -403,6 +590,8 @@ const get_content_data = function(self) {
 						break;
 					}
 					default:
+						// Array values (e.g. list of warnings) are joined with <br>
+						// so they render as separate lines inside the info panel span.
 						if (Array.isArray(value)) {
 							value = value.join('<br>')
 						}
@@ -419,12 +608,17 @@ const get_content_data = function(self) {
 		}
 
 	// saml
+	// Container starts hidden; revealed asynchronously when saml.render()
+	// resolves successfully. The click_handler hides it again during login.
 		const saml_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'saml_container hide',
 			parent			: fragment
 		})
 		// saml render
+		// self.saml is built by login.build() when context.properties.saml_config
+		// is present. The .then() pattern is intentional: the SAML node loads
+		// asynchronously so it does not block the rest of the login UI.
 		if (self.saml) {
 			self.saml.render()
 			.then(function(saml_wrapper){
@@ -463,6 +657,9 @@ const get_content_data = function(self) {
 		})
 
 	// content_data
+	// Wrap the assembled fragment. Explicit DOM pointers are set as properties
+	// so login.action_dispatch() and render_relogin() can reach individual
+	// regions without querying the DOM (no querySelector needed post-render).
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_data'
@@ -483,11 +680,22 @@ const get_content_data = function(self) {
 
 /**
 * GET_BROWSER_INFO
-* @return object info
-* {
-* 	name : Chrome
-* 	version : 106
-* }
+* Parses the current browser name and major version from navigator.userAgent.
+*
+* Uses a series of regex matches to distinguish between Chrome, Opera/OPR,
+* Edge, Trident (IE), Safari, and Firefox. The detection logic follows a
+* well-known UA-sniffing pattern: Chrome UA strings contain 'Chrome' but
+* Opera/Edge UA strings also contain 'Chrome', so OPR/Edge detection runs
+* first inside the Chrome branch.
+*
+* Note: UA sniffing is inherently fragile. Dédalo uses this only for the
+* minimum-version gate in validate_browser() and for the info panel display;
+* it is not used for capability detection.
+*
+* @returns {Object} Browser descriptor
+* @returns {string} .name    - Browser name e.g. 'Chrome', 'Firefox', 'Safari',
+*                              'Opera', 'IE'
+* @returns {string} .version - Major version string e.g. '106'
 */
 const get_browser_info = function() {
 
@@ -515,7 +723,26 @@ const get_browser_info = function() {
 
 /**
 * VALIDATE_BROWSER
-* @return bool
+* Checks the detected browser version against Dédalo's minimum requirements
+* and shows a blocking alert() when the browser is too old or unrecognised.
+*
+* Minimum supported versions (as of this file):
+*  - Chrome:      100
+*  - Firefox:     100
+*  - AppleWebKit: 14  (Safari engine major version)
+*
+* Any browser not matching one of those UA strings falls into the default case
+* and receives a generic "browser not verified" alert.
+*
+* (!) Uses alert() for user notification. This is intentional — the login page
+* has no toast/message UI until the form has rendered, and the severity of an
+* unsupported browser warrants a blocking modal. Do not silently swallow this.
+*
+* Side effects: may call alert() and returns false on version mismatch.
+*
+* @returns {boolean} true when the browser meets the minimum requirements (or
+*          when no version mismatch was detected); false when an outdated version
+*          was found and the user was warned
 */
 const validate_browser = function() {
 
@@ -527,12 +754,16 @@ const validate_browser = function() {
 	}
 
 	// function msg
+	// Builds the localised warning string displayed in the alert() call
 	const msg = (browser, version, min_version) => {
 		return `Sorry, your browser ${browser} version is too old (${version}). \nPlease update your ${browser} version to ${min_version} or newer.`
 	}
 
 	try {
 	   // Browser warning
+	   // switch(true) pattern lets each case be an arbitrary boolean expression;
+	   // UA string order matters — 'Chrome' must be checked before 'AppleWebKit'
+	   // because Chrome UA strings contain both substrings.
 		switch(true) {
 			case (navigator.userAgent.indexOf('Chrome')!==-1) :
 
@@ -559,7 +790,8 @@ const validate_browser = function() {
 				break;
 
 			default:
-
+				// Unknown / unverified browser — alert and let the user continue
+				// at their own risk (no hard block beyond the modal).
 				alert("Sorry. Your browser is not verified to work with Dédalo. \n\nOnly Webkit browsers are tested by now. \n\nPlease download the last version of official Dédalo browser (Google Chrome - Safari) to sure a good experience.")
 				break;
 		}
@@ -575,11 +807,30 @@ const validate_browser = function() {
 
 /**
 * RENDER_FILES_LOADER
-* Creates the files loader nodes with a circular SVG progress indicator.
-* The returned container exposes an `update(data)` method to advance the
-* progress bar from worker messages.
-* @see login.action_dispatch
-* @return HTMLElement cont
+* Creates the files-loader widget: a circular SVG progress indicator with
+* a percentage data attribute and a status label.
+*
+* Called by login.action_dispatch() immediately after a successful server-side
+* authentication, before the service worker or worker_cache starts loading the
+* Dédalo JS/CSS asset bundle. The returned container is injected into
+* content_data.top (which is hidden until the 'ready' worker message fires).
+*
+* The progress circle uses CSS stroke-dashoffset animation:
+*  - stroke-dasharray is set to the full circumference (2πr ≈ 565.49 px).
+*  - stroke-dashoffset is reduced proportionally as the percentage increases.
+*  - CSS handles the smooth transition; the JS only updates the offset value.
+*
+* The exposed `update(data)` method is called by the worker message handler
+* on each 'loading' event. It accumulates the per-file increment (100 /
+* total_files) and schedules a requestAnimationFrame to avoid redundant DOM
+* writes within a single frame.
+*
+* Data shape expected by cont.update(data):
+*  { status: 'loading'|string, total_files: number }
+*
+* @see login.action_dispatch — wires worker messages to cont.update()
+* @returns {HTMLElement} The `.cont.files_loader` div with an `update(data)`
+*          method attached directly on the element
 */
 export const render_files_loader = function() {
 
@@ -630,6 +881,9 @@ export const render_files_loader = function() {
 		cont.appendChild(svg);
 
 	// bar_circle animation
+	// animate_circle updates the SVG stroke-dashoffset and the percentage label.
+	// bar_revealed ensures the bar element stays hidden (via class 'hide') until
+	// the first non-zero value arrives, so there is no visual flash at 0 %.
 		let bar_revealed = false
 		let current_val = null
 		const animate_circle = (value) => {
@@ -643,25 +897,33 @@ export const render_files_loader = function() {
 			const val = Math.min(Math.round(value), 100)
 
 			// skip DOM updates if percentage hasn't changed
+			// (prevents unnecessary repaints when two rapid rAF calls resolve to the same integer)
 			if (val === current_val) return
 
+			// stroke-dashoffset at 100 % = 0 (full circle drawn);
+			// at 0 % = CST (circle fully hidden by the gap).
 			const offset = ((100 - val) / 100) * CST
 
 			// change circle stroke offset
 			bar_circle.style.strokeDashoffset = offset
 
 			// updates number as 50%
+			// CSS ::before/::after reads data-pct to render the percentage label
 			cont.dataset.pct = val + '%'
 
 			current_val = val
 		}
 
 	// update. receive worker messages data
+	// This method is called on each worker 'loading' message by the handler
+	// in login.action_dispatch(). Each call represents one file completing load.
 		let loaded = 0
 		let raf_id = null
 		cont.update = function( data ) {
 
 			const total_files	= data.total_files
+			// Increment is 100/total_files per file; non-'loading' statuses
+			// contribute 0 so the counter does not advance spuriously.
 			const rate			= data.status==='loading'
 				? 100 / total_files
 				: 0
@@ -670,6 +932,8 @@ export const render_files_loader = function() {
 			loaded = Math.min(rate + loaded, 100)
 
 			// animate - prevent rAF queuing
+			// Cancel any pending frame before scheduling a new one to coalesce
+			// rapid successive calls into a single paint.
 			if (raf_id) cancelAnimationFrame(raf_id)
 			raf_id = requestAnimationFrame(() => {
 				animate_circle(loaded)
@@ -692,15 +956,37 @@ export const render_files_loader = function() {
 
 /**
 * RENDER_RELOGIN
-* Create a new login instance, and after rendering it, place the node in the body of the DOM.
-* Used to allow user login after session with server is lost due to timeout or error
-* @see component_common.save()
-* @param object options
-* {
-* 	on_success : function|null,
-* 	main_container : HTMLElement
-* }
-* @return object loggin_instance
+* Creates a full-screen overlay login form inside an already-running Dédalo
+* page session and appends it to document.body.
+*
+* Used when the PHP session has expired (or been invalidated) mid-session
+* and a subsequent API call returns an authentication error. Rather than
+* redirecting the user to the login page and losing unsaved state, this
+* function injects a login overlay so the user can re-authenticate in place.
+*
+* @see component_common.save() — primary caller; detects auth failure and
+*      calls render_relogin() so the pending save can be retried after login.
+*
+* Lifecycle of the overlay:
+*  1. The page's main container receives class 'loading' (dims the UI).
+*  2. A fresh login instance is created via get_instance() with:
+*     - add_select_lang: false (no language switcher in the overlay)
+*     - custom_action_dispatch: destroys the overlay and unlocks the page
+*       after successful re-authentication, then calls on_success if provided.
+*  3. build(true) loads the login context from the server (autoload mode).
+*  4. render() produces the login_node. The '.overlay' class is added to
+*     content_data so CSS positions it over the existing page content.
+*  5. The '.powered_by' footer is hidden — it is redundant in overlay context.
+*  6. The node is appended to document.body and the instance is returned.
+*
+* @param {Object} [options={}] - Configuration options
+* @param {Function|null} [options.on_success=null] - Callback fired after
+*        successful re-authentication. Receives the login instance as its
+*        first argument. Use to retry the operation that triggered the error.
+* @param {HTMLElement|null} [options.main_container=null] - The container to
+*        lock with class 'loading' while the overlay is active. Defaults to
+*        the first '.wrapper.page' element in the document.
+* @returns {Promise<Object>} The login instance (already built and rendered)
 */
 export const render_relogin = async function(options={}) {
 
@@ -709,11 +995,15 @@ export const render_relogin = async function(options={}) {
 		const main_container	= options.main_container || document.querySelector('.wrapper.page')
 
 	// lock main container (normally page)
+	// Adding 'loading' typically applies a CSS overlay/dim via the page stylesheet.
 		if (main_container) {
 			main_container.classList.add('loading')
 		}
 
 	// login_instance
+	// dd229 is the ontology tipo for the login section/component.
+	// autoload=false is the default for login; build(true) is passed here
+	// because the re-login overlay must fetch its own context from the server.
 		const login_instance = await get_instance({
 			model					: 'login',
 			tipo					: 'dd229',
@@ -737,9 +1027,12 @@ export const render_relogin = async function(options={}) {
 		})
 		await login_instance.build(true)
 		const login_node = await login_instance.render()
+		// 'overlay' class positions the login form over the dimmed page content
 		login_node.content_data.classList.add('overlay')
 
 		// powered_by
+		// Hide the Dédalo branding footer — it is redundant in the overlay context
+		// since the main page already identifies the application.
 		login_node.querySelector('.powered_by').classList.add('hide')
 
 	// add to DOM
