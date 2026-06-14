@@ -25,6 +25,28 @@
 
 /**
 * INSPECTOR
+* Side-panel UI instance that provides contextual metadata, component history,
+* time-machine controls, and ontology navigation for the currently active section.
+*
+* One inspector is created per section (section_tipo keyed). It wires itself into
+* the global event bus so it responds to component activation/deactivation, section
+* renders, and save events without polling.
+*
+* Key properties set during init:
+*   - `caller`                   — the section instance that owns this inspector
+*   - `actived_component`        — the component currently focused by the user, or null
+*   - `paginator_container`      — DOM node holding the section-id display + navigation
+*   - `element_info_container`   — DOM node for component/section metadata panel
+*   - `component_history_container` — DOM node for the per-component history list
+*   - `selection_info_node`      — DOM node showing the selected element's label
+*   - `service_time_machine`     — live service_time_machine instance (set by render_inspector)
+*   - `last_docu_type`           — last ontology target used (for window coherence)
+*
+* Lifecycle: init → build → render (delegated to render_inspector.prototype.edit)
+*
+* Main exports:
+*   inspector          — constructor (prototype-based class)
+*   get_ontology_url   — standalone helper to build ontology navigation URLs
 */
 export const inspector = function() {
 
@@ -35,7 +57,9 @@ export const inspector = function() {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend inspector with shared prototype methods from common / render modules.
+* The edit/render/refresh/destroy surface is identical to other Dédalo UI elements;
+* inspector adds only destroy override and the full init implementation below.
 */
 // prototypes assign
 	inspector.prototype.edit	= render_inspector.prototype.edit
@@ -45,6 +69,12 @@ export const inspector = function() {
 	/**
 	* DESTROY
 	* Overrides common.destroy to clean up active component value update events
+	* subscribed during render_component_info(). Without this cleanup the
+	* event_manager would hold a dangling handler pointing at the destroyed instance.
+	* @param {boolean} delete_self - whether to remove this instance from the registry
+	* @param {boolean} delete_dependencies - whether to destroy child instances
+	* @param {boolean} remove_dom - whether to remove the root DOM node
+	* @returns {Promise<boolean>} result of common.prototype.destroy
 	*/
 	inspector.prototype.destroy	= async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 		const self = this
@@ -60,8 +90,26 @@ export const inspector = function() {
 
 /**
 * INIT
-* @param object options
-* @return bool true
+* Bootstraps an inspector instance for the given section. Seeds all instance
+* properties and registers the four event-bus subscriptions that drive live updates:
+*
+*   render_<section_id>       — re-renders section info when the section reloads
+*   activate_component        — switches the info panel to the focused component
+*   save                      — refreshes history + time-machine on any component save
+*   deactivate_component      — reverts to section info when no component is focused
+*   render_component_filter_* — captures the filter node rendered by the section
+*
+* The duplicated-init guard (`this.is_init`) is shared with common.init() pattern
+* and will log a console error + optionally alert (SHOW_DEBUG) on re-entry.
+*
+* (!) `self.service_time_machine` on line 103 is a bare expression with no assignment;
+* it appears to be a placeholder / dead statement rather than an intentional initialisation.
+* The property is actually set later by render_inspector via load_time_machine_list.
+*
+* @param {Object} options - initialisation options
+* @param {string} options.section_tipo - ontology tipo of the owning section (e.g. 'dd368')
+* @param {Object} options.caller - the live section instance that owns this inspector
+* @returns {Promise<boolean>} true on successful initialisation
 */
 inspector.prototype.init = async function(options) {
 
@@ -212,7 +260,10 @@ inspector.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @return bool true
+* Fulfils the standard Dédalo lifecycle contract (init → build → render).
+* The inspector has no async data to prefetch before rendering, so this method
+* is intentionally a no-op that simply advances the status flag.
+* @returns {Promise<boolean>} true always
 */
 inspector.prototype.build = async function() {
 
@@ -233,9 +284,20 @@ inspector.prototype.build = async function() {
 
 /**
 * UPDATE_SECTION_INFO
-* Updates section information in inspector
-* Fired by render_handler and deactivate_component_handler
-* @return void
+* Resets the inspector to show section-level metadata after the active component
+* is cleared. Called both when the section re-renders and when the user deactivates
+* (unfocuses) a component with no other component taking focus within 250 ms.
+*
+* Sequence:
+*   1. Clears `self.actived_component` so subsequent events know no component is selected.
+*   2. Renders section-level info in the element_info_container panel.
+*   3. Schedules time-machine list and component-history (null ⟹ empty) refreshes via
+*      dd_request_idle_callback so they do not block the current render cycle.
+*   4. Updates the selection_info_node label to the section caller.
+*   5. Syncs the paginator section_id text node if the record has navigated.
+*
+* @param {Object} self - the inspector instance
+* @returns {void}
 */
 const update_section_info = (self) => {
 
@@ -271,11 +333,26 @@ const update_section_info = (self) => {
 
 /**
 * GET_ONTOLOGY_URL
-* Build the proper URL for given component or section
-* @param string tipo
-* @param string target
-* 	docu_link|local_ontology|local_ontology_search|master_ontology
-* @return string|false
+* Resolves the navigation URL for a given ontology term (tipo) according to the
+* requested target mode. Used both when the user opens the ontology panel and when
+* a component activation must silently update an already-open docu_window.
+*
+* Target modes:
+*   'docu_link'           — canonical online docs at dedalo.dev/ontology/<tipo>
+*   'local_ontology'      — fetches the term's locator via the API and builds a
+*                           local Dédalo page URL; falls through to
+*                           'local_ontology_search' if the locator is not found
+*   'local_ontology_search' — local search page pre-filtered to the tipo
+*   'master_ontology'     — master.dedalo.dev record for the TLD section of tipo
+*
+* (!) The 'local_ontology' case has no explicit break/return before the
+* 'local_ontology_search' case; if ontology_info is null the switch falls through
+* and returns the search URL instead. This is intentional fallback behaviour but
+* relies on implicit fall-through — worth making explicit in a future refactor.
+*
+* @param {string} tipo - ontology tipo identifier (e.g. 'dd345')
+* @param {string} target - one of 'docu_link' | 'local_ontology' | 'local_ontology_search' | 'master_ontology'
+* @returns {Promise<string|boolean>} the resolved URL string, or false when target is unrecognised
 */
 export const get_ontology_url = async function (tipo, target) {
 
@@ -351,7 +428,11 @@ inspector.prototype.get_raw_record = async function () {
 * Builds the request query object (RQO) used by get_raw_record().
 * Configures a read_raw action filtered by the caller's section_tipo and section_id.
 *
-* @return {object} The configured RQO with action, options, and sqo
+* The resulting RQO targets the standard Dédalo API 'read_raw' action with
+* pretty_print enabled so the raw JSON panel in the inspector is human-readable.
+* limit:1 is safe because the SQO is filtered to a single section locator.
+*
+* @returns {Object} the configured RQO with action, options, and sqo
 */
 inspector.prototype.get_raw_record_rqo = function () {
 

@@ -4,6 +4,56 @@
 
 
 
+/**
+* VIEW_TABLE_DD_GRID
+* HTML <table> view for the dd_grid component.
+*
+* This module is the 'table' view variant selected by render_list_dd_grid when
+* `self.view === 'table'`. It converts the server-produced nested data array
+* (`self.data`) into a proper <thead>/<tbody> structure rendered as
+* <tr>/<th>/<td> elements inside a <table> wrapper.
+*
+* Architecture:
+* - view_table_dd_grid is a static-method namespace (it is never instantiated).
+* - render_list_dd_grid.prototype.list() delegates here when view === 'table'.
+* - Two public methods are exported on the constructor object:
+*     view_table_dd_grid.render()     – produces the full <table> from self.data
+*     view_table_dd_grid.render_row() – produces a DocumentFragment for one row
+*       (used by callers that need to re-render individual rows incrementally).
+* - All DOM creation goes through ui.create_dom_element() (from common/js/ui.js).
+*   Never use document.createElement() directly.
+*
+* Data shape expected in self.data (server-produced):
+*   Array<RowObject> where:
+*     [0]  – the column-map row:
+*             { value: Array<ColumnEntry> }
+*             Each ColumnEntry: { ar_columns_obj: ColumnObject }
+*             ColumnObject: { id, label, ar_labels?, ar_tipos? }
+*     [1…] – data rows:
+*             { row_count: number, value: Array<ColumnEntry> }
+*             row_count > 1 when a portal contributes multiple sub-rows.
+*
+* Column cell_type values handled by get_table_columns():
+*   'header'     → <th>  via render_header_column()
+*   'av' | '3d'  → <td> with posterframe <img>  via render_av_column()
+*   'img'        → <td> with full-size <img>     via render_img_column()
+*   'button'     → <td> with lazily imported module action  via render_button_column()
+*   'json'       → <td> with JSON.stringify()    via render_json_column()
+*   'section_id' → <td> with raw id text         via render_section_id_column()
+*   'iri'        → <td> with <a> links           via render_iri_column()
+*   'text'       → <td> with joined string       via render_text_column() (default)
+*
+* Config flags read from self.config:
+*   fill_the_gaps     {boolean} – if true, repeat the first portal row's data in
+*                                 empty sub-rows; if false, emit an empty cell.
+*   show_tipo_in_label {boolean} – if true, append " [tipo]" to header labels.
+*   data_format        {string}  – when 'dedalo_raw', render_json_column() HTML-
+*                                  encodes special characters so they display as
+*                                  literal text in the cell, not as markup.
+*
+* Exports: view_table_dd_grid
+*/
+
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {clone} from '../../common/js/utils/index.js'
@@ -11,7 +61,10 @@
 
 /**
 * VIEW_TABLE_DD_GRID
-* Manage the components logic and appearance in client side
+* Constructor namespace for the table view of dd_grid.
+* This function is never called as a constructor — its static methods
+* (render, render_row) are invoked directly on the constructor object.
+* @returns {boolean} Always returns true (placeholder body).
 */
 export const view_table_dd_grid = function() {
 
@@ -22,10 +75,17 @@ export const view_table_dd_grid = function() {
 
 /**
 * RENDER
-* Render node for use in table
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Build a full <table> DOM node from the dd_grid instance data.
+*
+* Reads `self.data` (the server-produced column map + row array), creates a
+* <table> wrapper, delegates header row construction to get_table_nodes(), and
+* appends the resulting DocumentFragment. The wrapper receives CSS classes that
+* encode the component tipo, current mode, and active view so LESS/CSS can scope
+* styles per context.
+*
+* @param {Object} self    - dd_grid instance; must expose .data, .tipo, .mode, .view, .config
+* @param {Object} options - Render options (currently unused by this view but kept for API parity with other views)
+* @returns {HTMLElement} wrapper - The <table> element ready to be appended to the DOM
 */
 view_table_dd_grid.render = function(self, options) {
 
@@ -50,11 +110,18 @@ view_table_dd_grid.render = function(self, options) {
 
 /**
 * RENDER_ROW
-* Render a single row (or sub-rows from portals)
-* @param object self
-* @param object row_data
-* @param array ar_columns_obj
-* @return DocumentFragment
+* Render a single data row (or the set of sub-rows derived from portal data).
+*
+* Delegates to get_portal_rows(), which handles both flat rows (row_count === 1)
+* and multi-row portal expansions (row_count > 1). The caller is responsible for
+* appending the returned fragment to the correct parent <tbody>/<table> node.
+*
+* @param {Object} self           - dd_grid instance; must expose .config
+* @param {Object} row_data       - A single row object from self.data (index >= 1):
+*                                  { row_count: number, value: Array<ColumnEntry> }
+* @param {Array}  ar_columns_obj - The column-map array extracted from data[0]; used
+*                                  to match each column entry to its header definition
+* @returns {DocumentFragment} Fragment containing one or more <tr> elements
 */
 view_table_dd_grid.render_row = function(self, row_data, ar_columns_obj) {
 	return get_portal_rows(self, row_data, ar_columns_obj)
@@ -64,11 +131,33 @@ view_table_dd_grid.render_row = function(self, row_data, ar_columns_obj) {
 
 /**
 * GET_TABLE_NODES
-* @param object self
-* @param array data
-* 	array of objects; full data sent by the server with all information.
-* @return DocumentFragment
-* 	DOM node with the table
+* Build the complete table structure (header row + all data rows) as a DocumentFragment.
+*
+* This is the core layout driver for the table view. It performs two passes over
+* the server data:
+*
+* Pass 1 – Header:
+*   Reads data[0].value (the column-map row) to produce <th> cells in a single
+*   header <tr>. Each column entry may itself describe nested sub-columns; the
+*   shape is handled by get_table_columns().
+*
+* Pass 2 – Data rows:
+*   Iterates data[1…] and delegates each row to get_portal_rows(). A row with
+*   row_count === N expands into N <tr> elements to flatten portal sub-records.
+*
+* Column map (ar_columns_obj):
+*   Extracted from data[0].value as the array of ar_columns_obj objects. This
+*   map is passed down to every row renderer so each cell can be matched to the
+*   correct column definition, including columns synthesised from portal section_ids.
+*
+* Portal expansion note:
+*   When the export has portals, some columns are "section_id columns" — they are
+*   dynamically generated per locator, e.g. "profession", "profession|1", etc.
+*   data[0] is the only row that always carries the full set of generated columns.
+*
+* @param {Object} self - dd_grid instance; must expose .config (fill_the_gaps, show_tipo_in_label, data_format)
+* @param {Array}  data - Server-produced data array; data[0] is the column-map row; data[1…] are data rows
+* @returns {DocumentFragment} Fragment containing one header <tr> and N data <tr> elements
 */
 const get_table_nodes = function(self, data) {
 
@@ -121,20 +210,22 @@ const get_table_nodes = function(self, data) {
 
 /**
 * GET_PORTAL_ROWS
-* This method calculate the rows when the main row has sub rows that comes from portals
-* sometime the row don't has portal information, but the calculation will be the same, because
-* the server use a row_count to identify the amount rows that will be necessary to build
-* if the row don't has portals the row_count will be 1, if has portals have multiple locators,
-* the row_count will be the total locators of the first level, sub-levels of information are
-* calculated as section_id columns
-* @param object self
-* 	dd_grid instance
-* @param object row
-* 	array of objects; all information of the row, the main row
-* @param array ar_columns_object
-* 	array of object; the column map with all columns to be matched with the data
-* @return DocumentFragment
-*	wWith the tr of the table
+* Expand a single data row into one or more <tr> elements, accounting for portal sub-rows.
+*
+* The server pre-calculates `row.row_count` — the total number of visual rows
+* this record needs. When the record has no portals, row_count === 1 and a single
+* <tr> is emitted. When the record has a first-level portal with N locators,
+* row_count === N and N <tr> elements are emitted, each reading from the
+* corresponding portal sub-row via the `row_key` index passed down to get_columns().
+*
+* Second-level portals (portals nested inside portals) do NOT generate additional
+* rows — they are instead flattened into extra section_id columns in the column map.
+*
+* @param {Object} self           - dd_grid instance; must expose .config
+* @param {Object} row            - A row descriptor from self.data:
+*                                  { row_count: number, value: Array<ColumnEntry> }
+* @param {Array}  ar_columns_obj - Column-map array from data[0]; see get_table_nodes()
+* @returns {DocumentFragment} Fragment with row_count <tr> elements (each containing <td>/<th> cells)
 */
 const get_portal_rows = function(self, row, ar_columns_obj) {
 
@@ -163,21 +254,48 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 
 /**
 * GET_COLUMNS
+* Recursively resolve and render <td> cells for a set of columns, handling nested portal structures.
 *
-* @param object self
-* @param array column_data
-* 	array of objects; full data with the columns to be processed, in the recursion it could be a part of this data to be processed
-* @param array ar_columns_object
-* 	array of object; the column map with all columns to be matched with the data
-* @param int parent_row_key
-* the current position of the row to be used to match with the portal data
-* the columns has the information of the components
-* is the component is a final component it will create a node
-* if the component is a relation component, portals, it could has other rows or portal columns with "sub-columns" of the final components
-* in the case of column has rows, extract the row with parent_row_key and star again
-* in the case of the column of a portal, extract his value and star again
-* @return DocumentFragment
-* 	with the td of the table
+* This function is the most complex part of the table view. It walks the column map
+* (ar_columns_obj) and matches each column definition against the actual cell data
+* (column_data) using a pre-built O(1) index map, then dispatches to either:
+*
+*   a) get_table_columns() — when the column is a leaf cell (has a cell_type): emits <td>/<th>.
+*   b) get_columns() recursively — when the column is a container (no cell_type):
+*        i)  If its value contains 'row' entries: this is a first-level portal. The
+*            row at index `parent_row_key` is selected, and get_columns() recurses
+*            into its cells.
+*       ii)  If its value contains non-'row' entries: this is a section_id column
+*            (nested portal flattened to columns). get_columns() recurses directly
+*            into that value array.
+*
+* Empty-cell handling:
+*   When no data exists for a column in the index, a synthetic empty cell object is
+*   constructed so the table always has the correct number of cells per row.
+*
+* Breakdown (multiple values in the same column):
+*   When the index returns more than one data entry for a column (breakdown mode,
+*   where every locator gets its own column), the values are merged into a single
+*   array before rendering.
+*
+* fill_the_gaps behaviour (self.config.fill_the_gaps):
+*   When a portal sub-row at `parent_row_key` does not exist:
+*   - fill_the_gaps === false → emit an empty cell.
+*   - fill_the_gaps === true  → repeat data from the first available sub-row
+*     (sub_portal_values[0]), making spreadsheet copy-paste easier.
+*
+* Performance note:
+*   The column index (Map<column_id, cell[]>) is built once per call in O(cells)
+*   time, reducing the inner lookup from O(columns × cells) to O(1) per column.
+*   This matters for grids with many columns and many rows.
+*
+* @param {Object} self           - dd_grid instance; must expose .config.fill_the_gaps
+* @param {Array}  column_data    - Array of ColumnEntry objects for this row (or sub-row slice
+*                                  during recursion); each entry has { ar_columns_obj, type, cell_type, value, class_list }
+* @param {Array}  ar_columns_obj - Column-map definitions to iterate; each entry is a ColumnObject { id, … }
+* @param {number} parent_row_key - Zero-based index into portal sub-rows; identifies which
+*                                  portal locator is being rendered in the current <tr>
+* @returns {DocumentFragment} Fragment of <td> (and/or <th>) elements for one table row
 */
 const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) {
 
@@ -301,11 +419,29 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 
 /**
 * GET_TABLE_COLUMNS
-* Use the column_data to create the right node
-* @param object self
-* @param object current_data
-* the full column data
-* @return array column_nodes
+* Dispatch a column data object to the correct cell renderer and return an array of DOM nodes.
+*
+* Reads `current_data.type` and `current_data.cell_type` to decide which render
+* function to call. If the data is missing or has no type, an empty text <td> is
+* produced as a fallback so the table keeps its column alignment.
+*
+* cell_type dispatch table:
+*   'header'     → render_header_column(self, current_data) → <th>
+*   'av' | '3d'  → render_av_column(current_data)          → <td> with posterframe <img>
+*   'img'        → render_img_column(current_data)          → <td> with full-size <img>
+*   'button'     → render_button_column(current_data)       → <td> with async-loaded action <img>
+*   'json'       → render_json_column(current_data, data_format) → <td> with JSON string
+*   'section_id' → render_section_id_column(current_data)   → <td> with plain id value
+*   'iri'        → render_iri_column(current_data)          → <td> with <a> links
+*   'text' / *   → render_text_column(current_data)         → <td> with joined string (default)
+*
+* The returned array always contains exactly one element in the current implementation,
+* but an array is returned for API flexibility (callers loop over it).
+*
+* @param {Object} self         - dd_grid instance; must expose .config.data_format
+* @param {Object} current_data - ColumnEntry descriptor:
+*                                { type, cell_type, value, class_list, ar_columns_obj, … }
+* @returns {Array<HTMLElement>} Array of <td> or <th> elements (typically length 1)
 */
 const get_table_columns = function(self, current_data) {
 
@@ -387,10 +523,13 @@ const get_table_columns = function(self, current_data) {
 
 /**
 * RENDER_ROW_CONTAINER
-* Render table tr node as row container
-* @param string class_name = null
-* @return HTMLElement row_container
-* table tr node
+* Create a bare <tr> element to serve as a table row container.
+*
+* Used for both the header row (class_name === 'row_header') and plain data rows
+* (class_name === null, which ui.create_dom_element treats as no class attribute).
+*
+* @param {string|null} [class_name=null] - Optional CSS class to apply to the <tr>
+* @returns {HTMLElement} A <tr> element (empty; cells are appended by the caller)
 */
 const render_row_container = function(class_name=null) {
 
@@ -406,11 +545,25 @@ const render_row_container = function(class_name=null) {
 
 /**
 * RENDER_HEADER_COLUMN
-* Render table th element for a label
-* @param object self
-* @param object current_data
-* @return HTMLElement th_node
-* table th element
+* Create a <th> element for a table header cell from a column-map entry.
+*
+* The label is built from ar_labels, which is a flat array alternating between
+* separator strings and label strings (odd indices are labels, even indices are
+* separators — hence the `i % 2 !== 1` skip). Labels from different levels of
+* the hierarchy are joined with ' | '.
+*
+* When self.config.show_tipo_in_label is true, each label is appended with the
+* corresponding tipo identifier in brackets, e.g. "Name [oh1]". This is useful
+* for developers inspecting exported data who need to trace columns back to
+* component tipos.
+*
+* Fallback: if ar_labels is empty (dynamically added columns may lack it), the
+* column's own .label property is used directly.
+*
+* @param {Object} self         - dd_grid instance; must expose .config.show_tipo_in_label
+* @param {Object} current_data - ColumnEntry whose ar_columns_obj carries ar_labels and ar_tipos:
+*                                { ar_columns_obj: { ar_labels: string[], ar_tipos: string[], label: string } }
+* @returns {HTMLElement} A <th> element with the computed label as inner HTML
 */
 const render_header_column = function(self, current_data) {
 
@@ -448,9 +601,21 @@ const render_header_column = function(self, current_data) {
 
 /**
 * RENDER_TEXT_COLUMN
-* Render table td node for a text value
-* @param object current_data
-* @return HTMLElement td_node
+* Create a <td> element for a plain-text cell value.
+*
+* When `value` is an array, its items are joined with `records_separator`
+* (default ' | ') before insertion. If the primary value is empty or absent,
+* `fallback_value` is used instead (also joined if it is an array). This
+* fallback mechanism supports "fill the gaps" scenarios where the server cannot
+* guarantee a value is present for every visual row.
+*
+* The class_list defaults to 'text_column' but can be overridden per-column
+* (e.g. 'empty_value' for synthesised empty cells).
+*
+* @param {Object} current_data - ColumnEntry:
+*                                { value: string|Array<string>, fallback_value?: string|Array<string>,
+*                                  class_list?: string, records_separator?: string }
+* @returns {HTMLElement} A <td> element whose innerHTML is the resolved string value
 */
 const render_text_column = function(current_data) {
 
@@ -486,9 +651,19 @@ const render_text_column = function(current_data) {
 
 /**
 * RENDER_AV_COLUMN
-* Render table td node for a component_av value
-* @param object current_data
-* @return HTMLElement td_node
+* Create a <td> element for a component_av (audio/video) or component_3d cell.
+*
+* Reads the posterframe URL from value[0].posterframe_url and renders a thumbnail
+* <img> inside the <td>. If the image fails to load (e.g. the media file has not
+* been processed yet), the error handler substitutes page_globals.fallback_image.
+* The guard `image.src !== page_globals.fallback_image` prevents an infinite error
+* loop if the fallback itself is unavailable.
+*
+* When value[0] is absent or posterframe_url is falsy, the <td> is returned empty.
+*
+* @param {Object} current_data - ColumnEntry:
+*                                { value: Array<{ posterframe_url: string }>, class_list?: string }
+* @returns {HTMLElement} A <td> element, optionally containing an <img> thumbnail
 */
 const render_av_column = function(current_data) {
 
@@ -527,9 +702,22 @@ const render_av_column = function(current_data) {
 
 /**
 * RENDER_IMG_COLUMN
-* Render table td node for a component_image value
-* @param object current_data
-* @return HTMLElement td_node
+* Create a <td> element for a component_image cell.
+*
+* Reads the image URL from value[0]. If the URL does not begin with 'http',
+* window.location.origin is prepended so that relative server paths are resolved
+* correctly in the current browser context. External URLs (e.g. IIIF manifests,
+* Gallica, etc.) are used as-is to avoid incorrectly prepending the local origin.
+*
+* An error handler substitutes page_globals.fallback_image on load failure,
+* with the same infinite-loop guard as render_av_column().
+*
+* When value[0] is falsy, the <td> is returned empty.
+*
+* @param {Object} current_data - ColumnEntry:
+*                                { value: Array<string>, class_list?: string }
+*                                value[0] is the image URL (relative or absolute)
+* @returns {HTMLElement} A <td> element, optionally containing an <img> element
 */
 const render_img_column = function(current_data) {
 
@@ -573,9 +761,25 @@ const render_img_column = function(current_data) {
 
 /**
 * RENDER_BUTTON_COLUMN
-* Render table td node for a button value
-* @param object current_data
-* @return HTMLElement td_node
+* Create a <td> element for a server-defined action button (rendered as an <img>).
+*
+* The button descriptor lives in value[0] and carries an `action` object:
+*   { event: string, module_path: string, method: string, options: Object }
+*
+* The event handler is wired up as an async listener that dynamically imports
+* `module_path` at click time (lazy loading). The invoked method receives the
+* merged options object augmented with `button_caller` pointing to the clicked
+* element, so the action can position UI elements relative to the trigger.
+*
+* (!) The <img> element is created unconditionally even when value[0] has no src
+* attribute, which may produce a broken-image icon. The action itself is only
+* wired when value.action.event is truthy.
+*
+* @param {Object} current_data - ColumnEntry:
+*                                { value: Array<{ class_list?: string,
+*                                    action?: { event: string, module_path: string,
+*                                               method: string, options: Object } }> }
+* @returns {HTMLElement} A <td> element containing the button <img>
 */
 const render_button_column = function(current_data) {
 
@@ -612,11 +816,20 @@ const render_button_column = function(current_data) {
 
 /**
 * RENDER_JSON_COLUMN
-* Render table td node for a component_json value
-* @param object current_data
-* @param string|null data_format
-* 	Like 'dedalo_raw'
-* @return HTMLElement td_node
+* Create a <td> element for a component_json cell, with optional HTML-entity encoding.
+*
+* Serialises the value to a JSON string with JSON.stringify(). When data_format is
+* 'dedalo_raw', all characters outside the printable ASCII range (code points
+*  –香) as well as '<', '>', and '&' are replaced with their HTML numeric
+* character references (&#N;). This ensures the raw JSON is displayed as literal
+* text in the table cell without the browser interpreting it as markup — important
+* for export views where the cell content is later scraped or clipboard-copied.
+*
+* When the value is empty (null, undefined, or empty array), an empty string is used.
+*
+* @param {Object}      current_data - ColumnEntry: { value: *|Array, class_list?: string }
+* @param {string|null} data_format  - Optional format hint; 'dedalo_raw' triggers HTML encoding
+* @returns {HTMLElement} A <td> element whose innerHTML is the (optionally encoded) JSON string
 */
 const render_json_column = function(current_data, data_format) {
 
@@ -648,9 +861,14 @@ const render_json_column = function(current_data, data_format) {
 
 /**
 * RENDER_SECTION_ID_COLUMN
-* Render table td node for a component_section_id value
-* @param object current_data
-* @return HTMLElement td_node
+* Create a <td> element for a component_section_id cell.
+*
+* Outputs the raw section id value (typically a numeric string) directly as
+* innerHTML. No formatting or linking is applied — the id is presented as-is
+* for use in export/spreadsheet contexts where raw ids are required.
+*
+* @param {Object} current_data - ColumnEntry: { value: string|number, class_list?: string }
+* @returns {HTMLElement} A <td> element whose innerHTML is the section id value
 */
 const render_section_id_column = function(current_data) {
 
@@ -669,9 +887,23 @@ const render_section_id_column = function(current_data) {
 
 /**
 * RENDER_IRI_COLUMN
-* Render table td node for a component_iri value
-* @param object current_data
-* @return HTMLElement td_node
+* Create a <td> element for a component_iri cell, rendered as a list of hyperlinks.
+*
+* Each item in current_data.data produces an <a> element linking to item.iri.
+* The link text is item.title when present, otherwise item.iri itself is used
+* as a self-descriptive label. Links open in a new tab (_blank) and carry
+* rel="noopener noreferrer" (SEC-033) to prevent reverse-tabnapping attacks.
+*
+* Items are separated by the records_separator string (default ' | ') inserted
+* as text nodes between <a> elements. No separator is appended after the last item.
+*
+* Note: current_data.value is present but not used here; the canonical data is
+* in current_data.data which carries the full IRI descriptor objects.
+*
+* @param {Object} current_data - ColumnEntry:
+*                                { data: Array<{ iri: string, title?: string }>,
+*                                  class_list?: string, records_separator?: string }
+* @returns {HTMLElement} A <td> element containing zero or more <a> link elements
 */
 const render_iri_column = function(current_data) {
 

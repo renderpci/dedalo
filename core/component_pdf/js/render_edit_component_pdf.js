@@ -12,8 +12,23 @@
 
 
 /**
-* RENDER_EDIT_COMPONENT_pdf
-* Manage the components logic and appearance in client side
+* RENDER_EDIT_COMPONENT_PDF
+* Edit-mode render controller for component_pdf.
+*
+* Acts as the prototype source for component_pdf.prototype.edit (assigned in
+* component_pdf.js). Dispatches rendering to the appropriate view module based
+* on the view string read from self.context.view.
+*
+* Supported views and their delegates:
+*  - 'mini'            — compact thumbnail/icon for autocomplete/list contexts (view_mini_pdf)
+*  - 'player'/'viewer' — standalone PDF viewer without label or edit buttons (view_viewer_pdf)
+*  - 'print'           — same DOM structure as 'default' but forces read-only permissions;
+*                        the CSS class 'view_print' on the wrapper lets stylesheets target it
+*  - 'line'            — same render as 'default' but without the label node
+*  - 'default'         — full editable view with the embedded pdfjs iframe and tool buttons
+*
+* Exported symbol:
+*  - render_edit_component_pdf  constructor (prototype host for .edit)
 */
 export const render_edit_component_pdf = function() {
 
@@ -24,9 +39,22 @@ export const render_edit_component_pdf = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @param object options
-* @return HTMLElement wrapper
+* Entry point for edit-mode rendering. Reads the active view from
+* self.context.view (not self.view — unlike component_image, this component
+* reads context.view directly) and delegates to the correct view module.
+*
+* (!) The 'print' case intentionally falls through to the 'default' handler —
+*     there is no `break` after `self.permissions = 1`. This is by design:
+*     the print view reuses the full default DOM layout but forces permissions
+*     to 1 so content_value renders in read-only mode. The wrapper will carry
+*     the additional CSS class 'view_print' applied by build_wrapper_edit when
+*     it detects a 'print' view, allowing print-specific CSS rules to apply.
+*     Example generated class string:
+*       "wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component"
+*
+* @param {Object} options - render options forwarded verbatim to the active view module
+* @returns {Promise<HTMLElement>} the wrapper element (or content_data node when
+*   render_level === 'content') produced by the chosen view module
 */
 render_edit_component_pdf.prototype.edit = async function(options) {
 

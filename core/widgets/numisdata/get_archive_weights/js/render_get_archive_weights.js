@@ -12,7 +12,46 @@
 
 /**
 * RENDER_GET_ARCHIVE_WEIGHTS
-* Manages the component's logic and appearance in client side
+* Client-side render module for the `get_archive_weights` numisdata widget.
+*
+* This widget displays aggregated weight and diameter statistics computed from
+* the set of qualifying numismatic records (coins) linked to the current
+* section via a source portal. For each IPO entry the PHP backend
+* (`class.get_archive_weights.php`) resolves the linked records, filters out
+* unused and duplicated coins, and emits eight keyed output items:
+*
+*   Weight dimension:
+*     media_weight            — mean weight across all qualifying coins (rounded to 2 dp)
+*     max_weight              — maximum per-coin mean weight
+*     min_weight              — minimum per-coin mean weight
+*     total_elements_weights  — count of qualifying coins that had weight data
+*
+*   Diameter dimension:
+*     media_diameter          — mean diameter across all qualifying coins (rounded to 2 dp)
+*     max_diameter            — maximum per-coin mean diameter
+*     min_diameter            — minimum per-coin mean diameter
+*     total_elements_diameter — count of qualifying coins that had diameter data
+*
+* The eight items are delivered as a flat array on `self.value`; each element
+* carries `{ widget, key, widget_id, value }` where `key` is the 0-based IPO
+* index and `widget_id` matches one of the names above.
+*
+* In addition to the initial static render the widget subscribes to
+* `update_widget_value_<key>_<id>` events via `event_manager` so that peer
+* input widgets (e.g. a weight data-entry component on the same section page)
+* can push live recalculations without a full page reload. The subscription
+* token is pushed onto `self.events_tokens` so `widget_common.destroy()` can
+* unsubscribe automatically.
+*
+* Note: the `event_manager` import is consumed inside `get_value_element`.
+* The `page_globals`, `SHOW_DEBUG`, and `DEDALO_CORE_URL` globals are declared
+* in the /*global*‌/ directive for ESLint but are not referenced in this file;
+* they are available for future debug logging additions.
+*
+* Exported prototype methods are mixed into `get_archive_weights` instances
+* by `get_archive_weights.js`.
+*
+* Main export: `render_get_archive_weights` (constructor, no instance state)
 */
 export const render_get_archive_weights = function() {
 
@@ -23,8 +62,18 @@ export const render_get_archive_weights = function() {
 
 /**
 * EDIT
-* Render node for use in modes: edit, edit_in_list
-* @return HTMLElement wrapper
+* Render node for use in modes: edit, edit_in_list.
+*
+* Builds the full widget wrapper (or just the inner content node when
+* `render_level === 'content'`) by delegating data layout to
+* `get_content_data_edit`. When called with `render_level !== 'content'` the
+* method wraps the content in a standard widget wrapper created by
+* `ui.widget.build_wrapper_edit`.
+*
+* @param {Object} options - render options supplied by widget_common.render()
+* @param {string} options.render_level - when 'content', only the inner
+*   content_data element is returned; any other value returns the full wrapper
+* @returns {Promise<HTMLElement>} wrapper element or content_data node
 */
 render_get_archive_weights.prototype.edit = async function(options) {
 
@@ -51,7 +100,30 @@ render_get_archive_weights.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return HTMLElement content_data
+* Builds the `<ul class="values_container">` list of IPO-entry rows.
+*
+* Iterates over every entry in `self.ipo` (one entry per configured source
+* portal / measurement group). For each entry it filters `self.value` to the
+* eight output items whose `key` matches the current IPO index, then delegates
+* DOM construction and event subscription to `get_value_element`.
+*
+* Data contract (`self.value`):
+*   A flat array of objects produced by PHP `get_archive_weights::get_data()`.
+*   Each object has the shape:
+*   {
+*     widget    : 'get_archive_weights',   // string — widget class name
+*     key       : 0,                       // number — 0-based IPO index
+*     widget_id : 'media_weight',          // string — one of 8 slot names
+*     value     : 12.45                    // number|null — computed aggregate
+*   }
+*   When the source portal has no linked records the PHP method returns [] and
+*   `self.value` will be empty; `filter` will then yield [] for every IPO key
+*   and `get_value_element` will render blank value spans.
+*
+* @param {Object} self - the `get_archive_weights` widget instance; must expose
+*   `self.ipo` (Array), `self.value` (Array), `self.id` (string), and
+*   `self.events_tokens` (Array) for use by the child call
+* @returns {Promise<HTMLElement>} content_data div containing the rendered list
 */
 const get_content_data_edit = async function(self) {
 
@@ -68,6 +140,9 @@ const get_content_data_edit = async function(self) {
 		const ipo 			= self.ipo
 		const ipo_length 	= ipo.length
 
+		// Each IPO entry produces one <li> row.
+		// self.value items are pre-filtered by `key === i` to isolate the 8 output
+		// slots that belong to this IPO entry before passing them to get_value_element.
 		for (let i = 0; i < ipo_length; i++) {
 			const data 		= self.value.filter(item => item.key === i)
 			get_value_element(i, data , values_container, self)
@@ -87,7 +162,49 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return HTMLElement li
+* Renders one statistics row (`<li>`) for a single IPO entry.
+*
+* Builds two side-by-side measurement sub-panels inside the `<li>`:
+*
+*   1. `.archive_weights` — weight dimension:
+*        `.sum_weights`    — mean weight (`media_weight`) displayed prominently,
+*                            labelled via the localised `get_label.weight` string.
+*        `.weights_values` — detail range row: max | min | n (total count).
+*
+*   2. `.archive_diameter` — diameter dimension:
+*        `.sum_diameter`   — mean diameter (`media_diameter`) displayed prominently,
+*                            labelled via the localised `get_label.diameter` string.
+*        `.diameter_values` — detail range row: max | min | n (total count).
+*
+* All eight output slot values are read via optional-chaining + nullish-coalescing
+* (`?.value ?? ''`) from the `data` array, so missing or null server values
+* render as empty strings rather than causing exceptions.
+*
+* After building the static DOM the function subscribes to the event channel
+* `update_widget_value_<i>_<self.id>` using `event_manager`. When another widget
+* or component on the same page publishes fresh aggregate data on that channel,
+* `fn_update_widget_value` replaces the `textContent` of all eight value spans
+* with the new values — avoiding HTML injection by using `textContent` instead
+* of `innerHTML` (the calculation outputs are always numeric strings).
+*
+* The subscription token is appended to `self.events_tokens` so that
+* `widget_common.destroy()` can cleanly unsubscribe when the widget is removed
+* from the DOM. The comment above the subscription block explains why live
+* updates are wired here even though they are architecturally unusual for this
+* widget type: the input components that feed the recalculation are on a
+* different section, so the user cannot edit and view at the same time; the
+* subscription is kept as a future-proof pattern compatible with sibling widgets.
+*
+* @param {number} i - 0-based IPO index; used to scope the event channel name
+* @param {Array} data - subset of `self.value` items for IPO key `i`;
+*   expected to contain up to 8 objects, one per output slot; missing slots
+*   render as empty strings
+* @param {HTMLElement} values_container - the `<ul>` node that receives the
+*   new `<li>` as a child (side-effect)
+* @param {Object} self - the `get_archive_weights` widget instance; `self.id`
+*   and `self.events_tokens` are consumed here
+* @returns {HTMLElement} the constructed `<li>` node (also appended to
+*   values_container as a side-effect)
 */
 const get_value_element = (i, data, values_container, self) => {
 

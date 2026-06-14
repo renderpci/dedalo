@@ -4,6 +4,42 @@
 
 
 
+/**
+* VIEW_DEFAULT_EDIT_TS_OBJECT
+*
+* View layer for a single thesaurus/ontology node (ts_object) in edit mode.
+* This module owns the DOM construction and event wiring for the full
+* ts_object rendering cycle: the outer wrapper, its content row, child
+* container, drag-and-drop chrome, expand/collapse arrow, and paginated
+* child loading.
+*
+* Exported symbols consumed by ts_object.js:
+*   - view_default_edit_ts_object   constructor stub (no-op; presence signals "view loaded")
+*   - render_children               bound as ts_object.prototype.render_children
+*   - render_child                  builds one child ts_object instance + its DOM node
+*   - render_link_children          creates the expand-arrow element and wires its toggle
+*
+* DOM hierarchy produced by render():
+*   wrap_ts_object                  (div, dataset: section_tipo / section_id / id)
+*     content_data                  (div, built by get_content_data)
+*       id_column_content           (from render_id_column: add / drag / delete / order / edit buttons)
+*       elements_container          (div, class includes caller.model)
+*         [ts_line nodes]           (from render_ts_line: term text, arrow, indexation badges, etc.)
+*       data_container              (div, hidden initially; component editors mount here)
+*       indexations_container       (div, hidden initially; indexation grid mounts here)
+*       nd_container                (div, hidden initially; non-descriptor children; descriptor nodes only)
+*     children_container            (div, hidden; descriptor nodes only)
+*       [wrap_ts_object …]          (recursive ts_object children)
+*
+* State contract:
+*   - is_open is the single source of truth (owned by ts_object.set_open).
+*     This view only reads is_open; it never writes it except via the
+*     set_open / sync_open_dom entry points.
+*   - children_container / data_container / indexations_container / nd_container
+*     are DOM pointer properties set on the ts_object instance so that sibling
+*     modules (render_ts_line, ts_object) can reach them without querying the DOM.
+*/
+
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport, dd_request_idle_callback} from '../../common/js/events.js'
@@ -34,12 +70,28 @@ export const view_default_edit_ts_object = function() {
 
 /**
 * RENDER
-* Global render for the ts_object.
-* It created the DOM nodes needed from the instance (wrapper, children_container, etc.)
-* Render a wrapper containing all ts_object item nodes.
-* Before render the instance, you need to load the data using `ts_node.get_children_data()`
-* @param object ts_record
-* @param return HTMLElement wrapper
+* Entry point for a full ts_object DOM render.
+*
+* Accepts a `render_level` option that controls how much work is done:
+*   - 'content'  — return only the content_data fragment (skips wrapper +
+*                  children_container). Used by common.prototype.refresh when
+*                  it needs to swap in-place without recreating the outer shell.
+*   - 'full'     — (default) build the complete subtree: wrapper → content_data
+*                  → children_container (descriptor nodes) and, if the node was
+*                  previously open, trigger a non-blocking re-open to reload
+*                  its children (is_open continuity after a full re-render).
+*
+* Side effects on `self`:
+*   - self.node is NOT set here; that pointer is set by common.prototype.render
+*     after it receives the returned wrapper.
+*   - self.children_container is set on the instance for descriptor nodes.
+*   - self.is_open is NOT touched: the flag is the single source of truth owned
+*     by ts_object.set_open(); this function only reads it.
+*
+* @param {Object} self - ts_object instance whose properties drive the render.
+* @param {Object} options - Render options.
+* @param {string} [options.render_level='full'] - 'full' or 'content'.
+* @returns {Promise<HTMLElement|DocumentFragment>} wrapper (full) or content_data fragment (content).
 */
 view_default_edit_ts_object.render = async function(self, options) {
 
@@ -88,8 +140,25 @@ view_default_edit_ts_object.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self - ts_object instance
-* @return HTMLElement content_data
+* Assembles the inner content row for one ts_object node into a single
+* `content_data` div.
+*
+* The layout inside content_data (left→right):
+*   id_column_content  — action icons (add / drag / delete / order / edit)
+*   elements_container — ts_line (term text, expand arrow, indexation badge, etc.)
+*   data_container     — initially empty; receives component editors on demand
+*   indexations_container — initially hidden; receives indexation grid on demand
+*   nd_container       — initially hidden; non-descriptor (ND) children (descriptor nodes only)
+*
+* Pointer side effects on `self`:
+*   self.data_container, self.indexations_container, self.nd_container
+*   are set here so that other modules can reach these nodes without a DOM
+*   query. (!) Order matters: render_ts_line reads self.indexations_container
+*   but is called BEFORE that div is appended, so render_ts_line must look
+*   up self.indexations_container at event-time, not at construction-time.
+*
+* @param {Object} self - ts_object instance.
+* @returns {HTMLElement} content_data div containing the full content row.
 */
 const get_content_data = function(self) {
 
@@ -153,15 +222,64 @@ const get_content_data = function(self) {
 
 /**
 * RENDER_CHILDREN
-* Get the JSON data from the server. When data is loaded, render DOM element
-* Data is built from parent node info (current object section_tipo and section_id)
-* @param object
-* {
-* 	clean_children_container: bool (default false)
-* 	children_data: object {ar_children_data: [], pagination: {}}
-* }
-* @return promise
-* 	Resolve bool true
+* Renders DOM nodes for a list of child terms into the ts_object's
+* children_container (and nd_container for non-descriptors).
+*
+* This function is bound to ts_object.prototype.render_children and called
+* with `this` pointing to the parent ts_object instance:
+*   await self.render_children({ clean_children_container, children_data })
+*
+* Data contract for `children_data`:
+*   {
+*     ar_children_data : Array<Object>  — list of child node descriptors
+*     pagination       : {
+*       total  : number,  — total matching children on the server
+*       limit  : number,  — page size used in the last request
+*       offset : number   — starting offset of the last page
+*     }
+*   }
+*
+* Each element in ar_children_data is a ts_object data descriptor returned
+* by dd_ts_api::get_children_data, e.g.:
+*   {
+*     section_tipo          : 'hierarchy1',
+*     section_id            : '66',
+*     is_descriptor         : true,
+*     has_descriptor_children: false,
+*     order                 : 2,
+*     ts_id                 : 'hierarchy1_66',
+*     ts_parent             : 'hierarchy1_1',
+*     ar_elements           : [{ type:'term', tipo:'hierarchy5', value:'Spain', model:'component_input_text' }]
+*   }
+*
+* Stale-child cleanup (clean_children_container === true):
+*   Before emptying the container, every cached child ts_object instance
+*   is destroyed via destroy(delete_self=true, delete_dependencies=true,
+*   remove_dom=false) — the DOM is then wiped by the container clear.
+*   Fresh instances are created by render_child on the next loop.
+*
+* Recursion guard:
+*   Children with the same section_tipo + section_id as the parent are
+*   silently skipped to prevent infinite DOM recursion.
+*
+* Pagination:
+*   When `children_data.pagination` indicates more records exist beyond the
+*   current page, `render_ts_pagination` is scheduled via
+*   dd_request_idle_callback → requestAnimationFrame to append a "Show more"
+*   button without blocking the current paint.
+*
+* Fragment strategy:
+*   All rendered nodes are collected into two DocumentFragments
+*   (children_fragment for descriptors, nd_fragment for non-descriptors) and
+*   appended synchronously after the loop. This ensures callers that await
+*   this promise see the children already in the DOM, with a single reflow.
+*
+* @param {Object} options
+* @param {boolean} [options.clean_children_container=false] - When true, destroys stale
+*   child instances and empties the containers before rendering. Use true when
+*   replacing content (reload); false when appending (pagination page).
+* @param {Object} options.children_data - Children data object (see above). Required.
+* @returns {Promise<boolean>} Resolves true on success, false on any recoverable error.
 */
 export const render_children = async function(options) {
 	if(SHOW_DEBUG===true) {
@@ -331,11 +449,35 @@ export const render_children = async function(options) {
 
 /**
 * RENDER_CHILD
-* Render a instance of child nodes.
-* @param object self - ts_object instance
-* @param object child_data - Basic child instance information for instance
-* @param int virtual_order - Number with the relative child order
-* @return HTMLElement node_wrapper
+* Creates, builds, and renders a single child ts_object node.
+*
+* Workflow:
+*   1. ts_object.get_instance() is called with the child's key parts. When
+*      an instance already exists in the global cache (same node previously
+*      rendered), it is returned immediately. Otherwise a fresh instance is
+*      created and cached.
+*   2. caller is always refreshed on the returned instance to prevent stale
+*      parent references after a parent re-render (cache-hit guard).
+*   3. The instance is registered in self.ar_instances so that
+*      destroy(delete_dependencies=true) on the parent reclaims the whole
+*      open subtree.
+*   4. build(false) populates instance data (from injected child_data.data
+*      or from the API if data is absent).
+*   5. render(render_level:'full') produces and returns the wrapper DOM node.
+*
+* Key parts forwarded to ts_object.get_instance:
+*   section_tipo, section_id, children_tipo, target_section_tipo (null),
+*   thesaurus_mode, ts_parent (parent's ts_id string).
+*
+* The `data` property is injected from child_data so that the build step can
+* skip an extra API round-trip for freshly loaded children.
+*
+* @param {Object} self - Parent ts_object instance.
+* @param {Object} child_data - Raw child descriptor from ar_children_data
+*   (see render_children for the full shape).
+* @param {number} virtual_order - 1-based display order of this child within
+*   the current page of results.
+* @returns {Promise<HTMLElement>} The rendered wrap_ts_object div for the child.
 */
 export const render_child = async function(self, child_data, virtual_order) {
 
@@ -386,13 +528,35 @@ export const render_child = async function(self, child_data, virtual_order) {
 
 /**
 * RENDER_TS_PAGINATION
-* Render pagination button with events
-* @param object options
-* {
-* 	children_container: HTMLElement
-* 	pagination: object
-* }
-* @return HTMLElement button_show_more
+* Appends a "Show more" button to the children_container when the server has
+* more children than the current page covers.
+*
+* The button is removed once its page loads successfully. While a load is
+* in progress the button acquires the 'loading_spinner' CSS class and any
+* further clicks are ignored (in-flight guard).
+*
+* Pagination object shape (received from the API and stored on the instance):
+*   {
+*     total  : number,   — total children count on the server
+*     limit  : number,   — page size used for the last request
+*     offset : number    — starting offset of the last page
+*   }
+*
+* When the "Show more" button is clicked:
+*   1. A new pagination object is built with offset += limit.
+*      The original object is NOT mutated (built-by-value) because it is the
+*      cached children_data.pagination.
+*   2. get_children_data fetches the next page (cache: false).
+*   3. The new ar_children_data is appended to self.children_data.ar_children_data
+*      so subsequent full re-renders include all loaded pages.
+*   4. render_children is called with clean_children_container=false to append
+*      only the new nodes without destroying the already rendered ones.
+*   5. On success the button removes itself.
+*
+* @param {Object} options
+* @param {Object} options.self - ts_object instance owning the children_container.
+* @param {Object} options.pagination - Pagination descriptor from children_data.
+* @returns {HTMLElement} The appended "Show more" button div.
 */
 const render_ts_pagination = function(options) {
 
@@ -468,9 +632,30 @@ const render_ts_pagination = function(options) {
 
 /**
 * RENDER_WRAPPER
-* Normalized wrapper render
-* @param object options
-* @return HTMLElement wrap_ts_object
+* Builds the outermost `wrap_ts_object` div for a ts_object node and wires
+* all HTML drag-and-drop events onto it.
+*
+* Data attributes set on the wrapper:
+*   data-section_tipo  — section_tipo of the node
+*   data-section_id    — section_id of the node
+*   data-id            — instance cache key (self.id); read by drag_and_drop.on_drop
+*                        to look up the target instance in the global instances map.
+*
+* CSS class variants:
+*   'wrap_ts_object'              — descriptor nodes
+*   'wrap_ts_object wrap_ts_object_nd' — non-descriptor (ND) nodes
+*
+* Drag-and-drop mechanics (descriptor nodes only):
+*   The wrapper itself is NOT draggable by default. It becomes draggable only
+*   after the user presses mousedown on the drag-icon (rendered by
+*   render_id_column), which sets wrapper.event_handle = e and
+*   wrapper.draggable = true. The dragstart handler checks event_handle; if it
+*   is null the drag is rejected via preventDefault (prevents accidental drags
+*   from clicking the term text or buttons). dragend/drop/dragleave all reset
+*   event_handle to null so that the next interaction starts clean.
+*
+* @param {Object} self - ts_object instance.
+* @returns {HTMLElement} The configured wrap_ts_object div.
 */
 const render_wrapper = function(self) {
 
@@ -548,9 +733,38 @@ const render_wrapper = function(self) {
 
 /**
 * RENDER_LINK_CHILDREN
-* Builds normalized link children HTMLElement
-* @param object self - ts_object instance
-* @return HTMLElement link_children_element
+* Builds the expand/collapse arrow icon element for descriptor nodes and
+* wires the toggle interaction.
+*
+* The arrow icon is the visual indicator that the node has children and
+* allows the user to open/close the children_container. It uses the
+* ts_object.set_open() single entry point exclusively — this function
+* never modifies is_open or children_container directly.
+*
+* Open/close mechanics:
+*   - On mousedown: calls self.set_open(!self.is_open, options).
+*     Holding Alt while clicking a collapsed node sets force_reload=true
+*     so that the children data is re-fetched from the server even if it
+*     was previously loaded and cached.
+*   - Visual state (CSS class 'open' on the element) is immediately
+*     synchronised by set_open → sync_open_dom after the state update.
+*
+* Persisted expand state (non-search mode only):
+*   After the element enters the viewport, the function checks the
+*   local_db 'status' table for a persisted open flag (written by
+*   set_open(true)). If found and the node is not already open it calls
+*   set_open(true, { persist: false }) to restore the previous user's
+*   expanded state without overwriting the stored value.
+*
+*   (!) In 'search' mode this restore is skipped to avoid inadvertently
+*   expanding nodes that happen to match a search but were never opened
+*   in the regular tree view.
+*
+* @param {Object} self - ts_object instance. Must have: id, is_open,
+*   set_open, sync_open_dom, mode, ts_id, link_children_element.
+* @returns {HTMLElement} The link_children_element div (also set as
+*   self.link_children_element for external access by sync_open_dom and
+*   set_open).
 */
 export const render_link_children = function (self) {
 

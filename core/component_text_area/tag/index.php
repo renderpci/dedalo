@@ -1,4 +1,47 @@
 <?php
+/**
+* TAG IMAGE ENDPOINT
+* HTTP entry point that renders a Dédalo inline tag as a PNG or SVG image.
+*
+* This script is called by the browser for every `<img>` tag injected into
+* rich-text content by TR::add_tag_img_on_the_fly(). The `?id=` query parameter
+* carries the raw tag string (URL-encoded), which encodes tag type, state, numeric
+* id, and optional payload. The script decodes the tag, dispatches to a type-specific
+* branch, and streams the resulting image back to the client.
+*
+* Supported tag types and example formats:
+*   - tc       [TC_mm:ss:ff.ms_TC]       Timecode reference (PNG, from tc_ms-x2.png base)
+*   - index    [index-{state}-{n}]       Thesaurus index annotation (PNG, in/out pair)
+*   - draw     [draw-{state}-{n}-{label}] SVG annotation (SVG, rendered inline)
+*   - geo      [geo-{state}-{n}-{data}]  Geolocation tag (PNG)
+*   - page     [page-{state}-{n}-{page}] Page reference (PNG)
+*   - person   [person-{state}-{n}-{name}] Person/speaker tag (PNG)
+*   - note     [note-{state}-{name}-...]  Annotation note (PNG)
+*   - lang     [lang-{state}-{n}-{lang}] Language tag (PNG)
+*   - locator  {json_locator}            Arbitrary component file (SVG) fetched
+*                                         from the component itself via get_file_content()
+*
+* State codes used across all PNG-based tags:
+*   'n' = normal (new), 'r' = reviewed, 'd' = deleted, 'a'/'b' = variant roles.
+*
+* For PNG types: a base image is loaded from core/themes/default/tag_base/, the
+* label text is rendered via GD (imagettftext with San Francisco Display Regular),
+* and the result is sent as image/png with a 3-hour private cache.
+*
+* For the 'draw' and 'locator' types: SVG content is emitted directly as
+* image/svg+xml, bypassing the GD pipeline.
+*
+* (!) This file MUST NOT include config.php unconditionally — the config is loaded
+* only inside the locator branch to avoid bootstrap cost for pure tag images.
+*
+* Called from:
+*   core/common/js/tr.js (add_tag_img_on_the_fly)
+*   core/component_text_area/js/component_text_area.js (images_factory_url)
+*
+* @package Dédalo
+* @subpackage Core
+*/
+
 // Turn off output buffering
 	ini_set('output_buffering', 'off');
 
@@ -17,6 +60,18 @@
 
 /**
 * TAG_SAFE_XSS
+* Sanitize a raw tag string against XSS before rendering it into an image.
+*
+* Strips disallowed HTML tags and escapes special characters for most input.
+* JSON objects/arrays are passed through unchanged: they are legitimate
+* structured payloads used by the locator branch (see the '{' case below)
+* and must not have their quotes or angle brackets mutated. Only objects
+* and arrays bypass the filter — scalar JSON primitives ("null", "0", etc.)
+* are still sanitized.
+*
+* The JSON detection follows SEC-027: json_last_error() is checked rather
+* than truthiness so that valid-but-falsy JSON values ("null", "false",
+* "0", '""') are sanitized instead of silently bypassing the filter.
 * @param string $value
 * @return string $value
 */
@@ -47,24 +102,34 @@ $text = trim(stripslashes(urldecode($text)));
 $text = strip_tags($text, '');
 
 // tag type
+// Base image directory; PNG sprites for each tag type live here.
 	$tag_image_dir = dirname(__FILE__, 3). '/themes/default/tag_base';
 	$type = false;
+
+	// fill_color defines the pill background color per state for SVG-rendered tags (draw).
 	$fill_color = new stdClass();
 		$fill_color->n = '#ffa43d'; // normal state
 		$fill_color->d = '#3e8fed'; // delete state
 		$fill_color->r = '#e04a26';	// review state
 
+	// icon_color defines the icon/glyph color per state for SVG-rendered tags (draw).
 	$icon_color = new stdClass();
 		$icon_color->n = '#000000'; // normal state
 		$icon_color->d = '#ffffff'; // delete state
 		$icon_color->r = '#ffffff'; // review state
 
+	// Dispatch to the correct rendering branch based on the tag prefix embedded in $text.
+	// Each branch extracts the display label, state, and base PNG path that the GD
+	// pipeline (below) needs. 'draw' and 'locator' branches exit early with their own
+	// SVG output and never reach the GD section.
 	switch (true) {
 		case (strpos($text,'[TC_')!==false):
 			$type			= 'tc';
+			// Timecode format: [TC_hh:mm:ss[.mmm]_TC] — milliseconds portion is optional.
 			$pattern		= "/\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2}(\.[0-9]{1,3})?)_TC\]/";
 			$text_original	= $text;
 			preg_match_all($pattern, $text, $matches);
+			// Capture group 1 holds the time value, e.g. "00:01:23.456".
 			$text			= $matches[1][0];
 			$imgBase		= $tag_image_dir . '/tc_ms-x2.png';
 			// SGV version
@@ -103,13 +168,19 @@ $text = strip_tags($text, '');
 
 		case (strpos($text,'[index-')!==false || strpos($text,'[/index-')!==false):
 			$type			= 'index';
+			// Index pattern captures: [1]=tag-name, [2]=state, [3]=id, [5]=label, [7]=data-payload.
+			// The leading '/?' handles both opening [index-…] and closing [/index-…] forms.
 			$pattern		= "/\[\/{0,1}(index)-([a-z])-([0-9]{1,6})(-(.{0,22}))?(-data:(.*?):data)?\]/";
 			$text_original	= $text;
 			preg_match_all($pattern, $text, $matches);
+			// Capture group 3 is the numeric tag id used as the display label.
 			$n				= $matches[3][0];
+			// Capture group 2 is the single-letter state ('n', 'r', 'd').
 			$state			= $matches[2][0];
 			if(strpos($text_original,'/')!==false) {
 				// mode [/index-u-6]
+				// Closing (out) tag: prepend a space so the number visually separates from
+				// the preceding text when rendered next to the opening tag image.
 				$text 		= " $n";
 				$imgBase 	= $tag_image_dir."/indexOut-{$state}-x2.png";
 			}else{
@@ -122,14 +193,18 @@ $text = strip_tags($text, '');
 		case (strpos($text,'[draw-')!==false):
 			$type = 'draw' ;
 			// mode [draw-n-1-data:***]
+			// State is the single character at position 6 of the tag string, e.g. 'n' in '[draw-n-'.
 			$state = substr($text,6,1);
 
 			$last_minus	= strrpos($text, '-');
 			$pattern	= "/\[(draw)-([a-z])-([0-9]{1,6})-(.{0,22})\]/";
 			preg_match($pattern, $text, $matches);
+			// Capture group 4 is the short label (e.g. the annotation identifier).
 			$text		= $matches[4];
 			// $imgBase	= $tag_image_dir."/draw-{$state}-x2.png";
 
+			// SVG pill dimensions scale with label length: longer labels use a wider viewBox.
+			// Threshold is >3 characters.
 			$path = strlen($text)>3
 				? '"M73.22,30H14.85C6.74,30,0.17,23.43,0.17,15.32v-0.64C0.17,6.57,6.74,0,14.85,0l58.37,0 c8.11,0,14.68,6.57,14.68,14.68v0.64C87.91,23.43,81.33,30,73.22,30z"'
 				: '"M61.15,30H14.88C6.77,30,0.19,23.43,0.19,15.32v-0.64C0.19,6.57,6.77,0,14.88,0l46.27,0 c8.11,0,14.68,6.57,14.68,14.68v0.64C75.83,23.43,69.26,30,61.15,30z"';
@@ -174,8 +249,10 @@ $text = strip_tags($text, '');
 		case (strpos($text,'[geo-')!==false):
 			$type = 'geo';
 			// mode [geo-n-1-data:***]
+			// Position 5 in the tag string is the single-letter state: '[geo-' is 5 chars.
 			$state 		= substr($text,5,1);
 			$last_minus = strrpos($text, '-');
+			// Explode on '-' to reach the numeric id at index 2: [0]='[geo', [1]=state, [2]=id, ...
 			$ar_parts 	= explode('-', $text);
 			$text 		= $ar_parts[2];
 			$imgBase 	= $tag_image_dir."/geo-{$state}-x2.png";
@@ -187,6 +264,7 @@ $text = strip_tags($text, '');
 			$pattern		= "/\[(page)-([a-z])-([0-9]{1,6})-(.{0,22})?\]/";
 			$text_original	= $text;
 			preg_match_all($pattern, $text, $matches);
+			// Capture group 3 is the page number used as the visible label.
 			$text			= $matches[3][0]; //$matches[3][0]
 			$state			= $matches[2][0];
 			$imgBase		= $tag_image_dir."/page-{$state}-x2.png";
@@ -198,9 +276,12 @@ $text = strip_tags($text, '');
 			$pattern		= "/\[(person)-([a-z])-([0-9]{1,6})-(.{0,22})\]/";
 			$text_original	= $text;
 			preg_match_all($pattern, $text, $matches);
+			// Capture group 4 is the URL-encoded initials; fall back to '...' when absent.
 			$text = isset($matches[4][0])
 				? urldecode($matches[4][0])
 				: '...';
+			// Person tags use 'a' or 'b' as valid states (participant role variants).
+			// Any other value is clamped to 'a' to guarantee a matching PNG exists.
 			$state = $matches[2][0] ?? 'a';
 			if($state!=='a' && $state!=='b') {
 				$state = 'a';
@@ -211,6 +292,7 @@ $text = strip_tags($text, '');
 		case (strpos($text,'[note-')!==false):
 			$type = 'note';
 			// mode [note-0-name-data:locator_flat:data]
+			// Explode on '-': [0]='[note', [1]=state-index, [2]=name (URL-encoded), [3+]=data.
 			$ar_parts	= explode('-', $text);
 			$state		= $ar_parts[1];
 			$text		= urldecode($ar_parts[2]);
@@ -220,6 +302,7 @@ $text = strip_tags($text, '');
 		case (strpos($text,'[lang-')!==false):
 			$type = 'lang';
 			// mode [lang-n-1-English]
+			// Capture group 4 matches non-digit characters for the language name label.
 			$pattern		= "/\[(lang)-([a-z])-([0-9]{1,6})-(\D{0,22})\]/";
 			$text_original	= $text;
 			preg_match_all($pattern, $text, $matches);
@@ -229,6 +312,10 @@ $text = strip_tags($text, '');
 			break;
 
 		// locator case, used by svg or image or video, etc...
+		// When the tag string begins with '{', it is a JSON-encoded locator pointing
+		// to a component whose file content (usually an SVG) should be served directly.
+		// This path requires the full Dédalo bootstrap (config.php) because it must
+		// instantiate a component and read from the database/filesystem.
 		case (strpos($text,'{')===0):
 			$changed_text = str_replace(['&#039;','\''],'"', $text);
 			$locator = json_decode($changed_text);
@@ -296,6 +383,8 @@ $text = strip_tags($text, '');
 		error_log("Error. invalid im. type:". gettype($im) .' - REQUEST_URI: '.json_encode($_SERVER["REQUEST_URI"], JSON_PRETTY_PRINT));
 
 		// Create a blank image
+		// Fallback: produce a plain 150×30 white PNG with an error message when the
+		// base sprite cannot be loaded (e.g. missing file or unsupported tag state).
 		$im  = imagecreatetruecolor(150, 30);
 		$bgc = imagecolorallocate($im, 255, 255, 255);
 		$tc  = imagecolorallocate($im, 0, 0, 0);
@@ -314,6 +403,11 @@ $text = strip_tags($text, '');
 	}
 
 // Define colors
+// These GD color handles are allocated from the base image's palette and used
+// for text rendering. $colorH is allocated twice intentionally: the first
+// (rgb 141, 198, 63) is immediately overwritten by the second (rgb 0, 232, 0)
+// which is the value actually used by the 'tc' branch. The dead first allocation
+// is a historical artefact — do not remove it without verifying no side effects.
 	$black	= imagecolorallocate($im, 0, 0, 0);
 	$white	= imagecolorallocate($im, 255, 255, 255);
 	$grey	= imagecolorallocate($im, 188, 188, 188);
@@ -322,9 +416,13 @@ $text = strip_tags($text, '');
 	$colorP	= imagecolorallocate($im, 0, 167, 157);
 
 // Font config defaults
+// San Francisco Display Regular is the standard UI typeface for Dédalo tag images.
 	$font_name 	= '/san_francisco/System_San_Francisco_Display_Regular.ttf';
 	$font_size 	= 8;
 
+	// Select text color, background color, and effective font size per tag type.
+	// $font_size is doubled + 2 (yielding 18pt) for most types so the label fits
+	// the 30px-tall sprite comfortably.
 	switch($type) {
 
 		case 'tc'	:
@@ -337,6 +435,7 @@ $text = strip_tags($text, '');
 			$colorText	= $black ;
 			$colorBG	= $black ;
 			$font_size	= ($font_size *2)+2; // as 18
+			// Normal-state index tags use a white sprite background, so text must be white too.
 			if($state==='n') $colorText	= $white ;
 			break;
 
@@ -390,6 +489,10 @@ $text = strip_tags($text, '');
 	$fontfile	= $path_fonts . $font_name;
 
 // offset
+// Per-type X/Y pixel offsets align the text label within each sprite image.
+// The base values are then overridden for macOS (Darwin) hosts (see below)
+// because GD's FreeType renderer produces slightly different baseline metrics
+// on macOS vs. Linux.
 	$offsetX	= 0 ; # 0
 	$offsetY	= 0 ; # 5
 
@@ -411,6 +514,9 @@ $text = strip_tags($text, '');
 			break;
 		case 'page':
 			$offsetY = 2;
+		// (!) Intentional fall-through: 'page' sets $offsetY then falls into 'person'
+		// to also pick up its $offsetX = 8. This is deliberate layout sharing — do not
+		// add a break here without verifying the page sprite alignment.
 		case 'person':
 			$offsetX = 8;
 			break;
@@ -432,6 +538,9 @@ $text = strip_tags($text, '');
 	}
 
 // custom offset for mac development
+// GD/FreeType on Darwin positions glyphs fractionally differently from Linux.
+// These overrides restore visual parity during local development on macOS.
+// Production servers (Linux) use the values set above.
 	if (PHP_OS==='Darwin') {
 
 		$offsetX = -1;
@@ -485,10 +594,14 @@ $text = strip_tags($text, '');
 		$text_height	= abs($bbox[7])-abs($bbox[1]);
 
 		// Calculate coordinates of the text
+		// Initial centered position (overwritten below by the baseline calculation).
 		$x = intval( ($image_width/2)  - ($text_width/2) 	+ $offsetX) ;
 		$y = intval( ($image_height/2) - ($text_height/2) );	// + $offsetY ;
 
 		// calculate y baseline
+		// The y coordinate for imagettftext is the text *baseline*, not the top-left
+		// corner. This formula approximates the baseline so the label sits vertically
+		// centred within the 30px sprite regardless of font size.
 		$y = $baseline = abs($font_size/2 - ($image_height) ) + $offsetY ;
 
 		// This is our coordinates for X and Y
@@ -505,6 +618,8 @@ $text = strip_tags($text, '');
 	}//end if($text!==false)
 
 // Enable interlacing
+// Progressive interlacing reduces perceived load time when images render
+// incrementally in the browser.
 	imageinterlace($im, true);
 
 // headers

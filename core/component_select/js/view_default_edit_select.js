@@ -20,7 +20,62 @@
 
 /**
 * VIEW_DEFAULT_EDIT_SELECT
-* Manages the component's logic and appearance in client side
+* Default edit-mode view for component_select.
+*
+* Provides the full edit UI for a select component: a native <select> element
+* populated from the server-resolved datalist, an optional inline dataframe for
+* qualifying the selected value, and an action toolbar (button_add / button_list /
+* tools buttons) subject to permission guards.
+*
+* Architecture note
+* -----------------
+* This module is a *view* — it only builds DOM nodes and wires events; all state
+* mutations go through the shared helpers in component_select.js
+* (handle_select_change → set_changed_data → change_value → save) and
+* component_common (get_dataframe / delete_dataframe).  No API calls are made
+* directly from this file.
+*
+* Render flow (called by render_edit_component_select.prototype.edit):
+*   render()  →  get_content_data()  →  get_content_value()  (one per entry)
+*                                    →  get_content_value_read()  (permissions === 1)
+*           →  get_buttons()         →  button_add / button_list / tools
+*           →  ui.component.build_wrapper_edit()
+*
+* Value shape (self.data.entries[n]):
+*   { section_id: string, section_tipo: string, id: number }
+*   where `id` is the stable data-item id used as the dataframe pairing key.
+*
+* Datalist shape (self.data.datalist[n]):
+*   { label: string, value: { section_id: string, section_tipo: string } | null,
+*     section_id?: string }
+*   The empty sentinel { label: '', value: null } is prepended at render time.
+*
+* Context shape (self.context):
+*   { target_sections: Array<{ tipo, label, permissions, permissions_new }>,
+*     view: string }
+*
+* show_interface flags consumed here:
+*   button_edit  — pen icon on the select row to open the linked record
+*   button_add   — toolbar button to create a new target-section record
+*   button_list  — toolbar button to open the target section in list mode
+*   tools        — render the tools toolbar via ui.add_tools()
+*
+* Related modules
+* ---------------
+* component_select.js          — handle_select_change, build_changed_data_item
+* render_edit_component_select.js — get_content_data, edit() dispatcher
+* view_line_edit_select.js     — alternative single-row layout
+* component_common/dataframe.js — get_dataframe, delete_dataframe
+*
+* @module view_default_edit_select
+*/
+
+
+
+/**
+* VIEW_DEFAULT_EDIT_SELECT
+* Constructor stub — this module is used as a namespace for static methods;
+* the constructor itself is never instantiated directly.
 */
 export const view_default_edit_select = function() {
 
@@ -31,10 +86,21 @@ export const view_default_edit_select = function() {
 
 /**
 * RENDER
-* Render node for view
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Entry point called by render_edit_component_select.prototype.edit().
+* Builds the full wrapper DOM tree for the default edit view, or returns only
+* the content_data subtree when render_level === 'content' (used for in-place
+* refresh without rebuilding buttons / wrapper).
+*
+* Side effects:
+*   - Attaches content_data as wrapper.content_data for downstream access.
+*   - When permissions > 1, appends the buttons container to the wrapper.
+*
+* @param {Object} self - Component instance (component_select) providing .data,
+*   .context, .permissions, .show_interface, .section_id, .section_tipo, .tipo
+* @param {Object} options - Render options
+* @param {string} [options.render_level='full'] - 'content' to return only the
+*   content_data node; 'full' (default) to return the complete wrapper
+* @returns {Promise<HTMLElement>} wrapper (full) or content_data node (content)
 */
 view_default_edit_select.render = async function(self, options) {
 
@@ -71,13 +137,48 @@ view_default_edit_select.render = async function(self, options) {
 
 /**
 * GET_CONTENT_VALUE
-* @param int i
-* 	Value key like 0
-* @param object|null current_value
-* 	Current locator value as {section_id: '2', section_tipo: 'rsc740'}
-* @param object self
-* 	Component instance pointer
-* @return HTMLElement content_value
+* Builds the interactive content node for a single select entry (edit mode).
+*
+* Creates a native <select> element populated with all datalist options, sets the
+* currently selected option, and wires three events:
+*
+*  focus  — activates the component when reached via tab navigation.
+*  click  — stops click from bubbling to the section (prevents accidental deactivation).
+*  change — full save pipeline:
+*             1. delete_dataframe() to remove any existing frame for the old value,
+*                because a value change is an 'update' action; the server remove-cascade
+*                does NOT fire, so the client must unlink the frame explicitly.
+*             2. handle_select_change() to parse, persist and save the new value.
+*             3. Show/hide the button_edit pen icon and load a fresh dataframe for the
+*                new selection.
+*             4. Publish 'set_lang_value_<id_base>' so sibling components
+*                (e.g. component_select_lang) can react to the language change.
+*
+* If the component already has a value when the view is first rendered, the matching
+* dataframe is fetched and appended asynchronously (fire-and-forget .then()).
+*
+* Dataframe pairing key
+* ---------------------
+* The pairing key is ALWAYS self.data.entries[0].id (the stable data-item id assigned
+* by the server), never the target section_id. This avoids collisions when the same
+* target record is linked from multiple components.  The id is re-read from self.data
+* after each save because the first save on an empty component assigns the id for the
+* first time.
+*
+* Empty sentinel option
+* ---------------------
+* An { label: '', value: null } option is unshift()ed into the datalist so the user
+* can actively de-select a value.  This mutation is local to this render call;
+* the datalist reference is shared from self.data so callers should be aware.
+* (!) The unshift() mutates self.data.datalist in place.
+*
+* @param {number} i - Zero-based index of this entry within the entries array
+*   (always 0 for component_select which holds at most one value)
+* @param {Object|null} current_value - Locator for the currently stored value:
+*   { section_id: string, section_tipo: string, id?: number } or null when empty
+* @param {Object} self - Component instance pointer
+* @returns {HTMLElement} content_value div containing the <select> and optional
+*   button_edit pen and dataframe node
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -176,6 +277,9 @@ const get_content_value = (i, current_value, self) => {
 					}
 
 				// set_lang_value publish event
+				// Notify sibling language-selector components (e.g. component_select_lang)
+				// about the new selection so they can sync their displayed language.
+				// The event channel is 'set_lang_value_<section_tipo>_<section_id>_<tipo>'.
 					if (parsed_value) {
 						const datalist_item = datalist.find(el =>
 							el.value &&
@@ -190,6 +294,8 @@ const get_content_value = (i, current_value, self) => {
 			select.addEventListener('change', change_handler)
 
 	// select options
+	// Iterate datalist (which now starts with the empty sentinel) and create one
+	// <option> per item. In debug mode the section_id is appended to the label.
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 
@@ -203,6 +309,8 @@ const get_content_value = (i, current_value, self) => {
 				? datalist_item.label + (current_section_id ? " [" + current_section_id + "]" : '')
 				: datalist_item.label
 
+			// The option value is the full locator serialized as JSON so parse() can
+			// recover the { section_id, section_tipo } object in the change handler.
 			const option_node = ui.create_dom_element({
 				element_type	: 'option',
 				value			: JSON.stringify(datalist_item.value),
@@ -231,6 +339,9 @@ const get_content_value = (i, current_value, self) => {
 		}//end for (let i = 0; i < datalist_length; i++)
 
 	// button_edit. Default is hidden
+	// Shown only when show_interface.button_edit === true (set in render_edit_component_select
+	// for global admins). Opens the currently selected target record in a modal window;
+	// refreshes the component with build_autoload when the window loses focus.
 		if(self.show_interface.button_edit===true) {
 
 			const button_edit = ui.create_dom_element({
@@ -284,6 +395,9 @@ const get_content_value = (i, current_value, self) => {
 
 	// first dataframe load if the component has data
 	// pairing key is the data item id, never the target section_id
+	// (!) get_dataframe() is called without await here — the returned Promise is stored
+	//     in a local variable but never awaited (fire-and-forget pattern). The dataframe
+	//     renders asynchronously and appends itself to content_value when ready.
 		if(current_value?.id){
 
 			const component_dataframe = get_dataframe({
@@ -314,13 +428,18 @@ const get_content_value = (i, current_value, self) => {
 
 /**
 * GET_CONTENT_VALUE_READ
-* @param int i
-* 	Value key like 0
-* @param object|null current_value
-* 	Current locator value as {section_id: '2', section_tipo: 'rsc740'}
-* @param object self
-* 	Component instance pointer
-* @return HTMLElement content_value
+* Builds a read-only content node for a single select entry (permissions === 1).
+*
+* Used by get_content_data() when the component is rendered in read-only mode (e.g.
+* the 'print' view, or when the current user has view-only access).  The resolved
+* label string (not the raw locator) is passed as current_value by get_content_data().
+*
+* @param {number} i - Zero-based index of this entry (unused internally but required
+*   by the render_content_value_read callback contract)
+* @param {string|null} current_value - The human-readable label string for the stored
+*   locator, already resolved by get_content_data from the datalist
+* @param {Object} self - Component instance pointer (unused internally)
+* @returns {HTMLElement} content_value div with the label as its innerHTML
 */
 const get_content_value_read = (i, current_value, self) => {
 
@@ -339,8 +458,37 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object instance
-* @return HTMLElement buttons_container
+* Builds the component action toolbar for edit mode.
+*
+* Conditionally renders up to three groups of buttons based on show_interface flags
+* and permission levels:
+*
+*  button_add   — Creates a new record in the target section (via add_new_element()),
+*                 then opens it in a modal; on close the component refreshes.
+*                 Guard conditions: permissions_new > 1 AND show_interface.button_add
+*                 === true AND model !== 'component_select_lang'.
+*                 Multi-section: if target_sections has more than one entry the tipo
+*                 would need to be resolved before calling add_new_element(); currently
+*                 the handler alerts and returns early when target_sections.length > 1
+*                 because the picker is not yet implemented.
+*                 After add, any open service_autocomplete is destroyed to clean up.
+*
+*  button_list  — Opens each target section in list mode in a new window.
+*                 One button per target_sections entry; the tipo is stored as a DOM
+*                 property on the span so the shared fn_mousedown handler can read it.
+*                 Guard: show_interface.button_list === true.
+*
+*  tools        — Appended via ui.add_tools() (tools defined in context.tools).
+*                 Guard: show_interface.tools === true.
+*
+* Structure returned:
+*   buttons_container > buttons_fold > fragment (all button nodes)
+* buttons_fold exists to allow sticky positioning on tall components without the
+* container itself being sticky.
+*
+* @param {Object} self - Component instance providing .context, .show_interface,
+*   .model, .permissions, .section_id, .section_tipo, .tipo, .data, .ar_instances
+* @returns {HTMLElement} buttons_container wrapping all action buttons
 */
 const get_buttons = (self) => {
 
@@ -377,6 +525,9 @@ const get_buttons = (self) => {
 					// }
 
 				// target_section_tipo. to add section selector
+				// (!) When multiple target sections exist, a section-picker UI would be
+				//     required to let the user choose the target; this is not yet implemented.
+				//     The handler currently alerts and bails out in that case.
 					const target_section_tipo = target_sections_length > 1
 						? false
 						: target_sections[0].tipo
@@ -427,6 +578,9 @@ const get_buttons = (self) => {
 					}//end if (result===true)
 
 				// remove aux items
+				// Destroy any open autocomplete overlay so it does not linger after
+				// the modal has opened. page_globals.service_autocomplete is set by the
+				// autocomplete service when active.
 					if (window.page_globals.service_autocomplete) {
 						window.page_globals.service_autocomplete.destroy(true, true, true)
 					}
@@ -465,6 +619,8 @@ const get_buttons = (self) => {
 				const item = target_sections[i]
 
 				// button edit
+				// In debug mode the tipo is appended to the label for identification.
+				// Strip HTML tags from the title to avoid browser tooltip artefacts.
 					const label = (SHOW_DEBUG===true)
 						? `${item.label} [${item.tipo}]`
 						: item.label || ''
@@ -474,6 +630,8 @@ const get_buttons = (self) => {
 						title			: label.replace(/<\/?[^>]+(>|$)/g, ""),
 						parent			: fragment
 					})
+					// Store tipo directly on the DOM node so fn_mousedown can read it
+					// from e.target without a closure variable per iteration.
 					button_list.tipo = item.tipo
 					button_list.addEventListener('mousedown', fn_mousedown)
 			}//end for (let i = 0; i < target_sections_length; i++)

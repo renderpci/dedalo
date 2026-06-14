@@ -1,33 +1,45 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_FILTER
-* Manages project-based access control (filter) components in Dédalo.
+* Project-based access-control component: assigns section records to projects
+* and enforces which users can see those records.
 *
-* Assigns records to projects and controls which users can access them.
-* All new section records are automatically assigned to at least one project
-* based on the creating user's project permissions.
+* Every section record carries a component_filter whose stored value is an array
+* of locators pointing at project records in the projects section
+* (DEDALO_SECTION_PROJECTS_TIPO, typically 'dd153').  The access-control layer
+* then restricts search results to records whose filter value overlaps with the
+* requesting user's own project set (held in component_filter_master inside the
+* User section 'dd128').
 *
-* Key features:
-* - Project assignment for section records
-* - User-project relationship management via component_filter_master
-* - Security enforcement preventing unauthorized project removal
-* - Admin override for global access control
-* - Checkbox-based project selection interface
+* Responsibilities:
+* - Store and validate the list of projects a record belongs to (as locators
+*   with relation type DEDALO_RELATION_TYPE_FILTER, typically 'dd675').
+* - On save, prevent non-admin users from silently removing projects they do
+*   not have access to (set_data override).
+* - Populate a sensible default on new-record creation via three-stage
+*   priority cascade (config-file default → properties.data_default → global
+*   config constant DEDALO_DEFAULT_PROJECT).
+* - Expose a user-scoped datalist (checkbox list) so the edit UI only offers
+*   projects the current user may assign.
+* - Build a sortable order path that traverses into the project name field
+*   (DEDALO_PROJECTS_NAME_TIPO, typically component_input_text 'dd156').
 *
-* When saving, non-admin users cannot remove projects they don't have access to,
-* preventing security issues with record visibility.
-*
-* Note: when a section record is created, it will be assigned to at least one project by default.
-* 1 - Get the section_id of the user
-* 2 - With the user:
-*   1 - Get the user section_id
-*   2 - With the user section_id build the component_filter_master
-*   3 - Check the admin user with component-security-administrator (value 1)
-*   4 - If the user is not admin, get the data of the component_filter_master and his tipo for get the label
-*   5 - Build the checkbox list (datalist) of the sections that we get and the label of the tipo dd156
-*   6 - Save the array of the projects for this section inside the user projects (in the user section)
+* Data shape (stored in the 'relation' JSONB column):
+*   Array of locator objects, each:
+*   {
+*     "section_tipo": "dd153",       // DEDALO_FILTER_SECTION_TIPO_DEFAULT
+*     "section_id":   1,             // the target project record id
+*     "type":         "dd675",       // DEDALO_RELATION_TYPE_FILTER
+*     "from_component_tipo": "dd##"  // the filter component tipo in the source section
+*   }
 *
 * Extends component_relation_common for relationship management capabilities.
+* Extended by component_filter_master (user-section variant) which overrides
+* save() to flush the per-user project cache on permission changes.
+*
+* The commented-out save() / propagate_filter() / get_diffusion_value() blocks
+* are intentionally retained as disabled code pending a decision on portal
+* propagation and diffusion strategy.
 *
 * @package Dédalo
 * @subpackage Core
@@ -36,19 +48,54 @@ class component_filter extends component_relation_common {
 
 
 
+	/**
+	* @var string|int|null $user_id
+	* Lazily populated user identifier used during default-data calculation.
+	* Starts as null; set to the logged-in user's id when needed.
+	*/
 	private string|int|null $user_id = null;
+
+	/**
+	* @var bool $run_propagate_filter
+	* Controls whether filter changes cascade to child portal components after
+	* save().  Set to false in regenerate_component() to skip the (expensive)
+	* inverse portal search during bulk cache rebuilds.
+	*/
 	public bool $run_propagate_filter = true;
 
 	// relation_type defaults
+	/**
+	* @var ?string $default_relation_type
+	* The relation type tag stored on every locator written by this component.
+	* Defaults to DEDALO_RELATION_TYPE_FILTER ('dd675').  Overrides the generic
+	* null default from component_relation_common so that auto-built locators
+	* always carry the correct type without explicit assignment.
+	*/
 	protected ?string $default_relation_type = DEDALO_RELATION_TYPE_FILTER;
 
 	// test_equal_properties is used to verify duplicates when add locators
+	/**
+	* @var array $test_equal_properties
+	* Property set used by locator::in_array_locator() to decide whether two
+	* locators represent the same project assignment.  Including
+	* 'from_component_tipo' ensures that a single project record referenced from
+	* two different filter components on the same section remains distinct.
+	*/
 	public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 
 
 	/**
 	* __CONSTRUCT
+	* Builds the component, forcing the language to DEDALO_DATA_NOLAN.
+	* Project filter data is language-neutral: project locators are the same
+	* regardless of the active UI language, so no language suffix is stored.
+	* @param string $tipo
+	* @param mixed $section_id [= null]
+	* @param string $mode [= 'list']
+	* @param string $lang [= DEDALO_DATA_NOLAN] - overridden; always forced to DEDALO_DATA_NOLAN
+	* @param ?string $section_tipo [= null]
+	* @param bool $cache [= true]
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
@@ -63,11 +110,22 @@ class component_filter extends component_relation_common {
 
 	/**
 	* SET_DATA
-	* Overwrites component_relation_common method checking user projects access.
-	* The method prevents a security issue where a non-admin user could remove filter projects
-	* they don't have access to.
-	* @param ?array $data
-	* @return bool
+	* Overwrites component_relation_common::set_data() with a security merge step.
+	*
+	* The security problem being solved: a non-admin user editing a record could
+	* submit a locator array that omits projects the user has no visibility into.
+	* A naive save would erase those hidden-project assignments, effectively
+	* removing the record from projects the user cannot even see.
+	*
+	* Strategy:
+	* 1. Global admins skip the merge; their submitted $data is stored verbatim.
+	* 2. For regular users, identify every locator in the current database value
+	*    whose (section_tipo, section_id) pair does NOT appear in the user's own
+	*    project list (fetched from component_filter_master).
+	* 3. Append those "non-access" locators to the incoming $data so they are
+	*    always preserved.
+	* @param ?array $data - new locator array from the client (may be null/empty)
+	* @return bool - result of parent::set_data()
 	*/
 	public function set_data( ?array $data ) : bool {
 
@@ -122,7 +180,19 @@ class component_filter extends component_relation_common {
 	* If the user has not write access to the component it will not set.
 	* In these cases, the component will be empty and
 	* only the user who created the section and the global administrator can access the record.
-	* @return bool true
+	*
+	* Called automatically by the framework when a new section record is first
+	* loaded in 'edit' mode with no existing data.  Only component_filter itself
+	* triggers the auto-assignment (not its subclass component_filter_master).
+	*
+	* Guard conditions (all must hold before assigning defaults):
+	* - Current user has write permission (>= 2) on the section's new button.
+	* - Component is not in time-machine mode.
+	* - Mode is 'edit' and the concrete class is exactly 'component_filter'.
+	* - section_id is not null (not a template row).
+	* - section_tipo is not 'test3' (unit-test sentinel excluded to avoid
+	*   polluting test data with real project assignments).
+	* @return bool true if defaults were saved, false otherwise
 	*/
 	protected function set_data_default() : bool {
 
@@ -197,9 +267,37 @@ class component_filter extends component_relation_common {
 
 	/**
 	* GET_DEFAULT_DATA_FOR_USER
-	* Calculates default value for given user (normally the logged user)
+	* Calculates the initial project locator array for a newly created record.
+	*
+	* Priority cascade (first non-empty result wins, then security-checked):
+	*
+	* 1. CONFIG_DEFAULT_FILE_PATH JSON file (optional, defined in config.php):
+	*    An array of objects matching {tipo, [section_tipo,] value}.  The method
+	*    searches for the first entry where tipo matches $this->tipo and, if
+	*    section_tipo is present in the entry, also section_tipo matches.
+	*    The 'value' property (array or scalar wrapped in array) becomes the
+	*    initial default_data.
+	*
+	* 2. properties.data_default (legacy, deprecated for new installations):
+	*    Reads properties->dato_default from the ontology node.  Supports two
+	*    legacy formats:
+	*      - v5:  {"<section_id>": <ignored_value>}  (numeric key = section_id)
+	*      - v6:  {"section_id": "<id>", "section_tipo": "<tipo>"}
+	*    Builds a single locator and appends it to default_data.
+	*    (!) Move to CONFIG_DEFAULT_FILE_PATH as soon as possible.
+	*
+	* 3. Global config fallback:
+	*    Uses DEDALO_DEFAULT_PROJECT (numeric section_id) and
+	*    DEDALO_FILTER_SECTION_TIPO_DEFAULT (section_tipo, same as
+	*    DEDALO_SECTION_PROJECTS_TIPO) to build a last-resort locator.
+	*
+	* Security check (applied for non-admin users after the cascade):
+	*   If none of the computed locators falls inside the user's own project set
+	*   (checked via locator::in_array_locator on section_tipo + section_id), the
+	*   first locator from the user's project list is appended to ensure the
+	*   creating user can always access the record they just created.
 	* @param int $user_id
-	* @return array $default_data
+	* @return array $default_data - array of locator objects (never empty after cascade)
 	*/
 	public function get_default_data_for_user(int $user_id) : array {
 
@@ -473,7 +571,25 @@ class component_filter extends component_relation_common {
 	/**
 	* GET_DATALIST
 	* Works like ar_list_of_values but filtered by user authorized projects.
-	* @return array $datalist
+	*
+	* Delegates to component_filter_master::get_user_authorized_projects() which
+	* returns the enriched set of projects the logged-in user is allowed to assign
+	* (i.e. the intersection of all projects and the user's own project list, with
+	* hierarchy metadata and labels resolved from the ontology).
+	*
+	* The returned array is then sorted alphabetically (case-insensitive) by label
+	* so the checkbox list in the edit UI is consistently ordered regardless of
+	* the underlying project record ids.
+	*
+	* Each item in the returned array is a stdClass with:
+	*   - type        (string) 'project'
+	*   - label       (string) display name of the project
+	*   - section_tipo (string) e.g. 'dd153'
+	*   - section_id  (int|string) the project record id
+	*   - value       (locator) the raw locator object (used for selected-state matching)
+	*   - parent      (mixed) parent project info from the authorized-projects cache
+	*   - order       (mixed) ordering value from the authorized-projects cache
+	* @return array $datalist - sorted array of project stdClass items
 	*/
 	public function get_datalist() : array {
 		$start_time = start_time();
@@ -525,7 +641,21 @@ class component_filter extends component_relation_common {
 
 	/**
 	* UPDATE_DATA_VERSION
+	* Handles format-migration requests dispatched by the update-data-version tool.
+	*
+	* The switch-case on $update_version allows each version string to describe a
+	* migration step; the default branch returns result=0 ('no migration needed /
+	* not implemented') because component_filter data is currently up-to-date.
+	* Historical migrations (e.g. pre-v4.9.0 format) are handled by the separate
+	* convert_dato_pre_490() static method and never passed through here.
+	*
+	* Result codes returned in $response->result:
+	*   0 — this component has no migration for the requested version (ignored)
+	*   1 — migration was applied successfully
+	*   2 — migration attempted but data was already in the correct format
 	* @param object $request_options
+	*   Recognised keys: update_version (array), data_unchanged, reference_id,
+	*   tipo, section_id, section_tipo, context
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_data_version"
 	*	$response->result = 1; // the component do the update"
@@ -565,9 +695,28 @@ class component_filter extends component_relation_common {
 
 	/**
 	* CONVERT_DATO_PRE_490
-	* @param mixed $dato
-	* @param string $from_component_tipo
-	* @return mixed $new dato
+	* Migrates filter data saved before Dédalo v4.9.0 to the current locator format.
+	*
+	* Pre-v4.9.0 the component stored data as a JSON object whose keys were
+	* project section_ids (integers) and values were permission level integers
+	* (never used for access control, just a legacy artifact).
+	* Example old format:  {"1": 2, "7": 1}
+	*
+	* This method converts each numeric key into a proper locator object:
+	*   {section_tipo: DEDALO_FILTER_SECTION_TIPO_DEFAULT,
+	*    section_id:   <int key>,
+	*    type:         DEDALO_RELATION_TYPE_FILTER,
+	*    from_component_tipo: $from_component_tipo}
+	*
+	* Already-converted entries (objects that already carry section_id and
+	* section_tipo) are passed through unchanged, so the method is safe to call
+	* on mixed datasets.
+	*
+	* Keys that produce section_id === 0 (e.g. malformed {"0":"1"} objects) are
+	* silently discarded; this guards against a known bad-data pattern.
+	* @param mixed $dato - raw stored value (object/array from JSON decode or existing locators)
+	* @param string $from_component_tipo - component tipo to stamp on built locators
+	* @return mixed $new dato - array of locator objects, or the original $dato if empty
 	*/
 	public static function convert_dato_pre_490( mixed $dato, string $from_component_tipo ) {
 
@@ -614,6 +763,15 @@ class component_filter extends component_relation_common {
 	* REGENERATE_COMPONENT
 	* Force the current component to re-save its data
 	* Note that the first action is always load data to avoid save empty content
+	*
+	* Used by tool_update_cache during bulk cache-rebuild passes.  It disables
+	* $run_propagate_filter before saving to avoid triggering the (expensive)
+	* inverse-portal traversal for every record in the rebuild batch; propagation
+	* can be re-run separately if required.
+	*
+	* (!) Always call get_data() before save() here: the component may not have
+	* been loaded yet, and saving without loading would overwrite the stored data
+	* with an empty array.
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
@@ -684,6 +842,11 @@ class component_filter extends component_relation_common {
 	* GET_AR_TARGET_SECTION_TIPO
 	* Select source section/s
 	* Overrides component common method
+	*
+	* Returns the canonical projects section tipo so that the generic relation
+	* machinery (e.g. get_datalist fallback, portals, search helpers) knows which
+	* section this component points at.  Returns an empty array when the constant
+	* is not defined (e.g. minimal test environments) to fail gracefully.
 	* @return array ar_target_section_tipo
 	* 	Array of string like ['dd153']
 	*/
@@ -700,6 +863,11 @@ class component_filter extends component_relation_common {
 	* GET_SORTABLE
 	* @return bool
 	* Default is false for relations. Override here.
+	*
+	* component_relation_common disables sorting by default because most relation
+	* components reference arbitrary records without a meaningful sort field.
+	* component_filter overrides this to true so that list views can sort by the
+	* project name field (see get_order_path).
 	*/
 	public function get_sortable() : bool {
 
@@ -711,9 +879,19 @@ class component_filter extends component_relation_common {
 	/**
 	* GET_ORDER_PATH
 	* Calculate full path of current element to use in columns order path (context)
+	*
+	* Defines the two-step traversal the column-order engine follows to reach the
+	* sortable value:
+	*   step 1 — this component itself (the join anchor)
+	*   step 2 — the project name field inside the target project section
+	*             (DEDALO_PROJECTS_NAME_TIPO, typically component_input_text 'dd156')
+	*
+	* This path instructs the search engine to JOIN through the relation and then
+	* order by the text value of the project's name component, giving the user
+	* alphabetical sorting by project label.
 	* @param string $component_tipo
 	* @param string $section_tipo
-	* @return array $path
+	* @return array $path - ordered array of stdClass path-step objects
 	*/
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
@@ -744,7 +922,16 @@ class component_filter extends component_relation_common {
 	* Unified value list output
 	* By default, list value is equivalent to data. Override in other cases.
 	* Note that empty array or string are returned as null
-	* @return array|null $list_value
+	*
+	* Returns only the labels of projects that are BOTH stored in the record's
+	* filter data AND accessible to the currently logged-in user.
+	*
+	* (!) Projects the user has no access to are silently omitted from the output.
+	* This is intentional for UI display — the hidden project assignments are still
+	* preserved in the database (see set_data) — but it means the list value does
+	* not represent the complete set of project assignments for admin users reading
+	* records owned by other users.  Future revisions may change this behaviour.
+	* @return array|null $list_value - array of project label strings, or null if no data
 	*/
 	public function get_list_value() : ?array {
 

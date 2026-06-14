@@ -1,40 +1,97 @@
 <?php declare(strict_types=1);
 /**
 * CLASS DD_IRI
+* Value-object (DTO) that represents a single IRI entry managed by component_iri.
 *
-* 	DTO that defines each compoent_iri value schema and validation.
+* Each component_iri dato item is stored as a dd_iri instance (or a compatible plain object)
+* inside the component's data array. The class extends stdClass so that JSON serialization
+* and property_exists() introspection work without extra adapters.
 *
-*	Format:
-*	{
-*		"iri": "https://dedalo.dev",
-*		"title": "dedalo"
-*	}
-*	$iri->iri	= (string) $iri; // mandatory
-*	$iri->title	= (string) $title; // additional no mandatory
+* Persisted data shape (JSON stored in the matrix JSONB column):
+* {
+*     "id":    1,            // (int)    per-component monotonic counter; keys the dataframe pairing
+*     "iri":   "https://…", // (string) the Internationalized Resource Identifier (required)
+*     "title": "My org"     // (string) deprecated inline label; authoritative label lives in the
+*                           //          paired label dataframe (dd560/DEDALO_COMPONENT_IRI_LABEL_DATAFRAME)
+* }
 *
-*	(!) Note that properties can exists or not (are created on the fly).
-* 	The resulting object contains only the properties assigned to it and IRI object can be empty or partially set.
-*	For example, one link without title ,have only $iri property
+* Property semantics:
+* - $iri   — the validated URL/URI string; scheme + host are mandatory.
+* - $title — legacy human-readable label kept for read-path fallback during migration
+*            (resolve_title() prefers the dataframe value; see component_iri::resolve_title()).
+* - $id    — unique within one component instance; used as the pairing key (id_key) between
+*            the data item and its label dataframe locator. NOT auto-assigned here — callers
+*            (set_dato in component_iri) manage the per-component counter.
+* - $label_id — transient, import-only property: carries the target section_id of the label
+*              dataframe record to create/link on save. This property is NEVER persisted;
+*              it is stripped before the data is written to the database.
+*
+* (!) Properties are created on the fly (stdClass semantics). An instance can be partially
+* populated; callers must guard with isset() / property_exists() rather than assuming all
+* four properties exist.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class dd_iri extends stdClass {
 
 
 
 	/**
-	 * CLASS VARS
-	 */
+	* CLASS VARS
+	*/
+
+	/**
+	* The IRI (URL/URI) string.
+	* Scheme and host are required; validated on assignment via set_iri().
+	* @var ?string $iri
+	*/
 	public ?string $iri = null;
+
+	/**
+	* Human-readable label for the IRI.
+	* Deprecated: the authoritative label now lives in the paired label dataframe
+	* (DEDALO_COMPONENT_IRI_LABEL_DATAFRAME slot). This property is kept as a
+	* read-path fallback until the title-materialization migration completes.
+	* @var ?string $title
+	*/
 	public ?string $title = null;
+
+	/**
+	* Monotonic per-component item identifier.
+	* Doubles as the pairing key (id_key) for the label dataframe locator.
+	* Unlike most Dédalo component IDs this value IS meaningful on import —
+	* callers may supply it explicitly to control the dataframe pairing.
+	* @var ?int $id
+	*/
 	public ?int $id = null;
+
+	/**
+	* Transient import-only property: target section_id for the label dataframe.
+	* When present, import_save() uses this value to build the dataframe locator
+	* and then removes the property before persisting the data.
+	* Never stored in the database.
+	* @var ?int $label_id
+	*/
 	public ?int $label_id = null;
+
+	/**
+	* Separator used when building composite keys from dd_iri parts.
+	* Not currently used in public API but reserved for internal utilities.
+	*/
 	const DELIMITER = '_';
 
 
 
 	/**
 	* __CONSTRUCT
-	* @param object|null $data
-	*	optional . Default is null
+	* Creates a dd_iri instance, optionally hydrating it from a plain data object.
+	*
+	* Each property in $data is dispatched to the corresponding set_<property>() method.
+	* Unknown keys are rejected with a logger::ERROR entry so that callers discover
+	* schema drift at runtime rather than silently losing data.
+	*
+	* @param object|null $data [= null] - plain object with any subset of {iri, title, id, label_id}
 	* @return void
 	*/
 	public function __construct( ?object $data=null ) {
@@ -63,9 +120,15 @@ class dd_iri extends stdClass {
 
 	/**
 	* SET_IRI
-	* Set IRI value with check
-	* Expected format is 'https://my_domain/org/item=1'
-	* @param string|null $value
+	* Validates and assigns the IRI string.
+	*
+	* Parses the value with parse_url() and emits a logger::ERROR if either the
+	* scheme or host component is absent — the value is still assigned so that
+	* partially-formed IRIs are not silently dropped during editing.
+	*
+	* A null/empty value clears the property without logging.
+	*
+	* @param string|null $value - IRI string, e.g. 'https://example.org/items/42'
 	* @return void
 	*/
 	public function set_iri( ?string $value ) : void {
@@ -88,9 +151,14 @@ class dd_iri extends stdClass {
 
 	/**
 	* SET_TITLE
-	* Set the title or label to show in the web or other places
-	* Expected descriptive string as 'My organization'
-	* @param string $value
+	* Assigns the human-readable label displayed alongside the IRI.
+	*
+	* Kept for backward compatibility with data that still carries an inline title.
+	* New data should store the label through the dataframe pairing (label_id / label
+	* dataframe slot); resolve_title() in component_iri prefers that path.
+	*
+	* @param string $value - display label, e.g. 'My organisation'
+	* @return void
 	*/
 	public function set_title( string $value ) : void {
 
@@ -101,9 +169,13 @@ class dd_iri extends stdClass {
 
 	/**
 	* SET_ID
-	* Set the id property of the IRI value element.
-	* The value set is always an integer, but a string is accepted as a parameter.
-	* @param string|int $value
+	* Assigns the per-item identifier.
+	*
+	* Accepts a string to accommodate JSON-decoded integers arriving as strings.
+	* Always stored as int because the dataframe pairing (id_key) requires an integer.
+	*
+	* @param string|int $value - item id; must be a positive integer in practice
+	* @return void
 	*/
 	public function set_id( string|int $value ) : void {
 
@@ -114,12 +186,16 @@ class dd_iri extends stdClass {
 
 	/**
 	* SET_LABEL_ID
-	* Set a temporal label id property of the IRI value element.
-	* Used by import process to define the target section_id of the IRI label dataframe.
-	* This property is not part of data schema of the component_iri
-	* and this property is not saved.
-	* The value set is always an integer, but a string is accepted as a parameter.
-	* @param string|int $value
+	* Assigns the transient import-only label dataframe target section_id.
+	*
+	* This property signals to component_iri::import_save() which section_id should
+	* be used as the pairing target for the label dataframe locator. It is stripped
+	* before the data is written to the database and is NEVER persisted.
+	*
+	* Accepts a string to accommodate JSON-decoded integers arriving as strings.
+	*
+	* @param string|int $value - target section_id in the label dataframe section (dd1706)
+	* @return void
 	*/
 	public function set_label_id( string|int $value ) : void {
 
@@ -130,7 +206,26 @@ class dd_iri extends stdClass {
 
 	/**
 	* SET_IRI_FROM_URL_PARTS
-	* @param object $url_parts
+	* Builds and assigns the $iri property by assembling a URL from its parsed components.
+	*
+	* Accepts an object whose properties mirror the array returned by PHP's parse_url():
+	*   scheme   (string) — required, e.g. 'https'
+	*   host     (string) — required, e.g. 'example.org'
+	*   port     (int)    — optional
+	*   user     (string) — optional
+	*   pass     (string) — optional; only emitted when $user is also set
+	*   path     (string) — optional, leading '/' is added automatically
+	*   query    (string) — optional, prepended with '?'
+	*   fragment (string) — optional, prepended with '#'
+	*
+	* (!) Scheme and host are mandatory; an Exception is thrown if either is absent.
+	*
+	* Note: the assembled URL concatenates scheme and host WITHOUT the '://' separator
+	* (the caller is expected to include it in the scheme value, e.g. 'https://').
+	*
+	* @param object $url_parts - object with URL components (see above)
+	* @return void
+	* @throws Exception when scheme or host is missing
 	*/
 	public function set_iri_from_url_parts( object $url_parts ) : void {
 
@@ -181,7 +276,20 @@ class dd_iri extends stdClass {
 
 	/**
 	* GET METHODS
-	* By accessors. When property exits, return property value, else return null
+	* Generic property read-accessor via PHP's magic __call mechanism.
+	*
+	* Any call to get_<property>() that has no explicit method defined is handled here.
+	* If the named property exists and is not null, its value is returned as a string.
+	* Otherwise false is returned.
+	*
+	* Example: $dd_iri->get_iri() returns (string) $this->iri or false.
+	*
+	* The commented-out 'set_' case below is a placeholder for a symmetric
+	* write-accessor that was never implemented; it is left for reference.
+	*
+	* @param string $strFunction - called method name, e.g. 'get_iri'
+	* @param array  $arArguments - positional arguments passed to the call (unused for getters)
+	* @return mixed - string value on success, false when the property is absent or null
 	*/
 	public function __call(string $strFunction, array $arArguments) : mixed {
 
@@ -197,6 +305,18 @@ class dd_iri extends stdClass {
 		}
 		return(false);
 	}
+
+	/**
+	* GETACCESSOR
+	* Internal helper used by __call to read a named property.
+	*
+	* Returns the property value cast to string when the property exists and is
+	* non-null; returns false otherwise. Casting to string allows callers to use
+	* the result directly in string context without additional type checks.
+	*
+	* @param string $variable - property name (e.g. 'iri', 'title')
+	* @return string|false - property value as string, or false if absent/null
+	*/
 	private function GetAccessor(string $variable) : string|false {
 		if(property_exists($this, $variable) && $this->$variable !== null) {
 			return (string)$this->$variable;

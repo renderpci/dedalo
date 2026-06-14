@@ -44,11 +44,14 @@ class component_text_area extends component_string_common {
 
 	/**
 	* IS_EMPTY
-	* Check if given value is or not empty considering
-	* spaces and '<p></p>' as empty values
-	* Use only for data entries.
-	* @param mixed $data_item
-	* @return bool
+	* Check whether a data item is effectively empty for this component.
+	*
+	* Extends the parent check to treat WYSIWYG editor artefacts as empty.
+	* CKEditor and TinyMCE sometimes leave behind ghost markup such as
+	* '<p></p>' or '<br data-mce-bogus="1">' that is visually blank but
+	* non-empty as a raw string; this method recognises those cases.
+	* @param mixed $data_item - Data item object with a 'value' property
+	* @return bool - true when the item is empty or contains only editor garbage
 	*/
 	public function is_empty( mixed $data_item ) : bool {
 
@@ -78,23 +81,21 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the grid value of the text area component for use in dd_grid rendering.
-	* Processes data differently based on component mode (indexation_list vs default).
-	* In indexation_list mode, creates fragments for indexation.
-	* In default mode, processes data to build display values with HTML tags.
+	* Produce the dd_grid_cell_object for tabular / list rendering.
 	*
-	* @param object|null $ddo Optional dd_grid configuration object containing:
-	*   - records_separator: Custom separator for records (default ' | ')
-	*   - class_list: CSS classes to apply to the cell
-	* @return dd_grid_cell_object The grid cell object containing:
-	*   - type: 'column'
-	*   - label: Component label
-	*   - cell_type: 'text' (default)
-	*   - ar_columns_obj: Array of column objects
-	*   - records_separator: Separator for records
-	*   - value: Processed data values (HTML formatted)
-	*   - fallback_value: Fallback values for other languages
-	*   - model: Component class name
+	* Two rendering paths exist:
+	* - 'indexation_list' mode: builds interactive tag-fragment cells by delegating
+	*   to the component_text_area_value.php include. These cells carry per-cell
+	*   class_list and action objects that the atoms contract cannot express.
+	* - all other modes: delegates to component_common::get_grid_value() which uses
+	*   the standard scalar-atoms adapter (get_export_value).
+	*
+	* The fallback is computed only when the main-lang data is empty, sparing a
+	* second include for the common case.
+	* @param ?object $ddo = null - dd_grid display-descriptor; recognised keys:
+	*   class_list (string), format_columns (mixed), fields_separator (string),
+	*   records_separator (string)
+	* @return dd_grid_cell_object - fully populated grid cell
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
@@ -177,16 +178,19 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_EXPORT_VALUE
-	* Atoms based export contract (see component_common::get_export_value).
-	* One atom per non-empty data item (TR image tags resolved on the fly,
-	* as the legacy grid). Items join with fields_separator (legacy parity:
-	* the grid value was an array joined by resolve_value with fields_separator).
-	* The 'indexation_list' mode custom columns stay on the legacy grid path
-	* (indexation grid client); export never runs in that mode.
-	* Paragraph/entity cleanup is a tabulator concern (single chokepoint),
-	* atoms carry the same values the legacy grid carried.
-	* @param export_context|null $context = null
-	* @return export_value
+	* Atoms-based export contract; see component_common::get_export_value.
+	*
+	* Produces one export_atom per non-empty data item. Dédalo [svg:…] tags are
+	* resolved to <img> HTML on the fly (TR::add_tag_img_on_the_fly) to match
+	* the values the legacy grid carried. Paragraph cleanup and HTML-entity
+	* decoding are left to the tabulator layer (flat_table.js / export_tabulator)
+	* so the atoms are usable by callers that do not want stripped text.
+	*
+	* Falls back to the default language when the active language has no data.
+	* The 'indexation_list' mode is never reached by this path; that mode's
+	* interactive custom columns remain on the legacy grid path.
+	* @param ?export_context $context = null
+	* @return export_value - container holding zero or more atoms
 	*/
 	public function get_export_value( ?export_context $context=null ) : export_value {
 
@@ -233,12 +237,17 @@ class component_text_area extends component_string_common {
 
 	/**
 	* SAVE
-	* Save component data with text sanitization
-	* Overwrite component_common method
-	* @param bool $update_all_langs_tags_state	Whether to update language tags across all languages
-	* @param bool $clean_text					Whether to clean/sanitize text content
+	* Sanitize text content then persist via parent::save().
 	*
-	* @return bool $result
+	* Overrides component_common::save() to run the text through
+	* sanitize_text() before storage. Sanitization strips disallowed HTML,
+	* normalises encoding, and removes editor artefacts. It is skipped when
+	* $clean_text is false (e.g. when importing raw HTML that is already safe).
+	*
+	* (!) Data must be loaded (get_data()) before calling this method;
+	* otherwise set_data() will overwrite with an empty array.
+	* @param bool $clean_text = true - pass false to skip sanitize_text()
+	* @return bool - true on success, false on database error
 	*/
 	public function save( bool $clean_text=true) : bool {
 
@@ -263,16 +272,25 @@ class component_text_area extends component_string_common {
 
 
 		return $result;
-	}//end Save
+	}//end save
 
 
 
 	/**
 	* GET_LOCATORS_OF_TAGS
-	* (!) Called by observer numisdata563 of section_tipo: numisdata41 (legends)
-	* Resolve the data from text_area for a mark and get the locators to be used as data
-	* @param object $options
-	* @return array $ar_locators
+	* Extract locators embedded in Dédalo markup tags within the component's text.
+	*
+	* Iterates each tag type listed in $options->ar_mark_tag, applies TR::get_mark_pattern()
+	* to the raw text value, and collects the JSON-encoded locator objects stored in
+	* capture group 7 of each match. Single quotes in the tag data are normalised to
+	* double quotes before JSON decoding.
+	*
+	* (!) Called by observer numisdata563 of section_tipo numisdata41 (legends).
+	* Only the first data item value is inspected; component_text_area stores a single
+	* value per language row by convention.
+	* @param object $options - configuration object; recognised keys:
+	*   ar_mark_tag (string[]) tag types to scan (default ['svg'])
+	* @return array $ar_locators - deduplicated array of decoded locator objects
 	*/
 	public function get_locators_of_tags(object $options) : array {
 
@@ -314,14 +332,21 @@ class component_text_area extends component_string_common {
 
 
 	/**
-	* CHANGE TAG STATE
-	* Changes the tag state from given tag inside the text
-	* Sample: [index-n-1] -> [index-r-1]
-	* @param string $tag (formatted as tag in, like [index-n-1])
-	* @param string $state = 'r'
-	* @param string $text_raw = ''
+	* CHANGE_TAG_STATE
+	* Replace a specific tag's state character in raw text.
 	*
-	* @return string $text_raw_updated
+	* Dédalo tags encode their state as a single letter between the tag-type name
+	* and the numeric id: [index-{state}-{id}]. This method locates the tag by id
+	* and rebuilds it with the new state, leaving all other tag content unchanged.
+	* Example: change_tag_state('[index-n-1]', 'r', $text) turns '[index-n-1]' into
+	* '[index-r-1]' everywhere it appears, but only replaces the first match (break
+	* is called after the first processed id).
+	*
+	* State codes in common use: 'n' (new/normal), 'r' (reviewed), 'd' (deleted).
+	* @param string $tag - full tag string to locate, e.g. '[index-n-1]' or '[/index-n-1]'
+	* @param string $state = 'r' - single-character new state to inject
+	* @param string $text_raw = '' - raw text containing the tag
+	* @return string $text_raw_updated - text with the state character replaced; unchanged if tag not found
 	*/
 	public static function change_tag_state(string $tag, string $state='r', string $text_raw='') : string {
 
@@ -368,18 +393,23 @@ class component_text_area extends component_string_common {
 
 
 	/**
-	* GET FRAGMENT TEXT FROM TAG
-	* @param string $tag_id
-	* 	Like '1'
-	* @param string $tag_type
-	* 	Like: 'index'
-	* @param string $raw_text
-	* @return object|null $fragment_object
-	* [
-	* 	$fragment_text, // string like 'text enclosed by tags xxx to /xxx'
-	*	$tag_in_pos, // int like 1
-	*	$tag_out_pos // int like 1234
-	* ]
+	* GET_FRAGMENT_TEXT_FROM_TAG
+	* Extract the text enclosed between a matching in/out tag pair.
+	*
+	* Given a tag id and type, builds the combined regex (tag_in)(.*)(tag_out) and
+	* searches $raw_text. The captured text between the tags is stripped of all
+	* Dédalo marks (TR::deleteMarks) and HTML-entity decoded.
+	*
+	* Only the 'index' tag type is currently supported; any other type logs an error
+	* and returns null. Null is also returned for empty or invalid inputs.
+	*
+	* The returned object encodes character-level positions for the caller to
+	* reconstruct or splice the text around the fragment.
+	* @param string $tag_id - numeric id as string, e.g. '1'
+	* @param string $tag_type - Dédalo tag type; currently only 'index' is handled
+	* @param string $raw_text - full raw text to search within
+	* @return ?object $fragment_object - null when not found or on invalid input; on success:
+	*   {text: string, tag_in_pos: int, tag_out_pos: int, tag_in: string, tag_out: string}
 	*/
 	public static function get_fragment_text_from_tag(string $tag_id, string $tag_type, string $raw_text) : ?object {
 
@@ -477,9 +507,13 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_PLAIN_TEXT
-	* Get only the text without tags or HTML
-	* Used in publication to search
-	* @return string $text
+	* Return all language data values as a single plain-text string.
+	*
+	* Strips all Dédalo markup tags (TR::deleteMarks) and HTML elements
+	* (strip_tags), joining multiple data items with the component's
+	* default_records_separator. Used by the publication layer for
+	* full-text search indexing.
+	* @return string - plain text content; empty string when data is absent
 	*/
 	public function get_plain_text() : string {
 
@@ -511,15 +545,17 @@ class component_text_area extends component_string_common {
 
 	/**
 	* DELETE_TAG_FROM_ALL_LANGS
-	* Search all component data langs and delete tag an update (save) data on every lang
-	* (!) This method will save the result if data changes on each language
-	* @see tool_indexation 'delete_tag'
+	* Remove a tag from the component text across every stored language and persist.
 	*
-	* @param string $tag_id
-	* 	like '[index-n-2]'
-	* @param string $tag_type
-	* @return array $ar_langs_changed
-	* 	Array of affected langs
+	* Iterates all data items regardless of language, delegates per-item removal
+	* to delete_tag_from_text(), and accumulates which languages were modified.
+	* If at least one item changed, calls save() to write the updated data.
+	*
+	* (!) This method writes to the database when any change is found.
+	* @see tool_indexation 'delete_tag' action
+	* @param string $tag_id - tag id to remove, e.g. '2'
+	* @param string $tag_type - Dédalo tag type, e.g. 'index'
+	* @return array $ar_langs_changed - language codes of the data items that were modified
 	*/
 	public function delete_tag_from_all_langs(string $tag_id, string $tag_type) : array {
 
@@ -587,13 +623,20 @@ class component_text_area extends component_string_common {
 
 
 	/**
-	* DELETE TAG FROM TEXT
-	* Removes the tag in the given text returning the modified text
-	* @param string $tag_id
-	* @param string $tag_type
-	* @param string $raw_text
+	* DELETE_TAG_FROM_TEXT
+	* Remove all occurrences of a given tag (both in and out forms) from raw text.
 	*
-	* @return object|null $response
+	* Uses TR::get_mark_pattern() in standalone mode so that the pattern matches
+	* both '[tag-state-id]' and '[/tag-state-id]' forms in a single pass.
+	* The number of removed tags is tracked via preg_replace's $count parameter.
+	*
+	* Returns null when the tag_id/tag_type arguments are empty or when $raw_text
+	* is empty. Also returns null when $tag_type is not a member of TR::$tag_types.
+	* @param string $tag_id - numeric id as string, e.g. '2'
+	* @param string $tag_type - Dédalo tag type, must be in TR::$tag_types
+	* @param string $raw_text - full text to process
+	* @return ?object $response - null on invalid input; on success:
+	*   {result: string, remove_count: int, msg: string}
 	*/
 	public static function delete_tag_from_text(string $tag_id, string $tag_type, string $raw_text) : ?object {
 
@@ -646,15 +689,26 @@ class component_text_area extends component_string_common {
 
 	/**
 	* FIX_BROKEN_INDEX_TAGS
-	* Add missing tags to given raw_text
-	* @see component_text_area.json
-	* @param string $raw_text
-	* @return object $response
-	* {
-	* 	result : string $raw_text,
-	* 	msg : string $msg . Sample: 'Please review position of blue tags'
-	* 	total : string $total . Total time in ms
-	* }
+	* Repair index-tag integrity problems in raw text.
+	*
+	* Two categories of defect are corrected:
+	*
+	* 1. Mismatched in/out pairs: a '[/index-…]' out-tag with no matching in-tag
+	*    gets a synthetic in-tag prepended with state 'd' (deleted), and vice-versa.
+	*    Only the first match per id is processed (see change_tag_state break).
+	*
+	* 2. Orphaned indexation locators: tags stored in the associated index portal
+	*    (get_component_tags_data) that have no corresponding pair in the text at all
+	*    receive a new '[index-d-id][/index-d-id]' pair prepended to the text.
+	*
+	* The same repair is applied to 'draw' (SVG annotation) tags.
+	*
+	* The $response->msg is populated (and localised via label::get_label) only when
+	* changes were made, prompting the user to review the positions of altered tags.
+	* @see component_text_area.json (tool_fix_broken_index_tags action)
+	* @param string $raw_text - raw HTML text to inspect and repair
+	* @return object $response - always set; structure:
+	*   {result: string (repaired text), msg: string|null, total: string|null (ms)}
 	*/
 	public function fix_broken_index_tags(string $raw_text) : object {
 		$start_time = start_time();
@@ -819,8 +873,11 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_RELATED_COMPONENT_AV_TIPO
-	* Search in struct for related component_av tipo
-	* @return string|null $related_component_av_tipo
+	* Look up the ontology for the first component_av tipo related to this component.
+	*
+	* Used to discover the audio/video component paired with this transcription text area
+	* (e.g. to synchronise timecode navigation between text and media player).
+	* @return ?string - the ontology tipo of the related component_av, or null if none exists
 	*/
 	public function get_related_component_av_tipo() : ?string {
 
@@ -839,8 +896,13 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_RELATED_COMPONENT_SELECT_LANG
-	* Search in ontology for related component_select_lang
-	* @return string|null $tipo
+	* Look up the ontology for the first component_select_lang tipo related to this component.
+	*
+	* A component_select_lang sibling records the original language of a transcription
+	* (e.g. the language spoken by an interviewee). When present it drives the
+	* get_original_lang() / get_list_value() override that switches the active
+	* language to the one declared by that selector (see the rsc36 case).
+	* @return ?string - tipo of the related component_select_lang, or null if none
 	*/
 	public function get_related_component_select_lang() : ?string {
 
@@ -859,19 +921,19 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_COMPONENT_TAGS_DATA
-	* Indexations, references or draw tags in v6 are direct data from portal configured in
-	* component_text_area properties 'tags_index', 'tags_references' or 'tags_draw'
-	* Defined in Ontology properties node as (sample from rsc36):
-	* {
-	*	"tags_index": {
-	*		"tipo": "rsc860",		// target component_portal tipo
-	*		"section_id": "self",	// auto-solved current section_id
-	*		"section_tipo": "self"	// auto-solved current section_tipo
-	*	}
-	* }
-	* @param string $tag_type, used to get the configuration in properties
-	* @return array $ar_tags_data
-	* 	Array of component_portal data locators
+	* Return the locator data stored in the associated tag-portal component.
+	*
+	* In v6/v7 the indexation, reference, and draw tag metadata (who points to what)
+	* is stored in a companion portal component (e.g. component_portal rsc860) rather
+	* than inside the text itself. The portal's tipo is declared in the ontology
+	* properties of this component_text_area under 'tags_{tag_type}':
+	*
+	*   { "tags_index": { "tipo": "rsc860", "section_id": "self", "section_tipo": "self" } }
+	*
+	* This method resolves that configuration, instantiates the portal component at the
+	* current section_id, and returns its raw data (an array of locator objects).
+	* @param string $tag_type = 'index' - property key suffix; must be 'index', 'references', or 'draw'
+	* @return array - array of locator objects from the portal, or [] when no config or no data
 	*/
 	public function get_component_tags_data( string $tag_type='index' ) : array {
 
@@ -910,12 +972,18 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_TAGS_DATA_AS_TERM_ID
-	* Used for diffusion global search (temporally??????)
-	* @see diffusion global search needs
-	* @param string $tag_type // the type of the tag as 'index', 'reference', 'draw'
-	* @param string $type
-	* @return string $string_ar_term_id
-	* 	JSON encoded array
+	* Build a JSON-encoded array of compound term identifiers for tag locators.
+	*
+	* Each locator is reduced to the string '{section_tipo}_{section_id}' —
+	* the canonical term_id format used by the diffusion global-search index.
+	* Used to populate a searchable column in the diffusion target database.
+	*
+	* (!) The '??????' note in the original source reflects that this method's
+	* long-term home (component vs. diffusion layer) is still under discussion;
+	* do not remove it without resolving that architectural question.
+	* @param string $tag_type = 'index' - tag type to resolve via get_component_tags_data()
+	* @param string $type = DEDALO_RELATION_TYPE_INDEX_TIPO - relation type constant (currently unused in body)
+	* @return string - JSON-encoded string array, e.g. '["th1_42","th1_99"]'
 	*/
 	public function get_tags_data_as_term_id(string $tag_type='index', string $type=DEDALO_RELATION_TYPE_INDEX_TIPO) : string {  // DEDALO_RELATION_TYPE_INDEX_TIPO
 
@@ -942,11 +1010,13 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_COMPONENT_INDEXATIONS_TERM_ID
-	* Used for diffusion global search (temporally??????)
-	* @see diffusion global search needs
-	* @param string $type
-	* @return string $string_ar_term_id
-	* 	JSON encoded array
+	* Convenience wrapper: return indexation tag term ids as a JSON string.
+	*
+	* Delegates to get_tags_data_as_term_id() with tag_type fixed to 'index'.
+	* Used by the diffusion global-search pipeline to obtain the list of
+	* thesaurus term identifiers associated with this text area record.
+	* @param string $type - relation type constant (forwarded to get_tags_data_as_term_id)
+	* @return string - JSON-encoded array of '{section_tipo}_{section_id}' strings
 	*/
 	public function get_component_indexations_term_id(string $type) : string {  // DEDALO_RELATION_TYPE_INDEX_TIPO
 
@@ -958,12 +1028,20 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_TAGS_DATA_AS_TERMS
-	* Used for diffusion global search
-	* @see diffusion global search needs
-	* @param string $tag_type // the type of the tag as 'index', 'reference', 'draw'
-	* @param array $format array|test // output format
-	* @param string $separator, | // when the format is text the  separator to use between values
-	* @return array $ar_terms
+	* Resolve tag locators to human-readable term labels.
+	*
+	* Calls get_component_tags_data() to get locators, then resolves each via
+	* ts_object::get_term_by_locator(). When $format is 'text', the labels are
+	* joined into a single string with $separator. Otherwise an array of objects
+	* {data: locator, label: string} is returned.
+	*
+	* Used by the diffusion global-search pipeline and by display helpers that
+	* need to show indexation labels alongside the text.
+	* @param string $tag_type = 'index' - tag type to resolve, e.g. 'index', 'draw'
+	* @param string $format = 'array' - 'text' for a joined string, any other value for an array
+	* @param string $separator = ' | ' - separator string used when $format is 'text'
+	* @return array|string - array of {data, label} objects (format≠'text') or a plain
+	*   string (implode result) when format is 'text' (note: return type declared as array)
 	*/
 	public function get_tags_data_as_terms(string $tag_type='index', string $format='array', string $separator=' | ') : array {  // DEDALO_RELATION_TYPE_INDEX_TIPO
 		/*
@@ -1005,9 +1083,12 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_COMPONENT_INDEXATIONS_TERMS
-	* Used for diffusion global search
-	* @see diffusion global search needs
-	* @return array $ar_terms
+	* Convenience wrapper: resolve 'index' tag locators to term label objects or text.
+	*
+	* Delegates to get_tags_data_as_terms() with tag_type fixed to 'index'.
+	* @param string $format = 'array' - 'text' for a joined string, other values for an object array
+	* @param string $separator = ' | ' - separator used in text format
+	* @return array - see get_tags_data_as_terms() return description
 	*/
 	public function get_component_indexations_terms(string $format='array', string $separator=' | ') : array {  // DEDALO_RELATION_TYPE_INDEX_TIPO
 		/*
@@ -1022,10 +1103,21 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_ANNOTATIONS
-	* Used for diffusion global search annotations
-	* Locate the note tags in the component text data and return them as an array
-	* @see diffusion global search needs
-	* @return array|null $ar_annotations
+	* Extract note-tag annotation objects from all language data items.
+	*
+	* Scans each data item's text for Dédalo 'note' tags using TR::get_mark_pattern().
+	* Each note tag carries a JSON-encoded locator (with single quotes instead of
+	* double quotes) pointing to a separate section record that holds the annotation
+	* content. This method decodes those locators, instantiates the referenced
+	* components using the DDO map in properties->tags_notes, and returns a structured
+	* array where each element is an object containing the locator (data) plus the
+	* resolved component data keyed by the DDO id.
+	*
+	* Boolean DDO types (type === 'bool') are normalised: section_id '1' → true,
+	* everything else → false.
+	*
+	* Returns null when the component has no tags_notes configuration or no data.
+	* @return ?array - null when no configuration; array of annotation objects otherwise
 	*/
 	public function get_annotations() : ?array {
 
@@ -1118,14 +1210,20 @@ class component_text_area extends component_string_common {
 
 
 		return $ar_annotations;
-	}//end get_component_indexations_terms
+	}//end get_annotations
 
 
 
 	/**
-	* GET_AR_RELATED_SECTIONS
-	* get the ar_related_section object to use for persons tags
-	* @return object related_sections
+	* GET_RELATED_SECTIONS
+	* Return the related-sections result set for the current record.
+	*
+	* Builds a 'related' SQO (search_query_object) targeting all section types,
+	* filtered by a locator pointing to the current section record. The result
+	* includes the identifying component data of each related section (via
+	* sections::get_instance in 'related_list' mode) and is used to locate
+	* interviewee/informant/person records for person tag resolution.
+	* @return object - decoded sections JSON response object
 	*/
 	public function get_related_sections() : object {
 
@@ -1152,16 +1250,28 @@ class component_text_area extends component_string_common {
 
 
 		return $related_sections;
-	}//end get_ar_related_sections
+	}//end get_related_sections
 
 
 
 	/**
 	* GET_TAGS_PERSONS
-	* Get available tags for insert in text area. Interviewed, informants, etc..
-	* @param string $related_section_tipo
-	* @param array $ar_related_sections = []
-	* @return array $ar_tags_inspector
+	* Build the list of person tag objects available for insertion in this text area.
+	*
+	* Reads properties->tags_persons to find all participant roles (interviewees,
+	* informants, speakers, etc.) configured for this component. For each role whose
+	* section_tipo matches the current section, the section_id is used directly;
+	* for related sections, the matching entries from $ar_related_sections are used.
+	*
+	* Each person record is resolved to initials + full_name + role via
+	* get_tag_person_label(), and the ready-to-insert tag string is built via
+	* build_tag_person(). Duplicate locators (same section_tipo + section_id) are
+	* deduplicated via the $resolved array.
+	* @param string $related_section_tipo - ontology tipo of the related person section
+	* @param array $ar_related_sections = [] - pre-fetched related-section locator objects
+	*   (from get_related_sections()); avoids a second query
+	* @return array - array of person tag element objects:
+	*   {type, section_tipo, section_id, tag, role, full_name, state, tag_id, label, data}
 	*/
 	public function get_tags_persons(string $related_section_tipo, array $ar_related_sections=[]) : array {
 
@@ -1308,16 +1418,16 @@ class component_text_area extends component_string_common {
 
 
 	/**
-	* BUILD_PERSON
-	* Format like [person-q-Pepe%20lópez%20de%20l'horta%20y%20Martínez-data:{locator}:data]
-	* @param array $ar_data
-	* [
-	* 	tag_id => 1,
-	* 	state => n,
-	* 	label => tag label
-	* 	data => JSON stringify data
-	* ]
-	* @return string $person_tag
+	* BUILD_TAG_PERSON
+	* Construct a person tag string in Dédalo markup format.
+	*
+	* The resulting tag format is:
+	*   [person-{state}-{tag_id}-{label}-data:{locator_json}:data]
+	* where $label is trimmed before insertion and the locator is JSON-encoded.
+	* Delegates final tag construction to TR::build_tag().
+	* @param array $ar_data - associative array with keys:
+	*   tag_id (int|string), state (string), label (string), data (object locator)
+	* @return string - the complete formatted person tag string
 	*/
 	public function build_tag_person(array $ar_data) : string {
 
@@ -1345,14 +1455,20 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_TAG_PERSON_LABEL
-	* Build tag label to show in transcriptions tag image of persons
-	* @param object locator
-	* @return object $label
-	* {
-	* 	"initials"	: "ricsa",
-	* 	"full_name"	: "Ricardo Sánchez",
-	* 	"role"		: "Interviewer"
-	* }
+	* Resolve a person locator to display strings for use in tag rendering.
+	*
+	* Reads the name (rsc85) and surname (rsc86) components of the referenced person
+	* record and builds:
+	*   - initials: up to 3 chars of the first name + up to 2 chars of each
+	*     surname word (split on space), concatenated without separator
+	*   - full_name: first name + space + surname verbatim
+	*   - role: ontology term of the component_tipo (the relationship role label)
+	*
+	* The tipo constants rsc85/rsc86 are hardcoded in $ar_tipos; this method will
+	* not work correctly for person sections whose name/surname components use
+	* different tipos.
+	* @param object $locator - locator object with section_tipo, section_id, component_tipo
+	* @return object $label - {initials: string, full_name: string, role: string}
 	*/
 	public static function get_tag_person_label(object $locator) : object {
 
@@ -1422,10 +1538,17 @@ class component_text_area extends component_string_common {
 
 	/**
 	* REGENERATE_COMPONENT
-	* Force the current component to re-save its data
-	* Note that the first action is always load data to avoid save empty content
-	* @see class.tool_update_cache.php
-	* @return bool
+	* Re-save the component data after applying migration patches.
+	*
+	* Performs lightweight in-memory migrations before delegating to save():
+	* - Converts legacy timecode format '[TC_mm:ss:ff_TC]' to
+	*   '[TC_mm:ss:ff.000_TC]' (millisecond-precision normalisation).
+	*
+	* (!) Data must be loaded first to avoid overwriting existing content
+	* with an empty array. A TODO note marks the geo-tag URL migration as
+	* deferred (@todo).
+	* @see class.tool_update_cache.php (tool_update_cache calls this on every record)
+	* @return bool - always true; errors are logged inside save()
 	*/
 	public function regenerate_component() : bool {
 
@@ -1473,8 +1596,18 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_GEOJSON_DATA
+	* Return GeoJSON feature data for this text area's spatial annotations.
+	*
+	* Tries build_geolocation_data() first. If that returns empty (e.g. the
+	* component has no geo tags or the associated component_geolocation has no
+	* data), falls back to reading the first related component_geolocation and
+	* calling its get_diffusion_value_as_geojson() directly.
+	*
+	* Returns an empty array when no geolocation data can be found and logs
+	* a WARNING when the related component_geolocation cannot be located in
+	* the ontology.
 	* @see ontology publication use in mdcat4091
-	* @return array
+	* @return array - array of GeoJSON feature layer objects, or [] when absent
 	*/
 	public function get_geojson_data() : array {
 
@@ -1530,9 +1663,21 @@ class component_text_area extends component_string_common {
 
 	/**
 	* BUILD_GEOLOCATION_DATA
-	* This method is v6 rebuilt to mimic v5 version. Note that now, georef data is no longer stored
-	* into the tag HTML dataset, but is moved to related component_geolocation
-	* @return array $ar_elements
+	* Build the per-layer geolocation array from the paired component_geolocation.
+	*
+	* In v5 geolocation coordinates were embedded in the tag's HTML dataset
+	* attribute. In v6/v7 they are stored in a separate component_geolocation.
+	* This method reads the component_geolocation's lib_data layers and enriches
+	* each layer with the text fragment that follows the corresponding geo tag in
+	* the raw text, providing spatial context labels for map rendering.
+	*
+	* Consistency is verified: if the count of geo tags in the text does not equal
+	* the count of layers in component_geolocation, an ERROR is logged (but only
+	* for the main language to avoid flood on multilingual diffusion runs).
+	*
+	* Returns [] when the related component_geolocation is not found in the ontology,
+	* when it has no data, or when lib_data is absent.
+	* @return array - array of objects {layer_id, text, layer_data}, one per geo layer
 	*/
 	public function build_geolocation_data() : array {
 
@@ -1653,11 +1798,18 @@ class component_text_area extends component_string_common {
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $options
-	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	* Data migration hook called by tool_update_data_version.
+	*
+	* No versions are currently handled for component_text_area; the switch
+	* always hits the default case and returns result = 0 (not handled).
+	* Add case branches here when future data-format migrations are needed.
+	*
+	* Result codes: 0 = not handled, 1 = updated, 2 = no change needed.
+	* @param object $options - migration context; expected keys:
+	*   update_version (array), data_unchanged (mixed), reference_id (mixed),
+	*   tipo (string), section_id (string), section_tipo (string),
+	*   context (string = 'update_component_data')
+	* @return object $response - {result: int, msg: string}
 	*/
 	public static function update_data_version(object $options) : object {
 
@@ -1689,13 +1841,22 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_LIST_VALUE
-	* Unified value list output
-	* By default, list value is equivalent to data. Override in other cases.
-	* Note that empty array or string are returned as null
-	* A param '$options' is added only to allow future granular control of the output
-	* @param object|null $options = null
-	* 	Optional way to modify result. Avoid using it if it is not essential
-	* @return array|null $list_value
+	* Build the truncated, tag-resolved data array for list/thumbnail display.
+	*
+	* Overrides the generic component_common implementation to:
+	* 1. Respect an original-language override: when a sibling component_select_lang
+	*    declares that the content was recorded in a specific language (see rsc36),
+	*    this method switches $this->lang to that language before fetching data.
+	* 2. Resolve Dédalo [svg:…] tags to <img> HTML via TR::add_tag_img_on_the_fly(),
+	*    so inline drawings are visible in list thumbnails.
+	* 3. Truncate to $options->max_chars (default 130) using
+	*    component_string_common::truncate_html() which closes open HTML tags at the
+	*    cut-point to prevent broken markup.
+	*
+	* Returns null when the active language has no data (no fallback is applied here;
+	* see get_fallback_list_value() for the separate fallback path).
+	* @param ?object $options = null - recognised key: max_chars (int, default 130)
+	* @return ?array - array of data-item objects with truncated HTML values, or null
 	*/
 	public function get_list_value( ?object $options=null ) : ?array {
 
@@ -1756,10 +1917,16 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_FALLBACK_LIST_VALUE
-	* Used by component_text_area and component_html_text to
-	* generate fallback versions of current empty values
-	* @param object|null $options = null
-	* @return array|null $list_value
+	* Return truncated HTML values from the fallback language for list display.
+	*
+	* Called when get_list_value() finds no data in the active language.
+	* Resolves Dédalo tags to <img> HTML (TR::add_tag_img_on_the_fly) and
+	* truncates to max_chars (default 700, larger than the edit truncation
+	* to give context in read-only list rows) via truncate_html().
+	*
+	* Shared implementation used by component_text_area and component_html_text.
+	* @param ?object $options = null - recognised key: max_chars (int, default 700)
+	* @return ?array - array of data-item objects with truncated HTML values, or null
 	*/
 	public function get_fallback_list_value( ?object $options=null ) : ?array {
 
@@ -1811,10 +1978,19 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_FALLBACK_EDIT_VALUE
-	* Used by component_text_area and component_html_text to
-	* generate fallback versions of current empty values
-	* @param object|null $options = null
-	* @return array|null $list_value
+	* Return stripped, truncated plain-text values from the fallback language for edit display.
+	*
+	* Unlike get_fallback_list_value(), this method strips all Dédalo markup
+	* (TR::deleteMarks) and HTML tags (strip_tags) before truncating. The result
+	* is a plain-text hint shown inside the editor when the current language has
+	* no content, so users can see the fallback without interactive tags interfering.
+	*
+	* Truncation uses truncate_text() (plain text, not HTML-aware) at max_chars
+	* (default 700).
+	*
+	* Shared implementation used by component_text_area and component_html_text.
+	* @param ?object $options = null - recognised key: max_chars (int, default 700)
+	* @return ?array - array of data-item objects with plain-text truncated values, or null
 	*/
 	public function get_fallback_edit_value( ?object $options=null ) : ?array {
 
@@ -1862,9 +2038,27 @@ class component_text_area extends component_string_common {
 
 	/**
 	* CONFORM_IMPORT_DATA
-	* @param string $import_value
-	* @param string $column_name
-	* @return object $response
+	* Validate and normalise a raw CSV import value into the v7 data format.
+	*
+	* Handles three input shapes:
+	* 1. JSON string (array): each element is wrapped to ensure it is a v7
+	*    object with a 'value' property; already-wrapped objects have their
+	*    'value' string normalised via the inner $normalize_value closure.
+	* 2. JSON string (multi-language object keyed 'lg-*'): each language's
+	*    values are normalised to an array of v7 items and the multi-lang
+	*    object is preserved for the import tool's per-language iteration.
+	* 3. Plain string: wrapped in paragraph tags and returned as a single-element
+	*    v7 array if is_plain_bracket_string() confirms it is not malformed JSON.
+	*
+	* The $normalize_value closure ensures every text value is wrapped in
+	* <p>…</p> and converts legacy <br>/<br> line-break markup to paragraph
+	* pairs (CKEditor v5 no longer emits <br> as a line separator).
+	*
+	* Returns $response->result = null (with an error appended to errors[]) when
+	* the value looks like malformed JSON (begins with [" or ends with "]).
+	* @param string $import_value - raw value from the CSV import column
+	* @param string $column_name - CSV column header (currently unused; reserved for future validation)
+	* @return object $response - {result: array|object|null, errors: array, msg: string}
 	*/
 	public function conform_import_data(string $import_value, string $column_name) : object {
 
@@ -2028,9 +2222,17 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_ORIGINAL_LANG
-	* Check if a related component component_select_lang exists like rsc36 case
-	* If exists, return the lang value
-	* @return string|null $original_lang
+	* Resolve the original recording language from a related component_select_lang.
+	*
+	* Some transcription text areas have a sibling component_select_lang that
+	* records what language the source material (e.g. oral history interview) was
+	* in. This method looks up that sibling in the ontology, reads its stored
+	* locator, and converts it to a BCP-47-style lang code via
+	* lang::get_code_from_locator().
+	*
+	* Returns null when no component_select_lang is related, when no data is
+	* stored in it, or when the lang code cannot be resolved.
+	* @return ?string - lang code string (e.g. 'lg-spa'), or null when unavailable
 	*/
 	public function get_original_lang() : ?string {
 
@@ -2070,9 +2272,24 @@ class component_text_area extends component_string_common {
 
 	/**
 	* GET_DIFFUSION_V5_REFERENCES_HTML
-	* Legacy parser HTML text area to be compatible with v5 and v6
-	* Used by component_html_text components
-	* @return string|null $diffusion_value
+	* Produce HTML text with reference tags converted to the v5-compatible format.
+	*
+	* In v5/v6 reference tags embedded the locator in the tag's data attribute. In
+	* v7 the locator is stored in a companion portal (tags_reference). This method
+	* reads the reference portal data, matches each in-tag by numeric id against the
+	* stored locators, rebuilds both the in- and out-reference tags with the locator
+	* encoded as single-quoted JSON in the data field, then converts all tags to
+	* their HTML <img> equivalents via TR::add_tag_img_on_the_fly().
+	*
+	* Only even-indexed matches are processed (every other match is an in-tag;
+	* odd-indexed matches are out-tags handled as pairs). A logged ERROR is emitted
+	* when an out-tag is missing for a matched in-tag.
+	*
+	* Returns null when data is absent. Returns the raw value (with only
+	* add_tag_img_on_the_fly applied) when no tags_reference portal is configured.
+	*
+	* Used by component_html_text to generate publication output.
+	* @return ?string - HTML string with resolved reference tags, or null when no data
 	*/
 	public function get_diffusion_v5_references_html() : ?string {
 

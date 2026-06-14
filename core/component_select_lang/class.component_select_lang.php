@@ -1,22 +1,30 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_SELECT_LANG
-* Manages language selection components for multilingual content in Dédalo.
+* Specialised select component for choosing a language record from the Dédalo
+* languages thesaurus (section tipo 'lg1', constant DEDALO_LANGS_SECTION_TIPO).
 *
-* Specialized select component for choosing language codes (e.g., 'lg-eng', 'lg-spa')
-* from the Dédalo language ontology. Typically used alongside text components to
-* specify the language of content.
+* Responsibilities and design notes:
+* - Stores zero or more locator objects, each pointing to a single languages-section
+*   record (e.g. section_tipo='lg1', section_id=17344 for 'lg-spa').
+* - Unlike a generic relation component, the selectable option list is derived
+*   entirely from DEDALO_PROJECTS_DEFAULT_LANGS (the project's configured language
+*   set) rather than from a free-form search over a target section.
+* - Extends component_relation_common to inherit locator persistence, relation-table
+*   sync, and the default conform_import_data for raw locator/section_id import.
+*   Only the parts specific to language semantics are overridden here.
+* - The relation type is hard-coded to DEDALO_RELATION_TYPE_LINK (dd151) via
+*   $default_relation_type, meaning the generated locators carry a 'link' type
+*   rather than the generic 'related' type used by sibling components.
 *
-* Key features:
-* - Links to Dédalo language records (lg- prefix tipos)
-* - Provides language code resolution for diffusion/export
-* - Associates with component_text_area for multilingual content
-* - Supports language-based filtering in search
+* Typical pairings in ontology:
+* - Paired with component_text_area via a 'related' ontology edge so that a
+*   select_lang instance sits next to its corresponding text field. The pairing
+*   is resolved at runtime through get_related_component_text_area().
+* - Used by audio/video components to tag the spoken language of a media track.
 *
-* Use cases:
-* - Specifying language of text content in component_text_area
-* - Setting audio/video language for media components
-* - Language tagging for translation workflows
+* Data shape (stored in 'relation' JSONB column of the matrix table):
+*   [ { "section_tipo": "lg1", "section_id": 17344, "type": "dd151", ... } ]
 *
 * Extends component_relation_common for relationship management capabilities.
 *
@@ -31,8 +39,13 @@ class component_select_lang extends component_relation_common {
 	* CLASS VARS
 	*/
 		/**
-		 * Default relation type for language selection (DEDALO_RELATION_TYPE_LINK).
-		 * Defines the ontology tipo used for linking to language records.
+		 * Forces all locators created by this component to use the 'link' relation
+		 * type (DEDALO_RELATION_TYPE_LINK = 'dd151') rather than the generic
+		 * 'related' type used by most relation components.
+		 *
+		 * The parent constructor reads this property as the fallback when the
+		 * ontology properties do not specify an explicit relation type.
+		 *
 		 * @var ?string $default_relation_type
 		 */
 		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_LINK;
@@ -41,9 +54,18 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_VALUE_CODE
-	* Returns the value lang code like 'lg-cat'
-	* Used in diffusion to get the av file lang for example
-	* @return string|null $code
+	* Resolves the stored locator to a Dédalo language code string such as 'lg-cat'.
+	*
+	* Only the first locator in the data array is used; a component_select_lang
+	* is always single-value in practice, even though the underlying relation column
+	* accepts arrays. The actual mapping is delegated to lang::get_code_from_locator(),
+	* which looks up the section_id against the languages thesaurus.
+	*
+	* Typical caller: diffusion pipeline to determine the spoken-language tag for
+	* audio/video assets before writing to the MariaDB publication target.
+	*
+	* @return ?string - Language code (e.g. 'lg-cat', 'lg-spa') or null when the
+	*                   component holds no data or the locator cannot be resolved.
 	*/
 	public function get_value_code() : ?string {
 
@@ -71,9 +93,22 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_RELATED_COMPONENT_TEXT_AREA
-	* Returns the associated component text area
-	* Used to set a lang for the component text area content
-	* @return string|null $tipo
+	* Looks up the ontology to find the single component_text_area that shares
+	* a 'related' edge with this select_lang component.
+	*
+	* The pairing is established in the ontology model (not in code) so that each
+	* select_lang widget knows which text field it provides the language tag for.
+	* common::get_ar_related_by_model() queries the ontology graph for all tipo
+	* neighbours of $this->tipo that match the 'component_text_area' model.
+	*
+	* Contract:
+	* - Exactly one match → returns its tipo string.
+	* - More than one match → logs an ERROR and returns null. This is a
+	*   misconfiguration that must be fixed in the ontology.
+	* - Zero matches → returns null silently (the component simply has no
+	*   text-area partner).
+	*
+	* @return ?string - The tipo of the paired component_text_area, or null.
 	*/
 	public function get_related_component_text_area() : ?string {
 
@@ -100,11 +135,25 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $request_options
-	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	* Migration hook called by the data-version upgrade toolchain.
+	*
+	* component_select_lang currently has no version-specific data migrations.
+	* Any version string passed in $request_options->update_version falls through
+	* to the default switch branch, which returns result=0 (no migration applies).
+	*
+	* Response result codes:
+	*   0 — this component has no migration for the requested version (no-op)
+	*   1 — migration was applied successfully
+	*   2 — migration was attempted but the data needed no changes
+	*
+	* @param object $request_options - Migration options object. Recognised keys:
+	*   - update_version  array   Version segments, e.g. [7,0,1]
+	*   - data_unchanged  mixed   Caller-set flag passed through
+	*   - reference_id    mixed   Reference identifier for audit logging
+	*   - tipo            ?string Component tipo being migrated
+	*   - section_id      ?string Record identifier being migrated
+	*   - section_tipo    ?string Section tipo being migrated
+	* @return object $response - stdClass with at least ->result (int) and ->msg (string).
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -141,8 +190,13 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* 	Default is true
+	* Declares that this component's values may be used as a sort key in list views.
+	*
+	* The sort is resolved through get_order_path(), which routes ordering through
+	* the thesaurus term name stored in the language section rather than the raw
+	* locator data, giving meaningful alphabetical ordering by language name.
+	*
+	* @return bool - Always true; language columns are always sortable.
 	*/
 	public function get_sortable() : bool {
 
@@ -153,10 +207,26 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_ORDER_PATH
-	* Calculate full path of current element to use in columns order path (context)
-	* @param string $component_tipo
-	* @param string $section_tipo
-	* @return array $path
+	* Builds the two-step path descriptor used by the column-ordering infrastructure
+	* to sort records by the human-readable name of the selected language rather than
+	* by the raw section_id integer.
+	*
+	* The returned array always contains exactly two path steps:
+	*   [0] — The select_lang component itself (entry point into the relation column).
+	*   [1] — The DEDALO_THESAURUS_TERM_TIPO component (hierarchy25) inside section
+	*          tipo DEDALO_LANGS_SECTION_TIPO ('lg1'), which holds the text name of
+	*          the language. The sort engine follows this path to obtain a sortable
+	*          string value.
+	*
+	* Each step is an object with keys:
+	*   component_tipo — ontology tipo of the component at that step
+	*   model          — PHP class name for that tipo (e.g. 'component_input_text')
+	*   name           — Human-readable ontology label for debugging / UI display
+	*   section_tipo   — Section tipo that contains the step's component
+	*
+	* @param string $component_tipo - Tipo of this select_lang instance.
+	* @param string $section_tipo   - Section tipo that owns this component instance.
+	* @return array - Two-element array of stdClass path step descriptors.
 	*/
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
@@ -184,12 +254,28 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_LIST_OF_VALUES
-	* Lang-specific option list resolver (overrides the canonical resolver).
-	* Resolves the project default langs as the selectable values instead of
-	* searching a target section.
-	* @param string|null $lang = DEDALO_DATA_LANG
-	* @param bool $include_negative = false
-	* @return object $response
+	* Builds the selectable language option list from the project's configured
+	* language set (DEDALO_PROJECTS_DEFAULT_LANGS) instead of querying a target
+	* section — the canonical resolver used by generic relation components.
+	*
+	* Each option item has the shape:
+	*   {
+	*     "value"      : locator  — locator pointing to the lg1 record (section_id, section_tipo)
+	*     "label"      : string   — language name in $lang, with fallback to any available
+	*                               translation or bare ISO code when no name is found
+	*     "section_id" : string   — 'lg-' prefixed ISO code, e.g. 'lg-spa' (used client-side
+	*                               for quick membership checks without resolving locators)
+	*   }
+	*
+	* The list is sorted alphabetically by label after resolution so the UI dropdown
+	* presents languages in the user's current display language order.
+	*
+	* Note: languages that exist in the project config but whose thesaurus record has
+	* no name translation for $lang receive the bare ISO code as a label fallback.
+	*
+	* @param ?string $lang         = DEDALO_DATA_LANG — Display language for option labels.
+	* @param bool    $include_negative = false         — Unused; accepted for interface compatibility.
+	* @return object $response - stdClass with ->result (array of option items) and ->msg ('OK').
 	*/
 	public function get_list_of_values(?string $lang=DEDALO_DATA_LANG, bool $include_negative=false) : object {
 
@@ -236,10 +322,21 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_LIST_VALUE
-	* Unified value list output
-	* By default, list value is equivalent to data. Override in other cases.
-	* Note that empty array or string are returned as null
-	* @return array|null $list_value
+	* Returns the human-readable label(s) of the currently stored language(s),
+	* suitable for list/tm display modes (read-only grid cells, exports, etc.).
+	*
+	* Resolution strategy:
+	* 1. Loads the current stored locators via get_data().
+	* 2. Calls get_list_of_values() to obtain the full project language option list.
+	* 3. Matches each stored locator against the option list by section_id and
+	*    section_tipo, collecting the corresponding label strings.
+	* 4. If a stored locator does not match any configured project language
+	*    (i.e. the language was removed from DEDALO_PROJECTS_DEFAULT_LANGS after
+	*    the record was saved), calls get_missing_lang() to synthesise a labelled
+	*    fallback entry (label ends with ' *' to signal the missing status).
+	*
+	* @return ?array - Array of label strings (usually a single-element array), or
+	*                  null when the component holds no data.
 	*/
 	public function get_list_value() : ?array {
 
@@ -278,11 +375,31 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* GET_MISSING_LANG
-	* @param object $locator
-	* 	Data locator
-	* @param array $list_of_values
-	*  Array of values in ara_list_of_values result format
-	* @return object $missing_lang
+	* Synthesises a display-ready option object for a language locator that is no
+	* longer present in the project's configured language set.
+	*
+	* This can happen when a record was saved with a language that was later removed
+	* from DEDALO_PROJECTS_DEFAULT_LANGS. The stored locator is still valid (the
+	* thesaurus record exists) but it does not appear in get_list_of_values(). This
+	* method produces a fallback item so the UI and list view can still show something
+	* meaningful rather than an empty or broken cell.
+	*
+	* The returned object follows the same shape as an entry in get_list_of_values(),
+	* with the label suffixed by ' *' to flag the anomaly to the user:
+	*   {
+	*     "value"      : { "section_tipo": string, "section_id": string }
+	*     "label"      : string  — resolved language name + ' *'
+	*     "section_id" : string  — 'lg-' prefixed ISO code (e.g. 'lg-fra')
+	*   }
+	*
+	* Returns null when the locator IS found in the list (i.e. it is not missing).
+	*
+	* @param object $locator      - Data locator for the stored language record.
+	*                               Must have ->section_tipo and ->section_id properties.
+	* @param array  $list_of_values - Array of option items in get_list_of_values() result
+	*                               format; used for the membership check.
+	* @return ?object - Synthesised option object with ' *' label suffix, or null if
+	*                   the locator is already present in $list_of_values.
 	*/
 	public static function get_missing_lang(object $locator, array $list_of_values) : ?object {
 
@@ -319,25 +436,51 @@ class component_select_lang extends component_relation_common {
 
 	/**
 	* CONFORM_IMPORT_DATA
-	* Accepted import formats:
-	* 1. Lang code(s) as flat string, multiple values separated by comma:
-	* 	lg-spa
-	* 	lg-spa, lg-eng
-	* 2. JSON array of lang code strings:
-	* 	["lg-spa","lg-eng"]
-	* 3. JSON locator(s), array or single object (delegated to component_relation_common):
-	* 	[{"section_tipo":"dd1462","section_id":"17344"}]
-	* 4. Numeric section_id list (delegated to component_relation_common):
-	* 	17344,5101
-	* Lang codes are resolved to locators pointing to the languages section.
-	* Codes that resolve but are not in the project configured languages
-	* (DEDALO_PROJECTS_DEFAULT_LANGS) are imported with a WARNING: the value is saved
-	* but it will not be accessible until the project languages include it.
-	* Unresolvable codes produce a failed row.
-	* Empty value returns null (clears the existing component data)
-	* @param string $import_value
-	* @param string $column_name
-	* @return object $response
+	* Normalises an incoming import cell value into an array of locator objects
+	* suitable for direct storage in the component's relation column.
+	*
+	* This override adds native handling for language-code strings on top of the
+	* generic locator/section_id handling in component_relation_common. Any format
+	* not matched here is delegated to parent::conform_import_data().
+	*
+	* Accepted import formats (in evaluation order):
+	*
+	* 1. JSON array of lang code strings:
+	*      ["lg-spa","lg-eng"]
+	*    All tokens must be valid 'lg-*' codes; otherwise falls through to parent.
+	*
+	* 2. Flat comma-separated lang code string:
+	*      lg-spa
+	*      lg-spa, lg-eng
+	*    All tokens must match /^lg-[a-z0-9]+$/; mixed strings fall through to parent.
+	*
+	* 3. JSON locator array or single locator object (delegated to parent):
+	*      [{"section_tipo":"lg1","section_id":"17344"}]
+	*
+	* 4. Numeric section_id list (delegated to parent):
+	*      17344,5101
+	*
+	* Error and warning semantics:
+	* - An unresolvable code (lang::get_section_id_from_code() returns null) adds an
+	*   entry to $response->errors and returns immediately (import row fails).
+	* - A code that resolves but is absent from DEDALO_PROJECTS_DEFAULT_LANGS adds an
+	*   entry to $response->warnings but the locator IS still saved. The value will
+	*   not be visible in the UI until the project languages include that code.
+	* - An empty $import_value returns result=null, which clears the component data.
+	*
+	* Each resolved locator is built with:
+	*   section_tipo = DEDALO_LANGS_SECTION_TIPO ('lg1')
+	*   section_id   = integer resolved by lang::get_section_id_from_code()
+	*   type         = $this->get_relation_type()  (DEDALO_RELATION_TYPE_LINK)
+	*   from_component_tipo = $this->tipo
+	*
+	* @param string $import_value - Raw cell value from the import source.
+	* @param string $column_name  - Column identifier (e.g. 'hierarchy36' or 'rsc85_lg1').
+	* @return object $response - stdClass with:
+	*   ->result   array|null   Array of locator objects on success; null to clear data.
+	*   ->errors   array        Fatal import errors (empty on success).
+	*   ->warnings array        Non-fatal warnings (e.g. lang not in project config).
+	*   ->msg      string       'OK' on success, error message otherwise.
 	*/
 	public function conform_import_data( string $import_value, string $column_name ) : object {
 

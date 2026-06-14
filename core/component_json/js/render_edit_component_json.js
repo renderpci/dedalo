@@ -13,7 +13,39 @@
 
 /**
 * RENDER_EDIT_COMPONENT_JSON
-* Manage the components logic and appearance in client side
+* Edit-mode render mixin for component_json.
+*
+* This module is NOT a standalone class. It is a prototype-assignment vehicle:
+* component_json.prototype.edit is wired to
+* render_edit_component_json.prototype.edit (see component_json.js).
+* The constructor itself is a no-op placeholder so that the prototype.edit
+* method can be attached to it in the standard Dédalo pattern.
+*
+* View routing (delegated to view modules):
+*   'mini'    — compact representation for service_autocomplete dropdowns
+*               (view_mini_json.render)
+*   'text'    — bare inline span with the serialized JSON string; no chrome
+*               (view_text_json.render)
+*   'print'   — forces read-only (permissions=1) then falls through to 'default';
+*               renders a <pre>-formatted JSON block via view_default_edit_json
+*   'line'    — same widget as 'default' but without the label row
+*               (view_default_edit_json.render)
+*   'default' — full wrapper with label, toolbar buttons, and the JSONEditor
+*               (svelte-jsoneditor / CodeMirror 6) lazy-loaded on viewport entry
+*               (view_default_edit_json.render)
+*
+* Data shape expected on self.data:
+*   entries {Array<{id: number|null, lang: string, value: Object|null}>}
+*     Exactly one item is used at index 0; the stored value is a plain JSON
+*     object (not a string). Multi-entry JSON is not supported and will log a
+*     console warning if encountered.
+*
+* Global references (declared in /*global*\/ directive above):
+*   get_label       — localised label map
+*   page_globals    — runtime page configuration (used by child view modules)
+*   SHOW_DEBUG      — debug verbosity flag (used by child view modules)
+*   flatpickr       — date picker library (declared for downstream guard; not
+*                     used directly in this file)
 */
 export const render_edit_component_json = function() {
 
@@ -24,9 +56,26 @@ export const render_edit_component_json = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @param object options
-* @return HTMLElement wrapper
+* Entry point for all edit-mode rendering of component_json.
+*
+* Reads self.context.view (defaulting to 'default') and delegates to the
+* appropriate view renderer. Each view renderer returns a fully constructed
+* HTMLElement that the caller appends to the DOM.
+*
+* View routing:
+*   'mini'    — compact widget for service_autocomplete; calls view_mini_json.render
+*   'text'    — bare <span> containing the serialized JSON value; calls view_text_json.render
+*   'print'   — mutates self.permissions to 1 (read-only) and falls through to 'default'
+*   'line'    — same full editor as 'default', rendered without a label row
+*   'default' — full wrapper with label, download button, and lazy-loaded JSONEditor
+*
+* (!) The 'print' case intentionally falls through to 'default' (no break/return).
+*     It sets self.permissions = 1 so that view_default_edit_json renders a read-only
+*     <pre>-formatted block instead of the interactive JSONEditor. This mutation is
+*     side-effectful on the component instance for the duration of the render call.
+*
+* @param {Object} options - Render options forwarded verbatim to the selected view renderer
+* @returns {Promise<HTMLElement>} Resolved component wrapper node
 */
 render_edit_component_json.prototype.edit = async function(options) {
 

@@ -1,9 +1,31 @@
 <?php declare(strict_types=1);
 include_once 'trait.search_component_media_common.php';
 /**
-* INTERFACE COMPONENT_MEDIA_COMMON
-* Used as common base from all components that works with media
-* like component_3d, component_av, component_image, component_pdf, component_svg
+* INTERFACE COMPONENT_MEDIA_INTERFACE
+* Contract that every concrete media component must satisfy.
+*
+* All five media component types (component_3d, component_av, component_image,
+* component_pdf, component_svg) implement this interface alongside their common
+* behaviour, which lives in component_media_common. The interface is the minimal
+* surface that calling code (diffusion, tools, section delete/restore, etc.) can
+* depend on without knowing the concrete subclass.
+*
+* Methods are grouped logically:
+* - Identity / path helpers: get_id, get_initial_media_path, get_additional_path,
+*   get_media_path_dir, get_media_url_dir, get_media_filepath
+* - File lifecycle: add_file, delete_file, quality_file_exist, get_quality_files,
+*   rename_old_files (via add_file), restore_component_media_files,
+*   remove_component_media_files, create_alternative_versions
+* - Inspection: get_files_info, get_quality_file_info, get_normalized_name_from_files,
+*   get_uploaded_file, get_size, get_url, get_thumb_url, get_thumb_path
+* - Quality / extension metadata: get_ar_quality, get_default_quality,
+*   get_original_quality, get_extension, get_allowed_extensions, get_folder,
+*   get_best_extensions, get_alternative_extensions
+* - Transcoding pipeline: build_version, create_thumb, create_alternative_version,
+*   process_uploaded_file, update_data_version, regenerate_component
+*
+* @package Dédalo
+* @subpackage Core
 */
 interface component_media_interface {
 
@@ -59,23 +81,55 @@ interface component_media_interface {
 
 /**
 * CLASS COMPONENT_MEDIA_COMMON
-* Abstract base class for all media components in Dédalo.
+* Abstract base class shared by all five media component types in Dédalo.
 *
-* Provides shared functionality for components that work with media files:
-* - Quality management (original, modified, thumbnails)
-* - File path and URL generation
-* - Media file upload, download, and deletion
-* - Alternative format generation
-* - File information retrieval (size, dimensions, etc.)
+* Responsibilities:
+* - Builds deterministic filesystem paths and public URLs for every quality level
+*   (original, default/web, thumb, and any component-specific sizes such as '1.5MB').
+* - Coordinates the full media lifecycle: upload staging → file move → version
+*   transcoding → thumbnail creation → data-update → save.
+* - Provides "soft delete" semantics: files are never hard-deleted; they are
+*   renamed with a datestamp and moved to a 'deleted/' sub-folder within each
+*   quality directory.
+* - Generates component data (the `files_info` JSONB array stored in the matrix)
+*   by scanning the filesystem on every save.
+* - Wires into the diffusion pipeline via get_diffusion_value / get_diffusion_data,
+*   and into the export pipeline via get_export_value.
 *
-* Extended by:
-* - component_3d : 3D model files
-* - component_av : Audio/video files
-* - component_image : Image files
-* - component_pdf : PDF documents
-* - component_svg : SVG graphics
+* Concrete subclasses (all must also implement component_media_interface):
+* - component_3d  — 3D model files
+* - component_av  — audio / video files
+* - component_image — raster images
+* - component_pdf — PDF documents
+* - component_svg — SVG graphics
 *
-* Data is stored in the 'media' column of the matrix tables.
+* Data shape stored per component (one element in the JSONB array):
+* {
+*   "files_info": [
+*     {
+*       "quality"          : string,   // e.g. 'original', '1.5MB', 'thumb'
+*       "file_exist"       : bool,
+*       "file_name"        : string|null,
+*       "file_path"        : string|null, // relative to DEDALO_MEDIA_PATH
+*       "file_size"        : int|null,    // bytes
+*       "file_time"        : dd_date|null,
+*       "extension"        : string|null,
+*       "external"         : bool         // true when file_path is an external URL
+*     }, …
+*   ],
+*   "original_file_name"      : string|null,
+*   "original_normalized_name": string|null,  // e.g. 'dd522_dd128_1.tif'
+*   "original_upload_date"    : dd_date|null,
+*   "modified_normalized_name": string|null,
+*   "modified_upload_date"    : dd_date|null,
+*   "lib_data"                : object|null   // component_image only
+* }
+*
+* Uses trait search_component_media_common for SQO/SQL search stubs
+* (media components are not currently full-text searchable).
+*
+* Extends component_common — inherits get_data/set_data, save, locator helpers,
+* properties resolution, and the component cache.
 *
 * @package Dédalo
 * @subpackage Core
@@ -92,68 +146,83 @@ class component_media_common extends component_common {
 	*/
 
 		/**
-		 * Media quality variant for this component instance. Examples: 'original', '1.5MB'.
-		 * Determines which transcoding or resolution level is active for the media.
-		 * @var ?string $quality
-		 */
+		* Active quality level for this component instance.
+		* Examples: 'original', '1.5MB', 'standard', 'thumb'.
+		* Controls which sub-directory under the media folder is addressed by path/URL helpers.
+		* Initialized in __construct from get_quality(); callers can override via set_quality().
+		* @var ?string $quality
+		*/
 		public ?string $quality = null;
 
 		/**
-		 * Optional subdirectory path appended to the media storage location.
-		 * Used to organize files into sub-folders within the media directory.
-		 * Example: /media/images/my_initial_media_path/<1.5MB/../
-		 * @var ?string $additional_path
-		 */
+		* Optional sub-directory appended after the quality segment in the media path.
+		* Used to cap the number of files per directory (max_items_folder) or to honour
+		* a section-level 'additional_path' property that maps to another component's value
+		* (e.g. a numeric bucket like '/0', '/1000', '/2000').
+		* Null when neither mechanism is configured.
+		* @var ?string $additional_path
+		*/
 		public ?string $additional_path = null;
 
 		/**
-		 * Base directory path for media files of this component type.
-		 * Defined in configuration and combined with tipo, section_id, and quality to form the full path.
-		 * @var ?string $initial_media_path
-		 */
+		* Optional top-level sub-directory inserted between the folder root and the quality
+		* segment, sourced from the parent section's 'initial_media_path' property keyed by
+		* this component's tipo (e.g. '/archive_photos').
+		* Null when the section defines no custom path for this tipo.
+		* @var ?string $initial_media_path
+		*/
 		public ?string $initial_media_path = null;
 
 		/**
-		 * Target filename for uploaded or processed media files.
-		 * Generated from locator components to ensure unique, deterministic file naming.
-		 * @var ?string $target_filename
-		 */
+		* Target base filename (without extension) for the media file, i.e. the component id.
+		* Built lazily by get_target_filename() as $this->id . '.' . get_extension().
+		* Retained as a property so callers can read the planned name before committing the file.
+		* @var ?string $target_filename
+		*/
 		public ?string $target_filename = null;
 
 		/**
-		 * Target directory path for media file operations (upload, transcoding, deletion).
-		 * Full filesystem path combining folder, initial_media_path, and additional_path.
-		 * @var ?string $target_dir
-		 */
+		* Absolute filesystem path to the directory where files for the active quality are stored.
+		* Computed by get_media_path_dir(); cached here to avoid repeated string concatenation.
+		* @var ?string $target_dir
+		*/
 		public ?string $target_dir = null;
 
 		/**
-		 * Media folder name from configuration constants. Examples: DEDALO_IMAGE_FOLDER, DEDALO_PDF_FOLDER.
-		 * Defines the root media type directory for this component (images, av, pdf, etc.).
-		 * @var ?string $folder
-		 */
+		* Root media type folder constant value (not the constant name) set by the concrete
+		* subclass. Examples: value of DEDALO_IMAGE_FOLDER ('/image'),
+		* DEDALO_AV_FOLDER ('/av'), DEDALO_PDF_FOLDER ('/pdf').
+		* Forms the first segment after DEDALO_MEDIA_PATH in every path.
+		* Concrete subclasses define this via get_folder().
+		* @var ?string $folder
+		*/
 		public ?string $folder = null;
 
 		/**
-		 * Unique identifier for this media instance, typically a flattened locator.
-		 * Format: {component_tipo}_{section_tipo}_{section_id}. Example: 'dd522_dd128_1'.
-		 * Used for file naming and URL generation.
-		 * @var ?string $id
-		 */
+		* Unique, deterministic file identifier for this component instance.
+		* Format: {component_tipo}_{section_tipo}_{section_id}[_{lang}]
+		* Example: 'dd522_dd128_1' or 'rsc29_rsc170_770_lg-spa'.
+		* Used as the stem of every media file on disk and in generated URLs.
+		* Set once in __construct via get_id(); read-only thereafter.
+		* @var ?string $id
+		*/
 		public ?string $id = null;
 
 		/**
-		 * File extension for the media file. Examples: 'mp4', 'jpg', 'pdf', 'svg'.
-		 * Determines the file format and may trigger format-specific processing.
-		 * @var ?string $extension
-		 */
+		* Default file extension for the normalized/web version of this component's media.
+		* Examples: 'jpg' (component_image), 'mp4' (component_av), 'pdf', 'svg'.
+		* Concrete subclasses expose this via get_extension().
+		* @var ?string $extension
+		*/
 		public ?string $extension = null;
 
 		/**
-		 * External source URL for media not stored locally in Dédalo.
-		 * When set, the component references an external resource rather than internal files.
-		 * @var ?string $external_source
-		 */
+		* Absolute URL of an external media source (outside Dédalo's own media tree).
+		* When non-null, path and URL helpers short-circuit and return this value directly,
+		* bypassing all local filesystem operations. Set by resolving the 'external_source'
+		* property on the component's ontology node (which names a companion component_iri).
+		* @var ?string $external_source
+		*/
 		public ?string $external_source = null;
 
 	// Unified data sample:
@@ -176,6 +245,25 @@ class component_media_common extends component_common {
 
 	/**
 	* __CONSTRUCT
+	* Initializes the media component by delegating to the parent constructor and
+	* then eagerly computing the three path-building ingredients that are needed by
+	* almost every method: quality, id, initial_media_path, and additional_path.
+	*
+	* The constructor forces DEDALO_DATA_NOLAN for non-translatable components so
+	* that path helpers always produce the same filename regardless of the caller's
+	* language context. (PDF components can be translatable, so this override is
+	* conditional on the ontology node's translatable flag.)
+	*
+	* Path properties are only populated when section_id is known; if the instance
+	* is created without a section_id (e.g. for structural/ontology queries) those
+	* properties remain null and callers must check before using path helpers.
+	*
+	* @param string $tipo - ontology tipo identifier for this component (e.g. 'rsc29')
+	* @param mixed $section_id = null - parent record id; null for structural-only instantiation
+	* @param string $mode = 'list' - rendering mode: 'list', 'edit', 'tm', etc.
+	* @param string $lang = DEDALO_DATA_LANG - data language; overridden to DEDALO_DATA_NOLAN for non-translatable components
+	* @param ?string $section_tipo = null - parent section tipo; resolved from ontology when null
+	* @param bool $cache = true - whether to use the component instance cache
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true ) {
 
@@ -210,9 +298,12 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_MEDIA_COMPONENTS
-	* Return array with model names of defined as 'media components'.
-	* Add future media components here
-	* @return array
+	* Returns the canonical list of all PHP class names that are classified as
+	* "media components" in Dédalo. This list is used wherever code needs to
+	* iterate or detect every subclass without hard-coded instanceof chains
+	* (e.g. section delete/restore, diffusion, tool_update_cache).
+	* To register a new media component, add its class name here.
+	* @return array - ordered list of media component class-name strings
 	* @test true
 	*/
 	public static function get_media_components() : array {
@@ -230,12 +321,21 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_EXPORT_VALUE
-	* Atoms based export contract (see component_common::get_export_value).
-	* Single atom with the media URL, cell_type 'img'.
-	* URL absoluteness comes from the export_context (replaces the legacy
-	* $this->caller==='tool_export' switch)
+	* Atoms-based export contract (see component_common::get_export_value).
+	*
+	* Produces a single export_value atom containing the media URL for the
+	* appropriate quality level:
+	* - In 'edit' mode: the default (web) quality URL.
+	* - In any other mode: the thumb quality URL (smaller, faster).
+	*
+	* URL absoluteness is driven by export_context::$absolute_urls, replacing
+	* the old $this->caller==='tool_export' switch. Pass an export_context with
+	* absolute_urls=true to get a fully qualified https:// URL.
+	*
+	* The atom carries cell_type='img' so spreadsheet/table renderers can treat
+	* the value as an image reference rather than plain text.
 	* @param export_context|null $context = null
-	* @return export_value
+	* @return export_value - single-atom result; URL is empty string when data is null
 	*/
 	public function get_export_value( ?export_context $context=null ) : export_value {
 
@@ -276,13 +376,21 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
+	* Overrides component_common::get_diffusion_value.
+	* Computes the value written to a MySQL/MariaDB diffusion field for this component.
 	*
+	* Returns null when:
+	* - The component has no data.
+	* - The expected quality+extension combination does not exist on disk
+	*   (verified via files_info[].file_exist rather than a live stat() call).
+	*
+	* When DEDALO_PUBLICATION_CLEAN_URL is true the value is just the bare filename
+	* (e.g. 'dd522_dd128_1.jpg'), allowing an external web engine (e.g. with
+	* watermark middleware) to reconstruct the serving URL itself. Otherwise the
+	* full relative URL is returned.
+	* @param string|null $lang = null - unused for media components (kept for interface parity)
+	* @param object|null $option_obj = null - unused for media components (kept for interface parity)
+	* @return string|null - relative URL, bare filename, or null
 	* @see class.diffusion_mysql.php
 	* @test true
 	*/
@@ -320,13 +428,25 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_DIFFUSION_DATA
-	* Resolve the default diffusion data
-	* is used by the `diffusion_data`
-	* for component_section_id the default is its own data
-	* @param object $ddo
-	* @param ?string $diffusion_element_tipo
-	* @return array $diffusion_data
+	* Resolves the diffusion payload for this media component.
+	* Called by the diffusion chain processor to populate a single diffusion_data_object.
 	*
+	* Resolution order:
+	* 1. If the DDO provides a custom function name ($ddo->fn), call that method on $this.
+	*    Only whitelisted functions (currently 'get_posterframe_url') receive structured args;
+	*    all others receive ($ddo, $diffusion_element_tipo). Non-existent functions return
+	*    a null-valued diffusion_data array immediately.
+	* 2. If the component has an external_source configured, use that URL as the value.
+	* 3. Otherwise build the URL via get_url() using quality/extension/test_file/absolute/
+	*    default_add from $ddo->options (each defaulting to its natural fallback).
+	*    file_exist from the stored files_info is checked before calling get_url() to avoid
+	*    a redundant filesystem stat.
+	*
+	* When DEDALO_PUBLICATION_CLEAN_URL is true the value is the bare filename rather than
+	* the full URL (see get_diffusion_value for rationale).
+	* @param object $ddo - DDO descriptor from the diffusion map
+	* @param ?string $diffusion_element_tipo = null - target element tipo (forwarded to custom fn)
+	* @return array - array of diffusion_data_object; value is null when the file is missing
 	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
 	* @test false
 	*/
@@ -463,12 +583,19 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_EXTERNAL_SOURCE
-	* Look current component properties to find the property 'external_source'
-	* If found, the source path of current media will be get from a component_iri
-	* @see rsc29 (component_image 'Image') properties
-	* @return string|null $external_source
-	* sample:
-	* 	'rsc496' (component_iri)
+	* Resolves the external media URL for this component, if one is configured.
+	*
+	* The ontology node for this component may carry an 'external_source' property
+	* whose value is the tipo of a companion component_iri on the same section (e.g.
+	* 'rsc496'). When that IRI component holds a populated dataframe entry with an
+	* 'iri' field, the IRI value is used as the external URL instead of any local
+	* file path. This lets curators point a media component at an externally hosted
+	* image or asset without uploading a local copy.
+	*
+	* The check on $first_value->dataframe prevents misinterpreting a bare IRI
+	* stored without the dataframe pairing from being treated as an external source.
+	* @see rsc29 (component_image 'Image') for a production example of this property
+	* @return string|null - absolute external URL, or null when not configured / not set
 	*/
 	public function get_external_source() : ?string {
 
@@ -509,7 +636,14 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_ID
-	* @return string|null $id
+	* Returns (and caches in $this->id) the unique file-name stem for this component.
+	*
+	* The id is built by get_identifier() from the component's locator, then has the
+	* language code appended when the component is translatable. The result is used
+	* as the base filename for every media file on disk and in generated URLs.
+	* Null is returned (with a WARNING log) when section_id is not set, as is the case
+	* for structurally instantiated components with no record context.
+	* @return string|null - identifier string (e.g. 'rsc29_rsc170_770'), or null
 	* @test true
 	*/
 	public function get_id() : ?string {
@@ -550,8 +684,9 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_NAME
-	* Alias of get_id
-	* @return string|null $id
+	* Alias of get_id for contexts that request a 'name' rather than an 'id'
+	* (e.g. rename_old_files, get_quality_files). Returns the same value.
+	* @return string|null - same as get_id()
 	* @test true
 	*/
 	public function get_name() : ?string {
@@ -563,8 +698,18 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_INITIAL_MEDIA_PATH
-	* Used by component_image, component_pdf
-	* @return string|null $this->initial_media_path
+	* Reads the 'initial_media_path' object from the parent section's properties and
+	* returns the sub-path defined for this component's tipo, or null if none exists.
+	*
+	* The path is stored keyed by component tipo so different media components in the
+	* same section can use different top-level sub-directories under the quality root:
+	*   properties.initial_media_path.{tipo} = '/archive_photos'
+	*
+	* A leading slash is injected if the stored value lacks one, ensuring consistent
+	* path concatenation in get_media_path_dir().
+	*
+	* Primarily used by component_image and component_pdf.
+	* @return string|null - path segment like '/archive_photos', or null
 	* @test true
 	*/
 	public function get_initial_media_path() : ?string {
@@ -590,9 +735,19 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_ADDITIONAL_PATH
-	* Calculate item additional path from 'properties' json config.
-	* Used by component_image, component_pdf
-	* @return string|null $additional_path
+	* Computes the directory bucket sub-path appended after the quality segment.
+	*
+	* Two sources are checked in order:
+	* 1. Component properties.additional_path: a tipo pointing to another component
+	*    on the same section (e.g. component_input_text). That component's trimmed
+	*    string value is used as the path (leading slash forced, trailing slash stripped).
+	* 2. Component properties.max_items_folder: an integer (e.g. 1000) used to bucket
+	*    files by section_id: bucket = max_items_folder * floor(section_id / max_items_folder).
+	*    This prevents directories from growing to unmanageable sizes on large collections.
+	*
+	* Returns null when neither property is configured or section_id is absent.
+	* The cached value on $this->additional_path is returned immediately on repeat calls.
+	* @return string|null - path segment like '/0' or '/2000', or null
 	* @test true
 	*/
 	public function get_additional_path() : ?string {
@@ -668,9 +823,15 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_BEST_EXTENSIONS
-	* Extensions list of preferable extensions in original or modified qualities.
-	* Ordered by most preferable extension, first is the best.
-	* @return array
+	* Returns the ordered preference list of file extensions when multiple files are
+	* found for the same quality (e.g. both '.tiff' and '.jpg' in the original directory).
+	* The first extension in the returned array is the most preferred.
+	*
+	* The base implementation returns an empty array (no preference). Concrete subclasses
+	* (e.g. component_image) override this to declare codec priority such as
+	* ['tiff', 'png', 'jpg']. Used by get_normalized_name_from_files() to pick the
+	* canonical upload file when ambiguity exists.
+	* @return array - ordered extension strings (e.g. ['tiff', 'png', 'jpg']), empty when none
 	* @test true
 	*/
 	public function get_best_extensions() : array {
@@ -682,9 +843,11 @@ class component_media_common extends component_common {
 
 	/**
 	* QUALITY_FILE_EXIST
-	* Check if quality given file exists
-	* @param string $quality
-	* @return bool
+	* Checks whether the media file for the given quality level exists on disk.
+	* Uses the default extension (get_extension()) for the file path check.
+	* This is a fast existence test; for full metadata use get_quality_file_info().
+	* @param string $quality - quality level to test (e.g. 'original', '1.5MB')
+	* @return bool - true if the file is present on disk
 	* @test true
 	*/
 	public function quality_file_exist(string $quality) : bool {
@@ -699,23 +862,40 @@ class component_media_common extends component_common {
 
 	/**
 	* ADD_FILE
-	* Receive a file info object from tool upload
-	* and move/rename the file to the proper target
-	* @param object $options
-	* {
-	* 	"name": "montaje3.jpg",
-	*	"type": "image/jpeg",
-	*   "tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
-	*	"tmp_name": "/private/var/tmp/php6nd4A2",
-	*	"error": 0,
-	*	"size": 132898
-	* }
-	* @return object $response
-	* {
-	* 	"original_file_name" : $name, // montaje3.jpg
-	*	"full_file_name"	 : $full_file_name, // rsc29_rsc170_1.jpg
-	*	"full_file_path"	 : $full_file_path // /media/image/original/0/rsc29_rsc170_1.jpg
-	* }
+	* Accepts an upload descriptor from tool_upload / service_upload, validates the
+	* source file against a strict security allowlist (SEC-063), then atomically
+	* moves it to its final media location under DEDALO_MEDIA_PATH.
+	*
+	* Security constraints enforced here (see inline SEC-063 comments):
+	* - caller-supplied source_file paths are silently ignored; the source is always
+	*   reconstructed from the controlled staging root.
+	* - tmp_dir must be one of the whitelisted constant names (currently only
+	*   'DEDALO_UPLOAD_TMP_DIR'); any other string is rejected.
+	* - key_dir and tmp_name are sanitized via sanitize_key_dir() to strip traversal
+	*   sequences, null bytes, and path separators.
+	* - realpath() confinement confirms the resolved source lives inside the user's
+	*   own staging directory, blocking symlink-escape attacks.
+	*
+	* ZIP files are delegated to move_zip_file() (overridden by component_av).
+	* All other files are moved with rename().
+	* Old files for all allowed extensions are first backed up by rename_old_files().
+	*
+	* On success $response->ready contains:
+	*   { original_file_name, full_file_name, full_file_path }
+	*
+	* @param object $options - upload descriptor:
+	*   {
+	*     "name"      : string,  // original client filename, e.g. 'IMG_3007.jpg'
+	*     "type"      : string,  // MIME type (informational only, not trusted)
+	*     "tmp_dir"   : string,  // whitelisted constant name, e.g. 'DEDALO_UPLOAD_TMP_DIR'
+	*     "key_dir"   : string,  // upload-session sub-directory, e.g. 'tool_upload'
+	*     "tmp_name"  : string,  // temp basename chosen by upload handler, e.g. 'phpJIQq4e'
+	*     "error"     : int,     // PHP $_FILES error code (0 = ok)
+	*     "size"      : int,     // file size in bytes
+	*     "extension" : string,  // lowercase extension, e.g. 'jpg'
+	*     "quality"   : string   // optional; defaults to component default quality
+	*   }
+	* @return object $response - {result: bool, msg: string, errors: string[], ready?: object}
 	* @test true
 	*/
 	public function add_file(object $options) : object {
@@ -970,11 +1150,14 @@ class component_media_common extends component_common {
 
 	/**
 	* MOVE_ZIP_FILE
-	* Overwrite this method on each component that's needed it, for example 'component_av'
-	* @param string $tmp_name
-	* @param string $folder_path
-	* @param string $file_nam
-	* @return object $response
+	* Stub implementation for handling ZIP uploads. Always returns failure in this
+	* base class. Concrete subclasses that accept ZIP archives (e.g. component_av
+	* for DVD-style uploads with VIDEO_TS/AUDIO_TS directories) must override this
+	* method to perform the actual extraction and file placement.
+	* @param string $tmp_name - absolute path of the staged source ZIP file
+	* @param string $folder_path - absolute target directory for extracted contents
+	* @param string $file_name - target base name for the extracted content
+	* @return object $response - {result: false, msg: string} always in this base class
 	* @test true
 	*/
 	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_name) : object {
@@ -991,9 +1174,20 @@ class component_media_common extends component_common {
 
 	/**
 	* RENAME_OLD_FILES
-	* @param $file_name string as 'test175_test65_3'
-	* @param $folder_path string
-	* @return object $response
+	* Before overwriting with a new upload, moves every existing file matching
+	* $file_name (across all allowed extensions and any directory named $file_name)
+	* into a '$folder_path/deleted/' sub-directory with a datestamp suffix, e.g.:
+	*   rsc29_rsc170_1_deleted_2024-11-15_143022.jpg
+	*
+	* This preserves old versions for potential manual recovery without blocking the
+	* new upload, and without performing a hard delete. Called unconditionally from
+	* add_file() before the rename/copy step.
+	*
+	* The 'deleted' sub-directory is created with 0775 if it does not yet exist.
+	* Failure to create it is returned as an error (no partial rename is attempted).
+	* @param string $file_name - base filename stem, e.g. 'test175_test65_3'
+	* @param string $folder_path - absolute path to the quality directory
+	* @return object $response - {result: bool, msg: string, errors: string[]}
 	* @test true
 	*/
 	public function rename_old_files(string $file_name, string $folder_path) : object {
@@ -1055,7 +1249,11 @@ class component_media_common extends component_common {
 
 	/**
 	* VALID_FILE_EXTENSION
-	* @return bool
+	* Checks whether the given file extension is in the component's allowed-extensions
+	* list (returned by get_allowed_extensions()). The check is case-sensitive; callers
+	* should normalize to lowercase before calling (add_file() does this via strtolower).
+	* @param string $file_extension - lowercase extension without leading dot, e.g. 'jpg'
+	* @return bool - true if the extension is permitted for this component type
 	* @test true
 	*/
 	public function valid_file_extension(string $file_extension) : bool {
@@ -1071,8 +1269,15 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_ALTERNATIVE_EXTENSIONS
-	* 	Overwrite in each component like component_image do
-	* @return array|null $alternative_extensions
+	* Returns the list of secondary output formats produced alongside the primary
+	* extension for each quality level. Typically used for format pairs such as
+	* WebP or AVIF alongside JPEG, or WebM alongside MP4.
+	*
+	* The base implementation returns null (no alternatives). Concrete subclasses
+	* (e.g. component_image) override this to declare their extra formats.
+	* Used by get_files_info(), remove_component_media_files(), build_version(),
+	* and regenerate_component() when iterating all physical files for a quality.
+	* @return array|null - alternative extension strings (e.g. ['webp', 'avif']), or null
 	* @test true
 	*/
 	public function get_alternative_extensions() : ?array {
@@ -1086,10 +1291,16 @@ class component_media_common extends component_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* Dummy method. Overwrite it in each component
-	* @param object|null $file_data
-	* @param object|null $process_options
-	* @return object $response
+	* Stub hook called by the upload pipeline after add_file() succeeds.
+	* The base implementation does nothing and returns success, allowing the caller
+	* to continue with the default post-upload steps (build_version, save, etc.).
+	*
+	* Concrete subclasses override this to perform component-specific processing
+	* such as EXIF extraction (component_image), audio/video probing (component_av),
+	* or text extraction (component_pdf).
+	* @param object|null $file_data = null - file descriptor returned by add_file()->ready
+	* @param object|null $process_options = null - caller-specific processing flags
+	* @return object $response - {result: true, msg: 'OK. Request done'} in this base class
 	* @test true
 	*/
 	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
@@ -1105,10 +1316,28 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_FILES_INFO
-	* Get file info for every quality from disk
-	* Included alternative_extensions files and original from original_normalized_name
-	* @param bool $include_empty = false
-	* @return array $files_info
+	* Scans the filesystem for all media files belonging to this component and
+	* returns an array of file-info objects (one per quality × extension combination
+	* that is actually found, or all when include_empty=true).
+	*
+	* The scan covers:
+	* - Every quality in get_ar_quality() × every unique extension in
+	*   [get_extension(), get_allowed_extensions(), get_alternative_extensions()].
+	*   The thumb quality always uses get_thumb_extension() regardless of the
+	*   component's primary extension.
+	* - Any 'original_normalized_name' stored in data[0] (uploaded raw file that may
+	*   have a different extension than the normalized one, e.g. '.tiff').
+	* - Any 'modified_normalized_name' stored in data[0] (intermediate work file).
+	*
+	* Each returned object matches the files_info item schema documented on the class.
+	* This method is the source of truth for update_component_data_files_info() and
+	* is therefore called on every save().
+	*
+	* When include_empty=false (the default), qualities with no file are silently
+	* omitted from the result. Pass include_empty=true to get placeholder objects for
+	* every possible quality×extension combination (used by some admin UIs).
+	* @param bool $include_empty = false - when true, include zero-file placeholders
+	* @return array - array of file-info objects (see class data-shape documentation)
 	* @test true
 	*/
 	public function get_files_info(bool $include_empty=false) : array {
@@ -1219,9 +1448,19 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_DATALIST
-	* Creates a list of file info items iterating all qualities from
-	* the component data
-	* @return array $datalist
+	* Builds the client-facing datalist by reading quality entries from the stored
+	* component data (files_info in DDBB), rather than scanning the filesystem.
+	* This is faster than get_files_info() and appropriate for list/view rendering.
+	*
+	* For each quality in get_ar_quality():
+	* - If files_info has matching entries, they are included with a resolved file_url.
+	*   External files (file.external===true) use file_path directly as the URL;
+	*   internal files prepend DEDALO_MEDIA_URL when file_exist is true.
+	* - If no matching entry exists, a placeholder object is added with all fields null.
+	*
+	* The resulting array always contains one entry per quality level, making it safe
+	* for the client to iterate without null-checking.
+	* @return array - datalist objects {quality, file_exist, file_name, file_path, file_url, file_size, external}
 	* @test true
 	*/
 	public function get_datalist() : array {
@@ -1291,9 +1530,14 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_LIST_VALUE
-	* Reduced version of get_data to use in list mode.
-	* Unused quality and alternative extension info files will be ignored
-	* @return array|null $list_value
+	* Returns a stripped-down subset of files_info suitable for list-mode rendering.
+	* Only the default quality and thumb quality entries matching the component's
+	* primary extension (or thumb extension for the thumb quality) are included.
+	* All other quality levels and alternative-extension variants are omitted, keeping
+	* the data payload small for index/grid views that only need a preview image.
+	*
+	* Returns null when the component has no data at all.
+	* @return array|null - filtered files_info entries for default + thumb qualities only
 	* @test true
 	*/
 	public function get_list_value() : ?array {
@@ -1355,8 +1599,10 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_QUALITY
-	* 	Takes quality from fixed value or fallback to default config value
-	* @return string $quality
+	* Returns the currently active quality level for this instance.
+	* Uses $this->quality if already set (e.g. by set_quality() or __construct),
+	* otherwise falls back to get_default_quality() from component configuration.
+	* @return string - quality level string, e.g. 'standard', '1.5MB'
 	* @test true
 	*/
 	public function get_quality() : string {
@@ -1370,7 +1616,11 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_NORMALIZED_AR_QUALITY
-	* @return array $normalized_ar_quality
+	* Returns the pair of quality levels that hold 'normalized' (derived/transcoded)
+	* files: the original upload quality and the default (web) quality. Used by
+	* delete_normalized_files() to scope which directories need to be cleaned before
+	* regenerating from the uploaded source.
+	* @return array - two-element array [original_quality, default_quality]
 	*/
 	public function get_normalized_ar_quality() : array {
 
@@ -1387,7 +1637,10 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_THUMB_QUALITY
-	* @return string $thumb_quality
+	* Returns the thumbnail quality-level string. Reads from the DEDALO_QUALITY_THUMB
+	* constant if defined (allowing site configuration to override the key), otherwise
+	* falls back to the hardcoded string 'thumb'.
+	* @return string - quality key for the thumbnail directory, typically 'thumb'
 	* @test true
 	*/
 	public function get_thumb_quality() : string {
@@ -1401,7 +1654,10 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_THUMB_PATH
-	* @return string $image_thumb_path
+	* Returns the absolute filesystem path to the thumbnail file.
+	* Convenience wrapper around get_media_filepath() that hard-wires the
+	* thumb quality level.
+	* @return string - absolute path, e.g. '/srv/dedalo/media/image/thumb/0/rsc29_rsc170_1.jpg'
 	* @test true
 	*/
 	public function get_thumb_path() : string {
@@ -1418,7 +1674,11 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_THUMB_EXTENSION
-	* @return string $thumb_extension
+	* Returns the file extension used for thumbnail files. Reads from the
+	* DEDALO_THUMB_EXTENSION constant if defined, otherwise falls back to 'jpg'.
+	* Thumbnails always use this extension regardless of the component's primary
+	* extension (e.g. an AV component stores its posterframe thumb as a .jpg).
+	* @return string - thumbnail extension without leading dot, e.g. 'jpg'
 	* @test true
 	*/
 	public function get_thumb_extension() : string {
@@ -1432,11 +1692,20 @@ class component_media_common extends component_common {
 
 	/**
 	* DELETE_FILE
-	* Remove quality version moving the file to a deleted files directory
-	* @see component_image->remove_component_media_files
-	* @param string $quality
-	* @param string|null $extension = null
-	* @return object $response
+	* Soft-deletes the media file for a specific quality level by moving it to the
+	* 'deleted/' sub-directory (via remove_component_media_files()).
+	* After a successful move:
+	* - If deleting the original or modified quality without a specific extension,
+	*   all {quality}_* properties are stripped from data[0] so they are not
+	*   serialized back to the database on the subsequent save.
+	* - An activity log entry is written via logger.
+	* - save() is called to persist the updated files_info.
+	*
+	* Rejects qualities not in get_ar_quality() with an error response.
+	* @see component_image::remove_component_media_files
+	* @param string $quality - quality level to delete (e.g. 'original', '1.5MB')
+	* @param string|null $extension = null - restrict deletion to one extension; null deletes all
+	* @return object $response - {result: bool, msg: string, errors: string[]}
 	* @test true
 	*/
 	public function delete_file(string $quality, ?string $extension=null) : object {
@@ -1509,13 +1778,25 @@ class component_media_common extends component_common {
 
 	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
-	* "Remove" (rename and move files to deleted folder) all media file linked
-	* to current component (all quality versions)
-	* Is triggered wen section that contain media elements is deleted
-	* @see section:remove_section_media_files
-	* @param array $ar_quality = []
-	* @param string|null $extension = null
-	* @return bool
+	* Soft-deletes (moves to 'deleted/' directory) every physical media file linked
+	* to this component. Iterates all requested quality levels × all known extensions.
+	*
+	* When ar_quality is empty, all qualities from get_ar_quality() are processed.
+	* When extension is given, only files with that extension are moved; otherwise all
+	* known extensions ([get_extension(), get_alternative_extensions(), get_allowed_extensions()])
+	* are checked and moved where they exist.
+	*
+	* For the original and modified quality levels, the stored normalized_name from data[0]
+	* (e.g. 'rsc29_rsc170_770.tiff') is added to the extension list so that non-standard
+	* format uploads are cleaned up alongside the standard formats.
+	*
+	* Returns true as soon as at least one quality directory is processed successfully;
+	* returns false if any individual move fails (move_deleted_file returns false).
+	* Triggered by section::remove_section_media_files() when a record is deleted.
+	* @see section::remove_section_media_files
+	* @param array $ar_quality = [] - quality levels to process; defaults to all
+	* @param string|null $extension = null - restrict to one extension; null = all
+	* @return bool - true if at least one file was processed; false on any move error
 	* @test true
 	*/
 	public function remove_component_media_files( array $ar_quality=[], ?string $extension=null ) : bool {
@@ -1629,8 +1910,21 @@ class component_media_common extends component_common {
 
 	/**
 	* MOVE_DELETED_FILE
-	* @param object $options
-	* @return bool
+	* Performs the actual file rename/move into the 'deleted/' sub-directory for
+	* a single file. The destination filename is:
+	* - Normal case: {file_name}_deleted_{Y-m-d_Hi}.{extension}
+	* - Bulk-process case (bulk_process_id set): {file_name}.{extension}
+	*   (no datestamp, because the bulk process manages its own versioning directory).
+	*
+	* The target sub-directory is created via create_directory() if absent.
+	* Called by remove_component_media_files() and delete_normalized_files().
+	* @param object $options - {
+	*   quality: string,           // quality level for path resolution
+	*   file: string,              // absolute source file path
+	*   file_name: string,         // base name stem (no extension), e.g. 'rsc29_rsc170_1'
+	*   bulk_process_id: string|null // optional batch run identifier
+	* }
+	* @return bool - true on success, false if directory creation or rename fails
 	*/
 	public function move_deleted_file( object $options) : bool {
 
@@ -1681,14 +1975,25 @@ class component_media_common extends component_common {
 
 	/**
 	* DUPLICATE_COMPONENT_MEDIA_FILES
-	* Duplicate all media file linked (copy all media files into a new section_id)
-	* of current component (all quality versions)
-	* Is triggered wen section that contain media elements is duplicated
-	* @see section_record:duplicate()
-	* @param string|int $target_section_id
-	* @param array $ar_quality = []
-	* @param string|null $extension = null
-	* @return bool
+	* Copies all physical media files for this component into a new target section's
+	* media directories, effectively duplicating the component's media for the new record.
+	* Triggered by section_record::duplicate() when an entire section is duplicated.
+	*
+	* The target component is instantiated for $target_section_id so that its
+	* get_media_path_dir() / get_name() produce the correctly keyed paths.
+	* For each quality × extension combination, get_media_filepath() is called on the
+	* source component and the result copied to the matching target path via duplicate_file().
+	*
+	* Original and modified quality levels also check normalized_name from data[0] to
+	* include non-standard upload formats (e.g. '.tiff', '.psd').
+	*
+	* Returns false immediately if any individual copy fails; otherwise true when at
+	* least one quality directory was processed.
+	* @see section_record::duplicate()
+	* @param string|int $target_section_id - section_id of the newly created duplicate record
+	* @param array $ar_quality = [] - quality levels to copy; defaults to all
+	* @param string|null $extension = null - restrict to one extension; null = all
+	* @return bool - true when at least one file was copied; false on any copy error
 	* @test false
 	*/
 	public function duplicate_component_media_files( string|int $target_section_id, array $ar_quality=[], ?string $extension=null ) : bool {
@@ -1818,12 +2123,13 @@ class component_media_common extends component_common {
 
 	/**
 	* DUPLICATE_FILE
-	* @param object $options
-	* {
-	* 	source_file : string full path of the file to be copied
-	* 	target_file : string full path of the target file
+	* Copies a single source file to the specified target path, creating the target
+	* directory if it does not already exist. Used by duplicate_component_media_files().
+	* @param object $options - {
+	*   source_file: string, // absolute source file path
+	*   target_file: string  // absolute destination file path
 	* }
-	* @return bool
+	* @return bool - true on success, false if directory creation or copy fails
 	*/
 	public function duplicate_file( object $options) : bool {
 
@@ -1860,8 +2166,11 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* 	Default is true. Override when component is sortable
+	* Indicates whether this component's values support user-controlled sort ordering.
+	* Media components are not sortable by default (they represent a single asset per
+	* record), so this override hard-returns false. The comment in the doc saying
+	* "Default is true" reflects the parent class behaviour; this subclass flips it.
+	* @return bool - always false for media components
 	* @test true
 	*/
 	public function get_sortable() : bool {
@@ -1873,10 +2182,10 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_ORIGINAL_FILES
-	* Returns the full path of the original file/s found
+	* (!) This method is commented out and superseded by get_quality_files('original').
+	* Returns the full path of the original file/s found.
 	* The original files are saved renamed but keeping the extension.
-	* @return array $original_files
-	* 	Array of full path files found
+	* @return array $original_files - Array of full path files found
 	*/
 		// public function get_original_files() : array {
 
@@ -1948,11 +2257,16 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_QUALITY_FILES
-	* Returns the full path of the original file/s found
-	* The original files are saved renamed but keeping the extension.
-	* @param string $quality
-	* @return array $original_files
-	* 	Array of full path files found
+	* Scans the quality directory for all files whose basename begins with the
+	* component's name stem (get_name() + '.'), regardless of extension. Returns
+	* the full absolute paths of every matching file found.
+	*
+	* Multiple files can legitimately exist in the same directory when an original
+	* upload (e.g. '.tiff') and its normalized copy ('.jpg') have both been retained.
+	* The directory listing skips '.' and '..' but includes any extension.
+	* Returns an empty array when the directory does not exist or contains no match.
+	* @param string $quality - quality level to scan (e.g. 'original', 'modified')
+	* @return array - absolute file paths of matching files found (may be empty)
 	* @test true
 	*/
 	public function get_quality_files(string $quality) : array {
@@ -1997,12 +2311,21 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_NORMALIZED_NAME_FROM_FILES
-	* Resolve normalized name from given quality
-	* It is used to resolve orgininal_normalized_name and modified_normalized_name
-	* @param string $quality
-	* 	Sample 'modified'
-	* @return string|null $normalized_name
-	*  Sample: 'rsc29_rsc170_1070.tiff'
+	* Resolves the canonical filename (with extension) for the given quality by
+	* inspecting physical files on disk via get_quality_files(). Used to populate
+	* 'original_normalized_name' and 'modified_normalized_name' in component data.
+	*
+	* Disambiguation when multiple files exist (e.g. both '.tiff' and '.jpg'):
+	* 1. Try to match a file whose extension appears in get_best_extensions() (ordered
+	*    preference list defined by the concrete subclass).
+	* 2. Fallback: sort by ctime (oldest → newest) and pick the first file whose
+	*    extension is neither the default extension nor an alternative extension but
+	*    is in the allowed-extensions list — this usually identifies the raw upload.
+	* 3. Last resort: return the first entry in the ctime-sorted list.
+	*
+	* Returns null when no matching file is found in the quality directory.
+	* @param string $quality - quality level to inspect, e.g. 'modified'
+	* @return string|null - basename like 'rsc29_rsc170_1070.tiff', or null
 	* @test true
 	*/
 	public function get_normalized_name_from_files(string $quality) : ?string {
@@ -2085,9 +2408,18 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_UPLOADED_FILE
-	* From component data with fallback to files
-	* @param string $quality
-	* @return string|null $original_quality
+	* Returns the absolute filesystem path of the uploaded (source) file for the
+	* given quality level, combining the quality directory with the stored or
+	* disk-resolved normalized filename.
+	*
+	* Resolution order:
+	* 1. Read data[0]->{quality}_normalized_name (e.g. 'original_normalized_name').
+	* 2. If not stored, fall back to get_normalized_name_from_files($quality) which
+	*    scans the filesystem.
+	*
+	* Returns null when neither source yields a filename, or when the filename is empty.
+	* @param string $quality - quality level to look up (e.g. 'original', 'modified')
+	* @return string|null - absolute path like '/srv/dedalo/media/image/original/0/rsc29_rsc170_1.tiff', or null
 	* @test true
 	*/
 	public function get_uploaded_file(string $quality) : ?string {
@@ -2125,28 +2457,40 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_QUALITY_FILE_INFO
-	* Read the given quality file data, in media common data item format
-	* Result sample:
+	* Reads metadata for the file at the given quality + extension combination and
+	* returns a file-info object conforming to the files_info item schema.
+	*
+	* Two fast-return paths before hitting the filesystem:
+	* - External source: returns a synthetic object with file_exist=true and the
+	*   external URL as file_path (no disk stat performed).
+	* - File not found: returns a placeholder object with file_exist=false and
+	*   all other fields null.
+	*
+	* When the file exists, the returned object includes:
+	* - file_name: basename of the file.
+	* - file_path: path relative to DEDALO_MEDIA_PATH (not absolute).
+	* - file_size: bytes via @filesize() (null on any failure).
+	* - file_time: dd_date object built from filemtime() (content-change time).
+	* - extension: the resolved extension used for the lookup.
+	* - file_exist: true (double-checked after reading metadata).
+	*
+	* Note: file_url is intentionally omitted (commented out) from the returned
+	* object; callers that need a URL should call get_url() separately.
+	*
+	* Result object shape:
 	* {
-	* 	"quality": "50MB",
-	*	"file_url": "/v6/master_dedalo/media/image/50MB/0/rsc29_rsc170_1.jpg",
-	*	"file_name": "rsc29_rsc170_1.jpg",
-	*	"file_path": "/Users/pepe/v6/master_dedalo/media/image/50MB/0/rsc29_rsc170_1.jpg",
-	*	"file_size": 11270469,
-	*	"file_time": {
-	*		"day": 29,
-	*		"hour": 18,
-	*		"time": 65001897875,
-	*		"year": 2022,
-	*		"month": 5,
-	*		"minute": 44,
-	*		"second": 35,
-	*		"timestamp": "2022-05-29 18:44:35"
-	*	}
+	*   quality    : string,
+	*   file_exist : bool,
+	*   file_name  : string|null,
+	*   file_path  : string|null, // relative to DEDALO_MEDIA_PATH
+	*   file_size  : int|null,    // bytes
+	*   file_time  : dd_date|null,
+	*   extension  : string|null,
+	*   external   : bool          // only set when true (external source path)
 	* }
-	* @param string $quality
-	* @param string|null $extension = null
-	* @return object $data_item
+	* @param string $quality - quality level (e.g. '50MB', 'thumb')
+	* @param string|null $extension = null - file extension; defaults to get_extension()
+	* @return object - file-info data object
 	* @test true
 	*/
 	public function get_quality_file_info( string $quality, ?string $extension=null ) : object {
@@ -2270,8 +2614,11 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_TARGET_FILENAME
-	* @return string target_filename
-	*  as 'rsc29_rsc170_1363.jpg'
+	* Returns the full filename (stem + extension) for the web/default quality version.
+	* Combines the component id with the primary extension, e.g. 'rsc29_rsc170_1363.jpg'.
+	* Used by get_original_extension() to detect whether a file in the original
+	* directory is a raw upload versus the converted normalized copy.
+	* @return string - filename with extension, e.g. 'rsc29_rsc170_1363.jpg'
 	* @test true
 	*/
 	public function get_target_filename() : string {
@@ -2285,10 +2632,15 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_SOURCE_QUALITY_TO_BUILD
-	* Iterate array $ar_quality (Order by quality big to small)
-	* @param string $target_quality
-	* @return string|null $current_quality
-	* 	first suitable quality file to use as source
+	* Finds the first quality level (from get_ar_quality(), ordered large to small)
+	* that has an existing file and can be used as the transcoding source for
+	* $target_quality. Skips $target_quality itself and the 'original' quality.
+	*
+	* Returns null when no suitable source is found (e.g. no files uploaded yet).
+	* Used by build_version() when the direct original is not available and a
+	* downsample from an intermediate quality is preferred.
+	* @param string $target_quality - the quality level being built
+	* @return string|null - quality level string to use as source, or null
 	* @test true
 	*/
 	public function get_source_quality_to_build(string $target_quality) : ?string {
@@ -2314,13 +2666,24 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_ORIGINAL_EXTENSION
-	* Search the original file into the original path and returns the file extension if is found
-	* If a file with an extension other than DEDALO_IMAGE_EXTENSION is uploaded, it is converted to DEDALO_IMAGE_EXTENSION.
-	* The original files are saved renamed but keeping the ending.
-	* This function is used to locate them by checking if there is more than one.
-	* @param bool $exclude_converted = true
-	* @return string|null $result
-	* 	File extensions like 'jpg', 'mp4', ...
+	* Determines the file extension of the raw uploaded original file in the original
+	* quality directory.
+	*
+	* When a non-standard format is uploaded (e.g. '.tiff', '.raw', '.mov'), it is
+	* converted to the component's default extension but the original is kept alongside.
+	* This method distinguishes the two:
+	* - exclude_converted=true (default): skips any file whose full name matches
+	*   get_target_filename() (i.e. the standard normalized copy) and returns the
+	*   extension of the remaining raw file.
+	* - exclude_converted=false: returns the extension of any file in the directory.
+	*
+	* When exactly one qualifying file is found, its extension is returned. When none
+	* are found, null is returned. When multiple are found, the first whose extension
+	* differs from the default extension is returned (a trigger_error is issued if
+	* all remaining files share the default extension — this indicates an unexpected
+	* filesystem state).
+	* @param bool $exclude_converted = true - if true, skip files with the default extension
+	* @return string|null - extension string like 'tiff', 'mov', or null when not found
 	* @test true
 	*/
 	public function get_original_extension(bool $exclude_converted=true) : ?string {
@@ -2385,11 +2748,17 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_ORIGINAL_FILE_PATH
-	* Returns the full path of the original file (with no default extension) if exists
-	* If a file with an extension other than DEDALO_xxx_EXTENSION is uploaded, it is converted to DEDALO_xxx_EXTENSION.
-	* The original files are saved renamed but keeping the ending. This function is used to locate them by checking if
-	* there is more than one.
-	* @return string|null $result
+	* Returns the absolute filesystem path of the original uploaded file.
+	*
+	* When the original directory contains both a raw upload (e.g. '.tiff') and its
+	* normalized copy (e.g. '.jpg'), this method prefers the normalized copy by
+	* filtering to the file whose extension matches get_extension(). This ensures
+	* that build_version() uses the already-converted file as its source rather than
+	* re-converting a potentially large raw original.
+	*
+	* Returns null when no original file is found. Logs an error (SHOW_DEBUG only)
+	* when more than one file survives the extension filter.
+	* @return string|null - absolute path to the original file, or null
 	* @test true
 	*/
 	public function get_original_file_path() : ?string {
@@ -2448,21 +2817,15 @@ class component_media_common extends component_common {
 
 
 	/**
-	* GET_MEDIA_PATH_DIR
-	* Get the absolute path to the media in current quality as:
-	* 	'/user/myuser/httpddocs/dedalo/media/pdf/web'
-	* @param string $quality
-	* @return string $media_path
-	* @test true
-	*/
-	/**
 	* SANITIZE_QUALITY
-	* SEC-065 / MEDIA-04 / MEDIA-05: $quality is interpolated into filesystem paths
-	* and URLs. Restrict it to a strict identifier grammar (alphanumeric, underscore,
-	* hyphen, dot) — note '<' is NOT allowed — and reject pure-dot tokens ('.'/'..')
-	* so it cannot escape the media root. Falls back to the original quality on mismatch.
-	* @param string $quality
-	* @return string
+	* SEC-065 / MEDIA-04 / MEDIA-05: validates and sanitizes $quality before it is
+	* interpolated into filesystem paths or URLs. Only alphanumeric characters,
+	* underscores, hyphens, and dots are permitted; pure-dot tokens ('.' / '..')
+	* are explicitly rejected to prevent directory traversal escapes.
+	* On a mismatch the method logs an ERROR and falls back to get_original_quality().
+	* Called by get_media_path_dir() and get_media_url_dir() on every invocation.
+	* @param string $quality - raw quality value to validate
+	* @return string - the original $quality if valid, or get_original_quality() on rejection
 	*/
 	private function sanitize_quality(string $quality) : string {
 
@@ -2479,6 +2842,20 @@ class component_media_common extends component_common {
 
 
 
+	/**
+	* GET_MEDIA_PATH_DIR
+	* Returns the absolute filesystem directory path for media files at the given
+	* quality level, e.g. '/srv/dedalo/media/pdf/web/0'.
+	*
+	* Path construction: DEDALO_MEDIA_PATH + folder + initial_media_path + '/' + quality + additional_path
+	* When external_source is set, the directory is derived from the external URL's
+	* dirname instead of the local media tree.
+	* $quality is sanitized through sanitize_quality() (SEC-065/MEDIA-04/MEDIA-05)
+	* before being appended to any path.
+	* @param string $quality - quality level, e.g. 'original', '1.5MB'
+	* @return string - absolute directory path (may not exist yet)
+	* @test true
+	*/
 	public function get_media_path_dir(string $quality) : string {
 
 		// SEC-065 / MEDIA-05: confine $quality before it reaches the filesystem path.
@@ -2506,10 +2883,15 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_MEDIA_URL_DIR
-	* 	Creates the relative URL path in current quality as
-	* 	'/dedalo/media/pd/standard'
-	* @param string $quality
-	* @return string $media_url_dir
+	* Returns the relative URL directory path for media files at the given quality level.
+	* Example: '/dedalo/media/image/standard/0'
+	*
+	* URL construction: DEDALO_MEDIA_URL + folder + initial_media_path + '/' + quality + additional_path
+	* Mirrors get_media_path_dir() but uses DEDALO_MEDIA_URL instead of DEDALO_MEDIA_PATH.
+	* Leading double-slashes are collapsed (e.g. '//dedalo/…' → '/dedalo/…').
+	* $quality is sanitized via sanitize_quality() for parity with get_media_path_dir().
+	* @param string $quality - quality level, e.g. 'standard'
+	* @return string - relative URL directory (no trailing slash)
 	* @test true
 	*/
 	public function get_media_url_dir(string $quality) : string {
@@ -2535,15 +2917,26 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_URL
-	* Get image url for current quality
+	* Builds the URL for the media file at the requested quality level.
 	*
-	* @param string|bool $quality = null
-	* @param bool $test_file = true
-	*	Check if file exists. If not use 0.jpg as output
-	* @param bool $absolute = false
-	* @param bool $default_add = true
-	* @return string|null $url
-	*	Return relative o absolute url
+	* Behaviour matrix:
+	* - External source configured: returns the external URL directly, ignoring all other params.
+	* - TM (time-machine) mode: scans the 'deleted/' sub-directory for the most recently
+	*   deleted file matching this component's id and returns its URL. This allows the UI
+	*   to preview what was current at a historical point in time.
+	* - Normal mode: constructs URL as get_media_url_dir(quality) + '/' + id + '.' + extension.
+	* - test_file=true: does a file_exists() check on disk. If the file is absent:
+	*   - default_add=false → returns null.
+	*   - default_add=true  → returns the Dédalo placeholder image (0.jpg from the theme).
+	* - absolute=true: prepends DEDALO_PROTOCOL + DEDALO_HOST for a fully-qualified URL.
+	*
+	* (!) The @param type annotation says "string|bool $quality" but the PHP signature
+	* uses ?string. The bool form is not meaningful — pass null or a string.
+	* @param ?string $quality = null - quality level; defaults to get_quality() when null or empty
+	* @param bool $test_file = false - if true, verify the file exists before returning the URL
+	* @param bool $absolute = false - if true, prepend protocol + host to produce absolute URL
+	* @param bool $default_add = false - if true, return placeholder URL when file is missing
+	* @return string|null - URL string, or null when test_file=true and file missing with default_add=false
 	* @test true
 	*/
 	public function get_url( ?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false ) : ?string {
@@ -2613,9 +3006,11 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_THUMB_URL
-	* Unified method to get thumbnail, posterframe, etc.
-	* Alias of get_url with fixed thumb quality
-	* @return string|null
+	* Returns the relative URL for the thumbnail/posterframe image.
+	* Convenience wrapper around get_url() that fixes the quality to get_thumb_quality().
+	* Uses test_file=false, absolute=false, default_add=false — returns null when the
+	* thumb does not yet exist (e.g. before create_thumb() has been called).
+	* @return string|null - relative thumbnail URL, or null when the thumb is absent
 	*/
 	public function get_thumb_url() : ?string {
 
@@ -2636,10 +3031,23 @@ class component_media_common extends component_common {
 
 	/**
 	* DELETE_NORMALIZED_FILES
-	* Remove all media versions that are different of the uploaded files (normalized files), including the alternative versions
-	* Remove in original and modified qualities only
-	* Keep the original uploaded files
-	* @return bool
+	* Removes all derived (transcoded/normalized) files for the 'normalized' quality
+	* levels (original + default, from get_normalized_ar_quality()), and all alternative
+	* extension variants, while preserving the raw uploaded source file.
+	*
+	* For each quality, the file is only moved to 'deleted/' if:
+	* - It exists on disk AND
+	* - Either no uploaded source exists for that quality (uploaded_file===null), OR
+	*   the file differs from the uploaded source (media_filepath !== uploaded_file)
+	*   AND the uploaded source itself exists.
+	*
+	* This ensures the raw upload is never accidentally deleted, even if it happens to
+	* share a path with the normalized output (e.g. when the upload extension matches
+	* the default extension and no conversion was needed).
+	*
+	* Called by regenerate_component() with delete_normalized_files=true before
+	* rebuilding versions from a freshly uploaded original.
+	* @return bool - true on success; false if any individual file move fails
 	*/
 	public function delete_normalized_files() : bool {
 
@@ -2717,10 +3125,29 @@ class component_media_common extends component_common {
 
 	/**
 	* REGENERATE_COMPONENT
-	* Force the current component to re-build and save its data
+	* Performs a full rebuild of this component's media pipeline from the stored
+	* original upload. This is the central entry-point for tool_update_cache and
+	* any batch re-processing workflow.
+	*
+	* Pipeline steps:
+	* 1. Optionally delete all derived files via delete_normalized_files()
+	*    (controlled by options->delete_normalized_files, default true).
+	* 2. Ensure the default quality file exists; build it from the original if missing
+	*    or if a stale version persists after a failed delete step.
+	* 3. Build any missing alternative-extension versions of the default quality.
+	* 4. Recreate the thumbnail.
+	* 5. Refresh files_info in component data via update_component_data_files_info()
+	*    (without saving yet).
+	* 6. Populate original_file_name, original_normalized_name, original_upload_date,
+	*    modified_normalized_name, and modified_upload_date in data[0] from disk state.
+	* 7. Save the component.
+	*
+	* Returns false when:
+	* - update_component_data_files_info() finds no files (data is null).
+	* - data[0] is not an object (corrupt data).
 	* @see class.tool_update_cache.php
-	* @param object|null $options=null
-	* @return bool
+	* @param object|null $options = null - { delete_normalized_files?: bool }
+	* @return bool - true on successful rebuild and save; false on any failure
 	* @test true
 	*/
 	public function regenerate_component( ?object $options=null ) : bool {
@@ -2915,13 +3342,15 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_MEDIA_FILEPATH
-	* Get full file path in local media
-	* @param string|null $quality = null
-	* 	Like 'original'
-	* @param string|null $extension = null
-	* 	Like 'avif'
-	* @return string $path
-	* 	complete absolute file path like '/Users/myuser/works/dedalo/media/images/dd152-1.jpg'
+	* Returns the complete absolute filesystem path for a specific quality + extension
+	* combination: get_media_path_dir(quality) + '/' + get_name() + '.' + extension.
+	*
+	* Falls back to get_quality() when $quality is null/empty, and to get_extension()
+	* when $extension is null/empty.
+	* Example result: '/srv/dedalo/media/images/1.5MB/0/rsc29_rsc170_1.avif'
+	* @param string|null $quality = null - quality level; defaults to active quality
+	* @param string|null $extension = null - file extension; defaults to primary extension
+	* @return string - absolute file path (may not exist yet)
 	* @test true
 	*/
 	public function get_media_filepath( ?string $quality=null, ?string $extension=null ) : string {
@@ -2946,10 +3375,11 @@ class component_media_common extends component_common {
 
 	/**
 	* SET_QUALITY
-	* Sync this quality value
-	* set value must be inside config ar_quality definition
-	* @param string $quality
-	* @return bool
+	* Sets the active quality level for this instance, validating it against the
+	* allowed list from get_ar_quality(). Rejected values are logged as ERROR and
+	* false is returned without modifying $this->quality.
+	* @param string $quality - desired quality level (must be in get_ar_quality())
+	* @return bool - true when the quality was accepted and set; false when rejected
 	* @test true
 	*/
 	public function set_quality(string $quality) : bool {
@@ -2972,11 +3402,16 @@ class component_media_common extends component_common {
 
 
 	/**
-	* FILE SIZE
-	* Get file physical size in bytes (or KB/MB)
-	* @param string $quality
-	* @return string|null $size
-	* 	(round to KB or MB with label like '256 KB')
+	* GET_SIZE
+	* Returns the human-readable file size for the given quality level's primary file.
+	* Values are rounded and returned with a unit suffix ('KB' or 'MB').
+	* Returns null when the file does not exist or filesize() fails.
+	*
+	* Note: the path is constructed without a directory separator between
+	* get_media_path_dir() and get_name(), relying on get_media_path_dir() NOT
+	* ending with a slash. If that invariant ever changes, a '/' must be inserted.
+	* @param string $quality - quality level to check (e.g. 'standard')
+	* @return string|null - size string like '256 KB' or '1 MB', or null on error
 	* @test true
 	*/
 	public function get_size(string $quality) : ?string {
@@ -3010,10 +3445,18 @@ class component_media_common extends component_common {
 
 	/**
 	* RESTORE_COMPONENT_MEDIA_FILES
-	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
-	* Is triggered when tool_time_machine recover a section
+	* Restores the most recently deleted media file for each quality level by moving
+	* it back from the 'deleted/' sub-directory to the live media path.
+	*
+	* Files in 'deleted/' are named with a datestamp suffix (e.g. 'id_deleted_2024-11-15_1430.jpg').
+	* natsort() is applied to the glob result so that the lexicographically last entry
+	* (i.e. the most recent deletion) is selected via end().
+	*
+	* Skips qualities for which no deleted file is found (with a WARNING log) rather than
+	* failing the whole operation. Returns true if at least one file was restored.
+	* Triggered by tool_time_machine::recover_section_from_time_machine.
 	* @see tool_time_machine::recover_section_from_time_machine
-	* @return bool
+	* @return bool - true if at least one file was restored; false if none could be moved
 	* @test true
 	*/
 	public function restore_component_media_files() : bool {
@@ -3074,14 +3517,27 @@ class component_media_common extends component_common {
 
 
 	/**
-	* BUILD_VERSION - Overwrite in each component for real process
-	* Creates a new version based on target quality
-	* (!) Note that this generic method only copy files,
-	* to real process, overwrite in each component !
-	* @param string $quality
-	* @param bool $async = true
-	* @param bool $save = true
-	* @return object $response
+	* BUILD_VERSION
+	* Creates a quality-level derivative from the original file. This base implementation
+	* is a fallback that simply copies the original to the target quality directory.
+	*
+	* (!) Concrete subclasses MUST override this method to perform real transcoding or
+	* resizing (component_image uses ImageMagick, component_av uses FFmpeg, etc.).
+	* This copy-only default is intentional so that simple component types (component_svg)
+	* can inherit a working pipeline without transcoding logic.
+	*
+	* Special case: when the target quality is the thumb quality, delegates immediately
+	* to create_thumb() and returns its result.
+	*
+	* After copying, alternative-extension versions are built via create_alternative_version()
+	* for each extension in get_alternative_extensions().
+	* When $save=true, save() is called after all versions are built.
+	*
+	* CLI progress output (common::$pdata) is emitted when running_in_cli()===true.
+	* @param string $quality - target quality level to build (e.g. '1.5MB')
+	* @param bool $async = true - passed to subclass overrides (unused in base class)
+	* @param bool $save = true - if true, call save() after building
+	* @return object $response - {result: bool, msg: string, errors: string[]}
 	* @test true
 	*/
 	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
@@ -3236,9 +3692,19 @@ class component_media_common extends component_common {
 
 	/**
 	* UPDATE_COMPONENT_DATA_FILES_INFO
-	* Get component files info reading current media and
-	* updates the component data. Does not save!
-	* @return bool
+	* Scans the filesystem via get_files_info() and writes the result into the
+	* component's in-memory data array under data[0]->files_info. Does NOT call save().
+	*
+	* Three data states are handled:
+	* - data[0] already exists and is an object: replace only its files_info property.
+	* - data[0] does not exist and files_info is non-empty: create a new data[0] object.
+	* - data[0] does not exist and files_info is empty and data is empty: set data to null.
+	* - data[0] does not exist but data already has content (unit-test case): leave as is.
+	*
+	* This method is the single authoritative writer of files_info into component data.
+	* It is called by save() before every parent::save() so that the JSONB column always
+	* reflects the current filesystem state.
+	* @return bool - true on success; false when data[0] is not an object (data corruption)
 	* @test true
 	*/
 	protected function update_component_data_files_info() : bool {
@@ -3310,8 +3776,11 @@ class component_media_common extends component_common {
 
 	/**
 	* SAVE
-	* Update component data reading media files before save
-	* @return bool
+	* Overrides component_common::save() to refresh files_info from the filesystem
+	* before persisting component data to the database.
+	* update_component_data_files_info() is always called first; if it finds no files
+	* and sets data to null, the parent save will store null in the JSONB column.
+	* @return bool - result of parent::save()
 	* @test true
 	*/
 	public function save() : bool {
@@ -3329,12 +3798,16 @@ class component_media_common extends component_common {
 
 	/**
 	* CREATE_ALTERNATIVE_VERSION
-	* Render a new alternative_version file from given quality and target extension.
-	* This method overwrites any existing file with same path
-	* @param string $quality
-	* @param string $extension
-	* @param object|null $options = null
-	* @return bool
+	* Stub for rendering a single alternative-format derivative (e.g. a WebP file from
+	* a JPEG original). The base implementation does nothing useful — it only logs a
+	* WARNING and returns true so the pipeline can continue without crashing.
+	*
+	* (!) Concrete subclasses must override this method to produce real alternative files.
+	* For example, component_image uses ImageMagick to convert to WebP/AVIF.
+	* @param string $quality - source quality level (e.g. 'standard')
+	* @param string $extension - target extension for the alternative (e.g. 'webp')
+	* @param object|null $options = null - component-specific conversion options
+	* @return bool - always true in the base class (see subclass overrides for real results)
 	*/
 	public function create_alternative_version( string $quality, string $extension, ?object $options=null ) : bool {
 
@@ -3350,10 +3823,11 @@ class component_media_common extends component_common {
 
 	/**
 	* CREATE_ALTERNATIVE_VERSIONS
-	* Render all alternative_version files in all quality versions.
-	* This method overwrites any existing file with same path
-	* @param object|null $options = null
-	* @return bool
+	* Iterates all quality levels × all alternative extensions and calls
+	* create_alternative_version() for each combination. Skips the thumb quality.
+	* This method overwrites any existing file with the same target path.
+	* @param object|null $options = null - forwarded to create_alternative_version()
+	* @return bool - always true (delegates success/failure tracking to the caller)
 	*/
 	public function create_alternative_versions( ?object $options=null ) : bool {
 
@@ -3379,9 +3853,14 @@ class component_media_common extends component_common {
 
 
 	/**
-	* DELETE_thumb
-	* Remove thumb file version from disk
-	* @return bool
+	* DELETE_THUMB
+	* Hard-deletes the thumbnail file from disk using unlink().
+	* Unlike remove_component_media_files() this is a direct deletion, not a soft
+	* move-to-deleted — thumbnail regeneration is cheap so versioned backup is
+	* unnecessary.
+	* After unlinking, save() is called to update files_info to reflect the absence.
+	* Returns false and logs an ERROR if unlink fails (e.g. permissions issue).
+	* @return bool - true on success; false when unlink fails
 	*/
 	public function delete_thumb() {
 
@@ -3411,8 +3890,15 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_REGENERATE_OPTIONS
-	* Used by tool_update_cache to get custom regeneration options from component
-	* @return array|null $options
+	* Returns the list of configurable option descriptors exposed to tool_update_cache
+	* for batch regeneration runs. Each descriptor defines a parameter name, type,
+	* and default value that the tool UI surfaces to the operator.
+	*
+	* Currently exposes:
+	* - delete_normalized_files (boolean, default false): when true, derived files are
+	*   removed before rebuilding, ensuring a clean slate. Default is false to avoid
+	*   accidental mass-deletion in cautious batch runs.
+	* @return array|null - option descriptor objects, or null when none are defined
 	*/
 	public static function get_regenerate_options() : ?array {
 

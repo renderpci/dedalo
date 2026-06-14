@@ -14,11 +14,18 @@
 * - is_indexable: relation -> {is_indexable_tipo} -> first locator -> section_id == 1
 * - is_descriptor: relation -> {is_descriptor_tipo} -> first locator -> section_id (1|2)
 *
-* IMPORTANT: every public method returns null when anything cannot be resolved
+* (!) IMPORTANT: every public method returns null when anything cannot be resolved
 * (unknown table, missing section_map, query failure). Callers MUST fall back
 * to the legacy component-based path in that case — never assume the batch
 * succeeded. Output parity with the legacy path is covered by
 * test/server/ts_object/ts_object_Test.php and component_relation_children_Test.php.
+*
+* This class holds no instance state; all methods are static. It is not
+* auto-loaded by the standard per-directory convention — ts_object.php
+* explicitly requires it with require_once before use.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class ts_node_repository {
 
@@ -27,13 +34,26 @@ class ts_node_repository {
 	/**
 	* FETCH_NODE_INFO
 	* Resolves order value and is_indexable flag for a set of node locators
-	* with one query per section_tipo group.
+	* with one query per section_tipo group, replacing per-child component
+	* instantiations in the ts_object hot path.
+	*
+	* The returned order value is formatted to match exactly what
+	* component_number::set_format_form_type produces so that sort order is
+	* identical to the legacy path. The is_indexable flag replicates the
+	* ts_object::is_indexable logic: hierarchy/ontology roots, sections with no
+	* resolvable model, and sections with no is_indexable tipo in their section_map
+	* are always false.
+	*
+	* Nodes that have no matrix row (e.g. never saved) are filled in with
+	* { order: null, is_indexable: false }, matching what the legacy component
+	* path returns for empty data.
+	*
 	* @param array $locators
 	* 	Array of objects with section_tipo and section_id properties
 	* @return array|null $info
 	* 	Map keyed by "{section_tipo}_{section_id}" of objects:
 	* 	{ order: int|float|string|null, is_indexable: bool }
-	* 	null when resolution failed (caller must use the legacy path)
+	* 	null when resolution failed (caller must fall back to the legacy path)
 	*/
 	public static function fetch_node_info( array $locators ) : ?array {
 
@@ -51,12 +71,20 @@ class ts_node_repository {
 		foreach ($groups as $section_tipo => $section_ids) {
 
 			// table
+			// common::get_matrix_table_from_tipo resolves the physical PostgreSQL
+			// table name from the section tipo (e.g. 'dd1' → 'matrix'). Returns
+			// null/empty for sections that have no matrix table (e.g. virtual types).
 				$table = common::get_matrix_table_from_tipo($section_tipo);
 				if (empty($table)) {
 					return null;
 				}
 
 			// section_map tipos. Same source the legacy component path uses.
+			// order_tipo and is_indexable_tipo come from the thesaurus sub-object
+			// of the section_map, which is configured per-project in the ontology.
+			// safe_tipo() validates the regex pattern [a-z]{2,}[0-9]+ and returns
+			// false on invalid input; a false result means we cannot safely embed
+			// the tipo in SQL, so we abort the whole batch.
 				$section_map		= section::get_section_map($section_tipo);
 				$order_tipo			= $section_map->thesaurus->order ?? null;
 				$is_indexable_tipo	= $section_map->thesaurus->is_indexable ?? null;
@@ -69,6 +97,7 @@ class ts_node_repository {
 			// order component number format. component_number::get_data formats
 			// every value (set_format_form_type); read the same ontology
 			// properties so output types match the legacy path exactly.
+			// When the order_tipo is missing we skip the ontology lookup entirely.
 				$order_number_type		= null;
 				$order_number_precision	= 2;
 				if ($safe_order_tipo!==null) {
@@ -78,13 +107,19 @@ class ts_node_repository {
 				}
 
 			// is_indexable section level rules (replicated from ts_object::is_indexable):
-			// hierarchy/ontology roots are never indexable; missing or false map → false
+			// hierarchy/ontology roots are never indexable; missing or false map → false.
+			// Checking the model here avoids issuing the query for section tipos that
+			// the legacy path would also silently skip.
 				$indexable_possible = $safe_indexable_tipo!==null
 					&& strpos($section_tipo, 'hierarchy')!==0
 					&& strpos($section_tipo, 'ontology')!==0
 					&& !empty(ontology_node::get_model_by_tipo($section_tipo, true));
 
 			// one query for the whole group
+			// Both columns are extracted directly from the JSONB matrix column using
+			// the ->>'key' operator. NULL is projected when the tipo key is absent.
+			// The ANY($2::int[]) predicate lets us pass the full id list as a single
+			// PostgreSQL array parameter, avoiding one round-trip per node.
 				$order_select = $safe_order_tipo!==null
 					? "number->'".$safe_order_tipo."'->0->>'value'"
 					: 'NULL';
@@ -118,12 +153,18 @@ class ts_node_repository {
 
 					// order. The legacy path reads component get_data()[0]->value
 					// which component_number formats; apply the same formatting.
+					// pg_fetch_assoc always returns strings; cast to native numeric
+					// before formatting so round() receives the right type.
 					$order_value = $row['order_value'];
 					if ($order_value!==null && is_numeric($order_value)) {
 						$order_value = $order_value + 0; // restore native int|float
 					}
 					$order_value = self::format_number_value($order_value, $order_number_type, $order_number_precision);
 
+					// is_indexable. The legacy path loads the component and checks
+					// whether the first stored locator has section_id === 1 (the
+					// "indexable" sentinel value). We replicate the same integer
+					// comparison here against the raw JSONB value.
 					$is_indexable = $indexable_possible
 						&& $row['indexable_value']!==null
 						&& (int)$row['indexable_value']===1;
@@ -158,11 +199,22 @@ class ts_node_repository {
 	* a set of node locators with one query per section_tipo group.
 	* Replicates the legacy per-node read: first locator of the is_descriptor
 	* relation group → (int)section_id.
+	*
+	* Used by ts_object::has_children_of_type to determine whether any child is
+	* a descriptor-type or non-descriptor-type term without instantiating one
+	* component per grandchild. The sentinel values (1/2) match the relation
+	* component's section_id convention for descriptor classification.
+	*
+	* Sections whose model cannot be resolved or whose section_map lacks an
+	* is_descriptor tipo are assigned null flags (matching the legacy skip
+	* behaviour) rather than causing the whole batch to abort. This is different
+	* from fetch_node_info, which aborts on the first unresolvable section.
+	*
 	* @param array $locators
 	* 	Array of objects with section_tipo and section_id properties
 	* @return array|null $flags
 	* 	Map keyed by "{section_tipo}_{section_id}" of int|null flag values.
-	* 	null when resolution failed (caller must use the legacy path)
+	* 	null when resolution failed (caller must fall back to the legacy path)
 	*/
 	public static function batch_descriptor_flags( array $locators ) : ?array {
 
@@ -190,6 +242,9 @@ class ts_node_repository {
 				}
 
 			// section_map is_descriptor tipo
+			// Unlike fetch_node_info, a missing is_descriptor tipo per section is
+			// not a fatal error — the entire section's nodes are assigned null so
+			// the caller can handle them the same way the legacy loop does (skip).
 				$section_map		= section::get_section_map($section_tipo);
 				$is_descriptor_tipo	= $section_map->thesaurus->is_descriptor ?? null;
 				if (empty($is_descriptor_tipo)) {
@@ -211,6 +266,8 @@ class ts_node_repository {
 				}
 
 			// one query for the whole group
+			// Extracts the section_id of the first stored locator under the
+			// is_descriptor relation key directly from the JSONB column.
 				$sql = '
 					SELECT section_id,
 						relation->\''.$safe_descriptor_tipo.'\'->0->>\'section_id\' AS descriptor_value
@@ -256,11 +313,24 @@ class ts_node_repository {
 	* FORMAT_NUMBER_VALUE
 	* Replicates component_number::set_format_form_type so batched order values
 	* carry exactly the same type and rounding as the legacy component reads.
+	*
+	* The type and precision arguments must be read from the order component's
+	* ontology node properties (properties->type and properties->precision) so
+	* that the output matches the formatted value produced by component_number.
+	*
+	* When $value is empty and not the integer 0, null is returned — matching
+	* the component's behaviour for unset data. The default precision of 2
+	* mirrors the component_number default.
+	*
 	* @param mixed $value
+	* 	Raw string extracted from PostgreSQL JSONB (pg_fetch_assoc always returns strings)
 	* @param string|null $type
-	* 	The order component ontology properties->type ('int'|'float'|null)
-	* @param int|float $precision
+	* 	The order component ontology properties->type ('int'|'float'|null).
+	* 	Null defaults to float formatting.
+	* @param int|float $precision = 2
+	* 	Decimal places to use when rounding a float value.
 	* @return int|float|string|null
+	* 	Formatted numeric value, or null for missing/empty input
 	*/
 	private static function format_number_value( mixed $value, ?string $type, int|float $precision=2 ) : int|float|string|null {
 
@@ -296,9 +366,16 @@ class ts_node_repository {
 	/**
 	* GROUP_LOCATORS
 	* Groups locator section_ids by section_tipo, validating shape.
+	*
+	* Each locator must be an object with both section_tipo (string) and
+	* section_id (numeric) properties. Any malformed locator causes the entire
+	* grouping to fail (returns null) so callers fall back to the legacy path
+	* rather than silently operating on a partial set.
+	*
 	* @param array $locators
+	* 	Array of objects with section_tipo and section_id properties
 	* @return array|null $groups
-	* 	Map section_tipo => array of int section_ids, null on invalid input
+	* 	Map section_tipo => array of int section_ids, or null on invalid input
 	*/
 	private static function group_locators( array $locators ) : ?array {
 

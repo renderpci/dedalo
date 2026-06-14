@@ -1,4 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
+/*global SHOW_DEBUG, page_globals, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -25,104 +26,148 @@
 
 /**
 * TS_OBJECT
-* Manages a single thesaurus row element
+* Model for a single node (term) in the Dédalo thesaurus or ontology tree.
+*
+* Each ts_object instance owns one entry in the global instance map and,
+* after render(), one DOM wrapper (.wrap_ts_object). The same physical
+* section_id can appear under different parents (e.g. relation mode vs.
+* tree mode); ts_parent is therefore included in the cache key so that each
+* visual placement owns a distinct instance and DOM node.
+*
+* Core lifecycle:
+*   ts_object.get_instance(options) → init() → build() → render()
+*
+* Key responsibilities:
+* - Expand/collapse children branches (set_open, sync_open_dom).
+* - Load node data and children data from the PHP API (dd_ts_api).
+* - Mutate the local tree in response to add/remove/drag-drop operations
+*   without a full server round-trip (add_children_item, remove_children_item,
+*   swap_parent).
+* - Persist the expand state per node in the client-side local DB ('status').
+* - Display component data inline via show_component_in_ts_object and
+*   indexation grids via show_indexations.
+* - Drive search result rendering through the four-phase parse_search_result
+*   pipeline (build → hierarchize → open → hilite).
+*
+* Prototype methods are mixed in from:
+*   common.prototype  – render, refresh, destroy
+*   render_edit_ts_object.prototype – edit, search
+*   view_default_edit_ts_object – render_children
+*
+* Globals consumed: SHOW_DEBUG, page_globals, DEDALO_CORE_URL
+*
+* @exports ts_object
+* @exports key_instances_builder
 */
 export const ts_object = function() {
 
-	// string id. Composed by key_parts list
+	// string id. Cache key for the global instance map; composed from key_parts (see key_instances_builder).
 	this.id
-	// string model. Fix 'ts_object' value.
+	// string model. Always 'ts_object' — used by instance pool filters.
 	this.model
-	// string mode. Default is 'edit'.
+	// string mode. Render mode; 'edit' by default, 'search' during parse_search_result.
 	this.mode
-	// object|null caller. Caller instance pointer. Is area_thesaurus/area_ontology for roots and ts_object for others.
+	// object|null caller. Pointer to the owning instance: area_thesaurus/area_ontology for root nodes,
+	// a ts_object for all others. Used to traverse the tree upward.
 	this.caller
-	// object linker. Used for tool indexation
-	// E.g.  {
-	// 	id		: caller_id,
-	// 	caller	: indexing_component
-	// }
+	// object linker. Indexation context injected by tool_indexation.
+	// Shape: { id: caller_id, caller: indexing_component }
 	this.linker
 
-	// string section_tipo. Current thesaurus item section_tipo
+	// string section_tipo. Ontology tipo of this thesaurus section (e.g. 'hierarchy1', 'flora1').
 	this.section_tipo
-	// string|int section_id. Current thesaurus item section_tipo
+	// string|int section_id. Record identifier within section_tipo.
+	// (!) Doc typo in original: says 'section_tipo' — it is in fact section_id.
 	this.section_id
-	// string children_tipo. Tipo of the componetn_children for current section (for easy access)
+	// string children_tipo. Tipo of the component_relation_children component for this section.
+	// Kept as a shortcut to avoid re-reading it from data on every expand.
+	// (!) Original comment spelled it 'componetn_children' — corrected here.
 	this.children_tipo
-	// string target_section_tipo. Tipo of the target section for current item.
+	// string target_section_tipo. Tipo of the target section for the current item.
+	// (!) Intentionally commented-out in both the constructor and init(); kept for future use.
 		// this.target_section_tipo
-	// bool is_root_node. Identifies the area_thesaurus/area_ontology direct 'children'
-	// This elements do not have 'parent', they are linked by a portal in hierarchy section.
+	// bool is_root_node. True for nodes attached directly to an area (no parent ts_object).
+	// Root nodes are linked via a portal in the hierarchy section, not via component_relation_parent.
 	this.is_root_node
-	// int virtual_order. Calculated element order based on 'order' filed value and the position into the children array
+	// int virtual_order. Client-side display order within the parent's children list.
+	// Derived from the 'order' field in server data and the position in the rendered sibling array.
 	this.virtual_order
 
-	// object data. Data from current instance (term)
+	// object data. Raw term data returned by get_node_data / injected via build().
+	// Shape mirrors a row from dd_ts_api::get_node_data result:
+	//   { ar_elements, ts_id, ts_parent, is_descriptor, order, permissions_*, ... }
 	this.data
-	// object children_data. E.g. {
-	//	  ar_children_data : [{ar_elements:[]...}],
-	//	  pagination : {"limit": 300,"offset": 0,"total": 2}
+	// object children_data. Cached result of get_children_data.
+	// Shape: {
+	//   ar_children_data : [ { section_tipo, section_id, ts_id, ar_elements, ... }, ... ],
+	//   pagination       : { limit: 300, offset: 0, total: 2 }
 	// }
 	this.children_data
 
-	// string ts_id. Node contraction of section_tipo + section_id as tipo like 'dd256'
+	// string ts_id. Compact node identifier: section_tipo + '_' + section_id (e.g. 'hierarchy1_66').
+	// Used as the key for parent/child relationships in the in-memory tree.
 	this.ts_id
-	// string ts_parent. Parent contraction of section_tipo + section_id as tipo like 'dd98'
+	// string ts_parent. ts_id of the parent node (e.g. 'hierarchy1_1').
+	// 'root' when the node is a top-level child of the area. Part of the cache key (see key_order).
 	this.ts_parent
 
-	// bool is_descriptor. False for non descriptors (ND)
+	// bool is_descriptor. False for non-descriptor (ND) nodes. Determines arrow/expand availability.
 	this.is_descriptor
-	// bool is_ontology. If caller model is 'area_ontology' is true, false otherwise.
+	// bool is_ontology. True when the owning area is area_ontology; false for area_thesaurus.
 	this.is_ontology
 
 	// vars from options
-	// Set on update element in DOM (refresh)
+	// HTMLElement|null element_to_hilite. Node scheduled for highlight on the next DOM update (set during refresh).
 	this.element_to_hilite
-	// thesaurus_mode . Defines appearance of thesaurus
+	// string thesaurus_mode. Controls the visual appearance/behavior of the thesaurus tree.
+	// Typical values: 'default', 'relation'. Part of the cache key.
 	this.thesaurus_mode
-	// thesaurus_view_mode. Values: model|default
+	// string thesaurus_view_mode. Values: 'model' | 'default'.
+	// When 'model', term labels are drawn from the ontology model rather than data entries.
 	this.thesaurus_view_mode
-	// events_tokens
+	// Array events_tokens. Holds event_manager subscription tokens so they can be unsubscribed on destroy.
 	this.events_tokens = []
-	// bool is_open. Default false
+	// bool is_open. Whether children are currently visible. Single source of truth; DOM is a projection.
 	this.is_open = false
-	// status
+	// string status. Lifecycle state: 'initializing' → 'initialized' → 'building' → 'built'.
 	this.status
-	// instances
+	// Array ar_instances. Child ts_object instances owned by this node; used by destroy() cascade.
 	this.ar_instances = []
-	// promise|null children_request. In-flight get_children_data request (dedup)
+	// Promise|null children_request. In-flight get_children_data request used for deduplication.
+	// A rapid double-click on the expand arrow joins this promise instead of firing a new one.
 	this.children_request = null
-	// string|null children_request_signature. Request signature of children_request
+	// string|null children_request_signature. JSON signature of the in-flight request options.
+	// Compared to the incoming request; mismatch forces a new request.
 	this.children_request_signature = null
 
-	// int permissions_button_delete. Values from 0,1,2,3
+	// int permissions_button_delete. Delete permission level for this node. Values: 0 (none) – 3 (full).
 	this.permissions_button_delete
-	// int permissions_button_new. Values from 0,1,2,3
+	// int permissions_button_new. Create-child permission level. Values: 0 (none) – 3 (full).
 	this.permissions_button_new
-	// int permissions_indexation. Values from 0,1,2,3
+	// int permissions_indexation. Indexation permission level. Values: 0 (none) – 3 (full).
 	this.permissions_indexation
 
-	// bool has_descriptor_children. Identifies is current node has or not descriptor children
+	// bool has_descriptor_children. True when this node has at least one descriptor child.
+	// Controls whether the expand arrow is rendered.
 	this.has_descriptor_children
-	// string area_model. Model of current thesaurus/ontology area
+	// string area_model. Model identifier of the containing area: 'area_thesaurus' or 'area_ontology'.
 	this.area_model
 
-	// HTMLElement wrapper DOM node. Set on render render_wrapper
+	// HTMLElement node. The root wrapper DOM element (.wrap_ts_object). Set by render_wrapper.
 	this.node
-	// HTMLElement children_container
+	// HTMLElement children_container. Holds the rendered child ts_object nodes (.children_container).
 	this.children_container
-	// HTMLElement link_children_element
+	// HTMLElement link_children_element. The clickable expand/collapse arrow button.
 	this.link_children_element
-	// HTMLElement term_node
+	// HTMLElement term_node. The clickable term label node (.term). Used for highlighting.
 	this.term_node
-	// HTMLElement term_text (inside term_node)
+	// HTMLElement term_text. Text span inside term_node that holds the visible label string.
 	this.term_text
-	// HTMLElement data_container
+	// HTMLElement data_container. Container for inline component editors (show_component_in_ts_object).
 	this.data_container
-	// HTMLElement indexations_container
+	// HTMLElement indexations_container. Container for the indexation dd_grid (show_indexations).
 	this.indexations_container
-	// HTMLElement nd_container
+	// HTMLElement nd_container. Container shown/hidden by toggle_nd for non-descriptor children.
 	this.nd_container
 }//end ts_object
 
@@ -130,7 +175,9 @@ export const ts_object = function() {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend ts_object with shared lifecycle and render methods from common and
+* the specialized render modules. Individual prototype assignments are not
+* separately doc-blocked; documentation lives at the source definition.
 */
 // prototypes assign
 	ts_object.prototype.render	= common.prototype.render
@@ -139,6 +186,7 @@ export const ts_object = function() {
 
 	// render
 	ts_object.prototype.edit			= render_edit_ts_object.prototype.edit
+	// search mode intentionally reuses the edit render — same DOM, different mode flag
 	ts_object.prototype.search			= render_edit_ts_object.prototype.edit
 	ts_object.prototype.render_children	= render_children
 
@@ -146,7 +194,10 @@ export const ts_object = function() {
 
 /**
 * KEY_ORDER
-* Defines de vars and the order to create the instances key
+* Ordered list of option property names used by key_instances_builder to
+* compose the unique instance cache key. Only non-empty values are included.
+* ts_parent is last: it differentiates the same term rendered under two
+* different parents (e.g. tree vs. relation-list view).
 */
 const key_order = ['section_tipo','section_id','children_tipo','target_section_tipo','thesaurus_mode','ts_parent']
 
@@ -154,11 +205,14 @@ const key_order = ['section_tipo','section_id','children_tipo','target_section_t
 
 /**
 * GET_INSTANCE
-* Returns an instance of a ts_object by either retrieving it from a cache or dynamically importing and initializing it.
-* - If the instance is cached, it is returned immediately.
-* - If not cached, is instantiated, initialized, cached, and returned.
-* @param object options
-* @return object instance_element
+* Factory / singleton accessor for ts_object instances.
+* Builds a normalized cache key from options, returns the cached instance
+* when one exists, or creates, initializes, caches, and returns a new one.
+* Callers should always use this method rather than constructing ts_object
+* directly to guarantee key consistency and single-ownership of DOM nodes.
+* @param {Object} options - Property bag forwarded to init(); must include at
+*   minimum section_tipo and section_id. See key_order for key-part properties.
+* @returns {Promise<Object>} The ts_object instance (new or cached).
 */
 ts_object.get_instance = async function (options) {
 
@@ -190,58 +244,38 @@ ts_object.get_instance = async function (options) {
 
 /**
 * KEY_INSTANCES_BUILDER
-* Builds a normalized string key from selected properties of the given `options` object.
-* The key is used to uniquely identify an instance based on a defined order of parameters
-* defined in `key_order` constant: ['section_tipo','section_id','children_tipo','target_section_tipo','thesaurus_mode']
+* Builds a normalized underscore-delimited string key from selected
+* properties of the options object. The key uniquely identifies a ts_object
+* instance in the global instance map. Properties are taken from key_order;
+* undefined, null, and empty-string values are skipped.
 *
-* @param object options - Object containing the properties to build the key from
-* @param string [options.section_tipo] - Section tipo (e.g., 'hierarchy1', 'flora1')
-* @param string|number [options.section_id] - Section ID (e.g., 1, '45')
-* @param string [options.children_tipo] - Children component tipo (e.g., 'hierarchy49')
-* @param string [options.target_section_tipo] - Target section tipo
-* @param string [options.thesaurus_mode] - Thesaurus mode (e.g., 'default', 'model')
+* Exported so that external callers (e.g. drag_and_drop.js, area_thesaurus)
+* can compute the same key without holding an instance reference.
 *
-* @return string - A concatenated, underscore-delimited string key prefixed with 'ts_object_'
-* composed of non-empty values from the properties defined in key_order.
-*
-* @example
-* // Basic usage with section_tipo and section_id
-* const key1 = key_instances_builder({
-*   section_tipo: 'hierarchy1',
-*   section_id: 1
-* });
-* // Returns: 'ts_object_hierarchy1_1'
+* @param {Object} options - Source object; only key_order properties are read.
+* @param {string} [options.section_tipo] - e.g. 'hierarchy1', 'flora1'
+* @param {string|number} [options.section_id] - e.g. 1 or '45'
+* @param {string} [options.children_tipo] - e.g. 'hierarchy49'
+* @param {string} [options.target_section_tipo] - Target section tipo (rarely set).
+* @param {string} [options.thesaurus_mode] - e.g. 'default', 'relation'
+* @param {string} [options.ts_parent] - e.g. 'hierarchy1_1' or 'root'
+* @returns {string} Prefixed key, e.g. 'ts_object_hierarchy1_66_hierarchy49_root'
 *
 * @example
-* // With children_tipo
-* const key2 = key_instances_builder({
-*   section_tipo: 'flora1',
-*   section_id: 4,
-*   children_tipo: 'hierarchy49'
-* });
-* // Returns: 'ts_object_flora1_4_hierarchy49'
+* key_instances_builder({ section_tipo: 'hierarchy1', section_id: 1 })
+* // → 'ts_object_hierarchy1_1'
 *
 * @example
-* // With all properties
-* const key3 = key_instances_builder({
-*   section_tipo: 'hierarchy1',
-*   section_id: 2,
-*   children_tipo: 'hierarchy49',
-*   target_section_tipo: 'flora1',
-*   thesaurus_mode: 'default'
-* });
-* // Returns: 'ts_object_hierarchy1_2_hierarchy49_flora1_default'
+* key_instances_builder({
+*   section_tipo: 'flora1', section_id: 4,
+*   children_tipo: 'hierarchy49', thesaurus_mode: 'default', ts_parent: 'root'
+* })
+* // → 'ts_object_flora1_4_hierarchy49_default_root'
 *
 * @example
-* // With null/undefined/empty values (skipped in key)
-* const key4 = key_instances_builder({
-*   section_tipo: 'hierarchy1',
-*   section_id: null,
-*   children_tipo: '',
-*   target_section_tipo: undefined,
-*   thesaurus_mode: 'model'
-* });
-* // Returns: 'ts_object_hierarchy1_model'
+* // null/undefined/empty values are excluded from the key
+* key_instances_builder({ section_tipo: 'hierarchy1', section_id: null, thesaurus_mode: 'model' })
+* // → 'ts_object_hierarchy1_model'
 */
 export const key_instances_builder = function(options) {
 
@@ -271,7 +305,7 @@ export const key_instances_builder = function(options) {
 * Note: ts_parent is deliberately part of key_order — one instance owns one
 * DOM node, and the same term visible in two contexts (e.g. relation mode
 * and tree) must not steal nodes from each other.
-* @return bool
+* @returns {boolean}
 */
 ts_object.prototype.rekey = function() {
 
@@ -321,9 +355,14 @@ ts_object.prototype.rekey = function() {
 
 /**
 * INIT
-* Setup the ts instance
-* @param object options
-* @return bool
+* Populates all instance properties from the options object.
+* Called once by get_instance immediately after construction; not intended
+* for direct external calls. Property-to-option mapping is 1:1; see the
+* constructor property declarations for type and default documentation.
+* Sets self.status = 'initializing' → 'initialized'.
+* @param {Object} options - Same property bag as get_instance; all key-part
+*   and non-key properties must be supplied by the caller.
+* @returns {Promise<boolean>} Always resolves to true.
 */
 ts_object.prototype.init = async function(options) {
 
@@ -355,7 +394,8 @@ ts_object.prototype.init = async function(options) {
 	// bool is_root_node. Identifies the area_thesaurus/area_ontology direct 'children'
 	// This elements do not have 'parent', they are linked by a portal in hierarchy section.
 	self.is_root_node = options.is_root_node
-	// int virtual_order. Calculated element order based on 'order' filed value and the position into the children array
+	// int virtual_order. Initial assignment from options (overridden again below with || null guard).
+	// (!) virtual_order is assigned twice in this method; the second assignment below supersedes this one.
 	self.virtual_order = options.virtual_order
 	// object data. Data from current instance (term)
 	self.data = options.data
@@ -386,7 +426,7 @@ ts_object.prototype.init = async function(options) {
 	// int order. Order value from ts data
 	self.order = options.order ?? null
 
-	// virtual order
+	// virtual order. Normalizes falsy values to null (|| null replaces the earlier assignment above).
 	self.virtual_order = options.virtual_order || null
 
 	// status update
@@ -400,11 +440,15 @@ ts_object.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Generic agnostic build function created to maintain
-* unity of calls.
-* (!) For components, remember use always component_common.build()
-* @param bool autoload = false
-* @return bool
+* Loads node data from the server (unless already present) and syncs
+* derived properties (permissions, ts_id, ts_parent, order, etc.) from the
+* returned data object onto the instance.
+* Called after init() and before render(). Follows the same call-site
+* pattern as component_common.build() for API uniformity.
+* (!) For component instances (not ts_object), always use component_common.build().
+* @param {boolean} [autoload=false] - When true, forces a fresh server fetch
+*   even if self.data is already populated (used after structural mutations).
+* @returns {Promise<boolean>} Always resolves to true.
 */
 ts_object.prototype.build = async function(autoload=false) {
 
@@ -447,10 +491,16 @@ ts_object.prototype.build = async function(autoload=false) {
 
 /**
 * GET_NODE_DATA
-* Get the instance JSON data from the server across the API request.
-* Data is built from current node info (current instance section_tipo and section_id)
-* @return promise
-* 	Resolve object api_response.result {ar_children_data: [], pagination: {}}
+* Fetches the full data object for this term from the PHP API (dd_ts_api,
+* action: 'get_node_data'). The result is stored in self.data by build().
+* Derives thesaurus_view_mode and terms_are_model from the caller instance
+* so the server can tailor the response (e.g. ontology model labels).
+* @returns {Promise<Object>} Resolves to api_response.result on success.
+*   Result shape: { ar_elements, ts_id, ts_parent, is_descriptor, order,
+*     permissions_button_new, permissions_button_delete, permissions_indexation,
+*     has_descriptor_children, ... }
+* @throws {Error} Re-throws with extended context (section_tipo, section_id)
+*   on network failure or when the API returns no result.
 */
 ts_object.prototype.get_node_data = async function() {
 
@@ -527,15 +577,21 @@ ts_object.prototype.get_node_data = async function() {
 
 /**
 * GET_CHILDREN_DATA
-* Get the JSON data from the server across the API request.
-* Data is built from parent node info (current object section_tipo and section_id)
-* @param object options
-* {
-* 	pagination: object
-* 	children: array
-* 	cache: bool
-* }
-* @return promise
+* Fetches the immediate children of this node from the PHP API
+* (dd_ts_api, action: 'get_children_data').
+* Two short-circuit paths exist before hitting the server:
+*   1. Cache hit: if cache=true and self.children_data is populated, returns it.
+*   2. In-flight dedup: identical concurrent calls share the running Promise.
+* The returned ar_children_data array is sorted by the 'order' field (ascending)
+* before resolving. Callers are responsible for storing the result on self.children_data
+* when they want it cached for subsequent opens.
+* @param {Object} options
+* @param {Object|null} [options.pagination=null] - Pagination params forwarded to the API.
+* @param {Array|null} [options.children=null] - Explicit child locator list; null = all.
+* @param {boolean} [options.cache=true] - Return self.children_data when available.
+* @returns {Promise<Object>} Resolves to api_response.result.
+*   Shape: { ar_children_data: Array, pagination: { limit, offset, total } }
+* @throws {Error} Re-throws on API failure.
 */
 ts_object.prototype.get_children_data = async function(options) {
 
@@ -645,24 +701,22 @@ ts_object.prototype.get_children_data = async function(options) {
 
 /**
 * ADD_CHILDREN_ITEM
-* Add a new children data to current instance children_data.ar_children_data array
-* @param children_data
-* E.g. {
-	"section_tipo": "flora1",
-	"section_id": "4",
-	"ts_id": "flora1_4",
-	"ar_elements": [
-		{
-			"type": "term",
-			"tipo": "hierarchy25",
-			"value": "Flora 4",
-			"model": "component_input_text"
-		}
-	],
-	"children_tipo": "hierarchy49",
-	"has_descriptor_children": false
-  }
-* @return bool
+* Appends a child data object to self.children_data.ar_children_data and
+* updates derived state (has_descriptor_children, is_open). Used after a
+* successful swap_parent or drag-drop to keep the in-memory tree consistent
+* without a full server round-trip.
+* When the first child is added (length becomes 1), forces is_open=true and
+* calls sync_open_dom() so the tree opens to reveal the newly added node.
+* @param {Object} children_data - A single child row from ar_children_data.
+*   Shape: {
+*     section_tipo: string,
+*     section_id:   string,
+*     ts_id:        string,      // e.g. 'flora1_4'
+*     ar_elements:  Array,       // term labels and component references
+*     children_tipo: string,
+*     has_descriptor_children: boolean
+*   }
+* @returns {boolean} false when children_data is falsy; true on success.
 */
 ts_object.prototype.add_children_item = function ( children_data ) {
 
@@ -693,24 +747,18 @@ ts_object.prototype.add_children_item = function ( children_data ) {
 
 /**
 * REMOVE_CHILDREN_ITEM
-* Deletes a children data from current instance children_data.ar_children_data array
-* @param children_data
-* E.g. {
-	"section_tipo": "flora1",
-	"section_id": "4",
-	"ts_id": "flora1_4",
-	"ar_elements": [
-		{
-			"type": "term",
-			"tipo": "hierarchy25",
-			"value": "Flora 4",
-			"model": "component_input_text"
-		}
-	],
-	"children_tipo": "hierarchy49",
-	"has_descriptor_children": false
-  }
-* @return bool
+* Removes a child data entry from self.children_data.ar_children_data by ts_id
+* match and re-synchronizes derived state. Used after delete_term or a
+* successful swap_parent to keep the in-memory tree accurate.
+* Side effects when the last child is removed:
+*   - Sets has_descriptor_children and self.data.has_descriptor_children to false.
+*   - Collapses the node (is_open=false) and calls sync_open_dom().
+*   - Clears link_children_element.
+* After removal, re-indexes virtual_order (1-based) for remaining descriptor
+* siblings using a pre-built Map for O(1) instance lookups.
+* @param {Object} children_data - The child row to remove; must have ts_id.
+*   Shape matches the add_children_item parameter.
+* @returns {boolean} false when children_data/ts_id is missing or not found; true on success.
 */
 ts_object.prototype.remove_children_item = function ( children_data ) {
 
@@ -792,13 +840,11 @@ ts_object.prototype.remove_children_item = function ( children_data ) {
 * updates self.is_open synchronously (so concurrent calls observe the
 * transition), loads + renders children when needed, projects the state
 * to the DOM via sync_open_dom() and persists it.
-* @param bool is_open
-* @param object options
-* {
-* 	persist: bool (default true) - persist the state in the local db 'status' table
-* 	force_reload: bool (default false) - discard cached children_data and reload from API
-* }
-* @return promise<bool>
+* @param {boolean} is_open - True to expand; false to collapse.
+* @param {Object} [options={}]
+* @param {boolean} [options.persist=true] - Persist the state in the local db 'status' table.
+* @param {boolean} [options.force_reload=false] - Discard cached children_data and reload from API.
+* @returns {Promise<boolean>}
 */
 ts_object.prototype.set_open = async function(is_open, options={}) {
 
@@ -891,7 +937,7 @@ ts_object.prototype.set_open = async function(is_open, options={}) {
 * SYNC_OPEN_DOM
 * Projects self.is_open onto the DOM: children_container visibility ('hide')
 * and expand arrow state ('open'). The ONLY place these classes change.
-* @return bool
+* @returns {boolean}
 */
 ts_object.prototype.sync_open_dom = function() {
 
@@ -920,18 +966,24 @@ ts_object.prototype.sync_open_dom = function() {
 
 /**
 * UPDATE_CHILDREN_STATE
-* Centralized method to update children-related state and UI.
-* Call this after any operation that changes children (add, remove, swap, drop).
-* @param object options
-* {
-*   children_data: object|null - New children data (if null, uses current)
-*   fetch_data: bool - If true, fetches fresh data from server
-*   render: bool - If true, renders children DOM
-*   refresh_content: bool - If true, refreshes content (term line, arrow)
-*   show_children: bool - If true, shows children container and opens arrow
-*   clean_container: bool - If true, cleans container before render
-* }
-* @return promise<bool>
+* Orchestrates a full or partial children UI refresh after any mutation
+* (add, remove, swap, drag-drop). Accepts fine-grained flags so callers
+* can skip expensive steps they have already handled (e.g. swap_parent
+* passes render:false because it moved the DOM node directly).
+* Execution order: fetch → update state → render → refresh content → show.
+* @param {Object} [options={}]
+* @param {Object|null} [options.children_data=null] - Inject new children data;
+*   when null the current self.children_data is used.
+* @param {boolean} [options.fetch_data=false] - Fetch fresh data from the
+*   server (cache:false) before updating state.
+* @param {boolean} [options.render=true] - Re-render the children DOM.
+* @param {boolean} [options.refresh_content=true] - Refresh the term line and
+*   expand-arrow via self.refresh() at render_level:'content'.
+* @param {boolean} [options.show_children=true] - Open the node (is_open=true)
+*   when has_descriptor_children is true after the update.
+* @param {boolean} [options.clean_container=true] - Clear children_container
+*   before re-rendering children.
+* @returns {Promise<boolean>} false when a server fetch fails; true otherwise.
 */
 ts_object.prototype.update_children_state = async function(options = {}) {
 
@@ -1001,10 +1053,16 @@ ts_object.prototype.update_children_state = async function(options = {}) {
 
 /**
 * GET_CHILDREN_RECURSIVE
-* Get all children section of the caller term
-* Data is built from parent node info (section_tipo and section_id)
-* @param object options
-* @return promise
+* Returns a flat list of all descendant locators for a given term by
+* issuing a section search with children_recursive:true. Used when a
+* batch operation needs every descendant (e.g. deletion with cascade).
+* (!) Uses the generic section search API (action:'read'), not dd_ts_api,
+* with a hardcoded ddo_map:[] — no component data is requested.
+* @param {Object} options
+* @param {string} options.section_tipo - Tipo of the root term to recurse from.
+* @param {string|number} options.section_id - Record ID of the root term.
+* @returns {Promise<Array|boolean>} Array of { section_tipo, section_id }
+*   locator objects on success; false on validation failure or API error.
 */
 ts_object.prototype.get_children_recursive = function( options ) {
 
@@ -1082,10 +1140,23 @@ ts_object.prototype.get_children_recursive = function( options ) {
 
 /**
 * UPDATE_PARENT_DATA
-* Call API to update the parent data in the database.
-* @see ts_object drag_and_drop.js use.
-* @param HTMLElement wrap_ts_object
-* @return promise
+* Persists a parent change for a moved node to the server via dd_ts_api
+* (action: 'update_parent_data'). Called by swap_parent after the local
+* in-memory and DOM state have already been updated, so the user sees
+* the change immediately while the API call is in flight.
+* (!) The @param annotation in the original said HTMLElement wrap_ts_object
+* which is wrong — the parameter is an options object. Flagged; not changed.
+* @see drag_and_drop.js
+* @param {Object} options
+* @param {string|number} options.section_id - Moved node's section_id.
+* @param {string} options.section_tipo - Moved node's section_tipo.
+* @param {string|number} options.old_parent_section_id - Previous parent's section_id.
+* @param {string} options.old_parent_section_tipo - Previous parent's section_tipo.
+* @param {string|number} options.new_parent_section_id - New parent's section_id.
+* @param {string} options.new_parent_section_tipo - New parent's section_tipo.
+* @returns {Promise<Object>} The raw api_response Promise from data_manager.request.
+*   (!) Note: the await is intentionally omitted here; the caller (swap_parent)
+*   attaches a .then() handler to process the result asynchronously.
 */
 ts_object.prototype.update_parent_data = async function(options) {
 	if(SHOW_DEBUG) {
@@ -1121,6 +1192,8 @@ ts_object.prototype.update_parent_data = async function(options) {
 				new_parent_section_tipo	: new_parent_section_tipo
 			}
 		}
+		// (!) await is intentionally omitted: the caller (swap_parent) attaches .then()
+		// to handle the response asynchronously while the UI updates immediately.
 		const api_response = data_manager.request({
 			body : rqo
 		})
@@ -1133,11 +1206,17 @@ ts_object.prototype.update_parent_data = async function(options) {
 
 /**
 * HILITE_ELEMENT
-* Adds 'element_hilite' class to matching nodes
-* @param HTMLElment element
-* @param bool clean_others
-* @return int matches_length
-* 	matches.length
+* Adds the 'element_hilite' CSS class to the supplied element, optionally
+* clearing all existing highlights first (clean_others=true, the default).
+* Validates that element is a real DOM element node before proceeding.
+* (!) The matches array is currently hard-coded to [element] — the
+* commented-out querySelector that highlighted all same-term appearances
+* is dead code left for future restoration.
+* @param {HTMLElement} element - The element to highlight.
+* @param {boolean} [clean_others=true] - When true, calls reset_hilites()
+*   before adding the new highlight.
+* @returns {number} Number of elements highlighted (0 on validation failure,
+*   otherwise matches.length, currently always 1).
 */
 ts_object.prototype.hilite_element = function(element, clean_others) {
 
@@ -1180,7 +1259,11 @@ ts_object.prototype.hilite_element = function(element, clean_others) {
 
 /**
 * RESET_HILITES
-* Removes css class element_hilite from all elements
+* Removes the 'element_hilite' CSS class from every element in the document
+* that currently has it. Iterates in reverse to avoid live-NodeList issues.
+* Called by hilite_element (when clean_others=true) and parse_search_result
+* before applying a new search highlight set.
+* @returns {boolean} Always true.
 */
 ts_object.prototype.reset_hilites = function() {
 
@@ -1197,10 +1280,15 @@ ts_object.prototype.reset_hilites = function() {
 
 /**
 * REFRESH_ELEMENT
-* Reload selected element/s wrapper in DOM
-* @param bool hilite = true - Whether to highlight the refreshed element
-* @param function callback - An optional callback function to run after refresh.
-* @return int matches_length - The number of elements matched and processed.
+* Triggers a content-only refresh of the term's DOM node (render_level:'content',
+* destroy:false) and optionally highlights the term and runs a callback.
+* Used by open_record's on_blur handler to update the visible label after an
+* edit-window session, and by the indexation grid after a save.
+* (!) The @return annotation in the original was wrong (said int matches_length).
+* This method always returns true. Flagged; not changed.
+* @param {boolean} [hilite=true] - Whether to highlight self.term_node after refresh.
+* @param {Function} [callback] - Optional callback invoked with self.term_node as argument.
+* @returns {Promise<boolean>} Always resolves to true.
 */
 ts_object.prototype.refresh_element = async function(hilite=true, callback) {
 
@@ -1229,13 +1317,18 @@ ts_object.prototype.refresh_element = async function(hilite=true, callback) {
 
 /**
 * OPEN_RECORD
-* Opens a new window where you can edit the current record.
-* On open window blur, self instance will be refresh and hilited.
-* @param int|string section_id
-* @param string section_tipo
-* @return bool
+* Opens the full record editor for the given term in a secondary browser
+* window. Reuses the existing window (by target name 'edit_window') when
+* it is still open; navigates to the new URL if the record differs.
+* Registers an on_blur callback on the window that triggers refresh_element
+* on the matching ts_object instance so the tree label updates after a save.
+* edit_window is stored on the prototype (shared across all instances) so
+* that only a single edit window is open at a time per page.
+* @param {number|string} section_id - Section ID of the record to open.
+* @param {string} section_tipo - Section tipo of the record to open.
+* @returns {boolean} Always true.
 */
-ts_object.prototype.edit_window = null; // Class var
+ts_object.prototype.edit_window = null; // Class-level reference to the currently open edit window
 ts_object.prototype.open_record = function(section_id, section_tipo) {
 
 	const self = this
@@ -1294,8 +1387,12 @@ ts_object.prototype.open_record = function(section_id, section_tipo) {
 
 /**
 * ADD_CHILD
-* Call to API to create a new record and add the current element his parent
-* @return api_response
+* Creates a new child thesaurus term record under this node by calling
+* dd_ts_api (action: 'add_child'). On server-side failure the method
+* surfaces the error via alert() (legacy UX pattern). On success the caller
+* is expected to refresh the children list.
+* (!) Uses alert() for error feedback — legacy pattern; not changed here.
+* @returns {Promise<Object>} The raw api_response from the server.
 */
 ts_object.prototype.add_child = async function() {
 
@@ -1344,15 +1441,18 @@ ts_object.prototype.add_child = async function() {
 
 /**
 * DELETE_TERM
-* Removes selected record from database if not has children
+* Deletes a thesaurus term record from the database via the section's own
+* delete_section method. The guard against deleting nodes that have children
+* is enforced server-side; this method does not pre-check.
+* After a successful delete:
+*   - Calls caller.remove_children_item() to update the parent's in-memory tree.
+*   - Removes the persisted expand state for this node from the local DB.
+*   - Destroys the instance (instance map, events, and DOM node).
 * @see section.delete_section
-* @param object options
-* {
-*	section_tipo : section_tipo,
-*	section_id : section_id,
-*	caller_dataframe : caller_dataframe
-* }
-* @return bool delete_section_result
+* @param {Object} options
+* @param {string} options.section_tipo - Tipo of the term to delete.
+* @param {string|number} options.section_id - Record ID of the term to delete.
+* @returns {Promise<boolean>} Result of section.delete_section(); false on failure.
 */
 ts_object.prototype.delete_term = async function(options) {
 
@@ -1430,14 +1530,24 @@ ts_object.prototype.delete_term = async function(options) {
 
 /**
 * SWAP_PARENT
-* Changes from one parent to another a ts_object node.
-* It is used when user drag and drop terms in the tree.
-* @param object options
-* {
-* 	moving_instance: object - ts_object instance,
-* 	old_parent_instance: object - ts_object instance
-* }
-* @return bool
+* Moves a ts_object node from one parent to another in response to a
+* drag-and-drop operation. Self (the instance swap_parent is called on)
+* is the drop TARGET (new parent).
+* Operations performed in order:
+*   1. Validates that the move is legal (no self-drop, no duplicate child).
+*   2. Fires update_parent_data() asynchronously to persist on the server.
+*   3. Updates moving_instance.caller and .ts_parent to reflect the new parent.
+*   4. Calls rekey() to re-register the instance under its new cache key.
+*   5. Moves moving_instance between the ar_instances destroy-cascades.
+*   6. Moves the DOM node (appendChild to target children_container).
+*   7. Recalculates virtual_order and refreshes the term line.
+*   8. Schedules (via dd_request_idle_callback) the parent state updates and
+*      highlight on the moved term.
+* @param {Object} options
+* @param {Object} options.moving_instance - The ts_object being dragged.
+* @param {Object} options.old_parent_instance - The ts_object that was the
+*   previous parent of moving_instance.
+* @returns {Promise<boolean>} false on validation failure; true on success.
 */
 ts_object.prototype.swap_parent = async function (options) {
 
@@ -1595,8 +1705,13 @@ ts_object.prototype.swap_parent = async function (options) {
 
 /**
 * SELECT_FIRST_INPUT_IN_EDITOR
-* @param HTMLElement element_data_div
-* @return bool
+* Focuses and selects all text in the first <input> found inside the given
+* inline editor container, and hides the container when the value changes.
+* Called after show_component_in_ts_object renders an inline term editor so
+* the user can begin typing immediately.
+* @param {HTMLElement} element_data_div - The inline component editor wrapper
+*   (typically self.data_container).
+* @returns {boolean} Always true.
 */
 ts_object.prototype.select_first_input_in_editor = function(element_data_div) {
 
@@ -1619,14 +1734,21 @@ ts_object.prototype.select_first_input_in_editor = function(element_data_div) {
 
 /**
 * SHOW_COMPONENT_IN_TS_OBJECT
-* Show and hide component data in ts_object content_data div
-* @param object options
-* E.g. {
-*    "tipo": "ontology17",
-*    "type": "icon",
-*    "model": "component_json"
-* }
-* @return promise
+* Toggles the inline display of one or more component editors inside the
+* term's data_container. On first call for a tipo it builds, renders and
+* injects the component. On a second call for the same tipo it destroys the
+* component and returns (toggle-off). On a call for a different tipo it
+* destroys all current components and renders the new one(s).
+* For term-type components a 'save_*' event subscription updates self.term_text
+* and self.data.ar_elements immediately so the tree label changes without a
+* round-trip, then destroys the component via dd_request_idle_callback.
+* @param {Object} options
+* @param {string|string[]} options.tipo - One or more component tipos to show.
+*   A comma-separated string is also accepted (split internally).
+* @param {string} options.type - Display role hint: 'term' | 'icon' | etc.
+*   Determines whether a save-and-close subscription is set up.
+* @param {string} options.model - Component model name, e.g. 'component_json'.
+* @returns {Promise<boolean>} Always resolves to true.
 */
 ts_object.prototype.show_component_in_ts_object = async function(options) {
 
@@ -1781,6 +1903,9 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 					component_wrapper.remove()
 				}
 
+				// (!) tipo here is the raw options.tipo value (string or array); the
+				// comparison works only when options.tipo is a string. When an array
+				// is passed, this never matches and the toggle-off path is skipped.
 				if (component_wrapper.instance.tipo===tipo) {
 					// this component already exists. Remove it and stop
 					component_wrapper.instance.destroy(true, true, true)
@@ -1808,10 +1933,28 @@ ts_object.prototype.show_component_in_ts_object = async function(options) {
 
 /**
 * SHOW_INDEXATIONS
-* 	Load the fragment list and render the grid
-* @param object options
-* @return promise
-* 	resolve void
+* Loads and renders a dd_grid of records that index this term. Acts as a
+* toggle: calling it while the indexations_container is visible hides it;
+* calling it when hidden shows the grid (re-using a previously built dd_grid
+* when available via button_obj.dd_grid, otherwise building from scratch).
+* The grid is scoped by totals_group (target section tipos) and
+* filter_by_locators. Pagination is limited to 200 rows (micro view).
+* @param {Object} options
+* @param {string} options.uid - Unique identifier for the invoking button; used
+*   to detect same-caller re-opens and prevent duplicate grids.
+* @param {Object} options.button_obj - The button DOM element or object; the
+*   built dd_grid is stored on button_obj.dd_grid for reuse.
+* @param {string} options.section_tipo - Section tipo of this term.
+* @param {string|number} options.section_id - Section ID of this term.
+* @param {string} options.component_tipo - Tipo of the indexation component to query.
+* @param {HTMLElement} options.target_div - Container to render the grid into.
+* @param {*} [options.value=null] - Optional value filter forwarded to the API.
+* @param {Object} [options.pagination={}] - Pagination options.
+* @param {Array} [options.totals_group=[{key:'all'}]] - Target section filter groups.
+* @param {Array} [options.filter_by_locators=[]] - Additional locator filters.
+* @param {number|null} [options.total=null] - Pre-known result count.
+* @returns {Promise<boolean|void>} false when target_div is missing; void otherwise
+*   (the grid is rendered asynchronously via .then()).
 */
 ts_object.prototype.show_indexations = async function(options) {
 
@@ -1916,47 +2059,26 @@ ts_object.prototype.show_indexations = async function(options) {
 
 
 /**
-* PARSER_SEARCH_RESULT
-* Recursive parser for results of the search
-* Only used for search result, not for regular tree render
-* Called from render_area_thesaurus.list
-* @param object data
-*  sample:
-	* [{
-	* 		"section_tipo": "hierarchy1",
-	* 		"section_id": "66",
-	* 		"order": 2,
-	* 		"mode": "edit",
-	* 		"lang": "lg-eng",
-	* 		"is_descriptor": true,
-	* 		"is_indexable": false,
-	* 		"permissions_button_new": 3,
-	* 		"permissions_button_delete": 0,
-	* 		"permissions_indexation": 0,
-	* 		"ts_id": "hierarchy1_66",
-	* 		"ts_parent": "hierarchy1_1"
-	* 		"ar_elements": [
-	* 			{
-	* 				"type": "term",
-	* 				"tipo": "hierarchy5",
-	* 				"value": "Spain",
-	* 				"model": "component_input_text"
-	* 			},
-	* 			{
-	* 				"type": "link_children",
-	* 				"tipo": "hierarchy45",
-	* 				"value": "button show children",
-	* 				"model": "component_relation_children"
-	* 			}
-	* 		]
-	* }]
-* @param array to_hilite
-* 	array of locators found in search as
-* [{
-*    "section_tipo": "flora1",
-*    "section_id": "1"
-* }]
-* @return {Promise<boolean>} - True on successful execution.
+* PARSE_SEARCH_RESULT
+* Entry point for rendering search results in the thesaurus tree.
+* Called from render_area_thesaurus.list (not used for regular tree render).
+* Executes a four-phase pipeline:
+*   1. build_search_instances  — maps rows to node_info, creates/updates root instances.
+*   2. hierarchize_search_instances — links children to parents, collects branches to open.
+*   3. open_search_branches    — opens branches top-down so children are always
+*      attached before their own children are rendered (no detached-node races).
+*   4. hilite_search_results   — applies 'element_hilite', scrolls to first match,
+*      publishes a notification.
+* Orphaned nodes (no ancestor in the data set) are logged and notified.
+* (!) Method name in original was 'PARSER_SEARCH_RESULT' — corrected in doc-block;
+* the function identifier parse_search_result is unchanged.
+* @param {Array} data - Full search result, including all ancestor rows from root
+*   to each matched node. Each item is a ts node data object with fields:
+*   { section_tipo, section_id, order, ts_id, ts_parent, is_descriptor,
+*     ar_elements, permissions_*, ... }
+* @param {Array} to_hilite - Locators of the actual search hits (leaf nodes).
+*   Shape: [{ section_tipo: string, section_id: string }, ...]
+* @returns {Promise<boolean>} true on success; false when data is invalid.
 */
 ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 	const start_time = performance.now();
@@ -2027,15 +2149,18 @@ ts_object.prototype.parse_search_result = async function( data, to_hilite ) {
 /**
 * BUILD_SEARCH_INSTANCES
 * Phase 1 of parse_search_result.
-* Builds a plain-data node info map from the search result rows and ensures
-* the ROOT instances exist, are switched to 'search' mode and are rendered
-* (roots are attached to the DOM by the area).
-* @param object self
-* 	ts_object instance whose parse_search_result was called (area-level)
-* @param array data
-* 	search result rows (ts node data objects, full paths root → matched)
-* @return promise<Map> node_info
-* 	Map keyed by ts_id of {key, data, children}
+* Builds a plain-data node_info Map from the search result rows and ensures
+* root instances (ts_parent === 'root') exist, are in 'search' mode, and
+* are rendered so that deeper nodes have parent containers to attach to.
+* Existing root instances have their mutable (non-key) properties updated
+* in place; new ones are created via ts_object.get_instance + build + render.
+* Non-root nodes are intentionally NOT created here — they are created by
+* their parent's render_children call in open_search_branches (phase 3).
+* @param {Object} self - The ts_object instance that initiated the search
+*   (effectively the area-level node whose parse_search_result was called).
+* @param {Array} data - Search result rows (full ancestry path, root to leaf).
+* @returns {Promise<Map>} node_info — Map keyed by ts_id; values are
+*   { key: string, data: Object, children: Array }.
 */
 const build_search_instances = async function(self, data) {
 
@@ -2119,12 +2244,15 @@ const build_search_instances = async function(self, data) {
 /**
 * HIERARCHIZE_SEARCH_INSTANCES
 * Phase 2 of parse_search_result.
-* Links every node data item to its parent info entry (filling info.children)
-* and collects the set of branches to open. Pure data transformation: no
-* instances, no DOM.
-* @param Map node_info
-* 	Map built by build_search_instances
-* @return object {to_open: Set<ts_id>, orphans: array}
+* Pure data transformation — no instances, no DOM side effects.
+* Iterates node_info, links each non-root node's data into its parent's
+* info.children array (deduped by ts_id), and accumulates ts_ids of nodes
+* whose branches must be opened. Nodes whose parent is absent from node_info
+* are collected as orphans (reported to the caller).
+* @param {Map} node_info - Map built by build_search_instances.
+* @returns {{to_open: Set<string>, orphans: Array<string>}}
+*   to_open: Set of ts_id strings for branches that must be expanded.
+*   orphans: Array of ts_id strings whose ancestor was not in the data.
 */
 const hierarchize_search_instances = function(node_info) {
 
@@ -2163,14 +2291,18 @@ const hierarchize_search_instances = function(node_info) {
 /**
 * OPEN_SEARCH_BRANCHES
 * Phase 3 of parse_search_result.
-* Opens the collected branches with explicit recursion: a node's branch is
-* only processed after its parent's render_children created (and attached)
-* its wrapper, so the open order is top-down BY CONSTRUCTION — no depth
-* sorting, no detached containers.
-* Relies on render_children attaching nodes synchronously before resolving.
-* @param Map node_info
-* @param Set to_open
-* @return promise<bool>
+* Opens the branches identified by to_open using an inner recursive
+* open_branch function. The key contract: a child branch is only processed
+* AFTER its parent's render_children has synchronously attached the child
+* wrapper to the DOM, so the open order is top-down by construction.
+* This removes the detached-node race that earlier depth-sort workarounds
+* attempted to fix.
+* (!) Relies on render_children synchronously inserting DOM nodes before its
+* returned Promise resolves. If that assumption ever breaks, the recursive
+* cascade will attempt to look up instances that do not yet have DOM nodes.
+* @param {Map} node_info - Map built by build_search_instances.
+* @param {Set<string>} to_open - Set of ts_id strings to expand.
+* @returns {Promise<boolean>} Always resolves to true.
 */
 const open_search_branches = async function(node_info, to_open) {
 
@@ -2248,12 +2380,14 @@ const open_search_branches = async function(node_info, to_open) {
 /**
 * HILITE_SEARCH_RESULTS
 * Phase 4 of parse_search_result.
-* Hilites the found nodes and scrolls the page to the first one.
-* @param Map node_info
-* @param Set hilite_set
-* 	Set of ts_id strings to hilite
-* @param int total_found
-* @return void
+* Applies 'element_hilite' to term_node of each matched instance using
+* dd_request_idle_callback (deferred after the expensive branch rendering
+* to avoid blocking). Scrolls to the first match via scroll_to_node and
+* publishes a notification with the hit count.
+* @param {Map} node_info - Map built by build_search_instances.
+* @param {Set<string>} hilite_set - Set of ts_id strings to highlight.
+* @param {number} total_found - Total number of search matches (for notification).
+* @returns {void}
 */
 const hilite_search_results = function(node_info, hilite_set, total_found) {
 
@@ -2302,9 +2436,17 @@ const hilite_search_results = function(node_info, hilite_set, total_found) {
 
 /**
 * SCROLL_TO_NODE
-* Handles the page scroll to the search found item (first item only)
-* @param HTMLElement node_to_scroll
-* @return void
+* Scrolls the viewport to center the given DOM node using an
+* IntersectionObserver + setInterval retry strategy. Stops when the element
+* reaches >5% viewport visibility, when the user manually scrolls (wheel
+* event detected), or after MAX_SCROLL_ATTEMPTS (10) retries at 350 ms
+* intervals. A 10-second absolute timeout disconnects the observer as a
+* safety fallback.
+* The inner center_with_scroll_to helper computes absolute scroll coordinates
+* to center the element, used in preference to scrollIntoView for finer
+* positioning control.
+* @param {HTMLElement} node_to_scroll - The element to scroll into view.
+* @returns {void}
 */
 const scroll_to_node = (node_to_scroll) => {
 
@@ -2422,9 +2564,20 @@ const scroll_to_node = (node_to_scroll) => {
 
 /**
 * SAVE_ORDER
-* @param int value
-* @param mixed new_value
-* @return promise
+* Reorders this node among its siblings to a new 1-based position and
+* persists the new order to the server via dd_ts_api (action: 'save_order').
+* Operates in five steps:
+*   1. Validates the new position (no-op when unchanged or NaN).
+*   2. Finds the current node in the parent's ar_children_data array.
+*   3. Moves it in-place using splice to derive the new ordered locator list.
+*   4. Updates virtual_order on all matching live instances immediately
+*      (optimistic sync — no server confirmation required for the visual).
+*   5. Sends the full ordered locator array to the server.
+* (!) The @param annotation listed 'mixed new_value' which is a leftover from
+* an earlier signature; only value is accepted. Flagged; not changed.
+* @param {number|string} value - Target 1-based position for this node.
+* @returns {Promise<boolean>} false on validation failure; true on success
+*   (even if the server call throws — error is caught and notified).
 */
 ts_object.prototype.save_order = async function( value ) {
 
@@ -2538,9 +2691,17 @@ ts_object.prototype.save_order = async function( value ) {
 
 /**
 * TOGGLE_ND
-* Toggles the visibility of a container and loads its children via an AJAX call if it's being shown.
-* @param HTMLElement button_obj - The button element that triggers the toggle action.
-* @return bool - A promise that resolves to `true` if the operation was successful, otherwise `false`.
+* Toggles the visibility of the nd_container (non-descriptor children panel).
+* If currently visible: hides it and returns.
+* If hidden and children are already in the DOM: shows it and returns.
+* If hidden and no children yet: fetches children data from the API,
+* renders them into children_container, then shows nd_container.
+* (!) @return annotation in original said 'bool', but the function is async
+* and the actual contract is Promise<boolean>. Corrected here.
+* @param {HTMLElement} button_obj - The ND toggle button element (unused in body
+*   after refactor; nd_container is read from self directly).
+* @returns {Promise<boolean>} true on success; false when nd_container is absent
+*   or a children fetch/render error occurs.
 */
 ts_object.prototype.toggle_nd = async function(button_obj) {
 
@@ -2609,9 +2770,13 @@ ts_object.prototype.toggle_nd = async function(button_obj) {
 
 /**
 * IS_ROOT
-* @param string tipo
-* 	Usually 'hierarchy1' for Thesaurus and 'ontology35' from Ontology
-* @return bool
+* Returns true when the given tipo is a known root section tipo.
+* Root sections are the top-level containers of the hierarchy or ontology
+* tree ('hierarchy1' for the Thesaurus, 'ontology35' for the Ontology).
+* (!) The list is hardcoded; adding a new thesaurus root requires updating
+* ar_root_tipo here.
+* @param {string} tipo - The section tipo to check (e.g. 'hierarchy1').
+* @returns {boolean} True when tipo is in the known root-tipo list.
 */
 ts_object.prototype.is_root = function (tipo) {
 

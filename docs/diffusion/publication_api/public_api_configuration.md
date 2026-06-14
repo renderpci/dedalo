@@ -1,5 +1,12 @@
 # Set up Dédalo Publication API configuration files
 
+!!! warning "Legacy (v1) API"
+    This page documents the **v1 PHP Publication API**, kept in Dédalo v7 for backward compatibility
+    with existing published websites. It is in **maintenance / legacy status** — no new features.
+    For new projects and integrations, use the current [Publication API v2](v2/index.md)
+    (Bun/TypeScript): resource-oriented REST, RFC 9457 errors, `ETag` / `Link` caching, a bracketed
+    filter DSL, batch queries and MCP support.
+
 When Dédalo is downloaded from GitHub, publication config files should be configured with the proper parameters. All those config files come with a 'sample' prefix that need to be removed from the names to get the functionality.
 
 The first step would be locating and renaming config files from their original value in GitHub to target file names that Dédalo can will locate and use. Some of these files may already be renamed.

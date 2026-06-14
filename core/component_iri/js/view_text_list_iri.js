@@ -12,7 +12,28 @@
 
 /**
 * VIEW_TEXT_LIST_IRI
-* Manage the components logic and appearance in client side
+* Plain-text list-mode view for `component_iri`.
+*
+* Renders all IRI entries belonging to a single component_iri record as a
+* flat text string with no anchor (`<a>`) elements, making it safe to embed
+* inside contexts that cannot host interactive or structured HTML — for example,
+* export templates, print previews, or tooltip labels.
+*
+* Contrast with:
+*   - `view_default_list_iri` — standard list row that does include anchor links
+*     and an "edit in modal" click handler.
+*   - `view_mini_iri`         — compact anchor-based view for autocomplete /
+*     datalist service rows.
+*
+* This view is selected when `self.context.view === 'text'` from the
+* `render_list_component_iri.list` dispatcher.
+*
+* Per-entry output format (joined with ' | '):
+*   <dataframe textContent> | <entry.title> | <entry.iri>
+* Only non-empty fields contribute to the pipe-separated line.
+* All entry lines are joined with ', ' into a single output string.
+*
+* Exports: {Function} view_text_list_iri — namespace/constructor (no instances)
 */
 export const view_text_list_iri = function() {
 
@@ -23,10 +44,49 @@ export const view_text_list_iri = function() {
 
 /**
 * RENDER
-* Render node as text. URL is return as text node
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Builds a `<span>` wrapper containing all IRI entries serialised to plain text.
+*
+* For each entry in `self.data.entries` the function:
+*  1. Calls `get_dataframe` to resolve the paired label dataframe instance using
+*     the entry's server-minted `id` as the pairing key (`section_id_key`).
+*     The dataframe is built in 'list'/'line' mode and appended to
+*     `self.ar_instances` so the parent component can destroy it on teardown.
+*  2. Extracts `dataframe_node.textContent` (strips any HTML the dataframe may
+*     have rendered) as the human-readable label.
+*  3. Appends `entry.title` (legacy literal label, kept for fallback) and
+*     `entry.iri` (the raw URL string).
+*  4. Joins the non-empty fields for this entry with ' | '.
+* All entry lines are collected and joined with ', ' into `value_string`.
+*
+* The rendered DOM tree is a single `<span>` carrying the full concatenated
+* string as a `Text` node — no child elements, no markup.
+*
+* Data shape assumed on `self`:
+*   self.data = {
+*     entries: [
+*       {
+*         id:    {number}  server-minted item counter; pairing key for dataframe
+*         iri:   {string}  the URL (may be absent/null on partially-saved rows)
+*         title: {string}  legacy literal label (may be absent)
+*         lang:  {string}  language marker e.g. 'lg-nolan'
+*       },
+*       …
+*     ]
+*   }
+*
+* Note: `entry.title` is a legacy field from pre-dataframe data. It is still
+* included here so that records migrated from v6 display a label even if no
+* paired dataframe has been created yet.
+*
+* @param {Object} self    - `component_iri` instance; must expose `.data`,
+*                           `.section_id`, `.section_tipo`, `.tipo`,
+*                           `.ar_instances`, `.model`, `.mode`, `.view`.
+* @param {Object} options - render options forwarded from `render_list_component_iri.list`;
+*                           currently not consumed by this view but kept for
+*                           interface parity with other view renderers.
+* @returns {Promise<HTMLElement>} A `<span>` element whose `textContent` is the
+*   plain-text representation of all IRI entries, or an empty span when there
+*   are no entries.
 */
 view_text_list_iri.render = async function(self, options) {
 
@@ -42,6 +102,10 @@ view_text_list_iri.render = async function(self, options) {
 			const ar_line = []
 
 			// dataframe
+			// Resolve the label dataframe paired to this entry via its server-minted id.
+			// `section_id_key` is the pairing key (the item's `id`), NOT the array index.
+			// (!) Using the array index `i` here would cause wrong frame resolution on any
+			// record where entries have been reordered or deleted on the server side.
 			const component_dataframe = await get_dataframe({
 				self				: self,
 				section_id			: self.section_id,
@@ -52,26 +116,35 @@ view_text_list_iri.render = async function(self, options) {
 				mode				: 'list'
 			})
 			// Add dataframe instance to component dependencies array
+			// so that the parent component_iri teardown can destroy it.
 			self.ar_instances.push(component_dataframe)
 			// Render the dataframe wrapper
 			const dataframe_node = await component_dataframe.render()
 			// Get only the text content discarding HTML nodes
+			// `textContent` collapses all descendant text into a flat string;
+			// any anchor links, spans, or bold text in the dataframe are stripped.
 			const text_node = dataframe_node.textContent
 			if (text_node) {
 				ar_line.push(text_node)
 			}
 
 			// title
+			// Legacy literal label — populated before per-value dataframe support
+			// was introduced. Still read so that v6-migrated records display correctly.
 			if (entries[i].title) {
 				ar_line.push(entries[i].title)
 			}
 
 			// IRI
+			// Raw URL string; included after the human-readable label so the output
+			// reads "Label | https://example.org" when both are present.
 			if (entries[i].iri) {
 				ar_line.push(entries[i].iri)
 			}
 
 			// Line add
+			// Only push to the outer array when at least one field produced output,
+			// preventing empty ' | ' separators for blank or partially-saved entries.
 			if (ar_line.length>0) {
 				ar_value_string.push(ar_line.join(' | '))
 			}
@@ -82,12 +155,16 @@ view_text_list_iri.render = async function(self, options) {
 			: ''
 
 	// wrapper. Set as span
+	// A <span> (inline element) is used so this view composes cleanly inside
+	// table cells, tooltip content, and other block-controlled containers.
 		const wrapper = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`
 		})
 
 	// Append text_node
+	// A DOM Text node (not innerHTML) is used deliberately so that any special
+	// characters in IRIs or titles (e.g. '&', '<') are not interpreted as HTML.
 		const text_node = document.createTextNode(value_string);
 		wrapper.appendChild(text_node)
 

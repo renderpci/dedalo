@@ -12,7 +12,24 @@
 
 /**
 * RENDER_GET_ARCHIVE_STATES
-* Manages the component's logic and appearance in client side
+* Client-side render module for the `get_archive_states` DMM widget.
+*
+* This widget displays aggregated boolean/radio-button state counts and
+* percentages for a set of linked archive records. Two state dimensions are
+* shown for each IPO entry:
+*   - "closed"  — whether a record has been closed (affirmative/negative counts)
+*   - "answer"  — whether a response has been provided (positive/negative counts)
+*
+* The PHP counterpart (`class.get_archive_states.php`) resolves the linked
+* records via a source portal and produces 14 keyed output items per IPO
+* entry (e.g. `closed_afirmative`, `closed_afirmative_percent`, …).
+* This file consumes those items and renders them as read-only `<ul>/<li>`
+* HTML panels.
+*
+* Exported prototype methods are mixed into `get_archive_states` instances
+* via `get_archive_states.js`.
+*
+* Main export: `render_get_archive_states` (constructor, no instance state)
 */
 export const render_get_archive_states = function() {
 
@@ -23,8 +40,17 @@ export const render_get_archive_states = function() {
 
 /**
 * EDIT
-* Render node for use in modes: edit, edit_in_list
-* @return HTMLElement wrapper
+* Render node for use in modes: edit, edit_in_list.
+*
+* Builds the full widget wrapper (or just the inner content when
+* `render_level === 'content'`) by delegating data layout to
+* `get_content_data_edit`.
+*
+* @param {Object} options - render options passed by widget_common.render()
+* @param {string} options.render_level - 'content' returns only the inner
+*   content node; any other value returns the full wrapper element
+* @returns {Promise<HTMLElement>} wrapper element (or content_data when
+*   render_level is 'content')
 */
 render_get_archive_states.prototype.edit = async function(options) {
 
@@ -51,7 +77,28 @@ render_get_archive_states.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return HTMLElement content_data
+* Builds the scrollable list of IPO-entry panels.
+*
+* Iterates over every entry in `self.ipo` and delegates rendering of each
+* entry's statistics row to `get_value_element`. The resulting `<li>` nodes
+* are collected inside a `<ul class="values_container">` and wrapped in a
+* plain `<div>` that becomes the widget's `content_data` node.
+*
+* Data contract (self.value):
+*   An array of flat data-item objects produced by the PHP `get_data()` method,
+*   keyed by `key` (IPO index, 0-based) and `widget_id` (one of the 14 output
+*   slot names). Example item:
+*   {
+*     widget    : 'get_archive_states',
+*     key       : 0,
+*     widget_id : 'closed_afirmative',
+*     closed_label : 'Closed',    // only present on 'closed_afirmative' items
+*     answer_label : 'Answer',    // only present on 'closed_afirmative' items
+*     value     : 12
+*   }
+*
+* @param {Object} self - the `get_archive_states` widget instance
+* @returns {Promise<HTMLElement>} content_data div containing the rendered list
 */
 const get_content_data_edit = async function(self) {
 
@@ -68,6 +115,9 @@ const get_content_data_edit = async function(self) {
 		const ipo 			= self.ipo
 		const ipo_length 	= ipo.length
 
+		// Each IPO entry produces one <li> row of statistics.
+		// self.value items are filtered by `key === i` to select the 14 output
+		// slots that belong to the current IPO entry.
 		for (let i = 0; i < ipo_length; i++) {
 			const data 		= self.value.filter(item => item.key === i)
 			get_value_element(i, data , values_container, self)
@@ -87,10 +137,51 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return HTMLElement li
+* Renders one statistics row (`<li>`) for a single IPO entry.
+*
+* Extracts all 14 output slot values from `data` (filtered to the current IPO
+* key) and builds two sub-panels inside the `<li>`:
+*
+*   1. `.closed`  — "closed" dimension: affirmative count, negative count, and
+*      a summary "n of total" line, each with percentage in parentheses.
+*      The human-readable dimension label (e.g. "Closed") is read from the
+*      `closed_label` property on the `closed_afirmative` data item, which is
+*      only populated on that slot by the PHP backend.
+*
+*   2. `.answer`  — "answer" dimension: positive count (labelled "pos:"),
+*      negative count (labelled "neg:"), and a summary "n of total" line.
+*      The dimension label comes from `answer_label` on the same item.
+*
+* Counts and percentages are only rendered when the respective raw count is
+* truthy and > 0; otherwise the segment contributes an empty string to the
+* joined display, keeping the " | " separator clean.
+*
+* Localised strings "yes", "no", and "of" are sourced from the global
+* `get_label` object; each falls back to its English literal when the key is
+* absent.
+*
+* Note: a real-time `event_manager` subscription block is present in the
+* source but is commented out (see the commented block near the end of this
+* function). Unlike its sibling widget `get_archive_states_weights`, this
+* widget deliberately omits live updates because the source data and the
+* display panel are never visible at the same time for the end user.
+*
+* @param {number} i - 0-based IPO index; used only to identify the row
+*   (the data itself is already pre-filtered by the caller)
+* @param {Array} data - subset of `self.value` items for IPO key `i`;
+*   expected to contain exactly 14 objects, one per output slot
+* @param {HTMLElement} values_container - the `<ul>` element that receives
+*   the new `<li>` as a child
+* @param {Object} self - the `get_archive_states` widget instance (held for
+*   potential event subscription; not read directly in this function)
+* @returns {HTMLElement} the constructed `<li>` node (also appended to
+*   values_container as a side-effect)
 */
 const get_value_element = (i, data, values_container, self) => {
 
+	// Extract all 14 output slot values up front.
+	// Array.find() is used rather than a keyed map to stay consistent with the
+	// flat PHP output format; each slot is identified by `widget_id`.
 	const closed_afirmative			= data.find(item => item.widget_id === 'closed_afirmative').value
 	const closed_label 				= data.find(item => item.widget_id === 'closed_afirmative').closed_label
 	const answer_label 				= data.find(item => item.widget_id === 'closed_afirmative').answer_label
@@ -108,6 +199,7 @@ const get_value_element = (i, data, values_container, self) => {
 	const answer_count_percent		= data.find(item => item.widget_id === 'answer_count_percent').value
 	const answer_total				= data.find(item => item.widget_id === 'answer_total').value
 
+	// Localised display labels with English fallbacks.
 	const label_yes	= get_label.yes || 'yes'
 	const label_no	= get_label.no || 'no'
 	const label_of	= get_label.of || 'of'
@@ -134,6 +226,8 @@ const get_value_element = (i, data, values_container, self) => {
 			parent			: closed_node
 		})
 			//answer_text_node
+			// Build each segment conditionally; empty strings are excluded from the
+			// joined display so the " | " separator only appears between present values.
 			const closed_text =[]
 			const closed_afirmative_text = closed_afirmative && closed_afirmative > 0
 				? `${label_yes}: ${closed_afirmative} (${closed_afirmative_percent}%)`
@@ -143,6 +237,7 @@ const get_value_element = (i, data, values_container, self) => {
 				? `${label_no}: ${closed_negative} (${closed_negative_percent}%)`
 				: ''
 
+			// "n: <responded> of <total> (<percent>%)" summary segment
 			const closed_total_text = closed_count && closed_count > 0
 				? `n: ${closed_count} ${label_of} ${closed_total} (${closed_count_percent}%)`
 				: ''
@@ -173,6 +268,8 @@ const get_value_element = (i, data, values_container, self) => {
 			parent			: answer_node
 		})
 			//answer_text_node
+			// "pos:" / "neg:" labels are intentionally not localised here; they are
+			// short technical tokens rather than user-facing words.
 			const answer_text =[]
 			const answer_afirmative_text = answer_afirmative && answer_afirmative > 0
 				? `pos: ${answer_afirmative} (${answer_afirmative_percent}%)`

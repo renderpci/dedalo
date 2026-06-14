@@ -11,6 +11,54 @@
 
 
 /**
+* RENDER_CALCULATION
+* Client-side renderer for the `calculation` widget.
+*
+* The calculation widget renders read-only, computed values derived from one or
+* more component fields through a server-side IPO (Input–Process–Output) pipeline
+* (see class.calculation.php). The server resolves component values, optionally
+* runs a PHP processing function, and returns a flat array of `{widget, key, id,
+* value}` data items. This module consumes that resolved data to build the
+* display DOM.
+*
+* Expected data shape on `self.value` (array populated by the server):
+*   [
+*     { widget: 'calculation', key: 0, id: 'total', value: '1,234.56' },
+*     ...
+*   ]
+*
+* Expected shape of `self.ipo` (mirrors the server-side IPO ontology config):
+*   [
+*     {
+*       output: [
+*         {
+*           id: 'total',                    // widget_id matched against self.value
+*           format: 'date'|undefined,       // optional: triggers date formatting
+*           label_before: 'Total',          // displayed before the value (optional)
+*           label_before_singular: '...',   // used when value === 1 (optional)
+*           label_after: 'euros',           // displayed after the value (optional)
+*           label_after_singular: '...',    // used when value === 1 (optional)
+*           separator: ', '                 // appended after label_after (optional)
+*         }
+*       ]
+*     }
+*   ]
+*
+* For date-formatted values, `server_value` must be an object of the shape:
+*   { day: number|null, month: number|null, year: number|null }
+*
+* Live updates are delivered via the `event_manager` event
+* `update_widget_value_<i>_<self.id>`, fired when a component that feeds this
+* calculation changes value in the same page session.
+*
+* Exports:
+*   - `render_calculation` constructor (wired to calculation.prototype via
+*     prototype alias in calculation.js)
+*/
+
+
+
+/**
 * RENDER_COMPONENT_CALCULATION
 * Manage the components logic and appearance in client side
 */
@@ -62,8 +110,22 @@ render_calculation.prototype.list = render_calculation.prototype.edit
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Build the inner content DOM for the calculation widget.
+*
+* Iterates `self.ipo` (the server-side IPO configuration array) to produce one
+* `<li>` element per IPO entry. For each entry, server values are matched by
+* index (`key`) from `self.value` and forwarded to `get_value_element` for
+* DOM construction.
+*
+* The returned `content_data` `<div>` wraps a `<ul class="values_container">`
+* whose children are the rendered `<li>` items for each IPO group.
+*
+* @param {Object} self - The calculation widget instance. Expected properties:
+*   - `self.ipo`   {Array}  IPO configuration groups from the ontology.
+*   - `self.value` {Array}  Resolved data items from the server
+*                           ({ key, widget_id, value, … }).
+*   - `self.mode`  {string} Current render mode (e.g. 'edit', 'list').
+* @returns {Promise<HTMLElement>} Resolves to the `<div>` content_data node.
 */
 const get_content_data_edit = async function(self) {
 
@@ -102,7 +164,40 @@ const get_content_data_edit = async function(self) {
 
 /**
 * INPUT_ELEMENT
-* @return HTMLElement li
+* Build a single `<li>` element representing one IPO output group and attach a
+* live-update event subscription for reactive DOM updates.
+*
+* For each output descriptor in `ipo[i].output` the function:
+*   1. Finds the matching server value in `data` by `widget_id === data_map.id`.
+*   2. Applies date formatting when `data_map.format === 'date'`, producing a
+*      `day/month/year` string from the `{day, month, year}` server value object.
+*      Only present parts are included — a value with only a year renders as `YYYY`.
+*   3. Selects singular/plural label variants: when `value == 1` the keys
+*      `label_before_singular` and `label_after_singular` are tried; otherwise
+*      `label_before` and `label_after` are used. Missing keys produce empty strings.
+*   4. Labels are looked up through `get_label` (the i18n map). If no key is
+*      found there, the raw ontology string is used verbatim.
+*   5. Subscribes to `update_widget_value_<i>_<self.id>` so that when the
+*      upstream components change (e.g. the user edits a field in the same section),
+*      the rendered label/value/separator DOM nodes update in place without a full
+*      re-render.
+*
+* (!) The event subscription token is pushed to `self.events_tokens`. The caller
+* (widget_common.prototype.destroy) iterates that array and unsubscribes all
+* tokens on widget teardown — callers must not skip the destroy lifecycle.
+*
+* (!) The commented-out `Date`/`toLocaleString` implementation (lines 131–133)
+* was replaced by the manual array-join approach below it. The commented block
+* is left in place; do not remove it without a separate decision.
+*
+* @param {number}      i                - IPO group index (used as the `key` filter
+*                                         and as part of the event channel name).
+* @param {Array}       data             - Server value items for this IPO group;
+*                                         each element has at minimum `widget_id`
+*                                         and `value` properties.
+* @param {HTMLElement} inputs_container - The `<ul>` node to append the new `<li>` to.
+* @param {Object}      self             - The calculation widget instance.
+* @returns {HTMLElement} The constructed `<li>` element.
 */
 const get_value_element = (i, data, inputs_container, self) => {
 
@@ -120,10 +215,15 @@ const get_value_element = (i, data, inputs_container, self) => {
 		const data_map = output[j]
 		const current_data = data.find(el => el.widget_id===data_map.id)
 
+		// server_value is null when no matching data item exists for this output descriptor.
+		// This happens when the server IPO process produced no result for the given output id
+		// (e.g. the input component has no data yet, or the processing function returned nothing).
 		const server_value = (typeof current_data!=='undefined')
 			? current_data.value
 			: null
 
+		// get_date_string formats a structured {day, month, year} server value as "day/month/year".
+		// Parts are included only when truthy, so sparse dates (e.g. year-only) render correctly.
 		const get_date_string = ()=>{
 
 			if(server_value){
@@ -147,10 +247,14 @@ const get_value_element = (i, data, inputs_container, self) => {
 			}
 		}
 
+		// Apply date formatting when the output descriptor specifies format:'date';
+		// otherwise the server value (string, number, etc.) is used as-is.
 		const value = (data_map.format && data_map.format === 'date')
 			? get_date_string()
 			: server_value
 
+		// Singular label variant: when value equals exactly 1 (loose equality to
+		// handle numeric strings), append '_singular' to probe label_before/label_after keys.
 		const label_suffix = value==1 ? '_singular' : ''
 
 		// label before
@@ -187,6 +291,10 @@ const get_value_element = (i, data, inputs_container, self) => {
 			})
 
 		// event update_widget_value
+		// Fired by the calculation widget instance when any upstream component changes.
+		// `changed_data` has the same shape as `self.value` (flat array of {widget_id, value}).
+		// When the changed set contains no entry for this output descriptor, all three DOM
+		// nodes are cleared to reflect the absence of a value.
 			const update_widget_value_handler = (changed_data) => {
 
 				const current_data = changed_data.find(el => el.widget_id===data_map.id)

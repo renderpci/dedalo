@@ -77,13 +77,15 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* SAVE
-	* Overwrite relation common action.
-	* This component does not store data directly, so this method simply returns true.
+	* No-op override of the parent relation save pipeline.
+	* component_relation_children never stores its own rows — its data is derived
+	* entirely from the component_relation_parent records of the child sections.
+	* Saving is performed on those parent components instead (see update_parent()).
 	*
-	* @return bool Always returns true.
+	* @return bool Always returns true (nothing to persist).
 	*/
 	public function save() : bool {
-		// Noting to do. This component don`t save
+		// Nothing to do. This component doesn't save its own rows.
 		return true;
 	}//end save
 
@@ -91,12 +93,22 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_DATA
-	* Get data from its related parent.
-	* component_relation_children doesn't store data, it retrieves its data by resolving the parent relations.
-	* It searches for all sections that have the current section as a parent.
+	* Returns the calculated list of child-section locators for this record.
+	*
+	* This component stores no rows itself. Instead, get_data() queries the database
+	* for every record whose component_relation_parent points to the current
+	* ($section_tipo, $section_id) pair. The result is a flat array of locator objects
+	* where each locator->from_component_tipo is the tipo of this children component.
+	*
+	* The resolved result is cached in $this->data_resolved to avoid repeated SQL
+	* calls within the same request. Calling set_data() invalidates the cache via
+	* unset($this->data_resolved).
+	*
+	* In search mode the method delegates to parent::get_data() so that search filter
+	* values (stored in the matrix) can be read back normally.
 	*
 	* @see component_common->get_data()
-	* @return array|null An array of locators representing the children sections, or null if empty.
+	* @return array|null An array of locators representing the children sections, or null when the current section has no children.
 	*/
 	public function get_data() : ?array {
 
@@ -139,11 +151,18 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_DATA_PAGINATED
-	* Gets paginated data (inverse locators from component parent result).
-	* This handles strict limit and offset logic typically populated from the API request context.
+	* Returns one page of child locators and populates $this->pagination->total.
 	*
-	* @param int|null $custom_limit Optional custom limit to override the standard pagination limit.
-	* @return array The array of locators for the current page.
+	* The total row count is resolved via a dedicated SQL COUNT query (count_children())
+	* rather than loading every child row, so pagination is efficient for large hierarchies.
+	* If count_children() returns null (e.g., when the SQO cannot be built), the method
+	* falls back to counting the full get_data() array.
+	*
+	* $this->pagination->limit and ->offset are set by the request config; a caller
+	* may override the page size by passing $custom_limit.
+	*
+	* @param int|null $custom_limit [= null] Override the pagination limit from $this->pagination->limit. Pass null to use the configured value.
+	* @return array Locators for the requested page (may be empty if the offset exceeds total).
 	*/
 	public function get_data_paginated( ?int $custom_limit=null ) : array {
 
@@ -187,15 +206,26 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* SET_DATA
-	* Sets the data for the component.
-	* Note that current component DOES NOT STORE DATA directly.
-	* Instead, it updates the related 'component_relation_parent' to link to self.
-	* This method compares the provided data with existing data and adds/removes children as necessary.
-	* Don't use this method regularly; it is preferable to use 'add_children' method for every new relation.
+	* Synchronises the child list by diffing $data against the existing children.
 	*
-	* @param array|null $data The array of locator objects to set.
-	*	When data is string is because is a JSON encoded data.
-	* @return bool True on success.
+	* Because this component owns no rows, "setting data" means:
+	*  1. For every existing child locator NOT present in $data → call remove_child().
+	*  2. For every incoming locator NOT already in the existing list → call add_child().
+	*
+	* Each add/remove operation writes through to the counterpart component_relation_parent
+	* record (see update_parent()). The diff compares on ['section_tipo','section_id','from_component_tipo'].
+	*
+	* After the sync, $this->data_resolved is invalidated so the next get_data() call
+	* re-reads the freshly saved state from the database.
+	*
+	* Prefer add_child() / remove_child() for incremental changes; this method is mainly
+	* used by the generic save pipeline when a full replacement is required.
+	*
+	* In search mode the call delegates entirely to parent::set_data() (stored filter values
+	* must be persisted in the matrix, unlike the read path which is always derived).
+	*
+	* @param array|null $data Array of locator objects to set as the new child list. Pass null or [] to remove all children.
+	* @return bool True on success (individual child errors are logged but do not abort the loop).
 	*/
 	public function set_data( ?array $data ) : bool {
 
@@ -277,7 +307,11 @@ class component_relation_children extends component_relation_common {
 
 		// $this->update_parents($data);
 
-		// force read the new value on get_data (prevent cache inconsistency)
+		// cache invalidation
+		// Force the next get_data() call to re-query the database so callers do not
+		// see stale pre-save children after a set_data(). The assignment form
+		// '= null' was replaced by unset() to fully remove the property and trigger
+		// the isset() guard in get_data() rather than the null-check path.
 		unset($this->data_resolved); //  = null;
 
 
@@ -288,13 +322,16 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* ADD_CHILD
-	* Alias of update_parent with specific action 'add'.
-	* Adds a relationship between the current section (child) and the specified parent.
+	* Adds the current section as a child of the specified parent record.
 	*
-	* @param string $parent_section_tipo The section tipo of the parent.
-	* @param mixed $parent_section_id The section ID of the parent.
-	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation.
-	* @return bool True on success.
+	* Delegates to update_parent() with action='add', which locates the target
+	* component_relation_parent instance in $parent_section_tipo/$parent_section_id
+	* and calls make_me_your_parent() on it before saving.
+	*
+	* @param string $parent_section_tipo The section tipo of the target parent record.
+	* @param mixed $parent_section_id The section ID of the target parent record.
+	* @param string|null $parent_tipo [= null] Explicit component tipo of the component_relation_parent. Resolved automatically when null.
+	* @return bool True when the parent was updated and saved; false on resolution or save failure.
 	*/
 	public function add_child( string $parent_section_tipo, mixed $parent_section_id, ?string $parent_tipo=null ) : bool {
 
@@ -307,13 +344,16 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* REMOVE_CHILD
-	* Alias of update_parent with specific action 'remove'.
-	* Removes the relationship between the current section (child) and the specified parent.
+	* Removes the current section from the child list of the specified parent record.
 	*
-	* @param string $parent_section_tipo The section tipo of the parent.
-	* @param mixed $parent_section_id The section ID of the parent.
-	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation.
-	* @return bool True on success.
+	* Delegates to update_parent() with action='remove', which locates the target
+	* component_relation_parent instance and calls remove_me_as_your_parent() on it
+	* before saving.
+	*
+	* @param string $parent_section_tipo The section tipo of the target parent record.
+	* @param mixed $parent_section_id The section ID of the target parent record.
+	* @param string|null $parent_tipo [= null] Explicit component tipo of the component_relation_parent. Resolved automatically when null.
+	* @return bool True when the parent was updated and saved; false on resolution or save failure.
 	*/
 	public function remove_child( string $parent_section_tipo, mixed $parent_section_id, ?string $parent_tipo=null ) : bool {
 
@@ -326,14 +366,28 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* UPDATE_PARENT
-	* Locate current section component_relation_children and remove given parent_section_id, parent_section_tipo combination from data.
-	* This method interacts with the corresponding component_relation_parent to update the relationship.
+	* Core write-through mechanism: modifies the component_relation_parent of a target
+	* record so that the current section appears (or disappears) in its child list.
 	*
-	* @param string $action The action to perform: 'remove' or 'add'.
-	* @param string $parent_section_tipo The section tipo of the parent to update.
-	* @param int|string $parent_section_id The section ID of the parent to update.
-	* @param string|null $parent_tipo Optional. The specific component tipo of the parent relation. If null, it is resolved automatically.
-	* @return bool True on success, false on failure.
+	* Flow:
+	*  1. Resolve $parent_tipo via get_ar_related_parent_tipo() when not provided.
+	*  2. Guard: ensure the resolved tipo model is 'component_relation_parent'.
+	*  3. Instantiate the component_relation_parent for ($parent_section_tipo, $parent_section_id).
+	*  4. Call make_me_your_parent() or remove_me_as_your_parent() depending on $action.
+	*  5. Save the parent component if the call reported a change.
+	*  6. Call get_data() to warm the local cache with the updated state.
+	*
+	* The component instance is created with the caller's current mode so that search-
+	* mode modifications do not accidentally persist to the live data store.
+	*
+	* Commented-out blocks are preserved from the original implementation; see inline
+	* comments for context.
+	*
+	* @param string $action The mutation to apply: 'add' or 'remove'.
+	* @param string $parent_section_tipo The section tipo of the parent record to modify.
+	* @param int|string $parent_section_id The section ID of the parent record to modify.
+	* @param string|null $parent_tipo [= null] Explicit component_relation_parent tipo. Resolved automatically when null.
+	* @return bool True when the parent component was saved successfully; false on any resolution or save error.
 	*/
 	private function update_parent( string $action, string $parent_section_tipo, int|string $parent_section_id, ?string $parent_tipo=null ) : bool {
 
@@ -420,6 +474,10 @@ class component_relation_children extends component_relation_common {
 			if ($changed===true) {
 
 				// search cases do not update parent data
+				// An earlier guard here prevented saves in search mode, but it was
+				// removed because search-mode set_data() now delegates entirely to
+				// parent::set_data() before reaching this method, making the guard
+				// redundant. Left as documentation only.
 				// if ($this->mode === 'search') {
 				// 	$result = true;
 				// }else{
@@ -429,7 +487,11 @@ class component_relation_children extends component_relation_common {
 					}
 				// }
 
-				// force read the new value on get_data (prevent cache inconsistency)
+				// cache warm-up
+				// Re-query after save so subsequent get_data() calls in the same request
+				// see the updated children list without a redundant DB round-trip.
+				// The earlier approach of setting $this->data_resolved = null is also
+				// sufficient; get_data() is called here to pre-populate the cache.
 				// $this->data_resolved = null;
 				$this->get_data();
 			}
@@ -442,17 +504,26 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_CHILDREN
-	* Get children data of current section.
-	* This component has not real data, to obtain its data search the component_related_parent that call this section
-	* the found sections will be the children_data.
-	* @param int|string $section_id
-	* @param string $section_tipo
-	* @param string|null $component_tipo = null
-	*	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
-	* @param int|null $limit = 0
-	* @param int|null $offset = 0
-	* @return array $children
-	*	Array of locators
+	* Returns direct (non-recursive) children of a section as an array of locators.
+	*
+	* The data is not stored in this component's own column; instead the method
+	* queries the matrix table for records whose component_relation_parent locator
+	* points to ($section_tipo, $section_id). Each matching record becomes a locator
+	* in the returned array:
+	*   locator->section_tipo       : child section tipo
+	*   locator->section_id         : child section id
+	*   locator->from_component_tipo: the component_relation_children tipo
+	*   locator->type               : DEDALO_RELATION_TYPE_CHILDREN_TIPO ('dd48')
+	*
+	* The SQO is built via build_children_sqo() which applies limit/offset and an
+	* optional section_map-based ORDER BY. Pass limit=0 to retrieve all children.
+	*
+	* @param int|string $section_id The ID of the parent record.
+	* @param string $section_tipo The tipo of the parent section.
+	* @param string|null $component_tipo [= null] The component_relation_children tipo. Resolved from $section_tipo when null.
+	* @param int|null $limit [= 0] Maximum rows to return (0 = no limit).
+	* @param int|null $offset [= 0] Row offset for pagination.
+	* @return array Flat array of locator objects; empty array when no children or resolution fails.
 	*/
 	public static function get_children( int|string $section_id, string $section_tipo, ?string $component_tipo=null, ?int $limit=0, ?int $offset=0 ) : array {
 
@@ -508,15 +579,20 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* COUNT_CHILDREN
-	* Counts children of the given section with a SQL count query, without
-	* loading the children rows. Used for pagination totals where the previous
-	* implementation loaded all children just to count them.
-	* @param int|string $section_id
-	* @param string $section_tipo
-	* @param string|null $component_tipo = null
-	* @return int|null $total
-	* 	null when the count could not be resolved (caller should fall back
-	* 	to counting loaded data)
+	* Returns the total number of direct children without loading child rows.
+	*
+	* Builds the same SQO as get_children() but calls search::count() instead of
+	* search::search(), which issues a SQL COUNT(*) query. This avoids fetching all
+	* locator data just to measure the list length — critical for large hierarchies
+	* where get_data_paginated() needs a total for the pagination footer.
+	*
+	* Returns null (not 0) when the SQO cannot be built, so callers can distinguish
+	* "zero children" from "count unavailable" and apply a fallback strategy.
+	*
+	* @param int|string $section_id The ID of the parent record.
+	* @param string $section_tipo The tipo of the parent section.
+	* @param string|null $component_tipo [= null] The component_relation_children tipo. Resolved from $section_tipo when null.
+	* @return int|null Total child count, or null if the count query could not be executed.
 	*/
 	public static function count_children( int|string $section_id, string $section_tipo, ?string $component_tipo=null ) : ?int {
 
@@ -562,16 +638,28 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_CHILDREN_OF_TYPE
-	* Get children filtered by descriptor type (descriptor or non_descriptor).
-	* Uses the unified build_children_sqo() with descriptor_type option.
+	* Returns direct children filtered by their descriptor classification.
 	*
-	* @param int|string $section_id The section ID of the parent.
-	* @param string $section_tipo The section tipo of the parent.
-	* @param string $type The descriptor type: 'descriptor' or 'non_descriptor' (default 'descriptor').
-	* @param string|null $component_tipo Optional. Previously calculated component tipo or resolved internally.
-	* @param int|null $limit Limit results (default 0 = no limit).
-	* @param int|null $offset Offset for pagination (default 0).
-	* @return array Array of locators.
+	* Builds the same SQO as get_children() but adds a second filter locator that
+	* constrains results to records whose is_descriptor component points to the
+	* DEDALO_SECTION_SI_NO section (dd64) with section_id matching the requested type:
+	*   'descriptor'     → NUMERICAL_MATRIX_VALUE_YES (1)
+	*   'non_descriptor' → NUMERICAL_MATRIX_VALUE_NO  (2)
+	*
+	* The is_descriptor component tipo is read from section_map->thesaurus->is_descriptor.
+	* If that key is absent in the section map the descriptor filter is silently skipped
+	* and all children are returned (matching the unfiltered get_children() behaviour).
+	*
+	* Primarily used by the Thesaurus tree to separate preferred-term children from
+	* non-preferred (USE/UF) alternatives.
+	*
+	* @param int|string $section_id The ID of the parent record.
+	* @param string $section_tipo The tipo of the parent section.
+	* @param string $type [= 'descriptor'] Descriptor class to return: 'descriptor' or 'non_descriptor'.
+	* @param string|null $component_tipo [= null] The component_relation_children tipo. Resolved from $section_tipo when null.
+	* @param int|null $limit [= 0] Maximum rows to return (0 = no limit).
+	* @param int|null $offset [= 0] Row offset for pagination.
+	* @return array Flat array of locators for matching children; empty array on resolution failure or no match.
 	*/
 	public static function get_children_of_type(
 		int|string $section_id,
@@ -634,11 +722,27 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_CHILDREN_RECURSIVE
-	* @param int|string $section_id
-	* @param string $section_tipo
-	* @param ?string $component_tipo
-	* @param array $visited
-	* @return array $all_children
+	* Returns all descendants of the given section by recursively expanding children.
+	*
+	* Each level calls get_children() for direct children, then recurses into each
+	* child. Results are accumulated into a flat array — the returned list contains
+	* all descendants at every depth, not just direct children.
+	*
+	* Cycle detection is enforced via the $visited map (keyed by "$section_tipo_$section_id").
+	* A node already in $visited is skipped and returns [] to prevent infinite loops in
+	* circular or diamond-shaped hierarchies. $visited is passed by value, so independent
+	* subtrees do not share visit state; use get_children_recursive_batch() or
+	* get_children_recursive_shared() when a shared accumulator is needed.
+	*
+	* (!) Warning: this method can issue O(depth × branching_factor) SQL queries.
+	* For large hierarchies prefer get_children_recursive_batch() which shares the
+	* visited map and avoids redundant subtree expansion.
+	*
+	* @param int|string $section_id The ID of the root record to expand.
+	* @param string $section_tipo The tipo of the root section.
+	* @param string|null $component_tipo [= null] The component_relation_children tipo. Resolved from $section_tipo when null.
+	* @param array $visited [= []] Already-expanded nodes (keyed by "tipo_id"). Pass [] on first call.
+	* @return array Flat array of descendant locators at all depths; empty array when the root has no children or is already visited.
 	*/
 	public static function get_children_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null, array $visited = []) : array {
 
@@ -736,12 +840,24 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_AR_RELATED_PARENT_TIPO
-	* Get the parent node(s) in the ontology related to the component_relation_children.
-	* This determines which parent relation component in the ontology corresponds to this children relation.
+	* Resolves the ontology tipo(s) of the component_relation_parent that is paired
+	* with the given component_relation_children $tipo.
 	*
-	* @param string $tipo The tipo of the children relation component.
-	* @param string $section_tipo The section tipo context.
-	* @return array An array of related parent component tipos.
+	* Resolution order:
+	*  1. Return from static cache ($ar_parent_tipo_cache) if already resolved.
+	*  2. Call common::get_ar_related_by_model('component_relation_parent', $tipo) to
+	*     find the explicitly linked parent component in the ontology.
+	*  3. Fallback: search the section for any component of model component_relation_parent
+	*     via section::get_ar_children_tipo_by_model_name_in_section(). This path
+	*     indicates an incomplete ontology definition and logs a logger::ERROR warning.
+	*  4. If neither path yields a result, log a second ERROR and return [].
+	*
+	* Results are cached in self::$ar_parent_tipo_cache so repeated calls (e.g.,
+	* inside get_children() loops) do not re-query the ontology.
+	*
+	* @param string $tipo The tipo of the component_relation_children instance.
+	* @param string $section_tipo The containing section tipo (used only in the fallback lookup).
+	* @return array Array of related component_relation_parent tipos (usually one element); empty array on failure.
 	*/
 	public static function get_ar_related_parent_tipo( string $tipo, string $section_tipo ) : array {
 
@@ -809,11 +925,19 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* GET_CHILDREN_TIPO
-	* Get the ontology tipo for the component_relation_children within a given section_tipo.
-	* This identifies the specific component instance in the structure that handles children relations for the section.
+	* Returns the ontology tipo of the first component_relation_children found in
+	* a given section's component tree.
 	*
-	* @param string $section_tipo The tipo of the section to search within.
-	* @return string|null The component tipo (e.g., 'dd123') or null if not found.
+	* Used by get_children() and count_children() when $component_tipo is not already
+	* known, to convert a $section_tipo into the concrete children-component tipo
+	* needed to build the SQO filter locator. Virtual sections are resolved
+	* and the search is recursive across nested section components.
+	*
+	* Returns null if no component_relation_children exists in the section, logging an
+	* ERROR so the hierarchy can be diagnosed at the ontology level.
+	*
+	* @param string $section_tipo The tipo of the section to inspect.
+	* @return string|null The component tipo of the first component_relation_children instance, or null if none is defined.
 	*/
 	public static function get_children_tipo( string $section_tipo ) : ?string {
 
@@ -851,18 +975,27 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* SORT_CHILDREN
-	* Update all component_relation_parent affected by
-	* the order change in this component 'value'
-	* The order is provided by a list of locators, usually from
-	* dd_ts_api in a Thesaurus API call
-	* @param string $section_tipo
-	* @param array $locators
-	* 	ascending order locators
-	* @param string $parent_section_tipo
-	* 	the parent section tipo to use as context for the order
-	* @param int $parent_section_id
-	* 	the parent section id to use as context for the order
-	* @return array|false $changed
+	* Persists a new sort order for the children of a given parent record.
+	*
+	* The display order of children is stored in a dedicated order component (typically
+	* component_number) identified by section_map->thesaurus->order for the section.
+	* This component uses the dataframe pattern: each value is scoped to a parent
+	* context (parent_section_tipo + parent_section_id), so the same child record can
+	* have different positions under different parents.
+	*
+	* The method iterates $locators in ascending order position (1, 2, 3 …) and:
+	*  1. Reads the current context-scoped value via get_value_by_context().
+	*  2. Skips the record if the order value is already correct.
+	*  3. Writes the new position via update_value_by_context() + save().
+	*  4. Appends an entry to $changed so callers know which records were mutated.
+	*
+	* Returns false when section_map->thesaurus->order is not defined.
+	*
+	* @param string $section_tipo The tipo of the child section (determines the order component).
+	* @param array $locators Ordered list of locator objects (each must have ->section_tipo and ->section_id). Position is 1-based ascending.
+	* @param string $parent_section_tipo The section tipo of the parent used as order context.
+	* @param int $parent_section_id The section ID of the parent used as order context.
+	* @return array|false Array of changed-position records (each has 'value' and 'locator'), or false on configuration error.
 	* @see dd_ts_api::save_order
 	*/
 	public static function sort_children(
@@ -937,22 +1070,41 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* BUILD_CHILDREN_SQO
-	* Build a standardized search_query_object for children searches.
-	* Centralizes SQO construction used by get_children() and has_children_of_type().
+	* Builds a configured search_query_object for querying children of a parent record.
 	*
-	* @param int|string $section_id The section ID of the parent.
-	* @param string $section_tipo The section tipo of the parent.
-	* @param string $component_tipo The component_relation_children tipo.
-	* @param string $parent_tipo The related component_relation_parent tipo.
+	* This is the single SQO factory used by get_children(), count_children(),
+	* get_children_of_type(), and has_children_of_type(). Centralising construction
+	* ensures that all callers apply the same table, mode, filter, and order logic.
+	*
+	* The core filter locator represents the parent reference stored in the children's
+	* component_relation_parent column:
+	*   section_tipo       → $section_tipo (the parent)
+	*   section_id         → $section_id   (the parent)
+	*   from_component_tipo→ $parent_tipo  (the component_relation_parent tipo)
+	*   type               → DEDALO_RELATION_TYPE_PARENT_TIPO ('dd47')
+	*
+	* The SQO operates in 'related' mode targeting only the matrix table derived
+	* from $section_tipo, so cross-table children of unrelated sections are excluded.
+	*
+	* Ordering uses the section_map->thesaurus->order component as a context-scoped
+	* integer dataframe value. The SQL fragment uses column_sql (not column) so the
+	* trait.order handler treats it as a trusted server-built expression rather than
+	* a user-supplied identifier.
+	*
+	* @param int|string $section_id The section ID of the parent record.
+	* @param string $section_tipo The section tipo of the parent record.
+	* @param string $component_tipo The component_relation_children tipo (used only when logging; $parent_tipo carries the SQO filter).
+	* @param string $parent_tipo The component_relation_parent tipo used as the from_component_tipo in the filter locator.
 	* @param array $options {
-	*    @type int    $limit             Limit results (default 0 = no limit)
-	*    @type int    $offset            Offset for pagination (default 0)
-	*    @type bool   $order             Apply section_map order (default true)
-	*    @type string $descriptor_type   Filter by descriptor type: 'descriptor', 'non_descriptor', or null for all (default null)
-	*    @type array  $additional_locators Extra locators to filter by (default [])
-	*    @type string $filter_operator   Operator for multiple locators: 'AND' or 'OR' (default null = single locator)
+	*    @type int    $limit              Maximum rows (0 = no limit; default 0).
+	*    @type int    $offset             Row offset for pagination (default 0).
+	*    @type bool   $order              Whether to apply section_map sort order (default true).
+	*    @type string|null $descriptor_type Filter by descriptor status: 'descriptor' maps to NUMERICAL_MATRIX_VALUE_YES (1);
+	*                                     'non_descriptor' maps to NUMERICAL_MATRIX_VALUE_NO (2); null returns all (default null).
+	*    @type array  $additional_locators Extra filter locators merged after the parent locator (default []).
+	*    @type string|null $filter_operator Operator joining multiple filter locators: 'AND' or 'OR' (default null — single locator).
 	* }
-	* @return search_query_object|null Configured SQO or null on error
+	* @return search_query_object|null Fully configured SQO ready for search::get_instance(), or null on descriptor_type validation error.
 	*/
 	private static function build_children_sqo(
 		int|string $section_id,
@@ -1021,6 +1173,10 @@ class component_relation_children extends component_relation_common {
 
 		// build SQO
 			$sqo = new search_query_object();
+				// section_tipo ['all']: the child rows may belong to any section tipo
+				// within the table, so we open the section_tipo filter wide. The actual
+				// table is constrained via set_tables([$table]) below, which limits the
+				// query to the parent section's matrix table and avoids cross-table hits.
 				$sqo->set_section_tipo(['all']); // open wide for Ontology cross section parents
 				$sqo->set_mode('related');
 				$sqo->set_full_count(false);
@@ -1081,14 +1237,24 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* HAS_CHILDREN_OF_TYPE
-	* Check if the given child has any child descriptor or non descriptor.
-	* Used in Thesaurus to verify if a term has specific types of children (e.g., descriptors vs non-descriptors).
+	* Returns true if the given section record has at least one child of the requested
+	* descriptor type; false otherwise.
 	*
-	* @param int|string $section_id The section ID of the child.
-	* @param string $section_tipo The section tipo of the child.
-	* @param string $component_tipo The component tipo representing the relationship.
-	* @param string $type The type to check: 'descriptor' or 'non_descriptor'.
-	* @return bool True if children of the specified type exist, false otherwise.
+	* Issues a LIMIT 1 search via build_children_sqo() with the descriptor_type option
+	* so only a single matching row is fetched rather than loading the full child list.
+	* The descriptor status is stored in the section field identified by
+	* section_map->thesaurus->is_descriptor and resolved against the DEDALO_SECTION_SI_NO
+	* boolean section (dd64), where NUMERICAL_MATRIX_VALUE_YES (1) = descriptor,
+	* NUMERICAL_MATRIX_VALUE_NO (2) = non-descriptor.
+	*
+	* Used in the Thesaurus UI to toggle expand/collapse indicators for descriptor
+	* and non-descriptor child branches without loading all descendants.
+	*
+	* @param int|string $section_id The section ID of the parent record to inspect.
+	* @param string $section_tipo The section tipo of the parent record.
+	* @param string $component_tipo The component_relation_children tipo for this section.
+	* @param string $type The descriptor classification to check: 'descriptor' or 'non_descriptor'.
+	* @return bool True when at least one child of the requested type exists; false on no match or resolution failure.
 	*/
 	public static function has_children_of_type( int|string $section_id, string $section_tipo, string $component_tipo, string $type ) : bool {
 
@@ -1118,9 +1284,11 @@ class component_relation_children extends component_relation_common {
 			$search		= search::get_instance($sqo);
 			$db_result	= $search->search();
 
-			// check if the result is empty,
-			// if yes return false the child has any non descriptor
-			// if no return true the child has almost 1 non descriptor
+			// Existence check: at least one matching row means the type is present.
+			// row_count() === 0 → no child of requested type → return false.
+			// row_count() >= 1 → at least one match found  → return true.
+			// (The stale comment below is from an earlier iteration and is misleading;
+			// the logic is correct regardless of descriptor vs non_descriptor type.)
 			$result	= $db_result->row_count() === 0 ? false : true ;
 
 
@@ -1131,8 +1299,18 @@ class component_relation_children extends component_relation_common {
 
 	/**
 	* SEARCH_OPERATORS_INFO
-	* Overrides relation common operators.
-	* @return array $ar_operators
+	* Suppresses the search operators exposed by the trait.
+	*
+	* The trait search_component_relation_children defines a full operator set
+	* (!*, *, !=, !==) in its own search_operators_info() implementation. This
+	* class-level override returns an empty array to hide those operators from the
+	* UI operator picker for this specific component — it does NOT disable the SQL
+	* resolution methods, which remain callable from trait dispatch.
+	*
+	* (!) If search operators need to be re-enabled for this component, remove this
+	* method and let the trait implementation take effect.
+	*
+	* @return array Always returns an empty array, suppressing all visible search operators.
 	*/
 	public function search_operators_info() : array {
 

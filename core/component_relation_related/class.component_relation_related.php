@@ -1,26 +1,43 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_RELATION_RELATED
-* Manages related-term relationships in thesaurus hierarchies in Dédalo.
+* Manages associative (related-term) relationships between thesaurus records in Dédalo.
 *
-* Handles associative relationships between thesaurus terms, supporting multiple
-* directionality types for flexible semantic linking. Used to connect terms
-* across different hierarchy branches or establish non-hierarchical associations.
+* This component stores an array of locators whose 'type' is DEDALO_RELATION_TYPE_RELATED_TIPO
+* ('dd89') and whose 'type_rel' records the directionality of the link:
 *
-* Directionality types:
-* - Unidirectional: One-way relationship (A → B, B does not reference A)
-* - Bidirectional: Two-way relationship (A ↔ B, both reference each other)
-* - Multidirectional: Multi-way relationship for complex semantic associations
+*   - Unidirectional (dd620): A → B is stored only on A; B has no stored reference to A.
+*   - Bidirectional   (dd467): A → B is stored on A; the inverse B → A is computed on the fly
+*     by get_references_recursive() and surfaced through get_calculated_references().
+*   - Multidirectional (dd621): the full associative graph is resolved recursively — every term
+*     that either references, or is referenced by, the current term (and their neighbours) is
+*     included; cycles are broken via $references_recursive_resolved_cache.
 *
-* Key features:
-* - Locator-based relationship storage
-* - Recursive reference resolution for complex relationship trees
-* - Caching for computed reference trees to optimize performance
-* - Integration with thesaurus hierarchy navigation
-* - Supports both stored and calculated (derived) references
+* The component overrides the parent get_data_with_references() to merge the stored dato with
+* the computed inverse references so that callers always see the logically complete set.  The
+* JSON controller (component_relation_related_json.php) exposes the computed references as a
+* separate 'references' property on the item data object (shown in 'edit' mode only).
 *
-* Extends component_relation_common with DEDALO_RELATION_TYPE_RELATED_TIPO
-* and uses locator-based data handling.
+* Data shape (stored locator)
+* ---------------------------
+*   {
+*     "id":                 1,          // stable item id for dataframe pairing
+*     "type":               "dd89",     // DEDALO_RELATION_TYPE_RELATED_TIPO
+*     "type_rel":           "dd620",    // directionality: dd620 | dd467 | dd621
+*     "section_id":         "2",
+*     "section_tipo":       "test3",
+*     "from_component_tipo":"test54"
+*   }
+*
+* Key relationships
+* -----------------
+* - Extends component_relation_common (locator lifecycle, JSONB search, export, grid).
+* - $default_relation_type  overrides the parent null to DEDALO_RELATION_TYPE_RELATED_TIPO.
+* - $default_relation_type_rel seeds the directionality used when ontology properties do not
+*   specify config_relation->relation_type_rel.
+* - get_sortable() returns true (parent returns false), enabling sort_data_by_column().
+* - get_order_path() adds a second path hop to DEDALO_THESAURUS_TERM_TIPO ('hierarchy25') so
+*   that sort_data_by_column() orders by the term label of the linked thesaurus record.
 *
 * @package Dédalo
 * @subpackage Core
@@ -33,30 +50,45 @@ class component_relation_related extends component_relation_common {
 	* CLASS VARS
 	*/
 		/**
-		 * Default relation type for related terms (DEDALO_RELATION_TYPE_RELATED_TIPO).
-		 * Determines inverse resolutions and locator format.
+		 * Default locator 'type' for this component.
+		 * Overrides the parent null to DEDALO_RELATION_TYPE_RELATED_TIPO ('dd89').
+		 * Used by validate_data_element() when a locator arrives without a 'type' property
+		 * and as the type-check key in remove_locator_from_data().
 		 * @var ?string $default_relation_type
 		 */
 		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_RELATED_TIPO;
 
 		/**
-		 * Default relation directionality type.
-		 * Values: UNIDIRECTIONAL (default), BIDIRECTIONAL, MULTIDIRECTIONAL.
-		 * Stored inside each locator of current component data.
+		 * Default directionality stored inside every locator as 'type_rel'.
+		 * Overrides the parent null to DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO ('dd620').
+		 * Resolved from ontology properties->config_relation->relation_type_rel in __construct();
+		 * only falls back to this default when the ontology entry carries no relation_type_rel.
+		 * Determines the behaviour of get_calculated_references(): unidirectional returns [], while
+		 * bidirectional and multidirectional trigger the recursive reference resolver.
 		 * @var ?string $default_relation_type_rel
 		 */
 		protected ?string $default_relation_type_rel = DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO;
 
 		/**
-		 * Properties used to verify duplicate locators when adding relations.
-		 * Array of property names that must match to consider two locators equal.
+		 * Properties used to detect duplicate locators when adding relations.
+		 * Passed to locator::in_array_locator() inside add_locator_to_data() and
+		 * to locator::compare_locators() inside remove_locator_from_data().
+		 * Including 'from_component_tipo' means two locators pointing at the same section/record
+		 * but originating from different components are NOT considered duplicates.
+		 * Note: get_locator_properties_to_check() (called from validate_data_element) uses a
+		 * separate, hash-based mechanism — this array is the legacy add/remove guard.
 		 * @var array $test_equal_properties
 		 */
 		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 		/**
-		 * Static cache for recursively resolved references.
-		 * Stores computed reference trees to avoid expensive re-calculation.
+		 * Request-lifecycle cache for resolved inverse-reference sets.
+		 * Keyed by pseudo-locator strings ("{section_tipo}_{section_id}_{lang}") accumulated during
+		 * a single get_references_recursive() traversal.  Reset to [] at the start of every
+		 * top-level call ($recursion===false) to prevent cross-request bleed.
+		 * (!) Being static, this cache survives across calls within a persistent-worker process.
+		 *     The $recursion===false reset at the entry point is the only protection; do not
+		 *     populate it outside of get_references_recursive().
 		 * @var array $references_recursive_resolved_cache
 		 */
 		public static array $references_recursive_resolved_cache = [];
@@ -65,8 +97,19 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_DATA_WITH_REFERENCES
-	* Return the full data of the component, the real data with the calculated references
-	* @return array $data_with_references
+	* Returns the effective locator list for this component: the stored dato merged with any
+	* dynamically computed inverse references (terms that point to the current record).
+	*
+	* Overrides the parent component_relation_common::get_data_with_references(), which simply
+	* delegates to get_data(). This override calls get_calculated_references(true) with only_data=true
+	* to obtain raw inverse-reference locators (no label objects) and spreads them onto the stored
+	* dato array using the spread operator. The merged array is used by callers such as
+	* search and export that need the full logical set of related terms, not just the stored ones.
+	*
+	* For unidirectional components get_calculated_references(true) returns [] so the
+	* result equals get_data() with no overhead beyond the switch in get_calculated_references.
+	*
+	* @return array $data_with_references - Merged array of locator objects; never null.
 	*/
 	public function get_data_with_references() : array {
 
@@ -82,12 +125,29 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_CALCULATED_REFERENCES
-	* Resolves references (related terms that point to current locator).
-	* Calls get_references_recursive for bidirectional/multidirectional types.
-	* When only_data is true, returns raw locators; otherwise returns locators with labels.
+	* Resolves and returns the computed inverse references for the current term.
 	*
-	* @param bool $only_data - If true, return locators without labels (for merging with real data)
-	* @return array $references - Array of reference objects (locators or locator+label items)
+	* For bidirectional and multidirectional directionality types, this delegates to
+	* get_references_recursive(), which searches the database for every term whose
+	* component_relation_related dato contains a locator pointing at the current section
+	* record and then (for MULTIDIRECTIONAL) recursively expands the graph.
+	*
+	* For unidirectional (or any unrecognised type_rel), returns an empty array immediately
+	* — no database query is issued.
+	*
+	* When $only_data is false (the default), each resolved locator is wrapped in an item object:
+	*   { value: <locator>, label: <string|null> }
+	* and the label is built from the ddo_map in the component's request_config. The
+	* fields_separator from the show object (or ' | ' as fallback) is used to join multi-field
+	* labels. This form is used by the JSON controller to populate item->references for client
+	* display.
+	*
+	* When $only_data is true, the raw locator array is returned without wrapping. This form
+	* is consumed by get_data_with_references() to merge inverse refs with stored data.
+	*
+	* @param bool $only_data [= false] - When true, return plain locator objects (no label wrap).
+	* @return array $references - For only_data=true: array of locator objects.
+	*                             For only_data=false: array of {value, label} item objects.
 	*/
 	public function get_calculated_references(bool $only_data=false) : array {
 
@@ -157,9 +217,16 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_TYPE_REL
-	* Get the current relation type rel (unidirectional/bidirectional/multidirectional)
+	* Returns the active directionality tipo for this component instance.
 	*
-	* @return string - The relation_type_rel value
+	* The value is resolved in __construct() from ontology properties->config_relation->relation_type_rel,
+	* falling back to $default_relation_type_rel (DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO).
+	* Possible values:
+	*   DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO  ('dd620') — one-way, no inverse lookup
+	*   DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO   ('dd467') — inverse lookup enabled
+	*   DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO ('dd621') — full graph traversal
+	*
+	* @return string - The relation_type_rel value for this instance.
 	*/
 	public function get_type_rel() : string {
 
@@ -170,16 +237,39 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_REFERENCES_RECURSIVE
-	* Resolve references (related terms that point to current locator).
-	* Used for bidirectional and multidirectional relation types.
-	* Recursively resolves references to build the full graph of related terms.
+	* Traverses the associative-relationship graph to collect all terms that reference the
+	* given locator, following bidirectional or multidirectional links.
 	*
-	* @param string $tipo - The component tipo
-	* @param object $locator - The locator to resolve references for
-	* @param string $type_rel - Relation type (DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO or DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO)
-	* @param bool $recursion - Whether this is a recursive call (false on first call to reset cache)
-	* @param string $lang - The language for data resolution
-	* @return array $ar_references - Array of resolved reference locators
+	* Algorithm overview
+	* ------------------
+	* 1. On the first (top-level) call ($recursion===false), the static pseudo-locator cache is
+	*    reset so a fresh traversal starts cleanly.
+	* 2. The current locator is registered in the cache and a component_relation_related instance
+	*    is built for the matching section record.  get_references() is called on it to find all
+	*    database records whose dato contains a locator pointing at the current record.  Each new
+	*    result locator (not already in cache) is added to $ar_references.
+	* 3. For MULTIDIRECTIONAL only: the stored dato of the same component instance (terms the
+	*    current record itself points TO) is also traversed.  Each unvisited data locator is added
+	*    to the cache and, when $recursion===true (i.e., not the root call), added to $ar_references
+	*    as well.  Then get_references_recursive() is called on each data locator to pull in their
+	*    own inverse references.
+	* 4. Finally, for MULTIDIRECTIONAL, get_references_recursive() is called on each reference
+	*    already collected to further expand the graph.  The cache prevents infinite loops.
+	*
+	* Top-level (entry point) call: $recursion=false, $tipo = owning component tipo.
+	* Recursive calls pass $recursion=true and the locator being expanded.
+	*
+	* (!) The root call does NOT add items from the stored dato to $ar_references (only_data
+	*     at the call site already holds the stored dato via get_data()).  Only recursion=true
+	*     calls add data items, so the root term itself is never duplicated.
+	*
+	* @param string $tipo      - The component tipo of the owning component_relation_related.
+	* @param object $locator   - Locator representing the term to resolve ({section_tipo, section_id, from_component_tipo}).
+	* @param string $type_rel [= DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO]
+	*                         - Directionality constant that controls graph depth.
+	* @param bool $recursion [= false] - False on top-level call; true on every recursive call.
+	* @param string $lang [= DEDALO_DATA_LANG] - Language code forwarded to child get_instance() calls.
+	* @return array $ar_references - Flat array of locator objects that belong to the resolved graph.
 	*/
 	public static function get_references_recursive(
 		string $tipo,
@@ -270,11 +360,29 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_REFERENCES
-	* Get bidirectional / multi-directional references to current term.
-	* Searches the database for locators that reference the current section.
+	* Queries the database for all section records whose component_relation_related dato contains
+	* a locator pointing at the current component's own section record.
 	*
-	* @param string|null $type_rel - Optional type_rel filter to narrow the search
-	* @return array $ar_result - Array of locator objects [{section_tipo, section_id, from_component_tipo}]
+	* This is the foundational reverse-lookup that powers get_references_recursive(). It builds
+	* a search_query_object against the host section tipo, using the 'relations' component_path to
+	* search inside the JSONB 'relation' column of the matrix table.  The locator used as a filter
+	* carries {section_tipo, section_id, from_component_tipo} matching the current component; an
+	* optional $type_rel narrows the search to a specific directionality.
+	*
+	* The returned array contains plain-object locators (not full locator class instances) with
+	* exactly three properties:
+	*   { section_tipo: string, section_id: string, from_component_tipo: string }
+	* from_component_tipo is always set to $this->tipo (the querying component), not to the
+	* from_component_tipo stored in the matched row, because the caller needs to instantiate the
+	* same component type to recurse.
+	*
+	* (!) limit=0 means unlimited — for heavily connected thesaurus terms this query can return
+	*     large result sets. The recursive caller's cache prevents re-visiting the same node but
+	*     does not bound the total number of database results per traversal step.
+	*
+	* @param string|null $type_rel [= null] - Optional directionality tipo to narrow the filter
+	*   (e.g. DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO). When null, all type_rel values match.
+	* @return array $ar_result - Array of plain locator objects [{section_tipo, section_id, from_component_tipo}].
 	*/
 	public function get_references( ?string $type_rel=null ) : array {
 
@@ -342,9 +450,14 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_SORTABLE
-	* Override parent to enable sorting for this component.
+	* Overrides the parent component_relation_common::get_sortable() (which returns false) to
+	* enable column-based sorting for component_relation_related instances.
 	*
-	* @return bool - Always true for component_relation_related
+	* Returning true allows sort_data_by_column() to be invoked from the 'sort_by_column' changed_data
+	* action and exposes the sortable affordance in the client context (context->sortable: true in
+	* component_relation_related_json.php output).
+	*
+	* @return bool - Always true for component_relation_related.
 	*/
 	public function get_sortable() : bool {
 
@@ -355,12 +468,23 @@ class component_relation_related extends component_relation_common {
 
 	/**
 	* GET_ORDER_PATH
-	* Calculate full path of current element to use in columns order path (context).
-	* Includes the component itself and the thesaurus term component for sorting.
+	* Builds the two-hop ddo path used by sort_data_by_column() to construct the ORDER BY clause
+	* for sorting this component's locator array by the thesaurus term label of the linked record.
 	*
-	* @param string $component_tipo - The component tipo
-	* @param string $section_tipo - The section tipo
-	* @return array $path - Array of path objects for column ordering
+	* The path contains two elements:
+	*   1. The owning component itself (component_relation_related at $component_tipo / $section_tipo).
+	*   2. The thesaurus term component (DEDALO_THESAURUS_TERM_TIPO = 'hierarchy25', a
+	*      component_input_text in the thesaurus section) — this is the column whose string value
+	*      drives the alphabetical sort of the related-term list.
+	*
+	* This two-hop structure mirrors the ddo_map path configured in the ontology:
+	*   component_relation_related → hierarchy25 (term label)
+	* and matches the path built by get_order_path() in other portal-type components that resolve
+	* through a linked thesaurus record.
+	*
+	* @param string $component_tipo - The tipo of this component_relation_related instance.
+	* @param string $section_tipo   - The host section tipo that owns this component.
+	* @return array $path - Two-element array of path objects [{component_tipo, model, name, section_tipo}, …].
 	*/
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 

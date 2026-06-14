@@ -13,7 +13,31 @@
 
 /**
 * VIEW_LINE_EDIT_INPUT_TEXT
-* Manages the component's logic and appearance in client side
+* Compact, label-free edit view for component_input_text.
+*
+* This module implements the 'line' render variant selected by
+* render_edit_component_input_text.prototype.edit when context.view === 'line'.
+* It is structurally identical to the 'default' view (view_default_edit_input_text)
+* but omits the component label and the toolbar buttons, making it suitable for
+* inline use — e.g. inside list rows or embedded in another component's edit area
+* where the surrounding context already provides labelling.
+*
+* Key differences from 'default':
+*  - No label node is rendered (label : null passed to build_wrapper_edit).
+*  - No add/remove buttons or tool buttons (no get_buttons call).
+*  - A "close edit" button (button_exit_edit) is injected at the top of
+*    content_data so the user can leave edit mode without a full toolbar.
+*  - Permissions are not checked: this view always renders interactive inputs.
+*    Read-only protection must be enforced by the caller (the parent component
+*    or section) before dispatching to this view.
+*
+* Main export: view_line_edit_input_text (constructor placeholder); all logic
+* lives on the static .render() method assigned directly to the constructor.
+*
+* Related files:
+*  - render_edit_component_input_text.js — view dispatcher + change_handler
+*  - view_default_edit_input_text.js     — full-feature sibling view
+*  - component_common/js/dataframe.js    — attach_item_dataframe
 */
 export const view_line_edit_input_text = function() {
 
@@ -25,9 +49,21 @@ export const view_line_edit_input_text = function() {
 /**
 * RENDER
 * Render node for view
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+*
+* Entry point called by render_edit_component_input_text.prototype.edit.
+* Builds and returns the component wrapper for the 'line' edit view.
+*
+* When render_level === 'content', only the inner content_data fragment is
+* returned (used by callers that build their own wrapper, e.g. list rows).
+* For render_level === 'full' (default) a full wrapper node is returned with
+* content_data attached and a convenience back-reference at wrapper.content_data.
+*
+* @param {Object} self    - Component instance (component_input_text); provides
+*                           self.data, self.context, self.view, self.lang, etc.
+* @param {Object} options - Render options.
+*   @param {string} [options.render_level='full'] - 'content' to return only the
+*                           inner fragment, 'full' for the complete wrapper node.
+* @returns {Promise<HTMLElement>} wrapper (full) or content_data (content level).
 */
 view_line_edit_input_text.render = async function(self, options) {
 
@@ -56,8 +92,16 @@ view_line_edit_input_text.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Build the content_data container with a close button and one editable
+* input (or textarea) per data entry.
+*
+* Forces at least one empty input slot when data.entries is empty so the
+* component is always editable even for new, never-saved records.
+* Each value slot is indexed on content_data (content_data[i]) as a DOM
+* pointer used by callers that need to focus a specific input after mutation.
+*
+* @param {Object} self - Component instance.
+* @returns {HTMLElement} content_data — populated container node ready to attach.
 */
 const get_content_data_edit = function(self) {
 
@@ -91,10 +135,37 @@ const get_content_data_edit = function(self) {
 /**
 * GET_CONTENT_VALUE
 * Creates the current input text node
-* @param int i
-* @param string current_value
-* @param object self
-* @return HTMLElement content_value
+*
+* Builds one content_value div for the entry at index i.  The inner
+* form control is either an <input type="text"> or a <textarea>, determined
+* by context.properties.multi_line.
+*
+* (!) multi_line=true is deprecated — prefer component_text_area for multi-line
+* content.  The flag is still honoured here for backward compatibility.
+*
+* Fallback display: when the current entry has no value, the stored
+* data.fallback_value[i].value (resolved by the server from the language
+* fallback chain) is shown as the input's placeholder attribute so the user
+* can see the inherited value without it being submitted as a real value.
+*
+* Events wired on the input:
+*  - focus   — activates the component via ui.component.activate if not already
+*              active (covers tabbing into the field without a prior click).
+*  - keydown — stopPropagation so page-level shortcut handlers (e.g. the search
+*              panel toggle) do not fire while the user types.
+*  - click   — stopPropagation to prevent accidental section-level delegation.
+*  - change  — delegates to change_handler (from render_edit_component_input_text)
+*              which writes the new value into self.data.changed_data and triggers
+*              the save / mandatory / unique update cycle.
+*
+* component_dataframe is conditionally attached via attach_item_dataframe; the
+* call is a no-op when context.properties.has_dataframe is falsy.
+*
+* @param {number} i              - Zero-based index of this entry within entries.
+* @param {Object} current_value  - Data item for this slot; shape: {id, value, lang?}.
+*                                  May be {value:null} for a forced empty slot.
+* @param {Object} self           - Component instance.
+* @returns {HTMLElement} content_value div containing the input and any dataframe node.
 */
 const get_content_value = (i, current_value, self) => {
 

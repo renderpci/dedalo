@@ -1,18 +1,32 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_IMAGE
-* Manages image media components in Dédalo.
+* Manages raster image media components in Dédalo.
 *
-* Handles image file operations including:
-* - Upload, download, and deletion of image files
-* - Quality conversions and format transformations
-* - Image manipulation (rotate, crop)
-* - Alternative format generation (webp, avif, etc.)
-* - SVG representation management for editor overlays
-* - Pixel-to-centimeter calculations for print sizing
+* Provides the full lifecycle of a raster image attached to a section record:
+* - Upload and storage of original and retouched master files
+* - Conversion to derived quality variants (e.g., '6MB', '1.5MB', '<1MB', 'thumb')
+*   using ImageMagick via the ImageMagick helper class
+* - Generation of alternative format files (e.g., webp, avif) per DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS
+* - Automatic SVG wrapper file creation/maintenance that embeds the default-quality image,
+*   used by the editor overlay and annotation tools
+* - Rotation and crop operations that mutate the stored file in place
+* - Pixel-to-centimetre dimension conversion for print-sizing metadata
+* - External-source support: when a component references an off-server image,
+*   $external_source holds the path and most file operations are skipped
 *
-* Extends component_media_common and implements component_media_interface
-* for standard media component behavior across the system.
+* Quality tiers (from DEDALO_IMAGE_AR_QUALITY, highest to lowest):
+*   'original'   – master upload, lossless, never resized
+*   'modified'   – retouched/corrected master, lossless, never resized
+*   '100MB'/'25MB'/'6MB'/'1.5MB'/'<1MB' – derived JPEG derivatives at progressively lower resolution
+*   'thumb'      – fixed-dimension preview (DEDALO_IMAGE_THUMB_WIDTH × DEDALO_IMAGE_THUMB_HEIGHT)
+*
+* Upload pipeline:
+*   dd_utils_api::upload → tool_upload::process_uploaded_file
+*   → component_media_common::add_file → component_image::process_uploaded_file
+*
+* Extends component_media_common (abstract media base) and implements
+* component_media_interface (enforced media contract shared by image, av, pdf, svg, 3d).
 *
 * @package Dédalo
 * @subpackage Core
@@ -25,30 +39,33 @@ class component_image extends component_media_common implements component_media_
 	* CLASS VARS
 	*/
 		/**
-		 * Public URL to the image file.
-		 * Formatted as 'tipo'-'order_id' (e.g., 'dd732-1').
-		 * Null when no image is associated with the component.
+		 * Public URL to the image file used by legacy display helpers.
+		 * Populated externally by rendering code, not internally by the class.
+		 * Null when no image URL has been assigned to this instance.
 		 * @var ?string $image_url
 		 */
 		public ?string $image_url = null;
 
 		/**
-		 * External source identifier for images not stored in Dédalo.
-		 * References images hosted on external systems or services.
+		 * Filesystem path (or URL) of an image hosted outside Dédalo's media store.
+		 * When non-null, most file-system operations (dimension reads, path building)
+		 * fall back to this value instead of deriving a local path. Set during
+		 * __construct via get_external_source(); inherited from component_media_common
+		 * where the same property exists as ?string.
 		 * @var ?string $external_source
 		 */
 		public ?string $external_source = null;
 
 		/**
-		 * Default image display width in pixels (section edit mode).
-		 * Standard thumbnail/preview width for image components.
+		 * Default preview width in pixels for the section edit UI.
+		 * Controls the CSS width hint sent to the client; not the physical image dimension.
 		 * @var int $width
 		 */
 		public int $width = 539;
 
 		/**
-		 * Default image display height in pixels (section edit mode).
-		 * Standard thumbnail/preview height for image components.
+		 * Default preview height in pixels for the section edit UI.
+		 * Controls the CSS height hint sent to the client; not the physical image dimension.
 		 * @var int $height
 		 */
 		public int $height = 404;
@@ -57,6 +74,18 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* __CONSTRUCT
+	* Initialises the image component by delegating to the parent media constructor
+	* and then resolving any external-source reference for this record.
+	*
+	* Parent handles: quality, id, initial_media_path, additional_path.
+	* This class adds: $external_source, resolved from ontology properties.
+	*
+	* @param string $tipo - Component ontology type identifier (e.g., 'dd522')
+	* @param mixed $section_id - Record identifier within the section
+	* @param string $mode = 'list' - UI mode ('list', 'edit', 'tm', …)
+	* @param string $lang = DEDALO_DATA_NOLAN - Language code; images are non-translatable so this is always NOLAN
+	* @param ?string $section_tipo = null - Parent section type identifier
+	* @param bool $cache = true - Whether to use the instance cache
 	*/
 	protected function __construct( string $tipo, mixed $section_id, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
@@ -75,8 +104,17 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* SAVE
-	* Manages specific svg file creation and exec parent save
-	* @return bool
+	* Persists the component data to the database, with image-specific pre-processing.
+	*
+	* Before delegating to the parent save(), iterates the current data array and writes
+	* any pending SVG overlay files to disk when a data item carries an 'svg_file_data' key.
+	* This allows the client to embed a new SVG string in the save payload without a
+	* separate API round-trip.
+	*
+	* Side effect: calls create_svg_file() for each data item that contains svg_file_data,
+	* which writes or overwrites the .svg file on disk at the path returned by get_svg_file_path().
+	*
+	* @return bool - True on successful save, false on failure
 	*/
 	public function save() : bool {
 
@@ -99,9 +137,23 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_ID
-	* By default it's built with the type of the current component_image and the order number, eg. 'dd20_rsc750_1'
-	* It can be overwritten in properties with JSON ex. {"id": "dd851"} and will be read from the content of the referenced component
-	* @return string|null $id
+	* Resolves and returns the unique file-system identifier for this image component.
+	*
+	* Resolution order (first non-empty value wins):
+	*  1. Cached $this->id (already resolved earlier in the request).
+	*  2. External source: the filename (without extension) extracted from $external_source
+	*     when the image is hosted outside Dédalo's media store.
+	*  3. Referenced name: when the ontology property 'image_id' is set, its value must be
+	*     a component tipo (e.g., 'dd851'). The live value of that component in the current
+	*     section/record is read and used as the id, allowing custom naming via a sibling
+	*     input field.
+	*  4. Default identifier: component_media_common::get_identifier(), which builds the id
+	*     from the locator triplet ({tipo}_{section_tipo}_{section_id}).
+	*
+	* An empty section_id is a hard error (returns null and logs WARNING) because the
+	* identifier cannot be composed without a record context.
+	*
+	* @return ?string $id - Unique image identifier, or null when the component has no valid context
 	*/
 	public function get_id() : ?string {
 
@@ -172,8 +224,14 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_AR_QUALITY
-	* Get the list of defined image qualities in Dédalo config
-	* @return array $ar_image_quality
+	* Returns the ordered list of image quality identifiers defined in the installation config.
+	*
+	* Quality names are read from DEDALO_IMAGE_AR_QUALITY, defined in config.php.
+	* The canonical default order is: ['original', 'modified', '100MB', '25MB', '6MB', '1.5MB', 'thumb'].
+	* Callers that iterate this list to build derivatives should process from highest to lowest
+	* to avoid using a low-resolution file as a source.
+	*
+	* @return array - Ordered array of quality identifier strings
 	*/
 	public function get_ar_quality() : array {
 
@@ -186,7 +244,14 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_DEFAULT_QUALITY
-	* @return string $default_quality
+	* Returns the quality identifier used as the working/display version for editors.
+	*
+	* The default quality is the primary derivative that the UI displays and that tools
+	* (crop, rotate, regenerate) operate on. Defined by DEDALO_IMAGE_QUALITY_DEFAULT
+	* in config.php; the canonical value is '1.5MB'.
+	* The SVG overlay file always references this quality's JPEG.
+	*
+	* @return string - Quality identifier string (e.g., '1.5MB')
 	*/
 	public function get_default_quality() : string {
 
@@ -199,7 +264,13 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_ORIGINAL_QUALITY
-	* @return string $original_quality
+	* Returns the quality identifier for the original (unmodified) master upload.
+	*
+	* The 'original' quality stores the first file uploaded by a user, preserved
+	* losslessly. It is never resized or down-sampled. Defined by
+	* DEDALO_IMAGE_QUALITY_ORIGINAL in config.php; the canonical value is 'original'.
+	*
+	* @return string - Quality identifier string (e.g., 'original')
 	*/
 	public function get_original_quality() : string {
 
@@ -212,7 +283,15 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_MODIFIED_QUALITY
-	* @return string $modified_quality
+	* Returns the quality identifier for the retouched/corrected master file.
+	*
+	* The 'modified' (retouched) quality holds a post-processed master — for example,
+	* a colour-corrected or cropped version delivered by a photographer. Like 'original',
+	* it is stored losslessly and is never resized. When present, it takes precedence over
+	* 'original' as the source for building lower-quality derivatives (see get_image_source()).
+	* Defined by DEDALO_IMAGE_QUALITY_RETOUCHED in config.php; the canonical value is 'modified'.
+	*
+	* @return string - Quality identifier string (e.g., 'modified')
 	*/
 	public function get_modified_quality() : string {
 
@@ -225,7 +304,14 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_NORMALIZED_AR_QUALITY
-	* @return array $normalized_ar_quality
+	* Returns the subset of quality identifiers that hold 'normalized' image files.
+	*
+	* Normalized files are the canonical stored versions at each master level: the JPEG
+	* derived from the original upload (even if the source was a TIFF or PSD), the
+	* JPEG derived from the retouched master, and the working default-quality JPEG.
+	* check_normalized_files() uses this list to know which tiers need regeneration.
+	*
+	* @return array - Array of three quality identifiers [original, modified, default]
 	*/
 	public function get_normalized_ar_quality() : array {
 
@@ -243,8 +329,14 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_EXTENSION
-	* @return string $this->extension
-	* 	Normally DEDALO_IMAGE_EXTENSION from config
+	* Returns the file extension used for all derived image files (default quality, thumb, etc.).
+	*
+	* Uses the instance-level $extension when it has been explicitly set (e.g., overridden
+	* for a specific quality), otherwise falls back to DEDALO_IMAGE_EXTENSION from config.php
+	* (canonical value: 'jpg'). Master files may have different extensions (tiff, psd) —
+	* those are tracked separately via get_original_extension().
+	*
+	* @return string - Lowercase file extension without leading dot (e.g., 'jpg')
 	*/
 	public function get_extension() : string {
 
@@ -255,8 +347,14 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
-	* 	Normally from DEDALO_IMAGE_EXTENSIONS_SUPPORTED from config
+	* Returns the set of file extensions accepted during upload validation.
+	*
+	* Read from DEDALO_IMAGE_EXTENSIONS_SUPPORTED (config.php). The canonical default is:
+	* ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic','avif'].
+	* Files not in this list are rejected by component_media_common::valid_file_extension()
+	* before any disk write occurs.
+	*
+	* @return array - Lowercase extension strings without leading dots
 	*/
 	public function get_allowed_extensions() : array {
 
@@ -269,8 +367,13 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_FOLDER
-	* 	Get element dir from config
-	* @return string
+	* Returns the root media sub-directory name for image files.
+	*
+	* Uses the instance-level $folder when explicitly set, otherwise falls back to
+	* DEDALO_IMAGE_FOLDER (config.php canonical value: '/image'). This is the first
+	* path segment appended to DEDALO_MEDIA_PATH when building any image file path.
+	*
+	* @return string - Directory path segment (e.g., '/image')
 	*/
 	public function get_folder() : string {
 
@@ -281,9 +384,18 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_BEST_EXTENSIONS
-	* Extensions list of preferable extensions in original or modified qualities.
-	* Ordered by most preferable extension, first is the best.
-	* @return array
+	* Returns the ordered list of preferred high-fidelity source extensions for master files.
+	*
+	* When multiple uploaded files exist for the same image (e.g., both a TIFF and a JPEG),
+	* this precedence list determines which is used as the conversion source. The first item
+	* is the most preferred. Defined by DEDALO_IMAGE_BEST_EXTENSIONS in config.php; if the
+	* constant is not defined (e.g., in minimal installations), it is initialised here to
+	* the fallback value ['tif','tiff','psd'].
+	*
+	* (!) The in-place define() means that once this method is called in a request, the
+	* fallback value is locked for the lifetime of that PHP process.
+	*
+	* @return array - Extension strings in descending preference order (e.g., ['tif','tiff','psd'])
 	*/
 	public function get_best_extensions() : array {
 
@@ -298,8 +410,16 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_MODIFIED_UPLOADED_FILE
-	* From component data
-	* @return string|null $modified_quality
+	* Returns the filesystem path of the uploaded retouched master file, if one exists.
+	*
+	* Reads the 'modified_normalized_name' field from data[0], which is set during
+	* the upload pipeline when a file is uploaded to the 'modified' quality tier.
+	* The returned path points into the modified-quality media directory and includes
+	* the stored normalized filename (the upload's basename after Dédalo normalisation).
+	*
+	* Returns null when no modified file has been uploaded for this record.
+	*
+	* @return ?string - Absolute filesystem path to the modified uploaded file, or null
 	*/
 	public function get_modified_uploaded_file() : ?string {
 
@@ -321,8 +441,14 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_TARGET_FILENAME
-	* Upload needed
-	* @return string $target_filename
+	* Returns the filename (basename with extension) that an uploaded file will be stored as.
+	*
+	* For external-source images the target filename is taken directly from the external
+	* source path (preserving the original basename). For locally stored images it is
+	* constructed from the component id and the configured default extension (e.g., 'dd522_dd128_1.jpg').
+	* Used by the upload pipeline to name the file on disk.
+	*
+	* @return string - Target filename string (e.g., 'dd522_dd128_1.jpg')
 	*/
 	public function get_target_filename() : string {
 
@@ -345,9 +471,21 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CREATE_THUMB
-	* Called on save
-	* @return object|null $result
-	* 	URL	path of thumb file path OR null if default quality file does not exists
+	* Generates the thumbnail derivative from the default-quality image file.
+	*
+	* Reads DEDALO_QUALITY_THUMB (config.php; canonical value 'thumb') and initialises
+	* it with a local fallback if the constant is not defined, logging a WARNING so the
+	* omission is visible in the log.
+	* Requires the default-quality JPEG to already exist on disk; returns false immediately
+	* when it does not (no source → no thumb).
+	* The thumb dimensions are fixed by DEDALO_IMAGE_THUMB_WIDTH × DEDALO_IMAGE_THUMB_HEIGHT
+	* (config.php defaults: 222 × 148 px), applied by ImageMagick::dd_thumb().
+	*
+	* (!) The @return annotation in the original signature says "object|null $result / URL path"
+	* but the actual declared return type is bool. The prose description is stale — do not rely
+	* on it for callers. This is flagged here but must not be changed (doc-only rule).
+	*
+	* @return bool - True when the thumb was created successfully, false on missing source or error
 	*/
 	public function create_thumb() : bool {
 
@@ -394,8 +532,14 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_IMAGE_PRINT_DIMENSIONS
-	* @param string $quality
-	* @return array $ar_info
+	* Returns the physical print dimensions of the image at the given quality, in centimetres.
+	*
+	* Delegates to pixel_to_centimeters() using the DPI value from DEDALO_IMAGE_PRINT_DPI
+	* (config.php canonical default: 150 dpi). The result is suitable for display in
+	* image-info panels or export metadata.
+	*
+	* @param string $quality - Quality identifier whose file is used to read pixel dimensions
+	* @return array - Two-element array [width_cm, height_cm] formatted as locale strings (e.g., ['15,50cm', '10,35cm'])
 	*/
 	public function get_image_print_dimensions(string $quality) : array {
 
@@ -411,9 +555,23 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CONVERT_QUALITY_TO_MEGABYTES
-	* @param string $quality
-	* @return double $number
-	* 	A float value
+	* Parses a quality identifier string into a numeric megabyte value for arithmetic comparisons.
+	*
+	* Quality names encode a file-size target using a simple DSL:
+	*  - '1.5MB'   → 1.5    (exact MB value)
+	*  - '>100MB'  → 101    (exclusive upper bound: parsed int + 1)
+	*  - '<1MB'    → 0.9    (exclusive lower bound: parsed float - 0.1)
+	*
+	* The suffix 'MB' (last two characters) is stripped before parsing. The leading
+	* '>' / '<' prefix, if present, determines the boundary rule. This float is then
+	* consumed by get_target_pixels_to_quality_conversion() to calculate target pixel
+	* dimensions that will produce a file approximately equal to the target size.
+	*
+	* (!) The '#' comment delimiter is used on line ~434 instead of '//' — this is
+	* PHP-valid but inconsistent with the codebase style. Flagged, not changed.
+	*
+	* @param string $quality - Quality identifier string (e.g., '1.5MB', '>100MB', '<1MB')
+	* @return float - Numeric megabyte value derived from the quality string
 	*/
 	public static function convert_quality_to_megabytes(string $quality) : float {
 
@@ -452,8 +610,11 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* IMAGE_VALUE_IN_TIME_MACHINE
-	* @param string $image_value . Is valor_list of current image. We need replace path to enable view deleted image
-	* @return
+	* (Dead/commented-out code — preserved per policy. Original intent was to rewrite the
+	* image src URL in a stored HTML value to point to the deleted-files directory, enabling
+	* the time-machine viewer to display images that have since been removed from live storage.)
+	* @param string $image_value - HTML string containing an img src attribute referencing the image
+	* @return (void — no declared return type; method body is commented out)
 	*/
 		// public static function image_value_in_time_machine( $image_value ) {
 
@@ -484,9 +645,19 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_DELETED_IMAGE
-	* @param string $quality
-	* @return string $last_file_path
-	* 	null when no file found
+	* Locates the most recent soft-deleted file for this image at the given quality.
+	*
+	* When a file is deleted in Dédalo it is moved to a 'deleted/' sub-directory under
+	* the quality path rather than being unlinked immediately. Deleted files are renamed
+	* with a timestamp/counter suffix (pattern: {id}_*.{ext}). This method globs that
+	* directory for matching files and returns the last one in natural sort order
+	* (i.e., the most recently archived copy).
+	*
+	* Returns null when no deleted file is found, logging at DEBUG level.
+	* Used by the time-machine feature to render historical image states.
+	*
+	* @param string $quality - Quality tier to search in (e.g., 'original', '1.5MB')
+	* @return ?string - Absolute filesystem path to the most recent deleted file, or null
 	*/
 	public function get_deleted_image(string $quality) : ?string {
 
@@ -518,7 +689,16 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_ALTERNATIVE_EXTENSIONS
-	* @return array|null $alternative_extensions
+	* Returns the set of additional format extensions to generate alongside the primary JPEG.
+	*
+	* Alternative versions (e.g., 'webp', 'avif') are created by create_alternative_version()
+	* at conversion time. The list is read from DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS (config.php);
+	* an installation with no alternative formats defines this as an empty array [].
+	* Returns null when the constant is not defined at all (minimal/legacy installation).
+	*
+	* Callers must guard against null (e.g., `$this->get_alternative_extensions() ?? []`).
+	*
+	* @return ?array - Extension strings without dots (e.g., ['webp','avif']), or null if not configured
 	*/
 	public function get_alternative_extensions() : ?array {
 
@@ -533,22 +713,31 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* Note that this is the last method called in a sequence started on upload file.
-	* The sequence order is:
-	* 	1 - dd_utils_api::upload
-	* 	2 - tool_upload::process_uploaded_file
-	* 	3 - component_media_common::add_file
-	* 	4 - component:process_uploaded_file
-	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
-	* @param object|null $file_data
-	*	Data from trigger upload file. Sample:
-	*   {
-	*	  "original_file_name": "my file 1.jpg",
-	*	  "full_file_name": "rsc29_rsc170_1.jpg",
-	*	  "full_file_path": "/full dedalo path/media/image/1.5MB/0/rsc29_rsc170_1.jpg"
-	*   }
-	* @param object|null $process_options = null
-	* @return object $response
+	* Image-specific post-upload handler; the last step in the upload pipeline.
+	*
+	* Upload pipeline call order:
+	*  1. dd_utils_api::upload          — receives the raw multipart upload
+	*  2. tool_upload::process_uploaded_file — moves to media dir, sets $this->quality
+	*  3. component_media_common::add_file  — validates extension, calls this method
+	*  4. component_image::process_uploaded_file (this method)
+	*
+	* Responsibilities:
+	* - Records upload metadata (original filename, normalised name, upload date) in data[0]
+	*   for the appropriate quality tier (original or modified).
+	* - Optionally persists the human-readable original filename to a sibling component
+	*   if the ontology property 'target_filename' names a companion tipo (e.g., component_input_text).
+	* - Calls regenerate_component() which: converts all quality derivatives, creates/refreshes
+	*   the SVG overlay file, and saves the component data.
+	* - Invokes a site-specific post-processing script (POSTPROCESSING_IMAGE_SCRIPT) if defined,
+	*   with a 1-second sleep before execution to allow filesystem flush. The sleep is intentional
+	*   and should not be removed without verifying the post-processing script tolerates immediate calls.
+	*
+	* @param ?object $file_data = null - Upload result object:
+	*   - original_file_name  : string  Human-readable name the user uploaded (e.g., 'my photo785.jpg')
+	*   - full_file_name      : string  Normalised on-disk filename (e.g., 'rsc29_rsc170_1.jpg')
+	*   - full_file_path      : string  Absolute path where the file was stored (e.g., '/mypath/media/image/1.5MB/0/rsc29_rsc170_1.jpg')
+	* @param ?object $process_options = null - Reserved for future use; currently unused
+	* @return object $response - stdClass with result (bool) and msg (string) fields
 	*/
 	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
@@ -576,7 +765,8 @@ class component_image extends component_media_common implements component_media_
 
 		// upload info. Update data information about original or modified quality
 		// Data will save in regenerate() avoid save twice;
-			// set the data ket to 0
+			// set the data key to 0
+			// image components store all metadata in a single data item at index 0
 				$key = 0;
 
 			// update upload file info
@@ -610,7 +800,8 @@ class component_image extends component_media_common implements component_media_
 
 		try {
 
-			// target_filename. Save original file name in a component_input_text if defined
+			// target_filename. Save original file name in a component_input_text if defined.
+			// Allows a record to store the human-readable upload name in a visible field.
 			// $properties->target_filename is expected to be a tipo as 'test100'
 				$properties = $this->get_properties();
 				if (isset($properties->target_filename) && safe_tipo($properties->target_filename)) {
@@ -636,13 +827,15 @@ class component_image extends component_media_common implements component_media_
 					$component_target_filename->save();
 				}
 
-			// Generate default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
-			// and original file is conserved (like myfilename.tiff and myfilename.jpg)
-			// regenerate component will create the default quality image calling build()
-			// build() will check the normalized files of the original and modified quality
-			// then if the normalized files doesn't exist, will create it
-			// then will create the SVG format of the default
-			// then save the data.
+			// Generate default_image_format.
+			// If the uploaded file is not in the Dédalo standard format (jpg) it is converted;
+			// the original file is always preserved alongside the converted copy
+			// (e.g., both 'myfilename.tiff' and 'myfilename.jpg' coexist on disk).
+			// regenerate_component() orchestrates the full rebuild sequence:
+			//  - check_normalized_files() creates missing normalized JPEGs for original/modified tiers
+			//  - all quality derivatives are rebuilt via convert_quality()
+			//  - the SVG overlay file is created/refreshed
+			//  - component data is saved
 				$result = $this->regenerate_component();
 				if ($result === false) {
 					$response->msg .= ' Error processing the uploaded file';
@@ -650,6 +843,9 @@ class component_image extends component_media_common implements component_media_
 				}
 
 			// custom_postprocessing_image. postprocessing_image_script
+			// (!) The sleep(1) is intentional: it gives the filesystem a moment to flush
+			// all written files before the external script reads them. Do not remove it
+			// without verifying the post-processing script is safe to call immediately.
 				if (defined('POSTPROCESSING_IMAGE_SCRIPT')) {
 					sleep(1);
 					require( POSTPROCESSING_IMAGE_SCRIPT );
@@ -677,10 +873,21 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CREATE_DEFAULT_SVG_STRING_NODE
-	* Generates the SVG code for default quality image and
-	* If default quality image file does not exists, return null
-	* (!) Note that svg file takes the default quality file (the working file) as reference for dimensions
-	* @return string|null $svg_string_node
+	* Builds an SVG XML string that wraps the default-quality JPEG as an embedded image node.
+	*
+	* The resulting SVG contains a single <g id="raster"> group with an <image> element whose
+	* dimensions match the actual pixel size of the default-quality file. The xlink:href
+	* points to the relative media URL of the JPEG, not a base64-encoded inline version.
+	* This SVG is written to disk by create_svg_file() and used by the annotation/overlay editor
+	* as the background layer reference.
+	*
+	* (!) Returns null — and logs an ERROR — when the default-quality JPEG does not yet exist
+	* on disk. Callers must guard against null before calling create_svg_file().
+	*
+	* (!) The SVG uses the deprecated xlink:href attribute (SVG 1.1). This is intentional for
+	* broad tool compatibility; do not change to href without verifying editor support.
+	*
+	* @return ?string - SVG XML string ready to write to disk, or null if the source image is missing
 	*/
 	public function create_default_svg_string_node() : ?string {
 
@@ -712,6 +919,7 @@ class component_image extends component_media_common implements component_media_
 					 </g>
 				</svg>
 			';
+			// strip leading tabs from each line so the written file is compact but still readable
 			$svg_string_node = trim(preg_replace('/\t+/', '', $svg_string_node_pretty));
 
 
@@ -722,7 +930,16 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_SVG_FILE_PATH
-	* @return string $file_path
+	* Returns the absolute filesystem path where the SVG overlay file for this image is stored.
+	*
+	* The SVG is stored in a 'svg' quality sub-directory within the image media tree:
+	*   DEDALO_MEDIA_PATH / {folder} / {initial_media_path} / svg / {additional_path} / {id}.svg
+	* Example: /var/dedalo/media/image/my_project/svg/0/dd522_dd128_1.svg
+	*
+	* This path is used by create_svg_file(), get_base_svg_url(), and regenerate_component()
+	* to check existence and write the SVG file.
+	*
+	* @return string - Absolute filesystem path to the .svg file
 	*/
 	public function get_svg_file_path() : string {
 
@@ -744,10 +961,15 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CREATE_SVG_FILE
-	* Writes the SVG code to disk as SVG file
-	* @param string $svg_string_node
-	* @return bool
-	* 	On write fail return false, else true
+	* Writes an SVG string to the overlay file for this image component.
+	*
+	* Creates the target directory (0750) if it does not already exist.
+	* Overwrites any existing SVG file at the path returned by get_svg_file_path().
+	* Logs an ERROR and returns false when file_put_contents() fails (e.g., permission
+	* error or out-of-disk-space); returns false without logging when directory creation fails.
+	*
+	* @param string $svg_string_node - Well-formed SVG XML string to write (e.g., from create_default_svg_string_node())
+	* @return bool - True on successful write, false on directory creation failure or file write failure
 	*/
 	public function create_svg_file(string $svg_string_node) : bool {
 
@@ -785,11 +1007,20 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_BASE_SVG_URL
-	* Get the url of the component SVG file
-	* @param bool $test_file = false
-	* @param bool $absolute = false
-	* @param bool $add_default = false
-	* @return string|null $image_url
+	* Returns the URL to the SVG overlay file for this image component.
+	*
+	* By default returns the expected URL without checking whether the file actually exists
+	* on disk. When $test_file is true, the corresponding filesystem path is checked:
+	* - If the SVG exists, its URL is returned normally.
+	* - If the SVG does not exist and $add_default is false, returns null (caller should
+	*   handle missing SVG gracefully).
+	* - If the SVG does not exist and $add_default is true, returns the URL of the generic
+	*   placeholder SVG at DEDALO_CORE_URL/themes/default/0.svg.
+	*
+	* @param bool $test_file = false  - Whether to verify the file exists before returning the URL
+	* @param bool $absolute = false   - When true, prepends DEDALO_PROTOCOL + DEDALO_HOST to make a full absolute URL
+	* @param bool $add_default = false - When true and test_file fails, return the placeholder URL instead of null
+	* @return ?string - SVG file URL, placeholder URL, or null when the file is missing and add_default is false
 	*/
 	public function get_base_svg_url(bool $test_file=false, bool $absolute=false, bool $add_default=false) : ?string {
 
@@ -827,9 +1058,19 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_FILE_CONTENT
-	* Get the SVG data embedding the image data base64 encoded into
-	* @param string $quality = DEDALO_IMAGE_QUALITY_DEFAULT
-	* @return string|null $file_content
+	* Returns a self-contained SVG string with the JPEG image data embedded as a base64 data-URI.
+	*
+	* Reads the stored SVG overlay file for this image and replaces the external xlink:href
+	* JPEG URL with an inline base64-encoded data-URI, producing a portable SVG that does
+	* not depend on external HTTP access. Used for PDF generation or offline export where
+	* the image must be self-contained.
+	*
+	* Returns null when either the SVG file or the JPEG file cannot be read (logs WARNING).
+	* The regex replacement targets the pattern 'xlink:href="…jpg"'; other image extensions
+	* in the SVG are not substituted.
+	*
+	* @param string $quality = DEDALO_IMAGE_QUALITY_DEFAULT - Quality tier whose JPEG is embedded
+	* @return ?string - SVG string with embedded base64 image data, or null on read failure
 	*/
 	public function get_file_content( string $quality=DEDALO_IMAGE_QUALITY_DEFAULT ) : ?string {
 
@@ -868,7 +1109,9 @@ class component_image extends component_media_common implements component_media_
 			$type	= pathinfo($img_file_path, PATHINFO_EXTENSION);
 			$base64	= 'data:image/' . $type . ';base64,' . base64_encode($img_data);
 
-		// file_content. Clean SVG code
+		// file_content. Clean SVG code.
+		// Replace the external JPEG href in the SVG with the base64 data-URI.
+		// (!) Only matches .jpg extension; .png or other formats in the SVG are not substituted.
 			$file_content = preg_replace('/xlink:href=".*?.jpg"/', 'xlink:href="'.$base64.'"', $svg_data);
 
 
@@ -879,11 +1122,26 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $options
-	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	* Data-migration hook called during system upgrades to transform stored component data
+	* from one schema version to another.
+	*
+	* Result codes (shared convention across all media components):
+	*  0 - This component has no migration logic for the requested version (ignored)
+	*  1 - Migration was applied successfully
+	*  2 - Migration was attempted but the data was already in the target shape (no-op)
+	*
+	* Currently component_image has no version-specific migrations and always returns 0.
+	* The switch/default structure is kept for forward compatibility.
+	*
+	* @param object $options - Migration options:
+	*   - update_version  : array   Version tuple (e.g., [7, 0, 3]) joined to '7.0.3' for switch comparison
+	*   - data_unchanged  : mixed   Flag from the caller indicating unchanged data
+	*   - reference_id    : mixed   Reference identifier for logging
+	*   - tipo            : ?string Component tipo
+	*   - section_id      : mixed   Section record id
+	*   - section_tipo    : ?string Section tipo
+	*   - context         : string  Caller context label (default: 'update_component_data')
+	* @return object $response - stdClass with result (int) and msg (string) fields
 	*/
 	public static function update_data_version(object $options) : object {
 
@@ -914,18 +1172,27 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* ROTATE
-	* Rotates the given quality image file using ImageMagick
+	* Rotates the image file at the given quality tier in place using ImageMagick.
 	*
-	* @param object $options
-	*   Configuration object with the following properties:
-	*   - quality : string|null Image quality to rotate (e.g., 'original', '1.5MB')
-	*   - extension : string|null File extension (e.g., 'jpg', 'png')
-	*   - degrees : int|float Rotation angle (-360 to 360, positive/negative values)
-	*   - rotation_mode : string Rotation mode ('default' or 'expanded')
-	*   - background_color : string|null Background color for expanded rotation
-	*   - alpha : bool Whether to preserve alpha channel (disabled for JPG)
+	* The source and target file are the same path (overwrites the existing file).
+	* Two rotation modes are supported:
+	*  - 'default'  : rotates within the original canvas bounding box (may clip corners)
+	*  - 'expanded' : expands the canvas to fit the rotated image (adds background fill)
 	*
-	* @return string|null The command result from ImageMagick::rotate() or null on failure
+	* Alpha channel handling: JPG files do not support transparency, so $alpha is forced
+	* to false when the extension is 'jpg' regardless of what the caller passes.
+	*
+	* After rotating the source-quality file the caller is responsible for rebuilding
+	* any derived quality files (e.g., via build_version()) if they also need updating.
+	*
+	* @param object $options - Rotation configuration:
+	*   - quality          : ?string  Quality tier whose file is rotated (e.g., 'original', '1.5MB')
+	*   - extension        : ?string  File extension override (e.g., 'jpg', 'png'); uses default if null
+	*   - degrees          : int|float Rotation angle; positive = clockwise, negative = counter-clockwise
+	*   - rotation_mode    : string   'default' (in-place canvas) or 'expanded' (canvas grows); defaults to 'default'
+	*   - background_color : ?string  Fill colour for exposed corners in 'expanded' mode (e.g., '#ffffff')
+	*   - alpha            : bool     Preserve alpha channel; automatically false for jpg extension
+	* @return ?string - Raw command output from ImageMagick::rotate(), or null on error
 	*/
 	public function rotate( object $options) : ?string {
 
@@ -936,7 +1203,7 @@ class component_image extends component_media_common implements component_media_
 		$background_color	= $options->background_color ?? null;
 		$alpha				= $options->alpha ?? false;
 
-
+		// alpha channel cannot be preserved in JPEG format; force it off regardless of input
 		$alpha =($alpha && $extension === 'jpg')
 			? false
 			: $alpha;
@@ -965,19 +1232,24 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CROP
-	* Crops the given quality image file using ImageMagick
+	* Crops the image file at the given quality tier in place using ImageMagick.
 	*
-	* @param object $options
-	*   Configuration object with the following properties:
-	*   - quality : string|null Image quality to crop (e.g., 'original', 'modified')
-	*   - extension : string|null File extension (e.g., 'jpg', 'png')
-	*   - crop_area : object Crop region coordinates:
-	*       - x : int|float Starting X position
-	*       - y : int|float Starting Y position
-	*       - width : int|float Crop width in pixels
-	*       - height : int|float Crop height in pixels
+	* The source and target file are the same path (overwrites the existing file).
+	* Crop coordinates are in pixels and must be within the original image bounds;
+	* ImageMagick clips silently if they exceed the canvas.
 	*
-	* @return string|null The command result from ImageMagick::crop() or null on failure
+	* After cropping the source-quality file the caller is responsible for rebuilding
+	* any derived quality files (e.g., via build_version()) if they also need updating.
+	*
+	* @param object $options - Crop configuration:
+	*   - quality   : ?string Quality tier whose file is cropped (e.g., 'original', 'modified')
+	*   - extension : ?string File extension override; uses default if null
+	*   - crop_area : object  Pixel-coordinate region:
+	*       - x      : int|float  Left edge of crop box
+	*       - y      : int|float  Top edge of crop box
+	*       - width  : int|float  Width of crop box in pixels
+	*       - height : int|float  Height of crop box in pixels
+	* @return ?string - Raw command output from ImageMagick::crop(), or null on error
 	*/
 	public function crop( object $options) : ?string {
 
@@ -1005,10 +1277,26 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CONVERT_QUALITY
-	* Creates a version of source image file with target quality
-	* using ImageMagick.
-	* @param object $options
-	* @return bool
+	* Builds one quality-tier derivative file from a higher-quality source using ImageMagick.
+	*
+	* Sequence:
+	*  1. Ensures normalized files exist for original and modified tiers (check_normalized_files()).
+	*  2. Calculates target pixel dimensions based on the MB target encoded in $target_quality,
+	*     using get_target_pixels_to_quality_conversion(). Resize is skipped for lossless tiers
+	*     (original, modified) and thumb (which uses fixed dimensions).
+	*  3. Never enlarges an image: if the computed target exceeds the source pixel count the
+	*     source dimensions are used as-is.
+	*  4. Converts via ImageMagick::convert(). For lossless tiers, quality=100 is forced.
+	*  5. Creates any configured alternative-format files (e.g., webp, avif) at the same tier
+	*     by calling create_alternative_version() for each entry in get_alternative_extensions().
+	*
+	* CLI progress data (common::$pdata) is emitted at key checkpoints when the method is called
+	* from a CLI batch script (running_in_cli() === true), allowing progress bars.
+	*
+	* @param object $options - Conversion options:
+	*   - source_quality : string  Quality tier of the source file (e.g., 'original', 'modified')
+	*   - target_quality : string  Quality tier to produce (e.g., '1.5MB', 'thumb')
+	* @return bool - True on successful conversion, false when directory creation fails
 	*/
 	public function convert_quality(object $options) : bool {
 
@@ -1049,6 +1337,8 @@ class component_image extends component_media_common implements component_media_
 			$target_image = $this->get_media_filepath($target_quality);
 
 		// Resize
+		// Only size-capped qualities need a resize string. Master tiers (original, modified) are
+		// stored full-size; thumb has its own fixed-dimension path in get_target_pixels_to_quality_conversion().
 			$resize = null;
 			if( $target_quality !== $this->get_original_quality() &&
 				$target_quality !== $this->get_modified_quality() &&
@@ -1063,12 +1353,15 @@ class component_image extends component_media_common implements component_media_
 				$target_pixels_height	= $ar_target[1] ?? null;
 
 				// Avoid enlarge images
+				// If the computed target pixel area exceeds the source, cap it at the source dimensions.
+				// This prevents upscaling a small source to fill a large quality bucket.
 					if ( ($source_pixels_width*$source_pixels_height)<($target_pixels_width*$target_pixels_height) ) {
 						$target_pixels_width	= $source_pixels_width;
 						$target_pixels_height	= $source_pixels_height;
 					}
 
 				// defaults when no value is available
+				// Guard against null/zero dimensions returned when the source file could not be read.
 					if((int)$target_pixels_width<1)  $target_pixels_width  = 720;
 					if((int)$target_pixels_height<1) $target_pixels_height = 720;
 
@@ -1146,13 +1439,24 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* BUILD_VERSION
-	* Creates a new version with IMAGEMAGICK conversion using settings based on target quality
-	* Source file is get from uploaded_modified_file. If not exists, use uploaded_original_file
-	* @param string $quality
-	* 	target quality file to build like '1.5MB'
-	* @param bool $async=true
-	* @param bool $save = true
-	* @return object $response
+	* Builds a single quality-tier file for this image component and optionally saves the component.
+	*
+	* Orchestrates the full workflow for producing one derivative:
+	*  1. Resolves the best available source file via get_image_source() (modified > original > other available).
+	*  2. Calls convert_quality() to produce the target-quality JPEG (and alternative formats).
+	*  3. When the target is the default quality, deletes and recreates the SVG overlay file
+	*     so it reflects the current pixel dimensions of the newly built file.
+	*  4. Logs a 'NEW VERSION' activity entry to the activity logger.
+	*  5. Saves the component data if $save is true.
+	*
+	* The $async parameter is declared in the interface contract but is not used by this
+	* implementation; conversion is always synchronous. Callers should not rely on async
+	* behaviour in this class.
+	*
+	* @param string $quality - Target quality identifier to build (e.g., '1.5MB', 'thumb')
+	* @param bool $async = true   - Declared by interface; not used — conversion is synchronous
+	* @param bool $save = true    - Whether to call save() after building the file
+	* @return object $response - stdClass with result (bool), msg (string), and errors (array) fields
 	*/
 	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
 
@@ -1245,14 +1549,22 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_IMAGE_SOURCE
-	* get the uploaded file to be used as source file to be converted into other qualities and formats
-	* the $quality parameter is used to check high qualities of it as source when the original and modified has not files.
-	* @param string $quality
-	* @return object $source_file
-	* {
-	* 	source_file : string | null // resolve file path of the original or modified or other high quality file
-	* 	source_quality: string | null // the quality of where the source_file was selected
-	* }
+	* Resolves the best available source file to use when building a quality derivative.
+	*
+	* Selection priority (first match wins):
+	*  1. Modified (retouched) master, when the target is not itself the 'original' tier.
+	*  2. Original master.
+	*  3. Any other existing quality file, iterating get_ar_quality() from highest to lowest,
+	*     stopping at the target quality level so a low-quality file is never used as a source
+	*     for a higher-quality output.
+	*
+	* The $quality parameter gates the fallback iteration: the loop breaks once it reaches a
+	* tier at or below the target, preventing upscaling from a coarser derivative.
+	*
+	* @param string $quality - The target quality tier that will be built (used only to gate the fallback iteration)
+	* @return object - stdClass with:
+	*   - source_file    : ?string  Absolute filesystem path of the resolved source file, or null if none found
+	*   - source_quality : ?string  Quality identifier of the resolved source file, or null
 	*/
 	public function get_image_source( string $quality ) : object {
 
@@ -1275,9 +1587,11 @@ class component_image extends component_media_common implements component_media_
 		}
 
 		// try to use non original / modified / default qualities
-		// e.g. user upload a file to a intermediate quality like '3MB' with tool media versions
+		// e.g. user upload a file to an intermediate quality like '3MB' with tool media versions,
+		// without having uploaded an 'original' or 'modified' master
 		if(empty($source_file)){
-			// iterate qualities from high to low until
+			// Iterate qualities from high to low; stop when we reach the target quality level
+			// so we never use a lower-resolution file as a source for a higher-quality derivative.
 			foreach ($this->get_ar_quality() as $current_quality) {
 				if ($current_quality!==$quality) {
 					if (file_exists($this->get_media_filepath($current_quality))) {
@@ -1305,10 +1619,22 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
-	* Alias of component_medai_common method with some additions
-	* @param array $ar_quality = []
-	* @param string|null $extension = null
-	* @return bool
+	* Removes media files for the specified quality tiers, with SVG overlay cleanup.
+	*
+	* Delegates to parent::remove_component_media_files() for the standard quality-file removal,
+	* then additionally deletes the SVG overlay file when the default quality is included in
+	* $ar_quality. This keeps the SVG in sync with the raster files: if the default-quality
+	* JPEG is gone, the SVG that references it is also removed.
+	*
+	* Returns false immediately on SVG deletion failure (after logging ERROR), even if the
+	* parent call succeeded for other quality files.
+	*
+	* (!) Typo in the original doc-block: 'component_medai_common' should be 'component_media_common'.
+	* Corrected here, not in code.
+	*
+	* @param array $ar_quality = []       - Quality identifiers whose files should be removed
+	* @param ?string $extension = null    - File extension filter; null removes the default extension file
+	* @return bool - True when all deletions succeed, false on first failure
 	*/
 	public function remove_component_media_files( array $ar_quality=[], ?string $extension=null ) : bool {
 
@@ -1339,9 +1665,21 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CHECK_NORMALIZED_FILES
-	* Ensures normalized image files exist for original and modified qualities.
-	* Creates normalized versions from uploaded source files if missing,
-	* and generates alternative format versions as needed.
+	* Ensures that normalized JPEG files exist for both the 'original' and 'modified' quality tiers.
+	*
+	* A "normalized" file is the Dédalo-standard JPEG copy derived from the uploaded master
+	* (which may be a TIFF, PSD, RAW, etc.). The normalized file is what all lower-quality
+	* derivatives are built from; without it, convert_quality() would fail.
+	*
+	* For each master quality tier (original, modified):
+	*  1. Locates the uploaded source file via get_uploaded_file(). Skips tiers with no upload.
+	*  2. Checks whether the normalized JPEG already exists. If missing, converts via ImageMagick
+	*     at quality=100 to produce it.
+	*  3. For each configured alternative extension (e.g., webp, avif), checks whether the
+	*     alternative-format copy exists at that tier and creates it if not.
+	*
+	* Called by convert_quality() before performing any resizing, so derivatives are always
+	* built from a known-good JPEG source rather than directly from a PSD/RAW.
 	*
 	* @return void
 	*/
@@ -1396,9 +1734,15 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_MEDIA_ATTRIBUTES
-	* Read file and get attributes using ffmpeg
-	* @param string $file_path
-	* @return array|null $media_attributes
+	* Reads technical attributes of a media file using the ImageMagick helper.
+	*
+	* Despite the reference to 'ffmpeg' in the original doc-block, this method delegates
+	* to ImageMagick::get_media_attributes() — not ffmpeg. (ffmpeg is used by component_av.)
+	* The returned array contains format-specific metadata such as dimensions, color space,
+	* bit depth, and resolution as reported by ImageMagick identify.
+	*
+	* @param string $file_path - Absolute filesystem path to the image file to inspect
+	* @return ?array - Associative array of media attributes, or null if reading fails
 	*/
 	public function get_media_attributes(string $file_path) : ?array {
 
@@ -1411,21 +1755,32 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_IMAGE_DIMENSIONS
-	* Calculate image size in pixels using PHP exif_read_data
-	* File used to read data will be the quality received version,
-	* usually default
-	* @param string $file_path
-	* @return object $image_dimensions
-	* 	{
-	* 		width: 1280
-	* 		height: 1024
-	* 	}
+	* Returns the pixel dimensions of the image at the given file path.
+	*
+	* Despite the mention of 'exif_read_data' in the original doc-block, the actual
+	* implementation delegates to ImageMagick::get_dimensions() (not the PHP exif extension).
+	* ImageMagick is used because it handles a wider range of formats (TIFF, PSD, HEIC, etc.)
+	* and reads dimensions reliably regardless of EXIF orientation tags.
+	*
+	* Early-return cases (return an empty stdClass with no width/height):
+	*  - $this->external_source is set: dimensions of external images cannot be read
+	*    server-side without fetching the remote file.
+	*  - The file does not exist on disk: logs ERROR and returns empty object.
+	*
+	* Callers must guard against a missing width/height via the null-coalescing operator
+	* (e.g., `$dimensions->width ?? null`) because the returned object may be empty.
+	*
+	* @param string $file_path - Absolute filesystem path to the image file
+	* @return object - stdClass with 'width' (int) and 'height' (int) properties,
+	*                  or an empty stdClass when the file cannot be read
 	*/
 	public function get_image_dimensions(string $file_path) : object {
 
 		$image_dimensions = new stdClass();
 
 		// file path
+		// External source images live outside the Dédalo media store; we cannot read their
+		// pixel dimensions without a remote HTTP fetch, so we return an empty object immediately.
 			if($this->external_source) {
 
 				$file_path = $this->external_source;
@@ -1470,17 +1825,27 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* GET_TARGET_PIXELS_TO_QUALITY_CONVERSION
-	* Calculates target pixel dimensions for converting an image to a specific quality.
-	* Returns width and height array based on source dimensions and target quality requirements.
-	* For original/retouched qualities, returns source dimensions unchanged.
-	* For thumb quality, returns fixed thumbnail dimensions.
-	* For other qualities, calculates dimensions based on target file size.
+	* Calculates the target pixel dimensions for a given quality tier based on the source image size.
 	*
-	* @param int|string|null $source_pixels_width Source image width in pixels
-	* @param int|string|null $source_pixels_height Source image height in pixels
-	* @param string $target_quality Target quality identifier (e.g., 'thumb', '1.5MB', 'original')
+	* Three branches:
+	*  - 'thumb' quality : returns the fixed thumbnail dimensions from config
+	*    (DEDALO_IMAGE_THUMB_WIDTH × DEDALO_IMAGE_THUMB_HEIGHT; defaults 222 × 148).
+	*  - 'original' / 'modified' tiers : no resizing allowed; returns source dimensions unchanged.
+	*  - All other size-capped tiers (e.g., '1.5MB', '6MB') : derives pixel dimensions
+	*    using the formula:
+	*      target_megabytes = convert_quality_to_megabytes(target_quality) × 350 000
+	*      short_axis       = target_megabytes / aspect_ratio
+	*      height           = √(short_axis)
+	*      width            = round(height × aspect_ratio)
+	*    The magic multiplier 350 000 is an empirically tuned constant that maps a JPEG
+	*    file-size target (in MB) to a pixel area at typical JPEG compression ratios.
 	*
-	* @return array|null Array containing [width, height] or null on invalid input
+	* Returns null when either source dimension is zero (invalid/missing image).
+	*
+	* @param int|string|null $source_pixels_width  - Source image width in pixels
+	* @param int|string|null $source_pixels_height - Source image height in pixels
+	* @param string $target_quality                - Target quality identifier (e.g., 'thumb', '1.5MB', 'original')
+	* @return ?array - Two-element array [width, height] in pixels, or null on invalid input
 	*/
 	public static function get_target_pixels_to_quality_conversion(int|string|null $source_pixels_width, int|string|null $source_pixels_height, string $target_quality) : ?array {
 
@@ -1521,12 +1886,15 @@ class component_image extends component_media_common implements component_media_
 			default:
 				// ratio
 					$source_ratio = (int)$source_pixels_width / (int)$source_pixels_height;
-				// target megabytes
+				// target megabytes: the MB value from the quality name multiplied by the empirical
+				// pixel-area constant (350 000) that maps file-size to pixel count for JPEG images.
 					$target_megabytes = component_image::convert_quality_to_megabytes($target_quality) * 350000;
-				// calculate the short_axis.
+				// calculate the short_axis: the number of pixels along the shorter dimension
+				// derived from total pixel area divided by the aspect ratio.
 					$short_axis = $target_megabytes / $source_ratio;
 				// set the values for height and width.
-				// if the image is a landscape the ratio will be positive: 1.33 otherwise (vertical) will be negative 0.75
+				// For landscape images the ratio is > 1 (e.g., 1.33), for portrait it is < 1 (e.g., 0.75).
+				// sqrt() gives us the short-axis pixel count from the total pixel area.
 					$height	= intval(sqrt($short_axis));
 					$width	= round($height * $source_ratio);
 
@@ -1545,14 +1913,20 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* PIXEL_TO_CENTIMETERS
-	* Converts image pixel dimensions to centimeters based on DPI resolution.
-	* Uses the image at the specified quality to get dimensions,
-	* then converts to centimeters and formats the result.
+	* Converts image pixel dimensions to centimetres at the specified DPI resolution.
 	*
-	* @param string $quality Image quality to use for source dimensions (e.g., 'original', 'modified')
-	* @param int $dpi Dots per inch resolution for conversion (default: DEDALO_IMAGE_PRINT_DPI)
+	* Reads the physical pixel dimensions from the quality-tier file using PHP's getimagesize(),
+	* then applies the standard inch-to-centimetre conversion: px × 2.54 / dpi.
+	* The result is formatted with two decimal places using a comma as the decimal separator
+	* (locale-style formatting; not the '.' separator used by number_format's default English locale).
 	*
-	* @return array Array containing [width, height] in formatted centimeters (e.g., ['15,50cm', '10,35cm'])
+	* (!) Uses getimagesize() rather than ImageMagick, which may fail or return incorrect results
+	* for formats like TIFF, PSD, or HEIC that are not natively supported by PHP's GD/exif stack.
+	* In those cases the caller may receive [0, 0] dimensions and incorrect centimetre values.
+	*
+	* @param string $quality       - Quality tier to read file from (e.g., 'original', 'modified')
+	* @param int $dpi = DEDALO_IMAGE_PRINT_DPI - Dots per inch for conversion (config.php default: 150)
+	* @return array - Two-element array [width_cm, height_cm] formatted as strings (e.g., ['15,50cm', '10,35cm'])
 	*/
 	public function pixel_to_centimeters(string $quality, int $dpi=DEDALO_IMAGE_PRINT_DPI) : array {
 
@@ -1562,7 +1936,7 @@ class component_image extends component_media_common implements component_media_
 		$x = $size[0];
 		$y = $size[1];
 
-		// Convert to centimeter
+		// Convert to centimetre: pixels × 2.54 (cm per inch) ÷ dpi
 		$h = $x * 2.54 / $dpi;
 		$l = $y * 2.54 / $dpi;
 
@@ -1618,7 +1992,10 @@ class component_image extends component_media_common implements component_media_
 					$this->create_svg_file($svg_string_node);
 				}
 			}else{
-				// svg file already exists. Check image path for fix if needed
+				// SVG file already exists. Verify that the embedded image href still matches the
+				// current media URL. Paths can drift when an installation is migrated to a new server
+				// path or when the initial_media_path / additional_path values change.
+				// Example of a stale href: '/v6/media/media_development/image/1.5MB/0/rsc29_rsc170_1.jpg'
 				$content = file_get_contents($svg_file_path);
 				// sample :
 				// <svg version="1.1" ..><g id="raster"><image width="1366" height="1024" xlink:href="/v6/media/media_development/image/1.5MB/0/rsc29_rsc170_1.jpg"/></g></svg>
@@ -1651,17 +2028,26 @@ class component_image extends component_media_common implements component_media_
 
 	/**
 	* CREATE_ALTERNATIVE_VERSION
-	* Creates an alternative format version of an image file using ImageMagick.
-	* Renders a new file with the target extension from the specified quality source.
-	* Overwrites any existing file with the same path.
-	* Skips thumb quality and extensions not defined as alternatives.
+	* Creates an alternative image format file (e.g., webp, avif) at the given quality tier.
 	*
-	* @param string $quality Image quality to use as source (e.g., 'original', 'modified')
-	* @param string $extension Target file extension for the alternative version (e.g., 'avif', 'webp')
-	* @param object|null $options Optional configuration:
-	*   - resize : array|null Target dimensions [width, height] for resizing
+	* Guards and early-return conditions (returns false without conversion):
+	*  - $quality is the thumb tier (thumb files are JPEG-only; no alternative formats).
+	*  - $extension is not in DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS.
+	*  - The primary JPEG at $quality does not exist (no source to convert from).
+	*  - No resolvable source file found via get_image_source().
 	*
-	* @return bool True on successful conversion, false on failure or skip
+	* Source-file selection: attempts to use a same-extension file from the master quality
+	* (e.g., 'original/myid.avif') when one exists, so avif→avif conversions bypass the JPEG
+	* intermediate. Falls back to the main source file otherwise.
+	*
+	* The target file is written to the same directory as the primary JPEG for $quality,
+	* with the alternative extension replacing '.jpg'. Existing alternative files are overwritten.
+	*
+	* @param string $quality        - Quality tier to produce the alternative version for
+	* @param string $extension      - Target extension without dot (e.g., 'webp', 'avif')
+	* @param ?object $options = null - Optional options:
+	*   - resize : ?string  ImageMagick resize spec (e.g., '1280x960'); null for no resize
+	* @return bool - True on successful creation, false on any failure or skip condition
 	*/
 	public function create_alternative_version( string $quality, string $extension, ?object $options=null ) : bool {
 
@@ -1722,7 +2108,8 @@ class component_image extends component_media_common implements component_media_
 			$target_path	= $this->get_media_path_dir($quality);
 			$target_file	= $target_path . '/' . $file_name . '.' . strtolower($extension);
 
-		// generate from PDF
+		// convert to alternative format using ImageMagick.
+		// (!) Label "generate from PDF" is a copy-paste error from component_pdf — this is an image component.
 			$im_options = new stdClass();
 				$im_options->source_file	= $source_file;
 				$im_options->target_file	= $target_file;

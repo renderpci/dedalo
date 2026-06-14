@@ -12,7 +12,41 @@
 
 /**
 * RENDER_SEARCH_COMPONENT_SVG
-* Manages the component's logic and appearance in client side
+* Client-side search renderer for component_svg.
+*
+* Provides the search-mode DOM for SVG file components inside Dédalo's search
+* panel. The module is mixed into `component_svg` via prototype assignment in
+* `component_svg.js`:
+*   `component_svg.prototype.search = render_search_component_svg.prototype.search`
+*
+* Responsibilities:
+* - Renders one `input[type=text]` per `data.entries` item (or a single blank
+*   placeholder when entries is empty) inside a standard `content_data` div.
+* - On `change`, normalises the input value (empty string → `null`), builds a
+*   frozen `changed_data_item` descriptor with `action: 'update'`, calls
+*   `self.update_data_value()` to mutate in-memory state, and publishes the
+*   global `change_search_element` event so the surrounding search bar redraws.
+*
+* Note: unlike component_input_text's search renderer, this module does NOT
+* support ontology-locator splitting, language-behaviour checkboxes, or the
+* `q_operator` override — SVG search is intentionally a plain text match against
+* the stored file name/path value.
+*
+* Exports:
+*   `render_search_component_svg` — constructor (prototype host for `.search`)
+*
+* @see component_svg.js           Prototype assignment for the `.search` method.
+* @see component_common.prototype.update_data_value  Single write path for entries.
+*/
+
+
+
+/**
+* RENDER_SEARCH_COMPONENT_SVG
+* Constructor function (no-op body; methods live on the prototype).
+* Mixed into `component_svg` via prototype assignment so the instance
+* gains the `.search()` method without inheritance overhead.
+* @returns {boolean} true — satisfies the call-as-constructor contract.
 */
 export const render_search_component_svg = function() {
 
@@ -23,9 +57,24 @@ export const render_search_component_svg = function() {
 
 /**
 * SEARCH
-* Render node for use in modes: search
-* @param object options
-* @return HTMLElement wrapper
+* Entry point for the search-mode render lifecycle.
+*
+* Called by the component lifecycle when `mode === 'search'`. Builds the inner
+* `content_data` subtree (value inputs) via `get_content_data`, then wraps it in
+* `ui.component.build_wrapper_search` unless `render_level === 'content'`.
+*
+* When `render_level === 'content'` the method returns only the `content_data`
+* element — this is the partial-refresh path used when the search filter changes
+* and only the inner DOM needs replacing without rebuilding the outer wrapper shell.
+*
+* The returned `wrapper` element exposes `wrapper.content_data` as a direct
+* property so callers can reach the inner node without a DOM query.
+*
+* @param {Object} options - Render configuration passed by the lifecycle.
+* @param {string} [options.render_level='full'] - `'content'` returns only
+*   `content_data`; any other value (or omitted) returns the full wrapper.
+* @returns {Promise<HTMLElement>} `wrapper_component` element (full render) or
+*   `content_data` element (content-only render).
 */
 render_search_component_svg.prototype.search = async function(options) {
 
@@ -55,8 +104,24 @@ render_search_component_svg.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Build the full search content area: one value-input row per `data.entries` item.
+*
+* When `data.entries` is empty a synthetic `['']` placeholder is used so that at
+* least one blank input row is always visible in the search form.
+*
+* Each rendered `content_value` node is:
+*   - Appended as a child of `content_data`, and
+*   - Stored as a numeric index property (`content_data[i]`) for O(1) index-based
+*     access by change handlers without a DOM query.
+*
+* Note: the placeholder for this component is a bare empty string `''` (not an
+* object `{value: ''}` as in component_input_text). The `get_content_value`
+* handler reads `data_item.value`, which resolves to `undefined` for a plain
+* string — the input then falls back to `''` via `|| ''`. This works but differs
+* from the pattern used in sibling search renderers; see the flag in flags.
+*
+* @param {Object} self - The component instance (`component_svg`).
+* @returns {HTMLElement} `content_data` div populated with input nodes.
 */
 const get_content_data = function(self) {
 
@@ -85,11 +150,36 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* Render component's content value node
-* @param int i Array key of current value from data
-* @param object data_item
-* @param object self Component instance
-* @return HTMLElement content_value
+* Render a single search-value row: a `content_value` div containing one
+* `input[type=text]` with a `change` event handler.
+*
+* The input is pre-populated with `data_item.value` (empty string when absent).
+*
+* Change handler contract:
+*   1. Reads `input.value`; maps an empty string to `null` (`parsed_value`).
+*   2. Builds a frozen `changed_data_item` descriptor:
+*        `{ action: 'update', id: <entry id or null>, value: <string|null> }`
+*      `action` is always `'update'` regardless of whether `parsed_value` is
+*      null — this differs from `component_input_text`'s renderer, which uses
+*      `action: 'remove'` and `value: null` to splice the entry out. Here, a null
+*      value is still passed as an update; `update_data_value` treats it as a
+*      no-op push when `data_key` is null, or a splice when `data_key` is found.
+*   3. Calls `self.update_data_value(changed_data_item)` to mutate `self.data.entries`.
+*   4. Publishes the `change_search_element` event via `event_manager` so the
+*      surrounding search UI (search bar, presets) can redraw to reflect the new state.
+*
+* (!) `data_item` here is whatever element lives in `data.entries` — for this
+*     component it is expected to be an object `{id?, value?}`, but the placeholder
+*     produced by `get_content_data` is a bare `''` string, so `data_item.value`
+*     will be `undefined` for the initial empty row. The `|| ''` fallback on the
+*     input covers that case. When the user fills in the input and the handler fires,
+*     `self.data.entries?.[i]?.id` is the authoritative id source (not `data_item.id`).
+*
+* @param {number} i - Zero-based index of this entry in `self.data.entries`.
+* @param {Object|string} data_item - Entry value from `data.entries`; expected to
+*   be an object `{id?, value?}` but may be a bare string for the empty placeholder.
+* @param {Object} self - The component instance (`component_svg`).
+* @returns {HTMLElement} `content_value` div containing the bound input element.
 */
 const get_content_value = (i, data_item, self) => {
 

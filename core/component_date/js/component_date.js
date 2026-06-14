@@ -4,6 +4,48 @@
 
 
 
+/**
+* COMPONENT_DATE
+* Client-side model for the Dédalo date component (`component_date`).
+*
+* Responsibilities:
+*   - Holds the instance state (tipo, section_id, mode, context, data, …).
+*   - Provides the date/time utility layer shared by all render sub-modules:
+*       parse/format helpers (`date_to_string`, `parse_string_date`, `time_to_string`,
+*       `parse_string_time`, `parse_string_period`, `date_time_to_string`),
+*       calendar-library loading (`load_editor`), placeholder generation
+*       (`get_placeholder_value`), date-mode inspection (`get_date_mode`), and
+*       display value serialisation (`value_to_string_value`).
+*   - Delegates lifecycle, save and change-data operations to `component_common`.
+*   - Delegates rendering to `render_edit_component_date`, `render_list_component_date`,
+*     and `render_search_component_date` via prototype assignment.
+*
+* Data model summary:
+*   The component stores a `dd_date` array under the `lg-nolan` language key (dates are
+*   language-independent). Each array entry is an object whose keys depend on `date_mode`:
+*
+*       date / date_time  →  { start: dd_date }
+*       range             →  { start: dd_date, end: dd_date }
+*       time / time_range →  { start: dd_date [, end: dd_date] }
+*       period            →  { period: { year, month, day } }
+*
+*   A `dd_date` object may carry any subset of:
+*       { year, month, day, hour, minute, second, millisecond, time }
+*   where `time` is an absolute-seconds value computed server-side on `save()` —
+*   it MUST NOT be authored by hand.
+*
+* Supported `date_mode` values (from `context.properties.date_mode`):
+*   'date' | 'range' | 'period' | 'time' | 'time_range' | 'date_time'
+*   Default is 'date'.
+*
+* Display order (dmy / ymd / mdy) is read from `page_globals.dedalo_date_order`
+* and is a global application setting, not a per-component property.
+*
+* @see docs/core/components/component_date.md  Full data-model and import/export spec.
+*/
+
+
+
 // imports
 	import {common} from '../../common/js/common.js'
 	import {load_style} from '../../common/js/utils/index.js'
@@ -15,6 +57,16 @@
 
 
 
+/**
+* COMPONENT_DATE
+* Constructor. Declares all instance properties to null/defaults so that the
+* prototype chain can see them from the very beginning and V8 can build a
+* stable hidden class for every instance.
+*
+* Properties are populated by `component_common.prototype.init` (called once
+* after instantiation with an `options` bag) and later by `build` + the render
+* lifecycle.
+*/
 export const component_date = function() {
 
 	this.id				= null
@@ -35,6 +87,7 @@ export const component_date = function() {
 
 	this.tools			= null
 
+	// separators used when converting dd_date objects to/from display strings
 	this.date_separator	= '/'
 	this.time_separator	= ':'
 
@@ -46,7 +99,10 @@ export const component_date = function() {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend component_date with the standard lifecycle, data-mutation, and render
+* methods from the shared `component_common` / `common` base classes.
+* All dates and time values are always stored under `lg-nolan` regardless of
+* the UI language; `save()` additionally runs `add_time()` server-side.
 */
 
 
@@ -68,7 +124,8 @@ export const component_date = function() {
 	component_date.prototype.set_changed_data		= component_common.prototype.set_changed_data
 	component_date.prototype.build_rqo				= common.prototype.build_rqo
 
-	// render
+	// render — each mode delegates to the appropriate render module.
+	// 'tm' (Time Machine read-only mode) intentionally reuses the list renderer.
 	component_date.prototype.list					= render_list_component_date.prototype.list
 	component_date.prototype.tm						= render_list_component_date.prototype.list
 	component_date.prototype.edit					= render_edit_component_date.prototype.edit
@@ -80,8 +137,19 @@ export const component_date = function() {
 
 /**
 * LOAD_EDITOR
-* load the libraries and specific css
-* @return bool
+* Lazily loads the flatpickr calendar library (JS + CSS) the first time an edit
+* or search widget is rendered.  If flatpickr has already been loaded by another
+* component instance in the same page, the check short-circuits so the files are
+* fetched only once per page lifetime.
+*
+* The CSS is injected via `load_style`; the JS is imported as a dynamic module.
+* Both assets are fetched in parallel through `Promise.all`.
+*
+* Called from `render_edit_component_date` and `render_search_component_date`
+* before constructing the input widget so the `flatpickr` global is guaranteed
+* to be defined by the time the calendar button is clicked.
+*
+* @returns {Promise<boolean>} Resolves to `true` when both assets are ready.
 */
 component_date.prototype.load_editor = async function() {
 
@@ -110,16 +178,23 @@ component_date.prototype.load_editor = async function() {
 
 /**
 * DATE_TO_STRING
-* @param object date
-*  dd_date as date in Dédalo format:
-* {
-* 	"day": 25,
-* 	"month" 4,
-* 	"year": 2022
-* }
-* This method converts specific date to string format.
-* The "start" or "end" object is not accepted here.
-* @return string string_date 25/04/2022
+* Converts a single `dd_date` object into a localised display string using the
+* global date order (`page_globals.dedalo_date_order`: 'dmy' | 'ymd' | 'mdy').
+*
+* Partial dates are supported: a bare year produces `"2022"`, a year+month
+* (without day) produces `"04/2022"` (or its locale equivalent).  A date with
+* all three parts set follows the full locale-ordered pattern.
+*
+* Day and month are zero-padded to two digits; year is emitted as-is (may be
+* negative for BCE).
+*
+* (!) The caller must pass the inner `dd_date` container directly (e.g.
+* `entry.start` or `entry.end`), NOT the outer entry wrapper `{ start, end }`.
+*
+* @param {Object} date - A `dd_date` object: `{ year?, month?, day?, hour?, minute?, second?, time? }`.
+*                        Only year/month/day are read; time fields are ignored.
+* @returns {string} Formatted date string (e.g. `"25/04/2022"`, `"04/2022"`, `"-238"`).
+*                   Returns `""` when no recognisable parts can be composed.
 */
 component_date.prototype.date_to_string = function (date) {
 
@@ -202,9 +277,40 @@ component_date.prototype.date_to_string = function (date) {
 
 /**
 * PARSE_STRING_DATE
-* @param string string_date
-* 	sample: '25/04/2022'
-* @return object dd_date
+* Parses a free-text date string typed by the user into a validated `dd_date`
+* object, respecting the global date order setting.
+*
+* Normalisation pipeline:
+*   1. Try to split on `this.date_separator` ('/').
+*   2. If only one token is found, try alternate separators '-' and '.' —
+*      with special handling for negative years: a leading '-' must NOT be
+*      treated as a separator.  For example '-200.05.01' should yield
+*      `{ year: -200, month: 5, day: 1 }`, not split into `['', '200', '05', '01']`.
+*      To achieve this, the code converts all '.' and '-' to '/' first, then
+*      re-folds `//` (which arose from the leading '-') back to '/-' before
+*      splitting again.
+*   3. Token count drives the positional interpretation according to `date_order`:
+*       1 token  → year only
+*       2 tokens → month+year (or year+month)
+*       3 tokens → full day+month+year (or local order variant)
+*   4. `check_day` and a month-range guard validate day/month values.
+*   5. Errors are accumulated and returned alongside the partial `dd_date`.
+*
+* (!) If `day_ok` or `month_ok` is `false` (validation failed), the corresponding
+* field is stored as `false` in `dd_date` (not `null`), signalling the caller
+* that a valid-looking but out-of-range value was found.  The error array entry
+* carries the specific field type so the UI can highlight the offending input.
+*
+* @param {string} string_date - User-entered date string, e.g. `'25/04/2022'`,
+*                               `'-200'`, `'2022-04-25'`.
+* @returns {Object} Response bag:
+*   ```
+*   {
+*     result : { year?, month?, day? },  // validated dd_date (fields omitted when absent)
+*     error? : [{ msg: string, type: 'full'|'day'|'month' }, …]
+*   }
+*   ```
+*   `error` is only present when at least one validation failure occurred.
 */
 component_date.prototype.parse_string_date = function(string_date) {
 
@@ -253,7 +359,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 					date_obj.year	= parseInt(ar_date_values[2])
 				}
 				break;
-			
+
 			case 'ymd':
 				// year and month  : 2022/04
 				if(ar_date_values.length === 2){
@@ -267,7 +373,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 					date_obj.day	= parseInt(ar_date_values[2])
 				}
 				break;
-			
+
 			case 'dmy':
 			default:
 				// month and year : 04/2022
@@ -307,9 +413,11 @@ component_date.prototype.parse_string_date = function(string_date) {
 			dd_date.year = date_obj.year
 		}
 		if(date_obj.month){
+			// store the raw month value on success; on failure store false (signals caller)
 			dd_date.month = month_ok ? date_obj.month : month_ok
 		}
 		if(date_obj.day){
+			// store the raw day value on success; on failure store false (signals caller)
 			dd_date.day = day_ok ? date_obj.day : day_ok
 		}
 
@@ -358,9 +466,20 @@ component_date.prototype.parse_string_date = function(string_date) {
 
 /**
 * CHECK_DAY
-* @param int day 25
-* @param int month 2
-* @return bool day_ok
+* Validates that a given day number is legal for the specified month and year.
+* Handles:
+*   - Zero / negative day values (always invalid → `false`).
+*   - February with leap-year awareness (28 days normally, 29 in a leap year).
+*   - Months with 31 days: Jan(1), Mar(3), May(5), Jul(7), Aug(8), Oct(10), Dec(12).
+*   - All other months have 30 days.
+*
+* Used by `parse_string_date` before building the final `dd_date` object.
+*
+* @param {number} day   - Day number as typed by the user (1–31 range expected).
+* @param {number} month - Month number (1–12).
+* @param {number} year  - Full year (used only for the February leap-year check).
+* @returns {boolean} `true` if the day is within the valid range for that month;
+*                    `false` otherwise.
 */
 component_date.prototype.check_day = function(day, month, year){
 
@@ -404,8 +523,16 @@ component_date.prototype.check_day = function(day, month, year){
 
 /**
 * IS_LEAP_YEAR
-* @param int year
-* @return bool
+* Returns whether the given year is a leap year under the proleptic Gregorian
+* calendar rules:
+*   - Divisible by 4   → leap year candidate.
+*   - Divisible by 100 → NOT a leap year, UNLESS also divisible by 400.
+*
+* Works correctly for negative (BCE) year values because the modulo operator in
+* JavaScript preserves sign for exact multiples (e.g. -400 % 400 === 0).
+*
+* @param {number} year - Integer year (may be negative for BCE dates).
+* @returns {boolean} `true` if `year` is a leap year; `false` otherwise.
 */
 component_date.prototype.is_leap_year = function(year) {
 
@@ -420,8 +547,14 @@ component_date.prototype.is_leap_year = function(year) {
 
 /**
 * GET_DATE_MODE
-* @return string date_mode
-* 	default: 'date'
+* Reads the `date_mode` property from the component's ontology context.
+* `date_mode` controls which input widgets are rendered and how `dd_date` data
+* is structured and serialised.
+*
+* Valid values: `'date'` | `'range'` | `'period'` | `'time'` | `'time_range'` | `'date_time'`.
+* Falls back to `'date'` when the property is absent (i.e. standard calendar date).
+*
+* @returns {string} The active date mode, defaulting to `'date'`.
 */
 component_date.prototype.get_date_mode = function() {
 
@@ -438,8 +571,22 @@ component_date.prototype.get_date_mode = function() {
 
 /**
 * GET_PLACEHOLDER_VALUE
-* @return string placeholder_value
-* sample: 'DD/MM/YYYY'
+* Builds the `placeholder` attribute string for a date or time input field,
+* reflecting both the active `date_mode` and the global date-order setting.
+*
+* For time-only modes (`'time'`, `'time_range'`) the placeholder is always
+* `'HH:MM:SS'` (or the instance's `time_separator` equivalent), regardless of
+* `dd_date_format`.  For all date-bearing modes the placeholder tokens (DD, MM,
+* YYYY) are re-ordered to match `page_globals.dedalo_date_order`.
+*
+* Example outputs for `date_separator = '/'`:
+*   - `dmy` → `'DD/MM/YYYY'`
+*   - `ymd` → `'YYYY/MM/DD'`
+*   - `mdy` → `'MM/DD/YYYY'`
+*   - time  → `'HH:MM:SS'`
+*
+* @returns {string} A human-readable input-format hint, e.g. `'DD/MM/YYYY'`.
+*                   Returns `''` for an unrecognised `dd_date_format` value.
 */
 component_date.prototype.get_placeholder_value = function() {
 
@@ -467,17 +614,20 @@ component_date.prototype.get_placeholder_value = function() {
 
 /**
 * TIME_TO_STRING
-* Converts object time to flat string with time_separator as '13:54:00'
-* @param object time
-* sample:
-* {
-*	hour: 14
-*	minute: 46
-*	second: 0
-*	time: 53160
-* }
-* @return string string_time
-*	 sample: '13:54:00'
+* Converts a `dd_date` container that holds clock-time fields into a display
+* string of the form `'HH:MM:SS'` (using `this.time_separator`).
+*
+* Missing or falsy hour/minute/second values are replaced with `'00'` so the
+* output always has the full three-part structure (zero-padded).
+*
+* (!) `time.hour === 0` is falsy in JavaScript, so a midnight hour (0) is
+* rendered as `'00'` correctly — but only because the ternary falls through to
+* the `'00'` default.  A value of `0` is treated the same as absent.
+*
+* @param {Object|null} time - A `dd_date` object with optional `{ hour, minute, second }`.
+*                             Pass `null` or `undefined` to get an empty string back.
+* @returns {string} Clock time string, e.g. `'13:54:00'`.  Returns `''` when
+*                   `time` is falsy.
 */
 component_date.prototype.time_to_string = function(time) {
 
@@ -511,21 +661,21 @@ component_date.prototype.time_to_string = function(time) {
 
 /**
 * DATE_TIME_TO_STRING
-* Converts object dd_date to flat string
-* mixing time_to_string and date_to_string results
-* @param object time
-* sample:
-* {
-* 	day: 25,
-* 	month 4,
-* 	year: 2022
-*	hour: 14
-*	minute: 46
-*	second: 0
-*	time: 53160
-* }
-* @return string string_time
-*	 sample: '22/07/2023 13:54:00'
+* Converts a combined `dd_date` object (holding both calendar-date and clock-time
+* fields) into a single display string of the form `'DD/MM/YYYY HH:MM:SS'`
+* (separators and order adapt to `date_separator` / `time_separator` and the
+* global `dedalo_date_order` setting).
+*
+* Delegates to `date_to_string` for the date portion and `time_to_string` for
+* the time portion, then concatenates them with a single space.
+*
+* Used by the `'date_time'` and `'time_range'` rendering paths.
+*
+* @param {Object|null} time - A `dd_date` object that may contain any combination
+*   of `{ year, month, day, hour, minute, second }`. Pass `null`/`undefined` to
+*   get an empty string.
+* @returns {string} Combined date-time string, e.g. `'22/07/2023 13:54:00'`.
+*                   Returns `''` when `time` is falsy.
 */
 component_date.prototype.date_time_to_string = function(time) {
 
@@ -549,12 +699,30 @@ component_date.prototype.date_time_to_string = function(time) {
 
 /**
 * PARSE_STRING_TIME
-* @param string string_time
-* @return object response
-* 	Sample:
-* {
-*	result : dd_date
-* }
+* Parses a free-text time string typed by the user into a validated `dd_date`
+* object containing clock-time fields only (`hour`, `minute`, `second`).
+*
+* Input is split on `this.time_separator` (`:`) and each part is parsed with
+* `parseInt`.  Three validation rules are applied:
+*   - hour   must be in [0, 23].
+*   - minute must be in [0, 59].
+*   - second must be in [0, 59].
+*
+* Special empty-clear case: when the string is empty (or splits into all-null
+* tokens), the method returns `{ result: {} }` with no error — this signals
+* the caller to delete the existing time value.  This is distinct from the
+* "non-empty but unparseable" case which does push a `'full'`-type error.
+*
+* @param {string} string_time - User-entered time string, e.g. `'13:54:00'`.
+* @returns {Object} Response bag:
+*   ```
+*   {
+*     result : { hour?, minute?, second? },  // dd_date with time fields only
+*     error? : [{ msg: string, type: 'full'|'hour'|'minute'|'second' }, …]
+*   }
+*   ```
+*   `error` is only present when at least one validation failure occurred.
+*   An empty `result` object (all fields absent) indicates a clear-value intent.
 */
 component_date.prototype.parse_string_time = function(string_time) {
 
@@ -649,18 +817,32 @@ component_date.prototype.parse_string_time = function(string_time) {
 
 /**
 * PARSE_STRING_PERIOD
-* @param object values
-* sample:
-* {
-* 	year : 1987,
-* 	month : 5,
-* 	day : 1
-* }
-* @return object response
-* 	Sample:
-* {
-*	result : dd_date
-* }
+* Parses raw numeric year/month/day values from the period input widget into a
+* `dd_date` object suitable for storage in the `period` container
+* (`{ period: { year, month, day } }`).
+*
+* Unlike `parse_string_date`, this method receives an **object** (not a string)
+* because the period widget renders three independent `<input>` elements and
+* collects them into a plain object before calling this method.
+*
+* Validation: currently minimal — year/month/day are accepted as-is.  The
+* commented-out month (<13) and day (<31) guards were intentionally disabled;
+* they are left in the source for future reference if stricter validation of
+* period fields is required.
+*
+* Year: `0` is a legal period duration (zero years), so the guard uses
+* `typeof year === 'number'` rather than truthiness to allow it.
+*
+* @param {Object} values - An object with optional string-or-number fields:
+*   `{ year?: string|number, month?: string|number, day?: string|number }`.
+*   All inputs are coerced with `parseInt`.
+* @returns {Object} Response bag:
+*   ```
+*   {
+*     result : { year?, month?, day? },  // parsed period dd_date
+*     error? : []                         // currently always empty (no active checks)
+*   }
+*   ```
 */
 component_date.prototype.parse_string_period = function(values) {
 
@@ -735,22 +917,31 @@ component_date.prototype.parse_string_period = function(values) {
 
 /**
 * VALUE_TO_STRING_VALUE
-* Convert standard value item to string date based on
-* current date_mode (range, period, time, date)
-* Used by get_content_value_read to unify print and read only output
-* It is necessary because edit mode do no send values resolved as string like list mode do
-* @param string current_value
-* 	Sample:
-	{
-	    "mode": "range",
-	    "start": {
-	        "day": 12,
-	        "time": 65027145600,
-	        "year": 2023,
-	        "month": 3
-	    }
-	}
-* @return string
+* Converts one data entry (a single array slot from `data.entries`) into a
+* human-readable string, dispatching on the component's `date_mode`.
+*
+* Used by `get_content_value_read` (in `render_edit_component_date`) to produce
+* read-only / print view output.  Edit mode receives raw `dd_date` objects from
+* the server rather than pre-resolved strings (which is what list mode provides),
+* so this helper bridges the gap.
+*
+* Output format per mode:
+*   - `'date'`    → `date_to_string(start)`, e.g. `'25/04/2022'`
+*   - `'range'`   → `'<start><>< end>'`, e.g. `'01/01/1999<>30/09/2008'`
+*                   (!) Uses `'<>'` as a hard-coded separator here, not the
+*                   `fields_separator` ontology property used by the server.
+*   - `'period'`  → comma-joined label/value pairs using `get_label` plurals,
+*                   e.g. `'years: 3, months: 10'`.  Zero values are omitted.
+*   - `'time'`    → `time_to_string(start)`, e.g. `'13:54:00'`
+*   - anything else (including `'date_time'`, `'time_range'`) falls through to
+*                   the `'date'` case via `default`.
+*
+* @param {Object|null} current_value - One entry from `data.entries`, e.g.:
+*   ```
+*   { mode: 'range', start: { day:12, year:2023, month:3 }, end: { … } }
+*   ```
+*   or `null` / `undefined` when the slot is empty.
+* @returns {string} Human-readable representation.  Returns `''` for null/empty input.
 */
 component_date.prototype.value_to_string_value = function(current_value) {
 
@@ -784,7 +975,7 @@ component_date.prototype.value_to_string_value = function(current_value) {
 				const month	= period.month || 0
 				const day	= period.day   || 0
 
-			// pairs
+			// pairs — only non-zero durations are emitted; pluralisation via get_label
 				const pairs = []
 				if (year>0) {
 					const label_year	= (year>1) ? get_label.years : get_label.year
@@ -821,9 +1012,22 @@ component_date.prototype.value_to_string_value = function(current_value) {
 
 /**
 * IS_EMPTY
-* Check if the instance data is empty.
-* Used in search mode for hilite the component wrapper when has value.
-* @return bool
+* Reports whether the component currently holds no meaningful date/time data.
+* The check is used by the search-mode UI to highlight the component wrapper
+* when the user has entered a filter value (non-empty → highlighted).
+*
+* An instance is considered empty when:
+*   - `data.entries` is absent or an empty array, OR
+*   - every entry is falsy, OR
+*   - every entry's `start`, `end`, and `period` containers are either absent
+*     or themselves contain only `null`, `undefined`, or `''` values.
+*
+* Note: `has_data` inspects `Object.values` shallowly — nested objects (which do
+* not occur in a flat `dd_date`) would be treated as truthy regardless of their
+* own content.
+*
+* @returns {boolean} `true` when all entries are empty; `false` as soon as any
+*                    non-empty container is found.
 */
 component_date.prototype.is_empty = function() {
 

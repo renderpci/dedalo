@@ -1,21 +1,54 @@
 <?php declare(strict_types=1);
 /**
- * HIERARCHY
- *
- * Centralized hierarchy methods for managing thesaurus-like structures in Dédalo.
- *
- * The hierarchy class extends ontology and provides specialized methods for:
- * - Managing virtual sections used for descriptors and typologies (e.g., 'es1', 'es2').
- * - High-speed retrieval of hierarchy-related configuration (section maps, main languages).
- * - Exporting and importing hierarchy data.
- * - Comparing and tracking schema changes in the ontology sections.
- * - Creating root terms for thesaurus display.
- *
- * It uses a main table 'matrix_hierarchy_main' and follows the ontology-driven
- * design pattern common in Dédalo v7.
- *
- * @package core\hierarchy
- */
+* HIERARCHY
+* Registry and lifecycle manager for Dédalo thesaurus/descriptor hierarchies.
+*
+* A "hierarchy" in Dédalo represents a named controlled vocabulary (e.g., a thematic
+* thesaurus, a toponymy, a language list). Every hierarchy is stored as a record in
+* 'matrix_hierarchy_main' (section_tipo = 'hierarchy1') and owns two virtual sections:
+*
+*   <tld>1  — descriptor section (actual terms: "Valencia", "Amphorae", …)
+*   <tld>2  — model/typology section (disambiguation values: "City", "Black", …)
+*
+* Virtual sections do not carry their own component definitions; they inherit everything
+* from a "real" section referenced via DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO.
+*
+* This class extends ontology and overrides:
+*   - $main_table         → 'matrix_hierarchy_main'
+*   - $main_section_tipo  → 'hierarchy1'
+*   - get_active_elements() to filter by hierarchy4 (Active flag)
+*   - clear() to additionally flush hierarchy-specific caches
+*
+* Key responsibilities:
+*   - generate_virtual_section()   : provision the two virtual sections in the ontology
+*   - get_main_lang()              : resolve the primary language for a thesaurus section
+*   - get_section_map_elemets()    : read section_map properties (term tipo, children tipo …)
+*   - get_element_tipo_from_section_map() : single-key helper over section_map resolver
+*   - export_hierarchy()           : dump matrix rows to gzipped psql COPY files
+*   - get/build/save/parse schema change utilities for ontology-upgrade auditing
+*   - create_thesaurus_general_term() : create the root display term for a thesaurus
+*   - sync_hierarchy_active_status()  : keep "Active" in sync with "Active in thesaurus"
+*
+* Related constants (core/base/dd_tipos.php):
+*   DEDALO_HIERARCHY_SECTION_TIPO               = 'hierarchy1'
+*   DEDALO_HIERARCHY_ACTIVE_TIPO                = 'hierarchy4'
+*   DEDALO_HIERARCHY_TERM_TIPO                  = 'hierarchy5'
+*   DEDALO_HIERARCHY_TLD2_TIPO                  = 'hierarchy6'
+*   DEDALO_HIERARCHY_LANG_TIPO                  = 'hierarchy8'
+*   DEDALO_HIERARCHY_TYPOLOGY_TIPO              = 'hierarchy9'
+*   DEDALO_HIERARCHY_TARGET_SECTION_TIPO        = 'hierarchy53'
+*   DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO  = 'hierarchy58'
+*   DEDALO_HIERARCHY_CHILDREN_TIPO              = 'hierarchy45'
+*   DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO        = 'hierarchy59'
+*   DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO   = 'hierarchy109'
+*   DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO   = 'hierarchy125'
+*
+* Extended by: (none in v7 core)
+* Uses traits: (none directly; inherits ontology's manage_cache_size / clear)
+*
+* @package Dédalo
+* @subpackage Core
+*/
 class hierarchy extends ontology {
 
 
@@ -25,64 +58,82 @@ class hierarchy extends ontology {
 	*/
 
 		/**
-		 * Primary database table storing hierarchy (thesaurus) master records.
-		 * Contains ontology-driven hierarchy definitions and configuration.
-		 * @var string $main_table
-		 */
+		* Primary database table for hierarchy master records.
+		* Each row (section_tipo='hierarchy1') represents one named thesaurus
+		* configuration: its TLD, target section, active flag, language, typology, etc.
+		* Overrides ontology::$main_table ('matrix_ontology_main').
+		* @var string $main_table
+		*/
 		public static string $main_table = 'matrix_hierarchy_main';
 
 		/**
-		 * Tipo of the main hierarchy section in the ontology.
-		 * Identifies the 'hierarchy1' section that defines hierarchy metadata.
-		 * @var string $main_section_tipo
-		 */
+		* Ontology tipo that identifies the main hierarchy definition section.
+		* All hierarchy configuration records are stored under this section_tipo.
+		* Overrides ontology::$main_section_tipo ('ontology35').
+		* @var string $main_section_tipo
+		*/
 		public static string $main_section_tipo = 'hierarchy1';
 
 		/**
-		 * Array of hierarchy portal tipos for children relations.
-		 * Formerly component_relation_children, now component_portal based.
-		 * Maps to hierarchy45 (General term) and hierarchy59 (General term model).
-		 * @var array $hierarchy_portals_tipo
-		 */
+		* Component portal tipos that hold the children (child-term) relations for a hierarchy.
+		* 'hierarchy45' = General Term portal  (descriptor trees)
+		* 'hierarchy59' = General Term Model portal  (typology/model trees)
+		* Formerly component_relation_children; migrated to component_portal in v7.
+		* @var array $hierarchy_portals_tipo
+		*/
 		public static array $hierarchy_portals_tipo = [
 			DEDALO_HIERARCHY_CHILDREN_TIPO,
 			DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO
 		];
 
 		/**
-		 * Static cache for hierarchy main language lookups.
-		 * Maps hierarchy tipos to their primary language code (e.g., 'lg-eng').
-		 * @var array $cache_main_lang
-		 */
+		* In-process cache mapping section_tipo → resolved main language code.
+		* Example entry: ['es1' => 'lg-spa', 'ts1' => 'lg-eng']
+		* Populated lazily by get_main_lang(); cleared by clear().
+		* @var array $cache_main_lang
+		*/
 		public static array $cache_main_lang = [];
 
 		/**
-		 * Static cache for hierarchy section map elements.
-		 * Stores resolved section structure to avoid repeated ontology traversal.
-		 * @var array $cache_section_map_elemets
-		 */
+		* In-process cache mapping section_tipo → its section_map properties array.
+		* Avoids repeated ontology traversal when resolving term/children tipos
+		* for the same thesaurus section within a single request.
+		* Cleared by clear(). Size-bounded by manage_cache_size().
+		* Note: the property name contains a typo ('elemets' vs 'elements') —
+		* it is preserved to avoid breaking call sites.
+		* @var array $cache_section_map_elemets
+		*/
 		public static array $cache_section_map_elemets = [];
 
 		/**
-		 * Static cache for hierarchy section instances.
-		 * Maps section tipos to their hierarchy objects for fast retrieval.
-		 * @var array $cache_hierarchy_section
-		 */
+		* In-process two-level cache: section_tipo → component_tipo → section_id (int|null).
+		* Used by get_hierarchy_section() to remember which hierarchy1 record
+		* points to a given target section_tipo, avoiding repeated SQO searches.
+		* Cleared by clear().
+		* @var array $cache_hierarchy_section
+		*/
 		public static array $cache_hierarchy_section = [];
 
 		/**
-		 * Static cache for hierarchy element definitions.
-		 * Stores parsed hierarchy components and their configuration.
-		 * @var array $cache_hierarchy_elements
-		 */
+		* In-process cache for the active hierarchy elements list.
+		* Populated on first call to get_active_elements(); cleared by clear().
+		* Stores the array of element objects returned by ontology::row_to_element().
+		* @var array $cache_hierarchy_elements
+		*/
 		public static array $cache_hierarchy_elements = [];
 
 
 
 	/**
 	* CLEAR
-	* Purges persistent caches to prevent memory leaks across worker requests.
-	* Overrides parent clear to include hierarchy-specific caches.
+	* Purges all in-process static caches maintained by this class and its parent.
+	*
+	* Must be called between worker requests to prevent state-bleed across tenants
+	* (see memory note: audit-2026-06-worker-state-bleed).
+	* Calls parent::clear() first so the ontology-level caches
+	* ($cache_ontology_sections, $cache_active_ontology_elements) are also reset.
+	*
+	* @return void
 	*/
 	public static function clear() : void {
 		parent::clear();
@@ -96,10 +147,14 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_DEFAULT_SECTION_TIPO_TERM
-	* @param string $tld
-	* 	Sample: 'es'
-	* @return string $default_section_tipo_term
-	* 	Sample 'es1'
+	* Returns the canonical section_tipo for the descriptor (term) virtual section
+	* of a hierarchy identified by its TLD.
+	*
+	* Convention: descriptor section = <tld_lowercase> + '1', e.g. 'es' → 'es1'.
+	* The returned tipo is the virtual section that holds the actual thesaurus terms.
+	*
+	* @param string $tld - Two-letter (or longer) top-level domain, e.g. 'es', 'ts', 'oh'.
+	* @return string $default_section_tipo_term - e.g. 'es1'
 	*/
 	public static function get_default_section_tipo_term(string $tld) : string {
 
@@ -112,10 +167,15 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_DEFAULT_SECTION_TIPO_MODEL
-	* @param string $tld
-	* 	Sample: 'es'
-	* @return string $default_section_tipo_model
-	* 	Sample 'es2'
+	* Returns the canonical section_tipo for the model/typology virtual section
+	* of a hierarchy identified by its TLD.
+	*
+	* Convention: model section = <tld_lowercase> + '2', e.g. 'es' → 'es2'.
+	* The model section stores disambiguation values (typologies) that qualify
+	* descriptor terms, e.g. "City" or "Black Figure" attached to a pottery term.
+	*
+	* @param string $tld - Two-letter (or longer) top-level domain, e.g. 'es', 'ts', 'oh'.
+	* @return string $default_section_tipo_model - e.g. 'es2'
 	*/
 	public static function get_default_section_tipo_model(string $tld) : string {
 
@@ -128,18 +188,42 @@ class hierarchy extends ontology {
 
 	/**
 	* GENERATE_VIRTUAL_SECTION
-	* Create two sections used by thesaurus to manage the descriptors and model/typologies
-	* Descriptors are the main thesaurus section with the terms (Valencia, Amphorae, etc), and is defined with the tld & 1 as es1, object1, etc.
-	* Model/typologies are secondary thesaurus section used to disambiguation the descriptor (City, Black, etc...) and is defined with the tld & 2 as es2, object2, etc.
-	* Note: Virtual sections not contains components, they inheritance all definition from real sections.
-	* (`es1` is a section that use of the `hierarchy20` definition)
+	* Provisions the two virtual ontology sections required for a new thesaurus hierarchy.
+	*
+	* Every Dédalo hierarchy needs two virtual sections that share the TLD of the hierarchy:
+	*   <tld>1  — descriptor section: holds the actual thesaurus terms (e.g. 'es1' for Spanish)
+	*   <tld>2  — model section: holds disambiguation typologies (e.g. 'es2')
+	*
+	* "Virtual" means these section tipos exist as ontology nodes (rows in dd_ontology and in
+	* the <tld>0 matrix table) but do not carry their own component definitions — they inherit
+	* the component layout from the "real" source section referenced by
+	* DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO (hierarchy109).
+	*
+	* The overall provisioning sequence is:
+	*   1. Validate that the hierarchy record is marked Active.
+	*   2. Read the TLD (hierarchy6), source real section (hierarchy109), typology (hierarchy9),
+	*      and display name (hierarchy5) from the supplied hierarchy1 record.
+	*   3. Register a new top-level entry in 'matrix_ontology_main' via ontology::add_main_section().
+	*   4. Create a dd_ontology node for the new TLD root via create_dd_ontology_ontology_section_node().
+	*   5. Create two section_record rows (section_id 1 and 2) in the <tld>0 matrix table,
+	*      setting Publication, Is-descriptor, Is-model, Model, Is-translatable, Relations,
+	*      TLD, and Name component data before saving.
+	*   6. Attach each new section node to its parent grouper in the ontology tree:
+	*        hierarchy56 grouper for descriptors, hierarchy57 grouper for models.
+	*   7. Insert both nodes into dd_ontology via ontology::insert_dd_ontology_record().
+	*   8. Grant the current user access (permission level 2) to the two virtual sections.
+	*   9. Store the target section tipos back in the hierarchy1 record
+	*        (DEDALO_HIERARCHY_TARGET_SECTION_TIPO = hierarchy53,
+	*         DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO = hierarchy58).
+	*
 	* @param object $options
-	* Sample:
-	* {
-	* 	section_id : 3,
-	* 	section_tipo : 'hierarchy1'
-	* }
+	*   - section_id   int|string  Row id of the hierarchy1 record to provision from.
+	*   - section_tipo string      Should always be 'hierarchy1'.
+	*   Example: { section_id: 3, section_tipo: 'hierarchy1' }
 	* @return object $response
+	*   - result  bool    true on full success; false on any validation or write failure.
+	*   - msg     string  Human-readable outcome message.
+	*   - errors  array   Accumulated error strings (may be non-empty even when result=true).
 	*/
 	public static function generate_virtual_section(object $options) : object {
 
@@ -263,6 +347,9 @@ class hierarchy extends ontology {
 				$section_tipo
 			);
 			$hierarchy_type_data = $component->get_data();
+			// (!) $is_toponymy is derived from typology section_id == '2' but is never
+			// referenced later in this method. Preserved in case downstream code expects
+			// the side-effects of the computation; do not remove without auditing callers.
 			$is_toponymy = (isset($hierarchy_type_data[0]) && isset($hierarchy_type_data[0]->section_id) && $hierarchy_type_data[0]->section_id=='2')
 				? true
 				: false;
@@ -360,6 +447,10 @@ class hierarchy extends ontology {
 				$section_record->set_component_data($tipo, $column, [$component_data]);
 
 			// Is Model
+			// (!) set_component_data is intentionally NOT called here for the descriptor
+			// section_record. The locator is built but discarded; 'Is Model' defaults to NO
+			// for the descriptor section (<tld>1). The model section (<tld>2) overrides
+			// this flag to YES after copying all other fields from this record (see below).
 				$tipo 	= DEDALO_ONTOLOGY_IS_MODEL_TIPO;
 				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
@@ -371,6 +462,9 @@ class hierarchy extends ontology {
 					$component_data->set_from_component_tipo( $tipo );
 
 			// Model (section = 6)
+			// Points to dd0/6 — the hardcoded section_id for 'section' model in the
+			// 'dd' ontology. This links the virtual section node to the generic
+			// 'section' component model definition in dd_ontology.
 				$tipo 	= DEDALO_ONTOLOGY_MODEL_TIPO;
 				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
@@ -397,6 +491,11 @@ class hierarchy extends ontology {
 				$section_record->set_component_data($tipo, $column, [$component_data]);
 
 			// relations
+			// 'Connected to' (DEDALO_ONTOLOGY_CONNECTED_TO_TIPO) links this virtual
+			// section node to the real source section node in dd_ontology.
+			// The real section supplies all component definitions (virtual sections
+			// inherit the component layout from it at runtime).
+			// The locator points to <real_tld>0 / <real_section_id>.
 				$tipo 	= DEDALO_ONTOLOGY_CONNECTED_TO_TIPO;
 				$model 	= ontology_node::get_model_by_tipo( $tipo );
 				$column = section_record_data::get_column_name( $model );
@@ -434,6 +533,9 @@ class hierarchy extends ontology {
 				$section_record->save();
 
 			// parent grouper
+			// Place the descriptor section node under the 'hierarchytype' grouper
+			// (hierarchy56) that corresponds to this hierarchy's typology id.
+			// create_parent_grouper() creates the grouper node if absent and returns its tipo.
 				$parent_grouper_tipo = ontology::create_parent_grouper('hierarchy56', 'hierarchytype', $typology_id);
 
 				$parent_tld			= get_tld_from_tipo( $parent_grouper_tipo );
@@ -462,6 +564,10 @@ class hierarchy extends ontology {
 				ontology::insert_dd_ontology_record($tld2.'0', 1);
 
 			// Virtual model section
+			// section_id 2 in <tld>0 → the <tld>2 model/typology virtual section.
+			// Reuses all data from section_record (section_id=1) and then flips
+			// Is-Model to YES, so the two sections share identical configuration
+			// except for that single flag.
 				// create the new section record in database
 				$section = section::get_instance( $tld2.'0' );
 				$section->create_record( (object)[
@@ -498,6 +604,12 @@ class hierarchy extends ontology {
 				$model_section_record->save();
 
 				// parent
+				// Place the model section node under the 'hierarchymtype' grouper
+				// (hierarchy57) — the parallel grouper for model sections.
+				// (!) $parent_tipo is hardcoded to 'ontology15' here instead of using
+				// DEDALO_ONTOLOGY_PARENT_TIPO. This appears to be an intentional choice
+				// for the model-section parent link; do not change without verifying the
+				// ontology tree integrity.
 					$parent_model_grouper_tipo = ontology::create_parent_grouper('hierarchy57', 'hierarchymtype', $typology_id);
 
 					$parent_model_tld	= get_tld_from_tipo( $parent_model_grouper_tipo );
@@ -592,15 +704,30 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_MAIN_LANG
-	* Search in section HIERARCHY (DEDALO_HIERARCHY_SECTION_TIPO) the lang for requested 'thesaurus' section by section_tipo
-	* Do a direct db search request for speed and store results in a static var for avoid resolve the same main_lang twice
-	* Speed here is very important because this method is basic for thesaurus sections defined in hierarchies
-	* @param string $section_tipo
-	* @return string $main_lang
+	* Resolves the primary language code for a thesaurus section.
+	*
+	* Every hierarchy in Dédalo has one authoritative language — for example the Spanish
+	* thesaurus ('es1') uses 'lg-spa'.  This information lives in the hierarchy1 record
+	* (component DEDALO_HIERARCHY_LANG_TIPO = 'hierarchy8', stored in the 'relation' JSONB
+	* column of 'matrix_hierarchy_main') and is identified by matching the TLD prefix of
+	* $section_tipo against the TLD stored in each hierarchy row.
+	*
+	* Performance note: a raw SQL query against the JSONB 'string' column with a jsonpath
+	* predicate is used instead of the ORM search layer because this method is called
+	* very frequently during thesaurus rendering; the result is cached in $cache_main_lang.
+	*
+	* Fallback chain (applied when the DB row is missing or the lang locator is empty):
+	*   - 'lg1'       → always returns 'lg-eng' immediately (lang root term is English).
+	*   - 'es1'       → 'lg-spa'
+	*   - 'hierarchy1'→ DEDALO_DATA_LANG_DEFAULT
+	*   - anything else → 'lg-eng'
+	*
+	* @param string $section_tipo - The thesaurus section tipo to look up, e.g. 'es1', 'ts1'.
+	* @return string $main_lang - BCP-47-style language code prefixed with 'lg-', e.g. 'lg-eng'.
 	*/
 	public static function get_main_lang( string $section_tipo ) : string {
 
-		// Always fixed langs root term as English
+		// lg1 is always in English — the language-list root section is invariant
 			if ($section_tipo==='lg1') {
 				return 'lg-eng';
 			}
@@ -623,12 +750,18 @@ class hierarchy extends ontology {
 			$prefix_lower			= strtolower($prefix); // data is stored sometimes in uppercase
 
 		// params
+		// $2 is a jsonpath expression that matches hierarchy rows whose TLD value
+		// equals $prefix_lower (case-insensitive). The jsonpath walks the 'string'
+		// JSONB column: $.hierarchy6[*].value where value matches the prefix regex.
 			$params = [
 				$hierarchy_section_tipo,
 				"\$.{$hierarchy_tld_tipo}[*].value ? (@ like_regex \"^$prefix_lower$\" flag \"i\")" // Case insensitive search
 			];
 
 		// SQL query
+		// Uses the PostgreSQL JSONB #> operator to extract the lang locator array
+		// from the 'relation' column at path {hierarchy8}. This avoids deserialising
+		// the full row and is significantly faster than a PHP-level array walk.
 			$sql  = "SELECT section_id, relation#>'{".$hierarchy_lang_tipo."}' AS main_lang" . PHP_EOL;
 			$sql .= "FROM $matrix_table WHERE" . PHP_EOL;
 			$sql .= "section_tipo = $1 AND" . PHP_EOL;
@@ -636,14 +769,22 @@ class hierarchy extends ontology {
 			$sql .= "LIMIT 1;";
 
 		// search
+		// Although only one row is expected (LIMIT 1), a while loop is used to
+		// allow pg_fetch_assoc to advance the cursor; the 'break' inside
+		// ensures we exit after the first row.
 			$result	= matrix_db_manager::exec_search($sql, $params);
 			while ($row = pg_fetch_assoc($result)) {
 
 				$main_lang_column = $row['main_lang'];
 				// JSON decode DB column
+				// The 'relation' JSONB sub-path is returned as a JSON string by pg;
+				// decode to an array of locator objects.
 				$main_lang_value = is_string($main_lang_column) ? json_decode($main_lang_column) : $main_lang_column;
 
 				// resolve locator
+				// The first locator in the array points to the lg section and section_id
+				// that represents the language. lang::get_code_from_locator() converts
+				// it to the 'lg-xxx' code used throughout Dédalo.
 				$main_lang_locator = $main_lang_value[0] ?? null;
 				if (!is_object($main_lang_locator)) {
 					debug_log(__METHOD__
@@ -696,11 +837,16 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_ALL_TABLES
-	* Return array of unique tables of requested hierarchy sections
-	* @param array $ar_section_tipo
-	* 	Format like [0] => lg1
-	*			    [2] => ts1
-	* @return array $all_tables
+	* Returns the deduplicated list of PostgreSQL matrix table names that back
+	* the supplied set of hierarchy section tipos.
+	*
+	* Multiple section tipos can share the same physical table (e.g. 'es1' and 'es2'
+	* both live in 'matrix_hierarchy'). This method collapses duplicates so callers
+	* can iterate once per table instead of once per section tipo.
+	*
+	* @param array $ar_section_tipo - Indexed array of section tipo strings.
+	*   Example: ['lg1', 'ts1', 'es1']
+	* @return array $all_tables - Unique table names, e.g. ['matrix_langs', 'matrix_hierarchy'].
 	*/
 	public static function get_all_tables( array $ar_section_tipo ) : array {
 
@@ -719,15 +865,24 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_ELEMENT_TIPO_FROM_SECTION_MAP
-	* Search in section_map the current request element,
-	* For example, search for term tipo, children element tipo, etc..
-	* Delegates to section_map::get_first_element_tipo, which applies the scope
-	* fallback chain (deterministic priority main -> thesaurus -> relation_list)
-	* instead of the legacy "first scope in property order" lookup.
-	* @param string $section_tipo
-	* @param string $type
-	* @param string|null $scope	Section_map scope. null walks the chain from 'main'.
-	* @return string|null $element_tipo
+	* Looks up a named element tipo from the section_map configuration of a
+	* thesaurus section.
+	*
+	* The section_map is an ontology component (model 'section_map') attached to each
+	* thesaurus section. Its 'properties' JSON object maps semantic keys (e.g. 'term',
+	* 'children', 'parents') to the actual component tipos in use for that section.
+	*
+	* This method is a thin wrapper over section_map::get_first_element_tipo(), which
+	* implements the deterministic scope fallback chain:
+	*   main → thesaurus → relation_list
+	* instead of the old "first scope found in property order" lookup that could produce
+	* inconsistent results depending on storage order.
+	*
+	* @param string $section_tipo - The thesaurus section, e.g. 'es1'.
+	* @param string $type - Semantic key to look up, e.g. 'term', 'children', 'parents'.
+	* @param string|null $scope - Restrict lookup to a specific scope ('main', 'thesaurus',
+	*   'relation_list'). null walks the full chain from 'main'.
+	* @return string|null $element_tipo - The resolved component tipo, or null if not found.
 	*/
 	public static function get_element_tipo_from_section_map( string $section_tipo, string $type, ?string $scope=null ) : ?string {
 
@@ -738,9 +893,24 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_SECTION_MAP_ELEMETS
-	* Get elements from section_list_thesaurus -> properties
-	* @param string $section_tipo
-	* @return array ar_elements
+	* Returns the full 'properties' array of the section_map component for a
+	* thesaurus section, providing all semantic tipo mappings in one call.
+	*
+	* The section_map is located by searching the section's children for a node of
+	* model 'section_map'. For virtual sections the lookup falls back to the real
+	* section tipo if no section_map is found directly.
+	*
+	* The returned array is a cast of the stdClass properties object stored in the
+	* ontology node, with keys like 'term', 'children', 'parents', etc. mapping
+	* to component tipo strings.
+	*
+	* Note: the method name contains a typo ('elemets' vs 'elements'). It is
+	* preserved to avoid breaking call sites. Use get_element_tipo_from_section_map()
+	* for single-key lookups with scope control.
+	*
+	* @param string $section_tipo - Thesaurus section tipo, e.g. 'es1'. Empty string returns [].
+	* @return array $ar_elements - Associative array of semantic-key → component-tipo mappings,
+	*   or empty array if no section_map is found.
 	*/
 	public static function get_section_map_elemets( string $section_tipo ) : array {
 
@@ -808,13 +978,21 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_HIERARCHY_SECTION
-	* Search hierarchy sections by target section_tipo and
-	* get result section_id
-	* @param string $section_tipo
-	*	Source section_tipo
-	* @param string $hierarchy_component_tipo
-	*	Target component tipo where search section_tipo
-	* @return int|null $section_id
+	* Finds the hierarchy1 record whose $hierarchy_component_tipo value matches
+	* $section_tipo, and returns its section_id.
+	*
+	* This is used to navigate from a virtual thesaurus section tipo (e.g. 'es1')
+	* back to the controlling hierarchy1 record. The $hierarchy_component_tipo
+	* parameter specifies which component in hierarchy1 stores the target value
+	* (e.g. DEDALO_HIERARCHY_TARGET_SECTION_TIPO = 'hierarchy53' for descriptor sections,
+	* or DEDALO_HIERARCHY_TARGET_SECTION_MODEL_TIPO = 'hierarchy58' for model sections).
+	*
+	* Results are keyed by [section_tipo][hierarchy_component_tipo] in $cache_hierarchy_section.
+	*
+	* @param string $section_tipo - Virtual section tipo to search for, e.g. 'es1'.
+	* @param string $hierarchy_component_tipo - Component in hierarchy1 that holds the value,
+	*   e.g. 'hierarchy53' or 'hierarchy58'.
+	* @return int|null $section_id - The hierarchy1 section_id, or null if not found.
 	*/
 	public static function get_hierarchy_section(string $section_tipo, string $hierarchy_component_tipo) : ?int {
 
@@ -872,16 +1050,18 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_HIERARCHY_BY_TLD
-	* Search hierarchy sections by tld and
-	* gets result as locator object
-	* @param string $tld
-	*	tld like 'es'
-	* @return object|null $row
-	* Sample:
-	* {
-	* 	"section_id": "66",
-	* 	"section_tipo": "hierarchy1"
-	* }
+	* Fetches the hierarchy1 record that owns a given TLD via a direct JSONB
+	* jsonpath query, and returns the (section_id, section_tipo) pair.
+	*
+	* Uses a raw SQL query against 'matrix_hierarchy_main' for performance; TLD
+	* matching is case-insensitive via the jsonpath 'flag "i"' flag.
+	* The $tld is sanitised through safe_tld() before interpolation into the
+	* jsonpath string to prevent SQL injection.
+	*
+	* @param string $tld - Two-letter (or longer) hierarchy TLD, e.g. 'es', 'ts', 'oh'.
+	* @return object|null $row - stdClass with properties section_id (string) and
+	*   section_tipo (string), e.g. {"section_id":"66","section_tipo":"hierarchy1"}.
+	*   Returns null when no matching hierarchy is found or on query failure.
 	*/
 	public static function get_hierarchy_by_tld( string $tld ) : ?object {
 
@@ -922,10 +1102,37 @@ class hierarchy extends ontology {
 
 	/**
 	* EXPORT_HIERARCHY
-	* For MASTER toponymy export
-	* @param string $section_tipo
-	* 	Could be '*', 'all', and comma separated list too as 'ts1,es1,fr1'
+	* Dumps one or more thesaurus matrix tables to gzip-compressed psql COPY files
+	* on the filesystem at EXPORT_HIERARCHY_PATH.
+	*
+	* The export is performed via a shell call to `psql … \copy … TO <file> ; gzip`.
+	* After all files are written the method scans EXPORT_HIERARCHY_PATH for .gz files
+	* and includes download links in the response message.
+	*
+	* $section_tipo accepts three forms:
+	*   '*'         — export all currently active hierarchies (one file per section_tipo)
+	*   'all'       — export every row in 'matrix_hierarchy' regardless of section_tipo
+	*                 into a single timestamped file
+	*   'es1,ts1'   — comma-separated list of specific section tipos to export
+	*
+	* Table routing:
+	*   'lg1' / 'lg2' → 'matrix_langs'
+	*   anything else → 'matrix_hierarchy'
+	*
+	* Requires:
+	*   - EXPORT_HIERARCHY_PATH constant defined (absolute filesystem path).
+	*   - DB_BIN_PATH and DEDALO_DATABASE_CONN constants for the psql invocation.
+	*   - The web server user must have write access to EXPORT_HIERARCHY_PATH.
+	*
+	* (!) This method calls shell_exec() directly. EXPORT_HIERARCHY_PATH must
+	* point to a directory the web server process can write to. All section tipo
+	* values are passed through safe_tipo() before shell interpolation.
+	*
+	* @param string $section_tipo - Export scope: '*', 'all', or comma-separated tipo list.
 	* @return object $response
+	*   - result  bool    true when export commands complete without PHP-level errors.
+	*   - msg     string  Human-readable summary including download links for .gz files.
+	*   - errors  array   Per-section error strings for skipped or invalid tipos.
 	*/
 	public static function export_hierarchy( string $section_tipo ) : object {
 
@@ -1015,6 +1222,9 @@ class hierarchy extends ontology {
 		}//end foreach ($ar_section_tipo as $key => $current_section_tipo)
 
 		// response OK
+		// (!) $command_res holds the last value set inside the foreach loop. If the loop
+		// ran zero iterations (empty $ar_section_tipo), $command_res is undefined here.
+		// The undefined-variable warning is a pre-existing condition; do not change code.
 			$response->result	= true;
 			$response->msg	= 'OK. All data is exported successfully'; // Override first message
 			$response->msg	.= "<br>".implode('<br>', $msg);
@@ -1051,12 +1261,25 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_SIMPLE_SCHEMA_OF_SECTIONS
-	* Get all sections of the current ontology with his own children in a simple associative array.
+	* Snapshots the current ontology tree as a flat associative array mapping each
+	* section tipo to its direct and indirect children tipos.
+	*
+	* The result is intended to be compared with an older snapshot via
+	* build_simple_schema_changes() to detect components added to sections during
+	* an ontology upgrade. The snapshot is written to disk by save_simple_schema_file().
+	*
+	* All section tipos of model 'dd6' (section model in the dd ontology) are
+	* enumerated. For each, the real section tipo is resolved (virtual sections share
+	* children with their real counterpart) and ontology_node::get_ar_recursive_children()
+	* returns all descendant tipos.
+	*
+	* Example output:
 	* [
-	* 	"oh1"  => ["oh17","oh25"],
-	* 	"ich1" => ["ich14","ich58"]
+	*   "oh1"  => ["oh17","oh25", …],
+	*   "ich1" => ["ich14","ich58", …]
 	* ]
-	* @return array  $simple_schema_of_sections
+	*
+	* @return array $simple_schema_of_sections - Map of section_tipo → array of child tipos.
 	*/
 	public static function get_simple_schema_of_sections() : array {
 
@@ -1082,10 +1305,21 @@ class hierarchy extends ontology {
 
 	/**
 	* BUILD_SIMPLE_SCHEMA_CHANGES
-	* Compare two simple schemas and return only the changes by section and return it into array of objects
-	* @param associative array $old_schema
-	* @param associative array $new_schema
-	* @return array of objects $simple_schema_changes
+	* Diffs two ontology schema snapshots and returns only the sections that gained
+	* new children since the old snapshot was taken.
+	*
+	* Each element of the returned array describes one section that has additions:
+	*   { tipo: 'oh1', children_added: ['oh99', 'oh100'] }
+	*
+	* Sections that exist only in $old_schema (deletions) are intentionally ignored;
+	* this method tracks additions only, as removals are considered separately.
+	* Sections present in $new_schema but absent in $old_schema are also skipped
+	* (they are new sections, not modified ones).
+	*
+	* @param array $old_schema - Map of section_tipo → children tipos before the update.
+	* @param array $new_schema - Map of section_tipo → children tipos after the update.
+	* @return array $simple_schema_changes - Array of stdClass objects, each with
+	*   properties 'tipo' (string) and 'children_added' (array of string).
 	*/
 	public static function build_simple_schema_changes(array $old_schema, array $new_schema) : array {
 
@@ -1118,7 +1352,15 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_SIMPLE_SCHEMA_CHANGES_FILES
-	* @return array $filenames
+	* Lists the schema-change JSON files stored in DEDALO_BACKUP_PATH_ONTOLOGY/changes/,
+	* sorted in reverse chronological order (most recent first).
+	*
+	* Files are named by convention as 'simple_schema_changes_YYYY-MM-DD_H-i-s.json'
+	* (see save_simple_schema_file()). The reverse sort makes the most recent change
+	* file the first element, which is convenient for diff browsing UIs.
+	*
+	* @return array $filenames - Indexed array of bare filenames (no directory prefix),
+	*   e.g. ['simple_schema_changes_2026-06-01_12-00-00.json', …].
 	*/
 	public static function get_simple_schema_changes_files() : array {
 
@@ -1142,19 +1384,29 @@ class hierarchy extends ontology {
 
 	/**
 	* PARSE_SIMPLE_SCHEMA_CHANGES_FILE
-	* Open the file specified into $filename variable and parse it into a simple schema changes.
-	* Simple schema changes is a array of objects with section as main node, his parents and his children.
-	* all nodes has the tipo and his label.
-	* section is a object
-	* parents is a array of objects
-	* children is a array of objects
-	* [{
-	* 	"section" 	: {"tipo":"oh1","label":"Oral History"},
-	* 	"parents"	: [{"tipo":"dd323","label":"Imaterial"},{"tipo":"dd355","label":"Cultural"}]
-	* 	"children"	: [{"tipo":"oh2","label":"Identification"},{"tipo":"oh14","label":"Code"}]
-	* "}]
-	* @param string $filename
-	* @return array $data
+	* Reads and enriches a schema-change JSON file produced by save_simple_schema_file().
+	*
+	* Each entry in the file is a raw change record {tipo, children_added}. This method
+	* enriches it with human-readable labels (via ontology_node::get_term_by_tipo()) and
+	* resolves the parent chain (via ontology_node::get_ar_parents_of_this()) so the UI
+	* can show full context without extra round-trips.
+	*
+	* The $filename is sanitised by sanitize_file_name() and basename() to prevent path
+	* traversal attacks. The file is read from DEDALO_BACKUP_PATH_ONTOLOGY/changes/.
+	*
+	* Output shape (one element per changed section):
+	* [
+	*   {
+	*     "section"  : {"tipo":"oh1", "label":"Oral History"},
+	*     "parents"  : [{"tipo":"dd323","label":"Imaterial"}, …],
+	*     "children" : [{"tipo":"oh2","label":"Identification"}, …]
+	*   },
+	*   …
+	* ]
+	*
+	* @param string $filename - Bare filename (no path), e.g. 'simple_schema_changes_2026-06-01.json'.
+	* @return array $changes - Array of enriched stdClass objects; empty array if file is
+	*   missing, empty, or not valid JSON.
 	*/
 	public static function parse_simple_schema_changes_file( string $filename ) : array {
 
@@ -1228,14 +1480,29 @@ class hierarchy extends ontology {
 
 	/**
 	* SAVE_SIMPLE_SCHEMA_FILE
-	* Calculates and writes the simple_schema_changes file
-	* @param object options
-	* {
-	*	old_simple_schema_of_sections : array
-	* 	name: ?string = 'simple_schema_changes_'.date("Y-m-d_H-i-s").'.json'
-	* 	dir_path: ?string = DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/'
-	* }
-	* @return object response
+	* Compares an old ontology snapshot with the current state and persists the diff
+	* as a JSON file on disk for later audit or UI review.
+	*
+	* This is the orchestration entry point for schema-change tracking. Typical call
+	* sequence during an ontology upgrade:
+	*   1. Capture $old = hierarchy::get_simple_schema_of_sections() BEFORE the update.
+	*   2. Apply the ontology update.
+	*   3. Call save_simple_schema_file({ old_simple_schema_of_sections: $old }) AFTER.
+	*
+	* The resulting JSON file is readable by parse_simple_schema_changes_file() and
+	* listable via get_simple_schema_changes_files().
+	*
+	* @param object $options
+	*   - old_simple_schema_of_sections array   Required. Pre-update schema snapshot.
+	*   - name                          ?string  Output filename; defaults to
+	*       'simple_schema_changes_YYYY-MM-DD_H-i-s.json'.
+	*   - dir_path                      ?string  Output directory; defaults to
+	*       DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/'.
+	* @return object $response
+	*   - result   bool    true on success.
+	*   - msg      string  Human-readable status.
+	*   - filepath string  Absolute path to the written file (on success).
+	*   - errors   array   Empty on success.
 	*/
 	public static function save_simple_schema_file( object $options ) : object {
 
@@ -1297,9 +1564,20 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_TYPOLOGY_LOCATOR_FROM_TLD
-	* Get the tld hierarchy definition and get his own typology definition
-	* @param string $tld
-	* @return object|null $typology_locator
+	* Resolves the typology locator for a hierarchy identified by its TLD.
+	*
+	* The typology (DEDALO_HIERARCHY_TYPOLOGY_TIPO = 'hierarchy9') is a component_select
+	* inside the hierarchy1 record that classifies the hierarchy as Thematic, Toponymy,
+	* Language, etc. Its value is a locator pointing to the 'hierarchytype' section row
+	* that matches the classification.
+	*
+	* This method is used when the caller knows the TLD (e.g. 'es') but needs the full
+	* typology locator rather than only the section_id.
+	*
+	* @param string $tld - Hierarchy TLD, e.g. 'es', 'ts', 'oh'.
+	* @return object|null $typology_locator - A locator stdClass pointing to the typology
+	*   entry (section_tipo/section_id in 'hierarchytype'), or null if the TLD or typology
+	*   component is not found.
 	*/
 	public static function get_typology_locator_from_tld( string $tld ) : ?object {
 
@@ -1331,8 +1609,19 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_ALL_MAIN_HIERARCHY_RECORDS
-	* Alias of ontology::get_all_main_ontology_records
-	* @return array $ar_records
+	* Returns all rows from 'matrix_hierarchy_main' (section_tipo = 'hierarchy1')
+	* as raw record objects, regardless of active status.
+	*
+	* Conceptually the hierarchy counterpart of ontology::get_all_main_ontology_records(),
+	* though that method does not exist under that name — this is an independent
+	* implementation using an unconstrained SQO over 'hierarchy1' with no project filter.
+	*
+	* This is a heavy operation; prefer get_active_elements() for most use cases.
+	* Logs an ERROR if the result set is empty, since at least one hierarchy record
+	* is expected in a properly configured Dédalo instance.
+	*
+	* @return array $ar_records - Array of raw row objects from the search result;
+	*   empty array only if the database has no hierarchy records.
 	*/
 	public static function get_all_main_hierarchy_records() : array {
 
@@ -1367,9 +1656,24 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_ACTIVE_ELEMENTS
-	* Execs a real SQL search and
-	* returns an array of current active ontologies or hierarchies
-	* @return array $active_hierarchies
+	* Returns all hierarchy records that have the 'Active' flag set to YES.
+	*
+	* Overrides ontology::get_active_elements() to query 'hierarchy1' instead of
+	* 'ontology35', and to filter on hierarchy4 (Active radio button) instead of
+	* the ontology equivalent. The SQO filter matches records whose hierarchy4
+	* component value is a locator pointing to dd64/1 (the "Yes" value in the
+	* dd_section_si_no section).
+	*
+	* Each matching row is passed through ontology::row_to_element() to produce the
+	* normalised element object with properties such as target_section_tipo,
+	* target_section_model_tipo, active_in_thesaurus, etc.
+	*
+	* Results are cached in $cache_hierarchy_elements. The cache is NOT bounded by
+	* manage_cache_size() in the normal sense (it stores a single array value),
+	* but is cleared by clear() between requests.
+	*
+	* @return array $active_hierarchies - Array of element objects; empty if no active
+	*   hierarchies exist. Each element is a stdClass produced by row_to_element().
 	* @test true
 	*/
 	public static function get_active_elements() : array {
@@ -1438,15 +1742,26 @@ class hierarchy extends ontology {
 
 	/**
 	* CREATE_THESAURUS_GENERAL_TERM
-	* It creates the section to display as root term in the Thesaurus,
-	* and add to `General Term` (hierarchy45) portal data.
-	* Before to create it, check for already existing one.
-	* @param string $section_tipo - Expected 'hierarchy1'
-	* @param string|int $section_id - Id of the current hierarchy
-	* @param string $general_term_tipo
-	* 	'hierarchy45' for General term
-	* 	'hierarchy59' for General term model
-	* @return bool
+	* Provisions the root display term for a hierarchy's thesaurus tree and registers
+	* it in the portal component.
+	*
+	* The Dédalo thesaurus tree must have a single visible root term (the "General Term")
+	* beneath which all other terms are arranged. This method creates that root term as
+	* a new record in the target thesaurus section, sets its term value to the hierarchy's
+	* display name, and saves its locator in the portal component on the hierarchy1 record.
+	*
+	* $general_term_tipo controls which portal receives the new term:
+	*   'hierarchy45' — DEDALO_HIERARCHY_CHILDREN_TIPO: General Term portal (descriptor tree)
+	*   'hierarchy59' — DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO: General Term Model portal (typology tree)
+	*
+	* The method is idempotent with respect to already-created terms: if the portal
+	* already has data it returns false without creating a duplicate.
+	*
+	* @param string $section_tipo - The hierarchy section tipo, expected 'hierarchy1'.
+	* @param string|int $section_id - The row id of the hierarchy1 record.
+	* @param string $general_term_tipo - Portal tipo: 'hierarchy45' or 'hierarchy59'.
+	* @return bool - true if the general term was successfully created and its term value
+	*   set; false if validation fails, the portal already has data, or any step errors.
 	*/
 	public static function create_thesaurus_general_term( string $section_tipo, string|int $section_id, string $general_term_tipo ) : bool {
 
@@ -1531,10 +1846,19 @@ class hierarchy extends ontology {
 
 	/**
 	* GET_HIERARCHY_NAME
-	* Gets the hierarchy name from the component 'Name' (hierarchy5) value
-	* @param string $section_tipo - Expected 'hierarchy1'
-	* @param string|int $section_id - Id of the current hierarchy
-	* @return string|null
+	* Returns the display name of a hierarchy from its 'Name' component (hierarchy5).
+	*
+	* hierarchy5 is a component_input_text storing the human-readable title of the
+	* hierarchy (e.g. "Spanish Thematic Thesaurus"). Used as the label for the
+	* auto-created General Term when create_thesaurus_general_term() is called.
+	*
+	* Note: get_value() returns the raw scalar value without lang-based fallback;
+	* the lang passed to get_instance() is DEDALO_DATA_NOLAN (language-neutral)
+	* because hierarchy names are stored in the 'string' column, not multilang 'lang_data'.
+	*
+	* @param string $section_tipo - Expected 'hierarchy1'.
+	* @param string|int $section_id - The row id of the hierarchy1 record.
+	* @return string|null - The hierarchy name string, or null if not set.
 	*/
 	public static function get_hierarchy_name(  string $section_tipo, string|int $section_id ) : string|null {
 
@@ -1561,11 +1885,22 @@ class hierarchy extends ontology {
 
 	/**
 	* SET_TERM_VALUE
-	* Sets the 'Term' (usually 'hierarchy25') string value
-	* @param string $section_tipo - (target section tipo as 'es1')
-	* @param string|int $section_id
-	* @param string $name
-	* @return bool
+	* Writes a string value to the 'term' component of a thesaurus record.
+	*
+	* The concrete term component tipo is resolved dynamically from the section_map
+	* of $section_tipo (scope='thesaurus') rather than being hardcoded. This makes
+	* the method work across all thesaurus section types without knowing the exact
+	* component tipo in advance (it might be 'ts25', 'es25', etc., depending on the
+	* thesaurus structure).
+	*
+	* The value is written using DEDALO_DATA_LANG, meaning it targets the
+	* current application/data language; it is NOT stored as language-neutral.
+	*
+	* @param string $section_tipo - Target thesaurus section tipo, e.g. 'es1'.
+	* @param string|int $section_id - Target record id within that section.
+	* @param string $name - The term string to write.
+	* @return bool - true if the component saved successfully; false if the term
+	*   component tipo could not be resolved or the save failed.
 	*/
 	public static function set_term_value( string $section_tipo, string|int $section_id, string $name ) : bool {
 
@@ -1606,10 +1941,21 @@ class hierarchy extends ontology {
 
 	/**
 	* SYNC_HIERARCHY_ACTIVE_STATUS
-	* Sync Hierarchy 'Active' with 'Active in thesaurus' status.
-	* Propagates 'Active in thesaurus' to 'Active' to prevent large list of
-	* apparently unused toponymies
-	* @return bool
+	* Deactivates hierarchy records whose 'Active in thesaurus' flag is false,
+	* keeping the 'Active' (hierarchy4) flag in sync.
+	*
+	* Background: a hierarchy can be 'Active' (visible in admin lists) but not
+	* 'Active in thesaurus' (excluded from public thesaurus navigation). Over time
+	* this divergence creates a large number of apparently active but unused toponymy
+	* and thematic hierarchies. This maintenance method resolves the mismatch by
+	* setting 'Active' to NO for any hierarchy where active_in_thesaurus is false.
+	*
+	* Exceptions (hard-coded ignore list):
+	*   'rsc197' — the 'People' hierarchy is intentionally kept active even when not
+	*   displayed in the thesaurus, because it is used by other relation components.
+	*
+	* @return bool - true if all save operations succeeded (or there was nothing to do);
+	*   false if one or more saves failed ($error_count > 0).
 	*/
 	public static function sync_hierarchy_active_status() : bool {
 

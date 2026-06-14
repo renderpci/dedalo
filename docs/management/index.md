@@ -51,6 +51,17 @@ The first general admin user is create by root user, but this account can create
 This accounts does not activate the debugger.
 This accounts does not have restrictions to data access. They have full data access.
 
+#### Users, profiles and permissions
+
+Day-to-day access control — creating users and profiles, the four permission levels (`0`–`3`), and how those permissions are computed and enforced on every read and save — is covered in its own guide.
+
+See [Users, profiles and permissions](users_and_permissions.md) for:
+
+- Where users and profiles live (the Users and Profiles sections, no bespoke tables)
+- The two roles above a profile (global admin, developer) and the root super-user
+- Step-by-step: create a profile, create a user, build a read-only profile for one section
+- How the type/schema permission (layer 1) and the per-record project scope (layer 2) are enforced server-side
+
 #### GNU/Linux account
 
 To admin a Dédalo installation you will need a user with administrative rights to access to GNU/Linux server.

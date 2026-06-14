@@ -4,6 +4,50 @@
 
 
 
+/**
+* RENDER_EDIT_COMPONENT_DATE
+* Edit-mode render helpers and shared UI factory functions for component_date.
+*
+* This module is NOT a standalone class — it is a prototype-assignment vehicle.
+* component_date.prototype.edit is wired to render_edit_component_date.prototype.edit
+* (see component_date.js). The constructor itself is a no-op placeholder that exists
+* solely so that prototype methods can be attached to it in the standard Dédalo pattern.
+*
+* In addition to the prototype carrier, the module exports a set of pure factory functions
+* that are consumed by the individual view renderers (view_default_edit_date.js,
+* view_mini_date.js, view_line_edit_date.js) to build the actual DOM widgets:
+*
+*   get_content_value_read       — read-only text node for print/read views
+*   get_ar_raw_data_value        — produce a flat string array from data.entries (all modes)
+*   get_input_date_node          — <input type="text"> + calendar button for a single date field
+*   get_input_time_node          — <input type="text"> + clock button for a single time field
+*   render_input_element_date    — one date input (mode: 'date')
+*   render_input_element_range   — two date inputs separated by '<>' (mode: 'range')
+*   render_input_element_time_range — two time inputs separated by '<>' (mode: 'time_range')
+*   render_input_element_period  — three numeric inputs: year / month / day (mode: 'period')
+*   render_input_element_time    — one time input (mode: 'time')
+*   change_handler               — unified 'change' event handler for all input types
+*
+* Data shape expected on self.data (component_date instance):
+*   entries  {Array<Object>}  — one item per stored value; each item shape depends on date_mode:
+*     date / range / time_range: { id: number|null, start: dd_date|null, end: dd_date|null }
+*     time:                       { id: number|null, start: dd_time|null }
+*     period:                     { id: number|null, period: { year, month, day } }
+*
+*   dd_date shape:   { day?: number, month?: number, year: number, time?: number }
+*   dd_time shape:   { hour: number, minute: number, second: number, time?: number }
+*   dd_period shape: { year?: number, month?: number, day?: number }
+*
+* The 'time' unix-epoch property carried on dd_date/dd_time is server-computed and is
+* informational only; the client reads day/month/year/hour/minute/second as the source
+* of truth when rendering.
+*
+* Globals consumed (declared above in the /*global*\/ directive):
+*   get_label       — localised UI label map (e.g. get_label.year, get_label.sure)
+*   page_globals    — application-wide settings (dedalo_date_order: 'dmy'|'mdy'|'ymd')
+*   flatpickr       — third-party date/time picker library, lazy-loaded by component_date.load_editor()
+*/
+
 // imports
 	import {view_default_edit_date} from './view_default_edit_date.js'
 	import {view_mini_date} from './view_mini_date.js'
@@ -15,7 +59,9 @@
 
 /**
 * RENDER_EDIT_COMPONENT_DATE
-* Manage the components logic and appearance in client side
+* Edit-mode render mixin / prototype carrier for component_date.
+* The constructor is intentionally a no-op; its prototype is populated by
+* component_date.js so that component_date.prototype.edit resolves here.
 */
 export const render_edit_component_date = function() {
 
@@ -26,9 +72,21 @@ export const render_edit_component_date = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @param object options
-* @return HTMLElement
+* Render node for use in edit mode.
+*
+* Dispatches to the appropriate view renderer based on self.context.view.
+*
+* View routing:
+*   'mini'    — compact single-span representation for autocomplete dropdowns
+*   'line'    — same layout as 'default' but without the label row
+*   'print'   — forces read-only (permissions=1) then falls through to 'default'.
+*               The resulting wrapper acquires the 'view_print' CSS class so styling
+*               can target this context. (!) self.permissions is mutated on the instance
+*               for the lifetime of the render call — no break before 'default'.
+*   'default' — full wrapper: label, buttons, content_data with one widget per entry
+*
+* @param {Object} options - Render options forwarded verbatim to the selected view renderer
+* @returns {Promise<HTMLElement>} Resolved component wrapper node
 */
 render_edit_component_date.prototype.edit = async function(options) {
 
@@ -63,23 +121,27 @@ render_edit_component_date.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_VALUE_READ
-* Render a element based on passed value
-* @param int i
-* 	data.value array key
-* @param object current_value
-* 	Sample:
-	{
-	    "mode": "date",
-	    "start": {
-	        "day": 12,
-	        "time": 65027145600,
-	        "year": 2023,
-	        "month": 3
-	    }
-	}
-* @param object self
+* Render a read-only text node for a single date/time/period entry value.
 *
-* @return HTMLElement content_value
+* Used in print view and when self.permissions === 1 (viewer cannot edit).
+* The display string is produced by self.value_to_string_value(), which respects
+* the active date_mode (range, period, time, date) and the locale date-order setting.
+*
+* @param {number} i - Zero-based index into data.entries (informational; not used internally)
+* @param {Object} current_value - A single entry from data.entries. Expected shape depends
+*   on date_mode; at minimum: { start?: dd_date, end?: dd_date, period?: dd_period }.
+*   Sample (mode: 'date'):
+*   {
+*       "mode": "date",
+*       "start": {
+*           "day": 12,
+*           "time": 65027145600,
+*           "year": 2023,
+*           "month": 3
+*       }
+*   }
+* @param {Object} self - Component instance (component_date)
+* @returns {HTMLElement} A <div class="content_value read_only"> containing the display string
 */
 export const get_content_value_read = (i, current_value, self) => {
 
@@ -100,8 +162,25 @@ export const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_AR_RAW_DATA_VALUE
-* @param object self
-* @return array ar_raw_value
+* Produce a flat array of display strings from all entries in self.data.
+*
+* Iterates over data.entries and converts each item to a human-readable string
+* according to the active date_mode. The resulting array is used by export and
+* list renderers that need a plain-text representation of all stored values.
+*
+* Mode mapping:
+*   'range'      — "start <> end" date strings, omitting whichever bound is absent
+*   'time_range' — "start <> end" datetime strings (date + time combined)
+*   'period'     — "N year(s), N month(s), N day(s)" — pluralised via get_label
+*   'time'       — time string from current_value.start
+*   'date_time'  — date + time combined string from current_value.start
+*   'date' (default) — date string from current_value.start
+*
+* Empty/null entries are skipped with a console.log warning (not an error) so
+* that corrupt or partially-migrated data does not break the render.
+*
+* @param {Object} self - Component instance (component_date)
+* @returns {Array<string>} Flat array of display strings, one per valid data.entries item
 */
 export const get_ar_raw_data_value = (self) => {
 
@@ -190,6 +269,7 @@ export const get_ar_raw_data_value = (self) => {
 					const month	= (period) ? period.month : null
 					const day	= (period) ? period.day : null
 
+					// plural/singular label selection: value > 1 → plural, otherwise singular
 					const label_year	= (year && year>1) 		? get_label.years : get_label.year
 					const label_month	= (month && month>1) 	? get_label.months : get_label.month
 					const label_day		= (day && day>1) 		? get_label.days : get_label.day
@@ -248,13 +328,32 @@ export const get_ar_raw_data_value = (self) => {
 * ATTACH_INPUT_HANDLERS
 * Attaches common event handlers to a date/time/period input element.
 * Unifies the event handling pattern across all input types.
-* @param HTMLElement input
-* @param object self
-* @param function change_callback
-* @param object options
-*	@val RegExp|null options.input_filter_regex - Regex to filter input chars (null skips input handler)
-*	@val bool options.focus_on_mousedown - Force focus on mousedown instead of stopPropagation
-* @return void
+*
+* Handlers installed:
+*   mousedown — either calls input.focus() (focus_on_mousedown) or stops event propagation
+*               to prevent the component wrapper's own mousedown from stealing focus.
+*   click     — always stops propagation so clicking inside the field does not collapse/
+*               expand a parent section or portal.
+*   focus     — activates the component (ui.component.activate) when it is not yet active.
+*               This handles the keyboard-Tab navigation case where the mouse is not involved.
+*   keydown   — stops propagation so page-level keyboard shortcuts (e.g. search-panel open)
+*               do not fire while the user is typing; Tab key deactivates the component
+*               (mirrors the behaviour of component_input_text).
+*   input     — when input_filter_regex is provided, strips any character that does not
+*               match the allowed set so the server-side parser receives a clean string.
+*   change    — delegates to change_callback; called after the browser determines the
+*               value has actually changed (fires on blur or Enter, not on every keystroke).
+*
+* @param {HTMLElement} input             - The <input> element to attach handlers to
+* @param {Object}      self              - Component instance (component_date)
+* @param {Function}    change_callback   - Callback invoked on the native 'change' event
+* @param {Object}      [options={}]      - Optional handler configuration
+* @param {RegExp|null} [options.input_filter_regex=null]   - Regex of chars to REMOVE on each
+*   input event (null skips the input filter handler entirely). Example: /[^0-9-\/\.,]/g
+* @param {boolean}     [options.focus_on_mousedown=false]  - When true, explicitly calls
+*   input.focus() on mousedown rather than stopping propagation; useful for period fields
+*   where a parent container intercepts the event.
+* @returns {void}
 */
 const attach_input_handlers = function(input, self, change_callback, options={}) {
 
@@ -303,14 +402,29 @@ const attach_input_handlers = function(input, self, change_callback, options={})
 
 /**
 * GET_INPUT_DATE_NODE
-* Generic node rendered of date field node
-* @param int i
-* 	component data value array key
-* @param string date_input
-* 	values: start|end
-* @param string input_value
-* @param instance self
-* @return HTMLElement input_wrap
+* Build a single date input widget composed of a text <input> and a calendar picker button.
+*
+* The text input accepts free-form typed dates; characters not matching /[0-9-\/\.,]/ are
+* filtered out on each keystroke. The calendar button opens a flatpickr date picker whose
+* dateFormat is derived from page_globals.dedalo_date_order ('dmy'|'mdy'|'ymd') joined
+* by self.date_separator. Selecting a date in flatpickr writes to input.value and
+* programmatically fires a 'change' event so that change_handler is invoked exactly as
+* if the user had typed the date.
+*
+* The input_wrap container (<div class="input-group">) is the node returned; the caller
+* appends it to the appropriate content_value container and may append additional controls
+* (e.g. a remove button) after the fact.
+*
+* (!) flatpickr is loaded lazily by self.load_editor() and is referenced as a global.
+*     It must be loaded before this factory function is called.
+*
+* @param {number}      i           - Zero-based index of the data entry (used in change_handler)
+* @param {string}      date_input  - Which date bound this field represents: 'start' or 'end'
+* @param {string}      input_value - Pre-populated display string (from self.date_to_string);
+*                                    empty string for a new/empty entry
+* @param {Object}      self        - Component instance (component_date)
+* @returns {HTMLElement} input_wrap — <div class="input-group"> containing the <input> and
+*                                     the calendar button container
 */
 export const get_input_date_node = (i, date_input, input_value, self) => {
 
@@ -351,6 +465,7 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 				const dd_date_format	= page_globals.dedalo_date_order || 'dmy'
 				const input_wrap		= input.parentNode
 
+				// map the Dédalo date order setting to the flatpickr format token order
 				const ar_date_format = (dd_date_format === 'dmy')
 					? ['d','m','Y']
 					: (dd_date_format === 'ymd')
@@ -396,11 +511,26 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 
 /**
 * GET_INPUT_TIME_NODE
-* @param int i
-* @param string date_input
-* @param string input_value
-* @param instance self
-* @return HTMLElement input_wrap
+* Build a single time input widget composed of a text <input> and a clock picker button.
+*
+* Analogous to get_input_date_node but configured for time entry.
+* The input filter restricts characters to digits and colons (/[^0-9:]/g).
+* The flatpickr picker is opened in time-only mode (noCalendar:true, enableTime:true,
+* time_24hr:true, enableSeconds:true). The time format is built from self.time_separator
+* joining the flatpickr tokens ['H','i','S'] (24-hour, minutes, seconds).
+*
+* Unlike the date picker which uses onValueUpdate, the time picker uses onClose to
+* synchronise the input value. This fires when the picker is dismissed — either by
+* selecting a time or clicking outside. (!) self.update_value_flatpickr, referenced in
+* a commented-out line, is not present in the module; the comment is left as-is.
+*
+* @param {number}      i           - Zero-based index of the data entry (used in change_handler)
+* @param {string}      date_input  - Which time bound this field represents: 'start' or 'end'
+* @param {string}      input_value - Pre-populated display string (from self.time_to_string or
+*                                    self.date_time_to_string); empty string for new entries
+* @param {Object}      self        - Component instance (component_date)
+* @returns {HTMLElement} input_wrap — <div class="input-group"> containing the <input> and
+*                                     the calendar button container
 */
 export const get_input_time_node = (i, date_input, input_value, self) => {
 
@@ -481,11 +611,17 @@ export const get_input_time_node = (i, date_input, input_value, self) => {
 
 /**
 * RENDER_INPUT_ELEMENT_DATE
-* Render input_element_date (one input)
-* @param int i
-* @param object|null current_value
-* @param instance self
-* @return HTMLElement date_node
+* Render a single date input widget for date_mode 'date'.
+*
+* Reads current_value.start (a dd_date object), converts it to a display string via
+* self.date_to_string(), and delegates DOM construction to get_input_date_node.
+* Appends a remove button for all entries after the first (i > 0) so the user can
+* delete individual entries in multi-value components.
+*
+* @param {number}      i             - Zero-based entry index in data.entries
+* @param {Object|null} current_value - Entry from data.entries; null/empty for a new slot
+* @param {Object}      self          - Component instance (component_date)
+* @returns {HTMLElement} date_node — <div class="input-group"> ready to be appended to content_value
 */
 export const render_input_element_date = (i, current_value, self) => {
 
@@ -510,11 +646,20 @@ export const render_input_element_date = (i, current_value, self) => {
 
 /**
 * RENDER_INPUT_ELEMENT_RANGE
-* Render inputs element date start and end (two inputs)
-* @param int i
-* @param object|null current_value
-* @param instance self
-* @return HTMLElement DocumentFragment
+* Render two date input widgets (start and end) separated by a '<>' node for date_mode 'range'.
+*
+* Both start and end fields use get_input_date_node, which calls change_handler with
+* the appropriate date_input value ('start' or 'end') so the correct key on the entry
+* object is updated. The remove button is attached to node_end (not node_start) so it
+* visually anchors to the right of the pair.
+*
+* Returns a DocumentFragment so that the two widgets and the separator node can be
+* appended to the parent in a single DOM operation without a wrapper element.
+*
+* @param {number}      i             - Zero-based entry index in data.entries
+* @param {Object|null} current_value - Entry from data.entries; shape: { id, start, end }
+* @param {Object}      self          - Component instance (component_date)
+* @returns {DocumentFragment} Fragment containing: node_start, dates_separator, node_end
 */
 export const render_input_element_range = (i, current_value, self) => {
 
@@ -555,11 +700,19 @@ export const render_input_element_range = (i, current_value, self) => {
 
 /**
 * RENDER_INPUT_ELEMENT_TIME_RANGE
-* Render inputs element time start and end (two inputs)
-* @param int i
-* @param object|null current_value
-* @param instance self
-* @return HTMLElement DocumentFragment
+* Render two time (or datetime) input widgets separated by '<>' for date_mode 'time_range'.
+*
+* Uses get_input_time_node for both fields. The display string is produced by
+* self.date_time_to_string(), which concatenates the date and time parts
+* (e.g. "22/07/2023 13:54:00"). The remove button is appended to node_end.
+*
+* Returns a DocumentFragment; see render_input_element_range for rationale.
+*
+* @param {number}      i             - Zero-based entry index in data.entries
+* @param {Object|null} current_value - Entry from data.entries; shape: { id, start, end }
+*   where each bound is a combined dd_date + dd_time object
+* @param {Object}      self          - Component instance (component_date)
+* @returns {DocumentFragment} Fragment containing: node_start, dates_separator, node_end
 */
 export const render_input_element_time_range = (i, current_value, self) => {
 
@@ -600,11 +753,32 @@ export const render_input_element_time_range = (i, current_value, self) => {
 
 /**
 * RENDER_INPUT_ELEMENT_PERIOD
-* Render inputs element year, month, day (three inputs)
-* @param int i
-* @param object|null current_value
-* @param instance self
-* @return HTMLElement DocumentFragment
+* Render three numeric inputs (year / month / day) for date_mode 'period'.
+*
+* Period mode represents a time duration rather than a calendar date — for example,
+* "2 years, 3 months, 10 days" to express a relative timespan. Each sub-field is an
+* independent numeric text input that accepts only digits (/[^0-9]/g filter).
+*
+* All three inputs share a single call_change_handler closure that reads all three
+* input.value properties simultaneously and passes them as a combined object to
+* change_handler (type:'period'). This means any change to any individual field
+* triggers a save of the full period triple.
+*
+* ui.fit_input_width_to_value() is called on both initial render (min-width: 2 chars)
+* and on each input event so the field shrinks/expands to its content, keeping the
+* layout compact.
+*
+* Label pluralisation: labels are read from get_label at render time based on the
+* current stored values. They are NOT updated as the user types; a refresh is needed
+* to update labels after saving. This is consistent with all other component_date modes.
+*
+* @param {number}      i             - Zero-based entry index in data.entries
+* @param {Object|null} current_value - Entry from data.entries; shape:
+*   { id: number|null, period: { year?: number, month?: number, day?: number } }
+* @param {Object}      self          - Component instance (component_date)
+* @returns {DocumentFragment} Fragment containing a single <div class="input-group period">
+*   with three pair_container <span>s (year, month, day), each holding an <input> and a
+*   <label>. A remove button is appended when i > 0.
 */
 export const render_input_element_period = (i, current_value, self) => {
 
@@ -746,11 +920,16 @@ export const render_input_element_period = (i, current_value, self) => {
 
 /**
 * RENDER_INPUT_ELEMENT_TIME
-* Render input element time (one input)
-* @param int i
-* @param object|null current_value
-* @param instance self
-* @return HTMLElement time_node
+* Render a single time input widget for date_mode 'time'.
+*
+* Reads current_value.start (a dd_time object), converts it to display string via
+* self.time_to_string(), and delegates to get_input_time_node.
+* Appends a remove button for entries beyond the first (i > 0).
+*
+* @param {number}      i             - Zero-based entry index in data.entries
+* @param {Object|null} current_value - Entry from data.entries; shape: { id, start: dd_time }
+* @param {Object}      self          - Component instance (component_date)
+* @returns {HTMLElement} time_node — <div class="input-group"> ready to append to content_value
 */
 export const render_input_element_time = (i, current_value, self) => {
 
@@ -775,9 +954,44 @@ export const render_input_element_time = (i, current_value, self) => {
 
 /**
 * CHANGE_HANDLER
-* manages change event in unified way
-* @param object options
-* @return bool
+* Unified 'change' event callback invoked by every edit-view date/time/period input.
+*
+* Responsibility chain:
+*   1. Dispatches to the appropriate parse method on self based on type:
+*        'time'   → self.parse_string_time(input_value)
+*        'period' → self.parse_string_period(input_value)
+*        default  → self.parse_string_date(input_value)
+*      Each parser returns { result: dd_date|{}, error?: [{msg, type}] }.
+*   2. If the response is null (self is falsy) or missing, logs and returns false.
+*   3. If response.error is set, shows an alert() with the first error message and
+*      marks the input_wrap with an error style via ui.component.error(). Returns false.
+*   4. On success, clears the error style on input_wrap.
+*   5. Determines the effective_key ('start', 'end', or 'period') from options.date_input
+*      or options.type, then merges the parsed result into the current data entry:
+*        - An empty result object ({}) is treated as null (delete the value).
+*        - If the entry only has an 'id' key left after clearing effective_key, the whole
+*          entry is set to null so the server can handle the removal cleanly.
+*   6. Builds a frozen changed_data_item: { action:'update', id, value: data_value }.
+*   7. Dispatches via one of two paths:
+*        search mode — calls self.update_data_value() then publishes 'change_search_element'
+*                      so search form state is updated without a full re-render.
+*        edit mode   — calls self.change_value({ changed_data, refresh:false }) which
+*                      records the mutation and queues a save without re-rendering.
+*
+* (!) alert() is used to surface parse errors to the user. This is a blocking browser dialog.
+*     Prefer ui.attach_to_modal() in future iterations for non-blocking feedback.
+*
+* @param {Object}          options             - All parameters are passed as named properties
+* @param {Object}          options.self        - Component instance (component_date)
+* @param {string|Object}   options.input_value - Raw string value from the input (date/time modes)
+*   or an object { year, month, day } (period mode)
+* @param {number}          options.key         - Zero-based index of this entry in data.entries
+* @param {HTMLElement}     options.input_wrap  - The input-group container; used for error styling
+* @param {string}          options.type        - Input type: 'date' | 'time' | 'period'
+* @param {string}          [options.date_input] - 'start' or 'end'; takes precedence over type
+*   when determining which property of the entry to update. Omit for period and single-value modes.
+* @returns {boolean} true on success; false when self is missing, the response is absent,
+*   or a validation error is raised by the parser
 */
 export const change_handler = function(options) {
 
@@ -848,6 +1062,9 @@ export const change_handler = function(options) {
 				// check if only id left
 				const item_keys = Object.keys(item)
 
+				// when only the 'id' survives, treat the entry as empty (return null)
+				// so the server-side remove path is invoked rather than an update with
+				// no meaningful content
 				if(item_keys.length===1 && item_keys[0]==='id'){
 					return null
 				}else if(item_keys.length===0){
@@ -888,10 +1105,24 @@ export const change_handler = function(options) {
 
 /**
 * RENDER_BUTTON_REMOVE
-* @param object self
-* @param HTMLElement input_node
-* @param int id
-* @return HTMLELement button_remove_container
+* Build the remove-entry button for multi-value date components.
+*
+* The button is rendered hidden by default (CSS class 'hidden_button') and is revealed
+* by the view layer on hover/focus via CSS. Clicking triggers a browser confirm() dialog;
+* if confirmed, builds a frozen changed_data atom (action:'remove') and calls
+* self.change_value({ refresh:true }) to trigger a full re-render after the server responds.
+*
+* document.activeElement.blur() is called first to flush any pending 'change' event on
+* the currently focused input, ensuring the remove is applied to the latest value.
+*
+* (!) alert / confirm are blocking browser dialogs. This is consistent with the rest of
+*     the codebase but is noted for future UX improvement.
+*
+* @param {Object}     self - Component instance (component_date)
+* @param {number|null} id  - Server-side entry id from the entry being removed
+*   (null for entries not yet persisted to the server)
+* @returns {HTMLElement} button_remove_container — <span class="button_container button_remove_container hidden_button">
+*   containing the icon button
 */
 const render_button_remove = function (self, id) {
 
@@ -943,7 +1174,18 @@ const render_button_remove = function (self, id) {
 
 /**
 * RENDER_BUTTON_CALENDAR
-* @return HTMLElement button_calendar_container
+* Build the calendar/clock picker trigger button shared by date and time input nodes.
+*
+* The button itself is an <a> element styled as a button with CSS class 'calendar'.
+* The container stops mousedown propagation so clicking the calendar icon does not
+* activate/deactivate the component wrapper. The actual flatpickr opening logic is
+* attached by the caller (get_input_date_node / get_input_time_node) via 'mouseup'.
+*
+* The button is rendered with tabIndex = -1 so it is skipped by keyboard Tab navigation;
+* the text input next to it is the focusable element for accessibility.
+*
+* @returns {HTMLElement} button_calendar_container — <span class="button_container button_calendar_container hidden_button">
+*   containing an <a class="input-group-addon button calendar">
 */
 const render_button_calendar = function () {
 
@@ -973,7 +1215,13 @@ const render_button_calendar = function () {
 
 /**
 * RENDER_DATES_SEPARATOR
-* @return HTMLElement dates_separator_node
+* Build the visual '<>' separator node displayed between start and end inputs
+* in range (date range) and time_range modes.
+*
+* The text content is the literal string '<>' which is also used as the separator
+* in the raw text representation produced by get_ar_raw_data_value (joined as ' <> ').
+*
+* @returns {HTMLElement} dates_separator_node — <span class="dates_separator"> with text '<>'
 */
 const render_dates_separator = function () {
 

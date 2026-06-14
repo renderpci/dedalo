@@ -4,6 +4,64 @@
 
 
 
+/**
+* VIEW_CONTENT_EDIT_PORTAL
+*
+* Edit-mode "content" view for `component_portal`.  This view renders each linked
+* target record as a full embedded section_record node (as opposed to the compact
+* table-row layout produced by `view_default_edit_portal` or the thumbnail grid of
+* `view_mosaic_edit_portal`).  It is registered in `component_portal`'s `render_views`
+* array with `{ view: 'content', mode: 'edit', render: 'view_content_edit_portal' }`
+* and dispatched from `render_edit_component_portal.prototype.edit` when
+* `self.context.view === 'content'`.
+*
+* Main exports:
+*   `view_content_edit_portal`         — stub constructor (no instances created).
+*   `view_content_edit_portal.render`  — async static render entry-point called by
+*                                        `render_edit_component_portal`.
+*
+* Render levels:
+*   `'full'`    — Rebuilds the entire wrapper DOM, including the column-header row,
+*                 the `list_body` grid container, the CSS grid rule, and the
+*                 autocomplete activation events.  Used on first render and after
+*                 a full refresh.
+*   `'content'` — Re-renders only the `content_data` child (the list of embedded
+*                 records) inside the existing wrapper, toggling the
+*                 `header_wrapper_list` visibility.  Used by
+*                 `component_portal.prototype.refresh` to update the record list
+*                 without tearing down the outer shell (e.g. after pagination, tag
+*                 filter, or autocomplete selection).
+*
+* CSS grid layout:
+*   Column widths are derived from `self.columns_map` via `ui.flat_column_items`
+*   and injected as a scoped `grid-template-columns` rule through `set_element_css`.
+*   The CSS selector is keyed on `<section_tipo>_<tipo>.edit.view_<view>` so that
+*   multiple portals on the same page do not share a single rule.
+*
+* Key data shapes consumed from `self` (the `component_portal` instance):
+*   `self.columns_map`     — `Array<ColumnDDO>` describing visible columns and their
+*                            widths.  May be empty for portals with no explicit layout.
+*   `self.fixed_columns_map` — `boolean|null` flag preventing `rebuild_columns_map`
+*                              from running more than once per portal lifecycle.
+*   `self.data.references` — `Array<Reference>` of back-reference locators; rendered
+*                            as a read-only reference list below the record rows.
+*   `self.ar_instances`    — `Array` accumulator; section_record instances are pushed
+*                            here so that `destroy()` can clean them up.
+*   `self.node.list_body`  — Pointer to the live `list_body` DOM element, set on first
+*                            full render; used by the `'content'` level to toggle the
+*                            `header_wrapper_list` visibility without a DOM query from
+*                            the root.
+*
+* @module view_content_edit_portal
+* @see render_edit_component_portal.js  for the view-dispatch switch.
+* @see component_portal.js              for the constructor and `render_views` registration.
+* @see view_default_edit_portal.js      for the canonical table-layout implementation
+*                                       (closest structural parallel).
+* @see docs/core/components/component_portal.md for the full specification.
+*/
+
+
+
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
@@ -18,7 +76,15 @@
 
 /**
 * VIEW_CONTENT_EDIT_PORTAL
-* Manage the component's logic and appearance in client side
+* Stub constructor for the content-view render module.
+*
+* Never instantiated directly.  The module follows the same pattern as all other
+* portal view modules: the constructor is a no-op and the real logic lives on
+* the static method `view_content_edit_portal.render`.  Exporting the function
+* (rather than a plain object) allows consistent duck-typing checks elsewhere in
+* the codebase.
+*
+* @returns {boolean} Always true.
 */
 export const view_content_edit_portal = function() {
 
@@ -29,11 +95,36 @@ export const view_content_edit_portal = function() {
 
 /**
 * RENDER
-* Manages the component's logic and appearance in client side
-* @param object
-* 	component instance
-* @param object options
-* @return HTMLElement wrapper
+* Entry point for the 'content' view of `component_portal` in edit mode.
+*
+* Orchestrates the two-phase render pattern used by all portal view modules:
+*
+*   Phase 1 — `render_level === 'full'` (default):
+*     Builds the complete wrapper DOM tree: resolves the columns_map, fetches
+*     section_record instances for the current page of locators, constructs the
+*     `list_body` grid container (with an injected CSS grid rule), and wires up
+*     the autocomplete click-activation handler.  Returns the finished wrapper.
+*
+*   Phase 2 — `render_level === 'content'`:
+*     Only refreshes the `content_data` child inside an already-existing wrapper.
+*     Toggles `header_wrapper_list` visibility depending on whether any records
+*     are present, then returns the new `content_data` node so the caller can
+*     swap it in-place.  Used by pagination, tag-filter, and record-link flows.
+*
+* Side effects:
+*   - Pushes all newly created section_record instances into `self.ar_instances`
+*     so the portal's `destroy()` can clean them up.
+*   - Sets `self.columns_map` to the (possibly cached) resolved column map.
+*   - Injects a scoped CSS `grid-template-columns` rule via `set_element_css`.
+*   - Sets `wrapper.list_body` and `wrapper.content_data` pointers for subsequent
+*     `'content'`-level renders to access the live DOM without a root-relative query.
+*
+* @param {Object} self - The `component_portal` instance.
+* @param {Object} options - Render options forwarded from the edit dispatcher.
+* @param {string} [options.render_level='full'] - `'full'` rebuilds the entire
+*   wrapper; `'content'` refreshes only the record list inside the existing wrapper.
+* @returns {Promise<HTMLElement>} The outer wrapper element (full render) or the
+*   newly built `content_data` element (content-only render).
 */
 view_content_edit_portal.render = async function(self, options) {
 
@@ -83,6 +174,9 @@ view_content_edit_portal.render = async function(self, options) {
 					"grid-template-columns" : template_columns
 				}
 			}
+			// Scope the CSS rule to this specific portal instance by keying it on
+			// <section_tipo>_<tipo>.edit.view_<view>, preventing rule collisions when
+			// multiple portals with the same tipo appear on the same page.
 			const selector = `${self.section_tipo}_${self.tipo}.edit.view_${self.view}`
 			set_element_css(selector, css_object)
 
@@ -111,11 +205,28 @@ view_content_edit_portal.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Render all received section records and place it into a new div 'content_data'
-* @param object self
-* 	component instance
-* @param array ar_section_record
-* @return HTMLElement content_data
+* Render all received section records and place them into a new `content_data` div.
+*
+* Iterates `ar_section_record` sequentially (awaiting each `section_record.render()`)
+* and appends the resulting nodes to a DocumentFragment before flushing into the
+* `content_data` container.  Sequential iteration (rather than `Promise.all`) ensures
+* that records appear in the correct order even when individual renders complete at
+* different times.
+*
+* Additionally, if the portal's server response includes back-references
+* (`self.data.references`), a read-only reference list node is appended below the
+* records using `render_references`.
+*
+* The numeric index assignment `content_data[i] = section_record_node` stores a
+* direct reference to each row's DOM node on the container element itself.  This
+* lets other code (e.g. drag-and-drop handlers) retrieve a specific row without an
+* extra DOM query.
+*
+* @param {Object} self - The `component_portal` instance.
+* @param {Array} ar_section_record - Array of `section_record` instances for the
+*   current page, as returned by `get_section_records`.
+* @returns {Promise<HTMLElement>} The populated `content_data` div, ready to be
+*   inserted into the `list_body` container.
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -159,10 +270,26 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will be processed by section_records
-* @param object self
-* 	component instance
-* @return array columns_map
+* Return the resolved columns_map for this portal, building it at most once per
+* portal lifecycle.
+*
+* The `content` view does not add any control columns (id button, drag handle, remove
+* button) on top of the base map — unlike `view_default_edit_portal` which injects
+* those extra DDO entries here.  The method exists for parity with other view modules
+* and to support future extension without changing the call signature.
+*
+* Early-exit guard: if `self.fixed_columns_map === true` the method returns
+* `self.columns_map` immediately, skipping the rebuild.  The flag is set to `true` at
+* the end of the first successful call so that subsequent `'content'`-level renders
+* reuse the already-computed map without re-running the logic.
+*
+* @param {Object} self - The `component_portal` instance.
+* @param {boolean|null} self.fixed_columns_map - Guards against running more than once.
+*   `null` = not yet run; `true` = already computed (skip).
+* @param {Array} self.columns_map - The base columns_map, populated during
+*   `component_portal.prototype.build` from the ontology / request config.
+* @returns {Promise<Array>} The (possibly identical) columns_map array, ready to be
+*   assigned back to `self.columns_map`.
 */
 const rebuild_columns_map = async function(self) {
 

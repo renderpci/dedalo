@@ -3,24 +3,35 @@ include_once 'trait.search_component_json.php';
 include_once 'trait.search_component_json_tm.php';
 /**
 * CLASS COMPONENT_JSON
-* Manages JSON data components in Dédalo.
+* Manages arbitrary JSON data stored as a single language-neutral component value.
 *
-* Stores and handles arbitrary JSON data structures, providing a flexible
-* container for complex data that doesn't fit standard component types.
-* Useful for storing configuration, metadata, or structured data from external sources.
+* Unlike typed components (text, number, IRI) that impose a schema on the stored
+* value, component_json is a transparent envelope: whatever JSON the caller provides
+* is stored verbatim and returned verbatim.  Typical use cases include:
+* - External metadata payloads imported from third-party APIs
+* - Free-form configuration objects that do not fit any standard field type
+* - JSON files uploaded by editors via the file-upload workflow
 *
-* Key features:
-* - Stores arbitrary JSON objects and arrays
-* - File-based JSON upload with .json extension validation
-* - Language-neutral storage (DEDALO_DATA_NOLAN)
-* - Data version migration support
-* - Search integration via search_component_json trait
+* Storage layout:
+* - DB column: 'misc' in the section's matrix table (see section_record_data)
+* - Data envelope: array of data-item objects, always exactly one item per record
+*   [ { "value": <any JSON value> } ]
+* - Language: always DEDALO_DATA_NOLAN ('lg-nolan') — JSON data is not translatable
 *
-* Data format: Valid JSON objects or arrays stored as string values.
+* Import/export:
+* - Raw export wraps the datum as {"dedalo_data": [{"value": <json>, "id": 1}]}
+* - The import tool detects and unwraps the dedalo_data wrapper before calling
+*   conform_import_data(), setting $import_data_is_wrapped = true on the instance
+*   so that conform_import_data() can restore the exact v7 envelope without
+*   re-interpreting the content as a plain value (see conform_import_data docs)
 *
-* Data is stored in the 'misc' column of matrix tables.
+* Search:
+* - Full JSONB path operator suite via trait search_component_json
+* - Time-machine variant via trait search_component_json_tm
 *
-* Extends component_common and uses search_component_json trait for JSON-specific queries.
+* Extends component_common.
+* Consumed by search_component_json (regular matrix) and
+* search_component_json_tm (matrix_time_machine).
 *
 * @package Dédalo
 * @subpackage Core
@@ -37,10 +48,24 @@ class component_json extends component_common {
 
 	/**
 	* __CONSTRUCT
+	* Initialises the component, forcing the language to DEDALO_DATA_NOLAN ('lg-nolan').
+	*
+	* JSON data is inherently non-translatable; the lang parameter is accepted for
+	* interface compatibility but is always overridden before forwarding to the parent
+	* so that data queries always target the correct language-neutral slot.
+	*
+	* @param string      $tipo         Ontology tipo identifier for this component (e.g. 'dd1574')
+	* @param mixed       $section_id   [= null]  Record ID within the parent section; null for unsaved instances
+	* @param string      $mode         [= 'list'] Rendering mode ('list', 'edit', 'search', …)
+	* @param string      $lang         [= DEDALO_DATA_NOLAN] Accepted for signature parity but ignored — always overridden
+	* @param string|null $section_tipo [= null]  Ontology tipo of the parent section
+	* @param bool        $cache        [= true]  Whether to use the instance cache
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
-		// Force always DEDALO_DATA_NOLAN
+		// (!) Force always DEDALO_DATA_NOLAN
+		// JSON values are language-neutral; overriding before the parent call ensures
+		// the data layer never tries to read or write a language-keyed slot.
 		$this->lang = DEDALO_DATA_NOLAN;
 
 		parent::__construct($tipo, $section_id, $mode, $this->lang, $section_tipo, $cache);
@@ -50,7 +75,12 @@ class component_json extends component_common {
 
 	/**
 	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
+	* Returns the list of file extensions that may be uploaded to this component.
+	*
+	* Only '.json' files are accepted; add_file() enforces this list before
+	* moving the upload to its final destination.
+	*
+	* @return array<string> Single-element array: ['json']
 	*/
 	public function get_allowed_extensions() : array {
 
@@ -63,7 +93,13 @@ class component_json extends component_common {
 
 	/**
 	* VALID_FILE_EXTENSION
-	* @return bool
+	* Checks whether the given file extension is in the component's allowed list.
+	*
+	* The comparison is case-sensitive; callers (add_file) must lowercase the
+	* extension before passing it here to avoid false negatives on 'JSON' vs 'json'.
+	*
+	* @param string $file_extension Lowercased extension without leading dot (e.g. 'json')
+	* @return bool True if the extension is allowed, false otherwise
 	*/
 	public function valid_file_extension(string $file_extension) : bool {
 
@@ -78,11 +114,32 @@ class component_json extends component_common {
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $request_options
+	* Applies a versioned migration to stored component data.
+	*
+	* Called by the data-version migration tool (tool_update_cache) when the platform
+	* upgrades and stored dato shapes must be transformed.  Each migration is identified
+	* by a dotted version string derived from $request_options->update_version (array of
+	* version parts joined with '.').
+	*
+	* Result codes:
+	*   0 — this component has no handler for the requested version (migration skipped)
+	*   1 — migration applied successfully
+	*   2 — migration was attempted but the dato needed no change
+	*
+	* component_json currently has no registered migration steps; all versions fall through
+	* to the default case and return result=0.
+	*
+	* @param object $request_options Migration request with at minimum:
+	*   ->update_version  array   Parts of the target version e.g. ['1','0','0']
+	*   ->data_unchanged  mixed   Reference value for detecting no-change situations
+	*   ->reference_id    mixed   ID used by some handlers for cross-referencing
+	*   ->tipo            string  Ontology tipo of the component being migrated
+	*   ->section_id      mixed   Section record ID
+	*   ->section_tipo    string  Ontology tipo of the parent section
+	*   ->context         string  Always 'update_component_data'
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the dato don't need change"
+	*   ->result int    0|1|2 — see result codes above
+	*   ->msg    string Human-readable outcome description
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -119,9 +176,17 @@ class component_json extends component_common {
 
 	/**
 	* GET_UPLOAD_FILE_NAME
-	* Compound the normalized name for the upload files
-	* Such as 'test3_test18_1'
-	* @return string
+	* Builds the canonical base filename for an uploaded file, without extension.
+	*
+	* The name is composed as:  <section_tipo>_<tipo>_<section_id>
+	* e.g. 'test3_test18_1' for section_tipo='test3', tipo='test18', section_id=1.
+	*
+	* The extension is appended by add_file() after extension validation, yielding
+	* the final file name such as 'test3_test18_1.json'.  Using this deterministic
+	* naming scheme means re-uploading a file for the same record always overwrites
+	* the previous one.
+	*
+	* @return string Basename without extension, e.g. 'rsc29_rsc170_1'
 	*/
 	public function get_upload_file_name() : string {
 
@@ -132,23 +197,41 @@ class component_json extends component_common {
 
 	/**
 	* ADD_FILE
-	* Receive a file info object from tool upload
-	* and move/rename the file to the proper target
-	* @param object $options
-	* {
-	* 	"name": "myfile.json",
-	*	"type": "application/octet-stream",
-	*   "tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
-	*	"tmp_name": "/private/var/tmp/php6nd4A2",
-	*	"error": 0,
-	*	"size": 132898
-	* }
+	* Receives a file-info object from the upload tool, validates the extension,
+	* and moves (renames) the temporary file to its canonical destination path.
+	*
+	* This method only handles the filesystem move; it does NOT read the file content
+	* or persist any data to the database — that is done in process_uploaded_file().
+	*
+	* Flow:
+	*   1. Resolve the full path of the temporary file from the constant named by
+	*      $options->tmp_dir (e.g. DEDALO_UPLOAD_TMP_DIR) + user ID + key_dir + tmp_name.
+	*      If $options->source_file is provided it is used directly.
+	*   2. Validate that the source file exists.
+	*   3. Validate that the file extension is in the allowed list (['json']).
+	*   4. Create the target directory if it does not exist (mode 0750, recursive).
+	*   5. Rename the temp file to the canonical name via get_upload_file_name().
+	*
+	* @param object $options Upload descriptor from the upload tool:
+	*   ->name        string  Original file name, e.g. 'myfile.json'
+	*   ->type        string  MIME type from the browser (informational only)
+	*   ->tmp_dir     string  Name of the PHP constant holding the temp directory path,
+	*                         e.g. 'DEDALO_UPLOAD_TMP_DIR' (the constant is resolved via
+	*                         constant() — a string constant-name, NOT the path itself)
+	*   ->key_dir     string  Sub-directory segment identifying the upload caller,
+	*                         e.g. 'tool_upload'
+	*   ->tmp_name    string  The PHP-assigned temp filename, e.g. 'phpJIQq4e'
+	*   ->error       int     PHP upload error code (0 = no error)
+	*   ->size        int     File size in bytes
+	*   ->extension   string  (optional) Pre-extracted extension
+	*   ->source_file string  (optional) Absolute path override; bypasses tmp_dir resolution
 	* @return object $response
-	* {
-	* 	"original_file_name" : $name, // myfile.json
-	*	"full_file_name"	 : $full_file_name, // rsc29_rsc170_1.jpg
-	*	"full_file_path"	 : $full_file_path // /media/image/original/0/rsc29_rsc170_1.jpg
-	* }
+	*   ->result               bool   True on success, false on any failure
+	*   ->msg                  string Human-readable outcome or error detail
+	*   ->ready                object (on success) File info:
+	*     ->original_file_name string  Caller's filename, e.g. 'myfile.json'
+	*     ->full_file_name     string  Stored filename, e.g. 'test3_test18_1.json'
+	*     ->full_file_path     string  Absolute path where the file now resides
 	*/
 	public function add_file(object $options) : object {
 
@@ -176,6 +259,8 @@ class component_json extends component_common {
 			$source_file 	= $options->source_file ?? null;
 
 		// source_file
+		// tmp_dir is the *name* of a PHP constant (e.g. 'DEDALO_UPLOAD_TMP_DIR'), not the path
+		// itself.  Guard against misconfigured deployments where the constant was never defined.
 			if (!defined($tmp_dir)) {
 				$msg = 'constant is not defined! tmp_dir: '.$tmp_dir;
 				$response->msg .= $msg;
@@ -188,6 +273,8 @@ class component_json extends component_common {
 			}
 
 			$user_id		= logged_user_id();
+			// Resolve the full source path from per-user temp directory unless an explicit
+			// source_file override was provided (used by programmatic callers and tests).
 			$source_file	= isset($source_file)
 				? $source_file
 				: constant($tmp_dir). '/'. $user_id .'/'. rtrim($key_dir, '/') . '/' . $tmp_name;
@@ -204,6 +291,8 @@ class component_json extends component_common {
 			}
 
 		// target file info
+		// The destination is placed in the SAME directory as the source temp file so that
+		// rename() is an atomic in-filesystem operation (avoids a cross-device copy+delete).
 			$file_extension	= strtolower(pathinfo($name, PATHINFO_EXTENSION));
 			$file_name		= $this->get_upload_file_name(); // such as 'test3_test18_1'
 			$folder_path	= pathinfo($source_file, PATHINFO_DIRNAME);
@@ -282,15 +371,30 @@ class component_json extends component_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* @param object|null $file_data = null
-	* sample:
-	* {
-	*	"original_file_name": "my file name.json",
-	*	"full_file_name": "test3_test18_1.json",
-	*	"full_file_path": "/fake_path/component_json/test3_test18_1.json"
-	* }
-	* @param object|null $process_options = null
+	* Reads a previously staged JSON file, decodes its content, and persists it
+	* as the component's data value.
+	*
+	* This is the second stage of the two-step file upload workflow:
+	*   1. add_file()              — validates extension and moves file to staging location
+	*   2. process_uploaded_file() — reads content, validates JSON, saves to DB, removes file
+	*
+	* On success the file is deleted from the filesystem after its content has been
+	* saved to the database (the component stores the decoded JSON object, not the file).
+	*
+	* The decoded value is wrapped in the standard v7 data envelope before being passed
+	* to set_data() so that the stored shape matches what all other write paths produce:
+	*   [ { "value": <decoded JSON> } ]
+	*
+	* @param object|null $file_data [= null] Staged file descriptor, as returned in
+	*   $response->ready from add_file():
+	*   ->original_file_name string  Original name supplied by the user, e.g. 'my file name.json'
+	*   ->full_file_name     string  Canonical stored filename, e.g. 'test3_test18_1.json'
+	*   ->full_file_path     string  Absolute filesystem path to the staged file
+	* @param object|null $process_options [= null] Reserved for future post-processing
+	*   options; currently unused — pass null
 	* @return object $response
+	*   ->result bool   True on success, false on any error
+	*   ->msg    string Human-readable outcome or error detail
 	*/
 	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
@@ -325,9 +429,12 @@ class component_json extends component_common {
 			$file_content = file_get_contents($full_file_path);
 
 		// read content
+		// json_handler::decode returns the decoded PHP value on success, or false/null on failure.
+		// The decoded value becomes the inner 'value' of the v7 data envelope.
 			if ($value = json_handler::decode($file_content)) {
 
 				// wrap data with array to maintain component data format
+				// The v7 envelope is always an array of item objects: [ { "value": <data> } ]
 					$data = [
 						(object)[
 							'value' => $value
@@ -339,6 +446,9 @@ class component_json extends component_common {
 					$this->save();
 
 				// remove it after store
+				// The component stores the decoded content, not the file; the staged file is
+				// no longer needed once save() succeeds.  A failure to unlink is logged but
+				// does not roll back the save — the data is already in the database.
 					if(!unlink($full_file_path)) {
 						debug_log(__METHOD__
 							. " Error deleting file " . PHP_EOL
@@ -380,14 +490,36 @@ class component_json extends component_common {
 
 	/**
 	* REGENERATE_COMPONENT
-	* Force the current component to re-save its data
-	* Note that the first action is always load data to avoid save empty content
+	* Forces the component to normalise and re-save its stored data.
+	*
+	* Called by tool_update_cache to migrate legacy records that stored the JSON
+	* value as a raw string inside the 'value' field rather than as a decoded
+	* PHP object/array.  Historically, some import paths serialised the JSON to a
+	* string before wrapping it in the v7 envelope; this method detects that
+	* condition and corrects it in-place.
+	*
+	* Algorithm:
+	*   1. Load the current data via get_data() (never skip — saving without loading
+	*      would overwrite with an empty value).
+	*   2. Walk every data item; if item->value is a string, attempt json_decode().
+	*      On decode failure return false immediately so an administrator can
+	*      investigate rather than silently losing data.
+	*   3. Replace the string value with the decoded PHP value (object or array)
+	*      via a clone so the original item object is not mutated.
+	*   4. Non-string values are kept as-is (already in the correct shape).
+	*   5. Pass the normalised data through set_data() to handle edge cases such as
+	*      [null] → null, then save().
+	*
+	* (!) Returns false and halts on the first invalid JSON string; the caller
+	* (tool_update_cache) treats a false return as a recoverable per-record error
+	* and continues with the next record.
+	*
 	* @see class.tool_update_cache.php
-	* @return bool
+	* @return bool True if data was successfully normalised and saved; false on JSON decode error
 	*/
 	public function regenerate_component() : bool {
 
-		// Force loads data always !IMPORTANT
+		// (!) Force loads data always — saving without first loading would overwrite with empty
 		$data = $this->get_data();
 
 		if (is_array($data)) {
@@ -441,20 +573,44 @@ class component_json extends component_common {
 
 	/**
 	* CONFORM_IMPORT_DATA
-	* Because component_json stores any arbitrary JSON as its value, a v7 envelope
-	* like [{"value":1}] is indistinguishable from a literal JSON value with the same shape.
-	* To disambiguate, the import uses the 'dedalo_data' wrapper produced by the raw export:
-	* 	{"dedalo_data":[{"value":<any JSON>,"id":1}]}
-	* The import tool unwraps it and sets the flag 'import_data_is_wrapped' on the component.
-	* Rules:
-	* 1. Wrapped input (flag set): the unwrapped array is the v7 envelope.
-	*    Items must be objects with a 'value' property.
-	* 2. Any other input: the ENTIRE decoded value (or the raw string when it is not
-	*    valid JSON) becomes the single monovalue as [{"value": <data>}]
-	* Empty value returns null (clears the existing component data)
-	* @param string $import_value
-	* @param string $column_name
+	* Normalises a raw import string into the v7 data envelope that set_data() expects.
+	*
+	* The core challenge for component_json is shape ambiguity: the stored envelope
+	* [{"value": 1}] and a literal user value that happens to be an array of objects
+	* with a 'value' property are syntactically indistinguishable.  The solution is a
+	* two-path strategy driven by the $import_data_is_wrapped flag:
+	*
+	* Path A — Wrapped export (import_data_is_wrapped === true):
+	*   The import tool detected the raw-export {"dedalo_data": [...]} wrapper and
+	*   already stripped the outer key.  $import_value now contains the JSON string
+	*   representation of the v7 envelope array.  This method validates that each
+	*   item is an object with a 'value' property and returns the decoded array
+	*   directly as result — it becomes the new $data for set_data().
+	*
+	* Path B — Plain / foreign JSON (import_data_is_wrapped === false):
+	*   The input has no dedalo_data wrapper (e.g. a manually authored CSV column or
+	*   a third-party export).  The ENTIRE decoded value — regardless of its shape —
+	*   becomes the inner 'value' of a single new data item:
+	*     result = [ { "value": <decoded value> } ]
+	*   Within this path, a further legacy heuristic is applied: if the decoded value
+	*   is an object with exactly one key starting with 'lg-' whose value is an array
+	*   of v7-shaped items, the lang-keyed envelope from old v6-style exports is
+	*   detected and unwrapped (the inner array is returned as the result directly).
+	*
+	* Edge cases:
+	* - Empty import_value (and not the string '0') → result null, which tells the
+	*   import tool to clear the component's existing data.
+	* - Non-JSON scalars (bare strings, integers) → passed through json_decode(); on
+	*   success the native PHP type is used as 'value', on failure the raw string is
+	*   kept as 'value' (lossless round-trip for pre-existing plain-text values).
+	*
+	* @param string $import_value  Raw string from the CSV cell or import source
+	* @param string $column_name   DB column name (informational; not used in this override)
 	* @return object $response
+	*   ->result array|null  The normalised v7 envelope on success; null clears existing data;
+	*                        stays null (initial value) on validation errors
+	*   ->errors array       List of failure descriptor objects; non-empty on validation errors
+	*   ->msg    string      Human-readable outcome
 	*/
 	public function conform_import_data(string $import_value, string $column_name) : object {
 
@@ -474,13 +630,17 @@ class component_json extends component_common {
 			}
 
 		// wrapped case. The value was exported as {"dedalo_data": ...} and the import
-		// tool has already unwrapped it, so the value is the v7 envelope itself
+		// tool has already unwrapped it, so the value is the v7 envelope itself.
+		// See component_common::unwrap_dedalo_data() and tool_import_dedalo_csv for
+		// how import_data_is_wrapped gets set to true before this call.
 			if ($this->import_data_is_wrapped===true) {
 
 				$data_from_json = json_handler::is_json($import_value)
 					? json_handler::decode($import_value)
 					: null;
 
+				// The dedalo_data payload must decode to a PHP array (the v7 envelope).
+				// Anything else (null, object, scalar) means the export was malformed.
 				if (!is_array($data_from_json)) {
 					$failed = new stdClass();
 						$failed->section_id		= $this->section_id;
@@ -492,6 +652,8 @@ class component_json extends component_common {
 					return $response;
 				}
 
+				// Every item in the array must be an object with a 'value' key.
+				// Fail-fast on the first malformed item to surface problems early.
 				foreach ($data_from_json as $current_item) {
 					if (!is_object($current_item) || !property_exists($current_item, 'value')) {
 						$failed = new stdClass();
@@ -511,11 +673,14 @@ class component_json extends component_common {
 				return $response;
 			}
 
-		// un-wrapped case. The entire value, whatever it is, becomes the single monovalue
+		// un-wrapped case. The entire value, whatever it is, becomes the single monovalue.
+		// Two sub-paths: valid JSON (object/array/literal) or a non-JSON raw string.
 			if (json_handler::is_json($import_value)) {
 
 				// arrays and objects
 				$decoded = json_handler::decode($import_value);
+				// json_handler::decode() may return null for an explicitly encoded JSON null
+				// (import_value === 'null'), which is legitimate and must not be rejected.
 				if ($decoded===null && $import_value!=='null') {
 					$failed = new stdClass();
 						$failed->section_id		= $this->section_id;
@@ -529,7 +694,9 @@ class component_json extends component_common {
 
 				// legacy raw export case as {"lg-nolan":[{"value":<any JSON>,"id":1}]}
 				// a single lang keyed object whose value is an array of items with 'value'
-				// property is interpreted as the legacy envelope and extracted
+				// property is interpreted as the legacy envelope and extracted.
+				// This heuristic handles v6-era exports that keyed data by language code
+				// (e.g. 'lg-nolan') even for non-translatable components.
 				if (is_object($decoded)) {
 					$ar_keys = array_keys((array)$decoded);
 					if (count($ar_keys)===1 && strpos($ar_keys[0], 'lg-')===0) {
@@ -550,13 +717,16 @@ class component_json extends component_common {
 				$value = $decoded;
 			}else{
 				// scalars. Decode JSON scalars when possible ('42' to int, 'true' to bool),
-				// else keep the raw string
+				// else keep the raw string.
+				// Using json_decode (not json_handler) here because the caller has already
+				// confirmed is_json() returned false — we only want native scalar coercion.
 				$decoded = json_decode($import_value);
 				$value = (json_last_error()===JSON_ERROR_NONE)
 					? $decoded
 					: $import_value;
 			}
 
+		// Wrap the resolved scalar/object/array as the single monovalue in a v7 envelope.
 		$response->result	= [(object)['value' => $value]];
 		$response->msg		= 'OK';
 

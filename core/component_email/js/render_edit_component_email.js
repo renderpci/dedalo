@@ -4,6 +4,50 @@
 
 
 
+/**
+* RENDER_EDIT_COMPONENT_EMAIL
+* Client-side edit renderer for `component_email`.
+*
+* This module owns the DOM construction for edit mode and exposes three
+* shared helpers (`get_content_data`, `get_buttons`, `change_handler`,
+* `remove_handler`) that are consumed directly by the view modules:
+*   - view_default_edit_email.js
+*   - view_line_edit_email.js
+*   - view_mini_email.js
+*
+* Entry point: `render_edit_component_email.prototype.edit(options)` —
+* dispatched from `component_email.prototype.edit` (prototype alias in
+* component_email.js).
+*
+* Data shape expected on `self.data`:
+*   {
+*     entries: [
+*       { id: <number|null>, value: <string>, lang: <string> },
+*       ...
+*     ]
+*   }
+* Each entry represents one email address stored in a given language.
+* An entry `id` of null means the row has never been persisted.
+*
+* Permissions model:
+*   - self.permissions === 1  → read-only; inputs are replaced with plain
+*                               `<div>` text nodes.
+*   - self.permissions > 1   → full edit with add/remove/send buttons.
+*
+* `changed_data` mutation protocol: every edit or removal calls
+* `self.change_value({ changed_data, refresh })` with a frozen array of
+* change descriptors:
+*   { action: 'insert'|'update'|'remove', id, key, value }
+* The id originates from the server entry; it is null for new entries.
+* `refresh: true` triggers a full re-render of the component's content area.
+*
+* Exports: `render_edit_component_email` (constructor),
+*          `get_content_data`, `get_buttons`, `change_handler`,
+*          `remove_handler`.
+*/
+
+
+
 // imports
 	import { add_instance } from '../../common/js/instances.js'
 import {ui} from '../../common/js/ui.js'
@@ -16,7 +60,9 @@ import {attach_item_dataframe} from '../../component_common/js/component_common.
 
 /**
 * RENDER_EDIT_COMPONENT_EMAIL
-* Manage the components logic and appearance in client side
+* Constructor for the edit-mode renderer.
+* Acts as a namespace for `prototype.edit`; all rendering helpers are
+* module-level functions, not prototype methods, so only `edit` lives here.
 */
 export const render_edit_component_email = function() {
 
@@ -27,9 +73,24 @@ export const render_edit_component_email = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @param object options
-* @return HTMLElement wrapper
+* Selects and delegates to the correct view for edit mode.
+* Called via the `component_email.prototype.edit` prototype alias.
+*
+* Supported views (read from `self.context.view`):
+*   - 'line'    → compact single-line widget with an exit-edit button.
+*   - 'mini'    → minimal read-like display (no editing widgets).
+*   - 'print'   → same DOM as 'default' but forces `self.permissions = 1`
+*                 so all inputs render as read-only plain text, and the
+*                 wrapper class is 'view_print'; CSS can target this class
+*                 for print-specific styling.
+*   - 'default' → full edit form with add/remove/send-email buttons.
+*
+* (!) The 'print' case intentionally falls through to 'default' after
+* forcing permissions; this is correct switch-fall-through behaviour.
+*
+* @param {Object} options - Rendering options forwarded to the view (includes
+*   `render_level`: 'full' | 'content').
+* @returns {Promise<HTMLElement>} Resolved wrapper or content_data element.
 */
 render_edit_component_email.prototype.edit = async function(options) {
 
@@ -64,8 +125,23 @@ render_edit_component_email.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Builds the `content_data` container that holds one `content_value` row
+* per entry in `self.data.entries`.
+*
+* When the entries array is empty, a single blank row is still rendered so
+* the user sees at least one input field immediately (value_length defaults
+* to 1).
+*
+* Each rendered row is stored as a numeric property on the returned element
+* (`content_data[0]`, `content_data[1]`, …) so that callers can find rows
+* by index without querying the DOM.
+*
+* Permissions gate:
+*   - `self.permissions === 1` → `get_content_value_read` (plain text div).
+*   - otherwise               → `get_content_value` (live `<input>` row).
+*
+* @param {Object} self - Component instance.
+* @returns {HTMLElement} Populated `content_data` container div.
 */
 export const get_content_data = function(self) {
 
@@ -96,10 +172,32 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @param int i
-* @param string current_value
-* @param object self
-* @return HTMLElement content_value
+* Builds one editable `content_value` row for a single email entry.
+*
+* The row contains:
+*   - A text `<input>` pre-filled with `current_value?.value`.
+*   - A 'remove' button (only rendered when `i > 0` so the first row
+*     cannot be deleted — the user empties it instead).
+*   - An 'email' button that opens the system mail client for the address.
+*   - An optional dataframe literal-view glue injected by `attach_item_dataframe`.
+*
+* Mandatory styling: when `self.context.properties.mandatory` is true and
+* the entry has no value, the CSS class `mandatory` is appended to the input
+* so the UI can highlight required empty fields.
+*
+* Event strategy:
+*   - `mousedown` / `click` on the input call `stopPropagation` to prevent
+*     the section container from intercepting the event and stealing focus.
+*   - `focus` activates the component (needed when the user tabs into the field).
+*   - `keydown` with Tab key deactivates the component and lets the browser
+*     move focus naturally.
+*   - `change` triggers `change_handler`, which validates and persists the value.
+*
+* @param {number} i - Zero-based index of this entry within `data.entries`.
+* @param {Object|undefined} current_value - Entry object `{ id, value, lang }`
+*   from `data.entries[i]`; may be undefined for the blank first row.
+* @param {Object} self - Component instance.
+* @returns {HTMLElement} The `content_value` div for this email row.
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -204,13 +302,20 @@ const get_content_value = (i, current_value, self) => {
 
 /**
 * GET_CONTENT_VALUE_READ
-* Render a element based on passed value
-* @param int i
-* 	data.value array key
-* @param string current_value
-* @param object self
+* Renders a single email entry as a non-interactive read-only element.
+* Used when `self.permissions === 1` (e.g. view='print', or the current
+* user has view-only access).
 *
-* @return HTMLElement content_value
+* The raw email string is rendered as inner HTML. Empty/undefined entries
+* produce an empty div rather than a broken layout.
+*
+* @param {number} i - Zero-based index of this entry within `data.entries`.
+* @param {Object|undefined} current_value - Entry object `{ id, value, lang }`
+*   from `data.entries[i]`; may be undefined.
+* @param {Object} self - Component instance.
+*
+* @returns {HTMLElement} A `content_value read_only` div containing the
+*   plain email string (no input, no buttons).
 */
 const get_content_value_read = (i, current_value, self) => {
 
@@ -229,8 +334,31 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object self
-* @return HTMLElement buttons_container
+* Builds the buttons container for the component's toolbar area.
+*
+* Buttons are conditionally rendered based on `self.show_interface`:
+*
+* `button_add` (show_interface.button_add === true):
+*   Inserts a new blank entry into `data.entries` via `self.change_value`
+*   with `action: 'insert'`. After insertion the component re-renders
+*   (`refresh: true`) and focus moves to the new input field.
+*   Edge case: if `data.entries` is empty or absent, clicking add focuses
+*   the existing first input instead of appending a duplicate blank row.
+*
+* `email_multiple` (show_interface.tools === true):
+*   Compiles all email addresses in the current search result set by
+*   calling `self.get_ar_emails()`, then opens a `mailto:?bcc=…` URI.
+*   Because operating systems impose a character limit on mailto URIs
+*   (approximately 2000 chars on Windows), `get_ar_emails` may return
+*   more than one string chunk. When more than one chunk is returned a
+*   modal is displayed with one button per chunk so the user can open
+*   each batch separately.
+*
+* `tools` (show_interface.tools === true):
+*   Standard shared tool buttons appended via `ui.add_tools`.
+*
+* @param {Object} self - Component instance.
+* @returns {HTMLElement} The fully populated `buttons_container` element.
 */
 export const get_buttons = (self) => {
 
@@ -377,11 +505,28 @@ export const get_buttons = (self) => {
 
 /**
 * CHANGE_HANDLER
-* Validate and store current input value via self.change_value()
-* @param event e
-* @param int key
-* @param object self
-* @return bool
+* Validates the new input value and persists it via `self.change_value`.
+*
+* Called on the `change` event of each email `<input>`. Validation is
+* delegated to `self.verify_email` (defined on `component_email.prototype`),
+* which accepts an empty string as valid (allows the user to clear an address).
+* When validation fails the `error` CSS class is applied to the input via
+* `ui.component.error` and the function returns `false` without saving.
+*
+* The change is sent with `refresh: false` so the DOM is not rebuilt for a
+* simple value edit — only `insert` and `remove` operations need a full
+* re-render.
+*
+* The frozen `changed_data` descriptor:
+*   { action: 'update', id: <number|null>, key: <number>, value: { value, lang } }
+* `id` is null when the entry has never been saved to the server.
+*
+* @param {Event} e - The DOM change event from the input element.
+* @param {number} key - Zero-based index of the entry being edited in
+*   `self.data.entries`.
+* @param {Object} self - Component instance.
+* @returns {boolean} `true` when the value was valid and saved; `false` when
+*   validation failed (no save is performed).
 */
 export const change_handler = function(e, key, self) {
 
@@ -423,14 +568,36 @@ export const change_handler = function(e, key, self) {
 
 /**
 * REMOVE_HANDLER
-* Handle button remove actions
-* For translatable components, shows a modal warning that the entry
-* will be deleted across all languages.
-* @param DOM  node input
-* @param int id
-* @param int key - array index of the entry in data_lang
-* @param object self
-* @return promise response
+* Handles the remove-button click for a single email entry.
+*
+* Behaviour differs based on `self.context.translatable`:
+*
+*   Translatable components (`is_translatable === true`):
+*     Shows a confirmation modal warning the user that the entry will be
+*     deleted across all languages. The user must explicitly confirm via
+*     the 'Delete' button; cancelling aborts the removal entirely.
+*     Deletion is deferred to `_do_remove` after the modal button click.
+*
+*   Non-translatable components:
+*     Uses a synchronous `confirm()` dialog only when the input field
+*     currently has a value. Emptied rows are removed silently.
+*     Then calls `_do_remove` directly.
+*
+* In both paths, `document.activeElement.blur()` is called first to
+* guarantee that any pending `change` event fires before the remove runs,
+* preventing a race between a dirty input and the deletion.
+*
+* (!) `confirm()` is a blocking synchronous call. On some browsers this can
+* interfere with animation frames. Consider migrating to a modal approach
+* (as already done for translatable components) when refactoring the UI.
+*
+* @param {HTMLElement} input - The `<input>` element for this row (its
+*   `.value` is read to populate the confirm dialog message).
+* @param {number|null} id - Server-side id of the entry; null for unsaved rows.
+* @param {number} key - Zero-based array index of the entry in `data.entries`.
+* @param {Object} self - Component instance.
+* @returns {Promise<*>|undefined} Returns the promise from `_do_remove` when
+*   deletion proceeds; returns undefined when the user cancels.
 */
 export const remove_handler = function(input, id, key, self) {
 
@@ -523,12 +690,21 @@ export const remove_handler = function(input, id, key, self) {
 
 /**
 * _DO_REMOVE
-* Executes the actual remove operation after confirmation
-* @param int id
-* @param int key
-* @param object self
-* @param string|null current_value
-* @return promise response
+* Executes the actual remove operation after confirmation.
+* Sends a single frozen `changed_data` descriptor with `action: 'remove'`
+* to `self.change_value`. `refresh: true` causes the component to re-render
+* its content area so the removed row disappears and remaining rows are
+* re-indexed.
+*
+* `value` is set to null (the server ignores it for remove actions); the
+* `label` field carries the original email string for activity-log purposes.
+*
+* @param {number|null} id - Server-side entry id; null for unsaved rows.
+* @param {number} key - Zero-based index of the entry in `data.entries`.
+* @param {Object} self - Component instance.
+* @param {string|null} current_value - The email string that was in the
+*   removed input; forwarded as `label` for the change-value activity log.
+* @returns {Promise<*>} Promise resolved when the API acknowledges the change.
 */
 const _do_remove = function(id, key, self, current_value) {
 

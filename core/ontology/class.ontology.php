@@ -1,18 +1,64 @@
 <?php declare(strict_types=1);
 /**
 * ONTOLOGY
-* Manages the main ontology definitions of Dédalo.
+* Central registry and lifecycle manager for Dédalo's ontology definitions.
+*
+* This class owns all CRUD operations that bridge the two ontology storage layers:
+*   1. 'matrix_ontology_main' — one row per top-level domain (TLD), stores the
+*      editable metadata of each ontology family (name, tld, active flag, typology, etc.).
+*   2. Per-TLD matrix tables (e.g. 'matrix_dd0', 'matrix_es0') — one row per ontology
+*      node (component, section model, area, …), each keyed by (section_tipo, section_id).
+*   3. 'dd_ontology' flat denormalised table — read by the runtime engine
+*      (class.ontology_node.php) for high-speed node lookups.  Changes to the two
+*      matrix layers must be flushed here via insert_dd_ontology_record() or the
+*      regenerate_records_in_dd_ontology() batch.
+*
+* The conventional TLD-to-matrix mapping is:
+*   tld  →  target_section_tipo  →  table
+*   'dd' →  'dd0'                →  'matrix_dd0'
+*   'es' →  'es0'                →  'matrix_es0'
+*
+* Responsibilities:
+* - Bootstrap: parse legacy 'dd_ontology' flat rows and populate the matrix (create_ontology_records).
+* - Lookup helpers: map TLD ↔ target_section_tipo, retrieve main section rows.
+* - Sync: convert matrix section records → ontology_node → 'dd_ontology' (insert_dd_ontology_record,
+*   set_records_in_dd_ontology, regenerate_records_in_dd_ontology).
+* - Lifecycle: add_main_section, create_parent_grouper, delete_ontology.
+* - Query helpers: get_active_elements, get_all_ontology_sections, get_root_terms.
+*
+* Extended by:
+*   hierarchy  (core/hierarchy/class.hierarchy.php) — thesaurus/term-list variant
+*               that overrides $main_table, $main_section_tipo and most query helpers
+*               while inheriting the shared TLD ↔ section_tipo mapping and CRUD logic.
+*
+* Data shapes managed:
+*   ontology_node — runtime lightweight DTO (tipo, tld, parent, model, properties …)
+*   locator       — cross-section pointer {section_tipo, section_id, type, …}
+*   element       — normalised output object returned by row_to_element()
+*
+* @package Dédalo
+* @subpackage Core
 */
 class ontology {
 
-	// Cache management constant
+	/**
+	* Maximum number of entries kept in each in-process static cache.
+	* When a cache exceeds this count the oldest half is discarded by
+	* manage_cache_size().  Prevents unbounded memory growth in long-lived
+	* PHP-FPM workers or CLI batch processes.
+	* @var int MAX_CACHE_SIZE
+	*/
 	public const int MAX_CACHE_SIZE = 1000;
 
 	/**
 	* MANAGE_CACHE_SIZE
-	* Controls cache size to prevent memory leaks by limiting cache entries.
-	* Keeps only the most recent entries when limit is exceeded.
-	* @param array &$cache Reference to the cache array
+	* Trims a static cache array to at most MAX_CACHE_SIZE entries.
+	*
+	* When the limit is exceeded only the most-recently-added tail is kept.
+	* Array keys are preserved so callers can still look up by string key after
+	* trimming.  Called from every cache-write site in this class.
+	*
+	* @param array &$cache Reference to the cache array to trim in-place.
 	* @return void
 	*/
 	protected static function manage_cache_size(array &$cache) : void {
@@ -24,7 +70,13 @@ class ontology {
 
 	/**
 	* CLEAR
-	* Purges persistent caches to prevent memory leaks across worker requests.
+	* Purges all in-process static caches maintained by this class.
+	*
+	* Must be called by the request dispatcher between worker requests
+	* (see context-cache-core-stamp-architecture memory note) to prevent
+	* state-bleed across tenants.  hierarchy::clear() calls this via parent.
+	*
+	* @return void
 	*/
 	public static function clear() : void {
 		self::$cache_ontology_sections = [];
@@ -33,25 +85,64 @@ class ontology {
 
 
 
-	// Table where ontology data is stored
+	/**
+	* Primary database table storing top-level ontology domain records.
+	* Each row represents one TLD family (dd, rsc, es, …) and holds metadata
+	* such as name, active flag, lang, typology, and target_section_tipo.
+	* Overridden by hierarchy ('matrix_hierarchy_main').
+	* @var string $main_table
+	*/
 	public static string $main_table		= 'matrix_ontology_main';
+
+	/**
+	* Section tipo of the main ontology section — 'ontology35' (DEDALO_ONTOLOGY_SECTION_TIPO).
+	* Used as the section_tipo when creating or querying rows in $main_table.
+	* Overridden by hierarchy ('hierarchy1').
+	* @var string $main_section_tipo
+	*/
 	public static string $main_section_tipo	= DEDALO_ONTOLOGY_SECTION_TIPO; // 'ontology35';
 
-	// children_tipo (component_relation_children)
+	/**
+	* Tipo of the component_relation_children component that stores child-node
+	* locators on each ontology node record.  Corresponds to 'ontology14'.
+	* Used by reorder_nodes_from_dd_ontology() and get_siblings().
+	* @var string $children_tipo
+	*/
 	public static string $children_tipo = 'ontology14';
 
-	// cache
+	/**
+	* Process-scoped cache for the list of target_section_tipo strings
+	* returned by get_all_ontology_sections().  Populated on first call;
+	* cleared by clear().
+	* @var array $cache_ontology_sections
+	*/
 	public static array $cache_ontology_sections = [];
+
+	/**
+	* Process-scoped cache for the active element objects returned by
+	* get_active_elements().  Populated on first call; cleared by clear().
+	* @var array $cache_active_ontology_elements
+	*/
 	public static array $cache_active_ontology_elements = [];
 
 
 	/**
 	* CREATE_ONTOLOGY_RECORDS
-	* Iterate all given $dd_ontology_rows and creates a section matrix row for each one.
-	* This is used to recover editable data from parsed table 'dd_ontology' former 'jer_dd'.
+	* Batch-converts an array of legacy 'dd_ontology' flat rows into editable matrix records.
+	*
+	* Each row in $dd_ontology_rows corresponds to one node in the (formerly named 'jer_dd')
+	* flat ontology table.  The method delegates per-row work to
+	* add_section_record_from_dd_ontology() and is the entry-point called by
+	* transform_data::generate_all_main_ontology_sections() during a full ontology
+	* bootstrap or migration run.
+	*
+	* Rows whose section_id is '0' (i.e. the synthetic TLD-root placeholder such as 'dd0')
+	* are intentionally skipped — section_id 0 is invalid in the matrix, and the root
+	* node for each TLD is stored in 'matrix_ontology_main' instead (via add_main_section).
+	*
 	* @see transform_data::generate_all_main_ontology_sections
-	* @param array $dd_ontology_rows
-	* @return bool
+	* @param array $dd_ontology_rows Array of raw stdClass row objects from 'dd_ontology'.
+	* @return bool Always true; individual row failures are logged but do not abort the loop.
 	* @test true
 	*/
 	public static function create_ontology_records( array $dd_ontology_rows ) : bool {
@@ -87,26 +178,43 @@ class ontology {
 
 	/**
 	* ADD_SECTION_RECORD_FROM_DD_ONTOLOGY
-	* Transforms dd_ontology row (former 'jer_dd') from DDBB into matrix ontology row (section record).
-	* @param object $dd_ontology_row
-	* Sample:
-		* {
-		*	"id": "16028305",
-		*	"tipo": "test102",
-		*	"parent": "test45",
-		* 	"term": "{\"lg-spa\": \"section_id\"}"
-		*	"model_tipo": "dd1747",
-		*	"is_model": false,
-		*	"order_number": "28",
-		*	"tld": "test",
-		*	"is_translatable": false,
-		*	"relations": "null",
-		*	"propiedades": null,
-		*	"properties": null,
-		*
-		* }
-	* @param string $target_section_tipo
-	* @return bool
+	* Transforms a single 'dd_ontology' flat row into a full matrix section record.
+	*
+	* This is the per-row worker called by create_ontology_records().  It:
+	*   1. Creates a new section record in the appropriate per-TLD matrix table
+	*      (e.g. 'matrix_dd0') using the numeric portion of $dd_ontology_row->tipo as section_id.
+	*   2. Instantiates and saves each component (tld, model, is_descriptor, is_model,
+	*      translatable, term, properties-v5, properties-css, properties-rqo, properties).
+	*   3. Derives the target_section_tipo from the row's tld via map_tld_to_target_section_tipo().
+	*
+	* Component tipo constants used:
+	*   ontology4  — is_descriptor (component_radio_button)
+	*   ontology5  — term          (component_input_text multilingual)
+	*   ontology6  — model         (component_portal → dd0 node)
+	*   ontology7  — tld           (component_input_text)
+	*   ontology8  — is_translatable (component_radio_button)
+	*   ontology16 — properties.css
+	*   ontology17 — properties.source (RQO / request_config)
+	*   ontology18 — properties (general JSON blob)
+	*   ontology19 — propiedades (v5 legacy JSON)
+	*   ontology30 — is_model     (component_radio_button)
+	*
+	* @param object $dd_ontology_row Raw row from 'dd_ontology'. Expected shape:
+	*   {
+	*     "id": "16028305",
+	*     "tipo": "test102",
+	*     "parent": "test45",
+	*     "term": "{\"lg-spa\": \"section_id\"}",
+	*     "model_tipo": "dd1747",
+	*     "is_model": false,
+	*     "order_number": "28",
+	*     "tld": "test",
+	*     "is_translatable": false,
+	*     "relations": "null",
+	*     "propiedades": null,
+	*     "properties": null
+	*   }
+	* @return bool True on success; false is not currently returned (errors are logged only).
 	* @test true
 	*/
 	public static function add_section_record_from_dd_ontology( object $dd_ontology_row ) : bool {
@@ -353,6 +461,11 @@ class ontology {
 			// 	$ontology_node->update();
 			// }
 
+			// Properties general extraction
+			// 'source' and 'css' are stored in dedicated components (ontology17 / ontology16)
+			// and are therefore excluded from the general properties blob (ontology18).
+			// Each remaining key is stored as its scalar `.value` to strip the wrapper object
+			// used in the legacy 'dd_ontology' column.
 			if(!empty($properties)) {
 				$properties_general = new stdClass();
 				foreach ($properties as $pkey => $pvalue) {
@@ -375,10 +488,17 @@ class ontology {
 
 	/**
 	* GET_ONTOLOGY_MAIN_FROM_TLD
-	* Find the matrix record ('matrix_ontology_main' table) of ontology main from a given tld
-	* sample: dd --> section_tipo: ontology35, section_id: 1
-	* @param string $tld
-	* @return object|null $row
+	* Retrieves the single 'matrix_ontology_main' row for a given TLD string.
+	*
+	* Uses a PostgreSQL JSONB containment query (@>) against the 'string' column
+	* to find the row whose DEDALO_HIERARCHY_TLD2_TIPO component value matches $tld.
+	* Example: 'dd' → {section_tipo: 'ontology35', section_id: 1}.
+	*
+	* The TLD is sanitised via safe_tld() before use in the query to prevent
+	* SQL injection (safe_tld() strips everything except alphanumerics and hyphens).
+	*
+	* @param string $tld Short top-level domain string, e.g. 'dd', 'rsc', 'es'.
+	* @return object|null Row with properties section_id and section_tipo, or null on miss.
 	* @test true
 	*/
 	public static function get_ontology_main_from_tld( string $tld ) : ?object {
@@ -424,10 +544,17 @@ class ontology {
 
 	/**
 	* GET_ONTOLOGY_MAIN_FORM_TARGET_SECTION_TIPO
-	* Find the matrix row of the ontology main ('matrix_ontology_main' table) from a given target section tipo as ontology matrix row
-	* sample: ontology45 --> section_tipo: ontology35, section_id: 4
-	* @param string $target_section_tipo
-	* @return object|null $row
+	* Retrieves the 'matrix_ontology_main' row whose DEDALO_HIERARCHY_TARGET_SECTION_TIPO
+	* component value matches $target_section_tipo.
+	*
+	* Inverse of get_ontology_main_from_tld(): given the matrix table identifier
+	* (e.g. 'ontology45') it returns the corresponding main section row
+	* (e.g. section_tipo: 'ontology35', section_id: 4).
+	*
+	* Uses a JSONB containment query (@>) for the lookup, with safe_tipo() sanitisation.
+	*
+	* @param string $target_section_tipo The per-TLD matrix section tipo, e.g. 'dd0', 'ontology45'.
+	* @return object|null Row with section_id and section_tipo, or null on miss.
 	* @test true
 	*/
 	public static function get_ontology_main_form_target_section_tipo( string $target_section_tipo ) : ?object {
@@ -473,11 +600,18 @@ class ontology {
 
 	/**
 	* ASSIGN_RELATIONS_FROM_DD_ONTOLOGY
-	* Once the matrix records of dd_ontology parse is set,
-	* it is possible to assign the relations between nodes.
-	* Get the relations column in dd_ontology and set it as component_portal locator pointed to other matrix ontology record.
-	* @param string $tld
-	* @return bool
+	* Populates the 'connected-to' component (ontology10) for every matrix node of a TLD.
+	*
+	* Called after create_ontology_records() has created matrix rows: at that point
+	* the node-to-node relation data (which lives in the 'relations' column of 'dd_ontology')
+	* can be resolved because target nodes already exist.  For each matrix row it:
+	*   1. Derives the node tipo from the TLD + section_id.
+	*   2. Fetches the raw relation tipos via ontology_node::get_relation_nodes().
+	*   3. Converts each relation tipo to a locator pointing to the target matrix section.
+	*   4. Saves the locator array into the DEDALO_ONTOLOGY_CONNECTED_TO_TIPO component.
+	*
+	* @param string $tld TLD to process, e.g. 'dd', 'rsc'.
+	* @return bool False if the TLD fails validation or the matrix record set cannot be loaded.
 	* @test true
 	*/
 	public static function assign_relations_from_dd_ontology( string $tld ) : bool {
@@ -555,11 +689,20 @@ class ontology {
 
 	/**
 	* REORDER_NODES_FROM_DD_ONTOLOGY
-	* Once the matrix records of dd_ontology parse is set
-	* is possible assign the order between nodes.
-	* Find the ontology nodes as matrix rows and order by the dd_ontology definition.
-	* @param string $tld
-	* @return bool
+	* Writes the ordered child-locator list into every node's component_relation_children
+	* (ontology14) for a given TLD.
+	*
+	* Like assign_relations_from_dd_ontology(), this runs after create_ontology_records()
+	* so that all sibling nodes already exist in the matrix.  For each row it:
+	*   1. Retrieves the child tipos from ontology_node::get_ar_children().
+	*   2. Converts each child tipo to a locator targeting its matrix section record.
+	*   3. Saves the ordered array into the children component (self::$children_tipo = 'ontology14').
+	*
+	* The ordering is authoritative — it determines how the ontology tree is displayed
+	* in the thesaurus and area views.
+	*
+	* @param string $tld TLD to process, e.g. 'dd', 'rsc'.
+	* @return bool False if the TLD is invalid or the record set cannot be loaded.
 	* @test true
 	*/
 	public static function reorder_nodes_from_dd_ontology( string $tld ) : bool {
@@ -635,21 +778,32 @@ class ontology {
 
 	/**
 	* ADD_MAIN_SECTION
-	* Creates a new section in the main ontology sections (table 'matrix_ontology_main') if not already exists.
-	* The main section could be the official tlds as dd, rsc, hierarchy, etc.
-	* or local ontology defined by every institution as es, qdp, mupreva, etc
-	* @param object $file_item
-	*  {
-	*		"tld": "oh",
-	*		"section_tipo": "oh0",
-	*		"typology_id": "5",
-	*		"name_data": {
-	*			"lg-spa": [
-	*				"oh"
-	*			]
-	*		}
-	*	}
-	* @return int|string|null $main_section_id
+	* Creates or updates the 'matrix_ontology_main' record for a given TLD.
+	*
+	* This is the primary entry-point for registering a new top-level ontology
+	* family (official TLDs: dd, rsc, hierarchy; institutional TLDs: es, qdp, mupreva …).
+	* It is idempotent: if a row already exists for the TLD it reuses that section_id;
+	* otherwise it creates a new section record.
+	*
+	* Components written (constants → tipology):
+	*   DEDALO_HIERARCHY_FILTER_TIPO           — project filter (links to project 1)
+	*   DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO — active-in-thesaurus flag (only 'dd' = yes by default)
+	*   DEDALO_HIERARCHY_LANG_TIPO             — main language (defaults to Spanish, lg-spa = 17344)
+	*   DEDALO_HIERARCHY_ACTIVE_TIPO           — active flag (yes by default)
+	*   DEDALO_HIERARCHY_TERM_TIPO             — display name (multilingual)
+	*   DEDALO_HIERARCHY_TLD2_TIPO             — TLD string value
+	*   DEDALO_HIERARCHY_TARGET_SECTION_TIPO   — matrix section tipo (e.g. 'dd0')
+	*   DEDALO_HIERARCHY_TYPOLOGY_TIPO         — typology locator (optional)
+	*   DEDALO_HIERARCHY_CHILDREN_TIPO         — root children (only for 'dd'; nodes dd1 and dd2)
+	*
+	* @param object $file_item Descriptor object. Expected shape:
+	*   {
+	*     "tld":         "oh",         // required
+	*     "section_tipo":"oh0",        // optional; derived from tld if absent
+	*     "typology_id": "5",          // optional; resolved from hierarchy if absent
+	*     "name_data":   {"lg-spa": ["oh"]}  // optional; falls back to tld string
+	*   }
+	* @return int|string|null The section_id of the created/updated main section, or null on save failure.
 	* @test true
 	*/
 	public static function add_main_section( object $file_item ) : int|string|null {
@@ -717,6 +871,10 @@ class ontology {
 				$ts_active_data->set_type( DEDALO_RELATION_TYPE_LINK ); // dd151
 				$ts_active_data->set_section_tipo( DEDALO_SECTION_SI_NO_TIPO ); // dd64
 				// active in thesaurus. Set only dd as active to force to show in the thesaurus tree
+			// Only the core 'dd' ontology is shown in the thesaurus tree by default.
+			// Institutional TLDs (es, qdp, …) are off by default so the thesaurus tree
+			// does not show incomplete or unreviewed ontologies to end-users.
+			// Administrators can turn each TLD on manually via the ontology editor.
 				$ts_is_active = ($tld === 'dd') ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO; // only dd terms will be active by default, any other tld wil be no active, user can change it manually.
 				$ts_active_data->set_section_id( $ts_is_active );
 				$ts_active_data->set_from_component_tipo( $tipo );
@@ -812,6 +970,9 @@ class ontology {
 			}
 
 		// add model root node in the dd main section only. Note that only dd has the models for the ontology.
+		// The 'dd' TLD is special: nodes dd1 (general terms) and dd2 (models) are the two
+		// root children.  Institutional TLDs only have their own term tree; they do not
+		// re-define the model root.
 			if($tld === 'dd'){
 
 				$tipo 	= DEDALO_HIERARCHY_CHILDREN_TIPO; // hierarchy45
@@ -852,18 +1013,30 @@ class ontology {
 
 	/**
 	* CREATE_DD_ONTOLOGY_ONTOLOGY_SECTION_NODE
-	* Creates/Updates a dd_ontology row with ontologytype tld for the local tlds
-	* Used for the creation of matrix ontology sections with local ontologies as es1, qdp1, mdcat1, etc.
-	* A dd_ontology row is needed to represent it.
-	* Note that action 'ontology_node->insert()' UPSERT the existing record in dd_ontology.
-	* @param object $file_item
-	* {
-	* 	tld: string
-	* 	typology_id: int
-	* 	name_data: object
-	* 	parent_grouper_tipo: string
-	* }
-	* @return string|false|null $term_id
+	* Creates or updates the 'dd_ontology' root node for a local/institutional TLD.
+	*
+	* Every TLD that has been registered in 'matrix_ontology_main' also needs a
+	* corresponding root node in 'dd_ontology' (the runtime flat table) so the
+	* ontology engine can resolve it.  This method builds that node as tipo = tld+'0'
+	* (e.g. 'mdcat0', 'mupreva0') and upserts it via ontology_node::insert().
+	*
+	* The root node always:
+	*   - Has model_tipo = SECTION_MODEL ('dd6') and model = 'section'.
+	*   - Is not a model (is_model = false).
+	*   - Is non-translatable.
+	*   - Is flagged as the main (root) node for the TLD (set_is_main(true)).
+	*   - Is linked to standard relation tipos: 'ontology1' and 'dd1201'.
+	*   - Carries properties.main_tld (the TLD string) and properties.color.
+	*
+	* @param object $file_item Configuration object:
+	*   {
+	*     tld:                string  — required
+	*     typology_id:        int     — optional; resolved from hierarchy if absent
+	*     name_data:          array|object — optional; falls back to tld string
+	*     parent_grouper_tipo:string  — optional; resolved via create_parent_grouper if absent
+	*   }
+	* @return string|false|null The created tipo string (e.g. 'mdcat0') on success,
+	*   false on insert error, null if dependencies are unresolvable.
 	* @test true
 	*/
 	public static function create_dd_ontology_ontology_section_node( object $file_item ) : string|false|null {
@@ -955,17 +1128,27 @@ class ontology {
 
 	/**
 	* CREATE_PARENT_GROUPER
-	* Creates an area node with the typology information to group the nodes.
-	* Parent grouper organize the tld with clear structure in menu
-	* This method can create the main group nodes if doesn't exists previously,
-	* main nodes are mandatory to store the child information of the created area node:
-	* `ontologytype14` (core node) is dependent of `ontology40` (instances node)
-	* but when a rebuild the ontology as update process does, the child node can be processed before his parent exists.
-	* In those cases, this method will create the main node (`ontology40`) in matrix to store the child locator.
-	* @param string $parent_group
-	* @param string $tld
-	* @param int $typology_id
-	* @return string|false $parent_grouper_tipo
+	* Ensures a typology grouper node exists in both 'dd_ontology' and the matrix,
+	* then returns its tipo for use as the parent reference of a new TLD root node.
+	*
+	* Ontology nodes are organised under a two-level grouper hierarchy:
+	*   ontology40  (instances node, e.g. "Ontology typologies | ontologytype")
+	*     └─ ontologytype14  (core node for a specific typology, e.g. typology 14)
+	*
+	* This method has to be resilient to partial bootstrap states: during a full
+	* regeneration the child node (ontologytype14) may be processed before its
+	* parent (ontology40) has been inserted.  When that happens the method creates
+	* the parent in both 'dd_ontology' and the matrix on-the-fly so that the child
+	* can correctly write its parent locator.
+	*
+	* The method also calls add_main_section() and create_dd_ontology_ontology_section_node()
+	* for the $tld namespace itself (e.g. 'ontologytype') so the typology TLD is
+	* fully registered before the grouper node is returned.
+	*
+	* @param string $parent_group The main instances node tipo, default 'ontology40'.
+	* @param string $tld          The typology TLD namespace, 'ontologytype' or 'hierarchymtype'.
+	* @param int    $typology_id  Numeric typology id (row in DEDALO_HIERARCHY_TYPES_SECTION_TIPO).
+	* @return string|false The grouper tipo (e.g. 'ontologytype14') on success, false on error.
 	* @test true
 	*/
 	public static function create_parent_grouper( string $parent_group='ontology40', string $tld='ontologytype', int $typology_id=15 ) : string|false {
@@ -974,10 +1157,16 @@ class ontology {
 		// ontology section is the main or root node used to create the ontology nodes.
 		// it is defined as tld+0, instead nodes that they start with 1 as dd1, rsc1, etc.
 		// this node is create to manage the typology sections
+			// Suffix appended to the human-readable grouper label so operators
+			// can distinguish hierarchy-model groupers ('[m]') from plain ontology
+			// and hierarchy groupers in the area menu.
 			$suffix = ( $tld==='hierarchymtype' )
 				? ' [m]'.' | '.$tld
 				: ''.' | '.$tld;
 
+			// Multilingual labels for the grouper node.
+			// These are internal structural labels (not data) so they are hardcoded
+			// here rather than pulled from the thesaurus.
 			$name_data =[
 				(object)[
 					'lang' => 'lg-spa',
@@ -1243,10 +1432,18 @@ class ontology {
 
 	/**
 	* MAP_TLD_TO_TARGET_SECTION_TIPO
-	* get the target section tipo from a given tld
-	* dd ---> dd0
-	* @param string $tld
-	* @return string $target_section_tipo
+	* Derives the per-TLD matrix section tipo by appending '0' to the sanitised TLD.
+	*
+	* This is the canonical TLD → section_tipo mapping used throughout the class.
+	* Example: 'dd' → 'dd0', 'rsc' → 'rsc0', 'mupreva' → 'mupreva0'.
+	*
+	* (!) Throws an Exception if $tld fails safe_tld() validation (empty, contains
+	* illegal characters, etc.).  Callers must guard against this or ensure the TLD
+	* has already been validated upstream.
+	*
+	* @param string $tld Raw TLD string.
+	* @return string The target_section_tipo, e.g. 'dd0'.
+	* @throws Exception If $tld is not a valid ontology TLD.
 	* @test true
 	*/
 	public static function map_tld_to_target_section_tipo( string $tld ) : string {
@@ -1273,10 +1470,15 @@ class ontology {
 
 	/**
 	* MAP_TARGET_SECTION_TIPO_TO_TLD
-	* get the tld from a given target section tipo
-	* dd0 --> dd
-	* @param string $target_section_tipo
-	* @return string|false $tld
+	* Extracts the TLD prefix from a target_section_tipo string.
+	*
+	* Inverse of map_tld_to_target_section_tipo().
+	* Example: 'dd0' → 'dd', 'mupreva0' → 'mupreva'.
+	*
+	* Delegates to get_tld_from_tipo() which strips the trailing numeric section_id.
+	*
+	* @param string $target_section_tipo The section tipo, e.g. 'dd0', 'es0'.
+	* @return string|false The TLD prefix, or false if the tipo has no numeric suffix.
 	* @test true
 	*/
 	public static function map_target_section_tipo_to_tld( string $target_section_tipo ) : string|false {
@@ -1291,9 +1493,17 @@ class ontology {
 
 	/**
 	* GET_ALL_ONTOLOGY_SECTIONS
-	* Calculates ontology sections (target section tipo) like dd0, ontologytype3, ...
-	* stored in 'matrix_ontology_main' table.
-	* @return array $ontology_sections Array of ontology sections tipo
+	* Returns every registered target_section_tipo string from 'matrix_ontology_main'.
+	*
+	* Reads all rows from the main ontology table (via get_all_main_ontology_records()),
+	* extracts the DEDALO_HIERARCHY_TARGET_SECTION_TIPO value from each row's 'string'
+	* JSONB column, and returns the array of unique section tipos
+	* (e.g. ['dd0', 'rsc0', 'es0', 'ontologytype0', …]).
+	*
+	* Results are cached in self::$cache_ontology_sections for the lifetime of the
+	* worker process.  Clear via self::clear() between requests.
+	*
+	* @return array<string> Flat array of target_section_tipo strings; empty on DB failure.
 	* @test true
 	*/
 	public static function get_all_ontology_sections() : array {
@@ -1344,9 +1554,15 @@ class ontology {
 
 	/**
 	* GET_ALL_MAIN_ONTOLOGY_RECORDS
-	* Exec a search against matrix_ontology_main filtering
-	* for main_section_tipo without limit and return all resulting records
-	* @return db_result|false $db_result
+	* Executes an unlimited search against 'matrix_ontology_main' and returns the raw result.
+	*
+	* The project-filter is intentionally skipped (set_skip_projects_filter(true)) because
+	* the main ontology is a global registry that must be readable regardless of the
+	* current project context — it would be wrong to exclude TLDs not associated with
+	* the active project when rebuilding or displaying the full ontology tree.
+	*
+	* @return db_result|false Iterable db_result on success; false if the query fails
+	*   or returns an empty set (both cases are logged at ERROR level).
 	* @test true
 	*/
 	public static function get_all_main_ontology_records() : db_result|false {
@@ -1380,8 +1596,20 @@ class ontology {
 
 	/**
 	* GET_ACTIVE_ELEMENTS
-	* Performs a search and returns an array of current active ontologies or hierarchies.
-	* @return array $active_elements
+	* Returns the list of active ontology (or hierarchy) definitions from 'matrix_ontology_main'.
+	*
+	* "Active" means DEDALO_HIERARCHY_ACTIVE_TIPO (hierarchy4) points to the 'yes' record
+	* in DEDALO_SECTION_SI_NO_TIPO ('dd64').  Inactive TLDs are not presented to users
+	* in area menus or exported via the API.
+	*
+	* Each matching row is converted to a rich element object via row_to_element().
+	* Results are cached in self::$cache_active_ontology_elements; cleared by clear().
+	*
+	* Note: self::$main_section_tipo controls whether this queries the ontology or
+	* hierarchy main table — hierarchy overrides it to 'hierarchy1'.
+	*
+	* @return array<object> Array of element objects (see row_to_element() for shape);
+	*   empty array if no active elements are found.
 	* @test true
 	*/
 	public static function get_active_elements() : array {
@@ -1546,13 +1774,38 @@ class ontology {
 
 
 	/**
-	* PARSE_SECTION_RECORD_TO_ontology_node
-	* Build every component in the section given ($section_tipo, $section_id).
-	* Get the component_data and parse as column of dd_ontology format.
-	* @param string $section_tipo
-	* @param string|int $section_id
-	* @return ontology_node|null $ontology_node
-	* 	returns null if section tld value is empty
+	* PARSE_SECTION_RECORD_TO_ONTOLOGY_NODE
+	* Reads a matrix section record and builds a fully-populated ontology_node DTO.
+	*
+	* This is the bridge from the editable matrix layer to the runtime 'dd_ontology'
+	* flat table.  Every component of the section is instantiated and its data is
+	* extracted, then transferred to the ontology_node via setters.  The resulting
+	* object can be persisted to 'dd_ontology' via ontology_node::insert().
+	*
+	* Overwrite resolution:
+	*   A 'localontology0' section may store overriding values for a core 'dd0' node
+	*   (e.g. an institution-specific label or properties).  get_overwrite() checks
+	*   whether such a record exists.  When found, most components (term, properties,
+	*   translatable, relations) are read from the local override first; model and
+	*   is_model are always taken from the canonical (main) node to preserve coherence.
+	*
+	* Components read (constant → tipo):
+	*   DEDALO_ONTOLOGY_TLD_TIPO        → ontology7  (mandatory; null return if missing)
+	*   DEDALO_ONTOLOGY_PARENT_TIPO     → ontology15
+	*   DEDALO_ONTOLOGY_IS_MODEL_TIPO   → ontology30
+	*   DEDALO_ONTOLOGY_MODEL_TIPO      → ontology6
+	*   DEDALO_ONTOLOGY_ORDER_TIPO      → ontology41
+	*   DEDALO_ONTOLOGY_TRANSLATABLE_TIPO → ontology8
+	*   DEDALO_ONTOLOGY_CONNECTED_TO_TIPO → ontology10
+	*   ontology16 — properties.css
+	*   ontology17 — properties.source (RQO / request_config)
+	*   ontology18 — properties (general blob)
+	*   ontology19 — propiedades (v5 legacy)
+	*   DEDALO_ONTOLOGY_TERM_TIPO       → ontology5
+	*
+	* @param string $section_tipo Matrix section tipo of the node, e.g. 'dd0'.
+	* @param string|int $section_id Numeric ID of the section record.
+	* @return ontology_node|null Populated node on success; null if tld is empty (row is invalid).
 	* @test true
 	*/
 	public static function parse_section_record_to_ontology_node( string $section_tipo, string|int $section_id ) : ?ontology_node {
@@ -1615,6 +1868,9 @@ class ontology {
 				debug_log(__METHOD__ . " Record without parent data. tipo: $tipo section_tipo: $section_tipo id: $section_id", $log_level);
 			} else {
 				$parent_locator	= $parent_data[0];
+				// Main root nodes (dd1 and dd2) store their parent locator pointing to
+				// the main ontology section record (DEDALO_ONTOLOGY_SECTION_TIPO = 'ontology35')
+				// rather than to another node.  In dd_ontology these roots have parent = null.
 				$parent = ($parent_locator->section_tipo !== DEDALO_ONTOLOGY_SECTION_TIPO)
 					? self::get_term_id_from_locator($parent_locator)
 					: null; // main root nodes of the ontology dd1 and dd2
@@ -1622,7 +1878,9 @@ class ontology {
 			}
 
 		// Is Model
-			// IMPORTANT: NOT overwrite it!, needs to be coherent with the main definition.
+			// (!) IMPORTANT: is_model is intentionally read from the canonical node,
+			// NOT from the overwrite.  A local override cannot change whether a node
+			// is a model — that would break the ontology's structural integrity.
 			$is_model_data = self::get_node_component_data($locator, $is_model_tipo);
 			$is_model = !empty($is_model_data) && (int)$is_model_data[0]->section_id === NUMERICAL_MATRIX_VALUE_YES;
 			$ontology_node->set_is_model($is_model);
@@ -1751,10 +2009,16 @@ class ontology {
 
 	/**
 	* GET_NODE_COMPONENT_DATA
-	* Get the data of the component from given tipo.
-	* @param locator $locator
-	* @param string $tipo
-	* @return array|null $data
+	* Retrieves the raw data array of a single component on an ontology section record.
+	*
+	* A thin helper used throughout parse_section_record_to_ontology_node() to
+	* reduce repetitive component instantiation code.  Always uses DEDALO_DATA_NOLAN
+	* as the language context because ontology component values are language-neutral
+	* (except term, which is handled separately via resolve_term()).
+	*
+	* @param locator $locator Points to the section record to read from.
+	* @param string  $tipo   Component tipo to instantiate (e.g. 'ontology7').
+	* @return array|null Component data array on success; null if the component has no data.
 	*/
 	private static function get_node_component_data( locator $locator, string $tipo ) : ?array {
 
@@ -1780,12 +2044,19 @@ class ontology {
 
 	/**
 	* RESOLVE_TRANSLATABLE
-	* Get the translatable value of the node.
-	* The translatable value is defined as true or false based on the section_id of the locator:
-	* section_id = 1 -> true (NUMERICAL_MATRIX_VALUE_YES)
-	* section_id = 2 -> false (NUMERICAL_MATRIX_VALUE_NO)
-	* @param locator $locator
-	* @return bool $translatable
+	* Reads the is_translatable flag from an ontology section record.
+	*
+	* The translatable flag is stored as a component_radio_button value referencing
+	* DEDALO_SECTION_SI_NO_TIPO ('dd64'):
+	*   section_id = 1 (NUMERICAL_MATRIX_VALUE_YES) → true
+	*   section_id = 2 (NUMERICAL_MATRIX_VALUE_NO)  → false
+	*
+	* Falls back to true (translatable by default) when the component data is missing,
+	* logging at DEBUG level.  This conservative default prevents newly created nodes
+	* from silently omitting their term translations.
+	*
+	* @param locator $locator Points to the section record to read.
+	* @return bool True if the node is translatable, false otherwise.
 	*/
 	private static function resolve_translatable( locator $locator ) : bool {
 
@@ -1816,10 +2087,16 @@ class ontology {
 
 	/**
 	* RESOLVE_RELATIONS
-	* Get the relations data of the node.
-	* The relations data is composed of locators pointing to other nodes.
-	* @param locator $locator
-	* @return array|null $relations
+	* Reads the 'connected-to' relation list from an ontology section record and
+	* converts each locator to an ontology-node-style relation object.
+	*
+	* The DEDALO_ONTOLOGY_CONNECTED_TO_TIPO ('ontology10') component stores an
+	* array of locators pointing to related nodes.  This method resolves each
+	* locator to its term_id (via get_term_id_from_locator) and wraps it as:
+	*   {tipo: 'dd55'}
+	*
+	* @param locator $locator Points to the section record to read.
+	* @return array<object>|null Array of relation objects, or null if no relations are defined.
 	*/
 	private static function resolve_relations( locator $locator ) : ?array {
 
@@ -1854,11 +2131,17 @@ class ontology {
 
 	/**
 	* RESOLVE_TERM
-	* Get the term / label data of the node.
-	* The term includes all languages translations.
-	* @param locator $locator
-	* @return object|null $term
-	* Sample: {"lg-eng": "Denmark", "lg-spa": "Dinamarca"}
+	* Reads the multilingual term / label for an ontology node from its section record.
+	*
+	* Iterates the DEDALO_ONTOLOGY_TERM_TIPO ('ontology5') component data and builds
+	* a plain object keyed by language code:
+	*   {"lg-eng": "Denmark", "lg-spa": "Dinamarca"}
+	*
+	* Uses DEDALO_DATA_LANG as the lang context so all available translations are loaded.
+	* Returns null if the component model is not defined or the data is empty.
+	*
+	* @param locator $locator Points to the section record to read.
+	* @return object|null Multilingual term object, or null if none is stored.
 	*/
 	private static function resolve_term( locator $locator ) : ?object {
 
@@ -1901,11 +2184,24 @@ class ontology {
 
 	/**
 	* GET_TERM_ID_FROM_LOCATOR
-	* Build the term_id as tld.section_id (e.g. 'dd55') from a given locator.
-	* It first attempts to map the section_tipo to a TLD via the main ontology.
-	* If not found, it tries to retrieve the TLD from the node record itself.
-	* @param object $locator Must contain section_tipo and section_id
-	* @return string|null $term_id
+	* Resolves a locator to its canonical term_id string (e.g. 'dd55').
+	*
+	* A term_id is the concatentation of TLD and section_id: tld + section_id.
+	* This method attempts two strategies to derive the TLD:
+	*
+	*   1. Fast path — map_target_section_tipo_to_tld(): derives the TLD from the
+	*      section_tipo string directly (e.g. 'dd0' → 'dd').  Works for all TLDs
+	*      already registered in the ontology (the common case).
+	*
+	*   2. Slow fallback — reads the DEDALO_ONTOLOGY_TLD_TIPO ('ontology7') component
+	*      on the pointed-to matrix record.  This handles edge cases where the
+	*      section_tipo is not in the expected TLD+0 form (e.g. during a partial
+	*      bootstrap when map tables are incomplete).
+	*
+	* Returns null if neither strategy can resolve the TLD.
+	*
+	* @param object $locator Must contain section_tipo (string) and section_id (string|int).
+	* @return string|null term_id string (e.g. 'dd55'), or null on failure.
 	* @test true
 	*/
 	public static function get_term_id_from_locator( object $locator ) : ?string {
@@ -1962,11 +2258,19 @@ class ontology {
 
 	/**
 	* GET_ORDER_FROM_LOCATOR
-	* Use the array of siblings to locate the given locator.
-	* Order will be the position of the locator in the siblings array + 1.
-	* @param object $locator
-	* @param array $siblings Array of locator-like objects
-	* @return int $order
+	* Returns the 1-based position of $locator within a siblings array.
+	*
+	* Used during matrix-to-dd_ontology conversion to compute the order_number
+	* of a node: the parent's children component stores an ordered array of
+	* locators; the position of the current locator in that array is its order.
+	*
+	* Comparison is by (section_tipo, section_id) identity.  Defaults to 1 if
+	* the locator is not found (should not happen in a consistent dataset).
+	*
+	* @param object  $locator  The locator to look up.
+	* @param array   $siblings Ordered array of sibling locator-like objects from the
+	*                          parent's component_relation_children ('ontology14').
+	* @return int 1-based position of $locator, or 1 as fallback.
 	* @test true
 	*/
 	public static function get_order_from_locator( object $locator, array $siblings ) : int {
@@ -1990,9 +2294,16 @@ class ontology {
 
 	/**
 	* GET_SIBLINGS
-	* Get the children data from parent node as siblings
-	* @param object $parent_locator
-	* @return array $children_data
+	* Retrieves the ordered children locator list from a parent ontology node.
+	*
+	* "Siblings" in this context means the ordered array of child-node locators
+	* stored in the parent's component_relation_children (self::$children_tipo = 'ontology14').
+	* The returned array is the authoritative insertion order for all children of
+	* the given parent.
+	*
+	* @param object $parent_locator Locator with section_tipo and section_id pointing
+	*                               to the parent matrix record.
+	* @return array<object> Ordered array of child locator objects; empty on miss.
 	* @test true
 	*/
 	public static function get_siblings( object $parent_locator ) : array {
@@ -2026,12 +2337,19 @@ class ontology {
 
 	/**
 	* INSERT_DD_ONTOLOGY_RECORD
-	* Parses the section record and inserts it into dd_ontology
-	* If the target registry already exists, it is deleted and a new one is created.
-	* @param string $section_tipo
-	* @param string|int $section_id
-	* @return string|null $term_id
-	* 	returns null if section tld value is empty
+	* Parses a matrix section record and upserts it into 'dd_ontology'.
+	*
+	* This is the single-record version of set_records_in_dd_ontology():
+	*   1. Calls parse_section_record_to_ontology_node() to build the ontology_node DTO.
+	*   2. Calls ontology_node::insert(), which performs an UPSERT (delete + insert) in
+	*      'dd_ontology' so the runtime engine always sees the latest data.
+	*
+	* Returns the tipo of the inserted node on success, or null if the section record
+	* is invalid (missing TLD) or the insert fails.
+	*
+	* @param string     $section_tipo The matrix section tipo, e.g. 'dd0'.
+	* @param string|int $section_id   Numeric ID of the section record.
+	* @return string|null The tipo of the upserted node (e.g. 'dd55'), or null on failure.
 	* @test true
 	*/
 	public static function insert_dd_ontology_record( string $section_tipo, string|int $section_id ) : ?string {
@@ -2073,14 +2391,29 @@ class ontology {
 
 	/**
 	* SET_RECORDS_IN_DD_ONTOLOGY
-	* Insert a group of `matrix_ontology` records into `dd_ontology`
-	* use a SQO given to search the group and process it.
-	* @param object $sqo
-	* @return object $response
-	* {
-	* 	result : bool,
-	* 	msg: string,
-	* 	errors: array
+	* Synchronises a set of matrix_ontology records into 'dd_ontology' using a SQO.
+	*
+	* This is the API-facing batch sync method (called e.g. by tool_ontology after an
+	* ontology editor save).  It:
+	*   1. Executes $sqo to find the target matrix records.
+	*   2. For each record:
+	*      - If it is a 'matrix_ontology_main' row (ontology35): it is treated as a
+	*        TLD root node.  Inactive TLDs have their 'dd_ontology' rows deleted;
+	*        active TLDs are synced via create_dd_ontology_ontology_section_node().
+	*      - Otherwise: insert_dd_ontology_record() upserts the node into 'dd_ontology'.
+	*   3. Invalidates the diffusion section-map cache when any rows are updated.
+	*
+	* The response object uses partial-success semantics: if some records succeeded
+	* and some failed, result is true with a 'Partial success' message and the
+	* failing records are enumerated in response.errors.
+	*
+	* @param object $sqo search_query_object; must have section_tipo set.
+	* @return object $response {
+	*   result:          bool,
+	*   msg:             string,
+	*   errors:          array<string>,
+	*   total:           int,
+	*   processed_count: int
 	* }
 	* @test true
 	*/
@@ -2209,10 +2542,32 @@ class ontology {
 
 	/**
 	* REGENERATE_RECORDS_IN_DD_ONTOLOGY
-	* Insert a group of `matrix_ontology` records into `dd_ontology`
-	* use a given SQO to search the group and process it.
-	* @param array $tld
-	* @return object $response
+	* Fully rebuilds 'dd_ontology' for one or more TLDs from their matrix sources.
+	*
+	* Unlike set_records_in_dd_ontology() this method performs a destructive
+	* delete-then-reinsert cycle with backup/restore protection:
+	*
+	*   Step 1 — backup: ontology_utils::create_bk_table() snapshots the current
+	*             'dd_ontology' rows for the affected TLDs.
+	*   Step 2 — parse: for every matrix record in the TLD matrix table, build
+	*             an ontology_node via parse_section_record_to_ontology_node().
+	*             A parse failure aborts and restores from backup.
+	*   Step 3 — delete: ontology_utils::delete_tld_nodes() removes all 'dd_ontology'
+	*             rows for each TLD.
+	*   Step 4 — insert: inserts every parsed ontology_node.
+	*             An insert failure triggers a full restore from backup.
+	*   Step 5 — main section: re-runs add_main_section() and
+	*             create_dd_ontology_ontology_section_node() for each TLD to refresh
+	*             the root node.
+	*
+	* On success invalidates the diffusion section-map cache.
+	*
+	* (!) This is a heavyweight, destructive operation.  Run it only during planned
+	* ontology maintenance, not on every user save.  Prefer set_records_in_dd_ontology()
+	* for incremental updates.
+	*
+	* @param array<string> $tld Array of TLD strings to regenerate, e.g. ['dd', 'rsc'].
+	* @return object $response {result: bool, msg: string, errors: array, total_insert: int}
 	* @test true
 	*/
 	public static function regenerate_records_in_dd_ontology( array $tld ) : object {
@@ -2347,19 +2702,20 @@ class ontology {
 
 	/**
 	* DELETE_MAIN
-	* Resolves ontology TLD from main record value and
-	* deletes all ontology records.
-	* It deletes given main section and deletes all ontology records in
-	* `matrix_ontology` and `dd_ontology` with the main `tld`.
-	* Therefore, removes all references to the tld of the main ontology or hierarchy.
-	* It is used to update the ontology.
-	* @param object $options
-	* Sample:
-	* {
-	* 	section_id : 8,
-	* 	section_tipo : 'ontology35'
-	* }
-	* @return object $response
+	* Resolves the TLD for a given main section record and delegates full ontology
+	* deletion to delete_ontology().
+	*
+	* This is the API entry-point when deleting an ontology through the admin UI:
+	* the caller knows only the (section_tipo, section_id) of the main record, not
+	* the TLD string.  This method reads the TLD via get_main_tld() and then calls
+	* delete_ontology() which removes everything.
+	*
+	* @param object $options Must include:
+	*   {
+	*     section_id:   int|string — row ID in 'matrix_ontology_main'
+	*     section_tipo: string    — e.g. 'ontology35'
+	*   }
+	* @return object $response Standard {result, msg, errors} object from delete_ontology().
 	* @test true
 	*/
 	public static function delete_main(object $options) : object {
@@ -2394,10 +2750,15 @@ class ontology {
 
 	/**
 	* GET_MAIN_TLD
-	* Get the TLD, in lowercase, of the main ontology/hierarchy section (ontology35 | hierarchy1).
-	* @param string|int $section_id
-	* @param string $section_tipo
-	* @return string|null $tld
+	* Returns the lowercase TLD string stored in the DEDALO_HIERARCHY_TLD2_TIPO
+	* ('hierarchy6') component of a 'matrix_ontology_main' or 'matrix_hierarchy_main' record.
+	*
+	* Used by delete_main() and set_records_in_dd_ontology() when they receive a
+	* (section_id, section_tipo) pair and need the TLD to drive further operations.
+	*
+	* @param string|int $section_id  Row ID in the main matrix table.
+	* @param string     $section_tipo Section tipo of the main table row, e.g. 'ontology35'.
+	* @return string|null Lowercase TLD (e.g. 'dd', 'rsc'), or null if the component has no data.
 	* @test true
 	*/
 	public static function get_main_tld( string|int $section_id, string $section_tipo ) : ?string {
@@ -2429,10 +2790,18 @@ class ontology {
 	/**
 	* GET_MAIN_TYPOLOGY_ID
 	* Retrieves the typology ID for a given TLD from its main section record.
-	* Defaults to 15 (others) if no specific typology is defined.
-	* If typology component has not data, use 15 (others) as `typology_id`
-	* @param string $tld
-	* @return int|null $typology_id
+	*
+	* Typologies categorise TLDs in the ontology editor (e.g. "official", "local",
+	* "others").  The typology is stored as a locator in DEDALO_HIERARCHY_TYPOLOGY_TIPO
+	* ('hierarchy9'), and its section_id is used directly as the typology_id integer.
+	*
+	* Falls back to typology 15 ("others") when:
+	*   - The DEDALO_HIERARCHY_TYPOLOGY_TIPO component has no data.
+	*   - The main record cannot be found for the given TLD.
+	*
+	* @param string $tld TLD string, e.g. 'dd', 'es'.
+	* @return int|null Typology ID (e.g. 14 for official, 15 for others),
+	*   or null if the main record is missing entirely.
 	* @test true
 	*/
 	public static function get_main_typology_id( string $tld ) : ?int {
@@ -2475,9 +2844,15 @@ class ontology {
 
 	/**
 	* GET_MAIN_NAME_DATA
-	* Retrieves the full name/term data (translations) for a given TLD's main section.
-	* @param string $tld
-	* @return array|null $name_data Sample: [{"lang": "lg-spa", "value": "Prueba"}, ...]
+	* Retrieves the full multilingual name/term data for a given TLD's main section record.
+	*
+	* Reads DEDALO_HIERARCHY_TERM_TIPO ('hierarchy5') with DEDALO_DATA_LANG context
+	* so all available language translations are included.  The returned array is in
+	* the standard component_input_text data shape, e.g.:
+	*   [{"lang": "lg-spa", "value": "Prueba"}, {"lang": "lg-eng", "value": "Test"}]
+	*
+	* @param string $tld TLD string, e.g. 'dd', 'es'.
+	* @return array|null Array of multilingual value objects, or null on miss.
 	* @test true
 	*/
 	public static function get_main_name_data( string $tld ) : ?array {
@@ -2509,15 +2884,29 @@ class ontology {
 
 	/**
 	* DELETE_ONTOLOGY
-	* Delete all ontology references with `tld` given.
-	* Remove the `matrix_ontology` and `dd_ontology` nodes of given `tld`.
-	* It also deletes the main ontology section definition.
-	* @param string $tld
-	* @return object $response
-	* {
-	* 	result: bool,
-	* 	msg: string,
-	* 	errors: array
+	* Completely removes all traces of a TLD from both storage layers and the runtime table.
+	*
+	* Deletion is performed in a specific order to maintain referential consistency:
+	*   Step 1 — delete 'dd_ontology' nodes for the TLD (runtime table first so the
+	*             engine never sees orphaned references).
+	*   Step 2 — delete the 'matrix_ontology_main' row via sections::delete() with
+	*             delete_with_children = true.  The options object includes
+	*             prevent_delete_main = true to avoid re-entering this method
+	*             from a cascading section delete hook.
+	*   Step 3 — delete all matrix node records (per-TLD table rows) via sections::delete()
+	*             with delete_with_children = true.
+	*   Step 4 — reset the TLD's counter (prevents new nodes getting recycled IDs).
+	*
+	* On any failure an error response is returned immediately; completed steps are
+	* not rolled back.  On success invalidates the diffusion section-map cache.
+	*
+	* @param string $tld TLD to delete, e.g. 'es', 'mupreva'.  Sanitised via safe_tld().
+	* @return object $response {
+	*   result:       bool,
+	*   msg:          string,
+	*   errors:       array<string>,
+	*   delete_main:  object  (sections::delete response for main row)
+	*   delete_nodes: object  (sections::delete response for node rows)
 	* }
 	*/
 	public static function delete_ontology( string $tld ) : object {
@@ -2618,10 +3007,20 @@ class ontology {
 
 	/**
 	* DD_ONTOLOGY_VERSION_IS_VALID
-	* Temporal check for legacy ontologies to determine if an update is required.
-	* Disciminates if the 'dd1' (root) node meets the minimum required date.
-	* @param string $min_date Sample: '2025-12-31'
-	* @return bool
+	* Checks whether the installed ontology (dd1 root node) meets a minimum version date.
+	*
+	* Used during system bootstrap to detect outdated ontology installations that need
+	* regeneration before they can be used by this version of Dédalo.
+	*
+	* Resolution strategy for the date (two-stage fallback):
+	*   1. New style (Dédalo >= 6.4): properties.date field on the 'dd1' ontology_node.
+	*   2. Legacy style: parses a 'YYYY-MM-DD' pattern from the 'dd1' term value,
+	*      e.g. 'Dédalo 2024-12-31T00:00:00+01:00'.
+	*
+	* Returns false if neither source yields a parseable date.
+	*
+	* @param string $min_date The minimum acceptable date, e.g. '2025-12-31'.
+	* @return bool True if the ontology date >= $min_date; false otherwise.
 	*/
 	public static function dd_ontology_version_is_valid( string $min_date ) : bool {
 
@@ -2670,11 +3069,22 @@ class ontology {
 
 	/**
 	* GET_ROOT_TERMS
-	* Get initial term to start the thesaurus tree view
-	* @param string $section_tipo
-	* @param string|int $section_id
-	* @param ?bool $is_model=false
-	* @return array $root_terms
+	* Returns the ordered list of root-node locators for the thesaurus tree view.
+	*
+	* Reads the appropriate children component of the main section record:
+	*   - is_model = false: DEDALO_HIERARCHY_CHILDREN_TIPO ('hierarchy45') — data terms
+	*   - is_model = true:  DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO ('hierarchy59') — model terms
+	*
+	* The returned array drives the initial render of the thesaurus/ontology tree in the UI.
+	* Each element is a locator object pointing to a root ontology/hierarchy node.
+	*
+	* Note: $componnent (sic) contains a typo in the variable name; not changed here
+	* per doc-only constraint.
+	*
+	* @param string     $section_tipo Main section tipo of the ontology/hierarchy, e.g. 'ontology35'.
+	* @param string|int $section_id   Row ID of the main section record.
+	* @param ?bool       $is_model    Whether to return model root terms (default false).
+	* @return array<object> Ordered array of root locator objects; empty if not set.
 	*/
 	public static function get_root_terms( string $section_tipo, string|int $section_id, ?bool $is_model=false ) : array {
 
@@ -2702,10 +3112,16 @@ class ontology {
 
 	/**
 	* GET_MAIN_ORDER
-	* Retrieves the display order for a given TLD's main section.
-	* This order is used to organize root nodes in tree views.
-	* @param string $tld
-	* @return int|null $order
+	* Retrieves the numeric display order for a given TLD's main section.
+	*
+	* Reads DEDALO_HIERARCHY_ORDER_TIPO ('hierarchy48', component_number) from the
+	* 'matrix_ontology_main' (or 'matrix_hierarchy_main') record for the TLD.
+	* The order value controls how TLD families are sorted in tree and menu views.
+	*
+	* Returns 0 as the default when the component exists but has no data.
+	*
+	* @param string $tld TLD string, e.g. 'dd', 'rsc'.
+	* @return int|null Display order integer (0 by default), or null if the main record is missing.
 	* @test true
 	*/
 	public static function get_main_order( string $tld ) : ?int {
@@ -2746,12 +3162,25 @@ class ontology {
 
 	/**
 	* GET_OVERWRITE
-	* Checks if a specified ontology node has a corresponding local override definition.
-	* This is used to resolve project-specific customizations (localontology) of
-	* common ontology elements.
-	* @param string $section_tipo The TIPO of the section to check.
-	* @param string|int $section_id The ID of the section to check.
-	* @return locator|null Returns a locator to the overwrite node if found, otherwise null.
+	* Finds the 'localontology0' override record that shadows a given ontology node.
+	*
+	* Institutional deployments may need to provide alternative labels, properties,
+	* or request_config values for core 'dd0' ontology nodes without modifying the
+	* shared ontology.  A "local overwrite" is a 'localontology0' matrix record that
+	* stores a relation back to the canonical node.
+	*
+	* This method performs a 'related' search against 'localontology0' (and
+	* 'matrix_ontology_main') to find any such record pointing to ($section_tipo,
+	* $section_id).  It returns a locator to the found override, or null if none exists.
+	*
+	* Two node types are never overwritten:
+	*   - 'localontology0' nodes themselves (prevents infinite self-referential lookup).
+	*   - Nodes where is_model = true (model definitions must stay authoritative).
+	*
+	* @param string     $section_tipo The section tipo of the node to check, e.g. 'dd0'.
+	* @param string|int $section_id   The section ID of the node to check.
+	* @return locator|null Locator pointing to the 'localontology0' override record,
+	*   or null if no override exists.
 	* @test true
 	*/
 	public static function get_overwrite( string $section_tipo, string|int $section_id ) : ?locator {
@@ -2817,11 +3246,21 @@ class ontology {
 
 
 	/**
-	 * Experimental
-	 * Do no use in production.
-	 * Get and save all Ontology records into 'cache_ontology.php' file
-	 * to use as Opcode cache vars.
-	 */
+	* BUILD_CACHE_FILE
+	* Experimental: dumps all 'dd_ontology' rows to a PHP opcode-cache file.
+	*
+	* Reads every row from 'dd_ontology' ordered by tipo and writes the result
+	* to 'cache_ontology.php' via dd_cache::cache_to_file().  The intention is to
+	* allow the opcode cache (OPcache) to serve ontology lookups from a pre-compiled
+	* PHP array rather than hitting the database on every request.
+	*
+	* (!) NOT production-ready.  Do not call from request handlers.
+	*
+	* Note: row values are stored as-is without JSON parsing because parsing is
+	* cheaper at cache-read time than at dump time (see inline comment).
+	*
+	* @return void
+	*/
 	public static function build_cache_file() : void {
 
 		$conn = DBi::_getConnection();

@@ -21,7 +21,31 @@
 
 /**
 * VIEW_DEFAULT_DD_GRID
-* Manage the components logic and appearance in client side
+* Default free-form card view for the dd_grid component.
+*
+* This module provides the 'default' view variant used by render_list_dd_grid
+* when no specific view ('table', 'mini', 'indexation', 'descriptors') is
+* requested. It renders each grid data item as a nested set of <div> containers
+* rather than a <table>, which is appropriate for non-tabular layouts such as
+* record cards or compact summary panels.
+*
+* Architecture:
+* - view_default_dd_grid is a static-method namespace (not instantiated).
+* - render_list_dd_grid.prototype.list() delegates here when view === 'default'.
+* - The server builds the nested data array passed via self.data; this module
+*   only produces DOM from that shape — no API calls are made here.
+*
+* Data shape expected in self.data (server-produced):
+*   Array<{
+*     type      : string,      // 'column' | 'row' | container type
+*     cell_type : string,      // 'text' | 'av' | 'img' | 'iri' | 'button' | 'json' | 'section_id'
+*     class_list: string,      // optional extra CSS classes
+*     render_label: boolean,   // whether to prepend a <label> node
+*     label     : string,      // label text (used when render_label is true)
+*     value     : Array|*,     // leaf value array OR nested child data array for recursion
+*   }>
+*
+* Exports: view_default_dd_grid (constructor namespace with .render static method)
 */
 export const view_default_dd_grid = function() {
 
@@ -32,8 +56,16 @@ export const view_default_dd_grid = function() {
 
 /**
 * RENDER
-* Render node for use in this view
-* @return HTMLElement wrapper
+* Build and return the root wrapper element for the default dd_grid view.
+*
+* Creates a <div class="wrapper_dd_grid ..."> and populates it with the
+* full DOM tree produced by get_grid_nodes() from self.data. The wrapper's
+* class list encodes the component tipo, interaction mode, and view name so
+* CSS rules can target each combination independently.
+*
+* @param {Object} self - dd_grid instance; must have .data, .tipo, .mode, .view
+* @param {Object} options - render options (currently unused in this view)
+* @returns {HTMLElement} wrapper div containing the rendered grid nodes
 */
 view_default_dd_grid.render = async function(self, options) {
 
@@ -58,10 +90,27 @@ view_default_dd_grid.render = async function(self, options) {
 
 /**
 * GET_GRID_NODES
-* Recursively build grid nodes from value
-* @param array data
-* 	If data item type is 'column', generates a node, else recursively resolve the value
-* @return DocumentFragment
+* Recursively converts a server-produced dd_grid data array into a DOM
+* DocumentFragment of nested <div> containers.
+*
+* For each item in data:
+*  1. A container div is created via get_div_container() using item.type
+*     (and optional item.class_list) as CSS classes.
+*  2. If item.type === 'column' and item.render_label is truthy, a <label>
+*     node is prepended inside the container.
+*  3. If item.type === 'column' and item.cell_type is set, the appropriate
+*     leaf renderer from render_list_dd_grid.js is called (see switch).
+*  4. If item.value is a nested array (container or row type), the function
+*     recurses — allowing arbitrary nesting depth driven by the server layout.
+*  5. Items without a .type property are skipped (continue).
+*
+* The 'text' case is the fallback for any unrecognised cell_type values.
+* use_fallback is explicitly passed as false: the default view does not fall
+* back to a fallback_value (callers that need fallback should use a different
+* render path or wrap the call themselves).
+*
+* @param {Array} data - array of data-item objects produced by the dd_grid server response
+* @returns {DocumentFragment} fragment containing one <div> per valid data item
 */
 const get_grid_nodes = function(data) {
 
@@ -136,6 +185,8 @@ const get_grid_nodes = function(data) {
 				}// end if(current_data.type==='column' && current_data.cell_type)
 
 			// value. Recursion
+			// If the item has a .value array it is a container node (e.g. type='row').
+			// Recurse into it so nested columns are rendered as child DOM nodes.
 				if(current_data.value){
 					const child_node = get_grid_nodes(current_data.value)
 					node.appendChild(child_node)
@@ -147,6 +198,10 @@ const get_grid_nodes = function(data) {
 		}
 
 		// add cell_nodes (array of one value)
+		// (!) fragment.appendChild is called with spread; cell_nodes always has
+		// exactly one element at this point, so the spread is equivalent to a
+		// direct single-argument call. The pattern mirrors the array-building
+		// approach used in view_table_dd_grid for symmetry.
 		fragment.appendChild(...cell_nodes)
 	}//end for (let i = 0; i < data_len; i++)
 
@@ -158,8 +213,18 @@ const get_grid_nodes = function(data) {
 
 /**
 * GET_DIV_CONTAINER
-* @param object current_data
-* @return HTMLElement div_container
+* Create a <div> whose CSS class list encodes the item's structural type
+* and any optional additional classes from the data descriptor.
+*
+* The element type string (e.g. 'column', 'row') is always set as the first
+* class so CSS can target it generically. Extra classes from current_data.class_list
+* are appended when present, allowing the server to inject layout hints
+* (e.g. 'span2', 'highlight') without the client needing to understand them.
+*
+* @param {Object} current_data - single data-item object from the dd_grid data array
+* @param {string} current_data.type - structural type string used as the base CSS class
+* @param {string} [current_data.class_list] - optional space-separated extra CSS classes
+* @returns {HTMLElement} newly created div element with the computed class list
 */
 const get_div_container = function(current_data) {
 

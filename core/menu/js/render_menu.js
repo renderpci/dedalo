@@ -12,7 +12,17 @@
 
 /**
 * RENDER_MENU
-* Manages the element's logic and appearance in client side
+* Render controller for the Dédalo top navigation menu component.
+*
+* Acts as a thin prototype host used by menu.js to delegate view rendering.
+* menu.js assigns render_menu.prototype.edit to menu.prototype.edit (and .list),
+* so every menu instance calls into this module for its HTML construction.
+*
+* Exports:
+*   - render_menu        : constructor / prototype host (prototype-assignment pattern)
+*   - render_section_label : shared helper that builds the contextual section label element
+*
+* The actual per-view HTML is produced by view_default_edit_menu (desktop/edit mode).
 */
 export const render_menu = function() {
 
@@ -23,8 +33,15 @@ export const render_menu = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @return HTMLElement wrapper
+* Dispatch rendering to the appropriate view implementation.
+*
+* Called via menu.prototype.edit (and menu.prototype.list, which is aliased to the same
+* function). Reads self.context.view to pick the view variant; falls through to 'default'
+* when the view is unset or unrecognised, which covers the normal desktop edit mode.
+*
+* @param {Object} options - Render options forwarded verbatim to the view renderer
+*   (e.g. { render_level: 'full' | 'content' })
+* @returns {Promise<HTMLElement>} Resolves to the wrapper element produced by the view
 */
 render_menu.prototype.edit = async function(options) {
 
@@ -47,8 +64,18 @@ render_menu.prototype.edit = async function(options) {
 
 /**
 * RENDER_SECTION_LABEL
-* @param object self
-* @return HTMLElement section_label
+* Build a bare section-label `<div>` used as a placeholder in the menu bar.
+*
+* Creates the element in its initial 'inactive' state (no click handler attached).
+* Callers are responsible for activating it: removing the 'inactive' class and
+* inserting the section title via insertAdjacentHTML (see menu.prototype.update_section_label).
+*
+* The element receives the CSS class 'top_item' so the flex menu bar positions it
+* correctly alongside the other top-level controls.
+*
+* @param {Object} self - The menu instance (unused by this function; kept for
+*   signature parity so the caller does not need a conditional reference)
+* @returns {HTMLElement} A detached `<div class="section_label top_item inactive">`
 */
 export const render_section_label = function(self) {
 

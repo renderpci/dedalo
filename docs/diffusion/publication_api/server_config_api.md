@@ -1,5 +1,12 @@
 # Changing the parameters of Dédalo API server config file
 
+!!! warning "Legacy (v1) API"
+    This page documents the **v1 PHP Publication API**, kept in Dédalo v7 for backward compatibility
+    with existing published websites. It is in **maintenance / legacy status** — no new features.
+    For new projects and integrations, use the current [Publication API v2](v2/index.md)
+    (Bun/TypeScript): resource-oriented REST, RFC 9457 errors, `ETag` / `Link` caching, a bracketed
+    filter DSL, batch queries and MCP support.
+
 ./dedalo/publication/server_api/v1/config_api/server_config_api.php
 
 This config file sets specific values to configure the publication API.

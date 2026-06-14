@@ -4,6 +4,37 @@
 
 
 
+/**
+* RENDER_USER_ACTIVITY
+* Client-side renderer for the `user_activity` widget hosted inside
+* component_info (dd/user_activity).
+*
+* Responsibilities:
+*  - Fetches aggregated user-activity statistics asynchronously via the
+*    `dd_component_info` API action (`get_widget_data`) when the PHP side
+*    skips synchronous computation (is_async() === true).
+*  - Normalises the multi-shape server payload into a canonical
+*    `{who, what, where, when, publish}` object via `normalize_totals`.
+*  - Renders a two-part panel: a KPI summary strip (pure DOM, always
+*    visible) and a D3-backed chart grid (lazy-loaded, deferred until
+*    `wrapper.offsetWidth > 0` to cope with tab/panel insertion timing).
+*
+* Data flow:
+*  1. PHP class `user_activity` sets `is_async()` → true, so no server-side
+*     `self.value` is populated on initial page render.
+*  2. `get_content_data_edit` fires `get_widget_data` and writes the result
+*     back into `self.value`.
+*  3. Server response: array of items `{ widget, key, widget_id:'totals',
+*     value: <canonical|flat-raw|null> }`.
+*  4. `build_totals_charts` renders the item whose `widget_id === 'totals'`.
+*
+* D3 is loaded lazily from `/lib/d3/d3-7.9.0/dist/d3.min.js` and cached on
+* `window.__dedalo_d3` so the bundle is not fetched more than once per page
+* session (shared with the area-dashboard chart).
+*
+* Exports: {render_user_activity}
+*/
+
 // imports
 import {ui} from '../../../../common/js/ui.js'
 import {event_manager} from '../../../../common/js/event_manager.js'
@@ -24,8 +55,16 @@ const SHOW_DEBUG_GLOBAL = (typeof SHOW_DEBUG !== 'undefined' && SHOW_DEBUG === t
 
 /**
 * LOAD_D3
-* Lazy import the bundled D3 build, sharing the cache with the area dashboard.
-* @return Promise<object|null>
+* Lazily imports the bundled D3 build from the configured web root, caching
+* the resolved module on `window.__dedalo_d3` so subsequent calls in the same
+* page session pay no network cost. The shared key also means the area-dashboard
+* and this widget reuse the same singleton if both are active.
+*
+* Falls back to `window.d3` when the dynamic import succeeds but the module's
+* default export does not expose `d3.select` (e.g. UMD script-tag load).
+* Returns null on network failure so callers can degrade gracefully.
+*
+* @returns {Promise<Object|null>} The D3 namespace, or null if loading fails.
 */
 const load_d3 = async function() {
 
@@ -58,9 +97,14 @@ const load_d3 = async function() {
 
 /**
 * FORMAT_NUMBER
-* Locale-aware integer formatting with thousand separators.
-* @param number n
-* @return string
+* Locale-aware integer formatting with thousand separators, used in KPI tiles
+* and SVG data labels. Guards against non-finite values (Infinity, NaN) that
+* arrive when a dimension aggregation finds no rows. Falls back to `String(n)`
+* when `toLocaleString` throws (e.g. some older runtime environments).
+*
+* @param {number} n - The number to format.
+* @returns {string} Locale-formatted string, or the coerced string for
+*   non-finite / non-number inputs.
 */
 const format_number = function(n) {
 
@@ -76,10 +120,17 @@ const format_number = function(n) {
 
 /**
 * TRUNCATE
-* Cut a string with an ellipsis when longer than the requested length.
-* @param string str
-* @param int max
-* @return string
+* Cuts a string to at most `max` characters, replacing the last character
+* with a Unicode ellipsis (…) when truncation occurs. Used to fit section
+* labels inside the fixed-width SVG label column and the KPI "Top section"
+* tile without causing text overflow.
+*
+* Returns an empty string for non-string inputs (guards against null/undefined
+* values from the server payload's `label` field).
+*
+* @param {string} str - The string to truncate.
+* @param {number} max - Maximum character count (inclusive).
+* @returns {string} The possibly-truncated string.
 */
 const truncate = function(str, max) {
 
@@ -91,7 +142,17 @@ const truncate = function(str, max) {
 
 /**
 * RENDER_USER_ACTIVITY
-* Manages the component's logic and appearance in client side
+* ES6 class that provides the client-side rendering contract expected by
+* component_info's widget dispatch layer. An instance is created by the
+* component_info renderer and its `edit()` method is called to produce the
+* DOM subtree inserted into the component's wrapper.
+*
+* The class is stateless: all contextual data (tipo, section_id, value, ipo,
+* caller, mode) is accessed through the `self` (component_info instance)
+* received by the rendering helpers.
+*
+* Exported as the default symbol so component_info can dynamically import:
+*   const { render_user_activity } = await import('.../render_user_activity.js')
 */
 export class render_user_activity {
 
@@ -101,8 +162,18 @@ export class render_user_activity {
 
 	/**
 	* EDIT
-	* Render node for use in modes: edit, edit_in_list
-	* @return HTMLElement wrapper
+	* Entry point for the `edit` and `edit_in_list` render modes. Triggers an
+	* asynchronous data fetch when `self.value` is absent (the normal case,
+	* because `user_activity::is_async()` is true), then builds the widget DOM.
+	*
+	* When `render_level === 'content'` the method returns only the inner
+	* content node, omitting the outer wrapper. This matches the pattern used
+	* by component_info when re-rendering after a data refresh.
+	*
+	* @param {Object} options
+	* @param {string} options.render_level - `'content'` to return the inner
+	*   node only; any other value returns the full widget wrapper.
+	* @returns {Promise<HTMLElement>} The DOM node to insert.
 	*/
 	async edit(options) {
 
@@ -130,11 +201,35 @@ export class render_user_activity {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return HTMLElement content_data
+* Builds the inner content node for the widget in edit mode. When `self.value`
+* is empty (normal for async widgets), sends a `get_widget_data` request to the
+* `dd_component_info` API action. The API calls `user_activity::get_data()` on
+* the PHP side and returns an array of activity items which is written back to
+* `self.value` so subsequent renders can skip the fetch.
+*
+* The IPO (input-process-output) array from the ontology descriptor drives the
+* outer loop: one `<li>` is rendered per IPO entry, each containing the totals
+* chart panel produced by `build_totals_charts`.
+*
+* RQO shape sent to the API:
+* ```json
+* {
+*   "action"      : "get_widget_data",
+*   "dd_api"      : "dd_component_info",
+*   "source"      : { "tipo", "section_tipo", "section_id", "mode" },
+*   "options"     : { "widget_name": "user_activity" }
+* }
+* ```
+*
+* @param {Object} self - The component_info instance that hosts this widget.
+*   Expected properties: value, caller, mode, ipo, name.
+* @returns {Promise<HTMLElement>} A `<div>` containing a `<ul>` of activity items.
 */
 const get_content_data_edit = async function(self) {
 
-	// async data fetch when component_info PHP skipped synchronous computation
+	// Async data fetch: triggered when PHP skipped synchronous computation because
+	// user_activity::is_async() returns true. The caller context supplies the
+	// section owner's tipo/section_tipo/section_id (the user whose stats to show).
 	if ((!self.value || self.value.length < 1) && self.caller) {
 		try {
 			const rqo = {
@@ -199,11 +294,25 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return HTMLElement li
+* Creates a single `<li>` entry for one IPO slot and attaches its chart panel.
+* The `data` array is the subset of `self.value` whose `key` matches the current
+* IPO index `i`. Within that subset this function looks for the item whose
+* `widget_id` is `'totals'` — the only widget_id the PHP class currently
+* produces — and hands its `value` payload to `build_totals_charts`.
+*
+* If no `totals` item is present (e.g. data fetch failed), `build_totals_charts`
+* still renders an empty-state placeholder via the null-safe code path.
+*
+* @param {number}      i                - IPO slot index (0-based).
+* @param {Array}       data             - Activity items filtered for key === i.
+* @param {HTMLElement} values_container - The `<ul>` element to append to.
+* @param {Object}      self             - The component_info instance (unused
+*   directly here but available for future extension).
+* @returns {HTMLElement} The appended `<li>` element.
 */
 const get_value_element = (i, data, values_container, self) => {
 
-	// li, for every ipo will create a li node
+	// One <li> per IPO entry; the CSS class `user_activity` scopes widget styles.
 		const li = ui.create_dom_element({
 			element_type	: 'li',
 			class_name		: 'widget_item user_activity',
@@ -224,18 +333,38 @@ const get_value_element = (i, data, values_container, self) => {
 
 /**
 * NORMALIZE_TOTALS
-* Accept any of the historical user-activity payload shapes and return
-* the canonical `{who, what, where, when, publish}` object.
+* Accepts any of the historical user-activity payload shapes produced by the
+* PHP server and returns the canonical `{who, what, where, when, publish}`
+* object used by all rendering helpers in this module.
 *
-* Supported inputs:
-*   - null / undefined / empty                    → null (no data)
-*   - already-canonical object {who,what,…}       → passed through
-*   - flat raw array (get_interval_raw_activity_data):
-*       [{type:'what', tipo, value, label}, {type:'when', hour, value}, …]
-*   - component_json wrapper (legacy):            [{value:[…], lang}]
+* The PHP-side payload has evolved through multiple backend iterations; this
+* function acts as the single adaptation point so callers never need to branch
+* on payload shape.
 *
-* @param mixed input
-* @return object|null
+* Supported input forms:
+*
+*  1. null / undefined / empty string / false
+*       → returns null (no activity data to display).
+*
+*  2. Already-canonical object `{ who:Array, what:Array, where:Array,
+*       when:Array, publish:Array }`
+*       → passed through unchanged. Detected by presence of at least one
+*         dimension key whose value is an Array.
+*
+*  3. Flat raw array from `diffusion_section_stats::get_interval_raw_activity_data`:
+*       `[{type:'what', tipo, value, label}, {type:'when', hour, value}, …]`
+*       → grouped by `type` into the canonical object. The `when` dimension
+*         is pre-seeded with 24 zero-valued slots (hours 0–23) for visual
+*         continuity in the bar chart; slots with no activity remain at 0 and
+*         the whole `when` array is dropped if no hour has a non-zero value.
+*
+*  4. component_json wrapper (legacy cache format):
+*       `[{value:[…], lang:'ca'}]`
+*       → unwraps `[0].value` and re-enters the normalisation logic.
+*
+* @param {*} input - Raw server payload in any supported shape.
+* @returns {Object|null} Canonical activity object, or null if there is
+*   no data to display.
 */
 const normalize_totals = function(input) {
 
@@ -302,12 +431,30 @@ const normalize_totals = function(input) {
 
 /**
 * BUILD_TOTALS_CHARTS
-* Build the visual user-activity chart panel for the `totals` widget output.
-* Renders synchronously a placeholder + summary KPIs and asynchronously
-* upgrades with D3 charts as soon as the bundle is loaded.
-* @param object|array|null raw_totals
-* 	Any of the supported payload shapes (see `normalize_totals`).
-* @return HTMLElement
+* Builds the full visual panel for the `totals` widget output. The panel
+* has two layers:
+*
+*  1. Summary KPI strip — rendered synchronously via `build_summary_strip`;
+*     no D3 required. Displays total actions, sections touched, peak hour,
+*     top section, and publications count.
+*
+*  2. Chart grid — one card per active dimension (what / where / when / publish).
+*     Cards are built immediately with a `Loading…` placeholder, then upgraded
+*     asynchronously once `load_d3()` resolves. Upgrade is further delayed until
+*     the wrapper is laid out in the DOM (`wrapper.offsetWidth > 0`), polling
+*     every 33 ms for up to ~1 s. This avoids zero-width SVG when the widget
+*     is inside a hidden tab or panel.
+*
+* When raw_totals normalises to null (no data) an empty-state element is
+* returned immediately without building the chart grid.
+*
+* When D3 fails to load, each chart slot falls back to a `<pre>` with the
+* raw JSON for that dimension — enough to debug without crashing.
+*
+* @param {Object|Array|null} raw_totals - Server payload in any shape
+*   accepted by `normalize_totals`.
+* @returns {HTMLElement} Wrapper `<div class="user_activity_charts">` with
+*   the KPI strip and chart grid inside.
 */
 const build_totals_charts = function(raw_totals) {
 
@@ -387,12 +534,15 @@ const build_totals_charts = function(raw_totals) {
 		hosts[s.key] = body
 	}
 
-	// Async D3 upgrade
+	// Async D3 upgrade: load_d3 is non-blocking; the placeholder "Loading…"
+	// elements inside each card body are replaced once D3 resolves.
 	load_d3().then(d3 => {
 
 		if (!d3) {
 			// eslint-disable-next-line no-console
 			console.warn('[user_activity] D3 not available, rendering JSON fallback.')
+			// Degrade gracefully: replace "Loading…" with indented raw JSON so a
+			// developer can at least inspect the data without opening DevTools.
 			for (const key of Object.keys(hosts)) {
 				hosts[key].innerHTML = ''
 				const fb = ui.create_dom_element({
@@ -409,6 +559,9 @@ const build_totals_charts = function(raw_totals) {
 		// Wait until the panel is laid out (offsetWidth > 0). The widget may
 		// be inserted asynchronously into a tab/panel, so we poll for up to
 		// ~1s before falling back to a hard-coded width.
+		// (!) After 30 attempts the chart is rendered regardless; wrapper.offsetWidth
+		// may then be 0, causing the SVG to render at the hard-coded fallback width
+		// inside render_horizontal_bars / render_when_chart (clientWidth || 380).
 		const try_render = function(attempt) {
 			const ready = wrapper.isConnected && wrapper.offsetWidth > 0
 			if (!ready && attempt < 30) {
@@ -418,6 +571,7 @@ const build_totals_charts = function(raw_totals) {
 				// eslint-disable-next-line no-console
 				console.log('[user_activity] rendering charts. wrapper width:', wrapper.offsetWidth, 'attempt:', attempt)
 			}
+			// Clear the "Loading…" placeholder before injecting the SVG.
 			if (hosts.what)    { hosts.what.innerHTML    = ''; render_what_chart(d3, hosts.what, totals.what || []) }
 			if (hosts.where)   { hosts.where.innerHTML   = ''; render_where_chart(d3, hosts.where, totals.where || []) }
 			if (hosts.when)    { hosts.when.innerHTML    = ''; render_when_chart(d3, hosts.when, totals.when || []) }
@@ -434,10 +588,24 @@ const build_totals_charts = function(raw_totals) {
 
 /**
 * BUILD_SUMMARY_STRIP
-* KPI tiles displayed above the charts: total actions, sections touched,
-* peak working hour and most-touched section. Pure DOM (no D3 dependency).
-* @param object totals
-* @return HTMLElement
+* Renders the five KPI tiles displayed above the D3 chart grid. Pure DOM,
+* no D3 dependency — always visible even if the D3 bundle fails to load.
+*
+* Tiles produced (in order):
+*  - Total actions : sum of `where` values (preferred) or `what` values.
+*  - Sections touched : count of distinct `where` entries.
+*  - Peak hour : the `when` slot with the highest `value`, formatted as HH:00.
+*  - Top section : the `where` entry with the highest `value` (label truncated
+*    to 22 chars); hover hint shows the action count.
+*  - Publications : sum of `publish` values.
+*
+* An optional `hint` string is added as a smaller subdued element beneath the
+* value, giving context for the Peak hour and Top section tiles.
+*
+* @param {Object} totals - Canonical activity object with dimension arrays
+*   `{who, what, where, when, publish}`.
+* @returns {HTMLElement} A `<div class="user_activity_summary">` containing
+*   one `<div class="user_activity_summary_tile">` per KPI.
 */
 const build_summary_strip = function(totals) {
 
@@ -521,15 +689,36 @@ const build_summary_strip = function(totals) {
 
 /**
 * RENDER_HORIZONTAL_BARS
-* Generic horizontal-bar renderer used for `what`, `where` and `publish`.
-* When `clickable` is true each row publishes a `user_navigation` event on
-* click (Alt+click opens in a new tab).
-* @param object d3
-* @param HTMLElement host
-* @param array rows
-* @param object opts
-* 	{ max_rows:int, clickable:bool, label_width:int }
-* @return void
+* Generic D3 horizontal-bar renderer shared by the `what`, `where`, and
+* `publish` chart slots. Produces an SVG with left-aligned text labels,
+* colour-coded bars from the shared PALETTE, and trailing count labels.
+*
+* Layout constants:
+*  - `label_width` pixels reserved on the left for truncated text labels.
+*  - `padding_right` = 56px to accommodate trailing count labels.
+*  - Row height fixed at 24 px; top/bottom padding at 4 px each.
+*  - SVG `viewBox` is set to the host's `offsetWidth` so the chart fills the
+*    card width responsively via `width:100%`.
+*
+* When `clickable` is true each row:
+*  - Gets `tabindex="0"` and `role="link"` for keyboard accessibility.
+*  - Fires `navigate_to_section` on click / Enter / Space.
+*  - A transparent full-row `<rect>` enlarges the click target to the full
+*    row height, not just the bar.
+*  - Alt+click opens the section in a new browser tab.
+*
+* Rows are sorted descending by value; only the top `max_rows` are rendered.
+* A "+N more" footer appears when rows are truncated. Values are coerced to
+* numbers so that PHP/JSON strings like `"12"` do not break the scale domain.
+*
+* @param {Object}      d3        - D3 namespace (loaded via `load_d3`).
+* @param {HTMLElement} host      - DOM node that receives the SVG.
+* @param {Array}       rows      - Data rows `[{key, label, value}, …]`.
+* @param {Object}      opts      - Configuration overrides.
+* @param {number}      [opts.max_rows=12]    - Maximum bars to render.
+* @param {boolean}     [opts.clickable=false] - Enable row navigation.
+* @param {number}      [opts.label_width=160] - Left label column width (px).
+* @returns {void}
 */
 const render_horizontal_bars = function(d3, host, rows, opts) {
 
@@ -647,11 +836,14 @@ const render_horizontal_bars = function(d3, host, rows, opts) {
 
 /**
 * RENDER_WHAT_CHART
-* Horizontal bars of action types (modification, indexation, …).
-* @param object d3
-* @param HTMLElement host
-* @param array rows
-* @return void
+* Renders horizontal bars for the `what` dimension — breakdown of activity by
+* action type (modification, indexation, deletion, publication, …). Non-clickable
+* because action types are not navigable entities in the application.
+*
+* @param {Object}      d3   - D3 namespace.
+* @param {HTMLElement} host - Chart body element.
+* @param {Array}       rows - `what` dimension rows `[{key, label, value}]`.
+* @returns {void}
 */
 const render_what_chart = function(d3, host, rows) {
 	render_horizontal_bars(d3, host, rows, { max_rows: 12, clickable: false, label_width: 160 })
@@ -661,12 +853,19 @@ const render_what_chart = function(d3, host, rows) {
 
 /**
 * RENDER_WHERE_CHART
-* Horizontal bars of per-section activity. Clickable rows navigate to the
-* section's list (Alt+click new tab, Enter/Space keyboard).
-* @param object d3
-* @param HTMLElement host
-* @param array rows
-* @return void
+* Renders horizontal bars for the `where` dimension — breakdown of activity by
+* section tipo. Each bar is clickable: left-click publishes a `user_navigation`
+* event that the page's SPA router handles to open the section's list view;
+* Alt+click opens the section in a new browser tab. Keyboard: Enter/Space.
+*
+* A slightly wider label column (180 px) is used compared to `what` because
+* section labels tend to be longer.
+*
+* @param {Object}      d3   - D3 namespace.
+* @param {HTMLElement} host - Chart body element.
+* @param {Array}       rows - `where` dimension rows `[{key, label, value}]`
+*   where `key` is the section tipo string.
+* @returns {void}
 */
 const render_where_chart = function(d3, host, rows) {
 	render_horizontal_bars(d3, host, rows, { max_rows: 12, clickable: true, label_width: 180 })
@@ -676,10 +875,25 @@ const render_where_chart = function(d3, host, rows) {
 
 /**
 * NAVIGATE_TO_SECTION
-* Opens the section list page for a `where` row via the SPA event bus.
-* @param object row		{ key: section_tipo, label }
-* @param Event|undefined ev
-* @return void
+* Handles user interaction on a clickable `where` chart row. Performs SPA
+* navigation to the target section's list view using one of two strategies:
+*
+*  - Alt+click: opens `?tipo=<tipo>&mode=list` as a new browser tab. Uses
+*    `window.location.pathname` to keep the base URL correct on multi-path
+*    deployments. Falls back to empty string in non-browser environments.
+*  - Normal click / keyboard: publishes a `user_navigation` event to the
+*    application event bus (`event_manager`). The `page.js` subscriber picks
+*    this up and drives the SPA router to load the section in list mode.
+*
+* Returns early (no-op) when `row` is falsy or `row.key` is empty — safe to
+* call on D3 click events even when the datum is malformed.
+*
+* @param {Object}          row    - The clicked data row from the `where` array.
+* @param {string}          row.key - Section tipo used as the navigation target.
+* @param {string}          [row.label] - Human-readable label (unused here).
+* @param {MouseEvent|KeyboardEvent|undefined} ev - DOM event; inspected for
+*   `altKey` to decide new-tab vs SPA navigation.
+* @returns {void}
 */
 const navigate_to_section = function(row, ev) {
 
@@ -705,12 +919,28 @@ const navigate_to_section = function(row, ev) {
 
 /**
 * RENDER_WHEN_CHART
-* Vertical 24-column bar chart of activity by hour-of-day. Easy to scan,
-* color-coded by daypart (morning / afternoon / evening / night).
-* @param object d3
-* @param HTMLElement host
-* @param array rows		Items like { key:0..23, label:'HH', value:int }
-* @return void
+* Renders a vertical 24-column bar chart of activity by hour-of-day. Bars are
+* colour-coded by daypart for at-a-glance scanning:
+*   - 06:00–11:59 (morning)   → green  (#10b981)
+*   - 12:00–17:59 (afternoon) → amber  (#f59e0b)
+*   - 18:00–21:59 (evening)   → purple (#8b5cf6)
+*   - 22:00–05:59 (night)     → slate  (#475569)
+*
+* The 24-slot array is always populated (zero-value hours stay at 0), giving
+* a complete hour axis even when activity is sparse. Bars for zero-value hours
+* are rendered at 18% opacity as a visual guide.
+*
+* X-axis labels are shown every 2 hours (00, 02, 04 … 22) to avoid overcrowding
+* at narrow widths. Y-axis gridlines and labels are generated from `y.ticks(4)`.
+*
+* SVG height is fixed at 200 px; width follows `host.offsetWidth` (with
+* `clientWidth || 380` fallback).
+*
+* @param {Object}      d3   - D3 namespace.
+* @param {HTMLElement} host - Chart body element.
+* @param {Array}       rows - `when` dimension rows `[{key:0..23, label:'HH',
+*   value:number}]`. Missing hours are filled with 0.
+* @returns {void}
 */
 const render_when_chart = function(d3, host, rows) {
 
@@ -824,11 +1054,17 @@ const render_when_chart = function(d3, host, rows) {
 
 /**
 * RENDER_PUBLISH_CHART
-* Horizontal bars of publication targets.
-* @param object d3
-* @param HTMLElement host
-* @param array rows
-* @return void
+* Renders horizontal bars for the `publish` dimension — breakdown of publication
+* actions by target (diffusion channel, SQL target, etc.). Non-clickable because
+* publication targets are not navigable section entities.
+*
+* Uses a narrower label column (140 px) than `where` since publication target
+* labels are typically shorter strings.
+*
+* @param {Object}      d3   - D3 namespace.
+* @param {HTMLElement} host - Chart body element.
+* @param {Array}       rows - `publish` dimension rows `[{key, label, value}]`.
+* @returns {void}
 */
 const render_publish_chart = function(d3, host, rows) {
 	render_horizontal_bars(d3, host, rows, { max_rows: 10, clickable: false, label_width: 140 })

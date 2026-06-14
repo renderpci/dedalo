@@ -36,7 +36,23 @@ class component_filter_master extends component_filter {
 
 
 
+	/**
+	* Flat per-user cache of raw project locators returned by get_user_projects().
+	* Keyed by user_id (int). Populated on first call; cleared by clean_cache().
+	* Disabled (bypassed) when SHOW_DEVELOPER is true so developers always see
+	* fresh data without restarting the PHP process.
+	* @var array $user_projects_cache
+	*/
 	public static array $user_projects_cache = [];
+
+	/**
+	* Per-user cache of enriched project elements returned by get_user_authorized_projects().
+	* Keyed by the string produced by get_user_authorized_projects_cache_key().
+	* Note: as of current code, $use_cache is hardcoded to false inside
+	* get_user_authorized_projects(), so this cache is never actually populated
+	* at runtime. The infrastructure remains in place for a future re-enable.
+	* @var array $user_authorized_projects_cache
+	*/
 	public static array $user_authorized_projects_cache = [];
 
 
@@ -144,21 +160,35 @@ class component_filter_master extends component_filter {
 
 	/**
 	* GET_USER_AUTHORIZED_PROJECTS
-	* Returns enriched project data filtered by user authorized projects.
+	* Returns enriched project data for the given user, split by role.
 	*
-	* Similar to ar_list_of_values but includes hierarchical information, labels,
-	* and ordering. Returns different data sets for global admins (all projects)
-	* vs regular users (assigned projects only).
+	* Global admins receive all projects found in the projects section (unlimited search).
+	* Regular users receive only the projects stored in their component_filter_master field
+	* (dd170), obtained via get_user_projects().
 	*
-	* Each returned element contains:
-	* - label: Project name in current language
-	* - locator: stdClass with section_tipo and section_id
-	* - parent: Parent project locator or null
-	* - order: Numeric sort value
+	* Each returned element is an associative array with:
+	* - 'label'   (string)        Human-readable project name resolved in the current
+	*                             language with fallback to DEDALO_DATA_LANG_DEFAULT.
+	* - 'locator' (locator)       Clone of the source locator (section_tipo + section_id).
+	* - 'parent'  (locator|null)  Nearest ancestor project that is also in the user's
+	*                             authorized set, or null if the project is a root.
+	* - 'order'   (int)           Numeric sort value from component_number dd1631.
 	*
-	* @param int $user_id The user ID to retrieve projects for
-	* @param string $from_component_tipo The tipo of component requesting (for cache key)
-	* @return array $ar_projects Array of project elements with metadata
+	* The method resolves labels and ordering by instantiating per-project components
+	* for the projects-name tipo (dd156) and the order tipo (dd1631). Model names are
+	* looked up from the ontology to remain decoupled from hard-coded class strings,
+	* except for the order tipo which is currently pinned (see inline flag).
+	*
+	* (!) Cache note: $use_cache is unconditionally set to false in this method.
+	* Both the static and file-cache branches are present but never executed.
+	* Re-enable by setting $use_cache = true (and verify clean_cache() covers all paths).
+	*
+	* @param int    $user_id             The user ID to retrieve projects for.
+	* @param string $from_component_tipo The tipo of the calling component; used only
+	*                                    for cache-key scoping — has no effect while
+	*                                    $use_cache is false.
+	* @return array $ar_projects         Array of enriched project elements as described above;
+	*                                    empty array on ontology resolution failure.
 	*
 	* Sample:
 	* ```php
@@ -175,6 +205,10 @@ class component_filter_master extends component_filter {
 		$start_time = start_time();
 
 		// cache
+		// (!) $use_cache is intentionally hardcoded to false: caching is disabled
+		// until a reliable invalidation strategy is confirmed. The cache_key variable
+		// and both the static/file cache branches below are kept as infrastructure
+		// for a future re-enable. Do not remove them.
 		$use_cache = false;
 		if ($use_cache===true) {
 
@@ -198,9 +232,13 @@ class component_filter_master extends component_filter {
 		}
 
 		// projects_section_tipo
+		// This is the section that owns project records (typically dd153 = DEDALO_SECTION_PROJECTS_TIPO).
 		$projects_section_tipo = DEDALO_FILTER_SECTION_TIPO_DEFAULT;
 
 		// section map (expected 'dd267')
+		// Resolve the section_map child of the projects section to locate the
+		// language/name component tipo. The resolved value must equal DEDALO_COMPONENT_PROJECT_LANGS_TIPO
+		// (dd267); a mismatch means the ontology is misconfigured.
 			$ar_section_map = ontology_node::get_ar_tipo_by_model_and_relation(
 				$projects_section_tipo, // tipo
 				'section_map', // model name
@@ -214,6 +252,8 @@ class component_filter_master extends component_filter {
 			}
 
 		// projects_name_tipo. Get ts_map for locate name component (for future use)
+		// The thesaurus->term property of the section_map node holds the tipo of the
+		// component that stores the project's human-readable name (expected: dd156).
 			$ontology_node	= ontology_node::get_instance($section_map);
 			$properties		= $ontology_node->get_properties();
 			if (empty($properties)) {
@@ -234,6 +274,7 @@ class component_filter_master extends component_filter {
 			}
 			$projects_name_tipo	= $properties->thesaurus->term ?? null; // dd156
 			if ($projects_name_tipo !== DEDALO_PROJECTS_NAME_TIPO) {
+				// Log a warning but continue; the resolved tipo may still work.
 				debug_log(__METHOD__
 					." Expected projects_name_tipo value was '".DEDALO_PROJECTS_NAME_TIPO."' and received value is: " . PHP_EOL
 					.' projects_name_tipo: ' . to_string($projects_name_tipo)
@@ -242,6 +283,7 @@ class component_filter_master extends component_filter {
 			}
 
 		// data. Array of locators
+		// Global admins see every project; regular users see only their assigned projects.
 			$is_global_admin = security::is_global_admin($user_id);
 			if ($is_global_admin===true) {
 
@@ -274,6 +316,9 @@ class component_filter_master extends component_filter {
 		// resolve label and parent
 			// Cache model lookups outside loop for performance
 			$projects_model = ontology_node::get_model_by_tipo($projects_name_tipo);
+			// (!) $order_model_tipo is hardcoded to 'dd1631' (component_number 'Order').
+			// Unlike $projects_name_tipo, this is not resolved from the ontology at runtime.
+			// If the ontology tipo for the order component changes, this constant must be updated manually.
 			$order_model_tipo = 'dd1631'; // component_number 'Order'
 			$order_model = ontology_node::get_model_by_tipo($order_model_tipo, true);
 
@@ -281,6 +326,8 @@ class component_filter_master extends component_filter {
 			foreach ($data as $current_locator) {
 
 				// name
+				// Instantiate the name component for this project record and resolve a
+				// displayable label with language fallback. Returns empty string on failure.
 				$parent			= null;
 				$component_term	= component_common::get_instance(
 					$projects_model, // string model
@@ -310,6 +357,10 @@ class component_filter_master extends component_filter {
 				$order_data		= $order_component->get_data();
 				$order_value	= (int)($order_data[0]->value ?? 0);
 
+				// parent resolution
+				// Walk all recursive ancestors of this project and pick the nearest one
+				// that also appears in the user's authorized set. This allows the UI to
+				// render a tree structure limited to what the user can actually see.
 				$ar_all_parents = component_relation_parent::get_parents_recursive(
 					$current_locator->section_id,
 					$current_locator->section_tipo
@@ -425,8 +476,19 @@ class component_filter_master extends component_filter {
 
 	/**
 	* SAVE
-	* Overwrite component_filter method.
-	* @return bool
+	* Overrides component_filter::save() to invalidate all project caches on every write.
+	*
+	* Because this component stores user-project permission assignments, any change must
+	* immediately invalidate the authorization caches so that subsequent requests reflect
+	* the new state. Cache invalidation is performed for the currently logged-in user
+	* before delegating to the parent save routine.
+	*
+	* (!) Cache clearing uses logged_user_id() (the session user), not the section_id of
+	* the user record being saved. In multi-user admin scenarios where one admin edits
+	* another user's projects, the cache for the edited user is NOT cleared here — only
+	* the admin's own cache is cleared. This is a known limitation.
+	*
+	* @return bool true on successful save, false on failure (mirrors parent::save()).
 	*/
 	public function save() : bool {
 
@@ -443,8 +505,17 @@ class component_filter_master extends component_filter {
 
 	/**
 	* PROPAGATE_FILTER
-	* Overwrite only to catch calls to parent method.
-	* @return bool
+	* Overrides component_filter::propagate_filter() as a deliberate no-op.
+	*
+	* component_filter uses propagate_filter() to cascade project assignments down to
+	* child portal components. For component_filter_master — which manages user-level
+	* project permissions rather than record-level project membership — propagation
+	* is not applicable and must be suppressed to avoid expensive unnecessary processing.
+	*
+	* The parent class body is commented-out there and was never ported to v7; this
+	* override exists to capture any future call and return immediately.
+	*
+	* @return bool Always returns true.
 	*/
 	public function propagate_filter() : bool {
 

@@ -1,57 +1,72 @@
 <?php declare(strict_types=1);
 /**
  * CLASS TS_OBJECT
- * Manage thesaurus hierarchical elements. Every element is a section used as thesaurus term
+ * Represents a single thesaurus tree node (term) and drives the assembly of its
+ * display data for the area_thesaurus / area_ontology UI.
  *
- * This class handles the retrieval and formatting of thesaurus objects, including terms, icons,
- * and child relationships. It processes the configuration defined in the ontology (section_list_thesaurus)
- * to build the object representation.
+ * Every thesaurus term is stored as a section record in the main matrix. ts_object
+ * wraps a (section_tipo, section_id) pair and, guided by the ontology configuration
+ * entry 'section_list_thesaurus', fetches the term string, icon flags, and
+ * child-link metadata needed to render one tree node in the client.
  *
- * Example of Use:
- * ```php
- * $ts_obj = new ts_object($section_id, $section_tipo);
- * $data = $ts_obj->get_data();
- * echo $data->ar_elements[0]->value;
+ * Responsibilities:
+ * - Build the stdClass node payload returned by get_data() and consumed by
+ *   dd_ts_api / area_thesaurus JS.
+ * - Batch-build arrays of children data via the static parse_child_data() entry point
+ *   (called by dd_ts_api::get_children_data).
+ * - Resolve permissions for per-node action buttons (button_new, button_delete).
+ * - Count indexation cross-references for index-icon display (get_count_data_group_by).
+ * - Delegate term-string resolution to ts_term_resolver and cache invalidation after
+ *   tree mutations (invalidate_node, clear).
+ *
+ * Data shape produced by get_data():
+ * ```
+ * {
+ *   section_tipo, section_id, ts_id, ts_parent, order,
+ *   mode, lang, is_descriptor, is_indexable,
+ *   ar_elements: [ { type, tipo, value, … }, … ],
+ *   children_tipo,             // set when a 'link_children' element is present
+ *   has_descriptor_children,   // bool, set alongside children_tipo
+ *   permissions_button_new,    // int bitmask
+ *   permissions_button_delete  // int bitmask
+ * }
  * ```
  *
- * Sample of elements from Ontology 'section_list_thesaurus' properties:
+ * Element types that can appear in ar_elements (driven by section_list_thesaurus ddo_map):
+ * - 'term'              — the human-readable label string for the node
+ * - 'icon'             — an icon flag (e.g. "ND", "M", "U", "CH")
+ * - 'link_children'    — sentinel indicating this node may have child nodes
+ * - 'link_children_nd' — synthetic element added when non-descriptor children exist
+ *
+ * Sample section_list_thesaurus ddo_map (ontology JSON):
+ * ```json
  * [
- *     {
- *         "tipo": "actv10",
- *         "type": "term"
- *     },
- *     {
- *         "icon": "ND",
- *         "tipo": "actv9",
- *         "type": "icon"
- *     },
-*     {
-*         "icon": "M",
-*         "tipo": "actv6",
-*         "type": "icon"
-*     },
-*     {
-*         "icon": "U",
-*         "tipo": "actv25",
-*         "type": "icon"
-*     },
-*     {
-*         "icon": "CH",
-*         "tipo": "actv23",
-*         "type": "icon"
-*     },
-*     {
-*         "tipo": "actv23",
-*         "type": "link_children"
-*     }
+ *   { "tipo": "actv10", "type": "term" },
+ *   { "icon": "ND", "tipo": "actv9",  "type": "icon" },
+ *   { "icon": "M",  "tipo": "actv6",  "type": "icon" },
+ *   { "icon": "U",  "tipo": "actv25", "type": "icon" },
+ *   { "icon": "CH", "tipo": "actv23", "type": "icon" },
+ *   { "tipo": "actv23", "type": "link_children" }
  * ]
+ * ```
+ *
+ * Relationships:
+ * - Instantiated by dd_ts_api and area_thesaurus PHP controllers.
+ * - Uses ts_node_repository for batched SQL reads (order + is_indexable + is_descriptor).
+ * - Delegates term caching / eviction to ts_term_resolver.
+ * - Reads ontology configuration via ontology_node and section_map.
+ *
+ * @package Dédalo
+ * @subpackage Core
  */
 
-// ts_node_repository. Batched raw row access used by the tree hot path
-// (lives in this directory, outside the one-class-per-dir autoload convention)
-require_once DEDALO_CORE_PATH . '/ts_object/class.ts_node_repository.php';
-// ts_term_resolver. Term resolution and its request-scope cache
-require_once DEDALO_CORE_PATH . '/ts_object/class.ts_term_resolver.php';
+// Explicit require_once for co-located helpers.
+// Both files live in the same directory and are outside the one-class-per-dir
+// autoload convention, so they must be loaded manually.
+	// ts_node_repository — batched SQL reads for the tree hot path (order, is_indexable, is_descriptor)
+	require_once DEDALO_CORE_PATH . '/ts_object/class.ts_node_repository.php';
+	// ts_term_resolver — term-string resolution with a request-scope cache
+	require_once DEDALO_CORE_PATH . '/ts_object/class.ts_term_resolver.php';
 
 
 class ts_object {
@@ -63,64 +78,69 @@ class ts_object {
 	*/
 
 		/**
-		 * Section ID of the thesaurus term record. Mandatory.
-		 * Identifies the specific term within the section (thesaurus hierarchy).
+		 * Section record identifier of this thesaurus term. Required; set in __construct.
 		 * @var string|int|null $section_id
 		 */
 		public string|int|null $section_id = null;
 
 		/**
-		 * Section tipo of the thesaurus term. Mandatory.
-		 * Defines which hierarchy/ontology type this term belongs to.
+		 * Ontology tipo that identifies the section type (hierarchy) this term belongs to.
+		 * Determines which section_list_thesaurus ddo_map is used. Required; set in __construct.
 		 * @var ?string $section_tipo
 		 */
 		public ?string $section_tipo = null;
 
 		/**
-		 * Optional configuration object for this thesaurus element.
-		 * Defines display options, children behavior, and rendering preferences.
+		 * Caller-supplied configuration bag. Optional.
+		 * May carry: order (display sort key), is_indexable (bool, pre-fetched),
+		 * model (bool, ontology-mode flag), have_children (bool override),
+		 * area_model (string, 'area_thesaurus'|'area_ontology').
 		 * @var ?object $options
 		 */
 		protected ?object $options = null;
 
 		/**
-		 * Display mode for this thesaurus object. Default 'edit'.
-		 * Controls how the term is rendered (edit, list, search, etc.).
+		 * Rendering mode passed down from the calling area. Defaults to 'edit'.
+		 * Not currently forwarded to child components (components are always
+		 * instantiated in 'list_thesaurus' mode).
 		 * @var ?string $mode
 		 */
 		protected ?string $mode = null;
 
 		/**
-		 * Display order/position of this term within its parent hierarchy.
-		 * Used for sorting siblings in the thesaurus tree view.
+		 * Numeric or string display position of this term among its siblings.
+		 * Populated from $options->order in __construct; may be null when the
+		 * section has no order component.
 		 * @var string|int|float|null $order
 		 */
 		public string|int|float|null $order = null;
 
 		/**
-		 * Array of UI elements (term, icons, links) for this thesaurus object.
-		 * Populated from ontology section_list_thesaurus configuration.
+		 * Rendered element list for this node. Populated by get_data(); null before that call.
+		 * Each entry is a stdClass with at minimum: type (string), tipo (string|array), value (mixed).
 		 * @var ?array $ar_elements
 		 */
 		public ?array $ar_elements = null;
 
 		/**
-		 * Thesaurus ID combining section_tipo and section_id. Format: "dd1_1".
-		 * Unique identifier for the term within the thesaurus tree structure.
+		 * Composite identifier for this node: "{section_tipo}_{section_id}" (e.g. "actv1_42").
+		 * Set in __construct; used as the stable key in the client tree.
 		 * @var ?string $ts_id
 		 */
 		public ?string $ts_id = null;
 
 		/**
-		 * Parent thesaurus ID linking this term to its parent node. Format: "dd1_1".
-		 * Establishes the hierarchical parent-child relationship in the tree.
+		 * ts_id of the parent node ("{section_tipo}_{section_id}"), or null for root nodes.
+		 * Passed in from the caller so the client can reconstruct the ancestry chain.
 		 * @var ?string $ts_parent
 		 */
 		public ?string $ts_parent = null;
 
 		/**
-		 * Static cache for resolved child thesaurus objects.
-		 * Stores pre-computed child arrays to optimize tree traversal.
+		 * Request-scope cache for recursively resolved child locator sets.
+		 * Key: md5 of the JSON-encoded SQO that produced the child list.
+		 * Value: raw pg_fetch_all() result array.
+		 * Bounded to 1 000 entries; cleared wholesale on overflow and by clear().
 		 * @var array $resolved_child_cache
 		 */
 		public static array $resolved_child_cache = [];
@@ -129,12 +149,18 @@ class ts_object {
 
 	/**
 	* __CONSTRUCT
-	* @param int|string $section_id
-	* @param string $section_tipo
-	* @param object|null $options
-	*	Default null
-	* @param string $mode
-	*	Default 'edit'
+	* Initialises a thesaurus node wrapper for a given (section_tipo, section_id) pair.
+	*
+	* Does not load any data from the DB; all fetching is deferred to get_data().
+	* $options is stored verbatim — it is the caller's responsibility to clone it when
+	* the same options object is shared across multiple ts_object instances (parse_child_data
+	* already handles this via clone).
+	*
+	* @param int|string $section_id    - Matrix record identifier of the thesaurus term
+	* @param string $section_tipo      - Ontology tipo of the section (determines the ddo_map)
+	* @param ?object $options = null   - Optional config bag (order, is_indexable, model, etc.)
+	* @param string $mode = 'edit'     - Rendering mode forwarded from the calling area
+	* @param ?string $ts_parent = null - ts_id of the parent node; null for root-level terms
 	*/
 	public function __construct( int|string $section_id, string $section_tipo, ?object $options=null, string $mode='edit', ?string $ts_parent=null ) {
 
@@ -164,10 +190,24 @@ class ts_object {
 
 	/**
 	* GET_AR_ELEMENTS
-	* Get elements from section_list_thesaurus -> properties
-	* @param string $section_tipo
-	* @param boolean|null $model = false
-	* @return array $ar_elements
+	* Reads the section_list_thesaurus ontology node for $section_tipo and returns
+	* the ddo_map array that describes which components to render for each tree node.
+	*
+	* Resolution order:
+	* 1. Look for a child of $section_tipo with model 'section_list_thesaurus'.
+	* 2. If not found (virtual section), fall back to the real (non-virtual) section tipo.
+	* 3. Extract properties->show->ddo_map from the resolved ontology node.
+	*
+	* $model controls whether the result is for a live term display or for an ontology
+	* model-builder display:
+	* - $model === false (default): 'link_children_model' entries are skipped.
+	* - $model === true: 'link_children' entries for the hierarchy/ontology root are
+	*   skipped, and 'link_children_model' entries are promoted to 'link_children'.
+	*
+	* @param string $section_tipo - Section tipo whose ddo_map is requested
+	* @param ?bool $model = false - Whether to return the model variant of the map
+	* @return array $ar_elements  - Ordered array of ddo_map entry objects; empty when
+	*                               section_list_thesaurus is not configured
 	*/
 	public static function get_ar_elements( string $section_tipo, ?bool $model=false ) : array {
 
@@ -195,6 +235,7 @@ class ts_object {
 			}
 
 			// Fallback to real section when in virtual
+			// Virtual sections inherit the ddo_map of their real counterpart.
 			if ( empty($properties) ) {
 				$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
 				if ($section_tipo!==$section_real_tipo) {
@@ -223,6 +264,10 @@ class ts_object {
 					$type = $current_ddo->type ?? null;
 
 					// link children exception
+					// 'link_children_model' is an ontology-builder variant of 'link_children';
+					// in normal ($model===false) display it must be suppressed entirely.
+					// In model mode, the hierarchy/ontology roots never have expandable children
+					// (they are structural containers), so 'link_children' is skipped there.
 						if ($model===false && $type==='link_children_model') {
 							continue;
 						}else if ($model===true) {
@@ -246,15 +291,29 @@ class ts_object {
 
 	/**
 	* PARSE_CHILD_DATA
-	* Auxiliary function used in dd_ts_api
-	* Iterates locators extracting the child data of each one
-	* @see get_data
-	* @param array $locators
-	* @param string $area_model
-	*   Default 'area_thesaurus' (currently unused, reserved for future functionality)
-	* @param object|null $ts_object_options
-	*   Optional ts_object options (will be cloned to avoid mutation)
-	* @return array $child_data
+	* Converts an array of child locators into an array of ts_object data objects,
+	* ready to be sent to the client as the children of a tree node.
+	*
+	* Called by get_children_data() (which is itself called by dd_ts_api) after
+	* component_relation_children supplies the raw locator list.
+	*
+	* Performance strategy:
+	* - Resolves the order component tipo once from the first locator's section_tipo
+	*   (assumes homogeneous children — all locators share the same section_tipo).
+	* - Calls ts_node_repository::fetch_node_info() to pre-fetch order and is_indexable
+	*   for all locators in a single SQL query per section_tipo group.
+	* - Falls back to per-child component_common::get_instance() when the batch fails.
+	*
+	* Each locator must be an object with at least section_tipo and section_id. Invalid
+	* or unresolvable locators are logged and skipped.
+	*
+	* @param array $locators           - Child locator objects (section_tipo + section_id required)
+	* @param string $area_model = 'area_thesaurus'
+	*                                  - Area context; currently unused, reserved for routing
+	* @param ?object $ts_object_options = null
+	*                                  - Config bag forwarded to each ts_object; cloned per child
+	*                                    to prevent cross-child mutation
+	* @return array $child_data        - Array of stdClass objects as returned by ts_object::get_data()
 	*/
 	public static function parse_child_data( array $locators, string $area_model='area_thesaurus', ?object $ts_object_options=null ) : array {
 
@@ -373,10 +432,23 @@ class ts_object {
 
 	/**
 	 * GET_DATA
-	 * Builds and returns the data object for the thesaurus element.
-	 * This method iterates through the configured elements (from ontology) and processes them.
+	 * Builds and returns the complete data payload for this thesaurus node.
 	 *
-	 * @return object $child_data
+	 * Reads the section_list_thesaurus ddo_map for this node's section_tipo, then
+	 * iterates over each element entry, delegating per-element processing to
+	 * process_element_details(). The resulting ar_elements array is what the
+	 * area_thesaurus JS renders as a tree row.
+	 *
+	 * Side effects:
+	 * - Resolves and attaches is_indexable from the pre-fetched options bag when
+	 *   available, otherwise falls back to a live is_indexable() call.
+	 * - Resolves button_new / button_delete permissions via get_permissions_element().
+	 * - Populates $data->children_tipo and $data->has_descriptor_children when a
+	 *   'link_children' element is present in the ddo_map.
+	 * - May add a synthetic 'link_children_nd' element when non-descriptor children exist.
+	 *
+	 * @return object $child_data - stdClass with the full node payload (see class doc-block
+	 *                              for the complete property list)
 	 */
 	public function get_data() : object {
 
@@ -456,9 +528,31 @@ class ts_object {
 
 	/**
 	* GET_CHILDREN_DATA
+	* Loads, paginates, and formats the direct children of the current node,
+	* returning a structured response consumed by dd_ts_api.
 	*
-	* @param object $options
-	* @return object $response
+	* Workflow:
+	* 1. Instantiates the component_relation_children component identified by
+	*    $options->children_tipo (the tipo from the 'link_children' ddo_map entry).
+	* 2. Determines or computes the total child count; uses a lightweight SQL COUNT
+	*    (component_relation_children::count_children) before falling back to a full load.
+	* 3. Applies pagination: fetches all children when total <= limit, otherwise calls
+	*    get_data_paginated() for the requested slice.
+	* 4. Calls ts_object::parse_child_data() to build the node-data array.
+	*
+	* (!) $options->children_tipo MUST belong to a component with model
+	*     'component_relation_children'; an incorrect model causes an early error return.
+	*
+	* @param object $options - Required keys:
+	*   - children_tipo (string)        — tipo of the component_relation_children
+	*   - default_limit (int)           — page size when caller supplies no pagination
+	*   - area_model (string)           — forwarded to parse_child_data
+	*   - ts_object_options (?object)   — forwarded to parse_child_data
+	*   - pagination (?object)          — {limit, offset[, total]}; null uses default_limit
+	* @return object $response - stdClass with:
+	*   - result (object|false): { ar_children_data: array, pagination: object }
+	*   - msg (string)
+	*   - errors (array)
 	*/
 	public function get_children_data( object $options ) : object {
 
@@ -553,12 +647,27 @@ class ts_object {
 
 	/**
 	 * HAS_CHILDREN_OF_TYPE
-	 * Checks if any of the children matching the criteria exists.
-	 * Optimized with local caching for model and section map lookups.
+	 * Returns true if at least one locator in $ar_children matches the requested
+	 * descriptor / non-descriptor classification.
 	 *
-	 * @param array $ar_children Array of locators
-	 * @param string $type Criteria type ('descriptor' or 'nd')
-	 * @return bool
+	 * The 'descriptor' flag is stored in the is_descriptor relation component of each
+	 * thesaurus term record. A section_id value of 1 means descriptor; 2 means
+	 * non-descriptor (ND).
+	 *
+	 * Performance strategy (mirrors parse_child_data):
+	 * - First tries ts_node_repository::batch_descriptor_flags() for a single SQL query
+	 *   per section_tipo group covering all children at once.
+	 * - Falls back to per-child component_common::get_instance() when the batch returns null.
+	 * - A local $cache_models map avoids re-resolving model and section_map for repeated
+	 *   section_tipos within the same call.
+	 *
+	 * Edge case: when $ar_children is empty and $type === 'descriptor', the
+	 * $options->have_children override is checked. This supports nodes (e.g. persons)
+	 * whose child count is injected at call time without actual child locators.
+	 *
+	 * @param array $ar_children - Array of locator objects (section_tipo + section_id)
+	 * @param string $type       - 'descriptor' (section_id === 1) or 'nd' (section_id === 2)
+	 * @return bool              - true when at least one child matches $type
 	 */
 	public function has_children_of_type( array $ar_children, string $type ) : bool {
 
@@ -649,9 +758,29 @@ class ts_object {
 
 	/**
 	* IS_INDEXABLE
-	* @param string $section_tipo
-	* @param int $section_id
-	* @return bool
+	* Determines whether a specific thesaurus term record is marked as indexable.
+	*
+	* An "indexable" term is one that cataloguers may assign as an index entry to
+	* documentary records. Non-indexable terms (categories, structural nodes, etc.)
+	* exist in the hierarchy but are not selectable for indexation.
+	*
+	* Resolution steps:
+	* 1. Immediately returns false for hierarchy/ontology root sections — they are
+	*    always structural and never indexable.
+	* 2. Resolves the model for $section_tipo; logs and returns false on failure
+	*    (uninstalled TLD, unknown tipo).
+	* 3. Reads the 'is_indexable' entry from the section_map's 'thesaurus' scope.
+	*    Returns false when the entry is null or explicitly set to false.
+	* 4. Instantiates the is_indexable component (a relation component) and checks
+	*    whether its first locator has section_id === 1 (yes).
+	*
+	* Note: the batched variant of this check lives in ts_node_repository::fetch_node_info().
+	* This method is the per-node fallback and is also used directly in get_data() when
+	* $options->is_indexable is not pre-fetched.
+	*
+	* @param string $section_tipo      - Section tipo of the thesaurus term
+	* @param int|string $section_id    - Record identifier of the thesaurus term
+	* @return bool                     - true when the term is marked indexable
 	*/
 	public static function is_indexable( string $section_tipo, int|string $section_id ) : bool {
 
@@ -707,6 +836,8 @@ class ts_object {
 
 	/**
 	* GET_DESCRIPTORS_FROM_CHILDREN
+	* (!) Dead code — entire method body is commented out. Preserved for historical
+	* reference; the active replacement is has_children_of_type() + ts_node_repository.
 	* @return
 	*/
 		// public static function get_descriptors_from_children__DES( $ar_children ) {
@@ -747,8 +878,21 @@ class ts_object {
 
 	/**
 	* SET_TERM_AS_ND
-	* Modifies received array data on term to set as ND (no descriptor)
-	* @return array $ar_elements
+	* Mutates the already-built ar_elements array to mark the term element as
+	* belonging to a non-descriptor (ND) node.
+	*
+	* Called from resolve_element_value() when the 'ND' icon component reveals that
+	* this term's is_descriptor component has section_id === 2. The method finds the
+	* first element of type 'term' and (currently) leaves its value unchanged — the
+	* commented-out wrapping in a <span class="no_descriptor"> was the original intent
+	* but was deferred; the break still stops further processing to avoid touching
+	* unrelated elements.
+	*
+	* (!) Passes $ar_elements by reference and also returns it — callers may use either
+	*     form, but the in-place mutation is the operative effect.
+	*
+	* @param array &$ar_elements - The node's ar_elements array; mutated in place
+	* @return array $ar_elements - The same array (reference return for chaining)
 	*/
 	public static function set_term_as_nd( array &$ar_elements ) : array {
 
@@ -776,11 +920,16 @@ class ts_object {
 
 
 	/**
-	* get_term_data_by_locator
-	* Delegate of ts_term_resolver::get_term_data_by_locator (kept here because
-	* diffusion/export/portal code calls it on ts_object).
-	* @param object $locator
-	* @return array|null $final_value
+	* GET_TERM_DATA_BY_LOCATOR
+	* Returns the raw component data array (merged across all 'term' tipos of the
+	* section_map 'thesaurus' scope) for the term identified by $locator.
+	*
+	* Thin static delegate to ts_term_resolver::get_term_data_by_locator(). Kept
+	* on ts_object because diffusion, export, and portal code targets this class
+	* directly; the resolution logic lives entirely in ts_term_resolver.
+	*
+	* @param object $locator      - Locator object with section_tipo and section_id
+	* @return array|null $final_value - Merged data items or null on failure
 	*/
 	public static function get_term_data_by_locator( object $locator ) : ?array {
 
@@ -791,14 +940,19 @@ class ts_object {
 
 	/**
 	 * GET_TERM_BY_LOCATOR
-	 * Retrieves the string representation of a term given its locator.
-	 * Delegate of ts_term_resolver::get_term_by_locator (kept here because
-	 * diffusion/export/portal code calls it on ts_object).
+	 * Returns the display string for the term identified by $locator, in $lang,
+	 * with optional request-scope caching.
 	 *
-	 * @param object $locator
-	 * @param string $lang
-	 * @param bool $from_cache
-	 * @return string|null
+	 * Thin static delegate to ts_term_resolver::get_term_by_locator(). Kept on
+	 * ts_object because diffusion, export, and portal code targets this class.
+	 * Passes the $scope parameter at its default ('thesaurus') so callers that
+	 * rely on ts_object do not need to know about scope resolution.
+	 *
+	 * @param object $locator         - Locator with section_tipo and section_id
+	 * @param string $lang = DEDALO_DATA_LANG - Language code for the term lookup
+	 * @param bool $from_cache = false - When true, check $term_by_locator_data_cache
+	 *                                   before loading the component
+	 * @return string|null            - Resolved term string, or null on failure
 	 */
 	public static function get_term_by_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) : ?string {
 
@@ -809,11 +963,17 @@ class ts_object {
 
 	/**
 	* INVALIDATE_NODE
-	* Targeted cache eviction after a tree mutation (add_child, move, reorder):
-	* drops the node's cached term strings and the resolved children cache
-	* (sqo-hash keyed: tree mutations invalidate broadly and it is cheap to rebuild).
-	* @param string $section_tipo
-	* @param int|string $section_id
+	* Targeted cache eviction after a tree mutation (add_child, move, reorder).
+	*
+	* Evicts the affected node's term strings from ts_term_resolver's cache (all langs,
+	* all scopes) and purges the entire $resolved_child_cache. The child cache is keyed
+	* by SQO hash, not by node identity, so a node mutation invalidates an unknown set
+	* of child lists — a full purge is simpler and cheap to rebuild on the next request.
+	*
+	* Called by the ts_tree add/move/reorder operations after a successful DB write.
+	*
+	* @param string $section_tipo   - Section tipo of the mutated node
+	* @param int|string $section_id - Record ID of the mutated node
 	* @return void
 	*/
 	public static function invalidate_node( string $section_tipo, int|string $section_id ) : void {
@@ -826,8 +986,12 @@ class ts_object {
 
 	/**
 	* CLEAR
-	* Full static cache reset. Registered in worker cache_manager (RoadRunner)
-	* so long-running workers never serve tree data cached in a previous request.
+	* Full static cache reset for all ts_object request-scope caches.
+	*
+	* Resets both ts_term_resolver::$term_by_locator_data_cache and the local
+	* $resolved_child_cache. Registered in the RoadRunner worker cache_manager so
+	* that persistent workers never serve data cached in a previous HTTP request.
+	*
 	* @return void
 	*/
 	public static function clear() : void {
@@ -840,8 +1004,14 @@ class ts_object {
 
 	/**
 	* RESOLVE_LOCATOR
-	* Alias of get_term_by_locator
-	* @return string|null
+	* Instance-method alias of the static get_term_by_locator().
+	* Provided for callers that hold a ts_object instance and prefer instance-method
+	* call syntax over the static form.
+	*
+	* @param object $locator         - Locator with section_tipo and section_id
+	* @param string $lang = DEDALO_DATA_LANG - Language code
+	* @param bool $from_cache = false - Pass true to use the request-scope term cache
+	* @return string|null            - Resolved term string or null on failure
 	*/
 	public function resolve_locator( object $locator, string $lang=DEDALO_DATA_LANG, bool $from_cache=false ) : ?string {
 		return ts_object::get_term_by_locator($locator, $lang, $from_cache);
@@ -851,9 +1021,18 @@ class ts_object {
 
 	/**
 	* GET_COMPONENT_ORDER_TIPO
-	* Alias of hierarchy::get_element_tipo_from_section_map
-	* @param string $section_tipo
-	* @return string|null $element_tipo
+	* Returns the ontology tipo of the 'order' component for the given section.
+	*
+	* The order component (typically a component_number) stores the display sort
+	* position of a term within its parent. Its tipo is read from the section_map
+	* 'thesaurus' scope under the 'order' key.
+	*
+	* This is an alias of hierarchy::get_element_tipo_from_section_map() kept on
+	* ts_object so parse_child_data can call it without depending on hierarchy directly.
+	* Returns null when no order component is configured for the section.
+	*
+	* @param string $section_tipo - Section tipo to inspect
+	* @return string|null $element_tipo - Tipo of the order component, or null
 	*/
 	public static function get_component_order_tipo( string $section_tipo ) : ?string {
 
@@ -868,10 +1047,24 @@ class ts_object {
 
 	/**
 	* GET_PERMISSIONS_ELEMENT
-	* Resolve permissions value for given element name (model)
-	* E.g. 'button_new'
-	* @param string $element_name
-	* @return int $permissions
+	* Resolves the permission bitmask for a named UI control on this thesaurus node.
+	*
+	* The root hierarchy (DEDALO_HIERARCHY_SECTION_TIPO) and thesaurus root
+	* (DEDALO_THESAURUS_SECTION_TIPO) have hardcoded tipo constants for their
+	* standard buttons; all other sections resolve the button tipo dynamically from
+	* the section's child components via a closure.
+	*
+	* Known element names and their handling:
+	* - 'button_new'    — hierarchy: uses DEDALO_HIERARCHY_BUTTON_NEW_TIPO;
+	*                     thesaurus: uses DEDALO_THESAURUS_BUTTON_NEW_TIPO;
+	*                     other: resolved non-recursively from section children.
+	* - 'button_delete' — hierarchy: always 0 (deletion of hierarchy roots is disallowed);
+	*                     thesaurus: uses DEDALO_THESAURUS_BUTTON_DELETE_TIPO;
+	*                     other: resolved non-recursively from section children.
+	* - any other       — resolved recursively from section children.
+	*
+	* @param string $element_name - UI control name (e.g. 'button_new', 'button_delete')
+	* @return int $permissions    - Permission bitmask (0 = no access)
 	*/
 	public function get_permissions_element( string $element_name ) : int {
 
@@ -934,18 +1127,35 @@ class ts_object {
 
 	/**
 	* GET_COUNT_DATA_GROUP_BY
-	* Counts indexation related items
-	* @param object $component
-	* 	component indexation
-	* @param object section_list_thesaurus_item
-	* sample:
+	* Returns a grouped count of indexation cross-references for this node's icon display.
+	*
+	* When a section_list_thesaurus entry is an 'icon' of type component_relation_index and
+	* includes a 'show_data' key, the icon must display the total number of documentary
+	* records that reference this term (or any of its descendant terms). This method
+	* computes that count.
+	*
+	* When 'show_data' is present:
+	* - Builds a search_query_object (SQO) anchored to this node and its recursive children.
+	* - Caches the raw child result set by SQO hash (up to 1 000 entries) to avoid
+	*   repeated DB queries when multiple icons request the same subtree.
+	* - Wraps each matched record in a locator filtered by the component's relation_type,
+	*   then delegates counting to component->count_data_group_by().
+	*
+	* When 'show_data' is absent, delegates directly to component->count_data_group_by()
+	* with no filter (counts all direct indexation references).
+	*
+	* The result shape mirrors component_relation_index::count_data_group_by():
+	* ```
 	* {
-	*	"icon": "TCHI",
-	*	"tipo": "tchi59",
-	*	"type": "icon",
-	*	"show_data": "children"
+	*   total: int,
+	*   totals_group: [ { key: string, label: string, count: int }, … ]
 	* }
-	* @return object $count_data_group_by
+	* ```
+	*
+	* @param object $component                  - Instantiated component_relation_index
+	* @param object $section_list_thesaurus_item - The ddo_map entry driving this icon, e.g.:
+	*   { "icon": "TCHI", "tipo": "tchi59", "type": "icon", "show_data": "children" }
+	* @return object $count_data_group_by       - Aggregated count result
 	*/
 	public function get_count_data_group_by( object $component, object $section_list_thesaurus_item ) : object {
 
@@ -1022,9 +1232,13 @@ class ts_object {
 
 	/**
 	* IS_ONTOLOGY
-	* Checks if current context is in ontology or in thesaurus
-	* as boolean based on $this->options->area_model set on construct.
-	* @return bool
+	* Returns true when this node is being rendered in the area_ontology context.
+	*
+	* The rendering area is set in $options->area_model at construct time by the
+	* calling controller (dd_ts_api). The distinction matters for certain display
+	* rules (e.g. 'link_children' suppression for root sections in get_ar_elements).
+	*
+	* @return bool - true when options->area_model === 'area_ontology'
 	*/
 	public function is_ontology() : bool {
 		$area_model = $this->options->area_model ?? null;
@@ -1036,13 +1250,30 @@ class ts_object {
 
 	/**
 	 * PROCESS_ELEMENT_DETAILS
-	 * Iterates over the element types configuration and processes the data for the current object.
+	 * Resolves component data for a single ddo_map entry and populates $element_obj.
 	 *
-	 * @param object $current_object
-	 * @param array $ar_element_tipo
-	 * @param object $element_obj
-	 * @param object $data Global data object
-	 * @return bool Returns true if the element is valid and should be added, false if it should be skipped.
+	 * Called once per ddo_map entry by get_data(). $ar_element_tipo is normalised to an
+	 * array upstream so that composite tipos (arrays in the ddo_map) are handled uniformly.
+	 * For each tipo in the array the method:
+	 * 1. Validates the model (returns false for 'box elements' or unresolvable types).
+	 * 2. Checks for a legacy component_relation_struct model (skipped; that model was
+	 *    replaced by component_relation_index).
+	 * 3. Instantiates the component via load_component_instance().
+	 * 4. Fetches and formats component data via format_component_data().
+	 * 5. Assigns the element's value and side-effects via resolve_element_value().
+	 * 6. Captures model_value for 'M' (model) icon elements.
+	 * 7. Attaches show_data when present in the ddo_map entry.
+	 *
+	 * Returns false to signal that the calling get_data() loop must skip (not add) this
+	 * element_obj — used when the element has no data, is an excluded icon type, or an
+	 * invalid model is detected.
+	 *
+	 * @param object $current_object  - The ddo_map entry object (type, tipo, icon?, show_data?)
+	 * @param array $ar_element_tipo  - Normalised array of tipo strings from $current_object
+	 * @param object $element_obj     - Output element being assembled (mutated by reference)
+	 * @param object $data            - The node's main data object; mutated for side effects
+	 *                                  (children_tipo, is_descriptor, ar_elements extras)
+	 * @return bool                   - true when $element_obj is ready to add; false to skip it
 	 */
 	protected function process_element_details(object $current_object, array $ar_element_tipo, object $element_obj, object $data) : bool {
 
@@ -1111,7 +1342,16 @@ class ts_object {
 
 	/**
 	 * LOAD_COMPONENT_INSTANCE
-	 * Helper to instantiate a component
+	 * Instantiates a component for the given tipo relative to this node's section.
+	 *
+	 * Always uses mode 'list_thesaurus' regardless of $this->mode, because thesaurus
+	 * node rendering always reads the same language-aware list format.
+	 * The language is resolved via common::get_element_lang() to respect per-elemento
+	 * language overrides (e.g. monolingual components).
+	 *
+	 * @param string $model_name  - Component model class name (e.g. 'component_input_text')
+	 * @param string $element_tipo - Ontology tipo of the component to instantiate
+	 * @return component_common   - Instantiated component
 	 */
 	protected function load_component_instance(string $model_name, string $element_tipo) : component_common {
 		$lang = common::get_element_lang($element_tipo, DEDALO_DATA_LANG);
@@ -1127,7 +1367,23 @@ class ts_object {
 
 	/**
 	 * FORMAT_COMPONENT_DATA
-	 * detailed data formatting logic
+	 * Applies model-specific post-processing to raw component data before value assignment.
+	 *
+	 * Switch cases by model/tipo combination:
+	 * - hierarchy portals: data passed through unchanged (portal data is not term-resolved).
+	 * - component_autocomplete_hi / component_portal: each locator in the data array is
+	 *   resolved to a term string via get_term_by_locator() with cache enabled.
+	 * - component_relation_related: merges inverse (bidirectional) related references into
+	 *   the data array (only when the relation type is not unidirectional).
+	 * - component_svg: replaces the data array with a URL string (with cache-bust query)
+	 *   or an empty string when the file does not exist on disk.
+	 * - all others: data is returned unmodified.
+	 *
+	 * @param string $model_name          - Model class name of the component
+	 * @param string $element_tipo        - Ontology tipo of the component
+	 * @param component_common $component - The already-instantiated component
+	 * @param mixed $component_data       - Raw data as returned by get_data_lang() or []
+	 * @return mixed $component_data      - Post-processed data, ready for resolve_element_value()
 	 */
 	protected function format_component_data(string $model_name, string $element_tipo, component_common $component, mixed $component_data): mixed {
 
@@ -1175,9 +1431,33 @@ class ts_object {
 
 	/**
 	 * RESOLVE_ELEMENT_VALUE
-	 * Processes the logic for assigning values to the element object based on its type.
+	 * Assigns a value to $element_obj (and triggers side effects on $data) based on
+	 * the element's 'type' field. Returns false when the element should be suppressed.
 	 *
-	 * @return bool Returns false if the processing indicates the element should be skipped.
+	 * Type dispatch:
+	 * - 'term': concatenates the (possibly multi-field) term string into element_obj->value
+	 *   with a space separator; falls back to the component's lang-fallback data when the
+	 *   primary language data is empty and decorates the fallback with an "untranslated" marker.
+	 * - 'icon':
+	 *   * 'CH' icon — always skipped (suppressed in this context).
+	 *   * 'ND' icon — when the is_descriptor component shows section_id === 2, marks the
+	 *     node as non-descriptor (calls set_term_as_nd, sets data->is_descriptor = false);
+	 *     always returns false (the ND icon itself is not rendered as a visible element).
+	 *   * component_relation_index icons — calls get_count_data_group_by(); skips when
+	 *     total is 0; enriches count_result->totals_group with labels.
+	 *   * other icons — skipped when component_data is empty.
+	 * - 'link_children': sets data->children_tipo and data->has_descriptor_children;
+	 *   appends a synthetic 'link_children_nd' element when ND children are detected.
+	 * - default: assigns $component_data directly as the element value.
+	 *
+	 * @param object $current_object      - The ddo_map entry (type, tipo, icon?, show_data?)
+	 * @param object $element_obj         - Element being assembled (mutated)
+	 * @param string $element_tipo        - The specific tipo being processed
+	 * @param string $model_name          - Model class name of the component
+	 * @param component_common $component - The instantiated component
+	 * @param mixed $component_data       - Formatted data from format_component_data()
+	 * @param object $data                - Node data object; mutated for side effects
+	 * @return bool                       - false signals the caller to skip this element
 	 */
 	protected function resolve_element_value(object $current_object, object $element_obj, string $element_tipo, string $model_name, component_common $component, mixed $component_data, object $data): bool {
 
@@ -1283,6 +1563,24 @@ class ts_object {
 
 
 	# ACCESSORS
+	# Generic dynamic getter/setter pattern used across Dédalo components.
+	# Calls of the form $obj->set_foo($val) and $obj->get_foo() are intercepted
+	# here and routed to SetAccessor / GetAccessor without requiring individual
+	# per-property methods.
+
+	/**
+	* __CALL
+	* Magic method that intercepts calls to undefined instance methods matching the
+	* 'set_*' or 'get_*' naming convention and routes them to SetAccessor / GetAccessor.
+	*
+	* Prefix 'set_' writes the first argument to the property named by the suffix.
+	* Prefix 'get_' reads and returns the property named by the suffix.
+	* Any other prefix returns false.
+	*
+	* @param string $strFunction   - The called method name (e.g. 'set_order', 'get_mode')
+	* @param array $arArguments    - Arguments passed to the dynamic call
+	* @return mixed                - Property value (get), true/false (set), or false on mismatch
+	*/
 	final public function __call(string $strFunction, array $arArguments) {
 
 		$strMethodType 		= substr($strFunction, 0, 4); # like set or get_
@@ -1298,6 +1596,17 @@ class ts_object {
 		}
 		return(false);
 	}
+
+	/**
+	* SETACCESSOR
+	* Writes $strNewValue to the named property when it exists on the instance.
+	* Returns false (not an exception) when the property does not exist, preserving
+	* the lenient accessor contract used across the codebase.
+	*
+	* @param string $strMember   - Property name (without 'set_' prefix)
+	* @param mixed $strNewValue  - Value to assign
+	* @return bool               - true on success, false when property is not defined
+	*/
 	# SET
 	final protected function SetAccessor(string $strMember, $strNewValue) : bool {
 
@@ -1311,6 +1620,16 @@ class ts_object {
 			return false;
 		}
 	}
+
+	/**
+	* GETACCESSOR
+	* Reads and returns the named property when it exists on the instance.
+	* Returns false (not null) when the property does not exist, preserving
+	* the lenient accessor contract used across the codebase.
+	*
+	* @param string $strMember - Property name (without 'get_' prefix)
+	* @return mixed            - Property value, or false when property is not defined
+	*/
 	# GET
 	final protected function GetAccessor(string $strMember) {
 

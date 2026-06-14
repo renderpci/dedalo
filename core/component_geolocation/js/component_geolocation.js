@@ -4,6 +4,49 @@
 
 
 
+/**
+* COMPONENT_GEOLOCATION
+* Client-side controller for the geolocation component in Dédalo v7.
+*
+* Wraps a Leaflet map with one or more named FeatureGroups (layers). Each layer
+* stores GeoJSON geometry (points, circles, polygons, polylines) that is
+* serialised inside the component's `dato` under `entries[key].lib_data`.
+*
+* Key responsibilities:
+* - Lazy-loading Leaflet, leaflet-geoman, turf.js, and iro.js via `load_libs`.
+* - Creating the Leaflet map instance for every `data.entries` entry in `get_map`.
+* - Keeping `current_value` in sync with the map view and geometry edits so the
+*   save button always commits the most recent state.
+* - Bridging with linked `component_text_area` instances through `event_manager`
+*   events: inserting/removing geo-tags triggers `load_tag_into_geo_editor` /
+*   `handle_click_no_tag`, while geometry edits publish `updated_layer_data_<id_base>`.
+* - Responding to external portal selections (`map_update_coordinates`) so that
+*   clicking a toponymy record re-centres the map to its own coordinates.
+*
+* Data shape stored in `data.entries[key]`:
+* ```json
+* {
+*   "lat"      : 39.462571,
+*   "lon"      : -0.376295,
+*   "zoom"     : 16,
+*   "alt"      : 0,
+*   "lib_data" : [
+*     {
+*       "layer_id"        : 1,
+*       "layer_data"      : { "type": "FeatureCollection", "features": [...] },
+*       "user_layer_name" : "layer_1"
+*     }
+*   ]
+* }
+* ```
+*
+* Provider switch: controlled by `context.features.geo_provider` (OSM | GOOGLE |
+* ARCGIS | NUMISDATA | VARIOUS). Only OSM has automatic light/dark tile swapping
+* via a MutationObserver on `document.documentElement[data-theme]`.
+*
+* Main exports: `component_geolocation` constructor.
+*/
+
 // imports
 	import {common} from '../../common/js/common.js'
 	import {clone, get_json_langs, load_style, load_script} from '../../common/js/utils/index.js'
@@ -18,15 +61,37 @@
 // OSM tile URLs per theme
 // To switch to MapTiler dark tiles once you have an API key, replace TILE_URLS.dark with:
 // 'https://api.maptiler.com/maps/streets-v4-dark/{z}/{x}/{y}.png?key=YOUR_KEY'
+
+/** @type {Object} Leaflet tile URL templates indexed by UI theme name. */
 const TILE_URLS = {
 	light : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
 	dark  : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
 }
+
+/** @type {Object} Attribution HTML strings to display below the map per theme. */
 const TILE_ATTR = {
 	light : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
 	dark  : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
 }
+
+/**
+* FN_IS_DARK
+* Returns true when the page is currently rendered in dark mode.
+* Detection relies on the `data-theme` attribute set by the Dédalo theme system
+* on `document.documentElement`.
+* @returns {boolean}
+*/
 const fn_is_dark   = () => document.documentElement.dataset.theme === 'dark'
+
+/**
+* FN_OSM_LAYER
+* Builds a Leaflet tile layer pre-configured for the current light/dark theme.
+* Automatically picks the correct TILE_URLS and TILE_ATTR entries.
+* Called both at map creation time and again each time the MutationObserver
+* detects a theme change (the old tile layer is removed before calling this).
+* @param {Object} options - Extra Leaflet tileLayer options merged with defaults.
+* @returns {Object} Leaflet TileLayer instance ready to be added to a map.
+*/
 const fn_osm_layer = (options = {}) => {
 	const dark = fn_is_dark()
 	return L.tileLayer(dark ? TILE_URLS.dark : TILE_URLS.light, {
@@ -38,28 +103,52 @@ const fn_osm_layer = (options = {}) => {
 
 
 
+/**
+* COMPONENT_GEOLOCATION
+* Constructor for the geolocation component client instance.
+*
+* All properties below are declared here for discoverability; most are
+* populated by `component_common.prototype.init` and `init` in this file.
+* The render views (edit/list/search) add further runtime properties
+* (e.g. `node.content_data`) to the instance.
+*/
 export const component_geolocation = function(){
 
+	/** @type {string} Unique instance identifier assigned by common.init. */
 	this.id
 
 	// element properties declare
+	/** @type {string} Component model name, always 'component_geolocation'. */
 	this.model
+	/** @type {string} Structure tipo of this component (e.g. 'hierarchy31'). */
 	this.tipo
+	/** @type {string} Section tipo that owns this component. */
 	this.section_tipo
+	/** @type {number|string} Record identifier of the current section. */
 	this.section_id
+	/** @type {string} Render mode: 'edit' | 'list' | 'search' | 'tm'. */
 	this.mode
+	/** @type {string} Active data language code (e.g. 'lg-spa'). */
 	this.lang
+	/** @type {string} Language code used by the parent section. */
 	this.section_lang
 
+	/** @type {Object} Server-side context object (permissions, features, etc.). */
 	this.context
+	/** @type {Object} Server-side data object; `data.entries` holds coordinate records. */
 	this.data
 
+	/** @type {Object} Parent component or section instance. */
 	this.parent
+	/** @type {HTMLElement} Root DOM node for this component. */
 	this.node
 
+	/** @type {Array} Tool instances attached to this component. */
 	this.tools
 
+	/** @type {boolean} Whether duplicate entries are allowed (always false here). */
 	this.duplicates = false
+	/** @type {Array} Tokens returned by event_manager.subscribe calls, used for cleanup. */
 	this.events_tokens
 }//end component_geolocation
 
@@ -67,13 +156,19 @@ export const component_geolocation = function(){
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend component_geolocation with shared prototype methods from common and
+* component_common modules.
+*
+* destroy is overridden locally to disconnect the MutationObserver that swaps
+* OSM tile layers on theme changes before delegating to the base destroyer.
 */
 // prototypes assign
 	component_geolocation.prototype.build				= component_common.prototype.build
 	component_geolocation.prototype.render				= common.prototype.render
 	component_geolocation.prototype.destroy				= async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 		const self = this
+		// theme_observer watches document.documentElement[data-theme] to swap OSM tiles;
+		// it must be disconnected here to prevent the callback referencing a torn-down map.
 		if (self.theme_observer) {
 			self.theme_observer.disconnect()
 			self.theme_observer = null
@@ -111,6 +206,7 @@ export const component_geolocation = function(){
 
 	// render
 	component_geolocation.prototype.list				= render_list_component_geolocation.prototype.list
+	// (!) tm mode reuses the list render — no separate time-machine view for geolocation.
 	component_geolocation.prototype.tm					= render_list_component_geolocation.prototype.list
 	component_geolocation.prototype.edit				= render_edit_component_geolocation.prototype.edit
 	component_geolocation.prototype.search				= render_search_component_geolocation.prototype.search
@@ -121,8 +217,19 @@ export const component_geolocation = function(){
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Initialises the geolocation component instance after the base component_common
+* init has run. Sets all Leaflet-specific state properties to their defaults and
+* establishes the geographic fallback position.
+*
+* Leaflet libraries are NOT loaded here; they are loaded lazily by `get_map` via
+* `load_libs` to avoid blocking the page when the map is not yet in view.
+*
+* Event observations (e.g. `click_tag_geo` → `load_tag_into_geo_editor`) are wired
+* up through the ontology properties config rather than explicitly here; see the
+* in-code example below for the expected properties shape.
+*
+* @param {Object} options - Standard init options passed through from component_common.
+* @returns {Promise<boolean>} Resolves to the result of component_common.prototype.init.
 */
 component_geolocation.prototype.init = async function(options) {
 
@@ -131,12 +238,12 @@ component_geolocation.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await component_common.prototype.init.call(this, options);
 
-	// short vars
-		self.ar_layer_loaded	= null
-		self.map				= null
-		self.tile_layer			= null
-		self.theme_observer		= null
-		self.layer_control		= false
+	// Leaflet map state — all set to null/false/empty until get_map() creates the instance.
+		self.ar_layer_loaded	= null  // Array<{layer_id, layer_data, user_layer_name}> cloned from data on get_map
+		self.map				= null  // Leaflet Map instance
+		self.tile_layer			= null  // active Leaflet TileLayer (OSM provider only)
+		self.theme_observer		= null  // MutationObserver watching data-theme for dark mode tile swap
+		self.layer_control		= false // Leaflet layer-control widget; false = not yet created
 
 	// temporary data_value: component_geolocation does not save the values when the inputs change their value.
 	// We need a temporary value for all current values of the inputs (lat, lon, zoom, alt)
@@ -144,18 +251,18 @@ component_geolocation.prototype.init = async function(options) {
 		this.current_value = []
 
 	// draw editor vars
-		self.drawControl				= null
-		self.draw_editor_is_initated	= false
-		self.FeatureGroup				= {}
-		self.active_layer_id			= 1
+		self.drawControl				= null   // unused placeholder; kept for future leaflet-draw migration
+		self.draw_editor_is_initated	= false  // guards against double init_draw_editor calls
+		self.FeatureGroup				= {}     // plain object keyed by layer_id → Leaflet FeatureGroup
+		self.active_layer_id			= 1      // layer_id that receives new geometry from the toolbar
 
 	// Data buffer will store the changes send by text area when the tags are removed or inserted
 	// if the user undo the remove tag in the editor, restore for the data_buffer the layer data
 	// this var will not save in DB, if the user delete the tag and do not undo in the same session or close the window the buffer will erase
-		self.ar_data_buffer = []
+		self.ar_data_buffer = []  // sparse array indexed by layer_id; allows undo of geo-tag removal
 
 	// self default value when the component doesn't has any value, data = null
-	// default value
+	// default value — Valencia city centre; used when data.entries is absent or empty
 		self.default_value = {
 			lat		: 39.462571,
 			lon		: -0.376295,
@@ -186,9 +293,22 @@ component_geolocation.prototype.init = async function(options) {
 
 /**
 * LOAD_LIBS
-* Load Leaflet lib and accessories
-* @return promise
-* 	bool true
+* Lazy-loads all third-party scripts and stylesheets required by the map editor,
+* in dependency order:
+*  1. Leaflet CSS + JS  — must resolve before geoman attaches itself to L.
+*  2. leaflet-geoman CSS + JS — drawing toolbar, geometry editing, and pm.* API.
+*  3. json_langs — user-language lookup table used to set geoman's UI language.
+*  4. turf.js — geometry calculations used by `get_popup_content` (area, distance).
+*  5. iro.js — color-picker library used by `render_color_picker` in popups.
+*
+* CSS files are injected without awaiting because they do not block JS execution.
+* Each JS `load_script` call is awaited so the dependent library is never reached
+* before its dependency.
+*
+* (!) Leaflet exposes itself as the global `L` (listed in the `globals` pragma).
+*     turf.js exposes `turf`; iro.js exposes `iro` — both used in this file.
+*
+* @returns {Promise<boolean>} Resolves true when all scripts have loaded.
 */
 component_geolocation.prototype.load_libs = async function () {
 
@@ -267,10 +387,35 @@ component_geolocation.prototype.load_libs = async function () {
 
 /**
 * GET_MAP
-* Load the libraries and specific CSS
-* @param HTMLElement map_container
-* @param integer key
-* @return bool
+* Creates and fully initialises a Leaflet map inside `map_container` for the
+* entry at index `key` within `data.entries`. This is the main entry point
+* called by the edit view for each entry row.
+*
+* Sequence:
+*  1. Lazily loads Leaflet and companion libraries via `load_libs`.
+*  2. Reads coordinate data from `data.entries[key]`; falls back to
+*     `default_value` when entries is absent.
+*  3. Clones the entry into `current_value[key]` and `ar_layer_loaded` so that
+*     subsequent edits do not mutate the server-received data directly.
+*  4. Constructs the Leaflet Map and tile layers according to
+*     `context.features.geo_provider`. Provider-specific notes:
+*     - OSM: single tile layer with automatic dark/light swap via MutationObserver.
+*     - GOOGLE: uses the third-party `L.Google` plugin (must be loaded separately).
+*     - ARCGIS: single satellite imagery tile layer.
+*     - NUMISDATA: three base layers (dare, arcgis, osm) with a layer-selector control.
+*     - VARIOUS: arcgis + osm base layers with a layer-selector control.
+*  5. Attaches map-level event handlers (dragend, zoomend, click, overlayadd) that
+*     keep `current_value[key]` and the coordinate input fields in sync.
+*  6. On `whenReady`: initialises the geoman draw toolbar, sets the PM UI language
+*     to match `page_globals.dedalo_data_lang`, and loads the first FeatureGroup.
+*
+* (!) Scroll-wheel zoom is intentionally disabled to avoid accidental zoom while
+* scrolling the page. Enable it only if the map occupies the full viewport.
+*
+* @param {HTMLElement} map_container - The div that Leaflet will mount the map into.
+* @param {number} key - Index into `data.entries` (and `current_value`) for this map.
+* @returns {Promise<boolean>} Resolves true after map setup; does NOT wait for
+*   `whenReady` to fire (that fires asynchronously after the DOM is painted).
 */
 component_geolocation.prototype.get_map = async function(map_container, key) {
 
@@ -279,7 +424,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 	// load libs
 		await self.load_libs()
 
-	// defaults
+	// defaults — when data is absent use the component's geographic fallback position
 		const entries = self.data.entries || [self.default_value]
 
 	// get data
@@ -292,12 +437,12 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 	// current_value will be update with different changes to create change_data to save
 		self.current_value[key] = clone(entries[key])
 
-	// load all layers
+	// load all layers — deep-clone so that geometry edits don't mutate data.entries
 		self.ar_layer_loaded = typeof entries[key].lib_data!=='undefined'
 			? clone(entries[key].lib_data)
 			: []
 
-	// map_data
+	// map_data — normalise coordinates to x/y for L.LatLng construction
 		const map_data = (typeof entries!=='undefined')
 			? {
 				x		: field_lat,
@@ -318,7 +463,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		let dare		= null
 		let base_maps	= {}
 
-	// Add layer to map
+	// Add layer to map — provider is configured per-section in context.features.geo_provider
 		switch(self.context.features.geo_provider) {
 
 			case 'OSM':
@@ -355,6 +500,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				// dare = new L.tileLayer('http://pelagios.org/tilesets/imperium/{z}/{x}/{y}.png',{
 				// 	maxZoom: 11
 				// });
+				// dare: Digital Atlas of the Roman Empire — ancient world tile overlay
 				dare = new L.TileLayer('https://dh.gu.se/tiles/imperium/{z}/{x}/{y}.png',{
 					maxZoom: 11
 				});
@@ -367,7 +513,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				// MAP
 				self.map = new L.map(map_container, {layers: [osm], center: new L.LatLng(map_data.x, map_data.y), zoom: map_data.zoom});
 
-				// LAYER SELECTOR
+				// LAYER SELECTOR — allows toggling among dare, arcgis, and osm base layers
 				base_maps = {
 					dare	: dare,
 					arcgis	: arcgis,
@@ -396,21 +542,22 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				break;
 		}//end switch(self.context.features.geo_provider)
 
-	// set active layer
+	// set active layer — when the user checks an overlay in the layer control, track it
 		self.map.on('overlayadd', function(e) {
 			self.active_layer_id = e.name
 		})
 		// self.map.pm.setGlobalOptions({ measurements: { measurement: true, displayFormat: 'metric' } })
 
-	// disable zoom handlers
+	// disable zoom handlers — prevents unintentional zoom during page scroll
 		self.map.scrollWheelZoom.disable();
 		// disable tap handler, if present.
 		// if (self.map.tap) self.map.tap.disable();
 
-	// map move listeners
+	// map move listeners — sync coordinate inputs and current_value after user interaction
+
 		self.map.on('dragend', function(){
 
-			// Update input values
+			// Update input values after the user pans the map
 			self.update_input_values(
 				key,
 				{
@@ -422,7 +569,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 			)
 		});
 		self.map.on('zoomend', function(){
-			// Update input values
+			// Update input values after the user zooms the map
 			self.update_input_values(
 				key,
 				{
@@ -435,7 +582,7 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 			)
 		});
 		self.map.on('click', function(e){
-			// disable layers
+			// disable layers — clicking the map canvas (not a feature) exits geometry edit mode
 			for (let feature in self.FeatureGroup) {
 				const feature_group = self.FeatureGroup[feature]
 				feature_group.eachLayer(function (layer){
@@ -444,12 +591,12 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 			}
 		})
 
-	// map ready event
+	// map ready event — fires once Leaflet has painted its first frame
 		self.map.whenReady(async function(){
-			// init map editor
+			// init map editor — attaches geoman toolbar and pm:create/pm:cut/pm:remove events
 				self.init_draw_editor()
 
-			// set the lang of the tool
+			// set the lang of the tool — map geoman UI matches the user's Dédalo data language
 				const json_langs = self.json_langs || await get_json_langs() || []
 				if (json_langs.length<1) {
 					console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
@@ -457,14 +604,14 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 				const dedalo_lang	= page_globals.dedalo_data_lang
 				const lang_obj		= json_langs.find(item => item.dd_lang===dedalo_lang)
 				const lang			= lang_obj
-					? lang_obj.tld2
+					? lang_obj.tld2  // two-letter ISO 639-1 code consumed by geoman setLang
 					: 'en'
 				self.map.pm.setLang(lang);
 
 			// check if the map has any layer loaded, if not create new one
 				const check_layer_loaded = self.FeatureGroup[self.active_layer_id]
 				if(!check_layer_loaded){
-					// load_layer
+					// load_layer — create the default FeatureGroup for active_layer_id when none exists
 					self.layers_loader({
 						load 		: 'layer',
 						layer_id	: self.active_layer_id
@@ -479,10 +626,23 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 /**
 * UPDATE_INPUT_VALUES
-* @param integer key
-* @param object data
-* @param HTMLElement map_container
-* @return bool true
+* Writes new coordinate values into both the visible `<input>` fields and the
+* in-memory `current_value[key]` buffer. Called after every map drag, zoom, or
+* external coordinate update so that the inputs always reflect the map state.
+*
+* The `alt` field is read back from the DOM rather than from `data` because
+* altitude is entered manually by the user and not emitted by Leaflet map events.
+*
+* (!) This method intentionally does NOT call `set_changed_data`. Panning and
+* zooming do not auto-save; only an explicit click of the save button commits the
+* new position to the database. See the disabled block at the end of the method
+* body for the original intent.
+*
+* @param {number} key - Index into `current_value` identifying the active entry.
+* @param {Object} data - New coordinate values: `{lat, lon, zoom, [alt]}`.
+* @param {HTMLElement} map_container - The map's root element; its `parentNode`
+*   is expected to contain the `input[data-name=*]` coordinate fields.
+* @returns {boolean} Always true.
 */
 component_geolocation.prototype.update_input_values = function(key, data, map_container) {
 
@@ -490,25 +650,25 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 
 	const content_value = map_container.parentNode
 
-	// inputs
+	// inputs — found by data-name attribute within the same content_value wrapper
 		const input_lat		= content_value.querySelector("input[data-name='lat']")
 		const input_lon		= content_value.querySelector("input[data-name='lon']")
 		const input_zoom	= content_value.querySelector("input[data-name='zoom']")
 		const input_alt		= content_value.querySelector("input[data-name='alt']")
 
-	// Set values to inputs
+	// Set values to inputs — guard for inputs not present in the current view
 		if (input_lat) input_lat.value	= data.lat
 		if (input_lon) input_lon.value	= data.lon
 		if (input_zoom) input_zoom.value = data.zoom
 
-	// get the value from alt input
+	// get the value from alt input — altitude is not provided by Leaflet events; read from the DOM
 		if (input_alt) {
 			data.alt = input_alt.value
 				? parseFloat(input_alt.value)
 				: null
 		}
 
-	// set the current value
+	// set the current value — keep in-memory buffer in sync for the next save
 		self.current_value[key].lat		= data.lat
 		self.current_value[key].lon		= data.lon
 		self.current_value[key].zoom	= data.zoom
@@ -537,10 +697,17 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 
 /**
 * BUILD_CHANGED_DATA_ITEM
-* Creates a frozen changed_data_item for the given key
-* Centralizes the pattern used across views and component methods
-* @param int key
-* @return object changed_data_item
+* Creates a frozen changed_data_item for the given key, using the contents of
+* `current_value[key]` as the value to be persisted. Centralises the
+* `{action, id, value}` shape that `set_changed_data` and `change_value` expect,
+* so that every caller (update_draw_data, layer_data_change, map_update_coordinates)
+* produces a consistent payload.
+*
+* The item is frozen via `Object.freeze` to prevent accidental mutation before
+* it reaches the server request.
+*
+* @param {number} key - Index into `current_value` identifying the active entry.
+* @returns {Object} Immutable changed_data_item: `{action:'update', id, value}`.
 */
 component_geolocation.prototype.build_changed_data_item = function(key) {
 
@@ -559,18 +726,28 @@ component_geolocation.prototype.build_changed_data_item = function(key) {
 
 /**
 * HANDLE_COORD_CHANGE
-* Unified handler for coordinate input changes (lat, lon, zoom, alt)
-* Updates current_value, marks data as changed, and syncs map position
-* @param int key - index of the value entry
-* @param string name - field name ('lat'|'lon'|'zoom'|'alt')
-* @param number|null val - new value
-* @return bool true
+* Unified handler for coordinate input changes (lat, lon, zoom, alt) fired when
+* the user types directly into the lat/lon/zoom/alt input fields in the edit view.
+*
+* Updates `current_value[key][name]`, marks the component as dirty
+* (`is_data_changed = true`), and immediately moves the Leaflet map to the new
+* position. Map updates are guarded against NaN so that partial keyboard input
+* (e.g. a leading minus sign) does not crash Leaflet's LatLng constructor.
+*
+* (!) altitude ('alt') changes do NOT update the map — Leaflet's 2-D map has no
+* vertical dimension. The value is stored in current_value only, to be included
+* in the next save payload.
+*
+* @param {number} key - Index into `current_value` for the active entry.
+* @param {string} name - Field being changed: 'lat' | 'lon' | 'zoom' | 'alt'.
+* @param {number|null} val - Parsed numeric value from the input field.
+* @returns {boolean} Always true.
 */
 component_geolocation.prototype.handle_coord_change = function(key, name, val) {
 
 	const self = this
 
-	// ensure current_value[key] exists
+	// ensure current_value[key] exists — may not yet be set if map hasn't loaded
 	self.current_value[key] = self.current_value[key] || {}
 	self.current_value[key][name] = val
 
@@ -605,8 +782,14 @@ component_geolocation.prototype.handle_coord_change = function(key, name, val) {
 
 /**
 * REFRESH_MAP
-* @param object map
-* @return bool true
+* Forces Leaflet to recalculate tile coverage and redraw after the map container
+* has been resized (e.g. when a panel is expanded or a tab is shown).
+*
+* `invalidateSize` is the Leaflet-recommended approach; the older private API
+* `_onResize` is left in a comment for historical reference but must not be used.
+*
+* @param {Object} map - A Leaflet Map instance.
+* @returns {boolean} Always true.
 */
 component_geolocation.prototype.refresh_map = function(map) {
 
@@ -620,14 +803,27 @@ component_geolocation.prototype.refresh_map = function(map) {
 
 /**
 * LAYERS_LOADER
-* Load all data information of the current selected tag or full database layer loaded.
-* @param object options
-* Sample:
-* {
-* 	layer_id: 1
-*	load: "layer"
-* }
-* @return bool
+* Dispatcher that either loads a single named layer or reloads every layer in
+* `ar_layer_loaded`, depending on `options.load`.
+*
+* Modes:
+* - 'layer': Load (or create) the FeatureGroup for `options.layer_id`. If the id
+*   does not yet exist in `ar_layer_loaded`, a new empty layer entry is appended
+*   and then passed to `load_layer`. This is used when a geo-tag is inserted into
+*   a linked `component_text_area`.
+* - 'full': Iterates all entries in `ar_layer_loaded` and calls `load_layer` on
+*   each. After loading, activates all overlay checkboxes in the layer control by
+*   programmatically clicking unchecked ones. Used when the geo-tag selection is
+*   cleared (no tag focused).
+*
+* (!) 'full' mode accesses the private `_layers` and `_layerControlInputs` arrays
+* on the Leaflet layer-control widget. These are undocumented Leaflet internals and
+* may break on Leaflet upgrades.
+*
+* @param {Object} options - Dispatch options.
+* @param {string} [options.load='full'] - 'layer' to load one layer, 'full' for all.
+* @param {number|null} [options.layer_id=null] - Required when load is 'layer'.
+* @returns {boolean} True on success; false if ar_layer_loaded is absent in 'layer' mode.
 */
 component_geolocation.prototype.layers_loader = function(options) {
 
@@ -649,7 +845,7 @@ component_geolocation.prototype.layers_loader = function(options) {
 						self.load_layer(layer)
 					}
 				}
-				// active all layer in control
+				// active all layer in control — simulate checkbox clicks for unchecked overlays
 				if (self.layer_control && self.layer_control._layers) {
 					const control_layers_len = self.layer_control._layers.length
 					for (let i = 0; i < control_layers_len; i++) {
@@ -695,18 +891,41 @@ component_geolocation.prototype.layers_loader = function(options) {
 
 /**
 * LOAD_LAYER
-* Load specific layer data information into the map
-* one layer = one FeatureGroup (GeoJSON model)
-* ar_FeatureGroup = ar_layers
-* layer_id = int or key for select the layer into the ar_FeatureGroup
-* Layer in Leaflet is a item in the map (circle, point, etc..)
-* @param object layer
-* sample:
-* {
-*	layer_id: 1
-*	layer_data: {type: 'FeatureCollection', features: Array(1)}
-* }
-* @return bool
+* Renders a single named layer (FeatureGroup) onto the Leaflet map. Called by
+* `layers_loader` for both 'full' and 'layer' modes, and also directly from
+* `layer_data_change` during tag insert/remove undo flows.
+*
+* Terminology:
+* - A Dédalo *layer* (`{layer_id, layer_data, user_layer_name}`) maps 1-to-1 to a
+*   Leaflet `FeatureGroup` stored in `self.FeatureGroup[layer_id]`.
+* - A GeoJSON *feature* inside `layer_data.features` maps to a Leaflet geometry
+*   (Marker, Circle, Polygon, Polyline).
+*
+* Behaviour when the FeatureGroup does NOT yet exist:
+*  1. Creates a new `L.FeatureGroup` and registers it as the geoman layerGroup.
+*  2. Adds it to the map and registers it in the layer control as an overlay.
+*
+* Behaviour when the FeatureGroup ALREADY exists (e.g. switching active tag):
+*  1. Removes all currently visible FeatureGroups from the map.
+*  2. Re-adds only the requested one and updates the geoman target.
+*
+* For each GeoJSON feature, `L.geoJson` is used with:
+* - `pointToLayer`: converts circle-shaped points (stored as GeoJSON Point with
+*   `properties.shape='circle'`) back to `L.Circle`; other points become `L.Marker`.
+* - `onEachFeature`: delegates to `init_feature` to add click handlers, popups,
+*   and colour styling.
+*
+* geoman events attached to the FeatureGroup:
+* - `pm:update` / `pm:edit` — serialise geometry back to `ar_layer_loaded` and
+*   refresh the popup.
+* - `pm:markerdrag` — refreshes the popup with new coordinates during drag
+*   (geometry data is NOT serialised until `pm:edit` fires on drag end).
+*
+* @param {Object} layer - Layer descriptor from `ar_layer_loaded`.
+* @param {number} layer.layer_id - Numeric id used as the FeatureGroup key.
+* @param {Object|Array|string} layer.layer_data - GeoJSON FeatureCollection, or
+*   empty array/string indicating no existing geometry.
+* @returns {boolean} Always true.
 */
 component_geolocation.prototype.load_layer = function(layer) {
 
@@ -747,12 +966,12 @@ component_geolocation.prototype.load_layer = function(layer) {
 			self.map.pm.setGlobalOptions({layerGroup: self.FeatureGroup[layer_id]})
 		}
 
-	// LAYERS : Load layers from data
+	// LAYERS : Load GeoJSON features from stored layer_data into the FeatureGroup
 		if (typeof layer_data!=='undefined' && layer_data!=='undefined' && layer_data!=='') {
-			// remove previous data into the layer
+			// remove previous data into the layer — prevents duplicate features on repeated calls
 			self.FeatureGroup[layer_id].clearLayers();
 
-			// update the feature data
+			// update the feature data — fires when geoman finishes moving a vertex
 			self.FeatureGroup[layer_id].on('pm:update', (e) => {
 				self.update_draw_data(layer_id);
 				// recalculate the popup
@@ -764,7 +983,7 @@ component_geolocation.prototype.load_layer = function(layer) {
 				}
 			});
 
-			// finish the editing feature data
+			// finish the editing feature data — fires when leaving edit mode
 			self.FeatureGroup[layer_id].on('pm:edit', (e) => {
 				self.update_draw_data(layer_id);
 				// recalculate the popup
@@ -777,6 +996,8 @@ component_geolocation.prototype.load_layer = function(layer) {
 			});
 
 			// when the user drag a handler update the popup data
+			// (!) update_draw_data is intentionally NOT called here — serialisation
+			// happens on pm:edit (drag end) to avoid excessive writes during drag
 			self.FeatureGroup[layer_id].on('pm:markerdrag', (e) => {
 				// self.update_draw_data(layer_id);
 				// recalculate the popup
@@ -793,6 +1014,7 @@ component_geolocation.prototype.load_layer = function(layer) {
 
 			L.geoJson( layer_data, {
 				pointToLayer: (feature, latlng) => {
+					// circles are stored as GeoJSON Point with shape='circle'; restore the radius
 					if (feature.properties.shape==='circle') {
 						return new L.Circle(latlng, feature.properties.radius);
 					} else {
@@ -824,17 +1046,20 @@ component_geolocation.prototype.load_layer = function(layer) {
 
 /**
 * LOAD_TAG_INTO_GEO_EDITOR
-* (!) properties config observe
-* Called by the user click on the tag (in component_text_area)
-* The tag will send the ar_layer_id that it's pointing to
-* @param object options
-* Sample:
-* {
-*  	caller: component_text_area {model: 'component_text_area', tipo: 'numisdata19', …}
-*	tag: {node_name: 'img', type: 'geo', tag_id: '1', state: 'n', label: '1', …}
-*	text_editor: service_ckeditor {init: ƒ, …}
-* }
-* @return bool
+* Event handler invoked when the user clicks a geo-tag image inside a linked
+* `component_text_area`. The tag carries the `tag_id` that identifies which
+* FeatureGroup to activate in the map editor.
+*
+* (!) This method is wired up through the ontology `properties.observe` config
+* (event: 'click_tag_geo', perform.function: 'load_tag_into_geo_editor') rather
+* than a hard-coded event subscription.
+*
+* @param {Object} options - Event payload.
+* @param {Object} options.caller - The `component_text_area` instance that fired the event.
+* @param {Object} options.tag - Tag descriptor from the text editor.
+* @param {string} options.tag.tag_id - Numeric string id of the geo-tag (parsed to int).
+* @param {Object} options.text_editor - The CKEditor service instance managing the text.
+* @returns {Promise<boolean>} Resolves true after the layer is loaded.
 */
 component_geolocation.prototype.load_tag_into_geo_editor = async function(options) {
 
@@ -859,14 +1084,19 @@ component_geolocation.prototype.load_tag_into_geo_editor = async function(option
 
 /**
 * HANDLE_CLICK_NO_TAG
-* (!) properties config observe
-* Called by the user click in component_text_area (no tag image target)
-* @param object options
-* Sample:
-* {
-*  	caller: component_text_area {model: 'component_text_area', tipo: 'numisdata19', section_tipo: 'numisdata6', …}
-* }
-* @return bool
+* Event handler invoked when the user clicks inside a linked `component_text_area`
+* but NOT on a geo-tag image — i.e. a generic click with no tag target.
+*
+* Responds by loading all stored layers onto the map simultaneously ('full' mode),
+* which gives the user a complete view of all geometry when no specific tag is focused.
+*
+* (!) Like `load_tag_into_geo_editor`, this is wired via ontology properties.observe
+* rather than an explicit subscription. The event name on the text_area side is
+* typically 'click_no_tag_geo'.
+*
+* @param {Object} options - Event payload.
+* @param {Object} options.caller - The `component_text_area` instance that fired the event.
+* @returns {Promise<boolean>} Resolves true after all layers are loaded.
 */
 component_geolocation.prototype.handle_click_no_tag = async function(options) {
 
@@ -885,8 +1115,17 @@ component_geolocation.prototype.handle_click_no_tag = async function(options) {
 
 /**
 * GET_DATA_TAG
-* Send the data_tag to the text_area when it need create a new tag
-* @return object data_tag
+* Builds the `data_tag` descriptor that a linked `component_text_area` uses when
+* inserting a new geo-tag into the rich-text editor. The tag references this
+* component's current layers so the text-area can render the correct layer list
+* in its tag dialogue.
+*
+* `last_layer_id + 1` pre-increments the next available id so the text_area can
+* assign a unique id to the freshly inserted tag without querying the component.
+*
+* @returns {Object} data_tag descriptor:
+*   `{type:'geo', tag_id:null, state:'n', label:'', data:'',
+*     last_layer_id:<number>, layers:[{layer_id, user_layer_name}]}`
 */
 component_geolocation.prototype.get_data_tag = function() {
 
@@ -895,7 +1134,7 @@ component_geolocation.prototype.get_data_tag = function() {
 	const lib_data 		= self.get_lib_data()
 	const last_layer_id = self.get_last_layer_id()
 
-	// layers
+	// layers — strip layer_data from the descriptor; text_area only needs identity fields
 	const layers = lib_data.map((item) => {
 		const layer = {
 			layer_id		: item.layer_id,
@@ -921,8 +1160,19 @@ component_geolocation.prototype.get_data_tag = function() {
 
 /**
 * GET_LIB_DATA
-* get the lib_data in self.data, lib_data is the specific data of the library used (leaflet)
-* @return array lib_data
+* Returns the `lib_data` array from the first data entry (`data.entries[0]`).
+* `lib_data` is the Leaflet-specific geometry store: an array of layer descriptors,
+* each with `{layer_id, layer_data (GeoJSON FeatureCollection), user_layer_name}`.
+*
+* Falls back to a single default layer (`layer_id:1`, empty geometry) when:
+* - `data.entries` is absent or empty, or
+* - `data.entries[0].lib_data` is not defined (component has no saved geometry).
+*
+* (!) Only entries[0] is read — the component currently supports a single
+* coordinate entry per record. If multi-entry support is added later, this method
+* will need to accept a `key` parameter.
+*
+* @returns {Array} Array of `{layer_id, layer_data, user_layer_name}` descriptors.
 */
 component_geolocation.prototype.get_lib_data = function() {
 
@@ -944,9 +1194,15 @@ component_geolocation.prototype.get_lib_data = function() {
 
 /**
 * GET_LAST_LAYER_ID
-* Get the last layer_id in the data
-* will be used for create new layer with the tag
-* @return int last_layer_id
+* Returns the highest numeric `layer_id` currently present in `lib_data`.
+* Used by `get_data_tag` to compute the next available id (`last_layer_id + 1`)
+* for a freshly inserted geo-tag.
+*
+* `Math.max(...ar_layer_id)` returns `-Infinity` when `ar_layer_id` is empty, but
+* `get_lib_data` always returns at least one entry (`layer_id: 1`) so this is safe
+* in practice.
+*
+* @returns {number} The maximum layer_id found in lib_data.
 */
 component_geolocation.prototype.get_last_layer_id = function() {
 
@@ -963,9 +1219,26 @@ component_geolocation.prototype.get_last_layer_id = function() {
 
 /**
 * GET_POPUP_CONTENT
-* Generates popup content based on layer type
-* Returns HTML string, or null if unknown object
-* @return string|null text_node
+* Builds the DOM node displayed inside a Leaflet popup when the user clicks a
+* geometry shape. Content varies by layer type:
+* - `L.Marker` — returns a formatted lat/lng string directly (no colour picker).
+* - `L.Circle` — centre lat/lng, radius, circumference area, and a colour picker.
+* - `L.Polygon` (Rectangle included) — computed area via turf.js, and colour picker.
+* - `L.Polyline` — total distance in metres via Leaflet's `distanceTo`, and colour picker.
+*
+* (!) `L.Polygon` is a subclass of `L.Polyline` in Leaflet, so the instanceof
+* checks MUST test `L.Polygon` before `L.Polyline`.
+*
+* The `ar_mesures` array is assembled with `{label, messure?, separator?}` items
+* and passed to `render_popup_text` which builds the HTML structure. The colour
+* picker node is then appended to the text container.
+*
+* Returns null implicitly when the layer type is not recognised (none of the
+* instanceof checks match), in which case callers should not call `bindPopup`.
+*
+* @param {Object} layer - A Leaflet layer instance (Marker, Circle, Polygon, or Polyline).
+* @param {number} layer_id - The numeric id of the parent FeatureGroup.
+* @returns {HTMLElement|string} DOM node for the popup, or a lat/lng string for Markers.
 */
 component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 
@@ -976,6 +1249,8 @@ component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 		return this.str_lat_lng(layer.getLatLng());
 
 	// Circle - lat/long, radius
+	// (!) Check Circle before Polygon — L.Circle extends L.Path, not L.Polygon,
+	// but it's listed first here for clarity. Order relative to Polygon is safe.
 	} else if (layer instanceof L.Circle) {
 		const center	= layer.getLatLng()
 		const radius	= layer.getRadius()
@@ -997,10 +1272,12 @@ component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 		)
 
 	// Rectangle/Polygon - area
+	// (!) Must come before L.Polyline because L.Polygon extends L.Polyline
 	} else if (layer instanceof L.Polygon) {
 
 		// const latlngs	= layer._defaultShape ? layer._defaultShape() : layer.getLatLngs()
 		const geojson		= layer.toGeoJSON()
+		// turf.area computes geodesic area in square metres from a GeoJSON feature
 		const area			= turf.area(geojson)
 
 		ar_mesures.push(
@@ -1026,6 +1303,7 @@ component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 				}
 			)
 		} else {
+			// sum segment distances in metres using Leaflet's WGS84 distanceTo
 			for (let i = 0; i < latlngs.length-1; i++) {
 				distance += latlngs[i].distanceTo(latlngs[i+1]);
 			}
@@ -1053,9 +1331,13 @@ component_geolocation.prototype.get_popup_content = function(layer, layer_id) {
 
 /**
 * STR_LAT_LNG
-* @param object latlng
-* @return string
-* 	Helper method to format LatLng object (x.xxxxxx, y.yyyyyy)
+* Formats a Leaflet `LatLng` object as a human-readable coordinate string of the
+* form `(lat, lng)` with six decimal places of precision.
+*
+* Used by `get_popup_content` for Marker and Circle popups.
+*
+* @param {Object} latlng - Leaflet LatLng object with `lat` and `lng` properties.
+* @returns {string} Formatted string, e.g. `'(39.462571, -0.376295)'`.
 */
 component_geolocation.prototype.str_lat_lng = function(latlng) {
 
@@ -1070,9 +1352,14 @@ component_geolocation.prototype.str_lat_lng = function(latlng) {
 
 /**
 * ROUND_COORDINATE
-* Add pop up information to the draw
-* Truncate value based on number of decimals
-* @return int
+* Rounds a number to `len` decimal places using integer arithmetic to avoid
+* floating-point representation issues with `toFixed`.
+*
+* Used by `str_lat_lng`, `get_popup_content` (radius, distance display).
+*
+* @param {number} num - The value to round.
+* @param {number} len - Number of decimal places to keep.
+* @returns {number} The rounded value (still a number, not a string).
 */
 component_geolocation.prototype.round_coordinate = function(num, len) {
 
@@ -1083,12 +1370,31 @@ component_geolocation.prototype.round_coordinate = function(num, len) {
 
 /**
 * INIT_DRAW_EDITOR
-* Activate the editor
-* @see https://github.com/Leaflet/Leaflet.draw/issues/66
-* @editable_FeatureGroup = the current layer data with all items in the current_layer (FeatureGroup)
-* @layer_id = the id of the active layer
+* Attaches the leaflet-geoman (pm) drawing toolbar to the map and wires up the
+* map-level pm events that serialise geometry changes back to `ar_layer_loaded`.
 *
-* @return bool
+* Called once from inside the `map.whenReady` callback in `get_map`.
+* `draw_editor_is_initated` is set to true after the first call; callers should
+* check this flag if they need to guard against double-initialisation.
+*
+* Toolbar options:
+* - `drawCircleMarker: false` — removed from the toolbar; full circles are still
+*   supported via the 'draw circle' tool.
+* - `drawText: false` — text annotations are not used in the geolocation component.
+* - Measurements are enabled globally in metric format.
+*
+* Map-level pm events registered:
+* - `pm:create` — fires when the user finishes drawing a new shape. Adds the new
+*   Leaflet layer to the active FeatureGroup, serialises geometry, and runs
+*   `init_feature` to attach click/popup handlers.
+* - `pm:cut` — fires when the user cuts (clips) a shape. Removes the original
+*   layer, serialises, and re-binds the popup on the resulting clipped layer.
+* - `pm:remove` — fires when the user deletes a shape. Serialises geometry to
+*   `ar_layer_loaded` without refreshing the popup (layer is gone).
+*
+* @see https://github.com/Leaflet/Leaflet.draw/issues/66 (legacy reference; now
+*   using leaflet-geoman, not leaflet-draw)
+* @returns {boolean} Always true.
 */
 component_geolocation.prototype.init_draw_editor = function() {
 
@@ -1112,7 +1418,7 @@ component_geolocation.prototype.init_draw_editor = function() {
 			e.layer.addTo(layer)
 			// Update draw_data
 			self.update_draw_data(self.active_layer_id);
-			// init the feature
+			// init the feature — attach popup and click handlers to the newly created shape
 			init_feature({
 				self		: self,
 				data_layer	: e.layer,
@@ -1120,7 +1426,7 @@ component_geolocation.prototype.init_draw_editor = function() {
 			})
 		});
 
-		// finish the editing feature data
+		// finish the editing feature data — pm:cut produces two layers: originalLayer (old) and layer (new clipped)
 		map.on('pm:cut', (e) => {
 			e.originalLayer.remove()
 			e.originalLayer.removeFrom(map)
@@ -1136,7 +1442,7 @@ component_geolocation.prototype.init_draw_editor = function() {
 
 		// Listener for delete the draw editor to "deleted mode" for save the current data of the editable_FeatureGroup
 		map.on('pm:remove', () => {
-			// Update draw_data
+			// Update draw_data — serialise the remaining geometry after removal
 			self.update_draw_data(self.active_layer_id);
 		});
 
@@ -1151,10 +1457,30 @@ component_geolocation.prototype.init_draw_editor = function() {
 
 /**
 * UPDATE_DRAW_DATA
-* Preparing the data for save, update the layers data into the instance
-* Save action is not exec here, see the render_component_geolocation for the save action
-* @param string layer_id
-* @return bool
+* Serialises the current state of the Leaflet FeatureGroup for `layer_id` back
+* into `ar_layer_loaded` and marks the component as dirty. This is the single
+* point that reads live Leaflet layer state and writes it into the in-memory data
+* model prior to saving.
+*
+* The save itself is NOT triggered here — that responsibility belongs to the save
+* button handler in `render_edit_component_geolocation` / `view_default_edit_geolocation`.
+*
+* Serialisation logic:
+* 1. Calls `FeatureGroup[layer_id].toGeoJSON()` to get a FeatureCollection skeleton.
+* 2. Iterates each Leaflet layer via `eachLayer` to build augmented feature objects:
+*    - Stamps `properties.layer_id` on every feature.
+*    - Copies `options.color` into `properties.color` when a custom colour is set.
+*    - For `L.Circle` layers, adds `properties.shape='circle'` and `properties.radius`
+*      because GeoJSON does not natively represent circles (they are stored as Point).
+* 3. Replaces the FeatureCollection's `features` array with the augmented list.
+* 4. Resolves the active `key` from the map container's `dataset.key` attribute.
+* 5. Publishes `updated_layer_data_<id_base>` via event_manager so that linked
+*    `component_text_area` instances (e.g. hierarchy42 properties) can react.
+* 6. Writes `ar_layer_loaded` into `current_value[key].lib_data` and calls
+*    `set_changed_data` to enqueue the changed_data_item for the next save.
+*
+* @param {number} layer_id - Id of the FeatureGroup whose geometry has changed.
+* @returns {boolean} Always true.
 */
 component_geolocation.prototype.update_draw_data = function(layer_id) {
 
@@ -1177,7 +1503,7 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 
 			const json = layer.toGeoJSON();
 
-			// add layer_id
+			// add layer_id — stamp the feature so it can be reassigned to the correct layer on reload
 			json.properties = json.properties
 				? json.properties
 				: {}
@@ -1188,6 +1514,8 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 				json.properties.color =  layer_color
 			}
 
+			// GeoJSON has no native circle type — persist shape + radius as properties
+			// so pointToLayer in load_layer can reconstruct the L.Circle on next load
 			if (layer instanceof L.Circle) {
 				json.properties.shape	= 'circle';
 				json.properties.radius	= layer.getRadius();
@@ -1196,7 +1524,7 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 		});
 		current_layer.layer_data.features = features
 
-	// value key
+	// value key — map container carries data-key to identify which entries index this map belongs to
 		const key = parseInt(self.map.getContainer().dataset.key)
 
 	// current_layer.user_layer_name 	= current_layer.data.user_layer_name
@@ -1221,7 +1549,7 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 		self.current_value[key].lib_data = self.ar_layer_loaded
 
 
-	// track changes in self.data.changed_data
+	// track changes in self.data.changed_data — enqueue for the next save
 		const changed_data_item = self.build_changed_data_item(key)
 		self.set_changed_data(changed_data_item)
 
@@ -1233,12 +1561,15 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 
 /**
 * MAP_UPDATE_COORDINATES
-* Update the coordinates based in the data sent by other components, as autocomplet_hi
-* this components can point to other record, as toponymy, that has a geolocation component.
-* This method is fired by the update_value or other events defined in ontology.
-* This method will use the data of the referenced geolocation data in the pointed record as his own coordinates
-* The caller component will dispatch a event when it update his data that will fire this method
-* the self component(geolocation that is listen) could be configured in properties as:
+* Re-centres this geolocation map to the coordinates stored in a record pointed to
+* by another component (e.g. a portal/autocomplete for toponymy). When the user
+* picks a location record in the linked component, this method reads the geolocation
+* data from that record and copies it to this component's map and data value.
+*
+* This method is fired via the ontology `observe` event system (event: 'update_value'
+* on the observed component). It is NOT called directly by this component.
+*
+* The self component (geolocation that is listening) should be configured in properties as:
 *
 *	"observe": [
 *		{
@@ -1271,8 +1602,22 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 *	}]
 *
 * If the observable doesn't has specified the component_geolocation will use the default thesaurus component_geolocation: hierarchy31
-* @param object options
-* @return void
+*
+* Resolution logic:
+*  1. Reads `target_geolocation_tipo` from `caller.request_config_object.hide.ddo_map`
+*     (role='target_geolocation_tipo'), falling back to 'hierarchy31'.
+*  2. Uses `caller.data.entries` to identify which record was last selected (the
+*     portal's last entry's section_id).
+*  3. Searches `caller.datum.data` for the geolocation component data at that
+*     section_id and updates this component's map and data accordingly.
+*
+* (!) `caller.datum.data` is the raw datum array from the portal; if the portal's
+* request_config does not include the target geolocation tipo in its ddo_map, the
+* find call will return undefined and the map will not be moved.
+*
+* @param {Object} options - Event payload dispatched by the observed component.
+* @param {Object} options.caller - The portal/autocomplete instance whose value changed.
+* @returns {Promise<void>}
 */
 component_geolocation.prototype.map_update_coordinates = async function(options) {
 
@@ -1312,7 +1657,7 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 		// move the map to the new point and zoom with the values
 		self.map.panTo(new L.LatLng(self.current_value[key].lat, self.current_value[key].lon));
 		self.map.setZoom(self.current_value[key].zoom);
-		// modify his own data with the new values
+		// modify his own data with the new values — change_value persists the borrowed coordinates
 		const changed_data = [self.build_changed_data_item(key)]
 		self.change_value({
 			changed_data	: changed_data,
@@ -1326,14 +1671,34 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 
 /**
 * LAYER_DATA_CHANGE
-* @param object change
-* With the information of the tag and the action (insert, remove)
-* {
-* 	action : 'remove'
-* 	tag_id : 1
-* 	type : 'geo'
-* }
-* @return bool
+* Reacts to geo-tag insertion and removal events from a linked `component_text_area`.
+* Called when the user adds or deletes a geo-tag in the rich-text editor; synchronises
+* the map's FeatureGroup state with the tag model.
+*
+* 'insert' action:
+*   - Short-circuits if the layer is already loaded (idempotent).
+*   - Recovers the layer from `ar_data_buffer` if available (supports undo after remove).
+*   - Pushes the recovered or new empty layer into `ar_layer_loaded`, renders it on
+*     the map, and persists the change via `change_value`.
+*   - After save resolves, updates `db_data.value[key]` so the in-memory DB snapshot
+*     stays consistent and avoids false dirty-state detection.
+*
+* 'remove' action:
+*   - Saves the layer into `ar_data_buffer[layer_id]` to enable undo recovery.
+*   - Removes the FeatureGroup from the map and the layer control.
+*   - Splices the entry out of `ar_layer_loaded` and persists via `change_value`.
+*   - After save resolves: resets to layer 1 if no layers remain, or activates
+*     the first available layer.
+*
+* (!) `key` is hardcoded to 0 because geolocation only supports a single coordinate
+* entry per component instance. Multi-entry support would require reading the key
+* from the event payload.
+*
+* @param {Object} change - Tag change descriptor.
+* @param {string} change.action - 'insert' or 'remove'.
+* @param {number|string} change.tag_id - The numeric id of the affected tag (parsed to int).
+* @param {string} change.type - Always 'geo' for this component.
+* @returns {boolean} True on success; false when the layer to remove cannot be found.
 */
 component_geolocation.prototype.layer_data_change = function(change) {
 
@@ -1352,6 +1717,7 @@ component_geolocation.prototype.layer_data_change = function(change) {
 				if(layer_loaded){
 					return true
 				}
+				// recover from buffer if the user previously removed this tag in the same session
 				const recover_layer = self.ar_data_buffer[layer_id] ||
 					{
 						layer_id	: layer_id,
@@ -1369,6 +1735,7 @@ component_geolocation.prototype.layer_data_change = function(change) {
 					refresh			: false
 				})
 				.then(()=>{
+					// sync the DB snapshot after save so dirty-check sees a clean state
 					self.db_data.value[key] = clone(self.current_value[key])
 				})
 				break;
@@ -1379,7 +1746,7 @@ component_geolocation.prototype.layer_data_change = function(change) {
 				if(!layer){
 					return false
 				}
-				//store the layer into the data_buffer
+				// store the layer into the data_buffer for possible undo recovery
 				self.ar_data_buffer[layer_id] = layer;
 				// remove the data of the FeatureGroup
 				if(!self.FeatureGroup[layer_id]){
@@ -1402,11 +1769,12 @@ component_geolocation.prototype.layer_data_change = function(change) {
 					refresh			: false
 				})
 				.then(()=>{
+					// sync the DB snapshot after save
 					self.db_data.value[key] = clone(self.current_value[key])
 					// when the ar_layer_loaded is empty, the user has delete all tags and is necessary reset the load_layer
 
 					if(self.ar_layer_loaded.length === 0){
-						// reset the load_layer to 1
+						// reset the load_layer to 1 — ensures a valid empty FeatureGroup exists
 						self.layers_loader({
 							load 		: 'layer',
 							layer_id	: 1
@@ -1427,13 +1795,17 @@ component_geolocation.prototype.layer_data_change = function(change) {
 
 /**
 * CREATE_POINT
-* @param object point
-* with the coordinates of the new point
-* {
-*	lat : 39.46861766020243, //float
-*	lng : -0.40077683642303136 //float
-* }
-* @return bool
+* Programmatically places a new Leaflet Marker at the given coordinates and adds
+* it to the currently active FeatureGroup. Useful when an external component (e.g.
+* a search result or autocomplete) provides coordinates to plot.
+*
+* After adding the marker, `update_draw_data` is called to serialise the updated
+* FeatureGroup into `ar_layer_loaded` and mark the component as changed.
+*
+* @param {Object} point - Coordinate pair accepted by `L.marker`.
+* @param {number} point.lat - WGS84 latitude in decimal degrees.
+* @param {number} point.lng - WGS84 longitude in decimal degrees.
+* @returns {boolean} Always true.
 */
 component_geolocation.prototype.create_point = function(point) {
 
@@ -1456,15 +1828,32 @@ component_geolocation.prototype.create_point = function(point) {
 
 /**
 * INIT_FEATURE
-* private function
-* @param object options
-* with instance data_layer and layer_id
-* {
-* 	self  // current instance with all properties
-*	data_layer // object, the feature data (new or loaded)
-*	layer_id // the int of the layer of the feature
-* }
-* @return void
+* Private module function (not on the prototype). Initialises a single Leaflet
+* layer (geometry feature) by:
+* 1. Applying a stored custom colour via `setStyle`, when `feature.properties.color`
+*    is set (only applicable to non-Marker shapes).
+* 2. Building and binding a measurement popup via `get_popup_content`.
+* 3. Attaching a 'click' event listener that:
+*    - Sets `active_layer_id` to this feature's `layer_id`.
+*    - Enables geoman editing (`pm.enable`) on all features in the clicked layer's
+*      FeatureGroup.
+*    - Disables geoman editing on all features in all OTHER FeatureGroups.
+* 4. Adding the Leaflet layer to its parent `FeatureGroup[layer_id]`.
+*
+* Called from `load_layer` (via `L.geoJson` `onEachFeature`) for restored geometry,
+* and from `init_draw_editor`'s `pm:create` handler for newly drawn features.
+*
+* The colour-coded active/inactive styling blocks inside the click handler are
+* intentionally commented out — the visual design uses geoman's own handles rather
+* than custom stroke colours.
+*
+* @param {Object} options - Initialisation context.
+* @param {Object} options.self - The `component_geolocation` instance.
+* @param {Object} options.data_layer - Leaflet layer (Marker/Circle/Polygon/Polyline).
+* @param {number} options.layer_id - Id of the parent FeatureGroup.
+* @param {Object|null} [options.feature=null] - GeoJSON feature object; may be null
+*   when called from `pm:create` (no feature properties available yet).
+* @returns {void}
 */
 const init_feature = function(options) {
 
@@ -1476,7 +1865,7 @@ const init_feature = function(options) {
 	// check if the feature has data else do nothing
 	if(data_layer){
 
-		//color
+		// color — restore the persisted stroke colour from GeoJSON properties
 			const color = feature && feature.properties && feature.properties.color
 				? feature.properties.color
 				: null
@@ -1500,6 +1889,7 @@ const init_feature = function(options) {
 
 						if(feature){
 							if(self.FeatureGroup[feature]===self.FeatureGroup[layer_id]){
+								// enable editing on all features in the clicked layer
 								self.FeatureGroup[layer_id].eachLayer(function (layer){
 									// layer.editing.disable();
 									layer.pm.enable()
@@ -1509,7 +1899,7 @@ const init_feature = function(options) {
 								});
 							}else{
 
-								//The layers of the actual feature disable and change to green color
+								// disable editing on all features in other layers
 								self.FeatureGroup[feature].eachLayer(function(layer) {
 									// layer.editing.disable();
 									layer.pm.disable()
@@ -1529,7 +1919,7 @@ const init_feature = function(options) {
 				// }
 
 			 });
-		// addLayer
+		// addLayer — register the Leaflet layer into its parent FeatureGroup
 			self.FeatureGroup[layer_id].addLayer(data_layer)
 	}//end if (data_layer)
 }//end init_feature
@@ -1538,10 +1928,30 @@ const init_feature = function(options) {
 
 /**
 * READABLE_AREA
-* @method readable_area(area, metric ): string
-* The value will be rounded as defined by the precision option object.
-* @return string area_string
-* Returns a readable area string in yards or metric.
+* Private module function. Converts a raw area value in square metres to a
+* human-readable string with an appropriate unit suffix, chosen by magnitude.
+*
+* Metric thresholds:
+* - >= 1,000,000 m² → km²  (precision: 2 decimal places)
+* - >= 10,000 m²    → ha   (precision: 2 decimal places)
+* - < 10,000 m²     → m²   (no decimal places)
+*
+* Imperial thresholds:
+* - >= 2,589,986.9952 m² → mi²   (1 square mile)
+* - >= 4,046.8564224 m²  → acres (1 acre)
+* - < 4,046.8564224 m²   → yd²
+*
+* Unit conversion uses `turf.convertArea`; rounding uses `turf.round`.
+*
+* (!) In metric mode, the `else` branch (area < 10,000) contains `area + ' m²'`
+* without assigning the result to `area_string`. This is a pre-existing bug:
+* the expression is computed but discarded, so `area_string` remains `undefined`
+* for small polygons in metric mode. Do not fix here — document only.
+*
+* @param {number} area - Area in square metres as returned by `turf.area`.
+* @param {boolean} [metric=true] - Use metric units when true, imperial otherwise.
+* @returns {string|undefined} Formatted area string; undefined for metric areas < 10,000 m²
+*   due to the pre-existing bug noted above.
 */
 const readable_area = function (area, metric=true) {
 
