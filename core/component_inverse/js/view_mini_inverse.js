@@ -35,8 +35,8 @@ view_mini_inverse.render = async function(self, options) {
 			? data.entries[0].locator.from_section_id
 			: null
 
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
+	// Set value (as text node to avoid HTML injection)
+		wrapper.prepend(value_string !== null && value_string !== undefined ? String(value_string) : '')
 
 
 	return wrapper

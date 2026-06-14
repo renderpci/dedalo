@@ -37,8 +37,8 @@ view_mini_list_filter.render = async function(self) {
 	// Value as string
 		const value_string = entries.join(' | ')
 
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
+	// Set value (as text node to avoid HTML injection)
+		wrapper.prepend(value_string)
 
 
 	return wrapper

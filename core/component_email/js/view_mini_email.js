@@ -40,8 +40,8 @@ view_mini_email.render = async function(self, options) {
 	// Value as string
 		const value_string = entries.map(item => item.value).join(self.context.fields_separator)
 
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
+	// Set value (as text node to avoid HTML injection)
+		wrapper.prepend(value_string)
 
 	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
 		for (const entry of entries) {
