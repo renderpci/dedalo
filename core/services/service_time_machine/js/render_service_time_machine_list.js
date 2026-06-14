@@ -4,6 +4,31 @@
 
 
 
+/**
+* RENDER_SERVICE_TIME_MACHINE_LIST
+* Client-side rendering entry point and shared rendering utilities for the
+* service_time_machine list views.
+*
+* This module contains:
+*   - The `render_service_time_machine_list` constructor, whose `.list` prototype
+*     method is mixed into `service_time_machine` instances as both `.list` and `.tm`.
+*   - `common_render` — the shared DOM-building routine used by every view variant
+*     ('default', 'mini', 'history', 'tool'). Handles paginator, column-grid CSS,
+*     list header, and content rows.
+*   - `get_content_data` — renders all pre-built section_record instances in parallel
+*     and wraps the result in a `content_data` div.
+*   - `rebuild_columns_map` — one-shot filter/transform pass over the raw columns_map
+*     that is resolved once per service instance (guarded by `self.fixed_columns_map`).
+*
+* View routing:
+*   'default'  → view_default_time_machine_list  (full grid with header, used in tool)
+*   'mini'     → view_mini_time_machine_list      (inspector sidebar, fewer columns)
+*   'history'  → view_history_time_machine_list   (inspector history tab, no header)
+*   'tool'     → view_tool_time_machine_list      (tool_time_machine; custom column-id UI)
+*
+* Exports: render_service_time_machine_list, common_render, get_content_data, rebuild_columns_map
+*/
+
 // imports
 	import {set_element_css} from '../../../../core/page/js/css.js'
 	import {get_section_records} from '../../../../core/section/js/section.js'
@@ -17,7 +42,11 @@
 
 /**
 * RENDER_SERVICE_TIME_MACHINE_LIST
-* Manages the component's logic and appearance in client side
+* Constructor for the prototype carrier used by service_time_machine.
+* The constructor itself does nothing; its `.list` prototype method is assigned
+* onto service_time_machine instances via service_time_machine.js:
+*   service_time_machine.prototype.list = render_service_time_machine_list.prototype.list
+*   service_time_machine.prototype.tm   = render_service_time_machine_list.prototype.list
 */
 export const render_service_time_machine_list = function() {
 
@@ -28,9 +57,20 @@ export const render_service_time_machine_list = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @param object options
-* @return HTMLElement wrapper
+* Entry point for rendering the time-machine list in the current view.
+* Called as `self.list(options)` or `self.tm(options)` on a service_time_machine instance.
+* Reads `self.view` (defaulting to 'default') and delegates to the matching
+* view-specific render function, each of which ultimately calls `common_render`.
+*
+* Supported views:
+*   'mini'    — compact inspector sidebar variant (suppresses matrix_id / bulk_process_id columns)
+*   'history' — inspector history tab (suppresses matrix_id, where, bulk_process_id; no header)
+*   'tool'    — tool_time_machine variant with custom column-id restore/preview button
+*   'default' — full-featured grid with paginator and column header
+*
+* @param {Object} options - Rendering options forwarded verbatim to the view's render function.
+*   Notable keys: `render_level` ('full'|'content'), `no_header` {boolean}.
+* @returns {Promise<HTMLElement>} The outer wrapper element produced by the chosen view.
 */
 render_service_time_machine_list.prototype.list = async function(options) {
 
@@ -63,10 +103,32 @@ render_service_time_machine_list.prototype.list = async function(options) {
 
 /**
 * COMMON_RENDER
-* Renders main element wrapper for current view
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Shared DOM-building routine for all service_time_machine list views.
+* Called by every view variant after any view-specific pre-processing (e.g.
+* narrowing `self.config.ignore_columns`). Produces a complete wrapper element
+* containing the paginator, list header (optional), and content rows.
+*
+* Side effects on `self`:
+*   - `self.columns_map` — replaced with the output of `rebuild_columns_map`.
+*   - `self.ar_instances` — reset to the array of freshly built section_record instances;
+*     this allows `common.prototype.destroy` to clean them up on the next lifecycle cycle.
+*
+* The CSS grid-template-columns for the list body is resolved from `self.columns_map` via
+* `ui.flat_column_items`, then injected with `set_element_css` scoped to the component's
+* unique CSS selector, so multiple concurrent lists do not collide.
+*
+* When `render_level === 'content'`, the function returns early with only the
+* `content_data` element (skipping the wrapper, paginator and list header). This is
+* used for pagination refresh to replace only the row area in the DOM.
+*
+* @param {Object} self - The service_time_machine instance being rendered.
+* @param {Object} options - Rendering options.
+* @param {string} [options.render_level='full'] - 'full' builds the whole wrapper;
+*   'content' returns only the inner content_data element (for pagination refreshes).
+* @param {boolean} [options.no_header=false] - When true, the column header row is
+*   omitted even when records exist.
+* @returns {Promise<HTMLElement>} The outer wrapper div (render_level='full') or the
+*   content_data div (render_level='content').
 */
 export const common_render = async function(self, options) {
 
@@ -157,13 +219,22 @@ export const common_render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Render previously built section_records into a content_data div container
-* Note that self here is a service_time_machine instance
-* @param array ar_section_record
-* 	Array of section_record instances
-* @param object self
-* 	service_time_machine instance
-* @return HTMLElement content_data
+* Renders previously built section_record instances into a single `content_data` div.
+* When there are no records, a localized "no records found" placeholder is shown instead.
+* Rendering is parallelized via `Promise.all` to avoid sequential awaits per row;
+* rendered nodes are then appended in original order to preserve the sort returned
+* by the server.
+*
+* Note that `self` here is a service_time_machine instance, not a generic section.
+* The resulting `content_data` element receives two CSS classes beyond 'content_data':
+* `self.mode` (always 'list' for this service) and `self.type` (always 'tm').
+*
+* @param {Array} ar_section_record - Array of already-built section_record instances
+*   (output of `get_section_records` called with mode='tm').
+* @param {Object} self - The service_time_machine instance; provides `self.mode` and
+*   `self.type` for CSS class names on the container.
+* @returns {Promise<HTMLElement>} A div.content_data element containing either the row
+*   nodes or the "no records found" placeholder.
 */
 export const get_content_data = async function(ar_section_record, self) {
 
@@ -211,8 +282,26 @@ export const get_content_data = async function(ar_section_record, self) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
-* @return obj columns_map
+* One-shot filter pass over the raw columns_map that removes any columns listed in
+* `self.config.ignore_columns`. After the first call the result is frozen by setting
+* `self.fixed_columns_map = true`, so subsequent calls (e.g. on pagination refresh)
+* return the already-computed map without re-processing.
+*
+* The commented-out `switch` block (dd201/dd197 short-label overrides) is intentionally
+* left in place as a reference for callers that need to relabel columns for narrow widths.
+*
+* Note: `ignore_columns` defaults to an empty array when not present in config. The
+* commented-out entry 'matrix_id' (dd1573) shows a column that is filtered at the view
+* level instead (view_mini / view_history set config.ignore_columns before calling
+* common_render, so the guard here is a fallback).
+*
+* @param {Object} self - The service_time_machine instance. Must expose:
+*   `self.fixed_columns_map` {boolean|null} — falsy on first call; set to true after.
+*   `self.columns_map` {Array|Promise<Array>} — the raw columns_map (may be a Promise
+*     if the caller assigned an unresolved Promise from `get_columns_map`).
+*   `self.config.ignore_columns` {Array<string>} — optional list of column `id` values
+*     to exclude from the rendered grid.
+* @returns {Promise<Array>} Filtered columns_map array ready for use by common_render.
 */
 export const rebuild_columns_map = async function(self) {
 
