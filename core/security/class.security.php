@@ -1,13 +1,58 @@
 <?php declare(strict_types=1);
 /**
 * CLASS SECURITY
+* Central ACL (Access Control Layer) for Dédalo v7.
 *
-*	Permissions:
+* Resolves integer permission levels (0–3) for any (section_tipo, component_tipo)
+* pair against the currently logged-in user, and exposes a family of one-line
+* throwing helpers (`assert_*`) that API methods can use as a gate before
+* performing any read or write operation.
 *
-*	0 no access
-*	1 read only
-*	2 read/write
-*	3 debug
+* Permission scale:
+*   0 → no access
+*   1 → read only
+*   2 → read / write
+*   3 → debug / admin (grants every capability)
+*
+* Two-tier ACL design:
+*   Layer 1 – schema-level, type-based: `assert_section_permission`,
+*             `assert_tipo_permission`, `assert_component_permission`.
+*             Decided by the permissions matrix stored in component_security_access
+*             of the user's profile section (dd234).
+*   Layer 2 – per-record, project-based: `user_can_access_record` /
+*             `assert_record_in_user_scope`.
+*             Mirrors the SQL filter injected by search::build_sql_projects_filter,
+*             evaluated against a single (section_tipo, section_id).
+*
+* Permission matrix storage:
+*   The matrix lives in component_security_access (tipo dd774) within the user's
+*   profile record (section dd234). get_permissions_table() loads it once,
+*   serialises it as a flat associative array
+*   { "<section_tipo>_<component_tipo>": <level>, … }
+*   and writes it to a per-session file cache (`cache_permissions_table.php`).
+*   A static variable (`$permissions_table_cache`) provides an in-process cache
+*   that avoids even the file read on repeated calls within the same request.
+*
+* Special bypass rules (evaluated in order inside get_security_permissions):
+*   - `$read_only_scope === true` → level 1 for most sections (server code only)
+*   - DEDALO_SUPERUSER (user_id === -1) → level 3 always
+*   - DEDALO_REGISTER_TOOLS_SECTION_TIPO (dd1324) → level 1 always
+*   - DEDALO_TEMP_PRESET_SECTION_TIPO (dd655) → level 2 always
+*   - DEDALO_SECTION_INFO_INVERSE_RELATIONS (dd1596) or tipo === 'all' → level 1
+*   - DEDALO_TIME_MACHINE_SECTION_TIPO (dd15) → level 1 (temporary; see @todo)
+*   - DEDALO_AREA_MAINTENANCE_TIPO (dd88) → 0 unless global admin or developer
+*   - matrix_list / matrix_dd / matrix_notes tables → fall back to level 1
+*
+* Relationships:
+*   - Extended by nothing; instantiated by dd_manager and API controllers.
+*   - Calls component_common::get_instance(), section::get_ar_children_tipo…(),
+*     component_filter_master::get_user_projects(), dd_cache, and the session
+*     helpers logged_user_id() / logged_user_is_global_admin() / logged_user_is_developer().
+*   - permission_exception is defined in this file so the autoloader loads both
+*     together.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class security {
 
@@ -18,58 +63,83 @@ class security {
 	*/
 		/**
 		 * ID of the currently logged-in user.
-		 * Set in constructor from session. Used to resolve user-specific permissions.
+		 * Populated in the constructor from logged_user_id() (session).
+		 * Used only during the constructor; all static methods re-read the session
+		 * directly, so this property is not consulted after construction.
 		 * @var ?int $user_id
 		 */
 		private ?int $user_id = null;
 
 		/**
-		 * Tipo of the section storing user permissions in config.
-		 * Defines where the permission matrix is stored in the ontology.
+		 * Tipo of the section that stores user permission profiles.
+		 * Retained for potential future use; currently not written after construction.
 		 * @var ?string $permissions_tipo
 		 */
 		private ?string $permissions_tipo = null;
 
 		/**
-		 * Component tipo within the permissions section that contains the actual permission data.
-		 * Points to the specific field holding permission values.
+		 * Tipo of the component within the permissions section that holds the
+		 * permission matrix data (component_security_access).
+		 * Retained for potential future use; currently not written after construction.
 		 * @var ?string $permissions_dato
 		 */
 		private ?string $permissions_dato = null;
 
 		/**
-		 * Static cache of permissions matrix for the current user.
-		 * Array mapping section_tipos to permission levels (0-3) for the active user.
+		 * In-process static cache of the permissions matrix for the current user.
+		 * Stores a flat associative array keyed as "<section_tipo>_<component_tipo>"
+		 * mapping to permission level (int 0–3). Populated on the first call to
+		 * get_permissions_table() and reused for the lifetime of the request.
+		 * Cleared by clean_cache() and reset_permissions_table() when the matrix
+		 * is invalidated (e.g. after a profile change).
 		 * @var ?array $ar_permissions_in_matrix_for_current_user
 		 */
 		private static ?array $ar_permissions_in_matrix_for_current_user = null;
 
 		/**
-		 * Static cache of the full permissions lookup table.
-		 * Stores all user/section permission mappings for fast access.
+		 * In-process static cache of the full permissions lookup table.
+		 * Secondary cache slot; used as a pre-static-cache fallback in earlier code.
 		 * @var ?array $ar_permissions_table
 		 */
 		private static ?array $ar_permissions_table = null;
 
 		/**
-		 * Filename for caching the user's permissions table on disk.
-		 * Used to persist permission lookups across requests for performance.
+		 * Filename for the per-user on-disk permissions cache.
+		 * When set, the file stores the serialised permissions table across requests
+		 * so that the matrix does not need to be rebuilt from the component on every
+		 * page load.
 		 * @var ?string $filename_user_ar_permissions_table
 		 */
 		private ?string $filename_user_ar_permissions_table = null;
 
 		/**
-		 * Static cache for parsed permissions table data.
-		 * Prevents repeated file reads or database queries for permission lookups.
+		 * Primary in-process static cache for the parsed permissions table.
+		 * Public so that external diagnostic tooling can inspect or clear the cache
+		 * without going through reset_permissions_table(). Use clean_cache() or
+		 * reset_permissions_table() in normal application code.
 		 * @var ?array $permissions_table_cache
 		 */
 		public static ?array $permissions_table_cache = null;
 
 		/**
-		 * Server-only flag to grant temporary read access for non-destructive operations.
-		 * Used in autocomplete and label resolution where the user lacks direct access
-		 * but needs to read linked data. Must ONLY be set by trusted server code
-		 * and reset in a finally block. Never trust client-supplied rqo for this flag.
+		 * Server-only flag that temporarily elevates any logged-in user to read-level
+		 * access on most sections.
+		 *
+		 * Required by internal services (autocomplete, label resolution, search
+		 * sub-queries) that must traverse sections the user has not been explicitly
+		 * granted access to in order to resolve referenced labels or list values.
+		 *
+		 * (!) CRITICAL: this flag MUST be set exclusively by trusted server-side
+		 * code (e.g. service_autocomplete, search helper methods) and MUST be reset
+		 * (set back to false) in a finally block immediately after the privileged
+		 * call. Never honour a client-supplied flag from the rqo/API payload for
+		 * this purpose — a previous version that trusted
+		 * dd_core_api::$rqo->source->config->read_only allowed any logged user to
+		 * gain read access to nearly every section.
+		 *
+		 * Exceptions (even when true, access stays 0):
+		 *   DEDALO_SECTION_USERS_TIPO and DEDALO_SECTION_PROFILES_TIPO
+		 *   are never made readable via this flag.
 		 * @var bool $read_only_scope
 		 */
 		public static bool $read_only_scope = false;
@@ -78,6 +148,10 @@ class security {
 
 	/**
 	* __CONSTRUCT
+	* Initialises the security instance and validates that a user session exists.
+	* Throws (in debug mode) or logs an error if no user_id is found in the session.
+	* @throws Exception When SHOW_DEBUG is true and the session has no user_id.
+	* @return void
 	*/
 	function __construct() {
 
@@ -101,13 +175,26 @@ class security {
 
 	/**
 	* GET_SECURITY_PERMISSIONS
-	* Resolve permissions value from $parent_tipo and $tipo
-	* normally section_tipo, component_tipo
-	* @param string $parent_tipo
-	*	tipo of section / area
-	* @param string $tipo
-	* 	tipo of element (usually component)
-	* @return int $permissions
+	* Resolves the effective permission level (0–3) for a (parent_tipo, tipo) pair
+	* against the currently logged-in user.
+	*
+	* Evaluation order (first matching rule wins):
+	*   1. $read_only_scope flag — returns 1 for most sections (see property doc).
+	*   2. DEDALO_SUPERUSER — returns 3 unconditionally.
+	*   3. Hard-coded section bypasses (tools register, temp preset, inverse relations,
+	*      time machine, maintenance area).
+	*   4. User permissions matrix (get_permissions_table()).
+	*   5. matrix_list / matrix_dd / matrix_notes fallback — returns 1 when the
+	*      section stores publicly readable list values and the matrix gave 0.
+	*
+	* When SHOW_DEBUG is true, the method increments 'security_permissions_total_calls'
+	* and accumulates timing in 'security_permissions_total_time' via the metrics
+	* subsystem.
+	*
+	* @param string $parent_tipo - Tipo of the owning section or area (e.g. 'dd128').
+	* @param string $tipo - Tipo of the element being checked, usually a component tipo.
+	*                       Pass 'all' to check section-level visibility.
+	* @return int - Permission level: 0 = none, 1 = read, 2 = read/write, 3 = admin.
 	*/
 	public static function get_security_permissions( string $parent_tipo, string $tipo ) : int {
 
@@ -212,17 +299,29 @@ class security {
 
 
 	/**
-	* PERMISSIONS TABLE
-	* Calculated once and stored in cache
-	* Cached as custom file for each user as 'development_1_cache_permissions_table.json'
-	* containing an JSON object with key => value as
-	* {
-	* 	"test38_test122": 2,
-	*	"test38_test207": 2,
-	* 	..
-	* }
-	* @return array $permissions_table
-	*	Array of permissions of ALL structure table elements from root 'dd1'
+	* GET_PERMISSIONS_TABLE
+	* Builds and returns the full permissions lookup table for the currently
+	* logged-in user. The table is a flat associative array:
+	*
+	*   [ "<section_tipo>_<component_tipo>" => <int level>, … ]
+	*
+	* Example:
+	*   { "test38_test122": 2, "test38_test207": 2, … }
+	*
+	* Caching strategy (fastest first):
+	*   1. In-process static cache ($permissions_table_cache) — avoids any I/O
+	*      during a single PHP request and is essential for the login sequence,
+	*      where permission lookups happen before the file cache exists.
+	*   2. On-disk file cache (`cache_permissions_table.php`, written via dd_cache)
+	*      — shared across requests for the same session user.
+	*   3. Fresh computation from component_security_access (dd774) of the user's
+	*      profile record — triggers a component build and database read.
+	*
+	* Call clean_cache() or reset_permissions_table() after a profile change to
+	* invalidate both layers.
+	*
+	* @return array - Flat associative permissions map. Returns an empty array
+	*                 when the user has no profile or no permission entries.
 	*/
 	private static function get_permissions_table() : array {
 		$start_time=start_time();
@@ -278,6 +377,8 @@ class security {
 				: [];
 
 		// transforms to assoc array (fast for check if item exists)
+			// Each $item is an object with properties: section_tipo, tipo, value.
+			// Keying on "<section_tipo>_<tipo>" mirrors the key built in get_security_permissions.
 			$permissions_table = [];
 			foreach ($data as $item) {
 				$permissions_key = $item->section_tipo.'_'.$item->tipo;
@@ -311,11 +412,19 @@ class security {
 
 	/**
 	* GET_USER_SECURITY_ACCESS
-	* Locate component_security_access of current logged user based on user profile
-	* and return the component instance
-	* @param int $user_id
-	* @return component_security_access|null $component_security_access
-	* Returns null if user profile is not found.
+	* Locates and returns the component_security_access instance (tipo dd774)
+	* belonging to the profile record assigned to the given user.
+	*
+	* Resolution path:
+	*   user (dd128) → profile locator (dd1725) → profile record (dd234)
+	*     → component_security_access (dd774)
+	*
+	* The component's get_data() returns an array of objects, each describing one
+	* (section_tipo, tipo, value) permission entry. This data feeds
+	* get_permissions_table().
+	*
+	* @param int $user_id - Dédalo user section_id (from the users section dd128).
+	* @return component_security_access|null - null when the user has no profile.
 	*/
 	public static function get_user_security_access(int $user_id) : ?component_security_access {
 
@@ -347,9 +456,17 @@ class security {
 
 	/**
 	* GET_USER_PROFILE
-	* Resolve user profile id by user_id
-	* @param int $user_id
-	* @return object|null $locator
+	* Resolves the profile locator object for the given user.
+	*
+	* Reads the user's profile-select component (tipo DEDALO_USER_PROFILE_TIPO,
+	* typically dd1725) in section dd128 and returns the first locator object,
+	* which carries `section_tipo` (dd234) and `section_id` identifying the
+	* user's profile record. Returns null when no profile is assigned or the
+	* data is malformed.
+	*
+	* @param int $user_id - Dédalo user section_id (in the users section dd128).
+	* @return object|null - Locator object { section_tipo, section_id } or null
+	*                       if the user has no assigned profile.
 	*/
 	public static function get_user_profile(int $user_id) : ?object {
 
@@ -390,8 +507,14 @@ class security {
 
 	/**
 	* RESET_PERMISSIONS_TABLE
-	* Force to recalculate global permissions
-	* @return bool true
+	* Invalidates all caches for the current user's permission matrix and
+	* immediately triggers a fresh computation from the database/component layer.
+	*
+	* Use after modifying a user's profile assignment or after saving changes
+	* to the profile's component_security_access data, so that the new matrix
+	* takes effect without requiring a new session.
+	*
+	* @return bool - Always true.
 	*/
 	public static function reset_permissions_table() : bool {
 
@@ -408,9 +531,17 @@ class security {
 
 	/**
 	* CLEAN_CACHE
-	* Removes PHP session permissions_table and
-	* security static vars 'permissions_table_cache'
-	* @return bool
+	* Wipes all permission-table cache layers for the current request:
+	*   1. The legacy PHP session key `$_SESSION['dedalo']['auth']['permissions_table']`
+	*      (kept for backward compatibility with any caller that still reads it).
+	*   2. The static in-process cache ($permissions_table_cache).
+	*   3. The on-disk file cache (`cache_permissions_table.php`) via dd_cache,
+	*      so the next request rebuilds the table from the component.
+	*
+	* Called by reset_permissions_table(); also useful in tests and after login
+	* to guarantee a clean slate.
+	*
+	* @return bool - Always true.
 	*/
 	public static function clean_cache() {
 
@@ -434,8 +565,19 @@ class security {
 
 	/**
 	* GET_AR_AUTHORIZED_AREAS_FOR_USER
-	* Returns the user authorized areas
-	* @return array $area_permissions
+	* Returns the list of area tipos the currently logged-in user has any
+	* explicit permission on.
+	*
+	* An "area" entry in the permissions table is identified by the pattern where
+	* both the section_tipo and component_tipo parts of the compound key are the
+	* same string (e.g. the key "tchi1_tchi1" represents area tipo "tchi1").
+	* This method scans the full flat permissions table and collects those entries.
+	*
+	* Each element of the returned array is a stdClass with:
+	*   - tipo  (string) — the area tipo
+	*   - value (int)    — the permission level (0–3)
+	*
+	* @return array - Array of stdClass{ tipo, value } for each authorized area.
 	*/
 	public static function get_ar_authorized_areas_for_user() : array {
 
@@ -470,10 +612,26 @@ class security {
 
 	/**
 	* IS_GLOBAL_ADMIN
-	* Test if received user is global admin
-	* @param int|null $user_id
-	*	User id · int|null · can be the current logged user or not.
-	* @return bool
+	* Tests whether the given user has the global-administrator flag set.
+	*
+	* Global admins bypass per-record project filters in search queries and have
+	* access to administrative UI areas such as the maintenance area (dd88) and
+	* the user/profile management sections. They do NOT automatically receive
+	* write permission on every component — that still depends on the profile
+	* matrix — but many security gates treat them as unrestricted readers.
+	*
+	* Resolution:
+	*   - DEDALO_SUPERUSER (–1) always returns true.
+	*   - If $user_id matches the session user, the pre-computed session flag
+	*     `$_SESSION['dedalo']['auth']['is_global_admin']` is returned immediately
+	*     (set during login).
+	*   - Otherwise, the value is read live from component DEDALO_SECURITY_ADMINISTRATOR_TIPO
+	*     (dd244) inside section DEDALO_SECTION_USERS_TIPO (dd128). A section_id of 1
+	*     in that component's data means the user is a global admin.
+	*
+	* @param int|null $user_id - The user section_id to test. Pass null or 0 to get
+	*                            false immediately (no user → no admin).
+	* @return bool - true if the user is a global admin, false otherwise.
 	*/
 	public static function is_global_admin(?int $user_id) : bool {
 
@@ -528,6 +686,8 @@ class security {
 					$data = (int)$security_administrator_data[0]->section_id;
 
 				// is_global_admin
+					// Convention: the component stores a relation to a yes/no list record;
+					// section_id === 1 means "yes" (admin), any other value means "no".
 					$is_global_admin = ($data===1);
 			}
 
@@ -539,10 +699,24 @@ class security {
 
 	/**
 	* IS_DEVELOPER
-	* Test if received user is developer
-	* @param $user_id
-	*	User id · int · can be the current logged user or not.
-	* @return bool
+	* Tests whether the given user has the developer flag set.
+	*
+	* Developer status grants access to the maintenance area (dd88) alongside
+	* global admins. It is used by diagnostic and debug features that are unsafe
+	* to expose to regular editors. A developer is NOT automatically a global
+	* admin and vice versa.
+	*
+	* Resolution:
+	*   - DEDALO_SUPERUSER (–1) always returns true.
+	*   - If $user_id matches the session user, the pre-computed session flag
+	*     `$_SESSION['dedalo']['auth']['is_developer']` is returned immediately
+	*     (set during login).
+	*   - Otherwise, the value is read live from component DEDALO_USER_DEVELOPER_TIPO
+	*     (dd515) inside section DEDALO_SECTION_USERS_TIPO (dd128). A section_id of 1
+	*     in that component's data means the user is a developer.
+	*
+	* @param int $user_id - The user section_id to test. Pass 0 to get false immediately.
+	* @return bool - true if the user is a developer, false otherwise.
 	*/
 	public static function is_developer(int $user_id) : bool {
 
@@ -596,6 +770,7 @@ class security {
 					$data = (int)$data[0]->section_id;
 
 				// is_developer
+					// Convention: section_id === 1 means "yes" (developer).
 					$is_developer = ($data===1);
 			}
 
@@ -607,11 +782,18 @@ class security {
 
 	/**
 	* GET_SECTION_NEW_PERMISSIONS
-	* Resolves button new permissions
-	* @see component_filter->set_data_default()
-	* @param string $section_tipo
-	* @return int|null $permissions
-	* 	null indicates that no button new is available or permissions are not set
+	* Resolves the permission level that controls whether the current user may
+	* create new records in $section_tipo (the "button_new" gate).
+	*
+	* Locates the first button_new child tipo within the section's ontology
+	* structure, then delegates to common::get_permissions() for the actual
+	* level lookup. Returns null when the section has no button_new defined
+	* (creation is not supported for that section) or when permissions are
+	* not set.
+	*
+	* @see component_filter::set_data_default()
+	* @param string $section_tipo - Tipo of the section to check.
+	* @return int|null - Permission level 0–3, or null if no button_new is found.
 	*/
 	public static function get_section_new_permissions(string $section_tipo) : ?int {
 
@@ -640,13 +822,17 @@ class security {
 
 	/**
 	* ASSERT_SECTION_PERMISSION
-	* Throws a permission_exception if the logged user has insufficient
-	* permission on $section_tipo. Use as a one-line gate at the top of
-	* API methods that operate on a section.
-	* @param string $section_tipo
-	* @param int $required_level 1=read, 2=write, 3=admin
-	* @param string $context Optional caller context for logs.
-	* @throws permission_exception
+	* Throws a permission_exception if the logged user's level on $section_tipo
+	* is below $required_level. Use as a one-line gate at the top of API methods
+	* that operate on a section.
+	*
+	* The check is done against the (section_tipo, section_tipo) self-key, which
+	* is the convention for section-level access in the permissions matrix.
+	*
+	* @param string $section_tipo - Tipo of the section to gate.
+	* @param int $required_level - Minimum level required: 1=read, 2=write, 3=admin.
+	* @param string $context = '' - Optional caller identifier for the exception message.
+	* @throws permission_exception - When the user's level is below $required_level.
 	* @return void
 	*/
 	public static function assert_section_permission(
@@ -667,14 +853,15 @@ class security {
 
 	/**
 	* ASSERT_TIPO_PERMISSION
-	* Throws a permission_exception if the logged user has insufficient
-	* permission on the (parent_tipo, tipo) pair. Use for component-level
-	* gating where the parent section_tipo and component tipo differ.
-	* @param string $parent_tipo
-	* @param string $tipo
-	* @param int $required_level
-	* @param string $context
-	* @throws permission_exception
+	* Throws a permission_exception if the logged user has insufficient permission
+	* on the ($parent_tipo, $tipo) pair. Use for component-level gating when the
+	* parent section_tipo and component tipo differ (the normal case).
+	*
+	* @param string $parent_tipo - Tipo of the owning section.
+	* @param string $tipo - Tipo of the component or sub-element.
+	* @param int $required_level - Minimum level required: 1=read, 2=write, 3=admin.
+	* @param string $context = '' - Optional caller identifier for the exception message.
+	* @throws permission_exception - When the user's level is below $required_level.
 	* @return void
 	*/
 	public static function assert_tipo_permission(
@@ -696,11 +883,17 @@ class security {
 
 	/**
 	* ASSERT_COMPONENT_PERMISSION
-	* Throws if the component's resolved permission level is below required.
-	* Use when an instantiated component is already at hand.
-	* @param component_common $component
-	* @param int $required_level
-	* @throws permission_exception
+	* Throws a permission_exception if the already-instantiated component's
+	* resolved permission level is below $required_level.
+	*
+	* Use this variant when the component object is already at hand (avoids a
+	* second type/matrix lookup). The level is read from
+	* component_common::get_component_permissions(), which calls
+	* common::get_permissions() with the component's own section_tipo and tipo.
+	*
+	* @param component_common $component - The instantiated component to test.
+	* @param int $required_level - Minimum level: 1=read, 2=write, 3=admin.
+	* @throws permission_exception - When the component's level is below $required_level.
 	* @return void
 	*/
 	public static function assert_component_permission(
@@ -719,12 +912,16 @@ class security {
 
 	/**
 	* ASSERT_SECTION_ARRAY_PERMISSION
-	* Throws on the first $section_tipo in the array that fails the gate.
-	* Use for SQO arrays like sqo.section_tipo[].
-	* @param array $ar_section_tipo
-	* @param int $required_level
-	* @param string $context
-	* @throws permission_exception
+	* Iterates an array of section tipos and throws on the first entry that fails
+	* the schema-level gate. Use for SQO payloads that carry multiple target
+	* sections (e.g. sqo.section_tipo[]).
+	*
+	* Non-string entries are skipped silently to tolerate mixed arrays.
+	*
+	* @param array $ar_section_tipo - Flat array of section tipo strings.
+	* @param int $required_level - Minimum level: 1=read, 2=write, 3=admin.
+	* @param string $context = '' - Optional caller identifier for the exception.
+	* @throws permission_exception - On the first section with insufficient access.
 	* @return void
 	*/
 	public static function assert_section_array_permission(
@@ -744,11 +941,19 @@ class security {
 
 	/**
 	* ASSERT_LOCATOR_ARRAY_PERMISSION
-	* Iterates filter_by_locators and gates each unique section_tipo.
-	* @param array $filter_by_locators
-	* @param int $required_level
-	* @param string $context
-	* @throws permission_exception
+	* Iterates an array of locator objects (each expected to have a `section_tipo`
+	* property) and gates each unique section_tipo it encounters. Already-seen
+	* section tipos are skipped to avoid redundant checks.
+	*
+	* Designed for payloads that carry filter_by_locators arrays (e.g. relational
+	* search inputs) where the caller needs to verify the user may read each
+	* referenced section.
+	*
+	* @param array $filter_by_locators - Array of locator objects, each with a
+	*                                    `section_tipo` string property.
+	* @param int $required_level - Minimum level: 1=read, 2=write, 3=admin.
+	* @param string $context = '' - Optional caller identifier for the exception.
+	* @throws permission_exception - On the first section with insufficient access.
 	* @return void
 	*/
 	public static function assert_locator_array_permission(
@@ -783,10 +988,15 @@ class security {
 	*   - layer 1 → `assert_*_permission` (schema-level, type-based)
 	*   - layer 2 → this helper (per-record, project-based)
 	*
-	* @param string $section_tipo
-	* @param int $section_id
-	* @param int|null $user_id Defaults to logged_user_id().
-	* @return bool
+	* Section exemptions (always returns true regardless of project assignment):
+	*   - DEDALO_SECTION_PROFILES_TIPO (dd234) — profile records are shared.
+	*   - DEDALO_FILTER_SECTION_TIPO_DEFAULT — the default project/filter section.
+	*   - Sections that have no component_filter child in their ontology.
+	*
+	* @param string $section_tipo - Tipo of the section owning the record.
+	* @param int $section_id - Primary key of the record to check.
+	* @param int|null $user_id = null - User to check; defaults to logged_user_id().
+	* @return bool - true when the user may access the record, false otherwise.
 	*/
 	public static function user_can_access_record(
 		string $section_tipo,
@@ -904,10 +1114,10 @@ class security {
 	* caller-supplied `section_id` and is about to mutate or read it
 	* outside of a sqo (which already applies the project filter).
 	*
-	* @param string $section_tipo
-	* @param int $section_id
-	* @param string $context Caller name for the exception (typically __METHOD__).
-	* @throws permission_exception
+	* @param string $section_tipo - Tipo of the section owning the record.
+	* @param int $section_id - Primary key of the record to check.
+	* @param string $context = '' - Caller name for the exception (typically __METHOD__).
+	* @throws permission_exception - When user_can_access_record returns false.
 	* @return void
 	*/
 	public static function assert_record_in_user_scope(
@@ -940,8 +1150,18 @@ class security {
 */
 final class permission_exception extends Exception {
 
+	/**
+	 * Caller context string set by the assert_* helper that threw this exception.
+	 * Typically the fully-qualified method name (__METHOD__) of the API handler
+	 * that performed the permission check. An empty string when the caller omitted it.
+	 * @var string $api_context
+	 */
 	public string $api_context;
 
+	/**
+	 * @param string $message - Human-readable description of the permission failure.
+	 * @param string $context - Optional caller identifier (typically __METHOD__).
+	 */
 	public function __construct(string $message, string $context = '') {
 		parent::__construct($message);
 		$this->api_context = $context;

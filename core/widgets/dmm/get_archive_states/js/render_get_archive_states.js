@@ -219,13 +219,15 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 
 		// label
+		// (!) closed_label_node is intentionally not referenced after creation —
+		// ui.create_dom_element appends it to closed_node as a side-effect.
 		const closed_label_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'states_label closed_label',
 			inner_html		: closed_label + ':',
 			parent			: closed_node
 		})
-			//answer_text_node
+			// closed_text
 			// Build each segment conditionally; empty strings are excluded from the
 			// joined display so the " | " separator only appears between present values.
 			const closed_text =[]
@@ -245,7 +247,9 @@ const get_value_element = (i, data, values_container, self) => {
 			closed_text.push(closed_negative_text)
 			closed_text.push(closed_total_text)
 
-			//closed_text_node
+			// closed_text_node
+			// (!) closed_text_node is intentionally not referenced after creation —
+			// ui.create_dom_element appends it to closed_node as a side-effect.
 				const closed_text_node = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'text',
@@ -261,13 +265,15 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 
 		// label
+		// (!) answer_label_node is intentionally not referenced after creation —
+		// ui.create_dom_element appends it to answer_node as a side-effect.
 		const answer_label_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'states_label answer_label',
 			inner_html		: answer_label + ':',
 			parent			: answer_node
 		})
-			//answer_text_node
+			// answer_text
 			// "pos:" / "neg:" labels are intentionally not localised here; they are
 			// short technical tokens rather than user-facing words.
 			const answer_text =[]
@@ -286,7 +292,9 @@ const get_value_element = (i, data, values_container, self) => {
 			answer_text.push(answer_negative_text)
 			answer_text.push(answer_total_text)
 
-			//answer_text_node
+			// answer_text_node
+			// (!) answer_text_node is intentionally not referenced after creation —
+			// ui.create_dom_element appends it to answer_node as a side-effect.
 				const answer_text_node = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'text',
@@ -297,10 +305,17 @@ const get_value_element = (i, data, values_container, self) => {
 
 
 
-		// even manager model to use in other widgets_properties
-		// this widget don't use it, because the info is not in the same section
-		// than the components that changed our value
-		// the user don't see the info and the input components at same time
+		// event_manager subscription — deliberately omitted for this widget.
+		// The live-update pattern via event_manager is used in sibling widgets (e.g.
+		// get_archive_states_weights) when the data source and the display panel
+		// coexist in the same section view. Here they do not: the user never sees the
+		// input components and the summary panel at the same time, so a subscription
+		// would never fire in practice.
+		//
+		// (!) The commented-out fn_update_widget_value body below was copied from
+		// get_archive_states_weights and references weight/diameter fields that do not
+		// exist in this widget's value schema. It should be removed once confirmed
+		// that live-update support is not planned for this widget.
 		// self.events_tokens.push(
 		// 	event_manager.subscribe('update_widget_value_'+i+'_'+self.id, fn_update_widget_value)
 		// )

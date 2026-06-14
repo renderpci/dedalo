@@ -1,9 +1,36 @@
 <?php
 declare(strict_types=1);
 /**
-* CLASS ImageMagick
-* Manages image files process with ImageMagick lib
-* https://imagemagick.org
+* CLASS IMAGEMAGICK
+* Provides a static façade over the ImageMagick command-line tools (`magick`,
+* `convert`, `identify`) for all image-processing operations in Dédalo.
+*
+* Responsibilities:
+* - Resolving the installed binary path for both ImageMagick v6 (`convert`/`identify`)
+*   and v7 (`magick`/`magick identify`), since the two versions ship different binary names.
+* - Reading per-installation behaviour overrides from the `MAGICK_CONFIG` constant
+*   defined in `config.php` (e.g. OS-specific `remove_layer_0` for TIFF transparency).
+* - Converting source images to web-ready derivates (JPEG, WebP, PNG, etc.) with
+*   full colour-space handling: CMYK→sRGB profile conversion, ICC profile stripping,
+*   layer/channel merging, meta-channel→alpha promotion, and opaque/transparent detection.
+* - Building and executing the thumbnail derivate used throughout the UI
+*   (`dd_thumb`), driven by `DEDALO_IMAGE_THUMB_WIDTH`/`DEDALO_IMAGE_THUMB_HEIGHT`.
+* - Querying file metadata: dimensions (orientation-aware), layer count, channel
+*   composition, EXIF date, and the full `json:` attribute dump.
+* - Performing in-place or cross-path rotate and crop operations with
+*   fine-grained distortion mode control.
+*
+* All shell commands are run with `nice -n 19` to avoid starving the web process,
+* and all user-supplied paths are escaped via `escapeshellarg()`.
+*
+* Key constants expected from `config.php`:
+*   - MAGICK_PATH          — directory that contains the ImageMagick binaries (trailing slash).
+*   - MAGICK_CONFIG        — optional array with keys `remove_layer_0` (bool) and `is_opaque` (?bool).
+*   - COLOR_PROFILES_PATH  — directory containing ICC colour-profile files.
+*   - DEDALO_IMAGE_THUMB_WIDTH / DEDALO_IMAGE_THUMB_HEIGHT — thumbnail geometry.
+*
+* @package Dédalo
+* @subpackage Core
 */
 final class ImageMagick {
 
@@ -11,9 +38,18 @@ final class ImageMagick {
 
 	/**
 	* GET_MAGICK_CONFIG
-	* get the parameters defined into the config.php
-	* it check if the parameters are defined and set the defaults.
-	* @return object $magick_config
+	* Reads and normalises the ImageMagick configuration defined in `config.php`.
+	*
+	* The constant `MAGICK_CONFIG` is expected to be an associative array set in
+	* `config.php`. If the constant is absent, an empty `stdClass` is used so
+	* that every key falls back to the documented default below:
+	*   - `remove_layer_0` (bool, default false): On some OS/IM version combinations
+	*     (Rocky Linux, RHEL, macOS), the TIFF "layer 0" flat-composition layer must be
+	*     deleted to preserve per-layer transparency. On Ubuntu it must be kept.
+	*   - `is_opaque` (?bool, default null): When set to `false`, every image is treated
+	*     as transparent (needed on Rocky Linux where `%[opaque]` detection is unreliable).
+	*     When `null`, `is_opaque()` performs the normal per-file check.
+	* @return object $magick_config - stdClass with `remove_layer_0` and `is_opaque` properties.
 	*/
 	public static function get_magick_config() : object {
 
@@ -30,7 +66,19 @@ final class ImageMagick {
 
 	/**
 	* GET_IMAGEMAGICK_INSTALLED_PATH
-	* @return string
+	* Resolves the full path to the ImageMagick conversion binary, caching the
+	* result in a static variable so the filesystem check happens only once per
+	* PHP process.
+	*
+	* ImageMagick v7 ships a unified `magick` binary; v6 uses separate binaries
+	* (`convert`, `identify`, …). This method returns `MAGICK_PATH . 'magick'`
+	* when that file exists, and falls back to `MAGICK_PATH . 'convert'` for
+	* installations that are still on v6.
+	*
+	* (!) The static cache is process-scoped: if the binary is replaced on disk
+	*     (e.g. during a package upgrade) the cached path becomes stale until the
+	*     PHP worker is restarted.
+	* @return string - absolute path to the conversion binary.
 	*/
 	public static function get_imagemagick_installed_path() : string {
 		static $path;
@@ -49,7 +97,16 @@ final class ImageMagick {
 
 	/**
 	* GET_IMAGEMAGICK_IDENTIFY_PATH
-	* @return string
+	* Resolves the full command string for the ImageMagick `identify` tool,
+	* caching the result in a static variable.
+	*
+	* On ImageMagick v7 the sub-command form `magick identify` is used (because
+	* `magick` is the single unified entry-point). On v6 installations the
+	* standalone `identify` binary at `MAGICK_PATH` is returned instead.
+	*
+	* (!) Returns a command *string* (potentially with a space and a sub-command),
+	*     not a bare file path — callers must not pass it through `file_exists()`.
+	* @return string - command string suitable for shell interpolation, e.g. `'/usr/bin/magick identify'`.
 	*/
 	public static function get_imagemagick_identify_path() : string {
 		static $path;
@@ -70,7 +127,13 @@ final class ImageMagick {
 
 	/**
 	* GET_IMAGEMAGICK_PDFINFO_PATH
-	* @return string
+	* Returns the full path to the `pdfinfo` utility (part of Poppler, not
+	* ImageMagick itself) expected to live in `MAGICK_PATH`.
+	*
+	* `pdfinfo` is used elsewhere in the media pipeline to read PDF metadata
+	* without invoking a full IM conversion. There is intentionally no version
+	* detection or caching here because `pdfinfo` is always a standalone binary.
+	* @return string - absolute path to the `pdfinfo` binary.
 	*/
 	public static function get_imagemagick_pdfinfo_path() : string {
 
@@ -98,10 +161,25 @@ final class ImageMagick {
 
 	/**
 	* DD_THUMB
-	* Creates the thumb version file using the ImageMagick command line
-	* @param string $source_file (full source file path)
-	* @param string $target_file (full target thumb file path)
-	* @return string|bool $result
+	* Generates the fixed-size thumbnail derivate of an image file using the
+	* ImageMagick `-thumbnail` preset and writes it to `$target_file`.
+	*
+	* Thumbnail dimensions are read from the constants `DEDALO_IMAGE_THUMB_WIDTH`
+	* and `DEDALO_IMAGE_THUMB_HEIGHT` (falling back to 224×149 if undefined). The
+	* `>` suffix on the geometry string means ImageMagick only *shrinks* images
+	* that exceed the specified size — it never enlarges a small source image.
+	*
+	* The target directory is created (mode 0750, recursive) if it does not yet
+	* exist. Failure to create it is logged at ERROR level but does not throw, so
+	* the subsequent IM command will likely fail as well and return false.
+	*
+	* The command is run at `nice -n 19` (lowest CPU priority), with
+	* `-unsharp 0x.5` to compensate for the sharpness loss from resampling and
+	* `-auto-orient` to honour EXIF rotation tags.
+	*
+	* @param string $source_file - full absolute path of the source image.
+	* @param string $target_file - full absolute path where the thumbnail will be written.
+	* @return string|bool $result - the last line printed by `exec()` on success, or false on failure.
 	*/
 	public static function dd_thumb( string $source_file, string $target_file ) : string|bool {
 
@@ -150,10 +228,49 @@ final class ImageMagick {
 
 	/**
 	* CONVERT
-	* Creates alternate video or audio version with received settings
-	* @param object $options
-	* @return string|bool $result
-	*	Terminal command response
+	* Converts a source image file into a derivate using a rich set of ImageMagick
+	* options, writing the result to `$options->target_file`.
+	*
+	* This is the central conversion engine for the image media pipeline. It handles:
+	*   - Layer selection: a single layer, a list of layers, or all layers (null).
+	*   - Colour-space detection and CMYK→sRGB conversion using ICC profiles when the
+	*     source is identified as CMYK (via `identify -format '%[colorspace]'`).
+	*   - Transparency detection via `is_opaque()` and `has_meta_channel()`:
+	*       * If a meta channel is present (TIFF/PSD using meta as alpha), the channel
+	*         is promoted to a true alpha channel with `-channel-fx "meta0=>alpha"`.
+	*       * If the image has transparent pixels (is_opaque === false), a composite
+	*         layer is constructed manually; optionally the raw TIFF "layer 0"
+	*         flat-composition is deleted (OS-specific, see `get_magick_config()`).
+	*       * JPEG and other opaque-format targets always use a white background.
+	*   - Flattening, stripping, compositing, coalescing — each individually gated.
+	*   - Optional `-thumbnail` preset (fixed width/height from constants).
+	*   - Optional `-resize` to a percentage or pixel geometry.
+	*   - Density override for rasterising PDFs at a specific DPI.
+	*   - Anti-aliasing and PDF crop-box flags at the command prefix position.
+	*
+	* The command runs at `nice -n 19`. On non-zero exit codes the failure is logged
+	* at WARNING. A non-zero exit is *not* always a hard failure: ImageMagick sometimes
+	* exits non-zero but produces valid output; the method only returns false when the
+	* output string explicitly contains "ERROR:".
+	*
+	* @param object $options - conversion parameters:
+	*   - string   source_file  — absolute path of the input file (required).
+	*   - string   target_file  — absolute path for the output file (required).
+	*   - int|array|null ar_layers     = null     — layer index, array of indices, or null for all.
+	*   - int      quality       = 90              — JPEG/WebP compression quality (0–100).
+	*   - bool     thumbnail     = false           — apply fixed thumb geometry from constants.
+	*   - string   colorspace    = 'sRGB'          — target colour space label (informational).
+	*   - string   profile_in    = 'Generic_CMYK_Profile.icc' — input ICC profile filename.
+	*   - string   profile_out   = 'sRGB_Profile.icc'         — output ICC profile filename.
+	*   - bool     flatten       = true            — flatten layers onto a single canvas.
+	*   - int|null density       = null            — input resolution in DPI (e.g. 150 for PDF).
+	*   - string|null pdf_cropbox = null           — when set, adds `-define pdf:use-cropbox=true`.
+	*   - bool     strip         = true            — strip metadata (EXIF, profiles) from output.
+	*   - bool     antialias     = true            — enable anti-aliasing.
+	*   - bool     composite     = true            — composite layers when transparent.
+	*   - bool     coalesce      = true            — coalesce animation frames when transparent.
+	*   - string|null resize     = null            — geometry string, e.g. '25%' or '1024x756'.
+	* @return string|bool $result - last line of exec() output on success, or false on hard error.
 	*/
 	public static function convert( object $options ) : string|bool {
 
@@ -396,8 +513,26 @@ final class ImageMagick {
 
 	/**
 	* GET_LAYERS_FILE_INFO
-	* @param string $source_file
-	* @return int $layer_number
+	* Returns the number of layers (pages/frames) in a TIFF or PSD file.
+	*
+	* Uses `identify -format "%n %[tiff:has-layers]\n"` and takes only the last
+	* output line (via `tail -1`) because multi-layer TIFF files emit one line per
+	* layer and only the final line carries the aggregate count. PSD files emit
+	* the layer count without the boolean flag.
+	*
+	* The output format is one of:
+	*   - `"1"`               — single-layer / flattened image.
+	*   - `"8 true"`          — 8 layers (TIFF); the boolean flag is present.
+	*   - `"4"`               — 4 layers (PSD); no boolean suffix.
+	*
+	* Note that layer 0 in the IM numbering is always the flat composite of all
+	* layers, so the count returned includes that synthetic composite.
+	*
+	* Returns 1 for any format that does not report layers (empty output, flat
+	* images, or non-TIFF/PSD files passed in by the caller).
+	*
+	* @param string $source_file - absolute path of the image to inspect.
+	* @return int $layer_number - number of layers; minimum 1.
 	*/
 	public static function get_layers_file_info( string $source_file ) : int {
 
@@ -442,8 +577,20 @@ final class ImageMagick {
 	* Meta channel is use as alpha channel to define areas to be transparent
 	* imagemagick don't apply meta channels as alpha channels
 	* but tiff format or psd formats use it as alpha channel defining transparent pixels
-	* @param string $source_file
-	* @return bool $meta_channel
+	*
+	* Only inspects TIFF and PSD files (`.tif`, `.tiff`, `.psd`). All other
+	* extensions return false immediately and log a WARNING, because the
+	* `%[channels]` property carries meta-channel information only for those formats.
+	*
+	* The `identify` output uses a `<total>.<meta>` notation per layer, e.g.:
+	*   - `"srgb  3.0"` — 3 channels, 0 meta channels → no alpha defined by meta.
+	*   - `"srgb  4.1"` — 4 channels, 1 meta channel  → transparent via meta.
+	*   - `"srgba 6.2"` — 6 channels, 2 meta channels → transparent via meta.
+	* The regex extracts every `\d+\.\d+` pattern and checks whether the decimal
+	* part (the meta-channel count) is greater than zero.
+	*
+	* @param string $source_file - absolute path of the file to inspect.
+	* @return bool $meta_channel - true when at least one meta channel exists, false otherwise.
 	*/
 	public static function has_meta_channel( string $source_file ) : bool {
 
@@ -523,7 +670,29 @@ final class ImageMagick {
 	*	"alpha"				: false 		// bool; true || false
 	* }
 	*
-	* @return string|null $result
+	* Applies an SRT (Scale, Rotate, Translate) distortion to rotate the image
+	* by the given number of degrees. Two modes are supported via `rotation_mode`:
+	*   - `'default'`  — uses `-distort SRT` (canvas is clipped to the original size).
+	*   - `'expanded'` — uses `+distort SRT` (canvas expands to fit the rotated content).
+	*
+	* Background fill behaviour:
+	*   - When `alpha` is true: background is set to transparent (`-background none`)
+	*     regardless of `background_color`.
+	*   - When `background_color` is provided (and `alpha` is false): that hex colour
+	*     fills the exposed corners.
+	*   - When neither is set: no `-virtual-pixel` or background flag is added,
+	*     leaving ImageMagick's default fill in effect.
+	*
+	* Returns null on non-zero exit code from the shell command.
+	*
+	* @param object $options - rotation parameters:
+	*   - string      source          — absolute path of the input image (required).
+	*   - string      target          — absolute path for the output image (required).
+	*   - string|float degrees        — rotation angle in degrees (required).
+	*   - string      rotation_mode   = 'default' — 'default' (clip) or 'expanded' (expand).
+	*   - string|null background_color = null      — hex fill colour, e.g. '#ffffff'.
+	*   - bool        alpha           = false       — when true, background is transparent.
+	* @return string|null $result - last output line from exec() on success, null on failure or empty output.
 	*/
 	public static function rotate( object $options ) : ?string {
 
@@ -593,7 +762,21 @@ final class ImageMagick {
 	*	}
 	* }
 	*
-	* @return string|null $result
+	* Translates the `crop_area` object into an ImageMagick geometry string
+	* (`{width}x{height}+{x}+{y}`) and runs `magick/convert -crop … +repage`
+	* to remove canvas padding after the crop.
+	*
+	* Even on a zero exit code from exec(), the method inspects the combined output
+	* string for "ERROR:" or "geometry does not contain image" (ImageMagick may emit
+	* these warnings while still returning exit code 0 for partial crops) and returns
+	* null in those cases to prevent the caller from treating an empty/garbage file
+	* as a successful derivate.
+	*
+	* @param object $options - crop parameters:
+	*   - string $source    — absolute path of the source image (required).
+	*   - string $target    — absolute path for the output image (required).
+	*   - object $crop_area — geometry: `x` (int), `y` (int), `width` (int), `height` (int).
+	* @return string|null $result - last exec() output line on success, null on failure or out-of-bounds geometry.
 	*/
 	public static function crop( object $options ) : ?string {
 
@@ -664,8 +847,16 @@ final class ImageMagick {
     * 		}
     *	}
     * ]
-	* @param string $file_path
-	* @return array|null $result
+	*
+	* Invokes `magick <file> json:` to dump the full IM JSON attribute block for
+	* every layer in the file. The output is collected via exec() into the `$output`
+	* array, joined with newlines, and decoded as JSON.
+	*
+	* Returns null when the command exits with a non-zero status or when the
+	* combined output is empty/unparseable.
+	*
+	* @param string $file_path - absolute path of the image file to inspect.
+	* @return array|null $result - decoded JSON attribute objects (one per layer), or null on failure.
 	*/
 	public static function get_media_attributes( string $file_path ) : ?array {
 
@@ -705,6 +896,19 @@ final class ImageMagick {
 	* Check all layers of the image to determinate if the image is transparent or is opaque
 	* @param string $source_file
 	* @return bool $is_opaque
+	*
+	* Returns true (opaque) when at least one layer reports `%[opaque] = True`.
+	* Returns false (transparent) when every layer reports `False`.
+	*
+	* The `MAGICK_CONFIG` constant can override per-image detection entirely:
+	*   - `is_opaque = false` — forces all images to be treated as transparent
+	*     (needed on Rocky Linux where the `%[opaque]` property is unreliable).
+	*   - `is_opaque = true`  — forces all images to be treated as opaque.
+	*   - `is_opaque = null`  — performs the normal per-file shell check (default).
+	*
+	* (!) This method does NOT check for the presence of a meta channel. Use
+	*     `has_meta_channel()` separately when working with TIFF/PSD files that
+	*     define transparency through a meta channel rather than a true alpha layer.
 	*/
 	public static function is_opaque( string $source_file ) : bool {
 
@@ -741,6 +945,21 @@ final class ImageMagick {
 	* 	full file path
 	* @return dd_date|null $dd_date
 	* 	dd_date object
+	*
+	* Attempts to extract the capture date from the image in two passes:
+	*   1. `%[EXIF:DateTimeOriginal]` — the primary EXIF capture timestamp,
+	*      expected in `YYYY:MM:DD HH:MM:SS` format.
+	*   2. `%[date:modify]` — the file-system modification date in ISO 8601
+	*      format, used as a fallback when no EXIF date is present.
+	*
+	* Each pass uses a dedicated regex to parse the value because the two
+	* sources produce differently formatted strings. The parsed parts are
+	* mapped to individual setters on a `dd_date` instance.
+	*
+	* Timezone components (matches 8 and 9 from the fallback regex) are currently
+	* commented out and not applied to the `dd_date` object.
+	*
+	* Returns null when both `identify` calls return empty output.
 	*/
 	public static function get_date_time_original( string $file ) : ?dd_date {
 
@@ -789,6 +1008,21 @@ final class ImageMagick {
 	* 		width: 1280
 	* 		height: 1024
 	* 	}
+	*
+	* Reads width, height, and orientation from layer 0 of the image (`[0]`
+	* suffix) so that multi-layer files return the geometry of the composite.
+	*
+	* EXIF orientation values 5–8 (`LeftTop`, `RightTop`, `RightBottom`,
+	* `LeftBottom`) indicate the camera was rotated 90° or 270° when the
+	* picture was taken. For these orientations the width and height values
+	* stored in the file header are swapped to reflect the *display* dimensions.
+	* Currently only `RightTop` (270°) and `LeftBottom` (90°) are swapped;
+	* the remaining rotated orientations (`LeftTop`, `RightBottom`) fall through
+	* to the default branch and are not swapped.
+	*
+	* (!) Three separate `shell_exec` calls are made to `identify` (orientation,
+	*     width, height). This is intentional for simplicity; callers that need
+	*     to minimise process spawns should use `get_media_attributes()` instead.
 	*/
 	public static function get_dimensions( string $file_path ) : object {
 

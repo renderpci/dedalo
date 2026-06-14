@@ -1,7 +1,36 @@
 <?php declare(strict_types=1);
 /**
 * CLASS TM_RECORD
-* It represents a database record in the PHP space.
+* Domain object representing a single row in the `matrix_time_machine` PostgreSQL table.
+*
+* Every time a component value is saved in Dédalo, the previous snapshot of that value is
+* written to `matrix_time_machine` so that the Time Machine tool can restore any prior state.
+* This class is the primary PHP representation of one such snapshot row.
+*
+* Responsibilities:
+* - Wraps a tm_record_data instance that owns all database I/O (read / update / delete).
+* - Provides a factory (create()) that validates, guards, and inserts new snapshot rows,
+*   including a "save-before" repair pass for component data that was never previously
+*   captured by TM (e.g. legacy import scenarios).
+* - Exposes search() so callers can query the `matrix_time_machine` table with arbitrary
+*   column filters, returning results via the typed db_result iterator.
+* - Materialises a full section_record from a TM row via get_section_record(), mapping
+*   each stored datum back into the virtual DEDALO_TIME_MACHINE_SECTION_TIPO (dd15)
+*   record so the normal component rendering pipeline can display TM history without
+*   any special-cased UI.
+*
+* Key relationships:
+* - tm_record_data  — CRUD façade; one instance is held in $data_instance.
+* - tm_db_manager   — static DAL that owns the prepared-statement pool for matrix_time_machine.
+* - matrix_db_manager — sibling DAL supplying exec_search() used inside search().
+* - section_record  — target type produced by get_section_record().
+* - db_result       — typed iterator returned by search().
+*
+* Global kill-switch: set tm_record::$save_tm = false before a bulk operation to suppress
+* all TM writes for the duration of that operation.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class tm_record {
 
@@ -61,7 +90,7 @@ class tm_record {
 
 	/**
 	* GET_INSTANCE
-	* Get an instance of a section_record object.
+	* Get an instance of a tm_record object.
 	* Not cached at now because the real shared data is from section_record_data.
 	* @param int $id
 	* @return tm_record $tm_record
@@ -74,9 +103,10 @@ class tm_record {
 
 
 	/**
-	* GET_INSTANCE
-	* Cache section instances (singleton pattern)
-	* @param int $id
+	* __CONSTRUCT
+	* Private constructor; instances must be obtained via get_instance().
+	* Initialises the tm_record_data instance that handles all database I/O.
+	* @param int $id - Primary key of the matrix_time_machine row.
 	*/
 	private function __construct( int $id ) {
 
@@ -201,14 +231,35 @@ class tm_record {
 	/**
 	* CREATE
 	* Inserts a single row into a "matrix_time_machine" table.
+	*
+	* Guards applied before the INSERT:
+	* 1. Global kill-switch: returns false immediately when tm_record::$save_tm === false.
+	*    Callers such as bulk-portalize operations set this flag to skip TM entirely.
+	* 2. Timestamp injection: if $values->timestamp is absent, the current UTC timestamp
+	*    is added via dd_date::get_timestamp_now_for_db().
+	* 3. User injection: if $values->user_id is absent, the currently-logged-in user is
+	*    resolved via logged_user_id() and injected.
+	* 4. Mandatory column validation: section_id, section_tipo, tipo, and lang must all be
+	*    non-empty or the call is logged as ERROR and returns false.
+	* 5. dd15 guard: saving a TM record whose section_tipo is DEDALO_TIME_MACHINE_SECTION_TIPO
+	*    would create infinite recursion — rejected immediately.
+	* 6. Excluded-section guard: section_tipos in $excluded_section_tipos (volatile utility
+	*    sections such as dd655 and dd1521) are skipped silently.
+	* 7. Save-before repair: when $previous_data is supplied and differs from $values->data,
+	*    the method checks whether a prior TM entry exists for this component. If none is
+	*    found (e.g. first-ever save of an imported record), it inserts a synthetic row
+	*    timestamped one minute in the past so that the TM timeline is coherent. The
+	*    bulk_process_id is cleared on the synthetic row because it belongs to a repair
+	*    pass, not the triggering process.
+	*
 	* @param object $values
-	* Object with {column name : value} structure.
-	* Keys are column names, values are their new values.
+	*   Object with {column name : value} structure.
+	*   Keys are column names, values are their new values.
 	* @param mixed $previous_data=null
-	* Previous data to check if time machine record already exists.
+	*   Previous data to check if time machine record already exists.
 	* @return tm_record|false $tm_record
-	* Returns the new tm_record instance on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	*   Returns the new tm_record instance on success, or `false` if validation fails,
+	*   query preparation fails, or execution fails.
 	*/
 	public static function create( object $values, mixed $previous_data=null ) : tm_record|false {
 
@@ -352,15 +403,29 @@ class tm_record {
 
 
 	/**
-	 * SEARCH
-	 * Search records in the matrix table
-	 * Compares columns with given search values and returns matching records
-	 * @param object $values
-	 * @param int $limit = 10
-	 * @param int $offset = 0
-	 * @param string|null $order_by = null
-	 * @return db_result|false
-	 */
+	* SEARCH
+	* Search records in the matrix_time_machine table, matching rows where each supplied
+	* column equals the provided value.
+	*
+	* Only columns listed in tm_db_manager::$columns are honoured; any unknown column key
+	* in $values is logged at ERROR level and skipped so callers never accidentally inject
+	* arbitrary SQL identifiers.
+	*
+	* Positional parameters ($1, $2, …) are used for all value bindings; the placeholder
+	* counter is incremented per accepted column so the ordering is deterministic.
+	*
+	* Result rows are wrapped in a db_result iterator that applies the JSON-column
+	* decoding map from tm_db_manager::$json_columns, yielding fully-typed stdClass
+	* objects on iteration.
+	*
+	* @param object $values   - Filters: each property name is a column, each value is the
+	*                           exact match target.  Only string equality (`=`) is supported.
+	* @param int $limit = 10  - Maximum rows to return.  Pass 0 to omit the LIMIT clause.
+	* @param int $offset = 0  - Row offset for pagination.  Ignored when 0.
+	* @param string|null $order_by = null - ORDER BY clause fragment (e.g. 'timestamp DESC').
+	*                           Defaults to 'timestamp DESC' when null.
+	* @return db_result|false - Typed iterator over matching rows, or false if the query fails.
+	*/
 	public static function search( object $values, int $limit=10, int $offset=0, ?string $order_by=null ) : db_result|false {
 
 		$tm_columns = tm_db_manager::$columns;
@@ -421,13 +486,23 @@ class tm_record {
 
 
 	/**
-	 * SET_SECTION_RECORD_FACTORY
-	 * Set every component data of the Time machine into the section_record instance
-	 * @param string $tipo - The type of component to set in time-machine
-	 * @param array|null $data - The component's data
-	 * @param section_record $section_record - The instance of Section Record
-	 * @return bool - If operation was successful or not, true if success and false otherwise
-	 */
+	* SET_SECTION_RECORD_FACTORY
+	* Resolve the storage column for a given ontology tipo and write the supplied data
+	* into the section_record via section_record::set_component_data().
+	*
+	* This is a private helper used exclusively by get_section_record() to inject each
+	* TM field (who, when, where, what) into the virtual dd15 section_record without
+	* duplicating the column-resolution logic for every field.
+	*
+	* When the ontology cannot resolve a model for $tipo (e.g. the ontology version
+	* predates the TM definition), the method logs an ERROR and returns false so that
+	* get_section_record() can continue building the remaining fields gracefully.
+	*
+	* @param string $tipo            - Ontology tipo of the component to populate (e.g. 'dd577').
+	* @param array|null $data        - Datum array to inject; null clears the field.
+	* @param section_record $section_record - Target section_record instance being built.
+	* @return bool                   - true on success, false if the model cannot be resolved.
+	*/
 	private function set_section_record_factory( string $tipo, ?array $data, section_record $section_record ) : bool {
 
 		$model 	= ontology_node::get_model_by_tipo( $tipo, true );
@@ -451,13 +526,46 @@ class tm_record {
 
 
 	/**
-	 * GET_SECTION_RECORD
-	 * Get a section record from tm_record.
-	 * transform the Time machine data into a section record object.
-	 * Create the data for the Time machine components.
-	 * Build the section_record with this data.
-	 * @return section_record $section_record
-	 */
+	* GET_SECTION_RECORD
+	* Materialise a full section_record from a single time-machine row.
+	*
+	* The `matrix_time_machine` row stores a flat snapshot (who, when, which component,
+	* which language, the JSONB datum). This method reconstructs a virtual section_record
+	* keyed under DEDALO_TIME_MACHINE_SECTION_TIPO (dd15) so that the standard component
+	* rendering pipeline can display TM history without any special-cased UI code.
+	*
+	* Field-by-field mapping (all injected via set_section_record_factory):
+	*
+	*   section_id       → dd1212 (component_number)   — numeric id of the source record
+	*   timestamp        → dd559  (component_date)      — when the change was recorded
+	*   tipo             → dd577  (component_input_text) — human-readable label of the
+	*                       changed component tipo; includes the raw tipo in SHOW_DEBUG mode
+	*   section_tipo     → dd1772 (component_input_text) — human-readable label of the
+	*                       owning section tipo; includes raw tipo in SHOW_DEBUG mode
+	*   user_id          → dd578  (component_autocomplete) — locator pointing to the user
+	*                       record in DEDALO_SECTION_USERS_TIPO (dd128); also written to
+	*                       dd200 for component_text_area compatibility
+	*   annotation       → rsc329 (component_text_area) — optional user note attached to
+	*                       the TM row; fetched from rsc832 (TM notes section) by
+	*                       searching rsc835 (Code component) for the TM row id; the first
+	*                       item of $note_value receives parent_section_id so the client
+	*                       can navigate to the note record
+	*   bulk_process_id  → dd1371 (component_number)   — id of the enclosing bulk operation
+	*                       (null when the change was not part of a bulk process)
+	*   data             → branching on the source model:
+	*       section model: iterates $data columns and injects each component's datum under
+	*                       its own tipo directly into the section_record; 'data' and 'id'
+	*                       columns are skipped as they are structural, not component data.
+	*       other models:  coerces the datum to an array and injects it under both
+	*                       dd1574 (generic debug column) and the component's own $tipo so
+	*                       that component::get_data() finds it via the normal path.
+	*
+	* (!) $ddo is referenced in the annotation block but is not declared in this method's
+	*     scope. This is a pre-existing issue; the fallback to DEDALO_DATA_LANG is used
+	*     when $ddo is undefined (PHP will emit a notice in strict mode). Do not fix here.
+	*
+	* @return section_record - Populated virtual dd15 section_record ready for JSON output.
+	*/
 	public function get_section_record() : section_record {
 
 		$tm_data = $this->get_data();
@@ -716,7 +824,13 @@ class tm_record {
 
 	/**
 	* JSON_SERIALIZE
-	* @return mixed
+	* Serialise the instance to a JSON-compatible value.
+	*
+	* Filters out null properties to keep the payload compact and to match the behaviour
+	* of dynamic-property objects (which do not emit null keys in json_encode output).
+	* Called automatically by json_encode() when this object is part of a larger payload.
+	*
+	* @return mixed - Associative array of non-null instance properties.
 	*/
 	public function jsonSerialize() : mixed {
 

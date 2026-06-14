@@ -4,6 +4,34 @@
 
 
 
+/**
+* SERVICE_UPLOAD
+* Generic multi-part file upload service for the Dédalo v7 platform.
+*
+* Responsibilities:
+* - Negotiates PHP upload limits with the server via `dd_utils_api::get_system_info`.
+* - Validates file extension and size client-side before any network traffic.
+* - Splits large files into configurable-size chunks (DEDALO_UPLOAD_SERVICE_CHUNK_FILES MB)
+*   and pipelines up to DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT simultaneous XHR connections.
+* - Retries failed chunks up to 3 times with a 5-second back-off.
+* - Joins chunks server-side via `dd_utils_api::join_chunked_files_uploaded` when all
+*   parts have arrived.
+* - Publishes `upload_file_status_<id>` and `upload_file_done_<id>` events so callers
+*   (render_edit_service_upload, tool_import, component_av, …) can update their UI without
+*   tight coupling to this class.
+* - Attaches SEC-008 CSRF tokens to every XHR request both as a header
+*   (X-Dedalo-Csrf-Token) and as a form-field fallback for proxy environments.
+*
+* Consumers instantiate `service_upload`, call `init(options)` → `build()` → `render()`,
+* then let the rendered UI call `upload_file()` automatically on file-selection or drop.
+* The standalone `upload()` export may also be called directly by tools that manage
+* their own file-picking UI (e.g. tool_import_dedalo_csv).
+*
+* Main exports:
+* - `service_upload` constructor / prototype — the primary instantiable service class.
+* - `upload` — the low-level, standalone upload function (chunked or single-shot).
+*/
+
 // import
 	import { event_manager } from '../../../common/js/event_manager.js'
 	import { data_manager } from '../../../common/js/data_manager.js'
@@ -15,8 +43,33 @@
 
 /**
 * SERVICE_UPLOAD
-* Common service to manage basic upload files
-* It is used by tools like 'service_upload', 'tool_import' and more
+* Constructor for the file-upload service instance.
+*
+* All properties are initialised to null here; they are populated by
+* `init()` (from common + upload-specific options) and `build()` (from the
+* server's system-info response).
+*
+* Key properties set after `init()`:
+* - `id`                  {string}  — unique instance id used as event-name suffix.
+* - `caller`              {Object}  — the component or tool that owns this service;
+*                                     MANDATORY — init() logs an error if absent.
+* - `allowed_extensions`  {Array}   — lowercase extension whitelist, e.g. ['jpg','tiff'].
+* - `key_dir`             {string|null} — server-side directory key that routes the
+*                                     uploaded file to the correct storage path.
+* - `max_concurrent`      {number}  — cap on simultaneous XHR chunk connections
+*                                     (default 50, overridden by DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT).
+* - `progress_info`       {HTMLElement} — set by render_edit_service_upload; receives text updates.
+* - `progress_line`       {HTMLElement} — <progress> element; receives numeric % updates.
+* - `response_msg`        {HTMLElement} — receives final success/error text.
+*
+* Additional properties set after `build()` (values sourced from PHP ini / config):
+* - `max_size_bytes`      {number}  — PHP upload_max_filesize expressed in bytes.
+* - `sys_get_temp_dir`    {string}  — server system temp directory.
+* - `upload_tmp_dir`      {string}  — PHP upload_tmp_dir ini value.
+* - `upload_tmp_perms`    {number}  — octal permissions of upload_tmp_dir.
+* - `session_cache_expire`{number}  — PHP session.cache_expire in minutes.
+* - `upload_service_chunk_files` {number|boolean} — chunk size in MB, or false = disabled.
+* - `pdf_ocr_engine`      {boolean} — whether a server-side OCR engine is configured.
 */
 export const service_upload = function () {
 
@@ -40,7 +93,7 @@ export const service_upload = function () {
 
 /**
 * COMMON FUNCTIONS
-* extend functions from common
+* Extend instance with shared prototype methods from common / render modules.
 */
 // prototypes assign
 	service_upload.prototype.render		= common.prototype.render
@@ -52,8 +105,26 @@ export const service_upload = function () {
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Initialises the service_upload instance.
+*
+* Delegates generic Dédalo instance setup to `common.prototype.init`, then applies
+* upload-specific configuration.  Also subscribes to `upload_file_status_<id>` events
+* so that any change in upload progress updates the progress bar and response message
+* elements that are attached to `self` by `render_edit_service_upload`.
+*
+* The `upload_file_status` handler distinguishes three states via `options.value`:
+*   - `false`  → error/abort: writes `options.msg` into `response_msg`.
+*   - `100`    → complete: writes "Upload done." into `response_msg`.
+*   - 0–99     → in-progress: updates `progress_line.value` and `progress_info.innerHTML`.
+*
+* (!) `options.caller` is mandatory.  Without a caller the service cannot resolve
+* `key_dir` during `upload_file()` and the upload will be misconfigured.
+*
+* @param {Object} options - Initialisation options forwarded from the owning caller.
+*   @param {string}  [options.model='service_upload'] - Model name used for URL/icon resolution.
+*   @param {Array}   [options.allowed_extensions=[]]  - Lowercase file extensions whitelist.
+*   @param {string|null} [options.key_dir=null]       - Server directory routing key.
+* @returns {Promise<boolean>} Result of common.prototype.init (true on success).
 */
 service_upload.prototype.init = async function(options) {
 
@@ -66,6 +137,8 @@ service_upload.prototype.init = async function(options) {
 		self.model				= options.model || 'service_upload'
 		self.allowed_extensions	= options.allowed_extensions || []
 		self.key_dir			= options.key_dir || null
+		// Read the global constant injected by dd_core_api; fall back to 50
+		// if the constant was not yet defined when this module loaded.
 		self.max_concurrent 	= typeof DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT === 'undefined'
 			? 50
 			: DEDALO_UPLOAD_SERVICE_MAX_CONCURRENT
@@ -116,8 +189,18 @@ service_upload.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param bool autoload
-* @return bool
+* Fetches PHP server configuration needed by the upload UI and stores it on the instance.
+*
+* Called once after `init()`.  Issues a single API call (`dd_utils_api::get_system_info`)
+* to retrieve upload limits and environment details that are only known server-side
+* (PHP ini values, temp-dir paths, OCR engine availability, chunk-file setting).
+*
+* After `build()` returns, `self.max_size_bytes` is safe to use in extension/size
+* validation, and `self.upload_service_chunk_files` controls whether chunked transfer
+* is activated during `upload_file()`.
+*
+* @param {boolean} [autoload=false] - Unused; present for interface parity with common.build.
+* @returns {Promise<boolean>} Always resolves to `true` once server info is stored.
 */
 service_upload.prototype.build = async function(autoload=false) {
 
@@ -148,9 +231,23 @@ service_upload.prototype.build = async function(autoload=false) {
 
 /**
 * GET_SYSTEM_INFO
-* Call API to obtain useful system info
-* @return object response
-* 	API response
+* Queries the server for PHP environment values that are not available on the client.
+*
+* The returned object shape mirrors `dd_utils_api::get_system_info()`:
+* ```json
+* {
+*   "max_size_bytes":           <number>,
+*   "sys_get_temp_dir":         <string>,
+*   "upload_tmp_dir":           <string>,
+*   "upload_tmp_perms":         <number>,
+*   "session_cache_expire":     <number>,  // minutes
+*   "upload_service_chunk_files": <number|false>,
+*   "pdf_ocr_engine":           <boolean>
+* }
+* ```
+* Called internally by `build()`.  Not exported.
+*
+* @returns {Promise<Object>} Resolved system-info object from the API response's `result` field.
 */
 const get_system_info = async function() {
 
@@ -182,8 +279,50 @@ const get_system_info = async function() {
 
 /**
 * UPLOAD
-* @param object options
-* @return object response
+* Low-level file upload driver.  Validates the file, then either sends it as a
+* single XHR POST or splits it into chunks depending on DEDALO_UPLOAD_SERVICE_CHUNK_FILES.
+*
+* Chunked mode:
+*   Files are sliced into `chunk_size`-byte blobs.  Each blob is enqueued via
+*   `add_to_queue` / `process_queue`, which maintains a sliding window of
+*   `max_concurrent` concurrent XHR connections.  Failed chunks are retried up to
+*   `max_retry` (3) times with a 5-second delay.  Once ALL chunks are confirmed
+*   uploaded (`count_uploaded.length === total_chunks`), the chunks are joined
+*   server-side via `join_chunked_files`.
+*
+* Single-shot mode (DEDALO_UPLOAD_SERVICE_CHUNK_FILES falsy):
+*   A single XHR POST carries the entire file.  Progress events still fire so the
+*   UI behaves identically to chunked mode.
+*
+* Events published on `upload_file_status_<id>`:
+*   - `{ value: 0,    msg: 'Loading file <name>' }`   — upload started
+*   - `{ value: N,    msg: 'Upload progress: N %' }`  — 0 < N < 100
+*   - `{ value: 100,  msg: 'Loaded file <name>' }`    — upload complete
+*   - `{ value: false, msg: '<error text>' }`          — error or abort
+*
+* The per-request Content-Range header follows RFC 7233:
+*   `bytes <start>-<end-1>/<total>` (end is exclusive in the slice call, inclusive in the header).
+*
+* SEC-008: Every XHR carries `window.page_globals.csrf_token` both as the
+*   `X-Dedalo-Csrf-Token` request header and as a `csrf_token` form field so that
+*   the server can validate the token even when a reverse proxy strips custom headers.
+*
+* (!) `alert()` is used for extension/size validation errors — this is existing
+*   behaviour; do not replace with console.warn without verifying the UX contract
+*   with callers.
+*
+* @param {Object} options - Upload configuration.
+*   @param {Object}  options.self               - The service_upload instance (used for context only;
+*                                                 events are keyed on `id`, not `self`).
+*   @param {string}  options.id                 - Unique identifier appended to event names.
+*   @param {File}    options.file               - The browser File object to upload.
+*   @param {string}  options.key_dir            - Server-side directory routing key.
+*   @param {Array}   options.allowed_extensions  - Lowercase file-extension whitelist.
+*   @param {number}  options.max_size_bytes      - Maximum allowed file size in bytes.
+*   @param {string|null} options.tipo            - Ontology tipo of the owning component, if any.
+*   @param {number|false} options.max_concurrent - Max simultaneous XHR connections; falsy = unlimited.
+* @returns {Promise<Object>} API response object.  On success: `{ result: true, file_data: {...} }`.
+*   On extension/size failure resolves immediately with `{ result: false }`.
 */
 export const upload = async function(options) {
 
@@ -290,6 +429,7 @@ export const upload = async function(options) {
 				const sum = loaded.reduce((first, second) => first + (second || 0), 0);
 
 				const percent = Math.round(sum/total_chunks);
+				// skip publishing if the percentage has not changed to avoid redundant DOM updates
 				if(percent === last_percent){
 					return
 				}
@@ -648,10 +788,29 @@ export const upload = async function(options) {
 
 /**
 * UPLOAD_FILE
-* Upload selected file to server using the API and when is done, process the target file
-* calling caller component across process_uploaded_file_controller tool method
-* @param object options
-* @return object response
+* High-level upload entry-point called by the service's own render layer
+* (`file_selected` in render_edit_service_upload.js) or by tool callers that
+* have already obtained a File object.
+*
+* Resolves the server-side `key_dir` routing key using a three-level fallback
+* cascade (in order of precedence):
+*   1. `self.key_dir` — explicitly set during `init()`.
+*   2. `self.caller.context.features.key_dir` — owning component's feature config.
+*   3. `self.caller.caller.context.features.key_dir` — grandparent component's feature config.
+*   4. `self.caller.caller.model` — grandparent model name used as a directory key (e.g. 'image').
+*
+* After a successful upload, publishes `upload_file_done_<caller.id>` with:
+*   `{ file_data: <Object>, process_options: <Object> }`
+* so that the owning component can trigger server-side post-processing
+* (e.g. component_av media pipeline, tool_import_dedalo_csv row processing).
+*
+* On upload failure returns `{ result: false, msg: <string> }` without publishing
+* the done event, so callers can surface the error independently.
+*
+* @param {Object} options - Upload options.
+*   @param {File} options.file - The browser File object selected or dropped by the user.
+* @returns {Promise<Object>} API response from the underlying `upload()` call.
+*   Shape: `{ result: boolean, file_data?: Object, msg?: string }`.
 */
 service_upload.prototype.upload_file = async function(options) {
 
@@ -662,6 +821,8 @@ service_upload.prototype.upload_file = async function(options) {
 
 	// short vars
 		const allowed_extensions	= self.allowed_extensions
+		// Resolve the server-side directory routing key via a waterfall:
+		// self.key_dir → caller features → caller.caller features → caller.caller model name.
 		const key_dir				= self.key_dir
 			? self.key_dir
 			: self.caller.context.features && self.caller.context.features.key_dir
@@ -701,10 +862,25 @@ service_upload.prototype.upload_file = async function(options) {
 
 
 /**
-* GET_SYSTEM_INFO
-* Call API to obtain useful system info
-* @param object options
-* @return object response
+* JOIN_CHUNKED_FILES
+* Instructs the server to concatenate all uploaded chunk temp-files into a
+* single final file after all parts have arrived.
+*
+* Delegates to `dd_utils_api::join_chunked_files_uploaded` via `data_manager.request`.
+* Called internally from `on_xhr_load` (inside `upload()`) once
+* `count_uploaded.length === total_chunks`.
+*
+* The request is configured with up to 5 retries and a 10-second timeout per
+* attempt to account for slow disk I/O on large files.
+*
+* @param {Object} options - Join options.
+*   @param {Object} options.file_data     - The `file_data` object from the last
+*                                           chunk's API response (carries metadata
+*                                           such as `original_name`, `total_chunks`,
+*                                           `tmp_dir`).
+*   @param {Array}  options.files_chunked - Ordered array of server-side temp-file
+*                                           paths, indexed by chunk_index.
+* @returns {Promise<Object>} Full API response: `{ result: boolean, file_data?: Object, msg: string }`.
 */
 service_upload.prototype.join_chunked_files = async function(options) {
 

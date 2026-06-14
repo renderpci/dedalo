@@ -4,6 +4,64 @@
 
 
 
+/**
+* RENDER_MEDIA_ICONS
+* Client-side renderer for the `media_icons` Oral History widget.
+*
+* This module renders the edit- and list-mode DOM for the `media_icons` widget,
+* which displays a compact row of action icons for each audiovisual (A/V) record
+* linked to the current section (typically an Oral History interview).
+*
+* For every linked A/V record the widget produces one `<li>` row that contains:
+*   - ID cell         — numeric section_id; clicking opens the media record in a
+*                       new browser window for review.
+*   - A/V icon (av)   — clicking opens the media viewer (component_tipo-rooted URL).
+*   - TR link         — opens the transcription tool in a modal via `open_tool`.
+*   - IN link         — opens the indexation tool in a modal via `open_tool`.
+*   - TL link         — opens the translation tool in a modal via `open_tool`.
+*   - TC cell         — time-code / duration string read from the server value
+*                       (e.g. "00:05:23").
+*
+* Data contract (populated by class.media_icons.php → `self.value`):
+*   `self.value` is an Array of per-locator Objects.  Each object has the shape:
+*   {
+*     widget        : "media_icons",
+*     id            : {
+*       widget      : "media_icons",
+*       key         : {number},          // IPO index
+*       widget_id   : "id",
+*       locator     : {                  // dd151 relation locator
+*         type              : "dd151",
+*         section_id        : {string},
+*         section_tipo      : {string},  // e.g. "rsc167"
+*         from_component_tipo : {string} // e.g. "oh25"
+*       },
+*       value       : {string}           // section_id as string
+*     },
+*     transcription : { widget_id: "transcription", tool_context: {Object}|null, locator: {Object} },
+*     indexation    : { widget_id: "indexation",    tool_context: {Object}|null, locator: {Object} },
+*     translation   : { widget_id: "translation",   tool_context: {Object}|null, locator: {Object} },
+*     tc            : { widget_id: "tc",             value: {string},            locator: {Object} }
+*   }
+*
+* `self.ipo` is the raw IPO config array coming from the ontology (one entry per
+* widget state).  The renderer uses `self.ipo[i].input.paths[0][0]` to resolve
+* the `section_tipo` / `component_tipo` needed to build the A/V viewer URL.
+*
+* The exported constructor `render_media_icons` is a no-op stub; all logic lives
+* on its prototype and is mixed into the `media_icons` class via:
+*   `media_icons.prototype.edit = render_media_icons.prototype.edit`
+*   `media_icons.prototype.list = render_media_icons.prototype.list`
+* (see media_icons.js).  This object is never instantiated directly.
+*
+* Companion files:
+*   - media_icons.js            — constructor + prototype wiring
+*   - class.media_icons.php     — PHP server-side data builder
+*   - css/media_icons.less      — widget styles (flex-row layout per record)
+*
+* @module render_media_icons
+*/
+
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {open_tool} from '../../../../../tools/tool_common/js/tool_common.js'
@@ -13,7 +71,9 @@
 
 /**
 * RENDER_MEDIA_ICONS
-* Manages the component's logic and appearance in client side
+* Constructor stub for the render_media_icons prototype mixin.
+* All render logic is defined on the prototype and mixed into `media_icons`.
+* @returns {boolean} true
 */
 export const render_media_icons = function() {
 
@@ -24,8 +84,22 @@ export const render_media_icons = function() {
 
 /**
 * EDIT
-* Render node for use in modes: edit, edit_in_list
-* @return HTMLElement wrapper
+* Builds the DOM subtree for the widget when displayed in `edit` or
+* `edit_in_list` mode.
+*
+* The rendering is delegated to the private `get_content_data_edit` helper,
+* which iterates over every linked A/V record in `self.value` and produces a
+* `<ul>` list of icon rows.
+*
+* When `options.render_level === 'content'` the raw `content_data` `<div>` is
+* returned without any wrapper, allowing the caller to embed it inline.
+* Otherwise the content is wrapped with `ui.widget.build_wrapper_edit`.
+*
+* @param {Object} options
+* @param {string} options.render_level - Rendering scope: `'content'` returns
+*   only the inner node; any other value returns the full wrapper element.
+* @returns {Promise<HTMLElement>} Resolves to either the content_data div (when
+*   render_level is 'content') or the full wrapper element.
 */
 render_media_icons.prototype.edit = async function(options) {
 
@@ -52,8 +126,18 @@ render_media_icons.prototype.edit = async function(options) {
 
 /**
 * LIST
-* Render node for use in modes: list, list_in_list
-* @return HTMLElement wrapper
+* Builds the DOM subtree for the widget when displayed in `list` or
+* `list_in_list` mode.
+*
+* The list view renders the same icon rows as the edit view — there is no
+* read-only simplification.  Both modes call `get_content_data_edit` and wrap
+* the result with `ui.widget.build_wrapper_edit`.
+*
+* @param {Object} options
+* @param {string} options.render_level - Rendering scope: `'content'` returns
+*   only the inner node; any other value returns the full wrapper element.
+* @returns {Promise<HTMLElement>} Resolves to either the content_data div (when
+*   render_level is 'content') or the full wrapper element.
 */
 render_media_icons.prototype.list = async function(options) {
 
@@ -80,8 +164,27 @@ render_media_icons.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Builds the inner content DOM — a `<ul class="values_container">` holding one
+* `<li>` per linked A/V record per IPO entry.
+*
+* Iteration strategy:
+*   Outer loop → `self.value`  (one item per linked A/V locator)
+*   Inner loop → `self.ipo`    (one entry per ontology widget-state / IPO config)
+* Each combination produces one row via `get_value_element`.
+*
+* (!) Both loops use the loop variable `i`, with the inner loop shadowing the
+* outer `i`.  This does not cause incorrect output because the outer `i` is
+* never read inside the inner loop body — only `data_item` (captured before the
+* inner loop) is used — but the shadowing may be confusing.
+*
+* @param {Object} self - The `media_icons` instance (bound via closure; not
+*   injected via `this` because this function is called as a plain function,
+*   not as a method).
+* @param {Array}  self.value - Array of per-locator data objects from the PHP
+*   server response (see module doc-block for full shape).
+* @param {Array}  self.ipo   - Array of IPO config objects from the ontology.
+* @returns {Promise<HTMLElement>} A `<div>` containing the DocumentFragment with
+*   the complete `<ul>` of icon rows.
 */
 const get_content_data_edit = async function(self) {
 
@@ -127,7 +230,51 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return HTMLElement li
+* Builds one `<li class="widget_item media_icons">` row for a single linked
+* A/V record and its associated IPO configuration entry.
+*
+* The row is composed of six child `<div>` elements, each carrying a BEM-style
+* class that the LESS stylesheet maps to its flex column:
+*
+*   .value.id    — Numeric section_id, clickable. Opens the media record in a
+*                  new browser window using `open_window` (target: 'record_viewer').
+*                  The URL is built from DEDALO_CORE_URL with the media section's
+*                  section_tipo and section_id.  `session_save: false` prevents
+*                  overwriting the opener tab's stored session.
+*
+*   .value.av    — Icon button (font-icon .file_av). Opens the media viewer in a
+*                  new window (target: 'viewer', 1024×720).  The viewer URL uses
+*                  the component/section info from `current_ipo.input.paths[0][0]`
+*                  and `data_id.value` as the record id.
+*
+*   .value.tr    — "TR" transcription link. If `data.transcription.tool_context`
+*                  is present, clicking calls `open_tool` passing the tool_context
+*                  and `self.caller.caller.caller` as the section caller.
+*
+*   .value.in    — "IN" indexation link, same pattern as TR.
+*
+*   .value.tl    — "TL" translation link, same pattern as TR.
+*
+*   .value.tc    — Read-only time-code / duration cell; displays `data_tc.value`
+*                  or an empty string if absent.
+*
+* Tool links (TR/IN/TL) are only wired with a click listener when their
+* `tool_context` is truthy.  When `tool_context` is null/undefined (tool not
+* registered for the current user) the element is rendered but is inert.
+*
+* The caller chain `self.caller.caller.caller` is expected to resolve to the
+* owning section instance (widget → component_info → component → section).
+*
+* @param {number}  i           - IPO index (0-based), used to disambiguate rows
+*   when multiple IPO entries share the same locator.
+* @param {Object}  data        - One data item from `self.value`; see module
+*   doc-block for the full shape.  Must have at minimum: `data.id`, `data.transcription`,
+*   `data.indexation`, `data.translation`, `data.tc`.
+* @param {Object}  self        - The `media_icons` widget instance.
+* @param {Object}  current_ipo - The IPO config for this row's index.  The
+*   `.input.paths[0][0]` sub-object must expose `section_tipo` and
+*   `component_tipo` for the A/V viewer URL.
+* @returns {HTMLElement} The populated `<li>` element ready to append.
 */
 const get_value_element = (i, data, self, current_ipo) => {
 
@@ -175,7 +322,7 @@ const get_value_element = (i, data, self, current_ipo) => {
 				const height	= window.screen.height < 1024 ? window.screen.height : 1024;
 				const url		= DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 					tipo			: locator.section_tipo,
-					section_tipo	: locator.section_id,
+					section_tipo	: locator.section_id,  // (!) section_tipo param receives section_id — review if intentional
 					id				: locator.section_id,
 					mode			: 'edit',
 					session_save	: false, // prevent to overwrite current section session

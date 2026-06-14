@@ -215,7 +215,7 @@ const get_value_element = (i, data, values_container, self) => {
 			parent			: values_container
 		})
 
-	//weights
+	// weight dimension panel — contains the mean/max/min/count rows for weight data
 		const archive_weights = ui.create_dom_element({
 			element_type: 'div',
 			class_name	: 'archive_weights',
@@ -230,6 +230,11 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 			//media_weight
 				// label
+				// (flag) media_weight_label is assigned but not referenced after creation;
+				// the label text is rendered via inner_html at construction time and the
+				// element reference is only needed if the text must later be updated.
+				// The live-update handler (fn_update_widget_value) updates only the
+				// *_value spans, so *_label references are intentionally dead here.
 					const media_weight_label = ui.create_dom_element({
 						element_type: 'span',
 						class_name	: 'label',
@@ -237,7 +242,7 @@ const get_value_element = (i, data, values_container, self) => {
 						parent 		: sum_weights
 					})
 
-				// value
+				// value — holds the mean weight string; updated live by fn_update_widget_value
 					const media_weight_value = ui.create_dom_element({
 						element_type: 'span',
 						class_name	: 'value',
@@ -245,7 +250,7 @@ const get_value_element = (i, data, values_container, self) => {
 						parent 		: sum_weights
 					})
 
-		// detail
+		// detail range row: max | min | n (count of qualifying coins with weight data)
 		const weights_values = ui.create_dom_element({
 			element_type: 'span',
 			class_name	: 'weights_values',
@@ -253,6 +258,7 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 			//max_weight
 				// label
+				// (flag) max_weight_label — assigned but not read after creation (same pattern as media_weight_label above)
 				const max_weight_label = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'label_range',
@@ -260,7 +266,7 @@ const get_value_element = (i, data, values_container, self) => {
 					parent 		: weights_values
 				})
 
-				// value
+				// value — holds the maximum per-coin mean weight
 				const max_weight_value = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
@@ -270,6 +276,7 @@ const get_value_element = (i, data, values_container, self) => {
 
 			// min_weight
 				// label
+				// (flag) min_weight_label — assigned but not read after creation
 				const min_weight_label = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'label_range',
@@ -277,7 +284,7 @@ const get_value_element = (i, data, values_container, self) => {
 					parent 		: weights_values
 				})
 
-				// value
+				// value — holds the minimum per-coin mean weight
 				const min_weight_value = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
@@ -285,8 +292,9 @@ const get_value_element = (i, data, values_container, self) => {
 					parent 		: weights_values
 				})
 
-			// total_elements_weights
+			// total_elements_weights — count of qualifying coins that provided weight data
 				// label
+				// (flag) total_weight_label — assigned but not read after creation
 				const total_weight_label = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'label',
@@ -294,7 +302,7 @@ const get_value_element = (i, data, values_container, self) => {
 					parent 		: weights_values
 				})
 
-				// value
+				// value — holds the qualifying-coin count for the weight dimension
 				const total_weight_value = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
@@ -303,8 +311,7 @@ const get_value_element = (i, data, values_container, self) => {
 				})
 
 
-	//Diameter
-		// general
+	// diameter dimension panel — parallel structure to the weight panel above
 		const archive_diameter = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'archive_diameter',
@@ -318,6 +325,7 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 		// media_diameter
 			// label
+			// (flag) media_diameter_label — assigned but not read after creation (same dead-reference pattern as weight labels above)
 				const media_diameter_label = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'label',
@@ -325,14 +333,14 @@ const get_value_element = (i, data, values_container, self) => {
 					parent 		: sum_diameter
 				})
 
-			// value
+			// value — holds the mean diameter string; updated live by fn_update_widget_value
 				const media_diameter_value = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
 					inner_html 	: data.find(item => item.widget_id === 'media_diameter')?.value ?? '',
 					parent 		: sum_diameter
 				})
-		// detail
+		// detail range row: max | min | n for diameter
 		const diameter_values = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'diameter_values',
@@ -340,6 +348,7 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 			// max_diameter
 				// label
+				// (flag) max_diameter_label — assigned but not read after creation
 				const max_diameter_label = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'label_range',
@@ -347,7 +356,7 @@ const get_value_element = (i, data, values_container, self) => {
 					parent 		: diameter_values
 				})
 
-				// value
+				// value — holds the maximum per-coin mean diameter
 				const max_diameter_value = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
@@ -357,6 +366,7 @@ const get_value_element = (i, data, values_container, self) => {
 
 			// min_diameter
 				// label
+				// (flag) min_diameter_label — assigned but not read after creation
 				const min_diameter_label = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'label_range',
@@ -364,7 +374,7 @@ const get_value_element = (i, data, values_container, self) => {
 					parent 		: diameter_values
 				})
 
-				// value
+				// value — holds the minimum per-coin mean diameter
 				const min_diameter_value = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
@@ -373,8 +383,9 @@ const get_value_element = (i, data, values_container, self) => {
 				})
 
 
-			//total_elements_diameter
+			//total_elements_diameter — count of qualifying coins that provided diameter data
 				// label
+				// (flag) total_diameter_label — assigned but not read after creation
 				const total_diameter_label = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'label',
@@ -382,7 +393,7 @@ const get_value_element = (i, data, values_container, self) => {
 					parent			: diameter_values
 				})
 
-				// value
+				// value — holds the qualifying-coin count for the diameter dimension
 				const total_diameter_value = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'value',
@@ -391,13 +402,38 @@ const get_value_element = (i, data, values_container, self) => {
 				})
 
 
-		// even manager model to use in other widgets_properties
-		// this widget don't use it, because the info is not in the same section
-		// than the components that changed our value
-		// the user don't see the info and the input components at same time
+		// Live-update subscription — future-proof pattern kept in place even though this
+		// widget's input components (the weight/diameter fields) live on a different section
+		// than the archive record the widget is embedded in. Because the user cannot view
+		// both the statistics panel and the data-entry form simultaneously, the subscription
+		// will only fire if a future sibling widget or automated process broadcasts on this
+		// channel. The token is stored in self.events_tokens so widget_common.destroy()
+		// can cleanly unsubscribe when the widget is removed from the DOM.
 		self.events_tokens.push(
 			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, fn_update_widget_value)
 		)
+
+		/**
+		* FN_UPDATE_WIDGET_VALUE
+		* Live-update handler subscribed to `update_widget_value_<i>_<self.id>`.
+		*
+		* Replaces the textContent of all eight statistic value spans with fresh
+		* aggregate data pushed on the event channel. Using `textContent` (not
+		* `innerHTML`) is intentional: calculation outputs are always numeric strings
+		* so there is no HTML to parse, and `textContent` prevents any accidental
+		* HTML injection if an unexpected non-numeric value is received.
+		*
+		* Closed-over span references (`media_weight_value`, `max_weight_value`, etc.)
+		* are the live DOM nodes built earlier in `get_value_element`; they remain
+		* accessible via closure even after `get_value_element` returns.
+		*
+		* @param {Array} changed_data - same shape as the `data` parameter of
+		*   `get_value_element`: an array of `{ widget_id, value }` items from the
+		*   server or from a broadcasting sibling widget; items are matched by
+		*   `widget_id` and unknown widget_ids are silently ignored
+		* @returns {boolean} true — return value is ignored by event_manager but
+		*   signals normal completion for any future assertion-based tests
+		*/
 		function fn_update_widget_value(changed_data) {
 
 			// SEC-XSS-012: calculation outputs are numeric; textContent avoids HTML parsing.

@@ -5,7 +5,75 @@
 // Fail closed regardless of server (Apache / nginx / Caddy / lighttpd / IIS)
 // or display_errors mode. The .htaccess <FilesMatch> rule is layer 1.
 if (!isset($this)) { http_response_code(404); exit; }
-// JSON data component controller
+/**
+* SECTIONS JSON CONTROLLER
+* Assembles the standard {context, data} API response for a `sections` element.
+*
+* This file is the JSON controller for the `sections` model. It is never invoked
+* directly by a web request; it is `include`d by `common::get_json()` inside the
+* calling `sections` object scope. On entry `$this` refers to the `sections`
+* instance; no `$options` argument is used (sections always returns both context
+* and data).
+*
+* Two execution paths exist depending on whether the search returned records:
+*
+* EMPTY-RESULT PATH (row_count === 0)
+*   When the search returns no rows — typically the first request for a section
+*   whose records have not yet been loaded — the controller builds a context-only
+*   response. It iterates `$ar_section_tipo`, instantiates a bare `section` object
+*   for each tipo, propagates pagination and view settings, then calls
+*   `section::get_json()` to collect the context fragment. This ensures the client
+*   receives the ontology/layout context it needs even before any records exist.
+*   No data items are emitted.
+*
+* DATA PATH (row_count > 0)
+*   When the search returns rows the controller:
+*   1. Emits a single envelope `$item` of typo 'sections' that accumulates locator
+*      entries (`section_tipo` + `section_id`) for every row.
+*   2. For each row, resolves or reuses a cached `section` instance, enforces
+*      per-record and per-section permission gates, propagates view/properties,
+*      then appends a `$current_value` locator (with `paginated_key` and, in TM
+*      mode, time-machine metadata) to `$item->entries`.
+*   3. After all rows, calls `section::get_json()` on each cached section instance
+*      to collect its context+data fragments, deduplicating context items via
+*      `common::context_key()` (tipo + section_tipo + mode hash).
+*
+* Time Machine (TM) mode:
+*   When `$mode === 'tm'` or `$this->caller_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO`
+*   ('dd15'), each raw database row is treated as a `tm_record`. The record is
+*   converted to a regular `section_record` via `tm_record::get_section_record()`.
+*   The origin section_tipo is preserved so permission checks are performed against
+*   the *real* section, not the bookkeeping section `dd15` (SEC-024 guard).
+*   TM metadata (matrix_id, timestamp, caller_section_tipo/id, bulk_process_id,
+*   user_id) is injected into each `$current_value` entry.
+*
+* Security gates:
+*   - SEC-026: direct HTTP access blocked at the top of the file.
+*   - SEC-024: TM rows use origin section_tipo for permission resolution to avoid
+*     systematically failing the dd15-vs-real-section permission mismatch.
+*   - Per-record permissions are checked before the section instance is created;
+*     sections scoring < 1 are collected in `$rejected_sections` and all their
+*     future rows are skipped without repeating the permission call (O(1) lookup).
+*
+* Output shape:
+*   The return value of `include()` is the result of `common::build_element_json_output()`:
+*   {
+*     context : array   — deduplicated dd_object context fragments
+*     data    : array   — [ {typo:'sections', tipo:…, section_tipo:[], entries:[…]},
+*                            …section-level data items from section::get_json() ]
+*   }
+*
+* Scope contract (variables available on entry via the include scope):
+*   @var sections  $this  The sections instance being serialised. Key properties:
+*                           - $this->search_query_object  SQO with limit/offset/section_tipo
+*                           - $this->caller_tipo           tipo of the calling element
+*                           - $this->mode                  'list'|'edit'|'tm'|…
+*                           - $this->view                  optional view override
+*                           - $this->properties            optional section properties
+*
+* @package Dédalo
+* @subpackage Core
+*/
 
 
 
@@ -25,6 +93,10 @@ if (!isset($this)) { http_response_code(404); exit; }
 
 	if ( $sections_data->row_count()===0 ) {
 
+		// empty-result path
+		// When the search returns no records we still need to emit context so the
+		// client can render a placeholder or empty list correctly. Iterate each
+		// requested section_tipo and collect its context fragment.
 		$ar_section_tipo = $this->get_ar_section_tipo();
 
 		foreach ((array)$ar_section_tipo as $current_section_tipo) {
@@ -56,6 +128,11 @@ if (!isset($this)) { http_response_code(404); exit; }
 	}else{
 
 		// data item (first data item. Note that 'value' and 'section_tipo' are fulfilled on each dato iteration)
+			// The 'entries' array is populated per-row below; section_tipo is left
+			// empty at construction because a single sections request may span
+			// multiple section tipos (e.g. a portal searching across 'oh1' and
+			// 'oh2'). The client resolves the actual tipos from each entry's
+			// section_tipo field.
 			$item = new stdClass();
 				$item->typo			= 'sections';
 				$item->tipo			= $this->caller_tipo;
@@ -74,10 +151,21 @@ if (!isset($this)) { http_response_code(404); exit; }
 			// $grouped_sections = [];
 			// sections
 
+			// section_instances: O(1) keyed cache of already-built section objects,
+			// avoiding repeated get_instance() calls for the same section_tipo when
+			// a single search result contains many rows from the same section.
 			$section_instances = []; // O(1) lookup instead of O(n) in_array
+			// key: per-row counter used together with $offset to produce paginated_key
 			$key = 0;
 			$section = null;
+			// context_index: declared but not used in the current implementation.
+			// (!) Left-over variable — no writes or reads below; may be a remnant
+			// from a refactor that moved context deduplication to the $seen_context
+			// pattern further down. Do not remove: rule 3 prohibits dead-code removal.
 			$context_index = [];
+			// rejected_sections: tracks section tipos that failed the permission
+			// check so that subsequent rows from the same tipo are skipped without
+			// re-evaluating permissions on every iteration.
 			$rejected_sections = [];
 
 			foreach ($sections_data as $current_record) {
@@ -97,6 +185,7 @@ if (!isset($this)) { http_response_code(404); exit; }
 				if( $mode === 'tm' || $this->caller_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO ){
 					$tm_record = tm_record::get_instance( (int)$current_record->id );
 					$tm_record->set_data( $current_record );
+					// preserve origin section_tipo before overwrite for SEC-024 permission gate
 					$tm_origin_section_tipo = $current_record->section_tipo ?? null;
 					// OVERWRITE! section_id and section_tipo to convert it into a regular section record
 					$current_record = $tm_record->get_section_record();
@@ -183,6 +272,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 					}
 
 					// item sections value. Update in each iteration
+					// Each entry is a minimal locator used by the client to position
+					// and render the section record within a paginated list.
 					$current_value = new stdClass();
 						$current_value->section_tipo	= $section_tipo;
 						$current_value->section_id		= $section_id;
@@ -196,10 +287,13 @@ if (!isset($this)) { http_response_code(404); exit; }
 					// 	}
 
 					// paginated_key
+					// Absolute position in the full result set (offset + per-page counter).
+					// Used by the client to maintain stable ordering across paginated fetches.
 						$current_value->paginated_key = $key + $offset;
 						$key++;
 
 					// tm case: inject time machine record metadata
+					// These fields are consumed by the TM viewer to display who changed what and when.
 						if ($mode === 'tm' || $this->caller_tipo === DEDALO_TIME_MACHINE_SECTION_TIPO ) {
 							$tm_data = $tm_record->get_data();
 							// Note: id/matrix_id is in tm_record instance, not in get_data() result
@@ -219,10 +313,15 @@ if (!isset($this)) { http_response_code(404); exit; }
 		// subdatum
 			// seen_context. Keyed dedup (tipo+section_tipo+mode) instead of a linear
 			// search per item; seed it with any context already collected above.
+			// The hash key is produced by common::context_key(), which concatenates
+			// tipo, section_tipo, and mode to form a cheap identity token.
 			$seen_context = [];
 			foreach ($context as $context_item) {
 				$seen_context[ common::context_key($context_item) ] = true;
 			}
+			// Iterate the per-tipo section cache. Each call to section::get_json()
+			// triggers component get_subdatum() expansion for all records accumulated
+			// during the row-iteration loop above, returning context and data fragments.
 			foreach ($section_instances as $section_tipo => $section) {
 
 				$section_json = $section->get_json();
@@ -240,6 +339,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 					}
 
 				// data
+				// Spread-append all section data items (component datum objects) to
+				// the top-level $data array so the client receives a flat list.
 					array_push($data, ...$section_json->data);
 			}
 

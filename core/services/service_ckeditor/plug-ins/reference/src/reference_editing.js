@@ -7,6 +7,46 @@
  * @module link/reference_editing
  */
 
+/**
+ * REFERENCE_EDITING
+ * CKEditor 5 engine plugin that wires the Dédalo "reference" inline annotation into
+ * the editor's model, view, and command subsystems.
+ *
+ * Responsibilities
+ * ----------------
+ * - Declares the `reference` model attribute on `$text` nodes so the schema allows it.
+ * - Registers an **upcast** converter: HTML `<reference …>` elements (stored in the
+ *   component's rich-text field) are parsed into CKEditor model text nodes carrying the
+ *   `reference` attribute as an object with the shape:
+ *     ```
+ *     {
+ *       id:     string  – unique DOM id of the <reference> element
+ *       type:   string  – always 'reference'; may be absent in legacy v5 content
+ *       tag_id: string  – sequential tag counter, e.g. '1', '2', …
+ *       state:  string  – lifecycle state of the referenced term
+ *       label:  string  – human-readable label rendered in the editor
+ *       data:   string  – serialised reference payload attached to the span
+ *     }
+ *     ```
+ * - Registers a **downcast** converter: model text nodes with the `reference` attribute
+ *   are emitted as `<reference class="reference" id="…" data-type="…" …>` view elements.
+ * - Registers the `reference` editor command (see `reference_command`).
+ * - Activates CKEditor's **two-step caret movement** for the `reference` attribute so the
+ *   caret exits and enters reference spans without inadvertently inheriting their attribute.
+ * - Activates **inline highlight** (`ck-link_selected` CSS class) on the selected reference
+ *   element.
+ * - Patches four UX edge cases via private helper methods (see below).
+ *
+ * Note on commented-out conversion code
+ * --------------------------------------
+ * The `dataDowncast` and `editingDowncast` blocks that appear commented-out below `init()`
+ * were the earlier split-downcast approach. They have been replaced by the unified
+ * `downcast` registration that handles both pipelines through a single `attributeToElement`
+ * call. The dead code is left for reference; see flags.
+ *
+ * @module reference/reference_editing
+ */
+
 import { Plugin } from 'ckeditor5/src/core';
 import { MouseObserver } from 'ckeditor5/src/engine';
 import { Input, TwoStepCaretMovement, inlineHighlight, findAttributeRange } from 'ckeditor5/src/typing';
@@ -17,14 +57,15 @@ import { first } from 'ckeditor5/src/utils';
 import reference_command from './reference_command';
 import '../theme/link.css';
 
+// CSS class applied to the currently-selected reference span by `inlineHighlight`.
 const HIGHLIGHT_CLASS = 'ck-link_selected';
 
 
 /**
- * The link engine feature.
+ * The reference engine feature.
  *
- * It introduces the `reference="url"` attribute in the model which renders to the view as a `<a href="url">` element
- * as well as `'link'` and `'unlink'` commands.
+ * It introduces the `reference` attribute in the model which renders to the view as a `<reference class="reference" …>`
+ * element as well as the `'reference'` command. See {@link module:reference/reference_editing~reference_editing}.
  *
  * @extends module:core/plugin~Plugin
  */
@@ -50,13 +91,23 @@ export default class reference_editing extends Plugin {
 	constructor( editor ) {
 		super( editor );
 
+		// Provide a default config block so callers can override individual keys without
+		// having to supply the entire object.
 		editor.config.define( 'reference', {
 			addTargetToExternalLinks: false
 		} );
 	}
 
 	/**
-	 * @inheritDoc
+	 * INIT
+	 * Registers the `reference` model attribute, upcast/downcast converters, the
+	 * `reference` command, two-step caret movement, and the four UX fixers.
+	 *
+	 * Call order matters: the command must be registered before the UX fixers run
+	 * because they may query command state. CKEditor calls `init()` automatically
+	 * after all plugins are instantiated.
+	 *
+	 * @returns {void}
 	 */
 	init() {
 		const editor = this.editor;
@@ -98,6 +149,9 @@ export default class reference_editing extends Plugin {
 						// sometimes the data-type is not set (v5)
 						const type = viewElement.getAttribute( 'data-type' ) || 'reference'
 
+						// Build the reference value object from all data attributes.
+						// Every field maps to a corresponding HTML attribute on the <reference> element.
+						// Missing attributes resolve to null; callers should treat null as "not set".
 						const values = {
 							id		: viewElement.getAttribute( 'id' ),
 							type	: type,
@@ -180,6 +234,8 @@ export default class reference_editing extends Plugin {
 		const model = editor.model;
 		const selection = model.document.selection;
 
+		// Low priority means this fires after CKEditor's own insertContent handlers have settled,
+		// so `selection.anchor` already reflects the post-insertion position.
 		this.listenTo( model, 'insertContent', () => {
 			const nodeBefore = selection.anchor.nodeBefore;
 			const nodeAfter = selection.anchor.nodeAfter;
@@ -247,6 +303,9 @@ export default class reference_editing extends Plugin {
 				return;
 			}
 
+			// Only reached when the caret is exactly at the trailing boundary of a reference span
+			// with no further reference text ahead. Strip the `reference` attribute (and any
+			// related decorator attributes) so the next keystroke starts clean text.
 			model.change( writer => {
 				removeLinkAttributesFromSelection( writer, getLinkAttributesAllowedOnText( model.schema ) );
 			} );
@@ -268,8 +327,12 @@ export default class reference_editing extends Plugin {
 		const editor = this.editor;
 		const model = editor.model;
 
+		// MouseObserver must be registered manually because this plugin cannot list it in
+		// `requires` (it lives in the engine package and has no plugin-system entry point).
 		editor.editing.view.addObserver( MouseObserver );
 
+		// `clicked` acts as a one-shot flag: raised by `mousedown`, consumed by `selectionChange`.
+		// This correlates the two events without relying on timing assumptions.
 		let clicked = false;
 
 		// Detect the click.
@@ -303,6 +366,8 @@ export default class reference_editing extends Plugin {
 
 			// ...check whether clicked start/end boundary of the link.
 			// If so, remove the `reference` attribute.
+			// `isTouching` is true when position is at or immediately adjacent to the boundary,
+			// covering both the "collapsed at start" and "collapsed at end" click positions.
 			if ( position.isTouching( linkRange.start ) || position.isTouching( linkRange.end ) ) {
 				model.change( writer => {
 					removeLinkAttributesFromSelection( writer, getLinkAttributesAllowedOnText( model.schema ) );
@@ -358,6 +423,9 @@ export default class reference_editing extends Plugin {
 				return;
 			}
 
+			// Snapshot the attributes of the about-to-be-deleted selection.
+			// `selectionAttributes` is iterable as [ [key, value], … ] pairs, which is
+			// consumed by the `insertContent` listener below to re-apply each attribute.
 			if ( shouldCopyAttributes( editor.model ) ) {
 				selectionAttributes = selection.getAttributes();
 			}
@@ -377,12 +445,15 @@ export default class reference_editing extends Plugin {
 				return;
 			}
 
+			// Re-apply the saved reference attribute (and any others) to the newly inserted
+			// text node so the span is continuous after the replacement keystroke.
 			editor.model.change( writer => {
 				for ( const [ attribute, value ] of selectionAttributes ) {
 					writer.setAttribute( attribute, value, element );
 				}
 			} );
 
+			// Clear the snapshot so it is not accidentally applied to subsequent insertions.
 			selectionAttributes = null;
 		}, { priority: 'high' } );
 	}
@@ -414,6 +485,7 @@ export default class reference_editing extends Plugin {
 		let hasBackspacePressed = false;
 
 		// Detect pressing `Backspace`.
+		// High priority: must fire before `deleteContent` so the flag is set when needed.
 		this.listenTo( view.document, 'delete', ( evt, data ) => {
 			hasBackspacePressed = data.domEvent.keyCode === keyCodes.backspace;
 		}, { priority: 'high' } );
@@ -435,10 +507,13 @@ export default class reference_editing extends Plugin {
 
 			// Preserve `reference` attribute if the selection is in the middle of the link or
 			// the selection is at the end of the link and 2-SCM is activated.
+			// `containsPosition` → caret is strictly inside the span.
+			// `isEqual( position )` → caret is at the very end (two-step caret mode leaves it here).
 			shouldPreserveAttributes = linkRange.containsPosition( position ) || linkRange.end.isEqual( position );
 		}, { priority: 'high' } );
 
 		// After removing the content, check whether the current selection should preserve the `reference` attribute.
+		// Low priority ensures this fires after the model mutation is complete.
 		this.listenTo( model, 'deleteContent', () => {
 			// If didn't press `Backspace`.
 			if ( !hasBackspacePressed ) {
@@ -453,6 +528,8 @@ export default class reference_editing extends Plugin {
 			}
 
 			// Use `model.enqueueChange()` in order to execute the callback at the end of the changes process.
+			// Enqueueing prevents the attribute removal from being batched with the deletion,
+			// which would cause undo to restore the attribute along with the deleted text.
 			editor.model.enqueueChange( writer => {
 				removeLinkAttributesFromSelection( writer, getLinkAttributesAllowedOnText( model.schema ) );
 			} );
@@ -460,8 +537,21 @@ export default class reference_editing extends Plugin {
 	}
 }
 
+/**
+ * REMOVELINKATTRIBUTESFROMSELECTION
+ * Strips the `reference` attribute and any related decorator attributes from the
+ * current selection so that subsequent keystrokes produce plain (unlinked) text.
+ *
+ * All link-related model attributes start with "reference". That includes not only "reference"
+ * but also all decorator attributes (they have dynamic names), or even custom plugins.
+ *
+ * @param {Object} writer - CKEditor model writer obtained from a `model.change()` callback.
+ * @param {Array} linkAttributes - Array of attribute names (strings) that start with 'reference',
+ *   as returned by {@link getLinkAttributesAllowedOnText}.
+ * @returns {void}
+ */
 // Make the selection free of link-related model attributes.
-// All link-related model attributes start with "link". That includes not only "reference"
+// All link-related model attributes start with "reference". That includes not only "reference"
 // but also all decorator attributes (they have dynamic names), or even custom plugins.
 //
 // @param {module:engine/model/writer~Writer} writer
@@ -474,6 +564,18 @@ function removeLinkAttributesFromSelection( writer, linkAttributes ) {
 	}
 }
 
+/**
+ * SHOULDCOPYATTRIBUTES
+ * Determines whether the `reference` attribute (and other link-related attributes) from
+ * the currently selected text should be copied to the newly typed character.
+ *
+ * Returns `true` only when the entire selection falls within a single continuous reference
+ * span. Partial selections that cross span boundaries, or selections of non-text nodes,
+ * return `false` to avoid incorrectly propagating the reference to unrelated content.
+ *
+ * @param {Object} model - The CKEditor model instance (`editor.model`).
+ * @returns {boolean} `true` when the selection is fully contained within one reference span.
+ */
 // Checks whether selection's attributes should be copied to the new inserted text.
 //
 // @param {module:engine/model/model~Model} model
@@ -516,6 +618,17 @@ function shouldCopyAttributes( model ) {
 	return linkRange.containsRange( model.createRange( firstPosition, lastPosition ), true );
 }
 
+/**
+ * ISTYPING
+ * Returns `true` when the current model batch was created by a typing operation.
+ *
+ * CKEditor marks batches with `isTyping: true` when they originate from direct
+ * keyboard input (character insertion). This distinguishes typing from programmatic
+ * changes (paste, commands, undo), which must not trigger the typing-over-link fixer.
+ *
+ * @param {Object} editor - The CKEditor editor instance.
+ * @returns {boolean} `true` when the active batch has `isTyping === true`.
+ */
 // Checks whether provided changes were caused by typing.
 //
 // @params {module:core/editor/editor~Editor} editor
@@ -526,6 +639,18 @@ function isTyping( editor ) {
 	return currentBatch.isTyping;
 }
 
+/**
+ * GETLINKATTRIBUTESALLOWEDONTEXT
+ * Returns the subset of `$text`-allowed attribute names that belong to the reference
+ * feature — i.e. those whose name starts with the string `'reference'`.
+ *
+ * This covers the primary `reference` attribute and any plugin-registered decorator
+ * attributes that share the `reference` prefix. The resulting array is consumed by
+ * `removeLinkAttributesFromSelection` to ensure a clean strip.
+ *
+ * @param {Object} schema - The CKEditor model schema instance (`editor.model.schema`).
+ * @returns {Array} Array of attribute name strings allowed on `$text` that start with `'reference'`.
+ */
 // Returns an array containing names of the attributes allowed on `$text` that describes the link item.
 //
 // @param {module:engine/model/schema~Schema} schema
@@ -537,5 +662,8 @@ function getLinkAttributesAllowedOnText( schema ) {
 }
 
 
+// Expose `findAttributeRange` and `first` utilities on the class prototype so that external
+// Dédalo code (e.g. service_ckeditor) can access them without importing the CKEditor packages
+// directly.  These are read-only references; callers must not override them.
 reference_editing.prototype.findAttributeRange = findAttributeRange
 reference_editing.prototype.first = first

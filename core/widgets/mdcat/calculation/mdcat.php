@@ -562,8 +562,8 @@
 	*
 	* @param object|string $request_options - unified IPO arg object or its JSON encoding
 	* @param object $request_options->data
-	* @param array  $request_options->data->total_period - minuend array (first element used)
-	* @param array  $request_options->data->total        - subtrahend array (first element used)
+	* @param array  $request_options->data->total        - minuend array (first element used)
+	* @param array  $request_options->data->total_period - subtrahend array (first element used)
 	* @return array - single-element array: [ stdClass { id: 'total', value: float } ]
 	*/
 	function subtract($request_options) : array {

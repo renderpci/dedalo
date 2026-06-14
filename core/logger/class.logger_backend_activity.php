@@ -1,31 +1,53 @@
 <?php declare(strict_types=1);
 /**
 * LOGGER BACKEND ACTIVITY CLASS
-* Manages activity records write to matrix_activity table
+* Concrete logger backend that writes structured audit records to the
+* `matrix_activity` PostgreSQL table (section tipo dd542).
 *
-* This class handles logging of user activities within the Dédalo system.
-* It captures comprehensive audit trails including user actions, timestamps,
-* IP addresses, and contextual data for security and analytics purposes.
+* Responsibilities:
+* - Convert every significant user action (LOGIN, SAVE, DELETE, etc.) into a
+*   typed Dédalo section record and persist it via matrix_activity_db_manager.
+* - Normalise the five audit dimensions — IP, WHO, WHAT, WHERE, WHEN — plus
+*   an arbitrary JSON data blob into the JSONB column layout expected by the
+*   matrix_activity schema.
+* - Prevent infinite loops when a log call is itself triggered by a save to one
+*   of the activity section's own components (guard via $ar_elements_activity_tipo_map).
+* - Defer all actual writes to PHP shutdown time (or a forced flush when the
+*   queue reaches MAX_QUEUE_SIZE) so that logging never blocks the request.
+* - Exclude volatile/utility section tipos (temp presets, time-machine, user-
+*   activity aggregates) that must not generate activity rows.
 *
-* Key features:
-* - Automatic user activity tracking
-* - IP address logging with localhost normalization
-* - Structured activity categorization (LOGIN, SAVE, DELETE, etc.)
-* - Deferred logging using shutdown functions to prevent interference
-* - Infinite loop prevention for self-logging scenarios
+* Data flow:
+*   log_message()  →  queue (self::$log_queue)
+*                  →  register_shutdown_function(flush_queue)  [first item only]
+*   flush_queue()  →  log_message_defer()  →  matrix_activity_db_manager::create()
 *
-* @package Dedalo
-* @subpackage Logger
+* Relationships:
+* - Extends logger_backend (abstract interface).
+* - Registered as logger::$obj['activity'] via logger::register().
+* - Delegates the actual INSERT to matrix_activity_db_manager::create().
+* - References section_record_data::get_column_name() to resolve JSONB column
+*   names from component model names (cached in static $_COLUMN_* properties).
+* - Constructs locator objects for relational links (WHO→users, WHAT→dd42).
+* - Uses component_date::get_date_now() for the WHEN timestamp.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class logger_backend_activity extends logger_backend {
 
 
 
 	/**
-	* Activity type mappings
-	* Maps human-readable activity names to numeric IDs for storage
-	* @see diffusion_section_stats::build_what() for statistics usage
-	* @var array<int, int>
+	* WHAT
+	* Maps human-readable activity event names to their numeric IDs in the
+	* 'Activity events' section (dd42).  The numeric ID is used as section_id
+	* when building the WHAT locator so that the display label is resolved from
+	* the ontology at read time rather than stored as a plain string.
+	*
+	* Keys correspond exactly to the $message argument accepted by log_message().
+	* Entries must be kept in sync with the dd42 section records in the ontology.
+	* @var array<string,int> $what
 	*/
 	static array $what = [
 		'LOG IN'			=>	1,	// dd696 login module
@@ -47,34 +69,81 @@ class logger_backend_activity extends logger_backend {
 	];
 
 	// tipos
+	/**
+	* Activity log section descriptor.
+	* Points to dd542, the section type that holds all activity records.
+	* @var array{tipo:string,model_name:string} $_SECTION_TIPO
+	*/
 	static array $_SECTION_TIPO = [
 		'tipo'			=>'dd542',
 		'model_name'	=>'section'
 	];
+	/**
+	* Component descriptor for the IP address field (dd544, component_input_text).
+	* Stores the raw IP string of the originating HTTP request.
+	* @var array{tipo:string,model_name:string} $_COMPONENT_IP
+	*/
 	static array $_COMPONENT_IP = [
 		'tipo'			=>'dd544',	// (v5 former component_ip)
 		'model_name'	=>'component_input_text'
 	];
+	/**
+	* Component descriptor for the WHO field (dd543, component_portal).
+	* Stores a locator link to the user section (DEDALO_SECTION_USERS_TIPO) so
+	* that the display name is resolved at read time from the users section.
+	* @var array{tipo:string,model_name:string} $_COMPONENT_WHO
+	*/
 	static array $_COMPONENT_WHO = [
 		'tipo'			=>'dd543',
 		'model_name'	=>'component_portal'	//component_autocomplete
 	];
+	/**
+	* Component descriptor for the WHAT field (dd545, component_select).
+	* Stores a locator link into the 'Activity events' section (dd42) whose
+	* section_id corresponds to an entry in self::$what.
+	* @var array{tipo:string,model_name:string} $_COMPONENT_WHAT
+	*/
 	static array $_COMPONENT_WHAT = [
 		'tipo'			=> 'dd545',
 		'model_name'	=> 'component_select'	// (v5 former component_input_text)
 	];
+	/**
+	* Component descriptor for the WHERE field (dd546, component_input_text).
+	* Stores the Dédalo tipo (ontology identifier) of the component or section
+	* that triggered the activity, e.g. 'oh32'.
+	* @var array{tipo:string,model_name:string} $_COMPONENT_WHERE
+	*/
 	static array $_COMPONENT_WHERE = [
 		'tipo'			=>'dd546',	// (v5 former component_autocomplete_ts)
 		'model_name'	=>'component_input_text'
 	];
+	/**
+	* Component descriptor for the WHEN field (dd547, component_date).
+	* Stores a dd_date object with a 'start' timestamp (ISO-8601) produced by
+	* component_date::get_date_now() at the moment log_message() is called.
+	* @var array{tipo:string,model_name:string} $_COMPONENT_WHEN
+	*/
 	static array $_COMPONENT_WHEN	= [
 		'tipo'			=>'dd547',
 		'model_name'	=>'component_date'
 	];
+	/**
+	* Component descriptor for the PROJECTS field (dd550, component_filter).
+	* Reserved for future project-scoping of activity records; populated by
+	* callers that pass a projects filter in $log_data.
+	* @var array{tipo:string,model_name:string} $_COMPONENT_PROJECTS
+	*/
 	static array $_COMPONENT_PROJECTS	= [
 		'tipo'			=>'dd550',
 		'model_name'	=>'component_filter'
 	];
+	/**
+	* Component descriptor for the DATA field (dd551, component_json).
+	* Stores the caller-supplied $log_data array as a JSONB value.  The
+	* ontology registers this component as component_input_text (v5 legacy)
+	* but get_model() maps it to component_json at runtime.
+	* @var array{tipo:string,model_name:string} $_COMPONENT_DATA
+	*/
 	static array $_COMPONENT_DATA = [
 		'tipo'			=>'dd551',
 		'model_name'	=>'component_json'	// (v5 former component_input_text)
@@ -82,33 +151,107 @@ class logger_backend_activity extends logger_backend {
 	];
 
 	// ar_elements_activity_tipo
+	/**
+	* Ordered list of all component/section tipos that belong to the activity
+	* log section itself.  Built once in __construct() from the $_COMPONENT_* /
+	* $_SECTION_TIPO descriptors.  Used to populate the O(1) lookup map.
+	* @var array<int,string> $ar_elements_activity_tipo
+	*/
 	static array $ar_elements_activity_tipo;
 
 	// enable_log static
+	/**
+	* Master switch for activity logging.  Set to false (e.g. during bulk
+	* import or test runs) to skip all log_message() calls with no overhead.
+	* @var bool $enable_log
+	*/
 	public static bool $enable_log = true;
 
 	// Cached column names for performance (pre-computed in constructor)
+	/**
+	* JSONB column name for the IP component, cached from
+	* section_record_data::get_column_name() at construction time.
+	* @var string $_COLUMN_IP
+	*/
 	static string $_COLUMN_IP;
+	/**
+	* JSONB column name for the WHO component, cached from
+	* section_record_data::get_column_name() at construction time.
+	* @var string $_COLUMN_WHO
+	*/
 	static string $_COLUMN_WHO;
+	/**
+	* JSONB column name for the WHAT component, cached from
+	* section_record_data::get_column_name() at construction time.
+	* @var string $_COLUMN_WHAT
+	*/
 	static string $_COLUMN_WHAT;
+	/**
+	* JSONB column name for the WHERE component, cached from
+	* section_record_data::get_column_name() at construction time.
+	* @var string $_COLUMN_WHERE
+	*/
 	static string $_COLUMN_WHERE;
+	/**
+	* JSONB column name for the WHEN component, cached from
+	* section_record_data::get_column_name() at construction time.
+	* @var string $_COLUMN_WHEN
+	*/
 	static string $_COLUMN_WHEN;
+	/**
+	* JSONB column name for the DATA component, cached from
+	* section_record_data::get_column_name() at construction time.
+	* @var string $_COLUMN_DATA
+	*/
 	static string $_COLUMN_DATA;
 
 	// O(1) lookup map for infinite loop prevention
+	/**
+	* Flipped version of $ar_elements_activity_tipo: maps each activity-section
+	* tipo string to its array index.  Used by log_message_defer() to detect in
+	* O(1) whether $tipo_where belongs to the activity section itself, which
+	* would cause infinite recursion if logged.
+	* @var array<string,int> $ar_elements_activity_tipo_map
+	*/
 	static array $ar_elements_activity_tipo_map;
 
 	// Log queue for batching (prevents 1000s of shutdown functions)
+	/**
+	* Pending log entries awaiting deferred write.  Items are stdClass objects
+	* with keys: message, log_level, tipo_where, operations, log_data, user_id.
+	* A single PHP shutdown function is registered on the first push to drain
+	* this queue; subsequent pushes reuse that registration.  If the queue
+	* reaches MAX_QUEUE_SIZE the flush is triggered immediately to cap memory.
+	* @var array<int,object> $log_queue
+	*/
 	private static array $log_queue = [];
 
 	// Maximum queue size before forced flush (prevents memory bloat)
+	/**
+	* Hard cap on self::$log_queue length.  When the queue reaches this size
+	* flush_queue() is called synchronously rather than waiting for shutdown,
+	* preventing unbounded memory growth during bulk operations.
+	* @var int MAX_QUEUE_SIZE
+	*/
 	private const int MAX_QUEUE_SIZE = 100;
 
 	/**
-	 * Section tipos excluded from activity tracking.
-	 *
-	 * @var array $excluded_section_tipos
-	 */
+	* EXCLUDED_SECTION_TIPOS
+	* Section tipos that must never generate activity log records.
+	*
+	* These sections are either written automatically by the system (search
+	* presets, user-activity aggregates) or are internal virtual constructs
+	* (time-machine). Logging them would produce noise, infinite recursion
+	* (user-activity writing to itself), or misleading audit trails.
+	*
+	* - DEDALO_TEMP_PRESET_SECTION_TIPO (dd655): ephemeral search-preset records
+	*   created automatically when a user runs a search with saved filters.
+	* - DEDALO_TIME_MACHINE_SECTION_TIPO (dd15): virtual section used by the
+	*   time-machine feature to expose historical states; not real user data.
+	* - USER_ACTIVITY_SECTION_TIPO (dd1521): daily aggregated user-action counter
+	*   updated automatically; logging saves to it would recurse.
+	* @var array<int,string> $excluded_section_tipos
+	*/
 	public static array $excluded_section_tipos = [
 		DEDALO_TEMP_PRESET_SECTION_TIPO, // dd655 - temporal search presets (automatic saved search configuration)
 		DEDALO_TIME_MACHINE_SECTION_TIPO, // dd15 - time machine section (internal virtual section)
@@ -119,19 +262,26 @@ class logger_backend_activity extends logger_backend {
 
 	/**
 	* __CONSTRUCT
-	* Requires url_data connector.
-	* @param array|null $url_data
-	* Assoc array with url data
-	* E.g.
-	* [
-	*	"scheme" => "activity",
-	*	"host" => "auto",
-	*	"port" => 5432,
-	*	"user" => "auto",
-	*	"pass" => "auto",
-	*	"path" => "/log_data",
-	*	"query" => "table=matrix_activity"
-	* ]
+	* Initialises static column-name caches and the infinite-loop prevention
+	* map, then delegates connection setup to the parent.
+	*
+	* All heavy work (column-name resolution, tipo list building) is done once
+	* here rather than on every log_message() call, which can fire thousands of
+	* times per request during bulk operations.
+	*
+	* @param array|null $url_data [= null] - Connection descriptor parsed from
+	*   the connection string passed to logger::register().  Expected keys:
+	*   scheme, host, port, user, pass, path, query.  Example:
+	*   [
+	*     "scheme" => "activity",
+	*     "host" => "auto",
+	*     "port" => 5432,
+	*     "user" => "auto",
+	*     "pass" => "auto",
+	*     "path" => "/log_data",
+	*     "query" => "table=matrix_activity"
+	*   ]
+	* @return void
 	*/
 	public function __construct( ?array $url_data ) {
 
@@ -166,10 +316,40 @@ class logger_backend_activity extends logger_backend {
 
 	/**
 	* LOG_MESSAGE_DEFER
-	* Creates a new record in database.
-	* Table: matrix_activity
-	* Section tipo: DEDALO_ACTIVITY_SECTION_TIPO
-	* @param object $options
+	* Builds the full section-record data object and persists it to the
+	* `matrix_activity` table via matrix_activity_db_manager::create().
+	*
+	* This method is always called from flush_queue() (either at PHP shutdown
+	* or on a forced mid-request flush) — never directly from application code.
+	* It must never be called while handling a save to the activity section's
+	* own components, which the infinite-loop guard at the top enforces.
+	*
+	* Data structure written (each key is a JSONB column in matrix_activity):
+	*
+	*   $_COLUMN_IP    → [{ value: '<ip>', lang: '' }]
+	*   $_COLUMN_WHO   → [locator → DEDALO_SECTION_USERS_TIPO / $user_id]
+	*   $_COLUMN_WHAT  → [locator → dd42 / self::$what[$message]]
+	*   $_COLUMN_WHERE → [{ value: '<tipo_where>', lang: '' }]
+	*   $_COLUMN_WHEN  → [{ start: <dd_date> }]
+	*   $_COLUMN_DATA  → [{ value: [<log_data items>], lang: '' }]
+	*
+	* The $data->relation / $data->string / $data->date / $data->misc sub-objects
+	* are initialised but may remain empty; matrix_activity_db_manager uses them
+	* to match the expected section_record_data column layout.
+	*
+	* Side effects:
+	* - Executes an INSERT into matrix_activity (via matrix_activity_db_manager).
+	* - May write an error to the debug log if $message cannot be resolved in
+	*   self::$what, but the record is still inserted without the WHAT locator.
+	* - Calls dump() when SHOW_DEBUG is true and $message is unresolvable.
+	*
+	* @param object $options - Bag of named parameters (produced by log_message()):
+	*   - string  $options->message     Activity event key, e.g. 'SAVE' or 'LOG IN'.
+	*   - int     $options->log_level   Numeric severity (logger::INFO, etc.).
+	*   - string  $options->tipo_where  Dédalo tipo of the acted-upon element.
+	*   - string|null $options->operations  Legacy field; not currently consumed.
+	*   - array|null  $options->log_data   Caller context array stored as JSON.
+	*   - int|null    $options->user_id    Override for the logged-in user ID.
 	* @return void
 	*/
 	public function log_message_defer( object $options ) : void {
@@ -240,6 +420,10 @@ class logger_backend_activity extends logger_backend {
 		$column_name	= self::$_COLUMN_WHO;
 
 		// value
+		// (!) The '-666' fallback is a string assigned to $user_id which is declared ?int
+		// in log_message(); this works at runtime due to PHP's loose typing but is a
+		// type mismatch that may produce unexpected behaviour when $user_id is later
+		// passed to set_section_id().  Do not change — document and flag only.
 		$user_id = $user_id ?? logged_user_id() ?? '-666';
 		$locator_user_id = new locator();
 		$locator_user_id->set_section_id($user_id);
@@ -329,35 +513,47 @@ class logger_backend_activity extends logger_backend {
 
 
 	/**
-	* LOG MESSAGES
-	* Logs activity messages with user context and metadata.
+	* LOG_MESSAGE
+	* Public entry point for recording a user activity event.
+	* Enqueues the event for deferred write; the actual INSERT is deferred to
+	* flush_queue(), which runs at PHP shutdown (or earlier if the queue fills).
 	*
-	* Data structure stored:
-	* IP_ADDRESS	WHO		WHAT	WHERE	WHEN	log_data
+	* Only the first call per request registers a shutdown function; subsequent
+	* calls just push to the queue, keeping overhead minimal during bulk saves.
 	*
-	* @param string $message
-	*	Activity message (e.g., 'SAVE', 'LOAD EDIT')
-	* @param int $log_level = logger::INFO
-	*	Log level severity. E.g 75
-	* @param string|null $tipo_where = null
-	*	Component/section tipo being acted upon. E.g. 'oh32'
-	* @param string|null $operations = null
-	*	Additional operations info (legacy)
-	* @param array|null $log_data = null
-	*	Associative array with context data:
-	*	[
-	*		"msg"			=> "Saved component data",
-	*		"tipo"			=> "oh32",
-	*		"section_id"	=> "1",
-	*		"lang"			=> "lg-nolan",
-	*		"top_id"		=> "1",
-	*		"top_tipo"		=> "oh1",
-	*		"component_name"=> "component_publication",
-	*		"table"			=> "matrix",
-	*		"section_tipo"	=> "oh1"
-	*	]
-	* @param int|null $user_id
-	*	User ID override (defaults to logged user)
+	* Skipped silently when:
+	* - self::$enable_log is false (e.g. during import/test runs).
+	* - $tipo_where is in self::$excluded_section_tipos (temp presets, time-
+	*   machine, user-activity aggregates).
+	*
+	* Data structure stored per record:
+	*   IP_ADDRESS  WHO  WHAT  WHERE  WHEN  log_data
+	*
+	* @param string $message - Activity event key; must be a key of self::$what
+	*   (e.g. 'SAVE', 'LOAD EDIT').  Whitespace is normalised before lookup.
+	* @param int $log_level [= logger::INFO] - Numeric severity passed through
+	*   to the options bag; not currently used for filtering but available for
+	*   future log-level-gated backends.
+	* @param string|null $tipo_where [= null] - Dédalo tipo (ontology ID) of the
+	*   component or section being acted upon (e.g. 'oh32').  Required; returns
+	*   early with an error if empty.
+	* @param string|null $operations [= null] - Legacy field; reserved for future
+	*   use; not currently consumed by log_message_defer().
+	* @param array|null $log_data [= null] - Caller context stored as JSON in the
+	*   DATA column.  Typical shape:
+	*   [
+	*     "msg"            => "Saved component data",
+	*     "tipo"           => "oh32",
+	*     "section_id"     => "1",
+	*     "lang"           => "lg-nolan",
+	*     "top_id"         => "1",
+	*     "top_tipo"       => "oh1",
+	*     "component_name" => "component_publication",
+	*     "table"          => "matrix",
+	*     "section_tipo"   => "oh1"
+	*   ]
+	* @param int|null $user_id [= null] - Override the acting user ID; defaults
+	*   to logged_user_id() when null.
 	* @return void
 	*/
 	public function log_message(
@@ -405,9 +601,20 @@ class logger_backend_activity extends logger_backend {
 
 
 	/**
-	* FLUSH QUEUE
-	* Processes all queued logs in batch.
-	* Called automatically on shutdown or when queue reaches MAX_QUEUE_SIZE.
+	* FLUSH_QUEUE
+	* Drains self::$log_queue by calling log_message_defer() for each entry.
+	* Called either automatically at PHP shutdown (registered on the first
+	* log_message() call) or synchronously when the queue fills to MAX_QUEUE_SIZE.
+	*
+	* The queue is atomically swapped to an empty array before iteration so that
+	* any log events triggered inside log_message_defer() (e.g. from debug_log)
+	* go onto a fresh queue rather than being lost or causing a double-write.
+	*
+	* (!) log_message_defer() is accessed via logger::$obj['activity'], which is
+	* the same instance as $this in normal operation.  This self-reference is
+	* intentional: it allows the backend to be swapped or mocked by replacing
+	* logger::$obj['activity'] without changing flush_queue.
+	*
 	* @return void
 	*/
 	private static function flush_queue() : void {
