@@ -6,11 +6,35 @@
 
 /**
 * UA
-* User Agent / Browser
-* Check the user agent technologies
+* User-agent / browser capability detector for Dédalo v7.
+*
+* Provides static methods to probe whether the current browser supports the
+* technologies required by AI/ML features (WebGPU, Transformers.js) and to
+* identify the browser name and version via both the modern User-Agent Client
+* Hints API and the traditional `navigator.userAgent` string.
+*
+* Usage pattern — all methods are called directly on the constructor function
+* (static dispatch); the constructor itself is only instantiated when a caller
+* needs to accumulate results across multiple checks into `this.results`:
+*
+*   const detector = new ua();
+*   await ua.check_transformers_webgpu.call(detector);
+*   console.log(detector.results);
+*
+* Main static methods:
+*   check_transformers_webgpu  — orchestrates a full WebGPU + Transformers.js check
+*   check_browser              — quick sync browser-name flags via UA string
+*   check_webgpu               — async WebGPU adapter/device probe
+*   check_transformers_js      — checks whether Transformers.js globals are present
+*   check_performance          — benchmarks basic CPU compute speed
+*   get_browser_info_modern    — browser info via User-Agent Client Hints API
+*   get_browser_info_legacy    — browser info via traditional UA-string parsing
+*   get_detailed_browser_info  — picks modern or legacy parser automatically
+*   get_webgpu_recommendations — human-readable remediation advice
 */
 export const ua = function() {
 
+	// results accumulator — populated by check_transformers_webgpu
 	this.results = {};
 }//end ua
 
@@ -19,6 +43,26 @@ export const ua = function() {
 
 /**
 * CHECK_TRANSFORMERS_WEBGPU
+* Orchestrates a complete capability check for AI inference in the browser.
+*
+* Runs all four probes sequentially (browser info, WebGPU, Transformers.js,
+* performance) and assembles the results into `this.results`. Sets
+* `results.overall` to the WebGPU supported flag as the primary gate —
+* Transformers.js with WebGPU backend is the minimum requirement for
+* on-device model inference in Dédalo.
+*
+* (!) This method must be called with `this` bound to a `ua` instance so
+* that `self.results` accumulates correctly. Use `new ua()` and then
+* `await ua.check_transformers_webgpu.call(instance)`.
+*
+* @returns {Promise<Object>} Resolves to `this.results`, which has the shape:
+*   {
+*     browser:      {Object}  — output of get_detailed_browser_info()
+*     webgpu:       {Object}  — output of check_webgpu()
+*     transformers: {Object}  — output of check_transformers_js()
+*     performance:  {Object}  — output of check_performance()
+*     overall:      {boolean} — true when WebGPU is supported
+*   }
 */
 ua.check_transformers_webgpu = async function() {
 
@@ -31,6 +75,7 @@ ua.check_transformers_webgpu = async function() {
 		performance		: await self.check_performance()
 	};
 
+	// overall is keyed on WebGPU: without it Transformers.js cannot use GPU acceleration
 	self.results.overall = self.results.webgpu.supported;
 
 	return self.results;
@@ -40,7 +85,24 @@ ua.check_transformers_webgpu = async function() {
 
 /**
 * CHECK_BROWSER
-* a simple browser detection
+* Synchronous, lightweight browser identification via UA-string regex tests.
+*
+* Uses simple regex heuristics rather than the Client Hints API, so it is
+* available immediately without an async call. Suitable for quick gating
+* decisions (e.g. showing a WebGPU warning banner) where a rough answer is
+* enough. For accurate version numbers use `get_detailed_browser_info()`.
+*
+* Edge detection requires the double-negative guard (`!/Edge/.test`) because
+* Chromium-based Edge also injects "Chrome" into its UA string.
+*
+* @returns {Object} Detection result with the shape:
+*   {
+*     user_agent:  {string}  — raw navigator.userAgent string
+*     is_chrome:   {boolean} — true for Chrome/Chromium (excludes Edge)
+*     is_firefox:  {boolean} — true for Firefox
+*     is_safari:   {boolean} — true for Safari (excludes Chrome/Chromium)
+*     recommended: {boolean} — true when WebGPU support is considered reliable
+*   }
 */
 ua.check_browser = function() {
 
@@ -63,6 +125,23 @@ ua.check_browser = function() {
 
 /**
 * CHECK_WEBGPU
+* Probes the browser's WebGPU implementation end-to-end.
+*
+* Goes beyond merely checking `navigator.gpu` — it requests a real GPU adapter
+* and then a logical device to confirm that the hardware and driver stack are
+* actually usable. The device is destroyed immediately after the check to
+* release GPU resources; it is not retained for inference use.
+*
+* Three failure modes are distinguished:
+*   1. `navigator.gpu` absent — browser has no WebGPU support at all.
+*   2. `requestAdapter()` returns null — GPU exists but no suitable adapter
+*      (e.g. hardware acceleration disabled, no compatible GPU).
+*   3. `requestDevice()` throws — adapter found but device creation failed
+*      (driver crash, out of memory, feature mismatch).
+*
+* @returns {Promise<Object>} Resolves (never rejects) to one of:
+*   Success: { supported: true,  adapter_info: { features: Array, limits: GPULimits } }
+*   Failure: { supported: false, reason: {string} }
 */
 ua.check_webgpu = async function() {
 	if (!navigator.gpu) {
@@ -76,6 +155,7 @@ ua.check_webgpu = async function() {
 		}
 
 		const device = await adapter.requestDevice();
+		// destroy immediately — we only needed the device to confirm it can be created
 		device.destroy();
 
 		return {
@@ -94,6 +174,24 @@ ua.check_webgpu = async function() {
 
 /**
 * CHECK_TRANSFORMERS_JS
+* Checks whether the Hugging Face Transformers.js library is available in the
+* current browser context.
+*
+* Detection strategy: looks for `window.pipeline` (the primary inference
+* entry point) or `window.env` (the library's runtime configuration object).
+* Either presence is treated as evidence that Transformers.js has been loaded.
+*
+* The `typeof window === 'undefined'` guard makes the function safe to call
+* in Web Worker or SSR contexts where there is no global `window`.
+*
+* (!) This check only confirms that the library is loaded, not that a model
+* has been downloaded or that inference will succeed. A `{ supported: true }`
+* result should always be combined with `check_webgpu()` before enabling GPU
+* inference features.
+*
+* @returns {Promise<Object>} Resolves to:
+*   Success: { supported: true }
+*   Failure: { supported: false, reason: {string} }
 */
 ua.check_transformers_js = async function() {
 	if (typeof window === 'undefined') {
@@ -113,6 +211,23 @@ ua.check_transformers_js = async function() {
 
 /**
 * CHECK_PERFORMANCE
+* Benchmarks the browser's raw CPU compute speed with a simple floating-point
+* loop to estimate whether the device is fast enough for ML inference.
+*
+* Runs one million `Math.sqrt` iterations and records the wall-clock time.
+* This deliberately uses a tight synchronous loop — it blocks the main thread
+* for the duration, so it should not be called in a latency-sensitive context.
+* Call it during an initialisation phase before the UI is interactive.
+*
+* The 1 000 ms threshold (`acceptable: duration < 1000`) is intentionally
+* lenient; it only filters out severely constrained devices. On a modern
+* desktop this loop typically completes in under 10 ms.
+*
+* @returns {Promise<Object>} Resolves to:
+*   {
+*     basic_compute_time: {number}  — elapsed milliseconds for the loop
+*     acceptable:         {boolean} — true when duration is under 1 000 ms
+*   }
 */
 ua.check_performance = async function() {
 	// Simple performance check
@@ -134,6 +249,31 @@ ua.check_performance = async function() {
 
 /**
 * GET_BROWSER_INFO_MODERN
+* Identifies the browser using the User-Agent Client Hints API
+* (`navigator.userAgentData`), which provides structured, entropy-preserving
+* brand data that is more reliable than UA-string parsing.
+*
+* The `brands` array returned by the API can contain multiple entries
+* (e.g. both "Chromium" and "Google Chrome" for Chrome). This method resolves
+* that ambiguity by checking each known brand in priority order and taking
+* only the first match. Unknown browsers fall through to `name: 'unknown'`.
+*
+* Returns early with `is_modern_api: false` when the API is absent (Firefox,
+* Safari, and all non-Chromium browsers as of 2024). Callers should always
+* check `is_modern_api` and fall back to `get_browser_info_legacy()`.
+*
+* @returns {Object} Browser identification with the shape:
+*   Success (API available):
+*     {
+*       is_modern_api: {boolean} — always true on this path
+*       user_agent:    {string}  — raw navigator.userAgent (legacy fallback string)
+*       platform:      {string}  — OS platform string or 'unknown'
+*       name:          {string}  — 'Chrome' | 'Firefox' | 'Safari' | 'Edge' | 'unknown'
+*       version:       {string}  — version string from the matched brand entry
+*       full_brand:    {string}  — raw brand string from the brands array
+*     }
+*   Failure (API not supported):
+*     { is_modern_api: false, error: {string} }
 */
 ua.get_browser_info_modern = function() {
 	// Check if User-Agent Client Hints API is available
@@ -200,6 +340,27 @@ ua.get_browser_info_modern = function() {
 
 /**
 * GET_DETAILED_BROWSER_INFO
+* Resolves the most accurate browser information available in the current
+* environment, automatically choosing between the modern Client Hints API
+* and the legacy UA-string parser.
+*
+* Strategy:
+*   1. If `navigator.userAgentData.brands` is present (Chromium-family browsers),
+*      delegate to `get_browser_info_modern()` and tag the result with
+*      `method: 'brands'`.
+*   2. Otherwise fall back to `get_browser_info_legacy()` and tag the result
+*      with `method: 'parsing'` and `is_modern_api: false`.
+*
+* The returned object always contains at minimum: `name`, `version`,
+* `user_agent`, `method`, and `is_modern_api`.
+*
+* (!) Although the method is declared `async`, it does not currently await
+* any promise — the signature is async for future compatibility (e.g. if
+* `getHighEntropyValues()` is added for version resolution).
+*
+* @returns {Promise<Object>} Browser info object (same shape as
+*   `get_browser_info_modern()` / `get_browser_info_legacy()`) with an
+*   additional `method` property: `'brands'` or `'parsing'`.
 */
 ua.get_detailed_browser_info = async function () {
 
@@ -228,6 +389,26 @@ ua.get_detailed_browser_info = async function () {
 
 /**
 * GET_BROWSER_INFO_LEGACY
+* Identifies the browser by parsing the traditional `navigator.userAgent`
+* string. Used as a fallback when the User-Agent Client Hints API is
+* unavailable (Firefox, Safari, non-Chromium environments).
+*
+* Parsing rules, in priority order:
+*   Chrome  — UA contains 'Chrome' but NOT 'Edg' (avoids false-positive on Edge)
+*   Firefox — UA contains 'Firefox'
+*   Safari  — UA contains 'Safari' but NOT 'Chrome' (Chromium injects 'Safari')
+*   Edge    — UA contains 'Edg' (both 'Edg/' for Chromium Edge and 'Edge/' legacy)
+*
+* Note that Chrome-based browsers (Brave, Opera, Vivaldi) will be reported as
+* 'Chrome' because they share the same UA token. This is intentional — for
+* WebGPU feature detection the distinction is irrelevant.
+*
+* @returns {Object} Browser info with the shape:
+*   {
+*     name:       {string} — 'Chrome' | 'Firefox' | 'Safari' | 'Edge' | 'unknown'
+*     version:    {string} — dotted version string or 'unknown' when not matched
+*     user_agent: {string} — raw navigator.userAgent string
+*   }
 */
 ua.get_browser_info_legacy = function() {
 	const user_agent = navigator.userAgent;
@@ -263,6 +444,24 @@ ua.get_browser_info_legacy = function() {
 
 /**
 * GET_WEBGPU_RECOMMENDATIONS
+* Generates a list of human-readable remediation steps based on the failure
+* reasons detected by a prior `check_transformers_webgpu()` call.
+*
+* (!) This method reads `this.results`, which is only populated after calling
+* `check_transformers_webgpu()` on the same instance. Calling it before that
+* will throw because `this.results.webgpu` is undefined.
+*
+* Returns an empty array when everything is supported — callers can use
+* `recommendations.length === 0` as a "all good" signal without additional
+* checks.
+*
+* Recommendation groups:
+*   WebGPU not supported — actionable steps for the user (flags, browser choice,
+*     driver update).
+*   Transformers.js not loaded — actionable steps for the integrator (import
+*     check, connectivity).
+*
+* @returns {Array} Array of {string} recommendation messages, possibly empty.
 */
 ua.get_webgpu_recommendations = function() {
 	const recommendations = [];
