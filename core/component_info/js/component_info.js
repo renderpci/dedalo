@@ -142,43 +142,46 @@ component_info.prototype.get_widgets = async function() {
 				// self.ar_instances.push(new_widget)
 
 			// parallel mode
-				const current_promise = new Promise(async function(resolve){
+				const current_promise = (async function(){
 
-					// import module file. Use short_path to enable file discovery by packers
-						const short_path		= path + '/js/' + widget_name
-						const element_widget	= await import(`../../../core/widgets${short_path}.js`)
+					try {
+						// import module file. Use short_path to enable file discovery by packers
+							const short_path		= path + '/js/' + widget_name
+							const element_widget	= await import(`../../../core/widgets${short_path}.js`)
 
-					// instance widget
-						const new_widget = new element_widget[widget_name]()
+						// instance widget
+							const new_widget = new element_widget[widget_name]()
 
-					// init widget
-						new_widget.init({
-							id				: widget_id,
-							section_tipo	: self.section_tipo,
-							section_id		: self.section_id,
-							lang			: self.lang,
-							mode			: self.mode,
-							model			: 'widget',
-							value			: widget_value,
-							datalist		: widget_datalist,
-							ipo				: current_widget.ipo,
-							name			: current_widget.widget_name,
-							properties		: current_widget,
-							caller			: self
-						})
-						.then(function(){
-							resolve(new_widget)
-						})
-						.catch((errorMsg) => {
-							console.error(errorMsg);
-						})
-				})
+						// init widget
+							await new_widget.init({
+								id				: widget_id,
+								section_tipo	: self.section_tipo,
+								section_id		: self.section_id,
+								lang			: self.lang,
+								mode			: self.mode,
+								model			: 'widget',
+								value			: widget_value,
+								datalist		: widget_datalist,
+								ipo				: current_widget.ipo,
+								name			: current_widget.widget_name,
+								properties		: current_widget,
+								caller			: self
+							})
+
+						return new_widget
+					} catch (errorMsg) {
+						console.error('Error loading widget:', widget_name, errorMsg);
+						return null
+					}
+				})()
 				ar_promises.push(current_promise)
 
 		}//end for loop
 
-		// instances. Await all instances are parallel init and fix
-		self.ar_instances = await Promise.all(ar_promises)
+		// instances. Await all instances are parallel init and fix.
+		// Filter out widgets that failed to load (null) so a single failure
+		// does not break the whole set.
+		self.ar_instances = (await Promise.all(ar_promises)).filter(Boolean)
 
 
 	return self.ar_instances
