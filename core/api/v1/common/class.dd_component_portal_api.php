@@ -1,10 +1,30 @@
 <?php declare(strict_types=1);
 /**
-* DD_COMPONENT_PORTAL_API
-* Manage API REST data flow of the component with Dédalo
-* This class is a collection of component exposed methods to the API using
-* a normalized RQO (Request Query Object)
+* CLASS DD_COMPONENT_PORTAL_API
+* Remote API action handler for component_portal operations.
 *
+* Exposes a curated allowlist of component_portal methods as REST API actions
+* reachable via the normalized RQO (Request Query Object) protocol. Every method
+* here maps directly to an action key listed in API_ACTIONS; callers must include
+* that key as the `action` field in the RQO body routed through dd_manager.
+*
+* Current surface:
+* - delete_locator : Remove matching locators from a portal component and persist
+*
+* Primary caller: tool_indexation (client JS), which uses component_portal::delete_locator()
+* on the JavaScript side to invoke this endpoint when a tagged reference (e.g. an index
+* entry pointing to a transcription word) is deleted and the corresponding portal link
+* must be cleaned up server-side.
+*
+* Security model: every action asserts the required permission level via
+* security::assert_section_permission() before touching any data. Write operations
+* require level 2.
+*
+* This class follows the same static, final, no-instantiation pattern as the other
+* dd_component_*_api classes in this directory. It does NOT extend any base class.
+*
+* @package Dédalo
+* @subpackage Core
 */
 final class dd_component_portal_api {
 
@@ -26,6 +46,20 @@ final class dd_component_portal_api {
 	* Remove the coincident locators from component data and save the result
 	* This method is used by tool_indexation to remove tags from component_portal related to transcription
 	*
+	* Resolves the target component_portal instance from the RQO source locator,
+	* delegates matching and removal to component_relation_common::remove_locator_from_data(),
+	* and calls Save() only when at least one locator was actually removed.
+	*
+	* The `locator` option is a partial or full locator object; only the properties
+	* listed in `ar_properties` are compared when looking for matches. This allows
+	* caller-controlled precision: e.g. matching only by `tag_id` + `type` to remove
+	* all portal links referencing a specific index tag regardless of other fields.
+	*
+	* Response shape:
+	*   result  int|false  — number of removed locators (0 = none removed), false on error
+	*   msg     string[]   — human-readable outcome messages
+	*   errors  string[]   — validation/error messages; non-empty means result is false
+	*
 	* @param object $rqo
 	* 	Sample:
 	* {
@@ -43,6 +77,7 @@ final class dd_component_portal_api {
 	* 	}
 	* }
 	* @return object $response
+	* @throws permission_exception When the current user lacks write access to $section_tipo
 	*/
 	public static function delete_locator( object $rqo ) : object {
 

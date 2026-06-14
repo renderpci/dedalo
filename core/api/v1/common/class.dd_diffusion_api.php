@@ -1,10 +1,44 @@
 <?php declare(strict_types=1);
 require_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php');
 /**
- * DIFFUSION_API
- * Main entry point for the new diffusion system.
- * Handles SQO-based requests and returns standardized JSON data.
- */
+* CLASS DD_DIFFUSION_API
+* PHP gateway for the Dédalo v7 diffusion system — the layer that publishes
+* Dédalo work-data to external targets (SQL/MariaDB, RDF, XML, Socrata).
+*
+* Responsibilities:
+* - Exposes a fixed, allowlisted set of API actions (API_ACTIONS) invoked by
+*   Bun (the diffusion engine) or the tool_diffusion UI via the standard
+*   core/api/v1/json endpoint.
+* - Executes an SQO-based record search, walks the diffusion ontology (flat
+*   virtual tree via diffusion_utils), resolves multi-level cross-section
+*   chains through diffusion_chain_processor, and builds a serialisable
+*   response containing 'langs', 'main', and 'datum[]' groups consumed by
+*   the Bun engine.
+* - Delegates file-based formats (RDF, XML) to specialised per-record
+*   handlers (diffusion_rdf, diffusion_xml) and SQL/Socrata data to the
+*   chain-processor path.
+* - Resolves and forwards media-index rebuild requests to Bun; PHP owns
+*   the ontology walk, Bun owns MariaDB (see MariaDB-is-Bun's-responsibility
+*   memory note).
+* - Orchestrates opportunistic retry of pending deletions (dd1758
+*   unpublish_pending rows) on the first chunk of every publish run.
+*
+* Architecture notes:
+* - All public static methods are pure request-handlers: they receive an
+*   $rqo (Request Query Object) and return a stdClass response.
+* - Static class-level accumulators ($datum, $datum_unresolved,
+*   $publishable_overrides, $sqo_filter_by_locators) hold per-request state
+*   and are reset at the top of every diffuse() call.
+* - Cross-section relations not matched by the SQO filter still get their
+*   field values resolved (for reference data), but are excluded from
+*   top-level $datum entries.
+* - Multi-level resolution is breadth-first: primary records are processed
+*   first, then linked sections are enqueued in $datum_unresolved and
+*   drained in a while loop.
+*
+* @package Dédalo
+* @subpackage Core
+*/
 class dd_diffusion_api {
 
 
@@ -14,7 +48,9 @@ class dd_diffusion_api {
 	*/
 		/**
 		 * SEC-024: explicit allowlist of methods callable as remote API actions.
-		 * Security measure defining which methods can be invoked via remote API calls.
+		 * Only names in this list may be dispatched from the public API endpoint.
+		 * Adding a method here without reviewing its security implications is dangerous.
+		 * @var array<string> API_ACTIONS
 		 */
 		public const API_ACTIONS = [
 			'diffuse',
@@ -26,45 +62,81 @@ class dd_diffusion_api {
 		];
 
 		/**
-		 * Accumulated resolved diffusion datum objects for the current request.
-		 * Stores processed/resolved data during multi-level diffusion operations.
+		 * Accumulated diffusion_datum objects built during the current diffuse() request.
+		 * Each entry covers one section_tipo / diffusion_tipo group and holds the
+		 * context (column definitions) and data (per-record field values) consumed by
+		 * the Bun engine. Reset to [] at the start of every diffuse() call.
 		 * @var array $datum
 		 */
 		public static array $datum = [];
 
 		/**
-		 * Queue of unresolved locators and their diffusion types.
-		 * Used for multi-level recursive diffusion resolution.
+		 * Breadth-first queue of locator batches waiting to be resolved at deeper levels.
+		 * Keys use the format "{level}:{diffusion_tipo}" so the draining loop can
+		 * reconstruct both the remaining depth budget and which diffusion node to use.
+		 * Populated inside diffusion_chain_processor when it encounters cross-section
+		 * references; drained by the while loop in diffuse(). Reset to [] at the start
+		 * of every diffuse() call.
 		 * @var array $datum_unresolved
 		 */
 		public static array $datum_unresolved = [];
 
 		/**
-		 * @var array Stores publishable override states for locators.
+		 * Per-locator publication-state overrides, keyed by "{section_tipo}_{section_id}".
+		 * When a chain processor determines that a linked record should be treated as
+		 * publishable/unpublishable regardless of its own publication component, it
+		 * writes an entry here so that process_datum picks up the inherited state.
+		 * Reset to [] at the start of every diffuse() call.
+		 * @var array $publishable_overrides
 		 */
 		public static array $publishable_overrides = [];
 
 		/**
-		 * @var array|null SQO filter_by_locators to restrict which records
-		 * get top-level datum entries. Non-matching related sections are
-		 * resolved for field values but don't create separate datums.
+		 * SQO filter_by_locators copied from the request sqo at the start of diffuse(),
+		 * or null when no filter was requested. Controls which records get a top-level
+		 * datum entry: only records whose section_tipo + section_id appear in this list
+		 * are included; cross-section relations at deeper levels still get their fields
+		 * resolved for value data but are not promoted to separate datum entries.
+		 * @var array|null $sqo_filter_by_locators
 		 */
 		public static ?array $sqo_filter_by_locators = null;
 
 
 
 	/**
-	 * DIFFUSE
-	 * Main action to resolve diffusion data for records selected by SQO.
-	 *
-	 * @param object $rqo Request Query Object {
-	 *   action: "diffuse",
-	 *   source: { ... },
-	 *   sqo: { ... },
-	 *   options: { diffusion_tipo: "rsc...", levels: int, ... }
-	 * }
-	 * @return object Standardized JSON response
-	 */
+	* DIFFUSE
+	* Main publish action — resolves diffusion data for every record returned
+	* by the SQO and returns a structured response consumed by the Bun engine.
+	*
+	* Processing pipeline:
+	*  1. Unlock the PHP session immediately so concurrent UI requests are not blocked.
+	*  2. On the first paginated chunk (sqo->offset == 0 or absent), fire an
+	*     opportunistic retry of pending deletions (dd1758 unpublish_pending rows).
+	*  3. Reset all request-scoped static caches (diffusion_utils, chain_processor,
+	*     activity_logger, and the class-static accumulators).
+	*  4. Resolve the diffusion_element parent of diffusion_tipo from the ontology.
+	*  5. Execute the SQO search and dispatch to a type-specific path:
+	*     - 'rdf' / 'xml': file-based formats handled by diffuse_rdf() / diffuse_xml();
+	*       returns immediately with the file-centric response shape.
+	*     - 'sql' / 'socrata' (default): builds datum[] via process_datum() and drains
+	*       the $datum_unresolved breadth-first queue until all levels are resolved.
+	*  6. Returns: { result, msg, langs, main_lang, main, datum[] }.
+	*
+	* Bun paginates large publish runs into many consecutive diffuse() calls.
+	* Per-request caches are reset on each call; the pending-deletion retry runs
+	* only when sqo->offset is 0 or absent to avoid redundant retries per chunk.
+	*
+	* @param object $rqo - {
+	*   action: "diffuse",
+	*   sqo: { section_tipo, …search clauses…, offset?: int, filter_by_locators?: locator[] },
+	*   options: { diffusion_tipo: string, levels?: int, diffusion_element_tipo?: string,
+	*              include_empty?: bool, skip_publication_state_check?: bool }
+	* }
+	* @return object $response - {
+	*   result: bool, msg: string, errors: string[],
+	*   langs?: array<string,string>, main_lang?: string, main?: array, datum?: diffusion_datum[]
+	* }
+	*/
 	public static function diffuse(object $rqo): object {
 
 		// Release the session lock immediately so the frontend UI isn't blocked
@@ -89,7 +161,9 @@ class dd_diffusion_api {
 		$diffusion_tipo = $rqo->options->diffusion_tipo;
 		$sqo_data      	= $rqo->sqo;
 		$options      	= $rqo->options ?? new stdClass();
-		// deep resolution of linked secitons
+		// Level budget for cross-section chain resolution
+		// Controls how many levels of related sections are recursively resolved
+		// beyond the primary records (e.g. level 2 = records + their direct relations).
 		$levels       	= $options->levels ?? DEDALO_DIFFUSION_RESOLVE_LEVELS; // 2
 
 		// Opportunistic retry of pending diffusion deletions (hybrid delete
@@ -117,7 +191,9 @@ class dd_diffusion_api {
 			self::$datum_unresolved = [];
 			self::$publishable_overrides = [];
 
-			// 1. Get diffusion_element (parent of source_tipo or source_tipo itself if it's a diffusion_element)
+			// Resolve diffusion_element ancestor
+			// The caller may supply the element tipo directly (Bun optimization); if
+			// not, walk up the ontology tree until reaching the diffusion_element node.
 			$diffusion_element_tipo = $options->diffusion_element_tipo
 				?? diffusion_utils::get_diffusion_element($diffusion_tipo);
 
@@ -152,7 +228,12 @@ class dd_diffusion_api {
 			$search    = search::get_instance(new search_query_object($sqo_data));
 			$db_result = $search->search();
 
-			// Detect diffusion type from diffusion_element ontology for specialized dispatch
+			// Dispatch by diffusion type
+			// properties->diffusion->type drives which renderer handles the records:
+			//   'rdf'     → diffuse_rdf()  — writes per-record .rdf files via diffusion_rdf
+			//   'xml'     → diffuse_xml()  — writes per-record .xml files via diffusion_xml
+			//   'sql'     → default path below — chain-processor → Bun SQL upsert
+			//   'socrata' → same default path with Socrata-specific column shapes
 			$diffusion_elem_props = ontology_node::get_instance($diffusion_element_tipo)->get_properties(true);
 			$diffusion_type = $diffusion_elem_props->diffusion->type ?? null;
 
@@ -233,39 +314,26 @@ class dd_diffusion_api {
 		}
 
 		return $response;
-	}
+	}//end diffuse
 
 
 	/**
-	 * GET_DIFFUSION_INFO
-	 * Retrieves diffusion configuration information for a given section.
-	 *
-	 * This method serves as the entry point for obtaining diffusion metadata,
-	 * including the hierarchy of diffusion elements, nodes, and their mappings
-	 * to the specified section.
-	 *
-	 * Logic flow:
-	 * 1. Validates that `section_tipo` is provided in options
-	 * 2. Retrieves resolve levels from configuration (via `diffusion_utils`)
-	 * 3. Calls `get_section_diffusion_nodes()` to build the diffusion tree
-	 * 4. Returns a standardized response object with result status
-	 *
-	 * @param object $options {
-	 *    Required parameters:
-	 *    - string $section_tipo : The section tipo to query diffusion info for
-	 * }
-	 *
-	 * @return object {
-	 *    - bool   $result : false when error in the operation or an object with diffusion info:
-	 *    	- array  $section_diffusion_nodes : Hierarchical tree of diffusion nodes
-	 *    	- array  $resolve_levels : Configuration resolve levels
-	 *    - string $msg    : Human-readable status message
-	 *    - array  $errors : Array of error messages (empty on success)
-	 * }
-	 *
-	 * @see self::get_section_diffusion_nodes() For the actual tree construction
-	 * @see diffusion_utils::get_resolve_levels() For configuration resolve levels
-	 */
+	* GET_DIFFUSION_INFO
+	* Returns the diffusion configuration for a section as seen by the tool_diffusion UI.
+	*
+	* Walks the flat virtual diffusion tree to find all diffusion nodes that target
+	* $section_tipo and returns them together with the configured resolve level budget.
+	* The UI uses this data to render the publish panel and badge counts.
+	*
+	* Requires at minimum read permission (level 1) on the requested section_tipo.
+	*
+	* @param object $rqo - { options: { section_tipo: string } }
+	* @return object $response - {
+	*   result: false|{ section_diffusion_nodes: array, resolve_levels: int },
+	*   msg: string,
+	*   errors: string[]
+	* }
+	*/
 	public static function get_diffusion_info( object $rqo ) : object {
 
 		$response = new stdClass();
@@ -273,10 +341,8 @@ class dd_diffusion_api {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->errors	= [];
 
-		// options
 		$section_tipo = $rqo->options->section_tipo ?? null;
 
-		// validate vars
 		if (empty($section_tipo)) {
 			$response->errors[] = 'Missing section_tipo.';
 			debug_log(__METHOD__
@@ -290,19 +356,18 @@ class dd_diffusion_api {
 		// SEC: read permission required to inspect diffusion configuration of a section
 		security::assert_section_permission($section_tipo, 1, __METHOD__);
 
-		// levels default from config
+		// Level budget from DEDALO_DIFFUSION_RESOLVE_LEVELS (or config override)
 		$resolve_levels = diffusion_utils::get_resolve_levels();
 
-		// get_diffusion_elements
+		// All virtual-tree nodes that target this section, enriched with
+		// their parent chain up to the diffusion_domain.
 		$section_diffusion_nodes = diffusion_utils::get_section_diffusion_nodes($section_tipo);
 
-		// add section_diffusion_nodes to response
 		$result = (object)[
 			'section_diffusion_nodes' => $section_diffusion_nodes,
 			'resolve_levels' => $resolve_levels
 		];
 
-		// response
 		$response->result	= $result;
 		$response->msg		= empty($response->errors)
 			? 'Diffusion info retrieved successfully'
@@ -314,29 +379,33 @@ class dd_diffusion_api {
 
 
 	/**
-	 * VALIDATE
-	 * Validates the diffusion ontology configuration against the flat virtual
-	 * diffusion tree. Checks one element (options.diffusion_element_tipo) or
-	 * every element of the diffusion domain when omitted.
-	 *
-	 * Per-element checks:
-	 *  - element resolvable as diffusion_element / diffusion_element_alias
-	 *  - properties->diffusion->type defined and in the known set
-	 *  - at least one section targeted by the element
-	 *  - sql/socrata: database name resolvable from the virtual tree
-	 *  - rdf: properties->diffusion->service_name defined
-	 *  - field nodes: ddo_map is an array when defined; parser entries carry
-	 *    a non-empty 'class::method' fn string
-	 *
-	 * @param object $rqo {
-	 *   action: "validate",
-	 *   options: { diffusion_element_tipo?: string }
-	 * }
-	 * @return object $response {
-	 *   result: bool, msg: string, errors: array,
-	 *   data: [{element_tipo, label, type, result, checks: [{check, result, msg}]}]
-	 * }
-	 */
+	* VALIDATE
+	* Validates the diffusion ontology configuration against the flat virtual
+	* diffusion tree. Checks one element (options.diffusion_element_tipo) or
+	* every element of the diffusion domain when omitted.
+	*
+	* Per-element checks (each becomes a 'checks' entry in the response):
+	*  - element_resolvable: tipo resolves to diffusion_element or diffusion_element_alias
+	*  - diffusion_type: properties->diffusion->type is in ['sql','rdf','xml','socrata']
+	*  - target_sections: at least one section is targeted by this element in the tree
+	*  - database (sql/socrata only): database name is resolvable from the virtual tree
+	*  - service_name (rdf/xml only): properties->diffusion->service_name is non-empty
+	*  - ddo_map: each field node's process->ddo_map is an array when defined
+	*  - parser_fn: each parser entry carries a non-empty 'class::method' fn string
+	*
+	* Restricted to global admins because the response discloses the full
+	* diffusion ontology structure (database names, service endpoints, etc.).
+	*
+	* @param object $rqo - {
+	*   action: "validate",
+	*   options: { diffusion_element_tipo?: string }
+	* }
+	* @return object $response - {
+	*   result: bool, msg: string, errors: string[],
+	*   data: array of { element_tipo: string, label: string, type: string|null,
+	*                    result: bool, checks: array of { check, result, msg } }
+	* }
+	*/
 	public static function validate(object $rqo): object {
 
 		$response = new stdClass();
@@ -353,7 +422,9 @@ class dd_diffusion_api {
 
 		$known_types = ['sql','rdf','xml','socrata'];
 
-		// elements to validate: the requested one or all elements of the domain
+		// Scope: a single named element or every element in the diffusion domain map.
+		// When validating all elements, get_ar_diffusion_map_elements() walks the
+		// ontology diffusion domain to find every diffusion_element node.
 		$requested_element_tipo = $rqo->options->diffusion_element_tipo ?? null;
 		$ar_element_tipo = [];
 		if (!empty($requested_element_tipo)) {
@@ -370,6 +441,8 @@ class dd_diffusion_api {
 		foreach ($ar_element_tipo as $element_tipo) {
 
 			$checks = [];
+			// Inline accumulator: appends a check result object and returns the bool
+			// so call-sites can write: $add_check('name', $cond, '…') in a single expression.
 			$add_check = function(string $check, bool $result, string $msg) use (&$checks) : bool {
 				$checks[] = (object)[
 					'check'		=> $check,
@@ -481,9 +554,20 @@ class dd_diffusion_api {
 
 
 	/**
-	 * GET_ONTOLOGY_MAP
-	 * Returns the raw ddo_map and parser definitions from ontology.
-	 */
+	* GET_ONTOLOGY_MAP
+	* Returns the raw process properties (ddo_map, parser, output_format, …) for a
+	* given diffusion ontology node. Used by the tool_diffusion UI to inspect the
+	* field-mapping configuration without leaving the publish interface.
+	*
+	* Restricted to global admins; the process properties may reveal internal
+	* database column names and SQL/RDF mapping details.
+	*
+	* @param object $rqo - { options: { diffusion_tipo: string } }
+	* @return object $response - {
+	*   result: bool, msg: string, errors: string[],
+	*   data: object  (the properties->process subtree, or empty stdClass)
+	* }
+	*/
 	public static function get_ontology_map(object $rqo): object {
 		$response = new stdClass();
 		$response->result	= false;
@@ -512,22 +596,34 @@ class dd_diffusion_api {
 		$response->data		= $properties->process ?? new stdClass();
 
 		return $response;
-	}
+	}//end get_ontology_map
 
 
 	/**
-	 * RETRY_PENDING_DELETIONS
-	 * Retries delete propagation for records whose deletion could not reach
-	 * one or more diffusion targets (dd1758 rows with action=unpublish_pending).
-	 * With options.count_only=true, only returns the pending count (used by
-	 * the tool_diffusion UI to display the badge without triggering a retry).
-	 *
-	 * @param object $rqo {
-	 *   action: "retry_pending_deletions",
-	 *   options: { count_only?: bool, limit?: int }
-	 * }
-	 * @return object $response
-	 */
+	* RETRY_PENDING_DELETIONS
+	* Retries delete propagation for records whose deletion could not reach
+	* one or more diffusion targets (dd1758 rows with action=unpublish_pending).
+	*
+	* With options.count_only=true only the pending count is returned — the
+	* tool_diffusion UI uses this mode to populate the badge without triggering
+	* an actual retry on every page load.
+	*
+	* When count_only is false (default), delegates to diffusion_delete::retry_pending()
+	* up to $limit records. The response carries total/retried/remaining counters so
+	* the UI can show progress and re-trigger until remaining == 0.
+	*
+	* Restricted to global admins because the operation writes across all SQL
+	* publication targets.
+	*
+	* @param object $rqo - {
+	*   action: "retry_pending_deletions",
+	*   options: { count_only?: bool [= false], limit?: int [= 100] }
+	* }
+	* @return object $response - {
+	*   result: false | { pending: int } | { total: int, retried: int, remaining: int },
+	*   msg: string, errors: string[]
+	* }
+	*/
 	public static function retry_pending_deletions(object $rqo): object {
 
 		$response = new stdClass();
@@ -575,22 +671,28 @@ class dd_diffusion_api {
 
 
 	/**
-	 * REBUILD_MEDIA_INDEX
-	 * Full resync of the media publication markers (the filesystem allowlist
-	 * the web server checks to authorize anonymous media access) from the
-	 * publication databases. Used for initial migration and drift repair.
-	 *
-	 * PHP resolves the SQL targets {database_name, table_name, section_tipo}
-	 * from the diffusion ontology (the Bun engine never interprets the
-	 * ontology) and delegates the diff-sync to the Bun action of the same
-	 * name. MariaDB is a Bun responsibility.
-	 *
-	 * @param object $rqo {
-	 *   action: "rebuild_media_index",
-	 *   options: {}
-	 * }
-	 * @return object $response
-	 */
+	* REBUILD_MEDIA_INDEX
+	* Full resync of the media publication markers (the filesystem allowlist
+	* the web server checks to authorize anonymous media access) from the
+	* publication databases. Used for initial migration and drift repair.
+	*
+	* PHP's role: resolve all SQL publication targets from the diffusion ontology
+	* (database_name, table_name, section_tipo) via resolve_media_index_targets()
+	* and forward the target list to the Bun engine action 'rebuild_media_index'.
+	* Bun owns MariaDB and performs the actual SELECT + filesystem marker write.
+	*
+	* The response propagates the Bun engine response: markers (count written) and
+	* targets (count of SQL tables scanned). Errors from Bun are merged into
+	* $response->errors so callers see a unified failure surface.
+	*
+	* Restricted to global admins (cross-section, cross-database operation).
+	*
+	* @param object $rqo - { action: "rebuild_media_index", options: {} }
+	* @return object $response - {
+	*   result: bool, msg: string, errors: string[],
+	*   markers: int, targets: int
+	* }
+	*/
 	public static function rebuild_media_index(object $rqo): object {
 
 		$response = new stdClass();
@@ -633,14 +735,21 @@ class dd_diffusion_api {
 
 
 	/**
-	 * RESOLVE_MEDIA_INDEX_TARGETS
-	 * Walks the diffusion ontology and returns every SQL publication target
-	 * as {database_name, table_name, section_tipo} objects for the Bun
-	 * rebuild_media_index action. Covers all publication databases defined
-	 * in the ontology ("published in ANY database" union semantics).
-	 *
-	 * @return array $targets
-	 */
+	* RESOLVE_MEDIA_INDEX_TARGETS
+	* Walks every diffusion_element in the ontology map and collects all SQL/Socrata
+	* publication targets as {database_name, table_name, section_tipo} objects for
+	* the Bun rebuild_media_index engine action.
+	*
+	* Only sql and socrata elements carry publication tables; rdf/xml elements are
+	* skipped (they write files, not database rows). Elements without a resolvable
+	* database_name emit a WARNING and are also skipped. Duplicate targets (same
+	* database + table + section triple) are deduplicated via a $seen hash-set.
+	*
+	* Marked public so it can be called directly in tests or CLI migration scripts
+	* without requiring a full $rqo object.
+	*
+	* @return array $targets - array of { database_name: string, table_name: string, section_tipo: string }
+	*/
 	public static function resolve_media_index_targets(): array {
 
 		$targets	= [];
@@ -668,6 +777,8 @@ class dd_diffusion_api {
 			$ar_sections = diffusion_utils::get_diffusion_sections_from_diffusion_element($element_tipo);
 			foreach ($ar_sections as $section_tipo) {
 
+				// The section node's label holds the SQL table name as defined in
+				// the diffusion ontology (e.g. the database_table child node label).
 				$section_node = diffusion_utils::get_section_node_for_element($element_tipo, $section_tipo);
 				$table_name = $section_node->label ?? null;
 				if (empty($table_name)) {
@@ -693,15 +804,21 @@ class dd_diffusion_api {
 
 
 	/**
-	 * BUILD_LANGS
-	 * Returns available diffusion languages.
-	 * @return array
-	 */
+	* BUILD_LANGS
+	* Builds the langs map (language_code => human_name) included in every diffuse()
+	* response. The Bun engine uses this to know which columns to write per language.
+	*
+	* Falls back to [DEDALO_DATA_LANG] when DEDALO_DIFFUSION_LANGS is not defined
+	* (single-language installations or tests that skip the diffusion config).
+	*
+	* @return array<string,string> $langs - keyed by BCP-47/DEDALO lang code, value is the display name
+	*/
 	private static function build_langs(): array {
 
 		$langs = [];
 
-		// Get available diffusion langs
+		// DEDALO_DIFFUSION_LANGS is defined in the site config as an array of language
+		// codes to publish. Fall back to the single work-data language when absent.
 		$ar_langs = defined('DEDALO_DIFFUSION_LANGS')
 			? DEDALO_DIFFUSION_LANGS
 			: [DEDALO_DATA_LANG];
@@ -713,16 +830,29 @@ class dd_diffusion_api {
 
 
 		return $langs;
-	}
+	}//end build_langs
 
 
 	/**
-	 * BUILD_MAIN_HIERARCHY
-	 * Traverses UP from source_tipo to diffusion_domain.
-	 * Returns array of hierarchy nodes.
-	 * @param string $diffusion_tipo
-	 * @return array
-	 */
+	* BUILD_MAIN_HIERARCHY
+	* Builds the 'main' breadcrumb array for the diffuse() response: an ordered list
+	* of ontology nodes from the diffusion_domain root down to $diffusion_tipo.
+	*
+	* The Bun engine uses 'main' to understand which diffusion scope (domain →
+	* element → section-group → field-group) a datum[] batch belongs to, and to
+	* render the publish hierarchy in the UI.
+	*
+	* Each item carries: { diffusion_tipo, term, model, parent? }.
+	* diffusion_element and diffusion_element_alias nodes additionally expose
+	* { properties } so Bun can read the diffusion type and service_name without
+	* a separate ontology call.
+	*
+	* Returns [] and logs a WARNING if $diffusion_tipo is not found in the
+	* virtual tree (e.g. the ontology was modified between request start and here).
+	*
+	* @param string $diffusion_tipo - the leaf node to start from (walks up to root)
+	* @return array $hierarchy - ordered top-down from domain root to $diffusion_tipo
+	*/
 	private static function build_main_hierarchy(string $diffusion_tipo): array {
 
 		$virtual_tree = diffusion_utils::get_virtual_diffusion_tree();
@@ -791,18 +921,44 @@ class dd_diffusion_api {
 		}
 
 		return $hierarchy;
-	}
+	}//end build_main_hierarchy
 
 
 	/**
-	 * PROCESS_DATUM
-	 * Resolves data for each record in db_result according to source_tipo config.
-	 *
-	 * @param string $diffusion_tipo
-	 * @param iterable $iterable_data
-	 * @param int $levels
-	 * @return diffusion_datum
-	 */
+	* PROCESS_DATUM
+	* Core record-processing loop: for every locator in $iterable_data, resolves the
+	* diffusion field values defined by $diffusion_tipo and assembles a diffusion_datum
+	* that gets appended to the static self::$datum[] accumulator.
+	*
+	* Processing steps per locator:
+	*  1. Skip if already visited this request (diffusion_chain_processor::is_used).
+	*  2. Apply SQO filter: only emit top-level datum entries for records that match
+	*     $sqo_filter_by_locators; cross-section relations pass through freely.
+	*  3. Determine is_publishable via (a) ontology override, (b) $publishable_overrides,
+	*     or (c) the publication component value (diffusion_utils::is_publishable).
+	*  4. For each child diffusion node, invoke diffusion_chain_processor::resolve_chain
+	*     which descends the ddo_map, calls each component's get_diffusion_data(), and
+	*     pushes unresolved cross-section locators into self::$datum_unresolved.
+	*  5. Group the flat chain results into field_group objects keyed by tipo+lang+id,
+	*     each containing an entries[] array of value objects.
+	*  6. Set fields = 'delete' (string sentinel) when the record is not publishable,
+	*     so Bun knows to remove the row rather than upsert it.
+	*
+	* Alias handling: when $diffusion_tipo is an alias node (e.g. diffusion_section_alias),
+	* the real node is looked up and its children and properties are merged so that alias
+	* and canonical nodes behave identically from the caller's perspective.
+	*
+	* RDF field delegation: field nodes that carry diffusion->type='rdf' are routed through
+	* diffusion_rdf::build_rdf_xml() instead of the standard chain, and their XML string
+	* is stored as a single entry value. class.diffusion_rdf.php is included lazily.
+	*
+	* @param string $diffusion_tipo - ontology node being processed (section-level group node)
+	* @param iterable $iterable_data - array of locator objects {section_tipo, section_id}
+	* @param int $levels - remaining cross-section resolution depth budget
+	* @param object $options - the original rqo->options (include_empty, skip_publication_state_check, …)
+	* @return diffusion_datum $datum_object - the built datum (also appended to self::$datum if non-empty)
+	* @throws Exception when the ontology node cannot be resolved for $diffusion_tipo
+	*/
 	private static function process_datum(string $diffusion_tipo, $iterable_data, int $levels, object $options): diffusion_datum {
 
 		$source_node = ontology_node::get_instance($diffusion_tipo);
@@ -821,6 +977,11 @@ class dd_diffusion_api {
 		// Identify all section-level diffusion nodes (children of source_tipo)
 		$ar_children = ontology_node::get_ar_children($diffusion_tipo);
 
+		// Alias resolution
+		// If this node is an alias (e.g. diffusion_section_alias), find the real
+		// (non-alias) node it points to via a 'related' ontology relation and merge
+		// the real node's children + properties. Alias-specific children come last
+		// so they can override default field mappings from the real node.
 		if( str_contains( $diffusion_node_model, '_alias') ){
 
 			$search_model = str_replace('_alias','',$diffusion_node_model);
@@ -860,9 +1021,15 @@ class dd_diffusion_api {
 			$datum_object->set_parent($parent);
 			$datum_object->set_context($context);
 
+		// Ontology-level is_publishable override
+		// When the diffusion node itself carries is_publishable (e.g. always-publish
+		// reference tables), skip the per-record publication component check entirely.
 		$publishable = $properties->is_publishable ?? null;
 
 		// Pre-detect field nodes delegating to RDF generation (diffusion.type = "rdf")
+		// These nodes embed a nested RDF document into a SQL column rather than
+		// resolving through the normal chain. Identified once per call to avoid
+		// repeated property reads inside the per-record loop.
 		$rdf_field_nodes = [];
 		foreach ($combined_ddo_map as $node_tipo => $unused_ddo_map) {
 			$node_rdf_props = ontology_node::get_instance($node_tipo)->get_properties();
@@ -871,6 +1038,7 @@ class dd_diffusion_api {
 			}
 		}
 		if (!empty($rdf_field_nodes)) {
+			// Lazy-load: most requests do not use embedded RDF fields.
 			include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_rdf.php';
 		}
 
@@ -907,6 +1075,8 @@ class dd_diffusion_api {
 				}
 			}
 
+			// Publication state resolution: ontology-level constant wins, then any
+			// override set by a parent chain processor, then the per-record component value.
 			$override = self::$publishable_overrides["{$locator->section_tipo}_{$locator->section_id}"] ?? null;
 			$is_publishable = $publishable ?? $override ?? diffusion_utils::is_publishable($locator);
 
@@ -991,7 +1161,10 @@ class dd_diffusion_api {
 				}
 			}
 
-			// Structure record output
+			// Record output shape
+			// fields = 'delete' (string) signals to Bun that this record was
+			// unpublished and must be removed from the SQL table (or RDF/XML file),
+			// rather than being upserted. See delete propagation memory note.
 			$record_output = (object)[
 				'section_id' => $locator->section_id,
 				'fields'     => (!$is_publishable) ? 'delete' : $fields
@@ -1009,16 +1182,34 @@ class dd_diffusion_api {
 		}
 
 		return $datum_object;
-	}
+	}//end process_datum
 
 
 	/**
-	 * BUILD_DATUM_CONTEXT
-	 * Builds context array (column definitions) for a datum group.
-	 * @param string $diffusion_tipo
-	 * @param array $ddo_map
-	 * @return array
-	 */
+	* BUILD_DATUM_CONTEXT
+	* Builds one context entry (column / field definition) for a single diffusion
+	* field-group node. The context array is consumed by the Bun engine to set up
+	* the target SQL columns (or XML/RDF fields) before inserting record data.
+	*
+	* Each context item contains:
+	*  - term, tipo, model, parent: identify the diffusion node in the ontology
+	*  - parser: class::method strings from properties->process->parser (empty stdClass if absent)
+	*  - columns: the leaf DDO entries (intermediate parent nodes stripped) — these
+	*    map 1:1 to SQL columns or XML elements in the target schema
+	*  - output_format (optional): from ontology process->output_format, or
+	*    from the component class's $diffusion_output_format map (currently assumes
+	*    'sql' as the diffusion type when falling back — see inline TODO comment)
+	*  - varchar, length, index (optional): SQL schema hints from ontology properties
+	*
+	* The 'columns' list is produced by building a hash-set of all tipo values that
+	* appear as a 'parent' in the ddo_map, then keeping only the leaf entries (those
+	* not referenced as parents). This strips intermediate chain nodes from the
+	* context while preserving the full ddo_map for chain resolution.
+	*
+	* @param string $diffusion_tipo - the field-group ontology node
+	* @param array $ddo_map - flat DDO chain for this node (from diffusion_utils::get_ddo_map)
+	* @return array $context - array of context objects (typically one element per call)
+	*/
 	private static function build_datum_context(string $diffusion_tipo, array $ddo_map): array {
 
 		$context = [];
@@ -1037,7 +1228,11 @@ class dd_diffusion_api {
 		// Model comes from diffusion ontology node
 		$field_model = ontology_node::get_model_by_tipo($diffusion_tipo);
 
-		// Build parent hash-set (O(1) lookup) then filter+clone+clean in one pass
+		// Leaf-column extraction
+		// Build a hash-set of every tipo that is referenced as a 'parent' by some
+		// other ddo entry. Non-parent (leaf) entries are the actual target columns.
+		// Clone each leaf before stripping internal-only keys so the original ddo_map
+		// is not mutated (it is reused in the per-record field resolution loop).
 		$parent_set = array_flip(array_filter(array_column((array)$ddo_map, 'parent')));
 		$cleaned_lasts_ddo_chain = [];
 		foreach ($ddo_map as $ddo) {
@@ -1056,13 +1251,13 @@ class dd_diffusion_api {
 			'columns' 		=> array_values($cleaned_lasts_ddo_chain)
 		];
 
-		// Resolve output_format
-		// 1. Check if defined explicitly in the ontology node properties
+		// output_format resolution (two-stage)
+		// Stage 1: explicit value in the ontology node properties->process->output_format.
 		$output_format = $properties->process->output_format ?? null;
 
-		// 2. Fallback to the component's default format based on the diffusion type (currently 'sql' is assumed)
-		// To properly do this, we find the component model of the main target of this diffusion node.
-		// For simplicity, we get the component model from the ddo_map (if it exists)
+		// Stage 2: fall back to the component class's $diffusion_output_format static map.
+		// (!) Currently hard-codes diffusion_type='sql'. When RDF/XML field embedding
+		// is fully integrated this must be derived from the parent diffusion_element.
 		if (!$output_format) {
 			$diffusion_type = 'sql'; // Future: get from diffusion_element or rqo
 
@@ -1100,23 +1295,33 @@ class dd_diffusion_api {
 		}
 
 		return $context;
-	}
+	}//end build_datum_context
 
 
 	/**
-	 * DIFFUSE_RDF
-	 * Handles direct RDF diffusion requests (diffusion_element.diffusion.type = "rdf").
-	 * Processes each search result through diffusion_rdf::update_record, saves RDF files,
-	 * and returns both saved file URLs and raw RDF/XML string in the response.
-	 *
-	 * @param string $diffusion_element_tipo
-	 * @param string $section_tipo
-	 * @param iterable $db_result
-	 * @param array $langs
-	 * @param array $main
-	 * @param object $options
-	 * @return object
-	 */
+	* DIFFUSE_RDF
+	* Handles diffusion for elements with properties->diffusion->type = 'rdf'.
+	*
+	* For each record, delegates to diffusion_rdf::update_record() which renders
+	* the RDF/XML document and saves it to the filesystem under
+	* DEDALO_MEDIA_PATH/rdf/{service_name}/{section_id}.rdf. The response contains
+	* both the file_url (for the Bun engine to record in the activity log) and the
+	* raw RDF/XML string so callers can inspect it without a second file read.
+	*
+	* Returned diffusion_datum uses output_format='rdf' in its context so Bun
+	* routes it through the RDF handler rather than the SQL upsert path.
+	*
+	* The de-duplication guard (diffusion_chain_processor::is_used) prevents the
+	* same record from being processed twice when the SQO returns overlapping sets.
+	*
+	* @param string $diffusion_element_tipo - the RDF diffusion_element ontology node
+	* @param string $section_tipo - the Dédalo section being published
+	* @param iterable $db_result - locator objects from the SQO search
+	* @param array $langs - the langs map built by build_langs()
+	* @param array $main - the hierarchy array built by build_main_hierarchy()
+	* @param object $options - the original rqo->options (skip_publication_state_check, …)
+	* @return object $response - full diffuse() response shape with datum=[diffusion_datum]
+	*/
 	private static function diffuse_rdf(string $diffusion_element_tipo, string $section_tipo, $db_result, array $langs, array $main, object $options): object {
 
 		$response = new stdClass();
@@ -1212,25 +1417,37 @@ class dd_diffusion_api {
 		}
 
 		return $response;
-	}
+	}//end diffuse_rdf
 
 
 
 	/**
-	 * DIFFUSE_XML
-	 * XML publication, symmetric to diffuse_rdf (DIFFU-01). Dispatches each record
-	 * of $db_result to diffusion_xml::update_record (which renders + saves one
-	 * deterministic file per record under /xml/{service_name}/, shared with
-	 * delete_record_file for delete propagation), then builds a single
-	 * diffusion_datum describing the produced files.
-	 * @param string $diffusion_element_tipo
-	 * @param string $section_tipo
-	 * @param mixed $db_result
-	 * @param array $langs
-	 * @param array $main
-	 * @param object $options
-	 * @return object
-	 */
+	* DIFFUSE_XML
+	* Handles diffusion for elements with properties->diffusion->type = 'xml'.
+	* Symmetric to diffuse_rdf() (DIFFU-01) but for XML publication.
+	*
+	* Unlike diffuse_rdf, a single diffusion_xml instance is reused across all records
+	* to amortise parser loading (via diffusion_xml::reset_cache() + constructor).
+	* Each record's update_record() call renders + saves one deterministic file under
+	* DEDALO_MEDIA_PATH/xml/{service_name}/{section_id}.xml. The same file path is
+	* used by delete_record_file when the record is unpublished, ensuring consistent
+	* delete propagation.
+	*
+	* The response datum value carries the file_url (not the raw document body)
+	* because XML can be large and the Bun engine only needs the file reference to
+	* update the activity log and trigger delivery to downstream consumers.
+	*
+	* Per-record errors from update_record() are collected into $response->errors
+	* but do not abort the loop; all records are attempted regardless.
+	*
+	* @param string $diffusion_element_tipo - the XML diffusion_element ontology node
+	* @param string $section_tipo - the Dédalo section being published
+	* @param mixed $db_result - iterable of locator objects from the SQO search
+	* @param array $langs - the langs map built by build_langs()
+	* @param array $main - the hierarchy array built by build_main_hierarchy()
+	* @param object $options - the original rqo->options (skip_publication_state_check, …)
+	* @return object $response - full diffuse() response shape with datum=[diffusion_datum]
+	*/
 	private static function diffuse_xml(string $diffusion_element_tipo, string $section_tipo, $db_result, array $langs, array $main, object $options): object {
 
 		$response = new stdClass();
@@ -1328,12 +1545,12 @@ class dd_diffusion_api {
 			$response->sub_path        		= $sub_path;
 			$response->datum         		= [$datum];
 
-		} catch (\Throwable $e) {
+		} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
 			$response->msg	= 'Error: ' . $e->getMessage();
 			$response->errors[]	= $e->getMessage();
 			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
 		}
 
 		return $response;
-	}
-}
+	}//end diffuse_xml
+}//end class dd_diffusion_api
