@@ -6,50 +6,91 @@
 
 /**
  * DYNAMIC CSS MANAGER
+ * Runtime stylesheet manager for Dédalo element-level CSS injection.
+ *
+ * Provides a single shared <style> element (id="elements_style_sheet") that is
+ * created on first use and reused for all subsequent rule operations. All writes
+ * go through a debounced queue (requestAnimationFrame) so that multiple style
+ * updates triggered in the same JS turn are coalesced into one DOM mutation.
+ *
+ * Exported API:
+ *   set_element_css(key, value)     – Build and queue rules for a component key
+ *   prune_rules(condition_fn)       – Remove rules that satisfy a predicate
+ *   get_inserted_rules()            – Return the live inserted-rules registry Map
+ *   get_elements_style_sheet()      – Return (or lazily create) the CSSStyleSheet
+ *
+ * Internal pipeline:
+ *   set_element_css → process_rule → queue_style_update → flush_style_updates → safe_insert_rule
+ *
+ * The inserted_rules Map acts as a local mirror of what is in the stylesheet so
+ * that duplicate inserts and stale-rule replacements can be detected without
+ * iterating cssRules (which is O(n) in some browsers).
  */
 
 
 
 /**
-* INSERTED_RULES
-* Registry for style sheet inserted CSS rules
-* value e.g. {
-*    "key": "#col_section_id::before",
-*    "value": {
-*        "rule_text": "#col_section_id::before { content:'Id' }",
-*        "index": 0
-*    }
-*  }
-*/
+ * INSERTED_RULES
+ * Registry that mirrors every CSS rule currently held in the dynamic stylesheet.
+ * Keyed by the CSS selector string; values record the rule text and its numeric
+ * index inside CSSStyleSheet.cssRules so that safe_insert_rule can delete and
+ * replace a stale rule in O(1) without a linear scan.
+ *
+ * Entry shape:
+ * {
+ *   "key":   "#col_section_id::before",        // selector (Map key)
+ *   "value": {
+ *     "rule_text": "#col_section_id::before { content:'Id' }",
+ *     "index": 0                               // position in sheet.cssRules
+ *   }
+ * }
+ *
+ * (!) Indices become stale whenever rules are deleted out of order (e.g. prune_rules
+ * iterates in reverse to preserve index validity). safe_insert_rule always appends
+ * at sheet.cssRules.length so new indices are correct at insertion time.
+ *
+ * @var {Map<string, {rule_text: string, index: number}>} inserted_rules
+ */
 const inserted_rules = new Map();
 
 
 
 /**
-* SET_ELEMENT_CSS
-* Sets CSS styles for a specific element by updating the stylesheet and root CSS registry.
-* Prevents overwriting existing styles unless explicitly requested via replace parameter.
-* @param string key
-* 	Unique identifier for the CSS rule/element (e.g., selector name, element ID)
-* @param object value
-* 	CSS properties object containing style declarations
-*	e.g. { color: 'red', fontSize: '16px', margin: '10px' }
-* @param bool replace
-* 	 Whether to replace existing CSS rules for this key
-*		- false: Skip if key already exists (default)
-*		- true: Overwrite existing CSS rules
-* @return result bool
-* 	Success status
-*		- true: CSS was successfully set/updated
-*		- false: Operation failed (key exists and replace=false, or empty value)
-* @example
-* // Basic usage - set new CSS rule
-* set_element_css('my-button', {
-*	backgroundColor: '#007bff',
-*	color: 'white',
-*	padding: '10px 20px'
-* }); // returns true
-*/
+ * SET_ELEMENT_CSS
+ * Translate a component-level style descriptor into one or more dynamic CSS rules
+ * and queue them for insertion into the shared stylesheet.
+ *
+ * The `value` parameter is a map from logical selector fragments to either:
+ *   - a plain CSS-properties object: { width: '12%', height: '150px' }
+ *   - a callback function that returns { selector, value } for custom/responsive rules
+ *     (see ui.make_column_responsive)
+ *
+ * The special key 'add_class' is silently skipped — it is handled elsewhere in the
+ * component lifecycle (class list mutation, not stylesheet injection).
+ *
+ * Selector construction for non-callback entries:
+ *   - If the fragment starts with '.wrapper', the component key is prepended
+ *     directly: `.${key}${selector}` → e.g. `.oh1_rsc75.wrapper_component`
+ *   - Otherwise the component key scopes the fragment as a child:
+ *     `.${key} > ${selector}` (or without '>' when the fragment already starts with '>')
+ *
+ * (!) This function is declared async but contains no await expression. It returns
+ * a resolved Promise<boolean>. Callers that do not await the return value receive
+ * the resolved value directly via the microtask queue, which is functionally
+ * equivalent in practice but callers should be aware of the async boundary.
+ *
+ * (!) The original doc-block described a `replace` parameter that does not exist
+ * in the actual function signature. No replace logic is implemented here; all
+ * deduplication is handled inside safe_insert_rule via the inserted_rules cache.
+ *
+ * @param {string} key - Unique component identifier used as the CSS scope class
+ *   (e.g. 'oh1_rsc75'). Becomes the leading class selector for all rules.
+ * @param {Object} value - Style descriptor map. Keys are selector fragments;
+ *   values are either a CSS-properties object or a callback returning
+ *   { selector: string, value: Object }.
+ * @returns {Promise<boolean>} Resolves to true when at least one rule was queued,
+ *   false when `value` is empty, not a plain object, or null.
+ */
 export const set_element_css = async function(key, value) {
 
 	// Validate value parameter - must be non-empty object
@@ -90,6 +131,7 @@ export const set_element_css = async function(key, value) {
 				// components case
 
 				// direct children operator
+				// Omit '>' when the fragment already leads with '>' to avoid '> >' duplication
 					const operator = selector.indexOf('>')===0
 						? ''
 						: '>'
@@ -110,18 +152,32 @@ export const set_element_css = async function(key, value) {
 
 
 /**
-* PROCESS_RULE
-* Execute a standard 'insertRule' order with given values
-*
-* @param string selector
-* 	like: '.rsc170_rsc20.wrapper_component'
-* @param object json_css_values
-* 	like:
-* @param boolean skip_insert
-* 	Used to control deep recursive resolutions
-*
-* @return array rules
-*/
+ * PROCESS_RULE
+ * Recursively flatten a CSS-properties descriptor into rule text and hand it to
+ * the update queue.
+ *
+ * For flat string values, each property is serialised as `property:value` (with
+ * single quotes around the value for the `content` CSS property so that the
+ * generated text is syntactically valid: `content:'Id'`).
+ *
+ * For nested object values, the function recurses with skip_insert=true, collects
+ * the child declarations, and calls queue_style_update with the parent key used
+ * as a wrapping selector (typically a @media query or pseudo-selector nesting
+ * context). This handles the case where `json_css_values` contains entries like:
+ *   { '@media (max-width: 768px)': { width: '100%' } }
+ *
+ * The skip_insert flag controls whether collected rules are only returned (for
+ * the recursive caller to assemble) or also flushed to the queue. Top-level calls
+ * always pass false; recursive calls always pass true to prevent premature insertion
+ * of partial rule fragments.
+ *
+ * @param {string} selector - Full CSS selector for the rule (e.g. '.rsc170_rsc20.wrapper_component')
+ * @param {Object} json_css_values - Flat or nested CSS-property object
+ * @param {boolean} skip_insert - When true, collected declarations are returned to
+ *   the caller without queuing; used during recursion to build nested rule bodies
+ * @returns {Array<string>} Flat list of serialised CSS declarations for this level
+ *   (e.g. ['width:12%', 'height:150px']). Empty when all entries are nested objects.
+ */
 const process_rule = function(selector, json_css_values, skip_insert) {
 
 	const rules = []
@@ -185,12 +241,28 @@ const process_rule = function(selector, json_css_values, skip_insert) {
 
 
 /**
-* QUEUE_RULE
-* Batch Insert Rules.
-* Debounce the rules injection for rule deduplication
-* @param object rule
-* @return void
-*/
+ * QUEUE_STYLE_UPDATE
+ * Batch-collect CSS rule updates and schedule a single DOM flush via
+ * requestAnimationFrame to deduplicate rapid back-to-back writes.
+ *
+ * The queue is keyed by selector. If the same selector is submitted multiple
+ * times within one animation frame only the last rule_body wins (last-write-wins
+ * within a frame). If the incoming rule_body is identical to the currently queued
+ * one it is skipped immediately without rescheduling.
+ *
+ * requestAnimationFrame is used (rather than setTimeout/microtask) so that all
+ * style mutations for a given render cycle are batched together and applied just
+ * before the browser's next paint, minimising forced style recalculations.
+ *
+ * Module-level state (declared here for colocation):
+ *   style_update_queue      – Pending selector→rule_body pairs
+ *   style_update_scheduled  – Guard flag: true while a rAF callback is pending
+ *
+ * @param {string} selector - Full CSS selector to update (Map key)
+ * @param {string} rule_body - Serialised CSS declarations WITHOUT the wrapping
+ *   braces, e.g. 'width:12%; height:150px'
+ * @returns {void}
+ */
 const style_update_queue	= new Map(); // selector -> rule_body
 let style_update_scheduled	= false;
 const queue_style_update = function(selector, rule_body) {
@@ -211,9 +283,19 @@ const queue_style_update = function(selector, rule_body) {
 
 
 /**
-* FLUSH_RULES
-* Insert batch rules in a pack of various between a requestAnimationFrame
-*/
+ * FLUSH_STYLE_UPDATES
+ * Drain the pending style update queue and write every rule to the live
+ * stylesheet in a single rAF callback.
+ *
+ * Resets style_update_scheduled before iterating so that any new updates
+ * arriving during a (synchronous) safe_insert_rule call can schedule a
+ * fresh rAF without being blocked by a stale true value.
+ *
+ * After all rules are processed the queue is cleared so that the Map does
+ * not grow unboundedly across frames.
+ *
+ * @returns {void}
+ */
 const flush_style_updates = function() {
 	style_update_scheduled = false;
 	for (const [rule_selector, rule_body] of style_update_queue.entries()) {
@@ -225,12 +307,28 @@ const flush_style_updates = function() {
 
 
 /**
-* SAFE_INSERT_RULE
-* Add new styleSheet rules if not already exists
-* @param string selector
-* @param string rule_body
-* @return bool
-*/
+ * SAFE_INSERT_RULE
+ * Insert or replace a single CSS rule in the dynamic stylesheet, maintaining
+ * the inserted_rules cache as a source of truth.
+ *
+ * If the selector already exists in inserted_rules the old rule is deleted first
+ * (by its cached index) and then re-inserted at the end of cssRules. This keeps
+ * indices stable for rules that have not been touched.
+ *
+ * (!) Deletion by index is only safe here because flush_style_updates processes
+ * the entire queue in one synchronous pass with no interleaved deletions.
+ * If rules were deleted out of order the cached indices in inserted_rules would
+ * become stale and deleteRule() would silently remove the wrong rule.
+ *
+ * Errors from both deleteRule and insertRule are caught and warned so that a
+ * single malformed rule (e.g. invalid selector from a callback) does not abort
+ * the rest of the batch.
+ *
+ * @param {string} selector - Full CSS selector (used as the Map key)
+ * @param {string} rule_body - Serialised declarations without outer braces
+ * @returns {boolean} true when the rule was successfully inserted or replaced;
+ *   false when insertion failed or no change was needed
+ */
 const safe_insert_rule = function(selector, rule_body) {
 
 	// sheet
@@ -273,10 +371,27 @@ const safe_insert_rule = function(selector, rule_body) {
 
 
 /**
-* PRUNE_RULES
-* Clean up unused rules
-* @param condition_fn - Function returning boolean
-*/
+ * PRUNE_RULES
+ * Remove all rules from the dynamic stylesheet that satisfy a caller-supplied
+ * predicate, and evict the corresponding entries from inserted_rules.
+ *
+ * The predicate receives the raw CSSStyleRule object (not just the selector) so
+ * callers can match on any property, e.g.:
+ *   prune_rules(rule => rule.selectorText.startsWith('.oh1_rsc75'))
+ *
+ * Iteration is performed in reverse index order (high → low) so that deleteRule()
+ * does not invalidate the indices of remaining rules ahead of the cursor.
+ *
+ * (!) After pruning, any cached indices in inserted_rules for rules that were NOT
+ * deleted may no longer match their actual cssRules position if deleted rules sat
+ * before them in the list. Subsequent safe_insert_rule calls for those selectors
+ * will attempt deleteRule() at the stale index. This is a known limitation; it
+ * does not cause data loss but may generate a caught exception.
+ *
+ * @param {Function} condition_fn - Predicate receiving a CSSStyleRule; return true
+ *   to delete the rule, false to keep it
+ * @returns {void}
+ */
 export const prune_rules = function(condition_fn) {
 
 	const sheet = get_elements_style_sheet();
@@ -300,9 +415,16 @@ export const prune_rules = function(condition_fn) {
 
 
 /**
-* GET_INSERTED_RULES
-* @return Map inserted_rules
-*/
+ * GET_INSERTED_RULES
+ * Return the live inserted-rules registry Map.
+ * Callers may inspect it for debugging or to check whether a rule for a given
+ * selector has already been injected, but should not mutate it directly —
+ * all writes must go through safe_insert_rule so that indices stay consistent
+ * with the stylesheet.
+ *
+ * @returns {Map<string, {rule_text: string, index: number}>} Reference to the
+ *   module-level inserted_rules Map (not a copy)
+ */
 export const get_inserted_rules = function() {
 
 	return inserted_rules
@@ -311,10 +433,24 @@ export const get_inserted_rules = function() {
 
 
 /**
-* GET_ELEMENTS_STYLE_SHEET
-* Get / create new styleSheet if not already exists
-* @return {CSSStyleSheet} instance window.elements_style_sheet
-*/
+ * GET_ELEMENTS_STYLE_SHEET
+ * Return the singleton dynamic CSSStyleSheet, creating it on first access.
+ *
+ * On first call a <style id="elements_style_sheet"> element is appended to
+ * <head> and its .sheet reference is stored on window.elements_style_sheet for
+ * fast subsequent access without a DOM query. All later calls return the cached
+ * reference directly.
+ *
+ * Storing on window (rather than a module-level variable) means the same sheet
+ * is shared across ES module instances if more than one bundle is loaded into
+ * the same window — useful in Dédalo's multi-panel layout where sections may be
+ * loaded as separate module graphs.
+ *
+ * @throws {Error} When the browser fails to expose the sheet property after
+ *   appending the <style> element (should not occur in any modern browser)
+ * @returns {CSSStyleSheet} The live stylesheet object backed by
+ *   window.elements_style_sheet
+ */
 export const get_elements_style_sheet = function() {
 
 	if (!window.elements_style_sheet) {
@@ -335,7 +471,7 @@ export const get_elements_style_sheet = function() {
 	}
 
 	return window.elements_style_sheet
-}//end create_new_CSS_sheet
+}//end get_elements_style_sheet
 
 
 
