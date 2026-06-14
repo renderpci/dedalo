@@ -7,25 +7,110 @@ include_once 'trait.count.php';
 include_once 'trait.utils.php';
 /**
 * CLASS SEARCH
-* Manage Dédalo search queries parsing SQO to SQL
-* It's divided in traits to split the large code:
-* - select
-* - from
-* - where
-* - order
-* - count
+* Central SQL query builder for Dédalo's search subsystem. Translates a
+* Search Query Object (SQO) into a parameterized PostgreSQL statement executed
+* against the JSONB matrix tables.
+*
+* Architecture overview
+* ---------------------
+* The SQO is a Mango/CouchDB-style filter DTO (`search_query_object`) that
+* describes what to retrieve. It travels from the client-side JS search widget
+* through `sanitize_client_sqo` (the only untrusted gateway, in the HTTP API),
+* then into `search::get_instance($sqo)`, which dispatches to one of three
+* builder classes by `$sqo->mode`:
+*
+*   - search          — default list/edit mode; this class
+*   - search_tm       — time-machine (matrix_time_machine); extends search
+*   - search_related  — cross-table relation search; extends search
+*
+* The builder is organized into six traits, each owning a clause family:
+*
+*   - trait.select.php  — SELECT column projection
+*   - trait.from.php    — FROM clause + table alias
+*   - trait.where.php   — WHERE fragments (main, filter, join, projects/ACL)
+*   - trait.order.php   — ORDER BY (custom + default)
+*   - trait.count.php   — COUNT(*) wrapper for pagination totals
+*   - trait.utils.php   — shared helpers (trim_tipo, get_placeholder, validators, …)
+*
+* Two-phase parse
+* ---------------
+* 1. `parse_sqo()` — "conform" phase: dispatches every filter/select/order item
+*    to its component model (`$model::get_search_query()`), which returns a
+*    `{sentence, params}` shape with named token placeholders (`_Q1_`, `_Q2_`…).
+*    After this phase `$this->sqo->parsed = true`.
+*
+* 2. SQL build — `parse_sql_default()` / `parse_sql_full_count()` /
+*    `parse_sql_filter_by_locators()` populate `$this->sql_obj` by calling the
+*    trait methods in the order: FROM → SELECT → ORDER → WHERE. This order is
+*    load-bearing: ORDER runs before WHERE because component-based ordering calls
+*    `build_sql_join()`, which must see the base FROM alias already established.
+*
+* Prepared parameters
+* -------------------
+* `$this->params` is a 0-indexed positional list of bound values fed to
+* `pg_execute`. `get_placeholder()` (trait.utils.php) deduplicates using strict
+* comparison so distinct typed values never collapse. `_Q1_` tokens in leaf
+* sentences are swapped to `$1`/`$2`… by `parse_search_object_sql()`.
+*
+* Security gates
+* --------------
+* `conform_filter()` validates every `section_tipo`, `component_tipo`, and `lang`
+* in incoming path steps before any model dispatch (the only place single-level
+* paths are reachable). `build_sql_join()` (trait.where.php) re-validates its
+* multi-level join keys. Direct-column identifiers, ORDER direction, and
+* `column_format_parser` operators are checked against explicit allowlists. Any
+* value that cannot be parameterized must pass through one of these validators or
+* be server-side in origin.
+*
+* Relationships
+* -------------
+* Extended by: search_tm, search_related.
+* Traits used: select, from, where, order, count, utils.
+* Called by: virtually every code path that needs to retrieve section records —
+*   section::get_records_data(), dd_core_api, tools, component resolvers, …
+*
+* @package Dédalo
+* @subpackage Core
 */
 class search {
 
 	// traits. Files added to current class file to split the large code.
 	use select, from, where, order, count, utils;
 
-	// Search Query Object
+	/**
+	* The Search Query Object being processed by this instance.
+	* Populated in set_up() from the caller-supplied SQO (cloned to prevent
+	* mutation of the caller's copy). Mutated during the two-phase parse:
+	* `parsed` is set to true after conform, and `total` is written back
+	* after a count or children_recursive search.
+	* @var object $sqo
+	*/
 	protected object $sqo;
 
-	// Search Query Language Object
+	/**
+	* Intermediate SQL clause container built during parse_sql_* methods.
+	* Each property holds an array of SQL string fragments for one clause family:
+	*   - select        : column projection expressions
+	*   - from          : base table(s) in the FROM clause
+	*   - join          : LEFT JOIN … ON … blocks added by build_sql_join()
+	*   - main_where    : fixed structural predicates (section_tipo equality, root user guard)
+	*   - where         : dynamic filter/ACL predicates assembled by the where-trait methods
+	*   - order         : custom ORDER BY expressions from sqo->order
+	*   - order_default : fallback ORDER BY (section_id ASC/DESC for activity section)
+	*   - limit         : LIMIT n (built by build_limit_offset_sql())
+	*   - offset        : OFFSET n (built by build_limit_offset_sql())
+	* Initialized in set_up(). Never share this object between search instances.
+	* @var object $sql_obj
+	*/
 	protected object $sql_obj;
 
+	/**
+	* Tables whose rows must NOT be filtered by user project membership.
+	* These are system/administrative matrix tables that have no project
+	* association column and should always be fully visible to any authenticated
+	* user. Checked in set_up() to auto-set sqo->skip_projects_filter=true.
+	* @var array $ar_tables_skip_projects
+	*/
 	// Set skip_projects_filter. Default is false
 	private static array $ar_tables_skip_projects = [
 		'matrix_list',
@@ -38,32 +123,93 @@ class search {
 		'matrix_notes'
 	];
 
+	/**
+	* Column names that map directly to physical matrix table columns and can
+	* appear verbatim in ORDER BY / SELECT without a JOIN. Used by
+	* build_sql_query_order() to distinguish "direct" orderings (e.g. by
+	* `section_id`) from component-based orderings that need a join + jsonb
+	* extraction.
+	* @var array $ar_direct_columns
+	*/
 	// ar_direct_columns. Useful to calculate efficient order sentences
 	public static array $ar_direct_columns = ['section_id','section_tipo','id'];
 
+	/**
+	* All section tipos the query spans. Derived from sqo->section_tipo in
+	* set_up(). Always an array; may contain more than one entry when querying
+	* across multiple heterogeneous sections (e.g. thesaurus multi-section
+	* autocomplete), in which case build_union_query() produces a UNION ALL.
+	* @var array $ar_section_tipo
+	*/
 	// ar_section_tipo : array
 	public array $ar_section_tipo;
 
+	/**
+	* The first (primary) section tipo — reset($this->ar_section_tipo).
+	* Used as the canonical section for main_where, projects filter, and
+	* the default ORDER BY direction (activity section sorts DESC).
+	* @var string $main_section_tipo
+	*/
 	// main_section_tipo : string
 	public string $main_section_tipo;
 
+	/**
+	* Short SQL alias for the main table. Derived from trim_tipo() when there is
+	* exactly one section tipo (e.g. 'oh1' → 'oh1'), or forced to 'mix' when
+	* multiple sections are queried. Used throughout the builder as the alias
+	* prefix in all clause fragments (e.g. `mix.section_id`, `oh1.relation`).
+	* @var string $main_section_tipo_alias
+	*/
 	// main_section_tipo_alias : string
 	public string $main_section_tipo_alias;
 
+	/**
+	* Primary PostgreSQL matrix table name (e.g. 'matrix_default', 'matrix_list').
+	* Resolved in set_up() from the first resolvable entry in $ar_section_tipo via
+	* `common::get_matrix_table_from_tipo()`. search_tm fixes this to
+	* 'matrix_time_machine' directly on the subclass property.
+	* @var string $matrix_table
+	*/
 	// matrix_table : string
 	protected string $matrix_table;
 
+	/**
+	* Resolved matrix table names for each entry in $ar_section_tipo.
+	* Populated by build_union_query() only when more than one distinct table
+	* appears. Each entry becomes one UNION ALL branch.
+	* @var array $ar_matrix_tables
+	*/
 	// ar_matrix_tables : array
 	protected array $ar_matrix_tables;
 
+	/**
+	* Ordered list of bound parameter values for the prepared PostgreSQL statement.
+	* 0-indexed; the placeholder `$N` in the SQL string maps to `$this->params[N-1]`.
+	* Populated exclusively through get_placeholder() (trait.utils.php), which
+	* deduplicates by strict comparison.
+	* @see search::get_placeholder()
+	* @var array $params
+	*/
 	// params array for prepared statements.
 	// 0-indexed sequential list of bound values (the order pg_execute expects); the
 	// placeholder $N maps to $this->params[N-1]. @see get_placeholder()
 	protected array $params = [];
 
+	/**
+	* Final SQL query string after parse_sql_query() completes. Stored for debug
+	* inspection via get_sql_query() / get_sql_query_resolved().
+	* @var string $sql_query
+	*/
 	// sql_query : string (final query to execute stored for debug purposes)
 	protected string $sql_query = '';
 
+	/**
+	* When true, allows negative section_ids (used for the root/system user record)
+	* to appear in results for the users section. Normally the WHERE clause
+	* excludes section_id ≤ 0 for DEDALO_SECTION_USERS_TIPO.
+	* (!) Must be set server-side only; sanitize_client_sqo strips it.
+	* @var bool $include_negative
+	*/
 	// include_negative
 	// negative section_id used in profiles for the root user, root record could be avoid or include
 	public bool $include_negative = false;
@@ -72,9 +218,18 @@ class search {
 
 	/**
 	* GET_INSTANCE
-	* Returns a new instance of the class based on the mode
-	* @param object $search_query_object
-	* @return search instance
+	* Factory method. Returns a new search builder instance whose class is
+	* determined by `$search_query_object->mode`:
+	*
+	*   'tm'                 → search_tm   (time-machine history queries)
+	*   'related'            → search_related (cross-section relation lookup)
+	*   'edit'|'list'|other → search      (standard section query)
+	*
+	* Always create instances through this method rather than `new search()`
+	* directly: the private constructor enforces the factory pattern and this
+	* is the only place the three builder subclasses diverge.
+	* @param object $search_query_object - SQO describing the search (must contain section_tipo)
+	* @return search - new instance of search, search_tm, or search_related
 	*/
 	public static function get_instance(object $search_query_object) : search {
 
@@ -107,7 +262,9 @@ class search {
 
 	/**
 	* __CONSTRUCT
-	* @param object $search_query_object
+	* Private constructor; enforces use of get_instance() as the sole entry
+	* point. Delegates immediately to set_up() to initialize all instance state.
+	* @param object $search_query_object - validated SQO; must have section_tipo set
 	*/
 	private function __construct(object $search_query_object) {
 		// Set up class minim vars
@@ -118,9 +275,27 @@ class search {
 
 	/**
 	* SET_UP
-	* Analyze given search_query_object and fix the properties.
-	* @param object $search_query_object
+	* Initializes all instance state from the caller-supplied SQO. This method
+	* is called by the constructor (and by search_tm / search_related constructors
+	* via parent::__construct). After set_up() the instance is ready for
+	* parse_sql_query() or count().
+	*
+	* Responsibilities:
+	*  - Validates that section_tipo is present; throws if missing.
+	*  - Initializes $sql_obj to an empty clause container.
+	*  - Normalizes section_tipo to an array; derives main_section_tipo and
+	*    main_section_tipo_alias ('mix' when more than one section is given).
+	*  - Resolves $matrix_table from the first ontology-resolvable entry in
+	*    $ar_section_tipo (skips tipos with no installed model/table). For
+	*    search_tm the subclass property is already 'matrix_time_machine'.
+	*  - Clones the SQO to prevent mutation of the caller's copy.
+	*  - Sets remove_distinct (forced true for multi-section to allow "duplicate"
+	*    section_ids across section spaces) and skip_projects_filter (true for
+	*    system tables that have no project filter column).
+	*
+	* @param object $search_query_object - raw SQO from get_instance()
 	* @return void
+	* @throws Exception when section_tipo is not set or empty
 	*/
 	protected function set_up(object $search_query_object) : void {
 
@@ -224,10 +399,25 @@ class search {
 
 	/**
 	* SEARCH
-	* Parses the current sqo and exec a SQL query search against the database
-	* getting a db_result iterable object.
-	* @return db_result|false
-	* 	db_result is an iterator that parses JSON columns on the iterations
+	* Executes the full search pipeline and returns a lazy row iterator.
+	*
+	* Execution path:
+	*  1. If `sqo->children_recursive === true`, first runs a separate unbounded
+	*     parents search, then calls `search_children_recursive()` to expand
+	*     to all descendant records and execute the combined query. This avoids
+	*     side effects on the current instance's sql_obj state.
+	*  2. Otherwise calls `parse_sql_query()` to build the prepared SQL string,
+	*     then `matrix_db_manager::exec_search()` to execute it.
+	*  3. Wraps the PostgreSQL result resource in a `db_result` iterator that
+	*     parses JSONB columns on demand during iteration.
+	*
+	* Side effects:
+	*  - Populates $this->params and $this->sql_query.
+	*  - When SHOW_DEBUG is true, logs execution time and appends to
+	*    dd_core_api::$sql_query_search for the API response.
+	*  - Increments and updates metrics counters.
+	*
+	* @return db_result|false - lazy iterator over matching rows, or false on DB error
 	*/
 	public function search() : db_result|false {
 
@@ -328,13 +518,29 @@ class search {
 
 	/**
 	* SEARCH_CHILDREN_RECURSIVE
-	* Process the result of the main search (the parents section records)
-	* Obtains all recursive children with the search result
-	* Creates a new SQO with all section_id of parents and children.
-	* Searches the combination and updates main SQO with the new SQO (with all
-	* parents and children) to be used for pagination.
-	* @param db_result $parents_db_result
-	* @return db_result|false $result
+	* Expands a set of "parent" section records to include all of their
+	* recursive children, then executes a single combined search over the
+	* full set and updates the instance SQO for correct pagination.
+	*
+	* Algorithm:
+	*  1. Iterate $parents_db_result to collect all parent rows and their
+	*     `{section_id, section_tipo}` root objects.
+	*  2. Call `component_relation_children::get_children_recursive_batch()`
+	*     to retrieve all descendant locators in one batched pass (shared
+	*     visited set prevents cycles and redundant lookups).
+	*  3. If no children exist, rewind the parents result and return it
+	*     directly, setting sqo->total to the parent count.
+	*  4. Otherwise, merge parents + children into one flat array, build a new
+	*     SQO filter that targets those exact section_ids using an IN clause
+	*     (via `generate_children_recursive_search()`), and execute a fresh
+	*     search. Update the current instance's sqo->filter and sqo->total so
+	*     that the caller's pagination layer sees the correct total count.
+	*
+	* (!) The parents result is fully iterated inside this method; rewinding
+	* it (seek(0)) is required in the no-children fast path.
+	*
+	* @param db_result $parents_db_result - result from the pre-search of parent records
+	* @return db_result|false - combined result including children, or false on error
 	*/
 	private function search_children_recursive( db_result $parents_db_result ) : db_result|false {
 
@@ -406,9 +612,22 @@ class search {
 
 	/**
 	* GENERATE_CHILDREN_RECURSIVE_SEARCH
-	* Create a new filter to inject in current search query object
-	* @param array $ar_rows
-	* @return object $new_sqo
+	* Builds a new SQO that restricts the search to a specific set of
+	* section records (parents + their children) using an `IN(…)` filter on
+	* `section_id`. This replaces any previous filter so the follow-up search
+	* returns exactly and only those records.
+	*
+	* The method clones the current instance's SQO and modifies it:
+	*  - Disables `children_recursive` to break the recursive cycle.
+	*  - Forces `parsed = false` so the conform phase re-runs on the new filter.
+	*  - Removes `filter_by_locators` (already resolved by the parent search).
+	*  - Disables `full_count` (caller handles totals from $ar_rows size).
+	*  - Builds the filter: `($fixed_children_filter) AND ($or: section_id IN (…))`.
+	*    section_id values are cast to `int` before `implode` to prevent any
+	*    non-integer value from corrupting the reconstructed SQO.
+	*
+	* @param array $ar_rows - flat array of stdClass with section_id (and optionally section_tipo)
+	* @return object $new_sqo - modified SQO ready for search::get_instance()
 	*/
 	public function generate_children_recursive_search( array $ar_rows ) : object {
 
@@ -482,8 +701,20 @@ class search {
 
 	/**
 	* PARSE_SQO
-	* Iterate all filter and select elements and communicate with components to rebuild the search_query_object
-	* Not return anything, only modifies the class var $this->sqo
+	* "Conform" phase of the two-phase parse. Iterates each filter item,
+	* select column, and order column and dispatches each to its component
+	* model, which adds the concrete SQL sentence + parameter tokens.
+	*
+	* Filter processing is recursive via `conform_filter()`. Select and order
+	* objects are normalized via `conform_select()` (resolves the physical
+	* column name from the ontology tipo when `column` is absent).
+	*
+	* This method is idempotent: if `sqo->parsed === true` it returns
+	* immediately without re-processing. Set `parsed = false` to force a
+	* re-parse (e.g. after `generate_children_recursive_search()` replaces
+	* the filter).
+	*
+	* Side effect: sets `$this->sqo->parsed = true` on completion.
 	* @return void
 	*/
 	public function parse_sqo() : void {
@@ -533,32 +764,33 @@ class search {
 
 	/**
 	* CONFORM_FILTER
-	* Call to components to conform final search_query_object, adding specific component path, search operators etc.
-	* Recursive
-	* @param string $op
-	* 	sample: '$and'
-	* @param array $filter_items
-	* sample:
-	*	[
-	*		{
-	*			"q": {
-	*				 "section_id": "1",
-	*				 "section_tipo": "dd64",
-	*				 "type": "dd151",
-	*				 "from_component_tipo": "dd1354"
-	*			},
-	*			"q_operator": null,
-	*			"path": [
-	*				 {
-	*					"section_tipo": "dd1324",
-	*					"component_tipo": "dd1354",
-	*					"model": "component_radio_button",
-	*					"name": "Active"
-	*				 }
-	*			]
-	*		}
-	*	]
-	* @return object $new_query_object
+	* Security chokepoint and conform dispatcher for the SQO filter tree.
+	* Walks the filter recursively and, for each leaf item (one that has a
+	* `path` property), validates all path steps and dispatches to the
+	* component model for SQL generation.
+	*
+	* Two structural cases per item in $filter_items:
+	*  - Operator group (no `path` key): the item is itself a `{$and: […]}` or
+	*    `{$or: […]}` group. Recurse into it.
+	*  - Leaf query item (has `path`): validate section_tipo, component_tipo,
+	*    and lang, then call `$model::get_search_query($search_object)` which
+	*    adds `{sentence, params}` to the item.
+	*
+	* Security:
+	*  `section_tipo` and `component_tipo` from the client path are interpolated
+	*  verbatim as JSONB keys / jsonpath member steps by the per-component
+	*  builders and cannot be parameterized. Both are validated here via
+	*  `is_valid_tipo()` or `is_valid_data_column()` (the latter covers the
+	*  legitimate pseudo-tipos: section_id, id, tipo, lang, type, section_tipo).
+	*  `lang` is validated via `is_valid_lang()`. Any invalid value throws.
+	*  This one gate covers ALL component traits and ALL path depths,
+	*  including single-level paths that never reach build_sql_join().
+	*
+	* @param string $op - logical operator key from the SQO filter tree (e.g. '$and', '$or')
+	* @param array $filter_items - array of filter leaf objects or nested operator groups; each leaf is:
+	*   {q, q_operator, path:[{section_tipo, component_tipo, model, name}], lang?, format?, …}
+	* @return object $new_query_object - conformed filter object `{$op: […conformed_items]}`
+	* @throws Exception when a path step contains an invalid section_tipo, component_tipo, or lang
 	*/
 	public function conform_filter(string $op, array $filter_items) : object {
 
@@ -687,13 +919,22 @@ class search {
 
 	/**
 	* CONFORM_SELECT
-	* Resolve the column name using the key ( with the model of the ontology tipo ) when the column is not defined
-	* {
-	* 	"column"		: "relation" string column name
-	* 	"key"			: "oh25" string|null component tipo
-	* }
-	* @param object $select_object
-	* @return object $select_object
+	* Resolves the physical matrix column name for a select descriptor when
+	* only the ontology tipo (component key) is provided and `column` is absent.
+	*
+	* Select descriptor shape:
+	*   {
+	*     "column": string|null  — physical column name (e.g. 'string', 'relation')
+	*     "key":    string|null  — ontology component tipo (e.g. 'oh25')
+	*   }
+	*
+	* If both `column` and `key` are present, the descriptor is already resolved
+	* and returned unchanged. If only `key` is given, the model is looked up via
+	* `ontology_node::get_model_by_tipo()` and the column is derived from
+	* `section_record_data::get_column_name()`.
+	*
+	* @param object $select_object - select descriptor; modified in place when column is absent
+	* @return object $select_object - same object with column populated if it was missing
 	*/
 	public static function conform_select( object $select_object ) : object {
 
@@ -718,12 +959,21 @@ class search {
 
 	/**
 	* BUILD_UNION_QUERY
-	* Rewrite query string building SQL union for each different matrix table
-	* based on every section tipo table resolution
-	* @param string $sql_query
-	*  The original SQL query to be modified.
-	* @return string $sql_query
-	*  The modified SQL query with UNION clauses for each matrix table.
+	* Rewrites a single-table SQL query string to a UNION ALL query when
+	* `$ar_section_tipo` spans more than one matrix table.
+	*
+	* Each branch is an independent SELECT that differs only in the `FROM` table.
+	* The main FROM clause produced by `build_main_from_sql()` (exact string
+	* `'FROM <table> AS <alias>'`) is replaced with the branch's own table name;
+	* only that exact substring is replaced, never a regex, to avoid corrupting
+	* correlated subqueries that use different aliases (e.g. the `!!` duplicated
+	* operator emits `FROM <table> AS m2`).
+	*
+	* After UNION ALL, table alias qualifiers (e.g. `mix.`) are stripped from
+	* the outer ORDER BY because UNION result columns are not alias-qualified.
+	*
+	* @param string $sql_query - the single-table SQL query to expand
+	* @return string $sql_query - expanded UNION ALL query, or the original if only one table
 	*/
 	public function build_union_query(string $sql_query) : string {
 
@@ -803,9 +1053,20 @@ class search {
 
 	/**
 	* PARSE_SQL_QUERY
-	* Build full final SQL query to send to DB
-	* @return string $sql_query
-	* 	parsed final SQL query string
+	* Top-level dispatcher for the SQL build phase. Runs `parse_sqo()` if the
+	* SQO has not yet been conformed (guarded by `sqo->parsed`), then delegates
+	* to the appropriate builder method based on the SQO's active flags:
+	*
+	*   full_count === true        → parse_sql_full_count()   (COUNT wrapper)
+	*   filter_by_locators set     → parse_sql_filter_by_locators()
+	*   default                    → parse_sql_default()
+	*
+	* After building, appends a trailing `;` and validates that a matrix table
+	* was resolved (logs an error if not, which typically means all tipos in
+	* ar_section_tipo were unresolvable). Stores the final SQL in $this->sql_query
+	* for debug access. When SHOW_DEBUG is true, prepends a `-- type` comment line.
+	*
+	* @return string $sql_query - final parameterized SQL string ready for pg_execute
 	*/
 	public function parse_sql_query( ) : string {
 
@@ -879,7 +1140,9 @@ class search {
 
 	/**
 	* PARSE_SQL_DEFAULT
-	* Build full final SQL query to send to DB
+	* Builds the standard section-list SQL query (no full_count, no
+	* filter_by_locators). This is the path taken for all normal edit/list
+	* mode searches.
 	*
 	* EXECUTION ORDER IS CRITICAL:
 	* ============================
@@ -900,10 +1163,16 @@ class search {
 	*   ORDER BY order (or order_default if no custom order)
 	*   LIMIT ... OFFSET ...
 	*
-	* This ensures DISTINCT ON works correctly while allowing custom final ordering.
+	* The window is enabled when the query has JOINs or a custom ORDER BY.
+	* Without it, `DISTINCT ON` requires the leading ORDER BY column to match
+	* the DISTINCT key, so the outer ORDER BY can freely apply the user's
+	* custom sort. When there are no JOINs and no custom order, the inner
+	* query doubles as the final result and LIMIT/OFFSET are appended inline.
 	*
-	* @return string $sql_query string
-	*  parsed final SQL query string
+	* For multi-section searches, `build_union_query()` is called on the inner
+	* query string before appending order/limit.
+	*
+	* @return string $sql_query - the built SQL string (without trailing semicolon)
 	*/
 	public function parse_sql_default() : string {
 
@@ -998,9 +1267,20 @@ class search {
 
 	/**
 	* PARSE_SQL_FULL_COUNT
-	* Build full final SQL query to send to DB
-	* @return string $sql_query string
-	* 	parsed final SQL query string
+	* Builds a `SELECT COUNT(*) as full_count FROM (…) x` wrapper query for
+	* pagination total calculation. Called when `sqo->full_count === true`.
+	*
+	* Inner SELECT is `SELECT DISTINCT section_id` (non-distinct for the
+	* activity section and time-machine, which can have multiple rows per
+	* section_id). The full filter stack (main_where, filter, filter_by_locators,
+	* projects filter, user-records filter) is applied. For multi-section queries
+	* the inner SELECT is expanded with UNION ALL before wrapping in the COUNT.
+	*
+	* JOINs from ORDER BY are not needed for count (order is skipped entirely),
+	* so the inner SELECT only includes the join virtual tables/filter projects
+	* from sql_obj->join.
+	*
+	* @return string $sql_query - the built COUNT SQL string (without trailing semicolon)
 	*/
 	public function parse_sql_full_count() : string {
 
@@ -1058,9 +1338,19 @@ class search {
 
 	/**
 	* PARSE_SQL_FILTER_BY_LOCATORS
-	* Build full final SQL query to send to DB
-	* @return string $sql_query string
-	* 	parsed final SQL query string
+	* Builds a query that returns exactly the rows identified by the locators
+	* in `sqo->filter_by_locators`. Each locator is an object with one or more
+	* of: `section_id`, `section_tipo`, `tipo` (TM only), `type`, `lang` (TM
+	* only), `matrix_id` (TM only). Multiple locators are combined with OR;
+	* fields within a single locator are combined with AND.
+	*
+	* The result is always wrapped in a window subquery (`SELECT * FROM (…)
+	* main_select`) so that an outer ORDER BY (custom or default) can be applied
+	* cleanly without needing DISTINCT ON to match the leading sort column.
+	* All parameter values are passed through `get_placeholder()` (prepared
+	* statement — no verbatim interpolation).
+	*
+	* @return string $sql_query - the built filter-by-locators SQL string
 	*/
 	public function parse_sql_filter_by_locators() : string {
 

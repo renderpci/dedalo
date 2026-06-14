@@ -1,8 +1,37 @@
 <?php declare(strict_types=1);
 /**
-* CLASS SEARCH
-* TRAIT count
-* Count methods
+* TRAIT COUNT
+* Provides the count() method for the search class family.
+*
+* This trait is one of six complementary traits that together form the search
+* class (select, from, where, order, count, utils). Its sole responsibility is
+* to execute a COUNT query against the matrix JSONB tables and return the total
+* number of matching records without fetching the full record payloads.
+*
+* Two distinct execution paths are covered:
+*
+* 1. children_recursive path — when sqo->children_recursive is true the full
+*    set of matching parent+child records is unknown until search() has run and
+*    populated sqo->total via search_children_recursive(). count() delegates to
+*    search() (with full_count temporarily disabled so search returns actual
+*    rows, not a COUNT(*) query) and reads the total that search_children_recursive()
+*    stored in sqo->total. No separate COUNT query is sent to the database.
+*
+* 2. Standard path — parse_sql_query() is called (which, when sqo->full_count is
+*    true, branches into parse_sql_full_count() via the switch in parse_sql_query())
+*    and exec_search() runs the resulting COUNT(*) SQL against PostgreSQL. The
+*    result set may contain more than one row when a UNION query spans multiple
+*    matrix tables; the rows are summed. If sqo->group_by is set, per-group
+*    totals are collected alongside the aggregate sum.
+*
+* Relationships:
+* - Mixed into: search (class.search.php); inherited by search_tm, search_related
+* - Calls: parse_sql_query() (trait.select/from/where/order), matrix_db_manager::exec_search(),
+*   search::search() (for the children_recursive path only)
+* - Reads/writes: $this->sqo (Search Query Object), $this->params (prepared-statement values)
+*
+* @package Dédalo
+* @subpackage Core
 */
 trait count {
 
@@ -10,13 +39,42 @@ trait count {
 
 	/**
 	* COUNT
-	* Count the rows of the sqo
+	* Executes a COUNT query for the current Search Query Object and returns a
+	* result object carrying the aggregate total (and optional per-group totals).
+	*
+	* The method has two entirely separate paths:
+	*
+	* children_recursive path (sqo->children_recursive === true):
+	*   A recursive tree-walk must know the full parent+child set before it can
+	*   produce a meaningful count. count() re-uses search() for this: it
+	*   temporarily disables full_count so that search() fetches actual rows (not
+	*   a COUNT(*) result), then reads sqo->total which search_children_recursive()
+	*   populates. The result is returned immediately without any SQL COUNT query.
+	*
+	* Standard path:
+	*   parse_sql_query() builds a SQL COUNT(*) string (it branches into
+	*   parse_sql_full_count() when sqo->full_count is true) and exec_search()
+	*   runs it via pg_execute with $this->params as the positional bound values.
+	*   For multi-section UNION queries the result set has one row per UNION
+	*   branch; all rows are summed to produce a single aggregate total.
+	*   If sqo->group_by is present, each row additionally contributes a
+	*   {key, value} object to the totals_group array so callers can obtain
+	*   per-section-tipo (or per-column) totals in a single query.
+	*
+	* Side effects:
+	*   - Writes $this->sqo->total with the computed total so subsequent
+	*     calls to search() (for pagination) can read it without re-counting.
+	*   - In SHOW_DEBUG mode: writes debug timing to $records_data->debug,
+	*     appends the human-readable SQL to dd_core_api::$sql_query_search,
+	*     and records metrics via metrics::add_time_ms / metrics::observe_max.
+	*
 	* @return object $records_data
-	* like:
-	* {
-	* 	total : 369, integer
-	* 	debug_info: ....
-	* }
+	*   Always an stdClass; at minimum has:
+	*     ->total  int  Aggregate number of matching records.
+	*   Optionally:
+	*     ->totals_group  array  Per-group {key: array, value: int} objects
+	*                            (only present when sqo->group_by is set).
+	*     ->debug  stdClass  Timing and SQL info (only present when SHOW_DEBUG).
 	*/
 	public function count() : object {
 
@@ -35,6 +93,10 @@ trait count {
 			// Save current full_count state
 			$full_count_backup = $this->sqo->full_count ?? false;
 			// Temporarily disable full_count to get actual parents
+			// (parse_sql_query() branches into parse_sql_full_count() when full_count is true,
+			// which emits a COUNT(*) query that returns no row data — we need real rows here
+			// so that search_children_recursive() can collect parent section_ids and resolve
+			// their descendants before writing the final total into sqo->total.)
 			$this->sqo->full_count = false;
 
 			// search as normal search to get the children_recursive sqo to be used for count.
@@ -56,7 +118,7 @@ trait count {
 				$this->sqo->generated_time = $exec_time;
 				metrics::add_time_ms('search_total_time', $exec_time);
 				metrics::observe_max('search_max_time', $exec_time); // slowest single search
-				
+
 				// Add extra debug info
 				$records_data->debug->children_recursive_total = $total;
 			}
@@ -71,6 +133,12 @@ trait count {
 		// ONLY_COUNT
 		// Exec a count query
 		// Converts JSON search_query_object to SQL query string
+		// (!) parse_sql_query() inspects sqo->full_count and, when true, calls
+		// parse_sql_full_count() which emits SELECT count(DISTINCT …) as full_count.
+		// The result set therefore has a 'full_count' column, not the regular data columns.
+		// For UNION queries (multiple section tipos spanning different matrix tables),
+		// build_union_query() wraps each branch as a separate UNION ALL branch so that
+		// each branch returns its own 'full_count' row; we sum them below.
 			$count_sql_query = $this->parse_sql_query();
 			$count_result = matrix_db_manager::exec_search(
 				$count_sql_query,
@@ -89,11 +157,16 @@ trait count {
 			while($row = pg_fetch_assoc($count_result)) {
 
 				// get the total as the sum of all rows
+				// Each UNION branch contributes one row; summing gives the cross-table aggregate.
 				$full_count = $row['full_count'] ?? 0;
 				$total = $total + (int)$full_count;
 
 				// group by
 				// get the specific total of the group_by concept (as section_tipo)
+				// When sqo->group_by is an array of column names (e.g. ['section_tipo']),
+				// the SQL groups by those columns and each row carries the column value alongside
+				// its full_count. We collect {key: [...column_values], value: int} per row so
+				// the caller can display per-section-tipo (or per-custom-column) breakdowns.
 				if( isset($this->sqo->group_by) ){
 					$current_totals_object = new stdClass();
 					$ar_keys = [];
@@ -129,6 +202,8 @@ trait count {
 			}
 
 		// Fix total value in the SQO
+		// Persisting here allows callers that run a separate search() for pagination
+		// to skip a second COUNT by reading sqo->total directly.
 			$this->sqo->total = $total;
 
 		// set total
