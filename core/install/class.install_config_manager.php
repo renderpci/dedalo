@@ -221,6 +221,37 @@ final class install_config_manager {
 				? true
 				: false;
 
+		// db writable check (verify target database allows CREATE/INSERT/DROP)
+			$db_writable_check = false;
+			if ($db_connection_check) {
+				try {
+					// attempt to create a temporary table, insert a row, and drop it
+					$test_table = '_dedalo_install_write_test_' . time();
+					$create_sql = "CREATE TEMP TABLE {$test_table} (id serial PRIMARY KEY, val text NOT NULL)";
+					$insert_sql = "INSERT INTO {$test_table} (val) VALUES ('write_test')";
+					$drop_sql	= "DROP TABLE IF EXISTS {$test_table}";
+
+					$cr = pg_query($db_connection, $create_sql);
+					if ($cr !== false) {
+						$ir = pg_query($db_connection, $insert_sql);
+						if ($ir !== false) {
+							$dr = pg_query($db_connection, $drop_sql);
+							if ($dr !== false) {
+								$db_writable_check = true;
+							}
+						}else{
+							// insert failed — likely no INSERT permission
+							pg_query($db_connection, $drop_sql);
+						}
+					}
+				} catch (Throwable $e) {
+					debug_log(__METHOD__
+						." DB writable check failed: " . $e->getMessage()
+						, logger::WARNING
+					);
+				}
+			}
+
 		// db_status
 			$db_status = new stdClass();
 				$db_status->config_db_name_check		= $db_name_check;
@@ -230,6 +261,7 @@ final class install_config_manager {
 				$db_status->config_info_key_check		= $info_key_check;
 				$db_status->config_check				= $config_check;
 				$db_status->db_connection_check			= $db_connection_check;
+				$db_status->db_writable_check			= $db_writable_check;
 
 		// global status
 			$global_status = true;

@@ -8,7 +8,12 @@
  * @package Dedalo
  * @subpackage Install
  */
-class install_data_seeder {
+final class install_data_seeder {
+
+	/**
+	* Private constructor to prevent instantiation (static utility class)
+	*/
+	private function __construct() {}
 
 	/**
 	* CREATE_ROOT_USER
