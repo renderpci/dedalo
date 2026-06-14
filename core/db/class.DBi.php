@@ -1,8 +1,29 @@
 <?php declare(strict_types=1);
 /**
-* DBI
-* DB CONNECTION
-* To close connection, use pg_close(DBi::_getConnection()); at end of page
+* CLASS DBI
+* Central database interface layer for Dédalo's PostgreSQL (and auxiliary MySQL) connections.
+*
+* All Dédalo server code must obtain database connections through this class rather than
+* opening connections directly. Responsibilities include:
+* - Maintaining a per-process singleton PgSql\Connection with time-windowed validity checks
+*   to avoid redundant pg_connection_status() calls on every query.
+* - Transparent support for persistent connections (pg_pconnect) including abandoned-transaction
+*   recovery — critical for PHP-FPM/worker-pool environments where a pooled connection may
+*   arrive with a leftover transaction block from a previous request.
+* - A SAVEPOINT-based nested transaction protocol: depth-0 callers issue a real BEGIN/COMMIT;
+*   nested callers transparently receive SAVEPOINTs so they can rollback independently without
+*   cancelling an outer transaction.
+* - Schema introspection helpers (check_table_exists, get_tables, check_column_exists,
+*   add_column, remove_column, get_indexes, get_functions, get_constraint_name_from_index) used
+*   during migration and bootstrap.
+* - An optional PDO accessor (_getConnectionPDO) and a legacy MySQLi accessor
+*   (_getConnection_mysql) for the few paths that still use those interfaces.
+*
+* This class is declared abstract so it cannot be instantiated; all methods are static.
+* To close the cached connection explicitly call pg_close(DBi::_getConnection()).
+*
+* @package Dédalo
+* @subpackage Core
 */
 abstract class DBi {
 
@@ -13,44 +34,57 @@ abstract class DBi {
 	*/
 		/**
 		 * Cached PostgreSQL connection instance.
-		 * Stores the persistent PgSql\Connection to avoid re-connecting on each request.
+		 * Stores the active PgSql\Connection between calls to avoid a round-trip handshake on
+		 * every query. Invalidated (set to null) whenever the connection is found dead or
+		 * invalidate_connection_cache() is called.
 		 * @var ?PgSql\Connection $pg_conn_cache
 		 */
 		private static ?PgSql\Connection $pg_conn_cache = null;
 
 		/**
-		 * Unix timestamp until which the cached connection is considered valid.
-		 * Used to reduce connection status checks (optimization).
+		 * Unix timestamp (seconds) until which the cached connection is assumed healthy.
+		 * Avoids calling pg_connection_status() on every request by re-using the cached
+		 * connection without a status check until this timestamp is exceeded. Reset to
+		 * $now + $connection_check_interval on each cache hit or fresh connection.
 		 * @var int $pg_conn_valid_until
 		 */
 		private static int $pg_conn_valid_until = 0;
 
 		/**
-		 * Interval in seconds between connection validity checks.
-		 * Default 30 seconds to balance performance and connection freshness.
+		 * How many seconds between mandatory pg_connection_status() checks.
+		 * A 30-second window trades minor staleness risk for significant overhead reduction in
+		 * high-throughput worker processes. Lower this value if connection drops go undetected.
 		 * @var int $connection_check_interval
 		 */
 		private static int $connection_check_interval = 30;
 
 		/**
-		 * Registry of already defined prepared statement names.
-		 * Tracks which SQL prepared statements have been registered with PostgreSQL.
+		 * Registry of prepared statement names already registered with PostgreSQL.
+		 * Keys are the md5-derived statement names used by exec_search and similar callers.
+		 * Must be cleared together with the connection cache (see invalidate_connection_cache)
+		 * because PostgreSQL prepared statements are session-scoped: a new connection does not
+		 * inherit statements defined on a previous one.
 		 * @var array $prepared_statements
 		 */
 		public static array $prepared_statements = [];
 
 		/**
-		 * Current transaction nesting depth.
-		 * Depth 0 means no Dédalo managed transaction is active. Depth 1 maps to a real
-		 * BEGIN/COMMIT block; deeper levels map to SAVEPOINTs so nested callers compose.
+		 * Current managed transaction nesting depth.
+		 * 0 = no active Dédalo transaction.
+		 * 1 = a real BEGIN has been issued (or a SAVEPOINT at depth 1 if the connection was
+		 *     already inside an external transaction block).
+		 * >1 = each additional begin_transaction() call creates a named SAVEPOINT so inner
+		 *      code can roll back independently without cancelling the outer block.
 		 * @var int $tx_depth
 		 */
 		private static int $tx_depth = 0;
 
 		/**
-		 * True when depth 1 issued the real BEGIN. False when the connection was
-		 * already inside an externally opened transaction and level 1 was mapped
-		 * to a SAVEPOINT (commit/rollback must then never touch the outer block).
+		 * Whether Dédalo's depth-1 begin_transaction() issued the real BEGIN.
+		 * True  → depth-1 commit/rollback must issue COMMIT/ROLLBACK.
+		 * False → the connection was already inside an externally opened transaction when the
+		 *         first begin_transaction() was called; depth-1 was mapped to a SAVEPOINT and
+		 *         commit/rollback must not touch the outer block.
 		 * @var bool $tx_owns_begin
 		 */
 		private static bool $tx_owns_begin = false;
@@ -59,16 +93,31 @@ abstract class DBi {
 
 	/**
 	* _GETCONNECTION
-	* This is the main DB connector of Dédalo.
-	* Returns an PgSql\Connection instance on success, or false on failure.
-	* @param string|null $host = DEDALO_HOSTNAME_CONN
-	* @param string $user = DEDALO_USERNAME_CONN
-	* @param string $password = DEDALO_PASSWORD_CONN
-	* @param string $database = DEDALO_DATABASE_CONN
-	* @param string|int|null $port = DEDALO_DB_PORT_CONN
-	* @param string|null $socket = DEDALO_SOCKET_CONN
-	* @param bool $cache = true
-	* @return PgSql\Connection|false $pg_conn
+	* Primary PostgreSQL connection accessor for all Dédalo server code.
+	*
+	* Returns the cached PgSql\Connection when the cache is warm and the connection is
+	* still healthy. Performs a full pg_connect() (or pg_pconnect() when the
+	* PERSISTENT_CONNECTION constant is true) only when no valid cached connection exists.
+	*
+	* Connection validity is checked lazily: pg_connection_status() is only called after
+	* $connection_check_interval seconds have elapsed since the last successful check, which
+	* avoids a syscall on every query in high-throughput paths.
+	*
+	* Persistent-connection safety: when pg_pconnect() returns a reused backend,
+	* any lingering INTRANS or INERROR block is rolled back immediately to prevent
+	* worker-pool state bleed (see audit-2026-06-worker-state-bleed).
+	*
+	* Socket connections: when $host is null and $socket is provided, the socket path is
+	* passed as the libpq 'host' parameter (PostgreSQL's convention for Unix-socket paths).
+	*
+	* @param string|null $host = DEDALO_HOSTNAME_CONN - PostgreSQL host; null for socket/default
+	* @param string $user = DEDALO_USERNAME_CONN - Database user
+	* @param string $password = DEDALO_PASSWORD_CONN - Database password
+	* @param string $database = DEDALO_DATABASE_CONN - Database name
+	* @param string|int|null $port = DEDALO_DB_PORT_CONN - Port; ignored when $host is null
+	* @param string|null $socket = DEDALO_SOCKET_CONN - Unix socket path used when $host is null
+	* @param bool $cache = true - Return and store the cached connection; pass false to force a new one
+	* @return PgSql\Connection|false - Active connection on success, false on failure
 	*/
 	public static function _getConnection(
 		string|null		$host		= DEDALO_HOSTNAME_CONN,
@@ -171,9 +220,15 @@ abstract class DBi {
 
 	/**
 	* INVALIDATE_CONNECTION_CACHE
-	* Clears the cached PostgreSQL connection and resets the validity timer.
-	* Use after external events (e.g. pg_terminate_backend) may have killed
-	* the underlying backend, to force a fresh connection on next call.
+	* Discards the cached PostgreSQL connection and resets the validity timer,
+	* forcing _getConnection() to open a fresh connection on the next call.
+	*
+	* Use this after any external event that may have killed the underlying backend
+	* (e.g. pg_terminate_backend(), a DBA SIGKILL, or a detected network partition).
+	* Also resets $prepared_statements because PostgreSQL prepared statements are
+	* session-scoped: they do not survive a reconnect. Leaving the registry populated
+	* after a reconnect would cause exec_search to skip re-preparing on the new session
+	* and fail with "prepared statement does not exist".
 	* @return void
 	*/
 	public static function invalidate_connection_cache() : void {
@@ -190,14 +245,22 @@ abstract class DBi {
 
 	/**
 	* BEGIN_TRANSACTION
-	* Starts a managed transaction on the cached connection.
-	* At depth 0 issues a real BEGIN; deeper calls create a SAVEPOINT so that
-	* nested transactional code composes safely (inner rollback only undoes
-	* the inner block).
-	* If the connection is already inside an externally opened transaction
-	* (e.g. an advisory xact lock block), the first level is mapped to a
-	* SAVEPOINT too, never a second BEGIN.
-	* @return bool
+	* Starts or nests a managed transaction on the cached connection.
+	*
+	* Nesting protocol:
+	* - Depth 0 AND connection is IDLE → issues a real BEGIN. $tx_owns_begin = true.
+	* - Depth 0 AND connection is already IN TRANSACTION (external block) → creates
+	*   SAVEPOINT dd_tx_1. $tx_owns_begin = false, so commit/rollback will not issue
+	*   COMMIT/ROLLBACK against the outer block.
+	* - Depth ≥ 1 → creates SAVEPOINT dd_tx_{depth+1}. The inner block can roll back
+	*   independently; the outer block continues.
+	*
+	* Callers can use this pattern safely without knowing whether they are nested:
+	*   DBi::begin_transaction();
+	*   // ... do work ...
+	*   DBi::commit_transaction();  // or rollback_transaction() on error
+	*
+	* @return bool - false when no connection is available or the BEGIN/SAVEPOINT fails
 	*/
 	public static function begin_transaction() : bool {
 
@@ -237,10 +300,19 @@ abstract class DBi {
 
 	/**
 	* COMMIT_TRANSACTION
-	* Commits the current managed transaction level.
-	* At depth 1 issues a real COMMIT (refused if the transaction is in an
-	* aborted state); deeper levels release their SAVEPOINT.
-	* @return bool
+	* Commits or releases the current managed transaction level.
+	*
+	* - Depth 1 + $tx_owns_begin true → issues a real COMMIT. Refuses to commit when
+	*   the PostgreSQL transaction status is INERROR (aborted block); rolls back instead
+	*   and returns false to prevent a silent data loss.
+	* - Depth 1 + $tx_owns_begin false → releases SAVEPOINT dd_tx_1 (the outer block
+	*   owned the BEGIN and must not be committed here).
+	* - Depth >1 → releases SAVEPOINT dd_tx_{depth}.
+	*
+	* Callers should treat a false return as an unrecoverable failure for the current
+	* operation and propagate the error upward.
+	* @return bool - false when no active transaction exists, no connection is available,
+	*                the transaction is in aborted state, or the SQL command fails
 	*/
 	public static function commit_transaction() : bool {
 
@@ -287,10 +359,19 @@ abstract class DBi {
 
 	/**
 	* ROLLBACK_TRANSACTION
-	* Rolls back the current managed transaction level.
-	* At depth 1 issues a real ROLLBACK; deeper levels roll back to their
-	* SAVEPOINT (outer levels remain usable).
-	* @return bool
+	* Rolls back or unwinds the current managed transaction level.
+	*
+	* - Depth 1 + $tx_owns_begin true → issues a real ROLLBACK, undoing all work since BEGIN.
+	* - Depth 1 + $tx_owns_begin false → rolls back to SAVEPOINT dd_tx_1 then releases it
+	*   (the outer transaction block is left intact and continues to be usable).
+	* - Depth >1 → rolls back to SAVEPOINT dd_tx_{depth} then releases it; only the inner
+	*   block's changes are undone.
+	*
+	* On pg_query failure the depth counter is decremented anyway so the nesting stack does
+	* not get stuck. The _getConnection() persistent-connection guard will handle any lingering
+	* aborted block on the next request.
+	* @return bool - false when no active transaction exists, no connection is available,
+	*                or the SQL command fails (depth is still decremented in that case)
 	*/
 	public static function rollback_transaction() : bool {
 
@@ -333,13 +414,25 @@ abstract class DBi {
 
 	/**
 	* TRANSACTION
-	* Runs the given callable inside a managed transaction.
-	* Commits on success and returns the callable result; on any Throwable
-	* rolls back and rethrows so callers can build their error response.
-	* Nested calls compose via SAVEPOINTs (see begin_transaction).
-	* @param callable $fn
-	* @return mixed
-	* @throws Throwable
+	* Convenience wrapper: runs a callable inside a managed transaction and returns its result.
+	*
+	* Begins a transaction (or SAVEPOINT when nested), executes $fn(), then commits.
+	* If $fn() throws any Throwable the transaction is rolled back before the exception is
+	* rethrown, ensuring no partial writes leak to the outer scope.
+	*
+	* Nested usage is safe: inner DBi::transaction() calls receive a SAVEPOINT, so an inner
+	* failure only rolls back the inner block (see begin_transaction for the full protocol).
+	*
+	* Example:
+	*   $result = DBi::transaction(function() use ($data) {
+	*       // ... perform inserts/updates ...
+	*       return $data->id;
+	*   });
+	*
+	* @param callable $fn - The work unit to execute; its return value is forwarded to the caller
+	* @return mixed - Whatever $fn() returns
+	* @throws RuntimeException When begin_transaction() or commit_transaction() fails
+	* @throws Throwable Re-throws any exception thrown by $fn() after rolling back
 	*/
 	public static function transaction( callable $fn ) : mixed {
 
@@ -365,8 +458,13 @@ abstract class DBi {
 
 	/**
 	* IN_TRANSACTION
-	* True when a Dédalo managed transaction is active.
-	* @return bool
+	* Reports whether Dédalo's managed transaction stack is active.
+	*
+	* Returns true at any nesting depth ≥ 1. Does not inspect the underlying
+	* PostgreSQL transaction status; only tracks the depth counter maintained
+	* by begin/commit/rollback_transaction(). Use pg_transaction_status() directly
+	* if you need to detect externally opened or aborted PostgreSQL blocks.
+	* @return bool - true when $tx_depth > 0 (a managed transaction is open)
 	*/
 	public static function in_transaction() : bool {
 
@@ -377,8 +475,14 @@ abstract class DBi {
 
 	/**
 	* GET_CONNECTION_STRING
-	* Builds a DB connection string
-	* @return string $connection_string
+	* Builds a libpq / psql-compatible connection string fragment from the Dédalo constants.
+	*
+	* The returned string contains -h (host) and optionally -p (port) and -U (user) flags
+	* suitable for shell invocation of psql, pg_dump, etc. It does NOT include a password
+	* or the database name (the commented-out line for the database name is intentionally
+	* left out — callers append the database as a positional argument). Only used by
+	* server-side tools that shell out to PostgreSQL utilities.
+	* @return string - Space-separated connection flags, e.g. "-h localhost -p 5432 -U dedalo"
 	*/
 	public static function get_connection_string() : string {
 
@@ -409,11 +513,24 @@ abstract class DBi {
 
 	/**
 	* _GETNEWCONNECTION
-	* Alias of _getConnection, but with param cache=false
-	* Get a new PostgreSQL database connection without reuse existing connections
-	* @return PgSql\Connection $pg_conn
-	* 	>=8.1.0	Returns an PgSql\Connection instance now; previously, a resource was returned.
-	* 	false on failure
+	* Opens a fresh PostgreSQL connection, bypassing the internal connection cache.
+	*
+	* Delegates to _getConnection() with $cache = false. Use this only when a
+	* dedicated independent session is required (e.g. advisory-lock helpers, long-running
+	* CLI tasks that must not share the per-request connection). Most callers should use
+	* _getConnection() instead.
+	*
+	* Note: the return type declaration includes bool to match the legacy alias contract,
+	* but in practice the method returns PgSql\Connection on success or false on failure.
+	* PHP ≥ 8.1 returns a PgSql\Connection object; older versions returned a resource.
+	*
+	* @param string|null $host = DEDALO_HOSTNAME_CONN
+	* @param string $user = DEDALO_USERNAME_CONN
+	* @param string $password = DEDALO_PASSWORD_CONN
+	* @param string $database = DEDALO_DATABASE_CONN
+	* @param string|int|null $port = DEDALO_DB_PORT_CONN
+	* @param string|null $socket = DEDALO_SOCKET_CONN
+	* @return PgSql\Connection|bool - Active connection on success, false on failure
 	*/
 	public static function _getNewConnection(
 		string|null		$host		= DEDALO_HOSTNAME_CONN,
@@ -441,15 +558,28 @@ abstract class DBi {
 
 	/**
 	* _GETCONNECTIONPDO
-	* Returns an PosgreSQL PDO instance on success, or false on failure.
+	* Returns a PDO connection to the PostgreSQL database, caching the instance within
+	* the function-static $pdo_conn variable for the lifetime of the PHP process.
+	*
+	* Use this accessor only for code paths that specifically require PDO (e.g. statement
+	* parameter binding via PDOStatement). All other code should prefer _getConnection()
+	* which uses the native pgsql extension and benefits from the class-level cache and
+	* the persistent-connection safety guard.
+	*
+	* The $socket parameter is accepted for signature parity with _getConnection() but is
+	* not currently wired into the PDO DSN. PDOExceptions are re-thrown unchanged so
+	* callers can catch them normally.
+	*
 	* @param string|null $host = DEDALO_HOSTNAME_CONN
 	* @param string $user = DEDALO_USERNAME_CONN
 	* @param string $password = DEDALO_PASSWORD_CONN
 	* @param string $database = DEDALO_DATABASE_CONN
-	* @param string|int|null $port = DEDALO_DB_PORT_CONN
-	* @param string|null $socket = DEDALO_SOCKET_CONN
-	* @param bool $cache = true
-	* @return PDO|bool $pg_pdo_conn
+	* @param string|int|null $port = DEDALO_DB_PORT_CONN - Included in DSN when non-empty
+	* @param string|null $socket = DEDALO_SOCKET_CONN - Accepted but not used in DSN
+	* @param bool $cache = true - Return the cached PDO instance when true
+	* @return PDO|bool - PDO instance on success; false is theoretically unreachable
+	*                    since PDOException is thrown on connection failure
+	* @throws \PDOException On connection failure
 	*/
 	public static function _getConnectionPDO(
 		string|null		$host		= DEDALO_HOSTNAME_CONN,
@@ -490,15 +620,25 @@ abstract class DBi {
 
 	/**
 	* _GETCONNECTION_MYSQL
-	* Returns an mysqli instance on success, or false on failure.
+	* Returns a MySQLi connection to the auxiliary MySQL/MariaDB database.
+	*
+	* Used only by legacy import/export paths and the diffusion subsystem that still
+	* target a MariaDB instance (distinct from Dédalo's primary PostgreSQL store).
+	* All new code should target PostgreSQL via _getConnection(). Caches the mysqli
+	* instance in a function-static variable for the process lifetime.
+	*
+	* Connection setup order: enable strict error reporting → init → set connect timeout
+	* (10 s) → set autocommit (required for InnoDB row-level saves) → real_connect() →
+	* set charset to utf8mb4.
+	*
 	* @param string|null $host = MYSQL_DEDALO_HOSTNAME_CONN
 	* @param string $user = MYSQL_DEDALO_USERNAME_CONN
 	* @param string $password = MYSQL_DEDALO_PASSWORD_CONN
 	* @param string $database = MYSQL_DEDALO_DATABASE_CONN
 	* @param int|null $port = MYSQL_DEDALO_DB_PORT_CONN
 	* @param string|null $socket = MYSQL_DEDALO_SOCKET_CONN
-	* @param bool $cache = true
-	* @return mysqli|false $mysqli
+	* @param bool $cache = true - Return the cached mysqli instance when true
+	* @return mysqli|false - Connected mysqli instance, or false on any connection failure
 	*/
 	public static function _getConnection_mysql(
 		string|null		$host		= MYSQL_DEDALO_HOSTNAME_CONN,
@@ -581,9 +721,14 @@ abstract class DBi {
 
 	/**
 	* CHECK_TABLE_EXISTS
-	* Verify is the given table already exists in Dédalo DB
-	* @param string $table
-	* @return bool
+	* Tests whether a table with the given name exists in the current database.
+	*
+	* Queries information_schema.tables (all schemas, not just 'public') using a
+	* pg_escape_literal()-quoted parameter to prevent SQL injection. Returns false
+	* both when the table does not exist and when the query itself fails; callers
+	* must not treat false as "definitely does not exist" after a log error.
+	* @param string $table - Table name to check (unquoted, raw)
+	* @return bool - true when the table exists, false when it does not or on query failure
 	*/
 	public static function check_table_exists( string $table ) : bool {
 
@@ -620,9 +765,15 @@ abstract class DBi {
 
 	/**
 	* GET_TABLES
-	* Returns the list of user tables in the current Dédalo database (public schema)
-	* @param PgSql\Connection|null $conn Optional connection. Defaults to cached connection
-	* @return array<string>|false List of table names sorted alphabetically, or false on error
+	* Returns the names of all user-defined base tables in the 'public' schema,
+	* sorted alphabetically.
+	*
+	* Excludes views and system schemas. Used by migration scripts and bootstrap
+	* routines to discover the current schema state before applying DDL changes.
+	* An optional $conn parameter allows callers to pass a dedicated connection
+	* (e.g. from _getNewConnection()) when they must not share the cached connection.
+	* @param PgSql\Connection|null $conn = null - Connection to use; defaults to cached connection
+	* @return array<string>|false - Sorted list of table name strings, or false on query failure
 	*/
 	public static function get_tables( ?PgSql\Connection $conn= null ) : array|false {
 
@@ -661,10 +812,15 @@ abstract class DBi {
 
 	/**
 	* CHECK_COLUMN_EXISTS
-	* Verify is the given column already exists in Dédalo DB
-	* @param string $table
-	* @param string $column
-	* @return bool
+	* Tests whether a specific column exists in the given table.
+	*
+	* Both $table and $column are safely escaped with pg_escape_literal() before being
+	* embedded in the SQL, which adds the required single-quote delimiters for
+	* information_schema comparisons. The query checks across all schemas (not only
+	* 'public') — a deliberate choice that mirrors check_table_exists.
+	* @param string $table - Table name (unquoted)
+	* @param string $column - Column name (unquoted)
+	* @return bool - true when the column exists, false when absent or on query failure
 	*/
 	public static function check_column_exists( string $table, string $column ) : bool {
 
@@ -707,10 +863,27 @@ abstract class DBi {
 
 	/**
 	* ADD_COLUMN
-	* Add a column to the given table in Dédalo DB
-	* @param string $table
-	* @param string $column
-	* @return bool
+	* Adds a column to an existing table if it does not already exist.
+	*
+	* Performs an idempotent check via check_column_exists() before issuing the ALTER TABLE.
+	* If the column already exists the method returns true immediately without touching the
+	* schema, making it safe to call during repeated migration runs.
+	*
+	* Table and column names are escaped with pg_escape_identifier() (double-quoted) to
+	* handle reserved words and mixed-case identifiers. The $type parameter is interpolated
+	* directly into the SQL without escaping — callers must supply a safe, validated type
+	* string (e.g. 'jsonb NULL', 'text NOT NULL DEFAULT \'\'').
+	*
+	* When $comment is non-empty a second COMMENT ON COLUMN statement is issued.
+	* A failure on the comment step is logged but does not roll back the column addition.
+	*
+	* (!) $type is NOT escaped. Never pass user-supplied input as $type.
+	*
+	* @param string $table - Target table name (unquoted)
+	* @param string $column - Column name to add (unquoted)
+	* @param mixed $type = 'jsonb NULL' - PostgreSQL column definition, e.g. 'text NOT NULL'
+	* @param mixed $comment = '' - Optional column comment; empty string skips the COMMENT step
+	* @return bool - true on success or when column already exists, false on ALTER failure
 	*/
 	public static function add_column( string $table, string $column, $type='jsonb NULL', $comment='' ) : bool {
 
@@ -768,10 +941,18 @@ abstract class DBi {
 
 	/**
 	* GET_INDEXES
-	* Get all Database indexes as:
-	* 	public	| matrix |	matrix_section_tipo_section_id
-	* 	public	| matrix |	matrix_relations_gin
-	* @return array|false $list
+	* Returns all user-defined indexes in the database (excluding pg_catalog and
+	* information_schema), as a flat list of plain objects.
+	*
+	* Each object in the returned array has four properties:
+	*   - schemaname  (string) e.g. 'public'
+	*   - tablename   (string) e.g. 'matrix'
+	*   - indexname   (string) e.g. 'matrix_section_tipo_section_id'
+	*   - indexdef    (string) the full CREATE INDEX statement as stored in pg_indexes
+	*
+	* Used by migration and health-check tools to verify that expected GIN/BTREE indexes
+	* are present and have the correct definition.
+	* @return array|false - List of index descriptor objects sorted by schema then table, or false on error
 	*/
 	public static function get_indexes() : array|false {
 
@@ -827,9 +1008,21 @@ abstract class DBi {
 
 	/**
 	* GET_FUNCTIONS
-	* Get all Database user functions as:
-	* 	public	f_unaccent
-	* @return array|false $list
+	* Returns all user-defined PostgreSQL functions, excluding built-ins and
+	* extension-owned functions (e.g. unaccent from the unaccent extension).
+	*
+	* The extension exclusion is achieved by joining pg_depend and checking that no
+	* matching pg_extension row exists (e ON d.refobjid = e.oid WHERE e.oid IS NULL).
+	* This prevents false positives from functions installed by pg_trgm, unaccent, etc.
+	*
+	* Each object in the returned array has:
+	*   - schemaname   (string) e.g. 'public'
+	*   - functionname (string) e.g. 'f_unaccent'
+	*   - arguments    (string) argument signature as returned by pg_get_function_identity_arguments
+	*
+	* Used by migration tools to check whether Dédalo's own stored functions (like
+	* f_unaccent) are installed before attempting to create or replace them.
+	* @return array|false - List of function descriptor objects sorted by schema then name, or false on error
 	*/
 	public static function get_functions() : array|false {
 
@@ -883,10 +1076,23 @@ abstract class DBi {
 
 
 	/**
-	* GET_CONSTRAINT_FROM_INDEX
-	* Get the constraint for one given index
-	* @param string $index_name
-	* @return array|false $constraint_name
+	* GET_CONSTRAINT_NAME_FROM_INDEX
+	* Returns the constraint(s) backed by the given index name.
+	*
+	* PostgreSQL primary-key and unique constraints are implemented as indexes. This method
+	* resolves the mapping by joining information_schema.table_constraints → pg_constraint →
+	* pg_class (by index OID). Useful when a migration needs to DROP CONSTRAINT by name but
+	* only knows the index name shown in pg_indexes.
+	*
+	* Each object in the returned array has:
+	*   - constraint_name (string) e.g. 'matrix_pkey'
+	*   - table_name      (string) e.g. 'matrix'
+	*
+	* Returns an empty array when no constraint is backed by that index (i.e. the index
+	* is a plain CREATE INDEX, not a constraint index).
+	*
+	* @param string $index_name - The pg_indexes.indexname value to look up
+	* @return array|false - List of constraint descriptor objects, or false on query failure
 	*/
 	public static function get_constraint_name_from_index( string $index_name ) : array|false {
 
@@ -937,16 +1143,25 @@ abstract class DBi {
 		}
 
 		return $list;
-	}//end get_constraint_from_index
+	}//end get_constraint_name_from_index
 
 
 
-	/*
+	/**
 	* REMOVE_COLUMN
-	* Removes a column from the given table in Dédalo DB
-	* @param string $table
-	* @param string $column
-	* @return bool
+	* Drops a column from the given table if it exists.
+	*
+	* Performs an idempotent existence check via check_column_exists() first.
+	* If the column is not present the method returns true immediately, making it safe
+	* to call from migration scripts on any schema version.
+	*
+	* Table and column names are escaped with pg_escape_identifier() (double-quoted) to
+	* handle reserved words. The DROP COLUMN is issued without CASCADE; if dependent
+	* objects exist (e.g. views, indexes on that column) PostgreSQL will return an error.
+	*
+	* @param string $table - Target table name (unquoted)
+	* @param string $column - Column to remove (unquoted)
+	* @return bool - true on success or when column does not exist, false on DROP failure
 	*/
 	public static function remove_column( string $table, string $column ): bool {
 
