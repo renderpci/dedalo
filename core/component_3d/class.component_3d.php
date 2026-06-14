@@ -1,16 +1,31 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_3D
-* Manages 3D media components in Dédalo.
+* Manages 3D model media components in Dédalo.
 *
-* Handles 3D file operations including:
-* - Upload, download, and deletion of 3D model files
-* - Quality level management for different 3D file variants
-* - MIME type resolution for 3D formats (GLB, GLTF, OBJ, etc.)
-* - File path and URL generation for 3D assets
+* Concrete implementation of the media component contract for three-dimensional
+* asset types (GLB, GLTF, OBJ, FBX, DAE, ZIP). Responsibilities include:
+* - Resolving config-driven quality levels ('original', 'web') and file extensions
+* - Generating server-side file paths and public URLs for each quality variant
+* - Handling the upload processing pipeline: validation → regeneration → data persistence
+* - Soft-deleting media files by moving them to a per-quality 'deleted' subfolder
+* - Restoring the most-recently-deleted version from the 'deleted' subfolder
+* - Managing a JPEG posterframe (thumbnail preview) alongside the 3D file
+* - Generating a thumb image from the posterframe via ImageMagick
+* - Providing atoms-based export values (cell_type 'img') compatible with the
+*   export_tabulator NDJSON protocol
 *
-* Extends component_media_common and implements component_media_interface
-* for standard media component behavior across the system.
+* Quality tiers (all defined in config):
+*   DEDALO_3D_QUALITY_ORIGINAL ('original') — raw upload, preserved without conversion
+*   DEDALO_3D_QUALITY_DEFAULT  ('web')      — optimised variant served to browsers
+*
+* Preferred delivery format: GLB (binary GLTF), returned by get_best_extensions().
+* The posterframe is always stored as JPEG (DEDALO_AV_POSTERFRAME_EXTENSION = 'jpg').
+*
+* Extends component_media_common, which provides shared media infrastructure
+* (path construction, file management, quality negotiation, etc.).
+* Implements component_media_interface to satisfy the interface contract expected
+* by upload tools, regeneration pipelines, and the API layer.
 *
 * @package Dédalo
 * @subpackage Core
@@ -22,6 +37,14 @@ class component_3d extends component_media_common implements component_media_int
 	/**
 	* CLASS VARS
 	*/
+		/**
+		* Public URL for the 3D media file served by this component.
+		* Null until resolved by the URL-building helpers. Populated lazily
+		* by the JSON controller (component_3d_json.php) for the active quality.
+		* File name pattern: '<section_tipo>_<section_id>_<order_id>.<ext>'
+		* Example: 'rsc35_rsc167_1.glb'
+		* @var ?string $url
+		*/
 		// url. File name formatted as 'tipo'-'order_id' like dd732-1
 		public ?string $url = null;
 
@@ -29,8 +52,11 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_AR_QUALITY
-	* Get the list of defined av qualities in Dédalo config
-	* @return array $ar_quality
+	* Returns every defined quality level for 3D files, as declared in config.
+	* Callers use this list to iterate over all variants when building, deleting,
+	* or inspecting quality-specific files.
+	* Config constant: DEDALO_3D_AR_QUALITY — example value: ['original', 'web'].
+	* @return array - ordered list of quality identifiers
 	*/
 	public function get_ar_quality() : array {
 
@@ -43,7 +69,10 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_DEFAULT_QUALITY
-	* @return string DEDALO_3D_QUALITY_DEFAULT
+	* Returns the quality level that is served to browser clients when no explicit
+	* quality is requested. For 3D assets this is the optimised 'web' variant
+	* (DEDALO_3D_QUALITY_DEFAULT = 'web').
+	* @return string - default quality identifier (e.g. 'web')
 	*/
 	public function get_default_quality() : string {
 
@@ -54,7 +83,10 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_ORIGINAL_QUALITY
-	* @return string $original_quality
+	* Returns the quality identifier for the unprocessed upload. The original
+	* file is kept verbatim; derivative qualities are built from it.
+	* Config constant: DEDALO_3D_QUALITY_ORIGINAL = 'original'.
+	* @return string - original quality identifier (e.g. 'original')
 	*/
 	public function get_original_quality() : string {
 
@@ -67,7 +99,11 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_NORMALIZED_AR_QUALITY
-	* @return array $normalized_ar_quality
+	* Returns the subset of quality levels that are considered 'normalized'
+	* (i.e. standardised, browser-ready variants). For 3D components this is
+	* only the default quality, because the original upload may be in any of
+	* several supported input formats and does not need to be normalized itself.
+	* @return array - normalized quality identifiers (currently just [default_quality])
 	*/
 	public function get_normalized_ar_quality() : array {
 
@@ -83,7 +119,10 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_EXTENSION
-	* @return string DEDALO_3D_EXTENSION from config
+	* Returns the primary file extension for 3D files served by this component.
+	* Falls back to DEDALO_3D_EXTENSION ('glb') when the instance property has not
+	* been explicitly set. GLB (binary GLTF) is the preferred delivery format.
+	* @return string - file extension without leading dot (e.g. 'glb')
 	*/
 	public function get_extension() : string {
 
@@ -94,7 +133,11 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
+	* Returns the full list of file extensions accepted during upload.
+	* Validation in the upload pipeline checks each incoming file against this list
+	* before saving. Config constant: DEDALO_3D_EXTENSIONS_SUPPORTED.
+	* Example: ['glb', 'gltf', 'obj', 'fbx', 'dae', 'zip'].
+	* @return array - accepted upload file extensions (without leading dots)
 	*/
 	public function get_allowed_extensions() : array {
 
@@ -107,8 +150,11 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_FOLDER
-	* Gets element directory from config
-	* @return string
+	* Returns the root storage sub-directory for 3D media files, relative to
+	* DEDALO_MEDIA_PATH / DEDALO_MEDIA_URL. Typically '/3d' (DEDALO_3D_FOLDER).
+	* The instance property $this->folder takes precedence when set, allowing
+	* per-instance overrides (e.g. during testing or migration).
+	* @return string - folder path segment (e.g. '/3d')
 	*/
 	public function get_folder() : string {
 
@@ -119,9 +165,11 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_BEST_EXTENSIONS
-	* Extensions list of preferable extensions in original or modified qualities.
-	* Ordered by most preferable extension, first is the best.
-	* @return array
+	* Returns the ordered list of preferred file extensions for 3D delivery,
+	* from most to least desirable. The first entry in the list is the ideal
+	* target format after conversion. Currently only GLB (binary GLTF) is listed
+	* because it has the widest WebGL/AR viewer support and good compression.
+	* @return array - preferred extensions in descending priority order
 	*/
 	public function get_best_extensions() : array {
 
@@ -132,12 +180,22 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_EXPORT_VALUE
-	* Atoms based export contract (see component_common::get_export_value).
-	* Single atom with the 3D model URL (edit mode) or posterframe URL,
-	* cell_type 'img'. URL absoluteness comes from the export_context
-	* (replaces the legacy $this->caller==='tool_export' switch)
-	* @param export_context|null $context = null
-	* @return export_value
+	* Atoms-based export contract (see component_common::get_export_value).
+	* Produces a single export_value atom containing the URL for the 3D asset
+	* (or its posterframe URL in non-edit modes), with cell_type 'img' so that
+	* tabular export renderers treat it as a displayable image/media cell.
+	*
+	* In 'edit' mode: uses the default quality URL for the 3D file itself.
+	* In other modes (list, tm, etc.): falls back to the posterframe (JPEG preview).
+	*
+	* URL absoluteness is driven by $context->absolute_urls, replacing the legacy
+	* $this->caller==='tool_export' switch that older media components used.
+	* Returns an empty-string URL (not null) when the component holds no data,
+	* to keep the atom count stable for flat-table column alignment.
+	*
+	* @param export_context|null $context = null - export configuration; a default
+	*   context is created when null is passed
+	* @return export_value - single scalar atom with the media URL and cell_type 'img'
 	*/
 	public function get_export_value( ?export_context $context=null ) : export_value {
 
@@ -175,8 +233,12 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_POSTERFRAME_FILE_NAME
-	*  like 'rsc35_rsc167_1.jpg'
-	* @return string $posterframe_file_name;
+	* Returns the bare filename (without directory path) for the JPEG posterframe
+	* associated with this component instance. The name is derived from the
+	* component's unique identifier so it is deterministic and collision-free.
+	* Format: '<section_tipo>_<section_id>_<order_id>.jpg'
+	* Example: 'rsc35_rsc167_1.jpg'
+	* @return string - posterframe file name including the .jpg extension
 	*/
 	public function get_posterframe_file_name() : string {
 
@@ -189,8 +251,13 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_POSTERFRAME_FILEPATH
-	* Get full file path
-	* @return string $posterframe_filepath
+	* Returns the absolute server filesystem path to the posterframe JPEG file.
+	* Path structure: DEDALO_MEDIA_PATH/<folder>/posterframe/<additional_path>/<filename>
+	* Example: '/var/www/dedalo/media/3d/posterframe/rsc35_rsc167_1.jpg'
+	*
+	* Note: this method does NOT verify that the file exists; callers requiring
+	* existence checks should use file_exists() on the returned path.
+	* @return string - absolute path to the posterframe file
 	*/
 	public function get_posterframe_filepath() : string {
 
@@ -208,10 +275,21 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_POSTERFRAME_URL
-	* @param bool $test_file = true
-	* @param bool $absolute = false
-	* @param bool $avoid_cache = false
-	* @return string|null $posterframe_url
+	* Returns the public URL for the JPEG posterframe of this 3D asset.
+	* URL structure mirrors get_posterframe_filepath() but uses DEDALO_MEDIA_URL.
+	*
+	* Parameters allow callers to tailor the URL to their use case:
+	*   $test_file   — when true, returns null instead of an invalid URL if the
+	*                  file is absent (e.g. to suppress broken <img> tags)
+	*   $absolute    — when true, prepends DEDALO_PROTOCOL + DEDALO_HOST so the
+	*                  URL is usable in e-mail, export, or cross-origin contexts
+	*   $avoid_cache — when true, appends '?t=<timestamp>' to bust browser caches
+	*                  after an updated posterframe has been generated
+	*
+	* @param bool $test_file = false - return null when the file does not exist
+	* @param bool $absolute = false - prepend protocol + host to make URL absolute
+	* @param bool $avoid_cache = false - append cache-busting query parameter
+	* @return string|null - posterframe URL, or null when test_file=true and file absent
 	*/
 	public function get_posterframe_url(bool $test_file=false, bool $absolute=false, bool $avoid_cache=false) : ?string {
 
@@ -247,16 +325,19 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* CREATE_POSTERFRAME
-	* Creates a image 'posterframe' from the default quality of current video file
+	* Intended to generate a JPEG posterframe from a frame of the 3D asset at
+	* the given playback time, mirroring the pattern used by component_av.
 	*
-	* @param float $current_time
-	* 	A double-precision floating-point value indicating the current playback time in seconds.
-	* 	From HML5 video element command 'currentTime'
-	* @param string|null $target_quality
-	* @param array|string|null $ar_target
-	* 	Optional array value with forced target destination path and file name
-	* @return bool $command_response
-	* 	FFMPEG terminal command response
+	* (!) NOT YET IMPLEMENTED for 3D assets. 3D files are not time-based media
+	* and do not have a concept of 'currentTime' in the same way video does.
+	* This stub exists to satisfy the component_media_interface contract and to
+	* reserve the API surface for a future render-based posterframe pipeline.
+	* Returns false unconditionally; callers must handle this gracefully.
+	*
+	* @param float $current_time - playback position in seconds (HTML5 currentTime)
+	* @param string|null $target_quality = null - quality variant to read source from
+	* @param array|string|null $ar_target = null - optional forced target path/filename
+	* @return bool - always false (not implemented)
 	*/
 	public function create_posterframe( $current_time, ?string $target_quality=null, array|string|null $ar_target=null ) : bool {
 
@@ -272,8 +353,14 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* DELETE_POSTERFRAME
-	* Removes the file 'posterframe' from the disk
-	* @return bool
+	* Removes the posterframe JPEG file from disk. Called when the parent section
+	* or the 3D component itself is permanently cleaned up (not during soft-delete,
+	* which uses remove_component_media_files instead).
+	*
+	* Returns false (with a debug log) rather than throwing when the file is already
+	* absent or when the unlink() call fails, so callers can inspect and continue
+	* a broader deletion sequence.
+	* @return bool - true on successful removal, false when file is missing or deletion fails
 	*/
 	public function delete_posterframe() : bool {
 
@@ -306,14 +393,22 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* CREATE_THUMB
-	* Creates a image 'thumb' from the current posterframe file.
-	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
-	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
-	* So I modified my delegates.xml file, which in my case is located in [i]/usr/local/Cellar/imagemagick/6.9.3-0_1/etc/ImageMagick-6/delegates.xml[/] and replaced
-	* command="&quot;gs&quot;
-	* with
-	* command="&quot;/usr/local/bin/gs&quot;
-	* @return bool
+	* Generates a thumbnail image for this 3D asset by passing the existing
+	* posterframe JPEG through ImageMagick. The thumb is written to the path
+	* returned by get_media_filepath($thumb_quality, $thumb_extension).
+	*
+	* Prerequisites: the posterframe file must already exist on disk; if it does
+	* not, this method returns false without creating any file.
+	*
+	* Fallback guard: if the global constant DEDALO_QUALITY_THUMB is not yet
+	* defined in config (e.g. running from an older installation), a local
+	* define with value 'thumb' is emitted so the rest of the method can proceed.
+	*
+	* OSX / Apache note (kept from original): Brew ImageMagick may not find
+	* Ghostscript through Apache's restricted PATH. Fix by editing
+	* ImageMagick's delegates.xml and replacing "&quot;gs&quot;" with the
+	* absolute path "/usr/local/bin/gs".
+	* @return bool - true when the thumb was generated successfully
 	*/
 	public function create_thumb() : bool {
 
@@ -355,14 +450,28 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
-	* "Remove" (rename and move files to deleted folder) all media file linked to current component (all quality versions)
-	* Is triggered wen section that contains media elements is deleted
-	* @see section:remove_section_media_files
+	* Soft-deletes all (or a specified subset of) quality variants of the 3D media
+	* files by renaming and moving them into a per-quality 'deleted' subfolder.
+	* Optionally also soft-deletes the associated posterframe JPEG.
 	*
-	* @param array $ar_quality=[]
-	* @param string|null $extension = null
-	* @param bool $remove_posterframe=true
-	* @return bool $result
+	* Called automatically by section::remove_section_media_files() when a section
+	* containing 3D components is deleted. Direct callers (e.g. the API action for
+	* deleting an individual quality) should pass $remove_posterframe=false to
+	* preserve the preview image while removing only one quality variant.
+	*
+	* The posterframe is moved to:
+	*   DEDALO_MEDIA_PATH/<folder>/posterframe/<additional_path>/deleted/
+	*   renamed to: <id>_deleted_<YYYY-MM-DD_HHmm>.<DEDALO_AV_POSTERFRAME_EXTENSION>
+	*
+	* Returns false on any filesystem error (directory creation or rename failure),
+	* propagating failure up to callers that manage broader deletion sequences.
+	*
+	* @see section::remove_section_media_files
+	* @param array $ar_quality = [] - quality levels to remove; empty array removes all
+	* @param string|null $extension = null - when set, removes only the file with this
+	*   extension within the given quality; otherwise all extensions are removed
+	* @param bool $remove_posterframe = true - also soft-delete the posterframe JPEG
+	* @return bool - true when all requested files were moved successfully
 	*/
 	public function remove_component_media_files( array $ar_quality=[], ?string $extension=null, bool $remove_posterframe=true ) : bool {
 
@@ -415,10 +524,24 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* RESTORE_COMPONENT_MEDIA_FILES
-	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
-	* Is triggered when tool_time_machine recover a section
+	* Recovers the most-recently-deleted version of the 3D media files and their
+	* posterframe from the 'deleted' subdirectory, reversing a prior call to
+	* remove_component_media_files(). Called by tool_time_machine when rolling back
+	* a section to a previous snapshot.
+	*
+	* The posterframe glob pattern is: <deleted_dir>/<id>_*.<jpg>
+	* Files are sorted with natsort() (natural order) so that the last element
+	* after end() is the most recently timestamped deletion.
+	*
+	* Logs a WARNING (and continues) rather than throwing when no deleted
+	* posterframe file is found, because the 3D model files may be restorable
+	* even if the posterframe was never created.
+	*
+	* (!) Always returns true regardless of partial posterframe restore failure,
+	* leaving error diagnosis to the caller via debug logs.
+	*
 	* @see tool_time_machine::recover_section_from_time_machine
-	* @return bool
+	* @return bool - always true (errors are logged, not propagated as exceptions)
 	*/
 	public function restore_component_media_files() : bool {
 
@@ -467,24 +590,32 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* TODO: modify this to transform input file into .glb
-	* Note that this is the last method called in a sequence started on upload file.
-	* The sequence order is:
-	* 	1 - dd_utils_api::upload
-	* 	2 - tool_upload::process_uploaded_file
-	* 	3 - component_media_common::add_file
-	* 	4 - component:process_uploaded_file
-	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
-	* @param object|null $file_data
-	*	Data from trigger upload file
-	* Format:
-	* {
-	*     "original_file_name": "my_video.mp4",
-	*     "full_file_name": "test81_test65_2.mp4",
-	*     "full_file_path": "/mypath/media/av/original/test81_test65_2.mp4"
-	* }
-	* @param object|null  $process_options=null
-	* @return object $response
+	* Entry point for post-upload processing of a newly received 3D file.
+	* This is the final step in the upload pipeline:
+	*   1. dd_utils_api::upload         — receives the HTTP multipart upload
+	*   2. tool_upload::process_uploaded_file — validates, moves to temp path
+	*   3. component_media_common::add_file  — renames to normalized media path
+	*   4. component_3d::process_uploaded_file (this method) — runs conversion
+	*
+	* When the uploaded file targets the 'original' quality, this method records
+	* upload metadata (original filename, normalized name, upload date) into the
+	* component's stored data at index 0 before triggering regeneration.
+	*
+	* regenerate_component() drives format conversion: if the file is not already
+	* GLB, it is kept as-is and the 'web' quality GLB is built on the next
+	* regeneration pass using the registered converter tools (gltfpack, FBX2glTF,
+	* COLLADA2GLTF).
+	*
+	* (!) TODO: direct GLB conversion from non-GLB inputs at upload time has not
+	* been implemented yet. Non-GLB originals are stored but the 'web' GLB must
+	* be generated via a separate regeneration call.
+	*
+	* @param object|null $file_data = null - upload metadata object with properties:
+	*   - string $original_file_name  — user-provided filename, e.g. "my_model.glb"
+	*   - string $full_file_name      — normalized name, e.g. "test175_test65_1.glb"
+	*   - string $full_file_path      — absolute path to the saved file
+	* @param object|null $process_options = null - reserved for future pipeline flags
+	* @return object $response - stdClass with bool $result and string $msg
 	*/
 	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
@@ -579,14 +710,20 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* DELETE_FILE
-	* Remove quality version moving the file to a deleted files dir
-	* @see component_3d->remove_component_media_files
-	* @param string $quality
-	* 	Quality to delete as '1.5MB'
-	* @param string|null $extension=null
-	* 	Optional extension as 'avif'. On empty, all quality files will be deleted,
-	* 	else only the selected file in current quality will be deleted
-	* @return object $response
+	* Soft-deletes a single quality variant of the 3D media file for this component
+	* by moving it to the 'deleted' folder (via remove_component_media_files).
+	* The component data is persisted after deletion via Save() so that the
+	* file-info list reflected in the JSON API remains accurate.
+	* Also records the deletion event in the activity log (logger::$obj['activity']).
+	*
+	* The posterframe is deliberately NOT removed here ($remove_posterframe=false),
+	* because deleting one quality variant should not invalidate the preview image.
+	*
+	* @see component_3d::remove_component_media_files
+	* @param string $quality - quality level to delete, e.g. '1.5MB'
+	* @param string|null $extension = null - when set, removes only the file with
+	*   this extension; otherwise all files in the given quality are removed
+	* @return object $response - stdClass with bool $result, string $msg, array $errors
 	*/
 	public function delete_file( string $quality, ?string $extension=null ) : object {
 
@@ -641,9 +778,17 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* GET_MEDIA_ATTRIBUTES
-	* Read file and get attributes using ffmpeg
-	* @param string $file_path
-	* @return object|null $media_attributes
+	* Intended to read the given file and extract technical metadata (dimensions,
+	* triangle count, format details, etc.) using an external tool equivalent to
+	* ffmpeg for video. Returns null unconditionally.
+	*
+	* (!) NOT YET IMPLEMENTED for 3D assets. The commented-out body shows the
+	* intended call to ffmpeg::get_media_attributes(), which is not applicable
+	* to 3D formats. A dedicated 3D analysis tool (e.g. gltf-transform inspect)
+	* would be needed.
+	*
+	* @param string $file_path - absolute path to the 3D file to inspect
+	* @return object|null - always null (not implemented)
 	*/
 	public function get_media_attributes(string $file_path) : ?object {
 
@@ -662,11 +807,30 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $options
-	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	* Static migration hook called by the data-version upgrade runner when the
+	* stored data format needs to be transformed to match a new schema version.
+	* Receives an $options object describing the target version and the affected
+	* record coordinates.
+	*
+	* For component_3d, no data-version migrations have been defined yet, so this
+	* method always falls through to the default switch case and returns result=0,
+	* signalling to the runner that this component has nothing to do for the given
+	* version.
+	*
+	* Return code contract:
+	*   0 — component has no migration for this version (skip)
+	*   1 — migration was applied successfully
+	*   2 — migration was attempted but data was already at the target shape
+	*
+	* @param object $options - migration context:
+	*   - array  $update_version  — version segments, e.g. ['7','0','1']
+	*   - mixed  $data_unchanged  — raw pre-migration datum for comparison
+	*   - mixed  $reference_id    — ID of the record being migrated
+	*   - string $tipo            — ontology tipo of the component
+	*   - mixed  $section_id      — section record identifier
+	*   - string $section_tipo    — ontology tipo of the parent section
+	*   - string $context         — caller context tag, default 'update_component_data'
+	* @return object $response - stdClass with int $result (0/1/2) and string $msg
 	*/
 	public static function update_data_version(object $options) : object {
 

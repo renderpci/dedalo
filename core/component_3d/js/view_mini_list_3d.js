@@ -11,7 +11,12 @@
 
 /**
 * VIEW_MINI_LIST_3D
-* Manages the component's logic and appearance in client side
+* View module for the 3D component in "mini list" display mode.
+*
+* Used when a section record is displayed as a compact thumbnail entry inside
+* a relation list or portal. Exposes a single static method, `render`, which
+* builds the mini wrapper node. The constructor itself is a no-op stub
+* (returns true) following the Dédalo convention for view namespace objects.
 */
 export const view_mini_list_3d = function() {
 
@@ -22,10 +27,25 @@ export const view_mini_list_3d = function() {
 
 /**
 * RENDER
-* Render node to be used in this view
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Build and return the mini-list thumbnail node for a 3D component.
+*
+* Resolution order for the displayed image (most-specific wins):
+*   1. 'thumb' quality entry from data.entries, when file_exist === true.
+*   2. data.posterframe_url (a server-generated static snapshot of the model),
+*      with a cache-busting timestamp query parameter appended.
+*   3. page_globals.fallback_image — the site-wide placeholder image URL.
+*
+* A runtime 'error' listener on the <img> element replaces a broken src with
+* the fallback image, preventing broken-image icons in the UI.
+*
+* The wrapper receives the 'media' CSS class (in addition to the standard
+* 'mini' and model-specific classes added by build_wrapper_mini), which
+* activates media-specific layout rules in the stylesheet.
+*
+* @param {Object} self    - Component instance. Expected shape:
+*                           { data: { entries: Array, posterframe_url: string|null } }
+* @param {Object} options - Reserved for future use; not consumed by this render.
+* @returns {Promise<HTMLElement>} Resolves with the populated <span> wrapper element.
 */
 view_mini_list_3d.render = async function(self, options) {
 
@@ -44,6 +64,8 @@ view_mini_list_3d.render = async function(self, options) {
 		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
 
 	// posterframe (used as fallback)
+	// Cache-bust the posterframe URL with a timestamp so stale browser caches
+	// don't serve the old snapshot after a new posterframe has been generated.
 		const posterframe_url = data.posterframe_url
 			? data.posterframe_url + '?t=' + (new Date()).getTime()
 			: page_globals.fallback_image
@@ -55,6 +77,9 @@ view_mini_list_3d.render = async function(self, options) {
 			: posterframe_url
 
 	// image
+	// The error handler catches network errors and missing files, replacing the
+	// broken src with the global fallback only once (guard avoids an infinite loop
+	// if the fallback itself is unreachable).
 		const image = ui.create_dom_element({
 			element_type	: 'img',
 			parent			: wrapper
