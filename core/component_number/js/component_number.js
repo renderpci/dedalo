@@ -4,6 +4,46 @@
 
 
 
+/**
+* COMPONENT_NUMBER
+* Dédalo client-side component for numeric fields (integers and floating-point numbers).
+*
+* Responsibilities:
+* - Holds one or more numeric values per record in `this.data.entries`, where each entry
+*   is a plain object `{ id: number|null, value: number|null }`.  Numbers are non-translatable:
+*   the component always works with `lang = DEDALO_DATA_NOLAN` and never exposes a language
+*   selector or `tool_lang`.
+* - Cleans raw user input on every keystroke via `clean_value()` (normalises comma → dot,
+*   strips non-numeric characters) and applies the configured type+precision contract on the
+*   `change` event via `fix_number_format()`.
+* - Exposes `get_steps()` so edit views can set the HTML `<input step>` attribute to a
+*   value consistent with the configured precision (e.g. `0.01` for precision 2).
+* - Delegates rendering to per-mode sub-modules:
+*     - `render_edit_component_number`   → edit / line / mini / print views
+*     - `render_list_component_number`   → list / tm (Time Machine reuses list)
+*     - `render_search_component_number` → search (preserves `...` range operator)
+* - Inherits the full component lifecycle (init → build → render → save → destroy) and
+*   all data-mutation methods from `component_common` and `common`.
+*
+* Data shape (`this.data.entries`): Array of plain objects
+*   `{ id: number|null, value: number|null }`
+* There is no `lang` key because the component is non-translatable.
+*
+* Format contract (`context.properties`):
+*   `type`      – `"int"` | `"float"` (default `"float"`): controls how values are rounded.
+*   `precision` – integer number of decimal places (default `2`); only relevant when `type`
+*                 is `"float"`.
+*
+* (!) Legacy ontology before 04/07/2024 used the wrong object form `"type":{"float":2}`.
+* Both `get_format_number()` and the PHP class carry explicit guards for this shape.
+*
+* @see component_common   Generic lifecycle, save, change_value, mode-switch.
+* @see render_edit_component_number   Edit-mode view dispatch and `change_handler`.
+* @see render_list_component_number   List / TM view dispatch.
+* @see render_search_component_number  Search-filter view (range `...` operator preserved).
+* @see docs/core/components/component_number.md  Full data-model and properties reference.
+*/
+
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -13,6 +53,17 @@
 
 
 
+/**
+* COMPONENT_NUMBER
+* Constructor. Declares all instance properties used throughout the component lifecycle.
+* Actual values are populated by `component_common.prototype.init()` at mount time.
+*
+* Property notes:
+* - `minimum_width_px` – CSS minimum-width hint (in pixels) read by the view layer to
+*   prevent the component from collapsing in compressed grid layouts. The number component
+*   has a narrower default (80 px) than text-based components because numeric values are
+*   shorter.
+*/
 export const component_number = function(){
 
 	this.id
@@ -39,7 +90,10 @@ export const component_number = function(){
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend component_number with shared prototype methods from component_common and common.
+* No own implementations for the delegated methods — all logic lives in the shared
+* prototypes.  The `tm` (Time Machine) render mode intentionally reuses the standard list
+* renderer unchanged, so numbers display consistently in both list and TM contexts.
 */
 // prototypes assign
 	// lifecycle
@@ -69,16 +123,30 @@ export const component_number = function(){
 
 /**
 * GET_FORMAT_NUMBER
-* Get number formatted as properties say int || float.
-* By default the number is a int
-* When float is defined, it say the precision of the decimals as:
-*	{
-*		"type": "float",
-*		"precision": 16
-*	}
-* Example with int: input 85,35 | output 85
-* Example with float:2 : input 85.3568 | output 85.36
-* @return number format_number
+* Applies the ontology-configured type/precision contract to a numeric value and returns
+* the rounded result as a JavaScript number.  This is the canonical formatting step shared
+* by `fix_number_format()` (input parsing pipeline) and, on the PHP side, by
+* `set_format_form_type()`.
+*
+* Behaviour by `type`:
+*   - `"float"` (default): rounds to `precision` decimal places using `Number.toFixed()`,
+*     then converts back to a native JS number (e.g. `85.3568` with precision 2 → `85.36`).
+*   - `"int"` (or any other value): calls `Number.toFixed()` with zero decimals, then
+*     converts to a native JS number (e.g. `85.35` → `85`).
+*
+* Default values when `context.properties` is absent or incomplete:
+*   `type`      → `"float"`
+*   `precision` → `2`
+*
+* (!) Note: ontology created before 04/07/2024 used an incorrect nested-object form like
+* `"type": {"float": 2}`.  This function reads `context.properties?.type` as a string; the
+* legacy shape would yield `[object Object]` for `type`, which falls through to the `int`
+* path (toFixed(0)).  If a number component rounds unexpectedly, inspect the ontology node.
+*
+* @param {Object} self   - The component_number instance (`this` context from the caller).
+* @param {number} number - The numeric value to format.  Must pass `isNaN` check before
+*   this function is called; returns `null` if `isNaN(number)` is true.
+* @returns {number|null} The rounded number, or `null` when the input is NaN.
 */
 const get_format_number = function ( self, number ) {
 
@@ -106,10 +174,26 @@ const get_format_number = function ( self, number ) {
 
 /**
 * CLEAN_VALUE
-* Remove and changes non accepted chars.
-* Example: Change 17,2 to 17.2
-* @param string|number|null value
-* @return string|null cleaned
+* Normalises raw user input to a string that contains only the characters accepted by
+* numeric parsing: digits `0-9`, one decimal dot `.`, and a leading minus sign `-`.
+* This is called on every `input` event (live, keystroke-by-keystroke) so the user sees
+* their input corrected in real time without waiting for the `change` event.
+*
+* Transformations applied in order:
+*  1. Cast to string (safe even if `value` is a number, null, or undefined).
+*  2. Replace all commas with dots (Spanish/French `17,2` → `17.2`).
+*  3. Remove every character that is not `0-9`, `.`, or `-`.
+*  4. Return `null` if the result is empty (no numeric characters at all).
+*  5. Allow only one minus sign and only at the start of the string (strips
+*     embedded or trailing hyphens).
+*
+* (!) Multiple dots are intentionally NOT collapsed here because the search mode uses the
+* `...` range operator (e.g. `10...20`).  Collapsing multiple dots is deferred to
+* `fix_number_format()`, which is only invoked in edit mode on the `change` event.
+*
+* @param {string|number|null} value - Raw value from the input element.
+* @returns {string|null} Cleaned numeric string (may still contain multiple dots), or
+*   `null` when the input contained no valid numeric characters.
 */
 component_number.prototype.clean_value = function( value ) {
 
@@ -143,11 +227,32 @@ component_number.prototype.clean_value = function( value ) {
 
 /**
 * FIX_NUMBER_FORMAT
-* Force unified number format.
-* Format used is floating point ( , used in Spanish or other languages are avoided, only . will be valid for decimals)
-* Example: Change 17,2 to 17.2
-* @param string value
-* @return number|null new_number
+* Full parsing pipeline: takes a raw user string (possibly already partly cleaned by
+* `clean_value()`) and returns a properly formatted JavaScript number according to the
+* ontology type/precision contract, or `null` when the input is not a valid number.
+*
+* This method is called on the `change` event (when the user leaves the input field), NOT
+* on every keystroke.  The result is what gets persisted via `change_value()`.
+*
+* Pipeline stages:
+*  1. Guard: return `null` for `null`, `undefined`, or `""`.
+*  2. `clean_value()` — normalise separators and strip forbidden characters.
+*     Returns `null` for non-numeric input; guarded before `split()` to avoid a TypeError
+*     (UIUX-02: `null.split('.')` threw on previously unsanitised input).
+*  3. Multiple-dot collapse — keeps only the first dot as the decimal separator
+*     (e.g. `3.1.4` → `3.14`); the search range operator `1...7` is never passed here
+*     because search mode skips `fix_number_format` entirely.
+*  4. `Number()` conversion — produces NaN for edge cases; guarded and returns `null`.
+*  5. `get_format_number()` — rounds to the configured type/precision.  Its result is
+*     checked for NaN as a safety net (UIUX-02 guard).
+*
+* The decimal separator on output is always `.` (JS standard).  Display-layer
+* internationalisation (e.g. thousands separator, localised decimal comma) is applied in
+* the view, never persisted.
+*
+* @param {string|number|null} value - Raw or partly-cleaned input value.
+* @returns {number|null} Parsed and formatted number, or `null` when `value` cannot be
+*   interpreted as a valid number.
 */
 component_number.prototype.fix_number_format = function( value ) {
 
@@ -207,7 +312,25 @@ component_number.prototype.fix_number_format = function( value ) {
 
 /**
 * GET_STEPS
-* @return number steps
+* Derives the HTML `<input step>` attribute value from the ontology type/precision
+* configuration so that the browser's native number-spinner increments in a quantity
+* that matches the component's precision contract.
+*
+* Algorithm:
+*   - For `type: "float"` with `precision N`: produces `"0.0…01"` (N-1 zeros, then "1"),
+*     e.g. precision 2 → step `0.01`, precision 4 → step `0.001`.
+*   - For `type: "int"`: produces step `1` (integer increments).
+*
+* Implementation note: `base = 0` is formatted with `toFixed(precision - 1)` to get the
+* leading `"0."` and the correct number of zeros, then `"1"` is concatenated.  The result
+* is cast to `Number` so the caller receives a numeric primitive (e.g. `0.01`, not the
+* string `"0.01"`).
+*
+* Reads directly from `self.context.properties` (not the optional-chain form used by
+* `get_format_number`), so `context.properties` must exist before this method is called.
+*
+* @returns {number} The step value to assign to the input element (e.g. `0.01` for
+*   `precision: 2`, or `1` for `type: "int"`).
 */
 component_number.prototype.get_steps = function() {
 
