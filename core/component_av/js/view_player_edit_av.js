@@ -111,7 +111,7 @@ export const get_content_data_player = function(options) {
 					? null
 					:(self.fragment.tc_out)
 						? 'vend='+ self.fragment.tc_out
-						: 'vend='+ self.video.duration;
+						: 'vend='+ (self.video?.duration ?? 0);
 
 				const fragment_url = (tc_in)
 					? tc_in + '&' + tc_out
@@ -285,8 +285,16 @@ const get_av_control_buttons = (self) => {
 			parent			: fragment,
 			inner_html		: self.get_current_tc()
 		})
-		self.video.addEventListener('timeupdate', async () =>{
-			av_smpte.innerHTML = self.get_current_tc();
+		// throttle DOM updates and use textContent (no HTML parse) to avoid
+		// excessive reflows during playback (timeupdate can fire many times/sec)
+		let last_tc_update = 0
+		self.video.addEventListener('timeupdate', () =>{
+			const now = performance.now()
+			if (now - last_tc_update < 100) {
+				return
+			}
+			last_tc_update = now
+			av_smpte.textContent = self.get_current_tc();
 		})
 
 	// av_minus_10_seg. Go to 10 seconds before of the current time ( - 10 seconds )
