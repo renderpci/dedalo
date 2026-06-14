@@ -70,7 +70,13 @@
 		const data 		  = event.dataTransfer.getData('text/plain') // element thats move
 		const wrap_target = obj // element on user leaves source wrap
 
-		const data_parse = JSON.parse(data)
+		let data_parse
+		try {
+			data_parse = JSON.parse(data)
+		} catch (error) {
+			console.error('on_drop: invalid drag data JSON', data, error)
+			return false
+		}
 		const path = data_parse.path
 
 		const section_id = data_parse.section_id
