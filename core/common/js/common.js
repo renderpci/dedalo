@@ -18,6 +18,25 @@
 
 /**
 * COMMON
+* Base constructor and shared prototype methods for every Dédalo UI instance
+* (components, sections, areas, portals).
+*
+* All Dédalo UI elements extend this base via prototype assignment. The lifecycle
+* for every instance follows a strict state machine:
+*
+*   init → build → render → (refresh cycles: destroy deps → build → render) → destroy
+*
+* Status values: 'initializing' → 'initialized' → 'building' → 'built'
+*                → 'rendering' → 'rendered' → 'destroyed'
+*
+* Exported prototype methods (mixed into every Dédalo element class):
+*   init, build, render, refresh, destroy, build_rqo_show, build_rqo_search,
+*   load_data_from_datum, get_section_elements_context, calculate_component_path
+*
+* Exported stand-alone helpers:
+*   set_context_vars, create_source, get_columns_map, get_ar_inverted_paths,
+*   load_data_debug, render_tree_data, validate_tipo, get_fallback_value,
+*   push_browser_history, build_autoload, set_environment, update_process_status
 */
 export const common = function(){
 
@@ -28,10 +47,39 @@ export const common = function(){
 
 /**
 * INIT
-* @param object options
-* Generic agnostic init function created to preserve calls unity.
-* (!) For components, remember to use always common.init()
-* @return bool true
+* Shared initializer for all Dédalo instances (components, sections, areas, portals).
+* Seeds every well-known property from `options` to a consistent baseline so that
+* downstream lifecycle methods (build, render) can assume they exist.
+*
+* (!) For components, always call component_common.init() — not this function directly.
+* component_common.init() calls this internally and adds component-specific setup on top.
+*
+* Sets `this.is_init = true` as a one-shot guard: a second call to init() on the
+* same instance is treated as a programming error and logs a console error.
+*
+* Properties seeded here (all sourced from `options`):
+*   model, tipo, section_tipo, section_id, mode, lang, type,
+*   context, data, datum, rqo, properties, view, render_level,
+*   caller, standalone, events_tokens (empty array), ar_instances (empty array),
+*   node (null — populated during render).
+*
+* @param {Object} options - Initialization options bag
+* @param {string} options.model - Component/section class name, e.g. 'component_input_text'
+* @param {string} options.tipo - Ontology tipo of this instance, e.g. 'dd345'
+* @param {string} options.section_tipo - Ontology tipo of the parent section, e.g. 'oh1'
+* @param {string|number} options.section_id - Record identifier within the section
+* @param {string} options.mode - Render mode: 'edit', 'list', 'search', 'tm', etc.
+* @param {string} options.lang - Active language tag, e.g. 'lg-eng'
+* @param {string} [options.type] - Instance type classifier: 'component', 'section', 'area', etc.
+* @param {Object|null} [options.context=null] - Server-resolved context (properties, tools, permissions, etc.)
+* @param {Object|null} [options.data=null] - Resolved component data for the current record
+* @param {Array|null} [options.datum=null] - Full datum array including dependent data (portals, etc.)
+* @param {Object} [options.rqo] - Pre-built request query object for this instance
+* @param {Object} [options.properties] - Instance-specific configuration properties
+* @param {string} [options.view] - View variant to use, e.g. 'default', 'list'
+* @param {Object|null} [options.caller=null] - Parent instance that owns this instance
+* @param {boolean} [options.standalone=true] - Whether the instance manages its own lifecycle
+* @returns {Promise<boolean>} true on success; false if the instance was already initialized
 */
 common.prototype.init = async function(options) {
 
@@ -103,11 +151,21 @@ common.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Generic agnostic build function created to maintain
-* unity of calls.
-* (!) For components, remember use always component_common.build()
-* @param bool autoload = false
-* @return bool
+* Shared build stub for instances that do not override this method.
+* Most concrete classes (component_common, section, area, portal) replace this with
+* their own `build` that calls the API, hydrates context/data, and sets up events.
+*
+* This base version simply transitions status from 'building' → 'built' and publishes
+* the 'built_<id>' event so any in-progress render() waiters can continue.
+*
+* Concurrency guard: if `status === 'building'`, returns the existing `_build_waiter`
+* Promise so multiple concurrent callers share one build result instead of racing.
+*
+* (!) For components, always call component_common.build() — not this base directly.
+*
+* @param {boolean} [autoload=false] - When true, instructs the overriding build to
+*   fetch context and data from the API. Ignored in this base stub.
+* @returns {Promise<boolean>} Resolves to true once the instance reaches 'built' status
 */
 common.prototype.build = async function(autoload=false) {
 
@@ -137,9 +195,28 @@ common.prototype.build = async function(autoload=false) {
 
 /**
 * SET_CONTEXT_VARS
-* Set getters and setter to access context properties
-* type, label, tools, fields_separator, permissions
-* @return bool true
+* Wire up `self.context` properties as live getter/setter pairs and establish
+* the instance-level `show_interface` configuration object.
+*
+* Called once per instance during the `build` phase, after context has been
+* loaded from the API. Its key responsibilities:
+*
+* 1. Copy top-level context scalars (type, label, tools) onto `self`.
+* 2. Replace `self.view` and `self.properties` with Object.defineProperty
+*    getter/setters backed by `self.context`, so writes to `self.view` are
+*    immediately reflected in the context object (and vice-versa).
+* 3. Build `self.show_interface` by merging the component's context/request-config
+*    override with `default_show_interface`. Any key absent in the override is
+*    filled from the default, so callers can rely on every flag being present.
+* 4. Attach `self.rqo_test` as a lazy getter (via Object.defineProperty) that
+*    constructs a minimal debug RQO on first access without eagerly computing it.
+*
+* The `view` / `properties` / `permissions` proxy pattern ensures that changing
+* `self.view = 'list'` inside a render method also updates `self.context.view`,
+* keeping the context object as the single source of truth for serialization.
+*
+* @param {Object} self - The Dédalo instance to configure (component, section, etc.)
+* @returns {boolean} true
 */
 export const set_context_vars = function(self) {
 
@@ -275,12 +352,40 @@ export const set_context_vars = function(self) {
 
 /**
 * RENDER
-* @param object options = {}
-* {
-*   render_level : level of deep that is rendered (full | content)
-* }
-* @return HTMLElement|bool node
-*	node first DOM node stored in instance 'node' array
+* Main render dispatcher for all Dédalo UI instances. Delegates to the
+* instance's mode-named method (e.g. `self.edit()`, `self.list()`) and
+* manages DOM replacement and lifecycle state transitions.
+*
+* Render levels:
+*   'full'    — creates the complete wrapper DOM tree and stores it in `self.node`.
+*               If a previous `self.node` already exists in the DOM, it is replaced
+*               via `replaceWith()` to keep the parent tree consistent.
+*   'content' — only regenerates the inner `content_data` sub-node and splices it
+*               in-place, leaving the wrapper intact. Used by refresh() to avoid
+*               full teardown on data updates.
+*
+* Concurrency / status machine:
+*   'building'  → waits for 'built_<id>' event, then re-calls render()
+*   'built'     → normal path; proceeds immediately
+*   'rendering' → smart concurrency:
+*       - Identical (render_level + render_mode) → joins the in-progress waiter
+*       - Different request (LWW) → queues latest options; triggers after current render
+*   'rendered'  → if same render_level, returns existing node with a warning
+*
+* Pre-render guards (short-circuit to an error/empty node):
+*   - page_globals.api_errors is non-empty → renders server error display
+*   - type === 'component' and context is falsy → renders "invalid context" error
+*   - permissions < 1 → renders a "no access" span
+*
+* Post-render:
+*   - Publishes 'render_<id>' event with the result node
+*   - In 'edit' mode, schedules tooltip activation via dd_request_idle_callback
+*
+* @param {Object} [options={}] - Render options bag
+* @param {string} [options.render_mode] - Mode override; defaults to `self.mode`.
+*   Falls back to 'list' if no matching render method exists on the instance.
+* @param {string} [options.render_level='full'] - Depth of render: 'full' or 'content'
+* @returns {Promise<HTMLElement|boolean>} The rendered DOM node, or false on error/skip
 */
 common.prototype.render = async function (options={}) {
 	// const t0 = performance.now()
@@ -578,11 +683,32 @@ common.prototype.render = async function (options={}) {
 
 /**
 * REFRESH
-* Destroy current instance dependencies and build and render again
-* (!) Events subscription: Note that events subscription in the build moment, could be duplicated when refresh is done
-* @param object options = {}
-* @return promise
-* 	resolve bool true
+* Tear down and rebuild the instance in-place, then re-render.
+* The standard pattern for data refresh after a save, external data change, or
+* view-mode switch. Equivalent to destroy(dependencies only) → build → render.
+*
+* Execution order:
+*  1. Validate status is 'rendered' (refuses to refresh a partially initialized instance).
+*  2. Optionally destroy child instances and event subscriptions (destroy=true).
+*  3. Optionally inject a pre-fetched API response (tmp_api_response) so build()
+*     can reuse it instead of issuing a redundant network request.
+*  4. Call build(build_autoload) — fetches fresh context+data when autoload=true.
+*  5. Render at the requested render_level ('content' by default, to avoid full re-layout).
+*  6. Refresh the paginator if one exists.
+*  7. Optionally publish 'sync_data_<id_base_lang>' so sibling components sharing
+*     the same base language binding (e.g. TM rows) are notified.
+*
+* (!) Events subscribed inside build() may duplicate on repeated refresh() calls
+* if the concrete build() implementation does not guard against re-subscription.
+* Each override should use event tokens and unsubscribe before re-subscribing.
+*
+* @param {Object} [options={}] - Refresh options bag
+* @param {boolean} [options.build_autoload=true] - Pass as autoload arg to build()
+* @param {string} [options.render_level='content'] - 'full' or 'content' render depth
+* @param {boolean} [options.destroy=true] - Destroy child instances before rebuilding
+* @param {boolean} [options.refresh_id_base_lang=false] - Publish sync event for TM siblings
+* @param {Object|null} [options.tmp_api_response=null] - Pre-fetched API response to inject
+* @returns {Promise<boolean>} true when rebuild+render succeeded; false on status mismatch
 */
 common.prototype.refresh = async function(options={}) {
 	// const t0 = performance.now()
@@ -699,19 +825,33 @@ common.prototype.refresh = async function(options={}) {
 
 /**
 * DESTROY
-* Delete all dependent instances of the section and all events that was created by the instances,
-* but does not remove the section instance itself.
-* @param bool delete_self = true
-* 	On true, Delete self instance events, paginator, services, inspector, filter and instance
-* @param bool delete_dependencies = false
-* 	On true, Call to destroy all associated instances (ar_instances)
-* @param bool remove_dom = false
-* 	On true, removes the instance DOM node
-* @return object result
-* {
-* 	delete_dependencies : bool,
-* 	delete_self : bool
-* }
+* Tear down an instance and optionally its child instances and DOM node.
+* The three boolean flags let callers control exactly what gets cleaned up:
+*
+*   delete_dependencies — iterates `self.ar_instances` and destroys each child
+*     recursively via do_delete_dependencies(). Called first so children are gone
+*     before self-cleanup removes the event subscriptions they may depend on.
+*
+*   delete_self — unsubscribes all event tokens, destroys paginator/services/
+*     inspector/filter sub-objects, removes self from the global instances map,
+*     removes self from caller.ar_instances, and nullifies heavy properties
+*     (context, data, datum, etc.) to release memory. Sets status → 'destroyed'.
+*
+*   remove_dom — removes `self.node` from the DOM tree and sets `self.node = null`.
+*     Only meaningful when the caller owns the DOM lifecycle (e.g. a parent section
+*     clearing its children before re-rendering).
+*
+* A double-destroy guard (`status === 'destroyed'`) makes this safe to call
+* redundantly — it returns an empty result object without throwing.
+*
+* Always publishes 'destroy_<id>' after cleanup so external listeners can react
+* (e.g. a parent waiting for child teardown before re-rendering itself).
+*
+* @param {boolean} [delete_self=true] - Destroy own events, sub-objects, and instance registration
+* @param {boolean} [delete_dependencies=false] - Recursively destroy child instances in ar_instances
+* @param {boolean} [remove_dom=false] - Remove `self.node` from the DOM and null it
+* @returns {Promise<Object>} result — keys `delete_dependencies` and `delete_self` set to
+*   the return value of each internal helper when invoked; absent when skipped
 */
 common.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 
@@ -766,10 +906,22 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 /**
 * DO_DELETE_SELF
-* Exec the self instance deletion taking into account
-* paginator, services, inspector and filter
-* @return int
-* 	delete_instance from instances returns int 'deleted'
+* Internal helper called by destroy() when delete_self is true.
+* Performs ordered teardown of all resources owned by the instance:
+*
+*  1. Unsubscribes every token in `self.events_tokens` (reverse-iterates to
+*     safely splice while iterating).
+*  2. Destroys `self.paginator` if present.
+*  3. Destroys all entries in `self.services` (in parallel via Promise.all).
+*  4. Destroys `self.inspector` if present.
+*  5. Destroys `self.filter` if present.
+*  6. Removes the instance from the global instances map via delete_instance(self.id).
+*  7. Removes self from `self.caller.ar_instances` to prevent stale references.
+*  8. Nullifies heavy properties (context, data, datum, ar_instances, events_tokens,
+*     caller, request_config) to release memory held by closures.
+*
+* @param {Object} self - The Dédalo instance being destroyed
+* @returns {Promise<boolean>} true when cleanup is complete
 */
 const do_delete_self = async function (self) {
 
@@ -867,10 +1019,21 @@ const do_delete_self = async function (self) {
 
 /**
 * DO_DELETE_DEPENDENCIES
-* Remove instance dependencies added in the array 'self.ar_instances'
-* @param object self - Element instance
-* @return {Promise<boolean>}
-* 	`true` if every instance was removed, otherwise `false`.
+* Destroy all child instances registered in `self.ar_instances`.
+* Called by destroy() when delete_dependencies is true.
+*
+* Snapshots the ar_instances array and clears it immediately (before awaiting
+* anything) to prevent race conditions where a concurrent destroy could
+* encounter the same list. Each child is then destroyed in parallel via
+* Promise.all; instances with `destroyable === false` are skipped.
+*
+* Errors thrown by individual child destroy() calls are caught and logged
+* without aborting the remaining teardown.
+*
+* @param {Object} self - The Dédalo instance whose children should be destroyed.
+*   Must have an `ar_instances` array property.
+* @returns {Promise<boolean>} Always resolves to true (array was cleared at the start;
+*   individual failures are logged but do not propagate)
 */
 const do_delete_dependencies = async function (self) {
 
@@ -926,21 +1089,44 @@ const do_delete_dependencies = async function (self) {
 
 /**
 * CREATE_SOURCE
-* @param object self
-* 	Element instance (component, section, etc.)
-* @return object source
-* 	sample
+* Build the `source` descriptor object that the server API uses to identify
+* which instance is making a request and what data it needs.
+*
+* The source is a plain object with `typo: 'source'` as its type marker.
+* It is attached to every RQO (request query object) sent to the API.
+*
+* Optional property groups appended when present on `self`:
+*   - `source_add` (Object) — arbitrary key/value pairs merged into source by
+*     components that need to pass extra parameters (e.g. component_relation_model
+*     sends `ar_target_section_tipo`).
+*   - `matrix_id` — included when the instance is operating on a specific matrix
+*     row (time machine mode).
+*   - `data_source` — included when set to e.g. 'tm' (time machine read).
+*   - `is_temporal` — included when the instance is a temporary write (e.g. tool_propagate).
+*   - `caller_dataframe` — included when model is 'component_dataframe'; provides
+*     the pairing information needed by the server to resolve the dataframe context.
+*   - `properties` — forwarded when set on the instance so the server can apply
+*     instance-specific configuration during processing.
+*
+* Example output:
+* ```json
 * {
-* 	typo			: 'source',
-* 	type			: 'component',
-* 	action			: 'read',
-* 	model			: 'component_text_area',
-* 	tipo			: 'rsc17',
-* 	section_tipo	: 'rs167',
-* 	section_id		: '5',
-* 	mode			: 'edit',
-* 	lang			: 'lg-eng'
+*   "typo": "source",
+*   "type": "component",
+*   "action": "read",
+*   "model": "component_text_area",
+*   "tipo": "rsc17",
+*   "section_tipo": "rs167",
+*   "section_id": "5",
+*   "mode": "edit",
+*   "view": "default",
+*   "lang": "lg-eng"
 * }
+* ```
+*
+* @param {Object} self - The Dédalo instance (component, section, portal, etc.)
+* @param {string} action - API action name, e.g. 'read', 'get_data', 'save'
+* @returns {Object} source descriptor ready to embed in an RQO
 */
 export const create_source = function (self, action) {
 
@@ -1014,9 +1200,13 @@ export const create_source = function (self, action) {
 
 /**
 * GET_VIEW
-* Normalized get view from element with context fallback
-* @param object self
-* @return string|null view
+* Resolve the active view string for an instance with a context fallback.
+* Returns `self.view` when set; otherwise falls back to `self.context.view`;
+* returns null when neither is available.
+* Used internally by create_source() to populate the source.view field.
+*
+* @param {Object} self - The Dédalo instance
+* @returns {string|null} The active view name, e.g. 'default', 'list', or null
 */
 const get_view = function(self) {
 
@@ -1029,11 +1219,16 @@ const get_view = function(self) {
 
 /**
 * GET_RQO_TEST
-* Build a basic rqo of the component for test and debug purposes.
-* It could be copy and paste in the Area Development Playground environment
-* Set as a getter during the element build process
-* @param object self
-* @return object rqo
+* Construct a minimal, copy-pasteable RQO for developer inspection.
+* The resulting object can be pasted directly into the Area Development
+* Playground to replay the component's API call in isolation.
+*
+* Exposed on every instance as a lazy getter (`self.rqo_test`) — the getter
+* is installed by set_context_vars() via Object.defineProperty so the value
+* is always computed fresh from the current instance state.
+*
+* @param {Object} self - The Dédalo instance to describe
+* @returns {Object} rqo — minimal request query object {action:'read', source:{...}}
 */
 const get_rqo_test = function(self) {
 
@@ -1050,24 +1245,49 @@ const get_rqo_test = function(self) {
 
 
 /**
-* GET_COLUMNS
-* Resolve the paths into the request_config_object with all dependencies (portal into portals, portals into sections, etc)
-* and create the columns to be rendered by the section or portals
-* @param object options
+* GET_COLUMNS_MAP
+* Resolve a flat ordered array of column descriptors from the active request_config,
+* taking the full ddo_map hierarchy (portals inside portals, portals inside sections)
+* into account.
+*
+* The returned `columns_map` drives grid headers and column-to-component binding in
+* list/search views. Each column descriptor shape:
+* ```json
 * {
-* 	context : object instance.context,
-* 	datum_context : object instance.datum.context,
-* 	ddo_map_sequence : array ['show']
+*   "id":           "dd345",
+*   "tipo":         "dd345",
+*   "section_tipo": "oh1",
+*   "label":        "Name",
+*   "model":        "component_input_text",
+*   "width":        null,
+*   "sortable":     false
 * }
-* context:
-* 	instance (component, service, etc.) context
-* datum_context:
-* 	optional parameter send by section, to be used to find the sort-able ddo.
-* ddo_map_sequence:
-* 	optional parameter to define ddo_map property fallback order
-* @see section_record.get_ar_columns_instances_list for a better overview
-* @return array columns_map
-* 	The the specific columns to render into the list.
+* ```
+*
+* Column grouping strategy (controlled by `view`):
+*   'line'   — all child components of a portal share a single column keyed on the
+*               portal's tipo. Useful for compact inline display.
+*   'mosaic' — each component becomes its own column; each ddo gains `in_mosaic`
+*               and `hover` flags used by the mosaic renderer.
+*   default  — each component becomes its own column (deduplication guards prevent
+*               the same tipo appearing twice).
+*
+* When `value_with_parents` is set on any ddo, an extra synthetic `ddinfo` column is
+* inserted after the matching component column (or appended at the end) so that parent
+* context can be displayed alongside the value.
+*
+* `ddo_map_sequence` controls the fallback priority order for picking the ddo_map from
+* request_config (e.g. ['search','show'] in search mode, ['show'] otherwise).
+* For autocomplete, the sequence ['choose','search','show'] is passed explicitly.
+*
+* @param {Object} options - Configuration object
+* @param {Object} options.context - Instance context object (from API response)
+* @param {Array|null} [options.datum_context=null] - Section-level context array used
+*   to look up `sortable` and `path` flags for each column
+* @param {Array<string>|null} [options.ddo_map_sequence=null] - Priority list of
+*   request_config keys to search for a ddo_map; defaults to ['show'] or ['search','show']
+* @returns {Array<Object>} columns_map — ordered array of column descriptor objects
+* @see section_record.get_ar_columns_instances_list for a caller-side overview
 */
 export const get_columns_map = function(options) {
 
@@ -1355,9 +1575,30 @@ export const get_columns_map = function(options) {
 
 /**
 * GET_AR_INVERTED_PATHS
-* Resolve the unique and isolated paths into the ddo_map with all dependencies (portal into portals, portals into sections, etc)
-* get the path in inverse format, the last in the chain will be the first object [0]
-* @return array ar_inverted_paths the the specific paths, with inverse path format.
+* Walk a flat ddo_map (produced by collapsing nested request_config trees) and
+* return one "inverted path" array per leaf node. Each path array is ordered
+* from leaf → root so that path[0] is the value-bearing component and the last
+* element is the topmost ancestor.
+*
+* Only leaf nodes (ddo entries that have no children pointing to them as parent)
+* contribute a path. Intermediate nodes (portals, relation components) appear only
+* as path ancestors.
+*
+* Example — for a structure "interview → people under study → name":
+*   full_ddo_map entries: interview_ddo, people_study_ddo, name_ddo
+*   Result: [[name_ddo, people_study_ddo, interview_ddo]]
+*
+* This inverted format makes it convenient for build_rqo_search() to walk from
+* the leaf outward, building the nested SQO path in server-expected order after
+* a final reverse pass.
+*
+* component_dataframe entries encountered anywhere in a path cause the entire path
+* to be skipped (they carry their own independent SQO).
+*
+* @param {Array<Object>} full_ddo_map - Flat array of ddo descriptors. Each entry
+*   must have at minimum `tipo` (string) and `parent` (string) properties.
+* @returns {Array<Array<Object>>} ar_inverted_paths — one sub-array per leaf,
+*   ordered [leaf, parent, grandparent, …]
 */
 export const get_ar_inverted_paths = function(full_ddo_map) {
 
@@ -1404,11 +1645,29 @@ export const get_ar_inverted_paths = function(full_ddo_map) {
 
 /**
 * BUILD_RQO_SHOW
-* @param object _request_config_object
-* @param string action
-* 	e.g. 'get_data'
-* @param bool add_show = false
-* @return object rqo
+* Assemble the RQO (request query object) for a 'show' (data retrieval) API call.
+* The RQO is the primary data structure sent by the client to the Dédalo API; this
+* builder produces the canonical 'read' variant used by components, sections, and
+* portals when fetching record data.
+*
+* Key resolution steps:
+*  1. Clone `_request_config_object` to avoid mutating the cached config.
+*  2. Build a fresh `source` from the current instance state via create_source().
+*  3. Resolve `sqo` from `request_config_object.sqo` → `show.sqo_config` → `{}`.
+*  4. Normalize `sqo.section_tipo` to an array of bare tipo strings (the server emits
+*     ddo objects; bare strings are kept as a defensive fallback for old contexts).
+*  5. Apply pagination defaults for `limit` and `offset` from sqo_config when the
+*     sqo does not already have them.
+*  6. Resolve `filter_by_locators` from sqo or sqo_config; if absent, auto-generate
+*     a single-record locator from `self.section_tipo` + `self.section_id`.
+*  7. Optionally attach `rqo.show` when `add_show=true` (used by portals that need
+*     the full show config for ddo_map resolution on the server).
+*
+* @param {Object} _request_config_object - The request config (cloned internally)
+* @param {string} action - API action name to embed in the source, e.g. 'get_data'
+* @param {boolean} [add_show=false] - When true, attach `request_config_object.show`
+*   to the returned rqo as `rqo.show`
+* @returns {Promise<Object>} rqo — ready to pass to data_manager.request()
 */
 common.prototype.build_rqo_show = async function(_request_config_object, action, add_show=false){
 
@@ -1513,8 +1772,31 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 
 /**
 * BUILD_RQO_SEARCH
-* Used from portal to autocomplete
-* @return object rqo
+* Build the RQO for a search/autocomplete API call. Used by portals and
+* autocomplete services to query candidate records based on a user-typed string.
+*
+* Unlike build_rqo_show(), this method assembles an open-ended search SQO with a
+* `filter_free` block containing one path clause per leaf component in the ddo_map.
+* Each clause gets an empty `q` that the caller fills in before dispatching.
+*
+* Key resolution steps:
+*  1. Determine the boolean `operator` ('$or' by default, mirrors server default).
+*  2. Resolve `sqo_config` from search → show fallback.
+*  3. Resolve `ar_sections` from sqo → sqo_config → [self.section_tipo].
+*  4. Resolve `limit`/`offset` from choose.sqo_config → sqo_config → choose_limit_default (25).
+*     The choose.sqo_config branch is kept in sync with the server-side chain in
+*     request_config_v6 parse_choose_config.
+*  5. Build `filter_free` by walking search.ddo_map (or show.ddo_map as fallback)
+*     through get_ar_inverted_paths(), reversing each path to server order, and
+*     adding one `{q:'', path:[...]}` entry per leaf per operator group.
+*     component_dataframe paths are skipped (they have their own independent sqo).
+*  6. Resolve `ddo_map` for the show section of the rqo from choose → search.
+*  7. Attach `sqo_options` containing filter_free, fixed_filter, filter_by_list,
+*     and operator so the server can complete the SQO on its side.
+*
+* @param {Object} request_config_object - Active request config for this instance
+* @param {string} action - API action name, e.g. 'get_data'
+* @returns {Promise<Object>} rqo — search request query object ready for data_manager
 */
 common.prototype.build_rqo_search = async function(request_config_object, action){
 
@@ -1698,13 +1980,24 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 
 /**
 * LOAD_DATA_DEBUG
-* Render main page data using a JSON viewer
-* @param object section instance self
-* @param promise load_data_promise
-* 	API request response from current section/area
-* @param object rqo_show_original
-* 	Request query object sent to the API by current section/area
-* @return HTMLElement document fragment
+* Render a rich diagnostic view of an API response and its originating RQO into a
+* DocumentFragment, using the JsonView tree visualizer.
+*
+* Only active when SHOW_DEBUG === true and the caller is a section or area instance.
+* Renders four collapsible JSON trees into the returned fragment:
+*   - `response_debug`: combines response.debug, rqo_show_original, and CSS rule info
+*   - `dd_request`: the raw request object from the instance (if present)
+*   - `context`: response.result.context
+*   - `data`: response.result.data
+*
+* The fragment is returned to the caller (typically a section's build or debug panel)
+* to be appended wherever appropriate. No direct DOM insertion is performed here.
+*
+* @param {Object} self - Section or area instance that initiated the API request
+* @param {Promise<Object>} load_data_promise - Resolves to the API response object
+* @param {Object} rqo_show_original - The RQO that was sent to the API
+* @returns {Promise<DocumentFragment|boolean>} The diagnostic fragment, or false when
+*   SHOW_DEBUG is off, caller is not a section/area, or the API returned an error
 */
 export const load_data_debug = async function(self, load_data_promise, rqo_show_original) {
 
@@ -1822,10 +2115,23 @@ export const load_data_debug = async function(self, load_data_promise, rqo_show_
 
 /**
 * RENDER_TREE_DATA
-* Load once jsonview lib js/css files and render the request data into the target node
-* @param JSON data
-* @param DOM node target_node
-* @return promise
+* Load the JsonView library (CSS + JS) on demand and render `data` as an
+* interactive collapsible tree inside `target_node`.
+*
+* The CSS and JS files are loaded in parallel via load_style() / load_script().
+* Because script injection is asynchronous and `JsonView` may not be available
+* immediately after the load_promises resolve, the function polls by scheduling
+* itself recursively with a 500 ms delay until `JsonView` appears on `window`.
+* In practice this only occurs on the very first call per page load.
+*
+* After rendering, `open_main_children` expands all nodes in the tree by calling
+* JsonView.expandChildren(). The commented-out depth-limited traversal was a
+* previous implementation that only expanded the first three levels.
+*
+* @param {*} data - Any JSON-serializable value to visualize
+* @param {HTMLElement} target_node - DOM node to render the tree into
+* @returns {Promise<*>} Resolves to the return value of JsonView.render() once
+*   the tree has been fully rendered into target_node
 */
 export const render_tree_data = async function(data, target_node) {
 
@@ -1889,9 +2195,18 @@ export const render_tree_data = async function(data, target_node) {
 
 /**
 * LOAD_DATA_FROM_DATUM
-* Get and set current element data from current datum (used on build components and sections)
-* when not already loaded data is available (injected on init for example)
-* @return mixed self.data
+* Populate `self.data` from the pre-loaded `self.datum` array during the build phase.
+* Called by component build methods when data was not injected via init() options.
+*
+* Resolution logic:
+*   - If `self.data` is already set (e.g. injected at init), this is a no-op.
+*   - If `self.datum` exists, filter it to the entry matching
+*     `tipo === self.tipo AND section_tipo === self.section_tipo AND section_id == self.section_id`.
+*     Note the loose equality (`==`) for section_id to handle string/number mismatches.
+*   - If `self.datum` is absent, set a minimal empty-value placeholder so downstream
+*     render code never needs to null-check self.data.
+*
+* @returns {Array|Object} self.data — either the matched datum entries or the empty placeholder
 */
 common.prototype.load_data_from_datum = function() {
 
@@ -1917,8 +2232,10 @@ common.prototype.load_data_from_datum = function() {
 
 /**
 * REMOVE_NON_INIT_EVENTS
-* Applied in build moment to prevent duplicate events on refresh
-* @return array delete_events
+* (dead code — commented out)
+* Was intended to unsubscribe events added after init() to prevent duplication
+* on refresh cycles. Superseded by the destroy→rebuild pattern in refresh().
+* @returns {Array} delete_events
 */
 	// export const remove_non_init_events = function(self) {
 
@@ -1947,16 +2264,24 @@ common.prototype.load_data_from_datum = function() {
 
 /**
 * GET_SECTION_ELEMENTS_CONTEXT
-* Call to dd_core_api to obtain the list of components associated to current options section_tipo
-* @param object options
-* {
-* 	section_tipo: string
-* 	ar_components_exclude: array
-* 	use_real_sections: bool
-* 	skip_permissions: bool = false
-* }
-* @return promise components
-* 	Array of section components
+* Fetch the context list of components associated with a section tipo from the API.
+* Results are cached on `self.components_list[section_tipo]` for the lifetime of the
+* instance, and additionally via the data_manager's 'localdb' cache handler keyed by
+* section_tipo and the current application language.
+*
+* Used by section-level features (e.g. section_record column resolution, inspector
+* panel) that need to know which components belong to a section before rendering.
+*
+* `context_type: 'simple'` requests a lightweight context shape (no deep tool/button
+* resolution) suitable for list headers and column configuration.
+*
+* @param {Object} options - Request options
+* @param {string|Array<string>} options.section_tipo - Ontology tipo(s) to query
+* @param {Array<string>} [options.ar_components_exclude] - Component tipos to omit
+* @param {boolean} [options.use_real_sections] - When true, bypass virtual section merging
+* @param {boolean} [options.skip_permissions=false] - When true, include components
+*   regardless of the current user's permission level
+* @returns {Promise<Array<Object>>} Array of component context objects for the section
 */
 common.prototype.get_section_elements_context = async function(options) {
 
@@ -2027,14 +2352,25 @@ common.prototype.get_section_elements_context = async function(options) {
 
 /**
 * CALCULATE_COMPONENT_PATH
-* Resolve component full search path. Used to build json_search_object and
-* create later the filters and selectors for search
-* @param object element
-*	Contains all component data collected from trigger
-* @param array path
-*	Contains all paths prom previous click loads
-* @return array component_path
-*	Array of objects
+* Append the current component's path descriptor to an accumulated path array.
+* Used when building a multi-level search filter (e.g. clicking through portal
+* chains) to incrementally construct the full path from the root to the target
+* component.
+*
+* The returned array represents the traversal path as a sequence of locator objects,
+* each identifying a step in the component hierarchy. This path is later passed to
+* the SQO `filter.path` field.
+*
+* HTML tags are stripped from `component_context.label` before storing it in the
+* path descriptor (labels may contain markup from rich-text tool definitions).
+*
+* If `path` is not an array (e.g. undefined or null from a first call), it is
+* replaced with an empty array and a warning is logged.
+*
+* @param {Object} component_context - Context object of the component being added to the path.
+*   Expected properties: section_tipo, tipo, ar_target_section_tipo, model, label
+* @param {Array<Object>} path - Accumulated path from previous traversal steps
+* @returns {Array<Object>} New path array (does not mutate the input `path`)
 */
 common.prototype.calculate_component_path = function(component_context, path) {
 
@@ -2067,9 +2403,13 @@ common.prototype.calculate_component_path = function(component_context, path) {
 
 /**
 * VALIDATE_TIPO
-* 	Validate tipo format by regex
-* @param string tipo
-* @return bool result
+* Validate that a string matches the Dédalo ontology tipo format.
+* Valid tipos consist of two or more lowercase letters followed by one or more digits,
+* e.g. 'dd345', 'oh1', 'rsc17'. The regex anchors to the full string to reject
+* embedded tipos or tipo-like substrings.
+*
+* @param {string} tipo - The candidate tipo string to validate
+* @returns {boolean} true when tipo matches /^[a-z]{2,}[0-9]{1,}$/; false otherwise
 */
 export const validate_tipo = function(tipo) {
 
@@ -2135,16 +2475,28 @@ export const get_fallback_value = function(entries, fallback_value) {
 
 /**
 * PUSH_BROWSER_HISTORY
-* Unified way to update page navigation history state
-* @param object options
-* {
-*	event_in_history: bool
-* 	source: object {model: section,...}
-* 	sqo: object|null
-* 	titles: string "section_rsc176_rsc176_list_lg-eng",
-* 	url: string "?tipo=rsc176&mode=list"
-* }
-* @return bool
+* Add a navigation entry to the browser's session history stack using the
+* History API. Provides a single canonical call site so all Dédalo navigation
+* events produce a consistent state shape.
+*
+* The `state` object is frozen before being passed to history.pushState() to
+* prevent accidental mutation of the stored entry. The state is later read by
+* the 'popstate' handler (in page.js) to restore the view on browser back/forward.
+*
+* `event_in_history: true` signals that the entry represents a user-triggered
+* navigation event (e.g. a portal drill-down) rather than a programmatic state
+* update, so the popstate handler knows whether to re-trigger events.
+*
+* @param {Object} options - Navigation options
+* @param {Object} options.source - Source descriptor of the navigated instance,
+*   e.g. `{model:'section', tipo:'rsc176', ...}`
+* @param {Object|null} options.sqo - Search query object active at navigation time,
+*   or null when navigating to a non-search view
+* @param {boolean} [options.event_in_history=false] - Whether this navigation should
+*   fire a navigation event on popstate
+* @param {string} [options.title=''] - Page title hint (ignored by most browsers)
+* @param {string} [options.url=''] - URL to display in the address bar
+* @returns {boolean} true
 */
 export const push_browser_history = function(options) {
 
@@ -2182,10 +2534,30 @@ export const push_browser_history = function(options) {
 
 /**
 * BUILD_AUTOLOAD
-* Unified way to manage section, area and portals build API request
-* @param object self
-* 	Instance of area, section, component_portal
-* @return bool
+* Execute the API request that loads context and data for a section, area, or portal
+* during its `build` phase. Provides a single canonical call site for the
+* load-context-and-data pattern so all top-level containers behave consistently.
+*
+* If `self.tmp_api_response` is set, it is used directly instead of making a network
+* request. This allows refresh() to inject a previously fetched response (e.g. the
+* response from a save operation) to avoid a redundant round-trip.
+*
+* Error handling:
+*   - 'not_logged' error: subscribes once to 'login_successful'; when the user logs in,
+*     resets status and triggers a full rebuild+render automatically (only when no
+*     unsaved data is present on the page).
+*   - All other errors: publishes a 'notification' event (listened by the page's
+*     notification bubble container) with type 'error' and a 30-second display timeout.
+*   - In both error cases, status is reset to `previous_status` ('initialized') and
+*     false is returned so the calling build() knows to abort.
+*
+* Developer mode logging: when SHOW_DEVELOPER or SHOW_DEBUG is true, the raw
+* api_response is logged to the console. Errors are additionally highlighted.
+*
+* @param {Object} self - The Dédalo instance (area, section, or component_portal)
+*   that owns `self.rqo` (the pre-built request query object) and `self.status`
+* @returns {Promise<Object|boolean>} The raw api_response object on success, or false
+*   when the response is missing/invalid or a known error was handled
 */
 export const build_autoload = async function(self) {
 
@@ -2278,17 +2650,35 @@ export const build_autoload = async function(self) {
 
 /**
 * SET_ENVIRONMENT
-* Set global environment vars to window global vars
-* Substitution for old file 'environment.js.php'
-* @todo Unify all vars into a window.dd_environment unique object ?
-* @param object api_response_environment
-*  Usually API response environment result
-* {
-* 	get_label: string (object stringified)
-*	page_globals: object {dedalo_application_lang: "lg-eng", ...}
-* 	plain_vars: object {DEDALO_CORE_URL:"/v6/core", ...}
-* }
-* @return void
+* Apply the server-emitted environment payload to the browser global scope.
+* Replaces the old `environment.js.php` server-rendered file with a single
+* API call + client-side assignment pattern.
+*
+* The payload is a plain object whose keys map to one of three handling strategies:
+*
+*   'plain_vars'  — each key of the nested value object is assigned directly to
+*     `window` (e.g. `window.DEDALO_CORE_URL = '/v7/core'`). These are constants
+*     referenced by modules as bare globals (see the /*global …* / annotation in
+*     each module).
+*
+*   'page_globals' — the nested object is merged into the existing `page_globals`
+*     module-level variable via Object.assign so existing keys are overwritten and
+*     new keys are added without replacing the reference.
+*
+*   'get_label' — the value (already a parsed JSON object from the server) is
+*     assigned to the `get_label` module-level variable used throughout the UI for
+*     localized string lookups.
+*
+*   anything else — the entire value is assigned to `window[key]`.
+*
+* @todo Consider consolidating all env vars under a single `window.dd_environment`
+*   namespace to avoid polluting window directly.
+*
+* @param {Object} api_response_environment - Environment payload from the API
+* @param {Object} [api_response_environment.plain_vars] - Flat constant assignments
+* @param {Object} [api_response_environment.page_globals] - Runtime globals to merge
+* @param {Object} [api_response_environment.get_label] - Localization string map
+* @returns {void}
 */
 export const set_environment = function (api_response_environment) {
 
@@ -2308,7 +2698,11 @@ export const set_environment = function (api_response_environment) {
 				break;
 
 			case 'get_label':
-				// value is already server parsed JSON value
+				// value is already server parsed JSON value.
+				// `get_label` is declared `const` at page scope (environment.js.php),
+				// so reassigning it throws "Assignment to constant variable". Mutate in
+				// place instead so the existing binding (referenced everywhere as a bare
+				// global) reflects the new labels.
 				get_label = value;
 				break;
 
@@ -2324,15 +2718,31 @@ export const set_environment = function (api_response_environment) {
 
 /**
 * UPDATE_PROCESS_STATUS
-* Call to work API and get the current process status.
-* Once read, update the container info about.
-* @param string id - Unique identifier for the process.
-* @param string|number pid - Process ID.
-* @param string pfile - Path to the process file.
-* @param HTMLElement container - The DOM element to update with status info.
-* @param number update_rate = 1000 - Rate in milliseconds for server updates.
-* @param function callback - Optional callback function to execute when the stream finishes.
-* @return void
+* Poll a long-running server process via SSE (Server-Sent Events) and update
+* a DOM container with live status information as each chunk arrives.
+*
+* Sends a streaming request to the `dd_utils_api / get_process_status` endpoint.
+* The server pushes one SSE event per `update_rate` milliseconds until the process
+* identified by `pid` / `pfile` finishes or is cancelled.
+*
+* Rendering is handled by `render_stream()` which builds the base status UI nodes
+* inside `container`. As each SSE chunk arrives, `update_info_node()` updates the
+* display. When the stream closes, `done()` finalizes the UI and the optional
+* `callback` is invoked.
+*
+* Input validation is performed up-front:
+*   - `container` must be a valid HTMLElement (aborts with a console.error if not).
+*   - `id`, `pid`, `pfile` types are checked; a console.error is emitted and the
+*     function returns early on mismatch.
+*   - `update_rate` must be a positive number; defaults to 1000ms with a warning.
+*
+* @param {string} id - Unique string identifier for the process (used by render_stream)
+* @param {string|number} pid - OS or server-side process ID to monitor
+* @param {string} pfile - Path to the process status file on the server
+* @param {HTMLElement} container - DOM element to render status updates into
+* @param {number} [update_rate=1000] - Polling interval in milliseconds
+* @param {Function} [callback] - Called once when the stream finishes (no arguments)
+* @returns {void}
 */
 export const update_process_status = function (id, pid, pfile, container, update_rate=1000, callback) {
 
