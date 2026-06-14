@@ -259,6 +259,41 @@ export const when_in_viewport = function(node, callback, once=true, observer_opt
 
 
 /**
+* LAZY_IN_VIEWPORT
+* Convenience wrapper over when_in_viewport with a uniform 200px preload margin,
+* so heavy lazily-initialised content (media, json/leaflet/ckeditor editors)
+* starts loading just before it becomes visible and feels instant on scroll.
+* Shared by media and non-media components to keep the preload margin in one place.
+*
+* @param {HTMLElement} node - The element to observe.
+* @param {Function} on_enter - Invoked once when the node nears the viewport.
+* @returns {IntersectionObserver|undefined} The active observer.
+*/
+export const lazy_in_viewport = function(node, on_enter) {
+	return when_in_viewport(node, on_enter, true, { rootMargin: '200px' })
+}//end lazy_in_viewport
+
+
+
+/**
+* FADE_IN_ON_REVEAL
+* Generic smooth fade-in for lazily-initialised content (media, json/leaflet/
+* ckeditor editors, ...). Adds the `.lazy_fade` class (defined in layout.less) so
+* the container starts invisible, and returns a `reveal` function the caller
+* invokes once the content is ready (on load / ready / error) to fade it in.
+* Centralises what used to be duplicated inline opacity/transition assignments.
+*
+* @param {HTMLElement} container - The element to fade in.
+* @returns {Function} reveal - Call to fade the container in.
+*/
+export const fade_in_on_reveal = function(container) {
+	container.classList.add('lazy_fade')
+	return () => container.classList.add('is_loaded')
+}//end fade_in_on_reveal
+
+
+
+/**
 * DD_REQUEST_IDLE_CALLBACK
 * Schedule a callback for execution during the browser's idle periods.
 *

@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {dd_request_idle_callback, when_in_viewport} from '../../common/js/events.js'
+	import {dd_request_idle_callback, lazy_in_viewport, fade_in_on_reveal} from '../../common/js/events.js'
 	import {handle_json_change} from './component_json.js'
 
 
@@ -293,6 +293,8 @@ const get_content_value = (key, current_value, self) => {
 			element_type	: 'div',
 			class_name		: 'content_value'
 		})
+		// start invisible for a smooth fade-in once the editor is ready (shared contract)
+		const reveal = fade_in_on_reveal(content_value)
 
 	// load_editor and init
 		const load_editor = async () => {
@@ -381,6 +383,9 @@ const get_content_value = (key, current_value, self) => {
 				};
 				button_save.addEventListener('click', click_handler);
 
+				// smooth appearance: fade the editor in now that it is mounted
+				reveal();
+
 			} catch (error) {
 				content_value.dataset.editor_loading = 'false';
 				console.error('component_json: load_editor failed:', error);
@@ -388,14 +393,16 @@ const get_content_value = (key, current_value, self) => {
 				content_value.textContent = `Error loading JSON editor: ${error.message}`;
 				content_value.style.padding = '1rem';
 				content_value.style.color = 'var(--color_danger)';
+				// error also reveals so the message is visible
+				reveal();
 			}
 		}//end load_editor
 
 	// Preload editor module on idle (before viewport entry) to reduce perceived latency
 		dd_request_idle_callback(preload_editor_module);
 
-	// observe in viewport
-		when_in_viewport(content_value, load_editor);
+	// observe in viewport (shared lazy helper, 200px preload)
+		lazy_in_viewport(content_value, load_editor);
 
 
 	return content_value
