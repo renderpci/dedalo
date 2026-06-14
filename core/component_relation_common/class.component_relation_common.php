@@ -3,31 +3,57 @@ include_once 'trait.search_component_relation_common.php';
 include_once 'trait.search_component_relation_common_tm.php';
 /**
 * CLASS COMPONENT_RELATION_COMMON
-* Abstract base class for all relation components in Dédalo.
+* Abstract base for every Dédalo component whose dato is an array of locators
+* (cross-section record links) rather than a scalar or text value.
 *
-* Provides shared functionality for components that work with section relationship data
-* instead of standard component data. These components create links between records
-* across different sections using locator objects.
+* Responsibilities
+* ----------------
+* - Owns the locator lifecycle: validate, deduplicate, add, remove, normalize, import.
+* - Resolves grid/export values by instantiating target-section child components per
+*   locator and merging their output atoms (the ddo_map drives which child columns appear).
+* - Propagates project (component_filter) data to newly created child records.
+* - Provides a static registry of all relation component model names
+*   (get_components_with_relations) used by section export, search, and grid rendering.
+* - Feeds the diffusion pipeline (get_diffusion_data) and the import pipeline
+*   (conform_import_data) with locator-shaped data.
+* - Supports request-config section-tipo resolution from ontology properties
+*   (get_request_config_section_tipo) covering 'self', 'hierarchy_types',
+*   'field_value', 'hierarchy_terms', 'ontology_sections', and 'section' sources.
 *
-* Extended by relation components:
-* - component_check_box : Multi-select relationships
-* - component_filter, component_filter_master : Project-based access control
-* - component_portal : Record linking and navigation
-* - component_publication : Publication status management
-* - component_radio_button : Single-select relationships
-* - component_relation_children : Hierarchical child relationships
-* - component_relation_parent : Hierarchical parent relationships
-* - component_relation_related : Related records management
+* Data shape
+* ----------
+* The component dato is stored in the 'relation' column of the matrix table as a
+* JSON array of locator objects. Each locator object minimally has:
+*   { section_tipo, section_id, type, from_component_tipo }
+* Translatable relation components also carry a 'lang' key.
+* 'id' is an optional stable item id used for dataframe pairing and ordering.
 *
-* Key capabilities:
-* - Locator-based relationship storage
-* - Relation type management (unidirectional, bidirectional, multidirectional)
-* - Target section validation
-* - Relation table persistence for efficient querying
+* Relation types (constants in core/base/dd_tipos.php)
+* --------------------------
+* DEDALO_RELATION_TYPE_LINK                     = 'dd151'  — generic portal link
+* DEDALO_RELATION_TYPE_CHILDREN_TIPO            = 'dd48'   — hierarchy child
+* DEDALO_RELATION_TYPE_PARENT_TIPO              = 'dd47'   — hierarchy parent
+* DEDALO_RELATION_TYPE_RELATED_TIPO             = 'dd89'   — related record
+* DEDALO_RELATION_TYPE_FILTER                   = 'dd675'  — project/access filter
+* DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO     = 'dd620' — one-way related
+* DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO      = 'dd467' — bidirectional
+* DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO   = 'dd621' — multidirectional
 *
-* Data is stored in the 'relation' column of matrix tables.
+* Inheritance
+* -----------
+* Extends component_common.
+* Extended by: component_autocomplete, component_autocomplete_hi,
+*   component_check_box, component_filter, component_filter_master,
+*   component_portal, component_publication, component_radio_button,
+*   component_relation_children, component_relation_index,
+*   component_relation_model, component_relation_parent,
+*   component_relation_related, component_relation_struct,
+*   component_select, component_select_lang, component_inverse,
+*   component_dataframe.
 *
-* Uses traits for code organization: search_component_relation_common, search_component_relation_common_tm.
+* Uses traits: search_component_relation_common (SQL search over the
+*   'relation' JSONB column), search_component_relation_common_tm
+*   (thesaurus-matrix variant).
 *
 * @package Dédalo
 * @subpackage Core
@@ -46,72 +72,92 @@ class component_relation_common extends component_common {
 	*/
 		/**
 		 * Whether to propagate component locators to the relation table on save.
-		 * Set to false to skip relation persistence (e.g., bulk imports in geonames).
+		 * Set to false to skip relation persistence (e.g., bulk imports such as geonames
+		 * that insert millions of records where the overhead is unacceptable).
 		 * @var bool $save_to_database_relations
 		 */
 		public bool $save_to_database_relations = true;
 
 		/**
-		 * Relation type tipo defining the locator type for section relations.
-		 * Set in constructor from ontology properties. Determines inverse resolution behavior.
-		 * Example: DEDALO_RELATION_TYPE_RELATED_TIPO.
+		 * Tipo that identifies the kind of locator stored in this component's dato.
+		 * Initialised in __construct from properties->config_relation->relation_type,
+		 * falling back to $default_relation_type defined by each concrete subclass.
+		 * Controls validate_data_element type assignment and remove_locator_from_data
+		 * type-mismatch checks.
+		 * Examples: DEDALO_RELATION_TYPE_LINK ('dd151'),
+		 *           DEDALO_RELATION_TYPE_RELATED_TIPO ('dd89').
 		 * @var ?string $relation_type
 		 */
 		protected ?string $relation_type = null;
 
 		/**
-		 * Directionality of the relation (unidirectional, bidirectional, multidirectional).
-		 * Stored inside each locator of the component data. Set in constructor from properties.
-		 * Examples: DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO (default), BIDIRECTIONAL_TIPO, MULTIDIRECTIONAL_TIPO.
+		 * Directionality tipo stored inside every locator of the component dato.
+		 * Only set by component_relation_related; other subclasses leave it null.
+		 * Initialised from properties->config_relation->relation_type_rel or
+		 * $default_relation_type_rel.
+		 * Examples: DEDALO_RELATION_TYPE_RELATED_UNIDIRECTIONAL_TIPO ('dd620'),
+		 *           DEDALO_RELATION_TYPE_RELATED_BIDIRECTIONAL_TIPO ('dd467'),
+		 *           DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO ('dd621').
 		 * @var ?string $relation_type_rel
 		 */
 		protected ?string $relation_type_rel = null;
 
 		/**
-		 * Array of target section tipos this relation component can link to.
-		 * Defines which sections are valid for portal/autocomplete selection.
+		 * List of section tipos that this relation component may link to.
+		 * Populated by get_ar_target_section_tipo (component_common) from the ontology
+		 * request_config. Used by autocomplete / portal to restrict search results and
+		 * by conform_import_data when the column name has no explicit target suffix.
 		 * @var array $ar_target_section_tipo
 		 */
 		protected array $ar_target_section_tipo = [];
 
 		/**
-		 * Whether to divide sub-columns in list view for multi-value relation display.
-		 * When true, each related item gets its own sub-column in tabular layouts.
+		 * When true, each locator stored in this component is rendered as a separate
+		 * column group in tabular list/export layouts (portal-inside-portal case).
+		 * Set dynamically in get_grid_value when a child component is itself a
+		 * relation component, so its rows are exploded sideways rather than stacked.
 		 * @var bool $sub_columns_division
 		 */
 		protected bool $sub_columns_division = false;
 
 		/**
-		 * Default relation type fallback when no specific type is configured.
-		 * Used in constructor to initialize $relation_type when properties lack an explicit value.
+		 * Fallback $relation_type value used when the ontology properties do not
+		 * specify config_relation->relation_type. Subclasses override this constant
+		 * to establish their canonical locator type without requiring per-record
+		 * ontology config.
 		 * @var ?string $default_relation_type
 		 */
 		protected ?string $default_relation_type = null;
 
 		/**
-		 * Default relation directionality fallback when no specific direction is configured.
-		 * Used in constructor to initialize $relation_type_rel when properties lack an explicit value.
+		 * Fallback $relation_type_rel value used when the ontology properties do not
+		 * specify config_relation->relation_type_rel. Meaningful only for
+		 * component_relation_related subclass.
 		 * @var ?string $default_relation_type_rel
 		 */
 		protected ?string $default_relation_type_rel = null;
 
 		/**
-		 * Default output format mapping for diffusion endpoints.
-		 * Overrides parent component_common format. Relations export as JSON in SQL contexts.
+		 * Diffusion output format map (overrides parent default).
+		 * Relation dato (an array of locators) is serialised as JSON when written to
+		 * SQL diffusion targets, rather than the plain-text format text components use.
 		 * @var array $diffusion_output_format
 		 */
 		public static array $diffusion_output_format = ['sql' => 'json'];
 
 		/**
-		 * Auxiliary lookup map for fast existence checks of locators in component data.
-		 * Prevents duplicate relations by indexing existing locators before add operations.
+		 * O(1) duplicate guard for validate_data_element.
+		 * Keys are hash strings produced by locator::build_locator_lookup_key()
+		 * over the properties returned by get_locator_properties_to_check().
+		 * Rebuilt at the start of each validate_data_element call when $init===true.
 		 * @var array $locator_lookup_map
 		 */
 		protected array $locator_lookup_map = [];
 
 		/**
-		 * Static cache for hierarchy section tipos resolved from type codes.
-		 * Avoids repeated ontology traversal when resolving hierarchy types.
+		 * Class-static cache for get_hierarchy_sections_from_types().
+		 * Key: implode('_', $hierarchy_types). Value: array of section tipos.
+		 * Avoids repeated search/ontology traversal within a single request lifecycle.
 		 * @var array $hierarchy_sections_from_types_cache
 		 */
 		public static array $hierarchy_sections_from_types_cache = [];
@@ -120,11 +166,24 @@ class component_relation_common extends component_common {
 
 	/**
 	* __CONSTRUCT
-	* @param string $tipo = null
-	* @param string|null $section_id = null
-	* @param string $mode = 'list'
-	* @param string|null $lang = null
-	* @param string|null $section_tipo = null
+	* Initialises the relation component, enforcing language and loading relation
+	* type configuration from the ontology before delegating to parent.
+	*
+	* Language normalisation:
+	*   - Translatable components: blank lang → DEDALO_DATA_LANG; DEDALO_DATA_NOLAN → forced
+	*     to DEDALO_DATA_LANG (with error log, as NOLAN is invalid for translatable types).
+	*   - Non-translatable components: blank lang → DEDALO_DATA_NOLAN; any non-NOLAN
+	*     value is silently coerced to DEDALO_DATA_NOLAN.
+	*
+	* Relation config is read from ontology_node::get_properties()->config_relation and
+	* falls back to the subclass defaults ($default_relation_type, $default_relation_type_rel).
+	*
+	* @param string $tipo          Component tipo identifier (e.g. 'rsc92').
+	* @param mixed $section_id = null  Record id in the host section matrix.
+	* @param string $mode = 'list'     Rendering mode ('list', 'edit', …).
+	* @param string $lang = DEDALO_DATA_LANG  Requested language code.
+	* @param ?string $section_tipo = null  Host section tipo.
+	* @param bool $cache = true     Pass through to parent instance cache.
 	* @return void
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true ) {
@@ -177,7 +236,15 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_COMPONENTS_WITH_RELATIONS
-	* Array of components model name that using locators in data and extends component_relation_common
+	* Canonical registry of every component model that stores locator arrays as its dato.
+	* All models in this list extend component_relation_common and write to the 'relation'
+	* matrix column. Used by:
+	*   - section export / flat-table to distinguish column types.
+	*   - get_grid_value / get_export_value to decide whether a child component requires
+	*     sub_columns_division (portal-inside-portal explosion).
+	*   - sort_data_by_column to trigger build_request_config on child instances.
+	*
+	* (!) Keep this list in sync when adding a new relation component model.
 	* @return array $components_with_relations
 	*/
 	public static function get_components_with_relations() : array {
@@ -210,13 +277,36 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Get the value of the components. By default will be get_data().
-	* overwrite in every different specific component
-	* Some the text components can set the value with the data directly
-	* the relation components need to process the locator to resolve the value
-	* @param object|null $ddo = null
+	* Builds the dd_grid_cell_object for this relation component in list/grid contexts.
 	*
-	* @return dd_grid_cell_object $value
+	* The method iterates over the component's stored locator array and, for each
+	* locator, resolves the ddo_direct_children from the ddo_map (the sub-columns
+	* requested by the caller) by instantiating the corresponding child components
+	* in the target section.  Child components are injected with a built request_config
+	* when they have their own ddo descendants so that their own get_grid_value can
+	* resolve the next level.
+	*
+	* Column identity / deduplication:
+	*   The column_obj.id is composed by concatenating the parent component path with
+	*   the target section_tipo and component_tipo of each ddo, and optionally appended
+	*   with '|{current_key}' when sub_columns_division is active (portal-inside-portal
+	*   explosion).  Columns are merged into ar_columns_obj without duplicate ids; new
+	*   columns from inner portals are inserted after the last entry sharing the same
+	*   column_obj.group.
+	*
+	* Caching:
+	*   A child component whose ddo has no further descendants is cached (use_cache=true).
+	*   A child that has its own ddo sub-chain receives an injected request_config and
+	*   must NOT be cached because different locators mutate its instance's state.
+	*
+	* component_relation_index special case:
+	*   If the caller class is component_relation_index AND ddo_direct_children is empty,
+	*   the ddo_map is computed on the fly from the target section's own relation_list
+	*   request_config, including a synthetic ddo_section_id element.
+	*
+	* @param object|null $ddo = null  The caller ddo with optional overrides
+	*   (fields_separator, records_separator, format_columns, class_list).
+	* @return dd_grid_cell_object  Typed column cell containing nested row/cell arrays.
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
@@ -261,6 +351,9 @@ class component_relation_common extends component_common {
 			];
 
 		// children_recursive function, get all ddo chain that depends of this component
+		// Defined as a global function (guarded by function_exists) because it is called
+		// recursively from within itself and cannot close over $this.  The export path
+		// uses get_export_ddo_descendants() instead, which is a proper instance method.
 			if (!function_exists('get_children_recursive')) {
 				function get_children_recursive($ar_ddo, $dd_object) {
 					$ar_children = [];
@@ -278,7 +371,9 @@ class component_relation_common extends component_common {
 				}
 			}
 
-		// get only the direct_children of the current component, if the child component is a portal it will resolve his children
+		// ddo_direct_children. Only the ddo items whose parent matches this component's tipo.
+		// Child ddos whose parent is another ddo are handled when that ddo is instantiated
+		// and calls get_grid_value on the child portal/relation component.
 			$ddo_direct_children = array_filter($ddo_map, function($el){
 				return $el->parent === $this->tipo;
 			});
@@ -389,32 +484,18 @@ class component_relation_common extends component_common {
 				// get the ddo path for inject to the next component level resolution.
 				$sub_ddo_map = get_children_recursive($ddo_map, $ddo);
 
-				// To use cache or not
-				// if the current component has a sub_ddo_map, it will be injected to be resolved in the next loop
-				// as current component will be changed on the fly, the cache will be changed, and it will solved incorrectly into the next row
-				// to prevent the conflict, the component cache will set false (because the it has different value).
-				// for example a column with a component as portal with ddo_map:
-				//	[{
-				//		"section_tipo": "rsc197",
-				//		"component_tipo": "rsc92",
-				//		"model": "component_portal",
-				//		"name": "Municipio de residencia"
-				//	}]
-				// it can be cached
-				// but a component with sub_ddo_map as:
-				//	[{
-				//		"section_tipo": "rsc197",
-				//		"component_tipo": "rsc92",
-				//		"model": "component_portal",
-				//		"name": "Municipio de residencia"
-				//	},
-				//	{
-				//		"section_tipo": "af1",
-				//		"component_tipo": "hierarchy26",
-				//		"model": "component_publication",
-				//		"name": "Público"
-				//	}]
-				// it can NOT cached, because it can affect other columns of rsc92
+				// Cache eligibility.
+				// A child that has its own ddo descendants receives an injected request_config
+				// (set just below) which mutates the memoised instance on the fly. If that
+				// instance were cached and later reused for a different locator row, the stale
+				// injected request_config would produce wrong column output.
+				// Rule: leaf ddos (no sub-chain) → use cache; non-leaf ddos → skip cache.
+				//
+				// Example — safe to cache (leaf portal):
+				//   [{section_tipo:"rsc197", tipo:"rsc92", model:"component_portal"}]
+				// Example — NOT safe to cache (portal has a sub-ddo for a child column):
+				//   [{tipo:"rsc92"}, {tipo:"hierarchy26", parent:"rsc92"}]
+				//   → rsc92's cache entry would contain the injected hierarchy26 request_config.
 				$use_cache = empty($sub_ddo_map) ? true : false;
 
 				// don't used need to be changed the way that components get its instances
@@ -424,15 +505,23 @@ class component_relation_common extends component_common {
 				// 	$ddo_map_id = $this->get_ddo_map_id($ddo_map);
 				// }
 
-				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
+				// section_tipo normalisation.
+				// Some autocomplete ddos carry an array of section tipos (toponymy search
+				// spans multiple hierarchy sections). We take the first to build paths and
+				// instantiate the component; the stored locator->section_tipo is always a
+				// single string.
 				$tmp_section_tipo 		= $ddo->section_tipo;
 				$ddo_section_tipo		= is_array($tmp_section_tipo) ? reset($tmp_section_tipo) : $tmp_section_tipo;
 				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo;
 				// set the path that will be used to create the column_obj id
 				$current_path			= $locator->section_tipo.'_'.$ddo->tipo;
 				$translatable			= ontology_node::get_translatable($ddo->tipo);
-				// if the component has a dataframe component, create his caller_dataframe to related with the locator
-				// unified pairing: the key is the main data item id (locator->id)
+				// caller_dataframe. Dataframe columns live in the SAME section as the portal
+				// (they annotate a locator, not a linked record), so they are keyed by the
+				// locator id (the stable item id assigned at locator creation time).
+				// The caller_dataframe object is passed to get_instance so that
+				// component_dataframe can select the correct row from its json dato.
+				// Unified pairing: the key is the main data item id (locator->id).
 				$caller_dataframe 		= ($ddo->model === 'component_dataframe')
 					? (object)[
 						'section_tipo'			=> is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo,
@@ -511,7 +600,12 @@ class component_relation_common extends component_common {
 				$ar_columns[] = $current_column;
 			}//end foreach ($ddo_direct_children as $ddo)
 
-			// in the case that the portals has sub-data, this sub-data will separated only in columns, not in rows
+			// Row vs column layout decision.
+			// When sub_columns_division is true (this component is a portal child of another
+			// portal, set by the outer portal's loop above) or when section_id is null
+			// (no specific record; column-header mode), multiple locators are placed side by
+			// side as columns instead of stacked as rows.  Otherwise each locator gets a 'row'
+			// wrapper, and they stack vertically in the grid.
 			if(isset($this->sub_columns_division) && $this->sub_columns_division || $this->section_id === null){
 				$ar_cells = [...$ar_cells, ...$ar_columns];
 			}else{
@@ -523,11 +617,14 @@ class component_relation_common extends component_common {
 					$ar_cells[] = $grid_row;
 			}
 
-			// get the columns position to re-order the ar_columns_obj
-			// it will join the columns see if the column is a column created by the locator
-			// when the component is portal inside portal, like 'photograph' inside 'identifying image' inside 'interview'.
-			// 'photograph' locators will be exploded in columns not in rows and the column is identify by the section_id of the photograph
-			// the final format will be: name ; surname ; name|1 ; surname|1 ; name|2 etc of the photograph
+			// Column header deduplication and ordering.
+			// ar_columns_obj accumulates the unique column_obj descriptors across all
+			// locators.  When a portal contains multiple locators that each introduce new
+			// columns (portal-inside-portal, e.g., photograph→name, photograph→surname for
+			// each photograph), new columns are inserted immediately AFTER the last column
+			// sharing the same group id (the locator's section_tipo), so the output reads:
+			//   name | surname | name|1 | surname|1 | name|2 | surname|2 …
+			// New column ids contain a '|' separator with the locator key index.
 			foreach ($locator_column_obj as $column_pos => $current_column_obj) {
 				/** @var object $current_column_obj */
 				if (!is_object($current_column_obj)) continue;
@@ -616,16 +713,33 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_EXPORT_VALUE
-	* Atoms based export contract (see component_common::get_export_value).
-	* Component driven recursion: for every data locator and every direct
-	* child ddo of this component in the ddo_map, the child component is
-	* instantiated and resolved; its atoms are merged extending the path.
-	* The child own segment carries the locator position (item_index), so
-	* row/column explosion is a tabulator decision — the legacy
-	* sub_columns_division flag and the request_config/column_obj instance
-	* injections are not ported (the ddo_map travels in the export_context).
-	* @param export_context|null $context = null
-	* @return export_value
+	* Atoms-based export contract — counterpart of get_grid_value for the export pipeline.
+	*
+	* For every locator in the dato and every direct ddo child of this component in the
+	* ddo_map, a child component is instantiated in the target section and its atoms
+	* (export_atom objects) are merged into the returned export_value.  The recursion
+	* is driven by passing a descend()ed export_context down the chain.
+	*
+	* Key differences from get_grid_value:
+	*   - sub_columns_division and column_obj injection are NOT applied; row/column
+	*     explosion is the tabulator's responsibility at render time.
+	*   - ddo_map travels through export_context rather than being injected as a
+	*     request_config onto the component instance.
+	*   - The value_with_parents flag on the context triggers an additional atom
+	*     per locator containing the ancestor chain (' > ' joined), useful for
+	*     export tools that need the full hierarchy path alongside the value.
+	*
+	* Locator validation mirrors get_grid_value: empty/invalid locators and locators
+	* pointing to inactive TLDs are skipped with an ERROR log entry.
+	*
+	* component_relation_index hook: the protected resolve_export_ddo_children() method
+	* is called per locator; the base implementation is a no-op pass-through, but
+	* component_relation_index overrides it to compute its ddo_map dynamically from the
+	* target section's relation_list config.
+	*
+	* @param export_context|null $context = null  Carries path_prefix, ddo_map,
+	*   item_index, item_section_id, and value_with_parents from the caller.
+	* @return export_value  Flat collection of export_atom objects.
 	*/
 	public function get_export_value( ?export_context $context=null ) : export_value {
 
@@ -845,15 +959,16 @@ class component_relation_common extends component_common {
 
 	/**
 	* RESOLVE_EXPORT_DDO_CHILDREN
-	* Hook for per-locator ddo children resolution in get_export_value().
-	* Default: the given map and children are returned unchanged.
-	* component_relation_index overrides it to self-compute the ddo_map from
-	* the target section relation_list config (it has no export ddo paths).
-	* @param array $ddo_map
-	* @param array $ddo_direct_children
-	* @param object $locator
-	* @return object
-	* 	{ddo_map: array, ddo_direct_children: array}
+	* Per-locator hook called inside get_export_value() before iterating ddo children.
+	* The base implementation is a transparent pass-through returning the unchanged map
+	* and children.  component_relation_index overrides this to compute the ddo_map
+	* dynamically from the target section's relation_list request_config because
+	* component_relation_index records point at arbitrary section types and have no
+	* static ddo path in the export tool config.
+	* @param array $ddo_map              Full ddo_map active for this export call.
+	* @param array $ddo_direct_children  Pre-filtered direct children of this component.
+	* @param object $locator             The locator currently being resolved.
+	* @return object {ddo_map: array, ddo_direct_children: array}
 	*/
 	protected function resolve_export_ddo_children( array $ddo_map, array $ddo_direct_children, object $locator ) : object {
 
@@ -867,10 +982,14 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_EXPORT_DDO_DESCENDANTS
-	* All ddo_map elements that depend on the given ddo (recursive children chain)
-	* @param array $ddo_map
-	* @param object $dd_object
-	* @return array
+	* Collects the full recursive descendant chain of a given ddo in the ddo_map.
+	* Used by get_export_value to determine whether a child ddo has its own sub-chain
+	* (and therefore must skip instance caching) and to build the sub_ddo_map passed
+	* into the child's export_context.
+	* Mirrors the get_children_recursive() global function used by get_grid_value.
+	* @param array $ddo_map    Full flat ddo_map for the current export pass.
+	* @param object $dd_object The parent ddo whose descendants are sought.
+	* @return array  All descendant ddo objects in breadth-first order.
 	*/
 	protected function get_export_ddo_descendants( array $ddo_map, object $dd_object ) : array {
 
@@ -892,11 +1011,16 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_DATA_WITH_REFERENCES
-	* Return the data to all components, except the components that has references calculated,
-	* like component_relation_related
-	* this will mix the real data and the result of the calculation
-	* (!) Default is the component data, but overwrite it if component need it
-	* @return array|null $data
+	* Returns the effective locator list for this component, including any computed
+	* inverse references that are not literally stored in the dato.
+	*
+	* The base implementation simply delegates to get_data().  component_relation_related
+	* overrides this method to merge stored locators with dynamically computed inverse
+	* references (cross-section reverse links), which is needed for search and export.
+	*
+	* (!) Callers that need the full logical set (e.g. set_data_external's data_from_field
+	* resolution) must use this method rather than get_data() directly.
+	* @return array|null  Array of locator objects, or null when the dato is empty.
 	*/
 	public function get_data_with_references() : ?array {
 
@@ -907,14 +1031,33 @@ class component_relation_common extends component_common {
 
 	/**
 	* VALIDATE_DATA_ELEMENT
-	* Set raw data overwrite existing data.
-	* Usually, data is built element by element, adding one locator to existing data, but sometimes we need
-	* to insert complete array of locators at once. Use this method in this cases
-	* @param object $data_element
-	* The data element to validate
-	* @param bool $init
-	* On true, the component will initialize the locator lookup map
-	* @return object|false
+	* Validates, normalises, and deduplicates a single incoming locator object before
+	* it is added to the component dato.
+	*
+	* Steps performed:
+	*   1. Rejects locators missing section_id or section_tipo.
+	*   2. Rejects self-referencing locators (section_tipo + section_id match host section)
+	*      to prevent infinite resolution loops.
+	*   3. Clones the locator to isolate it from mutations by observer components (e.g.,
+	*      a component observed by another will have from_component_tipo rewritten for the
+	*      observer; without cloning the original locator stored on disk would be corrupted).
+	*   4. Ensures 'type' is set (falls back to $this->relation_type).
+	*   5. Sets 'type_rel' for component_relation_related when missing.
+	*   6. Enforces correct 'from_component_tipo' (logs a warning if it was wrong).
+	*   7. Enforces correct 'lang' for translatable components.
+	*   8. Strips temporary 'paginated_key' marker that must never be persisted.
+	*   9. Constructs a normalised locator instance.
+	*  10. Checks the O(1) lookup map for a duplicate; rejects duplicates, otherwise
+	*      registers the new key.
+	*
+	* The lookup map is reset when $init===true (the default), which is appropriate when
+	* processing a single element.  Bulk callers (e.g., set_data_raw importing a full
+	* array) should call with $init===false after the first element to accumulate the map
+	* across the whole array.
+	*
+	* @param object $data_element  The incoming locator-shaped object to validate.
+	* @param bool $init = true     True → reset the lookup map before this validation.
+	* @return object|false  The normalised locator object, or false if rejected.
 	*/
 	public function validate_data_element( object $data_element, bool $init = true ) : object|false {
 
@@ -1039,8 +1182,17 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_LOCATOR_PROPERTIES_TO_CHECK
-	* return the properties to be check to compare locators
-	* @return array $locator_properties_to_check
+	* Returns the set of locator properties that together uniquely identify a locator
+	* for duplicate detection in validate_data_element.
+	*
+	* Translatable relation components (where lang is stored on each locator) include
+	* 'lang' in the key set so that a Spanish and an English locator to the same record
+	* are considered distinct.  Non-translatable components omit 'lang'.
+	*
+	* 'tag_id' is included to differentiate multiple references to different named tags
+	* within the same target record (used by component_text_area tagging).
+	*
+	* @return array  Ordered list of property names to hash via locator::build_locator_lookup_key().
 	*/
 	public function get_locator_properties_to_check() {
 
@@ -1054,9 +1206,23 @@ class component_relation_common extends component_common {
 
 	/**
 	* ADD_LOCATOR_TO_DATA
-	* Add one locator to current 'data'. Verify that it exists before, to avoid duplicates.
-	* @param object $locator
-	* @return bool
+	* Appends a single locator to the component's in-memory dato, checking first for
+	* duplicates using locator::in_array_locator().
+	*
+	* The data array is re-indexed (array_values) before the check so that JSON encoding
+	* always produces an array, not an object (non-sequential integer keys trigger the
+	* latter in json_encode).
+	*
+	* (!) This method updates the in-memory dato via set_data() but does NOT persist.
+	* The caller is responsible for calling save() afterward.
+	*
+	* (!) Throws an Exception in SHOW_DEBUG mode when 'type' is missing from the locator,
+	* since type is mandatory for all relation locators.
+	*
+	* @param object $locator  The locator to append.  Must contain at minimum: type,
+	*   section_tipo, section_id, from_component_tipo.
+	* @return bool  True if the locator was appended; false if rejected (empty, invalid,
+	*   or duplicate).
 	*/
 	public function add_locator_to_data( object $locator ) : bool {
 
@@ -1112,11 +1278,34 @@ class component_relation_common extends component_common {
 
 	/**
 	* REMOVE_LOCATOR_FROM_DATA
-	* Removes from data one or more locators that accomplish given locator equality
-	* (!) Not save the result
-	* @param object $locator_to_remove
-	* @param array $ar_properties = []
-	* @return bool
+	* Removes every locator from the in-memory dato that matches the given locator
+	* according to the supplied property equality list.
+	*
+	* Type validation:
+	*   - If 'type' is missing from the incoming locator it is auto-assigned from
+	*     $this->relation_type (with a WARNING log).
+	*   - If 'type' is present but does not match $this->relation_type the method
+	*     aborts immediately and returns false.  This guards against accidentally
+	*     removing a locator from the wrong component type.
+	*
+	* Dataframe cascade:
+	*   For each removed locator, the matching dataframe row is also removed:
+	*   - If the locator has an 'id' property, removal is by id (new unified pairing).
+	*   - Otherwise removal is by locator object (legacy, pre-migration items).
+	*
+	* The default $ar_properties ('section_tipo', 'section_id', 'from_component_tipo',
+	* 'type') means all locators pointing to the same target record from the same
+	* component are removed.  Pass a narrower or wider set as needed.
+	*
+	* 'paginated_key' is always excluded from comparisons via the $ar_exclude_properties
+	* argument to locator::compare_locators() to avoid mismatches in data that was saved
+	* with an accidentally persisted paginated_key.
+	*
+	* (!) This method mutates in-memory dato only.  Callers must call save() to persist.
+	* @param object $locator_to_remove  The locator whose matching entries are removed.
+	* @param array $ar_properties = ['section_tipo','section_id','from_component_tipo','type']
+	*   Properties compared by locator::compare_locators() for equality.
+	* @return bool  True if at least one locator was removed; false otherwise.
 	*/
 	public function remove_locator_from_data( object $locator_to_remove, array $ar_properties=['section_tipo','section_id','from_component_tipo','type'] ) : bool {
 
@@ -1200,15 +1389,33 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_LOCATOR_VALUE
-	* Resolve locator to string value to show in list etc.
+	* Resolves a locator to one or more display string values.
 	*
-	* @param object $locator
-	* @param string $lang = DEDALO_DATA_LANG
-	* @param bool $show_parents = false
-	* @param array|null $ar_components_related
-	* @param bool $include_self = true
-	* @return array|null $ar_value
-	* 	Sample: ['pepe','lope']
+	* Two resolution modes depending on $ar_components_related:
+	*
+	* 1. $ar_components_related is provided:
+	*    Each component tipo in the array is instantiated against the locator's
+	*    section_id/section_tipo and get_value() is called.  Empty, whitespace-only,
+	*    or '<mark></mark>' values are skipped.
+	*    Use case: custom multi-field display (e.g., First name + Surname).
+	*
+	* 2. $ar_components_related is null (default):
+	*    The primary thesaurus term is resolved via ts_object::get_term_by_locator().
+	*    If $show_parents===true, the full ancestor chain is walked with
+	*    component_relation_parent::get_parents_recursive() and each parent term is
+	*    appended to the result.  $include_self controls whether the self-term leads
+	*    the array (default true).
+	*    Use case: section_map hierarchical breadcrumbs, export value_with_parents.
+	*
+	* Return value is an array so callers can join with a separator of their choice.
+	*
+	* @param object $locator                    The locator to resolve (must have section_id, section_tipo).
+	* @param string $lang = DEDALO_DATA_LANG    Language for term resolution.
+	* @param bool $show_parents = false         When true, ancestor terms are appended.
+	* @param array|null $ar_components_related  Component tipos to resolve; null → use thesaurus term.
+	* @param bool $include_self = true          When show_parents is true, include the self-term first.
+	* @return array|null  Array of display strings, e.g. ['Madrid', 'Spain', 'Europe'],
+	*   or null on invalid/empty locator.
 	*/
 	public static function get_locator_value( object $locator, string $lang=DEDALO_DATA_LANG, bool $show_parents=false, ?array $ar_components_related=null,	bool $include_self=true	) : ?array {
 
@@ -1281,14 +1488,27 @@ class component_relation_common extends component_common {
 
 	/**
 	* REMOVE_PARENT_REFERENCES
-	* Calculate parents and removes references to current section
-	* @param string $section_tipo
-	* @param int $section_id
-	* @param array|null $filter
-	* 	Is array of locators. Default is bool false
-	* @param array|null $parents
-	* 	Pre-fetched parents array (to avoid reading from deleted section)
-	* @return object $response
+	* Removes all references to the given section from its parent records' child lists.
+	* Called during section deletion to clean up dangling hierarchy back-pointers.
+	*
+	* For each parent locator, the corresponding component_relation_children instance
+	* (resolved via from_component_tipo) is loaded, remove_me_as_your_child() is
+	* called to strip the reference, and the parent section is saved immediately.
+	*
+	* $parents is accepted as a pre-fetched argument to avoid a second read of a
+	* section record that may already have been deleted by the time this method runs.
+	*
+	* $filter restricts removal to only the parents whose (section_tipo, section_id)
+	* appears in the filter list, which is used when a partial deletion/unlink is
+	* requested rather than a full purge.
+	*
+	* @param string $section_tipo  Section tipo of the record being deleted.
+	* @param mixed $section_id     Section id of the record being deleted.
+	* @param array|null $filter    Optional array of locator objects; only parent entries
+	*   matching these (section_id + section_tipo) are removed.
+	* @param array|null $parents   Pre-fetched result of component_relation_parent::get_parents();
+	*   if null, the method fetches them itself.
+	* @return object $response  {result: bool, msg: string, ar_removed?: array}
 	*/
 	public static function remove_parent_references( string $section_tipo, $section_id, ?array $filter=null, ?array $parents=null ) : object {
 
@@ -1366,13 +1586,28 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_DIFFUSION_DATA
-	* Resolve the default diffusion data
-	* is used by the `diffusion_data`
-	* for component_section_id the default is its own data
-	* @param object $ddo
-	* @param ?string $diffusion_element_tipo
-	* @return array $diffusion_data
+	* Resolves the diffusion value for this relation component.
 	*
+	* Default flow (no ddo->fn):
+	*   The component's stored locator array is returned as the diffusion value.
+	*   If data is empty and the model is component_relation_parent, a fallback to
+	*   get_possible_root_hierarchy() is attempted for v5 thesaurus compatibility.
+	*   If ddo->data_slice is set, the array is sliced to the requested offset/length
+	*   before being set as the value.
+	*
+	* Custom function flow (ddo->fn is set):
+	*   The named method is called on $this.  Three dispatch cases:
+	*   - fn === 'add_parents': sets raw data as value; method result goes into meta.
+	*   - method_exists($this, $fn): sets method return value directly as diffusion value.
+	*   - default (diffusion_fn via __call): the method returns a full array of
+	*     diffusion_data_object items that replaces the default one.
+	*   Errors during invocation are caught and logged; the stub diffusion_data_object
+	*   (null value) is returned on failure.
+	*
+	* @param object $ddo                   DDO configuration driving this diffusion element.
+	*   May contain: fn (string method name), data_slice ({offset, length}), id.
+	* @param ?string $diffusion_element_tipo  The tipo of the parent diffusion element.
+	* @return array  Array of diffusion_data_object instances.
 	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
 	* @test false
 	*/
@@ -1480,8 +1715,10 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* SET_DATO_EXTERNAL (Compatibility alias for set_data_external)
-	* @param object $options
+	* SET_DATO_EXTERNAL
+	* Compatibility alias for set_data_external().  'dato' was the v6 naming convention;
+	* callers may still use 'dato' in legacy ontology config.
+	* @param object $options  Same options object as set_data_external().
 	* @return bool
 	*/
 	public function set_dato_external( object $options ) : bool {
@@ -1492,12 +1729,43 @@ class component_relation_common extends component_common {
 
 	/**
 	* SET_DATA_EXTERNAL
-	* Get the data from other component that reference at the current section of the component (portal, autocomplete, select, etc)
-	* the result will be the result of the search to the external section and component
-	* and the combination with the data of the component (portal, autocomplete, select, etc) (that save the result for user manipulation, order, etc)
-	* @see used by component_autocomplete and component_portal
-	* @param object options
-	* @return bool
+	* Synchronises this component's locator dato against records in an external
+	* section that reference the current host section.  Callers are typically
+	* component_autocomplete and component_portal in observer/observed patterns.
+	*
+	* Three special resolution paths (short-circuit and return early):
+	*
+	* 1. set_observed_data (properties->source->set_observed_data):
+	*    The component's data is taken directly from another component on the same
+	*    section (or a function on it), replacing the current dato.  Used for cases
+	*    where component_text_area tags or SVG embed locators that must be mirrored.
+	*    Saves immediately and returns true.
+	*
+	* 2. source_overwrite (properties->source->source_overwrite):
+	*    Data is copied from a field on the section pointed to by component_to_search,
+	*    overwriting the current dato.  Used in tool_cataloging workflows.
+	*    Saves immediately and returns true.
+	*
+	* 3. Normal inverse-reference search (default path):
+	*    Builds a search_query_object in 'related' mode scoped to
+	*    $ar_section_to_search (from properties->source->section_to_search) that
+	*    filters by a locator pointing at the current host record.
+	*    Optionally enriches the search locator with data from
+	*    properties->source->data_from_field components.
+	*    The resulting rows are merged with the existing dato preserving user order:
+	*    - Locators that still exist are kept in original order.
+	*    - New locators from the search are appended.
+	*    - Locators whose target has been deleted are removed.
+	*    Performance guards: if total > 2000 results, order preservation is skipped;
+	*    if both old and new are empty, no save is triggered ($changed stays false).
+	*
+	* @param object $options  Configuration bag:
+	*   save (bool)                → persist after updating (default false).
+	*   changed (bool)             → force-treat as changed (default false).
+	*   current_data (array|false) → pre-loaded dato to diff against (else reads from DB).
+	*   current_dato (array|false) → legacy alias for current_data.
+	*   references_limit (int)     → max rows from the inverse search (default 10).
+	* @return bool  Always true (even on no-change; changed flag controls actual save).
 	*/
 	public function set_data_external( object $options ) : bool {
 		$start_time=start_time();
@@ -1714,16 +1982,21 @@ class component_relation_common extends component_common {
 			$total_ar_data		= sizeof((array)$data);
 			$final_data			= [];
 
+			// Change detection and order-preservation logic.
+			// Four cases are handled in order of cheapest to most expensive:
 			if ($total_ar_result===0 && $total_ar_data===0) {
-				// empty values
+				// Both empty: nothing to do, no save needed.
 				$changed = false;
 
 			}else if ($total_ar_result===0 && $total_ar_data > 0){
-
+				// All previously linked records have disappeared (deleted externally).
+				// Mark changed so the now-empty dato gets saved.
 				$changed = true;
 
 			}else if ($total_ar_result>2000) {
-				// Not maintain order, is too expensive above 1000 locators
+				// Large result set: preserving insertion order would require an O(n²)
+				// scan. Accept the new list verbatim; flag as not changed so we avoid
+				// an expensive save unless the count has actually changed.
 				if ($total_ar_data!==$total_ar_result) {
 					$changed = false; // avoid expensive save
 					$this->set_data($ar_result);
@@ -1733,7 +2006,11 @@ class component_relation_common extends component_common {
 					);
 				}
 			}else{
-				// preserve order
+				// Normal case: walk existing data in order, keeping only entries that
+				// are still present in the search result.  Then append any new entries
+				// that the search returned but were not yet in data.
+				// This two-pass approach preserves user-defined ordering while
+				// removing deleted and adding new cross-references.
 					foreach ((array)$data as $key => $current_locator) {
 
 						$found = array_find($ar_result, function($el) use($current_locator){
@@ -1824,22 +2101,31 @@ class component_relation_common extends component_common {
 
 	/**
 	* ADD_PARENTS
-	* Resolves the hierarchical ancestor chain for related items.
+	* Resolves the hierarchical ancestor chain for each locator in the component dato.
+	* Called as a ddo->fn diffusion function (see get_diffusion_data) when the diffusion
+	* config requests enriched parent metadata alongside the raw locator data.
 	*
-	* Iterates through current relation locators. For each locator, resolves its data Node
-	* (term and typology) and maps the element. Then, if enabled, walks the node tree
-	* upwards fetching all parent locators to build a list representing the structural path
-	* from item up to root.
+	* For each locator in the dato:
+	*   1. Validates a thesaurus scope exists for the target section (skips if not).
+	*   2. Calls resolve_map_node_data() to get the item's term and typology.
+	*   3. If $resolve_parent_chain is true (i.e., not the root-hierarchy fallback case),
+	*      walks up with component_relation_parent::get_parents_recursive() and appends
+	*      each ancestor's node data to the chain.
 	*
-	* The output array structure maps locator keys to their full descriptive lists.
+	* The root-hierarchy fallback applies to empty-data component_relation_parent
+	* components whose get_possible_root_hierarchy() returns a virtual root locator;
+	* in that case the parent chain walk is suppressed (there is nothing further up).
 	*
-	* @return array Mapped chains indexing keys "{section_tipo}_{section_id}" to list items of structure:
-	*	- section_id (int): Item ID
-	*	- section_tipo (string): Item layout Type
-	*	- term (string|null): resolved visual descriptor string
-	*	- typology (string|null): descriptive typology label
-	*	- typology_section_id (int|null): relation definition target group
-	*	- typology_section_tipo (string|null): relation definition target type
+	* @return array  Map keyed by "{section_tipo}_{section_id}" of the locator target.
+	*   Each value is an ordered list (self first, then ancestors) of node-data arrays:
+	*   [
+	*     'section_id'           => int,
+	*     'section_tipo'         => string,
+	*     'term'                 => array|null,   raw term dato merged across all term tipos
+	*     'typology'             => array|null,   raw term dato of the typology target node
+	*     'typology_section_id'  => int|null,
+	*     'typology_section_tipo'=> string|null
+	*   ]
 	*/
 	protected function add_parents() : array {
 
@@ -1925,22 +2211,28 @@ class component_relation_common extends component_common {
 
 	/**
 	* RESOLVE_MAP_NODE_DATA
-	* Resolves visual and category descriptive data for a specific section node record.
+	* Resolves the raw term and typology data for a single section record, used by
+	* add_parents() to build each node entry in the ancestor chain.
 	*
-	* Fetches the primary term (string label) of the item. Additionally, if a typology
-	* relation is populated, fetches the related locator and pulls the term label
-	* of that target typology section entry setup.
+	* Term resolution:
+	*   Uses section_map::get_term_data() in 'thesaurus' scope, which returns the
+	*   raw multi-lang dato merged across all term component tipos defined for the
+	*   section in section_map.
 	*
-	* @param int $section_id        Target section instance record numerical identification.
-	* @param string $section_tipo   Target section layout configuration layout index.
+	* Typology resolution:
+	*   The 'model' element tipo from the section_map (e.g. hierarchy27 → a
+	*   component_select pointing at a typology section) is instantiated and its
+	*   first stored locator is followed to retrieve the typology node's own term.
+	*   The guard against missing thesaurus scope on the typology target prevents a
+	*   spurious warning when the typology section has no configured term.
 	*
-	* @return array|null Pack dictionary list item definitions of structure:
-	*	- section_id (int): item descriptive locator structure.
-	*	- section_tipo (string): layout item descriptive locator structure layout.
-	*	- term (array|null): descriptive term raw data, merged across all term tipos.
-	*	- typology (array|null): supporting descriptive typology raw data.
-	*	- typology_section_id (int|null): definitions descriptive typology target structure index.
-	*	- typology_section_tipo (string|null): definitions descriptive typology target structure type.
+	* Returns null if no thesaurus term tipos are defined for the section (indicates
+	* an unresolvable or non-thesaurus section).
+	*
+	* @param int $section_id      Numeric record id of the node to resolve.
+	* @param string $section_tipo Section tipo of the node.
+	* @return array|null  Node data pack or null if the section has no thesaurus term.
+	*   Keys: section_id, section_tipo, term, typology, typology_section_id, typology_section_tipo.
 	*/
 	protected function resolve_map_node_data( int $section_id, string $section_tipo ) : ?array {
 
@@ -2009,10 +2301,20 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_RELATIONS_SEARCH_VALUE
-	* Resolve component search values (parent recursive) to easy search.
-	* @return array|null $relations_search_value
-	* 	Null is default response for calls to this method. Overwritten for component_autocomplete_hi
-	* 	Array of locators calculated with thesaurus parents of current section ascendant. Used only for search.
+	* Returns locators for all thesaurus ancestors of the currently stored locators,
+	* to enable hierarchical search (search for a node implicitly matches all descendants).
+	*
+	* Only applicable to component_autocomplete_hi components (legacy model check enforced).
+	* For all other models the method logs an error and returns null.
+	*
+	* When a component_autocomplete_hi links to thesaurus node 'Madrid', the search index
+	* should also match the component when searching for 'Spain' or 'Europe'.  This method
+	* computes all parent locators for each stored locator and returns them tagged with
+	* the current component tipo and relation_type so they can be inserted into the
+	* 'relation_search' JSONB column during save.
+	*
+	* @return array|null  Array of locator objects (parent chain locators), or null when
+	*   not applicable (wrong model, empty dato, or component is not component_autocomplete_hi).
 	*/
 	public function get_relations_search_value() : ?array {
 		// only for component_autocomplete_hi
@@ -2066,9 +2368,15 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_FILTER_LIST_DATA
-	* Create all data needed for build service autocomplete filter options interface
-	* @param array $filter_by_list
-	* @return array $filter_fields_data
+	* Builds the data payload required to render the autocomplete filter options UI.
+	* For each filter field descriptor in $filter_by_list, instantiates the component
+	* and collects its context (for rendering) and its list of available values
+	* (from get_list_of_values), returned as an array of objects each with keys
+	* 'context' and 'datalist'.
+	*
+	* @param array $filter_by_list  Array of objects, each with 'section_tipo' and
+	*   'component_tipo' properties describing a filterable field.
+	* @return array  Array of {context: object, datalist: array} objects, one per input.
 	*/
 	public static function get_filter_list_data( array $filter_by_list ) : array {
 
@@ -2111,11 +2419,20 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_HIERARCHY_TERMS_FILTER
-	* Create a sqo filter from
-	* @see get_request_config
+	* Converts an array of hierarchy term descriptors into SQO filter clauses that
+	* restrict a search to records whose section_id component matches one of the
+	* given term nodes (or their children when recursive===true).
 	*
-	* @param array $ar_terms
-	* @return array $filter
+	* Used by get_fixed_filter() (case 'hierarchy_terms') and transitively by
+	* get_request_config to build the fixed filter portion of a request config SQO.
+	*
+	* Each input term:
+	*   - Gets its children retrieved (flat or recursive).
+	*   - Maps to a filter_item {q: "id1,id2,…", path: [section_id path]} using the
+	*     section's component_section_id tipo, so the final SQL can use an IN clause.
+	*
+	* @param array $ar_terms  Array of objects: {section_id, section_tipo, recursive: bool}.
+	* @return array  Array of filter_item objects suitable for embedding in an SQO filter.
 	*/
 	public static function get_hierarchy_terms_filter( array $ar_terms ) : array {
 
@@ -2172,11 +2489,26 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_HIERARCHY_SECTIONS_FROM_TYPES
-	* Calculate hierarchy sections (target section tipo) of types requested, like es1,fr1,us1 from type 2 (Toponymy)
-	* $component_tipo set the target component to get the section_tipo, by default id the target section component, but is possible get the target model section.
-	* @param array $hierarchy_types
-	* @param string $component_tipo, by default uses DEDALO_HIERARCHY_TARGET_SECTION_TIPO (hierarchy53)
-	* @return array $hierarchy_sections_from_types
+	* Resolves the target section tipos (e.g. 'es1', 'fr1', 'us1') registered in the
+	* hierarchy system (DEDALO_HIERARCHY_SECTION_TIPO = 'hierarchy1') for the given
+	* type codes (e.g. [2] for Toponymy).
+	*
+	* A hierarchy record in hierarchy1 carries:
+	*   - hierarchy4  (component_radio_button 'Active') — must be 'yes' (NUMERICAL_MATRIX_VALUE_YES).
+	*   - hierarchy9  (component_select 'Typology')     — must match one of $hierarchy_types.
+	*   - hierarchy53 (component_select 'Target section') — the value is the section tipo string.
+	*
+	* The search is executed with skip_projects_filter=true because hierarchy records
+	* are global installation config, not project-scoped content.
+	*
+	* Results are cached in the static $hierarchy_sections_from_types_cache array keyed
+	* by implode('_', $hierarchy_types) for the request lifetime.
+	*
+	* @param array $hierarchy_types   Array of integer type ids (as strings) that identify
+	*   a hierarchy class (e.g. ['2'] for Toponymy).
+	* @param string $component_tipo   The component tipo holding the target section value;
+	*   defaults to DEDALO_HIERARCHY_TARGET_SECTION_TIPO ('hierarchy53').
+	* @return array  Array of target section tipo strings (e.g. ['es1', 'fr1', 'on1']).
 	*/
 	public static function get_hierarchy_sections_from_types( array $hierarchy_types, string $component_tipo=DEDALO_HIERARCHY_TARGET_SECTION_TIPO ) : array {
 
@@ -2306,30 +2638,49 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_REQUEST_CONFIG_SECTION_TIPO
-	* Resolves section tipo from properties definition.
-	* Sometimes it is not possible to clearly define section_type,
-	* in those cases it is possible to define in properties a «resolution» with a context
-	* for example:
-	* 	self
-	* 		in toponymy «self» will be resolved by the section_tipo that call as es1, fr1, etc.
-	* 	hierarchy_types
-	* 		resolve the hierarchy type as 1 - thematic, and set all section_tipo of this type as; ts1, on1, dc1, etc...
+	* Resolves the effective set of section tipos that a relation component's request_config
+	* should target, given a declarative source descriptor from the ontology properties.
 	*
-	* this function has two params
-	* @param array $ar_section_tipo_sources
-	* this param give the property configuration as:
-	* [
-	*    {
-	*        "value": [
-	*            "hierarchy53"
-	*        ],
-	*        "source": "field_value"
-	*    }
-	* ]
-	* second param is used to give the caller section_tipo, used for the resolution in some cases.
-	* @param string|null $caller_section_tipo = null
-	* 	sample: hierarchy1
-	* @return array $ar_section_tipo
+	* Source types (property format: [{source: '…', value: […]}]):
+	*
+	*   'self'
+	*     The section tipo of the calling section (passed as $caller_section_tipo).
+	*     Used by portal or autocomplete components in re-usable virtual sections that
+	*     must target whichever concrete section invoked them.  Example: a toponymy
+	*     component in hierarchy1 targeting 'es1', 'fr1', etc. dynamically.
+	*
+	*   'hierarchy_types'
+	*     Delegates to get_hierarchy_sections_from_types($source_item->value) to map
+	*     a type code (e.g. [2] = Toponymy) to all registered target section tipos.
+	*
+	*   'ontology_sections'
+	*     All section tipos defined in the ontology (ontology::get_all_ontology_sections()).
+	*
+	*   'field_value'
+	*     Reads a component in every active record of $caller_section_tipo (hierarchy1)
+	*     and collects the section tipo strings stored there.  Used by
+	*     component_relation_children in hierarchy to dynamically resolve the set of
+	*     sections a hierarchy type may target.  Filters by active status before
+	*     iterating to keep the result set small.
+	*
+	*   'hierarchy_terms'
+	*     Collects section tipos from explicit locator objects (with section_id,
+	*     section_tipo, recursive) for use as fixed filter targets.
+	*
+	*   'section' (default)
+	*     Plain literal section tipos from $source_item->value, validated against the
+	*     active TLD list (inactive TLDs are silently dropped with a WARNING log).
+	*
+	* String source items (legacy flat format) are accepted with a WARNING log; they
+	* bypass source-based dispatch and are pushed directly into $ar_section_tipo.
+	* A string 'self' triggers an ERROR because it should be expressed as an object.
+	*
+	* Duplicates are removed before returning; result is re-indexed.
+	*
+	* @param array $ar_section_tipo_sources  Declarative source descriptors from properties.
+	* @param string $caller_section_tipo     The section tipo that owns the component;
+	*   used for 'self' and 'field_value' resolutions.
+	* @return array  Flat unique array of resolved section tipo strings.
 	*/
 	public static function get_request_config_section_tipo( array $ar_section_tipo_sources, string $caller_section_tipo ) : array {
 		if(SHOW_DEBUG===true) {
@@ -2566,10 +2917,39 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_FIXED_FILTER
-	* @param array $ar_fixed
-	* @param string $section_tipo
-	* @param mixed $section_id
-	* @return array $ar_fixed_filter
+	* Converts ontology fixed-filter property descriptors into SQO filter clause objects
+	* that are pre-applied to every search executed by this component's request_config.
+	*
+	* Three source types are handled:
+	*
+	*   'fixed_dato'
+	*     Direct SQO filter objects embedded in the property value.  Each is validated
+	*     against the active TLD list (missing TLD → item silently skipped with WARNING).
+	*     Use case: restrict a portal to records flagged with a specific attribute
+	*     (e.g. "Usable in indexing" = yes).
+	*
+	*   'component_data'
+	*     Dynamically resolves the search value from a component's dato in the calling
+	*     section.  Supports a ddo_map chain for multi-hop resolution (calling section →
+	*     linked record → value component).  Two sub-variants:
+	*     - search_section_id===true: the resolved section_ids are joined as a comma
+	*       string for an IN-style section_id lookup (optimised).
+	*     - default: each locator from the resolved data becomes an individual q item
+	*       in the filter, optionally stripping from_component_tipo when
+	*       use_from_component_tipo===false.
+	*     See the inline sample comment in the source for the full JSON shape.
+	*
+	*   'hierarchy_terms'
+	*     Delegates to get_hierarchy_terms_filter() to build section_id range filters
+	*     from a hierarchy subtree.
+	*
+	* Each group of items is wrapped in a {$operator: [...]} object (default '$or') and
+	* only appended to the result if non-empty.
+	*
+	* @param array $ar_fixed      Fixed filter descriptors from properties->fixed (or equivalent).
+	* @param string $section_tipo Caller section tipo; passed to resolve_component_data_recursively.
+	* @param mixed $section_id    Caller section id; used for 'component_data' resolution.
+	* @return array  Array of SQO filter clause objects, each with a boolean operator key.
 	*/
 	public static function get_fixed_filter( array $ar_fixed, string $section_tipo, mixed $section_id ) : array {
 
@@ -2773,11 +3153,26 @@ class component_relation_common extends component_common {
 
 	/**
 	* RESOLVE_COMPONENT_DATA_RECURSIVELY
-	* Get data of the parent component and inject into the next component in the chain (his children)
-	* @param array $ar_ddo // full array with all ddo
-	* @param dd_object $dd_object // parent ddo to get his children
-	* @param locator $data // data of the previous recursion
-	* @return array $component_data
+	* Walks a ddo_map chain depth-first, fetching each component's dato and passing the
+	* result locators as context to the next level's component instantiation.
+	*
+	* Used by get_fixed_filter (case 'component_data') and get_calculation_data to
+	* follow a multi-hop path from the calling section to a final leaf component whose
+	* data is the actual filter/calculation value.
+	*
+	* Termination: a ddo marked $dd_object->last===true is the leaf — its component
+	* dato is returned directly without further recursion.  Non-leaf ddos recurse into
+	* their children (found by get_ddo_children_recursive), merging all child results.
+	*
+	* Special fn dispatch:
+	*   ddo->fn (or legacy ddo->data_fn) === 'get_calculation_data' → calls the named
+	*   method with ddo->options; otherwise get_data() is used.
+	*
+	* @param array $ar_ddo    Full flat ddo_map for the resolution pass.
+	* @param object $dd_object The current ddo being processed (set to leaf via ->last).
+	* @param object $data      Context object from the previous recursion level, carrying
+	*   {section_tipo, section_id} used to instantiate the current component.
+	* @return array  The resolved component dato (array of locators or plain values).
 	*/
 	private static function resolve_component_data_recursively(array $ar_ddo, object $dd_object, object $data) : array {
 
@@ -2838,10 +3233,13 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_DDO_CHILDREN_RECURSIVE
-	* children_resursive function, used to get all children for specific ddo
-	* @param array $ar_ddo // full array with all ddo
-	* @param dd_object $dd_object // parent ddo to get his children
-	* @return array $ar_children
+	* Collects the full recursive descendant chain of a ddo in the ddo_map, used by
+	* resolve_component_data_recursively() to fan out into siblings at each level.
+	* This is the static private equivalent of get_export_ddo_descendants(), scoped to
+	* the 'component_data' resolution context rather than the export context.
+	* @param array $ar_ddo    Full flat ddo_map.
+	* @param object $dd_object Parent ddo whose descendants are sought.
+	* @return array  All descendant ddo objects in breadth-first order.
 	*/
 	private static function get_ddo_children_recursive(array $ar_ddo, object $dd_object) : array {
 		$ar_children = [];
@@ -2861,8 +3259,10 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* Default (component_common) is true. Override as false.
+	* Overrides component_common (which returns true) to disable the generic alphabetic
+	* sort UI for all relation components.  Relation components expose their own
+	* 'sort_by_column' mechanism via sort_data_by_column().
+	* @return bool  Always false.
 	*/
 	public function get_sortable() : bool {
 
@@ -2873,18 +3273,45 @@ class component_relation_common extends component_common {
 
 	/**
 	* SORT_DATA_BY_COLUMN
-	* Persistently reorders the full locator array by the value of a column
-	* component in the target section(s). The new order is resolved with a
-	* search over the target section restricted to the linked section_id list,
-	* ordered by the column component order path. Locators are never dropped:
-	* entries without a matching search row (deleted/unreadable targets) fall
-	* to the end preserving their relative order.
-	* Used by changed_data action 'sort_by_column' (see component_common::update_data_value)
-	* (!) Not save the result. The caller save flow (dd_core_api::save) persists it.
-	* @param object $changed_data
-	* 	Expected: { action:'sort_by_column', component_tipo:'oh28', direction:'ASC'|'DESC', value:null }
-	* @param string $lang
-	* @return bool
+	* Reorders the in-memory locator array so that locators are sorted by the value
+	* of a specific column component in the target section.
+	*
+	* Guards (all return false on failure):
+	*   - properties->sort_by_column must be true or an array of allowed column tipos.
+	*   - direction must be 'ASC' or 'DESC'.
+	*   - component_tipo must appear in this component's request_config show ddo_map.
+	*   - When sort_by_column is an array, component_tipo must be in the allowlist.
+	*   - The ddo must resolve a non-empty target_section_tipo.
+	*   - The model of component_tipo must be resolvable.
+	*
+	* Order resolution:
+	*   A fresh target component instance (no section_id, list mode) is obtained to
+	*   call get_order_path() without mixing in the portal caller's prefix.  Relation
+	*   model components also receive a build_request_config() call so that overrides
+	*   of get_order_path (portal, related) have access to their show ddo_map.
+	*   A search over the target section restricted to the linked section_ids (via an
+	*   IN filter on section_id) is executed with skip_projects_filter=true.
+	*   A rank map {section_tipo_section_id → position} is built from the search rows.
+	*
+	* Stable sort:
+	*   usort with <=> spaceship on rank positions.  Unmatched locators (e.g. targets
+	*   that were deleted) receive PHP_INT_MAX as rank and fall to the end, preserving
+	*   their relative order among themselves.
+	*
+	* paginated_key cleanup:
+	*   Any paginated_key markers left by get_data_paginated on the memoised locators
+	*   are stripped before the sort to avoid stale markers affecting comparison.
+	*
+	* (!) Does NOT save. The caller (dd_core_api::save via update_data_value 'sort_by_column')
+	* persists the reordered dato.
+	*
+	* @param object $changed_data  Client action payload:
+	*   action (string)        = 'sort_by_column'
+	*   component_tipo (string) The column to sort by.
+	*   direction (string)      'ASC' or 'DESC'.
+	*   value (null)            Unused.
+	* @param string $lang  Language passed through for data retrieval (get_data_lang).
+	* @return bool  True on success, false when any guard check fails.
 	*/
 	public function sort_data_by_column( object $changed_data, string $lang ) : bool {
 
@@ -3061,10 +3488,16 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_LIST_VALUE
-	* Unified value list output
-	* By default, list value is equivalent to data. Override in other cases.
-	* Note that empty array or string are returned as null
-	* @return array|null $list_value
+	* Returns the display labels for all currently stored locators that appear in the
+	* component's value list (get_list_of_values).
+	*
+	* This differs from get_data() in that it resolves each locator to its human-readable
+	* label rather than returning the raw locator objects.  Locators not present in the
+	* value list (e.g. records deleted since the data was saved) are silently omitted.
+	*
+	* Returns null rather than an empty array when the dato is empty.
+	*
+	* @return array|null  Array of label strings, or null when the dato is empty.
 	*/
 	public function get_list_value() : ?array {
 
@@ -3090,12 +3523,35 @@ class component_relation_common extends component_common {
 
 	/**
 	* CONFORM_IMPORT_DATA
-	* @param string $import_value
-	*  sample JSON stringified array of locators:
-	*  [{"section_tipo":"ts1","section_id":"273","from_component_tipo":"hierarchy36"}]
-	* @param string $column_name
-	* 	like: 'hierarchy36' or 'hierarchy36_ts1'
-	* @return object $response
+	* Parses and validates an import cell value for this relation component, returning
+	* an array of locator objects or null (to clear the component dato).
+	*
+	* Accepted $import_value formats:
+	*
+	* 1. JSON-encoded array of full locator objects
+	*    e.g. '[{"section_tipo":"ts1","section_id":"273","from_component_tipo":"hierarchy36"}]'
+	*    Each locator is validated with locator::check_locator(); invalid ones abort with
+	*    an error entry.  Missing 'type' and 'from_component_tipo' are filled from the
+	*    component context.
+	*
+	* 2. Comma-separated integer section_ids (old format)
+	*    e.g. '1' or '273,418'
+	*    The target section tipo is taken from the column_name suffix (after the DELIMITER)
+	*    or falls back to the first element of get_ar_target_section_tipo().  Invalid or
+	*    ambiguous (multiple targets, no suffix) imports are rejected.
+	*
+	* $column_name format:
+	*   '{component_tipo}' or '{component_tipo}{DELIMITER}{target_section_tipo}'
+	*   e.g. 'hierarchy36' or 'hierarchy36_ts1'
+	*   When the first segment does not match $this->tipo, from_component_tipo defaults
+	*   to $this->tipo (user-friendly column names are tolerated).
+	*
+	* An empty $import_value is treated as a valid 'clear' operation; result is null
+	* and msg is 'OK'.
+	*
+	* @param string $import_value  Raw cell content from the CSV/import source.
+	* @param string $column_name   Import column identifier (used to derive target section tipo).
+	* @return object $response  {result: array|null, errors: array, msg: string}
 	*/
 	public function conform_import_data( string $import_value, string $column_name ) : object {
 
@@ -3289,15 +3745,33 @@ class component_relation_common extends component_common {
 
 	/**
 	* ADD_NEW_ELEMENT
-	* Creates a new record in target section and propagates filter data
-	* Add the new record section id to current component data (as locator) and save it
-	* (!) Note that this function do NOT save the value
-	* @param object $options
-	* Sample:
-	* {
-	* 	target_section_tipo : 'rsc197'
+	* Creates a new record in the target section, copies the current host record's
+	* project filter data into it, and appends a locator to this component's dato.
+	*
+	* Steps:
+	*   1. PROJECTS: reads the current host section's component_filter data (projects).
+	*      If the host is a temporary section ($this->is_temporal) or has no filter
+	*      data, the installation default project (DEDALO_DEFAULT_PROJECT) is used as
+	*      a fallback.  Locators are re-tagged with the target section's own
+	*      component_filter tipo and given sequential id values.
+	*   2. SECTION: calls section::create_record() with the prepared filter values
+	*      object so that the new record inherits the correct project membership.
+	*   3. PORTAL: builds a DEDALO_RELATION_TYPE_LINK locator pointing at the new
+	*      record and appends it via add_locator_to_data().  If the append fails
+	*      (duplicate prevention), the orphaned new section record is immediately
+	*      deleted to avoid dangling records.
+	*
+	* (!) Does NOT call save() on this component.  The caller is responsible for
+	* persisting the updated dato.
+	*
+	* @param object $options  Options bag.  Required: target_section_tipo (string)
+	*   identifying the section in which to create the new record.
+	* @return object $response  {
+	*   result: bool,
+	*   msg: string,
+	*   section_id?: int,         — the new record's section_id (on success)
+	*   added_locator?: locator   — the locator that was appended (on success)
 	* }
-	* @return object $response
 	*/
 	public function add_new_element( object $options ) : object {
 
@@ -3448,13 +3922,17 @@ class component_relation_common extends component_common {
 
 
 	/**
-	* MAP_LOCATOR_TO_TERM_ID [diffusion]
-	* v6-only diffusion method (was an alias of diffusion_sql::map_locator_to_term_id,
-	* removed in v7). Diffusion values are processed by the Bun engine parsers now;
-	* ontology process_dato configs were converted by the migration script
-	* (diffusion/migration/migrate_diffusion_properties.php). Any call reaching this
-	* method comes from an unmigrated config: it resolves as null and is reported.
-	* @return string|null $term_id Always null
+	* MAP_LOCATOR_TO_TERM_ID [diffusion — REMOVED v6 method]
+	* v6-only diffusion helper that mapped a locator to its external term identifier.
+	* Removed in v7: the Bun engine's diffusion parsers now handle this mapping
+	* natively for all ontology configs.  Legacy ontology records that still reference
+	* this method via process_dato config will reach this stub and receive a null value
+	* with an ERROR log prompting migration.
+	*
+	* Migration: run diffusion/migration/migrate_diffusion_properties.php to convert
+	* any remaining v6 process_dato references to v7 parser equivalents.
+	*
+	* @return string|null  Always null.
 	*/
 	public function map_locator_to_term_id() : ?string {
 
@@ -3473,9 +3951,21 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_CALCULATION_DATA
-	* @param object|null $options=null
-	* @return $data
-	* get the data of the component for do a calculation
+	* Resolves a chain of ddo components starting from this component's locators and
+	* returns the leaf-level dato array.  Used by get_fixed_filter (case 'component_data'
+	* with fn='get_calculation_data') and by tool_export calculation columns.
+	*
+	* The ddo_map in $options describes the full hop chain.  The last ddo in the map
+	* (end($ddo_map)) is marked as the leaf (->last=true) so that
+	* resolve_component_data_recursively() terminates there.
+	*
+	* For each locator in this component's dato, resolve_component_data_recursively
+	* is called with the locator as context, and all results are merged into a flat
+	* output array.
+	*
+	* @param object|null $options = null  Options bag; expected key: ddo_map (array).
+	* @return mixed  Flat array of resolved leaf-component dato items, or false when
+	*   dato is empty or no valid last ddo exists.
 	*/
 	public function get_calculation_data( ?object $options=null ) : mixed {
 
@@ -3533,10 +4023,21 @@ class component_relation_common extends component_common {
 
 	/**
 	* GET_DDO_MAP_ID
-	* Flat the ddo_map objects into a string representation of the path.
-	* It use the section_tipo and component_tipo to build the id.
-	* @param array $ddo_map
-	* @return string $ddo_map_id
+	* Produces a compact string fingerprint of a ddo_map by joining each ddo's
+	* '{section_tipo}_{tipo}' pair with underscores.
+	*
+	* Intended for use as a variant key to extend the component instance cache key when
+	* the same component tipo is rendered with different ddo_maps (portal-inside-portal
+	* scenario).  Currently prepared but not yet wired into the cache key (see the
+	* commented block in get_grid_value for the planned use).
+	*
+	* Multi-value section_tipo arrays are normalised to their first element.
+	*
+	* Example: [{section_tipo:'rsc197', tipo:'rsc92'}, {section_tipo:'af1', tipo:'hierarchy26'}]
+	* → 'rsc197_rsc92_af1_hierarchy26'
+	*
+	* @param array $ddo_map  Array of ddo objects, each with section_tipo and tipo.
+	* @return string  Underscore-delimited fingerprint string.
 	*/
 	public function get_ddo_map_id( array $ddo_map ) : string {
 
