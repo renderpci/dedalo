@@ -1002,7 +1002,10 @@ const get_custom_events = (self, i, text_editor) => {
 					// resolve the key number pressed by the user, it will be the key of the person array
 					const key_person_number	= evt.code.match(/\d+/g);
 					// get the person with the number pressed
-					const person_tag		= self.data.tags_persons[key_person_number[0]]
+					const person_tag		= key_person_number ? self.data.tags_persons?.[key_person_number[0]] : null
+					if (!person_tag) {
+						break;
+					}
 					event_manager.publish('key_up_persons' +'_'+ self.id_base, key_person_number)
 					// get the node tag defined in the person (it's prepared in server)
 					const node_tag_person	= self.build_view_tag_obj(person_tag, person_tag.tag_id)
@@ -1020,8 +1023,12 @@ const get_custom_events = (self, i, text_editor) => {
 					const ar_project_langs	= page_globals.dedalo_projects_default_langs
 					// resolve the key number pressed by user, it will match with the key of the array of languages
 					const key_lang_number	= evt.code.match(/\d+/g);
-					// get the lang object
-					const current_lang		= ar_project_langs[key_lang_number]
+					// get the lang object. Index with [0]: match() returns an array, so
+					// indexing ar_project_langs with the whole array yields undefined.
+					const current_lang		= key_lang_number ? ar_project_langs[key_lang_number[0]] : null
+					if (!current_lang) {
+						break;
+					}
 					// create the new lang tag
 					const tag_type			='lang'
 					const last_tag_id		= self.get_last_tag_id(tag_type, text_editor)
