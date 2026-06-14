@@ -11,14 +11,62 @@
 
 
 /**
+* RENDER_COMMON
+* Shared DOM-rendering utilities used across multiple Dédalo features (search,
+* tool_export, portals, etc.).
+*
+* Exports:
+*  - render_components_list      Build a draggable component picker for a section.
+*  - render_server_response_error  Render a full-page error panel from server errors.
+*  - render_stream               Create a live-updating SSE progress panel.
+*  - render_error                Render Dédalo standard inline error blocks.
+*  - render_lang_behavior_check  Render the "search in all langs" toggle for translatable components.
+*
+* Internal (module-private):
+*  - toggle_section_group_label_siblings  Collapse/expand a section_group label and its siblings.
+*/
+
+
+
+/**
 * RENDER_COMPONENTS_LIST
-* Create DOM elements to generate list of components and section groups of current section
-* @see this.get_section_elements_context
-* @param object options
-*	string options.section_tipo (section to load components and render)
-*	DOM element options.target_div (Target DOM element on new data will be added)
-*	array path (Cumulative array of component path objects)
-* @return array ar_components
+* Build a draggable picker list of components and section groups for a given section,
+* populating `options.target_div` with the result.
+*
+* The function iterates over `section_elements` (returned by the caller's
+* `get_section_elements_context`) and creates one `<li>` element per component.
+* Components with a `target_section_tipo` (portals, autocompletes) render a
+* "has_subquery" pointer that, when clicked, recursively calls this same function
+* to drill into the child section and display it inside `target_list_container`.
+*
+* Each generated `<li>` element receives:
+*  - `.ddo`   — the raw section-element descriptor object.
+*  - `.path`  — the resolved component path array (via `caller.calculate_component_path`).
+*  - `data-path`, `data-tipo`, `data-section_tipo`, `data-section_id` attributes used
+*    by drag-drop handlers.
+*
+* Side effects:
+*  - Clears all children of `options.target_div` before rendering.
+*  - Scrolls the window to the top after rendering.
+*
+* @see caller.get_section_elements_context
+* @param {Object} options - Configuration object.
+* @param {Object} options.self - Caller instance (e.g. search or tool_export); must
+*   expose `calculate_component_path`, `get_section_id`, `on_dragstart`,
+*   and `get_section_elements_context`.
+* @param {string} options.section_tipo - Ontology tipo of the section whose components
+*   are being listed.
+* @param {HTMLElement} options.target_div - Container to render into; its children
+*   are fully replaced.
+* @param {Array} options.path - Cumulative path array accumulated through recursive
+*   portal/autocomplete drill-downs; pass `[]` at the root level.
+* @param {Array} options.section_elements - Element descriptors from `get_section_elements_context`;
+*   each object carries at minimum `{ model, tipo, section_tipo, label }` and optionally
+*   `target_section_tipo` for portal/autocomplete linkage.
+* @param {Array|null} [options.ar_components_exclude=null] - Optional list of component
+*   tipos to suppress; forwarded verbatim to recursive calls.
+* @returns {Array} Flat array of all `<li>` HTMLElement nodes created for individual
+*   components (excludes section/group header nodes).
 */
 export const render_components_list = function(options) {
 
@@ -36,12 +84,15 @@ export const render_components_list = function(options) {
 		target_div.replaceChildren()
 
 	// First item check
+	// section_elements[0] being undefined means the server returned an empty schema
+	// context — guard before iteration to avoid silent no-ops.
 		if (!section_elements || typeof section_elements[0]==="undefined") {
 			console.warn(`[render_components_list] Warning. Empty section_elements on get_section_elements_context ${section_tipo} Nothing to render`, section_elements);
 			return []
 		}
 
 	// list_container
+	// Primary column that holds section headers, group labels, and component items.
 		const list_container = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name		: 'list_container',
@@ -49,6 +100,8 @@ export const render_components_list = function(options) {
 		})
 
 	// target_list_container
+	// Secondary column rendered to the right; used for portal/autocomplete drill-downs.
+	// Populated lazily on component click via recursive render_components_list calls.
 		const target_list_container = ui.create_dom_element({
 			element_type	: 'ul',
 			class_name		: 'list_container target_list_container',
@@ -65,6 +118,9 @@ export const render_components_list = function(options) {
 
 			case element.model==='section': {
 				// section title bar
+				// The `close_hide` class is added only at root depth (path.length===0)
+				// because nested portal calls carry a non-empty path and the bar should
+				// remain visible in those contexts.
 				const section_bar = ui.create_dom_element({
 					element_type	: 'li',
 					class_name		: 'section_bar_label',
@@ -75,6 +131,9 @@ export const render_components_list = function(options) {
 					section_bar.classList.add('close_hide')
 				}
 				// click event
+				// Clears the target_list_container when the section bar itself is clicked.
+				// Only fires when this node IS the target_list_container (i.e. in recursive
+				// drill-down rendering), preventing unintended clears at the root level.
 				const handle_click = (e) => {
 					e.stopPropagation()
 					if (target_div.classList.contains('target_list_container')) {
@@ -87,6 +146,8 @@ export const render_components_list = function(options) {
 
 			case element.model==='section_group' || element.model==='section_tab':
 				// Section group container (ul)
+				// Wraps the group label and all its child component items; used as the
+				// collapse/expand target by toggle_section_group_label_siblings.
 				section_group = ui.create_dom_element({
 					element_type	: 'ul',
 					class_name		: 'ul_regular',
@@ -111,6 +172,9 @@ export const render_components_list = function(options) {
 				const section_id	= caller.get_section_id() // defined by the caller, sometimes "tmp_seach_" sometimes "list_" etc
 
 				// component node
+				// The path and ddo expando properties are attached directly on the DOM node
+				// so that drag-drop handlers (on_dragstart) can read them without a dataset
+				// JSON round-trip for rich objects.
 					const component	= ui.create_dom_element({
 						element_type	: 'li',
 						class_name		: class_names,
@@ -136,6 +200,9 @@ export const render_components_list = function(options) {
 				// Portals and autocomplete only
 				// Pointer to open "children" target section (portals and autocompletes)
 				// Builds li element
+				// Only components that link to another section (portals / autocompletes)
+				// carry target_section_tipo.  For those, clicking the item lazily loads
+				// the child section into target_list_container via a recursive call.
 					if (element.target_section_tipo){
 
 						component.classList.add('has_subquery')
@@ -161,6 +228,8 @@ export const render_components_list = function(options) {
 									section_elements	: current_section_elements
 								})
 							// Reset active in current wrap
+							// Clear 'active' on any previously selected item in the same
+							// list_container so only the clicked item is highlighted.
 								const ar_active_now	= list_container.querySelectorAll('li.active')
 								const len			= ar_active_now.length
 								for (let i = len - 1; i >= 0; i--) {
@@ -184,6 +253,8 @@ export const render_components_list = function(options) {
 	}//end for (let i = 0; i < len; i++)
 
 	// Scroll window to top always
+	// Ensures the user sees the newly rendered list from the beginning,
+	// particularly useful when this is called after a portal drill-down.
 		window.scrollTo(0, 0);
 
 
@@ -194,10 +265,19 @@ export const render_components_list = function(options) {
 
 /**
 * TOGGLE_SECTION_GROUP_LABEL_SIBLINGS
-* Toggle HTMLElemnt section_group_label style
-* If 'closed', hide all sibling nodes, otherwise show them again.
-* @param e event
-* @return void
+* Collapse or expand all sibling nodes of a section_group_label element.
+*
+* Toggles the 'closed' CSS class on the clicked label.  When closed, all
+* sibling `<li>` nodes within the same parent `<ul>` are given the 'hide'
+* class (CSS hides them); when re-opened the 'hide' class is removed.
+* The label node itself is skipped during the sibling loop to prevent
+* the label from hiding itself.
+*
+* This is a module-private helper registered via addEventListener inside
+* render_components_list — it is not exported.
+*
+* @param {Event} e - The click event fired on the section_group_label element.
+* @returns {void}
 */
 const toggle_section_group_label_siblings = function (e) {
 	e.stopPropagation()
@@ -213,6 +293,7 @@ const toggle_section_group_label_siblings = function (e) {
 	const ar_sibling_length	= ar_sibling.length
 
 	// toggle siblings
+	// Read the class state after the toggle above so the loop acts on the NEW state.
 	const is_closed = section_group_label.classList.contains('closed')
 	for (let i = 0; i < ar_sibling_length; i++) {
 		const item = ar_sibling[i]
@@ -232,17 +313,27 @@ const toggle_section_group_label_siblings = function (e) {
 
 /**
 * RENDER_SERVER_RESPONSE_ERROR
-* Render generic page error (Raspa background)
-* @param array errors
-* 	sample:
-* 	[
-* 		{
-*			error : 'not_logged',
-* 			msg : 'Invalid result',
-* 			trace : 'page build',
-* 		}
-* 	]
-* @return HTMLElement error_container
+* Render a full-page error panel displayed when the server returns a fatal error.
+*
+* Builds and returns a detached `<div class="page_error_container">` that the
+* caller is responsible for inserting into the DOM.  The panel always includes
+* the Dédalo logo and one block per error item in `errors`.
+*
+* Recognised `error` discriminator values and their rendering strategy:
+*  - `'not_logged'`       — session expired; shows a Reload button.
+*  - `'invalid_page_element'` — bad page configuration; shows a Home link.
+*  - `'data_manager'` / default — generic server fault; shows message, optional
+*    `dedalo_last_error` detail, a Home link, and a "see server log" hint.
+*    Multiple items of this type accumulate into the same container
+*    (the `added_header_node` flag suppresses duplicate headings and links).
+*
+* @param {Array} errors - Array of error descriptor objects from the server response.
+*   Each object may carry:
+*   - `{string}  error`             — discriminator key (see above).
+*   - `{string}  [msg]`             — human-readable message (may contain HTML).
+*   - `{string}  [trace]`           — call-site hint appended to `msg` in parentheses.
+*   - `{string}  [dedalo_last_error]` — last PHP error string (default case only).
+* @returns {HTMLElement} Detached error container element ready to be appended to the page.
 */
 export const render_server_response_error = function(errors) {
 
@@ -263,6 +354,8 @@ export const render_server_response_error = function(errors) {
 
 	// short vars
 		const home_url	= '../../core/page/'
+		// added_header_node prevents duplicate h1/home-link/more_info blocks when
+		// the errors array contains multiple 'data_manager'/default entries.
 		let added_header_node = false
 
 	// errors
@@ -271,6 +364,8 @@ export const render_server_response_error = function(errors) {
 
 			const error				= errors[i].error
 			const trace				= errors[i].trace || ''
+			// Append the trace context in parentheses so the developer sees where
+			// the error originated without a separate stack panel.
 			const msg				= errors[i].msg
 				? errors[i].msg   + '<br> (' + trace + ')'
 				: 'Unknown error' + '<br> (' + trace + ')'
@@ -288,6 +383,7 @@ export const render_server_response_error = function(errors) {
 							parent			: error_container
 						})
 					// link reload
+					// A forced page reload re-initiates the authentication handshake.
 						const link = ui.create_dom_element({
 							element_type	: 'a',
 							class_name		: 'link reload',
@@ -334,6 +430,9 @@ export const render_server_response_error = function(errors) {
 				case 'data_manager':
 				default: {
 					// server_response_error h1
+					// The h1 intro header ("Server response msg:") and the Home link /
+					// more_info hint are rendered only for the first error in the loop
+					// to avoid repeating chrome for every subsequent error object.
 						if (msg) {
 							if (!added_header_node) {
 								ui.create_dom_element({
@@ -351,6 +450,9 @@ export const render_server_response_error = function(errors) {
 							})
 						}
 					// dedalo_last_error
+					// PHP populates this with the last recorded error string from the
+					// error log when available; surface it as a secondary block so
+					// developers do not have to tail the log for obvious failures.
 						if (dedalo_last_error) {
 							ui.create_dom_element({
 								element_type	: 'h1',
@@ -406,24 +508,49 @@ export const render_server_response_error = function(errors) {
 
 /**
 * RENDER_STREAM
-* Render div with spinner and info about the given process status
-* Note that some functions (update_stream, done) are returned to
-* be fired by the stream reader in the corresponding events
-* @param object options
-* {
-* 	container: HTMLElement (parent of current generated nodes)
-* 	id: string (used to store DB local data status like 'process_make_backup')
-* 	pid: int (process id number)
-* 	pfile: string (name of process generated file)
-* 	display_json: bool false (on true, add raw JSON view of data)
-* 	delete_local_db_data: bool (on true, delete local DB process by id)
-* }
-* @return object response
-* {
-* 	process_status_node: HTMLElement (main node)
-* 	update_info_node: function (render sse_response chunk nodes)
-* 	done: function (remove spinner)
-* }
+* Build a live-updating SSE progress panel and return handle functions so the
+* caller's stream reader can drive it.
+*
+* Creates DOM structure inside `options.container`:
+*   process_status_node > spinner + info_node + button_stop_process
+*
+* The returned `update_info_node` function is intended to be called on every
+* SSE chunk received from `data_manager.read_stream`.  It interprets the
+* `sse_response` object and updates the `info_node` text accordingly.  When
+* `sse_response.is_running` becomes false, the spinner is removed and the local
+* DB status entry is cleaned up (unless `delete_local_db_data` is false).
+*
+* The "Stop" button is shown only when a PHP process PID or an `on_stop`
+* callback is provided.  If `on_stop` is a function it is called directly;
+* otherwise a `stop_process` API action is sent via `data_manager.request`
+* using the supplied `pid`.
+*
+* Caller usage pattern:
+*   const stream = render_stream({ container, id, pid, pfile });
+*   data_manager.read_stream(url, (chunk) => stream.update_info_node(chunk));
+*
+* @param {Object} options - Configuration for the stream panel.
+* @param {HTMLElement} options.container - Parent node; its children are cleared
+*   before the panel is inserted.
+* @param {string} options.id - Key used to persist process status in the local DB
+*   (e.g. `'process_make_backup'`).
+* @param {number|null} [options.pid] - PHP process ID.  When provided, the Stop
+*   button triggers a `stop_process` API call.
+* @param {string|null} [options.pfile] - Filename of the process output file;
+*   stored in the local DB alongside `pid` for later retrieval.
+* @param {Function|null} [options.on_stop] - Optional callback invoked when the
+*   Stop button is clicked (used by Bun/diffusion processes that do not have a
+*   Unix PID).  Takes priority over the `pid`-based API call.
+* @param {boolean} [options.display_json] - When true (or when SHOW_DEBUG is
+*   true), renders a `<pre>` box with the raw JSON of each SSE chunk.
+*   Defaults to the value of `SHOW_DEBUG`.
+* @param {boolean} [options.delete_local_db_data=true] - When true, removes the
+*   local DB status entry once `is_running` becomes false.
+* @returns {Object} response - Handle object with:
+*   - `{HTMLElement} process_status_node` — root panel node.
+*   - `{Function} update_info_node(sse_response, [callback])` — call on each SSE chunk.
+*     `callback(info_node)` is used for fully custom rendering inside the info area.
+*   - `{Function} done()` — removes the spinner immediately (e.g. on stream abort).
 */
 export const render_stream = function(options) {
 
@@ -473,6 +600,8 @@ export const render_stream = function(options) {
 
 	// button_stop_process
 	// Shown when a PID exists (PHP process) or an on_stop callback is provided (Bun/diffusion).
+	// The 'hide' class is added at creation time when neither mechanism is available, so
+	// the button is never shown at all rather than appearing and then being removed.
 		const has_stop_capability = pid || on_stop
 		const button_stop_process = ui.create_dom_element({
 			element_type	: 'button',
@@ -482,6 +611,8 @@ export const render_stream = function(options) {
 		})
 		button_stop_process.addEventListener('click', function(e) {
 			e.stopPropagation()
+			// on_stop takes priority: Bun/diffusion processes supply a JS-side
+			// abort handler and do not have a Unix PID.
 			if (typeof on_stop === 'function') {
 				on_stop()
 				return
@@ -506,6 +637,8 @@ export const render_stream = function(options) {
 		})
 
 	// store local info about this process
+	// Persists pid + pfile so the page can resume or inspect the process status
+	// after navigation or refresh (retrieved via data_manager.get_local_db_data).
 		data_manager.set_local_db_data(
 			{
 				id		: id, // like 'process_make_backup',
@@ -518,6 +651,8 @@ export const render_stream = function(options) {
 		)
 
 	// update_info_node function. loop from data_manager.read_stream
+	// Closure over spinner, info_node, button_stop_process, and config options so the
+	// caller does not need to pass those references on every SSE chunk.
 		const update_info_node = (sse_response, callback) => {
 			if(SHOW_DEBUG===true) {
 				console.log('update_info_node sse_response:', typeof sse_response, sse_response);
@@ -533,6 +668,8 @@ export const render_stream = function(options) {
 				// }
 
 			// process running status
+			// Default to true (treat unknown state as still-running) to avoid
+			// prematurely removing the spinner when the first chunk arrives.
 				const is_running = sse_response?.is_running ?? true
 
 			// data
@@ -549,6 +686,8 @@ export const render_stream = function(options) {
 				}else{
 
 					// msg_node. Create once
+					// Lazily created so callers using the callback path never
+					// allocate a node they will not use.
 					if (!info_node.msg_node) {
 						info_node.msg_node = ui.create_dom_element({
 							element_type	: 'div',
@@ -572,6 +711,7 @@ export const render_stream = function(options) {
 					};
 					if(is_running===true) {
 
+						// Short messages (≤3 chars) are likely malformed; show a safe default.
 						const msg = data.msg && data.msg.length>3
 							? data.msg
 							: 'Process running... please wait'
@@ -586,6 +726,8 @@ export const render_stream = function(options) {
 
 						// avoid freezing the last message in cases where
 						// the process does not return anything at end
+						// Build a completion line that distinguishes success from error
+						// so the user never sees a blank or stale "running" message.
 
 						const has_errors = Array.isArray(data.errors) && data.errors.length > 0;
 
@@ -611,6 +753,8 @@ export const render_stream = function(options) {
 				}
 
 			// debug display_json_box
+			// Lazily created like msg_node; renders the raw SSE chunk as pretty-printed
+			// JSON for development inspection without polluting the production UI.
 				if(display_json) {
 					// display_json_box. Create once
 					if (!info_node.display_json_box) {
@@ -624,6 +768,8 @@ export const render_stream = function(options) {
 				}
 
 			// running state check. If false, delete local DB reference
+			// Finalise the panel: remove the spinner, clean local DB state,
+			// and mark the message node so CSS can style the completion state.
 				if(is_running===false) {
 					spinner.remove()
 
@@ -644,6 +790,8 @@ export const render_stream = function(options) {
 		response.update_info_node = update_info_node
 
 	// done function
+	// Minimal teardown for cases where the caller ends the stream externally
+	// (e.g. abort) without receiving a final is_running===false chunk.
 		const done = () => {
 			spinner.remove()
 		}
@@ -658,13 +806,30 @@ export const render_stream = function(options) {
 
 /**
 * RENDER_ERROR
-* Creates the DOM nodes to display Dédalo standard errors
-* @see component_relation_parent recursive errors
-* @param array|object error
-* @return HTMLElemenrt wrapper
+* Build and return a detached DOM node that displays one or more Dédalo standard
+* error objects in a consistent UI block.
+*
+* Accepts either a single error object or an array; single items are normalised
+* to an array internally so the loop is always the same.
+*
+* Each error item is rendered as a `<div class="error_wrap">` containing:
+*  - An `error_type` label (falls back to 'Unknown type').
+*  - An `error_msg`  paragraph (falls back to 'Unknown msg').
+*  - An `error_info` div block with `JSON.stringify(info)` when `info` is present.
+*
+* The returned node is not inserted into the DOM — the caller must append it.
+*
+* @see component_relation_parent for recursive error bubbling pattern.
+* @param {Array|Object} error - A single error descriptor object or an array of them.
+*   Each descriptor has the shape:
+*   - `{string}  [type]` — machine-readable error category label.
+*   - `{string}  [msg]`  — human-readable message (may contain HTML).
+*   - `{*}       [info]` — arbitrary detail object; serialised to JSON for display.
+* @returns {HTMLElement} Detached wrapper `<div>` element.
 */
 export const render_error = function (error) {
 
+	// Normalise: always operate on an array regardless of input shape.
 	const errors = (Array.isArray(error))
 		? error
 		: [error]
@@ -737,21 +902,35 @@ export const render_error = function (error) {
 
 /**
 * RENDER_LANG_BEHAVIOR_CHECK
-* Set the lang option checkbox when the component is translatable.
-* It can change the language search behavior.
-* lang option allow to set if the component will search in all langs or in current data lang.
-* the default is search is set with all langs, checkbox in true.
-* if the `q_lang has set with a language (instead 'all' or null),
-* the search will be selective, only with the current data lang.
-* 'all' and null values meaning the the search will be in all languages. see: class.search.php->get_sql_where()
-* @param object self Component instance
-* @return HTMLElement lang_behavior_check
-* @see render_search_component_text_area, render_search_component_input_text
+* Render the "search in all languages" toggle switcher for a translatable component's
+* search UI, and wire up the change handler that updates the component SQO in place.
+*
+* Language-search behaviour is controlled by `self.data.q_lang` inside the SQO:
+*  - `null` or `'all'`  → search spans every stored language (checkbox ON / default).
+*  - a language code     → search is restricted to `self.data.lang` (checkbox OFF).
+* See `class.search.php → get_sql_where()` for the server-side enforcement of this flag.
+*
+* When the user toggles the switcher:
+*  1. `self.data.q_lang` is updated synchronously on the component instance.
+*  2. `event_manager.publish('change_search_element', self)` is fired so the rest
+*     of the search UI can react (e.g. re-run the query).
+*  3. The tooltip text is swapped to describe the NEW state the next click will produce.
+*
+* The returned node is the outer `<label class="switcher_translatable">` element.  The
+* `<input type="checkbox">` is a child, but callers should treat the label as the
+* attach-point when inserting into the DOM.
+*
+* @see render_search_component_text_area
+* @see render_search_component_input_text
+* @param {Object} self - The component search instance.  Must expose:
+*   - `self.data.q_lang`  {string|null} — current SQO language filter value.
+*   - `self.data.lang`    {string}      — the component's active data language code.
+* @returns {HTMLElement} The `<label class="switcher_translatable">` wrapper element.
 */
 export const render_lang_behavior_check = function (self) {
 
 	// sqo saves the q_lang as all or not set
-	// 'all' and null set the checkbox as true
+	// 'all' and null set the checkbox as true (search in all languages, the default).
 	const q_lang_state = self.data.q_lang===null || self.data.q_lang==='all'
 		? true // searching in all langs
 		: false // searching in current data lang
@@ -781,6 +960,9 @@ export const render_lang_behavior_check = function (self) {
 		self.data.q_lang = self.data.lang // searching in current data lang
 	}
 	// change event
+	// The handler mutates self.data.q_lang synchronously before publishing so
+	// any subscriber that immediately reads q_lang gets the updated value.
+	// Titles are set to describe the NEXT toggle action (i.e. what clicking again will do).
 	const change_handler = function(){
 		if(lang_behavior_check.checked){
 			div_switcher.classList.remove('off')
@@ -804,6 +986,8 @@ export const render_lang_behavior_check = function (self) {
 		}
 
 		// reset tool tip
+		// Force tooltip re-initialisation so the updated title attribute is
+		// picked up by the tooltip library without waiting for a mouse-leave.
 		ui.activate_tooltips(div_switcher, null, true)
 	}
 	lang_behavior_check.addEventListener('change', change_handler)

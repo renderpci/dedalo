@@ -362,6 +362,12 @@ export const get_input_date_node = (i, date_input, input_value, self) => {
 				const default_date = input.value
 
 				// datePicker
+					// destroy any previous flatpickr bound to this button before creating a
+					// new one — otherwise each calendar open leaks the prior instance's DOM
+					// and document listeners (flatpickr stores its instance on element._flatpickr).
+					if (button_calendar._flatpickr) {
+						button_calendar._flatpickr.destroy()
+					}
 					const datePicker = flatpickr(button_calendar, {
 						dateFormat	: date_format,
 						defaultDate	: default_date,
@@ -437,6 +443,11 @@ export const get_input_time_node = (i, date_input, input_value, self) => {
 					const time_format		= ar_time_format.join(self.time_separator)
 
 				// datePicker
+					// destroy any previous flatpickr bound to this button before creating a
+					// new one to avoid leaking the prior instance's DOM and document listeners.
+					if (button_calendar._flatpickr) {
+						button_calendar._flatpickr.destroy()
+					}
 					const datePicker = flatpickr(button_calendar, {
 						enableTime		: true,
 						noCalendar		: true,

@@ -27,7 +27,7 @@ API = `dd_ts_api` (`get_node_data`, `get_children_data`, `add_child`, `update_pa
 
 `core/ts_object/class.ts_node_repository.php` (explicit `require_once` from class.ts_object.php — NOT autoloadable, same for `ts_term_resolver`): `fetch_node_info()` (order + is_indexable, one query per section_tipo group) and `batch_descriptor_flags()`. **Contract: any resolution failure returns null and callers MUST run the legacy component path** (`parse_child_data`, `has_children_of_type` both do). Raw reads replicate component semantics exactly — order values go through `format_number_value()` mirroring `component_number::set_format_form_type` (default cast is FLOAT; `type:'int'` → int). Output parity incl. types is gated by `test/server/ts_object/ts_node_repository_Test.php` — never ship repository changes without it green. Pagination totals: `component_relation_children::count_children()` (SQO `full_count` + `search->count()`); `get_data_paginated` respects a caller-provided `pagination->total`.
 
-`ts_term_resolver` owns `get_term_by_locator`/`get_term_dato_by_locator` + the term cache; `ts_object` keeps static delegates (diffusion/export/portal call them — signatures frozen).
+`ts_term_resolver` owns `get_term_by_locator`/`get_term_data_by_locator` + the term cache; `ts_object` keeps static delegates (diffusion/export/portal call them — signatures frozen).
 
 ## Client architecture (no framework, ES modules)
 

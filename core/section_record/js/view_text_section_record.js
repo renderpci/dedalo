@@ -11,7 +11,32 @@
 
 /**
 * VIEW_TEXT_SECTION_RECORD
-* Manage the components logic and appearance in client side
+* Pure-text view renderer for section_record in list/search mode.
+*
+* This is one of three view strategies dispatched by `render_list_section_record.prototype.list`
+* when `self.context.view === 'text'`. The other two are `view_default_list_section_record`
+* (full column-grid layout) and `view_mini_section_record` (compact inline layout).
+*
+* Unlike the default and mini views, this renderer produces no structural column wrappers.
+* Instead it concatenates all non-empty component nodes directly into the record wrapper,
+* joining multiple instances within the same column with a `fields_separator` span, and
+* injecting a `column_separator` span between successive columns. This makes it suitable
+* for compact label generation, portal pickers, and any context where a flat text-like
+* representation of a record is preferred over a structured grid.
+*
+* Special columns handled by callback (e.g. tool_time_machine id, ddinfo):
+*   - Callback columns are appended directly without a column separator.
+*   - 'ddinfo' callback columns are pre-rendered to detect emptiness; an empty ddinfo
+*     column is skipped entirely so that it never contributes a trailing separator.
+*   - 'remove' and 'section_id' virtual column ids suppress the following column separator.
+*
+* Component instances are rendered in parallel via Promise.all before their nodes are
+* inspected. An instance node is skipped (treated as empty) when:
+*   - Its childNodes list is empty, OR
+*   - Its textContent (trimmed) is empty AND the first child is not an IMG or SPAN element.
+*
+* Main export: `view_text_section_record.render` — static async method called by
+* `render_list_section_record.prototype.list`.
 */
 export const view_text_section_record = function() {
 
@@ -22,10 +47,38 @@ export const view_text_section_record = function() {
 
 /**
 * RENDER
-* Render as text nodes
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Produce the flat-text DOM node for a single section_record row.
+*
+* Iterates `self.columns_map` in order. For each column:
+*   1. Callback columns — invoked immediately with the record's locator context and
+*      their result node appended directly to the wrapper. The loop continues to the
+*      next column without injecting a column separator.
+*   2. Regular columns — all component instances matching `column_id` are rendered in
+*      parallel. Non-empty instance nodes are joined by `fields_separator` spans and
+*      appended to the wrapper. A `column_separator` span is then appended between
+*      successive non-empty columns (see guard conditions below).
+*
+* Column separator guard: the separator after column[i] is suppressed when:
+*   - No non-empty instances were produced for column[i], OR
+*   - This is the last column (i === columns_map_length - 1), OR
+*   - The next column's id is 'remove' or 'section_id' (virtual/action columns), OR
+*   - The next column is a 'ddinfo' callback whose output is empty.
+*
+* (!) `options.render_level` is read but currently unused — it is accepted for API
+* parity with other view renderers that may use it in the future.
+*
+* @param {Object} self    - The section_record instance being rendered. Expected
+*   properties: `id`, `model`, `tipo`, `mode`, `context` (with `view`,
+*   `fields_separator`), `columns_map`, `section_tipo`, `section_id`,
+*   `row_key`, `paginated_key`, `offset`, `caller`, `matrix_id`, `locator`.
+*   The method `self.get_ar_columns_instances_list()` must be available and must
+*   return a Promise resolving to an Array of component instances, each carrying
+*   a `column_id`, `status`, `node`, and `render()` method.
+* @param {Object} options - Render options forwarded from list().
+* @param {string} [options.render_level='full'] - Rendering depth hint; accepted
+*   for API parity but not currently acted on by this renderer.
+* @returns {Promise<HTMLElement>} The wrapper `<div>` element containing all
+*   non-empty component nodes for this record, ready to be inserted into the DOM.
 */
 view_text_section_record.render = async function(self, options) {
 
@@ -57,6 +110,9 @@ view_text_section_record.render = async function(self, options) {
 
 			// callback column case
 			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
+			// Callback columns skip the normal instance-render pipeline entirely; their
+			// output is appended directly to the wrapper and the loop continues so that
+			// no column separator is emitted after them.
 				if(current_column.callback && typeof current_column.callback==='function'){
 
 					// content_node
@@ -128,6 +184,9 @@ view_text_section_record.render = async function(self, options) {
 						const current_instance_node	= current_instance.node
 
 					// if the node is empty do not use it
+					// An instance is treated as empty when it has no child nodes at all, or when its
+					// visible text is blank and the first child is not an image or inline SPAN element
+					// (images and SPANs are valid non-textual content that should not be suppressed).
 						const empty = current_instance_node.childNodes.length===0 ||
 							(
 								current_instance_node.textContent.trim()==='' &&
@@ -142,6 +201,8 @@ view_text_section_record.render = async function(self, options) {
 				}//end for (let j = 0; j < ar_instances_length; j++)
 
 			// join instances nodes, fields, with separator between them
+			// Multiple instances sharing the same column_id (e.g. multilingual component variants)
+			// are separated by the fields_separator so they read as a single concatenated value.
 				const value_separator = self.context.fields_separator || ' | '
 				const ar_nodes_length = ar_nodes.length
 				for (let k = 0; k < ar_nodes_length; k++) {
@@ -157,6 +218,10 @@ view_text_section_record.render = async function(self, options) {
 				}
 
 			// columns separator (between components inside the same column)
+			// The separator is only emitted when: (a) this column produced at least one node,
+			// (b) there is a next column, (c) the next column is not a virtual action column
+			// ('remove', 'section_id'), and (d) if the next column is a 'ddinfo' callback,
+			// its content is not empty (to avoid a trailing separator before blank metadata).
 				if(ar_nodes_length > 0 && i < columns_map_length-1 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
 
 					// ddinfo case. Check i f is empty the content

@@ -2,10 +2,46 @@
 
 declare(strict_types=1);
 /**
- * PERFORMANCE MONITOR CLASS
- * Lightweight performance monitoring for Dédalo API requests
- * Tracks execution time, memory usage, and provides detailed metrics
- */
+* CLASS PERFORMANCE_MONITOR
+* Lightweight, opt-in performance monitor for Dédalo API requests.
+*
+* One instance is created per PHP process via the singleton accessor and is wired
+* into the API entry point (core/api/v1/json/index.php).  The typical lifecycle is:
+*
+*   1. index.php calls  get_instance()->start($global_start_time)  immediately after
+*      including this file.  $global_start_time is the hrtime(true) nanosecond stamp
+*      captured before any heavy processing begins.
+*   2. Callers sprinkle checkpoint() calls at key milestones
+*      (e.g. 'request_parsed', 'before_dd_manager', 'after_dd_manager', 'before_output').
+*   3. set_request_data() and set_response_data() attach sanitised request/response
+*      metadata so log entries are self-contained for post-hoc analysis.
+*   4. finish() snapshots end-time/memory, then calls log_performance() which writes
+*      a JSON or text log entry, subject to the PERFORMANCE_LOG_LEVEL filter.
+*
+* All behaviour is controlled by constants defined in performance_config.php:
+*   PERFORMANCE_MONITORING_ENABLED  — master on/off switch (default false)
+*   PERFORMANCE_SAMPLING_RATE       — float 0.0–1.0; < 1.0 enables probabilistic sampling
+*   PERFORMANCE_SLOW_THRESHOLD_MS   — request duration that sets the 'is_slow' flag
+*   PERFORMANCE_LOG_LEVEL           — 'all' | 'slow' | 'error'
+*   PERFORMANCE_LOG_FORMAT          — 'json' | 'text'
+*   PERFORMANCE_LOG_DIR             — directory for daily rotating log files
+*   PERFORMANCE_LOG_MAX_SIZE        — bytes before a log file is rotated (default 10 MB)
+*   PERFORMANCE_LOG_MAX_FILES       — maximum number of rotated files to keep (default 10)
+*   PERFORMANCE_LOG_CHECKPOINTS     — include per-checkpoint breakdown in each entry
+*   PERFORMANCE_LOG_MEMORY          — include memory fields in each entry
+*   PERFORMANCE_LOG_METADATA        — include request/response metadata in each entry
+*
+* get_metrics() bridges this monitor with the subsystem-level metrics class
+* (core/common/class.metrics.php): when class metrics exists, metrics::get_summary()
+* is embedded in the output so file logs and any dashboard receive the same subsystem
+* detail that dd_manager writes to its debug log.
+*
+* (!) exec_time_unit() is a Dédalo global helper function (not defined in this file).
+*     It computes elapsed milliseconds from an hrtime(true) nanosecond start stamp.
+*
+* @package Dédalo
+* @subpackage API
+*/
 class performance_monitor
 {
 
@@ -33,10 +69,19 @@ class performance_monitor
 
 
     /**
-     * GET INSTANCE
-     * Singleton pattern to ensure only one monitor per request
-     * @return performance_monitor
-     */
+    * GET_INSTANCE
+    * Singleton accessor. Returns — or creates on first call — the single
+    * performance_monitor instance for this PHP process.
+    *
+    * A singleton is appropriate here because only one request is handled per
+    * PHP-FPM worker at a time, and the monitor must be reachable from any
+    * call site without passing the instance through the call stack.
+    *
+    * (!) In persistent-worker environments (RoadRunner, Swoole) the static
+    *     $instance survives between requests.  Ensure start() is called at the
+    *     beginning of every new request so $is_active is correctly reset.
+    * @return performance_monitor
+    */
     public static function get_instance(): performance_monitor
     {
 
@@ -50,9 +95,10 @@ class performance_monitor
 
 
     /**
-     * __CONSTRUCT
-     * Private constructor for singleton pattern
-     */
+    * __CONSTRUCT
+    * Private constructor — enforces the singleton pattern.
+    * All initialisation happens in start(); the constructor intentionally does nothing.
+    */
     private function __construct()
     {
         // Private to enforce singleton
@@ -61,11 +107,23 @@ class performance_monitor
 
 
     /**
-     * START
-     * Initialize performance monitoring for the current request
-     * @param float|null $start_time_override - Optional override for start time (use existing global start time)
-     * @return bool
-     */
+    * START
+    * Activate monitoring for the current request.
+    *
+    * Must be called once per request, before any checkpoints are recorded.
+    * Returns false without side-effects when:
+    *   - PERFORMANCE_MONITORING_ENABLED is not defined or is not true.
+    *   - Probabilistic sampling determines this request should be skipped
+    *     (random draw vs. PERFORMANCE_SAMPLING_RATE).
+    *
+    * When $start_time_override is supplied (typically $global_start_time from
+    * index.php, captured via hrtime(true) before any includes), the monitor
+    * uses that timestamp so total elapsed time covers the entire request, not
+    * just the time from when start() is called.
+    * @param float|null $start_time_override = null - hrtime(true) nanosecond timestamp
+    *   captured at the very beginning of the request; null uses the current hrtime
+    * @return bool - true when monitoring was activated, false when skipped
+    */
     public function start(?float $start_time_override = null): bool
     {
 
@@ -98,12 +156,23 @@ class performance_monitor
 
 
     /**
-     * CHECKPOINT
-     * Record a timing checkpoint at a specific point in execution
-     * @param string $name - Checkpoint name (e.g., 'request_parsed', 'before_manager', 'after_manager')
-     * @param array $metadata - Optional additional metadata for this checkpoint
-     * @return bool
-     */
+    * CHECKPOINT
+    * Record a named timing milestone within the active request.
+    *
+    * Each checkpoint captures the wall-clock nanosecond timestamp, real memory
+    * footprint, and elapsed milliseconds from $start_time.  The 'elapsed_ms'
+    * value is computed via exec_time_unit() using the nanosecond start stamp.
+    *
+    * Typical checkpoint names used by index.php:
+    *   'request_parsed', 'before_dd_manager', 'after_dd_manager',
+    *   'before_output', 'after_output'
+    *
+    * No-op (returns false) when monitoring is not active.
+    * @param string $name - human-readable milestone label
+    * @param array $metadata = [] - optional key/value pairs to attach to this checkpoint
+    *   (e.g. action name, section tipo) for richer log analysis
+    * @return bool - true on success, false when monitoring is inactive
+    */
     public function checkpoint(string $name, array $metadata = []): bool
     {
 
@@ -127,11 +196,19 @@ class performance_monitor
 
 
     /**
-     * SET REQUEST DATA
-     * Store request metadata for logging
-     * @param object $rqo - Request query object
-     * @return void
-     */
+    * SET_REQUEST_DATA
+    * Capture a sanitised snapshot of the incoming RQO (request query object)
+    * for inclusion in the log entry.
+    *
+    * Only a small, non-sensitive subset of the RQO is stored: action, dd_api,
+    * prevent_lock, recovery_mode, and the wall-clock timestamp.  Full RQO data
+    * (which may contain filter values, credentials, or large payload) is intentionally
+    * excluded to prevent sensitive information reaching the performance log files.
+    *
+    * No-op when monitoring is inactive.
+    * @param object $rqo - request query object (stdClass) passed to dd_manager
+    * @return void
+    */
     public function set_request_data(object $rqo): void
     {
 
@@ -152,11 +229,18 @@ class performance_monitor
 
 
     /**
-     * SET RESPONSE DATA
-     * Store response metadata for logging
-     * @param object $response - API response object
-     * @return void
-     */
+    * SET_RESPONSE_DATA
+    * Capture a lightweight snapshot of the API response for inclusion in the log entry.
+    *
+    * Records only the top-level result flag and error count so that the
+    * 'error' log level filter (see log_performance()) can operate without
+    * serialising the full response object.
+    *
+    * No-op when monitoring is inactive.
+    * @param object $response - API response object (stdClass) with at minimum
+    *   a 'result' bool property and an optional 'errors' array
+    * @return void
+    */
     public function set_response_data(object $response): void
     {
 
@@ -175,10 +259,19 @@ class performance_monitor
 
 
     /**
-     * FINISH
-     * Complete monitoring and finalize metrics
-     * @return bool
-     */
+    * FINISH
+    * Finalise monitoring for the current request and write the log entry.
+    *
+    * Snapshots $end_time, $end_memory, and $peak_memory, then delegates to
+    * log_performance() which applies the PERFORMANCE_LOG_LEVEL filter and
+    * writes the entry to the daily rotating log file.
+    *
+    * Must be called after set_response_data() so that the 'error' log level
+    * filter can inspect $response_data->has_errors.
+    *
+    * No-op (returns false) when monitoring is inactive.
+    * @return bool - true when the log write was attempted, false when inactive
+    */
     public function finish(): bool
     {
 
@@ -199,28 +292,65 @@ class performance_monitor
 
 
     /**
-     * GET METRICS
-     * Retrieve collected performance metrics
-     * @return object
-     */
+    * GET_METRICS
+    * Assemble and return the full performance metrics object for this request.
+    *
+    * The returned object always contains:
+    *   total_time_ms    float  — elapsed ms from $start_time to now (via exec_time_unit)
+    *   is_slow          bool   — true when total_time_ms > PERFORMANCE_SLOW_THRESHOLD_MS (default 1000)
+    *   checkpoint_count int    — number of recorded checkpoints
+    *
+    * Additional fields are conditionally included based on config constants:
+    *   PERFORMANCE_LOG_MEMORY (default true):
+    *     start_memory_mb, end_memory_mb, peak_memory_mb, memory_delta_mb
+    *   PERFORMANCE_LOG_METADATA (default true):
+    *     request  — sanitised RQO snapshot (see set_request_data)
+    *     response — sanitised response snapshot (see set_response_data)
+    *   metrics class present:
+    *     subsystems — output of metrics::get_summary(), bridging the subsystem
+    *                  counters (search, ontology, matrix, db, tools …) into the
+    *                  performance log entry
+    *   PERFORMANCE_LOG_CHECKPOINTS = true:
+    *     checkpoints — array of formatted checkpoint objects (see format_checkpoints)
+    *
+    * (!) end_memory_mb, peak_memory_mb, and memory_delta_mb are null when
+    *     finish() has not yet been called (properties are unset).
+    *
+    * Called both by finish() (for the final log entry) and externally by
+    * performance_viewer_api.php when serving the live dashboard.
+    * @return object - stdClass metrics object
+    */
     public function get_metrics(): object
     {
 
-        $total_time_ms = isset($this->end_time)
-            ? exec_time_unit($this->start_time, 'ms', 3)
-            : exec_time_unit($this->start_time, 'ms', 3);
+        $total_time_ms = exec_time_unit($this->start_time, 'ms', 3);
 
         $metrics = (object)[
             'total_time_ms' => $total_time_ms,
-            'start_memory_mb' => round($this->start_memory / 1024 / 1024, 2),
-            'end_memory_mb' => isset($this->end_memory) ? round($this->end_memory / 1024 / 1024, 2) : null,
-            'peak_memory_mb' => isset($this->peak_memory) ? round($this->peak_memory / 1024 / 1024, 2) : null,
-            'memory_delta_mb' => isset($this->end_memory) ? round(($this->end_memory - $this->start_memory) / 1024 / 1024, 2) : null,
             'is_slow' => $total_time_ms > (defined('PERFORMANCE_SLOW_THRESHOLD_MS') ? PERFORMANCE_SLOW_THRESHOLD_MS : 1000),
-            'checkpoint_count' => count($this->checkpoints),
-            'request' => $this->request_data,
-            'response' => $this->response_data
+            'checkpoint_count' => count($this->checkpoints)
         ];
+
+        // Memory profiling fields (gated by PERFORMANCE_LOG_MEMORY)
+        if (!defined('PERFORMANCE_LOG_MEMORY') || PERFORMANCE_LOG_MEMORY === true) {
+            $metrics->start_memory_mb  = round($this->start_memory / 1024 / 1024, 2);
+            $metrics->end_memory_mb    = isset($this->end_memory) ? round($this->end_memory / 1024 / 1024, 2) : null;
+            $metrics->peak_memory_mb   = isset($this->peak_memory) ? round($this->peak_memory / 1024 / 1024, 2) : null;
+            $metrics->memory_delta_mb  = isset($this->end_memory) ? round(($this->end_memory - $this->start_memory) / 1024 / 1024, 2) : null;
+        }
+
+        // Request/response metadata (gated by PERFORMANCE_LOG_METADATA)
+        if (!defined('PERFORMANCE_LOG_METADATA') || PERFORMANCE_LOG_METADATA === true) {
+            $metrics->request  = $this->request_data;
+            $metrics->response = $this->response_data;
+        }
+
+        // Subsystem breakdown bridge: include the per-subsystem metrics aggregated by the
+        // metrics class (search, ontology, matrix, db, tools, presets, request_config, …)
+        // so file logs / the dashboard get the same detail as the dd_manager debug log.
+        if (class_exists('metrics')) {
+            $metrics->subsystems = metrics::get_summary();
+        }
 
         // Add checkpoint details if enabled
         if (defined('PERFORMANCE_LOG_CHECKPOINTS') && PERFORMANCE_LOG_CHECKPOINTS === true) {
@@ -233,10 +363,22 @@ class performance_monitor
 
 
     /**
-     * FORMAT CHECKPOINTS
-     * Format checkpoint data for output
-     * @return array
-     */
+    * FORMAT_CHECKPOINTS
+    * Convert the raw checkpoint array into a developer-friendly output structure.
+    *
+    * Each formatted entry carries:
+    *   name                    — checkpoint label (e.g. 'before_dd_manager')
+    *   elapsed_total_ms        — ms from request start to this checkpoint
+    *   elapsed_since_previous_ms — ms from the preceding checkpoint (or request start
+    *                               for the first checkpoint), enabling per-phase profiling
+    *   memory_mb               — real memory at the checkpoint in megabytes
+    *   metadata                — caller-supplied key/value annotations
+    *
+    * The $previous_time cursor starts at $start_time so the first checkpoint's
+    * 'elapsed_since_previous_ms' measures the bootstrapping phase before any
+    * checkpoint was recorded.
+    * @return array - array of associative checkpoint arrays in recording order
+    */
     private function format_checkpoints(): array
     {
 
@@ -260,10 +402,31 @@ class performance_monitor
 
 
     /**
-     * LOG PERFORMANCE
-     * Write performance data to log file
-     * @return bool
-     */
+    * LOG_PERFORMANCE
+    * Apply the PERFORMANCE_LOG_LEVEL filter and, when the request passes,
+    * write a formatted entry to the daily rotating log file.
+    *
+    * Log level semantics:
+    *   'all'   — every monitored request is logged (default when the constant
+    *             is not defined, but note the early filter below re-evaluates
+    *             after PERFORMANCE_LOG_LEVEL is defined)
+    *   'slow'  — only requests where metrics->is_slow is true
+    *   'error' — only requests where the response reported at least one error
+    *
+    * The daily log file is named performance_YYYY-MM-DD.log inside PERFORMANCE_LOG_DIR.
+    * rotate_logs() is called before writing to keep file sizes under control.
+    *
+    * Log format is controlled by PERFORMANCE_LOG_FORMAT:
+    *   'json' (default) — one JSON object per line (NDJSON-compatible)
+    *   'text'           — human-readable single-line format via format_text_log()
+    *
+    * (!) get_metrics() is called twice when PERFORMANCE_LOG_LEVEL is defined
+    *     (once for the level check, once for the actual entry).  This is
+    *     intentional — the first call may return early before finish() populates
+    *     the end-memory fields, so a second call after the level check ensures
+    *     the logged entry always reflects the final state.
+    * @return bool - true when the entry was written successfully, false otherwise
+    */
     private function log_performance(): bool
     {
 
@@ -313,11 +476,25 @@ class performance_monitor
 
 
     /**
-     * ROTATE LOGS
-     * Rotate log files when they exceed maximum size
-     * @param string $log_file
-     * @return void
-     */
+    * ROTATE_LOGS
+    * Rotate the given log file when it exceeds PERFORMANCE_LOG_MAX_SIZE bytes.
+    *
+    * Rotation scheme (numbered suffix, oldest deleted):
+    *   performance_YYYY-MM-DD.log      ← current (written to)
+    *   performance_YYYY-MM-DD.log.1    ← most recent rotated copy
+    *   …
+    *   performance_YYYY-MM-DD.log.N    ← oldest kept copy (N = PERFORMANCE_LOG_MAX_FILES)
+    *
+    * When the current file exceeds the size limit the loop walks from
+    * (max_files - 1) down to 1, shifting each .N file to .(N+1) and deleting
+    * the file at position (max_files - 1) if it already exists.  The current
+    * file is then renamed to .1 and a fresh empty file will be created by the
+    * next file_put_contents() call in log_performance().
+    *
+    * No-op when the log file does not yet exist or is still under the size limit.
+    * @param string $log_file - absolute path to the current day's log file
+    * @return void
+    */
     private function rotate_logs(string $log_file): void
     {
 
@@ -353,11 +530,19 @@ class performance_monitor
 
 
     /**
-     * FORMAT TEXT LOG
-     * Format metrics as human-readable text
-     * @param object $metrics
-     * @return string
-     */
+    * FORMAT_TEXT_LOG
+    * Render a metrics object as a single human-readable log line.
+    *
+    * Output format:
+    *   [YYYY-MM-DD HH:MM:SS] [SLOW] dd_api->action | Time: X.XXXms | Memory: X.XXMb (peak: X.XXMb, delta: X.XXMb)<newline>
+    *
+    * The [SLOW] token is included only when metrics->is_slow is true.
+    * Memory fields fall back to 0 when finish() has not yet been called.
+    *
+    * Used when PERFORMANCE_LOG_FORMAT is set to 'text'; the default format is 'json'.
+    * @param object $metrics - metrics object returned by get_metrics()
+    * @return string - formatted log line including trailing PHP_EOL
+    */
     private function format_text_log(object $metrics): string
     {
 
@@ -385,10 +570,14 @@ class performance_monitor
 
 
     /**
-     * IS ACTIVE
-     * Check if monitoring is currently active
-     * @return bool
-     */
+    * IS_ACTIVE
+    * Return whether monitoring is currently active for this request.
+    *
+    * Used by index.php to cache the active state in $perf_active so that
+    * checkpoint() and finish() calls can be guarded with a simple boolean check
+    * rather than re-calling is_active() on every milestone.
+    * @return bool - true when start() completed successfully for this request
+    */
     public function is_active(): bool
     {
 

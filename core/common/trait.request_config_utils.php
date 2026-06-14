@@ -1,20 +1,36 @@
 <?php declare(strict_types=1);
 /**
-* COMMON
-* TRAIT request_config_utils
+* TRAIT REQUEST_CONFIG_UTILS
+* From class common
+* Shared utility methods for all request_config build paths.
 *
-* Utility methods for request_config building.
-* Handles validation, caching, pagination, and common helper functions.
+* This trait is mixed into class common and carries the cross-cutting helpers
+* that both the V6 (properties->source->request_config) and V5 (ontology
+* relation-node) build strategies rely on. It is never used on its own.
 *
-* RESPONSIBILITIES:
-* - Section tipo validation (must be section or area model)
-* - Cache key generation and management
-* - Source properties resolution (handles section_list children)
-* - Pagination defaults calculation
-* - SQO section_tipo DDO building (with buttons and permissions)
-* - SQO configuration defaults
+* Responsibilities:
+* - Section tipo validation: guards that a given tipo resolves to a 'section'
+*   or 'area*' ontology model before it is used in a request config.
+* - Cache key generation and read/write: computes a composite cache key that
+*   encodes every dimension that can produce a different config result (tipo,
+*   mode, user, pagination, API rqo, session sqo, TM view, preset hash) and
+*   manages the common::$resolved_request_properties_parsed static store.
+* - Source-properties resolution: selects the correct ontology properties object
+*   for the build (own properties, a user-layout preset, or the section_list /
+*   section_list_thesaurus child node for list/tm modes).
+* - Pagination defaults: computes the initial {offset, limit} pair from the
+*   instance pagination, the ontology properties, and mode/model fallbacks.
+* - SQO section_tipo DDO building: constructs the rich dd_object array that
+*   the SQO section_tipo field carries (label, color, permissions, buttons).
+* - SQO config defaults: produces the base sqo_config stdClass when no explicit
+*   sqo_config is present in the ontology properties.
 *
-* USED BY: get_ar_request_config() in class.common.php
+* Host class: common (abstract).
+* Sibling traits also used by common: request_config_ddo, request_config_v6,
+* request_config_v5.
+*
+* @package Dédalo
+* @subpackage Core
 */
 trait request_config_utils {
 
@@ -22,16 +38,20 @@ trait request_config_utils {
 
 	/**
 	* VALIDATE_SECTION_TIPO_MODEL
-	* Checks if section_tipo is valid (section or area model)
+	* Guards that $section_tipo refers to a section or area model before use in
+	* a request config build. Logs and records a 'drop' config warning on failure.
 	*
-	* FLOW:
-	* 1. Allow 'self' as special case (resolved later)
-	* 2. Get model from ontology
-	* 3. Verify model is 'section' or starts with 'area'
-	* 4. Log errors for invalid/empty models
+	* Called early in the build pipeline to prevent downstream errors that would
+	* occur if a component tipo or an unknown node were passed where a section is
+	* expected. The warning is consumed by the client to decide whether to drop
+	* the whole config item silently.
 	*
-	* @param string $section_tipo
-	* @return bool True if valid, false otherwise
+	* The literal string 'self' is accepted without an ontology lookup: it is a
+	* deferred placeholder that the DDO processing stage later resolves to the
+	* actual containing section tipo.
+	*
+	* @param string $section_tipo - Ontology tipo to validate (e.g. 'dd1' or 'self')
+	* @return bool - True if valid (model is 'section' or starts with 'area'), false otherwise
 	*/
 	protected function validate_section_tipo_model(string $section_tipo) : bool {
 
@@ -75,33 +95,35 @@ trait request_config_utils {
 
 	/**
 	* BUILD_REQUEST_CONFIG_CACHE_KEY
-	* Creates a unique cache key for resolved request properties
+	* Constructs the composite cache key used to store and retrieve a resolved
+	* request config in common::$resolved_request_properties_parsed.
 	*
-	* The key combines all context variables that affect the result:
-	* - tipo: the component/section being configured
-	* - section_tipo: the parent section
-	* - external: deprecated flag (always false now)
-	* - mode: edit/list/tm/etc
-	* - section_id: for fixed_filter cases
+	* The key must encode every input dimension that can produce a different
+	* config result. Dimensions fall into two groups:
 	*
-	* Plus a suffix covering every request-scoped input the build bakes into
-	* the result (the cached payload would otherwise be served across calls
-	* that differ in these dimensions):
-	* - user: permissions and buttons are embedded per user
-	*   (build_sqo_section_tipo_ddo, check_ddo_permissions)
-	* - instance pagination: resolve_pagination_defaults/override read it
-	* - API rqo limit: applied when the rqo source targets this tipo
-	* - session sqo limit: applied for sections (resolve_show_sqo_config)
-	* - view in tm mode: baked into the dataframe ddo (process_single_ddo)
-	* - user preset hash: set by build_request_config when a layout preset
-	*   overrides properties (presets are per user and per mode)
+	* Structural (same for all callers in this request cycle):
+	* - $tipo         : the component or section being configured
+	* - $section_tipo : the owning section context
+	* - $external     : deprecated flag (always false in v7; kept for key stability)
+	* - $mode         : edit / list / tm / list_thesaurus / …
+	* - $section_id   : for fixed_filter cases where the config differs per record
 	*
-	* @param string $tipo
-	* @param string $section_tipo
-	* @param bool $external
-	* @param string $mode
-	* @param int $section_id
-	* @return string Composite cache key
+	* Request-scoped (vary per caller even for the same structural dimensions):
+	* - user          : permissions and buttons are embedded per user
+	*                   (build_sqo_section_tipo_ddo, check_ddo_permissions)
+	* - instance pagination : resolve_pagination_defaults / override read it
+	* - API rqo limit : applied when the rqo source targets this tipo
+	* - session sqo limit  : applied for sections (resolve_show_sqo_config)
+	* - view (tm mode only): baked into dataframe ddos by process_single_ddo
+	* - preset hash   : set by build_request_config when a user layout preset
+	*                   overrides the base properties (presets are per-user per-mode)
+	*
+	* @param string $tipo         - Component or section tipo being configured
+	* @param string $section_tipo - Parent section tipo providing the context
+	* @param bool   $external     - Deprecated external flag (always false in v7)
+	* @param string $mode         - Display mode ('edit', 'list', 'tm', …)
+	* @param int    $section_id   - Record id; 0 when not record-specific
+	* @return string - Composite cache key string
 	*/
 	protected function build_request_config_cache_key(
 		string $tipo,
@@ -153,20 +175,22 @@ trait request_config_utils {
 
 	/**
 	* GET_CACHED_REQUEST_CONFIG
-	* Retrieves cached request config if available
+	* Returns a deep clone of the cached request config for the given key,
+	* or null if no entry exists.
 	*
-	* IMMUTABLE CACHE BOUNDARY: a deep clone is returned, never the live
-	* cached objects. Callers mutate the result with request-scoped state
-	* (the session/rqo sqo overlay in build_request_config; the children
-	* ddo_map injection in get_section_elements_context) and a shared
-	* reference would poison the pristine base config for every subsequent
-	* caller with the same key.
-	* unserialize(serialize()) is required (NOT a json round-trip): the
-	* arrays contain request_config_object / dd_object / search_query_object
-	* instances that must keep their classes.
+	* (!) IMMUTABLE CACHE BOUNDARY — never return the cached object directly.
+	* Callers mutate the result with request-scoped state: build_request_config
+	* overlays session/rqo sqo values, and get_section_elements_context injects
+	* children ddo_map entries. Sharing a reference would corrupt the pristine
+	* base config for every subsequent caller using the same cache key.
 	*
-	* @param string $resolved_key
-	* @return array|null Cloned cached config or null if not found
+	* unserialize(serialize()) is the required deep-clone technique here — a
+	* JSON round-trip would destroy class information, because the payload
+	* contains request_config_object, dd_object, and search_query_object
+	* instances that must keep their PHP classes intact.
+	*
+	* @param string $resolved_key - Cache key produced by build_request_config_cache_key()
+	* @return array|null - Deep-cloned config array, or null on cache miss
 	*/
 	protected function get_cached_request_config(string $resolved_key) : ?array {
 
@@ -181,15 +205,19 @@ trait request_config_utils {
 
 	/**
 	* CACHE_REQUEST_CONFIG
-	* Stores resolved request config in static cache
+	* Stores a deep-cloned snapshot of the resolved request config in the static
+	* per-request cache (common::$resolved_request_properties_parsed).
 	*
-	* A pristine deep-cloned snapshot is stored (see get_cached_request_config):
-	* the freshly built array returned to the miss-path caller is the same one
-	* that gets mutated downstream, so storing it by reference would poison
-	* the cache.
+	* (!) A deep clone is stored, not the live array. The freshly built array
+	* returned to the miss-path caller will be mutated downstream (session sqo
+	* overlay, ddo_map injection); storing a reference would corrupt the cache
+	* entry used by all subsequent hits for the same key.
 	*
-	* @param string $resolved_key
-	* @param array $ar_request_query_objects
+	* Calls manage_cache_size() first to prevent unbounded memory growth in
+	* long-running persistent-worker processes.
+	*
+	* @param string $resolved_key             - Key from build_request_config_cache_key()
+	* @param array  $ar_request_query_objects - Freshly built config array to cache
 	* @return void
 	*/
 	protected function cache_request_config(string $resolved_key, array $ar_request_query_objects) : void {
@@ -204,26 +232,34 @@ trait request_config_utils {
 
 	/**
 	* RESOLVE_SOURCE_PROPERTIES
-	* Gets properties based on mode (list uses section_list child if available)
+	* Selects and returns the properties object that the request_config build
+	* should read from, applying the section_list child-node substitution for
+	* list and tm modes, then returning a JSON deep-clone so the build can
+	* mutate the result freely.
 	*
-	* FLOW:
-	* 1. Get properties from current element
-	* 2. In list/tm modes, check for 'section_list' child term
-	* 3. If section_list exists, use its properties instead
-	* 4. This allows different configs for list vs edit views
-	* 5. Clone properties to avoid modifying original
+	* Selection order (first match wins):
+	* 1. $properties_override — a user layout preset injected by build_request_config;
+	*    avoids mutating the instance's own properties when a preset is active.
+	* 2. $this->get_properties() — the instance's own ontology properties object.
 	*
-	* EXAMPLE:
-	* Section 'numisdata3' may have a child 'section_list' with different
-	* ddo_map configuration for displaying columns in list view.
+	* For 'list', 'list_thesaurus', and 'tm' modes the method then looks for a
+	* child term of the given $tipo that carries the corresponding list model
+	* ('section_list' or 'section_list_thesaurus'). If found, the child node's
+	* properties replace the selection above. This lets ontology designers define
+	* separate column configurations for list views without touching the edit-mode
+	* node, e.g. a 'numisdata3' section may expose different ddos in list mode via
+	* its 'section_list' child.
 	*
-	* @param string $tipo
-	* @param string $mode
-	* @param string $model
-	* @param object|null $properties_override = null
-	* 	Used in place of the instance properties (e.g. a user layout preset);
-	* 	keeps preset application free of instance-properties mutation
-	* @return object|null Cloned properties object
+	* The JSON round-trip clone (json_decode(json_encode())) is intentional here:
+	* the properties object contains only plain data (no class instances), so a
+	* JSON round-trip is safe and cheap. It prevents the build from mutating the
+	* shared ontology properties cached in ontology_node.
+	*
+	* @param string      $tipo                - Ontology tipo whose properties to resolve
+	* @param string      $mode                - Display mode ('edit', 'list', 'tm', 'list_thesaurus', …)
+	* @param string      $model               - Ontology model of $tipo (e.g. 'section', 'area_thesaurus')
+	* @param object|null $properties_override = null - Preset properties to use instead of instance properties
+	* @return object|null - Cloned properties object, or null if none are available
 	*/
 	protected function resolve_source_properties(string $tipo, string $mode, string $model, ?object $properties_override=null) : ?object {
 
@@ -276,23 +312,26 @@ trait request_config_utils {
 
 	/**
 	* RESOLVE_PAGINATION_DEFAULTS
-	* Calculates default pagination values (offset and limit)
+	* Computes the initial {offset, limit} pagination object for the request
+	* config build from the available sources in priority order.
 	*
-	* PRIORITY (highest to lowest):
-	* 1. Instance $this->pagination->limit (set by API request)
-	* 2. Properties request_config->sqo->limit
-	* 3. Mode/model defaults
+	* Priority (highest to lowest):
+	* 1. $this->pagination->limit set by the incoming API request (rqo). When the
+	*    client sends an explicit limit this always wins.
+	* 2. properties->source->request_config[api_engine=dedalo]->sqo->limit — the
+	*    ontology-configured default for this node.
+	* 3. Mode/model heuristic fallback via calculate_default_limit():
+	*    - section  + edit  → 1   (one record at a time in the editor)
+	*    - section  + other → 10  (list views show ten by default)
+	*    - component + edit  → 10
+	*    - component + other → 1
 	*
-	* MODE/MODEL DEFAULTS:
-	* - section + edit: limit 1
-	* - section + other: limit 10
-	* - component + edit: limit 10
-	* - component + other: limit 1
+	* Offset always comes from $this->pagination->offset (0 when absent).
 	*
-	* @param object|null $properties
-	* @param string $model
-	* @param string $mode
-	* @return object {offset: int, limit: int}
+	* @param object|null $properties - Resolved source properties (may be null for v5 paths)
+	* @param string      $model      - Ontology model of the element ('section', 'area_*', or component model)
+	* @param string      $mode       - Display mode ('edit', 'list', 'tm', …)
+	* @return object - Plain object with integer properties {offset, limit}
 	*/
 	protected function resolve_pagination_defaults(?object $properties, string $model, string $mode) : object {
 
@@ -312,12 +351,22 @@ trait request_config_utils {
 
 	/**
 	* CALCULATE_DEFAULT_LIMIT
-	* Determines default limit based on model, mode and properties
+	* Determines the pagination limit to use when no API rqo limit is present.
 	*
-	* @param object|null $properties
-	* @param string $model
-	* @param string $mode
-	* @return int|null
+	* Checks the properties->source->request_config array first: if an entry with
+	* api_engine 'dedalo' carries an sqo->limit value, that value is used as the
+	* ontology-defined default for this node. Falls back to mode/model heuristics
+	* when the properties are absent or do not define a limit.
+	*
+	* The is_array() guard on properties->source->request_config is deliberate:
+	* properties come from user-edited ontology JSON and may be malformed; the
+	* structural error contract is applied later in build_request_config_v6 where
+	* a full validation pass runs.
+	*
+	* @param object|null $properties - Resolved source properties object
+	* @param string      $model      - Ontology model ('section', 'area_*', or component model)
+	* @param string      $mode       - Display mode ('edit', 'list', 'tm', …)
+	* @return int|null - Limit integer, or null if no default could be determined (callers treat null as 'use heuristic')
 	*/
 	protected function calculate_default_limit(?object $properties, string $model, string $mode) : ?int {
 
@@ -353,18 +402,24 @@ trait request_config_utils {
 
 	/**
 	* BUILD_SQO_SECTION_TIPO_DDO
-	* Builds dd_object instances for each section_tipo in the SQO
+	* Maps an array of section tipo strings to an array of rich dd_object instances
+	* suitable for embedding in an SQO's section_tipo field.
 	*
-	* Each section_tipo becomes a rich ddo object with:
-	* - tipo: the section identifier
-	* - label: human-readable name
-	* - color: for UI display
-	* - permissions: user access level (0-3)
-	* - buttons: button_new and button_delete if user has permissions
-	* - matrix_table: for determining editability
+	* Each dd_object in the result carries:
+	* - tipo        : the section identifier (e.g. 'dd1')
+	* - label       : human-readable term in the application language
+	* - color       : UI colour string from the ontology node
+	* - permissions : the logged-in user's access level on this section (0–3)
+	* - buttons     : button_new and/or button_delete objects (only when user
+	*                 has edit permissions; see build_section_buttons())
+	* - matrix_table: the DB matrix table name, used by the client to determine
+	*                 whether the section is editable or restricted to a private table
 	*
-	* @param array $ar_section_tipo Array of section tipo strings
-	* @return array Array of dd_object instances
+	* Called during the request_config build to enrich the SQO so the client
+	* does not need separate ontology lookups for section metadata.
+	*
+	* @param array $ar_section_tipo - Ordered list of section tipo strings to enrich
+	* @return array - Array of dd_object instances, one per entry in $ar_section_tipo
 	*/
 	protected function build_sqo_section_tipo_ddo(array $ar_section_tipo) : array {
 
@@ -390,14 +445,24 @@ trait request_config_utils {
 
 	/**
 	* BUILD_SECTION_BUTTONS
-	* Gets button_new and button_delete for a section
+	* Discovers and returns the button_new and button_delete action descriptors
+	* for a section, respecting the current user's permissions.
 	*
-	* Buttons are only added if:
-	* 1. User has edit permissions (>1) on the section
-	* 2. The button exists in the ontology
+	* Returns an empty array immediately when the user's permission level on
+	* $section_tipo is 0 or 1 (read-only). For permission level 2 or 3, the
+	* method searches the section's direct children for button_new and
+	* button_delete nodes via section::get_ar_children_tipo_by_model_name_in_section().
+	* Only buttons that exist in the ontology are included; missing buttons are
+	* silently skipped.
 	*
-	* @param string $section_tipo
-	* @return array Array of button objects with model and permissions
+	* Each returned descriptor is a plain object:
+	*   { model: string, permissions: int }
+	* where `model` is 'button_new' or 'button_delete' and `permissions` is the
+	* user's access level on the specific button tipo (may differ from the section
+	* level when button-level ACL is configured in the ontology).
+	*
+	* @param string $section_tipo - Section tipo whose buttons to discover
+	* @return array - Array of button descriptor objects (may be empty)
 	*/
 	protected function build_section_buttons(string $section_tipo) : array {
 
@@ -450,17 +515,25 @@ trait request_config_utils {
 
 	/**
 	* SYNC_PAGINATION_FROM_CONFIG
-	* Replicates, on the cache-hit path, the instance pagination side effect
-	* that the build (miss) path performs: parse_show_config (v6) and
-	* build_request_config_v5 both update $this->pagination->limit while
-	* building. Without this, instance pagination — consumed downstream by
-	* the *_json.php response controllers — would depend on whether the
-	* config came from cache or from a fresh build.
+	* Replicates, on the cache-hit path, the $this->pagination->limit side
+	* effect that the build (cache-miss) path produces as a by-product of
+	* parse_show_config (v6) and build_request_config_v5.
 	*
-	* Mirrors the per-item assignment order of the miss path (last item wins,
-	* each falling back to the current limit).
+	* Without this call, $this->pagination->limit would reflect the API rqo
+	* value (or the initial default) on a cache hit, but the limit baked into
+	* the config on a cache miss. Response controllers in *_json.php read
+	* $this->pagination->limit directly, so the two paths must produce the
+	* same instance state regardless of whether the config was built fresh or
+	* served from cache.
 	*
-	* @param array $ar_request_config
+	* Mirrors the miss-path assignment order: iterates items in array order,
+	* last item wins, each falling back to the current limit when the config
+	* item does not carry one.
+	*
+	* Silently returns when $this->pagination is not set (not all host classes
+	* carry pagination; mirrors the guard in trait.request_config_v5).
+	*
+	* @param array $ar_request_config - The cached config array just returned by get_cached_request_config()
 	* @return void
 	*/
 	protected function sync_pagination_from_config(array $ar_request_config) : void {
@@ -484,18 +557,27 @@ trait request_config_utils {
 
 	/**
 	* RESOLVE_PAGINATION_OVERRIDE
-	* Applies pagination overrides from various sources
+	* Applies per-item pagination limit overrides to a parsed request_config
+	* item's sqo object, in increasing priority order so the highest-priority
+	* source always wins.
 	*
-	* PRIORITY (highest to lowest):
-	* 1. API request via dd_core_api::$rqo->sqo->limit
-	* 2. Instance $this->pagination->limit
-	* 3. Calculated default limit (already in parsed_item->sqo->limit)
+	* Priority (lowest to highest — each level overwrites the previous):
+	* 1. Calculated default (already stored in $parsed_item->sqo->limit by the
+	*    build path; this method sets it only if missing).
+	* 2. $this->pagination->limit — the instance-level limit from the incoming
+	*    API request, applied to every item regardless of tipo.
+	* 3. dd_core_api::$rqo->sqo->limit — the explicit sqo limit sent by the
+	*    client for the specific source tipo, applied only when $requested_source
+	*    matches $tipo.
 	*
-	* @param object $parsed_item
-	* @param object $pagination
-	* @param object|null $requested_source
-	* @param object|null $requested_sqo
-	* @param string $tipo
+	* Mutates $parsed_item->sqo->limit in place; callers read this field after
+	* this method returns.
+	*
+	* @param object      $parsed_item      - The request_config_object item whose sqo->limit to set
+	* @param object      $pagination       - Resolved defaults from resolve_pagination_defaults()
+	* @param object|null $requested_source - dd_core_api::$rqo->source (null when rqo has no source)
+	* @param object|null $requested_sqo    - dd_core_api::$rqo->sqo (null when rqo has no sqo)
+	* @param string      $tipo             - The tipo this parsed_item applies to
 	* @return void
 	*/
 	protected function resolve_pagination_override(
@@ -526,15 +608,26 @@ trait request_config_utils {
 
 	/**
 	* BUILD_SQO_CONFIG_DEFAULT
-	* Creates default sqo_config object
+	* Constructs the default sqo_config stdClass used when the ontology
+	* properties do not define an explicit sqo_config block.
 	*
-	* Used when sqo_config is not defined in properties.
-	* Provides sensible defaults for search query configuration.
+	* The returned object is used by both the V5 legacy path
+	* (build_request_config_v5) and the V6 path when no sqo_config is present
+	* in properties->source->request_config. It seeds the show->sqo_config field
+	* of the resulting request_config_object.
 	*
-	* @param int $limit
-	* @param int $offset
-	* @param string $mode
-	* @return object Default sqo_config
+	* Default values:
+	* - full_count : false — total count query is not executed by default
+	*   (expensive; enabled explicitly when needed by the client or ontology)
+	* - limit      : $limit (from resolve_pagination_defaults())
+	* - offset     : $offset (from resolve_pagination_defaults())
+	* - mode       : $mode (echoed through so the client knows the build context)
+	* - operator   : '$or' — filter clauses are combined with OR by default
+	*
+	* @param int    $limit  - Record limit for the SQO
+	* @param int    $offset - Record offset for the SQO
+	* @param string $mode   - Display mode string echoed into sqo_config->mode
+	* @return object - Populated stdClass sqo_config object
 	*/
 	protected function build_sqo_config_default(int $limit, int $offset, string $mode) : object {
 

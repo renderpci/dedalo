@@ -45,7 +45,22 @@ export const service_dropzone = function () {
 */
 // prototypes assign
 	service_dropzone.prototype.render	= common.prototype.render
-	service_dropzone.prototype.destroy	= common.prototype.destroy
+	// destroy: tear down the Dropzone instance (it attaches drag/drop listeners to
+	// document.body) before delegating to the generic destructor. Without this each
+	// new service caller stacks another body-level Dropzone with all its listeners,
+	// leaking globally and causing dropped files to fire on stale instances.
+	service_dropzone.prototype.destroy	= function() {
+		const self = this
+		if (self.active_dropzone && typeof self.active_dropzone.destroy==='function') {
+			try {
+				self.active_dropzone.destroy()
+			} catch (e) {
+				console.warn('service_dropzone destroy: error destroying Dropzone', e)
+			}
+			self.active_dropzone = null
+		}
+		return common.prototype.destroy.call(self)
+	}
 	service_dropzone.prototype.refresh	= common.prototype.refresh
 	service_dropzone.prototype.edit		= render_edit_service_dropzone.prototype.edit
 

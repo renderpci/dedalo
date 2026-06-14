@@ -1,37 +1,93 @@
 <?php declare(strict_types=1);
 /**
- * PROCESSES
- *
- * This class manages system process records stored in the database.
- * It provides methods to track active background processes, stop them safely,
- * and maintain a persistent list of process metadata (PID, owner, etc.).
- *
- * Records are stored in the 'matrix_notifications' table under a specific record ID.
- */
+* CLASS PROCESSES
+* Registry and lifecycle manager for background OS processes in Dédalo.
+*
+* Background tasks (tool exports, area_maintenance jobs, media transcodes) are spawned
+* by exec_::request_cli() and run as child processes of PHP-FPM. This class is the
+* persistent ledger for those processes: it records which PID belongs to which user,
+* allows callers to check status, and removes the record when the process finishes or
+* is stopped.
+*
+* Responsibilities:
+* - add()               — write a new (user_id, pid, pfile, date) entry to the DB.
+* - stop()              — verify ownership, send SIGTERM via the `process` helper, and clean up.
+* - delete_process_item() — remove a single entry from the list after a process ends.
+* - get_process_item()  — look up a live entry by PID (used for ownership checks before
+*                         streaming the output file back to the client).
+*
+* Storage layout:
+*   Table : PROCESSES_TABLE ('matrix_notifications')
+*   Row   : id = RECORD_ID (2)
+*   Column: data (text) — JSON array of process-entry objects:
+*             [{ "user_id": int, "pid": int, "pfile": string, "date": string }, …]
+*
+* Concurrency:
+*   add(), stop(), and delete_process_item() all issue `SELECT … FOR UPDATE` to
+*   lock the single data row for the duration of the read-modify-write cycle,
+*   preventing lost updates when two background tasks register at the same instant.
+*
+* Known callers:
+* - exec_::request_cli()           — calls add() immediately after spawning the child.
+* - dd_utils_api::get_process_status() — calls get_process_item() to resolve the pfile path.
+* - dd_utils_api::stop_process()   — calls stop() on user request from the client UI.
+*
+* Depends on:
+* - `process` class (class.exec_.php) — OS-level PID inspection and SIGTERM.
+* - `matrix_db_manager`              — PostgreSQL query execution layer.
+* - `dd_date::get_timestamp_now_for_db()` — ISO timestamp for the 'date' field.
+* - `logged_user_id()` (shared/core_functions.php) — session-based user resolution.
+* - `DEDALO_SUPERUSER` constant (dd_tipos.php, value -1) — privileged user sentinel.
+*
+* @package Dédalo
+* @subpackage Core
+*/
 class processes {
 
-	/** @var string Table name used for storing process data */
+	/**
+	* Name of the PostgreSQL table used as the process registry.
+	* Reuses the 'matrix_notifications' table (row id=2) rather than a dedicated table,
+	* following Dédalo's convention of storing ephemeral system state in standard matrix tables.
+	* @var string PROCESSES_TABLE
+	*/
 	const PROCESSES_TABLE = 'matrix_notifications';
 
-	/** @var int Constant ID for the process list record */
+	/**
+	* Fixed row ID within PROCESSES_TABLE where the process list JSON is stored.
+	* The entire process registry lives in a single row; the 'data' column holds a
+	* JSON-encoded array of process-entry objects.
+	* @var int RECORD_ID
+	*/
 	const RECORD_ID = 2;
 
 
 
 	/**
-	 * ADD
-	 * Registers a new process in the tracking table.
-	 *
-	 * @param int $user_id ID of the user who owns the process.
-	 * @param int $pid System Process ID (PID).
-	 * @param string $pfile Path or descriptor of the process log/file.
-	 * @return object $response {
-	 *    @var bool   $result    True on success, false otherwise.
-	 *    @var string $msg       Operation status message.
-	 *    @var array  $errors    List of error descriptions.
-	 *    @var object $data_item The newly created process metadata object.
-	 * }
-	 */
+	* ADD
+	* Register a new background process in the persistent tracking table.
+	*
+	* Inserts a process-entry object { user_id, pid, pfile, date } into the JSON array
+	* stored in PROCESSES_TABLE at RECORD_ID. The row is locked with FOR UPDATE to guard
+	* against concurrent insertions by two callers registering at the same millisecond.
+	*
+	* If the row does not yet exist it is created with ON CONFLICT DO NOTHING, then
+	* re-fetched, so a race-winning parallel INSERT does not cause a duplicate.
+	*
+	* The $pfile value is sanitized to its basename before storage; callers must not
+	* include directory traversal sequences (e.g. '../') in this argument.
+	*
+	* Returns false (result=false) rather than throwing on all error paths; callers must
+	* check $response->result before using $response->data_item.
+	*
+	* @param int    $user_id - ID of the user who owns the process; -1 is DEDALO_SUPERUSER.
+	* @param int    $pid     - OS process ID (must be > 0).
+	* @param string $pfile   - Output file basename for this process (must be non-empty).
+	* @return object $response - stdClass with:
+	*   bool   $result    — true on success, false on any error.
+	*   string $msg       — human-readable status or error description.
+	*   array  $errors    — list of error tokens (empty on success).
+	*   object $data_item — the newly inserted entry (only present when result=true).
+	*/
 	public static function add( int $user_id, int $pid, string $pfile ) : object {
 
 		// Input validation
@@ -114,6 +170,9 @@ class processes {
 			$data = is_array($json_data) ? $json_data : [];
 
 		// Check if this process is already registered
+			// array_find() is a PHP 8.4 built-in; a polyfill for earlier PHP versions
+			// is declared in shared/core_functions.php and used transparently here.
+			// The isset() guards defend against malformed entries that lack the expected fields.
 			$found_row = array_find($data, function($el) use($user_id, $pid){
 				return isset($el->pid) && $el->pid === $pid && isset($el->user_id) && $el->user_id === $user_id;
 			});
@@ -157,18 +216,35 @@ class processes {
 
 
 	/**
-	 * STOP
-	 * Terminates a process by its PID, after verifying that the requesting user
-	 * is authorized to do so (must be the owner or a superuser).
-	 *
-	 * @param int $pid     The system PID to stop.
-	 * @param int $user_id The ID of the user requesting the operation.
-	 * @return object $response {
-	 *    @var bool   $result True if the process was stopped (or was already inactive), false on error.
-	 *    @var string $msg    Descriptive status message.
-	 *    @var array  $errors List of error descriptions if any.
-	 * }
-	 */
+	* STOP
+	* Terminate a tracked background process and remove it from the registry.
+	*
+	* Authorization model:
+	*   Only the owning user or DEDALO_SUPERUSER may stop a process. Authorization is
+	*   verified against the LOGGED session user (logged_user_id()), NOT against the
+	*   $user_id parameter — which is caller-supplied and therefore untrusted.
+	*   Passing $user_id = -1 (DEDALO_SUPERUSER) does NOT grant elevated access unless
+	*   the logged session actually belongs to the superuser.
+	*
+	* Flow:
+	*   1. Validate inputs.
+	*   2. Confirm the logged user matches $user_id or is superuser.
+	*   3. Fetch the process list and locate the entry matching (pid, user_id).
+	*   4. Query the OS via process::status(); if already gone, clean up and return success.
+	*   5. Send SIGTERM via process::stop().
+	*   6. On successful kill, call delete_process_item() to remove the DB entry.
+	*
+	* Returns result=true when the process is no longer running (either it was already
+	* stopped or SIGTERM succeeded). Returns result=false on authorization failure,
+	* process-not-found, or if the process survived the SIGTERM.
+	*
+	* @param int $pid     - OS process ID of the process to terminate (must be > 0).
+	* @param int $user_id - User ID that owns the process; must match the logged session.
+	* @return object $response - stdClass with:
+	*   bool   $result — true when the process is no longer running; false on any error.
+	*   string $msg    — human-readable status or error description.
+	*   array  $errors — list of error tokens (empty on success).
+	*/
 	public static function stop( int $pid, int $user_id ) : object {
 
 		// Input validation
@@ -257,8 +333,10 @@ class processes {
 				return $response;
 			}
 
-		// search
-			// sample data
+		// Locate the registry entry for this (pid, user_id) pair.
+			// Both fields must match so that user A cannot stop user B's process by
+			// supplying B's PID — the user_id from the registry is the authoritative owner.
+			// Sample registry entry shape:
 			// {
 			// 	"pid": 98018,
 			// 	"date": "2024-05-22 18:30:34",
@@ -316,13 +394,24 @@ class processes {
 
 
 	/**
-	 * DELETE_PROCESS_ITEM
-	 * Removes a specific process entry from the tracking list.
-	 *
-	 * @param int $pid     The system PID of the process to remove.
-	 * @param int $user_id The ID of the user who owns the process.
-	 * @return bool True if the item was found and removed (or didn't exist), false on error.
-	 */
+	* DELETE_PROCESS_ITEM
+	* Remove a single process entry from the registry JSON array.
+	*
+	* Loads the registry row with FOR UPDATE, filters out the entry whose (pid, user_id)
+	* pair matches the arguments, and writes the remaining items back. If the entry is
+	* not present (already removed), the write still succeeds — no error is raised.
+	*
+	* Authorization is enforced against the logged session (same rule as stop()):
+	* the $user_id parameter is caller-supplied and cannot be used alone to grant access.
+	* Superusers (DEDALO_SUPERUSER) may delete any user's entry.
+	*
+	* Called internally by stop() after a successful SIGTERM, and by stop() after
+	* confirming the process has already exited.
+	*
+	* @param int $pid     - OS process ID of the entry to remove (must be > 0).
+	* @param int $user_id - User ID that owns the entry; must match the logged session or be superuser.
+	* @return bool - true when the operation succeeded (entry removed or was absent); false on error.
+	*/
 	public static function delete_process_item( int $pid, int $user_id ) : bool {
 
 		// Input validation
@@ -348,7 +437,7 @@ class processes {
 				return false;
 			}
 
-		// short context
+		// Local aliases for the table constants — improves readability in SQL strings below
 			$id		= self::RECORD_ID;
 			$table	= self::PROCESSES_TABLE;
 
@@ -391,15 +480,26 @@ class processes {
 
 
 	/**
-	 * GET_PROCESS_ITEM
-	 * Looks up a tracked process by pid (and optional pfile match) and returns
-	 * its registry entry, including the owning user_id. Used by callers that
-	 * need to verify ownership of a process before reading its output.
-	 *
-	 * @param int $pid
-	 * @param string|null $pfile Optional pfile to additionally match
-	 * @return object|null Process entry or null if not found
-	 */
+	* GET_PROCESS_ITEM
+	* Look up a tracked process by PID and return its full registry entry.
+	*
+	* Reads the registry row (no row-level lock — read-only lookup) and scans the JSON
+	* array for an entry whose 'pid' field equals $pid. An optional $pfile argument
+	* narrows the match further; this is used by dd_utils_api when both the PID and the
+	* output filename are available from the client request.
+	*
+	* The returned object includes the owning user_id, which the caller must check
+	* against the logged session before allowing access to the process output file.
+	* This method itself does NOT enforce any authorization check — that responsibility
+	* lies with the caller.
+	*
+	* Returns null (not an exception) when the row is absent, JSON is malformed,
+	* or no matching entry is found.
+	*
+	* @param int         $pid   - OS process ID to look up (must be > 0; returns null immediately for ≤ 0).
+	* @param string|null $pfile = null - if provided, the entry's 'pfile' field must also match.
+	* @return object|null - the matching process-entry object, or null if not found.
+	*/
 	public static function get_process_item( int $pid, ?string $pfile = null ) : ?object {
 
 		if ($pid <= 0) {

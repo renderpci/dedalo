@@ -122,6 +122,7 @@
 			padding: 0.75rem 1rem;
 			background-color: var(--bg_app);
 			border-bottom: 1px solid var(--border_default);
+			border-radius: 8px;
 
 			.maintenance_search_wrap {
 				position: relative;
@@ -182,6 +183,7 @@
 		// ---- groups ----
 		>.maintenance_groups {
 			padding: 1rem;
+			width: 100%;
 
 			.maintenance_empty {
 				padding: 2rem 1rem;
@@ -218,7 +220,7 @@
 				}
 
 				// per-category group icon
-				&[data-category="data"]		>.group_header .group_icon { .fn_maintenance_icon('save.svg'); }
+				&[data-category="data"]			>.group_header .group_icon { .fn_maintenance_icon('save.svg'); }
 				&[data-category="migration"]	>.group_header .group_icon { .fn_maintenance_icon('exchange.svg'); }
 				&[data-category="config"]		>.group_header .group_icon { .fn_maintenance_icon('gears.svg'); }
 				&[data-category="integrity"]	>.group_header .group_icon { .fn_maintenance_icon('repair.svg'); }
@@ -229,7 +231,8 @@
 
 				>.group_grid {
 					display: grid;
-					grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+					// grid-template-columns: repeat(auto-fill, minmax(22rem, 1fr));
+					grid-template-columns: repeat(auto-fill, minmax(32.9%, 1fr));
 					gap: 0.75rem;
 
 					@media screen and (max-width: @width_break_point_0) {
@@ -249,6 +252,7 @@
 			box-shadow: 0 1px 3px var(--shadow_default);
 			overflow: hidden;
 			transition: box-shadow 160ms ease, transform 160ms ease;
+			min-height: 3.15rem;
 
 			&:hover {
 				box-shadow: 0 4px 12px var(--shadow_default);
@@ -275,6 +279,11 @@
 				}
 			}
 
+			>.container_placeholder {
+				height: 3.15rem;
+				margin: 0px;
+			}
+
 			// ---- header / label ----
 			>.widget_label {
 				display: flex;
@@ -288,6 +297,8 @@
 				user-select: none;
 				cursor: pointer;
 				position: relative;
+				height: 3.15rem;
+				// min-height: 3.15rem;
 
 				// category icon (white mask). content set by per-category rules below
 				&:before {

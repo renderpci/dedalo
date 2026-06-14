@@ -602,14 +602,13 @@ class ts_object {
 					continue;
 				}
 
-				$section_map = section::get_section_map($section_tipo);
-				if (empty($section_map) || !isset($section_map->thesaurus->is_descriptor)) {
+				$component_tipo = section_map::get_first_element_tipo($section_tipo, 'is_descriptor', 'thesaurus');
+				if (empty($component_tipo)) {
 					$cache_models[$section_tipo] = false;
 					debug_log(__METHOD__ . " Invalid section_map for section $section_tipo", logger::ERROR);
 					continue;
 				}
 
-				$component_tipo = $section_map->thesaurus->is_descriptor;
 				$model_name     = ontology_node::get_model_by_tipo($component_tipo, true);
 
 				$cache_models[$section_tipo] = (object)[
@@ -671,18 +670,18 @@ class ts_object {
 			return false;
 		}
 
-		$section_map = section::get_section_map( $section_tipo );
-		if (!isset($section_map->thesaurus->is_indexable)) {
-			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string($section_map), logger::ERROR);
+		$is_indexable = section_map::get_element_tipo( $section_tipo, 'is_indexable', 'thesaurus' );
+		if ($is_indexable===null) {
+			debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $section_tipo ".to_string(section_map::get_map($section_tipo)), logger::ERROR);
 			return false;
 		}
 
-		if ($section_map->thesaurus->is_indexable===false) {
+		if ($is_indexable===false) {
 			// properties set as false case
 			return false;
 		}
 
-		$component_tipo	= $section_map->thesaurus->is_indexable;
+		$component_tipo	= $is_indexable;
 		$model_name		= ontology_node::get_model_by_tipo($component_tipo,true);
 		$component		= component_common::get_instance(
 			$model_name,
@@ -777,16 +776,16 @@ class ts_object {
 
 
 	/**
-	* GET_TERM_DATO_BY_LOCATOR
-	* Delegate of ts_term_resolver::get_term_dato_by_locator (kept here because
+	* get_term_data_by_locator
+	* Delegate of ts_term_resolver::get_term_data_by_locator (kept here because
 	* diffusion/export/portal code calls it on ts_object).
 	* @param object $locator
 	* @return array|null $final_value
 	*/
-	public static function get_term_dato_by_locator( object $locator ) : ?array {
+	public static function get_term_data_by_locator( object $locator ) : ?array {
 
-		return ts_term_resolver::get_term_dato_by_locator($locator);
-	}//end get_term_dato_by_locator
+		return ts_term_resolver::get_term_data_by_locator($locator);
+	}//end get_term_data_by_locator
 
 
 
@@ -859,7 +858,7 @@ class ts_object {
 	public static function get_component_order_tipo( string $section_tipo ) : ?string {
 
 		// Calculated way
-		$element_tipo = hierarchy::get_element_tipo_from_section_map( $section_tipo, 'order' );
+		$element_tipo = hierarchy::get_element_tipo_from_section_map( $section_tipo, 'order', 'thesaurus' );
 
 
 		return $element_tipo;

@@ -1,43 +1,145 @@
 <?php declare(strict_types=1);
 /**
-* DD_DATE CLASS
-* Build dd_date objects like common dates but without restrictions/limitations of
-* negative dates and similar issues of timestamps
+* CLASS DD_DATE
+* A locale-aware, timestamp-free date/time value object for Dédalo.
+*
+* PHP's native DateTime and Unix timestamps cannot represent dates outside the
+* range of a 32-/64-bit integer, making BCE dates, very large CE years, and
+* partial dates (year-only, year+month) awkward or impossible. dd_date solves
+* this by storing each calendar field as a plain nullable integer and supplying
+* its own arithmetic for sorting and serialization.
+*
+* Responsibilities:
+* - Hold individual date/time fields (year, month, day, hour, minute, second, ms)
+*   without requiring all fields to be populated.
+* - Validate fields on assignment, with a `$constrain` mode that rejects out-of-
+*   range values outright (used when strict parsing is required).
+* - Serialize to Dédalo's internal "dd_timestamp" string format (Y-m-d H:i:s),
+*   which is aware of BCE (negative year) values that PHP's date() cannot handle.
+* - Convert to/from Unix timestamps for interop with PHP's DateTime when the date
+*   is within the representable range.
+* - Provide a monotonic "seconds" value (convert_date_to_seconds) for sorting and
+*   time-range queries without relying on PHP's mktime().
+* - Carry an optional `$op` field used only during search operations to attach a
+*   comparison operator to the date value.
+*
+* Implements JsonSerializable so that json_encode() emits only the non-null
+* fields, matching the sparse data shape expected by component_date.
+*
+* Extended by: nothing (concrete value object).
+* Used by: component_date, trait.search_component_date.php, and any code
+*          that must handle dates outside the Unix epoch range.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class dd_date implements JsonSerializable {
 
 
 
-	// Separator when format output
+	/**
+	* Date component separator for formatted output.
+	* Used by display/export routines that need a localized separator character.
+	* @var string $separator
+	*/
 	static string $separator = '/';
-	// Separator when format output
+
+	/**
+	* Time component separator for formatted output.
+	* @var string $time_separator
+	*/
 	static string $time_separator = ':';
-	// Virtual year days
+
+	/**
+	* Number of days assigned to one virtual year in the sort-seconds model.
+	* Uses 372 (= 31 × 12) rather than 365 so that every month can contribute
+	* exactly 31 days without fractional carry-over, making the arithmetic
+	* symmetric and predictable even for partial dates.
+	* @var int $virtual_year_days
+	*/
 	static int $virtual_year_days  = 372;
-	// Virtual month days
+
+	/**
+	* Number of days assigned to one virtual month in the sort-seconds model.
+	* See $virtual_year_days for the rationale behind using 31 instead of 30/28.
+	* @var int $virtual_month_days
+	*/
 	static int $virtual_month_days = 31;
 
-	// day
+	/**
+	* Day of month (1–31), or null if not specified.
+	* @var ?int $day
+	*/
 	public ?int $day = null;
-	// month
+
+	/**
+	* Month of year (1–12), or null if not specified.
+	* @var ?int $month
+	*/
 	public ?int $month = null;
-	// year
+
+	/**
+	* Calendar year, including BCE years as negative integers (e.g. -44 = 44 BCE).
+	* Null when not specified.
+	* @var ?int $year
+	*/
 	public ?int $year = null;
-	// time
+
+	/**
+	* Pre-computed monotonic sort value in seconds, as produced by
+	* convert_date_to_seconds(). Stored so callers can retrieve it without
+	* recomputing. Null until explicitly set via set_time().
+	* @var ?int $time
+	*/
 	public ?int $time = null;
-	// hour
+
+	/**
+	* Hour of day (0–23), or null if not specified.
+	* @var ?int $hour
+	*/
 	public ?int $hour = null;
-	// minute
+
+	/**
+	* Minute of hour (0–59), or null if not specified.
+	* @var ?int $minute
+	*/
 	public ?int $minute = null;
-	// second
+
+	/**
+	* Second of minute (0–59), or null if not specified.
+	* @var ?int $second
+	*/
 	public ?int $second = null;
-	// ms
+
+	/**
+	* Milliseconds (0–999), or null if not specified.
+	* Private because sub-second precision is rarely needed and should only be
+	* accessed via get_ms() / set_ms().
+	* @var ?int $ms
+	*/
 	private ?int $ms = null;
-	// errors
+
+	/**
+	* Validation errors accumulated during construction or individual set_*() calls.
+	* Populated by the constructor and by set_* methods when $constrain is true.
+	* Check with get_errors() before trusting the object's state.
+	* @var array $errors
+	*/
 	private array $errors = [];
-	// op (Only for search purposes)
+
+	/**
+	* Comparison operator string attached to this date for search use only.
+	* Examples: '>', '<', '>=', '<=', '='.
+	* Null when the instance is used as a plain value, not a search filter.
+	* @var ?string $op
+	*/
 	private ?string $op = null;
-	// timestamp
+
+	/**
+	* Raw timestamp string as received from the client or database, preserved for
+	* round-trip fidelity. Populated via set_timestamp(); not derived automatically.
+	* @var ?string $timestamp
+	*/
 	private ?string $timestamp = null;
 
 
@@ -45,8 +147,16 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* __CONSTRUCT
-	* @param object|null $data = null
-	* @param bool $constrain = false
+	* Hydrate a dd_date from a plain object whose keys match set_* method names.
+	*
+	* Each property on $data is dispatched to the corresponding set_<key>() method.
+	* Unknown keys are logged and recorded in $errors. The 'format' key from
+	* component_date data payloads is intentionally skipped here.
+	* After hydration, check_day() validates day-in-month consistency.
+	*
+	* @param object|null $data = null - source object; null produces an empty instance
+	* @param bool $constrain = false - when true, out-of-range field values are
+	*   rejected and recorded in $errors instead of being stored with a warning
 	* @return void
 	*/
 	public function __construct( ?object $data=null, bool $constrain=false ) {
@@ -113,8 +223,11 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_ERRORS
-	* Store array of errors
-	* @param int $value
+	* Replace the errors list with the given value or values.
+	* Accepts either a single error message (string/int/any scalar) or an array
+	* of messages. Callers that need to inject pre-built error lists from upstream
+	* validation can use this instead of constructing a new instance.
+	* @param mixed $value - a single error value or an array of error values
 	* @return void
 	*/
 	public function set_errors(mixed $value) : void {
@@ -128,7 +241,8 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_ERRORS
-	* Get the errors property value
+	* Return the list of validation errors accumulated since construction.
+	* An empty array means the instance is valid.
 	* @return array
 	*/
 	public function get_errors() : array {
@@ -140,8 +254,10 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_TIME
-	* Store absolute date value in seconds
-	* @param int $value
+	* Store the pre-computed monotonic sort value (seconds since the virtual epoch).
+	* This value is produced by convert_date_to_seconds() and stored for cheap
+	* retrieval without recomputing. It is NOT a Unix timestamp.
+	* @param int $value - absolute seconds value from convert_date_to_seconds()
 	* @return void
 	*/
 	public function set_time(int $value) : void {
@@ -153,7 +269,7 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_TIME
-	* Return property value
+	* Return the stored monotonic sort value in seconds, or null if not yet set.
 	* @return int|null $this->time
 	*/
 	public function get_time() : ?int {
@@ -165,9 +281,11 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_YEAR
-	* @param int|string $value
-	* @param bool $constrain = false
-	* @return bool
+	* Set the calendar year. Accepts negative integers for BCE years (e.g. -44).
+	* No range constraint is applied; any integer is valid for archaeological dates.
+	* @param int|string $value - year as integer or numeric string
+	* @param bool $constrain = false - ignored for year (no valid range to enforce)
+	* @return bool - always true
 	*/
 	public function set_year(int|string $value, bool $constrain=false) : bool {
 
@@ -180,7 +298,7 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_YEAR
-	* Return property value
+	* Return the stored year, or null if not set.
 	* @return int|null $this->year
 	*/
 	public function get_year() : ?int {
@@ -192,9 +310,13 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_MONTH
-	* @param int|string $value
-	* @param bool $constrain = false
-	* @return bool
+	* Set the calendar month (1–12).
+	* Values outside this range log a warning. When $constrain is true, an
+	* out-of-range value additionally pushes an error to $errors and returns false
+	* so the caller can detect rejection.
+	* @param int|string $value - month number (1 = January … 12 = December)
+	* @param bool $constrain = false - reject and record error if out of 1–12 range
+	* @return bool - false when constrain rejects the value, true otherwise
 	*/
 	public function set_month(int|string $value, bool $constrain=false) : bool {
 
@@ -229,7 +351,7 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_MONTH
-	* Return property value
+	* Return the stored month (1–12), or null if not set.
 	* @return int|null $this->month
 	*/
 	public function get_month() : ?int {
@@ -241,9 +363,13 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_DAY
-	* @param int|string $value
-	* @param bool $constrain = false
-	* @return bool
+	* Set the day of the month (1–31).
+	* Out-of-range values log a warning; with $constrain=true they are rejected.
+	* Note: this only enforces the 1–31 outer bound. Finer validation against the
+	* specific month and leap-year status is performed separately by check_day().
+	* @param int|string $value - day number (1–31)
+	* @param bool $constrain = false - reject and record error if outside 1–31
+	* @return bool - false when constrain rejects the value, true otherwise
 	*/
 	public function set_day(int|string $value, bool $constrain=false) : bool {
 
@@ -278,7 +404,7 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_DAY
-	* Return property value
+	* Return the stored day of month (1–31), or null if not set.
 	* @return int|null $this->day
 	*/
 	public function get_day() : ?int {
@@ -290,8 +416,15 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* CHECK_DAY
-	* Check if the max day value for specific month and leap years.
-	* @return bool
+	* Validate the stored day against the stored month, including leap-year logic.
+	* Called automatically at the end of __construct(). Returns true when:
+	* - day is null (not set) — nothing to validate,
+	* - the month is unknown — cannot perform month-specific check,
+	* - the day is within the valid range for the given month and year.
+	*
+	* Returns false when the day exceeds the maximum for the month, e.g. day=30
+	* in February, day=31 in April, etc.
+	* @return bool - false when the day is out of range for the current month/year
 	*/
 	public function check_day() : bool {
 
@@ -339,9 +472,11 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_HOUR
-	* @param int|string $value
-	* @param bool $constrain = false
-	* @return bool
+	* Set the hour of day (0–23).
+	* Out-of-range values log a warning; with $constrain=true they are rejected.
+	* @param int|string $value - hour (0–23)
+	* @param bool $constrain = false - reject and record error if outside 0–23
+	* @return bool - false when constrain rejects the value, true otherwise
 	*/
 	public function set_hour(int|string $value, bool $constrain=false) : bool {
 
@@ -376,7 +511,7 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_HOUR
-	* Return property value
+	* Return the stored hour (0–23), or null if not set.
 	* @return int|null $this->hour
 	*/
 	public function get_hour() : ?int {
@@ -388,9 +523,11 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_MINUTE
-	* @param int|string $value
-	* @param bool $constrain = false
-	* @return bool
+	* Set the minute of the hour (0–59).
+	* Out-of-range values log a warning; with $constrain=true they are rejected.
+	* @param int|string $value - minute (0–59)
+	* @param bool $constrain = false - reject and record error if outside 0–59
+	* @return bool - false when constrain rejects the value, true otherwise
 	*/
 	public function set_minute(int|string $value, bool $constrain=false) : bool {
 
@@ -425,7 +562,7 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_MINUTE
-	* Return property value
+	* Return the stored minute (0–59), or null if not set.
 	* @return int|null $this->minute
 	*/
 	public function get_minute() : ?int {
@@ -437,9 +574,11 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_SECOND
-	* @param int|string $value
-	* @param bool $constrain = false
-	* @return bool
+	* Set the second of the minute (0–59).
+	* Out-of-range values log a warning; with $constrain=true they are rejected.
+	* @param int|string $value - second (0–59)
+	* @param bool $constrain = false - reject and record error if outside 0–59
+	* @return bool - false when constrain rejects the value, true otherwise
 	*/
 	public function set_second(int|string $value, bool $constrain=false) : bool {
 
@@ -474,7 +613,7 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_SECOND
-	* Return property value
+	* Return the stored second (0–59), or null if not set.
 	* @return int|null $this->second
 	*/
 	public function get_second() : ?int {
@@ -486,9 +625,11 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_MS
-	* @param int|string $value
-	* @param bool $constrain = false
-	* @return bool
+	* Set the millisecond component (0–999).
+	* Out-of-range values log a warning; with $constrain=true they are rejected.
+	* @param int|string $value - milliseconds (0–999)
+	* @param bool $constrain = false - reject and record error if outside 0–999
+	* @return bool - false when constrain rejects the value, true otherwise
 	*/
 	public function set_ms(int|string $value, bool $constrain=false) : bool {
 
@@ -524,7 +665,7 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_MS
-	* Return property value
+	* Return the stored millisecond component (0–999), or null if not set.
 	* @return int|null $this->ms
 	*/
 	public function get_ms() : ?int {
@@ -536,9 +677,11 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_OP
-	* Only for search purposes
-	* @param string $value
-	* @return bool
+	* Store a search comparison operator string (e.g. '>', '<', '>=', '=').
+	* This field is only meaningful when the dd_date instance is used as a search
+	* filter operand, not as a standalone date value.
+	* @param string $value - comparison operator
+	* @return bool - always true
 	*/
 	public function set_op(string $value) : bool {
 		// set value
@@ -551,7 +694,7 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_OP
-	* Return property value
+	* Return the stored comparison operator, or null if not set.
 	* @return string|null $this->op
 	*/
 	public function get_op() : ?string {
@@ -563,11 +706,23 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_DD_TIMESTAMP
-	* Format default 'Y-m-d H:i:s'
-	* When any value if empty, default values are used, like 01 for month
-	* @param string $date_format = "Y-m-d H:i:s"
-	* @param bool $padding = true
-	* @return string $dd_timestamp
+	* Serialize this date to a formatted timestamp string.
+	*
+	* This is Dédalo's own formatter: it does NOT use PHP's date() or mktime(), so
+	* it works correctly with BCE (negative) years and very large year values that
+	* fall outside the Unix timestamp range.
+	*
+	* Missing fields default to 0 (displayed as "00" when $padding is true). Any
+	* negative field value that is not zero is silently replaced with 0 and logged
+	* as an error, since negative sub-year components are never valid.
+	*
+	* The $date_format string uses the same placeholder letters as PHP's date():
+	*   Y = year, m = month, d = day, H = hour, i = minute, s = second, u = ms
+	* but the replacement is a simple string substitution, not PHP's date engine.
+	*
+	* @param string $date_format = "Y-m-d H:i:s" - output template using date() letters
+	* @param bool $padding = true - zero-pad each component (year→4 digits, rest→2, ms→3)
+	* @return string $dd_timestamp - the formatted date string
 	*/
 	public function get_dd_timestamp(string $date_format="Y-m-d H:i:s", bool $padding=true) : string {
 
@@ -676,8 +831,12 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_DD_DATE_FROM_TIMESTAMP
-	* @param string $timestamp
-	* @return dd_date object
+	* Parse a timestamp string into a new dd_date instance.
+	* Accepts standard ISO-like strings including negative year prefixes for BCE dates.
+	* Example inputs: "2024-06-01 14:30:00", "-44-03-15" (44 BCE March 15).
+	* Parsing is performed with constrain=true so invalid field values are rejected.
+	* @param string $timestamp - date/time string in "Y-m-d H:i:s" or partial form
+	* @return dd_date - a new dd_date hydrated from the parsed fields
 	*/
 	public static function get_dd_date_from_timestamp( string $timestamp ) : object {
 
@@ -718,8 +877,11 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_FROM_TIMESTAMP
-	* @param string $timestamp
-	* @return bool
+	* Parse a timestamp string and populate this instance's fields in-place.
+	* Unlike get_dd_date_from_timestamp(), this mutates the current object rather
+	* than creating a new one. Constrain mode is always enabled during parsing.
+	* @param string $timestamp - date/time string in "Y-m-d H:i:s" or partial form
+	* @return bool - always true
 	*/
 	public function set_from_timestamp( string $timestamp ) : bool {
 
@@ -757,10 +919,14 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* TIMESTAMP_TO_DATE
-	* timestamp to European date
-	* @param string $timestamp
-	* @param bool $full (default false)
-	* Convert DB timestamp to date (American or European date) like '2013-04-23 19:47:05' to 23-04-2013 19:47:05
+	* Convert a database timestamp string to a European (day-month-year) date string.
+	* Input format: "YYYY-MM-DD HH:MM:SS" (as stored in SQL timestamp columns).
+	* Output format: "DD-MM-YYYY" or "DD-MM-YYYY HH:MM:SS" when $full=true.
+	*
+	* Returns null for empty or too-short input to avoid misleading partial output.
+	* @param string $timestamp - SQL timestamp string (minimum 10 chars: "YYYY-MM-DD")
+	* @param bool $full = true - when true, append the time portion (HH:MM:SS)
+	* @return string|null - formatted date string, or null if $timestamp is invalid
 	*/
 	public static function timestamp_to_date(string $timestamp, bool $full=true) : ?string {
 
@@ -797,14 +963,19 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_TIMESTAMP_NOW_FOR_DB
-	* Build current time ready to save to SQL as timestamp field
-	* @param array|null $offset
-	* ['sub' => 'PT1M']; (-1 minute)
-	* ['add' =>'PT1H']; (+1 hour)
-	* @return string $timestamp
-	* 	current time formatted for saved to SQL timestamp field
-	*	like 2013-01-22 22:33:29 ('Y-m-d H:i:s')
-	*	DateTime is available for PHP >=5.3.0
+	* Return the current server date/time as a SQL-ready timestamp string.
+	* The output format is always 'Y-m-d H:i:s', which is what MariaDB/MySQL
+	* expects for DATETIME and TIMESTAMP column types.
+	*
+	* An optional $offset array can shift the current time forward or backward:
+	*   ['sub' => 'PT1M']  subtract 1 minute
+	*   ['add' => 'PT1H']  add 1 hour
+	*   ['add' => 'P1D']   add 1 day
+	* The key must be a valid DateTime method name ('add' or 'sub') and the value
+	* must be a valid DateInterval spec string.
+	*
+	* @param array|null $offset = null - optional offset spec as ['add'|'sub' => 'interval_spec']
+	* @return string $timestamp - current time formatted as 'Y-m-d H:i:s'
 	*/
 	public static function get_timestamp_now_for_db( ?array $offset=null ) : string {
 
@@ -832,10 +1003,26 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* CONVERT_DATE_TO_SECONDS
-	* Calculate absolute "time" from dd_date object
-	* This operation is not reversible and is only for reference purposes
-	* @param object $source_dd_date
-	* @return int $seconds
+	* Compute a monotonic integer value (in seconds) for the given dd_date.
+	* This is used for sorting and time-range arithmetic, NOT as a Unix timestamp.
+	*
+	* The calculation uses virtual units to avoid real calendar irregularities:
+	*   virtual year  = 372 days (31 × 12), matching $virtual_year_days
+	*   virtual month = 31 days, matching $virtual_month_days
+	* Month and day are decremented by 1 before multiplication so that the epoch
+	* (year 0, month 1, day 1) maps cleanly to 0 seconds. This decrement means
+	* "January 1st of year N" and "year N alone" produce the same value, allowing
+	* partial dates to sort correctly alongside full dates.
+	*
+	* (!) The result is NOT reversible back to a wall-clock date. It is an
+	* ordinal position, not an absolute time. Do not pass the result to PHP's
+	* date() or DateTime APIs.
+	*
+	* (!) Always clone the source object before passing it here; the function
+	* operates on a clone internally to prevent caller-side mutation.
+	*
+	* @param object $source_dd_date - a dd_date instance to convert
+	* @return int $seconds - monotonic sort value; comparable across dd_dates
 	*/
 	public static function convert_date_to_seconds( object $source_dd_date ) : int {
 
@@ -942,10 +1129,19 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_UNIX_TIMESTAMP
-	* Get current dd_date in UNIX timestamp mode
-	* Note that hours, minutes and seconds are not defined here.
-	* Change the date to the unit (day, month, year)
-	* @return int $unix_timestamp
+	* Convert this dd_date to a Unix timestamp using PHP's DateTime.
+	* Useful for interop with PHP APIs that require Unix timestamps (e.g. sorting
+	* library data, display formatting).
+	*
+	* (!) This method only works correctly for dates within the representable Unix
+	* range. BCE or very large CE dates will produce invalid or platform-dependent
+	* results. Use convert_date_to_seconds() for cross-era date arithmetic instead.
+	*
+	* When month or day is not set, 1 is substituted (not 0) because PHP's
+	* DateTime::setDate() treats month=0 or day=0 as an underflow into the previous
+	* month/year, yielding a wrong result.
+	*
+	* @return int $unix_timestamp - Unix timestamp for this date's year/month/day
 	*/
 	public function get_unix_timestamp() : int {
 
@@ -965,9 +1161,16 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_DD_DATE_FROM_UNIX_TIMESTAMP
-	* Change the date to the unit (day, month, year)
-	* @param int $unix_timestamp
-	* @return dd_date $dd_date
+	* Build a dd_date from a Unix timestamp integer.
+	* All six components (day, month, year, hour, minute, second) are extracted
+	* using PHP's date() function and stored. The monotonic sort value ($time) is
+	* also computed and stored via set_time().
+	*
+	* (!) Inherits all Unix timestamp limitations: dates before 1 January 1970 or
+	* outside the platform's integer range are not supported.
+	*
+	* @param int $unix_timestamp - seconds since 1970-01-01 00:00:00 UTC
+	* @return dd_date $dd_date - a fully populated dd_date instance
 	*/
 	public static function get_dd_date_from_unix_timestamp( int $unix_timestamp) : dd_date {
 
@@ -996,10 +1199,15 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_SHAPE
-	* Get the structure of the date. Using for check if any of his values is set or not.
-	* if dd_date has a full date will return : {year: true, month: true, day:true}
-	* if dd_date doesn't has any of his properties it will be set as false.
-	* @return object $shape
+	* Return a summary object describing which date components are present.
+	* Used to distinguish a year-only date from a full day/month/year date without
+	* inspecting each field individually.
+	*
+	* Output shape:
+	*   { year: bool, month: bool, day: bool }
+	* Each property is true when the corresponding field is non-null, false when null.
+	*
+	* @return object $shape - stdClass with year, month, day boolean properties
 	*/
 	public function get_shape() : object {
 
@@ -1022,10 +1230,10 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_NOW_AS_UNIX_TIMESTAMP
-	* Get current dd_date in UNIX timestamp mode
-	* Note that hours, minutes and seconds are not defined here.
-	* Change the date to the unit (day, month, year)
-	* @return int $unix_timestamp
+	* Return the current moment as a Unix timestamp integer.
+	* A convenience wrapper around PHP's DateTime that avoids the global
+	* time() function, making it easier to mock in tests.
+	* @return int $unix_timestamp - seconds since 1970-01-01 00:00:00 UTC
 	*/
 	public static function get_now_as_unix_timestamp() : int {
 
@@ -1039,9 +1247,10 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_NOW_AS_ISO_TIMESTAMP
-	* Get current time and return it as ISO timestamp
-	* ex: 2024-12-04T10:57:57+01:00
-	* @return string $iso_timestamp
+	* Return the current moment as an ISO 8601 timestamp string.
+	* Output includes timezone offset, e.g. "2024-12-04T10:57:57+01:00".
+	* Suitable for HTTP headers, JSON-LD, and any context that requires RFC 3339.
+	* @return string $iso_timestamp - ISO 8601 / RFC 3339 formatted current time
 	*/
 	public static function get_now_as_iso_timestamp() : string {
 
@@ -1055,8 +1264,12 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* SET_TIMESTAMP
-	* @param string|null $value
-	* @return bool
+	* Store a raw timestamp string for round-trip preservation.
+	* This field is not derived from the individual date components; it holds
+	* whatever string was passed in by the client or read from the database,
+	* so it can be returned verbatim if the fields have not changed.
+	* @param string|null $value - raw timestamp string, or null to clear
+	* @return bool - always true
 	*/
 	public function set_timestamp(?string $value) : bool {
 		$this->timestamp = $value;
@@ -1067,6 +1280,7 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* GET_TIMESTAMP
+	* Return the stored raw timestamp string, or null if not set.
 	* @return string|null $this->timestamp
 	*/
 	public function get_timestamp() : ?string {
@@ -1077,7 +1291,11 @@ class dd_date implements JsonSerializable {
 
 	/**
 	* JSON_SERIALIZE
-	* @return mixed
+	* Implement JsonSerializable so json_encode() emits a sparse key/value map
+	* containing only the non-null fields of this instance.
+	* The $errors array is excluded from serialization because it is an internal
+	* validation artifact, not part of the date data payload.
+	* @return mixed - associative array of non-null date properties
 	*/
 	public function jsonSerialize() : mixed {
 		$vars = get_object_vars($this);

@@ -4,6 +4,38 @@
 
 
 
+/**
+* VIEW_GRAPH_EDIT_SECTION
+* Interactive D3 force-directed graph view for a section record in edit mode.
+*
+* Responsibilities:
+* - Renders the graph canvas (SVG) and a side-by-side node detail panel.
+* - Builds an initial graph from the datum already present on the client (no
+*   extra API call) via `datum_to_graph`, then lazily expands each node's
+*   outgoing relations on first click via `fetch_node_relations`.
+* - Supports reverse-relation discovery (records that *point to* the current
+*   record) through an optional `relation_list_tipo` configured on the section;
+*   batch-loaded in pages of INVERSE_BATCH via `fetch_inverse_relations`.
+* - Uses D3 v7 (UMD bundle at `lib/d3/d3-7.9.0`). The bundle populates
+*   `globalThis.d3` rather than named ESM exports, so it is loaded via a
+*   dynamic `import()` and read from `globalThis.d3` immediately after.
+* - Provides a toolbar with a "back to form" button and a hint label.
+* - All label text is resolved through `get_label` i18n lookups with hard-coded
+*   English fallbacks so the UI is functional even when translation data is absent.
+*
+* Main export:
+*   view_graph_edit_section        — inert constructor (namespace only)
+*   view_graph_edit_section.render — async entry-point called by the section renderer
+*
+* Internal helpers (module-private):
+*   get_toolbar       — builds the toolbar DOM, wires the back button
+*   switch_view       — programmatic view transition (graph ↔ default)
+*   get_content_data  — creates graph canvas + detail panel; defers D3 mount until in DOM
+*   build_graph       — creates the full D3 simulation and all interaction handlers
+*/
+
+
+
 // imports
 	import {dd_request_idle_callback, when_in_dom} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
@@ -13,6 +45,8 @@
 		fetch_node_relations,
 		fetch_section_datum,
 		fetch_inverse_relations,
+		fetch_section_terms,
+		apply_section_terms,
 		build_model_map,
 		build_section_maps,
 		extract_node_fields,
@@ -24,10 +58,8 @@
 
 /**
 * VIEW_GRAPH_EDIT_SECTION
-* Interactive node graph of a record and its relations (edit mode).
-* - Central node: current edit record (data already in client).
-* - Edges: relation components pointing to other records.
-* - Click a node to expand (lazy load via rqo) / collapse its relations.
+* Namespace / constructor for the graph edit-mode view.
+* Holds only static method properties; the function itself is inert.
 */
 export const view_graph_edit_section = function() {
 
@@ -38,10 +70,26 @@ export const view_graph_edit_section = function() {
 
 /**
 * RENDER
-* Render node for use in edit graph view
-* @param object self section instance
-* @param object options
-* @return HTMLElement wrapper
+* Entry-point called by the section render pipeline.
+* Builds the full wrapper (toolbar + graph canvas) for 'full' render_level, or
+* returns only the graph canvas for 'content' render_level (used by the pagination
+* and filter refresh paths that reuse the outer chrome).
+*
+* Side effects:
+* - Attaches `wrapper.content_data` as a direct property so callers can reach the
+*   canvas without querying the DOM.
+* - Stores `self.inverse_controls` so `build_graph` (which runs asynchronously
+*   later, once the canvas is in the DOM) can wire the inverse-relations checkbox
+*   and "load more" button after they are created here.
+*
+* @param {Object} self    - Section instance. Must supply at minimum `self.id`,
+*   `self.type`, `self.model`, `self.section_tipo`, `self.tipo`, `self.mode`,
+*   `self.view`, and optionally `self.context.config.relation_list_tipo`.
+* @param {Object} options - Render options.
+* @param {string} [options.render_level='full'] - 'full' (outer chrome + canvas)
+*   or 'content' (canvas only).
+* @returns {Promise<HTMLElement>} The wrapper `<section>` element for 'full', or
+*   the `content_data` `<div>` for 'content'.
 */
 view_graph_edit_section.render = async function(self, options) {
 
@@ -86,11 +134,26 @@ view_graph_edit_section.render = async function(self, options) {
 
 /**
 * GET_TOOLBAR
-* Toolbar with the action to return to the standard form view.
-* Returns the toolbar element and a reference holder for the inverse controls
-* so they can be updated from build_graph.
-* @param object self
-* @return object { toolbar, inverse_controls }
+* Build the graph toolbar DOM and create the inverse-relation UI controls.
+*
+* The toolbar contains:
+* - A "back to form" button that switches the section view to 'default'.
+* - A hint label explaining click / Ctrl+click behavior.
+* - Optionally, a checkbox and "load more" button for inverse relations; these are
+*   only rendered when `self.context.config.relation_list_tipo` is set (i.e. the
+*   section has a relation_list component configured to resolve callers).
+*
+* The returned `inverse_controls` object is a shared mutable reference holder
+* whose `.checkbox` and `.more_button` properties are set during this call and
+* later read by `build_graph` to wire their event listeners. Returning it as a
+* plain object (rather than accessing DOM by id) avoids repeated querySelector
+* calls and keeps the wiring self-contained in `build_graph`.
+*
+* @param {Object} self - Section instance. Reads `self.id` for the checkbox id
+*   and `self.context.config.relation_list_tipo` to decide whether to render
+*   the inverse-relations controls.
+* @returns {{toolbar: HTMLElement, inverse_controls: Object}} The toolbar element
+*   and a reference holder `{ checkbox?: HTMLElement, more_button?: HTMLElement }`.
 */
 const get_toolbar = function(self) {
 
@@ -162,11 +225,17 @@ const get_toolbar = function(self) {
 
 /**
 * SWITCH_VIEW
-* Toggle the section view (graph <-> default) reusing already-loaded data
-* (build_autoload:false avoids an extra API call when leaving the graph).
-* @param object self
-* @param string view
-* @return promise
+* Transition the section to a different view without an extra data fetch.
+*
+* Updates `self.view` (and `self.context.view` if context is present) before
+* calling `self.refresh`. Passing `build_autoload: false` tells the section
+* refresh pipeline to reuse the already-loaded datum instead of issuing a new
+* server read — critical for an instantaneous feel when the user clicks "back
+* to form" from the graph.
+*
+* @param {Object} self - Section instance with a `refresh()` method.
+* @param {string} view - Target view identifier, e.g. `'default'` or `'graph'`.
+* @returns {Promise<*>} Result of `self.refresh(...)`.
 */
 const switch_view = async function(self, view) {
 
@@ -185,9 +254,21 @@ const switch_view = async function(self, view) {
 
 /**
 * GET_CONTENT_DATA
-* Build the graph canvas and lazily mount the D3 visualization once in DOM.
-* @param object self
-* @return HTMLElement content_data
+* Create the graph canvas container and the node detail panel, and schedule
+* D3 initialization once the canvas element reaches the DOM.
+*
+* The D3 graph is not mounted synchronously here because the wrapper element is
+* not yet attached to the document at this point. Instead, `when_in_dom` installs
+* a MutationObserver/IntersectionObserver callback; once the element is visible,
+* `dd_request_idle_callback` defers `build_graph` to the next idle period so the
+* page paint is not blocked.
+*
+* When `self.section_id` is falsy (new/unsaved record), a placeholder message is
+* returned immediately and no graph is attempted.
+*
+* @param {Object} self - Section instance. Reads `self.section_id` and `self.mode`.
+* @returns {HTMLElement} The `content_data` container div. In the non-empty case it
+*   also carries a `node_detail` property pointing to the detail panel child.
 */
 const get_content_data = function(self) {
 
@@ -241,11 +322,60 @@ const get_content_data = function(self) {
 
 /**
 * BUILD_GRAPH
-* Create the D3 force graph and wire up expand/collapse + node detail interaction.
-* @param object self
-* @param HTMLElement graph_canvas
-* @param HTMLElement node_detail
-* @return promise
+* Initialize the D3 force simulation, populate the initial graph from the
+* client datum, and wire all user interactions.
+*
+* This function is the core of the graph view and runs once, asynchronously,
+* after the canvas element is in the DOM. It is responsible for:
+*
+* 1. Lazy-loading the D3 UMD bundle (only on first graph view activation).
+*    The bundle populates `globalThis.d3`; the local `d3` variable is a
+*    direct reference to that global immediately after `import()` resolves.
+*    Adding/removing the CSS class `loading` on `self.node` (if present)
+*    gives the user visual feedback during the bundle download.
+*
+* 2. Building the initial `graph = { nodes, links }` data structure from
+*    `datum_to_graph(self)`. The accumulator `section_maps` is seeded at the
+*    same time and grows as more datums are fetched during expansion.
+*
+* 3. Label resolution strategy (executed once and then after each expansion):
+*    a. `fetch_section_terms` sends a single batch API request for all nodes
+*       and updates labels that the section_map can authoratively resolve.
+*    b. `upgrade_fallback_labels` covers nodes whose sections have no map —
+*       it fetches their datum individually but only when a label is still a
+*       placeholder (`section_tipo · section_id`).
+*    Both steps run in `.then()` so they don't block the first paint.
+*
+* 4. Creating the SVG with a zoom layer, two rendering layers (links and
+*    nodes), the force simulation, and the drag behavior.
+*
+* 5. Wiring event handlers:
+*    - `node_clicked` — single click selects + shows detail; second click on
+*      same node expands (lazy fetch) or collapses. Ctrl/Cmd+click opens the
+*      record in a new browser window.
+*    - Inverse-relation checkbox / "load more" button (forwarded from
+*      `self.inverse_controls`).
+*    - Canvas background click deselects the current node.
+*    - Window resize updates the SVG viewBox and re-centers the simulation.
+*
+* Graph node shape: `{ id, section_tipo, section_id, label, is_root, expanded, loaded }`
+* Graph link shape: `{ source, target, parent_id, relation_tipo, relation_label [, is_inverse] }`
+* See `build_graph_data.js` for the authoritative schema and factory functions.
+*
+* Re-entrancy / concurrency:
+* - `processing` is a `Set` of node ids (or the string `'inverse'`) that are
+*   currently being fetched. Any click on a node in `processing` is dropped
+*   silently to prevent duplicate expansion requests.
+*
+* Inverse-relation pagination:
+* - `INVERSE_BATCH` is the page size (50). `inverse_loaded` tracks how many
+*   have been fetched so far; `inverse_total` is the server-side count.
+*   When `inverse_loaded < inverse_total` the "load more" button is visible.
+*
+* @param {Object}      self         - Section instance in edit mode.
+* @param {HTMLElement} graph_canvas - Container div for the SVG.
+* @param {HTMLElement} node_detail  - Container div for the node detail panel.
+* @returns {Promise<void>}
 */
 const build_graph = async function(self, graph_canvas, node_detail) {
 
@@ -271,10 +401,23 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 	// section_maps accumulator (grows as datums are fetched)
 		const section_maps = initial_section_maps || {}
 
+	// label nodes: authoritative section_map terms via the batch get_section_terms
+	// API first, then the per-node heuristic upgrade only for nodes that still
+	// show a fallback label (no-map sections); mapped nodes are already labeled
+	// so upgrade_fallback_labels' is_fallback gate skips them (no per-node read)
+		const refresh_labels = (nodes) => {
+			fetch_section_terms(self, nodes).then(terms => {
+				if (apply_section_terms(nodes, terms)) {
+					update()
+				}
+				upgrade_fallback_labels(self, nodes, () => {
+					update()
+				}, section_maps)
+			})
+		}
+
 	// lazily upgrade fallback labels ("tipo · id" → readable label)
-		upgrade_fallback_labels(self, graph.nodes, () => {
-			update()
-		}, section_maps)
+		refresh_labels(graph.nodes)
 
 	// dimensions
 		const get_size = () => {
@@ -321,10 +464,14 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 			.on('tick', ticked)
 
 	// helpers to read link endpoint ids regardless of resolved state
+		// D3 resolves source/target from id strings to node objects during simulation init.
+		// After that, link.source / link.target are node objects, not strings.
+		// endpoint_id normalises both cases so link_key can be computed at any time.
 		const endpoint_id = (endpoint) => (typeof endpoint === 'object' && endpoint !== null) ? endpoint.id : endpoint
 		const link_key = (l) => endpoint_id(l.source) + '__' + endpoint_id(l.target) + '__' + l.relation_tipo
 
 	// re-entrancy guard for async expansion per node
+		// Keyed by node.id (string) or the sentinel string 'inverse' for inverse-relation loads.
 		const processing = new Set()
 
 	// selected node for detail panel
@@ -334,13 +481,26 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 		const root_tipo		= self.section_tipo
 		const root_id_value	= String(self.section_id)
 		const root_id		= root_tipo + '_' + root_id_value
-		let inverse_loaded	= 0
-		let inverse_total	= 0
-		const INVERSE_BATCH	= 50
+		let inverse_loaded	= 0   // cumulative count of inverse nodes already in the graph
+		let inverse_total	= 0   // server-side total (from the count request)
+		const INVERSE_BATCH	= 50  // page size for each paginated inverse load
 
 	/**
 	* TOGGLE_INVERSE_RELATIONS
 	* Load or unload reverse relation nodes/links based on checkbox state.
+	*
+	* When `show` is true, calls `fetch_inverse_relations` for the first page
+	* of records that reference the root node. On success the fetched nodes/links
+	* are merged into the graph and labels are lazily upgraded.
+	* When `show` is false, all links marked `is_inverse` and any nodes that
+	* become orphaned after their removal are pruned from the graph arrays.
+	*
+	* The checkbox is disabled for the duration of the async load to prevent
+	* double submissions. The `processing` set is keyed with `'inverse'` to block
+	* concurrent `load_more_inverse` calls during the initial load.
+	*
+	* @param {boolean} show - true = load inverse relations; false = remove them.
+	* @returns {Promise<void>}
 	*/
 	async function toggle_inverse_relations(show) {
 
@@ -357,13 +517,12 @@ const build_graph = async function(self, graph_canvas, node_detail) {
 				inverse_total	= result.total
 				inverse_loaded	= result.loaded
 
+// (!) Indentation is deliberately kept as-is (not a bug in this documentation pass).
 const root_node = graph.nodes.find(n => n.id === root_id) || { id: root_id, x: width / 2, y: height / 2 }
 
 				add_children(root_node, result)
 
-				upgrade_fallback_labels(self, result.nodes, () => {
-					update()
-				}, section_maps)
+				refresh_labels(result.nodes)
 
 				update_more_button()
 				update()
@@ -395,6 +554,13 @@ const root_node = graph.nodes.find(n => n.id === root_id) || { id: root_id, x: w
 	/**
 	* LOAD_MORE_INVERSE
 	* Fetch the next batch of inverse relations and merge into the graph.
+	*
+	* Uses `inverse_loaded` as the offset so each successive call retrieves the
+	* next page without overlapping already-fetched records. The guard
+	* `processing.has('inverse')` prevents re-entrant loads when the user clicks
+	* "load more" faster than the previous batch resolves.
+	*
+	* @returns {Promise<void>}
 	*/
 	async function load_more_inverse() {
 
@@ -416,9 +582,7 @@ const root_node = graph.nodes.find(n => n.id === root_id) || { id: root_id, x: w
 
 add_children(root_node, result)
 
-		upgrade_fallback_labels(self, result.nodes, () => {
-			update()
-		}, section_maps)
+		refresh_labels(result.nodes)
 
 		update_more_button()
 		update()
@@ -435,6 +599,11 @@ add_children(root_node, result)
 	/**
 	* UPDATE_MORE_BUTTON
 	* Show/hide and update the text of the "load more" button for inverse relations.
+	*
+	* The button text shows the count that the next click will fetch
+	* (`Math.min(INVERSE_BATCH, remaining)`) and the total remaining, so the user
+	* knows how many records are still to be loaded. The button is hidden when all
+	* inverse records have been loaded (`remaining === 0`).
 	*/
 	function update_more_button() {
 
@@ -470,7 +639,25 @@ add_children(root_node, result)
 
 	/**
 	* UPDATE
-	* Rebind selections to the current graph arrays and restart the simulation.
+	* Rebind D3 selections to the current `graph.nodes` / `graph.links` arrays
+	* and restart the force simulation.
+	*
+	* Called after every mutation of `graph` (expand, collapse, label upgrade,
+	* inverse load). Performs a D3 enter/update/exit join for:
+	* - Lines (`.graph_link`) representing directed edges.
+	* - Text labels (`.graph_link_label`) centered on each edge.
+	* - `<g>` groups (`.graph_node`) each containing a circle and two text
+	*   elements (foreground label + white-stroke background clone for legibility).
+	*
+	* Visual state classes applied on the merged node selection on every call:
+	* - `is_root`    — the central record (larger circle, fixed color).
+	* - `expandable` — a non-root, non-expanded node that can be clicked to load.
+	* - `expanded`   — a non-root node whose children are currently visible.
+	* - `selected`   — the node currently shown in the detail panel.
+	* - `inverse`    — links and link labels whose `is_inverse` flag is true.
+	*
+	* Simulation alpha is set to 0.6 on each update so freshly added nodes
+	* settle visually before the simulation cools.
 	*/
 	function update() {
 
@@ -537,7 +724,16 @@ add_children(root_node, result)
 
 	/**
 	* TICKED
-	* Position links and nodes on every simulation tick.
+	* D3 simulation tick handler. Positions all SVG elements to match the
+	* simulation's current node coordinates.
+	*
+	* Called on every simulation frame (up to 300 iterations after each
+	* `simulation.restart()`). At this point D3 has resolved `link.source`
+	* and `link.target` from id strings to node objects, so `.x` / `.y` are
+	* always available on both endpoints.
+	*
+	* Link label positions are computed as the midpoint of the edge so the
+	* label text floats at the center of the line.
 	*/
 	function ticked() {
 		link_sel
@@ -556,7 +752,16 @@ add_children(root_node, result)
 
 	/**
 	* DRAG
-	* Standard d3 drag behavior for nodes.
+	* Standard D3 drag behavior factory for simulation nodes.
+	*
+	* Temporarily pins a node's position (`fx`/`fy`) while dragging so the
+	* simulation does not fight the user's pointer. On drag start, `alphaTarget`
+	* is raised to 0.3 so the layout reacts to the movement in real time.
+	* On drag end, `fx`/`fy` are cleared and `alphaTarget` is reset to 0 so
+	* the layout cools down naturally.
+	*
+	* @param {Object} simulation - D3 force simulation instance.
+	* @returns {Object} A D3 drag behavior bound to the simulation.
 	*/
 	function drag(simulation) {
 		return d3.drag()
@@ -578,8 +783,30 @@ add_children(root_node, result)
 
 	/**
 	* NODE_CLICKED
-	* Ctrl/Cmd + click opens the record in a new window.
-	* Plain click toggles expand / collapse of the node relations.
+	* D3 click handler for graph node elements.
+	*
+	* Interaction contract:
+	* - **Ctrl/Cmd + click**: opens the record in a new window immediately;
+	*   no selection or expand/collapse side effects.
+	* - **First click on an unselected node**: selects it and populates the
+	*   node detail panel; does NOT expand/collapse (avoids triggering an API
+	*   call just to see the record metadata).
+	* - **Second click on the already-selected node**: toggles expand/collapse.
+	*   If the node is expanded, `collapse_node` prunes its subtree. If the node
+	*   has been loaded before (`node.loaded`) and its children are still in the
+	*   graph (`has_children`), the expansion is instant (no API call). Otherwise,
+	*   `fetch_node_relations` is called and the result is merged via `add_children`.
+	*
+	* Re-entrancy: the `processing` set blocks concurrent expansions for the same
+	* node. The `loading_node` CSS class on the `<g>` element gives visual feedback
+	* while the fetch is in flight.
+	*
+	* `d3.select(this)` requires the handler to be a regular function (not an arrow)
+	* so that `this` is the clicked DOM element. This is already the case here.
+	*
+	* @param {MouseEvent} event - Native D3 click event.
+	* @param {Object}     node  - Graph node datum bound to the clicked element.
+	* @returns {Promise<void>}
 	*/
 	async function node_clicked(event, node) {
 
@@ -632,9 +859,7 @@ add_children(root_node, result)
 				const result = await fetch_node_relations(self, node, section_maps)
 				add_children(node, result)
 				// upgrade fallback labels on new child nodes
-				upgrade_fallback_labels(self, result.nodes, () => {
-					update()
-				}, section_maps)
+				refresh_labels(result.nodes)
 				node.loaded = true
 				node.expanded = true
 				update()
@@ -648,7 +873,15 @@ add_children(root_node, result)
 
 	/**
 	* HAS_CHILDREN
-	* Whether the node already has child links in the current graph.
+	* Check whether the graph already contains at least one outgoing link owned
+	* by the given node.
+	*
+	* A link is "owned by" a node when `link.parent_id === node.id`.
+	* This is set by `add_children` / `datum_to_graph` and is stable even after
+	* D3 resolves `source`/`target` from strings to objects.
+	*
+	* @param {Object} node - Graph node to check.
+	* @returns {boolean} true when at least one child link exists in `graph.links`.
 	*/
 	function has_children(node) {
 		return graph.links.some(l => endpoint_id(l.source)===node.id && l.parent_id===node.id)
@@ -656,7 +889,20 @@ add_children(root_node, result)
 
 	/**
 	* ADD_CHILDREN
-	* Merge fetched child nodes/links into the graph, deduping by id / key.
+	* Merge a fetched result set (nodes + links) into the live `graph` arrays,
+	* deduplicating by node id and link key.
+	*
+	* New nodes are spawned near their parent node with a small random jitter
+	* so they do not stack on top of each other before the simulation settles.
+	* The jitter range (±40 px) is intentionally modest to keep them visually
+	* adjacent to their parent while giving the force layout something to work with.
+	*
+	* Links are keyed by `source + '__' + target + '__' + relation_tipo` (using
+	* the original string ids, not the post-resolution objects) to match the key
+	* computed by `link_key` before D3 resolves endpoints.
+	*
+	* @param {Object} node   - Parent graph node (provides x/y for spawn position).
+	* @param {Object} result - Fetch result with `{ nodes: Array, links: Array }`.
 	*/
 	function add_children(node, result) {
 
@@ -688,8 +934,22 @@ add_children(root_node, result)
 
 	/**
 	* COLLAPSE_NODE
-	* Remove the subtree spawned by a node. A descendant is removed only when it
-	* is not still referenced by another retained link (safe prune, cycle proof).
+	* Remove all direct child links owned by a node and recursively prune any
+	* descendant nodes/links that become orphaned as a result.
+	*
+	* A link is "owned by" a node when `link.parent_id === node.id` (set by
+	* `add_children`). Removing only owned links — rather than all links that
+	* mention the node — is safe in graphs with shared nodes: a node that is
+	* referenced by another path stays in the graph.
+	*
+	* Cycles are handled by `prune_if_orphan`'s reference check: if removing a
+	* child's own links would leave the child still referenced by another remaining
+	* link (including links from a sibling path), `prune_if_orphan` keeps it.
+	*
+	* After collapsing, `node.expanded` must be set to `false` by the caller
+	* (done in `node_clicked`).
+	*
+	* @param {Object} node - Graph node whose direct subtree should be removed.
 	*/
 	function collapse_node(node) {
 
@@ -714,7 +974,20 @@ add_children(root_node, result)
 
 	/**
 	* PRUNE_IF_ORPHAN
-	* Remove a node (and its own subtree) when no remaining link points to it.
+	* Remove a node (and its own subtree) from the graph when no remaining
+	* link references it — either as a source or as a target.
+	*
+	* The root node is never pruned (`is_root` guard). A node is kept whenever
+	* any remaining link has it as either endpoint, even if it is the source of
+	* that link (possible in inverse-relation edges where the referencing record
+	* is the source).
+	*
+	* Recursion: before removing the node itself, its own child links are
+	* removed and its child targets are recursively probed, ensuring the entire
+	* subtree is cleaned up even in deep trees.
+	*
+	* @param {string} node_id - The graph node id (`section_tipo + '_' + section_id`)
+	*   to evaluate for removal.
 	*/
 	function prune_if_orphan(node_id) {
 
@@ -748,9 +1021,22 @@ add_children(root_node, result)
 
 	/**
 	* SHOW_NODE_DETAIL
-	* Populate the detail panel with node information.
-	* Metadata is shown immediately; component fields are lazy-fetched.
-	* @param object node
+	* Populate the right-hand detail panel with information about the clicked node.
+	*
+	* Renders immediately in two phases:
+	* 1. **Synchronous / instant**: label, type·id metadata, and "Open record"
+	*    button are created before any fetch. A loading indicator is shown in
+	*    the fields area.
+	* 2. **Async / lazy**: the record datum is fetched (or, for the root node,
+	*    taken directly from `self.datum`) and `extract_node_fields` converts it
+	*    into a list of `{ label, value, tipo }` rows rendered in `fields_container`.
+	*    Any new section_maps from the fetched datum are merged into the shared
+	*    accumulator so they are available for future label resolutions.
+	*
+	* On error the fields area shows a generic error message instead of throwing.
+	*
+	* @param {Object} node - Graph node whose detail should be displayed.
+	* @returns {Promise<void>}
 	*/
 	async function show_node_detail(node) {
 
@@ -888,7 +1174,18 @@ add_children(root_node, result)
 
 	/**
 	* OPEN_RECORD_WINDOW
-	* Open a node record in a new edit window.
+	* Open the full edit form of a graph node's record in a new browser window.
+	*
+	* Constructs the URL from `DEDALO_CORE_URL` (global constant injected by the
+	* page bootstrap) with `tipo`, `section_tipo`, `id`, `mode: 'edit'`,
+	* `session_save: false`, and `menu: true`.
+	* `session_save: false` prevents the new window from overwriting the central
+	* session navigation SQO that drives the originating edit window.
+	*
+	* The window `name` is unique per record type + id so re-clicking the same
+	* node focuses the existing window instead of opening a second one.
+	*
+	* @param {Object} node - Graph node whose record should be opened.
 	*/
 	function open_record_window(node) {
 		const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
@@ -906,6 +1203,9 @@ add_children(root_node, result)
 	}//end open_record_window
 
 	// resize handling
+		// Recalculates canvas dimensions and re-centers the force simulation
+		// whenever the browser window is resized. Alpha 0.3 is enough to
+		// gently reposition nodes without a jarring full-energy restart.
 		const on_resize = () => {
 			const size = get_size()
 			width	= size.width

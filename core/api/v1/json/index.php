@@ -1,6 +1,41 @@
 <?php declare(strict_types=1);
 /**
- * Dédalo API Entry Point
+ * JSON API ENTRY POINT
+ * Primary HTTP gateway for all Dédalo v7 API calls.
+ *
+ * This script is the single entry point for every JSON API request issued by the
+ * Dédalo browser client. It is reached via a traditional Apache/Nginx PHP-FPM request
+ * (core/api/v1/json/index.php) OR via the RoadRunner persistent-worker loop
+ * (worker/index.php), which re-includes this file on every request cycle. The two
+ * execution paths share the same code; the worker sets DEDALO_RR_WORKER and injects
+ * the raw request body via $GLOBALS['DEDALO_RAW_BODY'] so that the output strategy and
+ * body-reading branch can diverge without duplicating the rest of the pipeline.
+ *
+ * Request lifecycle (top to bottom):
+ *  1. Emit JSON content-type header immediately; start high-resolution timing.
+ *  2. Load optional performance monitor (core/api/v1/json/performance/).
+ *  3. Gate on PHP ≥ 8.4.0 — respond with an error and halt if the requirement is unmet.
+ *  4. Resolve APP_ROOT and include config.php to populate DEDALO_* constants.
+ *  5. Apply CORS headers from the DEDALO_CORS config constant; validate the request Origin
+ *     against the allowed-origins allowlist before reflecting it (SEC-012).
+ *  6. Short-circuit OPTIONS preflight requests without logging.
+ *  7. Decode the request body (php://input or $GLOBALS['DEDALO_RAW_BODY']) into an RQO
+ *     (Request Query Object) stdClass. Handle file-upload and legacy $_REQUEST paths.
+ *  8. Assign a default dd_api handler when the action implies one (e.g. 'diffuse'
+ *     → dd_diffusion_api).
+ *  9. Strip server-only SQO fields and clamp untrusted limit/offset values via
+ *     dd_manager::sanitize_client_rqo() — shared with the worker SSE entry point.
+ * 10. Mint/verify the per-session CSRF token (SEC-008) before session_write_close().
+ * 11. Optionally close the PHP session early (prevent_lock) to avoid blocking concurrent
+ *     requests from the same browser session.
+ * 12. Delegate to dd_manager::manage_request() and capture the response object.
+ * 13. Attach debug/timing information when SHOW_DEBUG is true.
+ * 14. Stream the response JSON via json_streaming_handler (normal path) or write the
+ *     full encoded string (RoadRunner worker path, where ob_start() already buffers).
+ * 15. Finalise the performance monitor and run the static profiler report.
+ *
+ * @package Dédalo
+ * @subpackage API
  */
 $global_start_time = hrtime(true);
 
@@ -109,6 +144,8 @@ if (!empty($_FILES)) {
 
 	// files case. Received files case. Uploading from tool_upload or text editor images upload
 	if (!isset($rqo)) {
+		// No JSON body was sent alongside the multipart upload — synthesize a minimal
+		// RQO for the upload action so the dd_utils_api handler can process the file.
 		$rqo = new stdClass();
 		$rqo->action	= 'upload';
 		$rqo->dd_api	= 'dd_utils_api';
@@ -116,6 +153,8 @@ if (!empty($_FILES)) {
 	} else if (!isset($rqo->options)) {
 		$rqo->options = new stdClass();
 	}
+	// Merge $_POST / $_GET query params into rqo->options after XSS-sanitising each value.
+	// $_FILES entries are attached verbatim; they are binary data streams, not user text.
 	foreach (array_merge($_POST, $_GET) as $key => $value) {
 		$rqo->options->{$key} = safe_xss($value);
 	}
@@ -129,6 +168,9 @@ if (!empty($_FILES)) {
 		// Ignore time get (used only for cache purposes @see data_manager.request JS.)
 		// Prevents potential proxy problems.
 	} else if (isset($_REQUEST['rqo'])) {
+		// Legacy form/query-string path: the entire RQO is JSON-encoded in a single
+		// 'rqo' key.  Decode it then sanitize — mirroring the php://input branch —
+		// but preserve the nested sqo objects (SEC-010 / SEARCH-05 described below).
 		$rqo = json_handler::decode($_REQUEST['rqo']);
 		// SEC-010: bring this branch in line with the php://input and $_REQUEST fallbacks,
 		// which already sanitize via safe_xss / safe_xss_recursive. Without this, payloads
@@ -147,6 +189,11 @@ if (!empty($_FILES)) {
 			}
 		}
 	} else {
+		// Plain $_REQUEST fallback — no JSON body, no 'rqo' key.
+		// Keys listed in request_query_object::$direct_keys (dd_api, action, source, sqo, show,
+		// search, choose, data, prevent_lock, options, pretty_print, id, api_engine) are mapped
+		// directly onto the RQO root object.  All other keys are routed into rqo->source so that
+		// callers can supply a section locator as individual query parameters.
 		$rqo = (object)[
 			'source' => (object)[]
 		];
@@ -178,6 +225,8 @@ if (empty($rqo)) {
 	return;
 }
 // Default dd_api apply
+// Certain actions are handled exclusively by dd_diffusion_api; assign the handler
+// here so callers do not need to specify dd_api for those well-known action names.
 $action = $rqo->action ?? null;
 if (in_array($action, ['diffuse', 'validate', 'get_ontology_map'])) {
 	$rqo->dd_api = 'dd_diffusion_api';
@@ -228,6 +277,10 @@ if ($perf_active) {
 $recovery_mode = $rqo->recovery_mode ?? false;
 if ($recovery_mode === true) {
 	// verify is not a malicious request
+	// (!) Two conditions must both be true before the environment is altered:
+	// the client sent recovery_mode=true AND the server config (config_core) also declares
+	// DEDALO_RECOVERY_MODE. This prevents a rogue client from switching the server into
+	// recovery mode when it was not intended by the administrator.
 	if (defined('DEDALO_RECOVERY_MODE') && DEDALO_RECOVERY_MODE === true) {
 		// change config environmental var value after verify
 		// that Dédalo is really in recovery mode (set in config_core)
@@ -248,6 +301,10 @@ if (class_exists('dd_manager') && method_exists('dd_manager', 'bootstrap_csrf_to
 }
 
 // prevent_lock from session
+// When rqo->prevent_lock is true the browser client is signalling that it is
+// about to issue multiple concurrent requests from the same PHP session and
+// does not need the session to remain writable. Closing the session early
+// releases the PHP session lock so that sibling requests are not queued.
 $session_closed = false;
 if (isset($rqo->prevent_lock) && $rqo->prevent_lock === true) {
 	// close current session and set as only read
@@ -297,6 +354,9 @@ try {
 
 	} else {
 
+		// In production mode, do not expose specific error details.
+		// Only signal whether a server-side error occurred so the client
+		// can prompt the user to contact an administrator without leaking internals.
 		$response->dedalo_last_error = isset($_ENV['DEDALO_LAST_ERROR'])
 			? 'Server errors occurred. Check the server log for details'
 			: null;
@@ -332,6 +392,10 @@ try {
 	$action = $rqo->action ?? null;
 	if ($action === 'read') {
 		// reset bad section session to allow next request
+		// A failed 'read' action can leave the section's SQO locked in the session,
+		// blocking subsequent requests for the same section. Derive the session key from
+		// rqo->source->session_key, or — if that is absent — from the section tipo, so
+		// that the lock is always released regardless of how the key was originally formed.
 		$source			= $rqo->source ?? (object)[];
 		$session_key	= $source->session_key ?? null;
 
@@ -379,6 +443,8 @@ if ($perf_active) {
 
 
 // output the response JSON string
+// Determine JSON encoding flags: always use unescaped unicode and slashes for
+// compact output; add JSON_PRETTY_PRINT only when the caller requests it.
 $options = JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
 if (isset($rqo->pretty_print)) {
 	$options |= JSON_PRETTY_PRINT;

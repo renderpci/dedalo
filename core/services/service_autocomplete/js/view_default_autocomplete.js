@@ -174,6 +174,13 @@ const get_content_data = function(self) {
 		})
 
 		// keydown event (document)
+		// remove any previous handler first: get_content_data re-runs on every
+		// source-selector change, so without this each pass would leave an orphaned
+		// document keydown listener (the old closure is no longer in self._fn_keydown
+		// and could never be removed) accumulating for the page lifetime.
+		if (self._fn_keydown) {
+			document.removeEventListener('keydown', self._fn_keydown, false)
+		}
 		document.addEventListener('keydown', fn_service_autocomplete_keys, false)
 		function fn_service_autocomplete_keys(e) {
 			// deactivate when the caller is not focused, it block keydown of other components.
@@ -323,6 +330,11 @@ const render_search_input = function(self) {
 		// Init a timeout variable to be used below
 			let timeout = null
 			let is_searching = false
+			// monotonic request sequence: guards against out-of-order autocomplete
+			// responses (a slower older request overwriting a newer one).
+			if (typeof self._search_seq !== 'number') {
+				self._search_seq = 0
+			}
 
 		// input_handler
 			const input_handler = async function(e) {
@@ -431,39 +443,48 @@ const render_search_input = function(self) {
 						: 320 * 1
 					timeout = setTimeout(async()=>{
 
-						// api_response. Get from cache if exists
-							const api_response = q.length && self.search_cache[q]
-								? { result : self.search_cache[q] }
-								: await self.autocomplete_search()
+						// request sequence token. A slower in-flight request must not
+						// overwrite the results of a newer keystroke's request.
+						const my_seq = ++self._search_seq
 
-						// no result from API case
-							if (api_response.result===false) {
-								// loading styles. class searching
+						try {
+							// api_response. Get from cache if exists
+								const api_response = q.length && self.search_cache[q]
+									? { result : self.search_cache[q] }
+									: await self.autocomplete_search()
+
+							// a newer search superseded this one: drop the stale response
+								if (my_seq !== self._search_seq) {
+									return
+								}
+
+							// no result from API case
+								if (api_response.result===false) {
+									// loading_label
+									loading_label.remove()
+									return
+								}
+
+							// cache result. Add if not already exists
+								if (!self.search_cache[q]) {
+									self.search_cache[q] = api_response.result
+								}
+
+							// render datalist (call API and render the response result)
+								await render_datalist(self, api_response.result)
+
+						} finally {
+							// always release lock + loading UI, even on error/stale/no-result,
+							// so a thrown search can never permanently jam the input.
+							// only clear the visible loading UI if still the latest request.
+							if (my_seq === self._search_seq) {
 								search_input.classList.remove('searching')
-								// spinner remove
-								spinner.remove()
-								// loading_label
-								loading_label.remove()
-								// unlock search
-								is_searching = false
-								return
+								if (spinner) {
+									spinner.remove()
+								}
 							}
-
-						// cache result. Add if not already exists
-							if (!self.search_cache[q]) {
-								self.search_cache[q] = api_response.result
-							}
-
-						// render datalist (call API and render the response result)
-							await render_datalist(self, api_response.result)
-
-						// loading styles. class searching
-							search_input.classList.remove('searching')
-							// spinner remove
-							spinner.remove()
-
-						// unlock search
-						is_searching = false
+							is_searching = false
+						}
 					}, ms)
 			}//end input_handler
 
@@ -593,7 +614,10 @@ const render_filters_selector = function(self) {
 						}
 					}
 					filter_items.push(datalist_item)
-					ar_filter_by_list.push(datalist_item)
+					// NOTE: do NOT pre-seed ar_filter_by_list here. The `change` callback
+					// is the single source of truth for which filters are active. Pre-seeding
+					// applied every list filter by default and inverted the checkbox logic
+					// (its findIndex would match the seed, so checking a box removed it).
 
 					ar_id.push(id) // add to global array of id
 				}

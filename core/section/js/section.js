@@ -4,6 +4,49 @@
 
 
 
+/**
+* SECTION
+* Core client-side class that orchestrates a Dédalo section (a structured record set).
+*
+* A section is the fundamental container of records in the Dédalo data model.  Each
+* section instance wraps one ontology tipo (e.g. 'oh1' for an "Oral History" section)
+* and can render in several modes:
+*
+*   edit    — single-record edit form, one record visible at a time
+*   list    — paginated table/grid of records
+*   tm      — Translation Memory view (also uses the list render path)
+*   solved  — read-only solved/published view of a record
+*
+* Lifecycle (mirrors all Dédalo UI elements):
+*   init → build([autoload]) → render() → refresh() cycles → destroy()
+*
+* Key responsibilities:
+*   - Maintains the Search Query Object (SQO) inside `self.rqo` that drives every
+*     API call for context, data, count, create, duplicate, and delete.
+*   - Owns a `filter` (search instance), `paginator`, and `inspector` sub-instance.
+*   - Subscribes to namespaced event_manager events during init so that buttons,
+*     menus, and the thesaurus area can trigger section operations without tight coupling.
+*   - Persists pagination state to the local IndexedDB (data_manager.set/get_local_db_data)
+*     so that navigating away and back restores the user's position.
+*   - Propagates record-count caching via `get_total` with promise-based deduplication
+*     to avoid redundant API round-trips.
+*
+* Main exports:
+*   section              — constructor (assign to prototypes via `new section()`)
+*   get_section_records  — factory that builds an array of section_record instances
+*                          for the current page of entries
+*
+* Related modules:
+*   render_edit_section, render_list_section, render_solved_section,
+*   render_common_section — mode-specific render implementations
+*   common.js             — shared lifecycle prototype methods
+*   instances.js          — instance registry / get_instance factory
+*   data_manager.js       — API request layer + local DB persistence
+*   event_manager.js      — pub/sub bus that decouples UI events
+*   paginator.js          — pagination sub-instance
+*   inspector.js          — record inspector sub-instance
+*/
+
 // imports
 	import {clone, url_vars_to_object, object_to_url_vars, dd_console, load_style, tool_base_url} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -33,6 +76,18 @@
 
 /**
 * SECTION
+* Constructor that establishes the canonical property baseline for every section
+* instance.  All properties are initialised to null so that downstream lifecycle
+* methods (build, render) can rely on their existence without `hasOwnProperty`
+* guards.
+*
+* Properties are deliberately not documented as `@var` annotations on the
+* constructor lines — the semantics are captured in the init() doc-block and in
+* the per-method doc-blocks that set or consume each property.
+*
+* Usage: section instances are never created with `new section()` directly;
+* instead, callers go through `get_instance({ model: 'section', … })` in
+* instances.js, which manages the shared instance registry.
 */
 export const section = function() {
 
@@ -81,7 +136,9 @@ export const section = function() {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend section with shared prototype methods from common and mode-specific render modules.
+* Individual prototype assignments are not separately doc-blocked; see the source
+* definitions in common.js, render_edit_section.js, render_list_section.js, etc.
 */
 // prototypes assign
 	// life cycle
@@ -106,9 +163,60 @@ export const section = function() {
 
 /**
 * INIT
-* Fix instance main properties
-* @param object options
-* @return bool
+* Seeds all instance properties from `options` and subscribes to the namespaced
+* event_manager channels this section owns for its entire lifetime.
+*
+* This method is called once per instance immediately after construction via
+* `get_instance`. A second call on the same instance is treated as a programming
+* error (likely a duplicated event subscription) and returns false after logging.
+*
+* Event subscriptions registered here:
+*   new_section_<id>         — creates a blank record and navigates to it
+*   duplicate_section_<id>   — duplicates the given record and navigates to the copy
+*   delete_section_<id>      — opens the delete confirmation dialog
+*   toggle_search_panel_<id> — lazily builds and shows/hides the filter panel
+*   render_<id>              — post-render hook (menu label, search panel state restore)
+*   quit                     — clears all local section caches on logout
+*   change_lang              — clears caches when the active language changes
+*
+* All of the above events are namespaced by `self.id` to prevent cross-instance
+* interference when multiple sections coexist on the same page.
+*
+* `self.render_views` is also populated here as a static default list that tools
+* and portals may extend dynamically before build/render.
+*
+* @param {Object} options - Options bag, typically forwarded from `get_instance`
+* @param {string} options.model - e.g. 'section'
+* @param {string} options.tipo - Ontology tipo of this section, e.g. 'oh1'
+* @param {string} options.section_tipo - Parent section tipo (often equals options.tipo
+*   for top-level sections)
+* @param {string|number|null} [options.section_id] - Record identifier; null in list mode
+* @param {string|number|null} [options.section_id_selected] - Pre-selected record id
+* @param {string} options.mode - Render mode; validated through validate_mode()
+* @param {string} options.lang - Active language tag, e.g. 'lg-eng'
+* @param {string} [options.section_lang] - Language used for section-level data
+* @param {Object|null} [options.parent] - Parent DOM element or instance
+* @param {Object|null} [options.caller=null] - Owning page/area/portal instance
+* @param {Object|null} [options.datum=null] - Pre-fetched datum (skips build API call)
+* @param {Object|null} [options.context=null] - Pre-fetched server context
+* @param {Object|null} [options.data=null] - Pre-fetched data entries
+* @param {Object|null|boolean} [options.filter=null] - Search filter instance, false to
+*   disable entirely (used when a section is embedded without its own filter)
+* @param {Object|null|boolean} [options.inspector=null] - Inspector instance or false
+* @param {Object|null|boolean} [options.paginator=null] - Paginator instance or false
+* @param {Object|null} [options.permissions=null] - Permission flags for the current user
+* @param {Array} [options.columns_map=[]] - Column layout map for list views
+* @param {Object|null} [options.config=null] - Extended configuration (section_tool, etc.)
+* @param {Array|null} [options.request_config=null] - Array of request_config objects that
+*   control how the section fetches context and data
+* @param {boolean|Object} [options.add_show=false] - Extra show configuration appended
+*   to the rqo
+* @param {boolean} [options.buttons=true] - Whether action buttons are shown in list views
+* @param {boolean} [options.session_save=true] - Persist SQO/pagination to local DB
+* @param {string} [options.session_key] - Override the default local-DB key (defaults to
+*   tipo via build_sqo_id)
+* @param {string|null} [options.view=null] - View variant, e.g. 'default', 'graph'
+* @returns {Promise<boolean>} true when initialised; false on duplicate-init guard
 */
 section.prototype.init = async function(options) {
 
@@ -277,6 +385,9 @@ section.prototype.init = async function(options) {
 					const section_id	= options.section_id
 					const section_tipo	= options.section_tipo
 					const section		= options.caller
+					// Build a minimal one-record SQO if the caller did not provide its own.
+					// This prevents the delete dialog from accidentally targeting more records
+					// than the user selected.
 					const sqo			= options.sqo ||
 						{
 							section_tipo		: [section_tipo],
@@ -379,6 +490,8 @@ section.prototype.init = async function(options) {
 					if (self.search_container && self.filter) {
 						dd_request_idle_callback( () => {
 							// open_search_panel. local DDBB table status
+							// Restores the search panel open/closed state the user left it in.
+							// The key schema is: 'open_search_panel_<tipo>_<mode>'
 							const status_id		= `open_search_panel_${self.tipo}_${self.mode}`
 							const status_table	= 'status'
 							data_manager.get_local_db_data(status_id, status_table, true)
@@ -468,9 +581,38 @@ section.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Load and parse necessary data to create a full ready instance
-* @param bool autoload = false
-* @return bool
+* Loads all data needed to render the section: resolves the request_config into a
+* concrete rqo, optionally fetches context+data from the server (when autoload is
+* true), restores pagination from IndexedDB, resolves the columns_map, and creates
+* the filter/paginator/inspector sub-instances if they do not yet exist.
+*
+* This method is safe to call multiple times — the paginator/inspector are guarded
+* by null checks, and the filter instance is looked up through the shared registry
+* so that the same search instance is reused across refresh cycles.
+*
+* The autoload path (autoload===true) follows this sequence:
+*   1. Merge session values into the rqo (session_save, session_key, view).
+*   2. Restore pagination from local DB (`data_manager.get_local_db_data`).
+*   3. Call `build_autoload(self)` which calls the Dédalo API and populates
+*      `self.datum` with `{ context: […], data: […] }`.
+*   4. Destroy any existing child instances (avoids leaking DOM nodes on refresh).
+*   5. Set `self.context`, normalising the 'list_thesaurus' mode alias to 'list'.
+*   6. Set `self.data` and extract `self.section_id` from the first data entry.
+*   7. Regenerate the rqo with session sqo from context if present.
+*   8. Finalise and persist the pagination offset/limit.
+*   9. Optionally inject a debug panel when SHOW_DEBUG is true.
+*
+* After the autoload block (or when skipped), the method always:
+*   - Normalises mode from context (catching any 'list_thesaurus' not caught above).
+*   - Calls `set_context_vars` to copy context properties onto self.
+*   - Resolves `self.initiator` from the URL or the caller instance.
+*   - Creates the paginator sub-instance and subscribes to paginator_goto_ events.
+*   - Creates the inspector sub-instance when mode is 'edit' and permissions exist.
+*   - Resolves the columns_map via `get_columns_map`.
+*
+* @param {boolean} [autoload=false] - When true, fetches context and data from the API
+* @returns {Promise<boolean>} true on success; false when the API response is invalid
+*   (e.g. missing context) or when the server returns a falsy result
 */
 section.prototype.build = async function(autoload=false) {
 
@@ -505,6 +647,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// rqo build
 			const action	= 'search'
+			// add_show is true for TM mode to include the source language data in the response
 			const add_show	= (self.add_show)
 				? self.add_show
 				: (self.mode==='tm') ? true	: false
@@ -527,6 +670,7 @@ section.prototype.build = async function(autoload=false) {
 				// and the context is loaded / updated
 				self.rqo.sqo = self.context.sqo_session
 
+				// dd15 is the Thesaurus section; it always uses TM search mode
 				if( self.tipo==='dd15' ){
 					self.rqo.sqo.mode = 'tm'
 					self.request_config_object.sqo.mode = 'tm'
@@ -591,6 +735,7 @@ section.prototype.build = async function(autoload=false) {
 					}
 				}
 
+				// dd15 is the Thesaurus section; it always uses TM search mode
 				if( self.tipo==='dd15' ){
 					self.rqo.sqo.mode = 'tm'
 				}
@@ -807,6 +952,7 @@ section.prototype.build = async function(autoload=false) {
 				? self.caller.id
 				: false
 		// fix initiator
+		// Strip any '#fragment' appended to the id (e.g. from URL hash navigation)
 			self.initiator = initiator
 				? initiator.split('#')[0]
 				: initiator
@@ -892,10 +1038,22 @@ section.prototype.build = async function(autoload=false) {
 
 /**
 * RENDER
-* @param object options
-*	render_level : level of deep that is rendered (full | content)
-* @return promise
-*	node first DOM node stored in instance 'node' array
+* Delegates to the common render implementation which dispatches to the appropriate
+* mode-specific render method (edit, list, solved, tm, …) based on `self.mode`.
+* After the common render completes, publishes the 'render_instance' event so that
+* the inspector, paginator, and other page-level listeners can react.
+*
+* The `render_` event (subscribed in init) fires from within common.prototype.render
+* and handles the post-render tasks (menu label update, search panel state restore).
+*
+* Performance timing is logged when SHOW_DEBUG is true so that render hot-paths
+* can be profiled without attaching a full DevTools session.
+*
+* @param {Object} [options={}] - Render options forwarded to common.prototype.render
+* @param {string} [options.render_level] - Depth control: 'full' renders the entire
+*   section including child records; 'content' re-renders only the inner content area
+* @returns {Promise<HTMLElement>} The outermost DOM node produced by the render path,
+*   also stored in `self.node`
 */
 section.prototype.render = async function(options={}) {
 	const t0 = performance.now()
@@ -928,15 +1086,46 @@ section.prototype.render = async function(options={}) {
 
 /**
 * GET_SECTION_RECORDS
-* Generate an array of section_record instances based on the provided data entries.
-* Each entry (locator) is used to initialize and build a section_record instance.
-* @param {Object} options - Configuration options
-* @param {Object} options.caller - The component/instance calling this function
-* @param {Array<Object>} [options.entries] - Array of locators to process
-* @param {string} [options.tipo] - Component typology ID
-* @param {string} [options.mode='list'] - View mode
-* @param {Object} [options.datum] - Data object
-* @return {Promise<Array<Object>>} A promise resolving to an array of section_record instances
+* Parallel factory that converts a page of raw locator entries into fully built
+* section_record instances ready for rendering.
+*
+* Each locator from `options.entries` (or `self.data.entries`) is passed to
+* `get_instance` with model='section_record'. All `get_instance` + `build` calls
+* are fired concurrently via Promise.all so that the time cost is bounded by the
+* slowest single record rather than by the total count.
+*
+* The resulting array preserves the original entry order (Promise.all guarantees
+* order) with failed/null instances filtered out so callers can iterate directly
+* without null checks.
+*
+* When a locator has a `tag_id` property (Translation Memory row identifier), the
+* tag_id is appended to `id_variant` (prefixed with '_l') to ensure the instance
+* key is unique within the TM matrix, where a record can appear multiple times with
+* different tag contexts.
+*
+* @param {Object} options - Configuration object
+* @param {Object} options.caller - The section instance that owns this call;
+*   many default values are sourced from `options.caller`
+* @param {Array<Object>} [options.entries] - Array of locator objects
+*   `{ section_tipo, section_id, paginated_key, tag_id? }`; defaults to
+*   `caller.data.entries`
+* @param {string} [options.tipo] - Ontology tipo forwarded to each section_record;
+*   defaults to `caller.tipo`
+* @param {string} [options.mode='list'] - Render mode for each section_record
+* @param {Array} [options.columns_map] - Column layout forwarded to each record
+* @param {string|null} [options.id_variant] - Variant suffix for instance dedup
+* @param {string} [options.view='default'] - View variant forwarded in the context
+* @param {string|null} [options.column_id] - ID of the column component (list views)
+* @param {Object} [options.datum] - Datum to share across all records; defaults to
+*   `caller.datum`
+* @param {Object} [options.request_config] - request_config override; cloned before
+*   use so records cannot mutate each other's config
+* @param {string} [options.fields_separator=' '] - Separator string used when
+*   concatenating multi-component list values
+* @param {string} [options.lang] - Language tag; defaults to `caller.section_lang`
+*   or `caller.lang`
+* @returns {Promise<Array<Object>>} Array of successfully built section_record
+*   instances (nulls from failed builds are excluded)
 */
 export const get_section_records = async function(options) {
 
@@ -1031,9 +1220,18 @@ export const get_section_records = async function(options) {
 
 /**
 * LOAD_SECTION_TOOL_FILES
-* Used by section_tool to set the tool icon from tool css definition
-* Normally mask-image: url('../img/icon.svg');
-* @return void
+* Loads CSS and other static assets required by a section_tool configuration.
+* Called during init when `self.config.source_model === 'section_tool'`.
+*
+* Section tools (e.g. diffusion tools, export tools) are mounted inside a regular
+* section but may define their own icon via CSS `mask-image: url('../img/icon.svg')`.
+* The CSS file path follows the convention:
+*   `<tool_base_url(model)>/css/<model>.css`
+*
+* The actual CSS injection is performed by `load_style` (from utils), which prevents
+* double-loading the same URL.
+*
+* @returns {void}
 */
 section.prototype.load_section_tool_files = function() {
 
@@ -1054,8 +1252,18 @@ section.prototype.load_section_tool_files = function() {
 
 /**
 * CREATE_SECTION
-* Creates a new section record calling API
-* @return int|string|null
+* Issues an API 'create' request to insert a new blank record in this section and
+* returns the new record's section_id on success.
+*
+* The request is built via `create_source(self, 'create')` which packages the
+* section tipo, lang, and credentials into the standard source envelope that the
+* Dédalo PHP API expects.
+*
+* Errors returned by the API are surfaced via alert() so the user is informed even
+* if the promise is not awaited at the call site.
+*
+* @returns {Promise<number|string|null>} The new record's section_id (positive
+*   integer) on success; null if the API returned a falsy or non-positive result
 */
 section.prototype.create_section = async function () {
 
@@ -1098,9 +1306,18 @@ section.prototype.create_section = async function () {
 
 /**
 * DUPLICATE_SECTION
-* Creates a new section record and copies the current data into it
-* @param object options
-* @return int|string|null
+* Issues an API 'duplicate' request to create a deep copy of an existing record and
+* returns the new copy's section_id on success.
+*
+* The source envelope is built the same way as create_section, then augmented with
+* the source `section_id` so the server knows which record to clone.
+*
+* The comment "data_manager. delete" below is a copy-paste artefact from another
+* method; the action here is 'duplicate', not 'delete'.
+*
+* @param {number|string} section_id - The section_id of the record to copy
+* @returns {Promise<number|string|null>} The new record's section_id on success;
+*   null on API failure
 */
 section.prototype.duplicate_section = async function (section_id) {
 
@@ -1145,13 +1362,24 @@ section.prototype.duplicate_section = async function (section_id) {
 
 /**
 * DELETE_SECTION
-* Remove the sqo calculation section records from database
-* @param object options
-* {
-* 	sqo : object,
-* 	delete_mode : string
-* }
-* @return bool
+* Issues an API 'delete' request to permanently remove one or more records
+* described by the provided SQO.  The caller is responsible for presenting a
+* confirmation dialog before calling this method (typically via
+* `render_delete_record_dialog`).
+*
+* `delete_diffusion_records` defaults to true so that any published/diffused
+* copies of the deleted record are also cleaned up via the diffusion pipeline.
+* Pass `false` to skip diffusion cleanup (e.g. during bulk test data removal).
+*
+* The SQO is cloned before being sent so that the caller's copy is not mutated
+* by the API layer.
+*
+* @param {Object} options - Delete parameters
+* @param {Object} options.sqo - Search Query Object defining which records to delete
+* @param {string} [options.delete_mode] - Server-side delete mode ('logical', 'physical', …)
+* @param {boolean} [options.delete_diffusion_records=true] - Whether to cascade the
+*   delete into the diffusion (publication) layer
+* @returns {Promise<boolean>} true when the server confirms deletion; false on failure
 */
 section.prototype.delete_section = async function (options) {
 
@@ -1206,15 +1434,36 @@ section.prototype.delete_section = async function (options) {
 
 /**
 * NAVIGATE
-* Refresh the section instance with new sqo params creating a
-* history footprint. Used to paginate and sort records
-* @param object options
-* {
-* 	callback : callable function optional
-* 	navigation_history : boolean, navigation_history save
-* 	sqo : object (clone before apply offset)
-* }
-* @return bool
+* Refreshes the section with a new SQO (typically a changed offset/limit after
+* pagination or a sort-column change) and optionally records the navigation in
+* the browser history so the back/forward buttons work.
+*
+* Flow:
+*   1. Ask the user to confirm discarding unsaved changes (via check_unsaved_data).
+*   2. Destroy any floating autocomplete widget.
+*   3. Execute an optional pre-navigation callback.
+*   4. Add 'loading' CSS classes to the body and inspector nodes.
+*   5. Call `self.refresh()` which destroys child instances, re-runs build, and
+*      re-renders the section.
+*   6. Remove 'loading' classes.
+*   7. Optionally push a browser history entry via `push_browser_history`.
+*   8. Fire a background worker call to clear server-side section locks for the
+*      current user so other sessions can acquire the lock on the record.
+*
+* The 'loading' class is applied to `self.node_body` (the section content area)
+* and to the inspector node rather than the entire section wrapper so that the
+* toolbar remains interactive during the refresh.
+*
+* @param {Object} options - Navigation options
+* @param {Function} [options.callback] - Async function executed before the refresh;
+*   useful for saving state before the section re-builds
+* @param {boolean} [options.navigation_history=false] - When true, push an entry to
+*   the browser history API so the user can navigate back
+* @param {Object} [options.sqo] - The SQO that triggered this navigation (used for
+*   the history entry; the actual SQO used for the refresh comes from `self.rqo.sqo`
+*   after update_pagination has already mutated it)
+* @returns {Promise<boolean>} false if the user cancelled the unsaved-data dialog;
+*   true otherwise
 */
 section.prototype.navigate = async function(options) {
 
@@ -1320,9 +1569,38 @@ section.prototype.navigate = async function(options) {
 
 /**
 * NAVIGATE_TO_NEW_SECTION
-* After a create or duplicate action, goes to the new created record
-* @param int|string section_id
-* @return bool
+* Transitions the section to edit mode on the freshly created (or duplicated) record
+* identified by `section_id`. Called by new_section_handler and
+* duplicate_section_handler after a successful API create/duplicate call.
+*
+* The navigation is performed by publishing a 'user_navigation' event that page.js
+* intercepts. This decouples the section from the page routing logic and allows
+* the transition to be intercepted or decorated by other listeners.
+*
+* Three navigation strategies exist, controlled by the local `filter_mode` constant:
+*
+*   'legacy' (current default):
+*     Sets `sqo.filter_by_locators = null` so that `build_rqo_show` regenerates
+*     it from `self.section_id`, which will be updated on the next build.
+*     Offset is reset to 0 because only the new record is expected.
+*
+*   'preserve_filter':
+*     Keeps existing filter clauses active and appends a new $or clause targeting
+*     the new record by section_id via the component_section_id path. Offset is
+*     set to `self.total` to land on the last page.  (Implemented but not active.)
+*
+*   'reset_filter':
+*     Clears the filter entirely, fetches the real unfiltered total, and sets
+*     offset to `total - 1` to land on the last record.  (Implemented but not active.)
+*
+* Pagination state for both list and edit modes is persisted to the local DB before
+* the navigation event so that the receiving section build picks up the correct
+* offset.
+*
+* @param {number|string} section_id - The newly created record's section_id;
+*   must be truthy or the method throws
+* @returns {Promise<boolean>} true after publishing the navigation event
+* @throws {Error} if section_id is falsy or if an unexpected error occurs
 */
 section.prototype.navigate_to_new_section = async function(section_id) {
 
@@ -1485,12 +1763,33 @@ section.prototype.navigate_to_new_section = async function(section_id) {
 
 /**
 * CHANGE_MODE
-* Destroy current instance and dependencies without remove HTML nodes (used to get target parent node placed in DOM)
-* Create a new instance in the new mode (for example, from list to edit) and view (ex, from default to line )
-* Render a fresh full element node in the new mode
-* Replace every old placed DOM node with the new one
-* @param object options
-* @return object|null new_instance
+* Transitions the section between render modes (e.g. list → edit or edit → list)
+* or between view variants (e.g. default → graph) without a full page reload.
+*
+* Algorithm:
+*   1. Resolve the target mode and view from options (with sensible fallbacks).
+*   2. Capture `self.node` as `old_node` — this is the DOM anchor point.
+*   3. Patch `current_context.mode` and `.view` to the new values.
+*   4. Call `get_instance` with the new mode to get (or create) the target instance.
+*   5. Wrap the build + render of the new instance in `ui.load_item_with_spinner`
+*      so the user sees a spinner in place of the old content while data loads.
+*   6. After rendering, destroy `self` (this instance) to clean up event subscriptions
+*      and child instances.
+*   7. Return the new instance immediately (before its build/render completes) so
+*      the caller can reference it if needed.
+*
+* (!) The destroy call inside the spinner callback runs asynchronously after this
+* method returns. Callers must not attempt to use `self` after calling change_mode.
+*
+* @param {Object} options - Mode-change options
+* @param {string} [options.mode] - Target render mode; when omitted, toggles between
+*   'list' and 'edit'
+* @param {boolean} [options.autoload=true] - Whether the new instance should fetch
+*   data from the API during build
+* @param {string|null} [options.view=null] - Target view variant; null keeps the
+*   current view
+* @returns {Promise<Object|null>} The new section instance (already registered in the
+*   instance map); null if `self.node` does not exist
 */
 section.prototype.change_mode = async function(options) {
 
@@ -1584,28 +1883,53 @@ section.prototype._total_promise = null; // Initialize this property once, likel
 * Asynchronously fetches the total count of records from an API
 * The function is designed to handle concurrent calls safely through promise-based request deduplication,
 * ensuring only one API request is made at a time for the same section instance.
-* @param object sqo (Optional)
-* 	Search Query Object. If provided, uses this custom query; otherwise defaults to self.rqo.sqo
-* @return promise
-* 	Resolves to the total count as an integer
+*
+* Two caching behaviours based on whether a custom `sqo` is supplied:
+*
+*   No sqo (default count):
+*     - If `self.total` is already set, returns it synchronously.
+*     - If a fetch is already in flight (`self._total_promise`), reuses that
+*       promise to prevent duplicate API calls.
+*     - On success, stores the result in `self.total` and clears `_total_promise`.
+*     - On error, clears `_total_promise` so the next call retries cleanly.
+*
+*   Custom sqo (filtered count):
+*     - Never reads or writes `self.total` — the filtered count is transient.
+*     - Never deduplicates; each call gets its own fresh API request.
+*
+* The count rqo strips `limit`, `offset`, `select`, `order`, and
+* `generated_time` from the SQO because none of these are meaningful for a
+* COUNT query and including them wastes server processing time.
+*
+* The request is sent through a worker with up to 5 retries and a 10-second
+* timeout to handle slow server responses in large activity sections.
+*
+* @param {Object} [sqo] - Optional custom Search Query Object for a filtered count.
+*   When omitted, the instance's own `self.rqo.sqo` is used and the result is cached.
+* @returns {Promise<number>} Resolves to the total record count as an integer
+* @throws {Error} Re-throws any API or network error after clearing the pending promise
 */
 section.prototype.get_total = async function(sqo) {
 
 	const self = this
 
-	// already calculated case
-		if (self.total || self.total==0) {
+	// A caller-supplied sqo means a FILTERED count. It must never read or write the
+	// cached section total (self.total) — that cache holds the unfiltered count.
+		const use_cache = !sqo
+
+	// already calculated case (only the default/unfiltered count is cached)
+		if (use_cache && (self.total || self.total==0)) {
 			return self.total
 		}
 
-	// If a promise to fetch the total is already pending, return that existing promise for debouncing/queueing.
-		if (self._total_promise) {
+	// If a promise to fetch the (default) total is already pending, reuse it for debouncing/queueing.
+		if (use_cache && self._total_promise) {
 			return self._total_promise;
 		}
 
-	// Create and store a new promise for the current API call.
+	// Create a new promise for the current API call.
 	// This promise will be resolved or rejected based on the API call's outcome.
-		self._total_promise = (async () => {
+		const total_promise = (async () => {
 			try {
 				// Execute the actual API call to get the total.
 				// API request
@@ -1657,13 +1981,17 @@ section.prototype.get_total = async function(sqo) {
 					}
 
 				// set result
-					self.total = api_count_response.result.total
+					const total = api_count_response.result.total
 
-				// Once the operation completes (successfully), clear the promise
-				// so that future calls to get_total will trigger a new API request.
-				self._total_promise = null;
+				// only cache the default/unfiltered count on the instance
+				if (use_cache) {
+					self.total = total
+					// Once the operation completes (successfully), clear the promise
+					// so that future calls to get_total will trigger a new API request.
+					self._total_promise = null;
+				}
 
-				return self.total; // Resolve the promise with the fetched total
+				return total; // Resolve the promise with the fetched total
 			} catch (error) {
 				// --- Error Handling ---
 				// Log the error for debugging purposes.
@@ -1671,23 +1999,41 @@ section.prototype.get_total = async function(sqo) {
 
 				// In case of an error, clear the promise so that the next call to get_total
 				// will attempt to re-fetch the total, rather than endlessly returning a rejected promise.
-				self._total_promise = null;
+				if (use_cache) {
+					self._total_promise = null;
+				}
 
 				// Re-throw the error so that the original caller of get_total can handle it.
 				throw error;
 			}
-		})(); // Immediately invoke this async IIFE to create and assign the promise.
+		})(); // Immediately invoke this async IIFE.
 
+	// store the pending promise only for the default count (used for dedup above)
+		if (use_cache) {
+			self._total_promise = total_promise;
+		}
 
-	return self._total_promise; // Return the promise that was just created/stored
+	return total_promise; // Return the promise that was just created
 }//end get_total
 
 
 
 /**
 * GOTO_LIST
-* Navigates from edit mode to list mode, usually from the Inspector or the Menu
-* @return bool
+* Transitions the section from edit mode back to list mode, publishing a
+* 'user_navigation' event that page.js handles to swap the section instance.
+*
+* This method is the target of the section label click in the menu (wired in the
+* render_ event handler) and can also be called programmatically.
+*
+* Before publishing the event the method restores the previously saved list
+* pagination from the local DB so the user lands on the same page they left.
+*
+* The source object is built manually here (rather than via create_source) because
+* the target mode is 'list', not the current edit mode.
+*
+* @returns {Promise<boolean>} false when called outside edit mode; true after
+*   publishing the navigation event
 */
 section.prototype.goto_list = async function() {
 
@@ -1748,10 +2094,13 @@ section.prototype.goto_list = async function() {
 * Unified way to compound sqo_id value
 * This string is used as key for section session SQO
 * like $_SESSION['dedalo']['config']['sqo'][$sqo_id]
-* @param string tipo
-* 	section tipo like 'oh1'
-* @return string sqo_id
-* 	final sqo_id like 'oh1'
+*
+* Currently returns the tipo unchanged, but is defined as a function to allow
+* future key composition (e.g. appending a user id or workspace qualifier)
+* without changing call sites.
+*
+* @param {string} tipo - Section tipo, e.g. 'oh1'
+* @returns {string} sqo_id - The resolved session key, currently equal to tipo
 */
 const build_sqo_id = function(tipo) {
 
@@ -1764,11 +2113,20 @@ const build_sqo_id = function(tipo) {
 
 /**
 * UPDATE_PAGINATION
-* This is fired in paginator_goto_ event function
-* Is a unified mode to update navigation history and offset
-* @see self.navigate
-* @param int offset
-* @return bool
+* Applies a new pagination offset to the section's SQO and triggers a section
+* refresh. This is the handler for the `paginator_goto_<id>` event published by
+* the paginator sub-instance.
+*
+* The method updates both `self.rqo.sqo.offset` and, when present,
+* `self.request_config_object.sqo.offset` so both the live rqo and the backing
+* request_config stay in sync before the refresh reads from them.
+*
+* When `session_save` is true the new offset is persisted to local DB under the
+* `<tipo>_<mode>` key so it survives a page reload or change_mode transition.
+*
+* @see section.prototype.navigate
+* @param {number} offset - Zero-based record offset to navigate to
+* @returns {Promise<boolean>} true after triggering navigation
 */
 section.prototype.update_pagination = async function (offset) {
 
@@ -1812,9 +2170,16 @@ section.prototype.update_pagination = async function (offset) {
 
 /**
 * FOCUS_FIRST_INPUT
-* Mimics components method with same name
-* Get first component (inside first section_record) and activate it
-* @return bool
+* Finds the first component in the first section_record child instance and
+* activates it via `ui.component.activate`, mimicking the same method present on
+* components so that callers do not need to distinguish between components and
+* sections when programmatically focusing content.
+*
+* Used, for example, by keyboard shortcut handlers in the page to jump focus into
+* the section without knowing its internal structure.
+*
+* @returns {boolean} true if a component was found and activated; false when
+*   `ar_instances[0]` is empty or contains no instances of type 'component'
 */
 section.prototype.focus_first_input = function() {
 
@@ -1834,10 +2199,22 @@ section.prototype.focus_first_input = function() {
 
 /**
 * VALIDATE_MODE
-* Check given mode to prevent unwanted or not valid mode.
-* If the mode is not accepted, fallback to default mode 'list'
-* @param string mode - The mode to validate.
-* @return string mode - A valid mode.
+* Guards against invalid or unknown mode strings before they propagate into the
+* instance and cause silent render failures.
+*
+* The set of valid modes is: 'edit', 'list', 'list_thesaurus', 'solved', 'tm'.
+* 'list_thesaurus' is a server-side-only mode alias that the build method
+* normalises to 'list' after the API response is received; it is listed here
+* because sections can be initialised with it before build runs.
+*
+* (!) When an unrecognised mode is passed the function currently returns it
+* unchanged (with a console.error) rather than the intended default 'list'.
+* The comment "It will return to the default mode in the future" signals that
+* this is a transitional behaviour — do not rely on it in new code.
+*
+* @param {string} mode - The mode string to validate
+* @returns {string} A valid mode string; currently returns the original `mode`
+*   even when unrecognised (see note above)
 */
 function validate_mode(mode) {
 
@@ -1864,10 +2241,18 @@ function validate_mode(mode) {
 
 /**
 * GET_ALL_TARGET_SECTIONS
-* Select all portal components of the section
-* Give the unique target sections defined into every rqo of the component
-* Get first component (inside first section_record) and activate it
-* @return bool
+* Collects all unique section tipos that are reachable from this section through
+* its portal components.
+*
+* Walks `self.datum.context` to find every component_portal whose `section_tipo`
+* matches `self.tipo`, then flattens all `sqo.section_tipo` arrays from their
+* request_config entries and reduces to unique objects by `tipo` key.
+*
+* The result is used (for example) by delete confirmation dialogs that need to
+* know which related sections should also be cleaned up.
+*
+* @returns {Array<Object>} Array of unique section-tipo descriptor objects, each
+*   containing at minimum a `tipo` property corresponding to a reachable section tipo.
 */
 section.prototype.get_all_target_sections = function() {
 
@@ -1901,9 +2286,15 @@ section.prototype.get_all_target_sections = function() {
 
 /**
 * DELETE_CACHE
-* Removes all section local cache data.
-* It is fired when login 'quit' event is published (subscription in page init),
-* or menu changes lang: 'change_lang' event.
+* Removes all section-level data cached in the client-side local DB (IndexedDB).
+* Targets only entries whose key begins with 'section_cache_' in the 'data' table,
+* leaving pagination and status entries untouched.
+*
+* Subscribed to the 'quit' event (user logout) and the 'change_lang' event
+* (active language switch) so that stale cached data is never served after a
+* user session change or locale change.
+*
+* @returns {Promise<void>}
 */
 section.prototype.delete_cache = async function () {
 

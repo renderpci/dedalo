@@ -664,7 +664,7 @@ export const render_column_remove = function(options) {
 
 				// data pagination offset. Check and update self data to allow save API request return the proper paginated data
 					const key = parseInt(row_key)
-					if (key===0 && self.data.pagination.offset>0) {
+					if (key===0 && self.data.pagination?.offset>0) {
 						const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
 						// set before exec API request on Save
 						self.data.pagination.offset = next_offset>0

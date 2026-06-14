@@ -1,40 +1,79 @@
 <?php declare(strict_types=1);
 /**
-* LANG CLASS
-* Manages dedalo lang resolutions
-* Complements thesaurus langs
+* CLASS LANG
+* Static utility class for resolving Dédalo language codes and their human-readable names.
+*
+* Dédalo represents languages as thesaurus terms stored in the 'matrix_langs' PostgreSQL
+* matrix table. Each language record carries:
+*   - An ISO 639-2/T three-letter code stored in the 'hierarchy41' component (e.g. "spa").
+*   - A set of multilingual name strings in the 'hierarchy25' component
+*     (e.g. {"lg-eng": "Spanish", "lg-spa": "Castellano"}).
+*   - A section_id that can be used to build a locator pointing to that language record.
+*
+* Dédalo lang codes use the prefix "lg-" followed by an ISO 639-2 alpha-3 code:
+*   lg-eng, lg-spa, lg-cat, lg-fra, lg-por, …
+* The special code "lg-nolan" (DEDALO_DATA_NOLAN) means "no language" — data that is not
+* language-tagged. Many methods return null for this sentinel rather than attempting a lookup.
+*
+* Responsibilities:
+*   - Resolve a lang code to its thesaurus record (section_id + multilingual names).
+*   - Retrieve the human-readable name for a lang in a given display language, with fallback.
+*   - Build a locator pointing to a language's thesaurus record.
+*   - Convert between Dédalo lg- codes, ISO 639-1 alpha-2 codes, and BCP-47 locale strings.
+*   - Map ISO 639-1 alpha-2 codes (e.g. "es") to Dédalo lg- codes (e.g. "lg-spa") and back.
+*
+* Resolution path:
+*   resolve() → resolve_multiple() → matrix_db_manager::exec_search() (PostgreSQL GIN index).
+*
+* @package Dédalo
+* @subpackage Core
 */
 class lang {
 
 
 
-	// fixed matrix table where are stored all langs
+	/**
+	* Matrix table name where all language thesaurus records are stored.
+	* Mirrors the PostgreSQL table 'matrix_langs'. Exposed as a public static
+	* so callers outside this class (e.g. class.search.php, class.hierarchy.php)
+	* can reference the same canonical table name without hard-coding it.
+	* @var string $langs_matrix_table
+	*/
 	public static string $langs_matrix_table = 'matrix_langs';
-	// cache static vars
+
+	/**
+	* In-process cache for resolve_multiple() results, keyed by the comma-joined
+	* list of alpha-3 code strings (e.g. "spa,eng"). Populated on first hit and
+	* reused for all subsequent calls within the same PHP request.
+	* @var array $resolve_multiple_lang_cache
+	*/
 	public static array $resolve_multiple_lang_cache = [];
 
 
 
 	/**
 	* RESOLVE
-	* Resolve request lang tld in requested language
-	* For example: resolves "Spanish" from $lang_tld = 'lg-spa', $lang = 'lg-eng'
-	* or "Español" from $lang_tld = 'lg-spa', $lang = 'lg-spa'
-	* @param string $lang_tld
-	*	like 'lg-spa'
-	* @return object|null $response
+	* Resolves a single Dédalo lang code to its thesaurus record object.
+	*
+	* Strips the "lg-" prefix if present before delegating to resolve_multiple(),
+	* which performs the actual PostgreSQL lookup with caching.
+	* Returns null when the code cannot be found in the matrix.
+	*
+	* @param string $lang_tld - Dédalo lang code with or without prefix, e.g. 'lg-spa' or 'spa'
+	* @return object|null - Resolved record, or null on miss:
 	* {
-    *    "code": "spa",
-    *    "section_id": 17344,
-    *    "names": {
-    *        "lg-eng": "Spanish",
-    *        "lg-spa": "Castellano"
-    *    }
-    * }
+	*    "code": "spa",
+	*    "section_id": 17344,
+	*    "names": {
+	*        "lg-eng": "Spanish",
+	*        "lg-spa": "Castellano"
+	*    }
+	* }
 	*/
 	private static function resolve(string $lang_tld) : ?object {
 
 		// lang tld formatting
+		// Strip the "lg-" prefix so the bare alpha-3 code is passed to resolve_multiple.
 		if (strpos($lang_tld, 'lg-')===0) {
 			$lang_tld = substr($lang_tld, 3);
 		}
@@ -52,15 +91,34 @@ class lang {
 
 	/**
 	* RESOLVE_MULTIPLE
-	* Exec a SQL search against the database filtering by lang data
-	* using 'matrix_langs_hierarchy41_gin' index
-	* @param array $ar_lang_tld
-	* as ['spa','eng']
-	* @return array|null $items
+	* Batch-resolves a set of bare ISO 639-2 alpha-3 codes to their thesaurus records,
+	* issuing a single PostgreSQL query against the matrix_langs table.
+	*
+	* The query uses the 'matrix_langs_hierarchy41_gin' GIN index on the JSONB 'string'
+	* column, filtering via a JSONPath expression that matches any of the supplied codes
+	* against the hierarchy41 component's value array.
+	*
+	* Results are stored in a static per-request cache keyed by the sorted comma-joined
+	* code string, so repeated calls for the same set cost nothing after the first hit.
+	*
+	* Each returned item has the shape:
+	* {
+	*   "code": "spa",           // bare ISO 639-2/T code as stored in hierarchy41
+	*   "section_id": 17344,     // thesaurus record id in matrix_langs
+	*   "names": {               // multilingual name map, keyed by Dédalo lang code
+	*     "lg-eng": "Spanish",
+	*     "lg-spa": "Castellano"
+	*   }
+	* }
+	*
+	* @param array $ar_lang_tld - Bare alpha-3 codes without "lg-" prefix, e.g. ['spa','eng']
+	* @return array|null - Ordered array of resolved objects, or null on DB error.
+	*                      Returns an empty array when no codes match.
 	*/
 	public static function resolve_multiple(array $ar_lang_tld) : ?array {
 
 		// cache
+		// Cache key is the sorted, comma-joined code list so call order does not matter.
 		$cache_key = implode(',', $ar_lang_tld);
 		if (isset(self::$resolve_multiple_lang_cache[$cache_key])) {
 			return self::$resolve_multiple_lang_cache[$cache_key];
@@ -73,6 +131,9 @@ class lang {
 
 		// query: (!) This is a temporal query until the search class is refactored (24/11/2025)
 		// to do: Refactor this query using search class
+		// The JSONPath operator @? filters rows where the hierarchy41 array contains
+		// at least one object whose 'value' property matches one of the requested codes.
+		// $1 is the single bound parameter — a JSONPath string built below.
 		$sql = '';
 		$sql .= PHP_EOL . 'SELECT';
 		$sql .= PHP_EOL . 'section_id, section_tipo,';
@@ -83,6 +144,8 @@ class lang {
 		$sql .= PHP_EOL . "string @? $1";
 
 		// Build condiionals as ['@ == "eng"', '@ == "spa"']
+		// Each element becomes a JSONPath existence check; they are OR-joined so a single
+		// query can retrieve all requested languages in one round trip.
 		$conds = array_map(
 			fn($l) => '@ == "' . str_replace('lg-', '', $l) . '"',
 			$ar_lang_tld
@@ -103,6 +166,9 @@ class lang {
 		}
 
 		// items
+		// Reshape each raw DB row into the canonical resolved-lang object.
+		// The 'names' column is a JSONB array of {lang, value} pairs; we flatten it
+		// into a plain object keyed by Dédalo lang code for cheap property access.
 		$items = [];
 		while ($rows = pg_fetch_assoc($result)) {
 
@@ -135,9 +201,14 @@ class lang {
 
 	/**
 	* GET_SECTION_ID_FROM_CODE
-	* @param string $code
-	*	like 'lg-spa'
-	* @return int|null $section_id
+	* Returns the thesaurus section_id (integer record identifier in matrix_langs)
+	* for a given Dédalo lang code.
+	*
+	* The section_id is the database row identifier that locates the language record;
+	* it is used wherever a locator must be constructed for a language.
+	*
+	* @param string $code - Dédalo lang code, e.g. 'lg-spa'
+	* @return int|null - section_id, or null if the code cannot be resolved
 	*/
 	public static function get_section_id_from_code(string $code) : int|null {
 
@@ -153,15 +224,31 @@ class lang {
 
 	/**
 	* GET_LANG_LOCATOR_FROM_CODE
-	* @param string $code
-	*	like 'lg-spa'
-	* @return locator $locator
+	* Builds a locator object pointing to the thesaurus language record for the given
+	* Dédalo lang code.
+	*
+	* Normally the section_id is resolved live from the matrix_langs table via resolve().
+	* If the live lookup fails (e.g. matrix not yet populated, DB error), the method falls
+	* back to a hardcoded map of well-known language section_ids. This ensures that core
+	* languages always produce a valid locator even in partially bootstrapped environments.
+	*
+	* The returned locator always uses DEDALO_LANGS_SECTION_TIPO ('lg1') as its section_tipo,
+	* since all language thesaurus records belong to that section type.
+	*
+	* (!) The fallback section_ids are database-specific constants that must match the
+	* actual records in the target installation's matrix_langs table.
+	*
+	* @param string $code - Dédalo lang code, e.g. 'lg-spa'
+	* @return locator - Locator pointing to the corresponding language thesaurus record
 	*/
 	public static function get_lang_locator_from_code(string $code) : locator {
 
 		$result = lang::resolve($code);
 		if (!isset($result->section_id)) {
 			// fallback to common languages
+			// (!) When the DB lookup fails or the lang is not found, use hardcoded section_ids.
+			// These IDs are stable across standard Dédalo installations but must be verified
+			// if the matrix is rebuilt from scratch.
 			$lang = DEDALO_DATA_LANG;
 			switch ($lang) {
 				case 'lg-eng':	$section_id = 5101; break;
@@ -204,19 +291,31 @@ class lang {
 
 	/**
 	* GET_NAME_FROM_CODE
+	* Returns the human-readable display name for a language, translated into the
+	* requested $lang display language.
 	*
-	* @param string $lang_code
-	* Search language code like 'lg-spa'
-	* @param string $lang = DEDALO_DATA_LANG
-    * Language to return the result (if not found, return with fallback)
-	* @param bool $from_cache = true
-	* @return string|null $name
-	* E.g. 'Spanish'
+	* For example: get_name_from_code('lg-spa', 'lg-eng') → "Spanish"
+	*              get_name_from_code('lg-spa', 'lg-spa') → "Castellano"
+	*
+	* Resolution order (via fallback_lang_value):
+	*   1. Exact match for $lang in the names map.
+	*   2. The installation's main lang (hierarchy::get_main_lang).
+	*   3. The first non-empty name available in any language.
+	*
+	* Returns null for the sentinel code DEDALO_DATA_NOLAN ('lg-nolan'), which
+	* represents language-neutral data rather than a real language.
+	*
+	* @param string $lang_code - Dédalo lang code to look up, e.g. 'lg-spa'
+	* @param string $lang = DEDALO_DATA_LANG - Display language for the returned name
+	* @param bool $from_cache = true - Reserved for future cache-bypass; currently unused
+	* @return string|null - Human-readable language name, or null when unresolvable
 	*/
 	public static function get_name_from_code(string $lang_code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true) : ?string {
 		$start_time = start_time();
 
 		// DEDALO_DATA_NOLAN case : When lang code is lg-nolan, null is returned
+		// 'lg-nolan' is the Dédalo sentinel for "no language" — it is not a real language
+		// and has no thesaurus entry, so returning null prevents a pointless DB query.
 			if ($lang_code === DEDALO_DATA_NOLAN) {
 				return null;
 			}
@@ -249,14 +348,25 @@ class lang {
 
 	/**
 	* FALLBACK_LANG_VALUE
-	* @param object $names
-	* Sample:
-	* {
-	* 	"lg-eng": "Spanish",
-	* 	"lg-spa": "Castellano"
-	* }
-	* @param string $lang = DEDALO_DATA_LANG
-	* @return string|null $name
+	* Selects the best available name string from a multilingual names map, with
+	* a three-level fallback strategy:
+	*
+	*   1. Exact match on $lang (the caller's requested display language).
+	*   2. The main lang for the DEDALO_LANGS_SECTION_TIPO section
+	*      (hierarchy::get_main_lang — the installation's primary language).
+	*   3. The first non-empty value found by iterating over the map.
+	*
+	* This method is intentionally reusable for any names map in the same shape,
+	* not only for language records — it is also used when displaying ontology terms
+	* or other multilingual strings stored in the same {lg-xxx: "label"} format.
+	*
+	* @param object $names - Multilingual names map keyed by Dédalo lang code, e.g.:
+	*   {
+	*     "lg-eng": "Spanish",
+	*     "lg-spa": "Castellano"
+	*   }
+	* @param string $lang = DEDALO_DATA_LANG - Preferred display language code
+	* @return string|null - Best available name, or null if the map is empty
 	*/
 	public static function fallback_lang_value(object $names, string $lang=DEDALO_DATA_LANG) : ?string {
 
@@ -268,6 +378,8 @@ class lang {
 		}else{
 
 			// main lang try
+			// When the requested language is missing, try the installation's primary language
+			// before giving up and picking any available value.
 			$main_lang = hierarchy::get_main_lang(DEDALO_LANGS_SECTION_TIPO);
 
 			if(isset($names->{$main_lang})) {
@@ -275,6 +387,7 @@ class lang {
 				$name = $names->{$main_lang};
 			}else{
 				// first not empty lang available
+				// Last resort: return the first non-empty string in the map, regardless of language.
 				foreach($names as $code => $label) {
 					if( !empty($label) ) {
 						$name = $label;
@@ -291,10 +404,19 @@ class lang {
 
 	/**
 	* GET_LANG_NAME_BY_LOCATOR
-	* @param object $locator
-	* @param string $lang = DEDALO_APPLICATION_LANG
-	* @param bool $from_cache = false
-	* @return string|null $lang_name
+	* Returns the display name for the language that a locator points to, in the
+	* requested display language.
+	*
+	* Delegates to ts_object::get_term_by_locator(), which retrieves the 'hierarchy25'
+	* (term) component value for the given locator's section_id.
+	*
+	* This method exists as a named wrapper so call sites that already hold a locator
+	* do not need to know about ts_object directly.
+	*
+	* @param object $locator - Locator pointing to a language thesaurus record
+	* @param string $lang = DEDALO_APPLICATION_LANG - Display language for the returned name
+	* @param bool $from_cache = false - Whether to use ts_object's term cache
+	* @return string|null - Human-readable language name, or null when not found
 	*/
 	public static function get_lang_name_by_locator(object $locator, string $lang=DEDALO_APPLICATION_LANG, bool $from_cache=false) : ?string {
 
@@ -307,12 +429,28 @@ class lang {
 
 	/**
 	* GET_CODE_FROM_LOCATOR
-	* @param object $locator
-	* @return string|null $code
+	* Derives the Dédalo lang code (e.g. 'lg-spa') from a locator that points to
+	* a language thesaurus record.
+	*
+	* Loads the hierarchy41 (code) component for the locator's section_id and reads
+	* its value, then prepends the 'lg-' prefix to form the canonical lang code.
+	*
+	* The component is instantiated in 'list' mode with DEDALO_DATA_NOLAN because
+	* the code field is language-neutral — it stores the ISO alpha-3 string, not
+	* a translated label. Passing DEDALO_DATA_NOLAN prevents any language-specific
+	* data resolution logic from running.
+	*
+	* Returns null when:
+	*   - The locator has no section_id (missing or malformed locator).
+	*   - The hierarchy41 component has no stored value.
+	*
+	* @param object $locator - Locator with section_id pointing to a language record
+	* @return string|null - Dédalo lang code with 'lg-' prefix, or null on failure
 	*/
 	public static function get_code_from_locator(object $locator) : ?string {
 
 		// locator check section_id
+		// A locator without section_id cannot identify a language record; bail early.
 			if (!isset($locator->section_id)) {
 				if(SHOW_DEBUG===true) {
 					dump($locator, ' locator ++ (locator_id not found!)'.to_string());
@@ -325,6 +463,7 @@ class lang {
 			$section_tipo = DEDALO_LANGS_SECTION_TIPO;
 
 		// component value (code)
+		// Instantiate the hierarchy41 component (the ISO code field) for this language record.
 			$tipo		= DEDALO_THESAURUS_CODE_TIPO;
 			$model_name	= ontology_node::get_model_by_tipo($tipo, true);
 			$parent		= $locator->section_id;
@@ -343,6 +482,8 @@ class lang {
 			}
 
 		// add_prefix. Default is true
+		// Reattach the 'lg-' prefix to convert from the bare stored code ("spa") to
+		// the full Dédalo lang identifier ("lg-spa").
 		$code = 'lg-'.$code;
 
 
@@ -353,10 +494,17 @@ class lang {
 
 	/**
 	* GET_LANG_CODE_FROM_ALPHA2
-	* @param string $lang_apha2
-	* 	like: 'es'
-	* @return string|null $lang_code
-	* 	like 'lg-spa'
+	* Converts an ISO 639-1 two-letter language code (alpha-2) to the corresponding
+	* Dédalo lg- lang code (ISO 639-2/T alpha-3 with 'lg-' prefix).
+	*
+	* Covers the complete ISO 639-1 standard set plus one Dédalo-specific extension:
+	*   'va' → 'lg-vlca'  (Valencian — non-standard ISO code used by this installation)
+	*   'sh' → 'lg-hbs'   (Serbo-Croatian, deprecated ISO 639-1 code)
+	*
+	* Returns null and logs an error for any code not in the map.
+	*
+	* @param string $lang_apha2 - ISO 639-1 alpha-2 code, e.g. 'es', 'en', 'fr'
+	* @return string|null - Dédalo lang code e.g. 'lg-spa', or null if unmapped
 	*/
 	public static function get_lang_code_from_alpha2(string $lang_apha2) : ?string {
 
@@ -364,6 +512,8 @@ class lang {
 
 		switch ($lang_apha2) {
 			// custom
+			// 'va' is a custom code for Valencian, which ISO 639-1 does not distinguish
+			// from Catalan ('ca'). Dédalo treats them as separate languages.
 			case 'va'	: $code = 'lg-vlca';break;
 			// official list
 			case 'aa' 	: $code = 'lg-aar'; break;
@@ -569,10 +719,21 @@ class lang {
 
 	/**
 	* GET_ALPHA2_FROM_CODE
-	* @param string $lang_code
-	* 	Sample: 'lg-spa'
-	* @return string|null $alpha2
-	*	Sample 'es'
+	* Converts a Dédalo lg- lang code back to an ISO 639-1 two-letter alpha-2 code.
+	*
+	* This is the inverse of get_lang_code_from_alpha2(), but covers only a subset
+	* of languages — the ones most commonly needed for HTML lang attributes, HTTP
+	* Accept-Language headers, and locale strings. Languages not in this map return
+	* null with an error log.
+	*
+	* Note: 'lg-vlca' (Valencian) maps to 'ca' because ISO 639-1 does not have a
+	* separate code for Valencian.
+	*
+	* The large commented-out block below is the inverse of the full alpha-2 map and
+	* is preserved for future expansion of this method.
+	*
+	* @param string $lang_code - Dédalo lang code, e.g. 'lg-spa'
+	* @return string|null - ISO 639-1 alpha-2 code e.g. 'es', or null if unmapped
 	*/
 	public static function get_alpha2_from_code(string $lang_code) : ?string {
 
@@ -582,6 +743,7 @@ class lang {
 			case 'lg-spa'	: $code = 'es';	break;
 			case 'lg-eng'	: $code = 'en';	break;
 			case 'lg-cat'	: $code = 'ca';	break;
+			// Valencian shares the Catalan ISO 639-1 code
 			case 'lg-vlca'	: $code = 'ca'; break;
 			case 'lg-fra'	: $code = 'fr';	break;
 			case 'lg-eus'	: $code = 'eu';	break;
@@ -800,9 +962,19 @@ class lang {
 
 	/**
 	* GET_LOCALE_FROM_CODE
-	* @param string $lang_code
-	* @return string $locale
-	*	Like 'en-EN' from lg-eng
+	* Returns a BCP 47 / POSIX locale string for a given Dédalo lang code.
+	*
+	* A handful of languages receive explicit, well-known locale overrides:
+	*   lg-eng → 'en-US', lg-spa → 'es-ES', lg-cat → 'ca', lg-nep → 'ne_NP'
+	*
+	* All other languages fall back to their ISO 639-1 alpha-2 code (via
+	* get_alpha2_from_code), which approximates a minimal BCP 47 subtag. The
+	* commented-out '. '-'. strtoupper($alpha2)' portion shows an earlier design that
+	* added an uppercase region suffix; it was removed because many locales do not have
+	* a meaningful default region.
+	*
+	* @param string $lang_code - Dédalo lang code, e.g. 'lg-eng'
+	* @return string - Locale string, e.g. 'en-US', 'es-ES', 'ca', 'fr'
 	*/
 	public static function get_locale_from_code(string $lang_code) : string {
 
@@ -824,14 +996,22 @@ class lang {
 
 	/**
 	* GET_LABEL_LANG
-	* Set exceptions to the languages to be used to get the correct translation of the langs
-	* As Valencià === Català, the ontology is translated to Català but is the same for Valencià
-	* @param string $lang
-	* @return string $lang
+	* Normalises a display lang code before using it to look up UI labels or ontology
+	* translations, applying language equivalences where Dédalo does not maintain
+	* separate translation data.
+	*
+	* Currently: Valencian ('lg-vlca') is collapsed to Catalan ('lg-cat') because the
+	* ontology and UI translations are maintained in Catalan and serve both language
+	* variants. Callers that need to display ontology terms or interface labels should
+	* pass the lang through this method first.
+	*
+	* @param string $lang = DEDALO_APPLICATION_LANG - Raw display lang code
+	* @return string - Normalised lang code, possibly remapped to a canonical equivalent
 	*/
 	public static function get_label_lang( string $lang=DEDALO_APPLICATION_LANG ) {
 
 		// lang vlca fallback
+		// Valencian shares ontology translations with Catalan; remap before any label lookup.
 		if ($lang==='lg-vlca') {
 			$lang = 'lg-cat';
 		}

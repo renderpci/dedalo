@@ -281,9 +281,13 @@ export const upload = async function(options) {
 				const chunk_index	= options.chunk_index
 				const total_chunks	= options.total_chunks
 
-				const current_chunk_loaded = parseInt(event.loaded/event.total*100);
+				// guard event.total===0 (zero-byte chunk) so we never store NaN, which
+				// would poison the sum and render "NaN %".
+				const current_chunk_loaded = event.total ? parseInt(event.loaded/event.total*100) : 0;
 				loaded[chunk_index] = current_chunk_loaded;
-				const sum = loaded.reduce((first, second) => first + second);
+				// seed reduce with 0 so it never throws on an empty/single-hole array and
+				// sparse holes (chunks that have not reported yet) are treated as 0.
+				const sum = loaded.reduce((first, second) => first + (second || 0), 0);
 
 				const percent = Math.round(sum/total_chunks);
 				if(percent === last_percent){
@@ -555,6 +559,16 @@ export const upload = async function(options) {
 					// on_xhr_load (the XMLHttpRequest ends successfully)
 						const load_handler = (e) => {
 							console.log('xhr.upload loaded chunk: ', chunk_index);
+							// Treat a non-2xx HTTP status as a failure: otherwise a chunk
+							// the server rejected (e.g. 500 with a non-JSON body) resolves
+							// "successfully" while on_xhr_load never increments count_uploaded,
+							// so join_chunked_files never runs and the upload silently
+							// half-completes with no error surfaced.
+							if (e.target.status < 200 || e.target.status >= 300) {
+								console.error('Chunk upload failed with HTTP status', e.target.status, 'chunk', chunk_index);
+								reject(e)
+								return
+							}
 							on_xhr_load(e)
 							resolve(e)
 						}
@@ -663,7 +677,7 @@ service_upload.prototype.upload_file = async function(options) {
 			key_dir				: key_dir, // string like 'image' used to target dir
 			allowed_extensions	: allowed_extensions, // array ['tiff', 'jpeg']
 			max_size_bytes		: self.max_size_bytes, // int 352142
-			tipo				: self.caller.caller?.tipo || null,
+			tipo				: self.caller?.caller?.tipo || null,
 			max_concurrent 		: self.max_concurrent // int | false, limit the open connections with the server
 		})
 		if (!api_response.result) {
@@ -675,7 +689,7 @@ service_upload.prototype.upload_file = async function(options) {
 		}
 
 	// event upload_file_done_
-		event_manager.publish('upload_file_done_' + self.caller.id, {
+		event_manager.publish('upload_file_done_' + self.caller?.id, {
 			file_data		: api_response.file_data,
 			process_options	: self.process_options
 		})

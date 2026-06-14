@@ -1,8 +1,36 @@
 <?php declare(strict_types=1);
 /**
-* DD_CORE_API
-* Manage API REST data with Dédalo
+* CLASS DD_CORE_API
+* Central REST API controller for the Dédalo v7 core backend.
 *
+* This is the single entry point that the JSON API dispatcher
+* (core/api/v1/json/index.php) calls for every client request. It owns:
+*
+* - The remote-callable method allowlist (API_ACTIONS), which is the sole
+*   SEC-024 security gate: no public-static method is callable over the
+*   network unless it is listed there.
+* - The main lifecycle actions: start (page bootstrap), read, read_raw,
+*   create, duplicate, delete, save, count.
+* - Utility API actions: get_element_context, get_section_elements_context,
+*   get_indexation_grid, get_environment, get_matrix_ontology_locator,
+*   get_section_terms, test.
+* - Internal helpers (get_page_globals, get_js_plain_vars, get_lang_labels,
+*   build_json_rows, get_component_value, smart_remove_data_duplicates,
+*   smart_remove_context_duplicates, log_activity) that are invoked from
+*   PHP code only and intentionally absent from API_ACTIONS.
+*
+* All public action methods follow the same contract:
+*   - Accept a single `object $rqo` (Request Query Object) parameter.
+*   - Return a `stdClass $response` with at minimum:
+*       $response->result  mixed   — false on hard failure, data on success
+*       $response->msg     string  — human-readable status message
+*       $response->errors  array   — empty array on clean success
+*
+* Permission checks are done early (before any DB or ontology work) to avoid
+* timing oracles and schema leaks.
+*
+* @package Dédalo
+* @subpackage Core
 */
 final class dd_core_api {
 
@@ -14,6 +42,10 @@ final class dd_core_api {
 	* must also be added here. Internal helpers (get_page_globals,
 	* get_js_plain_vars, get_lang_labels) are intentionally absent because they
 	* take non-rqo arguments and are invoked from PHP code only.
+	*
+	* Note: get_activity_metric is intentionally excluded — it is called
+	* internally by area_common and is not part of the public API surface.
+	* @var array<string> API_ACTIONS
 	*/
 	public const API_ACTIONS = [
 		'start',
@@ -29,48 +61,75 @@ final class dd_core_api {
 		'get_indexation_grid',
 		'get_environment',
 		'get_matrix_ontology_locator',
+		'get_section_terms',
 		'test'
 	];
 
 
 
 	/**
-	 * Version constant.
-	 * Format: "Major.Minor.Patch" (e.g., "1.0.0" for Dédalo 7.x).
-	 * @var string
-	 */
+	* API version string in "Major.Minor.Patch" format.
+	* Returned to clients via get_environment() → $response->result->page_globals.
+	* Increment Minor on new API_ACTIONS entries; increment Major on breaking changes.
+	* @var string $version
+	*/
 	public static string $version = "1.0.0";  // 05-06-2019
 
 	/**
-	 * Request Query Object (RQO) currently being processed.
-	 * Allows access to request parameters globally within the API context.
-	 * @var ?object $rqo
-	 */
+	* The RQO (Request Query Object) for the request currently being processed.
+	* Set at the start of build_json_rows() and start() so that downstream
+	* helpers — particularly common::build_request_config() — can recover
+	* client-supplied SQO and source properties (navigation state, session key)
+	* without requiring an explicit parameter chain.
+	* (!) Stale across persistent-worker requests; must be overwritten at the
+	*     top of every action method that sets it (not just carried forward).
+	* @var ?object $rqo
+	*/
 	public static ?object $rqo = null;
 
 	/**
-	 * The complete calculated response context object.
-	 * Holds the final structure and data to be returned to the client.
-	 * @var ?object $context
-	 */
+	* Holds the last fully-resolved response context object.
+	* Retained as a static for diagnostic / debug introspection; not used in
+	* the normal request flow.
+	* @var ?object $context
+	*/
 	public static ?object $context = null;
 
 	/**
-	 * Debug container for SQL queries executed during the request.
-	 * Only populated when SHOW_DEBUG is enabled.
-	 * @var array $sql_query_search
-	 */
+	* Accumulates SQL query strings executed during the current request.
+	* Populated only when SHOW_DEBUG === true; appended by search layer helpers
+	* and emitted under $response->debug->sql_query_search in read().
+	* @var array<string> $sql_query_search
+	*/
 	public static array $sql_query_search = [];
 
 
 
 	/**
 	* START
-	* Builds the start page minimum context.
-	* Normally is a menu and a section (based on url vars)
-	* This function tells to page what must to be request, based on given url vars
-	* Note that a full context is calculated for each element
-	* @param object $options
+	* Bootstraps the minimum page context needed by the browser on first load.
+	*
+	* Resolves the target element (section, area, tool, or component) from URL
+	* query variables carried in $rqo->options->search_obj, builds its
+	* structure context, and returns it together with the environment block.
+	* The login page context is returned when the user is not authenticated.
+	* The install context is returned when DEDALO_INSTALL_STATUS is not 'installed'.
+	*
+	* Special cases handled in order:
+	* 1. Recovery mode — ?recovery=<DEDALO_RECOVERY_KEY> activates recovery and
+	*    maintenance mode; any other value is rejected immediately.
+	* 2. Install check — when DEDALO_TEST_INSTALL is true (default), the install
+	*    wizard context is returned and normal boot is skipped.
+	* 3. Not-logged — returns the login context (or installer context on DB error).
+	* 4. Logged — resolves the element by model (section_tool → section, area_*,
+	*    tool_*, component_*, default area), injects session SQO and section_id
+	*    filter into the context's request_config when present.
+	*
+	* $rqo->sqo and $rqo->source (optional) preserve navigation state (filter,
+	* pagination) from the browser's local DB and are forwarded untouched to
+	* common::build_request_config().
+	*
+	* @param object $rqo
 	* sample:
 	* {
 	*	"action": "start",
@@ -82,20 +141,22 @@ final class dd_core_api {
 	*		 },
 	*		"menu": true
 	*	},
-	*	"sqo": {		// optional to preserve navigation
+	*	"sqo": {		// optional — preserves user navigation state
 	*		"section_tipo": [
 	*			"dd1324"
 	*		],
 	*		"limit": 10,
 	*		"offset": 0
 	*	},
-	* 	"source": {		// optional to preserve navigation
+	* 	"source": {		// optional — preserves user navigation state
 	*		"tipo": "dd1324",
 	*		"section_tipo": "dd1324",
 	*		"mode": "list"
 	*	}
 	* }
 	* @return object $response
+	*   $response->result = { context: array, data: [] }
+	*   $response->environment is always populated even on failure paths
 	*/
 	public static function start(object $rqo) : object {
 
@@ -622,14 +683,21 @@ final class dd_core_api {
 
 	/**
 	* READ
-	* Get context and data from given source
-	* Different modes are available using source->action value:
-	* @see dd_core_api::build_json_rows()
-	* 	search			// Used by section and service autocomplete
-	* 	related_search	// Used to get the related sections that call to the source section
-	* 	get_data		// Used by components and areas to get basic context and data
-	* 	resolve_data	// Used by components in search mode like portals to resolve locators data
-	* @see self::build_json_rows
+	* Fetches context and data for a given source element.
+	*
+	* The special-case sub-action 'get_value' calls get_component_value() to return
+	* a plain text representation of a component's stored data. All other source
+	* actions are forwarded to build_json_rows(), which handles:
+	*   search         — section list/edit fetch; also used by autocomplete services
+	*   related_search — sections that point TO the source section (inverse relations)
+	*   get_data       — component or area data-only fetch (no record search)
+	*   resolve_data   — resolves an array of locators into rendered component data
+	*
+	* Always calls log_activity() after the sub-action returns so that section/area
+	* page loads are recorded in the activity logger regardless of sub-action type.
+	*
+	* @see self::build_json_rows()
+	* @see self::get_component_value()
 	*
 	* @param object $rqo
 	* sample:
@@ -657,11 +725,8 @@ final class dd_core_api {
 		*    }
 		* }
 	* @return object $response
-	* sample:
-		*  $response->result = {
-		* 		context : array
-		* 		data : array
-		*  }
+	*   $response->result = { context: array, data: array }
+	*   $response->debug  is populated when SHOW_DEBUG === true
 	*/
 	public static function read(object $rqo) : object {
 
@@ -723,12 +788,25 @@ final class dd_core_api {
 
 	/**
 	* READ_RAW
-	* Get full raw data
-	* Apply the SQO given to select specific rows.
-	* When the source is a section it get the full data in DDBB
-	* When the source is a component it resolve the section_records and select the component specific data.
-	* for literal components, it returns the full data with all languages.
-	* for relation components, it returns all locators associated.
+	* Returns unrendered, raw JSONB data from the matrix table for the
+	* requested section_tipo, filtered by the given SQO.
+	*
+	* Three type modes governed by $rqo->options->type:
+	*   'section'        — returns the full fetched rows as-is (fetch_all()).
+	*   'component'      — resolves the data column for the component model and
+	*                      returns only the component's own JSONB datum per row.
+	*   'target_section' — walks relation JSONB on each row and returns only
+	*                      locators whose section_tipo matches $options->tipo.
+	*
+	* Used by tool_export and other internal PHP callers that need the unprocessed
+	* storage values before any rendering or language fallback is applied.
+	* For literal components this includes all language keys; for relation
+	* components it includes all stored locators.
+	*
+	* Two permission checks are applied:
+	* 1. Per-sqo->section_tipo loop (same gate as count()).
+	* 2. common::get_permissions() on the single options->section_tipo.
+	*
 	* @param object $rqo
 	* sample:
 	* {
@@ -741,7 +819,7 @@ final class dd_core_api {
 	*        "section_id": "1",
 	*        "mode": "edit",
 	*        "lang": "lg-eng"
-	*    }
+	*    },
 	* 	"sqo" : {
 	* 		"section_tipo" : ["rsc167"],
 	* 		"limit" 	   : 1,
@@ -754,6 +832,8 @@ final class dd_core_api {
 	* 	}
 	* }
 	* @return object $response
+	*   $response->result  array  — raw data rows (shape depends on options->type)
+	*   $response->table   string — matrix table name resolved from section_tipo
 	*/
 	public static function read_raw(object $rqo) : object {
 
@@ -874,8 +954,13 @@ final class dd_core_api {
 
 	/**
 	* CREATE
-	* Creates a new database record of given section tipo
-	* and returns the new section_id assigned by the counter
+	* Inserts a new, empty record row into the matrix table for the given
+	* section_tipo and returns the newly assigned section_id.
+	*
+	* The section_id is generated by the Dédalo counter service (not a DB
+	* sequence), so it is stable and unique across all matrix tables.
+	* Requires write permission (>= 2) on the section.
+	*
 	* @param object $rqo
 	* sample:
 	* {
@@ -885,6 +970,7 @@ final class dd_core_api {
 	*    }
 	* }
 	* @return object $response
+	*   $response->result  string|false — new section_id on success, false on failure
 	*/
 	public static function create(object $rqo) : object {
 
@@ -924,8 +1010,8 @@ final class dd_core_api {
 				$response->errors[] = 'Failed to save the section';
 			}
 
-		// OJO : Aquí, cuando guardemos las opciones de búsqueda, resetearemos el count para forzar a recalcular el total
-			//   esto está ahora en 'section_records' pero puede cambiar..
+		// (!) When we save the search options here, we will reset the count to force recalculation of the total.
+			//   This is currently handled in 'section_records' but may change in the future.
 			// Update search_query_object full_count property
 				// $search_options = section_records::get_search_options($section_tipo);
 				// if (isset($search_options->search_query_object)) {
@@ -945,18 +1031,28 @@ final class dd_core_api {
 
 	/**
 	* DUPLICATE
-	* Duplicates a section record of given section tipo and section_id
-	* and returns the new section_id assigned by counter
+	* Deep-copies an existing section record identified by section_tipo and
+	* section_id and returns the section_id of the newly created copy.
+	*
+	* Two security gates are applied before the copy:
+	* 1. Section-level write permission (>= 2) — a read-only user must not be
+	*    able to spawn records by cloning, even if they can view the source.
+	*    (Audit §5.2.)
+	* 2. Per-record scope check via security::assert_record_in_user_scope() —
+	*    prevents a user with section-write but outside the source record's
+	*    project scope from cloning records they cannot see. (SEC-024 §9.4.)
+	*
 	* @param object $rqo
 	* sample:
 	* {
-	*    "action": "duplicate ",
+	*    "action": "duplicate",
 	*    "source": {
-	*        "section_tipo": "oh1"
+	*        "section_tipo": "oh1",
 	* 		"section_id": "2"
 	*    }
 	* }
 	* @return object $response
+	*   $response->result  string|false — new section_id on success, false on failure
 	*/
 	public static function duplicate(object $rqo) : object {
 
@@ -1026,15 +1122,31 @@ final class dd_core_api {
 
 	/**
 	* DELETE
-	* Removes one or more section records from database
-	* If sqo is received, it will be used to search target sections,
-	* else a new sqo will be created based on current section_tipo, section_id
-	* Note that 'delete_mode' must be declared (delete_data|delete_record)
+	* Removes one or more section records from the database, delegating the
+	* actual operation to sections::delete().
+	*
+	* The target set is determined in order of precedence:
+	*   1. $rqo->sqo  — explicit SQO defines the row filter (preferred path for
+	*                   multi-record deletes from list views).
+	*   2. $rqo->source->section_id — single-record delete when no SQO is given.
+	*
+	* delete_mode controls the scope of the deletion:
+	*   'delete_data'   — removes component data only (keeps the row skeleton).
+	*   'delete_record' — removes the entire row and all its component data.
+	*
+	* Additional flags forwarded to sections::delete():
+	*   delete_diffusion_records — also removes the corresponding diffusion rows.
+	*   delete_with_children     — recursively removes child records in the TS tree.
+	*
+	* Only 'section' models are accepted; the method returns an error immediately
+	* for any other model to prevent accidental deletion of ontology elements.
+	* Requires write permission (>= 2) on the resolved section_tipo.
+	*
 	* @param object $rqo
 	* sample:
 		* {
 		*	"action": "delete",
-		*	"source": {	*
+		*	"source": {
 		*		"action": "delete",
 		*		"model": "section",
 		*		"tipo": "oh1",
@@ -1049,7 +1161,7 @@ final class dd_core_api {
 		*	},
 		*	"sqo": {
 		*		"section_tipo": [
-		*		"oh1"
+		*			"oh1"
 		*		],
 		*		"filter_by_locators": [
 		*			{
@@ -1058,9 +1170,9 @@ final class dd_core_api {
 		*			}
 		*		],
 		*		"limit": 1
-		*		}
+		*	}
 		* }
-	* @return object $response
+	* @return object $response — forwarded from sections::delete()
 	*/
 	public static function delete(object $rqo) : object {
 
@@ -1125,15 +1237,36 @@ final class dd_core_api {
 
 	/**
 	* SAVE
-	* Saves the given value to the component data into the database.
-	* @see $component_common->update_data_value
-	* save actions:
-	* 	insert		// add given value in data
-	* 	update		// updates given value selected by key in data
-	* 	remove		// removes a item value from the component data array
-	* 	set_data	// set the whole data sent by the client without check the array key (bulk insert or update)
-	* 	sort_data	// re-organize the whole component data based on target key given. Used by portals to sort rows
-	* 	sort_by_column	// re-organize the whole component data ordered by a target section column value. Used by portals (gated by 'sort_by_column' property)
+	* Persists changed component data to the matrix JSONB store.
+	*
+	* Only 'component' type is currently implemented; other types are logged as
+	* errors and ignored. In search mode the entire incoming value replaces the
+	* component's stored data (filter preset save). In edit/list mode each item
+	* in $rqo->data->changed_data is applied sequentially via
+	* component_common::update_data_value() then component::save().
+	*
+	* Changed-data atomic actions (carried inside each changed_data item):
+	*   insert          — appends the given value to the data array.
+	*   update          — replaces the item at the given key.
+	*   remove          — removes the item at the given key.
+	*   set_data        — bulk-replaces the whole data array (no key check).
+	*   sort_data       — reorders the data array by a target key (portals).
+	*   sort_by_column  — reorders by a target section column value (portals,
+	*                     gated by the 'sort_by_column' ontology property).
+	*   add_new_element — alias of 'insert' from the button-add flow; adjusts
+	*                     pagination offset to show the newly added item.
+	*
+	* After save the component re-resolves its data and the full element JSON
+	* (context + data) is returned so the client can refresh in place.
+	* If observers_data were set on the component during save they are merged
+	* into the returned data array so dependent components update atomically.
+	*
+	* Blocks any save to DEDALO_ACTIVITY_SECTION_TIPO to prevent data corruption
+	* of the activity audit trail (except section_id values starting with
+	* 'search_' which are temporary preset records, not real activity rows).
+	*
+	* @see component_common::update_data_value()
+	*
 	* @param object $rqo
 	* sample:
 		* {
@@ -1158,15 +1291,6 @@ final class dd_core_api {
 		*        "value": [
 		*            "title2"
 		*        ],
-		*        "parent_tipo": "oh1",
-		*        "parent_section_id": "124",
-		*        "fallback_value": [
-		*            "title"
-		*        ],
-		*        "debug_model": "component_input_text",
-		*        "debug_label": "Title",
-		*        "debug_mode": "edit",
-		*        "row_section_id": "124",
 		*        "changed_data": [{
 		*            "action": "update",
 		*            "key": 0,
@@ -1175,6 +1299,7 @@ final class dd_core_api {
 		*    }
 		* }
 	* @return object $response
+	*   $response->result  object|false — full element JSON {context, data} on success
 	*/
 	public static function save(object $rqo) : object {
 		$start_time = start_time();
@@ -1407,7 +1532,25 @@ final class dd_core_api {
 
 	/**
 	* COUNT
-	* Exec a SQL records count of given SQO
+	* Executes a SQL COUNT query for the given SQO and returns the total.
+	*
+	* Used by section pagination widgets and tools that need the total record
+	* count separately from a data fetch.
+	*
+	* Key behaviours:
+	* - If $rqo->prevent_lock is absent (falsy), session_write_close() is called
+	*   before the query to avoid blocking concurrent requests on the same PHP
+	*   session.
+	* - Permission check: if the user lacks read access (< 1) on ANY section_tipo
+	*   in sqo->section_tipo, a zero total is returned instead of an error —
+	*   this prevents leaking the existence of rows the user cannot see. (SEC-09)
+	* - Session filter merge: when the SQO arrives without a 'filter',
+	*   'filter_by_locators', or 'order', the last saved session values are
+	*   injected so the count stays consistent with the visible list. (Only
+	*   applied when a session SQO already exists for the sqo_id key.)
+	* - full_count is forced to true so the DB query runs COUNT(*) rather than
+	*   returning an estimate.
+	*
 	* @param object $rqo
 	* sample:
 		* {
@@ -1417,7 +1560,9 @@ final class dd_core_api {
 		*        "type": "tm",
 		*        "action": null,
 		*        "model": "service_time_machine",
-		*        ..
+		*        "tipo": "dd15",
+		*        "section_tipo": "dd15",
+		*        "mode": "list"
 		*    },
 		*    "sqo": {
 		*        "id": "tmp",
@@ -1429,6 +1574,7 @@ final class dd_core_api {
 		*    "prevent_lock": true
 		* }
 	* @return object $response
+	*   $response->result  object|int — { total: int } or 0 on permission denial
 	*/
 	public static function count(object $rqo) : object {
 
@@ -1500,9 +1646,33 @@ final class dd_core_api {
 
 	/**
 	* GET_ELEMENT_CONTEXT
-	* Used by search.get_component(source) calling data_manager
-	* @param object $json_data
+	* Returns the structure context for a single element without fetching any
+	* record data. Used primarily by the client-side search.get_component() path
+	* (via data_manager) to lazy-load a component's context after the section
+	* list has already rendered.
+	*
+	* When $rqo->simple is true, get_structure_context_simple() is called
+	* (skips tool/button resolution — cheaper). Otherwise the full get_json()
+	* path is used (context only, get_data=false).
+	*
+	* Supports all element families:
+	*   section     — plain section context
+	*   area*       — area context (area_thesaurus, area_ontology, etc.)
+	*   component_* — component context; lang resolved via ontology_node::get_translatable()
+	*   tool_*      — tool context; resolved via tool_common::get_user_tools() to
+	*                 enforce tool membership before instantiation
+	*   default     — other registered classes; guarded by SEC-049 identifier and
+	*                 DEDALO_CORE_PATH path checks to prevent arbitrary class loading
+	*
+	* SEC: read permission is asserted on section_tipo before element build for
+	* all non-tool models. Tools apply their own membership gate (get_user_tools).
+	*
+	* Closes the PHP session immediately (session_write_close) to avoid blocking
+	* other concurrent requests, since this action is read-only.
+	*
+	* @param object $rqo
 	* @return object $response
+	*   $response->result  object — structure context of the requested element
 	*/
 	public static function get_element_context(object $rqo) : object {
 
@@ -1710,8 +1880,27 @@ final class dd_core_api {
 
 	/**
 	* GET_SECTION_ELEMENTS_CONTEXT
-	* Get all components of current section (used in section search filter and tool export)
-	* Used by filter and tool_export
+	* Returns the structure contexts for all components belonging to one or more
+	* sections. Delegates entirely to common::get_section_elements_context().
+	*
+	* Used by:
+	*   - The section search filter panel (to populate the filterable field list).
+	*   - tool_export (to enumerate the exportable columns).
+	*
+	* $options->context_type controls the depth of each returned context:
+	*   'simple' — lightweight (get_structure_context_simple), no tool/button
+	*              resolution; preferred for filter and export lists.
+	*   (any)    — full context (get_structure_context).
+	*
+	* $options->use_real_sections — when true, resolves section_tipo through the
+	* ontology to its real section (not a virtual/portal one).
+	*
+	* $options->ar_components_exclude — optional list of component tipos to omit.
+	*
+	* SEC-07: skip_permissions is hardcoded to false here regardless of what the
+	* client sends; common::get_section_elements_context() applies its own
+	* per-component permission filter.
+	*
 	* @param object $rqo
 	*	{
 	*		action			: 'get_section_elements_context',
@@ -1735,6 +1924,7 @@ final class dd_core_api {
 	*		}
 	*	}
 	* @return object $response
+	*   $response->result  array — component structure context objects, one per component
 	*/
 	public static function get_section_elements_context(object $rqo) : object {
 
@@ -1779,16 +1969,55 @@ final class dd_core_api {
 
 
 
-	// search methods ///////////////////////////////////
+	// search / read methods ///////////////////////////////////
+	// build_json_rows, get_component_value: private helpers called by read()
 
 
 
 	/**
 	* BUILD_JSON_ROWS
-	* Gets context and data from given element (section, component, area)
-	* @see class.request_query_object.php
+	* Core read dispatcher: instantiates the requested element, runs its SQO,
+	* and returns the combined { context, data } JSON payload for the client.
+	*
+	* Called by read() for all source->action values except 'get_value'.
+	* Dispatches on $ddo_source->action:
+	*   'search'          — builds a sections instance and runs the SQO; used
+	*                       for section list/edit and service autocomplete.
+	*   'related_search'  — same as 'search' but for inverse-relation queries.
+	*   'get_data'        — data-only fetch for a component, area, or menu; no
+	*                       SQO search is involved — returns component data only.
+	*   'resolve_data'    — injects an arbitrary $value array into a component
+	*                       instance and resolves it; used by portals.
+	*   'get_relation_list' — legacy path for relation_list elements.
+	*
+	* Permission model (two gates):
+	* 1. Pre-hoc source gate — runs before any DB or ontology work.
+	*    - Skipped for 'menu' and 'service_*' models (see inline comment).
+	*    - Component models use component_common::resolve_component_read_permission()
+	*      for special-case grants (own-user, TM mode, search mode).
+	* 2. Post-hoc result gate — after get_json(), wipes $result->data if
+	*    permission < 1. Guards against edge cases where the pre-hoc gate was
+	*    exempt but the resolved element data should still be suppressed.
+	*
+	* SQO resolution order:
+	* 1. $rqo->sqo received  — clone it and merge any missing filter/order/limit/
+	*    offset/filter_by_locators/children_recursive from session when session_save=true.
+	* 2. No $rqo->sqo + section model + edit/list mode + session exists  — reuse
+	*    the whole session SQO (navigation continuity on page reload).
+	* 3. Fallback  — construct a fresh SQO with defaults; check for a user preset
+	*    (request_config_presets) to determine the starting limit.
+	*
+	* The SQO is persisted to $_SESSION at the end of the 'search' action for
+	* section models in edit/list/list_thesaurus mode when session_save=true.
+	* session_write_close() is called after context/data resolution to release
+	* the session lock for concurrent requests.
+	*
+	* @see class.search_query_object.php
+	* @see component_common::resolve_component_read_permission()
+	*
 	* @param object $rqo
 	* @return object $response
+	*   $response->result  object — { context: array, data: array [, debug: object] }
 	*/
 	private static function build_json_rows(object $rqo) : object {
 		$start_time	= start_time();
@@ -2415,8 +2644,16 @@ final class dd_core_api {
 
 	/**
 	* SMART_REMOVE_DATA_DUPLICATES
-	* @param array $data
-	* @return array $clean_data
+	* Removes duplicate data items from a flat array of component data objects,
+	* matching on the five-key composite identity: section_tipo, section_id,
+	* tipo, from_component_tipo, lang.
+	*
+	* Uses a manual loop with array_filter() rather than array_unique(SORT_REGULAR)
+	* because the data items are stdClass objects; the commented-out
+	* array_unique() alternative did not handle object comparison reliably.
+	*
+	* @param array<object> $data - array of component datum objects to deduplicate
+	* @return array<object> $clean_data - deduplicated array (preserves first occurrence)
 	*/
 	private static function smart_remove_data_duplicates(array $data) : array {
 
@@ -2452,8 +2689,15 @@ final class dd_core_api {
 
 	/**
 	* SMART_REMOVE_CONTEXT_DUPLICATES
-	* @param array $data
-	* @return array $clean_data
+	* Removes duplicate context items from a flat array of structure context
+	* objects, matching on the three-key composite identity: section_tipo,
+	* tipo, lang.
+	*
+	* Parallel to smart_remove_data_duplicates() but for context objects, which
+	* carry fewer identity keys than data items.
+	*
+	* @param array<object> $context - array of structure context objects to deduplicate
+	* @return array<object> $clean_context - deduplicated array (preserves first occurrence)
 	*/
 	private static function smart_remove_context_duplicates(array $context) : array {
 
@@ -2487,9 +2731,20 @@ final class dd_core_api {
 
 	/**
 	* GET_COMPONENT_VALUE
-	* Used to get the component value as text representation of the component data
-	* @param object $json_data
+	* Returns a plain text representation of a component's current data value,
+	* without building the full element JSON (no context, no data array).
+	*
+	* Invoked by read() when source->action === 'get_value'. Only component_*
+	* models are accepted; any other model type returns an error immediately.
+	* The value is obtained via component::get_value() which applies the
+	* component's own text-rendering logic (language fallback, locator
+	* resolution, etc.).
+	*
+	* Closes the PHP session immediately before element construction (read-only).
+	*
+	* @param object $rqo - same RQO structure as read(); action is 'get_value'
 	* @return object $response
+	*   $response->result  mixed — component value as rendered by get_value()
 	*/
 	private static function get_component_value(object $rqo) : object {
 
@@ -2561,18 +2816,31 @@ final class dd_core_api {
 
 	/**
 	* GET_INDEXATION_GRID
-	* @see class.request_query_object.php
+	* Builds the indexation grid for a specific component within a section
+	* record. The grid maps which thesaurus terms are associated with the
+	* component's locators so the client can display an inline indexation UI.
+	*
+	* Delegates to indexation_grid::build_indexation_grid() with the given SQO
+	* for pagination support.
+	*
+	* source->value is an optional filter — an array of section_tipo strings
+	* used to restrict which locator types appear in the grid (e.g. ['oh1']).
+	*
+	* SEC: read permission on section_tipo is asserted before grid construction.
+	*
 	* @param object $rqo
 	* {
-	*	action	: 'get_indexation_grid',
-	*	source	: {
-	*		section_tipo	: section_tipo,
-	*		section_id		: section_id,
-	*		tipo			: "test25", component_tipo
-	*		value			: value // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
-	*	}
+	*	"action": "get_indexation_grid",
+	*	"source": {
+	*		"section_tipo"  : "oh1",
+	*		"section_id"    : "42",
+	*		"tipo"          : "test25",
+	*		"value"         : ["oh1"]
+	*	},
+	*	"sqo": { "limit": 10, "offset": 0 }
 	* }
 	* @return object $response
+	*   $response->result  object — indexation grid built by indexation_grid::build_indexation_grid()
 	*/
 	public static function get_indexation_grid(object $rqo) : object {
 
@@ -2625,32 +2893,42 @@ final class dd_core_api {
 
 
 
+	// (!) DEAD CODE — service_request is entirely commented out.
+	// It was a generic dispatcher that loaded service class files by name and
+	// called a method on them via call_user_func(). Replaced by the per-tool
+	// API action pattern (tool_ prefixed models in get_element_context / start).
+	// Do not remove — kept for historical reference pending explicit cleanup.
 	/**
-	* SERVICE_REQUEST
-	* Call to service method given and return and object with the response
+	* SERVICE_REQUEST (INACTIVE — method body is commented out)
+	* Generic service method dispatcher.
 	*
-	* Class file of current service must be exists in path: DEDALO_SERVICES_PATH / my_service / class.service.php
-	* Method must be static and accept a only one object argument
-	* Method must return an object like { result: mixed, msg: string }
+	* Would call a static method on a service class loaded from
+	* DEDALO_SERVICES_PATH/<service_name>/class.<service_name>.php.
+	* Replaced by the tool_* model dispatch in get_element_context() and start().
 	*
 	* @param object $rqo
 	* sample:
 	* {
-	* 	action: "service_request"
-	* 	dd_api: "dd_core_api"
-	* 	source: {typo: "source", action: "build_subtitles_text", model: "subtitles", arguments: {
-	*   	sourceText: "rsc860"
-	*		maxCharLine: 90
-	*		type: "srt"
-	*		tc_in_secs: 10
-	*		tc_out_secs: 35
-	*   }}
+	* 	"action": "service_request",
+	* 	"dd_api": "dd_core_api",
+	* 	"source": {
+	*   	"typo": "source",
+	*   	"action": "build_subtitles_text",
+	*   	"model": "subtitles",
+	*   	"arguments": {
+	*   		"sourceText": "rsc860",
+	*   		"maxCharLine": 90,
+	*   		"type": "srt",
+	*   		"tc_in_secs": 10,
+	*   		"tc_out_secs": 35
+	*   	}
+	*   }
 	* }
 	* @return object $response
 	* {
-	* 	result : mixed,
-	* 	msg : string,
-	* 	error : int|null
+	* 	"result" : mixed,
+	* 	"msg"    : string,
+	* 	"error"  : int|null
 	* }
 	*/
 		// public static function service_request(object $rqo) : object {
@@ -2705,10 +2983,27 @@ final class dd_core_api {
 
 
 	/**
-	* GET_ENVIRONMENT -> WORK IN PROGRESS
-	* Calculate the minimum Dédalo environment to work
-	* Note that the value is different from logged and not logged cases
+	* GET_ENVIRONMENT
+	* Assembles the minimum environment payload that the browser needs to
+	* bootstrap the Dédalo client application.
+	*
+	* Returns three bundles:
+	*   page_globals   — PHP constants, user info, and feature flags as a
+	*                    stdClass; exposed as window.page_globals on the client.
+	*   plain_vars     — Associative array of URL and config constants injected
+	*                    as JS const declarations in environment.j.php.
+	*   get_label      — Decoded lang-labels JSON object (translated UI strings
+	*                    for the active DEDALO_APPLICATION_LANG).
+	*
+	* Called both as an explicit API action and internally from start() to
+	* include the environment in every page bootstrap response.
+	*
+	* The result is the same object shape regardless of login state; individual
+	* fields within page_globals (e.g. dedalo_version, user_id) are null when
+	* the user is not authenticated.
+	*
 	* @return object $response
+	*   $response->result  object — { page_globals: object, plain_vars: array, get_label: object }
 	*/
 	public static function get_environment() : object {
 		$start_time = start_time();
@@ -2761,9 +3056,31 @@ final class dd_core_api {
 
 	/**
 	* GET_PAGE_GLOBALS
-	* Builds whole environment page_globals object
-	* It is used as window.page_globals in environment.j.php file
-	* @return object $obj
+	* Builds the complete page_globals object that is serialised as
+	* window.page_globals in environment.j.php and consumed by every
+	* client-side module.
+	*
+	* Contains:
+	* - Authenticated user identity and role flags (is_logged, is_global_admin,
+	*   is_developer, is_root, user_id, username, full_username).
+	* - Entity identity constants (dedalo_entity, dedalo_entity_id).
+	* - Version strings — exposed only when the user is logged in (API-03: the
+	*   exact build version is a reconnaissance aid, so it is withheld pre-auth).
+	* - Active lang and all application lang options (needed by the lang selector).
+	* - dedalo_projects_default_langs — full language metadata for the project;
+	*   cached to dd_cache under 'cache_page_globals.php'. The cache is built on
+	*   first logged-in call and is invalidated by backup::write_lang_file().
+	* - Media-quality defaults and feature flags (lock, notifications, media
+	*   protection mode, maintenance/recovery mode).
+	* - data_version — current ontology data version; also cached to avoid
+	*   repeated DB queries.
+	* - Debug-only fields (pg_version, php_version, php_memory, dedalo_root_path)
+	*   only when SHOW_DEBUG or SHOW_DEVELOPER is true.
+	*
+	* The file-based cache (dd_cache) is written only when logged in to avoid
+	* populating it from unauthenticated requests.
+	*
+	* @return object $obj — the fully populated page_globals object
 	*/
 	public static function get_page_globals() : object {
 
@@ -2939,9 +3256,24 @@ final class dd_core_api {
 
 	/**
 	* GET_JS_PLAIN_VARS
-	* Builds whole environment JS plain vars
-	* They are used as constants declared in environment.j.php file
-	* @return array $plain_vars
+	* Returns the associative array of PHP constants that are emitted as
+	* JavaScript const declarations in environment.j.php.
+	*
+	* These become globally-scoped JS constants in the browser, used by
+	* every client module (data_manager, components, tools, diffusion client).
+	*
+	* Notable entries:
+	* - DEDALO_API_URL / DEDALO_DIFFUSION_API_URL — absolute URLs built from
+	*   DEDALO_PROTOCOL + HTTP_HOST when not overridden by config constants.
+	* - DEDALO_TOOLS_URLS — per-tool base-URL map from tool_paths::get_additional_tools_url_map()
+	*   for tools registered under DEDALO_ADDITIONAL_TOOLS roots; an absent key
+	*   means the tool lives in the primary DEDALO_TOOLS_URL root.
+	* - DEDALO_MAINTENANCE_MODE / DEDALO_NOTIFICATION — deprecated legacy keys
+	*   kept for client backward compatibility only; use page_globals equivalents.
+	* - DD_TIPOS — subset of ontology tipo constants needed by client tools
+	*   (e.g. tool_user_admin, indexation UI).
+	*
+	* @return array<string, mixed> $plain_vars — keyed by JS constant name
 	*/
 	public static function get_js_plain_vars(): array {
 
@@ -2984,18 +3316,26 @@ final class dd_core_api {
 
 	/**
 	* GET_LANG_LABELS
-	* Load requested lang file content
-	* (JSON object generated on update Ontology)
-	* Uses fallback to DEDALO_APPLICATION_LANGS_DEFAULT when the file do not exists
-	* @param string $lang
-	*  Normally DEDALO_APPLICATION_LANG like 'lg-eng'
-	* @return string $lang_labels
-	*  Stringified object with all definitions
-	*  {
-	* 	"diameter": "Diameter",
-	*	"code": "Code",
-	* 	...
-	*  }
+	* Reads and returns the raw content of the pre-generated language labels
+	* file for the given lang code.
+	*
+	* Lang label files live under DEDALO_CORE_PATH/common/js/lang/<lang>.js
+	* and are generated (or regenerated) by backup::write_lang_file() whenever
+	* the Ontology is updated. Each file is a JSON-stringified object mapping
+	* component/field labels to their translated strings in the requested lang:
+	*   { "diameter": "Diameter", "code": "Code", … }
+	*
+	* Recovery chain:
+	* 1. Try to read the file. On failure, call backup::write_lang_file($lang)
+	*    to regenerate it, then re-read.
+	* 2. If the file is still missing or empty, fall back to
+	*    DEDALO_APPLICATION_LANGS_DEFAULT (the install default lang).
+	*
+	* The returned string is consumed by get_environment(), which decodes it
+	* via json_decode() before placing it in the environment payload.
+	*
+	* @param string $lang - lang code, e.g. 'lg-eng' (typically DEDALO_APPLICATION_LANG)
+	* @return string $lang_labels - raw JSON string; may be empty on total failure
 	*/
 	public static function get_lang_labels(string $lang) : string {
 
@@ -3038,9 +3378,25 @@ final class dd_core_api {
 
 	/**
 	* GET_MATRIX_ONTOLOGY_LOCATOR
-	* Transform tipo like 'dd1' to an ontology section_tipo, section_id object
+	* Converts a tipo identifier (e.g. 'dd1') into a canonical locator object
+	* containing the ontology section's section_tipo and section_id.
+	*
+	* Used by the client when it needs to open the ontology record for a given
+	* tipo (e.g. to navigate from a component to its definition in the
+	* ontology section). The mapping is derived from:
+	*   - get_section_id_from_tipo($tipo)  — extracts the numeric section_id
+	*   - get_tld_from_tipo($tipo)         — extracts the top-level domain prefix
+	*   - ontology::map_tld_to_target_section_tipo($tld) — resolves the
+	*                                        ontology section_tipo for that TLD
+	*
+	* SEC: read permission on the resolved target_section_tipo is asserted before
+	* returning the locator so that the client cannot probe ontology records it
+	* has no access to.
+	*
 	* @param object $rqo
+	*   $rqo->source->tipo  string — tipo identifier to resolve (e.g. 'dd1')
 	* @return object $response
+	*   $response->result  object — { section_tipo: string, section_id: string }
 	*/
 	public static function get_matrix_ontology_locator( object $rqo ) : object {
 
@@ -3093,15 +3449,155 @@ final class dd_core_api {
 
 
 	/**
+	* GET_SECTION_TERMS
+	* Batch-resolves the authoritative display label (section_map 'term') for
+	* one or more section records in a single request.
+	*
+	* Used by client visualizations (e.g. the relation graph view) to label
+	* nodes with the proper term instead of a client-side heuristic. Each
+	* locator in $rqo->locators is resolved independently; the result is an
+	* stdClass keyed "{section_tipo}_{section_id}" → term string, which maps
+	* directly to the graph node id format for O(1) client lookups.
+	*
+	* Filtering rules applied per locator:
+	* - Invalid tipo or empty section_id: silently skipped.
+	* - Duplicate composite key: first occurrence wins.
+	* - Insufficient read permission on section_tipo: silently omitted (never leak).
+	* - No section_map term tipos defined for the section: omitted so the client
+	*   keeps its own label rather than receiving the fallback placeholder.
+	*
+	* Hard cap: batch is silently truncated to 1000 locators to bound CPU work.
+	* scope=null triggers the default main → thesaurus → relation_list resolution chain.
+	*
+	* @param object $rqo
+	* 	{
+	* 		"action"   : "get_section_terms",
+	* 		"locators" : [ { "section_tipo": "oh1", "section_id": "42" }, … ],
+	* 		"scope"    : null,
+	* 		"lang"     : "lg-eng"
+	* 	}
+	* @return object $response
+	*   $response->result  object — stdClass map keyed "{section_tipo}_{section_id}" => term string
+	*/
+	public static function get_section_terms( object $rqo ) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// hard cap to prevent unbounded work from a hostile/huge batch
+		$max_locators = 1000;
+
+		// locators check
+			$ar_locators = $rqo->locators ?? null;
+			if ( !is_array($ar_locators) || empty($ar_locators) ) {
+				$response->msg		= 'Error. Invalid or empty locators';
+				$response->errors[]	= 'bad_locators';
+				return $response;
+			}
+			if ( count($ar_locators) > $max_locators ) {
+				debug_log(__METHOD__
+					." Locators batch exceeds cap ($max_locators). Truncating from ".count($ar_locators)
+					, logger::WARNING
+				);
+				$ar_locators = array_slice($ar_locators, 0, $max_locators);
+			}
+
+		// resolution options
+			$scope	= $rqo->scope ?? null; // null => chain main -> thesaurus -> relation_list
+			$lang	= ( isset($rqo->lang) && is_string($rqo->lang) )
+				? $rqo->lang
+				: DEDALO_DATA_LANG;
+
+		// resolve terms (deduped by composite key; skip invalid or unreadable sections)
+			$terms = new stdClass();
+			foreach ($ar_locators as $current_locator) {
+
+				if (!is_object($current_locator)) {
+					continue;
+				}
+
+				$section_tipo	= $current_locator->section_tipo ?? null;
+				$section_id		= $current_locator->section_id ?? null;
+
+				// validate
+				if ( safe_tipo($section_tipo)===false || $section_id===null || $section_id==='' || !is_scalar($section_id) ) {
+					continue;
+				}
+
+				$key = $section_tipo . '_' . $section_id;
+				if ( isset($terms->{$key}) ) {
+					continue; // dedup
+				}
+
+				// SEC: read permission required on the section (omit forbidden, never leak)
+				if ( common::get_permissions($section_tipo, $section_tipo) < 1 ) {
+					continue;
+				}
+
+				// Only return a term when a section_map term is actually defined.
+				// Without this, get_term() returns the "{section_tipo}_{section_id}"
+				// fallback string, which would clobber the client's own label.
+				if ( empty(section_map::get_term_tipos($section_tipo, $scope)) ) {
+					continue;
+				}
+
+				$term = section_map::get_term(
+					(object)[
+						'section_tipo'	=> $section_tipo,
+						'section_id'	=> $section_id
+					],
+					$scope,
+					$lang,
+					true // from_cache
+				);
+
+				$terms->{$key} = $term;
+			}
+
+		$response->result	= $terms;
+		$response->msg		= empty($response->errors)
+			? 'OK. Request done successfully'
+			: 'Warning! Request done with errors';
+
+
+		return $response;
+	}//end get_section_terms
+
+
+
+	/**
 	* LOG_ACTIVITY
-	* Writes log_message in Dédalo logger
-	* It is used to registrar the navigation of the users by sections and areas.
-	* @see dd_core_api::read
+	* Records a user navigation event in the Dédalo activity logger.
+	*
+	* Called by read() after every successful data fetch to track which
+	* sections and areas users open. Only section and area models generate
+	* activity entries — component requests (e.g. autocomplete) are excluded
+	* to avoid polluting the activity trail with background UI calls.
+	*
+	* Early-return guards:
+	* - Empty tipo or excluded modes ('search', 'tm') — no navigation event.
+	* - Logger section tipos (logger_backend_activity::$ar_elements_activity_tipo) —
+	*   prevents an infinite write loop where logging triggers further activity.
+	* - Temp/search preset section tipos — ephemeral sections not worth logging.
+	*
+	* The logged message label is 'LOAD EDIT' or 'LOAD LIST'. Any mode that is
+	* neither 'list' nor one of the excluded modes is normalised to 'edit' because
+	* the activity log only distinguishes two page-load types (e.g. 'tool_transcription'
+	* is reported as 'LOAD EDIT').
+	*
+	* The section_id is included in the log data only when the model is 'section'
+	* and mode is 'edit', since it is only meaningful in that context.
+	*
+	* @see dd_core_api::read()
+	* @see logger_backend_activity
+	*
 	* @param object $options
-	* {
-	* 	rqo: object (full rqo object from read request)
-	* 	section_id: int|null (available in edit mode only)
-	* }
+	*   {
+	*     rqo:        object   — full RQO from the read request
+	*     section_id: int|null — section_id available in edit mode only
+	*   }
 	* @return void
 	*/
 	private static function log_activity(object $options) : void {
@@ -3167,21 +3663,27 @@ final class dd_core_api {
 
 	/**
 	* GET_ACTIVITY_METRIC
-	* On-demand activity metric for the dashboard timeline graph.
-	* Called by the client when the user selects a time range larger than
-	* the default 1-month pre-loaded data.
+	* Returns aggregated activity data for the dashboard timeline graph covering
+	* the requested date range.
 	*
-	* RQO sample:
-	* {
-	*   "action": "get_activity_metric",
-	*   "options": {
-	*     "area_tipo": "oh1",
-	*     "range_days": 90
-	*   }
-	* }
+	* Called when the user selects a time range larger than the default 1-month
+	* pre-loaded window. Delegates to area_common::get_activity_metric().
+	*
+	* Input constraints:
+	* - area_tipo is required (string); returns error immediately if absent.
+	* - range_days is clamped to [1, 365] — non-integer or < 1 values are reset
+	*   to 30; values > 365 are capped at 365 to prevent runaway queries.
+	*
+	* Note: get_activity_metric is intentionally NOT listed in API_ACTIONS and
+	* is therefore not reachable via the public JSON API dispatcher. It is called
+	* from internal PHP code only.
 	*
 	* @param object $rqo
+	*   $rqo->options->area_tipo   string — section tipo of the area to aggregate
+	*   $rqo->options->range_days  int    — number of days back from today (default 30)
 	* @return object $response
+	*   $response->result  bool   — true on success
+	*   $response->data    mixed  — aggregated metric data from area_common
 	*/
 	public static function get_activity_metric(object $rqo) : object {
 
@@ -3220,8 +3722,20 @@ final class dd_core_api {
 
 	/**
 	* TEST
-	* Useful for API testing purposes such as network metrics.
+	* Lightweight endpoint for API connectivity and network latency tests.
+	*
+	* Returns the full environment payload alongside a simple boolean result so
+	* callers can verify both that the API is reachable and that the environment
+	* is correctly configured in one round trip.
+	*
+	* Listed in API_ACTIONS, so it is reachable without authentication (the
+	* environment payload itself contains only public entity info when
+	* not logged in — see get_page_globals() for the auth-conditional fields).
+	*
 	* @return object $response
+	*   $response->result         bool   — always true on success
+	*   $response->dedalo_entity  string — entity name from page_globals
+	*   $response->environment    object — full get_environment() result
 	*/
 	public static function test() : object {
 

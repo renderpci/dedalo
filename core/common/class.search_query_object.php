@@ -1,14 +1,40 @@
 <?php declare(strict_types=1);
 /**
-* SEARCH QUERY OBJECT (SQO)
+* CLASS SEARCH_QUERY_OBJECT
+* Data-transfer object that encodes a normalized search query (SQO) for Dédalo's search pipeline.
 *
-*	DTO that defines an search query object with normalized schema properties and validation.
+* The SQO is the abstraction layer between the client (browser UI or server code) and the
+* PostgreSQL JSONB matrix tables that store all section/component data. It is inspired by the
+* Mango Query language used in Apache CouchDB (https://docs.couchdb.org/en/stable/api/database/find.html).
 *
-* 	SQO or Search Query Object definition is based on
-* 	Mango Query (A MongoDB inspired query language interface for Apache CouchDB)
+* Responsibilities:
+* - Carry every parameter that defines a search: section scope, filter tree, ordering,
+*   pagination, aggregation, and SQL-generation hints.
+* - Provide typed setter methods so that raw stdClass objects decoded from JSON can be
+*   hydrated safely via __construct($data).
+* - Expose sanitize_client_sqo() as a static security gate that scrubs untrusted
+*   client-supplied SQOs before they enter the search pipeline.
 *
+* Lifecycle of an SQO:
+*  1. **Un-parsed** — created by the client or a server builder with basic path definitions
+*     (section_tipo, filter paths, limit/offset, etc.). $parsed is null or false.
+*  2. **Parsed** — after search::parse_sqo() has delegated to each component via
+*     conform_filter() / get_search_query() to resolve type-specific SQL fragments.
+*     $parsed is set to true. Only a parsed SQO should be passed to parse_sql_query().
 *
-* // FORMAT
+* Security boundary:
+*  Client SQOs arriving over HTTP are sanitized by sanitize_client_sqo() at the API entry
+*  point (core/api/v1/json/index.php). Server-internal builders that construct a
+*  search_query_object directly and call search::search() bypass that gate and are fully
+*  trusted. See also: search_query_object::sanitize_client_sqo() and docs/core/sqo.md.
+*
+* Extends stdClass so that any extra property injected at runtime (e.g. resolved SQL
+* fragments added by component conform methods) is accessible without a property declaration.
+*
+* Used by: search, search_related, search_tm (core/search/).
+* See: docs/core/sqo.md for the full parameter reference and security model.
+*
+* // FORMAT (full SQO schema — values shown are illustrative defaults or allowed options)
 	id						: 'oh1'		// optional. section_tipo and other params to define the unique id
 	section_tipo			: ['oh1']	// array of section_tipo for search
 	mode					: ('edit' || 'list' || 'tm' || 'related') // configure the sqo for search witch different models of matrix tables into the DDBB
@@ -59,6 +85,9 @@
 	parsed					: (true || false) // boolean, state of the sqo
 	breakdown				: (true || false)
 	tables					: array // Used in search mode related to limit the tables to search
+*
+* @package Dédalo
+* @subpackage Core
 */
 class search_query_object extends stdClass {
 
@@ -68,157 +97,213 @@ class search_query_object extends stdClass {
 	* CLASS VARS
 	*/
 		/**
-		 * Unique identifier for this search query object.
-		 * Combines section_tipo and other params for query identification. Example: 'oh1_list'.
-		 * @var string|int|null $id
-		 */
+		* Unique identifier for this SQO instance.
+		* Combines section_tipo with other parameters so callers can distinguish
+		* cached or pooled SQOs. Example value: 'oh1_list'.
+		* Optional — null means the query is anonymous.
+		* @var string|int|null $id
+		*/
 		public string|int|null $id = null;
 
 		/**
-		 * Array of section tipos to search within.
-		 * Defines which sections are included in the query scope. Example: ['oh1', 'oh2'].
-		 * @var ?array $section_tipo
-		 */
+		* Section tipos that define the scope of this search.
+		* Each string is a Dédalo ontology tipo (e.g. 'oh1'). The search engine
+		* queries only the matrix rows whose section_tipo is in this list.
+		* Mandatory for any meaningful search; null only before set_section_tipo() is called.
+		* @var ?array $section_tipo
+		*/
 		public ?array $section_tipo = null;
 
 		/**
-		 * Search mode determining which matrix tables and models to query.
-		 * Values: 'edit', 'list', 'tm' (time machine), 'related'. Affects database table selection.
-		 * @var ?string $mode
-		 */
+		* Search mode controlling which matrix table model is targeted.
+		* - 'edit'    : default edit-mode matrix (datos column)
+		* - 'list'    : list-optimised view (may hit a materialized or derived table)
+		* - 'tm'      : time-machine mode — queries the versioned history tables
+		* - 'related' : relation matrix (used for cross-section joins)
+		* Null means the search class picks its own default.
+		* @var ?string $mode
+		*/
 		public ?string $mode = null;
 
 		/**
-		 * Filter object defining search conditions and constraints.
-		 * Contains operator ($and/$or), q (search string), path (component hierarchy), and options.
-		 * @var ?object $filter
-		 */
+		* Filter tree describing the search conditions, modelled on Mango Query.
+		* Top-level key is an operator ('$and' or '$or') mapping to an array of clause
+		* objects. Each clause carries: q (string to match), q_operator, path (component
+		* DDO chain), format, type, lang, and other hints used by conform_filter().
+		* Null means no filter is applied (all records are returned up to the limit).
+		* @var ?object $filter
+		*/
 		public ?object $filter = null;
 
 		/**
-		 * Maximum number of records to return in the result set.
-		 * Can be an integer limit or string for special pagination modes.
-		 * @var int|string|null $limit
-		 */
+		* Maximum number of rows to return.
+		* The string sentinel 'ALL' (or 'all') disables the LIMIT clause in SQL.
+		* Client-supplied values are clamped to DEDALO_SEARCH_CLIENT_MAX_LIMIT by
+		* sanitize_client_sqo(); server-internal builders may use 'ALL' freely.
+		* Empty or non-positive values are coerced to 'ALL' by set_limit().
+		* @var int|string|null $limit
+		*/
 		public int|string|null $limit = null;
 
 		/**
-		 * Number of records to skip before returning results.
-		 * Used for paginated queries to navigate through large datasets.
-		 * @var ?int $offset
-		 */
+		* Number of rows to skip before the first returned row.
+		* Standard SQL OFFSET for pagination. Null means no offset (start from row 1).
+		* @var ?int $offset
+		*/
 		public ?int $offset = null;
 
 		/**
-		 * Total count of matching records (if pre-calculated).
-		 * When null, the total is calculated. When set, skips count query for performance.
-		 * @var ?int $total
-		 */
+		* Pre-calculated total count of matching records.
+		* When null the search engine executes a COUNT query and writes the result back here.
+		* When set to an integer the count query is skipped entirely, which avoids a
+		* potentially expensive second query when the total is already known (e.g. cached).
+		* @var ?int $total
+		*/
 		public ?int $total = null;
 
 		/**
-		 * Whether to execute a parallel count query for full result set size.
-		 * When true, returns both results and total count for pagination.
-		 * @var ?bool $full_count
-		 */
+		* Whether to run a parallel COUNT(*) query alongside the main SELECT.
+		* When true, search writes the row count back into $total so the caller can
+		* render pagination controls without a second round-trip.
+		* (!) After the search executes, this property is overwritten with the integer
+		* count — it no longer holds the original boolean.
+		* @var ?bool $full_count
+		*/
 		public ?bool $full_count = null;
 
 		/**
-		 * Array of columns or components to group results by.
-		 * Used for aggregation queries and counting distinct values.
-		 * @var ?array $group_by
-		 */
+		* Columns or component tipos to group the result by.
+		* Passed as SQL GROUP BY expressions, used for aggregation and value-count queries.
+		* Example: ['section_tipo'] groups the count by section type.
+		* @var ?array $group_by
+		*/
 		public ?array $group_by = null;
 
 		/**
-		 * Array defining result sort order with direction and component paths.
-		 * Each item contains direction (ASC/DESC) and path array for nested sorting.
-		 * @var ?array $order
-		 */
+		* Ordered list of sort directives applied to the result set.
+		* Each item is an object with 'direction' ('ASC'|'DESC') and 'path' (DDO chain
+		* from the root section to the component whose value drives the sort).
+		* Multiple items produce a multi-column ORDER BY clause.
+		* @var ?array $order
+		*/
 		public ?array $order = null;
 
 		/**
-		 * Array of locators to filter results by specific related records.
-		 * Limits results to records matching these section_tipo/component_tipo combinations.
-		 * @var ?array $filter_by_locators
-		 */
+		* Explicit locators (section_tipo + section_id pairs) to filter results by.
+		* When set, the search restricts results to rows matching these specific records,
+		* complementing or replacing the filter tree. Useful for detail fetches and
+		* portal-driven pre-filtered searches.
+		* @var ?array $filter_by_locators
+		*/
 		public ?array $filter_by_locators = null;
 
 		/**
-		 * Logical operator for filter_by_locators conditions. Values: 'OR', 'AND'.
-		 * Determines how multiple locator filters are combined in the WHERE clause.
-		 * @var ?string $filter_by_locators_op
-		 */
+		* Logical operator combining multiple filter_by_locators entries.
+		* Accepted values: 'OR' (match any locator) or 'AND' (match all locators).
+		* Only meaningful when filter_by_locators contains more than one entry.
+		* @var ?string $filter_by_locators_op
+		*/
 		public ?string $filter_by_locators_op = null;
 
 		/**
-		 * Whether to allow sub-select queries by ID for complex filtering.
-		 * Enables optimized nested queries for large dataset filtering.
-		 * @var ?bool $allow_sub_select_by_id
-		 */
+		* Whether to wrap the main WHERE clause in a sub-select keyed by section_id.
+		* The default behaviour (true) wraps the filter in a sub-select so that the outer
+		* query can apply ORDER BY / LIMIT cleanly. Set to false for autocomplete and other
+		* contexts where the sub-select interferes with the query plan.
+		* @var ?bool $allow_sub_select_by_id
+		*/
 		public ?bool $allow_sub_select_by_id = null;
 
 		/**
-		 * Whether to include recursive children in the search results.
-		 * When true, traverses hierarchical relationships to find nested matches.
-		 * @var ?bool $children_recursive
-		 */
+		* Whether to traverse hierarchical relationships recursively to find child nodes.
+		* When true the thesaurus/tree search expands matched terms to include all
+		* descendant nodes. Has no effect outside hierarchical section types.
+		* @var ?bool $children_recursive
+		*/
 		public ?bool $children_recursive = null;
 
 		/**
-		 * Whether to remove DISTINCT from the SQL query for performance.
-		 * When true, may return duplicate records but executes faster.
-		 * @var ?bool $remove_distinct
-		 */
+		* Whether to suppress the DISTINCT clause in the generated SQL.
+		* By default, DISTINCT is added to prevent duplicate section_ids when joins
+		* across related tables can produce multiple rows per record. Set to true in
+		* contexts such as thesaurus search where the same section_id may legitimately
+		* appear more than once (one row per section_tipo variant).
+		* @var ?bool $remove_distinct
+		*/
 		public ?bool $remove_distinct = null;
 
 		/**
-		 * Whether to skip project-based filtering for this query.
-		 * When true, bypasses project access restrictions (admin use only).
-		 * @var ?bool $skip_projects_filter
-		 */
+		* Whether to bypass the per-user project scope filter.
+		* For non-global-admin users, the search engine always appends a WHERE clause that
+		* limits results to the projects the user belongs to. Setting this to true removes
+		* that restriction — required for cross-project lookups such as shared value lists.
+		* (!) This flag is stripped from client-supplied SQOs by sanitize_client_sqo();
+		* it can only be set by trusted server-side code.
+		* @var ?bool $skip_projects_filter
+		*/
 		public ?bool $skip_projects_filter = null;
 
 		/**
-		 * Whether this SQO has been parsed and validated.
-		 * Set to true after filter and paths are processed into SQL-ready format.
-		 * @var ?bool $parsed
-		 */
+		* Whether this SQO has been through the parse/conform pipeline.
+		* False (or null) means the SQO contains only raw client-level path definitions.
+		* True means search::parse_sqo() has already delegated to each component via
+		* conform_filter() / get_search_query() and the SQO is ready for SQL generation.
+		* (!) Client SQOs must never arrive with parsed=true; sanitize_client_sqo() forces
+		* it back to false so the conform pipeline is never skipped.
+		* @var ?bool $parsed
+		*/
 		public ?bool $parsed = null;
 
 		/**
-		 * Whether to include detailed breakdown data in results.
-		 * When true, returns additional metadata about query composition.
-		 * @var ?bool $breakdown
-		 */
+		* Whether to split matching relation locators into individual result rows.
+		* When false (default), each matched section record is returned as one row.
+		* When true, the relations data is expanded so that each matching locator within
+		* a section produces its own row — used in 'related' mode to enumerate individual
+		* audiovisual indexation hits. See search_related::parse_sql_query().
+		* @var ?bool $breakdown
+		*/
 		public ?bool $breakdown = null;
 
 		/**
-		 * Array of database tables to search within.
-		 * Used in 'related' mode to limit which tables are queried.
-		 * @var ?array $tables
-		 */
+		* Explicit list of matrix tables to query in 'related' mode.
+		* When set, overrides the default table list produced by
+		* common::get_matrix_tables_with_relations(). Useful when callers already know
+		* which relation tables are relevant and want to avoid a broader scan.
+		* @var ?array $tables
+		*/
 		public ?array $tables = null;
 
 		/**
-		 * Array of fields/components to return in the result set.
-		 * Defines the SELECT clause columns for efficient data retrieval.
-		 * @var ?array $select
-		 */
+		* Fields or components to include in the SELECT clause.
+		* Each item is a DDO-path object that search::conform_select() resolves to the
+		* appropriate JSONB column. When null, the search returns section_id, section_tipo,
+		* and the full datos row.
+		* @var ?array $select
+		*/
 		public ?array $select = null;
 
 		/**
-		 * Timestamp when this SQO was generated (microseconds).
-		 * Used for performance profiling and query optimization analysis.
-		 * @var ?float $generated_time
-		 */
+		* Microsecond timestamp recording when this SQO was instantiated.
+		* Populated by performance-profiling callers; null in the common case.
+		* @var ?float $generated_time
+		*/
 		public ?float $generated_time = null;
 
 
 
 	/**
 	* __CONSTRUCT
-	* @param object|null $data = null
+	* Hydrates the SQO from an optional stdClass data object (e.g. from json_decode).
+	*
+	* When $data is provided, every property present on it is routed through the
+	* corresponding set_*() method so that type coercions and any setter-level
+	* validation are applied even when the source is a raw decoded object.
+	* Properties with no setter (unexpected keys) will cause a fatal error via
+	* the dynamic method call — callers should sanitize_client_sqo() first for
+	* untrusted input.
+	*
+	* @param ?object $data = null - raw SQO object to hydrate from; null creates an empty SQO
+	* @return void
 	*/
 	public function __construct( ?object $data=null ) {
 
@@ -230,7 +315,7 @@ class search_query_object extends stdClass {
 			// 	return false;
 			// }
 
-		// set all properties
+		// delegate each property to its typed setter
 			foreach ($data as $key => $value) {
 				$method = 'set_'.$key;
 				$this->{$method}($value);
@@ -241,8 +326,10 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_ID
-	* @param string $value like 'oh1_list'
-	* @return bool true
+	* Sets the unique identifier for this SQO.
+	* The id is used by callers to distinguish cached or pooled SQOs (e.g. 'oh1_list').
+	* @param string $value - identifier string, e.g. 'oh1_list'
+	* @return true
 	*/
 	public function set_id(string $value) : true {
 
@@ -255,9 +342,11 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_SECTION_TIPO
-	* Array of one or more values
-	* @param array|string $value like ['oh1'] or 'oh1'
-	* @return bool true
+	* Sets the section scope for this search.
+	* Accepts either an array of tipo strings or a single string, which is
+	* automatically wrapped in an array so downstream code always sees an array.
+	* @param array|string $value - one or more section tipos, e.g. ['oh1'] or 'oh1'
+	* @return true
 	*/
 	public function set_section_tipo(array|string $value) : true {
 
@@ -270,10 +359,12 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_MODE
-	* Used to identify SQO search behavior to follow
-	* Time machine mode ('tm') works different for some methods
-	* @param string $value like 'tm'
-	* @return bool true
+	* Sets the search mode, which selects the matrix table model to query.
+	* Accepted values: 'edit', 'list', 'tm' (time-machine), 'related'.
+	* 'tm' triggers alternative behaviour in several search methods to target
+	* versioned history tables instead of the live matrix.
+	* @param string $value - mode identifier, e.g. 'tm'
+	* @return true
 	*/
 	public function set_mode(string $value) : true {
 
@@ -286,8 +377,14 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_FILTER
-	* Object as Mango Query
-	* @param object $value like
+	* Sets the Mango-Query-style filter tree for this search.
+	* The filter object's top-level key must be an operator ('$and' or '$or') whose
+	* value is an array of clause objects. Each clause must supply at minimum 'q'
+	* (the search string) and 'path' (the DDO chain identifying the component).
+	* Additional clause properties: q_operator, format, use_function, q_split,
+	* unaccent, type, lang, column, tipo, data_path.
+	*
+	* Example:
 	* {
 	*	"$and": [
 	*		{
@@ -307,7 +404,8 @@ class search_query_object extends stdClass {
 	*		}
 	*	]
 	* }
-	* @return bool true
+	* @param object $value - Mango-style filter tree
+	* @return true
 	*/
 	public function set_filter(object $value) : true {
 
@@ -320,8 +418,12 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_SELECT
-	* Array of objects
-	* @param object $value like
+	* Sets the list of DDO-path objects that define the SELECT columns.
+	* Each item in the array is resolved by search::conform_select() to the
+	* appropriate JSONB column for the component model. When omitted, the search
+	* returns section_id, section_tipo, and the full datos blob.
+	*
+	* Example item shape:
 	* [{
 	*    "path": [
 	*        {
@@ -336,7 +438,8 @@ class search_query_object extends stdClass {
 	*    ],
 	*    "type": "jsonb"
 	* }]
-	* @return bool true
+	* @param array $value - array of DDO path objects
+	* @return true
 	*/
 	public function set_select(array $value) : true {
 
@@ -349,8 +452,13 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_LIMIT
-	* @param int|string|null $value like 10
-	* @return bool true
+	* Sets the maximum number of rows to return.
+	* Empty, zero, or negative values are coerced to the string 'ALL', which removes
+	* the LIMIT clause from the generated SQL entirely. Positive integers are cast to int.
+	* Client-supplied values are additionally clamped by sanitize_client_sqo() to
+	* DEDALO_SEARCH_CLIENT_MAX_LIMIT before this setter is called.
+	* @param mixed $value - row limit integer or empty value; no type hint (accepts anything)
+	* @return bool
 	*/
 	public function set_limit($value) : bool {
 
@@ -368,8 +476,10 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_OFFSET
-	* @param int|null $value like 0
-	* @return bool true
+	* Sets the number of rows to skip before returning results (SQL OFFSET).
+	* Null is valid and means no offset is applied.
+	* @param ?int $value - row offset, e.g. 0 for the first page
+	* @return true
 	*/
 	public function set_offset(?int $value) : true {
 
@@ -384,10 +494,12 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_TOTAL
-	* Total records found
-	* Total could be a int or null
-	* @param int|null $value like 0
-	* @return bool true
+	* Sets the pre-known total count of matching records.
+	* When set to an integer, the search engine skips the COUNT query and returns
+	* this value directly, avoiding an extra database round-trip. Set to null to
+	* request a fresh count (the default).
+	* @param ?int $value - pre-calculated count, or null to trigger a live count
+	* @return true
 	*/
 	public function set_total(?int $value) : true {
 
@@ -400,9 +512,13 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_FULL_COUNT
-	* Note that if the request is made it using 'true' value, the sqo->full_count value
-	* will be modified with the result of the records count
-	* @param bool $value
+	* Enables or disables the parallel COUNT(*) query.
+	* When true, the search engine runs a secondary COUNT query alongside the main
+	* SELECT and stores the result back in $total. This allows pagination UIs to
+	* display the total match count without a separate API call.
+	* (!) After the search executes with full_count=true, $full_count is overwritten
+	* with the integer row count — it no longer holds the original boolean value.
+	* @param bool $value - true to request a full count, false to skip it
 	* @return bool
 	*/
 	public function set_full_count( bool $value) : bool {
@@ -415,11 +531,12 @@ class search_query_object extends stdClass {
 
 
 	/**
-	* GROUP_BY
-	* Group the search by any criteria as 'section_tipo'
-	* @param array $value
-	* ['section_tipo']
-	* @return
+	* SET_GROUP_BY
+	* Sets the GROUP BY columns for aggregation queries.
+	* Each element is a column name or component tipo. The most common use is
+	* ['section_tipo'] to count results broken down by section type.
+	* @param array $value - list of column/component identifiers, e.g. ['section_tipo']
+	* @return true
 	*/
 	public function set_group_by(array $value) : true {
 
@@ -432,7 +549,13 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_ORDER
-	* @param array of objects like
+	* Sets the sort directives applied to the result set.
+	* Each element is an object with:
+	*   - 'direction' : 'ASC' or 'DESC'
+	*   - 'path'      : DDO chain from the root section to the component to sort by
+	* Multiple elements produce a multi-column ORDER BY clause; order is preserved.
+	*
+	* Example:
 	* [
 	*    {
 	*        "direction": "DESC",
@@ -446,7 +569,8 @@ class search_query_object extends stdClass {
 	*        ]
 	*    }
 	* ]
-	* @return bool true
+	* @param array $value - array of sort-directive objects
+	* @return true
 	*/
 	public function set_order(array $value) : true {
 
@@ -458,13 +582,13 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_FILTER_BY_LOCATORS
-	* Allow to search directly with one or more locator values(section_tipo, section_id, etc.)
-	* @param array|null $value like
-	* [{
-	*		"section_tipo" : "rsc35"
-	*		"section_id" : "4"
-	*  }]
-	* @return bool true
+	* Sets an explicit list of locators to restrict the result set.
+	* Each locator object identifies a specific record via section_tipo and section_id
+	* (and optionally component_tipo / component_id). The search engine generates a
+	* WHERE clause that matches only these records, complementing or replacing the
+	* filter tree. Useful for portals that pre-load a fixed record set.
+	* @param ?array $value - array of locator objects, e.g. [{"section_tipo":"rsc35","section_id":"4"}], or null to clear
+	* @return true
 	*/
 	public function set_filter_by_locators( ?array $value ) : true {
 
@@ -477,8 +601,11 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_FILTER_BY_LOCATORS_OP
-	* @param string $value OR, AND
-	* @return bool true
+	* Sets the logical operator that combines multiple filter_by_locators entries.
+	* 'OR'  — result must match at least one locator (union).
+	* 'AND' — result must match all locators simultaneously (intersection).
+	* @param string $value - 'OR' or 'AND'
+	* @return true
 	*/
 	public function set_filter_by_locators_op( string $value ) : true {
 
@@ -491,11 +618,14 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_ALLOW_SUB_SELECT_BY_ID
-	* Allow / disallow the default sql query window created with selected ids for speed
-	* Sometimes, the default behavior (true) interferes with some search calls like
-	* in autocomplete cases
-	* @param bool $value
-	* @return bool true
+	* Controls whether the search wraps its WHERE clause in a sub-select by section_id.
+	* The default (true) enables a sub-select that lets ORDER BY and LIMIT operate on
+	* the full filtered ID list before the outer query fetches datos. This is the
+	* correct behaviour for paginated list views.
+	* Set to false for autocomplete and similar contexts where the sub-select confuses
+	* the planner or conflicts with other join conditions.
+	* @param bool $value - true to enable (default), false to disable
+	* @return true
 	*/
 	public function set_allow_sub_select_by_id(bool $value) : true {
 
@@ -508,9 +638,12 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_CHILDREN_RECURSIVE
-	* Allow / disallow the default SQL query to get children of the main search
-	* @param bool $value
-	* @return bool true
+	* Controls recursive descendant expansion for hierarchical searches.
+	* When true, a thesaurus or tree-structured search expands each matched term to
+	* include all of its child nodes (recursively). Has no effect when the target
+	* section type is not hierarchical.
+	* @param bool $value - true to recurse into children, false to match only the exact node
+	* @return true
 	*/
 	public function set_children_recursive(bool $value) : true {
 
@@ -522,12 +655,15 @@ class search_query_object extends stdClass {
 
 
 	/**
-	* SET_REMOVE_DISTINC
-	* By default, distinct clause is set in the search query to prevent duplicates on joins
-	* In some context (thesaurus search for example) we want "duplicate section_id's" because
-	* search is made it against various section tipo
-	* @param bool $value
-	* @return bool true
+	* SET_REMOVE_DISTINCT
+	* Controls whether the DISTINCT keyword is emitted in the generated SQL.
+	* By default DISTINCT is included to prevent duplicate section_ids when joins
+	* across related tables produce multiple rows for the same record.
+	* Set to true in contexts such as thesaurus search where the same section_id
+	* may legitimately appear multiple times (once per section_tipo variant) and
+	* collapsing duplicates would discard valid rows.
+	* @param bool $value - true to remove DISTINCT, false to keep it (default)
+	* @return true
 	*/
 	public function set_remove_distinct(bool $value) : true {
 
@@ -540,11 +676,16 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_SKIP_PROJECTS_FILTER
-	* By default, for non global administrators, a fixed filter y applied to all search using
-	* the user projects value. Sometimes, is required to remove this filter to allow access
-	* transversal data like common value lists etc.
-	* @param bool $value
-	* @return bool true
+	* Controls whether the per-user project scope filter is applied.
+	* For non-global-admin users the search engine always appends a WHERE clause
+	* that restricts results to the projects the user belongs to (enforced in
+	* search::set_up()). Setting this to true removes that restriction, which is
+	* necessary for cross-project lookups such as shared value lists and common
+	* thesaurus nodes.
+	* (!) This flag is stripped from untrusted client SQOs by sanitize_client_sqo()
+	* and may only be set by trusted server-side code.
+	* @param bool $value - true to bypass the project filter, false to enforce it (default)
+	* @return true
 	*/
 	public function set_skip_projects_filter(bool $value) : true {
 
@@ -557,14 +698,18 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_PARSED
-	* Mark the object status as parsed. Note that SQO have two moments:
-	* 1 - Base object with basic path definitions
-	* 2 - Parsed object with resolved component paths and component specific properties
-	* When SQO is passed to the search class to exec a DDBB query, the object elements are passed
-	* to the respective components to parse the final usable object
-	* @see search.parse_sql_query
-	* @param bool $value
-	* @return bool true
+	* Marks the SQO as having completed the parse/conform pipeline.
+	* Two lifecycle states exist:
+	*  1. Un-parsed (false/null): raw client-level path definitions only.
+	*  2. Parsed (true): search::parse_sqo() has delegated to each component's
+	*     conform_filter() and get_search_query() methods, which have injected
+	*     type-specific SQL fragments (sentence, params, column_sql, etc.).
+	*     Only a parsed SQO should be passed to search::parse_sql_query().
+	* (!) Client-supplied SQOs must never arrive with parsed=true; sanitize_client_sqo()
+	* forces this back to false so the conform pipeline cannot be bypassed.
+	* @see search::parse_sql_query
+	* @param bool $value - true once the SQO has been through parse_sqo()
+	* @return true
 	*/
 	public function set_parsed(bool $value) : true {
 
@@ -577,16 +722,16 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_BREAKDOWN
-	* Breakdowns the relations data into rows (split matching locators as rows).
-	* If the property is set in true:
-	* use the relations data to breakdown the data into rows with the match search.
-	* If the property is set as false:
-	* the result will be the section that match
-	* By default is false
-	* Used in search related to split the locators than match the search criteria (as indexations of audiovisual)
-	* @see search_related.parse_sql_query
-	* @param bool $value
-	* @return bool true
+	* Controls whether matching relation locators are expanded into individual rows.
+	* When false (default), each matched section record is returned as a single row.
+	* When true, the relations column is exploded so that each locator within a section
+	* that individually satisfies the filter produces its own result row. Used in
+	* 'related' mode to enumerate individual audiovisual indexation hits (e.g. listing
+	* every timecode segment that references a specific person), rather than just the
+	* parent section that contains them.
+	* @see search_related::parse_sql_query
+	* @param bool $value - true to expand locators into rows, false for section-level results
+	* @return true
 	*/
 	public function set_breakdown(bool $value) : true {
 
@@ -599,11 +744,13 @@ class search_query_object extends stdClass {
 
 	/**
 	* SET_TABLES
-	* List of tables to search.
-	* Used in search related to limit the tables to search.
-	* Overwrites the default value 'common::get_matrix_tables_with_relations()'
-	* @param array $value
-	* @return bool true
+	* Sets an explicit list of matrix tables to query in 'related' mode.
+	* When provided, overrides the default table list returned by
+	* common::get_matrix_tables_with_relations(). Use this when the caller already
+	* knows which relation tables are relevant so the engine avoids scanning tables
+	* that cannot contain matching relations.
+	* @param array $value - list of fully-qualified matrix table names
+	* @return true
 	*/
 	public function set_tables(array $value) : true {
 
@@ -615,9 +762,14 @@ class search_query_object extends stdClass {
 
 
 	/**
-	* GET METHODS
-	* By accessors. When property exits, return property value, else return null
-	* @param string $name
+	* __GET
+	* Magic property accessor — returns the property value when it exists, null otherwise.
+	* Used because search_query_object extends stdClass and components inject ad-hoc
+	* properties (e.g. 'sentence', 'params', 'column_sql') during the conform pipeline.
+	* Accessing an undefined property logs a DEBUG message instead of raising a PHP warning,
+	* preventing noisy output when callers probe optional SQO fields.
+	* @param string $name - property name to read
+	* @return mixed - property value, or null if the property is not set
 	*/
 	final public function __get(string $name) : mixed {
 
@@ -643,25 +795,41 @@ class search_query_object extends stdClass {
 
 	/**
 	* SANITIZE_CLIENT_SQO
-	* Scrubs a client-supplied (json_decode'd) SQO before it is trusted by the search
-	* pipeline. The HTTP API is the only untrusted SQO source; server-internal builders
-	* construct a search_query_object and call search directly, so they bypass this gate.
+	* Security gate that scrubs an untrusted client-supplied SQO before it enters
+	* the search pipeline.
 	*
-	* It removes server-only fields that, if supplied by a client, would reach raw SQL
-	* without going through the component conform pipeline:
-	*  - sentence / params : pre-built SQL fragment + bound values (always regenerated)
-	*  - column_sql        : trusted server-built ORDER fragment (see trait.order.php)
-	*  - table / table_alias : server-computed in conform_filter
-	* It also strips client-supplied ACL/control flags that would weaken access control
-	* (skip_projects_filter, skip_duplicated, include_negative).
-	* It forces parsed=false (a client must never be able to skip parse_sqo) and
-	* coerces offset/total to safe numeric types. The limit is clamped to
-	* DEDALO_SEARCH_CLIENT_MAX_LIMIT (the 'all' sentinel and out-of-range values are
-	* coerced to the ceiling) so untrusted clients cannot request unbounded result sets.
+	* Only client SQOs arriving over HTTP need sanitization; server-internal builders
+	* that construct a search_query_object directly and call search::search() are
+	* trusted and bypass this gate entirely.
 	*
-	* @param mixed $sqo
-	* 	Raw SQO (object) or any other value (passed through untouched)
-	* @return mixed
+	* What this method strips and why:
+	*  - sentence / params     : pre-built SQL fragment + bound values. These are always
+	*                            regenerated server-side; a client value would reach raw
+	*                            SQL without going through the component conform pipeline.
+	*  - column_sql            : trusted server-built ORDER fragment (see trait.order.php);
+	*                            must not be injectable by the client.
+	*  - table / table_alias   : server-computed identifiers set during conform_filter();
+	*                            client values would bypass that computation.
+	*  - skip_projects_filter  : disables the per-user project scope WHERE filter; only
+	*                            server-side code may legitimately set this.
+	*  - skip_duplicated       : valid only inside the component '!!' duplicated pipeline;
+	*                            a client value silently drops sibling filters.
+	*  - include_negative      : currently a search instance property (not read from the SQO);
+	*                            stripped defensively against future regressions.
+	*
+	* After stripping, the method:
+	*  - Forces parsed=false so the component conform pipeline is never skipped.
+	*  - Casts offset and total to safe integer types (the typed setters are not applied
+	*    to a raw stdClass decoded from JSON).
+	*  - Clamps limit to DEDALO_SEARCH_CLIENT_MAX_LIMIT (default 1000); the 'all'/'ALL'
+	*    sentinel and out-of-range values are coerced to the ceiling so untrusted clients
+	*    cannot request unbounded result sets.
+	*
+	* Non-object values (e.g. null, a string) are returned untouched — the caller is
+	* responsible for rejecting unexpected types after the gate.
+	*
+	* @param mixed $sqo - raw SQO object (from json_decode) or any other value
+	* @return mixed - the sanitized SQO object, or the original value unchanged if not an object
 	*/
 	public static function sanitize_client_sqo( mixed $sqo ) : mixed {
 
@@ -720,9 +888,13 @@ class search_query_object extends stdClass {
 
 	/**
 	* STRIP_KEYS_RECURSIVE
-	* Recursively unset the given keys from every object found in the node tree.
-	* @param mixed $node
-	* @param array $keys
+	* Recursively removes the specified property keys from every object found in
+	* the node tree rooted at $node.
+	* Traverses both object properties and array elements so that nested filter
+	* clauses (which may carry per-clause 'table' or 'sentence' fields injected
+	* by a previous server-side parse) are also cleaned.
+	* @param mixed $node - root of the tree to sanitize (object, array, or scalar)
+	* @param array $keys - property names to unset wherever they appear
 	* @return void
 	*/
 	private static function strip_keys_recursive( mixed $node, array $keys ) : void {

@@ -6,17 +6,33 @@
  * section that extends individual data items with frame records
  * (uncertainty, qualifiers, contextual information).
  *
+ * Used by component_common (via `use dataframe_common`) to provide every main
+ * component with the full set of frame reading, writing, export, import, and
+ * diffusion helpers without duplicating the pairing logic.
+ *
  * Pairing contract (see docs/core/components/component_dataframe.md):
  * - The pairing key is the main data item's stable counter `id` (id_key),
  *   for relation and literal components alike. Never an array index.
- * - Dataframe locators carry the positive marker type=DEDALO_RELATION_TYPE_DATAFRAME.
+ * - Dataframe locators carry the positive marker type=DEDALO_RELATION_TYPE_DATAFRAME
+ *   (constant value 'dd490', defined in core/base/dd_tipos.php).
  * - Match predicate: (type, from_component_tipo, main_component_tipo, id_key)
  * - Legacy (pre-migration) locators carry section_id_key/section_tipo_key and
- *   no type: they are dual-read until the data migration has run.
+ *   no type: they are dual-read until the dataframe_v7_migration update runs.
  *
- * Usage:
- * - Component declares 'dataframe' property in ontology with component_tipo
- * - Frame data access goes through build_dataframe_caller / get_dataframe_instance
+ * Methods grouped by responsibility:
+ * - Detection / matching: is_dataframe_entry(), dataframe_entry_matches()
+ * - Instance construction: build_dataframe_caller(), get_dataframe_instance()
+ * - Data access: get_item_dataframe_data(), get_dataframe_component()
+ * - Ontology helpers: get_dataframe_tipo(), get_dataframe_model(), has_dataframe()
+ * - Cascade delete: get_dataframe_delete_policy(), remove_dataframe_data_by_id()
+ * - JSON controller helper: build_dataframe_subdatum()
+ * - Export/import: get_export_dataframe_data(), import_dataframe_data()
+ * - Diffusion: get_diffusion_data_with_dataframe()
+ * - Deprecated context-keyed methods: get_data_by_context(), add_value_with_context(),
+ *   remove_by_context(), get_value_by_context(), update_value_by_context()
+ *
+ * @package Dédalo
+ * @subpackage Core
  */
 trait dataframe_common {
 
@@ -26,10 +42,14 @@ trait dataframe_common {
 	 * IS_DATAFRAME_ENTRY
 	 * Positive detection of dataframe pairing locators, type-first with a
 	 * legacy shape fallback (pre-migration data has no `type`).
-	 * Replaces shape-sniffing such as `property_exists($el,'iri')` or
-	 * model-name lists in Time Machine filtering.
-	 * @param mixed $el
-	 * @return bool
+	 *
+	 * Replaces ad-hoc shape-sniffing (e.g. `property_exists($el,'iri')` or
+	 * model-name allow-lists in Time Machine filtering) with a single gate.
+	 * Call this before any match predicate so that non-frame objects in the
+	 * mixed `relations` bag (portal locators, IRI locators, …) are skipped
+	 * cheaply without examining their full structure.
+	 * @param mixed $el - candidate element from a component's data/relations array
+	 * @return bool - true when $el is a frame pairing locator (unified or legacy)
 	 */
 	public static function is_dataframe_entry( mixed $el ) : bool {
 
@@ -51,10 +71,19 @@ trait dataframe_common {
 	 * DATAFRAME_ENTRY_MATCHES
 	 * Central match predicate between a dataframe locator and a caller
 	 * context, dual-reading new (id_key) and legacy (section_id_key) shapes.
-	 * @param mixed $el - candidate dataframe locator
-	 * @param object $caller_dataframe - dataframe_caller or legacy stdClass
-	 * @param string|null $from_component_tipo - the component_dataframe tipo (slot), when known
-	 * @return bool
+	 *
+	 * Enforces the four-part match contract:
+	 *   1. is_dataframe_entry() passes (positive marker or legacy shape).
+	 *   2. from_component_tipo matches the slot, when the caller supplies one.
+	 *   3. main_component_tipo identifies the same main component as the caller.
+	 *   4. id_key (or legacy section_id_key) is the same item id (int comparison).
+	 * A fifth legacy-only consistency check on section_tipo_key is applied only
+	 * when both sides carry it (pre-migration data may store the frame target
+	 * section there instead of the host section).
+	 * @param mixed $el - candidate dataframe locator from a component's relations bag
+	 * @param object $caller_dataframe - dataframe_caller DTO or legacy stdClass
+	 * @param string|null $from_component_tipo = null - the component_dataframe slot tipo; skips slot check when null
+	 * @return bool - true when $el belongs to the caller's item and slot
 	 */
 	public static function dataframe_entry_matches( mixed $el, object $caller_dataframe, ?string $from_component_tipo=null ) : bool {
 
@@ -95,10 +124,15 @@ trait dataframe_common {
 
 	/**
 	 * BUILD_DATAFRAME_CALLER
-	 * Builds the typed caller context pairing a component_dataframe with
-	 * one data item of this (main) component.
-	 * @param int $item_id - the stable `id` of the main data item
-	 * @return dataframe_caller
+	 * Builds the typed dataframe_caller DTO that pairs a component_dataframe
+	 * instance with exactly one data item of this (main) component.
+	 *
+	 * Convenience factory: forwards this component's own section_tipo, section_id,
+	 * and tipo into the dataframe_caller constructor so callers don't have to
+	 * assemble the DTO manually. Use this whenever building a paired
+	 * component_dataframe instance from inside a main component method.
+	 * @param int $item_id - the stable `id` of the main data item (>= 1, server-minted)
+	 * @return dataframe_caller - validated DTO ready to pass as caller_dataframe
 	 */
 	public function build_dataframe_caller( int $item_id ) : dataframe_caller {
 
@@ -117,11 +151,21 @@ trait dataframe_common {
 	 * Builds a component_dataframe instance paired with one data item of
 	 * this (main) component. Single construction path replacing hand-rolled
 	 * component_common::get_instance calls with ad-hoc stdClass callers.
-	 * @param int $item_id - the stable `id` of the main data item
-	 * @param string|null $dataframe_tipo - explicit dataframe slot tipo; resolved from ontology/RQO when null
-	 * @param string $mode = 'list'
-	 * @param string $lang = DEDALO_DATA_NOLAN
-	 * @return component_common|null
+	 *
+	 * Resolution order for the slot tipo:
+	 *   1. $dataframe_tipo argument (explicit, when provided).
+	 *   2. get_dataframe_tipo() — ontology properties->dataframe->component_tipo.
+	 *   3. get_dataframe_ddo() — first ddo in the RQO whose model is component_dataframe.
+	 * Returns null when no slot tipo can be resolved or the model cannot be found.
+	 *
+	 * The returned instance is caller-aware: its get_data() returns only the
+	 * locators paired with $item_id (filtered via the match predicate). Use
+	 * get_dataframe_component() instead when caller-less full-slot access is needed.
+	 * @param int $item_id - the stable `id` of the main data item (>= 1)
+	 * @param string|null $dataframe_tipo = null - explicit slot tipo; resolved automatically when null
+	 * @param string $mode = 'list' - component mode passed to get_instance
+	 * @param string $lang = DEDALO_DATA_NOLAN - language code; dataframe slots are non-translatable, so lg-nolan is the default
+	 * @return component_common|null - null when the slot cannot be resolved or the model is invalid
 	 */
 	public function get_dataframe_instance( int $item_id, ?string $dataframe_tipo=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN ) : ?component_common {
 
@@ -168,9 +212,15 @@ trait dataframe_common {
 	 * GET_ITEM_DATAFRAME_DATA
 	 * Returns the dataframe locators paired with one data item of this
 	 * (main) component, or null when none exist.
-	 * @param int $item_id - the stable `id` of the main data item
-	 * @param string|null $dataframe_tipo - explicit dataframe slot tipo
-	 * @return array|null
+	 *
+	 * Thin wrapper: builds the caller-aware component_dataframe instance and
+	 * calls its get_data(). The result is the filtered subset of the slot's
+	 * relations bag that belongs to $item_id — not the full slot data.
+	 * Returns null both when the slot cannot be resolved and when the item
+	 * genuinely has no frames yet.
+	 * @param int $item_id - the stable `id` of the main data item (>= 1)
+	 * @param string|null $dataframe_tipo = null - explicit slot tipo; resolved automatically when null
+	 * @return array|null - frame locator objects, or null when there are none
 	 */
 	public function get_item_dataframe_data( int $item_id, ?string $dataframe_tipo=null ) : ?array {
 
@@ -190,13 +240,18 @@ trait dataframe_common {
 	 * GET_DATAFRAME_DELETE_POLICY
 	 * Reads the frame target record policy from this (main) component's
 	 * ontology properties: properties->dataframe->delete_policy
+	 *
 	 * - 'unlink' (default): the cascade only removes the pairing locators;
 	 *   the frame target records survive (time machine renders past states)
 	 *   and are reclaimed by the dataframe GC maintenance task.
 	 * - 'delete_target': for frame-private sections where an unlinked record
 	 *   is meaningless, the cascade also soft-deletes the unlinked target
-	 *   records (sections delete_data mode, recoverable from time machine).
-	 * @return string 'unlink' | 'delete_target'
+	 *   records via sections::delete() in 'delete_data' mode (recoverable
+	 *   from time machine).
+	 *
+	 * Any value other than the literal string 'delete_target' is treated as
+	 * 'unlink' (fail-safe default: never silently destroys data).
+	 * @return string - 'unlink' | 'delete_target'
 	 */
 	public function get_dataframe_delete_policy() : string {
 
@@ -217,14 +272,22 @@ trait dataframe_common {
 	 * Removes all dataframe locators paired with one data item of this
 	 * (main) component, across every dataframe slot declared in the RQO.
 	 * This is the server-authoritative cascade fired when the main item is
-	 * removed (single-writer rule).
+	 * removed (single-writer rule): the main component's update_data_value()
+	 * calls this before saving.
+	 *
 	 * Frame TARGET records follow the delete_policy (see
-	 * get_dataframe_delete_policy): kept by default, soft-deleted when the
-	 * ontology opts in with 'delete_target'.
-	 * Time machine is suppressed for the dataframe save: the main component
-	 * captures the full state in its own TM row.
-	 * @param int $item_id - the stable `id` of the removed main data item
-	 * @return bool
+	 * get_dataframe_delete_policy): kept by default ('unlink'), soft-deleted
+	 * when the ontology opts in with 'delete_target'. Target records are
+	 * collected before the slot is cleared so their identifiers are still
+	 * available when the delete_target branch executes.
+	 *
+	 * Time machine is suppressed (REL-01 pattern): the main component
+	 * captures the full state — values + frame locators — in its own TM row,
+	 * so a separate dataframe TM row would be redundant and would break TM
+	 * restore ordering. The static $save_tm flag is restored in a `finally`
+	 * block to ensure it is never left disabled if set_data() or save() throws.
+	 * @param int $item_id - the stable `id` of the removed main data item (>= 1)
+	 * @return bool - always true; per-target soft-delete failures are logged but not propagated
 	 */
 	public function remove_dataframe_data_by_id( int $item_id ) : bool {
 
@@ -277,7 +340,8 @@ trait dataframe_common {
 				$dataframe_component->set_data( null );
 				$dataframe_component->save();
 			} finally {
-				// back to set time machine for the next savings.
+				// restore TM flag. Undo the suppression set above, whether or not
+				// set_data/save threw, so subsequent saves in this request remain captured.
 				tm_record::$save_tm = $prev_save_tm;
 			}
 		}
@@ -325,12 +389,20 @@ trait dataframe_common {
 	 * component's data items, and exposes the component counter so edit
 	 * views can build the provisional render context (counter+1) for new
 	 * blank rows.
+	 *
 	 * Pseudo-locators carry the item id as section_id: the unified pairing
 	 * key for literal components (see common::get_subdatum dataframe branch).
-	 * @param array|null $value - the controller's resolved data items
-	 * @param string $mode - controller mode ('edit'|'list'|'tm'|'search'|...)
-	 * @return object|null - {context: [], data: [], counter: int},
-	 * 	or null when properties->has_dataframe is not true or mode is 'search'
+	 * When the component has no saved data yet, a single dummy locator with
+	 * section_id = counter+1 is used so the client receives context for a
+	 * new first row.
+	 *
+	 * Returns null in two cases:
+	 *   - The component's ontology properties->has_dataframe is not true.
+	 *   - Mode is 'search': frame subdatum is never built for search renders.
+	 * @param array|null $value - the controller's resolved data items (objects with `id`)
+	 * @param string $mode - controller mode ('edit'|'list'|'tm'|'search'|…)
+	 * @return object|null - stdClass {context: array, data: array, counter: int},
+	 *   or null when has_dataframe is not true or mode is 'search'
 	 */
 	public function build_dataframe_subdatum( ?array $value, string $mode ) : ?object {
 
@@ -385,9 +457,19 @@ trait dataframe_common {
 	 * GET_EXPORT_DATAFRAME_DATA
 	 * Collects every dataframe locator paired with this (main) component's
 	 * data items, across all its dataframe slots. Used by the raw export
-	 * (dedalo_raw) to ship the frames alongside the dato:
-	 * {"dedalo_data": {"dato": [...], "dataframe": [...]}}
-	 * @return array|null - frame locators, or null when none
+	 * (dedalo_raw) to ship the frames alongside the dato in the dedalo_data
+	 * wrapper:
+	 *   {"dedalo_data": {"dato": [...], "dataframe": [...]}}
+	 *
+	 * Why caller-less: the export collects ALL frames for this main component
+	 * (all item ids) from the raw slot storage rather than filtering by a
+	 * single caller. get_data_unfiltered() is called on an uncached (no caller)
+	 * instance, then each entry is checked against main_component_tipo to
+	 * skip frames belonging to other main components sharing the slot.
+	 *
+	 * Returns null for component_dataframe itself (it exports its own locators
+	 * as regular dato) and when no frames are found.
+	 * @return array|null - frame locator objects (stdClass), or null when none
 	 */
 	public function get_export_dataframe_data() : ?array {
 
@@ -451,12 +533,24 @@ trait dataframe_common {
 	 * Writes imported frame locators pairing this (main) component's items,
 	 * replacing this component's previous frames in each slot and preserving
 	 * the frames of other main components sharing the slot.
-	 * Entries are normalized to the unified contract (type + id_key, legacy
-	 * aliases kept until the data migration runs). Frames without resolvable
-	 * pairing key or slot are skipped with a log.
-	 * Time machine is suppressed: the main component save captures the state.
-	 * @param array $frame_locators
-	 * @return bool
+	 *
+	 * Called by the CSV import tool after saving the main component's dato,
+	 * using the frame locators extracted from the dedalo_data wrapper
+	 * {"dedalo_data": {"dataframe": [...]}}.
+	 *
+	 * Steps:
+	 *   1. Group incoming locators by slot (from_component_tipo).
+	 *   2. Normalize each entry to the unified contract (type + id_key; legacy
+	 *      aliases section_id_key/section_tipo_key kept in sync for dual-read).
+	 *   3. For each slot: load the full (uncached) slot data, keep entries
+	 *      belonging to other main components, merge in the imported frames,
+	 *      and save. Entries without a resolvable pairing key or slot are
+	 *      skipped with a logger::WARNING.
+	 *
+	 * Time machine is suppressed (REL-01 pattern): the main component's import
+	 * save already captures the full state in its TM row.
+	 * @param array $frame_locators - array of stdClass frame locator objects from the import envelope
+	 * @return bool - false when at least one slot save fails; true on full success or no frames
 	 */
 	public function import_dataframe_data( array $frame_locators ) : bool {
 
@@ -549,14 +643,21 @@ trait dataframe_common {
 	/**
 	 * GET_DIFFUSION_DATA_WITH_DATAFRAME
 	 * Opt-in diffusion resolver: a diffusion ddo declaring
-	 * 	"fn": "get_diffusion_data_with_dataframe"
+	 *   "fn": "get_diffusion_data_with_dataframe"
 	 * publishes this component's data items with their paired frame locators
-	 * attached as a `dataframe` property, joined by the item id. Items
-	 * without frames are published unchanged; stored data is never mutated
-	 * (items are cloned).
-	 * @param object $ddo
-	 * @param string|null $diffusion_element_tipo = null
-	 * @return array - data items (consumed via diffusion_data_object->set_value)
+	 * attached as a `dataframe` property, joined by the item id.
+	 *
+	 * Items without frames are published unchanged. Stored data is never
+	 * mutated: each item object is cloned before the `dataframe` property is
+	 * attached.
+	 *
+	 * The optional $ddo->data_slice object ({offset: int, length: int}) lets
+	 * a diffusion pipeline paginate large dato arrays without building the
+	 * full set; it is applied before the per-item frame resolution.
+	 * @param object $ddo - diffusion ddo; may carry a data_slice property
+	 * @param string|null $diffusion_element_tipo = null - unused; kept for the standard diffusion fn signature
+	 * @return array - data item clones (possibly with added `dataframe` property),
+	 *   consumed by the chain processor via diffusion_data_object->set_value()
 	 */
 	public function get_diffusion_data_with_dataframe( object $ddo, ?string $diffusion_element_tipo=null ) : array {
 
@@ -592,9 +693,16 @@ trait dataframe_common {
 
 	/**
 	 * GET_DATAFRAME_COMPONENT
-	 * Get the linked dataframe component instance (no caller pairing).
-	 * For item-paired access use get_dataframe_instance().
-	 * @return component_common|null
+	 * Returns the linked component_dataframe slot instance WITHOUT a caller
+	 * pairing, so its get_data() returns the full unfiltered slot content.
+	 *
+	 * Use this when you need slot-level access (e.g. maintenance, migration,
+	 * bulk frame reads). For item-scoped access — where get_data() should
+	 * return only the frames for a specific data item — use
+	 * get_dataframe_instance($item_id) instead.
+	 *
+	 * Uses this component's current mode and lang (inherits the caller context).
+	 * @return component_common|null - null when no dataframe tipo is declared in ontology
 	 */
 	public function get_dataframe_component() : ?component_common {
 		$dataframe_tipo = $this->get_dataframe_tipo();
@@ -616,8 +724,14 @@ trait dataframe_common {
 
 	/**
 	 * GET_DATAFRAME_TIPO
-	 * Get the dataframe component tipo from ontology properties
-	 * @return string|null
+	 * Returns the component_dataframe slot tipo declared on this main
+	 * component's ontology node: properties->dataframe->component_tipo.
+	 *
+	 * Returns null when: the ontology node has no properties, the properties
+	 * object has no `dataframe` key, `component_tipo` is absent, or its value
+	 * is falsy (false, null, empty string). Any falsy value is treated as
+	 * "no dataframe declared" to guard against partial or malformed ontology data.
+	 * @return string|null - the slot tipo (e.g. 'oh115'), or null when not configured
 	 */
 	public function get_dataframe_tipo() : ?string {
 		$ontology_node = ontology_node::get_instance($this->tipo);
@@ -647,8 +761,14 @@ trait dataframe_common {
 
 	/**
 	 * GET_DATAFRAME_MODEL
-	 * Get the model of the dataframe component
-	 * @return string|null
+	 * Returns the ontology model name of the dataframe slot component,
+	 * resolved through get_dataframe_tipo() -> ontology_node::get_model_by_tipo().
+	 *
+	 * Expected to return 'component_dataframe' when the ontology is correctly
+	 * wired; callers in get_export_dataframe_data() and import_dataframe_data()
+	 * guard against non-dataframe models. Returns null when no slot tipo is
+	 * declared or the model cannot be resolved.
+	 * @return string|null - the model name (e.g. 'component_dataframe'), or null
 	 */
 	public function get_dataframe_model() : ?string {
 		$dataframe_tipo = $this->get_dataframe_tipo();
@@ -664,8 +784,13 @@ trait dataframe_common {
 
 	/**
 	 * HAS_DATAFRAME
-	 * Check if this component has a linked dataframe
-	 * @return bool
+	 * Returns true when this component's ontology declares a dataframe slot.
+	 *
+	 * Convenience predicate over get_dataframe_tipo(): checks that a non-empty
+	 * slot tipo is present in the node's properties->dataframe->component_tipo.
+	 * Use before any frame operation when you want to skip work cheaply for
+	 * components that never host frames.
+	 * @return bool - true when a dataframe slot is configured in the ontology
 	 */
 	public function has_dataframe() : bool {
 		return !empty($this->get_dataframe_tipo());
@@ -674,13 +799,19 @@ trait dataframe_common {
 
 	/**
 	 * GET_DATA_BY_CONTEXT
-	 * Filter data by parent context (section_id_key, section_tipo_key)
-	 * @deprecated Embedded-value mechanism (values stored inside component
-	 * data with context keys). The portal-locator mechanism through
-	 * get_dataframe_instance() is the only documented one.
-	 * @param string $section_tipo_key
-	 * @param int $section_id_key
-	 * @return array|null
+	 * Filters this component's data items by the legacy embedded context keys
+	 * (section_tipo_key + section_id_key) and returns the matching subset.
+	 *
+	 * This was the pre-dataframe mechanism for context-keyed values: instead of
+	 * pairing frame records via locators, values were stored inline inside the
+	 * main component's dato with context properties attached. It survives only
+	 * for backward-compatibility with unmigrated data; all new code should use
+	 * get_dataframe_instance() and the portal-locator mechanism instead.
+	 * @deprecated Superseded by the dataframe locator pairing contract.
+	 *   Use get_dataframe_instance() for item-scoped frame access.
+	 * @param string $section_tipo_key - legacy context tipo key
+	 * @param int $section_id_key - legacy context id key
+	 * @return array|null - filtered data items, or null when the component has no data or no match
 	 */
 	public function get_data_by_context(string $section_tipo_key, int $section_id_key) : ?array {
 		$data = $this->get_data();
@@ -701,12 +832,17 @@ trait dataframe_common {
 
 	/**
 	 * ADD_VALUE_WITH_CONTEXT
-	 * Add a value with context properties
-	 * @deprecated See get_data_by_context note.
-	 * @param mixed $value
-	 * @param string $section_tipo_key
-	 * @param int $section_id_key
-	 * @return bool
+	 * Appends a new data item carrying inline legacy context keys
+	 * (section_tipo_key + section_id_key) to this component's data array.
+	 *
+	 * Part of the pre-dataframe embedded-value mechanism. Retained for
+	 * backward-compatibility; do not use in new code.
+	 * @deprecated Superseded by the dataframe locator pairing contract.
+	 *   Use get_dataframe_instance() and the frame lifecycle instead.
+	 * @param mixed $value - the value payload to embed
+	 * @param string $section_tipo_key - legacy context tipo key
+	 * @param int $section_id_key - legacy context id key
+	 * @return bool - result of set_data()
 	 */
 	public function add_value_with_context($value, string $section_tipo_key, int $section_id_key) : bool {
 		$data = $this->get_data() ?? [];
@@ -724,11 +860,16 @@ trait dataframe_common {
 
 	/**
 	 * REMOVE_BY_CONTEXT
-	 * Remove values by context
-	 * @deprecated See get_data_by_context note.
-	 * @param string $section_tipo_key
-	 * @param int $section_id_key
-	 * @return bool
+	 * Removes all data items that carry the specified legacy context keys
+	 * (section_tipo_key + section_id_key) and saves the remaining data.
+	 *
+	 * Part of the pre-dataframe embedded-value mechanism. Retained for
+	 * backward-compatibility; do not use in new code.
+	 * @deprecated Superseded by the dataframe locator pairing contract.
+	 *   Use remove_dataframe_data_by_id() for item-scoped cascade removal.
+	 * @param string $section_tipo_key - legacy context tipo key to match
+	 * @param int $section_id_key - legacy context id key to match
+	 * @return bool - result of set_data() on the filtered array
 	 */
 	public function remove_by_context(string $section_tipo_key, int $section_id_key) : bool {
 		$data = $this->get_data() ?? [];
@@ -748,11 +889,17 @@ trait dataframe_common {
 
 	/**
 	 * GET_VALUE_BY_CONTEXT
-	 * Get a single value by context
-	 * @deprecated See get_data_by_context note.
-	 * @param string $section_tipo_key
-	 * @param int $section_id_key
-	 * @return mixed|null
+	 * Returns the `value` property of the first data item matching the
+	 * specified legacy context keys (section_tipo_key + section_id_key),
+	 * or null when no matching item is found.
+	 *
+	 * Part of the pre-dataframe embedded-value mechanism. Retained for
+	 * backward-compatibility; do not use in new code.
+	 * @deprecated Superseded by the dataframe locator pairing contract.
+	 *   Use get_item_dataframe_data() for item-scoped frame reads.
+	 * @param string $section_tipo_key - legacy context tipo key
+	 * @param int $section_id_key - legacy context id key
+	 * @return mixed|null - the embedded value, or null when not found
 	 */
 	public function get_value_by_context(string $section_tipo_key, int $section_id_key) {
 		$context_data = $this->get_data_by_context($section_tipo_key, $section_id_key);
@@ -766,12 +913,18 @@ trait dataframe_common {
 
 	/**
 	 * UPDATE_VALUE_BY_CONTEXT
-	 * Update value for a specific context
-	 * @deprecated See get_data_by_context note.
-	 * @param mixed $value
-	 * @param string $section_tipo_key
-	 * @param int $section_id_key
-	 * @return bool
+	 * Updates the `value` property of the first data item matching the
+	 * specified legacy context keys in place; appends a new item if no
+	 * match is found (upsert behaviour via add_value_with_context()).
+	 *
+	 * Part of the pre-dataframe embedded-value mechanism. Retained for
+	 * backward-compatibility; do not use in new code.
+	 * @deprecated Superseded by the dataframe locator pairing contract.
+	 *   Use import_dataframe_data() for import-time frame writes.
+	 * @param mixed $value - the new value to store
+	 * @param string $section_tipo_key - legacy context tipo key to match
+	 * @param int $section_id_key - legacy context id key to match
+	 * @return bool - result of set_data() or add_value_with_context()
 	 */
 	public function update_value_by_context($value, string $section_tipo_key, int $section_id_key) : bool {
 		$data = $this->get_data() ?? [];

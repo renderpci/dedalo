@@ -1,31 +1,43 @@
 <?php declare(strict_types=1);
 /**
-* COMMON
-* TRAIT request_config_v6
+* TRAIT REQUEST_CONFIG_V6
+* V6 request_config parsing strategy for class.common.php.
 *
-* V6 request_config parsing methods.
-* Handles modern ontology-defined request configurations.
+* Implements the modern, ontology-driven approach to building request_config_object
+* instances from the JSON array stored at properties->source->request_config.
+* This is the preferred strategy introduced in Dédalo v6; the legacy v5 path
+* (trait request_config_v5) is kept as a fallback for ontology nodes that have
+* not yet been migrated.
 *
-* RESPONSIBILITIES:
-* - Parse V6 style request_config from properties->source->request_config
-* - Build request_config_object instances with show/search/choose/hide configs
-* - Process SQO (Search Query Object) section_tipos
-* - Handle external API configurations
+* Responsibilities:
+* - Parse each item of the properties->source->request_config array into a
+*   request_config_object (api_engine, type, sqo, show, search, choose, hide).
+* - Resolve sqo->section_tipo: validate tipos against the ontology, convert to
+*   enriched ddo objects (labels, permissions, buttons).
+* - Expand filter_by_list and fixed_filter entries; disable caching when the
+*   result depends on live record data.
+* - Delegate ddo_map processing (validation, enrichment, self-resolution) to
+*   the sibling trait request_config_ddo.
+* - Attach external api_config for non-dedalo api_engine entries.
 *
-* V6 CONFIGURATION STRUCTURE:
-* properties->source->request_config = [
-*   {
-*     "api_engine": "dedalo",
-*     "type": "main",
-*     "sqo": { "section_tipo": [...], "limit": 10 },
-*     "show": { "ddo_map": [...] },
-*     "search": { "ddo_map": [...] },
-*     "choose": { "ddo_map": [...] },
-*     "hide": { "ddo_map": [...] }
-*   }
-* ]
+* V6 configuration shape (stored in the ontology node's properties):
+*   properties->source->request_config = [
+*     {
+*       "api_engine": "dedalo",
+*       "type": "main",
+*       "sqo": { "section_tipo": [...], "limit": 10 },
+*       "show":   { "ddo_map": [...], "sqo_config": { "operator": "$or" } },
+*       "search": { "ddo_map": [...] },
+*       "choose": { "ddo_map": [...] },
+*       "hide":   { "ddo_map": [...] }
+*     }
+*   ]
 *
-* USED BY: get_ar_request_config() in class.common.php
+* Used by: get_ar_request_config() in class.common.php (via `use request_config_v6`).
+* Sibling traits: request_config_utils, request_config_ddo, request_config_v5.
+*
+* @package Dédalo
+* @subpackage Core
 */
 trait request_config_v6 {
 
@@ -33,19 +45,26 @@ trait request_config_v6 {
 
 	/**
 	* BUILD_REQUEST_CONFIG_V6
-	* Parses V6 style request_config from properties
+	* Entry point for the V6 parsing strategy.
 	*
-	* FLOW:
-	* 1. Check request_config exists in properties
-	* 2. Get API request overrides from dd_core_api::$rqo
-	* 3. Iterate through each request_config item
-	* 4. Parse each item into request_config_object
-	* 5. Return array of parsed objects
+	* Iterates over the properties->source->request_config array and delegates
+	* each item to parse_request_config_item(). Returns an array of fully
+	* resolved request_config_object instances ready to be cached and returned
+	* by get_ar_request_config().
 	*
-	* @param object|null $properties Cloned properties object
-	* @param object $context {tipo, section_tipo, section_id, mode, model}
-	* @param object $pagination {offset, limit}
-	* @return array Array of request_config_object instances
+	* Error contract (applied to both the top-level array and each item):
+	* - If the caller's tipo matches the API request source (i.e. this component
+	*   is the direct target of the current request), structural errors throw an
+	*   Exception so the client receives a clear error response.
+	* - Otherwise the bad entry is silently dropped with a collected warning so
+	*   one malformed ontology node cannot break an unrelated render.
+	*
+	* @param object|null $properties - Cloned properties object from the ontology node.
+	* @param object $context - {tipo, section_tipo, section_id, mode, model, use_cache}.
+	* @param object $pagination - {offset, limit} resolved by resolve_pagination_defaults().
+	* @return array - Array of request_config_object instances (may be empty on error).
+	* @throws Exception When request_config is structurally invalid and this tipo is
+	*                   the direct target of the current API request.
 	*/
 	protected function build_request_config_v6(?object $properties, object $context, object $pagination) : array {
 
@@ -114,26 +133,27 @@ trait request_config_v6 {
 
 	/**
 	* PARSE_REQUEST_CONFIG_ITEM
-	* Parses a single request_config item into request_config_object
+	* Parses a single properties->source->request_config item into a request_config_object.
 	*
-	* PROCESSING STEPS:
-	* 1. Create base request_config_object with api_engine and type
-	* 2. Initialize SQO (Search Query Object)
-	* 3. Resolve section_tipo (with validation and ddo building)
-	* 4. Apply pagination overrides
-	* 5. Parse show config (display columns)
-	* 6. Parse search config (search fields)
-	* 7. Parse choose config (autocomplete selection)
-	* 8. Parse hide config (excluded fields)
-	* 9. Resolve external API config if non-dedalo engine
+	* Orchestrates the full resolution pipeline for one config entry:
+	* 1. Instantiate a request_config_object and populate api_engine, type, sqo.
+	* 2. Validate and enrich sqo->section_tipo (ontology check → ddo objects).
+	* 3. Apply pagination overrides from the inbound API request (rqo).
+	* 4. Parse show, search, choose, and hide sub-configs (ddo_map enrichment).
+	* 5. For non-dedalo api_engine entries, attach the external api_config from the
+	*    target section's ontology properties.
 	*
-	* @param object $item_request_config Single config from properties
-	* @param object|null $properties Full properties object
-	* @param object $context
-	* @param object $pagination
-	* @param object|null $requested_source API request source
-	* @param object|null $requested_sqo API request SQO
-	* @return request_config_object|null
+	* Side-effect: may set $context->use_cache = false when resolve_sqo_section_tipo
+	* determines the result depends on live record data (fixed_filter, filter_by_list).
+	*
+	* @param object $item_request_config - A single element of the request_config array.
+	* @param object|null $properties - Full properties object (passed through for context).
+	* @param object $context - {tipo, section_tipo, section_id, mode, model, use_cache}.
+	* @param object $pagination - {offset, limit}.
+	* @param object|null $requested_source - dd_core_api::$rqo->source (may be null).
+	* @param object|null $requested_sqo - dd_core_api::$rqo->sqo (may be null).
+	* @return request_config_object|null - Null is never actually returned by the current
+	*   implementation but is kept in the signature to allow future guard returns.
 	*/
 	protected function parse_request_config_item(
 		object $item_request_config,
@@ -198,24 +218,29 @@ trait request_config_v6 {
 
 	/**
 	* RESOLVE_SQO_SECTION_TIPO
-	* Resolves and validates sqo section_tipo
+	* Validates and enriches the sqo->section_tipo list, then resolves any
+	* filter_by_list and fixed_filter entries on the same sqo.
 	*
-	* FLOW:
-	* 1. Extract section_tipos from sqo or use default
-	* 2. Validate each tipo (must exist in ontology)
-	* 3. Convert to ddo objects with permissions/buttons
-	* 4. Handle filter_by_list (pre-filter dropdowns)
-	* 5. Handle fixed_filter (context-based filters)
+	* The raw section_tipo value from the ontology JSON is an array of source
+	* descriptors (handled by component_relation_common::get_request_config_section_tipo).
+	* Each resolved tipo is validated against the ontology; invalid tipos are
+	* skipped with a warning rather than aborting the whole config. The validated
+	* list is then converted to enriched ddo objects via build_sqo_section_tipo_ddo,
+	* which embeds labels, colors, user permissions, and available buttons.
 	*
-	* FIXED_FILTER SPECIAL CASE:
-	* When fixed_filter is used, result depends on section_id.
-	* Caching is disabled to prevent incorrect cache hits.
+	* Caching implications:
+	* - filter_by_list: values come from live DB queries (list of selectable options).
+	*   The result cannot be cached because the underlying data can change without
+	*   any invalidation signal.
+	* - fixed_filter: the resolved filter depends on section_id (record context).
+	*   Each record may yield a different filter, so caching is also disabled.
+	* Returns true (use_cache) unless either of the above is present.
 	*
-	* @param request_config_object $parsed_item
-	* @param object $item_request_config
-	* @param string $section_tipo
-	* @param int|string|null $section_id
-	* @return bool $use_cache False if result shouldn't be cached
+	* @param request_config_object $parsed_item - The item being built; sqo is mutated in place.
+	* @param object $item_request_config - Raw ontology item (source of filter_by_list/fixed_filter).
+	* @param string $section_tipo - The caller's section tipo (fallback when sqo has no section_tipo).
+	* @param int|string|null $section_id - Current record id, needed for fixed_filter resolution.
+	* @return bool - False when the resolved config must not be stored in the request_config cache.
 	*/
 	protected function resolve_sqo_section_tipo(
 		request_config_object $parsed_item,
@@ -273,22 +298,27 @@ trait request_config_v6 {
 
 	/**
 	* PARSE_SHOW_CONFIG
-	* Parses show configuration for request_config
+	* Resolves the 'show' sub-config of a request_config item.
 	*
-	* The 'show' section defines what columns/fields to display.
+	* The show config controls which columns/fields are rendered in list and grid
+	* views. It is the only mandatory sub-config; if it is absent or empty a
+	* warning is recorded and an empty stdClass is used so downstream code does
+	* not have to null-check.
 	*
-	* FLOW:
-	* 1. Get show object from config (create empty if missing)
-	* 2. Extract section_tipos for ddo context
-	* 3. Get ddo_map (direct or via get_ddo_map reference)
-	* 4. Process ddo_map (validate, enrich, filter)
-	* 5. Build sqo_config with pagination
-	* 6. Update instance pagination limit
+	* ddo_map resolution order:
+	* 1. Use show->ddo_map if explicitly defined.
+	* 2. Fall back to the result of resolve_get_ddo_map (via show->get_ddo_map
+	*    reference or auto-discovery from the section's ontology).
 	*
-	* @param request_config_object $parsed_item
-	* @param object $item_request_config
-	* @param object $context
-	* @param object $pagination
+	* After processing the ddo_map, resolve_show_sqo_config is called to
+	* determine sqo_config (operator, limit, offset). The method also propagates
+	* the resolved limit back to $this->pagination->limit so the JSON controller
+	* can use it for response envelope metadata.
+	*
+	* @param request_config_object $parsed_item - The item being built; show is set in place.
+	* @param object $item_request_config - Raw ontology item.
+	* @param object $context - {tipo, section_tipo, ar_section_tipo, mode, model}.
+	* @param object $pagination - {offset, limit} — limit may be updated as a side-effect.
 	* @return void
 	*/
 	protected function parse_show_config(
@@ -336,21 +366,29 @@ trait request_config_v6 {
 
 	/**
 	* RESOLVE_SHOW_SQO_CONFIG
-	* Resolves sqo_config for show section
+	* Fills or creates the show->sqo_config on the item being built.
 	*
-	* SQO_CONFIG contains search behavior settings:
-	* - operator: '$or' (any filter matches) or '$and' (all must match)
-	* - limit: max records to return
-	* - offset: pagination offset
-	* - full_count: whether to calculate total matching records
+	* sqo_config governs search-execution behaviour for the show view:
+	*   operator   : '$or' (any filter clause matches) or '$and' (all must match).
+	*   limit      : maximum records to return per page.
+	*   offset     : first-record offset for pagination.
+	*   full_count : whether the search layer should also return the total count.
 	*
-	* SECTION SPECIAL CASE:
-	* Sections can have user-specific limits stored in session.
-	* This allows users to change list page size preferences.
+	* Limit resolution follows a deliberate priority chain:
+	* - Sections: the user may have changed the per-page size from the UI; that
+	*   preference is persisted in the session (section::get_session_sqo). The
+	*   session value wins over the ontology-defined limit so the user's choice
+	*   is respected across page reloads.
+	* - Components: the ontology limit is used, but the inbound API request
+	*   (dd_core_api::$rqo->sqo->limit) can override it when the request
+	*   explicitly targets this tipo, allowing the client to page through results.
 	*
-	* @param request_config_object $parsed_item
-	* @param object $context
-	* @param object $pagination
+	* When no sqo_config is present in the raw item, a safe default is built via
+	* build_sqo_config_default using the resolved pagination values.
+	*
+	* @param request_config_object $parsed_item - show->sqo_config is set/mutated in place.
+	* @param object $context - {tipo, model, mode, …}.
+	* @param object $pagination - {offset, limit} from resolve_pagination_defaults().
 	* @return void
 	*/
 	protected function resolve_show_sqo_config(
@@ -399,17 +437,22 @@ trait request_config_v6 {
 
 	/**
 	* PARSE_SEARCH_CONFIG
-	* Parses search configuration for request_config
+	* Resolves the optional 'search' sub-config of a request_config item.
 	*
-	* The 'search' section defines which fields are searchable.
-	* Used by search components to build search forms.
+	* The search config declares which component fields are presented in the
+	* search form and how they map to SQO clauses. It is entirely optional;
+	* when absent, the returned request_config_object has search = null and
+	* the UI omits search controls.
 	*
-	* EXAMPLE: Autocomplete search on hierarchy terms
+	* The ddo_map is resolved with the same get_ddo_map / explicit ddo_map
+	* fallback as parse_show_config. A default sqo_config is created when
+	* the raw item does not define one, ensuring downstream code can always
+	* read search->sqo_config without null-checks.
 	*
-	* @param request_config_object $parsed_item
-	* @param object $item_request_config
-	* @param object $context
-	* @param object $pagination
+	* @param request_config_object $parsed_item - The item being built; search is set in place.
+	* @param object $item_request_config - Raw ontology item.
+	* @param object $context - {tipo, section_tipo, ar_section_tipo, mode, model}.
+	* @param object $pagination - {offset, limit}.
 	* @return void
 	*/
 	protected function parse_search_config(
@@ -454,16 +497,28 @@ trait request_config_v6 {
 
 	/**
 	* PARSE_CHOOSE_CONFIG
-	* Parses choose configuration for request_config
+	* Resolves the optional 'choose' sub-config of a request_config item.
 	*
-	* The 'choose' section defines what fields are shown when
-	* selecting a record in autocomplete components.
+	* The choose config defines the columns shown in the autocomplete result
+	* dropdown when a user picks a related record. It is independent of the
+	* show config so that list columns and selection columns can differ — e.g.
+	* selecting a thesaurus term may display the term label and its parent path,
+	* while the list view shows additional metadata columns.
 	*
-	* EXAMPLE: Selecting a thesaurus term shows term + parents
+	* sqo_config->limit resolution for choose:
+	* When the raw item does not specify choose->sqo_config->limit, the method
+	* falls back to search->sqo_config->limit, then show->sqo_config->limit,
+	* then 25 (the default autocomplete page size). This mirrors the client-side
+	* fallback chain in common.js build_rqo_search so that both sides agree on
+	* the maximum number of results presented during selection.
 	*
-	* @param request_config_object $parsed_item
-	* @param object $item_request_config
-	* @param object $context
+	* (!) 0 is a valid explicit limit (means "no results" / disable autocomplete).
+	*     The isset+empty check must treat 0 as set; the code uses isset() with an
+	*     explicit `=== 0` guard to avoid treating zero as absent.
+	*
+	* @param request_config_object $parsed_item - The item being built; choose is set in place.
+	* @param object $item_request_config - Raw ontology item.
+	* @param object $context - {tipo, section_tipo, ar_section_tipo, mode, model}.
 	* @return void
 	*/
 	protected function parse_choose_config(
@@ -512,14 +567,20 @@ trait request_config_v6 {
 
 	/**
 	* PARSE_HIDE_CONFIG
-	* Parses hide configuration for request_config
+	* Resolves the optional 'hide' sub-config of a request_config item.
 	*
-	* The 'hide' section defines fields to exclude from display.
-	* Useful for hiding internal fields or sensitive data.
+	* The hide config lists ddo entries that should be excluded from the rendered
+	* output even if they would otherwise appear in the show config. Common uses
+	* are suppressing internal-only fields, private metadata, or components whose
+	* values are already surfaced through a different display mechanism.
 	*
-	* @param request_config_object $parsed_item
-	* @param object $item_request_config
-	* @param object $context
+	* The ddo_map defaults to an empty array when not specified; process_ddo_map
+	* is still called so that enrichment and permission checks are applied
+	* consistently with the other sub-configs.
+	*
+	* @param request_config_object $parsed_item - The item being built; hide is set in place.
+	* @param object $item_request_config - Raw ontology item.
+	* @param object $context - {tipo, section_tipo, ar_section_tipo, mode, model}.
 	* @return void
 	*/
 	protected function parse_hide_config(
@@ -549,16 +610,19 @@ trait request_config_v6 {
 
 	/**
 	* RESOLVE_EXTERNAL_CONFIG
-	* Resolves api_config for external API engines
+	* Attaches the api_config block for non-dedalo api_engine entries.
 	*
-	* External APIs (Zenon, ISAD(G), etc.) need configuration like:
-	* - api_url: endpoint URL
-	* - authentication: API keys
-	* - field mappings: Dédalo to external field names
+	* When api_engine is something other than 'dedalo' (e.g. a third-party
+	* adapter like Zenon or an ISAD(G) endpoint), the adapter needs its own
+	* connection settings: base URL, authentication tokens, field mappings, etc.
+	* That configuration is not embedded in the component's properties; instead
+	* it lives in the target section's ontology properties under 'api_config'.
 	*
-	* This configuration comes from the target section's properties.
+	* The target section is identified from the first ddo in show->ddo_map. If
+	* show->ddo_map is empty or the ddo has no section_tipo, this method is a
+	* no-op — there is no safe way to guess which section's api_config to use.
 	*
-	* @param request_config_object $parsed_item
+	* @param request_config_object $parsed_item - api_config is set in place when found.
 	* @return void
 	*/
 	protected function resolve_external_config(request_config_object $parsed_item) : void {
@@ -588,13 +652,16 @@ trait request_config_v6 {
 
 	/**
 	* EXTRACT_SECTION_TIPOS_FROM_SQO
-	* Extracts section_tipo values from parsed_item sqo
+	* Extracts plain tipo strings from the enriched ddo objects in sqo->section_tipo.
 	*
-	* The sqo->section_tipo is an array of ddo objects.
-	* This method extracts the tipo strings for context building.
+	* After resolve_sqo_section_tipo runs, sqo->section_tipo contains an array of
+	* enriched ddo objects (with labels, permissions, buttons). The ddo_map processing
+	* helpers (process_ddo_map, build_ddo_context) need a flat array of tipo strings,
+	* not ddo objects. This method performs that projection.
 	*
-	* @param request_config_object $parsed_item
-	* @return array Array of section tipo strings
+	* @param request_config_object $parsed_item - Must have sqo->section_tipo populated by
+	*   resolve_sqo_section_tipo before this is called.
+	* @return array - Flat array of section tipo strings; empty if sqo has no section_tipo.
 	*/
 	protected function extract_section_tipos_from_sqo(request_config_object $parsed_item) : array {
 
@@ -615,14 +682,18 @@ trait request_config_v6 {
 
 	/**
 	* BUILD_DDO_CONTEXT
-	* Creates context object for ddo processing
+	* Builds the context object required by process_ddo_map and related helpers.
 	*
-	* DDO processing needs the resolved section_tipos array
-	* (not just the original context section_tipo).
+	* The ddo processing layer (trait request_config_ddo) expects a context that
+	* includes both the original section_tipo and the resolved ar_section_tipo list.
+	* The two can differ: section_tipo is the caller's own section, while
+	* ar_section_tipo comes from sqo->section_tipo and may point to different
+	* (possibly multiple) target sections. Both are needed so that 'self' ddos
+	* in a ddo_map can be correctly resolved to the appropriate target section.
 	*
-	* @param object $context Original context
-	* @param array $ar_section_tipo Resolved section tipos
-	* @return object Extended context with ar_section_tipo
+	* @param object $context - Original context from get_ar_request_config.
+	* @param array $ar_section_tipo - Resolved section tipo strings from extract_section_tipos_from_sqo().
+	* @return object - New context stdClass with tipo, section_tipo, ar_section_tipo, model, mode.
 	*/
 	protected function build_ddo_context(object $context, array $ar_section_tipo) : object {
 

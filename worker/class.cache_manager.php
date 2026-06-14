@@ -42,6 +42,16 @@ final class cache_manager {
 			if (class_exists('\metrics')) {
 				\metrics::reset();
 			}
+			// section_record analytics counters are shown in the same per-request metrics
+			// block (dd_manager) but live on other classes; reset them too to avoid
+			// cumulative bleed across worker requests.
+			if (class_exists('\section_record')) {
+				\section_record::$section_record_total = 0;
+				\section_record::$section_record_total_calls = 0;
+			}
+			if (class_exists('\section_record_data')) {
+				\section_record_data::$section_record_data_total_calls = 0;
+			}
 		});
 
 		// Raw body global

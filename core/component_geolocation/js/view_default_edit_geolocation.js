@@ -298,11 +298,15 @@ export const get_content_value = (i, current_value, self) =>{
 					self.layers_loader({
 						load: 'full'
 					})
-					// add resize content_value event to allow user to resize the map
-					new ResizeObserver( function(){
+					// add resize content_value event to allow user to resize the map.
+					// store the observer so destroy() can disconnect it (otherwise it
+					// outlives the component and keeps the map graph alive).
+					self.resize_observers = self.resize_observers || []
+					const resize_observer = new ResizeObserver( function(){
 						self.refresh_map(self.map)
 					})
-					.observe( content_value )
+					resize_observer.observe( content_value )
+					self.resize_observers.push(resize_observer)
 				})
 			}
 		);
@@ -355,11 +359,15 @@ export const get_content_value_read = (i, current_value, self) =>{
 					self.layers_loader({
 						load: 'full'
 					})
-					// add resize content_value event to allow user to resize the map
-					new ResizeObserver( function(){
+					// add resize content_value event to allow user to resize the map.
+					// store the observer so destroy() can disconnect it (otherwise it
+					// outlives the component and keeps the map graph alive).
+					self.resize_observers = self.resize_observers || []
+					const resize_observer = new ResizeObserver( function(){
 						self.refresh_map(self.map)
 					})
-					.observe( content_value )
+					resize_observer.observe( content_value )
+					self.resize_observers.push(resize_observer)
 				})
 			}
 		);

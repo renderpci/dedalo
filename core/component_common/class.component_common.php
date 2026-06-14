@@ -270,7 +270,16 @@ abstract class component_common extends common {
 
 		/**
 		* CLEAR
-		* Purges persistent caches to prevent memory leaks across worker requests.
+		* Purges the two static list-of-values caches to prevent memory leaks
+		* across persistent-worker requests.
+		*
+		* Persistent PHP workers (e.g. FrankenPHP / PHP-FPM long-lived processes)
+		* retain static properties between requests. Without this reset the
+		* option lists for components like component_select or component_check_box
+		* can bleed stale, user-specific (project-filtered) data across unrelated
+		* requests — see COMP-03 note in get_list_of_values().
+		*
+		* Called by common::clear() at the start of each API request cycle.
 		*/
 		public static function clear() : void {
 			self::$ar_list_of_values_data_cache = [];
@@ -281,11 +290,20 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DIRECT_DATA_COMPONENTS
-	* Return an array containing the model names of components with a direct data format.
-	* This means an array of objects without a 'value' level, as opposed to
-	* other components, such as 'component_input_text', using a structure such as {id: 1, value: string}.
-	* This is mainly useful for testing purposes.
- 	* @return array
+	* Returns the model names of all components whose stored data is a flat array
+	* of typed objects — not wrapped in a {'value': …} property level.
+	*
+	* "Direct data" components store items like:
+	*   [{section_tipo:'dd153', section_id:42, …}]  (relation/media locators)
+	*   [{date_from:'2024-01-01', precision:'Y'}]    (component_date)
+	*
+	* …as opposed to "value-property" components (see $components_using_value_property)
+	* which store:
+	*   [{id:1, value:'some text', lang:'lg-spa'}]
+	*
+	* This distinction is used by tests (get_data_Test, import round-trip checks) and
+	* by migration utilities that need to know the expected item shape.
+	* @return array - flat list of PHP class-name strings
 	*/
 	public static function get_direct_data_components() : array {
 
@@ -307,18 +325,38 @@ abstract class component_common extends common {
 
 	/**
 	* GET_INSTANCE
-	* Singleton pattern
-	* Creates a component instance
-	* @param string|null $component_name = null
-	* @param string|null $tipo = null
-	* @param mixed $section_id = null
-	* @param string $mode = 'edit'
-	* @param string $lang = DEDALO_DATA_LANG
-	* @param string|null $section_tipo = null
-	* @param bool $cache = true
-	* @param object|null $caller_dataframe = null
-	* @param bool $is_temporal = false
-	* @return object|null $component
+	* Singleton factory: returns a cached component instance keyed by
+	* (tipo, section_tipo, section_id, lang, mode, is_temporal, [caller_dataframe]).
+	* Creates and registers a new instance on a cache miss.
+	*
+	* Contracts:
+	* - $tipo and $section_tipo are MANDATORY. The method throws or returns null
+	*   when either is absent or fails safe_tipo() validation.
+	* - $component_name is auto-resolved from the ontology if empty; a mismatch
+	*   between the caller-supplied name and the ontology model is silently corrected
+	*   (logged at ERROR level) — do not rely on the caller name being respected.
+	* - mode 'update' forces $cache=false regardless of the passed value, because
+	*   update operations must always operate on fresh data.
+	* - When $section_id is empty (e.g. creating a new record before it is persisted),
+	*   cache is bypassed and a fresh instance is always returned.
+	* - $caller_dataframe, when set, is passed to set_caller_dataframe() and is
+	*   folded into the cache key so that each pairing of main-component × dataframe
+	*   row gets its own isolated instance.
+	* - Debug validation (SHOW_DEBUG mode): section/component consistency checks,
+	*   mode validation, and lang format checks are run only under SHOW_DEBUG to
+	*   avoid production overhead.
+	*
+	* @param string|null $component_name = null - PHP class name (e.g. 'component_input_text'); auto-resolved when null
+	* @param string|null $tipo = null - Ontology tipo of the component (e.g. 'dd207')
+	* @param mixed $section_id = null - Database section_id; null or 0 bypasses cache
+	* @param string $mode = 'edit' - Rendering mode: 'edit'|'list'|'search'|'tm'|'solved'|'related_list'
+	* @param string $lang = DEDALO_DATA_LANG - Language code (e.g. 'lg-spa'); falls back to DEDALO_DATA_LANG
+	* @param string|null $section_tipo = null - Ontology tipo of the parent section (e.g. 'dd153'); mandatory
+	* @param bool $cache = true - Whether to use the instance cache; forced false when mode='update' or section_id empty
+	* @param object|null $caller_dataframe = null - Dataframe pairing context; folds into the cache key
+	* @param bool $is_temporal = false - When true, the instance operates on temporal (session) data
+	* @return object|null - The component instance, or null when the tipo/model cannot be resolved
+	* @throws Exception when tipo is invalid or section_tipo is missing
 	*/
 	final public static function get_instance( ?string $component_name=null, ?string $tipo=null, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, ?object $caller_dataframe=null, bool $is_temporal=false ) : ?object {
 
@@ -535,14 +573,30 @@ abstract class component_common extends common {
 
 	/**
 	* __CONSTRUCT
-	* @param string $tipo = null
-	* @param mixed $section_id = null
-	* @param string $mode = 'edit'
-	* @param string $lang = DEDALO_DATA_LANG
-	* @param string|null $section_tipo = null
-	* @param bool $cache = true
-	* @param bool $is_temporal = false
+	* Protected constructor — always called via get_instance(), never directly.
+	*
+	* Initialization order is significant:
+	* 1. uid / tipo / section_id / data_column_name — identity fields.
+	* 2. mode — sets $update_diffusion_info_propagate_changes=true only for 'edit'.
+	* 3. lang — validated before and again AFTER structure data is loaded, because
+	*    the Ontology may mark this component non-translatable, in which case
+	*    $this->lang is forced to DEDALO_DATA_NOLAN (unless with_lang_versions=true).
+	* 4. section_tipo — mandatory; throws on empty.
+	* 5. parent::load_structure_data() — populates $this->properties,
+	*    $this->translatable, $this->label, etc. from the Ontology cache.
+	* 6. set_data_default() — when mode='edit' and section_id>0, silently saves
+	*    a default value if the component is empty and properties->dato_default exists.
+	* 7. pagination — initialised to {offset:0, limit:null}.
+	*
+	* @param string $tipo - Ontology tipo of the component
+	* @param mixed $section_id = null - Database record id; null for new/unsaved records
+	* @param string $mode = 'edit' - Rendering mode
+	* @param string $lang = DEDALO_DATA_LANG - Language code
+	* @param string|null $section_tipo = null - Ontology tipo of the parent section
+	* @param bool $cache = true - Whether to enable instance-level caching
+	* @param bool $is_temporal = false - Whether this is a temporal (session-only) component
 	* @return void
+	* @throws Exception when section_tipo is empty
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='edit', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true, bool $is_temporal=false ) {
 
@@ -674,10 +728,25 @@ abstract class component_common extends common {
 
 	/**
 	* SET_DATA_DEFAULT
-	* Set data default when properties->dato_default exists and current component data is empty
-	* properties are loaded always (structure data) at beginning of build component. Because this
-	* is more fast verify if is set 'dato_default' and not load component data always as before
-	* @return bool
+	* Silently seeds the component with a default value when it is empty on first load.
+	* Called automatically from __construct() when mode='edit' and section_id>0.
+	*
+	* Resolution order (first non-empty value wins):
+	* 1. CONFIG_DEFAULT_FILE_PATH — a JSON file mapping {tipo, [section_tipo], value};
+	*    the entry is matched by tipo (and section_tipo when present). This external
+	*    file overrides ontology defaults, supporting per-installation customisation
+	*    without touching the Ontology.
+	* 2. properties->dato_default — the Ontology property value, which may be a literal
+	*    or an object with a 'method' key (e.g. {"method":"get_today_date"}) resolved via
+	*    $this->get_method().
+	*
+	* Conditions that prevent writing the default:
+	* - User permission < 2 (read-only users must not silently write data).
+	* - The component already has non-empty data (never overwrites existing content).
+	* - mode='tm' or data_source='tm' (Time Machine mode is read-only).
+	* - section_id <= 0 (temporary/unsaved records are not persisted).
+	*
+	* @return bool - true when a default was written and saved, false otherwise
 	*/
 	protected function set_data_default() : bool {
 
@@ -804,7 +873,11 @@ abstract class component_common extends common {
 
 	/**
 	* SET_DATA_RESOLVED
-	* @param array|null $data
+	* Directly injects pre-resolved data into the instance cache, bypassing the
+	* normal matrix load path. Used by section_record when it pre-populates all
+	* component data from a single DB row (list/search modes), so that subsequent
+	* calls to get_data() return immediately without hitting the database again.
+	* @param array|null $data - Pre-decoded component data array, or null to clear
 	* @return void
 	*/
 	public function set_data_resolved(?array $data) : void {
@@ -1452,9 +1525,17 @@ abstract class component_common extends common {
 
 
 
-	# GET_DATA_UNCHANGED
-	# Recover component var 'data' without change type or other custom component changes
-	# This is a easy way to access internal protected var 'data' from out of component (like section::save_component_data)
+	/**
+	* GET_DATA_UNCHANGED
+	* Returns the raw, unprocessed value of the protected $data property without
+	* invoking any type-coercion, language-filtering, or TM-override logic.
+	*
+	* Exists so that section::save_component_data() can read the exact stored value
+	* that was last written to the section_record — including null, scalars, or
+	* malformed legacy data — for comparisons and diagnostics.
+	* Prefer get_data() for all other callers.
+	* @return mixed - The internal $data property; type is unguaranteed
+	*/
 	public function get_data_unchanged() {
 
 		return $this->data;
@@ -1464,8 +1545,15 @@ abstract class component_common extends common {
 
 	/**
 	* GET_TIME_MACHINE_DATA_TO_SAVE
-	* Recover component var 'data' without change type or other custom component changes
-	* @return array|null $time_machine_data_to_save
+	* Builds the payload written to the Time Machine row when this component is saved.
+	*
+	* For simple components the payload is the current language data slice
+	* (get_data_lang()). For components that have associated dataframe DDOs the
+	* payload additionally includes ALL dataframe data (all pairing rows, without
+	* a specific caller) merged in, because the TM row stores both main and dataframe
+	* data together under the main component's tipo — see get_data() tm-mode branch
+	* where the reverse split is performed on playback.
+	* @return array|null - Merged array of main + dataframe data items to persist in TM
 	*/
 	public function get_time_machine_data_to_save() : ?array {
 
@@ -1858,9 +1946,24 @@ abstract class component_common extends common {
 
 	/**
 	* SAVE
-	* Updates and saves current component data in the database.
-	* Uses current 'section_record' instance to manage all process.
-	* @return bool $result
+	* Persists the current component data to the database through section_record,
+	* then triggers secondary side-effects in this order:
+	* 1. section_record::save_component_data() — writes main data + counter columns.
+	*    For component_autocomplete_hi, also writes the relation_search column.
+	* 2. tm_record::create() — creates a Time Machine row when section_id>0,
+	*    is_temporal=false, tm_record::$save_tm=true, and section_tipo is not in
+	*    the TM exclusion list. The TM payload comes from get_time_machine_data_to_save()
+	*    which merges main data + any dataframe data.
+	* 3. save_activity() — logs the save event to the activity backend.
+	* 4. propagate_to_observers() — notifies observer components defined in properties
+	*    so they can recalculate derived values (e.g. component_info sum widgets).
+	*
+	* Guards that abort or skip silently:
+	* - Missing required vars (section_tipo, section_id, tipo, lang): returns false.
+	* - mode='tm' or data_source='tm': read-only playback context, returns false.
+	* - save_to_database=false: deferred save (caller must trigger section save later).
+	* - mode='search': prevents accidental persistence during filter operations.
+	* @return bool - true on success; false when a guard prevents saving or on error
 	*/
 	public function save() : bool {
 
@@ -2029,6 +2132,17 @@ abstract class component_common extends common {
 
 	/**
 	* SAVE_ACTIVITY
+	* Writes a 'SAVE' entry to the activity log backend for audit-trail purposes.
+	*
+	* Uses logger::$obj['activity'] (a logger_backend_activity instance), so it
+	* requires the activity logger to have been initialised before this component
+	* was instantiated. Calls that fail are caught and logged at DEBUG level rather
+	* than propagated, so an activity-log failure never aborts the save transaction.
+	*
+	* Self-referential loop guard: components whose tipo appears in
+	* logger_backend_activity::$ar_elements_activity_tipo are excluded from
+	* activity logging (the activity-log section's own components must not write
+	* activity events about themselves).
 	* @return void
 	*/
 	public function save_activity() : void {
@@ -2070,18 +2184,32 @@ abstract class component_common extends common {
 
 	/**
 	* PROPAGATE_TO_OBSERVERS
-	* Note: This property is only use in the server context, the client doesn't listen in this way.
-	* is used by calculations or component_info (with widgets) that show sums, or other calculations dependents of others components
-	* the observers of the component are defined by the own component in properties that say: This component in this section is watching me:
+	* Server-side reactive fan-out: notifies all observer components listed in this
+	* component's properties->observers array after every save.
+	*
+	* Observer configuration shape (defined on the observed component):
 	* {
-	*  "observers": [
-	*    {
-	*      "section_tipo": "numisdata3",
-	*      "component_tipo": "numisdata595"
-	*    }
-	*  ]
+	*   "observers": [
+	*     {
+	*       "section_tipo": "numisdata3",
+	*       "component_tipo": "numisdata595"
+	*     }
+	*   ]
 	* }
-	* @return array|null $observers_data
+	*
+	* For each observer entry update_observer_data() is called, which:
+	* 1. Reads the observer component's own "observe" configuration from the Ontology.
+	* 2. Resolves the set of sections to update (via filter SQO, inverse relations,
+	*    or the observable section itself — depending on server.config).
+	* 3. Calls the configured perform.function on each observer component instance
+	*    (or falls back to get_data() + save()).
+	* 4. Returns the updated component JSON only for the section the current user
+	*    is actively editing, so other sections are saved but their data is not
+	*    sent back to the client.
+	*
+	* The result is stored in $this->observers_data so it can be merged into the
+	* API response by the calling JSON controller.
+	* @return array|null - Collected observer component data for the active section, or null when no observers are defined
 	*/
 	public function propagate_to_observers() : ?array {
 		$start_time=start_time();
@@ -2191,10 +2319,10 @@ abstract class component_common extends common {
 	* 		define the function to be executed when the event is fired
 	* 	params:
 	* 		the options that will be passed to the function
-	* @param object $observer 		// component to update
-	* @param object $locator 		// section that made the change
-	* @param mixed $observable_data // data that has changed
-	* @param string $observable_tipo // tipo of the component that made the change
+	* @param object $observer - Component observer descriptor (section_tipo, component_tipo)
+	* @param object $locator - Locator of the section that triggered the change
+	* @param ?array $observable_data - Changed data items (locators/values) from the observable component, or null
+	* @param string $observable_tipo - Tipo of the component that fired the event
 	*
 	* @return array $ar_data
 	*/
@@ -2392,16 +2520,25 @@ abstract class component_common extends common {
 
 	/**
 	* REFRESH_DATA
-	* Get observable data to refresh the component_data, for ex:
-	* if the main component has deleted his value, check if the observer need to delete his own data because is not valid until his observable has empty.
-	* @param object $options
-	* {
-	* 	"actions" : [{
-	*		"condition": "on_empty",
-	*		"action": "empty_data"
-	* 	}]
-	* }
-	* @return bool
+	* Runs a conditional data-refresh action on this observer component, triggered
+	* by a change in the component it is observing.
+	*
+	* Currently only the 'on_empty' condition is implemented: when the observed
+	* component's data becomes empty, the specified action (e.g. 'empty_data') is
+	* invoked on this component and the result is persisted via save().
+	*
+	* Used by the observer infrastructure (update_observer_data with perform.function)
+	* to cascade "clear-on-empty" semantics across dependent components.
+	*
+	* @param object $options - Action descriptor:
+	*   {
+	*     "actions": [{
+	*       "condition": "on_empty",
+	*       "action":    "empty_data",
+	*       "arguments": []            // optional; passed to the action method
+	*     }]
+	*   }
+	* @return bool - Always returns true (errors are logged, not thrown)
 	*/
 	public function refresh_data(object $options) : bool {
 
@@ -2441,8 +2578,10 @@ abstract class component_common extends common {
 
 	/**
 	* EMPTY_DATA
-	* Remove the component data in all langs
-	* @return bool
+	* Clears all component data across all languages by calling set_data(null).
+	* Used as an observer action (see refresh_data 'on_empty' condition) and
+	* as a utility method for explicit data reset.
+	* @return bool - Result of the underlying set_data() call
 	*/
 	public function empty_data() : bool {
 
@@ -2453,9 +2592,20 @@ abstract class component_common extends common {
 
 	/**
 	* PARSE_SEARCH_DYNAMIC
-	* Check existence of $source in properties and resolve filter if yes
-	* @param object $ar_filtered_by_search_dynamic
-	* @return object $filter
+	* Resolves a "filtered_by_search_dynamic" property definition into a concrete
+	* SQO filter object by substituting dynamic source references at request time.
+	*
+	* The dynamic filter lives in properties->filtered_by_search_dynamic and contains
+	* one or more filter elements whose 'q' value is a source descriptor:
+	*   { "source": { "component_tipo": "numisdata77", "section_id": "current", "section_tipo": "current" } }
+	*
+	* This method resolves 'current' in section_id/section_tipo to the actual ids
+	* of the component being rendered, loads the source component's data, and returns
+	* a standard SQO filter object ({$and:[…]} or {$or:[…]}) ready for use by
+	* get_list_of_values().
+	*
+	* @param object $ar_filtered_by_search_dynamic - The properties->filtered_by_search_dynamic descriptor
+	* @return object $filter - Concrete SQO filter object
 	*/
 	public function parse_search_dynamic(object $ar_filtered_by_search_dynamic) : object {
 
@@ -2661,6 +2811,10 @@ abstract class component_common extends common {
 				if (isset(self::$list_of_values_data_cache[$uid])) {
 
 					if(SHOW_DEBUG===true) {
+						// metrics (datalist cache hit)
+						metrics::inc('datalist_total_calls');
+						metrics::inc('datalist_total_calls_cached');
+						metrics::add_metric('datalist_total_time', $start_time);
 						// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
 						self::$list_of_values_data_cache[$uid]->debug	= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
 					}
@@ -2821,6 +2975,9 @@ abstract class component_common extends common {
 			$response->msg		= 'OK';
 			if(SHOW_DEBUG===true) {
 				// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				// metrics (datalist cache miss / fresh resolution)
+				metrics::inc('datalist_total_calls');
+				metrics::add_metric('datalist_total_time', $start_time);
 				$response->debug = 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
 			}
 
@@ -2837,8 +2994,12 @@ abstract class component_common extends common {
 
 	/**
 	* DECORATE_UNTRANSLATED
-	* @param string|null $string
-	* @return string|null
+	* Wraps a string in a <mark> HTML element to visually flag untranslated
+	* fallback content in the UI (e.g. when a value exists in the default language
+	* but not in the currently requested language).
+	* Returns null unchanged so callers do not need a null guard before calling.
+	* @param string|null $string - Value to decorate, or null to pass through
+	* @return string|null - HTML-wrapped string, or null
 	*/
 	public static function decorate_untranslated(?string $string) : ?string {
 
@@ -2853,21 +3014,25 @@ abstract class component_common extends common {
 
 	/**
 	* GET_AR_TARGET_SECTION_DDO
-	* target section/s from which the portal/autocomplete feeds with records.
-	* Not to be confused with the section in which the portal is
-	* @return array ar_target_section_ddo
-	* 	Array of ddo objects like [
-	*	{
-	*		typo: ddo,
-	*		tipo : dd64
-	*		color: "#b9b9b9"
-	*		label: "Yes/No"
-	*		matrix_table: "matrix_dd"
-	*		model: "section"
-	*		permissions: 3,
-	* 		buttons: [{...}]
-	* 	}
-	* ]
+	* Returns the DDO (data-definition object) descriptors of the target sections
+	* that supply records to this portal or autocomplete component.
+	*
+	* The target sections are the remote sections this component links TO —
+	* not the section this component itself lives in (that is $this->section_tipo).
+	* They are derived from request_config->sqo->section_tipo across all context items.
+	*
+	* Each DDO has the shape:
+	* {
+	*   typo: 'ddo',
+	*   tipo: 'dd64',
+	*   color: '#b9b9b9',
+	*   label: 'Yes/No',
+	*   matrix_table: 'matrix_dd',
+	*   model: 'section',
+	*   permissions: 3,
+	*   buttons: [{...}]
+	* }
+	* @return array - Flat list of DDO objects (may be empty when request_config is absent)
 	*/
 	public function get_ar_target_section_ddo() : array {
 
@@ -3050,10 +3215,12 @@ abstract class component_common extends common {
 
 	/**
 	* GET_AR_TARGET_SECTION_TIPO
-	* Section/s from which the portal/autocomplete feeds with records.
-	* This should not be confused with the section in which the portal is located.
-	* @return array ar_target_section_tipo
-	* 	Array of string tipo like ['dd153']
+	* Returns a flat array of section tipo strings for the sections this portal or
+	* autocomplete component links to. Thin wrapper over get_ar_target_section_ddo()
+	* that extracts just the tipo property from each DDO object.
+	*
+	* Not to be confused with $this->section_tipo (the section this component belongs to).
+	* @return array - Array of tipo strings, e.g. ['dd153', 'dd64']
 	*/
 	public function get_ar_target_section_tipo() : array {
 
@@ -3070,13 +3237,26 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DIFFUSION_DATA
-	* Resolve the default diffusion data
-	* is used by the `diffusion_data`
-	* for component_section_id the default is its own data
-	* @param object $ddo
-	* @param ?string $diffusion_element_tipo
-	* @return array $diffusion_data
+	* Resolves the diffusion payload for this component as an array of
+	* diffusion_data_object items consumed by diffusion_chain_processor.
 	*
+	* Resolution order:
+	* 1. ddo->fn (custom function): if set, the named method is called on $this.
+	*    - If it is a native PHP method of this class the return value is set
+	*      directly on the default diffusion_data_object.
+	*    - If it is loaded via common::__call() (a diffusion_fn extension) the
+	*      full array of diffusion_data_object items is replaced.
+	* 2. Default resolution: iterates get_data() items and maps each to a
+	*    diffusion_data_object using lang and value (or the raw item when no
+	*    'value' property exists). An optional ddo->data_slice can limit the
+	*    range of items processed.
+	*
+	* Note: component_section_id overrides this method to return its integer
+	* section_id value instead of the generic data array.
+	*
+	* @param object $ddo - DDO descriptor from the diffusion ontology map
+	* @param string|null $diffusion_element_tipo = null - The diffusion element tipo (passed through to custom fn)
+	* @return array - Array of diffusion_data_object instances (may be empty)
 	* @see diffusion_chain_processor (consumes the returned diffusion_data_object items)
 	* @test false
 	*/
@@ -3186,11 +3366,21 @@ abstract class component_common extends common {
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $request_options
-	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	* Base stub for migration / data-versioning tools. Returns a "not implemented"
+	* response (result=0) for components that do not override this method.
+	*
+	* Subclasses that need to migrate their stored data format (e.g. after a schema
+	* change) override this method and return:
+	*   result=1  data was updated and saved
+	*   result=2  data was inspected but no change was required
+	*
+	* Called by tool_update_cache and similar migration scripts, not during normal
+	* request handling.
+	*
+	* @param object $request_options - Options object; recognized keys:
+	*   update_version, data_unchanged, reference_id, tipo, section_id, section_tipo,
+	*   context (default 'update_component_data')
+	* @return object $response - {result: 0, msg: string}
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -3221,10 +3411,20 @@ abstract class component_common extends common {
 
 	/**
 	* REGENERATE_COMPONENT
-	* Force the current component to re-save its data
-	* Note that the first action is always load data to avoid save empty content
+	* Forces a read-normalise-save cycle on this component instance to clean up
+	* corrupted or legacy-format data and re-trigger all save side-effects
+	* (Time Machine, activity log, observer fan-out).
+	*
+	* Steps:
+	* 1. get_data() — ensures data is loaded from DB (prevents saving empty state).
+	* 2. set_data($data) — normalises the data (e.g. [null] → null, wraps scalars).
+	* 3. save() — persists and triggers all secondary effects.
+	*
+	* (!) Always call get_data() first; calling save() without loading data
+	*     may overwrite the DB value with null.
+	*
 	* @see class.tool_update_cache.php
-	* @return bool
+	* @return bool - Always true (errors are logged internally by save())
 	*/
 	public function regenerate_component() : bool {
 
@@ -3412,8 +3612,10 @@ abstract class component_common extends common {
 
 	/**
 	* GET_INFO
-	* Returns a basic element information
-	* @return object $info
+	* Returns a basic element information object, extending the parent common::get_info()
+	* result with the component's section_id. Used by debugging utilities and API
+	* introspection endpoints.
+	* @return object $info - Info object with at minimum: tipo, label, model, section_id
 	*/
 	public function get_info() : object {
 
@@ -3433,30 +3635,31 @@ abstract class component_common extends common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Builds a search_query_object filter item taking care of split multiple values and conform output objects
-	* @param object $query_object
-	*  sample
-		* {
-		*   "q": "pepe",
-		*   "lang": "lg-spa",
-		*   "path": [
-		*     {
-		*       "section_tipo": "oh1",
-		*       "component_tipo": "oh24",
-		*       "target_section": "rsc197"
-		*     },
-		*     {
-		*       "section_tipo": "rsc197",
-		*       "component_tipo": "rsc85",
-		* 		"model": "component_input_text"
-		*     }
-		*   ],
-		*   "component_path": [
-		*     "data"
-		*   ]
-		* }
-	* @return array $ar_query_object
-	* 	Array of one or more SQO (search query object) filter items
+	* Normalises and resolves an incoming SQO filter element into one or more
+	* concrete SQL-ready query objects for this component type.
+	*
+	* Called statically (via get_called_class() dispatch) so that each concrete
+	* component subclass can apply its own resolve_query_object_sql() variant
+	* without overriding this orchestration method.
+	*
+	* Processing steps:
+	* 1. Injects component_path (leaf component tipo) when missing.
+	* 2. Defaults lang to 'all' when not specified.
+	* 3. If the query_object is itself an operator group ({$and:[…]} / {$or:[…]}),
+	*    each leaf is resolved individually via resolve_query_object_sql().
+	* 4. Otherwise, the single object is resolved directly.
+	* 5. Empty results are stripped from the returned array.
+	*
+	* @param object $query_object - SQO filter element, e.g.:
+	*   {
+	*     "q": "pepe",
+	*     "lang": "lg-spa",
+	*     "path": [
+	*       { "section_tipo": "oh1", "component_tipo": "oh24", "target_section": "rsc197" },
+	*       { "section_tipo": "rsc197", "component_tipo": "rsc85", "model": "component_input_text" }
+	*     ]
+	*   }
+	* @return array - Array of one or more resolved SQO filter items
 	*/
 	public static function get_search_query( object $query_object ) : array {
 
@@ -3575,8 +3778,12 @@ abstract class component_common extends common {
 
 	/**
 	* SEARCH_OPERATORS_INFO
-	* Return valid operators for search in current component
-	* @return array $ar_operators
+	* Returns the list of search operators supported by this component for the UI
+	* operator selector (e.g. 'contains', 'starts_with', 'exact', 'empty').
+	* The base implementation returns an empty array; concrete subclasses
+	* (e.g. component_input_text, component_number) override this to advertise
+	* the operators they have implemented in resolve_query_object_sql().
+	* @return array - Array of operator descriptor objects, empty for base class
 	*/
 	public function search_operators_info() : array {
 
@@ -3589,9 +3796,17 @@ abstract class component_common extends common {
 
 	/**
 	* REMOVE_FIRST_AND_LAST_QUOTES
-	* Removes first and last quotes (single or doubles) respecting existing operators
-	* @param string $string
-	* @return string $string
+	* Strips leading/trailing double-quote characters from a search value while
+	* preserving any recognized operator prefix ('!=', '>=', '<=', '+', '-', '=', '*', '>', '<').
+	*
+	* This lets users type exact-match strings in the UI using double quotes (e.g. "Pérez")
+	* without those quotes becoming part of the SQL LIKE/= pattern. Operators are
+	* extracted first so that '!="Smith"' is correctly reduced to '!=Smith'.
+	*
+	* Single-quote stripping is intentionally not applied (commented out) because
+	* single quotes can be legitimate content in names (e.g. O'Brien).
+	* @param string $string - Raw search input value
+	* @return string - Value with leading/trailing double-quotes removed, operator preserved
 	*/
 	public static function remove_first_and_last_quotes(string $string) : string {
 
@@ -3638,8 +3853,18 @@ abstract class component_common extends common {
 
 	/**
 	* GET_MY_SECTION
-	* Creates or get from memory the component section object
-	* @return object $this->section_obj
+	* Returns (or lazily creates) the section instance that owns this component.
+	*
+	* The result is cached in $this->section_obj to prevent repeated instantiation.
+	* The section is built in 'list' mode, syncing its cache flag with the
+	* component's own cache setting so the two instances share the same data layer.
+	* The optional $this->caller_dataframe is forwarded to the section so the
+	* dataframe pairing context is preserved in portal/list views.
+	*
+	* (!) Throws on failure — callers must not assume a valid section always exists
+	*     without a try/catch when calling from non-standard contexts.
+	* @return object - section instance for $this->section_tipo
+	* @throws Exception when the section cannot be instantiated
 	*/
 	public function get_my_section() : object {
 
@@ -3679,8 +3904,15 @@ abstract class component_common extends common {
 
 	/**
 	* GET_MY_SECTION_RECORD
-	* Creates or get from memory the component section record object
-	* @return object $this->section_record
+	* Returns (or lazily creates) the section_record instance for this component's
+	* section_tipo + section_id pair.
+	*
+	* section_record is the data-layer object responsible for reading/writing the
+	* JSONB columns of the matrix row. It is shared across all components in the
+	* same record within a single request cycle via the component_instances_cache.
+	* Caching here prevents redundant DB reads when multiple components on the same
+	* section_id call get_data() in sequence.
+	* @return object - section_record instance
 	*/
 	public function get_my_section_record() : object {
 
@@ -3710,9 +3942,13 @@ abstract class component_common extends common {
 
 	/**
 	* GET_CALCULATION_DATA
-	* @param object|null $options = null
-	* @return $data
-	* get the data of the component for do a calculation
+	* Returns the component value as a scalar string suitable for use in
+	* numeric or text calculations (e.g. by component_info sum widgets).
+	* The base implementation delegates to get_value(); components that
+	* store numeric data (component_number) override this to return a typed
+	* numeric value for accurate arithmetic.
+	* @param object|null $options = null - Optional configuration (currently unused in base class)
+	* @return mixed - Typically string|null; may be int|float in subclass overrides
 	*/
 	public function get_calculation_data( ?object $options=null ) {
 
@@ -3725,9 +3961,17 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATA_ITEM
-	* Unified way to compound the data item object used in JSON controllers
-	* @param mixed $value
-	* @return object $item
+	* Builds the standard envelope object used by JSON API controllers to return
+	* component data to the client. The envelope carries identity fields so the
+	* client can route the response to the correct component instance.
+	*
+	* In 'solved' mode, a resolved human-readable 'literal' property is appended
+	* (used by autocomplete display). In SHOW_DEBUG mode, additional diagnostic
+	* properties (debug_model, debug_label, debug_dataframe) are included.
+	*
+	* @param mixed $value - The component data payload (entries property)
+	* @return object - Envelope with: section_id, section_tipo, tipo, mode, lang,
+	*   from_component_tipo, entries; optionally literal and debug_* properties
 	*/
 	public function get_data_item($value) : object {
 
@@ -4324,9 +4568,17 @@ abstract class component_common extends common {
 
 	/**
 	* GET_DATA_PAGINATED
-	* It slices the component array of locators to allocate pagination options
-	* @param int|null $custom_limit = null
-	* @return array|null $data_paginated
+	* Returns a page-sized slice of the component's data array, honouring
+	* $this->pagination->offset and $this->pagination->limit (or a custom limit).
+	*
+	* Each returned item gains a 'paginated_key' property equal to its absolute
+	* position in the full data array (offset + relative key), so the client can
+	* pass the absolute position back in sort_data actions without needing to know
+	* the current offset.
+	*
+	* A limit of 0 (or null) means "no limit" — the full tail from offset is returned.
+	* @param int|null $custom_limit = null - Override $this->pagination->limit when set
+	* @return array|null - Sliced data items (each with paginated_key), or null when data is empty
 	*/
 	public function get_data_paginated( ?int $custom_limit=null ) : ?array {
 
@@ -4368,7 +4620,19 @@ abstract class component_common extends common {
 
 	/**
 	* GET_COMPONENT_TM_DATA
-	* @return array|null $tm_data
+	* Fetches the most recent Time Machine row for the given component and matrix_id
+	* and returns its decoded 'data' array (the snapshot of the component's value
+	* at the time the TM entry was created).
+	*
+	* Queries the TM matrix in DESC order by id so the most recent snapshot is
+	* returned first. If the TM row's data is not an array (legacy scalar formats)
+	* it is coerced to [$data] with a logged warning.
+	*
+	* Called by get_data() when data_source='tm' to load the historical value.
+	* @param string $tipo - Component tipo to look up
+	* @param string $section_tipo - Section tipo of the origin record
+	* @param int|string $matrix_id - Primary key of the TM matrix row
+	* @return array|null - Decoded data array from the TM row, or null/[] if not found
 	*/
 	public static function get_component_tm_data( string $tipo, string $section_tipo, int|string $matrix_id ) : ?array {
 
@@ -4438,8 +4702,13 @@ abstract class component_common extends common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* 	Default is true. Override when component is not sortable
+	* Returns whether this component type can be used as an order column in list views.
+	* The base implementation always returns true; override to return false for
+	* components that cannot meaningfully define a sort order (e.g. media, binary blobs).
+	*
+	* The TM notes text tipo (DEDALO_NOTES_TEXT_TIPO) is hard-excluded here because
+	* TM matrix views never need to sort by free-text notes.
+	* @return bool - true if the component supports column sorting
 	*/
 	public function get_sortable() : bool {
 
@@ -4455,10 +4724,22 @@ abstract class component_common extends common {
 
 	/**
 	* GET_ORDER_PATH
-	* Calculate full path of current element to use in columns order path (context)
-	* @param string $component_tipo
-	* @param string $section_tipo
-	* @return array $path
+	* Builds the full ontology path array used as the ORDER BY path descriptor
+	* in list-view column headers.
+	*
+	* For a top-level component the path is simply the single-element result of
+	* search::get_query_path(). For a portal column (from_section_tipo is set and
+	* differs from $section_tipo) the parent portal's step is prepended so the sort
+	* traverses from the owning section through the relation into the target section.
+	*
+	* The computed path is cached in common::$cache_order_path (keyed by
+	* tipo + section_tipo + from_component_tipo + from_section_tipo) and deep-copied
+	* on every access, because subclass overrides (component_date, component_number,
+	* component_section_id) mutate the returned path items after calling parent.
+	*
+	* @param string $component_tipo - Tipo of the component to sort by
+	* @param string $section_tipo - Section tipo the component belongs to
+	* @return array - Path descriptor array, each element is an object with section_tipo, component_tipo, model, name
 	*/
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 
@@ -4503,10 +4784,13 @@ abstract class component_common extends common {
 
 	/**
 	* GET_LIST_VALUE
-	* Unified value list output
-	* By default, list value is equivalent to data. Override in other cases.
-	* Note that empty array or string are returned as null
-	* @return array|null $list_value
+	* Returns the component data in its canonical list-view representation.
+	* By default this is the language-filtered data slice (get_data_lang()).
+	*
+	* Subclasses that produce a different format for list views (e.g. resolved
+	* labels, flattened relation arrays) override this method. Empty arrays and
+	* null are both normalised to null so the API response is consistent.
+	* @return array|null - Language-filtered data items for list display, or null when empty
 	*/
 	public function get_list_value() : ?array {
 
@@ -4730,12 +5014,14 @@ abstract class component_common extends common {
 
 	/**
 	* IMPORT_SAVE
-	* Only called by the import process
-	* Is used to perform any process after the conform data and previous to save
-	* As clean its dataframe or any other process.
-	* By default it only call to save function.
+	* Post-conform save hook called exclusively by the import tool pipeline,
+	* after conform_import_data() has normalised the value and set_data() has
+	* staged it on the section_record.
 	*
-	* @return bool
+	* The base implementation delegates directly to save(). Subclasses that need
+	* import-specific side-effects (e.g. clearing stale dataframe rows before
+	* writing new ones, or skipping TM creation during bulk imports) override this.
+	* @return bool - Result of save()
 	*/
 	public function import_save() : bool{
 
@@ -4746,10 +5032,18 @@ abstract class component_common extends common {
 
 	/**
 	* IS_EMPTY
-	* Generic check if given value is or not empty considering.
-	* Use only for data entries.
-	* @param mixed $data_item
-	* @return bool
+	* Checks whether a single data item is semantically empty.
+	* Used internally by is_empty_data() and by set_data_default() to determine
+	* whether default seeding should be applied.
+	*
+	* Rules:
+	* - null → empty
+	* - Non-objects (scalars, arrays) → empty (data items must always be objects)
+	* - Objects with a 'value' property equal to '' or null → empty
+	* - Objects with a 'value' of '0' or 0 or 0.0 → NOT empty (zero is a valid value)
+	* - Objects without a 'value' property (e.g. locators, date objects) → NOT empty
+	* @param mixed $data_item - A single component data array element
+	* @return bool - true when the item carries no meaningful content
 	*/
 	public function is_empty( mixed $data_item ) : bool {
 
@@ -4781,10 +5075,12 @@ abstract class component_common extends common {
 
 	/**
 	* IS_EMPTY_DATA
-	* @param array|null $data
-	* Check if given data is empty or not considering
-	* spaces and ' ' as empty values.
-	* @return bool
+	* Checks whether an entire data array is semantically empty (all items empty
+	* according to is_empty(), or the array itself is null).
+	* Returns true as soon as no non-empty item is found; returns false on the
+	* first non-empty item encountered (short-circuit).
+	* @param array|null $data - Component data array to inspect
+	* @return bool - true when all items are empty or when $data is null
 	*/
 	public function is_empty_data( ?array $data ) : bool {
 
@@ -4810,8 +5106,11 @@ abstract class component_common extends common {
 
 	/**
 	* GET_REGENERATE_OPTIONS
-	* Used by tool_update_cache to get custom regeneration options from component
-	* @return array|null $options
+	* Returns component-specific options that control how tool_update_cache
+	* regenerates this component type (e.g. batch size, exclusion rules, custom
+	* processing callbacks). The base implementation returns null, meaning default
+	* regeneration behaviour applies. Override in subclasses that need custom logic.
+	* @return array|null - Options array for tool_update_cache, or null for defaults
 	*/
 	public static function get_regenerate_options() : ?array {
 
@@ -4822,9 +5121,19 @@ abstract class component_common extends common {
 
 	/**
 	* GET_CURRENT_SECTION_FILTER_DATA
-	* Gets fast project data of current section
-	* Search component filter in current section and get the component data
-	* @return array|null $component_filter_data
+	* Returns the project filter locators associated with the current section record.
+	* Used by portals (add_new_element) to inherit the parent section's project
+	* assignments when creating new linked records, ensuring the new record is
+	* placed in the correct project(s).
+	*
+	* Two resolution paths:
+	* 1. When section_tipo === DEDALO_FILTER_SECTION_TIPO_DEFAULT (project-of-projects
+	*    special case): returns a synthetic locator pointing at the filter section itself.
+	* 2. Default: finds the component_filter child of the current section via the
+	*    Ontology, loads its data, then intersects with the logged user's own project
+	*    list (component_filter_master::get_user_projects()) to prevent elevation —
+	*    users can only propagate projects they themselves belong to.
+	* @return array|null - Array of filter locator objects representing the applicable projects, or null
 	*/
 	public function get_current_section_filter_data() : ?array {
 

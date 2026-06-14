@@ -25,7 +25,37 @@
 
 /**
 * RENDER_LIST_SECTION
-* Manages the section's logic and appearance in client side
+* Entry-point namespace for a section rendered in 'list' mode.
+*
+* The module provides two main exports:
+*   - render_list_section       – view dispatcher; delegates to the appropriate
+*                                 view module based on section.context.view.
+*   - render_column_id          – builds the DOM fragment for the 'id' column of
+*                                 every row in the list, including the link/edit/delete
+*                                 buttons and their full event wiring.
+*
+* Two private helpers support render_column_id:
+*   - _update_link_button       – async; resolves the initial linked/unlinked state
+*                                 of a row's link button when the list is rendered
+*                                 inside a portal-picker iframe.
+*   - _set_link_button_state    – sync; reflects a known linked/unlinked boolean
+*                                 onto the button and icon CSS classes immediately.
+*
+* Supported context.view values (render_list_section.list):
+*   'base'               → view_base_list_section
+*   'graph'              → view_graph_list_section
+*   'thesaurus_list'     → view_thesaurus_list_section
+*   'search_user_presets'→ view_search_user_presets
+*   'export_user_presets'→ view_export_user_presets
+*   'default' / unknown  → dynamic render_views lookup, then view_default_list_section
+*/
+
+
+
+/**
+* RENDER_LIST_SECTION
+* Namespace constructor — never instantiated; all functionality lives on the
+* static-style function properties (render_list_section.list, etc.).
 */
 export const render_list_section = function() {
 
@@ -36,14 +66,16 @@ export const render_list_section = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @param object options
-* sample:
-* {
-*    "render_level": "full",
-*    "render_mode": "list"
-* }
-* @return HTMLElement wrapper
+* View dispatcher for a section in list mode.
+* Reads `self.context.view` and delegates rendering to the matching view module.
+* Falls back to a dynamic `render_views` lookup (ontology-configured custom views)
+* and finally to view_default_list_section if no match is found.
+*
+* Called as a method on a section instance (this === section instance).
+*
+* @param {Object} options - Render options forwarded verbatim to the view module.
+*   Typical shape: { render_level: 'full'|'content', render_mode: 'list' }
+* @returns {Promise<HTMLElement>} The rendered wrapper element produced by the view.
 */
 render_list_section.list = async function(options) {
 
@@ -73,6 +105,8 @@ render_list_section.list = async function(options) {
 			case 'default':
 			default: {
 				// dynamic try
+				// Check whether the ontology has registered a custom render_view for this
+				// view/mode combination before falling back to the built-in default.
 					const render_view = (self.render_views || []).find(el => el.view===view && el.mode===self.mode)
 					if (render_view) {
 						const path			= render_view.path || ('./' + render_view.render +'.js')
@@ -89,10 +123,49 @@ render_list_section.list = async function(options) {
 
 /**
 * RENDER_COLUMN_ID
-* Custom render to generate the section list column id.
-* Is called as callback from section_record
-* @param object options
-* @return DOM DocumentFragment
+* Builds the DOM DocumentFragment that populates the 'id' column for one row
+* in the section list.  Called as a callback from section_record for every
+* rendered row.
+*
+* The fragment's content varies by context:
+*
+*   1. initiator (iframe portal-picker)
+*      A section list rendered inside an iframe with an `initiator` URL parameter
+*      pointing to a component_* instance in the parent window.  The button
+*      toggles a link/unlink relationship with that component.  The visual state
+*      (linked vs. unlinked) is resolved asynchronously by _update_link_button
+*      so the button renders immediately and the icon updates without blocking.
+*
+*   2. section_tool source  (self.config.source_model === 'section_tool')
+*      A tool-driven list.  Renders an edit-pen button that opens the configured
+*      tool via open_tool() rather than navigating to the record edit page.
+*      Only shown when permissions > 1.
+*
+*   3. Activity log (dd542) or Time Machine (dd15)
+*      Renders a plain container div with a distinguishing CSS class instead of
+*      an interactive button.
+*
+*   4. Default (read-only)  permissions < 2
+*      Renders a disabled button — no navigation, no edit action.
+*
+*   5. Default (edit)  permissions >= 2
+*      Renders an edit-pen button with two actions attached:
+*        - navigate()    – fires a 'user_navigation' event to open the record in
+*                          the same page (default mousedown action).
+*        - open_window() – opens the record edit page in a new browser window
+*                          (default contextmenu action).
+*      Which action fires on each interaction is controlled by
+*      self.show_interface.button_edit_options (action_mousedown / action_contextmenu).
+*      Additionally renders a delete button when the 'button_delete' button is
+*      present in self.context.buttons AND self.show_interface.button_delete is true.
+*
+* @param {Object} options - Row render options supplied by section_record.
+* @param {Object} options.caller - The section or portal instance that owns this list.
+* @param {string|number} options.section_id - The record's section_id.
+* @param {string} options.section_tipo - The record's ontology tipo, e.g. 'dd345'.
+* @param {number} options.paginated_key - Zero-based position of this row in the full result set.
+*   Used as the SQO offset when navigating to a specific record in edit mode.
+* @returns {DocumentFragment} Fragment containing the rendered id-column nodes.
 */
 export const render_column_id = function(options) {
 
@@ -103,37 +176,55 @@ export const render_column_id = function(options) {
 		const paginated_key	= options.paginated_key // int . Current item paginated_key in all result
 
 	// permissions
+		// Integer level: 0=none, 1=read, 2=edit, 3=admin (same scale as server-side permissions).
 		const permissions = self.permissions
 
 	// show_interface
+		// show_interface is a map of feature flags that control which UI controls appear.
+		// It is set by common.set_context_vars from the server context response.
 		const show_interface = self.show_interface || {}
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
 	// section_id
+		// The id_node is a shared span; the switch below appends it to whichever
+		// button/container is built for this row.
 		const section_id_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'section_id',
 			text_content	: section_id
 		})
 		if(SHOW_DEBUG===true) {
+			// Expose the absolute row position (paginated_key) as a tooltip in debug mode
+			// so developers can verify SQO offset arithmetic when navigating to a record.
 			section_id_node.title = 'paginated_key: ' + paginated_key
 		}
 		// font-size and column width are adapted once at the list level
 		// via scoped CSS variables set on list_body — see view_default_list_section.get_content_data
 
 	// buttons
+		// Priority switch: the first truthy case wins and determines which button
+		// variant to render.  Cases are evaluated in source order.
 		switch(true){
 
 			// initiator. is a url var used in iframe containing section list to link to opener portal
+			// This case handles a section list rendered inside an <iframe> that was
+			// opened by a component_portal (or similar) in the parent window.  The
+			// component's instance ID is passed as the 'initiator' URL variable so we
+			// can reach back across the window boundary to publish link/unlink events.
 			case (self.initiator?.includes('component_')): {
 
+				// (!) window.parent is the parent frame; it may equal window itself if
+				// the page is not embedded.  get_instance_by_id is a global helper
+				// exposed on the parent page object.
 				const top_window 	= window.parent
 				const initiator		= self.initiator
 				const caller_instance = top_window ? top_window.get_instance_by_id(initiator) : null
 
 				// link_icon
+				// Starts hidden (hide_opacity) so the icon only becomes visible once
+				// _update_link_button has determined the correct state asynchronously.
 					const link_icon = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button link icon hide_opacity'
@@ -147,9 +238,15 @@ export const render_column_id = function(options) {
 					})
 
 				// update link button
+				// Fire-and-forget: resolves the linked/unlinked initial state without
+				// blocking the synchronous render of this row.  The icon becomes visible
+				// once the promise settles (see _update_link_button → requestAnimationFrame).
 					_update_link_button(initiator, link_icon, link_button, section_tipo, section_id)
 
 				// Click event
+				// Optimistic UI pattern: update the in-memory Map and the icon immediately,
+				// then publish the cross-window event.  The parent component receives the
+				// event and persists the change; no round-trip to the server is made here.
 					const link_click_handler = (e) => {
 						e.stopPropagation()
 
@@ -158,6 +255,9 @@ export const render_column_id = function(options) {
 							return
 						}
 
+						// item_key: composite string used as the Map key.
+						// Matching must be type-safe; section_id from the server can be
+						// a number while entries_full items may be strings.
 						const item_key = String(section_tipo) + '_' + String(section_id)
 						const is_added = caller_instance && caller_instance.session_linked_items
 							? caller_instance.session_linked_items.get(item_key) === true
@@ -171,6 +271,8 @@ export const render_column_id = function(options) {
 								close_modal		: false
 							})
 							// update session state
+							// Mirror the removal in the cached Map so subsequent clicks in
+							// the same session do not need another API fetch.
 							if (caller_instance && caller_instance.session_linked_items) {
 								caller_instance.session_linked_items.set(item_key, false)
 							}
@@ -181,6 +283,8 @@ export const render_column_id = function(options) {
 								)
 								if (index !== -1) caller_instance.data.entries_full.splice(index, 1)
 							}
+							// Decrement the cached total used by _update_link_button's
+							// cache-invalidation guard so the Map is not discarded prematurely.
 							if (caller_instance && caller_instance.data?.pagination?.total !== undefined) {
 								caller_instance.data.pagination.total = Math.max(0, caller_instance.data.pagination.total - 1)
 								caller_instance._linked_cache_total = caller_instance.data.pagination.total
@@ -199,6 +303,7 @@ export const render_column_id = function(options) {
 								caller_instance.session_linked_items.set(item_key, true)
 							}
 							// keep entries_full synchronized (add item)
+							// Guard against duplicates: only push when not already present.
 							if (caller_instance && Array.isArray(caller_instance.data?.entries_full)) {
 								const exists = caller_instance.data.entries_full.some(
 									item => String(item.section_tipo) === String(section_tipo) && String(item.section_id) === String(section_id)
@@ -321,13 +426,19 @@ export const render_column_id = function(options) {
 				break;
 			}
 
+			// section_tool source: the list is driven by a tool configuration rather
+			// than the default record-navigation workflow.  Clicking the edit pen
+			// opens the configured tool (e.g. a data-import or batch-edit tool)
+			// with this row's section_id as context.
 			case (self.config && self.config.source_model==='section_tool'): {
 
 				// button_edit (pen)
+				// Only show the pen button for users with write permission (permissions > 1).
 				if ( permissions > 1 ) {
 
 					const button_edit = ui.create_dom_element({
 						element_type	: 'button',
+						// CSS suffix from tool_context.name lets each tool apply its own styles.
 						class_name		: 'button_edit list_'+ self.config.tool_context.name,
 						parent			: fragment
 					})
@@ -338,6 +449,8 @@ export const render_column_id = function(options) {
 							const tool_context = self.config.tool_context
 
 						// section_id_selected (!) Important to allow parse 'self' values
+						// (!) Must be set on self BEFORE calling open_tool so that any
+						// ddo_map entries with section_id==='self' can be resolved by the tool.
 							self.section_id_selected = section_id
 
 						// parse ddo_map section_id. (!) Unnecessary. To be done at tool_common init
@@ -364,6 +477,9 @@ export const render_column_id = function(options) {
 				break;
 			}
 
+			// Activity log (dd542) and Time Machine (dd15) sections use a plain
+			// container div rather than an interactive button — these records are
+			// read-only audit trails and cannot be navigated to in edit mode.
 			case (self.tipo==='dd542' || self.tipo==='dd15'): {
 
 				// activity | time_machine cases
@@ -384,6 +500,8 @@ export const render_column_id = function(options) {
 				if ( permissions < 2 ) {
 
 					// read only case
+					// Render a visually disabled (non-clickable) button so the id column
+					// still renders consistently but provides no edit action.
 
 					const button_edit = ui.create_dom_element({
 						element_type	: 'button', // button|a
@@ -395,6 +513,11 @@ export const render_column_id = function(options) {
 				}else{
 
 					// url
+					// Pre-build the full page URL for the open_window action.
+					// session_save=false prevents overwriting the user's current list
+					// session when the record is opened in a new window.
+					// menu=false hides the navigation menu when session_save is false
+					// (no saved session means the menu cannot restore the previous state).
 						const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 							tipo			: section_tipo,
 							section_tipo	: section_tipo,
@@ -405,6 +528,9 @@ export const render_column_id = function(options) {
 						})
 
 					// button_edit (pen)
+					// Two action methods are attached directly to the button DOM node so
+					// both event listeners can dispatch the correct action without closures
+					// that capture the wrong fn reference.
 					// button_edit
 						const button_edit = ui.create_dom_element({
 							element_type	: 'button', // button|a
@@ -412,6 +538,9 @@ export const render_column_id = function(options) {
 							parent			: fragment
 						})
 						// open_window action
+						// Opens the record in a new browser window/tab using the pre-built
+						// url above.  The on_blur callback refreshes the list when the
+						// window loses focus (user returns from the record edit page).
 						button_edit.open_window = (features) => {
 
 							// open a new window
@@ -428,6 +557,10 @@ export const render_column_id = function(options) {
 							})
 						}//end open_window
 						// navigate action
+						// Navigates within the same page by publishing a 'user_navigation'
+						// event.  The SQO is cloned from the current list RQO so the edit
+						// view inherits the same search/filter context; only limit and offset
+						// are overridden to land on exactly this record.
 						button_edit.navigate = () => {
 
 							// MODE USING PAGE USER_NAVIGATION
@@ -436,6 +569,8 @@ export const render_column_id = function(options) {
 								// set updated filter
 								sqo.filter = self.rqo.sqo.filter
 								// reset pagination
+								// limit=1 shows only this record in edit view; offset=paginated_key
+								// positions it correctly within the result set for prev/next navigation.
 								sqo.limit	= 1
 								sqo.offset	= paginated_key
 
@@ -462,9 +597,10 @@ export const render_column_id = function(options) {
 						}//end navigate
 
 						// contextmenu event
-							// Prevent showing the context menu
-							// open new window with the content
-							// if user has alt pressed, open new tab
+							// Prevent the browser's native context menu.
+							// Instead, dispatch the action configured in show_interface
+							// (defaults to open_window so right-click opens a new window).
+							// If alt is also held, open a new tab instead.
 							button_edit.addEventListener('contextmenu', (e) => {
 								e.stopPropagation()
 								e.preventDefault();
@@ -483,11 +619,15 @@ export const render_column_id = function(options) {
 							})
 
 						// mousedown event
+							// Use mousedown instead of click so the action fires before
+							// any blur event that might destroy the list instance.
 							button_edit.addEventListener('mousedown', (e) => {
 								e.stopPropagation()
 								e.preventDefault()
 
 								// if the user click with right mouse button, stop here
+								// Right-click (which===3) is handled by the contextmenu listener above.
+								// altKey+click is also deferred to contextmenu (opens new tab).
 								if (e.which == 3 || e.altKey===true) {
 									return
 								}
@@ -582,6 +722,10 @@ export const render_column_id = function(options) {
 						})
 
 					// button_delete (trash can)
+					// The delete button is optional: it must be declared in the ontology
+					// context (context.buttons) AND explicitly enabled in show_interface.
+					// Both conditions must be true to render the button, preventing
+					// accidental deletion in views where it was not configured.
 						const button_delete = self.context.buttons && self.context.buttons.length
 							? self.context.buttons.find(el => el.model==='button_delete')
 							: null
@@ -594,6 +738,9 @@ export const render_column_id = function(options) {
 									parent			: fragment
 								})
 								// delete event
+								// Publishes a scoped 'delete_section_<id>' event that section.init
+								// subscribes to.  The SQO payload targets exactly this one record
+								// so the server-side delete is unambiguous.
 								const delete_handler = (e) => {
 									e.stopPropagation()
 
@@ -632,19 +779,43 @@ export const render_column_id = function(options) {
 
 
 /**
- * Updates the visual state of a link button and its icon based on whether a record is already linked.
- * This function fetches the caller component's full data if not already present and uses a Map (session_linked_items)
- * for efficient lookup of linked records.
- *
- * @private
- * @async
- * @param {string} initiator - Unique ID of the caller component instance.
- * @param {HTMLElement} link_icon - The icon element to update.
- * @param {HTMLElement} [link_button] - Optional button element wrapping the icon.
- * @param {string|number} section_tipo - The section type of the record being checked.
- * @param {string|number} section_id - The ID of the record being checked.
- * @returns {Promise<void>}
- */
+* _UPDATE_LINK_BUTTON
+* Async private helper that resolves and applies the initial linked/unlinked
+* visual state for a row's link button in portal-picker mode.
+*
+* Strategy (in order):
+*   1. Cache-invalidation check: if the parent component's data reference or
+*      pagination total changed since the last render, wipe the session Map so
+*      it is rebuilt from fresh data.
+*   2. Instant path: if session_linked_items (a Map) already exists on the
+*      caller instance, look up the key and return immediately — no API call.
+*   3. Inline-data shortcut: if total <= limit, all linked items are already
+*      in caller_instance.data.entries; copy them into entries_full directly.
+*   4. New-record shortcut: if section_id is '0' or empty, no items can be
+*      linked yet — set entries_full to [].
+*   5. API fetch: fire a single 'read_raw' request for the caller component's
+*      full linked-item list.  A shared promise (_loading_full_data) is stored
+*      on the caller instance to prevent redundant parallel requests when many
+*      rows are initialized simultaneously (race-condition guard).
+*   6. Build the session_linked_items Map from entries_full once, then update
+*      the button and reveal the icon via requestAnimationFrame.
+*
+* Side effects:
+*   - Mutates caller_instance.session_linked_items (Map).
+*   - Mutates caller_instance.data.entries_full (Array).
+*   - Mutates caller_instance._linked_cache_entries_ref and _linked_cache_total.
+*   - Temporarily sets caller_instance._loading_full_data (Promise; deleted in finally).
+*   - Calls _set_link_button_state on the supplied DOM elements.
+*   - Schedules a requestAnimationFrame to remove 'hide_opacity' from link_icon.
+*
+* @private
+* @param {string} initiator - Instance ID of the component_portal caller in the parent window.
+* @param {HTMLElement} link_icon - Icon span whose CSS classes reflect the linked state.
+* @param {HTMLElement} link_button - Button element that wraps the icon; receives 'added' class.
+* @param {string|number} section_tipo - Ontology tipo of the row's section.
+* @param {string|number} section_id - Record id of the row.
+* @returns {Promise<void>}
+*/
 const _update_link_button = async function(initiator, link_icon, link_button, section_tipo, section_id) {
 
 	if (!initiator) return
@@ -776,13 +947,23 @@ const _update_link_button = async function(initiator, link_icon, link_button, se
 
 
 /**
- * Sync helper to set the visual state of the link button/icon.
- *
- * @private
- * @param {boolean} is_added - Whether the record is currently linked.
- * @param {HTMLElement} link_icon - The icon element.
- * @param {HTMLElement} [link_button] - Optional button element.
- */
+* _SET_LINK_BUTTON_STATE
+* Synchronous helper that reflects a known linked/unlinked boolean onto the
+* button and icon DOM elements immediately, without any data lookup.
+*
+* When linked (is_added===true):
+*   - link_button gets class 'added' and title 'Remove'.
+*   - link_icon gets class 'check'; class 'link' is removed.
+* When unlinked:
+*   - link_button loses class 'added'; title is cleared.
+*   - link_icon gets class 'link'; class 'check' is removed.
+*
+* @private
+* @param {boolean} is_added - true when the row's record is currently linked to the caller component.
+* @param {HTMLElement} link_icon - Icon span element whose CSS classes are toggled.
+* @param {HTMLElement} link_button - Button element that wraps the icon; may be null/undefined.
+* @returns {void}
+*/
 const _set_link_button_state = function(is_added, link_icon, link_button) {
 
 	if (is_added) {

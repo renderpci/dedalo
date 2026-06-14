@@ -1,8 +1,53 @@
 <?php declare(strict_types=1);
 /**
 * CLASS SECTION
+* Represents a Dédalo section — the primary container for records in the data matrix.
 *
-* data_column_name : 'data'
+* A section is the top-level structural unit: it groups a set of components (fields)
+* that together describe one entity type (e.g. objects, persons, bibliography).
+* Each section has a tipo (ontology identifier) and holds a collection of
+* section_record instances, each uniquely identified by a section_id.
+*
+* Responsibilities:
+* - Record lifecycle: create, add, remove section_record instances.
+* - Virtual-section resolution: sections can be ontology aliases pointing to a
+*   different real section_tipo for storage (section_virtual flag).
+* - Relations management: reading, adding, and removing locator entries stored
+*   in the section's dato.relations array (or a named alternate container).
+* - Ontology traversal: resolving child component tipos by model name, resolving
+*   recursive children, and exposing the section_map (thesaurus term/parent/model
+*   mapping) stored in the ontology node properties.
+* - Diffusion support: get/add diffusion_info metadata on the section dato.
+* - Project assignment: on record creation, sets the default or inherited project
+*   via component_filter; handles the special project-creation case via
+*   component_filter_master.
+* - Session SQO: stores and retrieves per-section Search-Query-Objects in the
+*   PHP session ($_SESSION['dedalo']['config']['sqo']).
+* - Cache management: three static caches (ar_section_instances, cache_ar_children_tipo,
+*   section_map_cache) are cleared by clear() between persistent-worker requests.
+*
+* Data shape managed:
+*   - The section dato is a stdClass stored as JSONB in the matrix table column
+*     `data` (see $data_column_name). Key sub-keys:
+*       - relations       : array of locator objects
+*       - diffusion_info  : object keyed by diffusion element tipo
+*       - metadata fields : created_by_user, created_date, modified_by_user, modified_date
+*
+* Virtual sections:
+*   A virtual section shares its matrix table with a real section (get_section_real_tipo()
+*   resolves this mapping). It may exclude certain components from its real section
+*   via an 'exclude_elements' ontology node, and can add its own buttons.
+*
+* Extends: common (abstract base for all sections and components).
+* Extended by: specific section subclasses (e.g. section_thesaurus, section_ontology).
+* Collaborates with: section_record, section_record_data, ontology_node, component_common,
+*   component_filter, component_filter_master, locator, search, diffusion.
+*
+* Note: Activity sections (DEDALO_ACTIVITY_SECTION_TIPO) are write-protected; their
+*   permission is clamped to 1 and they cannot be created via create_record().
+*
+* @package Dédalo
+* @subpackage Core
 */
 class section extends common {
 
@@ -13,127 +58,159 @@ class section extends common {
 	*/
 
 		/**
-		 * Array of button elements associated with this section.
-		 * Populated during rendering based on section configuration and user permissions.
+		 * Instantiated button element objects for this section's toolbar.
+		 * Populated by get_section_buttons_tipo() → render logic; null until first render.
+		 * Virtual sections merge buttons from both the real and virtual section definitions.
 		 * @var ?array $ar_buttons
 		 */
 		public ?array $ar_buttons = null;
 
 		/**
-		 * List of all project languages available for this section.
-		 * Used for multilingual content management and language switching.
+		 * All project languages available in the current context.
+		 * Used by the UI for language-tab rendering and multilingual content switching.
+		 * Set during section rendering; null before first access.
 		 * @var ?array $ar_all_project_langs
 		 */
 		public ?array $ar_all_project_langs = null;
 
 		/**
-		 * Whether to display the inspector panel for this section.
-		 * Controls visibility of metadata and debugging information in the UI.
+		 * Whether to render the inspector (metadata/debug) panel alongside this section.
+		 * The inspector exposes section_id, tipo, permissions, and system timestamps.
+		 * Defaults to true; may be suppressed in embedded (portal) contexts.
 		 * @var bool $show_inspector
 		 */
 		public bool $show_inspector = true;
 
 		/**
-		 * Whether this section is a virtual section (ontology-based alias).
-		 * Virtual sections map to a real section type for storage but have their own ontology definition.
+		 * Whether this section is a virtual section (an ontology alias of another).
+		 * Virtual sections reuse a real section's database table but have independent
+		 * ontology definitions (different labels, layouts, excluded components).
+		 * Resolved lazily by get_section_real_tipo(); initially false.
 		 * @var bool $section_virtual
 		 */
 		public bool $section_virtual = false;
 
 		/**
-		 * The real section tipo (type identifier) when this is a virtual section.
-		 * Points to the actual section where data is stored in the database.
+		 * The real (storage) section tipo when this instance is virtual.
+		 * Null until resolved by get_section_real_tipo(). Once resolved:
+		 *   - equals $tipo          → this is not a virtual section
+		 *   - differs from $tipo    → $tipo is a virtual alias; data lives under $section_real_tipo
 		 * @var ?string $section_real_tipo
 		 */
 		public ?string $section_real_tipo = null;
 
 		/**
-		 * Whether this section instance is temporary (e.g., 'temp1').
-		 * Temp sections use 'session' save_handler and are not persisted to the database.
+		 * Whether this section record is temporary (transient, not persisted to the DB).
+		 * Temporary sections use section_id strings like 'temp1' and $save_handler = 'session'.
+		 * Intended for holding unsaved records in multi-step creation wizards.
 		 * @var bool $is_temp
 		 */
 		public bool $is_temp = false;
 
 		/**
-		 * Generic options object passed during instantiation.
-		 * Allows flexible configuration without changing the constructor signature.
+		 * Arbitrary configuration object supplied at instantiation time.
+		 * Used as an escape hatch for passing context-specific flags without
+		 * extending the constructor signature.
 		 * @var ?object $options
 		 */
 		public ?object $options = null;
 
 		/**
-		 * Storage backend for this section: 'database' (default) or 'session'.
-		 * Automatically switches to 'session' when section_id is a temp identifier (e.g., 'temp1').
+		 * Where section data is persisted: 'database' (default) or 'session'.
+		 * Automatically set to 'session' when section_id is a temp identifier.
+		 * All normal sections use 'database'; temp sections use 'session' so
+		 * that no DB write occurs until the user explicitly commits the record.
 		 * @var string $save_handler
 		 */
 		public string $save_handler = 'database';
 
 		/**
-		 * Static cache holding section instances to prevent duplicate object creation (singleton pattern).
-		 * Cleared by clear() to prevent memory leaks across worker requests.
+		 * Static singleton cache: maps cache_key → section instance.
+		 * Cache key format: "{tipo}_{mode}" (extended with dataframe keys when applicable).
+		 * Bounded to $max_cache_instances (1200) entries; oldest 400 are evicted on overflow.
+		 * Cleared entirely by clear() between persistent-worker HTTP requests.
+		 * (!) Do not rely on instance identity across requests.
 		 * @var array $ar_section_instances
 		 */
 		public static array $ar_section_instances = [];
 
 		/**
-		 * Whether this section has been modified since last save.
-		 * Used by save logic to skip unnecessary database writes.
+		 * Dirty flag indicating this section's dato has changed since the last DB write.
+		 * Defaults to true so that a freshly created section is always persisted.
+		 * Checked by save routines to skip unnecessary UPDATE queries.
 		 * @var bool $save_modified
 		 */
 		public bool $save_modified = true;
 
 		/**
-		 * The full database record object with all columns (id, section_tipo, section_id, data, etc.).
-		 * Injected after load or directly assigned for performance in bulk operations.
+		 * Raw database row object for this section record (all matrix columns).
+		 * Columns typically include: id, section_tipo, section_id, data (JSONB).
+		 * May be pre-injected in bulk-load paths to avoid redundant queries.
+		 * Null until the record is loaded from the database.
 		 * @var ?object $record
 		 */
 		public ?object $record = null;
 
 		/**
-		 * Name of the JSONB column where component data is stored in the database.
-		 * Typically 'data' for standard sections. Defined per component context.
+		 * Name of the JSONB column in the matrix table that stores this section's data.
+		 * Hardcoded to 'data' for standard sections (set in __construct via
+		 * section_record_data::get_column_name()). Overridable in specialized subclasses.
 		 * @var ?string $data_column_name
 		 */
 		public ?string $data_column_name = null;
 
 		/**
-		 * Time Machine context data for tracking changes.
-		 * Array of temporal metadata used by the time machine versioning system.
+		 * Time Machine versioning context for this section record.
+		 * When set, operations use temporal data rather than the live record.
+		 * Array shape follows the time_machine module conventions.
 		 * @var ?array $tm_context
 		 */
 		public ?array $tm_context = null;
 
 		/**
-		 * Instance of JSON_RecordObj_matrix containing the raw section data source from the database.
-		 * Provides direct access to the underlying JSONB record before object hydration.
+		 * Raw JSONB record wrapper from the matrix, used for direct data-source access.
+		 * Holds the deserialized stdClass before component hydration.
+		 * Protected: only used internally and by section_record subclasses.
 		 * @var ?object $JSON_RecordObj_matrix
 		 */
 		protected ?object $JSON_RecordObj_matrix = null;
 
 		/**
-		 * Array of section_record instances belonging to this section.
-		 * Used in list mode to iterate over records matching the current filter.
+		 * Keyed collection of loaded section_record instances (section_id → section_record).
+		 * In list mode this holds all records fetched by the current SQO.
+		 * In edit mode it typically holds one record (the currently edited one).
+		 * Mutated by add_section_record() and remove_section_record().
 		 * @var array $section_records
 		 */
 		protected array $section_records = [];
 
 		/**
-		 * Static cache mapping section tipos to their child component tipos.
-		 * Avoids repeated ontology lookups for section structure.
+		 * Static cache: section component lookups keyed by a composite uid
+		 * (section_tipo | model_names | flags fingerprint).
+		 * Avoids repeated ontology traversals for get_ar_children_tipo_by_model_name_in_section().
+		 * Cleared by clear(); size-bounded by manage_cache_size().
 		 * @var array $cache_ar_children_tipo
 		 */
 		public static array $cache_ar_children_tipo = [];
 
 		/**
-		 * Static cache for resolved section map structures.
-		 * Stores parsed section definitions to avoid re-processing ontology maps.
+		 * Static cache: maps section_tipo → parsed section_map object (or null).
+		 * The section_map is read from the ontology node properties of the
+		 * 'section_map' child element; it defines thesaurus term/parent/model
+		 * mappings consumed by the ts_term_resolver and section_map resolver.
+		 * Cleared by clear(); size-bounded by manage_cache_size().
 		 * @var array $section_map_cache
 		 */
 		public static array $section_map_cache = [];
 
 		/**
 		* CLEAR
-		* Purges persistent caches to prevent memory leaks across worker requests.
+		* Purges all section static caches to prevent memory and state bleed across
+		* persistent-worker HTTP requests (see audit-2026-06-worker-state-bleed).
+		*
+		* Called by the global common::clear() dispatcher at the start of every request.
+		* Must be kept in sync with any new static caches added to this class.
+		* @return void
 		*/
 		public static function clear() : void {
 			self::$ar_section_instances = [];
@@ -144,13 +221,26 @@ class section extends common {
 
 	/**
 	* GET_INSTANCE
-	* Cache section instances (singleton pattern)
-	* @param string $tipo
-	* @param string|null $mode = 'list'
-	* @param bool $cache = true
-	* @param object|null $caller_dataframe = null
-	* @return object|false $section
-	* Returns false if the section cannot be created
+	* Singleton factory: returns a cached section instance or creates one on first call.
+	*
+	* Cache key format: "{tipo}_{mode}" for normal sections, extended with
+	* "_dataframe_{section_tipo_key}_{section_id_key}_{main_component_tipo}" when a
+	* caller_dataframe is supplied (so dataframe-scoped views do not share the same
+	* object as the top-level section view).
+	*
+	* Cache bypass rules (always allocates a fresh object):
+	*   - $cache === false   : callers that need isolated instances (import pipelines)
+	*   - $mode === 'update' : save operations require a clean state
+	*   - $mode === 'tm'     : time-machine reads must not pollute the live cache
+	*
+	* Cache eviction: when the instance pool exceeds 1200 entries, the oldest 400
+	* are dropped (FIFO). This is a safety net, not a precision LRU.
+	*
+	* @param string $tipo - ontology tipo of the section (must resolve to model 'section')
+	* @param string $mode = 'list' - rendering mode ('list', 'edit', 'search', 'update', 'tm', …)
+	* @param bool $cache = true - false forces a fresh section object (imports, TM)
+	* @param ?object $caller_dataframe = null - when set, scopes the cache key to this dataframe context
+	* @return section|false - false if $tipo resolves to no model or to a non-section model
 	*/
 	public static function get_instance( string $tipo, string $mode='list', bool $cache=true, ?object $caller_dataframe=null ) : section|false {
 
@@ -233,9 +323,23 @@ class section extends common {
 
 	/**
 	* CONSTRUCT
-	* Extends parent abstract class common
-	* @param string $tipo
-	* @param string|null $mode = 'edit'
+	* Initializes a section instance with identity, structural data, and pagination defaults.
+	*
+	* Private: only called by get_instance() to enforce the singleton cache contract.
+	* Extends the abstract common base class which provides shared identity properties
+	* (tipo, section_tipo, section_id, mode, lang, permissions, pagination, etc.).
+	*
+	* Side effects:
+	*   - Sets $uid to a nanosecond-precision string (hrtime) for instance tracing.
+	*   - Sets $lang to DEDALO_DATA_NOLAN (language-neutral, the section-level default).
+	*   - Calls parent::load_structure_data() which populates $ontology_node, $label,
+	*     $model, $translatable, and related ontology properties from the cache.
+	*   - Sets $data_column_name via section_record_data::get_column_name() — always 'data'
+	*     for standard sections.
+	*   - Initialises pagination with offset=0, limit=null (unlimited).
+	*
+	* @param string $tipo - section's ontology identifier
+	* @param string $mode - rendering mode ('list', 'edit', 'search', 'tm', …)
 	*/
 	private function __construct( string $tipo, string $mode ) {
 
@@ -266,30 +370,39 @@ class section extends common {
 
 	/**
 	* CREATE_RECORD
-	* Creates a new section record in the corresponding matrix database.
+	* Inserts a new record into this section's matrix table and performs all required
+	* post-creation bookkeeping.
 	*
-	* Builds metadata and modification data, inserts the record, logs the creation activity,
-	* and clears relevant caches based on the section tipo.
+	* Creation pipeline (in order):
+	*   1. Resolve $options (initial values object, optional forced section_id).
+	*   2. Require an authenticated user (logged_user_id()); refuse anonymous creation.
+	*   3. Guard: activity sections (DEDALO_ACTIVITY_SECTION_TIPO) must never be created
+	*      through this path — they are managed by the logger subsystem exclusively.
+	*   4. Build metadata (created_by_user, created_date) and modification_data
+	*      (modified_by_user, modified_date) via section_record helpers.
+	*   5. Call section_record::create() to INSERT the row into the matrix table.
+	*   6. Register the new section_record in $this->section_records via add_section_record().
+	*   7. Write a 'NEW' entry to the activity log.
+	*   8. Invalidate known derivative caches for config-presets, tool-registry, and
+	*      project-filter (section-tipo-specific switch).
 	*
-	* Note: Activity sections (`DEDALO_ACTIVITY_SECTION_TIPO`) cannot be created through
-	* this method and will return `false`.
+	* (!) Does NOT set the project filter on the new record. Callers that need
+	* project assignment must call set_projects_to_new_section_record() separately
+	* (portals do this automatically).
 	*
-	* @param object|null $options = null
-	*  Optional configuration object with properties:
-	*  - values : object|null
-	*    Data to inject into the new section record. Must be an object; non-objects are rejected.
-	*  - section_id : int|null
-	*    Force creation with a specific section_id (used in import processes). Must be an integer.
-	*
-	* @return int|false
-	*  The newly created section_id on success, `false` on any error.
+	* @param ?object $options = null - optional overrides:
+	*   - values     : ?object — initial data fields to write into the new record;
+	*                  merged with metadata/modification_data; non-objects cause a fatal return false.
+	*   - section_id : ?int   — force a specific section_id (import use only);
+	*                  non-integer values cause a fatal return false.
+	* @return int|false - the newly assigned section_id on success; false on any error
 	*/
 	public function create_record( ?object $options=null ) : int|false {
 		$start_time = start_time();
 
 		if(SHOW_DEBUG===true) {
 			// metrics
-				metrics::$section_save_total_calls++;
+				metrics::inc('section_save_total_calls');
 		}
 
 		// Options
@@ -404,17 +517,25 @@ class section extends common {
 			);
 
 		// 4. Reset caches
+		// Certain section types feed application-wide caches that must be invalidated
+		// immediately so subsequent requests see the newly created record.
 			switch ($tipo) {
 
 				case DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO:
+					// Request-config preset cache is keyed per tipo+mode; a new preset record
+					// must be visible immediately without a worker restart.
 					request_config_presets::clean_cache();
 					break;
 
 				case DEDALO_REGISTER_TOOLS_SECTION_TIPO:
+					// Tool registry cache must reflect newly registered tool records right away.
 					tools_register::clean_cache();
 					break;
 
 				case DEDALO_SECTION_PROJECTS_TIPO:
+					// A new project record changes which projects the current user is authorized
+					// for. The filter_master cache (dd170) is per-user, so only the current user's
+					// cache slot needs purging — the new project will be re-authorized below.
 					component_filter_master::clean_cache(
 						$user_id, // user id. Current logged user id
 						DEDALO_FILTER_MASTER_TIPO // dd170
@@ -432,7 +553,7 @@ class section extends common {
 				$total_time_ms = exec_time_unit($start_time, 'ms');
 
 				// metrics
-					metrics::$section_save_total_time += $total_time_ms;
+					metrics::add_time_ms('section_save_total_time', $total_time_ms);
 
 				debug_log(__METHOD__
 					." Create new section finish: ($tipo - $section_id) in time: ".$total_time_ms.' ms'
@@ -448,9 +569,14 @@ class section extends common {
 
 	/**
 	* ADD_SECTION_RECORD
-	* Storage section_record given into the section_records instances
-	* The array will replace the section_record with the same section_id
-	* @param section_record $section_record
+	* Registers a section_record instance into this section's in-memory record pool.
+	*
+	* Uses section_id as the array key so that re-adding the same record (e.g. after
+	* a save) silently replaces the stale reference without creating duplicates.
+	* Called by create_record() after a successful INSERT, and by load paths that
+	* hydrate records from the database.
+	*
+	* @param section_record $section_record - the record to register; its section_id must be set
 	* @return void
 	*/
 	public function add_section_record( section_record $section_record ) : void {
@@ -461,9 +587,13 @@ class section extends common {
 
 	/**
 	* REMOVE_SECTION_RECORD
-	* Remove section_record given from the section_records instances
-	* Will be deleted the section_record given with the same section_id if exist
-	* @param section_record $section_record
+	* Unregisters a section_record instance from this section's in-memory record pool.
+	*
+	* Matches by section_id key. If the record is not currently registered, the call
+	* is a no-op (safe to call on records that may or may not exist in the pool).
+	* Used by delete operations to keep the in-memory pool consistent after removal.
+	*
+	* @param section_record $section_record - the record to deregister; matched by section_id
 	* @return void
 	*/
 	public function remove_section_record( section_record $section_record ) : void {
@@ -475,10 +605,36 @@ class section extends common {
 
 
 	/**
-	* SET_PROJECTS_TO_NEW_SECTION_record
-	* Assign the project to new sections, it could be inheritance from caller section
-	* @param int $section_id
-	* @param array|null $component_filter_data
+	* SET_PROJECTS_TO_NEW_SECTION_RECORD
+	* Assigns a project locator to a freshly created section record.
+	*
+	* Two distinct code paths based on the section tipo:
+	*
+	*   DEDALO_SECTION_PROJECTS_TIPO (a project record was just created):
+	*     Adds the new project as an authorized project for the currently logged-in user
+	*     by appending a locator to the user's component_filter_master (dd170) dato and
+	*     saving it. component_filter_master::Save() automatically invalidates user
+	*     project caches, so no explicit cache flush is required here.
+	*
+	*   All other sections:
+	*     Resolves the section's component_filter tipo from the ontology. If none is
+	*     found the section is considered "project-less" (e.g. controlled vocabulary lists)
+	*     and the call is a no-op with a WARNING log. If a component_filter is found:
+	*       - When $component_filter_data is non-empty (portal-injected locators), those
+	*         locators are written directly and the component is saved in 'list' mode to
+	*         avoid triggering the auto-default-project logic.
+	*       - When $component_filter_data is empty, the component is loaded in 'edit' mode,
+	*         which automatically saves the default project (DEDALO_DEFAULT_PROJECT)
+	*         if the component's dato is currently empty.
+	*
+	* (!) Constructing component_filter in 'edit' mode triggers an automatic save of
+	* the default project, which in turn causes another section save. This is a known
+	* side effect of the component_filter design.
+	*
+	* @param int $section_id - the section_id of the newly created record
+	* @param ?array $component_filter_data - caller-supplied project locators (from portals);
+	*   null or empty triggers the default-project path
+	* @return void
 	*/
 	private function set_projects_to_new_section_record( int $section_id, ?array $component_filter_data ) {
 
@@ -595,8 +751,18 @@ class section extends common {
 
 	/**
 	* GET_SECTION_REAL_TIPO
-	* Resolves current section real tipo if is a virtual section
-	* @return string $section_real_tipo
+	* Resolves and caches the real (storage) section tipo for this instance.
+	*
+	* On first call, delegates to get_section_real_tipo_static() and memoises
+	* both $section_real_tipo and $section_virtual on the instance, so subsequent
+	* calls return the cached value without touching the ontology.
+	*
+	* Result interpretation:
+	*   - returned value === $this->tipo  → not virtual; $section_virtual = false
+	*   - returned value !== $this->tipo  → virtual alias; $section_virtual = true;
+	*     data is stored under the returned real tipo's matrix table
+	*
+	* @return string - the real section_tipo (equals $this->tipo when not virtual)
 	*/
 	public function get_section_real_tipo() : string {
 
@@ -622,10 +788,20 @@ class section extends common {
 
 	/**
 	* GET_SECTION_REAL_TIPO_STATIC
-	* Resolves current section real tipo if is a virtual section statically
-	* @param string $section_tipo
-	* @return string $section_real_tipo
-	*	If there is no related section, the same section_tipo is returned.
+	* Resolves the real (storage) section tipo for any given section_tipo without
+	* requiring a section instance.
+	*
+	* Looks up ontology relations of model 'section' on the given tipo via
+	* common::get_ar_related_by_model(). A virtual section declares exactly one
+	* 'section' relation pointing to its real counterpart. If no such relation
+	* exists, the input tipo is the real tipo and it is returned unchanged.
+	*
+	* Used both by the instance method get_section_real_tipo() and by static
+	* helpers that need virtual-section resolution without constructing an object
+	* (e.g. get_ar_children_tipo_by_model_name_in_section with resolve_virtual=true).
+	*
+	* @param string $section_tipo - the tipo to resolve (may be virtual or real)
+	* @return string - the real section_tipo; equals $section_tipo when not virtual
 	*/
 	public static function get_section_real_tipo_static(string $section_tipo) : string {
 
@@ -643,15 +819,48 @@ class section extends common {
 
 
 	/**
-	* GET_SECTION_AR_CHILDREN_TIPO
-	* @param string $section_tipo
-	* @param array $ar_model_name_required
-	* @param bool $from_cache
-	*	default true
-	* @param bool $resolve_virtual
-	*	Force resolve section if is virtual section. default false
-	*	Name of desired filtered model array. You can use partial name like 'component_' (string position search is made it)
-	* @return array $section_ar_children_tipo
+	* GET_AR_CHILDREN_TIPO_BY_MODEL_NAME_IN_SECTION
+	* Returns all child element tipos of a section that match the requested model name(s).
+	*
+	* This is the primary ontology-traversal entry point used throughout the codebase
+	* to locate components (e.g. ['component_filter']), buttons (['button_']),
+	* layout groupers (['section_group']), and structural markers (['section_map']).
+	*
+	* Traversal behaviour:
+	*   - Components (model name contains 'component') are searched recursively by default
+	*     (walks section_group, section_tab, tab children). Other models default to first level only.
+	*   - When multiple model names are requested (count > 1) the traversal is always recursive.
+	*   - $search_exact=true requires an exact model name match; false uses str_contains.
+	*
+	* Virtual-section resolution ($resolve_virtual=true):
+	*   1. Resolves $section_tipo to its real counterpart via get_section_real_tipo_static().
+	*   2. Reads the 'exclude_elements' node of the virtual section to find tipos that
+	*      were explicitly hidden (overrides). Those tipos — and their recursive children
+	*      if they are groupers — are subtracted from the real section's child list.
+	*   3. Any $ar_tipo_exclude_elements=false sentinel triggers automatic ontology resolution
+	*      of exclude_elements; pass an explicit array (even []) to skip that lookup.
+	*
+	* (!) Keep default $resolve_virtual=false. Passing true forces two ontology lookups
+	* and may return different results for the same section_tipo, which is intentional
+	* for virtual sections but unexpected for callers that always want the real layout.
+	*
+	* Caching:
+	*   Results are stored in self::$cache_ar_children_tipo keyed by a composite uid
+	*   that encodes all parameters. The cache is bounded by manage_cache_size() and
+	*   cleared by clear() between requests.
+	*
+	* @param string $section_tipo - the section to introspect (virtual or real)
+	* @param array $ar_model_name_required - one or more model names to match
+	*   (e.g. ['component_filter'], ['button_'], ['component_'])
+	* @param bool $from_cache = true - skip the cache when false (rare; mainly for tests)
+	* @param bool $resolve_virtual = false - when true, resolves virtual-section overrides
+	* @param bool $recursive = true - walk group/tab children recursively
+	* @param bool $search_exact = false - exact match vs. str_contains on model name
+	* @param array|false $ar_tipo_exclude_elements = false - tipos to exclude from results;
+	*   false triggers automatic ontology resolution of the virtual section's exclude_elements
+	* @param ?array $ar_exclude_models = null - additional model names to skip during
+	*   get_ar_recursive_children() traversal (used in ICH and similar multi-section contexts)
+	* @return array - list of matching child tipos (preserves ontology order, de-duplicated)
 	*/
 	public static function get_ar_children_tipo_by_model_name_in_section(
 			string $section_tipo,
@@ -665,6 +874,9 @@ class section extends common {
 		) : array {
 
 
+		// cache_uid. Incorporate all parameters that affect the result.
+		// md5(serialize()) is used for complex parameters ($ar_tipo_exclude_elements,
+		// $ar_exclude_models) that cannot be safely inlined as strings.
 		$cache_uid = implode('_', [
 			$section_tipo,
 			implode('|', $ar_model_name_required),
@@ -729,6 +941,14 @@ class section extends common {
 
 
 		// we obtain the child elements of this section
+		// Two traversal depths:
+		//   recursive   → calls get_ar_recursive_children(), which walks through
+		//                  section_group / section_tab / tab groupers to reach nested components.
+		//   first-level → calls ontology_node::get_ar_children_of_this(), which returns
+		//                  only direct children (buttons, section_map, etc.).
+		// The heuristic: if any required model contains 'component', default to recursive
+		// (components live inside groups); everything else defaults to first level.
+		// When multiple models are requested, we always go recursive to catch all depths.
 		if (count($ar_model_name_required)>1) {
 
 			if (true===$recursive) { // Default is recursive
@@ -783,13 +1003,18 @@ class section extends common {
 
 
 	/**
-	 * FILTER_CHILDREN_BY_MODELS
-	 * Filter children by models in section
-	 * @param array $ar_recursive_children
-	 * @param array $ar_model_name_required
-	 * @param bool $search_exact
-	 * @return array
-	 */
+	* FILTER_CHILDREN_BY_MODELS
+	* Filters a flat list of tipos, keeping only those whose ontology model name
+	* matches at least one entry in $ar_model_name_required.
+	*
+	* Deduplication is O(1) via $result_keys so that each tipo appears at most once
+	* even when a single tipo could satisfy multiple required model names.
+	*
+	* @param array $ar_recursive_children - flat tipo list from get_ar_recursive_children()
+	* @param array $ar_model_name_required - model names to match (e.g. ['component_filter'])
+	* @param bool $search_exact - true = strict equality; false = str_contains substring match
+	* @return array - filtered and de-duplicated list of tipos, preserving traversal order
+	*/
 	private static function filter_children_by_models(
 		array $ar_recursive_children,
 		array $ar_model_name_required,
@@ -825,11 +1050,22 @@ class section extends common {
 
 
 	/**
-	* GET_AR_RECURSIVE_CHILDREN : private alias of ontology_node::get_ar_recursive_children
-	* Note the use of $ar_exclude_models to exclude not desired section elements, like auxiliary sections in ich
-	* @param string $tipo
-	* @param array|null $ar_exclude_models = null
-	* @return array $ar_recursive_children
+	* GET_AR_RECURSIVE_CHILDREN
+	* Thin wrapper around ontology_node::get_ar_recursive_children() that injects
+	* section-appropriate default model exclusions.
+	*
+	* Default excluded models (always suppressed from section child traversal):
+	*   - 'box elements'             : layout-only containers without data meaning
+	*   - 'area'                     : area elements belong to the UI shell, not the section
+	*   - 'component_semantic_node'  : v5 artefact; present in legacy ontologies but unused in v6+
+	*
+	* Additional caller-supplied $ar_exclude_models are merged with the defaults.
+	* Used by ICH and other multi-section layouts to prevent auxiliary nested sections
+	* from contributing their children to the parent's component list.
+	*
+	* @param string $tipo - root tipo whose subtree should be traversed
+	* @param ?array $ar_exclude_models = null - extra model names to exclude beyond the defaults
+	* @return array - flat list of descendant tipos (depth-first, excluding excluded models' subtrees)
 	*/
 	public static function get_ar_recursive_children( string $tipo, ?array $ar_exclude_models=null ) : array {
 
@@ -859,8 +1095,25 @@ class section extends common {
 
 	/**
 	* GET_SECTION_BUTTONS_TIPO
-	* Calculates current section buttons tipo considering virtual section cases
-	* @return array $ar_buttons_tipo
+	* Returns the ordered list of button tipos that should appear in this section's toolbar.
+	*
+	* Virtual vs real section handling:
+	*   Virtual section ($section_real_tipo !== $this->tipo):
+	*     1. Resolves the virtual section's 'exclude_elements' node to get tipos that should
+	*        not appear (inherited from the real section). Warns if no exclude_elements is found
+	*        — all virtual sections should define one.
+	*     2. Fetches button_ tipos from the real section, filtering out excluded tipos.
+	*     3. Fetches button_ tipos specific to the virtual section itself.
+	*     4. Merges both sets (real first, then virtual-specific) into a single ordered list.
+	*
+	*   Real section:
+	*     Returns all button_ tipos found at the first ontology level of $this->tipo.
+	*
+	* (!) Buttons are at the first level of the section (not inside groups), so recursive=false
+	* is used throughout. Changing this to recursive=true would silently include buttons
+	* nested inside section_groups, which is not the intended behaviour.
+	*
+	* @return array - ordered list of button tipos for toolbar rendering
 	*/
 	public function get_section_buttons_tipo() : array {
 
@@ -942,8 +1195,11 @@ class section extends common {
 
 
 	/**
-	* GET_SECTION_TIPO : alias of $this->get_tipo()
-	* @return string $section_tipo
+	* GET_SECTION_TIPO
+	* Semantic alias of get_tipo() that clarifies caller intent at call sites
+	* dealing with sections rather than arbitrary common elements.
+	* Returns the section's ontology tipo identifier (e.g. 'oh1', 'dd153').
+	* @return string - the section's tipo
 	*/
 	public function get_section_tipo() : string {
 
@@ -954,9 +1210,18 @@ class section extends common {
 
 	/**
 	* GET_PUBLICATION_DATE
-	* @see class.diffusion_utils definitions for publication_first_tipo, publication_last_tipo, etc.
-	* @param string $component_tipo
-	* @return string|null $local_date
+	* Reads the human-readable local date string from a diffusion publication-date component.
+	*
+	* Used by the diffusion subsystem to surface publication timestamps in the UI and
+	* export outputs. Accepts either the first-publication or last-publication component
+	* tipo (see diffusion_utils for the relevant constants:
+	* publication_first_tipo, publication_last_tipo, etc.).
+	*
+	* Returns null when the component dato is empty or has no start date value.
+	*
+	* @see class.diffusion_utils - definitions for publication_first_tipo, publication_last_tipo, etc.
+	* @param string $component_tipo - tipo of the publication date component to read
+	* @return ?string - formatted local date string (via dd_date::timestamp_to_date()) or null
 	*/
 	public function get_publication_date(string $component_tipo) : ?string {
 
@@ -994,8 +1259,17 @@ class section extends common {
 
 	/**
 	* GET_PUBLICATION_USER
-	* @param string $component_tipo
-	* @return string|null $user_name
+	* Reads the display name of the user who triggered a publication event,
+	* from a diffusion publication-user component (e.g. publication_first_user_tipo).
+	*
+	* The component's dato is an array of locators; the relevant locator's
+	* section_id is treated as the user_id, which is then resolved to a display
+	* name via section::get_user_name_by_user_id().
+	*
+	* Returns null when the dato is empty or the user id cannot be resolved.
+	*
+	* @param string $component_tipo - tipo of the publication user component to read
+	* @return ?string - human-readable user display name, or null when unavailable
 	*/
 	public function get_publication_user(string $component_tipo) : ?string {
 
@@ -1037,10 +1311,17 @@ class section extends common {
 
 	/**
 	* GET_AR_ALL_SECTION_RECORDS_UNFILTERED
-	* @see diffusion::build_table_data_recursive
+	* Returns an array of all section_id values for a given section_tipo,
+	* without applying any project or search filter.
 	*
-	* @param string $section_tipo
-	* @return array $ar_records
+	* (!) Memory hazard: loads all section_ids into a PHP array. A WARNING is logged
+	* when the result set exceeds 1000 rows. For large sections, prefer the streaming
+	* variant get_resource_all_section_records_unfiltered() which returns a PgSql
+	* resource handle for row-by-row iteration without buffering.
+	*
+	* @see diffusion::build_table_data_recursive — primary caller in the diffusion pipeline
+	* @param string $section_tipo - the section to scan
+	* @return array - ordered list of section_id strings (ASC), empty on error
 	*/
 	public static function get_ar_all_section_records_unfiltered( string $section_tipo ) : array {
 
@@ -1069,13 +1350,26 @@ class section extends common {
 
 	/**
 	* GET_RESOURCE_ALL_SECTION_RECORDS_UNFILTERED
-	* Iterate result as:
-	* while ($rows = pg_fetch_assoc($result)) {
-	*	$current_id = $rows['section_id'];
-	* }
-	* @param string $section_tipo
-	* @param string $select = 'section_id'
-	* @return PgSql\Result|bool $result
+	* Returns a raw PostgreSQL result resource for streaming all records of a section.
+	*
+	* Unlike get_ar_all_section_records_unfiltered(), this method does NOT buffer
+	* records into a PHP array, making it suitable for very large datasets.
+	*
+	* Typical iteration pattern:
+	* <code>
+	*   $result = section::get_resource_all_section_records_unfiltered($section_tipo);
+	*   while ($rows = pg_fetch_assoc($result)) {
+	*       $current_id = $rows['section_id'];
+	*   }
+	* </code>
+	*
+	* The SQL query annotates itself with the calling method name (-- __METHOD__)
+	* for PostgreSQL log traceability.
+	*
+	* @param string $section_tipo - the section to scan
+	* @param string $select = 'section_id' - SQL SELECT columns (default: section_id only)
+	* @return \PgSql\Result|bool - PgSql result handle on success; false when the matrix table
+	*   is unknown or the query fails
 	*/
 	public static function get_resource_all_section_records_unfiltered( string $section_tipo, string $select='section_id' ) {
 
@@ -1104,13 +1398,24 @@ class section extends common {
 
 	/**
 	* GET_DIFFUSION_INFO
-	* Get property 'diffusion_info' from section dato
-	* sample:
-	* {
-	*   ...
-	* 	diffusion_info : null
-	* }
-	* @return object|null $diffusion_info
+	* Returns the diffusion_info object stored inside this section's dato, if present.
+	*
+	* The diffusion_info key is a stdClass keyed by diffusion element tipo, where each
+	* sub-key holds a record of the last publish event for that diffusion element:
+	* <code>
+	*   {
+	*     "dd_some_diffusion_tipo": {
+	*       "date":    "2025-03-01 14:22:00",
+	*       "user_id": 42
+	*     },
+	*     ...
+	*   }
+	* </code>
+	*
+	* Returns null when no diffusion_info has been written to this record yet.
+	* Used by the diffusion pipeline to decide whether a record needs republishing.
+	*
+	* @return ?object - parsed diffusion_info stdClass, or null when absent
 	*/
 	public function get_diffusion_info() : ?object {
 
@@ -1125,10 +1430,17 @@ class section extends common {
 
 	/**
 	* ADD_DIFFUSION_INFO_DEFAULT
-	* Add default base diffusion_info to section only if not already set
-	* @param string $diffusion_element_tipo
-	* @return bool
-	* true if not already set and is fixed, false if is already set
+	* Stamps a diffusion element's initial publish record onto this section's dato,
+	* but only when that element does not already have an entry in diffusion_info.
+	*
+	* Used at the start of a publish run to initialise tracking for a new diffusion
+	* element. Idempotent: if the key already exists, no change is made and false is returned.
+	*
+	* Side effect: calls set_dato() when a new entry is written, marking the section dirty.
+	* The caller is responsible for saving the section to persist the change.
+	*
+	* @param string $diffusion_element_tipo - the diffusion element tipo key to initialise
+	* @return bool - true when the entry was newly created; false when it already existed
 	*/
 	public function add_diffusion_info_default(string $diffusion_element_tipo) : bool {
 
@@ -1168,10 +1480,21 @@ class section extends common {
 
 	/**
 	* GET_RELATIONS
-	* Get section container 'relations' array of locators values
-	* Consider the variable in the section when constructing the object ......	*
-	* @param string $relations_container = 'relations'
-	* @return array $relations
+	* Returns the array of locator objects stored under a named relations container
+	* within this section's dato.
+	*
+	* Relations are the primary mechanism Dédalo uses to represent inter-record links.
+	* Each locator object has at minimum: section_id, section_tipo, type properties.
+	*
+	* The default container 'relations' holds the section's primary link set.
+	* Alternate containers (e.g. 'related_relations') are used for secondary link types.
+	*
+	* Returns an empty array (never null) when:
+	*   - section_id is not yet set (record not yet created), or
+	*   - the relations container key does not exist in the dato.
+	*
+	* @param string $relations_container = 'relations' - dato sub-key to read
+	* @return array - array of locator stdClass objects; empty when none exist
 	*/
 	public function get_relations( string $relations_container='relations' ) : array {
 
@@ -1192,11 +1515,21 @@ class section extends common {
 
 	/**
 	* ADD_RELATION
-	* @param object $locator
-	*	locator with valid 'type' property defined is mandatory
-	* @param string $relations_container = 'relations'
-	* @return bool
-	* 	true if is added
+	* Appends a locator to the named relations container in this section's dato.
+	*
+	* Validation guards (all return false on failure):
+	*   - $locator must be a non-empty object.
+	*   - $locator->type must be set (identifies the relation type, e.g. DEDALO_RELATION_TYPE_FILTER).
+	*   - Stripping is applied: if $locator->paginated_key exists it is removed (transient UI property).
+	*   - Existing locators are validated for well-formedness; malformed entries are logged.
+	*   - Duplicate detection via locator::in_array_locator() prevents double-adding the same link.
+	*
+	* Side effect: mutates $this->dato directly (does NOT call save). The caller must
+	* explicitly call Save() or the parent record's save routine to persist the change.
+	*
+	* @param object $locator - the locator to add; must have section_id, section_tipo, type
+	* @param string $relations_container = 'relations' - target container key in dato
+	* @return bool - true when the locator was added; false when rejected (invalid or duplicate)
 	*/
 	public function add_relation( object $locator, string $relations_container='relations' ) : bool {
 
@@ -1281,7 +1614,9 @@ class section extends common {
 			array_push($relations, $locator);
 
 		// Force load 'dato' if not exists / loaded
-		// (!) removed because is not necessary. get_relations method already loads section dato
+		// (!) This guard is kept for safety even though get_relations() already triggers
+		// get_dato() internally. The double-check ensures $this->dato is a writable object
+		// before we mutate it directly below (handles edge cases where dato was nulled out).
 			if ( empty($this->dato) && $this->section_id>0 ) {
 				$this->get_dato();
 			}
@@ -1290,6 +1625,8 @@ class section extends common {
 			}
 
 		// Update whole container
+		// Replace the entire container key so the change is visible to any subsequent
+		// get_relations() call on this same object without requiring a DB reload.
 			$this->dato->{$relations_container} = $relations;
 
 
@@ -1300,15 +1637,30 @@ class section extends common {
 
 	/**
 	* REMOVE_RELATION
-	* @param object locator $locator
-	* locator with valid 'type' property defined is mandatory
-	* @param string $relations_container = 'relations'
-	* @return bool
-	* 	true if is removed
+	* Removes a locator from the named relations container in this section's dato.
+	*
+	* Comparison strategy: always matches on the core triple (section_id, section_tipo, type).
+	* Additional optional properties are added to the comparison set when they are present
+	* on the supplied $locator, enabling precise removal of a single entry within a multi-link
+	* set that shares the same core triple:
+	*   - from_component_tipo : narrows match to a specific source component
+	*   - tag_id              : narrows match to a specific media tag
+	*   - component_tipo      : narrows match to a specific component binding
+	*   - section_top_tipo    : narrows match to a portal/relation top-section scope
+	*   - section_top_id      : narrows match to a portal/relation top-record scope
+	*
+	* Side effect: when at least one locator is removed, mutates $this->dato directly.
+	* The caller must explicitly call Save() to persist the change.
+	*
+	* @param object $locator - the locator to remove; core triple (section_id, section_tipo, type) required
+	* @param string $relations_container = 'relations' - container key in dato
+	* @return bool - true when at least one locator was removed; false when no match was found
 	*/
 	public function remove_relation( object $locator, string $relations_container='relations' ) : bool {
 
 		// ar_properties. Used to compare existing locators with given
+		// Start with the mandatory core triple, then extend with any optional discriminators
+		// that are present on the supplied locator to avoid over-broad removal.
 			$ar_properties=array('section_id','section_tipo','type');
 			// optional properties, based on given locator
 			if (isset($locator->from_component_tipo))	$ar_properties[] = 'from_component_tipo';
@@ -1350,21 +1702,37 @@ class section extends common {
 
 	/**
 	* REMOVE_RELATIONS_FROM_COMPONENT_TIPO
-	* Delete all locators of type requested from section relation dato
-	* (!) Note that this method do not save
-	* @param object $options
-	* {
-	*	component_tipo: string ,
-	* 	relations_container: string 'relations',
-	* 	model: string 'component_dataframe',
-	* 	caller_dataframe: {
-	* 		section_tipo: string "numisdata4",
-	* 		section_id: string "1",
-	* 		section_id_key: string "1",
-	* 		tipo_key: string "numisdata161"
-	* 	}
-	* }
-	* @return array $ar_deleted_locators
+	* Bulk-removes all locators that were written by a specific component from the
+	* named relations container, returning the deleted entries for the caller's use.
+	*
+	* (!) This method mutates $this->dato but does NOT save. The caller must call
+	* Save() separately to persist the removal.
+	*
+	* Two match predicates, selected by $options->model:
+	*
+	*   model === 'component_dataframe' AND $caller_dataframe is set:
+	*     Uses component_common::dataframe_entry_matches() to apply the unified
+	*     id_key / section_id_key dual-read contract (see memory: IRI id dataframe pairing).
+	*     This handles the case where a dataframe component built without a caller_dataframe
+	*     (e.g. import pipelines) stores whole-dato locators that must still be cleaned up
+	*     when the dataframe entry is deleted.
+	*
+	*   all other models:
+	*     Matches on locator->from_component_tipo === $options->component_tipo.
+	*     Removes all locators that were created by the given source component.
+	*
+	* @param object $options - removal configuration:
+	*   - component_tipo      : string — the source component whose locators to remove
+	*   - relations_container : string = 'relations' — target container key in dato
+	*   - model               : ?string = null — component model name (drives predicate selection)
+	*   - caller_dataframe    : ?object = null — dataframe context (required for component_dataframe path)
+	*     {
+	*       section_tipo    : string — e.g. "numisdata4"
+	*       section_id      : string — e.g. "1"
+	*       section_id_key  : string — legacy key (e.g. "1")
+	*       tipo_key        : string — e.g. "numisdata161"
+	*     }
+	* @return array - the locators that were removed (empty when nothing matched)
 	*/
 	public function remove_relations_from_component_tipo( object $options ) : array {
 
@@ -1444,21 +1812,36 @@ class section extends common {
 
 	/**
 	* GET_SECTION_MAP
-	* Section map data is stored in 'properties' of element of model 'section_map'
-	* placed in the first level of section.
-	* Note that virtual section could have different section_map than the real section
-	* furthermore, we try first without resolve and if result is empty, resolving real section
-	* @param string $section_tipo
-	* @return object|null $setion_map
-	* output sample:
-	* {
-	*	"thesaurus": {
-	*		"term": "test52",
-	*		"model": "test169",
-	*		"parent": "test71",
-	*		"is_descriptor": "test88"
-	*	}
-	* }
+	* Returns the section_map configuration object for a given section tipo.
+	*
+	* The section_map is an ontology-defined mapping stored in the 'properties' field
+	* of a special child node of model 'section_map' at the first level of the section.
+	* It tells the ts_term_resolver (and similar consumers) which component tipos carry
+	* thesaurus concepts such as the term label, parent, model, and descriptor flag.
+	*
+	* Lookup strategy (virtual-section aware):
+	*   1. Try the section_tipo as-is (works for both real and virtual sections that
+	*      define their own section_map node).
+	*   2. If no section_map is found, retry with resolve_virtual=true to inherit
+	*      the real section's section_map.
+	*   Returns null when neither lookup finds a section_map node.
+	*
+	* Output shape example:
+	* <code>
+	*   {
+	*     "thesaurus": {
+	*       "term":          "test52",
+	*       "model":         "test169",
+	*       "parent":        "test71",
+	*       "is_descriptor": "test88"
+	*     }
+	*   }
+	* </code>
+	*
+	* Results are cached per section_tipo in $section_map_cache (cleared each request).
+	*
+	* @param string $section_tipo - the section whose map to retrieve (virtual or real)
+	* @return ?object - the properties stdClass of the section_map node, or null when absent
 	*/
 	public static function get_section_map( string $section_tipo ) : ?object {
 
@@ -1514,10 +1897,23 @@ class section extends common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Used for compatibility of search queries when we need filter by section_tipo
-	* inside filter (thesaurus case for example)
-	* @param object $query_object
-	* @return array $ar_query_object
+	* Adapts a raw SQO query_object into the SQL builder format expected by the
+	* section-level search path.
+	*
+	* Sections can be searched by their section_tipo column (not by a JSONB component
+	* dato path). This method hard-wires component_path to ['section_tipo'] and
+	* sets a default lang of 'all', then delegates to resolve_query_object_sql()
+	* for the actual SQL fragment construction.
+	*
+	* Operator group handling: when the query_object is a search operator ($and/$or),
+	* each nested element is resolved individually. Otherwise the whole object is
+	* resolved as a single clause.
+	*
+	* Used primarily in thesaurus search contexts where a filter must narrow results
+	* by section_tipo rather than by component dato content.
+	*
+	* @param object $query_object - incoming SQO; mutated in-place (component_path, lang)
+	* @return array - array of resolved query_object(s) ready for the SQL WHERE builder
 	*/
 	public static function get_search_query(object $query_object) : array {
 
@@ -1561,8 +1957,19 @@ class section extends common {
 
 	/**
 	* GET_METADATA_DEFINITION
-	* Returns a resolved object with all needed to set section
-	* @return stdClass $modified_section_tipos
+	* Returns a canonical descriptor object that maps metadata field names to their
+	* hardcoded tipos and model names.
+	*
+	* These are the four system-managed fields that exist on every section record:
+	*   - created_by_user  : dd200 (component_select)  — user who created the record
+	*   - created_date     : dd199 (component_date)    — creation timestamp
+	*   - modified_by_user : dd197 (component_select)  — last user to modify the record
+	*   - modified_date    : dd201 (component_date)    — last modification timestamp
+	*
+	* Used by section_record::build_metadata() and get_metadata_definition_tipos() to
+	* discover and write these fields without hardcoding tipos in multiple places.
+	*
+	* @return stdClass - keyed by field name; each value is an object with .tipo and .model
 	*/
 	public static function get_metadata_definition() : stdClass {
 
@@ -1592,8 +1999,13 @@ class section extends common {
 
 	/**
 	* GET_METADATA_DEFINITION_TIPOS
-	* Return the list of fixed
-	* @return array $ar_tipos
+	* Returns a flat array of the hardcoded metadata component tipos (dd197, dd199, dd200, dd201).
+	*
+	* Convenience wrapper over get_metadata_definition() for callers that only need the
+	* tipo strings (e.g. to exclude metadata fields from export column lists or
+	* to identify system-managed components in ontology traversal).
+	*
+	* @return array - list of tipo strings for all system metadata components
 	*/
 	public static function get_metadata_definition_tipos() : array {
 
@@ -1609,8 +2021,16 @@ class section extends common {
 
 	/**
 	* GET_AR_GROUPER_MODELS
-	* Returns the list of grouper models
-	* @return array $ar_groupers_models
+	* Returns the canonical list of ontology model names that act as layout groupers
+	* within a section — nodes that contain child components but hold no data themselves.
+	*
+	* Grouper models: section_group, section_group_div, section_tab, tab.
+	*
+	* Used during virtual-section exclude_elements resolution to expand an excluded
+	* grouper into all its recursive children, ensuring that hiding a group hides all
+	* contained components as well.
+	*
+	* @return array - list of grouper model name strings
 	*/
 	public static function get_ar_grouper_models() : array {
 
@@ -1623,8 +2043,21 @@ class section extends common {
 
 
 	/**
-	* GET_PERMISSIONS
-	* @return int $this->permissions
+	* GET_SECTION_PERMISSIONS
+	* Returns the integer permission level for this section in the current user context.
+	*
+	* Permission levels (inherited from common::get_permissions()):
+	*   0 = no access, 1 = read-only, 2 = read+write, 3 = full (including delete)
+	*
+	* Memoised: the calculated permission is cached on $this->permissions and returned
+	* directly on subsequent calls without re-querying.
+	*
+	* Special case — DEDALO_ACTIVITY_SECTION_TIPO:
+	*   The activity log section is intentionally capped at permission level 1 (read-only)
+	*   regardless of the user's role. This prevents any UI or API path from writing
+	*   directly to the activity log outside the logger subsystem.
+	*
+	* @return int - permission level [0–3]; DEDALO_ACTIVITY_SECTION_TIPO is always <= 1
 	*/
 	public function get_section_permissions() : int {
 
@@ -1649,13 +2082,17 @@ class section extends common {
 
 	/**
 	* BUILD_SQO_ID
-	* Unified way to compound sqo_id value
-	* This string is used as key for section session SQO
-	* like $_SESSION['dedalo']['config']['sqo'][$sqo_id]
-	* @param string $tipo
-	* 	section tipo like 'oh1'
-	* @return string $sqo_id
-	* 	final sqo_id like 'oh1'
+	* Returns the session key under which this section's active navigation SQO is stored.
+	*
+	* Currently a trivial identity function (returns $tipo unchanged), but centralised here
+	* so that if the key format ever needs to change (e.g. namespaced by user or area),
+	* all callers only need to go through this single method.
+	*
+	* The returned value is used as:
+	*   $_SESSION['dedalo']['config']['sqo'][$sqo_id]
+	*
+	* @param string $tipo - section tipo (e.g. 'oh1')
+	* @return string - the session key for this section's SQO (currently equals $tipo)
 	*/
 	public static function build_sqo_id(string $tipo) {
 
@@ -1668,12 +2105,17 @@ class section extends common {
 
 	/**
 	* GET_SESSION_SQO
-	* Accessor for the section navigation SQO stored in session
-	* ($_SESSION['dedalo']['config']['sqo'][$sqo_id]). Use this instead of
-	* touching the superglobal directly so the storage shape stays in one place.
-	* @param string $sqo_id
-	* 	Key built by section::build_sqo_id()
-	* @return object|null $session_sqo
+	* Reads the persisted navigation SQO for a section from the PHP session.
+	*
+	* The SQO encodes the active search/filter state (filters, sort, pagination) that
+	* survives page reloads and is re-applied when the user returns to the section.
+	*
+	* Always use this accessor instead of reading $_SESSION['dedalo']['config']['sqo']
+	* directly — it validates the returned value is an object and returns null for
+	* missing or corrupted entries.
+	*
+	* @param string $sqo_id - key built by section::build_sqo_id()
+	* @return ?object - the stored SQO object, or null when absent or not an object
 	*/
 	public static function get_session_sqo(string $sqo_id) : ?object {
 
@@ -1688,9 +2130,17 @@ class section extends common {
 
 	/**
 	* SET_SESSION_SQO
-	* Stores (or removes, on null) the section navigation SQO in session.
-	* @param string $sqo_id
-	* @param object|null $sqo
+	* Writes (or deletes) the section navigation SQO in the PHP session.
+	*
+	* Passing $sqo = null removes the entry (clears the stored search state),
+	* which happens when the user resets a section or navigates away.
+	* Passing a valid SQO object stores it under the given key, overwriting any
+	* previous value.
+	*
+	* Always use this mutator instead of writing $_SESSION directly.
+	*
+	* @param string $sqo_id - key built by section::build_sqo_id()
+	* @param ?object $sqo - the SQO to store, or null to remove the entry
 	* @return void
 	*/
 	public static function set_session_sqo(string $sqo_id, ?object $sqo) : void {

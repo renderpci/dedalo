@@ -1,8 +1,47 @@
 <?php declare(strict_types=1);
 /**
-* DD_TS_API
-* Manage API REST data of area_thesaurus and ts_object with Dédalo
+* CLASS DD_TS_API
+* Remote API controller for thesaurus tree read and write operations.
 *
+* This is the server-side handler that the JSON API dispatcher invokes when
+* `dd_api === 'dd_ts_api'`. It exposes five remote actions covering every
+* interaction that the area_thesaurus client (and the thesaurus widget used
+* inside other areas) needs:
+*
+* - get_node_data    — fetch the rendered data of a single thesaurus node
+* - get_children_data — fetch paginated children of a node
+* - add_child        — create a new child term under a parent, transactionally
+* - update_parent_data — move a node to a different parent, transactionally
+* - save_order       — persist a user-reordered sibling list, transactionally
+*
+* Responsibilities:
+* - SEC-024 allowlist gate: only methods listed in API_ACTIONS can be called
+*   over the network.
+* - Early permission checks (common::get_permissions) before any DB mutation,
+*   to avoid timing oracles or schema leaks.
+* - Transactional correctness for all write operations via DBi::transaction()
+*   combined with matrix_db_manager::acquire_node_lock() to serialize
+*   concurrent modifications of the same parent.
+* - Post-rollback cache hygiene: clears component and section_record in-memory
+*   instance caches so persistent workers do not serve stale state.
+* - ts_object cache invalidation after successful writes.
+*
+* Data shapes:
+* - All public methods accept a single `object $rqo` (Request Query Object)
+*   and return a `stdClass $response` with at minimum:
+*     $response->result  mixed  — false on hard failure, payload on success
+*     $response->msg     string — human-readable status
+*     $response->errors  array  — empty on clean success
+*
+* Relationships:
+* - Delegates tree-render logic to ts_object and ts_object::parse_child_data().
+* - Delegates parent-link management to component_relation_parent.
+* - Delegates child ordering to component_relation_children::sort_children().
+* - Uses matrix_db_manager::acquire_node_lock() for advisory row-level locking.
+* - Uses DBi::transaction() for atomicity.
+*
+* @package Dédalo
+* @subpackage Core
 */
 final class dd_ts_api {
 
@@ -10,6 +49,10 @@ final class dd_ts_api {
 
 	/**
 	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* Adding a new public-static method does NOT make it remotely callable; it
+	* must also be listed here. Internal helpers (e.g. clear_instance_caches)
+	* are intentionally absent because they are invoked from PHP code only.
+	* @var array<string> API_ACTIONS
 	*/
 	public const API_ACTIONS = [
 		'get_node_data',
@@ -23,8 +66,30 @@ final class dd_ts_api {
 
 	/**
 	* GET_NODE_DATA
-	* Get JSON data of of current element
-	* @param object $rqo
+	* Returns the rendered data object for a single thesaurus node.
+	*
+	* Resolves the locator described by $rqo->source, delegates to
+	* ts_object::parse_child_data() to build the node's display data (term
+	* label, icons, children count, etc.), and returns the first (and only)
+	* element of that array as the result.
+	*
+	* Returns $response->result === null when the locator resolves but the
+	* node has no parseable data (e.g. a deleted record still referenced by a
+	* locator). Returns false only on hard failures (missing source, permission
+	* denied).
+	*
+	* @param object $rqo - Request Query Object. Expected shape:
+	*   {
+	*     source: {
+	*       section_tipo: string,    // thesaurus hierarchy tipo (e.g. 'ds1')
+	*       section_id:   string|int,// record id of the node
+	*       children_tipo: string,   // optional: component tipo driving the child link
+	*       area_model:   string     // optional: 'area_thesaurus' (default)
+	*     },
+	*     options: {
+	*       thesaurus_view_mode: string // 'default'|'model'; 'model' exposes ontology structure
+	*     }
+	*   }
 	* @return object $response
 	*/
 	public static function get_node_data(object $rqo) : object {
@@ -99,35 +164,49 @@ final class dd_ts_api {
 
 	/**
 	* GET_CHILDREN_DATA
-	* Get JSON data of all children of current element
-	* @param object $rqo
-	* Sample:
-	* {
-	* 	dd_api : 'dd_ts_api',
-	* 	prevent_lock : true,
-	* 	action : 'get_children_data',
-	* 	source : {
-	* 		section_tipo : string,
-	* 		section_id : string|int,
-	* 		children_tipo : string,
-	* 		model : string|null,
-	* 		children : array|null [{
-    *            "type": "dd151",
-    *            "section_id": "1",
-    *            "section_tipo": "rt1",
-    *            "from_component_tipo": "hierarchy45"
-    *        }]
-	* 	},
-	* 	options : {
-	* 		pagination: {
-	* 			limit: 100,
-	* 			offset: 0,
-	* 			total: 150
-	* 		},
-	* 		thesaurus_view_mode: string 'default'
-	* 	}
-	* }
-	* @return object $response
+	* Returns a paginated list of rendered child nodes for the given parent.
+	*
+	* Two operational modes:
+	*
+	* 1. STANDARD (no $source->children supplied): instantiates a ts_object for
+	*    the parent and delegates entirely to ts_object::get_children_data(),
+	*    which applies pagination and returns a response object directly.
+	*
+	* 2. DIRECT LIST ($source->children supplied as an array of locators): calls
+	*    ts_object::parse_child_data() on the pre-built list, then wraps the
+	*    result with any pagination context passed by the caller. This path is
+	*    used when the client already has a flat array of child locators
+	*    (e.g. from a previous relationship fetch) and wants them rendered.
+	*
+	* The default hard limit before the "show more" button is displayed is 300
+	* children. This limit is passed into ts_object::get_children_data() via
+	* the options object; the caller can override it through $rqo->options->pagination.
+	*
+	* @param object $rqo - Request Query Object. Expected shape:
+	*   {
+	*     dd_api:        'dd_ts_api',
+	*     prevent_lock:  true,
+	*     action:        'get_children_data',
+	*     source: {
+	*       section_tipo:   string,         // parent node hierarchy tipo
+	*       section_id:     string|int,     // parent node record id
+	*       children_tipo:  string,         // component tipo that stores child links
+	*       model:          string|null,    // area model; defaults to 'area_thesaurus'
+	*       children:       array|null      // pre-built locator list [{
+	*                                       //   type, section_id, section_tipo,
+	*                                       //   from_component_tipo
+	*                                       // }]; omit to trigger standard mode
+	*     },
+	*     options: {
+	*       pagination: {
+	*         limit:  number,               // page size (default 300)
+	*         offset: number,               // zero-based start position
+	*         total:  number                // total known children count
+	*       },
+	*       thesaurus_view_mode: string     // 'default'|'model'
+	*     }
+	*   }
+	* @return object $response - result is stdClass{ar_children_data: array, pagination: object|null}
 	*/
 	public static function get_children_data(object $rqo) : object {
 		// $start_time=start_time();
@@ -230,18 +309,39 @@ final class dd_ts_api {
 
 	/**
 	* ADD_CHILD
-	* @param object $rqo
-	* Sample:
-	* {
-	* 	action: "add_child"
-	*	dd_api: "dd_ts_api"
-	*	prevent_lock: true
-	*	source: {
-	*		section_tipo: string "ds1"
-	*		section_id: string|int "77"
-	* 	}
-	* }
-	* @return object $response
+	* Creates a new empty thesaurus term as a child of the given parent node.
+	*
+	* The method runs all validation before touching the database, then
+	* executes the full creation sequence inside a single DBi::transaction():
+	*   1. Acquires an advisory lock on the parent node (serializes concurrent
+	*      add_child / update_parent_data calls for the same parent).
+	*   2. Creates the new section record (section::create_record).
+	*   3. Saves the default value for the 'is_descriptor' component (mode 'edit'
+	*      triggers auto-save of the ontology default).
+	*   4. Saves the default value for the 'is_indexable' component.
+	*   5. For ontology sections (get_section_id_from_tipo($section_tipo) === '0'),
+	*      copies the TLD value from the parent to the new node via component 'ontology7'.
+	*   6. Creates the component_relation_parent link pointing back to the parent.
+	*
+	* On any failure inside the transaction, DBi::transaction() rolls back and
+	* this method:
+	*   - Clears in-memory component/section_record caches (worker-mode safety).
+	*   - Returns a $response->result === false with the error details.
+	*
+	* On success, invalidates the parent's ts_object node cache and returns
+	* the new record's section_id as an integer in $response->result.
+	*
+	* @param object $rqo - Request Query Object. Expected shape:
+	*   {
+	*     action:       "add_child",
+	*     dd_api:       "dd_ts_api",
+	*     prevent_lock: true,
+	*     source: {
+	*       section_tipo: string,     // hierarchy tipo of the thesaurus section (e.g. 'ds1')
+	*       section_id:   string|int  // parent node record id
+	*     }
+	*   }
+	* @return object $response - result is (int) new section_id on success, false on failure
 	*/
 	public static function add_child(object $rqo) : object {
 		$start_time = start_time();
@@ -478,25 +578,45 @@ final class dd_ts_api {
 
 	/**
 	* UPDATE_PARENT_DATA
-	* Changes element parent from actual to a new value
-	* Used to move thesaurus items between parents
-	* @param object $rqo
-	* Sample:
-	* {
-	*	dd_api			: 'dd_ts_api',
-	*	prevent_lock	: true,
-	*	action			: 'update_parent_data',
-	*	source			: {
-	*		section_id				: wrap_ts_object.dataset.section_id,
-	*		section_tipo			: wrap_ts_object.dataset.section_tipo,
-	*		old_parent_section_id	: old_parent_wrap.dataset.section_id,
-	*		old_parent_section_tipo	: old_parent_wrap.dataset.section_tipo,
-	*		parent_section_id		: parent_wrap.dataset.section_id,
-	*		parent_section_tipo		: parent_wrap.dataset.section_tipo,
-	*		tipo					: element_children.dataset.tipo
-	*	}
-	* }
-	* @return object $response
+	* Moves a thesaurus node from its current parent to a new parent.
+	*
+	* Used by the drag-and-drop reordering in area_thesaurus when the user
+	* drops a term onto a different branch. The method:
+	*   1. Verifies write permission (level 2) on the moved node's section.
+	*   2. Resolves the component_relation_parent tipo for that section.
+	*   3. Guards against self-reference and descendant cycles: a node cannot
+	*      be moved under itself or under any of its own descendants. The check
+	*      calls component_relation_parent::is_ancestor() BEFORE any mutation.
+	*   4. Runs the actual mutation inside a DBi::transaction():
+	*      a. Acquires advisory locks on BOTH old and new parent nodes in a
+	*         deterministic (sorted) order to prevent deadlocks.
+	*      b. Removes the old parent locator from the component_relation_parent.
+	*      c. Adds the new parent locator.
+	*      d. Saves the updated component_relation_parent data.
+	*      e. Recalculates sibling order values for the old parent (the new
+	*         parent order is set by add_parent's set_child_order).
+	*   5. Invalidates ts_object node caches for the moved node and both parents.
+	*
+	* On any failure inside the transaction the whole operation is rolled back.
+	* In-memory instance caches are cleared before returning the error response
+	* to prevent stale data from being served in worker mode.
+	*
+	* @param object $rqo - Request Query Object. Expected shape:
+	*   {
+	*     dd_api:           'dd_ts_api',
+	*     prevent_lock:     true,
+	*     action:           'update_parent_data',
+	*     source: {
+	*       section_id:               string|int,  // record id of the node being moved
+	*       section_tipo:             string,      // hierarchy tipo of the node
+	*       old_parent_section_id:    string|int,  // current parent record id
+	*       old_parent_section_tipo:  string,      // current parent hierarchy tipo
+	*       new_parent_section_id:    string|int,  // target parent record id
+	*       new_parent_section_tipo:  string,      // target parent hierarchy tipo
+	*       tipo:                     string       // children component tipo (informational)
+	*     }
+	*   }
+	* @return object $response - result is true on success, false on failure
 	*/
 	public static function update_parent_data(object $rqo) : object {
 		$start_time = start_time();
@@ -673,19 +793,38 @@ final class dd_ts_api {
 
 	/**
 	* SAVE_ORDER
-	* Updates order values from the locators array given.
-	* @param object rqo
-	* Sample:
-	* {
-	*	dd_api			: 'dd_ts_api',
-	*	prevent_lock	: true,
-	*	action			: 'save_order',
-	*	source			: {
-	*		section_tipo	: section_tipo,
-	*		ar_locators		: ar_locators
-	*	}
-	* }
-	* @return object $response
+	* Persists a user-defined sibling ordering for the children of a parent node.
+	*
+	* Called when the user reorders terms inside a parent in the area_thesaurus
+	* UI. The client sends the full ordered array of child locators; this method
+	* delegates to component_relation_children::sort_children() which assigns
+	* sequential order values to each child's record.
+	*
+	* The entire save runs inside a DBi::transaction() that first acquires an
+	* advisory lock on the parent node, ensuring a concurrent add_child or
+	* update_parent_data cannot interleave order updates mid-transaction.
+	*
+	* $response->result on success is the array returned by sort_children()
+	* (the set of changed order values). When sort_children() returns false it
+	* means the section map does not define an order component; $response->msg
+	* carries the actionable hint in that case.
+	*
+	* Requires parent_section_tipo and parent_section_id in $rqo->source;
+	* the method returns an error early if they are absent.
+	*
+	* @param object $rqo - Request Query Object. Expected shape:
+	*   {
+	*     dd_api:           'dd_ts_api',
+	*     prevent_lock:     true,
+	*     action:           'save_order',
+	*     source: {
+	*       section_tipo:        string,    // hierarchy tipo whose children are being sorted
+	*       ar_locators:         array,     // ordered array of child locators
+	*       parent_section_tipo: string,    // parent node hierarchy tipo (lock target)
+	*       parent_section_id:   string|int // parent node record id (lock target)
+	*     }
+	*   }
+	* @return object $response - result is array (changed order values) or false on failure
 	*/
 	public static function save_order(object $rqo) : object {
 		$start_time = start_time();

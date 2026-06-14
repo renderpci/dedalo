@@ -1,58 +1,75 @@
 <?php declare(strict_types=1);
 /**
- * EVENT_MANAGER_CLASS
- * A high-performance event system for managing subscriptions and publications
- *
- * This class provides a robust event management system with O(1) operations for most methods.
- * It uses arrays for optimal performance and supports duplicate detection,
- * token-based unsubscription, and efficient event publishing.
- *
- * @example
- * // Basic usage
- * $manager = event_manager_class::get_instance();
- * $token = $manager->subscribe('user-login', function($data) {
- *   error_log('User logged in: ' . $data['username']);
- * });
- *
- * $manager->publish('user-login', ['username' => 'john_doe']);
- * $manager->unsubscribe($token);
- */
+* CLASS EVENT_MANAGER_CLASS
+* Server-side pub/sub event bus for decoupled intra-request communication.
+*
+* Implements a singleton observer pattern that lets any PHP component broadcast
+* named events to an arbitrary number of registered listeners within a single
+* HTTP request lifetime. Unlike the JavaScript counterpart (core/common/js/event_manager.js),
+* this PHP class does not persist state between requests — the singleton is re-created
+* on every PHP-FPM worker invocation.
+*
+* Responsibilities:
+* - Accept callable subscriptions keyed by an application-defined event name string.
+* - Issue opaque, monotonically-increasing tokens so callers can unsubscribe individually
+*   without holding a reference to the original callback.
+* - Publish events synchronously: all registered callbacks are called in subscription
+*   order, and their return values are collected and returned to the publisher.
+* - Detect accidental duplicate registrations of the same callback reference (debug mode).
+* - Clean up empty event buckets automatically to keep memory usage proportional to
+*   the number of active subscriptions.
+*
+* Internal data layout:
+*   $eventMap  : [ event_name => [ token => callable, ... ], ... ]
+*   $tokenMap  : [ token => [ 'event_name' => string, 'callback' => callable ], ... ]
+*
+* The dual-map design gives O(1) lookup for both directions: event→callbacks (publish)
+* and token→event (unsubscribe), at the cost of storing each callback reference twice.
+*
+* @package Dédalo
+* @subpackage Core
+*/
 class event_manager_class {
 
 	/**
-	 * Maps event names to arrays of callbacks
-	 * @var array<string, array<string, callable>>
-	 */
+	* Primary event index: maps each event name to its active subscribers.
+	* The inner array is keyed by subscription token so that unsubscription
+	* requires a single unset() call with no linear scan.
+	* @var array<string, array<string, callable>> $eventMap
+	*/
 	private array $eventMap = [];
 
 	/**
-	 * Maps subscription tokens to event metadata
-	 * @var array<string, array{event_name: string, callback: callable}>
-	 */
+	* Reverse index: maps each subscription token back to its event name and
+	* callback. Required by unsubscribe() to locate the correct $eventMap bucket
+	* without iterating over all events.
+	* @var array<string, array{event_name: string, callback: callable}> $tokenMap
+	*/
 	private array $tokenMap = [];
 
 	/**
-	 * Counter for generating unique subscription tokens
-	 * @var int
-	 */
+	* Monotonically-increasing counter used to generate unique subscription tokens.
+	* Tokens take the form "event_N" where N is the post-increment value.
+	* Never reset within a request; guaranteed unique for the process lifetime.
+	* @var int $last_token
+	*/
 	private int $last_token = 0;
 
 	/**
-	 * Singleton instance
-	 * @var event_manager_class|null
-	 */
+	* Holds the single shared instance created by get_instance().
+	* Null until the first call to get_instance().
+	* @var ?event_manager_class $instance
+	*/
 	private static ?event_manager_class $instance = null;
 
 
 
 	/**
-	 * Private constructor for singleton pattern
-	 *
-	 * Initializes internal data structures:
-	 * - eventMap: Maps event names to arrays of callback functions
-	 * - tokenMap: Maps subscription tokens to event metadata
-	 * - last_token: Counter for generating unique subscription tokens
-	 */
+	* __CONSTRUCT
+	* Initializes the two lookup maps and the token counter to their empty defaults.
+	* Called only once per process by get_instance(). Do not instantiate directly —
+	* always obtain the shared instance via event_manager_class::get_instance().
+	*/
 	private function __construct() {
 		$this->eventMap = [];
 		$this->tokenMap = [];
@@ -62,10 +79,13 @@ class event_manager_class {
 
 
 	/**
-	 * GET_INSTANCE
-	 * Get singleton instance
-	 * @return event_manager_class
-	 */
+	* GET_INSTANCE
+	* Returns the shared singleton, creating it on first call.
+	* All Dédalo PHP code should use this accessor rather than constructing
+	* a private instance, so that all publishers and subscribers share the
+	* same event bus within a request.
+	* @return event_manager_class
+	*/
 	public static function get_instance() : event_manager_class {
 
 		if (self::$instance === null) {
@@ -78,32 +98,36 @@ class event_manager_class {
 
 
 	/**
-	 * SUBSCRIBE
-	 * Subscribes a callback function to an event
-	 *
-	 * Creates a new subscription for the specified event. Each subscription receives
-	 * a unique token that can be used for unsubscription. Duplicate callbacks for
-	 * the same event are detected when debugging is enabled.
-	 *
-	 * @param string $event_name - The name of the event to subscribe to
-	 * @param callable $callback - The callback function to execute when the event is published
-	 * @return string A unique token string for this subscription (format: "event_N")
-	 *
-	 * @example
-	 * $token = $manager->subscribe('data-updated', function($data) {
-	 *   error_log('Received update: ' . json_encode($data));
-	 * });
-	 */
+	* SUBSCRIBE
+	* Registers a callback to be invoked whenever the named event is published.
+	*
+	* Each call returns a unique opaque token (format: "event_N"). Callers must
+	* retain this token if they ever need to cancel the subscription via
+	* unsubscribe(). Tokens are never reused within a request.
+	*
+	* Callbacks are stored in $eventMap keyed by token so that
+	* event_exists() can use strict identity comparison to detect duplicates.
+	* When SHOW_DEBUG is true, re-registering an identical callable for the
+	* same event logs an ERROR — this usually indicates a listener leaking
+	* across re-renders without first calling unsubscribe().
+	*
+	* @param string $event_name - Arbitrary string naming the event channel (e.g. 'save', 'ts_add_child_tool_cataloging').
+	* @param callable $callback - Function to invoke when the event fires. Receives the $data argument passed to publish().
+	* @return string - Unique subscription token for use with unsubscribe().
+	*/
 	public function subscribe(string $event_name, callable $callback) : string {
 
 		$token = 'event_' . (++$this->last_token);
 
-		// Get or create callbacks array
+		// Initialize event bucket on first subscriber
 		if (!isset($this->eventMap[$event_name])) {
 			$this->eventMap[$event_name] = [];
 		}
 
-		// Check for duplicates (only if debugging is enabled)
+		// Duplicate detection
+		// Uses strict identity (===) so that two distinct closures with the same body
+		// are not flagged. Only fires when SHOW_DEBUG is explicitly true to avoid the
+		// overhead of in_array() on every subscription in production.
 		if (defined('SHOW_DEBUG') && SHOW_DEBUG === true && in_array($callback, $this->eventMap[$event_name], true)) {
 			debug_log(__METHOD__
 				. " Found duplicated subscription: $event_name"
@@ -113,7 +137,7 @@ class event_manager_class {
 
 		// Add callback with token as key for O(1) removal
 		$this->eventMap[$event_name][$token] = $callback;
-		
+
 		// Store token mapping
 		$this->tokenMap[$token] = [
 			'event_name' => $event_name,
@@ -126,19 +150,21 @@ class event_manager_class {
 
 
 	/**
-	 * UNSUBSCRIBE
-	 * Unsubscribes a callback using its subscription token
-	 *
-	 * Removes the subscription associated with the provided token. Automatically
-	 * cleans up empty event entries to prevent memory leaks.
-	 *
-	 * @param string $token - The subscription token returned by subscribe()
-	 * @return bool true if the subscription was found and removed, false otherwise
-	 *
-	 * @example
-	 * $token = $manager->subscribe('user-action', $callback);
-	 * $success = $manager->unsubscribe($token); // Returns true if successful
-	 */
+	* UNSUBSCRIBE
+	* Removes the subscription identified by the given token.
+	*
+	* Looks up the token in $tokenMap (O(1)) to find the event bucket, then
+	* removes the callback entry from both maps. If the event bucket becomes
+	* empty after removal, it is deleted from $eventMap so that publish() and
+	* event_name_exists() return consistent "no subscribers" results.
+	*
+	* Returns false without side effects if the token is unknown. This is a
+	* safe no-op when, for example, a component's destroy method calls
+	* unsubscribe() unconditionally regardless of whether it had subscribed.
+	*
+	* @param string $token - Subscription token previously returned by subscribe().
+	* @return bool - true if the subscription was found and removed, false if the token was not recognized.
+	*/
 	public function unsubscribe(string $token) : bool {
 
 		if (!isset($this->tokenMap[$token])) {
@@ -152,10 +178,12 @@ class event_manager_class {
 		$entry = $this->tokenMap[$token];
 		$event_name = $entry['event_name'];
 
-		// Remove callback and cleanup if empty
+		// Remove callback from event bucket and prune empty bucket
 		if (isset($this->eventMap[$event_name][$token])) {
 			unset($this->eventMap[$event_name][$token]);
-			
+
+			// (!) Remove the bucket entirely so event_name_exists() correctly
+			// reports that no listeners remain for this event name.
 			if (empty($this->eventMap[$event_name])) {
 				unset($this->eventMap[$event_name]);
 			}
@@ -168,26 +196,24 @@ class event_manager_class {
 
 
 	/**
-	 * PUBLISH
-	 * Publishes an event to all subscribed callbacks
-	 *
-	 * Executes all callback functions subscribed to the specified event, passing
-	 * the provided data to each callback. Returns an array of all callback return values.
-	 *
-	 * @param string $event_name - The name of the event to publish
-	 * @param mixed $data - Data to pass to each callback function (defaults to empty array)
-	 * @return array|false Array of callback return values, or false if no subscribers
-	 *
-	 * @example
-	 * // Publish with data
-	 * $results = $manager->publish('user-updated', [
-	 *   'id' => 123,
-	 *   'name' => 'John Doe'
-	 * ]);
-	 *
-	 * // Publish without data
-	 * $manager->publish('app-ready');
-	 */
+	* PUBLISH
+	* Fires all callbacks registered for the named event, passing $data to each.
+	*
+	* Callbacks are invoked synchronously in the order they were subscribed.
+	* Each callback's return value is appended to the result array so that
+	* publishers can inspect handler outcomes if needed (e.g. for veto patterns).
+	*
+	* Returns false — not an empty array — when the event has no subscribers,
+	* allowing callers to distinguish "no one is listening" from "listeners all
+	* returned null/void".
+	*
+	* (!) Publishing an event does not remove subscriptions. Handlers remain
+	* registered until unsubscribe() or clear_event() is called.
+	*
+	* @param string $event_name - Name of the event to fire.
+	* @param mixed $data = [] - Payload passed verbatim to every subscriber callback.
+	* @return array|false - Ordered array of callback return values, or false when no subscribers exist.
+	*/
 	public function publish(string $event_name, mixed $data = []) : array|false {
 
 		if (!isset($this->eventMap[$event_name]) || empty($this->eventMap[$event_name])) {
@@ -205,22 +231,20 @@ class event_manager_class {
 
 
 	/**
-	 * GET_EVENTS
-	 * Retrieves all active event subscriptions
-	 *
-	 * Returns an array containing details of all current subscriptions including
-	 * event names, tokens, and callback references. Useful for debugging and
-	 * subscription management.
-	 *
-	 * @return array Array of subscription objects
-	 *
-	 * @example
-	 * $events = $manager->get_events();
-	 * error_log('Active subscriptions: ' . count($events));
-	 * foreach ($events as $event) {
-	 *   error_log($event['event_name'] . ': ' . $event['token']);
-	 * }
-	 */
+	* GET_EVENTS
+	* Returns a flat list of all currently active subscriptions across all events.
+	*
+	* Each entry in the returned array is an associative array with three keys:
+	*   'event_name' (string)  — the event channel name
+	*   'token'      (string)  — the subscription token
+	*   'callback'   (callable) — the registered handler reference
+	*
+	* Intended for debugging and introspection only. Callers should not
+	* manipulate subscriptions by interacting with the returned callbacks directly;
+	* use subscribe()/unsubscribe() instead.
+	*
+	* @return array<int, array{event_name: string, token: string, callback: callable}>
+	*/
 	public function get_events() : array {
 
 		$events = [];
@@ -238,24 +262,20 @@ class event_manager_class {
 
 
 	/**
-	 * EVENT_EXISTS
-	 * Checks if a specific callback is subscribed to an event
-	 *
-	 * Determines whether the given callback function is already subscribed
-	 * to the specified event. Useful for preventing duplicate subscriptions
-	 * programmatically.
-	 *
-	 * @param string $event_name - The event name to check
-	 * @param callable $callback - The callback function to look for
-	 * @return bool true if the callback is subscribed to the event
-	 *
-	 * @example
-	 * $myCallback = function($data) { error_log(json_encode($data)); };
-	 *
-	 * if (!$event_manager->event_exists('user-login', $myCallback)) {
-	 *   $event_manager->subscribe('user-login', $myCallback);
-	 * }
-	 */
+	* EVENT_EXISTS
+	* Reports whether a specific callable is already subscribed to the named event.
+	*
+	* Uses strict identity comparison (===) so two closures with identical bodies
+	* but different instances are treated as distinct. Useful to guard subscribe()
+	* calls when the caller cannot retain the token from a previous registration.
+	*
+	* Prefer event_name_exists() when you only need to know if the event channel
+	* has any subscribers at all; event_exists() carries the cost of in_array().
+	*
+	* @param string $event_name - The event channel name to inspect.
+	* @param callable $callback - The callback reference to search for.
+	* @return bool - true if $callback is already subscribed to $event_name.
+	*/
 	public function event_exists(string $event_name, callable $callback) : bool {
 
 		if (!isset($this->eventMap[$event_name])) {
@@ -268,17 +288,16 @@ class event_manager_class {
 
 
 	/**
-	 * EVENT_NAME_EXISTS
-	 * Checks if a specific event name is already defined
-	 *
-	 * @param string $event_name - The event name to check
-	 * @return bool true if an event is subscribed with given name
-	 *
-	 * @example
-	 * if (!$event_manager->event_name_exists('user-login')) {
-	 *   // Do something
-	 * }
-	 */
+	* EVENT_NAME_EXISTS
+	* Reports whether any callback is currently subscribed to the named event.
+	*
+	* Cheaper than event_exists() — O(1) hash lookup with no iteration.
+	* Useful before setting up conditional subscriptions (e.g. in view_tool_cataloging_mosaic.js)
+	* to avoid registering duplicate hover/mouseleave handlers.
+	*
+	* @param string $event_name - The event channel name to check.
+	* @return bool - true if at least one subscriber is registered for $event_name.
+	*/
 	public function event_name_exists(string $event_name) : bool {
 
 		return isset($this->eventMap[$event_name]);
@@ -287,19 +306,20 @@ class event_manager_class {
 
 
 	/**
-	 * CLEAR_EVENT
-	 * Removes all subscriptions for a specific event
-	 *
-	 * Efficiently clears all callbacks associated with the given event name.
-	 * This is more efficient than unsubscribing individual tokens when you
-	 * need to clear an entire event.
-	 *
-	 * @param string $event_name - The event name to clear
-	 * @return bool true if the event existed and was cleared, false otherwise
-	 *
-	 * @example
-	 * $event_manager->clear_event('temporary-notifications');
-	 */
+	* CLEAR_EVENT
+	* Removes all subscriptions for a single named event in one pass.
+	*
+	* More efficient than calling unsubscribe() for each token when an entire
+	* event channel should be torn down (e.g. when a UI panel is destroyed and
+	* all its local subscriptions need to be released at once).
+	*
+	* Iterates $tokenMap once to remove reverse-index entries for this event,
+	* then deletes the event bucket from $eventMap. After this call,
+	* event_name_exists($event_name) returns false and publish() returns false.
+	*
+	* @param string $event_name - The event channel to clear.
+	* @return bool - true if the event existed and its subscribers were removed, false if the event was not registered.
+	*/
 	public function clear_event(string $event_name) : bool {
 
 		if (!isset($this->eventMap[$event_name])) {
@@ -320,18 +340,19 @@ class event_manager_class {
 
 
 	/**
-	 * CLEAR_ALL
-	 * Clears all events and subscriptions
-	 *
-	 * Removes all event subscriptions and resets the event_manager_class to its
-	 * initial state. This is useful for cleanup operations or testing.
-	 *
-	 * @return void
-	 *
-	 * @example
-	 * // Clean up
-	 * $manager->clear_all();
-	 */
+	* CLEAR_ALL
+	* Resets the event bus to its initial empty state.
+	*
+	* Drops all subscriptions across every event channel. Equivalent to
+	* constructing a fresh instance. Primarily used in test teardown or
+	* when a long-running worker (persistent PHP) needs to flush all
+	* registered listeners between logical request boundaries.
+	*
+	* (!) After this call, any previously issued token is invalid.
+	* Callers that stored tokens for later unsubscription must re-subscribe.
+	*
+	* @return void
+	*/
 	public function clear_all() : void {
 
 		$this->eventMap = [];
@@ -341,19 +362,15 @@ class event_manager_class {
 
 
 	/**
-	 * GET_EVENT_COUNT
-	 * Gets the number of subscribers for a specific event
-	 *
-	 * Returns the count of callback functions subscribed to the given event.
-	 * Useful for monitoring subscription levels and debugging.
-	 *
-	 * @param string $event_name - The event name to count subscribers for
-	 * @return int The number of subscribers (0 if event doesn't exist)
-	 *
-	 * @example
-	 * $count = $manager->get_event_count('user-activity');
-	 * error_log("$count handlers listening for user activity");
-	 */
+	* GET_EVENT_COUNT
+	* Returns the number of callbacks currently subscribed to one named event.
+	*
+	* Returns 0 — not false — when the event has no subscribers, to allow
+	* safe arithmetic comparisons without type juggling.
+	*
+	* @param string $event_name - The event channel name to inspect.
+	* @return int - Subscriber count, or 0 if the event is unknown.
+	*/
 	public function get_event_count(string $event_name) : int {
 
 		if (!isset($this->eventMap[$event_name])) {
@@ -366,23 +383,19 @@ class event_manager_class {
 
 
 	/**
-	 * GET_TOTAL_EVENTS
-	 * Gets the total number of active subscriptions
-	 *
-	 * Returns the total count of all active event subscriptions across
-	 * all events. Useful for memory usage monitoring and performance analysis.
-	 *
-	 * @return int Total number of active subscriptions
-	 *
-	 * @example
-	 * $total = $manager->get_total_events();
-	 * error_log("Total active subscriptions: $total");
-	 *
-	 * // Monitor subscription growth
-	 * if ($manager->get_total_events() > 1000) {
-	 *   error_log('High number of subscriptions detected');
-	 * }
-	 */
+	* GET_TOTAL_EVENTS
+	* Returns the total number of active subscriptions across all event channels.
+	*
+	* Reads the count from $tokenMap (one entry per subscription) rather than
+	* summing the inner $eventMap arrays — both give the same result but
+	* count($tokenMap) is a single O(1) operation.
+	*
+	* Useful for monitoring whether subscriptions are leaking across re-renders:
+	* a continuously growing count in a persistent worker indicates that
+	* listeners are being registered without a matching unsubscribe().
+	*
+	* @return int - Total number of active subscriptions.
+	*/
 	public function get_total_events() : int {
 
 		return count($this->tokenMap);

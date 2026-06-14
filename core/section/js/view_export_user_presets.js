@@ -4,6 +4,36 @@
 
 
 
+/**
+* VIEW_EXPORT_USER_PRESETS
+* List-view module that renders and manages the user export-presets panel
+* embedded inside the tool_export UI.
+*
+* This module is the client-side view counterpart of the 'export_user_presets'
+* section view (registered in the section's view map). It mirrors the
+* architecture of view_search_user_presets.js but targets export presets
+* (ontology section dd1781) instead of search presets (dd623).
+*
+* Responsibilities:
+*  - Build a columns_map augmented with three control columns: Apply, ID/edit,
+*    and (when permissions > 1) Delete.
+*  - Render the preset list as a paginated list of section_record rows.
+*  - Provide the Apply, Edit-modal, and Delete column callbacks that are
+*    invoked by each section_record row.
+*  - Delegate actual preset loading/saving to
+*    tools/tool_export/js/export_user_presets.js (load_export_preset,
+*    apply_export_preset, edit_user_export_preset).
+*
+* Main exports:
+*  - view_export_user_presets        – constructor stub (required by section view registry)
+*  - view_export_user_presets.render – async full/content render
+*  - render_column_apply_preset      – column callback: Apply button
+*  - render_column_id                – column callback: Edit/ID button
+*  - render_column_remove            – column callback: Delete button
+*  - render_preset_modal             – modal launcher for preset name/visibility/default editing
+*  - select_preset                   – loads and applies a preset + updates the row highlight
+*/
+
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
@@ -20,7 +50,11 @@
 
 /**
 * VIEW_EXPORT_USER_PRESETS
-* Manages the component's logic and appearance in client side
+* Constructor stub required by the section view-registration system.
+* The real rendering entry-point is the static method
+* view_export_user_presets.render, which is called by the section renderer
+* when view === 'export_user_presets'.
+* @returns {boolean} Always returns true (no initialization needed).
 */
 export const view_export_user_presets = function() {
 
@@ -31,10 +65,30 @@ export const view_export_user_presets = function() {
 
 /**
 * RENDER
-* Render wrapper node
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Builds the full wrapper DOM tree for the export-presets list view, or returns
+* only the inner content_data node when render_level === 'content' (used by
+* pagination refresh to replace just the row area without rebuilding the shell).
+*
+* Sequence:
+*  1. Rebuild the columns_map with control columns prepended/appended.
+*  2. Resolve or reuse cached section_record instances (self.ar_instances).
+*  3. Build content_data (the rows).
+*  4. Short-circuit and return content_data when render_level === 'content'.
+*  5. Build the full wrapper: optional paginator + list_body containing
+*     content_data, wrapped in a <section> element.
+*
+* Side effects:
+*  - Mutates self.columns_map, self.ar_instances, and self.node_body.
+*  - May inject custom CSS via set_element_css when self.context.css is set.
+*  - Sets wrapper.content_data and wrapper.list_body as DOM pointers for
+*    callers that need to reach inside the rendered tree.
+*
+* @param {Object} self    - The section instance (tool_export's presets section).
+* @param {Object} options - Render options.
+* @param {string} [options.render_level='full'] - 'full' returns the complete
+*   wrapper; 'content' returns only the content_data div (used by refresh).
+* @returns {Promise<HTMLElement>} The wrapper <section> element (render_level
+*   'full') or the content_data <div> (render_level 'content').
 */
 view_export_user_presets.render = async function(self, options) {
 
@@ -115,10 +169,18 @@ view_export_user_presets.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Render content data
-* @param array ar_section_record
-* @param object self
-* @return HTMLElement content_data
+* Renders all section_record rows into a content_data container div.
+* When the ar_section_record array is empty, renders the standard
+* no_records_node placeholder. Otherwise renders all rows in parallel
+* (Promise.all) to minimise sequential await overhead, then appends
+* them in order to preserve the original sort.
+*
+* @param {Array}  ar_section_record - Array of section_record instances,
+*   already built (build() called). May be empty.
+* @param {Object} self              - The section instance; provides self.mode
+*   and self.type for the content_data CSS classes.
+* @returns {Promise<HTMLElement>} A <div class="content_data …"> containing
+*   the rendered row nodes (or the no-records placeholder).
 */
 const get_content_data = async function(ar_section_record, self) {
 
@@ -166,9 +228,27 @@ const get_content_data = async function(ar_section_record, self) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
-* @param object self
-* @return {array} columns_map
+* Constructs the final columns_map for the preset list by prepending and
+* appending control columns around the section's base columns.
+*
+* The result order is:
+*  1. 'apply_preset' – Apply button (always present, leftmost).
+*  2. 'edit'         – ID / edit button (always present).
+*  3. …base columns… – taken from self.columns_map as configured on the
+*     section (e.g. the preset name column).
+*  4. 'delete'       – Delete button (only when self.permissions > 1).
+*
+* Each control column specifies a `callback` function that is invoked per row
+* by the section_record renderer with a standard options object
+* {caller, section_id, section_tipo, locator, …}.
+*
+* The 'edit' column's `path` entry uses component_tipo 'section_id' — a
+* special sentinel recognized by the search layer as a direct DB column rather
+* than a JSONB component lookup. The model/name fields are aesthetic only.
+*
+* @param {Object} self - The section instance; provides self.section_tipo and
+*   self.permissions.
+* @returns {Promise<Array>} The augmented columns_map array.
 */
 const rebuild_columns_map = async function(self) {
 
@@ -223,15 +303,26 @@ const rebuild_columns_map = async function(self) {
 
 /**
 * RENDER_COLUMN_APPLY_PRESET
-* @param object options
-* {
-* 	ar_instances: array
-* 	caller: object (section instance)
-* 	locator: object,
-* 	section_id: string|int
-* 	section_tipo: string (dd1781)
-* }
-* @return HTMLElement button_apply
+* Column callback that renders the Apply button for a single preset row.
+* When clicked, the button loads the preset config blob from the database
+* and applies it to the export tool UI (column selection, format, breakdown,
+* and option checkboxes), then highlights the current row as 'selected'.
+*
+* options.caller is the section instance (the presets list section), and
+* options.caller.caller is the tool_export instance that owns the presets
+* panel. The double-dereference is intentional: the section is a child
+* of the tool.
+*
+* Side effects on click:
+*  - Adds/removes 'loading' CSS class on self.node (the tool_export node).
+*  - Calls select_preset which calls apply_export_preset (mutates tool state
+*    and IndexedDB) and updates the row highlight.
+*
+* @param {Object} options             - Standard column-callback options.
+* @param {Object} options.caller      - The section instance (presets list).
+* @param {Object} [options.caller.caller] - The tool_export instance.
+* @param {string|number} options.section_id - The preset's section_id.
+* @returns {HTMLElement} A <span> button element with a click listener.
 */
 export const render_column_apply_preset = function(options) {
 
@@ -273,15 +364,29 @@ export const render_column_apply_preset = function(options) {
 
 /**
 * SELECT_PRESET
-* Loads the selected preset config and applies it to the export tool.
-* @param object options
-* {
-* 	self : object (tool_export instance)
-* 	section_id: int|string (preset section_id)
-* 	button_apply: HTMLElement
-* 	load_preset: bool (default true)
-* }
-* @return promise bool
+* Loads the saved export preset config blob for the given section_id and
+* applies it to the tool_export UI. Also updates the row highlight in the
+* preset list so exactly one row shows the 'selected' class.
+*
+* When load_preset is false the function skips the load+apply step and only
+* updates the visual selection and self.user_preset_section_id. This is used
+* when the calling code has already applied the preset by another path and
+* only needs the UI state synchronized.
+*
+* DOM traversal for the row highlight:
+*  button_apply → parentNode (column cell) → parentNode (section_record row)
+*  → parentNode (content_data). All .section_record elements in content_data
+*  have 'selected' removed before the current row gets it.
+*
+* @param {Object}      options                  - Options bag.
+* @param {Object}      options.self             - The tool_export instance.
+* @param {string|number} options.section_id     - ID of the preset to select.
+* @param {HTMLElement} [options.button_apply]   - The Apply button element for
+*   the row; used for the DOM traversal that highlights the row. May be null
+*   when called programmatically (no visual highlight update in that case).
+* @param {boolean}     [options.load_preset=true] - When true, fetches and
+*   applies the preset config blob. When false, only updates selection state.
+* @returns {Promise<boolean>} Resolves to true on completion.
 */
 export const select_preset = async function (options) {
 
@@ -326,12 +431,19 @@ export const select_preset = async function (options) {
 
 /**
 * RENDER_COLUMN_ID
-* @param object options
-* {
-* 	caller: instance, (section)
-* 	section_id: string|int
-* }
-* @return HTMLElement button_edit
+* Column callback that renders the ID/edit button for a single preset row.
+* When clicked (mousedown), opens the preset edit modal (render_preset_modal)
+* so the user can change the preset name, its public visibility, and whether
+* it is the default preset.
+*
+* Uses mousedown (not click) to match the convention used by other edit
+* buttons in Dédalo's section views, which avoids focus-blur race conditions
+* with editable fields in the same view.
+*
+* @param {Object} options             - Standard column-callback options.
+* @param {Object} options.caller      - The section instance (presets list).
+* @param {string|number} options.section_id - The preset's section_id.
+* @returns {HTMLElement} A <span> button element with a mousedown listener.
 */
 export const render_column_id = function(options) {
 
@@ -362,14 +474,24 @@ export const render_column_id = function(options) {
 
 /**
 * RENDER_PRESET_MODAL
-* Creates and opens a modal to edit current preset (name, public, default)
-* @param object options
-* {
-* 	caller: instance, (section)
-* 	section_id: string|int
-* 	on_close: function|null
-* }
-* @return void
+* Opens a small modal dialog containing the preset edit form (name, public
+* flag, default flag) for the given preset record.
+*
+* The modal body starts empty; a spinner is shown while the edit section
+* (dd1781 in 'edit' mode, via edit_user_export_preset) is built and
+* rendered. Once the section node is ready, focus is moved to the first
+* editable input using dd_request_idle_callback to avoid a focus race with
+* the CSS transition of the modal.
+*
+* The modal width is overridden to 20rem via a dd_modal callback because the
+* default small modal is wider than needed for a three-field form.
+*
+* @param {Object}        options            - Options bag.
+* @param {Object}        options.caller     - The section instance (presets list).
+* @param {string|number} options.section_id - The preset's section_id to edit.
+* @param {Function|null} [options.on_close] - Optional callback invoked when
+*   the modal is dismissed; useful for refreshing the preset list.
+* @returns {void}
 */
 export const render_preset_modal = function (options) {
 
@@ -424,8 +546,33 @@ export const render_preset_modal = function (options) {
 
 /**
 * RENDER_COLUMN_REMOVE
-* @param object options
-* @return HTMLElement delete_button
+* Column callback that renders the Delete button for a single preset row.
+* Only added to the columns_map when self.permissions > 1 (see rebuild_columns_map).
+*
+* On click:
+*  1. Shows a browser confirm() dialog (uses get_label.sure for i18n with
+*     a fallback of 'Sure?').
+*  2. Calls section.delete_section with a targeted SQO (single-record locator,
+*     delete_record mode, diffusion disabled because presets are user data
+*     that should not propagate to publication targets).
+*  3. On success: resets the section offset to 0, clears total to force a
+*     recount, refreshes the list.
+*  4. Also cleans up the tool_export state: hides the save-preset button if
+*     visible, and clears self.user_preset_section_id so no preset is
+*     considered active.
+*
+* (!) Uses the browser's built-in confirm() which is declared in the
+* global header directive because it is a global injected by the page
+* environment, not from an import.
+*
+* @param {Object}        options              - Standard column-callback options.
+* @param {Object}        options.caller       - The section instance (presets list).
+* @param {Object}        [options.caller.caller] - The tool_export instance; used
+*   to clean up button_save_preset and user_preset_section_id after deletion.
+* @param {string|number} options.section_id   - The preset record to delete.
+* @param {string}        options.section_tipo - The preset section tipo (dd1781);
+*   used to build the delete SQO.
+* @returns {HTMLElement} A <span> delete button with an async click listener.
 */
 export const render_column_remove = function(options) {
 

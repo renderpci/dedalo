@@ -1,28 +1,63 @@
 <?php declare(strict_types=1);
 /**
- * SYSTEM INTEGRITY CHECK (INITIALIZATION TEST)
- *
- * This script verifies the core system integrity, typically executed during the boot sequence
- * or upon user login. it ensures that all mandatory environment requirements are met,
- * including PHP version, required extensions, file system permissions, mandatory constants,
- * database connectivity, and external library availability.
- *
- * Each check is critical for the stability and security of Dédalo.
- * Failure in mandatory checks will stop execution and return an error response.
- *
- * @package Core\Base
- * @author Paco <paco@atenea-solutions.com>
- */
+* SYSTEM INTEGRITY CHECK (INITIALIZATION TEST)
+* Procedural boot-time script that verifies all mandatory runtime requirements
+* before Dédalo accepts any user request.
+*
+* Responsibilities (executed in order):
+* - PHP version gate (minimum 8.4.0 for strict typing, constructor promotion, etc.)
+* - Mandatory config constants defined in the installation's config file
+* - PHP mbstring extension availability (required for all UTF-8 / multilingual text handling)
+* - File-system write access for sessions, backups, media derivation trees, upload scratch space,
+*   and the import pipeline
+* - External binary availability: psql, ImageMagick, ffmpeg, ffprobe, qt-faststart
+* - PostgreSQL .pgpass credential file (when DEDALO_DB_MANAGEMENT is true)
+* - CURL extension and OpenSSL extension
+* - Active-lock garbage collection (when DEDALO_LOCK_COMPONENTS is enabled)
+* - PostgreSQL table existence checks for matrix_test and matrix_tools, with
+*   auto-creation and superuser redirect when they are missing
+* - File-based cache smoke test (write → read → delete a probe file)
+* - Temporary chunk-file cleanup for abandoned multi-part uploads
+* - dd_ontology_recovery table existence, restored from disk snapshot on absence
+*
+* Usage contract:
+* - This script is included (not required) by the boot loader, never executed directly.
+*   It returns a stdClass $init_response on every exit path (early return on any failure,
+*   final return at the bottom). Callers MUST check $init_response->result === true.
+* - $user_id MAY be preset by the caller (e.g. from the active session). When absent,
+*   the script resolves it via logged_user_id().
+* - $create_dir_permissions is set here and can be used by the caller after include; it is
+*   not exposed outside the script's own use.
+*
+* $init_response shape:
+*   result         bool   - true only when every mandatory check passes
+*   msg            array  - human-readable status/warning/error strings (accumulated)
+*   errors         array  - machine-readable error keys (one per failed check)
+*   result_options object|null - optional payload, e.g. ['redirect' => URL] for
+*                               the superuser matrix_tools bootstrap redirect
+*
+* @package Dédalo
+* @subpackage Core
+*/
 
 
 
 // default values
+// $create_dir_permissions: octal mode applied to any directories created by this script.
+// 0750 gives rwxr-x--- (owner full, group read/execute, world none) — suitable for a web-server
+// process that is the only writer and should not expose files to other system users.
+// $php_user: resolved at runtime for inclusion in diagnostic messages; helps ops trace which
+// system account lacks the required directory permissions.
 	$create_dir_permissions = 0750;
 	$php_user = exec('whoami');
 
 
 
 // user_id fix if not already defined
+// The boot loader may have already resolved $user_id from the active session before including
+// this script. When it has not (e.g. during a lightweight API ping or early install probe),
+// logged_user_id() reads from the current PHP session. The value is used later for the
+// matrix_tools superuser check and for the cache smoke test.
 	if (!isset($user_id)) {
 		$user_id = logged_user_id();
 	}
@@ -30,12 +65,14 @@
 
 
 // RESPONSE OBJECT
-	// $init_response will hold the result of all checks.
+// Initialised to result=false; only the very last statement in the script sets it to true.
+// This ensures any early return (missing constant, failed directory, missing binary, etc.)
+// returns a failure object without the caller having to inspect msg/errors.
 	$init_response = new stdClass();
 		$init_response->result			= false;
-		$init_response->msg				= []; // Array of status/error messages
-		$init_response->errors			= []; // Array of critical errors (e.g. [true, true])
-		$init_response->result_options	= null; // Optional data (e.g., redirect URL)
+		$init_response->msg				= []; // Accumulates human-readable status/warning/error strings
+		$init_response->errors			= []; // Accumulates machine-readable error keys (one per failed check)
+		$init_response->result_options	= null; // Optional payload, e.g. (object)['redirect' => URL]
 
 
 
@@ -61,8 +98,10 @@
 
 
 // MANDATORY CONSTANTS CHECK
-	// Verifies that all path and URL constants introduced or required in current version
-	// are defined in the config file. These are essential for routing and file access.
+// These constants must be present in the installation's config file (typically config.php /
+// config_db.php). Their absence indicates an incomplete or outdated configuration.
+// The loop stops at the first missing constant and returns an error; a single missing
+// constant can cause cascading undefined-constant fatal errors throughout the codebase.
 	$new_constants = [
 		'DEDALO_INSTALL_PATH',
 		'DEDALO_INSTALL_URL',
@@ -106,10 +145,12 @@
 
 
 // SESSIONS DIRECTORY CHECK
-	// Verifies that the sessions directory is writable by the PHP user.
-	// This is critical for maintaining user state and security tokens.
+// DEDALO_SESSIONS_PATH may be left undefined in configurations that rely on the system-default
+// PHP session path. Only perform the check when the constant is explicitly set, which signals
+// that the installation manages its own session directory (recommended for multi-tenant setups).
 	if (defined('DEDALO_SESSIONS_PATH')) {
 		// verify directory already exists
+		// system::check_sessions_path() also creates the directory if writable by the PHP user.
 		$dir_exists = system::check_sessions_path();
 		if( !$dir_exists ){
 			$init_response->msg[] = 'Error. Unable to write sessions. Review your permissions for sessions directory path (php user: $php_user)';
@@ -120,7 +161,9 @@
 			);
 			return $init_response;
 		}
-		// Maintenance Task: cleanup expired session files to prevent disk bloat.
+		// Maintenance Task: cleanup expired sessions and cache files to prevent disk bloat.
+		// Pruning is opportunistic (runs on each login), not a dedicated cron, so it adds
+		// a small I/O burst here but avoids a separate daemon dependency.
 		system::delete_old_sessions_files();
 	}
 
@@ -235,8 +278,10 @@
 
 
 // MEDIA AUDIO/VIDEO QUALITY FOLDERS CHECK
-	// Dédalo stores different versions of AV files (low res, high res, posterframes, subtitles).
-	// These directories must exist and be writable for the media processor.
+// Dédalo stores transcoded AV files in per-quality subdirectories under DEDALO_AV_FOLDER.
+// DEDALO_AV_AR_QUALITY holds the configured quality tiers (e.g. 'low', 'high').
+// 'posterframe' and 'subtitles' are not quality variants in the encoding sense but still
+// require their own subdirectories and are therefore appended here to reuse the same loop.
 	$ar_folder = DEDALO_AV_AR_QUALITY;
 	$ar_folder[] = 'posterframe'; // append posterframe as quality only to force iterate it
 	$ar_folder[] = 'subtitles'; // append subtitles as quality only to force iterate it
@@ -259,7 +304,10 @@
 
 
 // MEDIA IMAGE QUALITY FOLDERS CHECK
-	// Ensures directories for different image derivatives (thumbnails, web versions, etc.) exist.
+// Ensures directories for every configured image derivative (thumbnails, web-optimised, etc.)
+// exist and are writable. The 'svg' subfolder is appended unconditionally: SVG files are
+// re-encoded/sanitised and stored as image derivatives alongside raster quality tiers even
+// when the optional DEDALO_SVG_FOLDER constant (for the main SVG media type) is not defined.
 	$ar_quality = DEDALO_IMAGE_AR_QUALITY;
 	$ar_quality[] = 'svg'; // ensured support for vector graphics
 	foreach ($ar_quality as $quality) {
@@ -280,7 +328,9 @@
 
 
 // MEDIA PDF QUALITY FOLDERS CHECK
-	// If PDF support is enabled, verifies directories for PDF derivatives and thumbnails.
+// PDF support is optional; the whole block is skipped when DEDALO_PDF_FOLDER is not defined.
+// When enabled, DEDALO_PDF_AR_QUALITY lists the page-image quality variants, and
+// DEDALO_QUALITY_THUMB is appended to ensure the thumbnail subdirectory also exists.
 	if(defined('DEDALO_PDF_FOLDER')) {
 			$ar_quality = DEDALO_PDF_AR_QUALITY;
 			$ar_quality[] = DEDALO_QUALITY_THUMB;
@@ -303,7 +353,9 @@
 
 
 // MEDIA 3D QUALITY FOLDERS
-	// Target folder exists test
+// Like AV files, 3D models are stored in per-quality subdirectories.
+// A 'posterframe' subdirectory is also required for 3D model preview images (cover images
+// generated by the viewer), mirroring the same convention used for AV assets above.
 	$ar_quality = DEDALO_3D_AR_QUALITY;
 	$ar_quality[] = 'posterframe';
 	foreach ($ar_quality as $quality) {
@@ -324,7 +376,11 @@
 
 
 // MEDIA SVG QUALITY FOLDERS CHECK
-	// If SVG support is defined, verifies the main SVG folder and its quality derivatives.
+// DEDALO_SVG_FOLDER enables the dedicated SVG media type (scalable vector graphics stored as
+// first-class media assets, e.g. infographics or architectural plans). When defined, both
+// the root SVG folder and each per-quality subdirectory under it must be writable.
+// Note: 'svg' as an image-quality variant for raster images is handled above in the image
+// quality loop and is independent of this block.
 	if(defined('DEDALO_SVG_FOLDER')) {
 			$folder_path = DEDALO_MEDIA_PATH . DEDALO_SVG_FOLDER ;
 			if (!system::check_directory($folder_path)) {
@@ -360,7 +416,8 @@
 
 
 // MEDIA HTML FILES FOLDER
-	// Target folder exists test
+// Optional folder for storing self-contained HTML export artefacts (e.g. interactive
+// publications generated by diffusion). Skipped when DEDALO_HTML_FILES_FOLDER is not defined.
 	if(defined('DEDALO_HTML_FILES_FOLDER')) {
 		$folder_path = DEDALO_MEDIA_PATH.DEDALO_HTML_FILES_FOLDER;
 		if (!system::check_directory($folder_path)) {
@@ -380,7 +437,9 @@
 
 
 // MEDIA WEB IMAGES FOLDER
-	// Target folder exists test
+// Optional subfolder inside DEDALO_IMAGE_FOLDER for browser-optimised image variants
+// (typically smaller JPEG/WebP files served to end-users without authentication).
+// Skipped when DEDALO_IMAGE_WEB_FOLDER is not defined.
 	if(defined('DEDALO_IMAGE_WEB_FOLDER')) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . DEDALO_IMAGE_WEB_FOLDER;
 		if (!system::check_directory($folder_path)) {
@@ -401,7 +460,10 @@
 
 
 // MEDIA EXPORT FOLDER
-	// Target folder exists test
+// Directory where tool_export writes its output bundles (NDJSON, ZIP, etc.).
+// Checked separately from the general media tree because it may be configured on a
+// different volume or mount point to keep export artefacts off the media NAS.
+// Skipped when DEDALO_TOOL_EXPORT_FOLDER_PATH is not defined.
 	if(defined('DEDALO_TOOL_EXPORT_FOLDER_PATH')) {
 		$folder_path = DEDALO_TOOL_EXPORT_FOLDER_PATH;
 		if (!system::check_directory($folder_path)) {
@@ -422,7 +484,12 @@
 
 
 // MEDIA PROTECTION CHECK
-	// Verifies if media files are protected via .htaccess or similar mechanisms.
+// When DEDALO_PROTECT_MEDIA_FILES is true, media files are served through a PHP/Nginx
+// authentication gate instead of being publicly accessible via the web server.
+// The commented-out .htaccess check below was used for Apache-based protection; it is
+// retained in case an Apache-based protection path needs to be revived. See
+// docs/development/using_media_components.md and the media-access-control-markers memory
+// entry for the current token-based protection architecture.
 	if(defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
 		/*
 		# Test .htaccess file existence
@@ -436,6 +503,13 @@
 
 
 // DEDALO_UPLOAD_TMP_DIR
+// Scratch space for incoming multi-part file uploads (chunk assembly).
+// Two checks are performed:
+//   1. The directory itself is accessible/creatable by the PHP user.
+//   2. A subdirectory '/test' can be created inside it, confirming that the PHP user
+//      can write INTO the directory, not just that the directory inode exists.
+// The second check catches situations where the directory is mounted read-only or
+// owned by a different user with 0755 permissions.
 	$folder_path = DEDALO_UPLOAD_TMP_DIR;
 	if (!system::check_directory($folder_path)) {
 
@@ -457,6 +531,9 @@
 
 
 // IMPORT DIR
+// Root landing zone for data imports (CSV, JSON, Dédalo export bundles, etc.).
+// The same two-level writability check used for DEDALO_UPLOAD_TMP_DIR is applied here:
+// directory existence + ability to create a subdirectory inside it.
 	$folder_path = DEDALO_MEDIA_PATH . '/import';
 	if (!system::check_directory($folder_path)) {
 
@@ -477,6 +554,8 @@
 
 
 // IMPORT HISTORY DIR
+// Stores completed import logs and imported source files for audit and replay purposes.
+// Located under the import directory so the same filesystem permissions apply.
 	$folder_path = DEDALO_MEDIA_PATH . '/import/history';
 	if (!system::check_directory($folder_path)) {
 
@@ -489,13 +568,18 @@
 
 
 // POSTGRESQL CLIENT (PSQL) CHECK
-	// Dédalo requires the 'psql' binary for database operations, imports, and maintenance.
-	// If DEDALO_DB_MANAGEMENT is false, this check is skipped as DB is managed externally.
+// Dédalo's backup, restore, and maintenance tools invoke psql directly via shell_exec.
+// When DEDALO_DB_MANAGEMENT===false the PostgreSQL instance is managed by an external
+// service (e.g. a managed cloud database) and Dédalo does not need local binary access.
+// 'command -v <path>' is used instead of 'which' for POSIX portability; it returns the
+// resolved path when the binary is accessible, or empty output when it is not found.
 	if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
 		// Nothing to do
 	}else{
 		$path	= DB_BIN_PATH . 'psql';
 		$res	= shell_exec('command -v '. $path);
+		// trim() is safe on null as of PHP 8.x but $res is cast to string first to satisfy
+		// strict-types; the ternary keeps the null branch visible for future type-strictness.
 		$psql	= is_string($res)
 			? trim($res)
 			: $res;
@@ -517,8 +601,13 @@
 
 
 // PGPASS FILE CHECK
-	// Verifies the existence and readability of the .pgpass file for passwordless DB access.
-	// Failure here is often a warning because some environments might use other auth methods.
+// The .pgpass file in the PHP user's home directory stores PostgreSQL credentials so that
+// psql and pg_dump can authenticate without interactive password prompts.
+// This check only applies when DEDALO_DB_MANAGEMENT===true (local DB management).
+// A missing or malformed .pgpass is logged and added to errors but does NOT stop execution —
+// some environments use peer authentication or pg_hba.conf trust rules instead.
+// getenv('HOME') is preferred over $_SERVER['HOME'] to avoid contamination from
+// the web-server environment block in persistent-worker setups.
 	if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===true) {
 		if (!system::check_pgpass_file()) {
 
@@ -576,6 +665,12 @@
 
 
 // FFPROBE
+// ffprobe (the MediaInfo companion to ffmpeg) is used to read audio/video file metadata
+// before transcoding (duration, codec, bitrate, etc.).
+// (!) The Ffmpeg class and its methods use the identifier 'ffprove' (note the typo) throughout
+// the codebase — this matches the actual method names Ffmpeg::get_ffprove_version() and
+// Ffmpeg::get_ffprove_installed_path(). Do not rename $ffprove_version to 'ffprobe_version'
+// without renaming the Ffmpeg class methods in core/media_engine/class.Ffmpeg.php first.
 	$ffprove_version = Ffmpeg::get_ffprove_version();
 	if (empty($ffprove_version)) {
 
@@ -593,6 +688,9 @@
 
 
 // QT-FASTSTART
+// qt-faststart (part of the FFmpeg project) re-orders MPEG-4/MOV moov atoms to the beginning
+// of the file so that the browser can begin playback before the full file is downloaded
+// (progressive download / pseudo-streaming). Without it, videos are not streamable.
 	$qt_faststart = trim(shell_exec('command -v '.DEDALO_AV_FASTSTART_PATH));
 	if (empty($qt_faststart)) {
 
@@ -641,6 +739,11 @@
 
 
 // LOCK COMPONENTS
+// Pessimistic-locking garbage collection: removes stale lock records left behind by
+// PHP processes that crashed or timed out without releasing their component locks.
+// Only performed when the system is fully installed (not during initial setup) and only
+// when the locking feature is enabled. Running this during install would reference DB
+// tables that may not yet exist.
 	if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 		if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
 			lock_components::clean_locks_garbage();
@@ -649,7 +752,10 @@
 
 
 
-// Test openSSL lib
+// OPENSSL CHECK
+// OpenSSL is required for encrypting/decrypting sensitive data (API tokens, stored credentials,
+// media access signatures). The check uses function_exists on 'openssl_encrypt' as a lightweight
+// probe; if the extension is loaded, all other openssl_* functions are also available.
 	if (!function_exists('openssl_encrypt')) {
 
 		$init_response->msg[] = 'Error Processing Request: OPEN_SSL lib is not available';
@@ -664,7 +770,23 @@
 
 
 
-// table matrix_tools - matrix_test only when system is already installed
+// MATRIX_TOOLS / MATRIX_TEST TABLE CHECK
+// These two PostgreSQL tables mirror the schema of the main 'matrix' table (all columns,
+// constraints, indexes, storage, and comments via the LIKE … INCLUDING … clause) and are
+// used exclusively by the Development Area:
+//   - matrix_test:  Disposable sandbox table for generating and discarding test records.
+//   - matrix_tools: Stores tool configuration and registration data consumed by the tools
+//                   subsystem (tool_paths, tool_security, tool_ontology_map, etc.).
+//
+// Both tables are created automatically (with IF NOT EXISTS) the first time a fully-installed
+// Dédalo instance encounters a missing table. This allows them to be added via an incremental
+// Dédalo update without a manual DBA step.
+//
+// The matrix_tools creation path has an additional superuser gate:
+//   - If $user_id == DEDALO_SUPERUSER (root), the table is auto-created and the response
+//     carries a redirect to the Maintenance Area so the admin can run the data-update wizard.
+//   - All other users receive an error and execution stops; non-root users must not access
+//     the Development Area when the tools table is absent (it would yield empty tool sets).
 	if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 		$tables = (array)backup::get_tables();
 		if (!in_array('matrix_test', $tables)) {
@@ -712,6 +834,8 @@
 				}
 
 				// $init_response->msg = 'Warning. Redirect to Area Maintenance to update Dédalo data';
+				// result_options carries the redirect URL that the caller (boot loader / login handler)
+				// must honour to send the superuser to the Maintenance Area for the data-update wizard.
 				$init_response->result_options	= (object)[
 					'redirect'	=> DEDALO_CORE_URL .'/page/?t=' . DEDALO_AREA_MAINTENANCE_TIPO // dd88
 				];
@@ -729,8 +853,17 @@
 
 
 // CACHE MANAGER CHECK
-	// Dédalo uses a cache manager to store frequently accessed data.
-	// This check verifies that the cache directory is writable and the file-based cache stream is functional.
+// DEDALO_CACHE_MANAGER is a PHP constant array defined in config_db.php that configures the
+// file-based cache layer used by dd_cache (security-access trees, tool lists, user preferences,
+// etc.). The constant must define at least 'files_path' when file caching is active.
+//
+// Three-step validation:
+//   1. Constant is defined and non-empty — a missing constant stops execution immediately.
+//   2. The cache directory is accessible/creatable by the PHP user.
+//   3. A smoke test writes a real cache probe file (via dd_cache::process_and_cache_to_file with
+//      wait=true so the sub-process finishes before we read back), reads it, then deletes it.
+//      This validates not only directory permissions but also that PHP_BIN_PATH is correct and
+//      the background cache-writing sub-process can be spawned and complete successfully.
 	if (!defined('DEDALO_CACHE_MANAGER') || empty(DEDALO_CACHE_MANAGER)) {
 
 		$init_response->msg[] = 'Error Processing Request: DEDALO_CACHE_MANAGER is mandatory. Please check your config file and set a valid value. You can see some examples in sample.config file';
@@ -765,6 +898,9 @@
 			}
 		}
 
+		// Secondary directory sanity check: after system::check_directory() (which may have
+		// just created the directory), confirm is_dir() to rule out a symlink that points
+		// to a non-directory target or a race condition on networked filesystems.
 		if (!empty($files_path) && !is_dir($files_path) ) {
 
 			$init_response->msg[] = 'Warning: Cache dir unavailable at: '.$files_path . PHP_EOL . ' Check your DEDALO_CACHE_MANAGER config to fix it';
@@ -779,6 +915,8 @@
 		}else{
 
 			// write test file
+			// $test_user_id defaults to 0 when $user_id is null (anonymous/pre-login boot)
+			// so that dd_cache can still derive a valid cache file name prefix.
 			$test_user_id	= $user_id ?? 0;
 			$file_name		= 'cache_test_file.json';
 			dd_cache::process_and_cache_to_file((object)[
@@ -788,7 +926,7 @@
 					'user_id'		=> $test_user_id
 				],
 				'file_name'	=> $file_name,
-				'wait'		=> true
+				'wait'		=> true  // synchronous: block until the sub-process writes the file
 			]);
 			// read test file
 			$cache_data = dd_cache::cache_from_file((object)[
@@ -827,7 +965,11 @@
 
 
 // TEMPORAL CHUNK CLEANUP
-	// Maintenance Task: cleanup broken or abandoned upload file chunks.
+// Multi-part uploads leave partial chunk files on disk if a browser tab is closed mid-upload
+// or a network error prevents the client from sending a 'finalize' request. This maintenance
+// task removes chunks older than the configured TTL. Wrapped in try/catch because filesystem
+// errors here are non-fatal; a warning is logged but boot continues.
+// Skipped when DEDALO_UPLOAD_SERVICE_CHUNK_FILES is false (chunked upload is disabled).
 	if (defined('DEDALO_UPLOAD_SERVICE_CHUNK_FILES') && DEDALO_UPLOAD_SERVICE_CHUNK_FILES!==false) {
 		try {
 			system::remove_old_chunk_files();
@@ -843,7 +985,12 @@
 
 
 // ONTOLOGY RECOVERY CHECK
-	// Ensures the 'dd_ontology_recovery' table exists, restoring it from file if necessary.
+// 'dd_ontology_recovery' is a PostgreSQL table that holds a snapshot of the ontology
+// used as a fallback when the primary ontology data is corrupt or unavailable.
+// If the table is missing (e.g. after a bare-metal restore without this table), the
+// snapshot is re-imported from the on-disk JSON file via install::restore_dd_ontology_recovery_from_file(),
+// which delegates to install_ontology_manager::restore_dd_ontology_recovery_from_file().
+// This is a silent self-healing step — no error is raised and boot continues normally.
 	$dd_ontology_recovery_exists	= DBi::check_table_exists('dd_ontology_recovery');
 	if (!$dd_ontology_recovery_exists) {
 		install::restore_dd_ontology_recovery_from_file();
@@ -852,6 +999,10 @@
 
 
 // FINAL RESULT AGGREGATION
+// Reaching this point means all mandatory checks passed. Set result=true.
+// $init_response->errors may still be non-empty (e.g. the .pgpass warning that does not
+// stop execution), so the final message distinguishes a clean pass from a pass-with-warnings.
+// array_unshift ensures the summary line is the first human-readable message seen in any UI.
 	$init_response->result = true;
 	if (empty($init_response->errors)) {
 		$init_response->msg[] = 'OK. init test successful';

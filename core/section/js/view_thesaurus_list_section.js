@@ -24,8 +24,60 @@
 
 
 /**
-* view_thesaurus_list_section
-* Manages the component's logic and appearance in client side
+* VIEW_THESAURUS_LIST_SECTION
+* List-view module for thesaurus sections (area_thesaurus context).
+*
+* This is the specialised counterpart of view_default_list_section for sections
+* that display thesaurus terms. It differs from the generic list view in two
+* main ways:
+*
+*   1. It injects its own render_column_id callback that handles the term-linking
+*      workflow used by tool_indexation and the DS (Document Server) window opener,
+*      rather than the standard edit/navigate buttons of the generic list.
+*
+*   2. rebuild_columns_map is a module-private function (not a method on the
+*      exported namespace), so callers cannot override it. This keeps the thesaurus
+*      section_id column definition self-contained.
+*
+* Exported API:
+*   view_thesaurus_list_section         — namespace constructor (always returns true)
+*   view_thesaurus_list_section.render  — builds the full section DOM (async)
+*
+* Module-private helpers (not exported):
+*   get_content_data    — renders all section_record rows in parallel
+*   rebuild_columns_map — prepends the thesaurus section_id column to columns_map
+*   get_buttons         — builds the toolbar (search toggle only)
+*   render_column_id    — builds the id-column fragment for a single row;
+*                         handles the tool_indexation link-term workflow
+*
+* DOM structure produced by render():
+*   <section id="{self.id}" class="wrapper_section …">
+*     [div.buttons_container]     — optional; only when self.buttons && mode!=='tm'
+*     [div.search_container]      — optional; only when self.filter && mode!=='tm'
+*     [div.paginator_container]   — optional; only when self.paginator
+*     <div.list_body>
+*       <div.list_header>…</div>  — column labels; hidden when 0 records
+*       <div.content_data>
+*         <div.no_records>        — when ar_section_record.length === 0
+*         | <div>…</div>         — one section_record row per result record
+*       </div>
+*     </div>
+*   </section>
+*
+* @see view_default_list_section  — generic list view with richer toolbar
+* @see render_list_section        — dispatcher that selects this module for
+*                                   context.view === 'thesaurus_list'
+* @see area_thesaurus             — the area that owns the thesaurus sections
+*                                   rendered through this view
+*/
+
+
+
+/**
+* VIEW_THESAURUS_LIST_SECTION
+* Namespace constructor — never instantiated directly. All functionality lives
+* on the static-style function properties (.render, etc.).
+* @returns {boolean} Always returns true.
 */
 export const view_thesaurus_list_section = function() {
 
@@ -36,15 +88,53 @@ export const view_thesaurus_list_section = function() {
 
 /**
 * RENDER
-* Render node for use current view
-* @param object self
-* @param object options
-* sample:
-* {
-*    "render_level": "full",
-*    "render_mode": "list"
-* }
-* @return HTMLElement wrapper
+* Builds the complete list DOM for a thesaurus section and returns its wrapper
+* element. Supports two render levels:
+*
+*   'full' (default):
+*     Builds the entire wrapper including optional buttons bar, search placeholder,
+*     paginator slot, column header, and content rows. DOM pointers
+*     (wrapper.content_data, wrapper.list_body, wrapper.list_header_node) are set
+*     on the returned element so callers can reach sub-nodes without re-querying.
+*
+*   'content':
+*     Rebuilds only the row area (content_data). Used by the pagination handler to
+*     swap rows without tearing down the existing wrapper. Removes the 'hide' class
+*     from list_header_node when new records arrive. Returns content_data directly,
+*     NOT the wrapper.
+*
+* CSS grid layout:
+*   ui.flat_column_items() flattens columns_map (including nested sub-columns) into
+*   a list of CSS track-size strings, e.g. ['minmax(auto,6rem)', '1fr', '3fr'].
+*   These are joined and written to the .list_body grid-template-columns rule via
+*   set_element_css() with a scoped selector ({section_tipo}_{tipo}.list) so that
+*   multiple sections on the same page do not clash. Any CSS rules defined in
+*   self.context.css are merged on top of this computed grid definition.
+*
+* columns_map:
+*   rebuild_columns_map() is always called first. It prepends the thesaurus
+*   section_id column (with the link-term render_column_id callback) and appends
+*   any existing self.columns_map entries. The result is stored back on
+*   self.columns_map and self.fixed_columns_map is set to true so that subsequent
+*   pagination renders skip the rebuild.
+*
+* ar_instances lazy population:
+*   If self.ar_instances is already present and non-empty it is reused, avoiding a
+*   redundant server round-trip when render() is called again after a navigation
+*   event. Otherwise get_section_records() is called to populate it.
+*
+* buttons / filter / paginator:
+*   These optional sections are suppressed in 'tm' (Time Machine) mode. The search
+*   container is a bare placeholder div; the section's search.js instance attaches
+*   its own DOM to it when it initialises.
+*
+* @param {Object} self    - The section instance. Expected properties:
+*   id, type, model, tipo, section_tipo, mode, view, context, columns_map,
+*   ar_instances, buttons, filter, paginator, node (set on 'content' re-renders).
+* @param {Object} options - Render options.
+*   @param {string} [options.render_level='full'] - 'full' | 'content'
+* @returns {Promise<HTMLElement>} The section wrapper <section> element on a full
+*   render, or the content_data <div> element on a 'content' re-render.
 */
 view_thesaurus_list_section.render = async function(self, options) {
 
@@ -176,9 +266,28 @@ view_thesaurus_list_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param array ar_section_record
-* @param object self
-* @return HTMLElement content_data
+* Builds the scrollable row area for the thesaurus list view.
+*
+* Iterates over ar_section_record in parallel (Promise.all) and appends each
+* rendered section_record node to a DocumentFragment in their original order.
+* When the array is empty, a localised "No records found" placeholder is
+* rendered instead via no_records_node().
+*
+* The returned div carries CSS classes 'content_data', self.mode, and self.type
+* so that layout rules can target mode/type combinations without relying on
+* ancestor selectors.
+*
+* (!) This function uses a for-loop with a cached length after Promise.all to
+* preserve the server-side record order, which may differ from Promise resolution
+* order.
+*
+* @param {Object} self              - The section instance. Used for .mode and
+*                                     .type class names applied to content_data.
+* @param {Array}  ar_section_record - Array of initialised section_record instances.
+*                                     Each must expose a render({ add_hilite_row })
+*                                     method that returns a Promise<HTMLElement>.
+* @returns {Promise<HTMLElement>} A div.content_data element containing all row
+*   nodes in their original server order, or the no_records placeholder.
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -227,9 +336,35 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
-* @param object self
-* @return {array} columns_map
+* Prepends the thesaurus section_id control column to the section's columns_map.
+*
+* This function adds an 'Id' column as the first (leftmost) column in the grid.
+* The column uses the module-private render_column_id as its callback, which
+* provides the term-linking button instead of the generic edit/navigate button
+* from render_list_section.render_column_id.
+*
+* The section_id column definition:
+*   - id: 'section_id' — must match the string used by ui.render_list_header to
+*     identify the sort target.
+*   - tipo: 'section_id' — used by the search/sort layer as a direct column name
+*     (section_id is a real DB column, not a JSONB component path).
+*   - width: 'minmax(auto, 6rem)' — CSS grid track size; fixed to 6 rem so that
+*     numeric IDs up to 5–6 digits fit without clipping.
+*   - path: a single-entry array with component_tipo: 'section_id', used by
+*     section_record to build the sort event payload.
+*   - callback: render_column_id — the thesaurus-specific id-column renderer.
+*
+* Short-circuit: if self.fixed_columns_map === true the already-built map is
+* returned immediately (avoids duplicate prepend on pagination re-renders).
+*
+* (!) self.columns_map is expected to be a Promise or a resolved Array at the
+* point this function is called. It is awaited with `await self.columns_map`
+* so that both forms are handled correctly.
+*
+* @param {Object} self - The section instance. Reads self.fixed_columns_map,
+*   self.columns_map, and self.section_tipo. Writes self.fixed_columns_map.
+* @returns {Promise<Array>} Resolved columns_map array with the section_id column
+*   prepended to any base columns defined in the ontology.
 */
 const rebuild_columns_map = async function(self) {
 
@@ -274,8 +409,29 @@ const rebuild_columns_map = async function(self) {
 
 /**
 * GET_BUTTONS
-* @param object self
-* @return HTMLElement fragment
+* Builds the section toolbar fragment containing the search toggle button.
+*
+* Returns null when self.context.buttons is absent (no ontology buttons configured
+* for this section), allowing the caller to skip appending anything to the DOM.
+*
+* In this thesaurus view the toolbar is intentionally minimal — only the search
+* toggle is rendered. The richer toolbar provided by view_default_list_section
+* (show-all, delete, import, per-role guards) is not needed here because thesaurus
+* term lists are navigated via the tree, not by bulk operations.
+*
+* (!) 'mousedown' is used instead of 'click' so the button receives the event
+* before focus leaves any active input, which would otherwise fire blur/save
+* handlers on the currently edited component first.
+*
+* Event published: 'toggle_search_panel_{self.id}'
+*   Subscribed to by the section's search.js instance to show/hide the search
+*   panel. The event channel name is namespaced by section id to avoid cross-talk
+*   when multiple sections are visible simultaneously.
+*
+* @param {Object} self - The section instance. Reads self.context.buttons (used
+*   only as an existence check) and self.id (for the event channel name).
+* @returns {DocumentFragment|null} Fragment containing div.buttons_container
+*   with the search button inside, or null if no buttons are configured.
 */
 const get_buttons = function(self) {
 
@@ -314,13 +470,58 @@ const get_buttons = function(self) {
 
 
 
-
 /**
 * RENDER_COLUMN_ID
-* Custom render to generate the section list column id.
-* Is called as callback from section_record
-* @param object options
-* @return DOM DocumentFragment
+* Builds the DocumentFragment that populates the 'id' column for one row in
+* the thesaurus section list. Called as the 'callback' property of the
+* section_id column descriptor produced by rebuild_columns_map().
+*
+* This is the thesaurus-specific variant of render_column_id. Unlike the
+* generic version in render_list_section.js it only handles a single use-case:
+* linking a thesaurus term to a portal via the tool_indexation workflow.
+*
+* Behaviour by context:
+*
+*   tool_indexation initiator (self.initiator contains 'tool_indexation_'):
+*     A link button is rendered next to the section_id span. Clicking it
+*     publishes the 'link_term_{linker_id}' event_manager channel, passing
+*     { section_tipo, section_id, label }. The event is published on:
+*       - window.opener.event_manager  when self.caller.area_thesaurus.linker.caller
+*         is null (DS window-opener scenario — the thesaurus was opened in a new
+*         browser window by a Document Server page).
+*       - window.event_manager         in the standard indexation case (thesaurus
+*         rendered inside an iframe whose parent page owns the linker component).
+*     The linker is resolved from self.caller.area_thesaurus.linker, where
+*     self.caller is the area_thesaurus instance. It is expected to be a
+*     component_portal (or equivalent) that subscribes to the 'link_term_' event.
+*
+*   No other cases: the function returns an empty fragment when self.initiator
+*     does not match 'tool_indexation_*'. (No edit/navigate buttons are added.)
+*
+* Font-size adaptation:
+*   get_font_fit_size() computes a scaled font size so that long section IDs fit
+*   within the column width. The base size (1.25 rem) matches the --font_size CSS
+*   variable defined in list.less. If the computed size differs from the base,
+*   it is applied as an inline CSS custom property (--font_size) on the span.
+*
+* Debug mode:
+*   When SHOW_DEBUG is true, the section_id span's title attribute is set to the
+*   paginated_key so developers can verify SQO offset arithmetic.
+*
+* (!) If linker is undefined when the link button is clicked, a console.warn is
+* emitted and the handler returns false without publishing the event. This guard
+* exists because the linker is set asynchronously during area_thesaurus.init()
+* and may not be available if the button is clicked before init completes.
+*
+* @param {Object} options               - Row render options supplied by section_record.
+* @param {Object} options.caller        - The section or portal instance that owns
+*                                         this list (typically an area_thesaurus section).
+* @param {string|number} options.section_id   - The record's section_id value.
+* @param {string} options.section_tipo        - The record's ontology tipo, e.g. 'oh1'.
+* @param {number} options.paginated_key       - Zero-based position of this row in the
+*                                              full result set; used as a debug hint.
+* @returns {DocumentFragment} Fragment containing the rendered id-column nodes.
+*   May be empty if no matching case fires in the switch.
 */
 const render_column_id = function(options) {
 
@@ -340,6 +541,10 @@ const render_column_id = function(options) {
 		const fragment = new DocumentFragment()
 
 	// linker
+		// linker is set on the area_thesaurus instance during init() when an 'initiator'
+		// URL variable is present. The chain is: self (section) → self.caller (area_thesaurus)
+		// → self.caller.area_thesaurus.linker. When linker.caller is null the thesaurus
+		// was opened in a new window (DS scenario), so the event must target window.opener.
 		const linker = self.caller?.area_thesaurus?.linker
 	// section_id
 		const section_id_node = ui.create_dom_element({
@@ -382,6 +587,9 @@ const render_column_id = function(options) {
 						// linker id. A component_portal instance is expected as linker
 						const linker_id = linker?.id
 						// source_window.event_manager.publish('link_term_' + linker_id,
+						// Determine which window owns the target event_manager:
+						// - window.opener: DS scenario (thesaurus opened in a new window)
+						// - window:        standard indexation (thesaurus in an iframe, same origin)
 						const window_base = !linker?.caller
 							? window.opener // case DS opening new window
 							: window // default case (indexation)

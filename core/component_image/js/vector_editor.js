@@ -162,15 +162,32 @@ vector_editor.prototype.init_canvas = async function(self) {
 	// copy event
 		document.addEventListener('copy', fn_copy)
 		function fn_copy(event) {
-			// copy the path and convert to svg to export in the clipboard
+			// copy the current canvas svg to the clipboard.
+			// Use the SvgCanvas API (stage.getSvgString) — the previous code referenced
+			// an undefined `project` (paper.js leftover) and threw a ReferenceError on
+			// every copy after already calling preventDefault (breaking native copy too).
+			const project_svg = (stage && typeof stage.getSvgString==='function')
+				? stage.getSvgString()
+				: null
+			if (!project_svg) {
+				// nothing to copy from the editor; let the native copy proceed
+				return
+			}
 			event.preventDefault();
-			const project_svg = project.exportSVG({asString:true,precision:3})
 			if (event.clipboardData) {
 				event.clipboardData.setData('text/plain', project_svg);
 			} else if (window.clipboardData) {
 				window.clipboardData.setData('Text', project_svg);
 			}
 		};
+
+	// store the document-level handlers so destroy() can remove them (avoids
+	// accumulating copy/paste listeners across record navigation).
+		this._document_handlers = this._document_handlers || []
+		this._document_handlers.push(
+			{ type:'paste', handler:fn_paste },
+			{ type:'copy', handler:fn_copy }
+		)
 
 	// create the main layer
 	// main layer is the layer that define the area to be cropped.
@@ -314,6 +331,11 @@ vector_editor.prototype.element_transition = function(win, elems) {
 */
 vector_editor.prototype.keyboard_shortcuts = function() {
 
+	// guard: this is fired via stage.call('extensions_added'); register the document
+	// keydown listener only once per instance to avoid duplicate shortcut handlers.
+	if (this.extensionsAdded===true) {
+		return
+	}
 	this.extensionsAdded = true
 
 	const key_handler = {} // will contain the action for each pressed key
@@ -339,7 +361,7 @@ vector_editor.prototype.keyboard_shortcuts = function() {
 		return true
 	})
 	// register the keydown event
-	document.addEventListener('keydown', (e) => {
+	const keydown_handler = (e) => {
 
 		// only track keyboard shortcuts for the body containing the SVG-Editor
 		if (e.target.nodeName !== 'BODY') return
@@ -355,7 +377,12 @@ vector_editor.prototype.keyboard_shortcuts = function() {
 		if (key_handler[key].pd) {
 			e.preventDefault()
 		}
-	})
+	}
+	document.addEventListener('keydown', keydown_handler)
+
+	// store for teardown in destroy()
+	this._document_handlers = this._document_handlers || []
+	this._document_handlers.push({ type:'keydown', handler:keydown_handler })
 }//end keyboard_shortcuts
 
 
@@ -891,6 +918,12 @@ vector_editor.prototype.export_handler = function(win, data){
 		WindowName
 	} = data;
    const exportWindow = window.open('', WindowName);
+   // window.open returns null when blocked by a popup blocker (export is async and may
+   // run outside a direct user gesture); bail instead of throwing on a null window.
+   if (!exportWindow) {
+	   console.warn('export_handler: popup blocked, could not open export window');
+	   return;
+   }
    exportWindow.location.href = data.bloburl || data.datauri;
 }//end export_handler
 
@@ -920,7 +953,7 @@ vector_editor.prototype.set_color_picker = function() {
 			? this.selected_element.getAttribute('fill')
 			: stage.getColor('fill')
 		this.active_opacity = (this.selected_element)
-			? this.selected_element.getAttribute('opacity')
+			? parseFloat(this.selected_element.getAttribute('opacity'))
 			: stage.getOpacity()
 
 		if(this.button_color_picker && this.active_fill_color){
@@ -1252,6 +1285,7 @@ vector_editor.prototype.render_layer_selector = function(self) {
 */
 vector_editor.prototype.render_layer_row = function(self, layer) {
 
+	const editor			= this // captured for use inside non-arrow event handlers below
 	const stage				= this.stage
 	const drawing			= stage.getCurrentDrawing()
 	// const currentLayerName	= drawing.getCurrentLayerName()
@@ -1432,8 +1466,9 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 							//check if the user want remove transformations in raster or remove path layer
 							if(layer.layer_id==0){
 								// create new empty raster layer
-
-								this.load_data(self)
+								// use captured `editor`: inside this function() `this` is
+								// the button element, not the vector_editor instance.
+								editor.load_data(self)
 								// const new_raster_layer	= {
 								// 	layer_id	: 0
 								// }
@@ -1483,6 +1518,28 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 
 	return layer_li
 }//end layer_selector
+
+
+
+/**
+* DESTROY
+* Release the document-level listeners (copy/paste/keydown) attached during
+* init_canvas/keyboard_shortcuts so they do not accumulate across record navigation.
+* @return bool true
+*/
+vector_editor.prototype.destroy = function() {
+
+	if (Array.isArray(this._document_handlers)) {
+		this._document_handlers.forEach(item => {
+			document.removeEventListener(item.type, item.handler)
+		})
+		this._document_handlers = []
+	}
+
+	this.extensionsAdded = false
+
+	return true
+}//end destroy
 
 
 

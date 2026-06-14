@@ -589,28 +589,130 @@
 			width: 100%;
 			max-width: calc(100vw - 3rem);
 			min-height: 40vh;
+			max-height: 78vh; // container scrolls internally so the header can stick
 			overflow: auto;
 			margin: 0px;
+			background-color: @color_grey_16;
+			border: 1px solid @color_grey_13;
+			border-radius: 8px;
+			box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
 
-			@media screen and (max-width: @width_break_point_1) {
+			// export_flat_table. Modern result grid (sticky header, frozen id
+			// column, zebra rows, hover). Theme-aware: greys flip under
+			// data-theme="dark", so grey_16 surface + grey_4 text stays legible.
+			.export_flat_table {
+				border-collapse: separate;
+				border-spacing: 0;
+				width: max-content;
+				min-width: 100%;
+				font-size: 0.85rem;
+				line-height: 1.45;
+				color: @color_grey_4;
+				font-variant-numeric: tabular-nums;
 
-			}
-
-			.view_table {
-
-			}
-
-			// table dd_grid
-			.row_header {
-				position: sticky;
-				top: 0rem;
-
-				>th {
+				// sticky header
+				.row_header > th {
+					position: sticky;
+					top: 0;
+					z-index: 2;
 					background-color: @tool_color;
 					color: @color_white;
+					text-align: left;
+					font-weight: 600;
+					font-size: 0.72rem;
+					text-transform: uppercase;
+					letter-spacing: 0.05em;
+					padding: 0.66rem 0.9rem;
+					white-space: nowrap;
+					border-right: 1px solid rgba(255,255,255,0.12);
+					border-bottom: 2px solid var(--tool_export_border);
+
+					// top-left corner sits above the frozen id column
+					&:first-child {
+						position: sticky;
+						left: 0;
+						z-index: 3;
+					}
+					&:last-child {
+						border-right: none;
+					}
 				}
-			}
-		}
+
+				// body cells
+				td {
+					padding: 0.5rem 0.9rem;
+					border-bottom: 1px solid @color_grey_13;
+					vertical-align: top;
+					max-width: 30rem;
+					word-break: break-word;
+					background-color: @color_grey_16; // opaque so frozen col masks
+				}
+
+				// zebra striping
+				tr:not(.row_header):nth-of-type(even) td {
+					background-color: @color_grey_15;
+				}
+
+				// row hover (opaque to keep the frozen first column masked)
+				tr:not(.row_header):hover td {
+					background-color: @color_grey_13;
+				}
+
+				// frozen first column (record id)
+				td:first-child {
+					position: sticky;
+					left: 0;
+					z-index: 1;
+					font-weight: 600;
+					color: @color_grey_7;
+					white-space: nowrap;
+					box-shadow: 1px 0 0 @color_grey_13;
+				}
+
+				// breakdown sub-rows: tie visually to their parent record
+				tr.sub_row td {
+					border-bottom: 1px solid @color_grey_14;
+				}
+				tr.sub_row td:first-child {
+					color: @color_grey_9;
+					box-shadow: 1px 0 0 @color_grey_13, inset 3px 0 0 var(--tool_export_lighten_40);
+				}
+
+				// empty cells get a faint placeholder dash
+				td:empty::after {
+					content: "–";
+					color: @color_grey_10;
+				}
+
+				// media thumbnails
+				.export_media_thumb {
+					height: 44px;
+					width: auto;
+					max-width: 88px;
+					object-fit: cover;
+					border-radius: 4px;
+					border: 1px solid @color_grey_13;
+					background-color: @color_grey_15;
+					margin: 2px 4px 2px 0;
+					vertical-align: middle;
+					transition: transform 120ms ease;
+
+					&:hover {
+						transform: scale(1.04);
+					}
+				}
+
+				// links (iri cells)
+				td a {
+					color: var(--color_primary);
+					text-decoration: none;
+
+					&:hover {
+						text-decoration: underline;
+					}
+				}
+			}//end .export_flat_table
+		}//end .export_data_container
 	}//end >.content_data
 
 	// select style

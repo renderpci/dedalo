@@ -377,6 +377,11 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			// errors and not login situation managing
 				const api_response = await build_autoload(self)
 
+				// show debug
+				if (SHOW_DEBUG===true) {
+					console.log('area_thesaurus build api_response:', api_response);
+				}
+
 				// server: wrong response
 				if (!api_response) {
 					return false
@@ -388,11 +393,18 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				}
 
 			// destroy dependencies
-				await self.destroy(
-					false, // bool delete_self
-					true, // bool delete_dependencies
-					false // bool remove_dom
-				)
+			// Skip during search: ts_object instances in the cache must stay alive so
+			// build_search_instances can find them via get_instance_by_id and
+			// open_search_branches can walk the tree. For show_all and initial loads
+			// (no search_action or 'show_all') we still destroy so the tree resets cleanly.
+				const is_search_action = self.rqo?.source?.search_action === 'search'
+				if (!is_search_action) {
+					await self.destroy(
+						false, // bool delete_self
+						true, // bool delete_dependencies
+						false // bool remove_dom
+					)
+				}
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -555,7 +567,9 @@ area_thesaurus.prototype.navigate = async function(options) {
 	// loading
 		self.node.content_data.classList.add('loading')
 
-	// callback execute
+	try {
+
+		// callback execute
 		if (callback) {
 			await callback()
 
@@ -564,15 +578,19 @@ area_thesaurus.prototype.navigate = async function(options) {
 			}
 		}
 
-	// refresh
+		// refresh
 		await self.refresh({
 			build_autoload	: true,
 			render_level	: 'content',
 			destroy			: false
 		})
 
-	// loading
+	} catch (error) {
+		console.error("Error in area_thesaurus navigate:", error);
+	} finally {
+		// always remove loading class
 		self.node.content_data.classList.remove('loading')
+	}
 
 
 	return true

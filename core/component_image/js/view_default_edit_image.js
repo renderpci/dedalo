@@ -577,12 +577,19 @@ const fit_image = function(self) {
 			}
 		}
 
-	// event resize. Only if we are in fullscreen
-		const resize_handler = () => {
-			fit_image(self)
-		}
+	// event resize. Only if we are in fullscreen.
+	// Register a single resize handler (stored on self) instead of adding a brand-new
+	// closure on every fit_image call — otherwise listeners accumulate unbounded and
+	// each one re-runs the layout-thrashing fit_image on every resize.
 		if (wrapper.classList.contains('fullscreen')) {
-			window.addEventListener('resize', resize_handler)
+			if (!self._fit_image_resize_handler) {
+				self._fit_image_resize_handler = () => { fit_image(self) }
+				window.addEventListener('resize', self._fit_image_resize_handler)
+			}
+		} else if (self._fit_image_resize_handler) {
+			// leaving fullscreen: remove the resize handler
+			window.removeEventListener('resize', self._fit_image_resize_handler)
+			self._fit_image_resize_handler = null
 		}
 }//end fit_image
 

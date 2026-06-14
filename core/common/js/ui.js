@@ -23,9 +23,53 @@
 
 /**
 * UI
-* User Interface
-* Create common DOM nodes and structures used by areas, sections, components, tools etc.
-* Assign common DOM events and actions
+* Central UI factory and helper namespace for the Dédalo v7 front-end.
+*
+* Provides:
+*   - Namespaced sub-objects for building DOM wrappers per Dédalo entity type:
+*       ui.component — component wrappers (edit / list / mini / search modes),
+*                      lifecycle helpers (activate / deactivate / lock / unlock),
+*                      image fallbacks, warning badges, save animation.
+*       ui.section   — (reserved; currently empty; section-specific helpers live in
+*                      section files and delegate back here for shared DOM patterns)
+*       ui.area      — area wrappers (edit mode)
+*       ui.tool      — tool wrappers, content-data containers, tool-button builders
+*       ui.widget    — widget wrappers (edit mode)
+*   - Top-level utility methods:
+*       create_dom_element — generic DOM node factory (the most-called helper in the codebase)
+*       update_node_content — efficient replaceChildren + insertAdjacentHTML
+*       add_tools — attach tool buttons from instance.tools[] to a buttons container
+*       place_element — deferred DOM placement with event subscription fallback
+*       toggle_inspector — show/hide the section inspector sidebar
+*       collapse_toggle_track — persistent open/closed state via local DB
+*       build_select_lang — language <select> builder
+*       attach_to_modal — full-featured <dd-modal> Web Component wrapper
+*       activate_first_component — auto-focus the first editable component on record create
+*       render_list_header — unified portal/section list column headers with sort arrows
+*       allow_column_order / add_column_order_set — column-sort logic
+*       flat_column_items — CSS grid-template-columns builder from columns_map
+*       set_background_image — canvas-based dominant-color background for images
+*       make_column_responsive — CSS ::before responsive label injection
+*       hilite — toggle 'hilite_element' class on a component node
+*       enter_fullscreen — CSS fullscreen + Escape-key exit handler
+*       get_ontology_term_link — hyperlink to the ontology term viewer
+*       load_item_with_spinner — async spinner-then-replace pattern
+*       show_message — dismissible status/error message banner
+*       get_text_color — WCAG-contrast-aware black/white text color picker
+*       css_var — resolves a CSS custom property to its computed value
+*       render_edit_modal — builds an inline component edit modal
+*       activate_tooltips — registers codex-tooltip on .button elements
+*       fit_input_width_to_value — auto-sizes an <input> to its character count
+*       inside_dataframe — caller-chain check for component_dataframe context
+*
+* All wrapper builders follow the same contract:
+*   - Accept an `instance` (the Dédalo entity object) and an optional `options`/`items` map.
+*   - Return a single HTMLElement that the caller appends to the DOM.
+*   - Never mutate `instance` directly (pointer properties like `instance.node` are set
+*     by the caller after the returned node is placed, not by these builders).
+*
+* Exported as a plain object literal so callers can import individual sub-namespaces
+* or the whole object without instantiation.
 */
 export const ui = {
 
@@ -33,6 +77,12 @@ export const ui = {
 
 	/**
 	* LOCAL VARS
+	* @var {Object|null} tooltip - Singleton Tooltip instance (codex-tooltip).
+	*   Lazily initialized on first call to activate_tooltips; null means not yet
+	*   created or running on a mobile device (tooltips are suppressed on touch).
+	* @var {number|null} message_timeout - Handle returned by setTimeout for the
+	*   auto-dismiss timer on 'ok'-type messages. Cleared before each new message
+	*   to allow consecutive successes to reset the countdown correctly.
 	*/
 	tooltip : null,
 
@@ -40,15 +90,20 @@ export const ui = {
 
 	/**
 	* SHOW_MESSAGE
-	* @param HTMLElement wrapper
-	*	component wrapper where message is placed
-	* @param string message
-	*	Text message to show inside message container
-	* @param string msg_type = 'error'
-	* @param string message_node = 'component_message'
-	* @param bool clean = false
+	* Displays a dismissible status/error/warning banner inside a component wrapper.
+	* The message container is created once and reused on subsequent calls (the node
+	* is looked up by its CSS class and recycled rather than duplicated). Multiple
+	* text items may be stacked; pass clean=true to remove previous items first.
+	* 'ok'-type messages auto-dismiss after 10 seconds via a shared timeout handle.
 	*
-	* @return HTMLElement message_wrap
+	* @param {HTMLElement} wrapper - The component wrapper that will host the banner.
+	* @param {string} message - Plain-text message to display.
+	* @param {string} [msg_type='error'] - Severity class: 'error' | 'warning' | 'ok'.
+	* @param {string} [message_node='component_message'] - CSS class for the container node;
+	*   callers may pass a custom class to scope messages to a specific sub-element.
+	* @param {boolean} [clean=false] - When true, removes all existing .text nodes
+	*   before adding the new message (useful for replacing a previous error).
+	* @returns {HTMLElement} message_wrap - The message container element (created or recycled).
 	*/
 	message_timeout : null,
 	show_message : (wrapper, message, msg_type='error', message_node='component_message', clean=false) => {
@@ -297,10 +352,15 @@ export const ui = {
 
 		/**
 		* BUILD_CONTENT_DATA
-		* Unified component content_data container render
-		* @param object instance - The instance object containing type and context.
-		* @param object options = {} - Optional configuration for the function. Unused at now.
-		* @return HTMLElement content_data - The created content_data div element.
+		* Creates the main content container element for a component in any mode.
+		* Applies the component's ontology-defined CSS classes (from context.css.content_data)
+		* alongside the standard 'content_data' and type classes. The returned element is
+		* meant to be populated by the caller before being appended to the wrapper.
+		*
+		* @param {Object} instance - The component instance; must expose instance.type and
+		*   instance.context.css (may be an empty object when no ontology CSS is defined).
+		* @param {Object} [options={}] - Reserved for future configuration; currently unused.
+		* @returns {HTMLElement} content_data - The created <div> element.
 		*/
 		build_content_data : (instance, options={}) => {
 
@@ -332,10 +392,16 @@ export const ui = {
 
 		/**
 		* BUILD_BUTTON_EXIT_EDIT
-		* Unified render for component button_exit_edit
-		* @param object instance
-		* @param object options = {}
-		* @return HTMLElement content_data
+		* Creates the close/exit-edit button that appears on an active component.
+		* On click it deactivates the component and transitions it to the target mode
+		* (default 'list') by calling instance.change_mode, which destroys the current
+		* node and renders a fresh one in the new mode.
+		*
+		* @param {Object} instance - The component instance to deactivate and change mode on.
+		* @param {Object} [options={}] - Configuration overrides.
+		* @param {boolean} [options.autoload=true] - Passed to instance.change_mode.
+		* @param {string} [options.target_mode='list'] - The mode to switch to on close.
+		* @returns {HTMLElement} button_close_node - The rendered close <span> button element.
 		*/
 		build_button_exit_edit : (instance, options={}) => {
 
@@ -369,9 +435,13 @@ export const ui = {
 
 		/**
 		* BUILD_BUTTONS_CONTAINER
-		* Unified component buttons container render
-		* @param object instance
-		* @return HTMLElement buttons_container
+		* Creates the empty <div> container that holds action/tool buttons for a component.
+		* Callers append individual buttons (save, close, tool shortcuts, etc.) to the
+		* returned element before placing it into the wrapper.
+		*
+		* @param {Object} instance - The component instance (currently unused; reserved for
+		*   future per-instance customisation of the container).
+		* @returns {HTMLElement} buttons_container - The created <div class="buttons_container"> element.
 		*/
 		build_buttons_container : (instance) => {
 
@@ -387,10 +457,19 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_LIST
-		* Render a unified version of component wrapper in list mode
-		* @param object instance
-		* @param object options = {}
-		* @return HTMLElement wrapper
+		* Builds the component wrapper element for 'list' (read-only display) mode.
+		* Applies the standard CSS class set (wrapper_<type>, model, tipo, section_tipo_tipo,
+		* 'list', view_<view>) and injects ontology-defined CSS rules via set_element_css.
+		* If options.value_string is provided, a <span> with the pre-formatted value is
+		* appended immediately (used by simple single-value components to avoid an extra render pass).
+		* When SHOW_DEBUG is true, Alt+click logs the full instance to the console without
+		* triggering navigation.
+		*
+		* @param {Object} instance - The component instance.
+		* @param {Object} [options={}] - Configuration overrides.
+		* @param {string} [options.value_string] - Pre-rendered HTML string to display inside the wrapper.
+		* @param {string[]} [options.add_styles] - Extra CSS classes to add to the wrapper.
+		* @returns {HTMLElement} wrapper - The constructed wrapper <div> element.
 		*/
 		build_wrapper_list : (instance, options={}) => {
 
@@ -471,10 +550,15 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_MINI
-		* Render mini wrapper version of given component
-		* @param object instance
-		* @param object options = {}
-		* @return HTMLElement wrapper
+		* Builds a compact inline <span> wrapper for a component rendered in 'mini' mode.
+		* Mini mode is used when a component value is displayed as a small inline badge
+		* (e.g., inside a relation locator chip or a tooltip preview).
+		* The wrapper receives the classes 'mini' and '<model>_mini'.
+		*
+		* @param {Object} instance - The component instance; instance.model is used for the class.
+		* @param {Object} [options={}] - Configuration overrides.
+		* @param {string} [options.value_string] - Pre-rendered HTML string inserted via insertAdjacentHTML.
+		* @returns {HTMLElement} wrapper - The constructed <span> element.
 		*/
 		build_wrapper_mini : (instance, options={}) => {
 
@@ -503,11 +587,22 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_SEARCH
-		* Component wrapper unified builder
-		* @param object instance (self component instance)
-		* @param object items
-		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
-		* @return HTMLElement wrapper
+		* Builds the component wrapper element for 'search' mode (used inside the search inspector).
+		* Differences from build_wrapper_edit:
+		*   - The label is prefixed with '>' characters proportional to the ddo path depth,
+		*     so users can visually identify nested search components.
+		*   - The title attribute on the label shows the full section path (section_tipo chain).
+		*   - A tooltip div (.hidden_tooltip) is conditionally added if context.search_options_title
+		*     is defined (enables a hover info panel about available search operators).
+		*   - Activation is triggered on the 'click' event rather than 'mousedown'.
+		*   - The 'tooltip_toggle' class is always added (search wrappers always have a tooltip).
+		*
+		* @param {Object} instance - The component instance; must expose id, model, type, tipo,
+		*   mode, view, label, context, path, and an activate-capable node.
+		* @param {Object} [items={}] - Sub-elements to slot into the wrapper.
+		* @param {HTMLElement|null} [items.label] - Custom label node; null suppresses the label entirely.
+		* @param {HTMLElement} [items.content_data] - The main data container node.
+		* @returns {HTMLElement} wrapper - The constructed wrapper <div> element.
 		*/
 		build_wrapper_search : (instance, items={}) => {
 
@@ -639,12 +734,32 @@ export const ui = {
 
 		/**
 		* ACTIVATE
-		* Set component state as active/inactive and publish activation event
-		* @param object component
-		*	Full component instance
-		* @param bool focus = true
-		* @return bool
-		* 	If component is undefined or already active return false, else true
+		* Marks a component as the currently active (focused/editing) component.
+		* This is the single authoritative path for component activation — callers must
+		* NOT set component.active = true directly.
+		*
+		* Side effects (in order):
+		*  1. Guards: no-ops if component is undefined or already active.
+		*  2. Sets component.active = true immediately (before the deactivate await) to
+		*     prevent duplicate events from concurrent mousedown/focus chains.
+		*  3. Deactivates the previously active component (page_globals.component_active)
+		*     if it is a different instance; this saves any pending changed_data.
+		*  4. Adds the 'active' CSS class to component.node; also adds 'inside' when the
+		*     component overlaps the inspector panel (avoids visual overlap on wide screens).
+		*  5. Attempts to focus the first focusable input inside content_data (unless
+		*     component.focus_first_input is defined — components like component_text_area
+		*     override this to handle cursor placement themselves).
+		*  6. Updates page_globals.component_active.
+		*  7. Publishes the 'activate_component' event via event_manager.
+		*  8. Calls check_unsaved_data so that a pending mousedown on another component
+		*     triggers a save-before-navigate prompt.
+		*  9. Persists the last selected component tipo for this section in the local DB
+		*     (used to restore the selection on back-navigation).
+		*
+		* @param {Object} component - The full component instance to activate.
+		* @param {boolean} [focus=true] - Whether to auto-focus the first input inside the component.
+		* @returns {Promise<boolean>} Resolves false if the component was undefined or already active;
+		*   true when activation completed successfully.
 		*/
 		activate : async (component, focus=true) => {
 
@@ -766,14 +881,26 @@ export const ui = {
 
 		/**
 		* DEACTIVATE
-		* Removes component active style and save it
-		* if changed_data is different from undefined
-		* (!) Note that component changed_data existence provoke the save call (change_value())
-		* @param object component
-		*	Full component instance
-		* @return promise
-		* 	Resolve bool false if component it's not active or
-		* 	true when deactivation finish
+		* Removes the active state from a component, optionally auto-saving pending edits.
+		*
+		* (!) If component.data.changed_data is non-empty and component.save_on_deactivate
+		*     is true (or undefined, which defaults to true), this calls component.change_value()
+		*     synchronously — meaning a server save request is dispatched as a side effect.
+		*
+		* Side effects (in order):
+		*  1. No-op if component.active !== true.
+		*  2. Blurs the currently focused DOM element to flush any pending input events
+		*     (e.g., the 500 ms debounce in component_text_area).
+		*  3. Removes the 'active' CSS class from component.node.
+		*  4. Saves changed_data via component.change_value if applicable (see above).
+		*  5. Sets component.active = false.
+		*  6. Clears page_globals.component_active if it points to this component.
+		*  7. Publishes the 'deactivate_component' event via event_manager.
+		*  8. Deletes the last-selection record for this section from the local DB.
+		*
+		* @param {Object} component - The full component instance to deactivate.
+		* @returns {Promise<boolean>} Resolves false if the component was already inactive;
+		*   true when deactivation completed successfully.
 		*/
 		deactivate : async (component) => {
 
@@ -833,11 +960,13 @@ export const ui = {
 
 		/**
 		* LOCK
-		* Sets component as locked
-		* @param object component
-		*	Full component instance
-		* @return promise
-		* 	Resolve bool
+		* Marks a component as locked, adding the 'lock' CSS class to its node.
+		* Locked components display a visual indicator and typically disable interaction.
+		* The locked state is tracked via component.lock (boolean), distinct from
+		* component.active which tracks the editing-focus state.
+		*
+		* @param {Object} component - The full component instance to lock; must have a .node property.
+		* @returns {Promise<boolean>} Resolves false if already locked; true when lock was applied.
 		*/
 		lock : async (component) => {
 
@@ -860,11 +989,11 @@ export const ui = {
 
 		/**
 		* UNLOCK
-		* Sets component as unlocked
-		* @param object component
-		*	Full component instance
-		* @return promise
-		* 	Resolve bool
+		* Removes the locked state from a component by clearing the 'lock' CSS class
+		* and setting component.lock = false.
+		*
+		* @param {Object} component - The full component instance to unlock; must have a .node property.
+		* @returns {Promise<boolean>} Resolves false if the component was not locked; true when unlocked.
 		*/
 		unlock : async (component) => {
 
@@ -887,12 +1016,18 @@ export const ui = {
 
 		/**
 		* ERROR
-		* Set component state as valid or error
-		* @param boolean error
-		*	Boolean value obtained from previous component validation functions
-		* @param HTMLElement input_wrap
-		*	Component wrapper that has to be set as valid or with data errors
-		* @return boolean
+		* Applies or removes the 'error' CSS class on a component wrapper to reflect
+		* validation state, and moves focus to the problematic input when error=true.
+		*
+		* UIUX-05 tolerance: the second argument may be either the component wrapper itself
+		* OR a child field element (input/textarea/select). When a field is passed the method
+		* climbs the DOM to locate the enclosing wrapper before applying the class, and uses
+		* the original element as the focus target. Null / elements without .classList are
+		* safely ignored (returns false without throwing).
+		*
+		* @param {boolean} error - True to mark as errored; false to clear the error state.
+		* @param {HTMLElement} input_wrap - The component wrapper OR a field element inside it.
+		* @returns {boolean} False if input_wrap is null/invalid; true otherwise.
 		*/
 		error : (error, input_wrap) => {
 
@@ -930,10 +1065,15 @@ export const ui = {
 
 		/**
 		* REGENERATE
-		* Replace DOM element node from parent node
-		* @param HTMLElement current_node
-		* @param HTMLElement new_node
-		* @return HTMLElement current_node
+		* Swaps an existing DOM node in-place by replacing it with new_node inside
+		* the same parent. This is the canonical "hot-replace" helper used when a
+		* component re-renders: the old node is detached and the new one takes its slot
+		* without disturbing siblings or requiring knowledge of the parent's structure.
+		*
+		* @param {HTMLElement} current_node - The node currently in the DOM to be replaced.
+		* @param {HTMLElement} new_node - The new node to insert in its place.
+		* @returns {HTMLElement} current_node - The detached (old) node; callers may inspect
+		*   it but should not re-attach it since the instance has moved on.
 		*/
 		regenerate : (current_node, new_node) => {
 
@@ -946,10 +1086,15 @@ export const ui = {
 
 		/**
 		* ADD_IMAGE_FALLBACK
-		* Unified fallback image adds event listener error and changes the image src when event error is triggered
-		* @param HTMLElement img_node
-		* @param function callback
-		* @return bool
+		* Attaches a one-shot 'error' listener to an <img> element so that when the image
+		* fails to load (broken URL, missing file, CORS block) it is replaced with the
+		* global page_globals.fallback_image URL.
+		* The listener removes itself after firing to prevent an infinite error loop in
+		* case the fallback image itself is also unavailable.
+		*
+		* @param {HTMLElement} img_node - The <img> element to protect with a fallback.
+		* @param {Function} [callback] - Optional function called after the fallback src is set.
+		* @returns {boolean} Always returns true.
 		*/
 		add_image_fallback : (img_node, callback) => {
 
@@ -978,19 +1123,25 @@ export const ui = {
 
 		/**
 		* ADD_COMPONENT_WARNING
-		* Builds an alert icon at left of the component wrapper with
-		* the message as tooltip
-		* @param HTMLElement wrapper_component
-		*	component wrapper where message is placed
-		* @param string message
-		*	Text message to show inside message container
-		* @param string msg_type = 'alert'
-		* @param bool clean = true
-		* 	On true, remove previous icons inside warning_wrap
-		* @param function|null on_click
-		* 	optional callback to manage on click event
-		* @return HTMLElement warning_wrap
-		* 	note that warning_wrap node is created once and recycled
+		* Adds a small icon badge to the left of a component wrapper to surface a
+		* validation or data-quality warning to the editor. The badge container is
+		* created once and stored as wrapper_component.warning_wrap; subsequent calls
+		* recycle the same container (isConnected guard ensures a disconnected node is
+		* not reused after the component was re-rendered).
+		*
+		* The icon title is shown as a codex-tooltip when the badge enters the DOM.
+		* When the badge appears near the left viewport edge, 'right_side' is added so
+		* it does not overflow off-screen.
+		* Double-clicking the badge removes it from the DOM.
+		*
+		* @param {HTMLElement} wrapper_component - The component wrapper that will host the badge.
+		* @param {string} message - Tooltip text describing the warning.
+		* @param {string} [msg_type='alert'] - Icon type: 'alert' renders an exclamation icon;
+		*   any other value is used directly as the icon CSS class name.
+		* @param {boolean} [clean=true] - When true, removes existing icon buttons before adding
+		*   the new one (prevents stacking multiple warnings for the same issue).
+		* @param {Function|undefined} [on_click] - Optional click handler attached to the icon button.
+		* @returns {HTMLElement} warning_wrap - The badge container element (created or recycled).
 		*/
 		add_component_warning : (wrapper_component, message, msg_type='alert', clean=true, on_click) => {
 
@@ -1133,10 +1284,20 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_EDIT
-		* Common method to create element wrapper in current mode
-		* @param object instance
-		* @param object items = {}
-		* @return HTMLElement wrapper
+		* Builds the area wrapper element for 'edit' mode.
+		* Areas are top-level entity containers (e.g., area_thesaurus, area_multimedia);
+		* their wrappers differ from component wrappers in that they include the current
+		* language abbreviation in the default label and do not carry activation events.
+		* Ontology-defined CSS from context.css is applied via set_element_css; the
+		* add_class sub-property allows arbitrary classes to be pushed onto 'wrapper' or
+		* 'content_data' elements directly from the ontology definition.
+		*
+		* @param {Object} instance - The area instance; must expose model, type, tipo,
+		*   section_tipo, mode, view, label, lang, and context.
+		* @param {Object} [items={}] - Sub-elements to slot into the wrapper.
+		* @param {HTMLElement|null} [items.label] - Custom label node; null suppresses the label.
+		* @param {HTMLElement} [items.content_data] - The main data container node.
+		* @returns {HTMLElement} wrapper - The constructed wrapper <div> element.
 		*/
 		build_wrapper_edit : (instance, items={}) => {
 
@@ -1233,6 +1394,28 @@ export const ui = {
 
 
 
+		/**
+		* BUILD_WRAPPER_EDIT
+		* Builds the tool wrapper element with its standard header structure.
+		* In all modes except 'mini', a tool_header is created containing:
+		*   - A tool_name_container with the tool label (optionally prefixed by the caller's label)
+		*     and an optional SVG icon rendered as a CSS mask button.
+		*   - An optional description sub-element below the label.
+		*   - A tool_buttons_container for action buttons (populated by the tool itself).
+		*   - An activity_info_container for status/progress indicators.
+		*   - A close button that either calls history.back() (when inside an opener window)
+		*     or window.close() (standalone window).
+		* Pointer properties (tool_header, tool_buttons_container, activity_info_container,
+		* content_data) are stored directly on the wrapper element for fast access by the
+		* tool's render pass.
+		*
+		* @param {Object} instance - The tool instance; must expose model, type, mode, view,
+		*   context (with label, description, icon), and constructor.name.
+		* @param {Object} [items={}] - Sub-elements to slot into the wrapper.
+		* @param {HTMLElement} [items.content_data] - The main data container node.
+		* @returns {HTMLElement} wrapper - The constructed wrapper <div> element with header
+		*   pointers attached as properties.
+		*/
 		build_wrapper_edit : (instance, items={})=>{
 
 			// short vars
@@ -1371,10 +1554,13 @@ export const ui = {
 
 		/**
 		* BUILD_CONTENT_DATA
-		* Unified tool content data container render
-		* @param object instance
-		* @param object options
-		* @return HTMLElement content_data
+		* Creates the main content container element for a tool in any mode.
+		* Applies the standard 'content_data', type ('tool'), and mode classes so that
+		* each tool's CSS rules can target .content_data.tool.<mode> without specificity conflicts.
+		*
+		* @param {Object} instance - The tool instance; must expose type ('tool') and mode.
+		* @param {Object} [options] - Reserved for future use; currently unused.
+		* @returns {HTMLElement} content_data - The created <div> element.
 		*/
 		build_content_data : (instance, options) => {
 
@@ -1396,10 +1582,17 @@ export const ui = {
 
 		/**
 		* BUILD_SECTION_TOOL_BUTTON
-		* Generate button element for open the target tool
-		* @param object tool_context
-		* @param object self
-		* @return HTMLElement tool_button
+		* Builds a <button> element that opens a given tool in the context of a section.
+		* The button renders a mask-based SVG icon and the tool label; it stores the tool
+		* name in data-tool for potential external targeting. On mousedown it calls
+		* open_tool (tool_common) with the tool_context and the section as caller.
+		* Used by section-level tool slots (distinct from component tool buttons which are
+		* smaller icon-only spans; see build_component_tool_button).
+		*
+		* @param {Object} tool_context - The tool descriptor object from section.tools[];
+		*   must include model, name, icon, and label.
+		* @param {Object} self - The section instance acting as the tool caller.
+		* @returns {HTMLElement} tool_button - The constructed <button> element.
 		*/
 		build_section_tool_button : (tool_context, self) => {
 
@@ -1443,10 +1636,19 @@ export const ui = {
 
 		/**
 		* BUILD_COMPONENT_TOOL_BUTTON
-		* Generate button element for open the target tool
-		* @param object tool_context
-		* @param object self
-		* @return HTMLElement tool_button
+		* Builds a small icon <span> button that opens a tool in the context of a component.
+		* Unlike build_section_tool_button, this renders only a mask-based SVG icon (no text
+		* label) and is sized to fit inline in a component's buttons_container.
+		* If tool_context.show_in_component === false the method returns null so that the
+		* caller skips appending anything (the tool simply does not appear in that component).
+		* The tool name in data-tool allows CSS/JS selectors to target specific tool buttons.
+		*
+		* @param {Object} tool_context - The tool descriptor from component.tools[];
+		*   must include name, icon, and label (used as the tooltip title); show_in_component
+		*   controls whether the button is rendered at all.
+		* @param {Object} self - The component instance acting as the tool caller.
+		* @returns {HTMLElement|null} tool_button - The icon <span> element, or null when
+		*   show_in_component is false.
 		*/
 		build_component_tool_button : (tool_context, self) => {
 
@@ -1494,10 +1696,18 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_EDIT
-		* Render unified wrapper for widgets in edit mode
-		* @param object instance
-		* @param object items
-		* @return HTMLElement wrapper
+		* Builds the wrapper element for a widget in edit mode.
+		* Widgets are standalone UI units (e.g., calendar pickers, color selectors) that
+		* live inside component or tool DOMs but follow their own lifecycle. The wrapper
+		* carries the classes 'wrapper_widget', the widget constructor name, and the mode.
+		* If items.content_data is provided, 'content_data' and 'widget' classes are added
+		* to it before it is placed inside the wrapper (this avoids a separate call to
+		* build_content_data in the widget's render method).
+		*
+		* @param {Object} instance - The widget instance; must expose mode and constructor.name.
+		* @param {Object} items - Sub-elements to slot into the wrapper.
+		* @param {HTMLElement} [items.content_data] - The widget's main content container.
+		* @returns {HTMLElement} wrapper - The constructed wrapper <div> element.
 		*/
 		build_wrapper_edit : (instance, items)=>{
 
@@ -1537,9 +1747,41 @@ export const ui = {
 
 	/**
 	* CREATE_DOM_ELEMENT
-	* Builds a DOM node based on received options
-	* @param object options
-	* @return HTMLElement element
+	* Generic DOM node factory — the most-called helper in the Dédalo front-end.
+	* Accepts a flat options object and returns a fully configured HTMLElement, optionally
+	* appended to a parent in the same call. All properties are set only when the
+	* corresponding option key is present (no defaults are forced onto the element).
+	*
+	* Supported options:
+	*   element_type {string}      — tag name (default 'div')
+	*   id           {string}      — element.id
+	*   type         {string}      — element.type (skipped for <textarea>)
+	*   href         {string}      — for <a>; omit to leave href unset (CSP-safe; no navigation)
+	*   src          {string}      — element.src (images, iframes, etc.)
+	*   class_name   {string}      — element.className (space-separated class list)
+	*   style        {Object}      — key/value pairs applied via element.style.setProperty
+	*   title_label  {string}      — alias for title; HTML tags are stripped before assignment
+	*   title        {string}      — same as title_label (title_label takes precedence)
+	*   dataset      {Object}      — key/value pairs written to element.dataset
+	*   data_set     {Object}      — alias for dataset
+	*   value        {*}           — element.value (set when !== undefined)
+	*   inner_html   {string}      — inserted via insertAdjacentHTML('afterbegin') — HTML is parsed
+	*   text_node    {string}      — plain-text content; SEC-XSS-001: uses textContent not innerHTML
+	*                               (for non-span elements, wraps in a <span> with a leading space
+	*                               to work around a Chrome text-selection bug)
+	*   text_content {string}      — element.textContent (lowest-precedence text setter)
+	*   draggable    {boolean}     — element.draggable
+	*   contenteditable {string}   — element.contentEditable
+	*   name         {string}      — element.name
+	*   placeholder  {string}      — element.placeholder
+	*   pattern      {string}      — element.pattern
+	*   parent       {HTMLElement} — when provided, the new element is appended to this node
+	*
+	* Text-content priority (mutually exclusive; first match wins):
+	*   inner_html > text_node > text_content
+	*
+	* @param {Object} options - Configuration map (see above).
+	* @returns {HTMLElement} element - The newly created and configured DOM element.
 	*/
 	create_dom_element : function(options) {
 
@@ -1557,7 +1799,9 @@ export const ui = {
 				element.type = options.type
 			}
 
-		// element_type. A element. Add default href property to element
+		// element_type. A element. Set href only when explicitly provided.
+		// SEC-CSP-001: 'javascript:' URLs are blocked by script-src without
+		// 'unsafe-hashes'; omitting href entirely is the CSP-safe default.
 			if(element_type==='a') {
 				element.href = options.href || 'javascript:;'
 			}
@@ -1658,10 +1902,17 @@ export const ui = {
 
 	/**
 	* UPDATE_NODE_CONTENT
-	* Clean node container and add the new content as HTML string
-	* @param {HTMLElement} node - Target DOM node
-	* @param {string|Number} value - HTML string or value to insert
-	* @return {void}
+	* Efficiently replaces all children of a DOM node with new HTML content.
+	* Uses the modern replaceChildren() API (O(1) child removal) instead of
+	* innerHTML = '' to avoid layout thrash from repeated DOM access. The value
+	* is coerced to string via String() so callers may pass numbers or other
+	* primitives without pre-conversion. Null/undefined values leave the node
+	* empty (only the old children are cleared).
+	*
+	* @param {HTMLElement} node - The target container to update; no-ops if falsy.
+	* @param {string|number|null|undefined} value - HTML string (or coercible value)
+	*   to insert via insertAdjacentHTML('afterbegin').
+	* @returns {void}
 	*/
 	update_node_content : function(node, value) {
 		if (!node) return
@@ -1677,10 +1928,20 @@ export const ui = {
 
 	/**
 	* ADD_TOOLS
-	* Adds all the existent tools for the selected component
-	* @param object self
-	* @param HTMLElement buttons_container
-	* @return array tools
+	* Iterates the instance's tools[] array and appends a button for each tool
+	* to the given buttons_container. Tool buttons are built by:
+	*   - ui.tool.build_component_tool_button  (when self.type === 'component')
+	*   - ui.tool.build_section_tool_button    (for sections and other types)
+	* Tools whose model matches the current caller's model are skipped to prevent
+	* a tool from embedding itself recursively (e.g., tool_lang inside tool_lang).
+	* For each appended button, ontology-defined keyboard shortcuts declared in
+	* tool_context.properties.events are wired up via set_tool_event.
+	*
+	* @param {Object} self - The component or section instance whose tools[] to render;
+	*   must expose tools (array), type, and optionally caller (for self-exclusion).
+	* @param {HTMLElement} buttons_container - The container to append tool buttons into.
+	* @returns {Array} tools - The original self.tools array (or [] if none); callers
+	*   may inspect the array but the return value is rarely needed.
 	*/
 	add_tools : function(self, buttons_container) {
 
@@ -1744,10 +2005,33 @@ export const ui = {
 
 	/**
 	* PLACE_ELEMENT
-	* Place DOM element inside target instance nodes
-	* Used in section_record to send component_filter to inspector
-	* @param object options
-	* @return bool
+	* Places a source DOM node into a target instance's rendered DOM, with graceful
+	* deferral when the target instance has not yet been rendered.
+	*
+	* Two execution paths:
+	*  1. Target already rendered (target_instance.status === 'rendered'):
+	*     Locates container_selector inside target_instance.node and either appends
+	*     (place_mode === 'add') or replaces (default 'replace') the existing node
+	*     matching target_selector.
+	*  2. Target not yet rendered:
+	*     Subscribes to the 'render_<target_instance.id>' event (published by the
+	*     target instance when its wrapper is ready) and appends source_node then.
+	*     The subscription token is pushed onto source_instance.events_tokens so it
+	*     is cleaned up with the rest of the source instance's event subscriptions.
+	*
+	* Primary use-case: section_record sends component_filter nodes to the inspector
+	* panel, which may not yet be in the DOM when the component builds.
+	*
+	* @param {Object} options - Placement configuration.
+	* @param {HTMLElement} options.source_node - The DOM node to move/place.
+	* @param {Object} options.source_instance - The instance that owns source_node
+	*   (used to register deferred event tokens).
+	* @param {Object} options.target_instance - The instance whose DOM will receive source_node.
+	* @param {string} options.container_selector - CSS selector for the container inside target.
+	* @param {string} options.target_selector - CSS selector for the element to replace inside container.
+	* @param {string} [options.place_mode='replace'] - 'replace' swaps the existing node;
+	*   'add' appends source_node alongside any existing node.
+	* @returns {boolean} False if target_instance is missing; true otherwise.
 	*/
 	place_element : function(options) {
 
@@ -1807,8 +2091,13 @@ export const ui = {
 
 	/**
 	* TOGGLE_INSPECTOR
-	* Show/hide the section inspector when it exists
-	* @return void
+	* Toggles the visibility of the section inspector panel.
+	* When hiding, adds 'full_width' to the section wrapper so that the content
+	* area expands to fill the space the inspector occupied. When showing, both
+	* classes are reversed. No-ops gracefully when there is no inspector in the
+	* DOM or when there is no section wrapper in edit mode.
+	*
+	* @returns {void}
 	*/
 	toggle_inspector : () => {
 
@@ -1834,11 +2123,29 @@ export const ui = {
 
 	/**
 	* COLLAPSE_TOGGLE_TRACK
-	* Used by inspector to collapse information blocks like 'Relations'
-	* Manages a persistent view ob content (body) based on user selection
-	* Uses local DB to track the state of current element
-	* @param object options
-	* @return bool
+	* Attaches a persistent open/closed toggle to an inspector block (e.g., the
+	* 'Relations' or 'Properties' panels). The state is stored in the local IndexedDB
+	* ('status' table) under collapsed_id so it survives page reloads.
+	*
+	* Persistence contract:
+	*   - default_state === 'opened' (default): a record in the DB means "collapsed".
+	*     Deletion == open state. Avoids writing anything for the common open case.
+	*   - default_state === 'closed': absence means "never toggled" (stay closed).
+	*     A value=false record means "user explicitly opened it".
+	*
+	* On initial render, get_local_db_data is called to read the saved state and
+	* apply it immediately. The toggler element then receives a click listener
+	* (fn_toggle_collapse) that flips the state and persists the change.
+	*
+	* @param {Object} options - Configuration.
+	* @param {HTMLElement} options.toggler - The clickable element (usually a label/header).
+	* @param {HTMLElement} options.container - The body element to show/hide.
+	* @param {string} options.collapsed_id - Unique key for the local DB record.
+	* @param {Function} [options.collapse_callback] - Called whenever the container is hidden.
+	* @param {Function} [options.expose_callback] - Called whenever the container is shown.
+	* @param {string} [options.default_state='opened'] - Initial state when no DB record exists:
+	*   'opened' (visible by default) or 'closed' (hidden by default).
+	* @returns {boolean} Always returns true.
 	*/
 	collapse_toggle_track : (options) => {
 
@@ -1960,10 +2267,22 @@ export const ui = {
 
 	/**
 	* BUILD_SELECT_LANG
-	* Render a lang selector with a given array of langs or the default
-	* page_globals.dedalo_projects_default_langs list
-	* @param object options
-	* @return HTMLElement select_lang
+	* Builds a <select> element populated with language options.
+	* The language list may be provided as an array of {value, label} objects or as an
+	* associative object ({lang_code: label_string}); both formats are normalised to the
+	* array form internally. Falls back to page_globals.dedalo_projects_default_langs, and
+	* then to a hard-coded English entry if neither is available.
+	* The option matching options.selected (or page_globals.dedalo_application_lang) is
+	* pre-selected. If options.action is provided it is wired to the 'change' event.
+	*
+	* @param {Object} options - Configuration.
+	* @param {string|null} [options.id] - id attribute for the <select>.
+	* @param {string|null} [options.name] - name attribute for the <select>.
+	* @param {Array|Object} [options.langs] - Language list; see format notes above.
+	* @param {string} [options.selected] - The lang code to pre-select (e.g. 'lg-eng').
+	* @param {Function|null} [options.action] - onChange handler.
+	* @param {string} [options.class_name='select_lang'] - CSS class for the <select>.
+	* @returns {HTMLElement} select_lang - The constructed <select> element with <option> children.
 	*/
 	build_select_lang : (options) => {
 
@@ -2050,27 +2369,20 @@ export const ui = {
 	* is pinned to inline styles (position:absolute, margin:0) so the modal stays under
 	* the cursor without jumping.
 	*
-	* @param object options
-	* {
-	* 	header : HTMLElement|string — slotted into header slot. String auto-wrapped in div.
-	* 	body : HTMLElement|string — slotted into body slot. String auto-wrapped in div.
-	* 	footer : HTMLElement|string — slotted into footer slot. String auto-wrapped in div.
-	* 	size : string — 'normal'|'big'|'small' (default 'normal')
-	* 	modal_parent : HTMLElement — container for the dd-modal (default .wrapper.page or body)
-	* 	remove_overlay : bool — weakens overlay background (default false)
-	* 	minimizable : bool — shows/hides minimize button (default true)
-	* 	on_close : function|null — called after modal is removed from DOM
-	* 	callback : function|null — called with (dd_modal) when element is ready for styling
-	* }
-	*
-	* @info To set a custom width, use the callback:
-	* {
-	* 	callback : (dd_modal) => {
-	* 		dd_modal.modal_content.style.width = '34rem'
-	* 	}
-	* }
-	*
-	* @return HTMLElement modal_container — the <dd-modal> element
+	* @param {Object} options - Configuration.
+	* @param {HTMLElement|string} options.header - Slotted into the header slot. A string is auto-wrapped in a div.
+	* @param {HTMLElement|string} options.body - Slotted into the body slot. A string is auto-wrapped in a div.
+	* @param {HTMLElement|string} options.footer - Slotted into the footer slot. A string is auto-wrapped in a div.
+	* @param {string} [options.size='normal'] - Modal size variant: 'normal' | 'big' | 'small'.
+	* @param {HTMLElement} [options.modal_parent] - Container for the <dd-modal> element
+	*   (default: .wrapper.page or document.body).
+	* @param {boolean} [options.remove_overlay=false] - When true, weakens the overlay background.
+	* @param {boolean} [options.minimizable=true] - Shows or hides the minimize button.
+	* @param {Function|null} [options.on_close] - Called after the modal is removed from the DOM.
+	* @param {Function|null} [options.callback] - Called with the <dd-modal> element when it is ready
+	*   for custom styling. To set a custom width:
+	*   callback: (dd_modal) => { dd_modal.modal_content.style.width = '34rem' }
+	* @returns {HTMLElement} modal_container - The <dd-modal> element.
 	*/
 	attach_to_modal : (options) => {
 
@@ -2266,10 +2578,24 @@ export const ui = {
 
 	/**
 	* ACTIVATE_FIRST_COMPONENT
-	* This is used when a new record is created, to focus first component suitable for edit
-	* avoiding to select some models like component_publication, component_info...
-	* @param object options
-	* @return bool
+	* After a new record is created, finds and activates the first editable component
+	* in the section so the user can start typing without having to click.
+	* Skips display-only models (component_publication, component_info,
+	* component_radio_button, component_section_id, component_dataframe) and any
+	* additional models supplied in options.avoid_models.
+	*
+	* Search strategy:
+	*  1. Find the first ddo_map entry whose model starts with 'component_' and is not
+	*     in the avoid_models list.
+	*  2. Locate the corresponding instance in get_all_instances() by matching tipo,
+	*     section_tipo, section_id, and parent.
+	*  3. When the component node is ready in the DOM (when_in_dom), call ui.component.activate.
+	*
+	* @param {Object} options - Configuration.
+	* @param {Object} options.section - The section instance (must expose
+	*   request_config_object.show.ddo_map, section_tipo, and section_id).
+	* @param {string[]} [options.avoid_models] - Additional component model names to skip.
+	* @returns {boolean} False if no suitable first component was found; true otherwise.
 	*/
 	activate_first_component : (options) => {
 
@@ -2326,7 +2652,16 @@ export const ui = {
 
 	/**
 	* DO_SEARCH
-	* Unfinished function (!)
+	* (!) UNFINISHED / DEAD CODE — This function is not called anywhere in production.
+	* Intended to highlight a search term inside a contenteditable element by building
+	* a DOM Range from the matched text offset, but the implementation is incomplete:
+	* the sel variable is commented out, the range is hardcoded to [0,3], and getText()
+	* has a bug in its do-while loop condition (node == node.firstChild / nextSibling).
+	* Do not use. Retained per project policy (never delete commented-out code).
+	*
+	* @param {string} search_text - The text to search for (regex-escaped internally).
+	* @param {HTMLElement} contenteditable - The contenteditable element to search within.
+	* @returns {void}
 	*/
 	do_search : (search_text, contenteditable) =>{
 
@@ -2397,12 +2732,26 @@ export const ui = {
 
 	/**
 	* RENDER_LIST_HEADER
-	* Creates the header nodes needed for portal and section in the same unified way
-	* @param array columns_map
-	* 	Parsed columns_map array as [{id: 'oh87', label: 'Information'}]
-	* @param object self
-	* 	Instance of section/component_portal
-	* @return HTMLElement header_wrapper
+	* Builds the column-header row for section list views and component_portal tables.
+	* Handles both flat column maps and nested (sub-header) column maps:
+	*   - Flat: one .head_column div per entry with an optional sort arrow.
+	*   - Nested: when column.columns_map exists, a .sub_header div is added beneath the
+	*     parent header cell and the CSS grid-template-columns for the sub-row is computed
+	*     via flat_column_items then injected with set_element_css.
+	*
+	* Sort arrows (add_column_order_set) are attached only when allow_column_order returns
+	* true for the column. All created sort_node elements are stored in header_wrapper.sort_nodes
+	* so that exec_order can reset their active styles when a new sort is applied.
+	*
+	* Extra context classes are added to header_wrapper:
+	*   - 'with_initiator' when the URL contains an 'initiator' query parameter.
+	*   - 'with_debug_info_bar' when SHOW_DEBUG is true (adds a developer info strip).
+	*
+	* @param {Array} columns_map - Array of column descriptor objects; each must include
+	*   at least { id, label } and optionally { sortable, columns_map, tipo, path, width }.
+	* @param {Object} self - The section or component_portal instance.
+	* @returns {HTMLElement} header_wrapper - The .header_wrapper_list element with all
+	*   column headers and sort_nodes pointer array attached.
 	*/
 	render_list_header : (columns_map, self) =>{
 
@@ -2546,17 +2895,23 @@ export const ui = {
 
 	/**
 	* ALLOW_COLUMN_ORDER
-	* Checks if the given column accepts order/sort buttons in the list header
-	* Section lists order results with a sqo order (view time, not stored)
-	* component_portal applies a persistent re-order of the stored locators
-	* when the ontology property 'sort_by_column' is enabled (boolean true to
-	* allow all sortable columns or array of column tipos as allowlist)
+	* Determines whether a sort arrow should be rendered for the given column in the
+	* list header. Two distinct behaviours depending on the caller type:
+	*
+	*   Section lists: any column marked sortable=true in the context can be ordered;
+	*     the sort is applied to the SQO (view-time only, not persisted to storage).
+	*
+	*   component_portal: ordering is a persistent server-side reorder of the stored
+	*     locator array. It is gated by three additional guards:
+	*       1. The portal must be in 'edit' mode with write permissions (> 1).
+	*       2. The portal source must not be 'external' (external portals are read-only).
+	*       3. The ontology property sort_by_column must be either true (allow all) or
+	*          an array of column tipos that explicitly includes column.tipo.
+	*
 	* @see add_column_order_set
-	* @param object self
-	* 	Instance of section/component_portal
-	* @param object column
-	* 	columns_map item
-	* @return bool
+	* @param {Object} self - The section or component_portal instance.
+	* @param {Object} column - A columns_map item; must expose sortable (boolean) and tipo.
+	* @returns {boolean} True when a sort button should be rendered for this column.
 	*/
 	allow_column_order(self, column) {
 
@@ -2590,14 +2945,31 @@ export const ui = {
 
 	/**
 	* ADD_COLUMN_ORDER_SET
-	* Creates the arrows to sort list by column and
-	* place it into the header_item node
-	* @param object self
-	* 	Instance of section/component_portal
-	* @param object column
-	* @param HTMLElement header_wrapper
-	* 	Container where place the sort buttons
-	* @return HTMLElement sort_node
+	* Creates and returns a sort-arrow <span> for a column header cell.
+	* The span's active direction class ('asc' or 'desc') reflects the current sort
+	* state read from self.column_order_state (portal) or self.rqo.sqo.order (section).
+	*
+	* Interaction model:
+	*   - mouseenter: if no column in header_wrapper.sort_nodes is active and another
+	*     sort is already applied, the default_direction flips from DESC to ASC (so the
+	*     first click on a new column sorts ascending when another is already descending).
+	*   - click: toggles the direction (ASC↔DESC) and calls exec_order(direction).
+	*     FEJS-01: a 'loading' guard class prevents double-clicks during async portal
+	*     reorders. Errors are caught and surfaced via ui.notification.create if available.
+	*
+	* exec_order (internal closure):
+	*   - Portal: calls self.sort_by_column(column, direction) — server round-trip.
+	*   - Section: builds an SQO order array and calls self.navigate() with a callback
+	*     that updates request_config_object.sqo.order and rqo.sqo.order in sync.
+	*   After either path, resets all sort_nodes styles and applies the new direction class.
+	*
+	* @param {Object} self - The section or component_portal instance.
+	* @param {Object} column - The column descriptor; must expose path (section case),
+	*   tipo (portal case), and sortable.
+	* @param {HTMLElement} header_wrapper - The header container; must have a sort_nodes
+	*   array attached (populated by render_list_header) for cross-column style resets.
+	* @returns {HTMLElement} sort_node - The sort-arrow <span> element (callers append it
+	*   to the appropriate header_item node).
 	*/
 	add_column_order_set(self, column, header_wrapper) {
 
@@ -2775,13 +3147,23 @@ export const ui = {
 
 	/**
 	* FLAT_COLUMN_ITEMS
-	* Creates the css grid columns to build list items
-	* @param array list
-	*	Array of column items
-	* @param int level_max = 3
-	* @param string type = 'fr'
-	* @param int level = 1
-	* @return array ar_elements
+	* Recursively flattens a columns_map array into a CSS grid-template-columns value list.
+	* Each item produces one entry:
+	*   - item.width defined      → use the explicit width string (e.g. '12rem').
+	*   - item.model in defaults  → use the model-specific default (e.g. '102px' for media).
+	*   - item.columns_map        → recurse and use the sub-column count as the fr unit
+	*                               (e.g. 3 sub-columns → '3fr').
+	*   - otherwise               → '1fr'.
+	*
+	* The level/level_max guards prevent infinite recursion on malformed column maps.
+	* Default widths are defined inline for section_id and media component models.
+	*
+	* @param {Array} list - Array of column descriptor objects.
+	* @param {number} [level_max=3] - Maximum recursion depth.
+	* @param {string} [type='fr'] - CSS fraction unit suffix (appended to numeric values).
+	* @param {number} [level=1] - Current recursion level (callers should not pass this).
+	* @returns {Array} ar_elements - Array of CSS column width strings suitable for
+	*   joining into a grid-template-columns value (e.g. ['1fr', '102px', '2fr']).
 	*/
 	flat_column_items : (list, level_max=3, type='fr', level=1) => {
 
@@ -2834,9 +3216,24 @@ export const ui = {
 
 	/**
 	* SET_BACKGROUND_IMAGE
-	* @param HTMLElement image
-	* @param HTMLElement target_node
-	* @return bool
+	* Extracts the dominant color of an image by drawing it onto an off-screen canvas
+	* and reading the first pixel's RGB value, then applies that color as the
+	* backgroundColor of target_node. This creates a visually cohesive background
+	* that matches the image's edge color (typically used for media thumbnails in list rows).
+	*
+	* A gamma correction factor (currently 1.0, configurable via the `factor` variable)
+	* is applied to avoid washout: dark pixels are darkened further, light pixels
+	* are lightened, so the background contrasts with both light and dark image edges.
+	*
+	* (!) Skipped on Firefox to prevent erratic canvas behavior with background color.
+	* Canvas security errors (cross-origin image) are caught and logged as warnings;
+	* the background is simply not set in that case.
+	* The canvas is removed from memory after extraction.
+	*
+	* @param {HTMLElement} image - The <img> element to sample (must be loaded and same-origin
+	*   or CORS-enabled, otherwise a security error is silently caught).
+	* @param {HTMLElement} target_node - The element whose backgroundColor will be set.
+	* @returns {boolean} False on Firefox (skipped); true otherwise (even on canvas error).
 	*/
 	set_background_image : (image, target_node) => {
 
@@ -2946,9 +3343,20 @@ export const ui = {
 
 	/**
 	* MAKE_COLUMN_RESPONSIVE
-	* Used in section_record to add responsive CSS
-	* @param object options
-	* @return bool
+	* Injects a CSS ::before pseudo-element rule for a column cell selector so that
+	* on narrow viewports (where the column headers are hidden) each cell shows the
+	* column label as a generated content prefix, enabling the "stacked" responsive
+	* list layout used in section_record.
+	* The label is stripped of HTML tags via strip_tags before being set as the
+	* CSS content property to avoid injection of markup into stylesheet rules.
+	*
+	* Note: the commented-out width-check block was intentionally left in place to
+	* document a previous approach of conditionaling on window.innerWidth < 960.
+	*
+	* @param {Object} options - Configuration.
+	* @param {string} options.selector - CSS selector for the column cell (e.g. '#column_id_rsc3652').
+	* @param {string} options.label - The column label HTML string (HTML tags will be stripped).
+	* @returns {void}
 	*/
 	make_column_responsive : function(options) {
 
@@ -2996,10 +3404,15 @@ export const ui = {
 
 	/**
 	* HILITE
-	* Hilite/un-hilite and element (usually a component) in the DOM
-	* Used mainly by components in search mode
-	* @param object options
-	* @return bool
+	* Adds or removes the 'hilite_element' CSS class from a component's wrapper node
+	* to visually highlight or de-highlight it. Used primarily by search-mode components
+	* to indicate which component is currently matched or focused within the search inspector.
+	*
+	* @param {Object} options - Configuration.
+	* @param {boolean} options.hilite - True to add the highlight class; false to remove it.
+	* @param {Object} options.instance - The component instance; must have a .node property.
+	* @returns {boolean} True when the class was toggled; undefined (no explicit return)
+	*   if the node is missing (after a console warning).
 	*/
 	hilite : function(options) {
 
@@ -3034,13 +3447,20 @@ export const ui = {
 
 	/**
 	* ENTER_FULLSCREEN
-	* Set element as full screen size
-	* To exit, press key 'Escape'
-	* @param HTMLElement node
-	* 	Usually the component wrapper
-	* @param function exit_callback
-	* 	optional callback executed on exit from fullscreen
-	* @return bool
+	* Toggles a CSS fullscreen state on a node by adding/removing the 'fullscreen' class.
+	* Additionally hides the main navigation menu (.menu_wrapper) and appends a visible
+	* close button to the node. Exit is triggered either by pressing Escape (global keyup
+	* listener, passive) or by clicking the exit button.
+	*
+	* When the node is inside a <dd-modal> ancestor, the modal's 'center' CSS class is
+	* removed before entering fullscreen to prevent the modal from fighting the layout.
+	*
+	* The exit_callback (optional) is invoked after the fullscreen class is removed and
+	* the menu is restored, useful for components that need to re-render at the normal size.
+	*
+	* @param {HTMLElement} node - The element to fullscreen (usually a component wrapper).
+	* @param {Function} [exit_callback] - Optional function called after fullscreen exits.
+	* @returns {boolean} Always returns true.
 	*/
 	enter_fullscreen : function(node, exit_callback) {
 
@@ -3102,9 +3522,13 @@ export const ui = {
 
 	/**
 	* GET_ONTOLOGY_TERM_LINK
-	* Render a unified DOM node as Ontology link open in new window
-	* @param string tipo
-	* @return HTMLElement ontology_term_link
+	* Builds an <a> element that opens the Dédalo ontology term viewer for the given tipo
+	* in a new browser tab (rel="noopener" for security). The link text is the tipo string
+	* itself, making it easy to identify the term in debugging panels or error overlays.
+	* The URL points to the ontology area (dd5) filtered to the specific tipo.
+	*
+	* @param {string} tipo - The ontology term identifier (e.g. 'oh1', 'rsc26').
+	* @returns {HTMLElement} ontology_term_link - The constructed <a> element.
 	*/
 	get_ontology_term_link(tipo) {
 
@@ -3238,13 +3662,21 @@ export const ui = {
 
 	/**
 	* GET_TEXT_COLOR
-	* Calculate dynamic text color based on background
-	* Always return a black or white color, the most
-	* appropriated in current case for good visibility
+	* Returns either '#ffffff' or '#000000' — whichever achieves better WCAG contrast
+	* against the given background_color hex value.
+	* Uses the relative luminance formula (IEC 61966-2-1 sRGB linearisation followed
+	* by ITU-R BT.709 luminance coefficients) and WCAG 2.1 contrast ratio.
+	*
+	* Helper functions (inner closures, not exported):
+	*   getRGB(c)           — parses a 2-char hex fragment to an integer.
+	*   getsRGB(c)          — applies sRGB gamma expansion (linearises the channel).
+	*   getLuminance(hex)   — computes relative luminance from a #rrggbb string.
+	*   getContrast(f,b)    — WCAG contrast ratio between two luminance values.
+	*   getTextColor(bg)    — compares white vs black contrast and returns the winner.
+	*
 	* @see https://wunnle.com/dynamic-text-color-based-on-background
-	* @param string background_color
-	* @return string text_color
-	* 	"#ffffff" | "#000000"
+	* @param {string} background_color - A CSS hex color string (e.g. '#2b77c7' or '#fff').
+	* @returns {string} text_color - '#ffffff' for dark backgrounds, '#000000' for light ones.
 	*/
 	get_text_color : function(background_color) {
 
@@ -3289,13 +3721,16 @@ export const ui = {
 
 	/**
 	* CSS_VAR
-	* Resolves a CSS custom property declared on :root to its concrete value
-	* for the active theme, with a literal fallback. Useful when a color must
-	* be passed to code that can't accept a `var(...)` string (e.g. get_text_color,
-	* SVG attributes, canvas).
-	* @param string name e.g. '--color_primary'
-	* @param string fallback literal value if the property is unset
-	* @return string resolved value (e.g. '#2b77c7')
+	* Resolves a CSS custom property declared on :root to its concrete computed value
+	* for the active theme, returning a literal fallback when the property is unset or empty.
+	* Useful when a color value must be passed to code that cannot accept a var(...) string,
+	* such as get_text_color, canvas fillStyle, or SVG attribute setters.
+	*
+	* @param {string} name - The CSS custom property name including the '--' prefix
+	*   (e.g. '--color_primary').
+	* @param {string} fallback - Literal value to return if the property is unset or empty
+	*   (e.g. '#2b77c7').
+	* @returns {string} The resolved CSS value (whitespace-trimmed) or the fallback.
 	*/
 	css_var : function(name, fallback) {
 
@@ -3308,17 +3743,27 @@ export const ui = {
 
 	/**
 	* RENDER_EDIT_MODAL
-	* Render a component into a modal window
-	* Used for section list records to allow users edit inline big
-	* components like component_text_area
-	* @param object options
-	* 	{
-	* 		self		: object,
-	* 		callback	: function,
-	* 		lang		: string,
-	* 		on_close	: function
-	* 	}
-	* @return HTMLElement modal_node
+	* Opens a fresh component instance in a modal window for inline editing,
+	* without navigating away from the current list view. Used in section list rows
+	* where the list-mode value is too small to edit comfortably (e.g., component_text_area).
+	*
+	* The function:
+	*  1. Creates a header with the component label and the current record ID.
+	*  2. Gets a fresh component instance via get_instance (same tipo/section/section_id,
+	*     mode='edit', optionally in a different lang).
+	*  3. Builds and renders the instance, activating it so the user can type immediately.
+	*  4. Creates an empty footer container (callers may populate via options.callback).
+	*  5. Opens the modal via ui.attach_to_modal with size='normal', centered at 30rem.
+	*  6. Calls options.on_close after the modal is dismissed (if provided).
+	*  7. Calls options.callback with the dd_modal reference for custom sizing/content.
+	*
+	* @param {Object} options - Configuration.
+	* @param {Object} options.self - The list-mode component instance to open for editing.
+	* @param {Function} [options.callback] - Called with the dd_modal element when ready;
+	*   use to adjust modal size or add footer buttons.
+	* @param {string} [options.lang] - Override language; defaults to self.lang.
+	* @param {Function} [options.on_close] - Called after the modal is removed from the DOM.
+	* @returns {Promise<HTMLElement>} modal_node - The <dd-modal> element.
 	*/
 	render_edit_modal : async function(options) {
 
@@ -3399,14 +3844,27 @@ export const ui = {
 
 	/**
 	* ACTIVATE_TOOLTIPS
-	* Add tooltip to buttons based on title attribute
-	* @param HTMLElement wrapper
-	* 	Element (page, section, component, inspector, etc.) wrapper
-	* @param string|null selector = '.button'
-	* 	To select self wrapper, pass null as value
-	* @param bool reset = false
-	* 	On true, forces to regenerate the tooltip
-	* @return void
+	* Registers the codex-tooltip library on all matching button elements within a wrapper,
+	* using each button's title attribute as the tooltip text. Skips mobile user agents
+	* (Android/iPhone/iPad/iPod) since touch devices do not have hover states.
+	*
+	* The singleton ui.tooltip instance is created lazily on the first call. Subsequent
+	* calls reuse it, so the library is only initialised once per page load.
+	*
+	* Each processed button has its active_tooltip flag set to true after registration to
+	* prevent double-registration on re-renders (e.g., after a partial refresh). The title
+	* attribute is cleared on mouseover (mouseover_handler) because the tooltip library
+	* reads it at registration time and native title tooltips would appear underneath.
+	*
+	* Reset mode (reset=true): forces re-registration of already-active buttons by clearing
+	* their active_tooltip flag and dispatching synthetic mouseleave/mouseenter events.
+	* Used when a button's tooltip text changes after initial render.
+	*
+	* @param {HTMLElement} wrapper - The element (page, section, component, etc.) to search within.
+	* @param {string|null} [selector='.button'] - CSS selector to find tooltip targets.
+	*   Pass null to treat wrapper itself as the sole tooltip target.
+	* @param {boolean} [reset=false] - When true, forces re-registration even for already-active buttons.
+	* @returns {void}
 	*/
 	activate_tooltips : function(wrapper, selector='.button', reset=false) {
 
@@ -3468,12 +3926,18 @@ export const ui = {
 
 	/**
 	* FIT_INPUT_WIDTH_TO_VALUE
-	* Set input element style width based on number length of chars
-	* (!) Use monospace font to preserve char width when fit
-	* @param HTMLElement input_node
-	* @param int|string value
-	* @param int plus = 0
-	* @return void
+	* Sizes an <input> element's width to exactly fit its value by setting width in
+	* CSS 'ch' units (one 'ch' ≈ the width of the '0' character in the current font).
+	* The optional plus argument adds extra characters of padding (e.g. to leave room
+	* for a trailing cursor).
+	*
+	* (!) Requires a monospace or fixed-pitch font on the input element; proportional
+	*     fonts have variable glyph widths so 'ch'-based sizing will be approximate.
+	*
+	* @param {HTMLElement} input_node - The <input> element to resize.
+	* @param {number|string} value - The current value; its string length determines the width.
+	* @param {number} [plus=0] - Additional characters to add to the measured length.
+	* @returns {void}
 	*/
 	fit_input_width_to_value : function(input_node, value, plus=0) {
 
@@ -3490,10 +3954,17 @@ export const ui = {
 
 	/**
 	* INSIDE_DATAFRAME
-	* Check if current component is inside component_dataframe
-	* @param object instance
-	* 	component instance
-	* @return bool
+	* Checks whether a component was instantiated inside a component_dataframe cell
+	* by inspecting two levels of the caller chain:
+	*   instance.caller           → must be a section_record
+	*   instance.caller.caller    → must be a component_dataframe
+	* This two-level check is necessary because section_record always mediates between
+	* dataframe and its child components.
+	* Used by components that need to adjust their behaviour (e.g., suppress auto-save,
+	* change layout) when rendered inside a dataframe rather than a standalone section.
+	*
+	* @param {Object} instance - The component instance to check.
+	* @returns {boolean} True if instance is a direct child of a component_dataframe cell.
 	*/
 	inside_dataframe : function (instance) {
 

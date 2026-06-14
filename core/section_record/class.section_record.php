@@ -1,7 +1,45 @@
 <?php declare(strict_types=1);
 /**
-* CLASS SECTION RECORD
-* It represents a database record in the PHP space.
+* CLASS SECTION_RECORD
+* PHP-space representation of a single row in a Dédalo "matrix" PostgreSQL table.
+*
+* Each Dédalo database row stores all component values for one record as JSONB columns
+* (relation, string, date, iri, geo, number, media, misc, relation_search, meta, data).
+* section_record is the authoritative gateway for reading and writing those rows:
+* it owns the life-cycle of a record from creation through duplication and deletion,
+* coordinates the per-record advisory locks used for atomic counter allocation, and
+* dispatches cache-invalidation events after every persistent write.
+*
+* Key responsibilities:
+* - Identity: holds section_tipo (ontology tipo, e.g. "oh1") + section_id (int PK).
+* - Data delegation: all column-level reads/writes go through a shared
+*   section_record_data instance (one per {section_tipo, section_id} pair).
+* - Handler selection: chooses matrix_db_manager for normal tables or
+*   matrix_activity_db_manager for the activity log table (matrix_activity).
+* - Counter management: per-component item-id counters are stored in the 'meta'
+*   JSONB column and allocated atomically via pg_advisory_lock to prevent id reuse
+*   across concurrent requests editing the same record.
+* - Audit metadata: every create/update automatically stamps the 'created_by_user'
+*   (dd200), 'created_date' (dd199), 'modified_by_user' (dd197) and
+*   'modified_date' (dd201) relation/date columns.
+* - Delete pipeline: TM snapshot → DB row delete → inverse-reference cleanup →
+*   media file removal → diffusion target unpublish.
+* - Instance cache: get_instance() returns a per-request singleton keyed on
+*   "{section_tipo}_{section_id}[_temp]" via section_record_instances_cache.
+*
+* Extended by:
+* - section_record_temp — temporary / time-machine record variant.
+*
+* Collaborates with:
+* - section_record_data — shared JSONB column container (lazy decode).
+* - matrix_db_manager / matrix_activity_db_manager — DB read/write/delete.
+* - tm_record — Time Machine snapshot on delete.
+* - diffusion_delete — diffusion-target cleanup on delete.
+* - search_related — inverse-reference discovery.
+* - section — the only allowed caller of section_record::create().
+*
+* @package Dédalo
+* @subpackage Core
 */
 class section_record {
 
@@ -10,47 +48,111 @@ class section_record {
 	/**
 	* CLASS VARS
 	*/
-	// string section_tipo
+
+	/**
+	* Ontology tipo of the section this record belongs to (e.g. "oh1", "dd128").
+	* Set once in __construct and never mutated.
+	* @var string $section_tipo
+	*/
  	public string $section_tipo;
- 	// string|int section_id
+
+	/**
+	* Primary key of this row within the section's matrix table.
+	* Type is string|int for legacy compatibility; __construct always receives int.
+	* get_instance() will cast string values to int and log a deprecation warning.
+	* @var string|int $section_id
+	*/
  	public string|int $section_id;
-	// section_record_data class instance
+
+	/**
+	* Shared data container for all JSONB columns of this row.
+	* One section_record_data instance is shared by all section_record instances
+	* (normal + temp) that refer to the same {section_tipo, section_id} pair,
+	* so writes made through one instance are immediately visible through another.
+	* @var object $data_instance
+	*/
 	protected object $data_instance;
-	// Exist this record in the database?
+
+	/**
+	* Whether this record exists as a row in the database.
+	* Set by load_data() after the first read(); remains unset until then.
+	* Check via exists_in_the_database() rather than reading the property directly.
+	* @var bool $record_in_the_database
+	*/
 	public bool $record_in_the_database;
 
-	// bool is_loaded_data_columns. Defines if section data_columns is already loaded from the database
+	/**
+	* Guard flag: true once load_data() has performed at least one DB read for
+	* this instance.  Prevents redundant queries within the same PHP request.
+	* Reset to false after delete() so subsequent access correctly sees the record
+	* as gone.
+	* @var bool $is_loaded_data
+	*/
 	protected bool $is_loaded_data = false;
 
-	// int permissions
+	/**
+	* Resolved permission level for the current user on this record.
+	* Computed lazily by get_permissions() and cached here for the request.
+	* Numeric level: 0 = no access, 1 = read-only, 2 = read-write.
+	* @var int $permissions
+	*/
 	protected int $permissions;
 
-	// string data_handler. Default is 'matrix_db_manager'. Others: 'matrix_activity_db_manager'
+	/**
+	* Class name of the DB manager used for all CRUD operations on this record.
+	* Defaults to 'matrix_db_manager'; overridden to 'matrix_activity_db_manager'
+	* when the resolved table is 'matrix_activity' (activity-log section dd542).
+	* @var string $data_handler
+	*/
 	public string $data_handler = 'matrix_db_manager';
 
-	// string table.
-	// The name of the table to query.
+	/**
+	* PostgreSQL table name resolved from the section tipo via
+	* common::get_matrix_table_from_tipo(). Immutable after construction.
+	* Falls back to 'invalid_table' if the tipo has no registered table mapping,
+	* which will cause any DB operation to fail with a clear error rather than
+	* silently querying the wrong table.
+	* @var string $table
+	*/
 	private readonly string $table;
 
-	// metrics
+	/**
+	* Running total of section_record instances constructed during the current
+	* PHP process lifetime.  Useful for profiling instance churn.
+	* @var int $section_record_total
+	*/
 	public static int $section_record_total = 0;
+
+	/**
+	* Running total of get_instance() calls (cache hits + misses) during the
+	* current PHP process lifetime.  Divide by $section_record_total to gauge
+	* the instance-cache hit rate.
+	* @var int $section_record_total_calls
+	*/
 	public static int $section_record_total_calls = 0;
 
 
 
 	/**
-	 * GET_INSTANCE
-	 * Get an instance of a section_record object.
-	 *
-	 * It returns a cached instance from section_record_instances_cache if it exists for the given
-	 * combination of section_tipo, section_id and temporal state.
-	 * If not cached, it creates a new instance (section_record or section_record_temp).
-	 *
-	 * @param string $section_tipo The ontology tipo of the section
-	 * @param int|string $section_id The record ID. String is deprecated and will be cast to int.
-	 * @param bool $is_temporal Whether to use a temporal record instance (section_record_temp)
-	 * @return section_record The section record instance
-	 */
+	* GET_INSTANCE
+	* Returns the per-request singleton for a given {section_tipo, section_id} pair.
+	*
+	* Cache key is "{section_tipo}_{section_id}" or "{section_tipo}_{section_id}_temp"
+	* for temporal variants.  On a miss a new instance is constructed and stored in
+	* section_record_instances_cache so subsequent callers within the same request share
+	* the same in-memory data (edits are immediately visible to all holders).
+	*
+	* $is_temporal=true creates a section_record_temp instance instead; this variant is
+	* used by the Time Machine to load snapshot data without touching the live row.
+	*
+	* Passing $section_id as a string is deprecated: it is silently cast to int and an
+	* ERROR is logged to help callers migrate.
+	*
+	* @param string $section_tipo - ontology tipo of the section (e.g. "oh1")
+	* @param int|string $section_id - record PK; string form is deprecated and cast to int
+	* @param bool $is_temporal [= false] - true to get/create a section_record_temp instance
+	* @return section_record - shared singleton; may be a section_record_temp subclass
+	*/
 	public static function get_instance( string $section_tipo, int|string $section_id, bool $is_temporal = false ) : section_record {
 
 		// debug
@@ -84,17 +186,25 @@ class section_record {
 
 
 	/**
-	 * __CONSTRUCT
-	 * Initialize a new section_record instance.
-	 *
-	 * Sets the core identification properties, initializes the shared section_record_data instance,
-	 * determines the target database table based on the ontology tipo, and selects the
-	 * appropriate data handler (matrix_db_manager or matrix_activity_db_manager).
-	 *
-	 * @param string $section_tipo The ontology tipo of the section
-	 * @param int $section_id The record ID
-	 * @return void
-	 */
+	* __CONSTRUCT
+	* Initialises a new section_record instance for the given record identity.
+	*
+	* Not called directly by application code — use get_instance() or create() instead.
+	* Constructor is protected so that only get_instance() and subclasses can build
+	* instances, enforcing the per-request singleton contract.
+	*
+	* Steps performed:
+	* 1. Stores section_tipo and section_id as identity properties.
+	* 2. Acquires (or reuses) the shared section_record_data instance for this pair.
+	* 3. Resolves the PostgreSQL table name; falls back to 'invalid_table' on failure.
+	* 4. Selects the DB handler class (matrix_activity_db_manager for dd542 activity
+	*    records, matrix_db_manager for everything else).
+	* 5. Increments the static instance counter used for profiling.
+	*
+	* @param string $section_tipo - ontology tipo (e.g. "oh1")
+	* @param int $section_id - record primary key
+	* @return void
+	*/
 	protected function __construct( string $section_tipo, int $section_id ) {
 
 		// Set general vars
@@ -124,7 +234,17 @@ class section_record {
 
 	/**
 	* __DESTRUCT
-	* Destruct this instance and clear the instance from the cache
+	* Evicts this instance from the per-request singleton cache and releases the data container.
+	*
+	* Called automatically by PHP when the last reference to this object is dropped.
+	* Removing the entry from section_record_instances_cache ensures that the next
+	* get_instance() call for the same key constructs a fresh instance rather than
+	* returning a destroyed one.
+	*
+	* (!) Note: the cache key does not include the "_temp" suffix, so a normal and a
+	* temporal instance for the same record share a cache slot.  Destroying one will
+	* evict the other's slot.
+	*
 	* @return void
 	*/
 	public function __destruct() {
@@ -141,7 +261,21 @@ class section_record {
 
 	/**
 	* SAVE_EVENT
-	* Dispatches a save event for this section record
+	* Invalidates caches that depend on the content of this section after any
+	* persistent write (save, save_column, save_key_data, delete, etc.).
+	*
+	* Each special section tipo has a dedicated invalidation path:
+	* - dd1244 (request-config presets): clean_cache() resets both the on-disk
+	*   cache file and the in-request static so the current request immediately
+	*   sees the new list.
+	* - dd1324 (registered tools), dd996 (tools configuration), dd234 (profiles):
+	*   tools_register::invalidate_all_tool_caches() flushes in-memory statics,
+	*   shared file caches, and per-user tool resolution caches across all sessions.
+	*
+	* All other section tipos are silently ignored (default: no-op).
+	* Called internally at the end of every write method; callers must not call it
+	* themselves.
+	*
 	* @return void
 	*/
 	protected function save_event() : void {
@@ -197,12 +331,20 @@ class section_record {
 
 	/**
 	* LOAD_DATA
-	* Loads the section DB record once.
-	* The data fill the '$this->data_columns' values
-	* with parsed integer and JSON values.
-	* To force to reload the data form DB, set the property
-	* 'this->is_loaded_data_columns' to false.
-	* @return bool
+	* Triggers a DB read the first time it is called for this instance, then becomes
+	* a no-op for the lifetime of the request (guarded by $is_loaded_data).
+	*
+	* Delegates the actual query to read(), which populates the shared data_instance
+	* with the decoded JSONB column values.  After the read, $record_in_the_database
+	* is set: false when no row was found, true otherwise.
+	*
+	* To force a fresh DB read within the same request, set $this->is_loaded_data = false
+	* before calling this method (or call read(false) directly).
+	*
+	* (!) The doc-block comment "set the property this->is_loaded_data_columns to false"
+	* is stale — the actual property is $is_loaded_data (no "_columns" suffix).
+	*
+	* @return bool - always true (errors are handled inside read())
 	*/
 	protected function load_data() : bool {
 
@@ -225,8 +367,13 @@ class section_record {
 
 	/**
 	* EXISTS_IN_THE_DATABASE
-	* Returns true if the section record already exists in the database.
-	* @return bool
+	* Returns true when a DB row for this {section_tipo, section_id} pair exists.
+	*
+	* Uses the cached $record_in_the_database flag when it has already been resolved
+	* (i.e., after any previous load_data() or read() call).  Otherwise triggers a
+	* DB read via load_data() to resolve it.
+	*
+	* @return bool - true if the record exists in the database, false otherwise
 	*/
 	public function exists_in_the_database() : bool {
 
@@ -244,8 +391,18 @@ class section_record {
 
 	/**
 	* GET_DATA
-	* Retrieves all columns data of the record
-	* @return object $data
+	* Returns the full decoded data object for this record, triggering a DB read if
+	* the data has not yet been loaded.
+	*
+	* The returned object has one property per DB column (relation, string, date, iri,
+	* geo, number, media, misc, relation_search, meta, data).  Each column property is
+	* itself an object keyed by component tipo, or null when the column is empty.
+	*
+	* The returned object is the live data_instance reference — mutations to it
+	* affect the in-memory state of this record and will be persisted on the next
+	* save()/save_column()/save_key_data() call.
+	*
+	* @return object - full record data; never null (may have all-null columns)
 	*/
 	public function get_data() : object {
 
@@ -262,9 +419,17 @@ class section_record {
 
 	/**
 	* SET_DATA
-	* Assign data columns with its own values into the section_record_data
-	* @param object $data
-	* @return bool $result
+	* Replaces the entire in-memory data object in the shared data_instance.
+	*
+	* $data must have the same column structure returned by get_data() (properties
+	* keyed by column name).  This does NOT persist to the database; call save()
+	* afterwards to flush all columns.
+	*
+	* Used primarily by the import pipeline and Time Machine restore, which build
+	* complete data objects and push them in one call.
+	*
+	* @param object $data - full record data object (same shape as get_data() return)
+	* @return bool - true on success
 	*/
 	public function set_data( object $data ) : bool {
 
@@ -277,13 +442,17 @@ class section_record {
 
 	/**
 	* GET_COMPONENT_DATA
-	* It gets all the data from the component as the database is stored,
-	* with all languages, using the proper data column.
-	* @param string $tipo
-	* 	Component tipo
-	* @param string $column
-	* 	DB column where to get the data (relation,string...)
-	* @return array|null $component_data
+	* Returns the raw data array for a single component within a specific DB column.
+	*
+	* Triggers a DB read on the first call (via load_data()).  Returns all language
+	* values as stored in the JSONB column — no language filtering is applied here.
+	*
+	* Example: get_component_data('oh25', 'relation') returns the array of locators
+	* stored under key 'oh25' inside the 'relation' JSONB column.
+	*
+	* @param string $tipo - component ontology tipo (e.g. "oh25")
+	* @param string $column - DB column name (e.g. "relation", "string", "date")
+	* @return array|null - component value array, or null if the key does not exist
 	*/
 	public function get_component_data( string $tipo, string $column ) : ?array {
 
@@ -299,11 +468,19 @@ class section_record {
 
 	/**
 	* SET_COMPONENT_DATA
-	* Set the component data into the section record shared data.
-	* @param string $tipo
-	* @param string $column
-	* @param array|null $data
-	* @return bool $result Array of matching elements or null if none found
+	* Writes a component's value array into the specified JSONB column in the
+	* in-memory data_instance.
+	*
+	* Does NOT persist to the database; call save_component_data() or save_key_data()
+	* afterwards.  Passing null for $data removes the component key from the column.
+	*
+	* The @return doc-block description ("Array of matching elements") is stale and
+	* does not match the actual return value.
+	*
+	* @param string $tipo - component ontology tipo (e.g. "oh25")
+	* @param string $column - DB column name (e.g. "relation", "string")
+	* @param array|null $data - new value array for the component, or null to clear
+	* @return bool - true on success
 	*/
 	public function set_component_data( string $tipo, string $column, ?array $data ) : bool {
 
@@ -316,10 +493,21 @@ class section_record {
 
 	/**
 	* SET_COLUMN_DATA
-	* Set the column data into the section record shared data.
-	* @param string $column
-	* @param object|null $data
-	* @return bool $result Array of matching elements or null if none found
+	* Replaces the entire content of one JSONB column in the in-memory data_instance.
+	*
+	* Unlike set_component_data() which targets a single component key within a column,
+	* this method overwrites the full column object.  Used internally by read() to
+	* inject raw JSON strings into the data container (lazy decode), and by create()
+	* when writing section-level metadata (the 'data' column).
+	*
+	* Does NOT persist to the database; call save_column() afterwards if needed.
+	*
+	* The @return description ("Array of matching elements") is stale and does not
+	* match the actual return value.
+	*
+	* @param string $column - DB column name (e.g. "data", "relation")
+	* @param object|null $data - full column value object, or null to clear the column
+	* @return bool - true on success
 	*/
 	public function set_column_data( string $column, ?object $data ) : bool {
 
@@ -331,14 +519,23 @@ class section_record {
 
 
 	/**
-	 * SAVE
-	 * Update all section_record data into DB
-	 * Will save every column with current data
-	 * The save data will update the row as section record is.
-	 * - If the column is set as null the DB will delete it.
-	 * - If the column has change or delete any component, the update will set the column as is.
-	 * @return bool $result Boolean indicating whether the operation was successful
-	 */
+	* SAVE
+	* Persists all in-memory JSONB columns to the database in a single UPDATE statement.
+	*
+	* Writes every column returned by data_instance->get_data(), including nulls.
+	* A null column value causes the DB to clear that column (JSON null or omitted key
+	* depending on the handler implementation).  No partial-column optimisation is
+	* applied here — use save_column() or save_key_data() when only a subset of columns
+	* has changed.
+	*
+	* After the DB write, save_event() is called to invalidate dependent caches.
+	*
+	* (!) The commented-out line "$result = $this->data_instance->save_data();" is
+	* dead code left from an earlier refactor where saving was delegated to the data
+	* instance; it is now handled here via the data_handler.
+	*
+	* @return bool - true on success, false on DB error
+	*/
 	public function save() : bool {
 
 		// $result = $this->data_instance->save_data();
@@ -367,16 +564,26 @@ class section_record {
 
 	/**
 	* SAVE_COLUMN
-	* Saves given value into the specify json column, it could be:
-	* a section data
-	* a whole components data of the same data type (relation, string, date, etc.)
-	* a whole components counter data
-	* @param string $column
-	* 	DB column
-	* @param ?object $value
-	* 	Column data value
-	* @return bool
-	* 	Returns false if JSON save fails.
+	* Persists a single JSONB column to the database, replacing its entire contents.
+	*
+	* First updates the in-memory data_instance via set_column_data(), then issues
+	* a targeted UPDATE that touches only the specified column.  More efficient than
+	* save() when only one column has changed (avoids re-serialising unchanged columns).
+	*
+	* $value may be:
+	* - A full column object e.g. (object)['dd25' => [...], 'dd26' => [...]] for
+	*   component-keyed columns (relation, string, date, etc.).
+	* - null to clear the entire column.
+	* - A section-level metadata object for the 'data' column.
+	*
+	* After the DB write, save_event() is called to invalidate dependent caches.
+	*
+	* (!) The commented-out line "$result = $this->data_instance->save_column_data(…)"
+	* is dead code from an earlier refactor.
+	*
+	* @param string $column - DB column name (e.g. "relation", "data")
+	* @param ?object $value - new column value object, or null to clear
+	* @return bool - true on success, false on DB error
 	*/
 	public function save_column( string $column, ?object $value ) : bool {
 
@@ -411,19 +618,32 @@ class section_record {
 
 	/**
 	* SAVE_KEY_DATA
-	* Safely saves one key data of one column in a "matrix" table row,
-	* identified by a composite key of `section_id` and `section_tipo`.
-	* @param array $save_path
-	* Array of objects with the following structure:
-	* [
-	*  (object)[
-	*   'column' => 'relation',
-	*   'key' => 'test80'
-	* ]
-	* ]
-	* @return bool
-	* Returns `true` on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	* Atomically updates one or more component keys inside their respective JSONB
+	* columns using the data_handler's update_by_key() path (jsonb_set).
+	*
+	* This is the preferred persistence path for component saves because it writes
+	* only the changed keys within each column rather than replacing the full column
+	* object, reducing write amplification on large records.
+	*
+	* Pre-save housekeeping:
+	* - For each path item, the current value is read from data_instance.
+	* - If a component's value is null AND the entire column is also null, the column
+	*   is added to $columns_to_delete and removed with a whole-column NULL write
+	*   before the key-level update runs (keeps the DB free of empty column objects).
+	* - Any key belonging to a deleted column is removed from $data_to_save to avoid
+	*   a redundant write attempt.
+	*
+	* $save_path item shape (from data_instance, not the caller):
+	* {
+	*   "column": "relation",  // DB column name
+	*   "key":    "oh25"       // component tipo; the value is read from data_instance
+	* }
+	*
+	* This method does NOT call save_event() — the caller (save_component_data,
+	* update_modified_section_data) is responsible for that.
+	*
+	* @param array $save_path - array of (object){column, key} descriptors
+	* @return bool - true on success, false on any DB error
 	*/
 	public function save_key_data( array $save_path ) : bool {
 		if(SHOW_DEBUG) $start_time = start_time();
@@ -530,10 +750,15 @@ class section_record {
 
 		// debug
 		if(SHOW_DEBUG) {
+			// metrics (per-component JSONB persist path)
+			$save_ms = exec_time_unit($start_time,'ms');
+			metrics::inc('section_record_save_total_calls');
+			metrics::add_time_ms('section_record_save_total_time', $save_ms);
+			metrics::observe_max('section_record_save_max_time', $save_ms); // slowest single save
 			debug_log(__METHOD__
 				. ' Saved component data' . PHP_EOL
 				. ' result: ' . json_encode($result, JSON_PRETTY_PRINT) . PHP_EOL
-				. ' time: ' . exec_time_unit($start_time,'ms').' ms'
+				. ' time: ' . $save_ms .' ms'
 				, logger::WARNING
 			);
 		}
@@ -545,21 +770,24 @@ class section_record {
 
 	/**
 	* SAVE_COMPONENT_DATA
-	* Saves given data into the component container.
-	* @param array $save_path
-	* 	Array of objects with the following structure:
-	*   [
-	* 	 {
-	* 		"key": "test52",
-	* 		"column": "string"
-	* 	 },
-	* 	 {
-	* 		"key": "test52",
-	* 		"column": "meta"
-	* 	 }
-	* 	]
-	* @return bool
-	* 	Returns false if JSON fragment save fails.
+	* Persists component data together with audit metadata in a single DB call.
+	*
+	* This is the standard entry point called by component_common::save() for normal
+	* component saves.  It merges the caller-supplied $save_path (the component's own
+	* column/key pairs) with the audit metadata path (modified_by_user dd197,
+	* modified_date dd201) computed by get_modified_section_save_path(), then
+	* delegates to save_key_data() for the actual DB write.
+	*
+	* By merging both paths before calling save_key_data(), all changes land in a
+	* single jsonb_set UPDATE rather than two separate round-trips.
+	*
+	* After the DB write, save_event() is called to invalidate dependent caches.
+	*
+	* $save_path item shape (same as save_key_data):
+	* { "key": "test52", "column": "string" }
+	*
+	* @param array $save_path - array of (object){column, key} component path items
+	* @return bool - true on success, false on DB error
 	*/
 	public function save_component_data( array $save_path ) : bool {
 
@@ -585,10 +813,36 @@ class section_record {
 
 	/**
 	* DELETE
-	* Remove the record from DB
-	* Save all section record data deleted into Time machine
-	* @param bool $delete_diffusion_records=true
-	* @return bool
+	* Permanently removes this record from the database following a strict five-step
+	* pipeline designed to keep the system consistent across all subsystems.
+	*
+	* Pipeline:
+	* 1. Time Machine snapshot — the full record data is serialized into a tm_record
+	*    (matrix_time_machine row).  The saved snapshot is immediately re-read and
+	*    compared byte-for-byte with the original; a mismatch aborts the delete with
+	*    an error so the record is never lost without a verified backup.
+	* 2. DB row delete — the matrix table row is deleted via the appropriate handler.
+	* 3. Inverse reference cleanup — all components in other sections that hold a
+	*    locator pointing to this record are found via search_related and the
+	*    locators are removed.  Media files associated with this record are then
+	*    renamed/moved to the "deleted" folder (not permanently erased).
+	* 4. Diffusion unpublish — diffusion_delete::delete_record() requests removal of
+	*    the corresponding published rows from SQL/RDF diffusion targets.  Failures
+	*    are caught and logged as warnings; they are retried asynchronously later and
+	*    must not block the work-system delete.
+	* 5. Instance cleanup — the shared data_instance is released, $is_loaded_data is
+	*    reset, $record_in_the_database is set to false, and the singleton cache slot
+	*    is evicted so the next get_instance() call creates a fresh instance.
+	*
+	* Guard: section_id < 1 is rejected immediately (prevents accidental bulk deletes
+	* when a missing ID silently evaluates to 0).
+	*
+	* $delete_diffusion_records=false skips step 4.  Used during bulk-delete sequences
+	* that batch-handle diffusion cleanup separately.
+	*
+	* @param bool $delete_diffusion_records [= true] - false to skip diffusion cleanup
+	* @return bool - true when the full pipeline completed successfully
+	* @throws Exception if the Time Machine snapshot cannot be verified (step 1 failure)
 	*/
 	public function delete( bool $delete_diffusion_records=true ) : bool {
 
@@ -748,9 +1002,26 @@ class section_record {
 
 	/**
 	* DELETE_DATA
-	* Empty all columns components data
-	* The empty will be saved into DB and Time machine
-	* @return bool
+	* Empties all component values within this record while keeping the DB row itself.
+	*
+	* Iterates every component tipo that belongs to this section's model (obtained from
+	* the ontology), instantiates each component, and sets its data to null.  Each
+	* component->save() call creates an individual Time Machine entry and activity log
+	* row, so the full edit history is preserved.
+	*
+	* Exceptions:
+	* - component_section_id, component_external, component_inverse are skipped — they
+	*   hold system-managed or structural data that must not be erased.
+	* - component_filter receives the user's default project data rather than null
+	*   (ensures the section remains accessible after the clear).
+	*
+	* Media files belonging to cleared media components are moved to the "deleted"
+	* folder (not permanently erased) via remove_component_media_files().
+	*
+	* After all components are cleared, the audit metadata (modified_by_user, modified_date)
+	* is updated via update_modified_section_data() and save_event() is called.
+	*
+	* @return bool - always true; individual component errors are logged and skipped
 	*/
 	public function delete_data() : bool {
 
@@ -874,7 +1145,16 @@ class section_record {
 
 	/**
 	* DELETE_COLUMN
-	* @return
+	* Stub — not yet implemented.
+	*
+	* Intended to remove an entire JSONB column's data for this record.
+	* Currently a no-op body; callers should use save_column($column, null) instead
+	* until this method is implemented.
+	*
+	* (!) Return type annotation "@return" is missing — the body is empty so the
+	* implicit return type is void.
+	*
+	* @return void
 	*/
 	public function delete_column() {
 
@@ -884,14 +1164,21 @@ class section_record {
 
 	/**
 	* GET_COMPONENT_COUNTER
-	* Obtain the counter for given component ontology tipo
-	* Components storage its id to match with any other component as dataframe
-	* Data stored has the format:
-	* "oh25" : [{
-	* 	count: 1
-	* }]
-	* @param string $tipo
-	* @return int $component_counter
+	* Returns the current dataframe item-id counter for the given component tipo.
+	*
+	* Each component that uses item ids (e.g. component_dataframe) maintains a
+	* monotonically increasing counter stored in the 'meta' JSONB column under the
+	* component's tipo key.  The counter value is the highest item id ever assigned;
+	* the next allocation will start from counter+1.
+	*
+	* Storage format in the 'meta' column:
+	* { "oh25": [{ "count": 5 }], "oh26": [{ "count": 1 }] }
+	*
+	* Returns 0 (the safe default) when the key does not exist or the column is empty,
+	* so callers can always treat the return as a valid base for range allocation.
+	*
+	* @param string $tipo - component ontology tipo (e.g. "oh25")
+	* @return int - current counter value, or 0 if not yet initialised
 	*/
 	public function get_component_counter( string $tipo ) : int {
 
@@ -906,15 +1193,22 @@ class section_record {
 
 	/**
 	* SET_COMPONENT_COUNTER
-	* Fix the component counter with given ontology tipo and value
-	* Set the counter of the component into section data schema
-	* Data set has the format:
-	* "oh25" : [{
-	* 	count: 1
-	* }]
-	* @param string $tipo
-	* @param int value
-	* @return int $dato->counters->$tipo
+	* Writes a new dataframe item-id counter value for the given component tipo into
+	* the in-memory data_instance ('meta' column).
+	*
+	* If no counter entry exists yet for $tipo, a fresh one is initialised with
+	* count=null before setting the new value.  This in-memory write is not
+	* persisted until the next save()/save_column()/save_key_data() call.
+	*
+	* For atomic, race-safe allocation across concurrent processes use
+	* allocate_component_ids() or raise_component_counter() instead.
+	*
+	* Storage format written to the 'meta' column:
+	* { "oh25": [{ "count": $value }] }
+	*
+	* @param string $tipo - component ontology tipo (e.g. "oh25")
+	* @param int $value - new counter value to store
+	* @return int - the counter value as confirmed by get_component_counter() after the write
 	*/
 	public function set_component_counter( string $tipo, int $value ) : int {
 
@@ -934,16 +1228,34 @@ class section_record {
 
 	/**
 	* ALLOCATE_COMPONENT_IDS
-	* Atomically allocates $count new data item ids for the given component tipo.
-	* Item ids are the dataframe pairing keys (id_key): they must be unique per
-	* component per section record and never reused, so allocation is serialized
-	* with a PostgreSQL advisory lock and the counter is persisted immediately
-	* (a plain read-increment-write of the in-memory counter races between
-	* concurrent processes editing the same record).
-	* The in-memory counter is synced so the subsequent record save keeps it.
-	* @param string $tipo - component ontology tipo
-	* @param int $count = 1 - how many ids to allocate
-	* @return array - allocated ids, sequential, e.g. [8,9,10]
+	* Atomically allocates $count new dataframe item ids for the given component tipo,
+	* returning a sequential range that is guaranteed not to collide with any other
+	* concurrent allocation on the same {table, section_tipo, section_id, tipo} tuple.
+	*
+	* Why this method exists:
+	* Item ids (id_key values) are the pairing keys used by component_dataframe to
+	* link a value row to its label row.  They must be unique per component per record
+	* and must never be reused after deletion.  A simple in-memory read-increment-write
+	* would race when two PHP workers edit the same record simultaneously, so a
+	* PostgreSQL session-level advisory lock (pg_advisory_lock on a hashed key) is
+	* acquired before any read or write of the counter.
+	*
+	* Algorithm:
+	* 1. Acquire advisory lock on (table_section_tipo_section_id_tipo) hash.
+	* 2. Re-read the PERSISTED counter from the DB (may be ahead of in-memory if
+	*    another process has already allocated since this record was loaded).
+	* 3. Take the maximum of the persisted counter and the in-memory counter
+	*    (handles unsaved in-request allocations in the same process).
+	* 4. Persist the new counter immediately via jsonb_set so other processes see it.
+	* 5. Sync the in-memory counter to keep in-memory and DB consistent.
+	* 6. Return range(base+1, new_counter).
+	*
+	* Fallback: if no DB connection is available, falls back to the non-atomic
+	* in-memory path and logs an ERROR.
+	*
+	* @param string $tipo - component ontology tipo (e.g. "oh25")
+	* @param int $count [= 1] - how many consecutive ids to allocate
+	* @return array - allocated id integers, e.g. [8, 9, 10]
 	*/
 	public function allocate_component_ids( string $tipo, int $count=1 ) : array {
 
@@ -1031,13 +1343,25 @@ class section_record {
 
 	/**
 	* RAISE_COMPONENT_COUNTER
-	* Atomically raises the component counter to at least $min_value
-	* (no-op when the counter is already there). Used to absorb explicit
-	* item ids carried by imported / migrated data without racing against
-	* concurrent allocations.
-	* @param string $tipo - component ontology tipo
-	* @param int $min_value
-	* @return int - the resulting counter value
+	* Atomically ensures the component item-id counter is at least $min_value,
+	* without allocating specific ids (no-op when the counter is already at or above
+	* the requested minimum).
+	*
+	* Used during import / migration to absorb explicit item ids that arrive with
+	* source data.  After calling this method, subsequent allocate_component_ids()
+	* calls are guaranteed to produce ids strictly greater than $min_value, so
+	* imported data retains its original ids without colliding with new allocations.
+	*
+	* Internally takes the maximum of the persisted counter, the in-memory counter,
+	* and $min_value under the same advisory lock used by allocate_component_ids(),
+	* then persists the result immediately.
+	*
+	* Returns $current immediately (short-circuit) when the in-memory counter is
+	* already >= $min_value, avoiding an unnecessary lock acquisition.
+	*
+	* @param string $tipo - component ontology tipo (e.g. "oh25")
+	* @param int $min_value - the minimum counter value that must be guaranteed
+	* @return int - resulting counter value after the potential raise
 	*/
 	public function raise_component_counter( string $tipo, int $min_value ) : int {
 
@@ -1097,13 +1421,26 @@ class section_record {
 
 	/**
 	* GET_MODIFIED_SECTION_SAVE_PATH
-	* Computes metadata save_path items and sets data_instance values.
-	* Delegates data computation to build_modification_data to avoid duplication.
-	* Does NOT save to DB — caller is responsible for calling save_key_data + save_event.
-	* @param string $mode
-	* 	'new_record' | 'update_record'
-	* @return array
-	* 	Array of save_path items [(object)['column'=>'relation','key'=>'dd197'], ...]
+	* Computes the audit metadata save_path items for the current user and writes the
+	* corresponding values into the in-memory data_instance as a side effect.
+	*
+	* Delegates the pure data computation to the static build_modification_data() and
+	* then applies the results: sets each {column, tipo} data value into data_instance
+	* so that the caller's subsequent save_key_data() call persists them together with
+	* the rest of the component save_path.
+	*
+	* Returns an empty array (and does NOT set data_instance values) for:
+	* - The activity section (dd542) — it has no audit metadata components.
+	* - Requests without a logged-in user (user_id = 0 / empty).
+	*
+	* $mode controls which audit pair is updated:
+	* - 'new_record'    → created_by_user (dd200) + created_date (dd199)
+	* - 'update_record' → modified_by_user (dd197) + modified_date (dd201)
+	*
+	* Does NOT persist to the database.
+	*
+	* @param string $mode - 'new_record' or 'update_record'
+	* @return array - array of (object){column, key} items, or [] when skipped
 	*/
 	private function get_modified_section_save_path( string $mode ) : array {
 
@@ -1146,8 +1483,25 @@ class section_record {
 
 	/**
 	* UPDATE_MODIFIED_SECTION_DATA
-	* @param object $options
-	* @return bool
+	* Persists audit metadata (modified_by_user / modified_date or created_by_user /
+	* created_date) for this record as a standalone DB write, independent of any
+	* component save.
+	*
+	* Computes and sets data_instance values via get_modified_section_save_path(),
+	* then calls save_key_data() to flush only those metadata keys to the DB, followed
+	* by save_event() to invalidate dependent caches.
+	*
+	* Returns false (no-op) when the section is the activity section (dd542) or when
+	* there is no logged-in user — matching the skip rules of build_modification_data().
+	*
+	* $options must have:
+	*   $options->mode — 'new_record' or 'update_record'
+	*
+	* Called after delete_data() to stamp the modification without a full component
+	* save cycle.
+	*
+	* @param object $options - options object with 'mode' property
+	* @return bool - true on success, false when metadata was skipped or DB write failed
 	*/
 	public function update_modified_section_data(object $options) : bool {
 
@@ -1172,18 +1526,33 @@ class section_record {
 
 	/**
 	* BUILD_MODIFICATION_DATA
-	* Computes metadata save_path items and data values without side effects.
-	* Pure function that returns both save_path and data_values for the caller to use.
-	* Does NOT save to DB — caller is responsible for calling save_key_data + save_event.
-	* @param string $section_tipo
-	* 	The section tipo
-	* @param string $mode
-	* 	'new_record' | 'update_record'
-	* @param int $user_id
-	* 	The logged user ID
-	* @return object
-	* 	Object containing data to be set, keyed by column and tipo.
-	* 	Returns empty object if section is activity section or user_id is empty.
+	* Pure function that computes the audit metadata data values for a given save
+	* mode, without touching any instance state or the database.
+	*
+	* Returns an object keyed by column name, where each column value is itself keyed
+	* by component tipo:
+	* (object){
+	*   relation: (object){ dd200: [locator] },  // 'new_record': created_by_user
+	*   date:     (object){ dd199: [date_obj] }   // 'new_record': created_date
+	* }
+	* or for 'update_record':
+	* (object){
+	*   relation: (object){ dd197: [locator] },
+	*   date:     (object){ dd201: [date_obj] }
+	* }
+	*
+	* Returns an empty object (no side effects) when:
+	* - $section_tipo === DEDALO_ACTIVITY_SECTION_TIPO (dd542) — no metadata components.
+	* - $user_id is empty / 0 — cannot attribute a locator without an author.
+	*
+	* The user locator always uses id=1 (fixed, not the logged user's PK), as item ids
+	* for relation components are record-local sequential integers; section_id carries
+	* the actual user identifier.
+	*
+	* @param string $section_tipo - ontology tipo of the section being written
+	* @param string $mode - 'new_record' or 'update_record'
+	* @param int $user_id - logged user section_id (from logged_user_id())
+	* @return object - data-values object keyed {column: {tipo: value}}, or empty object
 	*/
 	public static function build_modification_data( string $section_tipo, string $mode, int $user_id ) : object {
 
@@ -1262,8 +1631,26 @@ class section_record {
 
 	/**
 	* BUILD_METADATA
-	* When section is created at first time, a basic data is set to write into the new section.
-	* @return object $data_values
+	* Constructs the initial 'data' column object written when a new section record is
+	* created for the first time.
+	*
+	* The 'data' column holds section-level administrative metadata that is stored as a
+	* single flat object (not component-keyed like other columns).  Fields:
+	* - label          : human-readable section name from the ontology term.
+	* - created_date   : DB-formatted timestamp (e.g. "2024-11-05 19:50:44").
+	* - section_id     : int PK of the new row (may be null before DB insert resolves it).
+	* - section_tipo   : ontology tipo of the section.
+	* - diffusion_info : always null at creation; populated later by the diffusion layer.
+	* - created_by_user_id : int user PK of the creating user.
+	*
+	* Returns:
+	* (object){ data: (object){ label, created_date, section_id, section_tipo,
+	*                            diffusion_info, created_by_user_id } }
+	*
+	* @param string $tipo - section ontology tipo
+	* @param int|null $section_id - new record PK, or null when not yet assigned
+	* @param int $user_id - creating user's section_id
+	* @return object - wrapper object with a 'data' property
 	*/
 	public static function build_metadata( string $tipo, ?int $section_id, int $user_id ) : object {
 
@@ -1288,9 +1675,18 @@ class section_record {
 
 	/**
 	* GET_INVERSE_REFERENCES
-	* Get calculated inverse locators for all matrix tables
-	* @see search::calculate_inverse_locator
-	* @return array $inverse_locators
+	* Searches all matrix tables for locators that point to this section record and
+	* returns the corresponding inverse locator descriptors.
+	*
+	* Uses search_related::get_referenced_locators() with a minimal locator constructed
+	* from {section_tipo, section_id}.  Each returned locator descriptor identifies the
+	* component (from_component_tipo), section (from_section_tipo, from_section_id),
+	* and pairing key (id_key / section_id_key) that holds a reference to this record.
+	*
+	* Returns an empty array when section_id is 0 or empty (record not yet created).
+	*
+	* @see search_related::get_referenced_locators()
+	* @return array - array of inverse locator objects; empty if none found or not yet created
 	*/
 	public function get_inverse_references() : array {
 
@@ -1317,9 +1713,27 @@ class section_record {
 
 	/**
 	* REMOVE_ALL_INVERSE_REFERENCES
-	* @see section->Delete()
-	* Saves the component data
-	* @return array $removed_locators
+	* Removes every locator that points to this record from all components across all
+	* sections, then saves those components.
+	*
+	* Called as step 3 of delete() to maintain referential integrity: when a section
+	* record is deleted, any portal / autocomplete / dataframe component in another
+	* section that holds a locator to it must have that locator removed so that stale
+	* references do not appear in the UI.
+	*
+	* Only components with parent class 'component_relation_common' or the
+	* 'component_dataframe' model are supported.  Other model types are skipped with
+	* a WARNING log.
+	*
+	* For component_dataframe, both the unified 'id_key' and legacy 'section_id_key'
+	* fields are read from the inverse locator and forwarded as caller_dataframe so
+	* the correct row can be targeted within the dataframe's data array.
+	*
+	* Returns the list of successfully removed {removed_from, locator_to_remove} pairs
+	* for diagnostic logging.
+	*
+	* @see delete()
+	* @return array - removed locator descriptor objects; empty if nothing was removed
 	*/
 	public function remove_all_inverse_references() : array {
 
@@ -1416,10 +1830,22 @@ class section_record {
 
 	/**
 	* REMOVE_SECTION_MEDIA_FILES
-	* "Remove" (rename and move files to deleted folder) all media file linked to current section (all quality versions)
-	* @see section_record->delete()
-	* @return array|null
-	* 	Array of objects (removed components info)
+	* Moves all media files linked to this section to the "deleted" folder by
+	* iterating the 'media' JSONB column and calling remove_component_media_files()
+	* on each media component found.
+	*
+	* "Remove" here means rename/move, not permanent erasure — files are recoverable
+	* via restore_deleted_section_media_files() until the deleted folder is purged.
+	*
+	* Only component tipos whose model is registered in
+	* component_media_common::get_media_components() (3d, av, image, pdf, svg) are
+	* processed.  Unknown model types logged as ERROR and skipped.
+	*
+	* Returns an empty array (not null) when the 'media' column is absent or empty.
+	*
+	* @see delete()
+	* @see restore_deleted_section_media_files()
+	* @return array|null - array of {tipo, model} objects for processed components; empty array if nothing to remove
 	*/
 	protected function remove_section_media_files() : ?array {
 
@@ -1491,20 +1917,37 @@ class section_record {
 
 	/**
 	* CREATE
-	* Inserts a single row into a "matrix" table with automatic handling for JSON columns
-	* and guaranteed inclusion of the `section_tipo` and `section_id` columns.
-	* Before insert, creates/updates the proper counter value and uses the result as `section_id` value.
-	* It is executed using prepared statement when the values are empty (default creation of empty record
-	* adding `section_tipo` and `section_id` only) and with query params when is not (other
-	* dynamic combinations of columns data).
-	* @param string $section_tipo as oh1
-	* @param int|null $section_id = null (optional)
-	* @param object|null $values = null (optional)
-	* Object with {column name : value} structure.
-	* Keys are column names, values are their new values.
-	* @return section_record|false
-	* Returns the new section_record instance on success, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	* Creates or updates a section record, returning the section_record instance.
+	*
+	* This is a dual-mode method:
+	*
+	* INSERT mode ($section_id === null):
+	*   Delegates to data_handler::create() which inserts a new row and returns the
+	*   auto-assigned section_id (PostgreSQL SERIAL / nextval).  The new instance is
+	*   retrieved via get_instance(), $record_in_the_database is set to true, and the
+	*   row data is force-loaded via get_data().  save_event() is called afterwards.
+	*
+	* UPDATE mode ($section_id !== null):
+	*   Retrieves the existing instance via get_instance(), merges the supplied $values
+	*   with the computed audit metadata (modified_by_user, modified_date), sets all
+	*   column data into the data_instance, then calls save() in a single DB trip.
+	*   No separate save_event() call is needed here because save() does it internally.
+	*
+	* (!) In DEBUG mode, a backtrace check enforces that the immediate caller is the
+	* 'section' class.  Calls from any other class throw an Exception.  This guard
+	* is active only when SHOW_DEBUG is true.
+	*
+	* $values format (optional, for INSERT path):
+	* {
+	*   "relation": { "oh25": [locator, ...] },
+	*   "string":   { "oh26": ["Hello"] },
+	*   "data":     { ... section metadata object ... }
+	* }
+	*
+	* @param string $section_tipo - ontology tipo (e.g. "oh1")
+	* @param int|null $section_id [= null] - null for INSERT, existing PK for UPDATE
+	* @param object|null $values [= null] - optional initial/updated column values
+	* @return section_record|false - new or updated instance on success, false on failure
 	*/
 	public static function create( string $section_tipo, ?int $section_id=null, ?object $values=null ) : section_record|false {
 
@@ -1616,10 +2059,32 @@ class section_record {
 
 	/**
 	* DUPLICATE
-	* Creates a new record cloning all data from current section record
-	* Force to save every component data to create a Time Machine and update its own state as component_info
-	* Or create new media files according to the new section_id
-	* @return int|string|null $section_id
+	* Creates a new record in the same section type by cloning all component data from
+	* this record, producing independent Time Machine and activity log entries for the
+	* new record.
+	*
+	* Steps:
+	* 1. Clones get_data() to obtain a deep snapshot of the source record.
+	* 2. Creates a new blank row via section::create_record(), passing the clone as
+	*    initial values (handles the INSERT + audit metadata stamp).
+	* 3. Iterates every column of source_data and re-saves each component into the new
+	*    section_id, skipping:
+	*    - 'data', 'meta', 'relation_search' columns (system-managed, auto-rebuilt).
+	*    - Tipos in $ar_section_info_tipos (audit components dd196 group, e.g. created
+	*      date, modified user — rebuilt by the create/save audit path).
+	*    - Media components (handled separately below).
+	* 4. For media components, calls duplicate_component_media_files() on the source
+	*    component to copy the physical files to the new section_id folder, then
+	*    regenerate_component() on the target component to build the DB entry from
+	*    the copied files.
+	* 5. Saves the new section_record once more to flush the 'meta' counter column and
+	*    any 'relation_search' column that was written during the component saves.
+	*
+	* Returns false when:
+	* - The source record has no data (all properties empty).
+	* - section::create_record() fails to return a valid new section_id.
+	*
+	* @return int|false - section_id of the new duplicate record, or false on failure
 	*/
 	public function duplicate() : int|false {
 
@@ -1746,18 +2211,28 @@ class section_record {
 
 	/**
 	* READ
-	* Retrieves a single row of data from a specified PostgreSQL table
-	* based on section_id and section_tipo.
-	* It's designed to provide a unified way of accessing data from
-	* various "matrix" tables within the Dédalo application.
-	* The function validates the table against a predefined list of allowed tables
-	* to prevent SQL injection vulnerabilities.
-	* @param bool $cache = true
-	* On true (default), if isset $this->data, no new database call is made.
-	* On false, a new database query is always forced.
-	* @return object|null $this->data
-	* Returns the processed data as an object with parsed JSON values.
-	* If no row is found, it returns null.
+	* Fetches and decodes the database row for this {section_tipo, section_id} pair,
+	* populating the shared data_instance with the JSONB column values.
+	*
+	* Cache behaviour:
+	* - When $cache=true (default) and $is_loaded_data is already set, the method
+	*   returns the cached value without hitting the database.  If $record_in_the_database
+	*   is false from a prior miss, null is returned immediately.
+	* - Set $cache=false to force a fresh DB query (bypasses $is_loaded_data guard).
+	*
+	* Special case: the 'matrix_time_machine' table is never queried here because
+	* tm_record injects its data directly into the data_instance.  The method marks
+	* $is_loaded_data=true and returns the existing data_instance content unchanged.
+	*
+	* On a DB hit, each column that exists in $row is passed raw (as a JSON string)
+	* to data_instance->set_column_data() for lazy decoding on first access.  Columns
+	* absent from the row are left at their initialised (null) values.
+	*
+	* On a DB miss, $is_loaded_data and $record_in_the_database are set to false-values
+	* and null is returned; subsequent calls with $cache=true skip the DB gracefully.
+	*
+	* @param bool $cache [= true] - false to force a fresh DB read
+	* @return object|null - decoded data object, or null if the row does not exist
 	*/
 	public function read( bool $cache=true ) : ?object {
 
@@ -1826,9 +2301,19 @@ class section_record {
 
 	/**
 	* RESTORE_DELETED_SECTION_MEDIA_FILES
-	* Use when recover section from time machine. Get files "deleted" (renamed in 'deleted' folder) and move and rename to the original media folder
-	* @return array|null $ar_restored
-	* 	Array of objects (restored components info)
+	* Restores media files that were previously moved to the "deleted" folder back to
+	* their original media folder, reversing the effect of remove_section_media_files().
+	*
+	* Called by the Time Machine restore path when a deleted section record is recovered.
+	* Iterates every entry in the 'media' JSONB column of the in-memory data_instance
+	* (not a fresh DB read) and calls restore_component_media_files() on each media
+	* component instance.  Only tipos whose model is registered in
+	* component_media_common::get_media_components() are processed; others are skipped.
+	*
+	* Returns an empty array (not null) when the 'media' column is absent or empty.
+	*
+	* @see remove_section_media_files()
+	* @return array|null - array of {tipo, model} objects for restored components; empty array if nothing to restore
 	*/
 	public function restore_deleted_section_media_files() : ?array {
 
@@ -1892,8 +2377,16 @@ class section_record {
 
 	/**
 	* GET_TABLE
-	* Returns the full table object
-	* @return string $this->table
+	* Returns the resolved PostgreSQL table name for this section record.
+	*
+	* The table name is resolved once during __construct() from
+	* common::get_matrix_table_from_tipo() and stored as a readonly property.
+	* Common values: 'matrix', 'matrix_activity', 'matrix_time_machine'.
+	*
+	* (!) The existing doc-block description "Returns the full table object" is stale —
+	* the return value is a string, not an object.
+	*
+	* @return string - PostgreSQL table name (e.g. "matrix", "matrix_activity")
 	*/
 	public function get_table() : string {
 
@@ -1904,7 +2397,22 @@ class section_record {
 
 	/**
 	* GET_PERMISSIONS
-	* @return int $this->permissions
+	* Returns the resolved permission level for the current user on this section record.
+	*
+	* Permissions are computed once per request and cached in $this->permissions.
+	* The base level is computed by common::get_permissions() using the section tipo.
+	*
+	* Special overrides:
+	* - Users section (dd128): if the record being accessed IS the currently logged-in
+	*   user's own record ($section_id == logged_user_id()), the level is forced to 1
+	*   (read-only) to allow tool_user_admin to access it regardless of the general
+	*   user-management permission level.
+	* - Time Machine notes (rsc832): level is set to 2 (read-write) only for the record's
+	*   creator or for global admins; all other users receive level 1 (read-only).
+	*
+	* Numeric permission levels: 0 = no access, 1 = read-only, 2 = read-write.
+	*
+	* @return int - resolved permission level (0, 1, or 2)
 	*/
 	public function get_permissions() : int {
 
@@ -1939,9 +2447,17 @@ class section_record {
 
 	/**
 	* SET_CREATED_DATE
-	* @param string $timestamp
-	*	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
-	* This method is used mainly in importations
+	* Writes the created_date (dd199) value into the in-memory data_instance ('date' column).
+	*
+	* Converts a plain timestamp string to the internal dd_date format via
+	* dd_date::get_dd_date_from_timestamp(), then stores it as a single-element array
+	* matching the date datum shape: {start: <dd_date>, id: 1, lang: 'lg-nolan'}.
+	*
+	* Does NOT persist to the database; call save() or save_column('date', …) afterwards.
+	* Primarily used by the import pipeline to preserve the original creation date of
+	* imported records rather than generating a new timestamp.
+	*
+	* @param string $timestamp - timestamp string in "YYYY-MM-DD HH:II:SS" or "YYYY-MM-DD" format
 	* @return void
 	*/
 	public function set_created_date(string $timestamp) : void {
@@ -1963,9 +2479,15 @@ class section_record {
 
 	/**
 	* SET_MODIFIED_DATE
-	* @param string $timestamp
-	*	$date is timestamp as "2016-06-15 20:01:15" or "2016-06-15"
-	* This method is used mainly in importations
+	* Writes the modified_date (dd201) value into the in-memory data_instance ('date' column).
+	*
+	* Same conversion and storage logic as set_created_date(), but targets the
+	* DEDALO_SECTION_INFO_MODIFIED_DATE (dd201) tipo key.
+	*
+	* Does NOT persist to the database; call save() or save_column('date', …) afterwards.
+	* Used by the import pipeline to override the modification timestamp of imported records.
+	*
+	* @param string $timestamp - timestamp string in "YYYY-MM-DD HH:II:SS" or "YYYY-MM-DD" format
 	* @return void
 	*/
 	public function set_modified_date(string $timestamp) : void {
@@ -1987,7 +2509,14 @@ class section_record {
 
 	/**
 	* GET_CREATED_DATE
-	* @return string|null $local_value
+	* Returns the created_date (dd199) of this record as a formatted local timestamp
+	* string, or null if the date has not been set.
+	*
+	* Reads the first element of the date array stored under DEDALO_SECTION_INFO_CREATED_DATE
+	* (dd199) in the 'date' column, converts the dd_date format value using
+	* dd_date::get_dd_timestamp(), and returns it formatted as "d-m-Y H:i:s".
+	*
+	* @return string|null - formatted creation date (e.g. "15-06-2024 10:30:00"), or null
 	*/
 	public function get_created_date() : ?string {
 
@@ -2006,7 +2535,13 @@ class section_record {
 
 	/**
 	* GET_MODIFIED_DATE
-	* @return string|null $local_value
+	* Returns the modified_date (dd201) of this record as a formatted local timestamp
+	* string, or null if the date has not been set.
+	*
+	* Same format and resolution logic as get_created_date(), but reads from
+	* DEDALO_SECTION_INFO_MODIFIED_DATE (dd201) in the 'date' column.
+	*
+	* @return string|null - formatted modification date (e.g. "15-06-2024 10:30:00"), or null
 	*/
 	public function get_modified_date() : ?string {
 
@@ -2025,8 +2560,14 @@ class section_record {
 
 	/**
 	* GET_CREATED_BY_USER_ID
-	* Get created user id from section record data
-	* @return int|null $created_by_userID
+	* Returns the section_id (user PK) of the user who created this record, as stored
+	* in the relation locator under DEDALO_SECTION_INFO_CREATED_BY_USER (dd200).
+	*
+	* Calls get_data() which may trigger a DB read on first access.
+	* Reads the section_id of the first locator element ([0]) within the dd200 relation
+	* array.  Returns null when the created_by_user component has not been set.
+	*
+	* @return int|null - user section_id, or null if not available
 	*/
 	public function get_created_by_user_id() : ?int {
 
@@ -2045,8 +2586,18 @@ class section_record {
 
 	/**
 	* SET_CREATED_BY_USER_ID
-	* Set section dato property 'created_by_userID'
-	* @return bool
+	* Writes the created_by_user (dd200) relation locator into the in-memory
+	* data_instance ('relation' column).
+	*
+	* Constructs a locator pointing to the user record in DEDALO_SECTION_USERS_TIPO (dd128)
+	* with the supplied $value as section_id.  The locator uses a fixed item id=1
+	* (component-local sequential id, not the user's PK) and type DEDALO_RELATION_TYPE_LINK.
+	*
+	* Does NOT persist to the database; call save() or save_column('relation', …) afterwards.
+	* Used primarily by the import pipeline to set the original record author.
+	*
+	* @param int $value - user section_id (PK in the users section dd128)
+	* @return bool - always true
 	*/
 	public function set_created_by_user_id(int $value) : bool {
 
@@ -2069,8 +2620,14 @@ class section_record {
 
 	/**
 	* GET_MODIFIED_BY_USER_ID
-	* Get modified user id from section record data
-	* @return int|null $modified_by_userID
+	* Returns the section_id (user PK) of the user who last modified this record,
+	* as stored in the relation locator under DEDALO_SECTION_INFO_MODIFIED_BY_USER (dd197).
+	*
+	* Reads directly from the data_instance 'relation' column without triggering a
+	* full get_data() call.  Returns null when the modified_by_user component is absent
+	* or the locator has no section_id.
+	*
+	* @return int|null - user section_id, or null if not available
 	*/
 	public function get_modified_by_user_id() : ?int {
 
@@ -2086,8 +2643,17 @@ class section_record {
 
 	/**
 	* SET_MODIFIED_BY_USER_ID
-	* Set section dato property 'modified_by_userID'
-	* @return bool
+	* Writes the modified_by_user (dd197) relation locator into the in-memory
+	* data_instance ('relation' column).
+	*
+	* Same locator construction logic as set_created_by_user_id(), but targets
+	* DEDALO_SECTION_INFO_MODIFIED_BY_USER (dd197).
+	*
+	* Does NOT persist to the database; call save() or save_column('relation', …) afterwards.
+	* Used primarily by the import pipeline to set the original last-modifier.
+	*
+	* @param int $value - user section_id (PK in the users section dd128)
+	* @return bool - always true
 	*/
 	public function set_modified_by_user_id(int $value) : bool {
 
@@ -2110,8 +2676,14 @@ class section_record {
 
 	/**
 	* GET_CREATED_BY_USER_NAME
-	* @param bool $full_name = false
-	* @return string|null $user_name
+	* Returns the display name of the user who created this record.
+	*
+	* Resolves the user id via get_created_by_user_id() and then delegates to the
+	* static get_user_name_by_user_id() helper.  Returns null when the created_by_user
+	* component has not been set or the user id is empty.
+	*
+	* @param bool $full_name [= false] - true to return the full name, false for short username
+	* @return string|null - user name string, or null if not available
 	*/
 	public function get_created_by_user_name(bool $full_name=false) : ?string {
 
@@ -2132,8 +2704,14 @@ class section_record {
 
 	/**
 	* GET_MODIFIED_BY_USER_NAME
-	* @param bool $full_name = false
-	* @return string|null $user_name
+	* Returns the display name of the user who last modified this record.
+	*
+	* Resolves the user id via get_modified_by_user_id() and then delegates to the
+	* static get_user_name_by_user_id() helper.  Returns null when the modified_by_user
+	* component has not been set or the user id is empty.
+	*
+	* @param bool $full_name [= false] - true to return the full name, false for short username
+	* @return string|null - user name string, or null if not available
 	*/
 	public function get_modified_by_user_name(bool $full_name=false) : ?string {
 
@@ -2153,10 +2731,25 @@ class section_record {
 
 
 	/**
-	* get_user_name_by_user_id
-	* @param int $userID
-	* @param bool $full_name = true
-	* @return string $user_name
+	* GET_USER_NAME_BY_USER_ID
+	* Static helper that resolves a user section_id to a display name string.
+	*
+	* The special sentinel DEDALO_SUPERUSER (-1) bypasses the component lookup and
+	* returns a hardcoded label ('root' or 'Admin debugger') for safety.  For all
+	* other user ids, the appropriate component tipo is selected:
+	* - $full_name=false → DEDALO_USER_NAME_TIPO (short username, e.g. "jdoe")
+	* - $full_name=true  → DEDALO_FULL_USER_NAME_TIPO (full display name, e.g. "John Doe")
+	*
+	* Instantiates the component using DEDALO_DATA_NOLAN (language-neutral), reads its
+	* data, and returns the first string element [0].  Returns null when the component
+	* has no data (user record not found or component empty).
+	*
+	* (!) The @return type annotation "@return string $user_name" is imprecise — the
+	* actual return is string|null (nullable) as declared in the signature.
+	*
+	* @param int $userID - user section_id to resolve
+	* @param bool $full_name [= true] - true for full name, false for short username
+	* @return string|null - resolved name, or null if not found
 	*/
 	public static function get_user_name_by_user_id(int $userID, bool $full_name=true) : ?string {
 
@@ -2189,7 +2782,15 @@ class section_record {
 
 	/**
 	* JSON_SERIALIZE
-	* @return mixed
+	* Returns the object's public properties as an associative array suitable for
+	* json_encode(), omitting null values to keep API payloads compact.
+	*
+	* The null filter replicates the behaviour of PHP dynamic properties (pre-8.2)
+	* where unset dynamic properties were naturally absent from serialisation.
+	* Null values excluded here include unset optional state flags such as
+	* $permissions (not set until get_permissions() is called).
+	*
+	* @return mixed - associative array of non-null public properties
 	*/
 	public function jsonSerialize() : mixed {
 

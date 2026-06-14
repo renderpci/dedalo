@@ -2,11 +2,47 @@
 /* global */
 /*eslint no-undef: "error"*/
 
+/**
+* KEYBOARD
+* Keyboard utility constants and helpers for Dédalo's browser-side modules.
+*
+* Exports:
+* - keyboard_codes {Object} — maps the DOM KeyboardEvent.code string (e.g. 'KeyA',
+*   'ArrowLeft') to the corresponding KeyboardEvent.key value (e.g. 'a', 'ArrowLeft').
+*   Used throughout the UI layer to normalize keyboard event handling without relying
+*   on deprecated keyCode integers.
+*
+* Note: the activate_window_keydown_DES function (below) was an early centralised
+* global-keydown dispatcher. It has been commented out and superseded by per-component
+* event handling, but is retained for reference until formally removed.
+*/
+
 
 
 /**
 * KEYBOARD_CODES
-* 	Object with all keys definition
+* Lookup table from DOM KeyboardEvent.code → KeyboardEvent.key value.
+*
+* Keys in this object use the W3C "physical key" identifier (e.g. 'KeyA', 'Digit0',
+* 'ArrowLeft') as returned by KeyboardEvent.code, which is layout-independent. The
+* corresponding value is the logical character or named key string, matching what
+* KeyboardEvent.key would return on a standard US-QWERTY keyboard.
+*
+* Design notes:
+* - Left and right variants of modifier keys (Shift, Control, Alt, Meta) share the
+*   same key value (e.g. both 'ShiftLeft' and 'ShiftRight' map to 'Shift'), so
+*   callers that only care about the logical modifier can look up either side.
+* - Numpad digits (Numpad0–Numpad9) map to the same digit strings as the main row
+*   (Digit0–Digit9); callers that need to distinguish physical location should use
+*   the object key directly rather than its value.
+* - 'Space' maps to an empty string '' rather than ' ' — consumers must handle this
+*   case explicitly if they need to detect the space bar by value.
+*
+* Usage example:
+*   document.addEventListener('keydown', (e) => {
+*     const key_value = keyboard_codes[e.code]; // undefined when code not listed
+*     if (key_value === 'Enter') { ... }
+*   });
 */
 export const keyboard_codes = {
 	Backspace		: 'Backspace',
@@ -118,7 +154,17 @@ export const keyboard_codes = {
 
 /**
 * ACTIVATE_WINDOW_KEYDOWN_DES
-* @return bool
+* (!) Dead code — commented out. Superseded by per-component keyboard handling.
+*
+* Registered a single global 'keydown' listener on window and dispatched
+* keyboard shortcuts for the paginator arrows, debug-info toggle (Ctrl+D),
+* ontology documentation viewer (Ctrl+O), inspector sidebar (Ctrl+I),
+* filter panel (Ctrl+F), stats panel (Ctrl+S), search submission (Enter),
+* and ESC to deselect components / close menus / reset thesaurus highlights.
+*
+* @returns {undefined} the outer function registers an event listener and
+*   returns nothing; individual cases inside the listener called return false
+*   to cancel the default browser behaviour for that key.
 */
 	// export const activate_window_keydown_DES = function() {
 

@@ -78,6 +78,24 @@ export const component_geolocation = function(){
 			self.theme_observer.disconnect()
 			self.theme_observer = null
 		}
+		// disconnect resize observers (created per content_value render)
+		if (Array.isArray(self.resize_observers)) {
+			self.resize_observers.forEach(observer => observer.disconnect())
+			self.resize_observers = []
+		}
+		// release the Leaflet map: it holds tile layers, DOM and many self.map.on(...)
+		// handlers that close over self. Without this the whole instance graph leaks.
+		if (self.map) {
+			try {
+				self.map.off()
+				self.map.remove()
+			} catch (e) {
+				console.warn('component_geolocation destroy: error removing map', e)
+			}
+			self.map = null
+			self.tile_layer = null
+			self.FeatureGroup = {}
+		}
 		return common.prototype.destroy.call(self, delete_self, delete_dependencies, remove_dom)
 	}
 	component_geolocation.prototype.refresh				= common.prototype.refresh
@@ -489,9 +507,9 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 		self.current_value[key].lat		= data.lat
 		self.current_value[key].lon		= data.lon
 		self.current_value[key].zoom	= data.zoom
-		if (data.alt) {
-			self.current_value[key].alt	= data.alt
-		}
+		// use != null so a valid altitude of 0 is stored and an explicit null clears it
+		// (the previous truthiness check silently dropped both 0 and null).
+		self.current_value[key].alt		= (data.alt != null) ? data.alt : null
 
 	// track changes in self.data.changed_data
 		// (!) DISABLED because, when changing the position of the map, it is not saved unintentionally.
@@ -1258,8 +1276,8 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 	const caller = options.caller
 
 	// check if the caller has defined 'target_geolocation_tipo' component in hide of rqo
-	const target_geolocation_tipo = caller.request_config_object.hide?.ddo_map.find(
-		el => el.role === 'target_geolocation_tipo').tipo
+	const target_geolocation_tipo = caller.request_config_object.hide?.ddo_map?.find(
+		el => el.role === 'target_geolocation_tipo')?.tipo
 		|| 'hierarchy31' // Default geolocation map in thesarus
 
 	const original_value = caller.data.entries

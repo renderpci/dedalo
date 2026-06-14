@@ -4,6 +4,38 @@
 
 
 
+/**
+* PAGE
+* Top-level application shell that orchestrates the Dédalo single-page application (SPA).
+*
+* Responsibilities:
+* - Bootstraps the page on first load: calls the PHP `start` API action, hydrates
+*   `page_globals` environment variables, and sets `self.context` from the API response.
+* - Manages the active page element (section, area, tool) lifecycle — instantiating,
+*   rendering, and destroying instances on each menu-driven navigation.
+* - Subscribes to application-wide events (user_navigation, activate_component,
+*   dedalo_notification, render_page, render_instance, notification, quit,
+*   change_lang, api_response_errors) and dispatches to the correct handler.
+* - Owns global keyboard shortcuts (Escape, ArrowLeft/Right with Shift, Ctrl+I, Enter).
+* - Registers itself as `window.dd_page` so other modules can reach the shell without
+*   an ES-module import cycle.
+*
+* Prototype methods are mixed in from:
+*   - render_page.prototype.edit  — builds the page DOM wrapper
+*   - common.prototype.render     — shared render orchestration
+*   - common.prototype.refresh    — shared rebuild-from-existing-context cycle
+*   - common.prototype.destroy    — base teardown (overridden locally to also remove
+*                                   global window/document listeners)
+*
+* `self.context` is an Array of context objects, each describing a top-level page
+* element (menu, section, tool, …). On navigation the array is pruned to keep only
+* static elements (menu) plus the newly requested source.
+*
+* Main exports: {page} constructor, {instantiate_page_element} helper.
+*/
+
+
+
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -29,6 +61,19 @@
 
 /**
 * PAGE
+* Page shell constructor. Declares the instance properties that every page instance
+* carries; all meaningful initialisation is deferred to `init()` and `build()`.
+*
+* Properties declared here (populated during init/build):
+*   id                       — unique instance identifier (set by common infrastructure)
+*   model                    — always 'page'
+*   mode                     — active rendering mode; currently always 'edit'
+*   node                     — root HTMLElement created by render_page.prototype.edit
+*   ar_instances             — Array of active child instances (menu, section, tools, …)
+*   context                  — Array of context objects received from the PHP API
+*   status                   — lifecycle string: 'initializing' | 'initialized' | 'building' | 'built' | 'rendered'
+*   events_tokens            — Array of event_manager subscription tokens for later unsubscription
+*   last_dedalo_notification — most-recently received dedalo_notification payload {Object}
 */
 export const page = function () {
 
@@ -48,7 +93,8 @@ export const page = function () {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend page with shared prototype methods from render_page and common modules.
+* Individual method docs live in their respective source files.
 */
 // prototypes assign
 	page.prototype.edit		= render_page.prototype.edit
@@ -60,11 +106,15 @@ export const page = function () {
 
 /**
 * RESTORE_SECTION_SELECTION
-* Reads local_db last_section_selection for a given section_tipo
-* and re-activates the matching component if found.
-* Called on full page render and on section re-render after pagination.
-* @param string section_tipo
-* @return bool
+* Reads local_db `last_section_selection_<section_tipo>` and re-activates the
+* matching component if it is present in the current instance list.
+*
+* This preserves the user's component selection across pagination and full-page
+* re-renders. It is called after `render_page` and after `render_instance` events
+* (see the handlers registered in `init`).
+*
+* @param {string} section_tipo - Ontology tipo of the section whose selection to restore
+* @returns {Promise<boolean>} true when a component was found and activated, false otherwise
 */
 page.prototype.restore_section_selection = async function(section_tipo) {
 
@@ -97,8 +147,32 @@ page.prototype.restore_section_selection = async function(section_tipo) {
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Wires up the application shell: sets instance properties, subscribes to all
+* page-level events, attaches global DOM listeners, and applies platform CSS.
+*
+* Must be called exactly once per page instance. A guard (`this.is_init`) detects
+* and logs duplicate calls — an alert is shown in DEBUG mode because duplicates
+* usually indicate a runaway event subscription.
+*
+* Event subscriptions registered here (tokens stored in `self.events_tokens`):
+*   'user_navigation'      → delegates to the private `navigate()` function
+*   'activate_component'   → fires lock-component worker request when
+*                            DEDALO_LOCK_COMPONENTS is enabled
+*   'dedalo_notification'  → calls render_notification_msg via idle callback
+*   'render_page'          → restores section selection after full renders
+*   'render_instance'      → restores section selection after pagination
+*   'notification'         → prepends inspector bubble to bubbles_notification_container
+*   'quit'                 → calls delete_cache to clear local storage
+*   'change_lang'          → calls delete_cache so stale translations are dropped
+*   'api_response_errors'  → shows re-login modal on 'not_logged' error
+*
+* After subscribing, `add_events()` attaches global window/document listeners and
+* `set_custom_css()` applies OS-specific body classes.
+*
+* @param {Object} options - Initialisation options
+* @param {Array}  options.context   - Array of page context objects (section, menu, …)
+* @param {Object} options.menu_data - Pre-fetched menu data (may be null on first load)
+* @returns {Promise<boolean>} always true on success; false only on duplicate-init guard
 */
 page.prototype.init = async function(options) {
 
@@ -335,9 +409,28 @@ page.prototype.init = async function(options) {
 
 /**
 * BUILD
-* (!) Note that normally page only needs load once. Later, only sections/areas will be built
-* @param bool autoload = false
-* @return bool
+* Fetches and validates the initial page context from the PHP API when `autoload`
+* is true (first page load), or verifies that a pre-supplied context is valid.
+*
+* When `autoload === true` the method:
+* 1. Reads URL search params to determine the `with_menu` flag (defaults to true
+*    when the `menu` param is absent).
+* 2. Sends a `start` action to the default API to receive context + environment.
+* 3. Calls `set_environment()` to inject API-supplied vars (`page_globals`,
+*    `get_label`, `DEDALO_ENVIRONMENT`, etc.) into the window scope.
+* 4. Validates the response at three levels: missing result, missing environment,
+*    and missing DEDALO_ENVIRONMENT global — each pushes a descriptive entry to
+*    `page_globals.api_errors` and returns false so the caller can render an error page.
+* 5. Sets `self.context` and `self.data` from the validated response.
+*
+* When `autoload === false` the caller is expected to have already set `self.context`
+* (e.g. from a prior navigation cycle). This path only validates that context exists.
+*
+* (!) Calling `build(autoload=true)` when `self.context` already exists is treated
+* as an error: the call is logged and ignored.
+*
+* @param {boolean} [autoload=false] - When true, fetches context from the API
+* @returns {Promise<boolean>} true when build succeeded; false on any error
 */
 page.prototype.build = async function(autoload=false) {
 
@@ -498,16 +591,38 @@ page.prototype.build = async function(autoload=false) {
 
 /**
 * NAVIGATE
-* Used by menu navigation
-* Is called by page init event 'user_navigation'
-* @param object user_navigation_options
-* {
-* 	source: object {config:null, mode:"list", model:"section", tipo:"rsc170"},
-* 	sqo: object|null,
-* 	event_in_history: bool
-* }
-* @return promise
-* 	resolve string new_page_element_instance id
+* Handles user-initiated navigation events published as `user_navigation`.
+* Replaces the active page element (section, area, tool) without reloading
+* the full page — the menu and other `base_models` instances are preserved.
+*
+* Flow:
+* 1. Prompts for unsaved data confirmation; aborts navigation on cancel.
+* 2. Acquires an in-progress navigation lock to prevent concurrent navigations.
+* 3. Adds a `.loading` CSS class to the content area while work is in progress.
+* 4. Cancels any active stream readers (e.g. SSE diffusion streams).
+* 5. Injects `sqo` into `source.request_config` when an SQO is supplied but no
+*    request_config exists, allowing the new section to start with a pre-set filter.
+* 6. Calls `instantiate_page_element()` to load/init the new page element instance.
+* 7. Prunes `self.context` and `self.ar_instances` to only `base_models` + new source,
+*    destroying instances that are no longer needed to free memory and event subscriptions.
+* 8. Calls `dd_garbage_collector()` to prune excess CSS injected rules.
+* 9. Calls `self.refresh()` to re-render the content area.
+* 10. Updates the browser history state via `push_browser_history()` unless the event
+*    originated from a browser back/forward button (`event_in_history === true`).
+* 11. Releases component locks on the previous section via a background worker request.
+*
+* This function is private (not exported) and is always invoked with `this` bound to
+* the page instance by the `user_navigation` event handler in `init()`.
+*
+* @param {Object} user_navigation_options - Navigation payload from event_manager
+* @param {Object}       user_navigation_options.source             - Context descriptor of the target page element
+* @param {string}       user_navigation_options.source.tipo        - Ontology tipo of the element (e.g. 'rsc170')
+* @param {string}       user_navigation_options.source.model       - Model name (e.g. 'section', 'menu')
+* @param {string}       user_navigation_options.source.mode        - Render mode ('list'|'edit'|…)
+* @param {Object|null}  [user_navigation_options.sqo=null]         - Search query object to pre-load
+* @param {boolean}      [user_navigation_options.event_in_history] - true when triggered by popstate (back/fwd button)
+* @returns {Promise<string|boolean>} Resolves to the new page element instance id on success,
+*                                    or false on failure / user cancellation
 */
 const navigate = async function(user_navigation_options) {
 
@@ -552,8 +667,14 @@ const navigate = async function(user_navigation_options) {
 	// stream_readers. If any stream reader is active, stop it
 		if (page_globals.stream_readers && page_globals.stream_readers.length) {
 			page_globals.stream_readers.forEach((el)=>{
-				el.cancel('abort')
+				try {
+					el.cancel('abort')
+				} catch (e) {
+					// reader may already be closed; ignore
+				}
 			})
+			// clear so already-cancelled readers are not re-cancelled on next navigation
+			page_globals.stream_readers.length = 0
 		}
 
 	// source
@@ -725,8 +846,21 @@ const navigate = async function(user_navigation_options) {
 
 /**
 * DESTROY
-* Extend common destroy to remove global window/document events
-* @return promise
+* Extends common.prototype.destroy to also unregister global window/document
+* event listeners that were attached in `add_events()`.
+*
+* This override is necessary because the page shell attaches listeners directly
+* to `window` and `document` (popstate, beforeunload, keydown, mousedown), which
+* are not tracked by the standard `events_tokens` mechanism and would otherwise
+* leak across re-mounts.
+*
+* Delegates the remainder of the teardown — instance list pruning, ar_instances
+* destruction, event_manager unsubscription — to `common.prototype.destroy`.
+*
+* @param {boolean} [delete_self=true]         - Remove this instance from the instances registry
+* @param {boolean} [delete_dependencies=false] - Also destroy child instances in ar_instances
+* @param {boolean} [remove_dom=false]          - Remove self.node from the DOM
+* @returns {Promise<*>} Result of common.prototype.destroy
 */
 page.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 
@@ -754,8 +888,31 @@ page.prototype.destroy = async function(delete_self=true, delete_dependencies=fa
 
 /**
 * ADD_EVENTS
-* Set page common events like 'keydown'
-* @return void
+* Attaches the global window- and document-level event listeners for the page shell.
+* Handlers are stored as named properties (e.g. `self.popstate_handler`) so that
+* `destroy()` can unregister them precisely without removing unrelated listeners.
+*
+* Registered listeners:
+*   window 'popstate'      — Re-publishes `user_navigation` from browser history state
+*                            when the user clicks Back/Forward; marks the event as
+*                            `event_in_history: true` so `navigate()` skips pushing a
+*                            duplicate history entry.
+*   window 'beforeunload'  — Prompts the user before leaving if `window.unsaved_data`
+*                            is true (component_text_area and others set this flag).
+*                            Uses `event.returnValue = true` to trigger the browser's
+*                            built-in "changes may not be saved" dialog (text cannot be
+*                            customised in modern browsers).
+*   document 'keydown'     — Application-wide keyboard shortcuts:
+*                              Escape      → close active modal / deactivate active component
+*                              Shift+Left  → paginator previous page
+*                              Shift+Right → paginator next page
+*                              Ctrl+I      → toggle inspector panel
+*                              Enter       → execute section search or open search panel
+*                                            (blocked inside modals and paginator inputs)
+*   document 'mousedown'   — Calls `deactivate_components()` to blur the active component
+*                            when the user clicks outside it.
+*
+* @returns {void}
 */
 page.prototype.add_events = function() {
 
@@ -914,12 +1071,39 @@ page.prototype.add_events = function() {
 
 /**
 * INSTANTIATE_PAGE_ELEMENT
-* Creates the instance of current element, usually a section or menu
-* calling instance.get_instance(...). This function only load and init the instance file
-* @param object self (instance)
-* @param object source
-* 	Could be full context of element return by start API function or an basic source on page navigation
-* @return object instance
+* Loads, configures, and returns a page-element instance (section, menu, tool, area, …)
+* using the shared `get_instance()` registry. Does not build or render the instance.
+*
+* The function extracts all relevant options from `source` — tipo, model, mode, lang,
+* config, request_config, view, properties — and translates them into the standard
+* `instance_options` object expected by `get_instance()`.
+*
+* Special cases handled:
+*   id_variant  — propagated from the page instance when present, allowing tools
+*                 (e.g. tool_transcription) to isolate their child instances.
+*   menu model  — forces `id_variant = page_globals.user_id` to prevent id conflicts
+*                 when multiple users share a session context.
+*   config.source_section_tipo — used by section tools (area_thesaurus, etc.) to set
+*                 `id_variant` so the tool instance is keyed to its owning section tipo.
+*   url_vars.session_key / session_save — URL params forwarded to the instance for
+*                 session-based data pre-loading.
+*
+* (!) Do not overwrite an existing `instance.caller`; tool instances like
+* tool_transcription set their own caller, and overwriting it would break their context.
+*
+* @param {Object} self   - The page instance (used as caller and for id_variant)
+* @param {Object} source - Context descriptor for the element to instantiate
+* @param {string}        source.tipo           - Ontology tipo (e.g. 'rsc170')
+* @param {string}        [source.section_tipo] - Parent section tipo (defaults to tipo)
+* @param {string}        source.model          - Model name ('section' | 'menu' | 'tool' | …)
+* @param {string|null}   [source.section_id]   - Section record id (null for list mode)
+* @param {string}        source.mode           - Render mode ('list' | 'edit' | …)
+* @param {string}        source.lang           - Active language code
+* @param {Object|null}   [source.config]       - Tool/area configuration object
+* @param {Array|null}    [source.request_config] - Request config descriptors
+* @param {string|null}   [source.view]         - Requested render view
+* @param {Object|null}   [source.properties]   - Element-level property overrides
+* @returns {Promise<Object|null>} The initialised instance, or null if get_instance fails
 */
 export const instantiate_page_element = async function(self, source) {
 
@@ -1007,10 +1191,15 @@ export const instantiate_page_element = async function(self, source) {
 
 /**
 * UPDATE_CSS_FILE
-* Force load cached css file
-* @param string sheet_name
-* 	Sample: 'main'
-* @return bool
+* Forces the browser to reload a `<link>` stylesheet by appending a timestamp
+* query-string (`?v=<timestamp>`) to the href, bypassing the browser cache.
+*
+* Only operates on the first matched stylesheet; subsequent calls on an already-
+* versioned URL (href already contains '?') are no-ops to avoid appending multiple
+* parameters on repeated calls.
+*
+* @param {string} sheet_name - Substring to match in the stylesheet href (e.g. 'main')
+* @returns {boolean} true when the href was updated; false when not found or already versioned
 */
 const update_css_file = function(sheet_name) {
 
@@ -1033,8 +1222,16 @@ const update_css_file = function(sheet_name) {
 
 /**
 * SET_CUSTOM_CSS
-* Set custom specific CSS based on operating system, browser, etc
-* @return void
+* Detects the host operating system via `navigator.userAgent` and adds a
+* corresponding class to `document.body` (`os-windows` or `os-macintosh`).
+*
+* These classes allow `general.less` (and component LESS files) to apply
+* OS-specific overrides — for example, Windows needs custom scrollbar widths
+* and Macintosh gets thinner native scrollbars.
+*
+* Early-return pattern: only the first matching OS class is applied.
+*
+* @returns {void}
 */
 const set_custom_css = function () {
 
@@ -1063,12 +1260,11 @@ const set_custom_css = function () {
 
 /**
 * SET_DOCUMENT_TITLE
-* Change the window title
-* Used by section and area to label the browser window
-* see section.js
-* @param string title
-* 	Sample: '22 - Oral history - oh1'
-* @return bool
+* Updates the browser window / tab title.
+* Called by section and area instances to reflect the currently open record or view.
+*
+* @param {string} title - New window title (e.g. '22 - Oral history - oh1')
+* @returns {boolean} always true
 */
 page.prototype.set_document_title = function (title) {
 
@@ -1080,11 +1276,19 @@ page.prototype.set_document_title = function (title) {
 
 
 /**
-* DD_GARBAGE_COLLECTORç
-* This function serves as a memory management tool for CSS rule injection systems.
-* It prevents memory bloat by automatically removing CSS rules when the collection
-* grows beyond a specified limit, helping maintain optimal application performance.
-* @return void
+* DD_GARBAGE_COLLECTOR
+* Clears all dynamically injected CSS rules when the runtime rule-set exceeds
+* `max_size` (currently 500 entries).
+*
+* Background: `css.js` injects per-element style rules (colours, widths, …) via
+* `CSSStyleSheet.insertRule`. These accumulate across navigations and can cause
+* measurable memory pressure. Pruning the entire set on navigation is safe because
+* the rules are regenerated on the next render cycle.
+*
+* Runs inside `dd_request_idle_callback` so it does not block the navigation paint.
+* Called by `navigate()` after destroying stale instances.
+*
+* @returns {void}
 */
 const dd_garbage_collector = function () {
 
@@ -1109,10 +1313,13 @@ const dd_garbage_collector = function () {
 
 /**
 * DELETE_CACHE
-* Removes all page local cache data.
-* It is fired when login 'quit' event is published (subscription in page init),
-* or menu changes lang: 'change_lang' event.
-* @return void
+* Removes all page-level local-DB cache entries whose key starts with `page_cache_`.
+*
+* Subscribed to the `quit` (user logout) and `change_lang` events in `init()`.
+* Clearing on language change is essential so that stale translated labels are not
+* served from the local cache after the language switch.
+*
+* @returns {Promise<void>}
 */
 page.prototype.delete_cache = async function () {
 

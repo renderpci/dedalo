@@ -4,6 +4,20 @@
 
 
 
+/**
+* NOTIFICATIONS
+* Transient UI notification bubbles surfaced after server interactions.
+*
+* Exports `render_node_info`, which creates a self-contained "bubble" DOM
+* element colour-coded by outcome type ('save', 'success', 'warning', 'error').
+* Callers append the returned node to the document; the module handles
+* auto-dismissal via a CSS fade-out animation and click-to-dismiss.
+*
+* The helper `append_text_with_breaks` (module-private) is the only safe way
+* to inject user-visible messages into the DOM — it prevents XSS by never
+* calling innerHTML or insertAdjacentHTML.
+*/
+
 //import
 	import {ui} from '../ui.js'
 
@@ -16,9 +30,15 @@
 * Splits the input on `<br>` literals (the only HTML token the previous code relied on)
 * and emits text nodes + <br> elements so that any other HTML/script payload is rendered
 * as text rather than parsed.
-* @param HTMLElement target
-* @param string text
-* @param string position 'afterbegin' | 'beforeend'
+*
+* Only `<br>` / `<br/>` / `<br />` (case-insensitive) are treated as markup;
+* every other character — including `<script>`, attribute injections, etc. — is
+* emitted as an inert text node.
+*
+* @param {HTMLElement} target - the container element to receive content
+* @param {string} text - message string, may contain `<br>` separators
+* @param {string} position - insertion point: 'afterbegin' (prepend) or 'beforeend' (append)
+* @returns {void}
 */
 function append_text_with_breaks(target, text, position = 'beforeend') {
 	const frag = document.createDocumentFragment()
@@ -38,11 +58,34 @@ function append_text_with_breaks(target, text, position = 'beforeend') {
 
 /**
 * RENDER_NODE_INFO
-* Renders a node with the information sent by the server when the components save, if all go ok it will be green with the msg from server if no it will be red.
-* @param options object
-* 	Has the instance and the api_response from the 'save' event sent by the components
-* @return node node_info
-* with the message and the node css class of the server response.
+* Builds and returns a transient notification bubble DOM element that reflects
+* the outcome of a server operation (typically a component save).
+*
+* The returned `<div class="bubble">` is unstyled at this point — callers are
+* responsible for appending it to the document at the appropriate position (e.g.
+* alongside the component or in a global toast container). Once in the DOM the
+* element self-manages: it auto-dismisses after `remove_time` milliseconds via a
+* CSS 'fade-out' animation, and it removes itself immediately on click.
+*
+* Type dispatch:
+*   'save'    (default) — colour and text derived from `api_response.result`.
+*                         Green ('ok' class) on success; red ('error' class) on failure.
+*                         Error details from api_response.error + api_response.msg are
+*                         appended as additional lines. Falls back to 'warning' when
+*                         api_response is absent (e.g. the save short-circuited client-side).
+*   'success' — green bubble; caller supplies `msg` and optionally `remove_time`.
+*   'warning' — yellow bubble; caller supplies `msg` and optionally `remove_time`.
+*   'error'   — red bubble; caller supplies `msg` and optionally `remove_time`.
+*
+* @param {Object} options - configuration bag
+* @param {Object} [options.instance] - component or section instance; used for label/model fallback
+* @param {Object|null} [options.api_response] - server API response object (result, msg, error fields)
+* @param {string} [options.msg] - message text for non-save types, or fallback text
+* @param {string} [options.type='save'] - bubble variant: 'save' | 'success' | 'warning' | 'error'
+* @param {number} [options.remove_time] - auto-dismiss delay; values >1000 are treated as
+*   milliseconds, smaller positive values are treated as seconds (multiplied by 1000).
+*   Omit or pass 0/null to suppress auto-dismissal for that type.
+* @returns {HTMLElement} the populated bubble element (not yet attached to the document)
 */
 export function render_node_info(options) {
 
@@ -51,6 +94,8 @@ export function render_node_info(options) {
 		const api_response	= options.api_response // optional object|null
 		const msg			= options.msg // string optional event message
 		const type			= options.type || 'save'
+		// remove_time normalisation: values >1000 are already in ms; smaller positive
+		// values are interpreted as whole seconds and converted to ms.
 		const remove_time	= options.remove_time > 1000
 			? options.remove_time // passed milliseconds as 15000
 			: options.remove_time
@@ -64,6 +109,9 @@ export function render_node_info(options) {
 		})
 
 	// fade_away
+	// Schedules the bubble for removal after `delay` ms by appending the
+	// 'fade-out' CSS class (which triggers a CSS animation). The node is
+	// actually removed in the animationend handler to avoid a visible pop.
 		const fade_away = (bubble, delay = 10000) => {
 
 			// remove node on timeout
@@ -80,6 +128,8 @@ export function render_node_info(options) {
 		}
 
 	// remove node on click
+	// stopPropagation prevents the click from bubbling to parent listeners
+	// (e.g. row-selection handlers in list views).
 		const click_handler = (e) => {
 			e.stopPropagation()
 			node_info.remove()
@@ -131,6 +181,8 @@ export function render_node_info(options) {
 					const text = `${get_label.fail_to_save || 'Failed to save'} <br>${instance.label}`
 					append_text_with_breaks(node_info, text, 'afterbegin')
 					// error msg
+					// Collect error detail lines, deduplicating api_response.msg
+					// against the error object's own message to avoid repetition.
 						const ar_msg = []
 						if (api_response.error) {
 							// Typically, api_response.error is an Error object. Extract the message if it exists.
@@ -149,6 +201,8 @@ export function render_node_info(options) {
 					// OK response
 
 					node_info.classList.add('ok')
+					// instance.model is used as a label fallback when the component
+					// has not yet resolved a human-readable label.
 					const text = `${instance.label || instance.model} ${get_label.saved || 'Saved'}`
 					append_text_with_breaks(node_info, text, 'afterbegin')
 
@@ -158,6 +212,8 @@ export function render_node_info(options) {
 			}else{
 
 				// error on save (saved false case)
+				// api_response is null/undefined — the save was rejected before reaching
+				// the server or was short-circuited by client-side validation.
 
 				node_info.classList.add('warning')
 				const text = `${msg} <br>${instance.label}`

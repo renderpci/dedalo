@@ -294,3 +294,15 @@ See [breaking_change_detection.md](breaking_change_detection.md) for full docume
 - Data Model Change Detection
 - CI/CD integration
 - How to update baselines for intentional changes
+
+## Performance Metrics
+
+Dédalo records lightweight per-subsystem performance metrics (search, ontology, DB reads/writes, tools, datalist, save, …) plus per-request monitoring, so developers can confirm the main processes run within reasonable timeframes and detect bottlenecks.
+
+See [metrics.md](metrics.md) for full documentation on:
+
+- The `metrics` aggregation class and the `performance_monitor` request monitor
+- Metric naming convention and the recording API (`add_metric`, `inc`, `add_time_ms`, `observe_max`, `set`)
+- What is measured per subsystem, including read/write split and tail latency (`*_max_time` / `*_slow_calls`)
+- Reading the debug-log breakdown and the monitor configuration
+- How to add a new metric

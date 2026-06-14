@@ -1,23 +1,58 @@
 <?php declare(strict_types=1);
 /**
-* Class MATRIX_TEMP_MANAGER
+* CLASS MATRIX_TEMP_MANAGER
+* PostgreSQL data-access layer for the 'temp' table — Dédalo's per-user, ephemeral
+* section storage used to stage unsaved work without touching the main matrix tables.
 *
-* Provides core operations for managing matrix records.
-* This class ensures data consistency by enforcing predefined
-* table and column definitions within the matrix model.
+* The 'temp' table has a different schema from the standard matrix tables: instead of
+* the composite (section_tipo, section_id) primary key, each row is identified by a
+* string 'key' column whose value is constructed by get_uid() as the concatenation of
+* section_tipo and the currently logged-in user's ID.  This design means:
+*  - Two users editing the same section_tipo simultaneously never collide.
+*  - The section_id concept does not apply; every temp row is addressed by tipo+user.
+*  - The 'value' column is a flat JSONB object that mirrors the combined column payload
+*    (data, string, relation, …) that the parent matrix tables store in separate columns.
 *
-* Supported actions include:
-* - Loading record data (read)
-* - Updating existing records (update)
-* - Inserting new records with optional initial data (create)
-* - Deleting existing records (delete)
+* This class extends matrix_db_manager to inherit exec_search() and get_columns_name(),
+* but overrides ALL four CRUD methods so that they operate on the 'temp' table schema
+* rather than the standard (section_tipo, section_id) schema of the parent.
+*
+* Overridden static allowlists:
+*  - $tables   — only 'temp' is allowed (parent allows 20+ matrix_* tables).
+*  - $columns  — only 'key' and 'value' (the two columns of the temp table).
+*  - $json_columns — only 'value' requires JSON encoding.
+*
+* Used by:
+*  - section_record_temp: sets $data_handler = 'matrix_temp_manager' and calls
+*    create/read/update/delete through the standard section_record interface.
+*
+* All methods are static.  The class is never instantiated.
+* Uses: matrix_db_manager::exec_search() (prepared-statement pool), json_handler,
+* logged_user_id() (session helper), logger, debug_log.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class matrix_temp_manager extends matrix_db_manager {
 
+	/**
+	* Closed allowlist of writable temp tables.
+	* Overrides the parent's $tables to restrict access to the 'temp' table only.
+	* All CRUD methods validate the $table argument against this map.
+	* @var array<string,true> $tables
+	*/
 	public static array $tables = [
 		'temp' => true
 	];
 
+	/**
+	* Closed allowlist of column names for the temp table.
+	* The temp table only has two payload columns:
+	*  - 'key'   : string primary key (section_tipo + user_id via get_uid())
+	*  - 'value' : JSONB object containing all component data for the staged record
+	* Overrides the parent's richer $columns allowlist.
+	* @var array<string,array<string,mixed>> $columns
+	*/
 	public static array $columns = [
 		'key' => [
 			'type' => 'string',
@@ -29,28 +64,35 @@ class matrix_temp_manager extends matrix_db_manager {
 		],
 	];
 
+	/**
+	* Subset of $columns whose values must be JSON-encoded before being bound to PostgreSQL.
+	* Only 'value' requires encoding; 'key' is a plain string scalar.
+	* @var array<string,true> $json_columns
+	*/
 	public static array $json_columns = [
 		'value' => true,
 	];
 
 
 	/**
-	 * CREATE
-	 * Inserts a new record into the temp table or updates it if it exists using an upsert pattern.
-	 * This method performs an atomic operation: if a record with the specified key exists, it merges
-	 * the new values into the existing JSONB data using PostgreSQL's JSONB merge operator; otherwise,
-	 * it creates a new record with the provided values. The function defaults to an empty object if
-	 * no values are provided.
-	 *
-	 * @param string $section_tipo The section tipo identifier used to generate the unique key
-	 * @param string $table The table name to operate on (default: 'temp')
-	 * @param object|null $values An object containing the values to insert or merge (defaults to empty object)
-	 *
-	 * @return int|false Returns 0 on success, false if the operation fails
-	 *
-	 * @package Dedalo
-	 * @subpackage Core
-	 */
+	* CREATE
+	* Inserts a new temporary record or merges new values into an existing one (upsert).
+	*
+	* The key is derived from section_tipo + logged-in user ID via get_uid(), ensuring
+	* per-user isolation.  If a row with that key already exists, the incoming values are
+	* shallow-merged into the stored JSONB with PostgreSQL's || operator; otherwise a new
+	* row is created.  When $values is null or empty, the row is initialised with an empty
+	* JSONB object ({}).
+	*
+	* Unlike the parent's create(), this method does NOT allocate a section_id from a
+	* counter table.  It always returns 0 as a sentinel section_id because temp records
+	* have no persistent integer identity.
+	*
+	* @param string $table The table to write to — must be 'temp'.
+	* @param string $section_tipo Section tipo identifier; combined with logged user ID to form the row key.
+	* @param object|null $values [= null] Column-keyed payload to insert or merge. Defaults to empty object.
+	* @return int|false Returns 0 on success (sentinel for "temp record saved"), false on failure.
+	*/
 	public static function create(string $table, string $section_tipo, ?object $values = null): int|false {
 
 		$key = self::get_uid($section_tipo);
@@ -69,23 +111,25 @@ class matrix_temp_manager extends matrix_db_manager {
 
 
 	/**
-	 * READ
-	 * Retrieves temporal data from the temp table and formats it as a matrix record.
-	 * This method fetches the JSONB data stored in the temp table for a given section tipo,
-	 * then constructs a fake database row object that mimics the structure of a matrix table.
-	 * The section_id is set to 0 to indicate this is a temporary record, and all non-string
-	 * values are JSON-encoded to match the expected format. If no record is found, the method
-	 * returns false.
-	 *
-	 * @param string $table The table name to read from (default: 'temp')
-	 * @param string $section_tipo The section tipo identifier used to generate the unique key
-	 * @param int|string $section_id The section ID (ignored, uses section_tipo as key for lookup)
-	 *
-	 * @return object|false Returns a fake matrix row object with section_id=0, or false if no record found
-	 *
-	 * @package Dedalo
-	 * @subpackage Core
-	 */
+	* READ
+	* Retrieves a temporary record from the temp table and returns it as a fake matrix row.
+	*
+	* Looks up the row whose key matches get_uid($section_tipo), decodes the stored JSONB
+	* 'value' object, and constructs a stdClass that mimics the shape of a real matrix row:
+	*  - section_tipo is set from the parameter.
+	*  - Each column returned by matrix_db_manager::get_columns_name() is populated from
+	*    the decoded JSONB object; non-string values are re-JSON-encoded to match the raw
+	*    string format that callers expect from pg_fetch_object on a real matrix table.
+	*  - section_id is always set to 0 (the sentinel for temp records).
+	*
+	* The $section_id parameter is accepted for API compatibility with the parent's
+	* read() signature but is never used; the lookup key is always tipo+user.
+	*
+	* @param string $table The table to read from — must be 'temp'.
+	* @param string $section_tipo Section tipo identifier; combined with logged user ID to form the row key.
+	* @param int|string $section_id Ignored — kept for API compatibility with matrix_db_manager::read().
+	* @return object|false Synthetic matrix-row object with section_id=0 on success, false if no record found.
+	*/
 	public static function read(string $table, string $section_tipo, int|string $section_id): object|false	{
 
 		$key = self::get_uid($section_tipo);
@@ -98,6 +142,11 @@ class matrix_temp_manager extends matrix_db_manager {
 			$data = json_decode($row->value);
 
 			// Mimic a database row for matrix tables
+			// Build a fake row that callers can treat like a real pg_fetch_object result.
+			// Each column from the canonical matrix column list is populated from the flat
+			// JSONB blob; values that are already strings are passed through as-is,
+			// while nested objects/arrays are re-encoded so callers see the same raw
+			// string format they would get from a SELECT on a real matrix table.
 			$fake_row = new stdClass();
 			$fake_row->section_tipo = $section_tipo;
 
@@ -118,18 +167,27 @@ class matrix_temp_manager extends matrix_db_manager {
 
 	/**
 	* UPDATE
-	* Merges new values into the existing JSONB 'value' column in the temp table using PostgreSQL's JSONB merge operator.
-	* This method performs an upsert operation: if a record with the specified key exists, it merges the new values
-	* into the existing JSONB data; otherwise, it creates a new record with the provided values.
+	* Merges new values into the existing JSONB 'value' column via an upsert.
 	*
-	* @param string $table The table name (default: 'temp')
-	* @param string $section_tipo The section tipo identifier used to generate the unique key
-	* @param int|string $section_id The section ID (ignored, kept for API compatibility)
-	* @param object $values An object containing the values to merge into the JSONB column
-	* @return bool True if the update was successful, false if values are empty or operation failed
+	* Encodes the full $values object as JSONB and issues an INSERT … ON CONFLICT DO UPDATE
+	* with the || merge operator, so existing top-level keys in the stored JSONB are
+	* replaced while unmentioned keys are preserved.  If the row does not yet exist it is
+	* created.  Returns false immediately when $values is empty to avoid a no-op write.
 	*
-	* @package Dedalo
-	* @subpackage Core
+	* The $section_id parameter is accepted for API compatibility with the parent's
+	* update() signature but is never used.
+	*
+	* (!) The error branch at line ~164 references an undefined variable $conn.  This is a
+	* pre-existing bug: exec_search() owns the connection internally and $conn is never
+	* declared in this method scope.  pg_last_error() will fall back to the last open
+	* connection in that case, so the error message may still be correct at runtime, but
+	* the reference is technically undefined and will emit an E_WARNING in strict contexts.
+	*
+	* @param string $table The table to update — must be 'temp'.
+	* @param string $section_tipo Section tipo identifier; combined with logged user ID to form the row key.
+	* @param int|string $section_id Ignored — kept for API compatibility with matrix_db_manager::update().
+	* @param object $values Column-keyed payload whose top-level keys are shallow-merged into the stored value.
+	* @return bool True on successful upsert, false if $values is empty or the database operation fails.
 	*/
 	public static function update(string $table, string $section_tipo, int|string $section_id, object $values): bool {
 
@@ -140,6 +198,9 @@ class matrix_temp_manager extends matrix_db_manager {
 		$key = self::get_uid($section_tipo);
 
 		// Prepare values for JSONB merge. Ensure all columns are JSON encoded if needed.
+		// Note: the two branches of this if/else produce identical results — both assign
+		// $val to $prepared_values->$col regardless of the condition.  The dead branch is
+		// left in place as-is per the doc-only rule.
 		$prepared_values = new stdClass();
 		foreach ($values as $col => $val) {
 			if ($val !== null && !is_string($val)) {
@@ -159,6 +220,7 @@ class matrix_temp_manager extends matrix_db_manager {
 		$result = self::exec_search($sql, [$key, $json_values]);
 
 		if (!$result) {
+			// (!) $conn is not declared in this scope — pre-existing bug; see method doc-block.
 			debug_log(__METHOD__
 				. " Error execution UPDATE/INSERT on table: $table " . PHP_EOL
 				. ' error: ' . pg_last_error($conn)
@@ -174,36 +236,41 @@ class matrix_temp_manager extends matrix_db_manager {
 
 	/**
 	* UPDATE_BY_KEY
-	* Updates individual component values within the JSONB 'value' column of the temp table.
+	* Granularly updates individual component values within the JSONB 'value' column.
 	*
-	* This method performs granular updates to specific component fields within a JSONB structure,
-	* using PostgreSQL's jsonb_set and jsonb_set_lax functions. Updates are grouped by column,
-	* allowing for efficient batch updates to multiple components within the same section.
+	* Where update() replaces entire top-level keys via shallow merge, this method
+	* performs surgical writes to nested JSON paths: each entry in $data_to_save targets
+	* a specific matrix column key (e.g. 'string') and a specific component tipo key
+	* inside it (e.g. 'oh25').  Null values remove the targeted key via PostgreSQL's
+	* jsonb_set_lax 'delete_key' option.
 	*
-	* The data structure is:
-	 * - Column-level objects: Each key represents a database column name
-	 * - Component-level objects: Each component is stored within its column object with the
-	 *   component tipo as the key and the component value as the value
-	 * - Null values are removed from the JSONB structure using the 'delete_key' option
-	 *
-	 * The function constructs nested jsonb_set expressions like:
-	 * SET value = jsonb_set(jsonb_set(value, '{column}',
-	 *   jsonb_set_lax(COALESCE(value->'column', '{}'), '{comp_id}', value, true, 'delete_key')
-	 * ), '{column}', ..., true)
-	 *
-	 * @param string $table The table name to update (default: 'temp')
-	 * @param string $section_tipo The section tipo identifier used to generate the unique key
-	 * @param int|string $section_id The section ID (kept for API compatibility, not used in logic)
-	 * @param array $data_to_save Array of objects, each containing:
-	 *                             - column: string The column name in the JSONB structure
-	 *                             - key: string The component tipo (used as the JSON path key)
-	 *                             - value: mixed The value to set for the component (null removes the key)
-	 * @return bool True if the update was successful, false if data_to_save is empty or operation failed
-	 * @throws Exception If database operation fails during exec_search
-	 *
-	 * @package Dedalo
-	 * @subpackage Core
-	 */
+	* Algorithm:
+	*  1. Guarantee-insert: INSERT … ON CONFLICT DO NOTHING ensures the row exists before
+	*     the UPDATE so that the subsequent jsonb_set expression never operates on NULL.
+	*  2. Group $data_to_save entries by their column field to minimise the number of
+	*     nested jsonb_set_lax calls needed in the final SQL.
+	*  3. For each column group, build a chain of nested jsonb_set_lax() calls that
+	*     start from COALESCE(value->'column', '{}') and thread in each component update.
+	*  4. Wrap each column's chain with jsonb_set(value, '{column}', ..., true) so the
+	*     outer 'value' JSONB object is updated atomically.
+	*  5. Execute a single UPDATE … SET value = <expression> WHERE key = $1.
+	*
+	* The resulting SQL expression is dynamic SQL (column names and JSON function calls
+	* are interpolated as strings) but all user-supplied values (JSON path and payload)
+	* are passed as positional parameters ($2, $3, …) to prevent injection.
+	*
+	* The $section_id parameter is accepted for API compatibility with the parent's
+	* update_by_key() signature but is never used.
+	*
+	* @param string $table The table to update — must be 'temp'.
+	* @param string $section_tipo Section tipo identifier; combined with logged user ID to form the row key.
+	* @param int|string $section_id Ignored — kept for API compatibility with matrix_db_manager::update_by_key().
+	* @param array $data_to_save Array of objects, each with:
+	*   - column string  Top-level key in the stored JSONB (e.g. 'string', 'relation').
+	*   - key    string  Component tipo used as the JSON path sub-key (e.g. 'oh25').
+	*   - value  mixed   New value to set; null removes the key via 'delete_key'.
+	* @return bool True on successful update, false if $data_to_save is empty or the operation fails.
+	*/
 	public static function update_by_key(
 		string $table,
 		string $section_tipo,
@@ -218,6 +285,9 @@ class matrix_temp_manager extends matrix_db_manager {
 		$key = self::get_uid($section_tipo);
 
 		// Ensure record exists to avoid UPDATE on non-existent key
+		// A plain UPDATE WHERE key = $1 on a missing row silently affects 0 rows.
+		// The guarantee-insert creates an empty JSONB object {} if the row is absent,
+		// so the subsequent SET expression always has a valid target to modify.
 		$sql_ensure = "INSERT INTO \"$table\" (key, value)
 				VALUES ($1, '{}'::jsonb)
 				ON CONFLICT (key) DO NOTHING";
@@ -225,6 +295,8 @@ class matrix_temp_manager extends matrix_db_manager {
 
 
 		// Group updates by column
+		// Grouping lets us produce one jsonb_set chain per column rather than one per
+		// data entry, reducing the depth of nesting for single-column batches.
 		$column_updates = [];
 		foreach ($data_to_save as $data) {
 			$column = $data->column;
@@ -293,24 +365,22 @@ class matrix_temp_manager extends matrix_db_manager {
 
 
 	/**
-	 * DELETE
-	 * Removes the record from the temp table based on section_tipo.
-	 *
-	 * Deletes the temporary record associated with the given section tipo. The function generates
-	 * a unique key using get_uid() and executes a DELETE statement against the specified table.
-	 * This is used to clean up temporary data when a section record is no longer needed.
-	 *
-	 * @param string $table The table name to delete from (default: 'temp')
-	 * @param string $section_tipo The section tipo identifier used to generate the unique key
-	 * @param int|string $section_id The section ID (kept for API compatibility, not used in logic)
-	 *
-	 * @return bool True if the record was deleted, false if no record was found or operation failed
-	 *
-	 * @throws Exception If database operation fails
-	 *
-	 * @package Dedalo
-	 * @subpackage Core
-	 */
+	* DELETE
+	* Removes the temporary record for the given section_tipo and current user.
+	*
+	* Constructs the row key via get_uid() and issues a DELETE against the temp table.
+	* Returns true when the DELETE statement executes successfully (even when zero rows
+	* were actually deleted — the row may have already been removed or never existed).
+	* Returns false only on a database-level execution failure.
+	*
+	* The $section_id parameter is accepted for API compatibility with the parent's
+	* delete() signature but is never used.
+	*
+	* @param string $table The table to delete from — must be 'temp'.
+	* @param string $section_tipo Section tipo identifier; combined with logged user ID to form the row key.
+	* @param int|string $section_id Ignored — kept for API compatibility with matrix_db_manager::delete().
+	* @return bool True if the DELETE executed without error, false on database failure.
+	*/
 	public static function delete(string $table, string $section_tipo, int|string $section_id) : bool {
 
 		$key = self::get_uid($section_tipo);
@@ -323,18 +393,25 @@ class matrix_temp_manager extends matrix_db_manager {
 
 
 	/**
-	 * GET_UID
-	 * Generates a unique key for the temp table by combining the section tipo with the logged-in user's ID.
-	 * This ensures that temporary data is isolated per user and section, preventing conflicts when multiple
-	 * users work on the same section simultaneously.
-	 *
-	 * @param string $section_tipo The section tipo identifier used to generate the unique key
-	 *
-	 * @return string The unique key composed of section_tipo and logged_user_id()
-	 *
-	 * @package Dedalo
-	 * @subpackage Core
-	 */
+	* GET_UID
+	* Derives the unique string key used to identify a temp row for the current session.
+	*
+	* The key is the concatenation of the section_tipo string and the integer user ID
+	* returned by logged_user_id() (which reads $_SESSION['dedalo']['auth']['user_id']).
+	* Example: for section_tipo 'oh1' and user ID 42, the key is 'oh142'.
+	*
+	* This encoding ensures that two users editing the same section_tipo simultaneously
+	* have completely independent temp rows and cannot overwrite each other's staged data.
+	*
+	* (!) logged_user_id() can return null when called outside an authenticated session
+	* (e.g. CLI scripts or unit tests). In that case the key becomes section_tipo + ''
+	* (empty string), which may cause unintended key collisions across unauthenticated
+	* callers. Callers must ensure a valid session exists before invoking any method that
+	* routes through get_uid().
+	*
+	* @param string $section_tipo Section tipo identifier (e.g. 'oh1', 'numisdata224').
+	* @return string Concatenation of $section_tipo and the logged-in user's integer ID.
+	*/
 	public static function get_uid(string $section_tipo) : string {
 		return $section_tipo . logged_user_id();
 	}//end get_uid

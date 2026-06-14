@@ -1,8 +1,36 @@
 <?php declare(strict_types=1);
 /**
-* COUNTER
+* CLASS COUNTER
+* Manages auto-increment section-ID counters persisted in the PostgreSQL matrix_counter table.
 *
+* Each section tipo (e.g. 'oh1', 'dd561') keeps one row in matrix_counter tracking the
+* highest section_id ever issued for that section type. When a new record is created,
+* update_counter() atomically increments this value and returns it as the next section_id.
 *
+* Responsibilities:
+* - Reading the current counter value for a tipo (get_counter_value).
+* - Incrementing and persisting the counter on each new record creation (update_counter).
+* - Resynchronising a counter after a bulk import that inserted non-sequential IDs
+*   (consolidate_counter): scans the data matrix table, finds the highest existing
+*   section_id, and writes that value directly into matrix_counter.
+* - Admin-gated reset ('reset') and repair ('fix') operations (modify_counter).
+* - Auditing the consistency of all counter rows against their live matrix tables
+*   (check_counters).
+*
+* Table schema (matrix_counter / matrix_counter_dd):
+*   tipo  VARCHAR(128) PRIMARY KEY  — ontology tipo of the section type
+*   value INTEGER                   — last issued section_id (next id = value + 1)
+*   ref   TEXT                      — human-readable label built from the ontology term
+*
+* Note: the activity-log section (DEDALO_ACTIVITY_SECTION_TIPO / 'dd542') is explicitly
+* excluded from counter management because its records are written by internal logging
+* code that manages its own identifiers.
+*
+* This class is abstract and contains only static methods; it is never instantiated.
+* Loaded unconditionally via core/base/class.loader.php.
+*
+* @package Dédalo
+* @subpackage Core
 */
 abstract class counter {
 
@@ -10,10 +38,18 @@ abstract class counter {
 
 	/**
 	* GET_COUNTER_VALUE
-	* COUNTER (STORED IN MATRIX_COUNTER TABLE)
-	* @param string $tipo Like dd561
-	* @param string $matrix_table Like matrix_counter (default)
-	* @return int $counter_number
+	* Returns the current (last-issued) section_id counter value for a section tipo.
+	*
+	* Reads the 'value' column from the given matrix_counter table for the specified tipo.
+	* Returns 0 when no counter row exists yet, which signals update_counter() that it
+	* must INSERT rather than UPDATE. Also returns 0 immediately for the activity-section
+	* tipo (DEDALO_ACTIVITY_SECTION_TIPO) since that section manages its own identifiers.
+	*
+	* @param string $tipo         - Ontology tipo identifying the section type, e.g. 'dd561'
+	* @param string $matrix_table = 'matrix_counter' - Target counter table; pass 'matrix_counter_dd'
+	*                               for the ontology-data counter table
+	* @return int - Last issued section_id, or 0 if no counter row exists
+	* @throws Exception           - On PostgreSQL query failure
 	*/
 	public static function get_counter_value(string $tipo, string $matrix_table='matrix_counter') : int {
 
@@ -48,11 +84,28 @@ abstract class counter {
 
 	/**
 	* UPDATE_COUNTER
-	* Create/update a counter for the given tipo in the given table
-	* @param string $tipo Like dd561
-	* @param string $matrix_table Like matrix_counter (default)
-	* @param int $value (default false)
-	* @return int $counter_data_updated
+	* Increments (or creates) the persistent section_id counter for a given tipo.
+	*
+	* Typical call site: section_record::create() calls this immediately before inserting a
+	* new row so the returned value becomes the new record's section_id.
+	*
+	* Algorithm:
+	*   1. If no explicit $value is provided, read the current value with get_counter_value().
+	*   2. Increment by 1 (counter_data_updated = value + 1).
+	*   3. If the result is 0 (i.e. value + 1 = 0, meaning the incoming value was -1),
+	*      INSERT a new counter row. Otherwise UPDATE the existing row.
+	*
+	* The INSERT branch is a legacy path for edge cases where the incoming $value is -1.
+	* Normal callers should omit $value entirely. consolidate_counter() bootstraps a
+	* missing row by calling update_counter(..., 0), which increments to 1 and goes to
+	* the UPDATE branch; the actual final value is then written by a direct SQL UPDATE.
+	*
+	* @param string $tipo         - Ontology tipo of the section type, e.g. 'oh1'
+	* @param string $matrix_table = 'matrix_counter' - Target counter table
+	* @param mixed  $value        = false - Starting value before increment;
+	*                               false means "read from DB"; -1 triggers INSERT (new row)
+	* @return int - The new counter value (= next section_id to use)
+	* @throws Exception           - On PostgreSQL query failure
 	*/
 	public static function update_counter(string $tipo, string $matrix_table='matrix_counter', $value=false) : int {
 
@@ -74,7 +127,8 @@ abstract class counter {
 		if( intval($value)===0 ) {
 
 			// new counter case
-
+			// Build a human-readable ref label from the ontology term so that the
+			// matrix_counter row is self-describing without extra joins.
 			$ref		= ontology_node::get_term_by_tipo($tipo)." [".ontology_node::get_model_by_tipo($tipo,true)."]";
 			$strQuery	= "INSERT INTO \"$matrix_table\" (tipo, value, ref) VALUES ($1, $2, $3)";
 			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array($tipo, $value, $ref));
@@ -103,12 +157,34 @@ abstract class counter {
 
 	/**
 	* CONSOLIDATE_COUNTER
-	* Get de bigger section_id of current section_tipo and set the counter with this value (useful for import records not sequentially)
-	* If counter do not exists, a new counter is created
-	* @param string $section_tipo
-	* @param string $matrix_table
-	* @param string $counter_matrix_table default matrix_counter
-	* @return bool true if update/create counter, false if not
+	* Repairs the counter for a section tipo by scanning the actual data matrix table
+	* and setting the counter value to the highest existing section_id found there.
+	*
+	* This is necessary after a bulk import that inserted records with non-sequential or
+	* externally assigned section_ids, where update_counter() was bypassed. Without
+	* consolidation, the counter would issue IDs that collide with already-existing rows.
+	*
+	* Algorithm:
+	*   1. Query $matrix_table for the highest section_id where section_tipo = $section_tipo.
+	*      If the table is empty, return false (nothing to do).
+	*   2. If no counter row yet exists for the tipo, bootstrap one via update_counter(..., 0).
+	*   3. Write $bigger_section_id directly into matrix_counter with a raw UPDATE, bypassing
+	*      the +1 increment that update_counter() would apply — the goal is to match the
+	*      existing maximum, not to advance past it.
+	*
+	* (!) update_counter() always adds 1 to whatever value is passed. That is why this method
+	* writes the raw $bigger_section_id directly into the counter table instead of delegating
+	* to update_counter().
+	*
+	* Called by: ontology_data_io (post-import repair), class.transform_data (upgrade scripts),
+	* and matrix_db_manager (integrity checks).
+	*
+	* @param string $section_tipo         - Ontology tipo of the section, e.g. 'oh1'
+	* @param string $matrix_table         - Data matrix table to scan, e.g. 'matrix'
+	* @param string $counter_matrix_table = 'matrix_counter' - Counter table to update
+	* @return bool - true if the counter was updated or created; false if the data table
+	*                is empty and there is nothing to consolidate
+	* @throws Exception                   - On any PostgreSQL query failure
 	*/
 	public static function consolidate_counter(string $section_tipo, string $matrix_table, string $counter_matrix_table='matrix_counter') : bool {
 
@@ -171,9 +247,21 @@ abstract class counter {
 
 	/**
 	* DELETE_COUNTER
-	* @param string $tipo
-	* @param string $matrix_table = 'matrix_counter'
-	* @return bool
+	* Permanently removes the counter row for a given tipo from the counter table.
+	*
+	* Used exclusively by modify_counter() as the implementation of the 'reset' action.
+	* After deletion, the next call to update_counter() for this tipo will INSERT a fresh
+	* row starting at value 1, effectively resetting the section_id sequence.
+	*
+	* (!) This operation is destructive. If records with higher section_ids already exist
+	* in the data matrix, the counter will re-issue IDs that are already taken and cause
+	* primary-key conflicts on the next insert. Only use via modify_counter() which
+	* enforces global-admin privilege before delegating here.
+	*
+	* @param string $tipo         - Ontology tipo whose counter row should be deleted
+	* @param string $matrix_table = 'matrix_counter' - Counter table to target
+	* @return bool                - Always true on success
+	* @throws Exception           - On PostgreSQL query failure
 	*/
 	private static function delete_counter(string $tipo, string $matrix_table='matrix_counter') : bool {
 
@@ -190,11 +278,26 @@ abstract class counter {
 
 	/**
 	* MODIFY_COUNTER
-	* @see dd_utils_aì::modify_counter
-	* @param string $section_tipo
-	* @param string $counter_action
-	* 	reset|fix
-	* @return bool
+	* Admin-gated entry point for destructive counter operations (reset and fix).
+	*
+	* Enforces that only a global admin may alter counters, then dispatches to the
+	* appropriate implementation:
+	*   'reset' — deletes the counter row via delete_counter(), so the sequence
+	*             restarts from 1 on the next record creation.
+	*   'fix'   — calls consolidate_counter() to re-synchronise the counter with
+	*             the highest section_id that actually exists in the data matrix.
+	*             Use this after bulk imports or manual DB edits.
+	*
+	* Called via dd_area_maintenance_api::modify_counter() (API action),
+	* ontology::modify_counter(), and matrix_db_manager integrity checks.
+	*
+	* @see dd_utils_api::modify_counter - API wrapper that also calls check_counters() afterwards
+	*
+	* @param string $section_tipo    - Ontology tipo whose counter should be modified
+	* @param string $counter_action  - Action to perform: 'reset' or 'fix'
+	* @return bool                   - true on success; false if the caller lacks privileges,
+	*                                  the matrix table cannot be resolved (fix only), or
+	*                                  an unknown action is passed
 	*/
 	public static function modify_counter(string $section_tipo, string $counter_action) : bool {
 
@@ -249,14 +352,27 @@ abstract class counter {
 
 	/**
 	* CHECK_COUNTERS
-	* Test all counters in DDBB
-	* @return object $response
-	* {
-	* 	result : bool,
-	* 	msg : string,
-	* 	errors : array,
-	* 	datalist: array
-	* }
+	* Audits every row in matrix_counter against the actual data in the corresponding
+	* section matrix table, collecting the counter value and the real maximum section_id.
+	*
+	* For each counter row the method:
+	*   1. Verifies that the ontology model for the tipo is 'section' — non-section tipos
+	*      (components, relations, etc.) must never have counter rows; any such entry is
+	*      reported as an error.
+	*   2. Resolves the matrix table for the tipo and queries for its highest section_id.
+	*   3. Adds an item_info object to $response->datalist containing both values so the
+	*      caller (counters_status widget / dd_area_maintenance_api) can highlight drift
+	*      between counter_value and last_section_id.
+	*
+	* The response object shape:
+	*   result    bool    — false only if matrix_counter itself cannot be read
+	*   msg       string  — human-readable audit title including the DB connection name
+	*   errors    array   — entries for non-section tipo rows or DB access failures
+	*   datalist  array   — one item_info object per valid counter row:
+	*                         { section_tipo, label, counter_value, last_section_id }
+	*   debug     object  — { counters_total: int, time: string (ms) }
+	*
+	* @return object - Audit result; see shape above
 	*/
 	public static function check_counters() : object {
 		$start_time = start_time();
@@ -290,6 +406,8 @@ abstract class counter {
 			$counter_value	= (int)$row['value'];
 
 			// model check
+			// Only section tipos may legitimately own a counter row. A non-section entry
+			// indicates either a stale row from a deleted TLD or a data integrity issue.
 				$model_name = ontology_node::get_model_by_tipo($section_tipo,true);
 				if ($model_name!=='section') {
 					$msg = empty($model_name)
@@ -305,6 +423,8 @@ abstract class counter {
 				}
 
 			// Find last id of current section
+			// last_section_id may differ from counter_value after a bulk import that
+			// bypassed update_counter(). A mismatch here means consolidate_counter() is needed.
 				$table_name = common::get_matrix_table_from_tipo($section_tipo);
 				$sql2  = 'SELECT section_id' . PHP_EOL;
 				$sql2 .= 'FROM "'.$table_name.'"' . PHP_EOL;

@@ -1,24 +1,39 @@
 <?php declare(strict_types=1);
 /**
- * DD_ONTOLOGY_API
- * API endpoints for ontology resolution and introspection.
+ * CLASS DD_ONTOLOGY_API
+ * Remote API handler for ontology resolution and introspection.
  *
- * Provides MCP-friendly access to the Dédalo ontology, allowing resolution
- * of human-readable text (e.g. "Oral History") to ontology nodes and their
- * full structural context (sections with components).
+ * Provides structured, MCP-friendly access to the Dédalo ontology, allowing
+ * resolution of human-readable text (e.g. "Oral History") to ontology node
+ * identifiers (tipos) and their full structural context (sections with components).
  *
- * Actions:
+ * Routed by dd_manager when rqo->dd_api === 'dd_ontology_api'. Every public
+ * static method listed in API_ACTIONS is callable as a remote action; all others
+ * are private helpers not reachable over the network.
+ *
+ * Public actions:
  * - resolve_term    : Search ontology nodes by text (exact JSONB or fuzzy similarity).
- * - resolve_section : Resolve text to section(s) with full component trees.
+ * - resolve_section : Resolve text to section node(s) with full component trees.
  * - get_node        : Retrieve full ontology node data by tipo.
  * - search          : Structured search of dd_ontology by column values.
+ * - get_glossary    : Lightweight multilingual glossary for LLM/MCP consumption.
+ * - resolve_path    : Walk and annotate a relational hop-path through the ontology.
  *
- * Fuzzy search uses a two-phase strategy:
- *   Phase 1 — JSONPath pre-filter: term @? for fast GIN narrowing
+ * Fuzzy search strategy (used by resolve_term and resolve_section in 'fuzzy' mode):
+ *   Phase 1 — JSONPath pre-filter: `term @?` operator for fast GIN-index narrowing.
  *   Phase 2 — Trigram similarity: f_unaccent(jsonb_values_as_text(term)) % f_unaccent(text)
- * Both phases use indexes defined in db_pg_definitions.php.
+ *             for accent-insensitive ranked matching.
+ * Both phases rely on indexes defined in db_pg_definitions.php.
  *
- * @package Dedalo
+ * All action methods share the same response envelope:
+ *   $response->result  mixed   — false on hard failure, data on success
+ *   $response->msg     string  — human-readable status message
+ *   $response->errors  array   — empty on clean success, error-code strings otherwise
+ *
+ * Delegates database queries to dd_ontology_db_manager and node instantiation
+ * to ontology_node::get_instance().
+ *
+ * @package Dédalo
  * @subpackage API
  */
 final class dd_ontology_api {
@@ -27,6 +42,12 @@ final class dd_ontology_api {
 
 	/**
 	 * SEC-024: explicit allowlist of methods callable as remote API actions.
+	 *
+	 * dd_manager enforces this list before dispatching any request: a public static
+	 * method NOT listed here cannot be invoked over the network even if its visibility
+	 * would otherwise allow it. Add a method here only after confirming it performs its
+	 * own input validation and respects security::get_security_permissions().
+	 * @var array<string> API_ACTIONS
 	 */
 	public const API_ACTIONS = [
 		'resolve_term',
@@ -45,8 +66,8 @@ final class dd_ontology_api {
 	 *
 	 * Supports two search modes:
 	 * - 'exact' (default): Uses PostgreSQL JSONB containment (`@>`) to match
-	 *   the term column. Requires the text to match exactly for a given language key.
-	 *   The `lang` parameter determines which language key to search against;
+	 *   the term column. The text must match a term value exactly for the given
+	 *   language key. The `lang` parameter selects which JSONB key to search;
 	 *   defaults to DEDALO_STRUCTURE_LANG if not provided.
 	 *   If `model` is provided, results are additionally filtered by model name.
 	 *
@@ -65,7 +86,7 @@ final class dd_ontology_api {
 	 *       "lang": "lg-eng",           // optional, default DEDALO_STRUCTURE_LANG
 	 *       "mode": "exact",            // optional, "exact"|"fuzzy", default "exact"
 	 *       "model": "section",         // optional, filter by model name
-	 * 		"is_main": false 			// opttional, remove or find the main terms
+	 * 		"is_main": false 			// optional, restrict or require is_main=true nodes
 	 *       "limit": 50                 // optional, max results, default 50
 	 *     }
 	 *   }
@@ -83,6 +104,8 @@ final class dd_ontology_api {
 		$lang		= $source->lang ?? DEDALO_STRUCTURE_LANG;
 		$mode		= $source->mode ?? 'exact';
 		$model		= $source->model ?? null;
+		// is_main=false returns all nodes regardless of their is_main flag;
+		// pass true to restrict results to nodes marked as primary/canonical terms.
 		$is_main	= $source->is_main ?? false;
 		$limit		= $source->limit ?? 50;
 
@@ -92,6 +115,9 @@ final class dd_ontology_api {
 			return $response;
 		}
 
+		// Dispatch to the appropriate DB search strategy.
+		// Fuzzy is preferred for open-ended LLM/MCP queries; exact requires a
+		// precise match in the JSONB term object for the given language key.
 		if ($mode === 'fuzzy') {
 			$tipos = dd_ontology_db_manager::search_fuzzy_term($text, $model, $is_main, (int)$limit);
 		} else {
@@ -159,7 +185,12 @@ final class dd_ontology_api {
 		$source		= $rqo->source ?? new stdClass();
 		$text		= $source->text ?? null;
 		$lang		= $source->lang ?? DEDALO_STRUCTURE_LANG;
+		// resolve_section defaults to fuzzy, which is more useful for natural-language
+		// queries from LLM/MCP callers that may not know exact ontology term spelling.
 		$mode		= $source->mode ?? 'fuzzy';
+		// is_main is intentionally hardcoded to false here — resolve_section targets
+		// all matching sections regardless of their is_main flag, so callers get the
+		// broadest possible match set.
 		$is_main	= false;
 		$limit		= $source->limit ?? 20;
 
@@ -169,6 +200,8 @@ final class dd_ontology_api {
 			return $response;
 		}
 
+		// The model is pre-filtered to 'section' at the DB layer so fuzzy/exact
+		// results already exclude components, portals, etc.
 		if ($mode === 'fuzzy') {
 			$tipos = dd_ontology_db_manager::search_fuzzy_term($text, 'section', $is_main, (int)$limit);
 		} else {
@@ -185,17 +218,26 @@ final class dd_ontology_api {
 		$resolved_tipos = [];
 		foreach ($tipos as $section_tipo) {
 
+			// Double-check model after DB filter: the DB query is model-constrained but
+			// get_model_by_tipo resolves from the live ontology cache, catching any
+			// inconsistency between the DB index and the in-memory ontology.
 			$section_model = ontology_node::get_model_by_tipo($section_tipo, true);
 			if ($section_model !== 'section') {
 				continue;
 			}
 
+			// Virtual sections (aliases that point to a canonical real section) must be
+			// deduplicated. Multiple virtual aliases could resolve to the same real tipo,
+			// and we only want one descriptor per canonical section.
 			$section_real_tipo = section::get_section_real_tipo_static($section_tipo);
 			if (in_array($section_real_tipo, $resolved_tipos)) {
 				continue;
 			}
 			$resolved_tipos[] = $section_real_tipo;
 
+			// Respect section-level read permissions. A permission value < 1 means no
+			// read access for the current user, so skip silently rather than leaking
+			// information about restricted sections.
 			$section_permisions = security::get_security_permissions($section_real_tipo, $section_real_tipo);
 			if ($section_permisions < 1) {
 				continue;
@@ -533,10 +575,15 @@ final class dd_ontology_api {
 	 * BUILD_SECTION_DESCRIPTOR
 	 * Builds a full section descriptor with its component tree.
 	 *
-	 * For the given section tipo, resolves all component children and
-	 * builds a descriptor object containing:
-	 * - Section metadata (tipo, model, term, tld, properties)
-	 * - Array of component descriptors
+	 * For the given section tipo, resolves all component children (any model
+	 * whose name starts with 'component_') recursively via the ontology tree,
+	 * and returns a descriptor object containing:
+	 * - Section metadata (tipo, model, term, tld, properties) via format_node_data()
+	 * - A 'components' array of lightweight node descriptors for each child component
+	 *
+	 * Virtual sections are resolved to their canonical real tipo before walking
+	 * the component tree, so alias section tipos yield the same component list as
+	 * the canonical section.
 	 *
 	 * @param string $section_tipo Ontology tipo of the section
 	 * @return object|null Section descriptor or null on failure
@@ -552,6 +599,10 @@ final class dd_ontology_api {
 
 		$section_descriptor = self::format_node_data($section_tipo, $data);
 
+		// Collect all component tipos within the section tree.
+		// - 'component_' prefix match (search_exact=false) catches all component subtypes.
+		// - resolve_virtual=true ensures virtual/aliased sections expose their real children.
+		// - recursive=true walks the full ontology subtree, not just immediate children.
 		$component_tipos = section::get_ar_children_tipo_by_model_name_in_section(
 			$section_tipo,
 			['component_'],
@@ -582,8 +633,13 @@ final class dd_ontology_api {
 	 *
 	 * For portal components, adds:
 	 * - is_portal: true
-	 * - target_section_tipo: array of target section tipos
-	 * - target_section_term: array of {tipo, term} for each target
+	 * - target_section_tipo: string[] — tipos of sections this portal points to
+	 * - target_section_term: object[] — {tipo, term} pairs for each target section
+	 *
+	 * "Portal" in this context covers any component type that creates a
+	 * cross-section link: component_portal, component_dataframe, and
+	 * component_filter (including component_filter_master, which also
+	 * matches the 'component_filter' prefix).
 	 *
 	 * @param string $component_tipo Component ontology tipo
 	 * @return object|null Component descriptor or null if not found
@@ -596,6 +652,8 @@ final class dd_ontology_api {
 		}
 
 		$model = $descriptor->model ?? '';
+		// Three model families act as cross-section portals and carry target metadata.
+		// str_starts_with matches all subtypes (e.g. 'component_portal_link').
 		$is_portal = str_starts_with($model, 'component_portal')
 			|| str_starts_with($model, 'component_dataframe')
 			|| str_starts_with($model, 'component_filter');
@@ -617,10 +675,23 @@ final class dd_ontology_api {
 	/**
 	 * EXTRACT_PORTAL_TARGETS
 	 * Extracts target section tipos and terms from a portal component's
-	 * ontology properties (source.request_config.sqo.section_tipo).
+	 * ontology properties (source.request_config[*].sqo.section_tipo).
+	 *
+	 * Portal components store their target section(s) in the ontology `properties`
+	 * column under the path: properties.source.request_config[].sqo.section_tipo.
+	 * The value of section_tipo can appear in three shapes due to v6/v7 migration:
+	 *
+	 *   1. v6 wrapped object: { value: ["rsc197"], source: "section" }
+	 *   2. Direct string:     "rsc197"
+	 *   3. DDO resolved:      { tipo: "rsc197", ... }
+	 *
+	 * All three are normalized to a plain tipo string. Deduplication is applied
+	 * so that a tipo appearing in multiple request_config entries is only listed once.
 	 *
 	 * @param string $tipo Portal component tipo
-	 * @return array ['tipos' => string[], 'terms' => object[]]
+	 * @return array{tipos: string[], terms: object[]}
+	 *   'tipos' — unique list of target section tipo strings
+	 *   'terms' — parallel array of {tipo, term} objects for display use
 	 */
 	private static function extract_portal_targets(string $tipo) : array {
 
@@ -639,6 +710,8 @@ final class dd_ontology_api {
 			return ['tipos' => $tipos, 'terms' => $terms];
 		}
 
+		// request_config is an array of SQO config objects. Each config item
+		// may target a different section; we aggregate all targets across all items.
 		$request_config = $source->request_config ?? [];
 		if (!is_array($request_config)) {
 			return ['tipos' => $tipos, 'terms' => $terms];
@@ -650,6 +723,8 @@ final class dd_ontology_api {
 				continue;
 			}
 
+			// section_tipo may be a scalar or an array; normalize to array for
+			// uniform iteration below.
 			$ar_section_tipo = $config_item->sqo->section_tipo ?? [];
 			if (!is_array($ar_section_tipo)) {
 				$ar_section_tipo = [$ar_section_tipo];
@@ -659,6 +734,7 @@ final class dd_ontology_api {
 				$target_tipo = null;
 
 				// V6 format: {value: ["rsc197"], source: "section"}
+				// The value key may hold an array (most common) or a scalar.
 				if (is_object($target_entry) && isset($target_entry->value)) {
 					$values = $target_entry->value;
 					if (is_array($values)) {
@@ -678,6 +754,7 @@ final class dd_ontology_api {
 					$target_tipo = $target_entry->tipo;
 				}
 
+				// Skip duplicates; add term label for each new target.
 				if ($target_tipo !== null && !in_array($target_tipo, $tipos)) {
 					$tipos[]			= $target_tipo;
 					$target_term		= ontology_node::get_term_by_tipo($target_tipo);
@@ -698,7 +775,12 @@ final class dd_ontology_api {
 	 * GLOSSARY_SECTIONS
 	 * Returns the compact sections glossary (all sections with multilingual terms).
 	 *
-	 * @return object Response with sections array
+	 * Fetches up to 500 section-model nodes and returns a lightweight array with
+	 * only section_tipo, term (full multilingual JSONB object), and tld — enough
+	 * for an LLM to build a complete namespace map without loading component trees.
+	 *
+	 * @return object Response with sections array —
+	 *   result: object[] { section_tipo, term, tld }
 	 */
 	private static function glossary_sections() : object {
 
@@ -707,6 +789,9 @@ final class dd_ontology_api {
 			$response->msg		= 'Error. glossary_sections request failed';
 			$response->errors	= [];
 
+		// DB already filters by model='section'. The 500-row cap is intentional:
+		// a Dédalo instance should never have thousands of section types, and
+		// loading all of them in one call is safe at this scale.
 		$tipos = dd_ontology_db_manager::search(['model' => 'section'], true, 500);
 
 		if ($tipos === false) {
@@ -724,11 +809,16 @@ final class dd_ontology_api {
 				continue;
 			}
 
+			// Defensive re-check: the DB result is already model-filtered, but the
+			// in-memory ontology cache is the authoritative source. This guard catches
+			// any race or stale-index edge case where the DB returns a non-section tipo.
 			$model = $data->model ?? null;
 			if ($model !== 'section') {
 				continue;
 			}
 
+			// Skip nodes that have no term at all — they cannot be represented in
+			// the glossary and would produce useless entries for LLM consumers.
 			$term = $data->term ?? null;
 			if (empty($term)) {
 				continue;
@@ -789,8 +879,13 @@ final class dd_ontology_api {
 	 * BUILD_GLOSSARY_SECTION_DESCRIPTOR
 	 * Builds a section descriptor with portal-aware component descriptors.
 	 *
+	 * Unlike build_section_descriptor() which uses basic node descriptors,
+	 * this variant calls build_component_descriptor() for each child so that
+	 * portal components carry their target_section_tipo / target_section_term
+	 * metadata — essential for LLM consumers navigating cross-section links.
+	 *
 	 * @param string $section_tipo Section tipo
-	 * @return object|null Section descriptor with components
+	 * @return object|null Section descriptor with 'components' array, or null if not found
 	 */
 	private static function build_glossary_section_descriptor(string $section_tipo) : ?object {
 
@@ -806,6 +901,9 @@ final class dd_ontology_api {
 			$descriptor->term			= $data->term ?? null;
 			$descriptor->tld			= $data->tld ?? null;
 
+		// Collect all component tipos recursively, resolving virtual sections,
+		// using prefix match ('component_') to include all component subtypes.
+		// Positional args: from_cache=true, resolve_virtual=true, recursive=true, search_exact=false.
 		$component_tipos = section::get_ar_children_tipo_by_model_name_in_section(
 			$section_tipo,
 			['component_'],
@@ -817,6 +915,8 @@ final class dd_ontology_api {
 
 		$components = [];
 		foreach ($component_tipos as $component_tipo) {
+			// Use build_component_descriptor (not build_node_descriptor) so that
+			// portal-type components include their cross-section target metadata.
 			$component_descriptor = self::build_component_descriptor($component_tipo);
 			if ($component_descriptor !== null) {
 				$components[] = $component_descriptor;
@@ -869,11 +969,30 @@ final class dd_ontology_api {
 	 * RESOLVE_PATH_HOPS
 	 * Walks a path array and annotates each hop with ontology metadata.
 	 *
-	 * Validates that portal hops have matching targets for the next hop.
-	 * Returns null if any hop is invalid.
+	 * For each tipo in the path, retrieves its node data and classifies it as a
+	 * section, portal (component_portal / component_dataframe / component_filter),
+	 * or plain component. For portal hops, validates that the following hop in
+	 * the path is a valid traversal target:
 	 *
-	 * @param array $path Array of tipo strings
-	 * @return object|null Resolved path or null on failure
+	 *   - If the next hop is directly one of the portal's target sections → valid.
+	 *   - If the next hop is a non-section node whose parent section is a target → valid.
+	 *   - If the next hop is a section node not in the target list → valid
+	 *     (the path may skip intermediates; validation only rejects if the parent
+	 *     section does not match any portal target).
+	 *
+	 * For the leaf node (last hop), adds column_type via get_component_column_type()
+	 * so callers know which matrix-table column type holds its data.
+	 *
+	 * Returns null on any validation failure or unknown tipo; callers should treat
+	 * null as an invalid/unsupported path.
+	 *
+	 * @param array $path Array of tipo strings (minimum 2 elements)
+	 * @return object|null Resolved path object or null on failure
+	 *   result->path       object[]  — annotated hop objects
+	 *   result->hop_count  int       — total number of hops
+	 *   result->leaf_tipo  string    — tipo of the final hop
+	 *   result->leaf_model string    — model of the final hop
+	 *   result->leaf_column_type string|null — column type of the final component hop
 	 */
 	private static function resolve_path_hops(array $path) : ?object {
 
@@ -898,7 +1017,9 @@ final class dd_ontology_api {
 				$hop->model		= $model;
 				$hop->term		= $data->term ?? null;
 
-			// Determine if this is a portal hop
+			// Determine if this hop is a cross-section portal.
+			// All three model families use request_config.sqo.section_tipo to
+			// declare their target section(s).
 			$is_portal = str_starts_with($model, 'component_portal')
 				|| str_starts_with($model, 'component_dataframe')
 				|| str_starts_with($model, 'component_filter');
@@ -914,7 +1035,8 @@ final class dd_ontology_api {
 					$next_tipo = $path[$next_index];
 					if (!in_array($next_tipo, $ar_target['tipos'])) {
 						// Not a direct target — may still be valid if next is a component
-						// within the target section
+						// within the target section. Walk up one level via get_parent()
+						// and resolve virtual sections before checking membership.
 						$next_node = ontology_node::get_instance($next_tipo);
 						$next_model = $next_node->get_model();
 						if ($next_model !== 'section') {
@@ -930,13 +1052,17 @@ final class dd_ontology_api {
 			} else {
 				$hop->is_portal = false;
 
-				// For section hops, extract all component children (first level only)
+				// Mark section hops explicitly so callers can identify scope changes.
+				// section_tipo is redundant with $hop->tipo but aids readability in
+				// the returned hop object.
 				if ($model === 'section') {
 					$hop->section_tipo = $tipo;
 				}
 			}
 
-			// For the leaf (last element), add column type info
+			// For the leaf (last element), add column type info.
+			// This maps the component model to the matrix-table column it writes to,
+			// which clients need to construct typed SQO filters.
 			$next_index = $index + 1;
 			if ($next_index >= count($path) && str_starts_with($model, 'component_')) {
 				$hop->column_type = self::get_component_column_type($model);
@@ -964,10 +1090,32 @@ final class dd_ontology_api {
 
 	/**
 	 * GET_COMPONENT_COLUMN_TYPE
-	 * Maps a component model to its data column type in the matrix table.
+	 * Maps a component model name to the matrix-table column type that holds its data.
 	 *
-	 * @param string $model Component model name
-	 * @return string Column type (string, relation, date, geo, number, media, misc)
+	 * Column types correspond to the physical column in the section matrix table
+	 * (matrix_<tld>) where a component stores its JSON dato:
+	 *
+	 *   string   — text/string column (component_input_text, component_text_area,
+	 *              component_email, component_password)
+	 *   relation — relation/link column; points to locator arrays in other sections
+	 *              (component_portal, component_select, component_dataframe, etc.)
+	 *   date     — date column (component_date)
+	 *   geo      — geolocation column (component_geolocation)
+	 *   number   — numeric column (component_number)
+	 *   media    — media file column (component_av, component_image, component_3d,
+	 *              component_pdf, component_svg)
+	 *   iri      — IRI/URI column (component_iri)
+	 *   section_id — section identifier pseudo-column (component_section_id)
+	 *   misc     — any other component model not covered by the above categories
+	 *
+	 * Match arms use str_starts_with() prefix matching, so all subtypes of a family
+	 * (e.g. 'component_filter_master') are covered by their parent prefix arm
+	 * ('component_filter'). The 'component_filter_master' arm is listed explicitly as
+	 * a documentation aid but is unreachable because 'component_filter' matches first.
+	 *
+	 * @param string $model Component model name (e.g. 'component_input_text')
+	 * @return string Column type identifier — 'string' | 'relation' | 'date' | 'geo' |
+	 *                'number' | 'media' | 'iri' | 'section_id' | 'misc'
 	 */
 	private static function get_component_column_type(string $model) : string {
 

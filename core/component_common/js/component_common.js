@@ -4,6 +4,46 @@
 
 
 
+/**
+* COMPONENT_COMMON
+* Prototype mixin that provides the shared lifecycle, data, and event methods for
+* every Dédalo component instance (component_input_text, component_select, etc.).
+*
+* This module does NOT extend `common.js` — it replaces or wraps several of its
+* prototype methods with component-specific behaviour. The public prototype chain is:
+*
+*   ComponentXxx → component_common.prototype → common.prototype
+*
+* Lifecycle order for every component instance:
+*   init(options) → build(autoload) → render({render_level}) →
+*   [change_value / save cycles] → refresh() → destroy()
+*
+* Status state machine (self.status):
+*   'initializing' → 'initialized' → 'building' → 'built'
+*   → 'rendering' → 'rendered' → 'changing' → 'destroyed'
+*
+* Key data shapes:
+*   datum  : { data: Array<DataItem>, context: Array<ContextItem> }
+*             Shared with the parent section; portals have their own datum.
+*   data   : DataItem — { tipo, section_tipo, section_id, mode, lang,
+*                          entries: Array<*>, changed_data: Array<ChangedDataItem> }
+*   db_data: DataItem — snapshot of `data` as last returned by the server.
+*                       Used by set_changed_data / save to detect genuine edits.
+*
+* Exported named functions (module-level, not on the prototype):
+*   init_events_subscription — wires ontology-driven observer events once per build.
+*   check_unsaved_data       — prompt/auto-save guard for navigation events.
+*   save_unsaved_components  — sweep all instances and flush pending changed_data.
+*   deactivate_components    — click-away handler that deactivates the active component.
+*   is_empty                 — check whether a component instance has no user data.
+*   activate_edit_in_list    — unified inline-or-modal edit entry point for list views.
+*
+* Re-exported from dataframe.js (backwards-compatibility shim):
+*   get_dataframe, delete_dataframe, attach_item_dataframe
+*/
+
+
+
 // imports
 	import { clone, dd_console, is_equal } from '../../common/js/utils/index.js'
 	import { event_manager } from '../../common/js/event_manager.js'
@@ -17,6 +57,13 @@
 
 
 
+/**
+* COMPONENT_COMMON
+* Base constructor for the component_common mixin.
+* Every concrete component class (component_input_text, etc.) inherits from this
+* via prototype chaining: `ComponentXxx.prototype = Object.create(component_common.prototype)`.
+* The constructor itself is a no-op; all setup happens in `init()`.
+*/
 export const component_common = function(){
 
 	return true
@@ -26,9 +73,46 @@ export const component_common = function(){
 
 /**
 * INIT
-* Common init prototype to use in components as default
-* @param object options
-* @return bool true
+* Seeds all well-known instance properties from `options` and attaches shared
+* event subscriptions. Must be called exactly once per instance.
+*
+* Acts as the component-specific replacement for common.prototype.init(): it
+* sets component-only properties (mode, lang, column_id, standalone, etc.) that
+* the base common.init() does not cover.
+*
+* (!) A second call on the same instance is treated as a programming error: it
+* logs a console.error and — in debug mode — fires alert(). Always guard creation
+* paths so init() runs only once.
+*
+* Subscription order matters: events_subscription(self) wires the shared
+* sync_data / hilite handlers first, then the concrete component's own
+* self.events_subscription() (if defined) adds model-specific subscriptions.
+* init_events_subscribed is deliberately left false here; it is flipped to true
+* inside init_events_subscription(), called during build().
+*
+* @param {Object} options - Instance initialization bag (see `get_instance`)
+* @param {string} options.model - Component class name, e.g. 'component_input_text'
+* @param {string} options.tipo - Ontology tipo of this component, e.g. 'dd345'
+* @param {string} options.section_tipo - Ontology tipo of the parent section, e.g. 'oh1'
+* @param {string|number} options.section_id - Record identifier within the section
+* @param {string|null} [options.matrix_id] - Time-machine matrix row id (list_tm mode only)
+* @param {string} options.mode - Render mode: 'edit', 'list', 'search', 'tm', etc.
+* @param {string} options.lang - Active language tag, e.g. 'lg-nolan'
+* @param {string|null} [options.column_id] - Column id when rendering as a grid column
+* @param {string} [options.type='component'] - Instance type classifier
+* @param {string} options.section_lang - Section-level language tag, e.g. 'lg-eng'
+* @param {string} options.parent - Ontology tipo of the structural parent group
+* @param {Object|null} [options.context=null] - Server-resolved context (properties, tools, permissions, etc.)
+* @param {Object|null} [options.data=null] - Resolved component data for the current record
+* @param {Object|null} [options.datum=null] - Full datum shared with parent section
+* @param {boolean} [options.is_temporal=false] - True for transient data used in tools
+* @param {*} [options.data_source] - Caller-supplied data source hint
+* @param {string} [options.view] - View variant, e.g. 'default', 'line'
+* @param {Object|null} [options.caller] - Parent instance that owns this component
+* @param {boolean} [options.standalone=true] - When true the component fetches its own data;
+*   when false it relies on the parent section's shared datum to reduce API calls.
+* @param {Object} [options.properties] - Raw ontology properties object
+* @returns {Promise<boolean>} Always resolves true on success, false on duplicate-init error
 */
 component_common.prototype.init = async function(options) {
 
@@ -180,10 +264,27 @@ component_common.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Set the main component properties.
-* Could be from database context and data or injected by caller section, tools, etc.
-* @param bool autoload = false
-* @return bool
+* Resolves and locks in the component's context and data, then wires observer
+* events for the first time. The entry point for both standalone autoload
+* (where the method calls the API itself) and injected-data scenarios (where
+* the caller section pre-populates context/data before calling build).
+*
+* Concurrent build calls are serialised: if a build is already in progress,
+* the method returns the pending `_build_waiter` Promise so all callers share
+* the same result without duplicate API round-trips. A second call on an
+* already-built instance returns true immediately.
+*
+* After build() resolves, the following are guaranteed:
+*   - self.context   is the server-resolved context object for this component
+*   - self.data      is the current data item for (tipo, section_tipo, section_id)
+*   - self.db_data   is a deep clone of self.data as returned by the server
+*   - self.status    === 'built'
+*   - event_manager has published 'built_' + self.id
+*
+* @param {boolean} [autoload=false] - When true the component fetches its own
+*   context and data from the API. When false (default), the caller is expected
+*   to have injected context and data via options before calling build().
+* @returns {Promise<boolean>} Resolves true on success
 */
 component_common.prototype.build = async function(autoload=false) {
 
@@ -212,7 +313,21 @@ component_common.prototype.build = async function(autoload=false) {
 
 /**
 * DO_BUILD
-* Internal build logic to be executed once
+* Internal implementation of build() — executed exactly once per lifecycle,
+* wrapped inside `_build_waiter` to serialise concurrent callers.
+*
+* Responsibilities:
+*  1. Ensure datum and data have safe default shapes.
+*  2. Resolve request_config_object (main-type Dédalo API config entry).
+*  3. If autoload is true: fetch context + data from the API, then update datum
+*     (shared path for non-standalone, private copy for standalone).
+*  4. Call set_context_vars() to push context-derived properties onto the instance.
+*  5. Call init_events_subscription() to wire ontology-driven observer events.
+*  6. Take a deep-clone snapshot into db_data (baseline for change detection).
+*
+* @param {Object} self - The component instance being built
+* @param {boolean} autoload - Whether to fetch data from the API
+* @returns {Promise<boolean>} true on success, false when the API returns no valid context
 */
 const do_build = async (self, autoload) => {
 
@@ -328,14 +443,37 @@ const do_build = async (self, autoload) => {
 
 /**
 * INIT_EVENTS_SUBSCRIPTION
-* Set component structure properties defined events (used in component info mainly)
-* This method is called in 'build' life cycle, but must be execute only one time to prevent
-* duplicated events attach
-* Executed once !
-* @param object self
-* 	Is the self component instance
-* @return bool
-* 	True when new events are subscribed, false when already are subscribed (var self.init_events_subscribed as true)
+* Wires the ontology-driven observer subscriptions declared in
+* context.properties.observe for the component instance `self`.
+*
+* The observe array lives in the ontology (not in code) and controls
+* inter-component reactivity: one component can watch another's value changes
+* and react (e.g. auto-refresh) without the observable needing to know its
+* observers. A typical use is a calculated-field component listening to a
+* radio-button's 'update_value' event to trigger a refresh.
+*
+* Each observe entry shape:
+*   {
+*     component_tipo : string    — the observable component tipo to listen to
+*     client : {
+*       event   : string         — event name published by the observable, e.g. 'update_value'
+*       perform : { function: string } — method name to call on self, e.g. 'refresh'
+*     }
+*     server : { filter: bool }  — server-side config only; ignored client-side
+*   }
+*
+* Called inside do_build() after set_context_vars(). The guard
+* `self.init_events_subscribed` prevents double-subscription when build() is
+* called more than once (which can happen via refresh()).
+*
+* Subscription scoping: events are keyed on the combination
+* `event +'_'+ section_tipo +'_'+ section_id +'_'+ component_tipo` so that
+* observers only react to their own section record's observable — not to
+* homologous components in other open records.
+*
+* @param {Object} self - The component instance to attach subscriptions to
+* @returns {boolean} true when subscriptions were attached; false when skipped
+*   (non-edit mode or already subscribed)
 */
 export const init_events_subscription = function(self) {
 
@@ -421,19 +559,39 @@ export const init_events_subscription = function(self) {
 
 /**
 * SAVE
-* Executes a save action by calling the API.
-* Handles UI state (loading, error, success classes), prevents concurrent saves,
-* and updates the local data model upon success.
+* Persists `changed_data` to the server via the Dédalo API, manages UI
+* feedback classes (saving / loading / error / save_success / modified), and
+* keeps the local data model in sync with the server response.
 *
-* @async
-* @param {Array} new_changed_data - Array of changes to save. If not provided, uses `self.data.changed_data`.
-* @example
-* [{
-* 	action : "update", // "update", "set_data", etc.
-* 	key : 0,           // Array index or null
-* 	value : "My new value"
-* }]
-* @returns {Promise<Object>} api_response - The raw API response object.
+* Flow:
+*  1. Guard: skip if a save is already in progress (self.saving === true).
+*  2. Validate changed_data — must be a non-empty array.
+*  3. Optimisation: for action='update' items, compare each value against the
+*     db_data snapshot with is_equal(). If nothing actually changed, abort.
+*  4. Clone self.data, inject changed_data, build an RQO and POST via data_manager.
+*  5. On success: update self.data + self.db_data from the server response, run
+*     the success animation, clear the 'modified' CSS class, and reset the
+*     before-unload warning.
+*  6. On auth failure ('not_logged'): subscribe to 'login_successful' and
+*     retry the save automatically when the user logs back in.
+*  7. Always publish 'save' (general) and 'save_' + self.id_base (component-specific)
+*     events with { instance, api_response } payload.
+*
+* ChangedDataItem shape:
+*   {
+*     action : string  — 'update' | 'set_data' | 'remove'
+*     key    : number|null — array index within data.entries (null = append)
+*     id     : *|null     — stable item id (preferred over key for id-based matching)
+*     value  : *          — the new value to persist
+*   }
+*
+* (!) component_password is excluded from the db_data snapshot update after save
+* to avoid storing the hash in the client-side baseline.
+*
+* @param {Array} [new_changed_data] - ChangedDataItem array. Falls back to
+*   self.data.changed_data when omitted.
+* @returns {Promise<Object|boolean>} The raw api_response object on completion;
+*   false when the save was skipped (concurrent, invalid data, or no-change).
 */
 component_common.prototype.save = async function(new_changed_data) {
 
@@ -647,8 +805,11 @@ component_common.prototype.save = async function(new_changed_data) {
 
 /**
 * GET_VALUE
-* Look component data entries (we assume that it is updated)
-* @return array value
+* Returns the current entries array from the component's data object.
+* Assumes self.data.entries is up to date (call after build() or update_datum()).
+* Concrete components may override this to apply model-specific transformations.
+*
+* @returns {Array|null} The entries array, or null/undefined when no data is set
 */
 component_common.prototype.get_value = function() {
 
@@ -661,8 +822,12 @@ component_common.prototype.get_value = function() {
 
 /**
 * SET_VALUE
-* Update component data entries (usually with with DOM node actual value)
-* @return bool true
+* Replaces the entries array in the component's data object with the supplied value.
+* This is a low-level setter: it does not trigger save(), change_value(), or any
+* event. Use change_value() when a user-initiated update should be persisted.
+*
+* @param {Array|*} value - New entries value to assign to self.data.entries
+* @returns {boolean} Always true
 */
 component_common.prototype.set_value = function(value) {
 
@@ -676,11 +841,32 @@ component_common.prototype.set_value = function(value) {
 
 /**
 * UPDATE_DATUM
-* Update component data entries with changed_data send by the DOM element
-* Update the datum and the data of the instance with the data changed and saved.
-* @param object new_data
-*	new_data contains fresh calculated data of saved component
-* @return bool true
+* Merges an API result object (containing fresh `data` and `context` arrays)
+* into the component's shared datum, then updates self.data from the merged result.
+*
+* Called in two situations:
+*  1. After build(autoload=true) — to push the autoloaded data into the shared datum.
+*  2. After change_value() → save() — to propagate the server-returned data back
+*     into datum so all other components sharing the same datum stay in sync.
+*
+* Data merge strategy (datum.data):
+*  - Existing items are matched by (tipo, section_tipo, section_id, mode) plus,
+*    for dataframe sub-entries, by (section_id_key, section_tipo_key, main_component_tipo).
+*  - Matching items have their `entries` and `fallback_value` updated in place.
+*  - New items that have no match are appended to datum.data.
+*  - When new_datum.data is empty the matched item's entries are cleared to []
+*    (server sends no data node when a component has no value).
+*
+* Context merge strategy (datum.context):
+*  - Only items NOT already in datum.context are appended (no update of existing).
+*  - Match is by (tipo, section_tipo, mode, lang) — added 12-10-2023 to fix
+*    component_relation_parent/children visualization after adding terms.
+*
+* (!) datum is shared with the parent section. Portals create their own private datum.
+*     Do not replace the datum reference itself — only mutate it in place.
+*
+* @param {Object} new_datum - API result object: { data: Array<DataItem>, context: Array<ContextItem> }
+* @returns {Promise<Object|boolean>} The updated self.datum on success; false on invalid input
 */
 component_common.prototype.update_datum = async function(new_datum) {
 
@@ -889,15 +1075,32 @@ component_common.prototype.update_datum = async function(new_datum) {
 
 /**
 * UPDATE_DATA_VALUE
-* Updates component data entries with changed_data_item sent by the DOM element
-* @param object changed_data_item
-* Sample data:
-* {
-*	id		: 'abc123',
-*	value	: input.value,
-*	action	: 'update'
-* }
-* @return bool true
+* Applies a single ChangedDataItem mutation to self.data.entries in memory,
+* without any API call. Called by change_value() before save() so the local
+* model stays consistent with what will be persisted.
+*
+* ChangedDataItem shape:
+*   {
+*     action : string      — 'update' | 'set_data' | 'remove'
+*     id     : *|undefined — stable item id (preferred lookup key)
+*     key    : number|null — fallback array index when id is absent
+*     value  : *|null      — new entry value; null signals deletion
+*   }
+*
+* Mutation rules by action / key combination:
+*   set_data              → replace the entire entries array with `value` (bulk insert)
+*   remove + key=null + value=null + id resolved → wipe entries to []
+*   data_key=false + value=null (legacy path) → wipe entries to []
+*   data_key=null + value !== null → append value to entries
+*   data_key=<idx> + value=null → splice that entry out (delete by position)
+*   data_key=<idx> + value !== null → overwrite that position
+*
+* id-based lookup: when `id` is present, findIndex() on entries is used to
+* resolve the array position, setting id_not_found=true when not matched
+* (avoids the 'remove all' fallback firing on a stale id).
+*
+* @param {Object} changed_data_item - The mutation descriptor
+* @returns {boolean} Always true
 */
 component_common.prototype.update_data_value = function(changed_data_item) {
 
@@ -962,21 +1165,37 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 
 /**
 * CHANGE_VALUE (AND SAVE)
-* 	Changes one or more component's values:
-* 		1 - Update self.data.entries
-* 		2 - Save values to DDBB
-* 		3 - Reset self.data.changed_data to empty array
-* 	Publish event 'update_value_'+self.id_base
+* High-level user-action handler that updates the in-memory data model and
+* persists the change in one atomic call. This is the correct entry point for
+* all user-initiated value changes; do NOT call save() or update_data_value()
+* directly from UI event handlers.
 *
-* @param object options
-* {
-* 	array changed_data
-* 	string label
-* 	bool|undefined refresh
-* 	undefined|function|bool remove_dialog
-* }
-* @return promise
-* 	Resolve bool|object (API response)
+* Sequence:
+*  1. Queue guard: if a change_value is already in progress (self.status === 'changing'),
+*     the new call is deferred into self.change_value_pool and resolved when the
+*     current call drains the queue in its finally block.
+*  2. Remove-confirmation: if any item in changed_data has action === 'remove',
+*     a confirmation dialog is shown (custom or default). Returning false cancels.
+*  3. Mark self.status = 'changing' so subsequent overlapping calls queue up.
+*  4. update_data_value() for each item — mutates self.data.entries in memory.
+*  5. save(changed_data) — POSTs to server, updates self.data and self.db_data.
+*  6. For non-standalone components, update_datum() propagates the server result
+*     into the shared section datum.
+*  7. Optional refresh if options.refresh === true.
+*  8. Restore status and drain the queue in the finally block (always runs).
+*  9. Publish 'sync_data_' + id_base_lang → sibling components sharing the same
+*     id_base update their DOM via events_subscription.js.
+* 10. Publish 'update_value_' + id_base → ontology-defined observers react
+*     (see init_events_subscription).
+*
+* @param {Object} options - Change descriptor
+* @param {Array} options.changed_data - Array of ChangedDataItem objects (required, must be array)
+* @param {string} [options.label] - Human-readable label shown in the remove confirmation dialog
+* @param {boolean} [options.refresh=false] - Whether to call self.refresh() after save
+* @param {boolean} [options.build_autoload=false] - autoload flag forwarded to self.refresh()
+* @param {Function|boolean|undefined} [options.remove_dialog] - Custom remove-confirm function;
+*   omit or pass undefined to use the built-in confirm() dialog
+* @returns {Promise<Object|boolean>} The api_response on success; false when cancelled or skipped
 */
 component_common.prototype.change_value = async function(options) {
 
@@ -1033,102 +1252,121 @@ component_common.prototype.change_value = async function(options) {
 
 	// status
 		const prev_status = self.status
-		// self.status = 'changing'
+		// Mark as 'changing' so overlapping change_value calls are queued (see guard
+		// above) instead of racing into save() — where the second call hits the
+		// `self.saving` guard, returns false and silently drops the change.
+		self.status = 'changing'
 
-	// update_data_value. update the component data value in the instance before to save (returns bool)
-		const changed_data_length = changed_data.length
-		for (let i = 0; i < changed_data_length; i++) {
-			const changed_data_item = changed_data[i] // must be a freeze object
-			const update_data = self.update_data_value(changed_data_item)
-			if (!update_data) {
-				return false
+	// Wrap the body in try/finally so the 'changing' status is ALWAYS restored and the
+	// queued calls ALWAYS drained, even if update/save/refresh throw. Otherwise status
+	// would stay 'changing' and deadlock every future change_value call.
+	try {
+
+		// update_data_value. update the component data value in the instance before to save (returns bool)
+			const changed_data_length = changed_data.length
+			for (let i = 0; i < changed_data_length; i++) {
+				const changed_data_item = changed_data[i] // must be a freeze object
+				const update_data = self.update_data_value(changed_data_item)
+				if (!update_data) {
+					return false
+				}
 			}
-		}
 
-	// save. save and rebuild the component
-		const api_response = await self.save(changed_data)
+		// save. save and rebuild the component
+			const api_response = await self.save(changed_data)
 
-		// fix instance changed_data
-		if (api_response && api_response.result) {
+			// fix instance changed_data
+			if (api_response && api_response.result) {
 
-			// reset component changed_data to empty array
-			self.data.changed_data = []
+				// reset component changed_data to empty array
+				self.data.changed_data = []
 
-			// update_datum. Force update datum with received API response result
-			// That is necessary for example to allow update maps with ddo.hide items
-			// containing coordinates value
-			// @see component_geolocation tch244
-			if(!self.standalone){
-				await self.update_datum(api_response.result)
+				// update_datum. Force update datum with received API response result
+				// That is necessary for example to allow update maps with ddo.hide items
+				// containing coordinates value
+				// @see component_geolocation tch244
+				if(!self.standalone){
+					await self.update_datum(api_response.result)
+				}
 			}
-		}
 
-	// refresh (optional, default is false)
-		if (refresh===true) {
-			await self.refresh({
-				// build_autoload default value is false but could be a function callback
-				build_autoload : build_autoload
+		// refresh (optional, default is false)
+			if (refresh===true) {
+				await self.refresh({
+					// build_autoload default value is false but could be a function callback
+					build_autoload : build_autoload
+				})
+			}
+
+		// restore previous status value
+			self.status = prev_status
+
+		// event sync_data_ . Used to update the DOM elements of the instance
+		// subscriptions from component_common.init()
+		// @see events_subscription.js
+			const id_base_lang = self.id_base + '_' + self.lang
+			event_manager.publish('sync_data_'+id_base_lang, {
+				caller			: self,
+				changed_data	: changed_data
 			})
-		}
 
-	// restore previous status value
-		self.status = prev_status
+		// event update_value_ . Defined in Ontology to fire events, see: hierarchy93 or numisdata77
+		// subscriptions from component_common.build() -> init_events_subscription(self)
+		// @see component_common.init_events_subscription
+		// sample of use in Ontology item properties:
+			// "observe": [
+			// 	{
+			// 	  "info": "Observes 'Review status' radio_button value changes to update this calculated value",
+			// 	  "client": {
+			// 		"event": "update_value",
+			// 		"perform": {
+			// 		  "function": "refresh"
+			// 		}
+			// 	  },
+			// 	  "server": {
+			// 		"filter": false
+			// 	  },
+			// 	  "component_tipo": "oh93"
+			// 	}
+			// ]
+			const id_base = self.id_base
+			event_manager.publish('update_value_'+id_base, {
+				caller			: self
+			})
 
-	// event sync_data_ . Used to update the DOM elements of the instance
-	// subscriptions from component_common.init()
-	// @see events_subscription.js
-		const id_base_lang = self.id_base + '_' + self.lang
-		event_manager.publish('sync_data_'+id_base_lang, {
-			caller			: self,
-			changed_data	: changed_data
-		})
+		return api_response
 
-	// event update_value_ . Defined in Ontology to fire events, see: hierarchy93 or numisdata77
-	// subscriptions from component_common.build() -> init_events_subscription(self)
-	// @see component_common.init_events_subscription
-	// sample of use in Ontology item properties:
-		// "observe": [
-		// 	{
-		// 	  "info": "Observes 'Review status' radio_button value changes to update this calculated value",
-		// 	  "client": {
-		// 		"event": "update_value",
-		// 		"perform": {
-		// 		  "function": "refresh"
-		// 		}
-		// 	  },
-		// 	  "server": {
-		// 		"filter": false
-		// 	  },
-		// 	  "component_tipo": "oh93"
-		// 	}
-		// ]
-		const id_base = self.id_base
-		event_manager.publish('update_value_'+id_base, {
-			caller			: self
-		})
+	} finally {
 
-	// exec queue one by one
-		if(self.change_value_pool.length > 0) {
-			(self.change_value_pool.shift())();
-		}
+		// safety: ensure status is restored even on early-return/throw
+			if (self.status==='changing') {
+				self.status = prev_status
+			}
 
-
-	return api_response
+		// exec queue one by one
+			if(self.change_value_pool.length > 0) {
+				(self.change_value_pool.shift())();
+			}
+	}
 }//end change_value
 
 
 
 /**
 * FUNCTION_QUEUE
-* @param object context
-*	Usually self or this
-* @param array pool
-*	Where is stored the section
-* @param function fn
-*	Name of the function to store
-* @param object options
-*	Argument to send to function
-* @return
+* Defers a function call by wrapping it in a closure and pushing it onto a pool
+* array. Used by change_value() to serialise concurrent value-change calls:
+* when self.status === 'changing' the new call is queued here and the running
+* call drains it (pool.shift()()) in its finally block.
+*
+* The returned function is also resolved as the Promise value for the waiting
+* caller, so the caller gets the result once the queue entry executes.
+*
+* @param {Object} context - The `this` context to bind when the function executes (usually the component instance)
+* @param {Array} pool - The queue array to push the wrapped call onto
+* @param {Function} fn - The function to defer (e.g. self.change_value)
+* @param {Object} options - The single argument to pass when fn is eventually called
+* @returns {Function} The wrapped deferred call (also added to pool)
 */
 const function_queue = function(context, pool, fn, options) {
 
@@ -1148,9 +1386,18 @@ const function_queue = function(context, pool, fn, options) {
 
 /**
 * UPDATE_NODE_CONTENTS
-* Static function. Replaces old DOM node by new node
-* @param DOM node current_node
-* @param DOM node new_node
+* Replaces the children of `current_node` with the children of `new_node`,
+* preserving the `current_node` element itself in the DOM (so external
+* references and event listeners on the container remain valid).
+*
+* This is preferred over `parentNode.replaceChild(new_node, current_node)` when
+* the caller holds a reference to `current_node` that must stay live.
+* Both nodes are mutated in place: current_node is emptied then repopulated,
+* and new_node is drained (its children are moved, not copied).
+*
+* @param {HTMLElement} current_node - The existing container whose content will be replaced
+* @param {HTMLElement} new_node - The source node whose children will be moved into current_node
+* @returns {Promise<HTMLElement>} The updated current_node
 */
 component_common.prototype.update_node_contents = async (current_node, new_node) => {
 
@@ -1172,18 +1419,31 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 
 /**
 * CHANGE_MODE
-* Destroy current instance and dependencies without remove HTML nodes (used to get target parent node placed in DOM)
-* Create a new instance in the new mode (for example, from list to edit) and view (ex, from default to line )
-* Render a fresh full element node in the new mode
-* Replace every old placed DOM node with the new one
-* Active element (using event manager publish)
-* @param object options
-* {
-* 	mode: string 'list',
-* 	view: string 'line'
-* 	autoload: bool 'true'
-* }
-* @return bool
+* Switches the component to a different render mode (e.g. 'list' → 'edit') and/or
+* view variant. Creates a fresh instance in the new mode, renders it, swaps it into
+* the DOM in place of the old node, activates it if in edit mode, and finally
+* destroys the current (old) instance.
+*
+* The old DOM node is preserved long enough to locate its parent for the in-place
+* swap; destroy() is called with remove_dom=true so the old shadow subtree is also
+* cleaned up after the swap.
+*
+* CSS: if context.css is defined, set_element_css() injects a scoped rule so the
+* new node immediately picks up any component-specific styles.
+*
+* Mode fallback logic (when options.mode is omitted):
+*   list → edit (toggle to edit)
+*   any other → self.mode (unchanged)
+*
+* View fallback logic (when options.view is omitted):
+*   edit mode → 'line'
+*   otherwise → self.mode (unchanged — keeps current view)
+*
+* @param {Object} options - Change descriptor
+* @param {string} [options.mode] - Target mode ('edit', 'list', etc.). Defaults to toggling list↔edit.
+* @param {string} [options.view] - Target view variant. Defaults to 'line' for edit, current mode otherwise.
+* @param {boolean} [options.autoload=true] - Whether the new instance should fetch its own data
+* @returns {Promise<boolean>} true on success; false when permissions are insufficient (< 1)
 */
 component_common.prototype.change_mode = async function(options) {
 
@@ -1281,6 +1541,9 @@ component_common.prototype.change_mode = async function(options) {
 
 /**
 * CHANGE_MODE_DES
+* Dead-code: superseded by change_mode(). Opened a modal instead of performing
+* an in-place DOM swap. Kept commented out to preserve history.
+* (!) Do not remove — explicit decision deferred.
 */
 	// component_common.prototype.change_mode_DES = async function(new_mode, autoload) {
 
@@ -1350,10 +1613,33 @@ component_common.prototype.change_mode = async function(options) {
 
 /**
 * SET_CHANGED_DATA
-* Unified way to set changed_data item
-* @param object changed_data_item
-* @return bool
-* 	Returns true when new data is different from stored db data and false when not
+* Records a pending edit in self.data.changed_data and determines whether the
+* edit represents an actual change from the last-saved server state (db_data).
+*
+* Deduplication: if an item with the same `id` already exists in changed_data
+* it is replaced in place; otherwise the item is appended. This ensures that
+* rapid keystrokes accumulate into a single pending change entry rather than
+* growing the array unboundedly.
+*
+* Change detection: compares the new value against db_data using is_equal().
+* Lookup order: by stable item `id` when present (mirrors save()'s contract),
+* falling back to positional `key` when no id is set.
+*
+* Side effects:
+*  - When the value is unchanged (is_equal returns true):
+*      · resets the before-unload navigation warning (set_before_unload(false))
+*      · removes the 'modified' CSS class from self.node
+*      · returns false
+*  - When the value is genuinely new:
+*      · activates the before-unload warning (set_before_unload(true))
+*      · adds the 'modified' CSS class to self.node
+*      · returns true
+*
+* @param {Object} changed_data_item - The change descriptor to record
+* @param {*} [changed_data_item.id] - Stable item id for dedup and db lookup
+* @param {number|null} [changed_data_item.key] - Array index fallback when id is absent
+* @param {*} changed_data_item.value - The new value to compare against db_data
+* @returns {boolean} true when the data is genuinely changed; false when it matches db_data
 */
 component_common.prototype.set_changed_data = function(changed_data_item) {
 
@@ -1373,10 +1659,13 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 		}
 
 	// Check if changed_data was really changed.
-	// Test if the changed_data is not the original data (the data in server database)
-		const original_value	= self.db_data.entries && self.db_data.entries[key]
-			? self.db_data.entries[key]
-			: null
+	// Test if the changed_data is not the original data (the data in server database).
+	// Resolve the original db entry by matching id (same contract as save()); the
+	// previous code indexed db_data.entries with the changed_data array index `key`,
+	// which is an unrelated ordering and compared against the wrong db entry.
+		const original_value	= (changed_data_item.id !== null && changed_data_item.id !== undefined)
+			? (self.db_data?.entries?.find(entry => entry?.id === changed_data_item.id) ?? null)
+			: (self.db_data?.entries?.[changed_data_item.key] ?? null)
 		const new_value			= changed_data_item.value
 
 		// debug
@@ -1409,20 +1698,29 @@ component_common.prototype.set_changed_data = function(changed_data_item) {
 
 /**
 * CHECK_UNSAVED_DATA
-* If window.unsaved_data===true, iterate all component instances
-* searching unsaved data to force save it
-* Customized confirm message is enable when is not possible to save the changed component
-* @see page.js beforeunload event
-* @see page.js mousedown event
-* @see page.js user_navigation event
-* @see section.js navigate method
-* @see dd-modal.js _closeModal method
-* @see ui component activate method
-* @param object options
-* {
-* 	confirm_msg: "Discard unsaved changes?"
-* }
-* @return bool
+* Navigation guard that flushes auto-saveable pending edits and prompts the user
+* to confirm discarding any remaining unsaved changes before a navigation event
+* proceeds.
+*
+* Two-phase approach:
+*  1. If window.unsaved_data === true, call save_unsaved_components() to auto-save
+*     any component instances that still carry non-empty changed_data. This handles
+*     the common text-area debounce window (500 ms delay before the component marks
+*     itself changed) where the user navigates faster than the debounce fires.
+*  2. After the auto-save pass, if window.unsaved_data is still true (e.g. a save
+*     failed or a component could not be auto-saved), show a browser confirm() dialog.
+*     Returning false signals the caller to abort the navigation.
+*
+* Called from:
+*   page.js        — beforeunload, mousedown, user_navigation events
+*   section.js     — navigate() method
+*   dd-modal.js    — _closeModal() method
+*   ui             — component.activate() method
+*
+* @param {Object} [options={}] - Options bag
+* @param {string} [options.confirm_msg] - Confirmation prompt text; defaults to the
+*   'discard_changes' i18n label or 'Discard unsaved changes?'
+* @returns {Promise<boolean>} true when safe to navigate; false when the user cancelled
 */
 export const check_unsaved_data = async function(options={}) {
 
@@ -1459,8 +1757,19 @@ export const check_unsaved_data = async function(options={}) {
 
 /**
 * SAVE_UNSAVED_COMPONENTS
-* Iterate all instances and save component data if data.changed_data is filled
-* @return bool
+* Walks the entire instance registry and calls save() on every component instance
+* that has a non-empty data.changed_data array (i.e. edits not yet persisted).
+*
+* Called by check_unsaved_data() before presenting the user with a discard prompt,
+* so that components like component_text_area — which debounce their change events
+* — get a chance to flush their pending edits even when the user navigates quickly.
+*
+* Instances without a `data` property are skipped with a console.error (they are
+* anomalous — all built components should have data) but the sweep continues for
+* the remaining instances.
+*
+* @returns {Promise<boolean>} Always resolves true (individual save errors are
+*   handled inside save() itself and do not abort the sweep)
 */
 export const save_unsaved_components = async function() {
 
@@ -1472,13 +1781,14 @@ export const save_unsaved_components = async function() {
 		if (item.type==='component') {
 			if (!item.data) {
 				console.error('))) Ignored item without data:', item);
-				return true
+				// skip this one but keep sweeping the rest
+				continue
 			}
 			if (item.data.changed_data && item.data.changed_data.length>0) {
 				console.log('Saving component unsaved', item);
+				// save every dirty component, not just the first one (otherwise
+				// later unsaved edits are silently dropped on navigation/unload)
 				await item.save()
-
-				return true
 			}
 		}
 	}
@@ -1491,8 +1801,30 @@ export const save_unsaved_components = async function() {
 
 /**
 * DEACTIVATE_COMPONENTS
-* Called from document and from section in edit mode
-* @see view_default_edit_section->render
+* Click-away handler attached to the document (and to section wrappers in edit mode)
+* that deactivates the currently active component when the user clicks outside it.
+*
+* Two code paths:
+*  A. A component is currently active (page_globals.component_active is set):
+*     - If component locking is enabled (DEDALO_LOCK_COMPONENTS === true) and the
+*       component is in edit mode, a background worker request is fired via
+*       dd_request_idle_callback to send a 'blur' lock-state update to the server
+*       (preventing the record from appearing locked to other users after the focus
+*       leaves without an explicit save).
+*     - ui.component.deactivate() is called to visually deactivate the component.
+*  B. No component is active:
+*     - check_unsaved_data() is called to handle the text-area debounce window edge
+*       case where the user clicks outside any component before the debounce timer fires.
+*
+* Scrollbar clicks: e.target.parentElement === null means the click landed on the
+* browser scrollbar (which is outside the DOM tree). These are ignored to prevent
+* spurious deactivation when the user scrolls the page.
+*
+* Called from:
+*   view_default_edit_section → render (section-level mousedown listener)
+*   page.js document-level mousedown listener
+*
+* @param {MouseEvent} e - The originating mouse event
 */
 export const deactivate_components = function(e) {
 	e.stopPropagation()
@@ -1550,10 +1882,13 @@ export const deactivate_components = function(e) {
 
 /**
 * DATAFRAME
-* get_dataframe / delete_dataframe moved to dataframe.js (single JS authority
-* for the dataframe pairing contract). Re-exported here for backwards
-* compatibility of existing imports.
-* @see core/component_common/js/dataframe.js
+* get_dataframe, delete_dataframe, and attach_item_dataframe were extracted to
+* dataframe.js to centralise the dataframe pairing contract in a single authority
+* file. They are re-exported here so that existing callers importing from
+* component_common.js continue to work without changes.
+*
+* @see core/component_common/js/dataframe.js for full documentation and the
+*   pairing contract (id_key / section_id_key / main_component_tipo triad).
 */
 export { get_dataframe, delete_dataframe, attach_item_dataframe } from './dataframe.js'
 
@@ -1561,10 +1896,24 @@ export { get_dataframe, delete_dataframe, attach_item_dataframe } from './datafr
 
 /**
 * IS_EMPTY
-* Check if the instance data is empty.
-* Used in search mode for hilite the component wrapper when has value.
-* @param object instance
-* @return bool
+* Determines whether a component instance currently holds no user data.
+* Used by the search-mode event handler in events_subscription.js to decide
+* whether to highlight (hilite) the component wrapper.
+*
+* Resolution order:
+*  1. If instance is falsy → true (empty).
+*  2. If the instance defines its own `is_empty()` method, delegate to it.
+*     Concrete components that have unusual data shapes (e.g. component_date,
+*     component_select) override this to apply model-specific logic.
+*  3. Otherwise apply the shared heuristic:
+*     - entries array empty → true
+*     - entries[0] is an object with a 'value' property (string-component shape) →
+*       empty when value is falsy or ''
+*     - entries[0] is any other truthy value → false (non-empty)
+*     - entries[0] is falsy → true
+*
+* @param {Object|null} instance - The component instance to check
+* @returns {boolean} true when the instance has no meaningful data
 */
 export const is_empty = function( instance ) {
 
@@ -1608,10 +1957,10 @@ export const is_empty = function( instance ) {
 * @param {Object} options - Optional configuration
 * @param {string} options.mode - 'modal' (always modal), 'inline' (always inline), 'auto' (based on width)
 * @param {string} options.inline_view - View to use for inline mode (default: 'line')
-* @param {number} options.modal_width - Modal width in CSS (default: '25rem')
+* @param {string} options.modal_width - Modal width CSS value (default: '25rem')
 * @param {string} options.lang - Language to use for edit instance
 * @param {Function} options.on_close - Callback when modal closes
-* @returns {boolean} Returns false if read-only or inside dataframe, otherwise void
+* @returns {boolean|undefined} false if read-only or inside dataframe; undefined otherwise (edit is launched)
 *
 * @example
 * // Simple usage (auto mode)

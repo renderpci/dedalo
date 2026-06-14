@@ -1,8 +1,29 @@
 <?php declare(strict_types=1);
 /**
-* CLASS SEARCH
-* TRAIT utils
-* Useful methods for search class
+* TRAIT UTILS
+* Cross-cutting utility methods mixed into the search class.
+*
+* This trait is one of six traits that compose the search class (select, from,
+* where, order, count, utils). It provides:
+* - SQL-safe identifier helpers (trim_tipo, is_valid_tipo, is_valid_lang,
+*   is_valid_data_column) used as security gates before verbatim SQL interpolation
+*   of ontology tipos, language codes, and column names that cannot be bound
+*   via prepared-statement parameters.
+* - Prepared-statement parameter management (get_placeholder) that deduplicates
+*   bound values with strict type comparison and emits PostgreSQL-style $N placeholders.
+* - LIMIT/OFFSET SQL tail builder (build_limit_offset_sql, sanitize_sql_limit).
+* - Query path resolution (get_query_path, get_table_alias_from_path) used by the
+*   FROM/SELECT builders to derive JOIN aliases from multi-hop traversal paths.
+* - Path-level data retrieval helpers (get_data_with_path, resolve_path_level) used
+*   by the component_info widget (class state).
+* - Search UI helpers (search_options_title, is_search_operator, is_literal).
+* - Debug accessors (get_sql_query, get_sql_query_resolved).
+*
+* Relies on properties declared in search: $this->sqo, $this->params,
+* $this->sql_query, $this->main_section_tipo_alias.
+*
+* @package Dédalo
+* @subpackage Core
 */
 trait utils {
 
@@ -10,8 +31,25 @@ trait utils {
 
     /**
 	* GET_TABLE_ALIAS_FROM_PATH
-	* @param array $path
-	* @return string $table_alias
+	* Derives the SQL table alias for the matrix JOIN that corresponds to a
+	* multi-hop traversal path produced by get_query_path().
+	*
+	* Each step of the path contributes a segment to the alias:
+	* - Single-step path: uses the pre-computed $main_section_tipo_alias (which
+	*   already encodes the section tipo with a short prefix via trim_tipo).
+	* - Multi-step path: each intermediate step contributes
+	*   "trim(section_tipo)_trim(component_tipo)", and the final step contributes
+	*   only "trim(section_tipo)" (the component_tipo is not needed at the leaf).
+	* Segments are joined with underscores.
+	*
+	* Example (2-step path via portal oh25 → rsc167):
+	*   step 0 (not last): 'oh1_oh25'
+	*   step 1 (last):     'rs167'
+	*   alias:             'oh1_oh25_rs167'
+	*
+	* @param array $path - array of stdClass steps from get_query_path();
+	*                      each step has ->section_tipo and ->component_tipo
+	* @return string $table_alias - underscore-joined SQL alias string
 	*/
 	public function get_table_alias_from_path( array $path ) : string {
 
@@ -41,11 +79,25 @@ trait utils {
 
     /**
 	* TRIM_TIPO
-	* Contract the tipo to prevent large names in SQL sentences
+	* Contracts an ontology tipo string to a short prefix suitable for SQL aliases.
+	*
+	* A tipo has the form <letters><digits> (e.g. 'rsc453', 'oh1'). This method
+	* keeps the first $max letters and the full numeric suffix, yielding a compact
+	* but still meaningful alias segment (e.g. 'rsc453' → 'rs453', 'oh1' → 'oh1').
+	*
+	* (!) This method MUST NOT be used as a security gate for SQL interpolation.
+	* It transforms the value (truncates the prefix), so using it to validate
+	* a tipo that is then used as a JSONB key would silently corrupt the key.
+	* Use is_valid_tipo() for validation-only checks.
+	*
+	* Returns null (and logs an error) for tipos that are empty or do not match the
+	* expected letter+digit pattern. The 'all' sentinel is passed through unchanged
+	* (used by related search when the target section is unspecified).
+	*
 	* @see search_Test::test_trim_tipo
-	* @param string $tipo
-	* @param int $max = 2
-	* @return string|null $trimmed_tipo
+	* @param string $tipo - ontology tipo to contract (e.g. 'rsc453')
+	* @param int $max = 2 - number of leading letters to keep
+	* @return string|null $trimmed_tipo - e.g. 'rs453'; null on malformed input
 	*/
 	public static function trim_tipo( string $tipo, int $max=2 ) : ?string {
 
@@ -204,11 +256,25 @@ trait utils {
 	* GET_QUERY_PATH
 	* Recursive function to obtain final complete path of each element in json query object
 	* Used in component common and section to build components path for select
-	* @param string $tipo
-	* @param string $section_tipo
-	* @param bool $resolve_related = true
+	*
+	* Builds a linear array of path steps from the given component tipo upward (or
+	* downward through relations), so the FROM and SELECT builders can emit the
+	* correct sequence of JOINs and alias segments.
+	*
+	* When $resolve_related is true and the component's model is a relation-capable
+	* type, the method follows the ontology relation nodes of the tipo into the
+	* related section and recurses for one level of related components. Only the
+	* first related component is followed (see 'Avoid multiple components in path'
+	* comment below); deeper nesting requires explicit $related_tipo.
+	*
+	* @param string $tipo            - ontology tipo of the component to resolve
+	* @param string $section_tipo    - section that owns the component
+	* @param bool $resolve_related = true  - follow relation nodes into related sections
 	* @param bool|string $related_tipo = false
-	* @return array $path
+	*     - when a string, resolve only this specific component in the related section
+	*       instead of scanning all relation nodes
+	* @return array $path - sequential array of stdClass steps, each with:
+	*   ->name (display label), ->model (class name), ->section_tipo, ->component_tipo
 	*/
 	public static function get_query_path(string $tipo, string $section_tipo, bool $resolve_related=true, bool|string $related_tipo=false) : array {
 
@@ -275,9 +341,14 @@ trait utils {
 	/**
 	* SEARCH_OPTIONS_TITLE
 	* Creates the search_operators_info of the components in search mode to draw the tool tip
+	*
+	* Builds an HTML string listing all available search operator options for a
+	* component. The result is rendered as a tooltip in the search UI, so it must
+	* not be escaped again by the caller.
+	*
 	* @param array $search_operators_info
 	*	Array of operator => label like: ... => between
-	* @return string $search_options_title
+	* @return string $search_options_title - HTML snippet (safe for direct output)
 	*/
 	public static function search_options_title( array $search_operators_info ) : string {
 
@@ -302,8 +373,16 @@ trait utils {
 
 	/**
 	* IS_SEARCH_OPERATOR
-	* @param object $search_object
-	* @return bool
+	* Checks whether a search object represents an SQO operator node rather than
+	* a plain key-value filter clause.
+	*
+	* Operator nodes carry keys that begin with '$' (e.g. '$and', '$or', '$not').
+	* This distinction is used by the WHERE builder when recursing through a filter
+	* tree to decide whether to interpret a node as an operator group or a leaf
+	* condition.
+	*
+	* @param object $search_object - a node from the SQO filter tree
+	* @return bool - true if at least one key starts with '$'
 	*/
 	public static function is_search_operator(object $search_object) : bool {
 
@@ -323,6 +402,12 @@ trait utils {
 	* Check if given value is literal or not
 	* A literal is identified by being enclosed in single quotes.
 	* Used by components to identify literals
+	*
+	* A literal search value is one that should be matched exactly (after stripping
+	* the enclosing quotes) rather than transformed into a JSONB path query. This
+	* convention allows users and callers to pass a quoted string like "'hello'" to
+	* request an exact-match against the stored text.
+	*
 	* @param string $q The string to check.
 	* @return bool True if the string is a literal, false otherwise.
 	*/
@@ -337,6 +422,15 @@ trait utils {
 	/**
 	* GET_DATA_WITH_PATH
 	* It is used by class state (component_info widget) to resolve path
+	*
+	* Iterates the path steps produced by get_query_path() and resolves the actual
+	* stored component data for each step, threading the locator array forward so
+	* each level filters by the records returned by the previous level. The output
+	* is a sequential array of step objects, each carrying the path metadata and
+	* the resolved locator/data array for that hop.
+	*
+	* This is the entry point; resolve_path_level() handles the per-step data fetch.
+	*
 	* @param array $path in this format:
 	*	"path": [
 	*	  {
@@ -352,8 +446,8 @@ trait utils {
 	*		  "name": "Collection \/ archive"
 	*	  }
 	*  ],
-	* @param array $ar_locator
-	* @return array $data
+	* @param array $ar_locator - starting locator array (section_tipo + section_id pairs)
+	* @return array $data - sequential array of stdClass{->path, ->value} per step
 	*/
 	public static function get_data_with_path(array $path, array $ar_locator) : array {
 
@@ -382,9 +476,16 @@ trait utils {
 	/**
 	* RESOLVE_PATH_LEVEL
 	* It is used by class state (component_info widget) to resolve path from search::get_data_with_path
-	* @param object $path_item
-	* @param array $ar_locator
-	* @return array $result
+	*
+	* For each locator in $ar_locator, instantiates the component described by
+	* $path_item and calls get_data() on it. The returned data items from all
+	* locators are merged into a single flat array which becomes the locator input
+	* for the next level. Uses 'list' mode and DEDALO_DATA_NOLAN so the data is
+	* returned in its normalized (non-language-specific) form.
+	*
+	* @param object $path_item - one step from the path array (->component_tipo, ->section_tipo, ->model)
+	* @param array $ar_locator - array of locator objects (->section_id, ->section_tipo) from the previous level
+	* @return array $result - merged flat array of data items from all resolved locators
 	*/
 	public static function resolve_path_level(object $path_item, array $ar_locator) : array {
 
@@ -416,6 +517,25 @@ trait utils {
 	* GET_PLACEHOLDER
 	* Gets the placeholder for a given value.
 	* If it exists, returns it, otherwise returns the next available placeholder.
+	*
+	* Manages $this->params, the 0-indexed array of bound values that is passed
+	* directly to pg_execute(). The returned placeholder string ('$1', '$2', …)
+	* maps to $this->params[N-1].
+	*
+	* Deduplication uses strict comparison (===) so that distinct typed values
+	* (e.g. integer 1 vs. string '1' vs. boolean true vs. null) never collapse
+	* onto the same placeholder. This prevents the PHP array-key coercion pitfall
+	* of the previous implementation (which keyed $this->params by the value itself,
+	* silently corrupting non-string params: 1.5 → 1, true → 1, null → '').
+	*
+	* (!) SEARCH-03 — known O(n²) characteristic: array_search() is a linear scan,
+	* so assembling N params costs O(n²) total. Real-world filters are small and this
+	* is not currently on the hot path. If profiling ever identifies this as a
+	* bottleneck, add a side-index keyed by a type-tagged string
+	* (e.g. gettype($value)."\0".serialize($value)) → placeholder index for O(1)
+	* lookup while preserving strict-type semantics. Left as-is to avoid touching the
+	* prepared-params model for a non-demonstrated cost.
+	*
 	* @param mixed $value Like 'oh1' (string|int|float|bool|null)
 	* @return string $placeholder Like $1, $2, $3, ...
 	*/

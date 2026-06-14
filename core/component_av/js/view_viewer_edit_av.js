@@ -33,6 +33,8 @@ export const view_viewer_edit_av = function() {
 */
 view_viewer_edit_av.render = async function(self, options) {
 
+	const render_level = options?.render_level || 'full'
+
 	// short vars
 		const data			= self.data || {}
 		const entries		= data.entries || []
@@ -40,21 +42,6 @@ view_viewer_edit_av.render = async function(self, options) {
 			? (entries[0].files_info || [])
 			: []
 		const extension		= self.context.features.extension
-
-	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'wrapper_component component_av view_viewer'
-		})
-
-	// permissions
-	// set read only permissions, remove the context menu
-		if(self.permissions < 2){
-			wrapper.addEventListener("contextmenu", (e) => {
-				e.preventDefault();
-				return false
-			});
-		}
 
 	// url to download
 		const quality	= page_globals.dedalo_av_quality_default // '404'
@@ -96,19 +83,25 @@ view_viewer_edit_av.render = async function(self, options) {
 			}
 		}
 
+	// content_data: contains everything that changes on refresh
+		const content_data = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_data'
+		})
+
 	// media_component player
 		const media_player_node = get_content_data_player({
 			self					: self,
 			with_control_buttons	: false
 		})
-		wrapper.appendChild(media_player_node)
+		content_data.appendChild(media_player_node)
 
 	// button download
 		const download_image_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary download hidden',
 			title			: get_label.download || 'Download',
-			parent			: wrapper
+			parent			: content_data
 		})
 		download_image_button.addEventListener('click', function(e) {
 			e.stopPropagation()
@@ -132,6 +125,28 @@ view_viewer_edit_av.render = async function(self, options) {
 				name : name
 			})
 		})
+
+	if (render_level==='content') {
+		return content_data
+	}
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'wrapper_component component_av view_viewer'
+		})
+		wrapper.content_data = content_data
+
+	// permissions
+	// set read only permissions, remove the context menu
+		if(self.permissions < 2){
+			wrapper.addEventListener("contextmenu", (e) => {
+				e.preventDefault();
+				return false
+			});
+		}
+
+		wrapper.appendChild(content_data)
 
 
 	return wrapper

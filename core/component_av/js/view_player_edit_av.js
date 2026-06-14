@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport} from '../../common/js/events.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 
 
 
@@ -111,10 +112,11 @@ export const get_content_data_player = function(options) {
 					? null
 					:(self.fragment.tc_out)
 						? 'vend='+ self.fragment.tc_out
-						: 'vend='+ (self.video?.duration ?? 0);
+						: null; // duration is unknown before metadata loads (self.video does
+						         // not exist yet here); omit vend and let it play to the end
 
 				const fragment_url = (tc_in)
-					? tc_in + '&' + tc_out
+					? (tc_out ? tc_in + '&' + tc_out : tc_in)
 					: null
 
 			// video node

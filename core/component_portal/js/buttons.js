@@ -255,15 +255,19 @@ buttons.render_button_link = (self) => {
 					class_name		: 'select_section' + (target_section_length===1 ? ' mono' : ''),
 					parent			: header_custom
 				})
-				select_section.addEventListener('click', function(e){
+				// named handlers so cleanup() can remove the same references later
+				const select_click_handler = function(e){
 					e.stopPropagation()
-				})
-				select_section.addEventListener('mousedown', function(e){
+				}
+				const select_mousedown_handler = function(e){
 					e.stopPropagation()
-				})
-				select_section.addEventListener('change', function(){
+				}
+				const select_change_handler = function(){
 					iframe.src = get_iframe_url(this.value)
-				})
+				}
+				select_section.addEventListener('click', select_click_handler)
+				select_section.addEventListener('mousedown', select_mousedown_handler)
+				select_section.addEventListener('change', select_change_handler)
 				// options for select_section
 					for (let i = 0; i < target_section_length; i++) {
 						const item = target_section[i]
@@ -286,16 +290,11 @@ buttons.render_button_link = (self) => {
 					})
 					// Store cleanup function on modal for potential cleanup
 					self.modal.cleanup = function() {
-						// Remove event listeners to prevent memory leaks
-						select_section.removeEventListener('click', function(e){
-							e.stopPropagation()
-						})
-						select_section.removeEventListener('mousedown', function(e){
-							e.stopPropagation()
-						})
-						select_section.removeEventListener('change', function(){
-							iframe.src = get_iframe_url(this.value)
-						})
+						// Remove event listeners by reference (the previous version passed
+						// brand-new anonymous functions, so removeEventListener was a no-op).
+						select_section.removeEventListener('click', select_click_handler)
+						select_section.removeEventListener('mousedown', select_mousedown_handler)
+						select_section.removeEventListener('change', select_change_handler)
 					}
 				} catch (error) {
 					console.error('Error creating modal:', error);
@@ -427,7 +426,7 @@ buttons.render_list_from_component_data_button = (self) => {
 				model			: self.model
 			},
 			label		: self.label,
-			total		: self.caller.caller.total
+			total		: self.caller?.caller?.total ?? 0
 		}
 		render_open_list_with_direct_relations( options )
 	}

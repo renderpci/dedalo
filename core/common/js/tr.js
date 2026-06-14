@@ -6,8 +6,29 @@
 
 /**
 * TR
-* Text transcription functions
-* Based on server side php class TR
+* Client-side counterpart of the PHP `TR` class: manages inline markup tags
+* embedded in Dédalo transcription text fields.
+*
+* Transcription text stored in component_text_area uses a custom tag syntax
+* (not standard HTML) for structured annotations such as timecodes, index
+* markers, geographic anchors, and speaker identifications. These tags survive
+* round-trips through the database and the CKEditor rich-text editor without
+* being parsed as HTML.
+*
+* This module provides two responsibilities:
+*   1. `get_mark_pattern` — canonical regex factory for every supported tag
+*      type; used both here and by external callers that need to detect or
+*      strip tags from raw text.
+*   2. `add_tag_img_on_the_fly` — converts embedded tags to `<img>` (or
+*      `<reference>`) elements for in-browser rendering, applying XSS escaping
+*      on all capture-group values before attribute interpolation (SEC-028).
+*
+* Tag wire format overview (most types):
+*   `[TYPE-STATE-ID-LABEL-data:DATA:data]`
+*   e.g. `[index-n-42-MyLabel-data:{"k":"v"}:data]`
+*   Timecode format differs: `[TC_HH:MM:SS.mmm_TC]`
+*
+* Server-side equivalent: shared/class.TR.php
 */
 export const tr = {
 
@@ -15,7 +36,53 @@ export const tr = {
 
 	/**
 	* GET_MARK_PATTERN
-	* Get unified patterns for marks
+	* Returns the canonical compiled RegExp for a named Dédalo transcription
+	* tag type. Centralising patterns here ensures that detection, stripping,
+	* and replacement all use identical rules — the same expressions are also
+	* used by the PHP TR class on the server side.
+	*
+	* All returned patterns use the `g` (global) flag so they can be passed
+	* directly to `String.prototype.replace`.
+	*
+	* Supported mark keys and the tag shapes they match:
+	*
+	*   'tc'              — timecode value: `[TC_HH:MM:SS[.mmm]_TC]`
+	*                       capture 1 = full tag, capture 2 = time string
+	*   'tc_full'         — full timecode tag (strict, requires milliseconds)
+	*   'tc_value'        — bare time digits inside a TC value string
+	*   'index'           — both open and close index markers
+	*   'indexIn'         — opening index marker only
+	*   'indexOut'        — closing index marker only
+	*   'reference'       — both open and close reference markers
+	*   'referenceIn'     — opening reference marker only
+	*   'referenceOut'    — closing reference marker only
+	*   'svg'             — SVG annotation tag (since v4.9.0 / 2018-05-18)
+	*   'draw'            — legacy Draw tag (pre-v4.9.0 name for SVG; still parsed)
+	*   'geo'             — geographic anchor tag
+	*   'geo_full'        — complete geographic anchor tag (looser variant)
+	*   'page'            — PDF page reference tag
+	*   'person'          — transcription speaker tag (note: group 5 = label,
+	*                       not group 6, because the optional outer group is absent)
+	*   'note'            — transcription annotation tag
+	*   'lang'            — transcription language-change tag
+	*   'p'               — bare `<p>` / `</p>` HTML elements
+	*   'strong'          — `<strong>` / `</strong>`
+	*   'em'              — `<em>` / `</em>`
+	*   'i'               — `<i>` / `</i>`
+	*   'u'               — `<u>` / `</u>`
+	*   'html_style'      — any of strong/em/i/u (open or close)
+	*   'apertium-notrans'— Apertium machine-translation suppression element
+	*
+	* Common capture-group layout for structured tags (index, svg, geo, …):
+	*   g1 = full match wrapper, g2 = type, g3 = state letter (a-z),
+	*   g4 = numeric tag_id, g5 = outer optional group,
+	*   g6 = label (≤22 chars, no hyphens), g7 = embedded data payload
+	*
+	* (!) Returns an empty string `''` and logs a console error for unknown keys,
+	* so callers must not assume a RegExp is always returned.
+	*
+	* @param {string} mark - named tag type (see list above)
+	* @returns {RegExp|string} compiled global RegExp, or `''` for unknown marks
 	*/
 	get_mark_pattern : (mark) => {
 
@@ -145,17 +212,36 @@ export const tr = {
 
 	/**
 	* ADD_TAG_IMG_ON_THE_FLY
-	* Convert Dédalo tags like index, tc, etc. to images
-	* i.e. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
-	* This function equivalent exists in server side in class TR
+	* Converts all Dédalo inline markup tags in a transcription string into
+	* renderable HTML elements (`<img>` or `<reference>`) for in-browser display.
 	*
-	* SEC-028: capture groups (label `[^-]{0,22}`, data `(.*?)`) can carry `"`, `<`, `>`, `&`
-	* and other attribute-breaking characters from CKEditor content or direct API writes.
-	* Previously interpolated raw via template strings, allowing stored XSS through attribute
-	* injection (e.g. `[index-n-1-x" onerror="alert(1)" x-data:foo:data]`).
-	* All capture groups are now HTML-attribute-escaped before interpolation.
-	* @param string text
-	* @return string text
+	* Each tag type is replaced by a self-closing `<img>` whose `src` points to
+	* the tag-thumbnail endpoint (`core/component_text_area/tag/?id=<TAG_ID>`),
+	* carrying structured metadata as `data-*` attributes. The resulting elements
+	* are later wired up by the component's JS to show tooltips, seek video, etc.
+	*
+	* Example transformation:
+	*   `[TC_00:00:25.684_TC]`
+	*   → `<img id="[TC_00:00:25.684_TC]" src="../../core/component_text_area/tag/?id=[TC_00:00:25.684_TC]"
+	*         width="82" height="15" class="tc" data-type="tc" ...>`
+	*
+	* Processing order matters: tags are replaced sequentially (indexIn before
+	* indexOut, etc.) so that overlapping patterns do not interfere.
+	*
+	* Server-side equivalent: TR::add_tag_img_on_the_fly() in shared/class.TR.php.
+	*
+	* SEC-028: capture groups (label `[^-]{0,22}`, data `(.*?)`) can carry `"`,
+	* `<`, `>`, `&` and other attribute-breaking characters originating from
+	* CKEditor content or direct API writes. Interpolating them raw into template
+	* strings allows stored XSS via attribute injection, e.g.:
+	*   `[index-n-1-x" onerror="alert(1)" x-data:foo:data]`
+	* All capture groups are HTML-attribute-escaped through the internal `esc`
+	* helper before interpolation. Do not bypass `esc` when adding new tag types.
+	*
+	* @param {string} text - raw transcription text containing Dédalo markup tags
+	* @returns {string} text with all recognised tags replaced by HTML elements;
+	*   unrecognised or malformed tags are left unchanged. Returns the original
+	*   value unchanged (including null/undefined) when the input is falsy or empty.
 	*/
 	add_tag_img_on_the_fly : (text) => {
 
@@ -163,9 +249,22 @@ export const tr = {
 			return text
 		}
 
+		// Relative path from the browser document to the tag-thumbnail endpoint.
+		// The endpoint returns a small preview image for a given tag ID string.
 		const tag_url = '../../core/component_text_area/tag/?id=';
 
 		// SEC-028: escape attribute-context interpolation.
+		// (!) All capture-group values MUST pass through esc() before being
+		// placed inside an HTML attribute. Skipping this step re-opens the
+		// stored-XSS vector described in the function doc-block.
+		/**
+		* ESC
+		* Escapes a value for safe use inside an HTML attribute (double-quoted).
+		* Converts null/undefined to an empty string, then replaces the five
+		* HTML special characters: & " ' < >
+		* @param {*} s - value to escape
+		* @returns {string} HTML-attribute-safe representation
+		*/
 		const esc = (s) => {
 			if (s === undefined || s === null) return ''
 			return String(s)

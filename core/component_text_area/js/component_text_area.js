@@ -195,6 +195,12 @@ component_text_area.prototype.init = async function(options) {
 					const key			= 0; // key (only one editor is available but component could support multiple)
 					const text_editor	= self.text_editor[key]
 
+				// guard: the event may arrive before the (async) CKEditor instance is
+				// ready (e.g. fired from another component during load).
+					if (!text_editor) {
+						return false
+					}
+
 				// fix selected tag element
 					self.tag = tag
 
@@ -542,7 +548,7 @@ component_text_area.prototype.save_editor = async function(key=0) {
 
 	const text_editor = self.service_text_editor_instance[key]
 	if (!text_editor) {
-		console.error('Error on get text_editor from self.service_text_editor_instance: '.self.service_text_editor_instance)
+		console.error('Error on get text_editor from self.service_text_editor_instance:', self.service_text_editor_instance)
 		return false
 	}
 
@@ -1563,7 +1569,7 @@ component_text_area.prototype.build_tag = function(options) {
 			const rqo = {
 				action	: 'create',
 				source	: {
-					section_tipo : notes_section_tipo
+					section_tipo : references_section_tipo
 				}
 			}
 			const api_response = await data_manager.request({
@@ -1648,7 +1654,7 @@ component_text_area.prototype.change_lang = async function(lang, n_try=1) {
 
 		// try new attempt after some ms
 		setTimeout(async function(){
-			self.change_lang(lang, n_try++)
+			self.change_lang(lang, n_try + 1)
 		}, 300)
 		return false
 	}

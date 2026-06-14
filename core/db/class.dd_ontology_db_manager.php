@@ -1,25 +1,66 @@
 <?php declare(strict_types=1);
 /**
-* Class DD_ONTOLOGY_DB_MANAGER
+* CLASS DD_ONTOLOGY_DB_MANAGER
+* Abstract data-access layer for the `dd_ontology` PostgreSQL table.
 *
-* Provides core operations for managing ontology records.
-* This class ensures data consistency by enforcing predefined
-* table and column definitions within the ontology model.
+* Encapsulates all CRUD and search operations against the ontology table so
+* that callers never build raw SQL for ontology rows. It enforces:
+* - A fixed, audited column allowlist (no dynamic column injection).
+* - Automatic type coercions on read (JSON → object, int, bool).
+* - Automatic type coercions on write (object → JSON string, bool → 't'/'f').
+* - Per-request in-memory cache keyed by `tipo` for read().
+* - Reuse of named PostgreSQL prepared statements (via DBi::$prepared_statements)
+*   so that frequently called operations (read, delete) avoid repeated parse/plan
+*   overhead on every request.
 *
-* Supported actions include:
-* - Loading record data
-* - Updating existing records
-* - Inserting new records with optional initial data
+* Declared abstract because the class contains only static methods and must
+* never be instantiated. Consumers call the static methods directly:
+*   dd_ontology_db_manager::read($tipo)
+*   dd_ontology_db_manager::update($tipo, $values)
 *
+* The `dd_ontology` schema (one row per ontology node):
+*   tipo          — unique string identifier, e.g. 'oh1', 'dd345' (primary key semantics)
+*   parent        — tipo of the parent node; null for root nodes
+*   term          — JSONB object mapping language codes to display labels, e.g. {"lg-eng":"Oral History"}
+*   model         — string discriminator for the node kind, e.g. 'section', 'component', 'database'
+*   order_number  — integer sort position among siblings
+*   relations     — JSONB array of related node tipos
+*   tld           — top-level domain string used for diffusion scoping
+*   properties    — JSONB object carrying v7 configuration (source, request_config, etc.)
+*   model_tipo    — tipo of the component model this node follows
+*   is_model      — boolean; true when the node defines a reusable component model
+*   is_translatable — boolean; true when the node's term is translatable
+*   is_main       — boolean; true for nodes belonging to the main ontology tree
+*   propiedades   — (!) v6 legacy text column; retained for migration reading only.
+*                    In v7, always read/write configuration via `properties`.
+*                    See diffusion/migration/migrate_diffusion_properties.php.
+*
+* Fuzzy-search capability relies on two PostgreSQL extensions defined in
+* core/db/db_pg_definitions.php:
+*   - f_unaccent()           — accent-insensitive wrapper around unaccent()
+*   - jsonb_values_as_text() — flattens a JSONB object's values to a single string
+*
+* @package Dédalo
+* @subpackage Core
 */
 abstract class dd_ontology_db_manager {
 
 
 
-	// Ontology table
+	/**
+	* Name of the PostgreSQL table that stores all ontology nodes.
+	* Every static method in this class targets this table exclusively.
+	* @var string $table
+	*/
 	public static string $table = 'dd_ontology';
 
-	// columns list
+	/**
+	* Allowlist of every column that this class is permitted to read or write.
+	* Keys are column names; values are always `true` (used as a lookup set).
+	* Any column name not present here is rejected as invalid in update() and search(),
+	* preventing SQL injection through dynamic column names.
+	* @var array<string,true> $columns
+	*/
 	public static array $columns = [
 		'tipo'				=> true,
 		'parent'			=> true,
@@ -36,45 +77,83 @@ abstract class dd_ontology_db_manager {
 		'propiedades'		=> true
 	];
 
-	// JSON columns to decode
+	/**
+	* Subset of $columns whose values are stored as JSONB in the database.
+	* On read(), matching columns are passed through json_decode(..., false) so
+	* callers always receive PHP objects/arrays rather than raw JSON strings.
+	* On write (create/update), matching values are encoded with json_handler::encode()
+	* and cast to `::jsonb` in the prepared statement placeholder.
+	* Note: `propiedades` is deliberately excluded — it is a text column (v6 legacy).
+	* @var array<string,true> $json_columns
+	*/
 	public static array $json_columns = [
 		'term'				=> true,
 		'relations'			=> true,
 		'properties'		=> true
 	];
 
-	// int columns to parse
+	/**
+	* Subset of $columns whose values must be cast to PHP int on read.
+	* PostgreSQL returns all scalar columns as strings; this map drives the
+	* (int) cast applied during row hydration in read().
+	* @var array<string,true> $int_columns
+	*/
 	public static array $int_columns = [
 		'order_number'		=> true
 	];
 
-	// bool columns to parse
+	/**
+	* Subset of $columns whose values are boolean flags in the database.
+	* PostgreSQL returns boolean columns as the strings 't' or 'f'.
+	* On read(), values are normalised to PHP bool by comparing against 't'.
+	* On write, PHP bool is serialised to the literals 'true'/'false' (search)
+	* or 't'/'f' (create/update) to satisfy the respective query modes.
+	* @var array<string,true> $boolean_columns
+	*/
 	public static array $boolean_columns = [
 		'is_model'			=> true,
 		'is_translatable'	=> true,
 		'is_main'			=> true
 	];
 
-	// load_cache
+	/**
+	* Per-request in-memory cache for read().
+	* Keyed by `tipo`; value is the fully hydrated associative array returned by
+	* read(), or an empty array `[]` when the tipo was queried but not found.
+	* Cache entries are invalidated (unset) immediately after any create(),
+	* update(), or delete() that touches the same tipo, ensuring that subsequent
+	* reads within the same request see fresh data.
+	* @var array<string,array<string,mixed>> $load_cache
+	*/
 	public static array $load_cache = [];
 
 
 
 	/**
 	* CREATE
-	* Inserts a single row into a "ontology" table with automatic handling for JSON columns
-	* and guaranteed inclusion of the `tipo` column.
-	* It is executed using prepared statement when the values are empty (default creation of empty record
-	* adding `tipo` only) and with query params when is not (other dynamic combinations of columns data).
-	* @param string $tipo
-	* 	A string identifier representing the unique type of ontology node.
-	* 	Used as part of the WHERE clause in the SQL query.
-	* @param object|null $values = {} (optional)
-	* 	Object with {column name : value} structure.
-	* 	Keys are column names, values are their new values.
-	* @return int|false $id
-	* 	Returns the new `id` on success, or `false` if validation fails,
-	*	 query preparation fails, or execution fails.
+	* Upserts a single row into the ontology table using a fixed-shape prepared statement.
+	*
+	* The SQL always includes every column in $columns (in declaration order) with `tipo`
+	* first. This keeps the prepared statement SQL structure identical across calls so
+	* PostgreSQL can reuse its plan — dynamic `$values` only affect parameter bindings, not
+	* the statement shape. The `ON CONFLICT (tipo) DO UPDATE SET …` clause means this method
+	* is safe to call even when the node already exists; it will overwrite all columns with
+	* the supplied (or default) values rather than inserting a duplicate.
+	*
+	* Type coercions applied before binding:
+	*   - JSONB columns: encoded via json_handler::encode(), placeholder cast to ::jsonb
+	*   - Boolean columns: converted to 't'/'f' string, placeholder cast to ::boolean
+	*   - All other columns: passed as-is; null is valid and stored as SQL NULL
+	*
+	* On success the in-memory cache entry for $tipo is invalidated so that the next
+	* read() call fetches the newly created/updated row.
+	*
+	* @param string $tipo - unique ontology node identifier, e.g. 'oh1' or 'dd345'
+	* @param ?object $values = null - optional initial column values; keys must exist in
+	*   $columns (the `tipo` key is ignored here — it is always taken from $tipo). Omitting
+	*   a column causes boolean columns to default to false, all others to null.
+	* @return int|false - the auto-assigned `id` of the inserted/updated row, or false on
+	*   prepare/execute failure
 	*/
 	public static function create( string $tipo, ?object $values = null ) : int|false {
 
@@ -89,7 +168,11 @@ abstract class dd_ontology_db_manager {
 		$params			= [$tipo]; // param values (first one for tipo)
 		$param_index	= 2; // next param index ($2, $3, ...)
 
-		// Add fixed columns (this allows use prepared statements)
+		// Iterate every column in declaration order
+		// The fixed iteration order over self::$columns guarantees that the placeholder
+		// sequence ($1, $2, …) is always identical across calls, which is a prerequisite
+		// for pg_prepare() to reuse a single named statement regardless of which $values
+		// were supplied by the caller.
 		foreach (self::$columns as $col => $col_value) {
 			// Prevent double columns. Already added by default (required).
 			if ($col==='tipo') continue;
@@ -119,8 +202,12 @@ abstract class dd_ontology_db_manager {
 			$param_index++;
 		}
 
-		// Build UPDATE SET parts using EXCLUDED
-		// Used by PostgreSQL to set values on conflict.
+		// Build ON CONFLICT update parts using the EXCLUDED pseudo-table
+		// PostgreSQL's EXCLUDED virtual table exposes the values that would have been
+		// inserted, so `col = EXCLUDED.col` effectively replaces the existing row's
+		// column value with the incoming one — producing a full upsert.
+		// The conflict column itself (tipo) must be excluded from the SET list because
+		// updating the conflict target is not allowed and would cause a syntax error.
 		$conflict_column = '"tipo"';
 		$update_parts = [];
 		foreach ($columns as $column) {
@@ -132,6 +219,9 @@ abstract class dd_ontology_db_manager {
 		// SQL. Note that counter (id) is updated auto-handled by the database.
 		// If a previous record with the same value for the 'tipo' column exists:
 		// Update the record using the ON CONFLICT clause.
+		// RETURNING "id" lets us return the row id without a second SELECT,
+		// covering both the INSERT path and the ON CONFLICT UPDATE path (PostgreSQL
+		// returns the id of the affected row in both cases).
 		$sql = "
 			INSERT INTO \"$table\" (" . implode(', ', $columns) . ")
 			VALUES (" . implode(', ', $placeholders) . ")
@@ -204,16 +294,28 @@ abstract class dd_ontology_db_manager {
 
 	/**
 	* READ
-	* Retrieves a single row of data from the ontology table
-	* based on `tipo`.
-	* It's designed to provide a unified way of accessing data from
-	* `ontology` table within the Dédalo application.
-	* @param string $tipo
-	* A string identifier representing the unique type of ontology node.
-	* Used as part of the WHERE clause in the SQL query.
-	* @return array|false $row
-	* Returns the processed data as an associative array with parsed int and JSON values.
-	* If no row is found, it returns an empty array []. If a critical error occurs, it returns false.
+	* Fetches and hydrates the ontology row for a given $tipo.
+	*
+	* Lookup order:
+	*   1. In-memory cache ($load_cache[$tipo]) — avoids a DB round-trip for repeated
+	*      lookups of the same node within a single request.
+	*   2. PostgreSQL prepared statement — `SELECT <explicit columns> FROM dd_ontology
+	*      WHERE tipo = $1 LIMIT 1`. Using an explicit column list (not `SELECT *`) keeps
+	*      the result set stable even if the DB schema adds new columns.
+	*
+	* Row hydration applies the type maps defined on the class:
+	*   - $json_columns  → json_decode($value, false) (returns objects, not arrays)
+	*   - $int_columns   → (int) cast
+	*   - $boolean_columns → compared to 't' to produce PHP bool
+	*   Null database values are left as null without hydration.
+	*
+	* When SHOW_DEBUG is on, query time is measured and added to the
+	* 'ontology_total_time' and 'ontology_total_calls' metrics. Queries exceeding
+	* SLOW_QUERY_MS (default 100 ms) are logged at WARNING level.
+	*
+	* @param string $tipo - unique ontology node identifier to look up
+	* @return array|false - hydrated associative array of column→value pairs on success;
+	*   empty array [] when the tipo does not exist; false on DB/prepare error
 	*/
 	public static function read( string $tipo ) : array|false {
 
@@ -221,14 +323,14 @@ abstract class dd_ontology_db_manager {
 		if(SHOW_DEBUG===true) {
 			$start_time = start_time();
 			// metrics
-			metrics::$ontology_total_calls++;
+			metrics::inc('ontology_total_calls');
 		}
 
 		// cache check - only return cached successful results
 		if (isset(self::$load_cache[$tipo])) {
 			if(SHOW_DEBUG===true) {
 				// metrics
-				metrics::$ontology_total_calls_cached++;
+				metrics::inc('ontology_total_calls_cached');
 			}
 			return self::$load_cache[$tipo];
 		}
@@ -340,7 +442,7 @@ abstract class dd_ontology_db_manager {
 				);
 			}
 			// metrics
-			metrics::$ontology_total_time += $total_time_ms;
+			metrics::add_time_ms('ontology_total_time', $total_time_ms);
 		}
 
 
@@ -351,17 +453,33 @@ abstract class dd_ontology_db_manager {
 
 	/**
 	* UPDATE
-	* Safely updates one or more columns in the "ontology" table row,
-	* identified by a `tipo`.
-	* @param string $tipo
-	* 	A string identifier representing the unique type of ontology node.
-	* 	Used as part of the WHERE clause in the SQL query.
-	* @param object $values
-	* 	Object with {column name : value} structure
-	* 	Keys are column names, values are their new values.
-	* @return bool
-	* 	Returns `true` on success, or `false` if validation fails,
-	* 	query preparation fails, or execution fails.
+	* Updates one or more columns in the ontology table row identified by $tipo.
+	*
+	* Unlike create(), the SQL shape varies with the columns supplied in $values,
+	* so this method uses pg_query_params() rather than a named prepared statement.
+	*
+	* Security: each key in $values is validated against $columns before being
+	* interpolated into the query. Invalid column names are logged and skipped
+	* (the update continues with remaining valid columns rather than aborting
+	* entirely — callers should not rely on partial-update semantics; prefer
+	* passing only validated column sets).
+	*
+	* Upsert fallback: when the UPDATE affects zero rows (the tipo does not yet
+	* exist), an INSERT is executed automatically. The $params array is reused
+	* directly, so the INSERT column/value order matches the UPDATE SET order
+	* (tipo first, then the validated columns from $values).
+	*
+	* Type coercions applied before binding:
+	*   - Non-null JSONB columns: encoded via json_handler::encode(); cast to ::jsonb
+	*   - Boolean columns: converted to 't'/'f' literal string (no explicit ::boolean cast)
+	*   - All other columns: passed as-is
+	*
+	* On success the $load_cache entry for $tipo is invalidated.
+	*
+	* @param string $tipo - unique ontology node identifier
+	* @param object $values - column→value map; keys must exist in $columns
+	* @return bool - true on success; false if $values is empty, an unknown column is
+	*   encountered and all columns are skipped, or the DB execute fails
 	*/
 	public static function update( string $tipo, object $values ) : bool {
 
@@ -432,8 +550,11 @@ abstract class dd_ontology_db_manager {
 		// Execute using pg_query_params for performance and security
 		$result = pg_query_params($conn, $sql, $params);
 
-		// No record existing case.
-		// When the record doesn't exist in DB, perform a INSERT
+		// Upsert fallback: zero affected rows means the tipo did not yet exist
+		// When the UPDATE matched no row, fall back to INSERT using the same
+		// $params array. $params[0] is $tipo (the WHERE value from the UPDATE),
+		// which becomes the column value in the INSERT — the positional indexes
+		// match because $columns starts with 'tipo' and $params starts with $tipo.
 		if ($result && pg_affected_rows($result) == 0) {
 
 			$placeholders = [];
@@ -471,13 +592,22 @@ abstract class dd_ontology_db_manager {
 
 	/**
 	* DELETE
-	* Deletes a single row into a "ontology" table
-	* @param string $tipo
-	* A string identifier representing the unique type of ontology node.
-	* Used as part of the WHERE clause in the SQL query.
-	* @return bool
-	* On success true, or `false` if validation fails,
-	* query preparation fails, or execution fails.
+	* Removes the ontology row for the given $tipo using a named prepared statement.
+	*
+	* The statement `DELETE FROM dd_ontology WHERE tipo = $1` is prepared once per
+	* process and reused (tracked in DBi::$prepared_statements) to avoid repeated
+	* parse/plan cycles for bulk delete operations such as ontology rebuilds.
+	*
+	* On success the $load_cache entry for $tipo is invalidated so that any
+	* subsequent read() call correctly returns an empty array for the deleted tipo.
+	*
+	* Note: this method does not cascade; callers are responsible for removing
+	* child nodes or related data (relations, matrix rows, etc.) before or after
+	* calling delete() when referential integrity is required.
+	*
+	* @param string $tipo - unique ontology node identifier to delete
+	* @return bool - true if the DELETE executed without error; false on prepare or
+	*   execute failure. Returns true even when the tipo did not exist (0 affected rows).
 	*/
 	public static function delete( string $tipo ) : bool {
 
@@ -531,18 +661,43 @@ abstract class dd_ontology_db_manager {
 
 	/**
 	* SEARCH
-	* Search in one or more columns in the "ontology" table ,
-	* return an array with the found `tipos`..
-	* @param array $values
-	* 	Assoc array with [column name => value] structure
-	* 	Keys are column names, values are their new values.
-	* @param bool $order = false
-	* 	If true, the results will be ordered by order_number ASC.
-	* @param int $limit = null
-	* 	Limit the number of results.
-	* @return array|false
-	* 	Returns and array with found tipos on success, or `false` if validation fails,
-	* 	query preparation fails, or execution fails.
+	* Queries the ontology table with one or more column filters and returns
+	* matching `tipo` strings.
+	*
+	* Each entry in $values can be either:
+	*   - A scalar — compared with `=` (equality match).
+	*   - An object with `operator` and `value` properties — the operator is
+	*     validated against an allowlist before use. Supported operators:
+	*     '=', '!=', '<', '>', '<=', '>=', 'LIKE', 'ILIKE', '@>'
+	*     The '@>' (JSONB containment) operator is used by search_exact_term()
+	*     to query inside the `term` JSONB column.
+	*
+	* Security:
+	*   - Column names are validated against $columns; an invalid name causes
+	*     search() to return false immediately.
+	*   - Operators are validated against a static allowlist; an invalid operator
+	*     causes search() to return false immediately.
+	*   - Values are passed as positional parameters (pg_query_params), never
+	*     interpolated into the SQL string.
+	*
+	* Unlike read(), this method uses pg_query_params() without a named prepared
+	* statement because the WHERE clause shape varies per call (different columns,
+	* different operators). Each call compiles a new query string at runtime.
+	*
+	* Boolean values in $values are normalised to the string 'true'/'false'
+	* before binding (PostgreSQL's pg_query_params requires string parameters;
+	* the column's native type handles final coercion).
+	*
+	* When SHOW_DEBUG is on, timing, backtrace, and per-call counters are
+	* recorded in the metrics system; slow queries (> SLOW_QUERY_MS) increment
+	* a dedicated 'exec_dd_ontology_search_slow_calls' metric.
+	*
+	* @param array<string,mixed> $values - column→value or column→{operator,value} filter map
+	* @param bool $order = false - when true, appends `ORDER BY order_number ASC`
+	* @param ?int $limit = null - when provided and > 0, appends `LIMIT $limit`
+	* @return array|false - flat array of matching `tipo` strings (may be empty);
+	*   false when $values is empty, a column name is invalid, an operator is invalid,
+	*   or the DB execute fails
 	*/
 	public static function search( array $values, bool $order=false, ?int $limit=null ) : array|false {
 
@@ -561,7 +716,7 @@ abstract class dd_ontology_db_manager {
 			$start_time = start_time();
 
 			// metrics
-			metrics::$exec_dd_ontology_search_total_calls++;
+			metrics::inc('exec_dd_ontology_search_total_calls');
 		}
 
 		$table = self::$table;
@@ -573,7 +728,9 @@ abstract class dd_ontology_db_manager {
 
 		$where_clauses = [];
 
-		// Add dynamic columns
+		// Operator allowlist — declared static to allocate the array only once per process.
+		// (!) Any operator not in this list is rejected and search() returns false.
+		// The '@>' operator enables JSONB containment queries (used by search_exact_term()).
 		static $allowed_ops = ['=', '!=', '<', '>', '<=', '>=', 'LIKE', 'ILIKE', '@>'];
 		foreach ($values as $col => $value) {
 
@@ -589,7 +746,7 @@ abstract class dd_ontology_db_manager {
 
 			if (is_object($value)) {
 
-				// search with operator
+				// Object form: {operator, value} — allows non-equality comparisons and JSONB ops.
 				if (!in_array($value->operator, $allowed_ops)) {
 					debug_log(__METHOD__
 						." Invalid operator: " . $value->operator . PHP_EOL
@@ -599,6 +756,8 @@ abstract class dd_ontology_db_manager {
 					return false;
 				}
 				$param_value = $value->value;
+				// PostgreSQL requires boolean literals as strings when passed via pg_query_params;
+				// convert PHP bool to 'true'/'false' so the DB coerces them correctly.
 				if (isset(self::$boolean_columns[$col]) && is_bool($param_value)) {
 					$param_value = ($param_value === true) ? 'true' : 'false';
 				}
@@ -606,6 +765,7 @@ abstract class dd_ontology_db_manager {
 				$where_clauses[] = pg_escape_identifier($conn, $col) . ' '.$value->operator.' $'.$param_index;
 
 			}else{
+				// Scalar form: simple equality match.
 				if (isset(self::$boolean_columns[$col])) {
 					$value = ($value === true) ? 'true' : 'false';
 				}
@@ -643,7 +803,11 @@ abstract class dd_ontology_db_manager {
 			$total_time_ms = exec_time_unit($start_time, 'ms');
 
 			// metrics
-			metrics::$exec_dd_ontology_search_total_time += $total_time_ms;
+			metrics::add_time_ms('exec_dd_ontology_search_total_time', $total_time_ms);
+			metrics::observe_max('exec_dd_ontology_search_max_time', $total_time_ms); // tail latency
+			if ($total_time_ms > SLOW_QUERY_MS) {
+				metrics::inc('exec_dd_ontology_search_slow_calls');
+			}
 
 			// query additional info
 			$bt = debug_backtrace();
@@ -677,18 +841,29 @@ abstract class dd_ontology_db_manager {
 
 
 	/**
-	 * SEARCH_EXACT_TERM
-	 * Searches dd_ontology by JSONB containment on the term column.
-	 *
-	 * Uses the `@>` operator to match a specific language key and value
-	 * inside the term JSONB object, e.g. `term @> '{"lg-eng":"Oral History"}'`.
-	 *
-	 * @param string $text Exact text to match
-	 * @param string $lang Language code (e.g. 'lg-eng')
-	 * @param string|null $model Optional model name filter
-	 * @param int $limit Max results
-	 * @return array|false Array of tipos, or false on error
-	 */
+	* SEARCH_EXACT_TERM
+	* Finds ontology nodes whose `term` JSONB object contains an exact match for
+	* a given language key and display text.
+	*
+	* Delegates to search() with an '@>' (JSONB containment) filter on the `term`
+	* column, e.g. `term @> '{"lg-eng":"Oral History"}'`. This is a case-sensitive,
+	* accent-sensitive exact match — use search_fuzzy_term() for tolerant lookups.
+	*
+	* The containment query benefits from the GIN index on `term` defined as
+	* dd_ontology_term_jsonpath_idx in db_pg_definitions.php.
+	*
+	* Note: the $model parameter is included in this signature but the $lang
+	* parameter has no corresponding entry in the $values map checked by search()
+	* for column allowlisting — the language key is baked into the JSONB literal
+	* string passed as the operator value, not treated as a separate column filter.
+	*
+	* @param string $text - exact label text to match, e.g. 'Oral History'
+	* @param string $lang - language code key inside the term object, e.g. 'lg-eng'
+	* @param ?string $model = null - optional model discriminator filter, e.g. 'section'
+	* @param bool $is_main = false - when true, restricts to nodes where is_main = true
+	* @param int $limit = 50 - maximum number of matching tipos to return
+	* @return array|false - flat array of matching tipo strings; false on DB error
+	*/
 	public static function search_exact_term(
 		string $text,
 		string $lang,
@@ -720,31 +895,48 @@ abstract class dd_ontology_db_manager {
 
 
 	/**
-	 * SEARCH_FUZZY_TERM
-	 * Searches dd_ontology using similarity/trigram matching on the term column.
-	 *
-	 * Two-phase strategy for performance + relevance:
-	 *   Phase 1 — JSONPath pre-filter: `term @? '$.* ? (@ like_regex "pattern" flag "i")'`
-	 *     Uses the GIN index for fast narrowing.
-	 *   Phase 2 — Trigram similarity: `f_unaccent(jsonb_values_as_text(term)) % f_unaccent(text)`
-	 *     Uses the trigram index for true fuzzy matching with accent-insensitivity.
-	 *
-	 * Results are ranked by `similarity()` score (DESC) so the most relevant
-	 * matches appear first.
-	 *
-	 * Relies on:
-	 *   - pg_trgm extension (already installed)
-	 *   - f_unaccent() function (defined in db_pg_definitions.php)
-	 *   - jsonb_values_as_text() function (defined in db_pg_definitions.php)
-	 *   - dd_ontology_term_jsonpath_idx (defined in db_pg_definitions.php)
-	 *   - dd_ontology_term_trgm_values_idx (defined in db_pg_definitions.php)
-	 *
-	 * @param string $text Search text (e.g. "Oral History")
-	 * @param string|null $model Optional model name filter (e.g. 'section')
-	 * @param bool $is_main Optional is_main filter (default false)
-	 * @param int $limit Max results (default 50)
-	 * @return array|false Array of tipos ordered by relevance, or false on error
-	 */
+	* SEARCH_FUZZY_TERM
+	* Finds ontology nodes whose `term` labels fuzzy-match a search string,
+	* ranked by trigram similarity score descending.
+	*
+	* Two-phase query strategy:
+	*   Phase 1 — JSONPath pre-filter (GIN index hit):
+	*     `term @? '$.* ? (@ like_regex "pattern" flag "i")'`
+	*     Narrows the candidate set quickly using the dd_ontology_term_jsonpath_idx
+	*     GIN index. This is a case-insensitive regex over all JSONB values in `term`.
+	*     The pattern is derived by escaping $text for JSONPath like_regex syntax
+	*     (backslash, double-quote) and single-quoting for PostgreSQL string literals.
+	*     Because the JSONPath literal is inlined rather than parameterised, the
+	*     escaping must be done in PHP before query construction.
+	*   Phase 2 — Trigram similarity (pg_trgm GIN index hit):
+	*     `f_unaccent(jsonb_values_as_text(term)) % f_unaccent($1)`
+	*     The `%` operator uses the similarity threshold set by pg_trgm.similarity_threshold
+	*     (PostgreSQL default 0.3). The dd_ontology_term_trgm_values_idx index is used here.
+	*     Both sides are passed through f_unaccent() for accent-insensitive matching.
+	*
+	* The two phase conditions are combined with OR so that a node passes if either
+	* the JSONPath regex or the trigram threshold matches. Nodes passing the WHERE
+	* clause are then sorted by the similarity() score computed against $1 (DESC),
+	* so the closest trigram matches appear first even when the regex alone matched.
+	*
+	* Database prerequisites (all defined in db_pg_definitions.php):
+	*   - pg_trgm extension
+	*   - f_unaccent(text) — accent-stripping wrapper around unaccent()
+	*   - jsonb_values_as_text(jsonb) — flattens all JSONB leaf values to a single text
+	*   - dd_ontology_term_jsonpath_idx — GIN index on the term column for JSONPath
+	*   - dd_ontology_term_trgm_values_idx — GIN trigram index on jsonb_values_as_text(term)
+	*
+	* Unlike search(), this method builds its own SQL and calls pg_query_params()
+	* directly (not via the search() dispatcher) because the SELECT list includes
+	* the computed `score` column needed for ORDER BY.
+	*
+	* @param string $text - search string, e.g. 'Oral History'
+	* @param ?string $model = null - optional model discriminator filter, e.g. 'section'
+	* @param bool $is_main = false - when true, restricts to nodes where is_main = true
+	* @param int $limit = 50 - maximum number of results; 0 disables the LIMIT clause
+	* @return array|false - flat array of tipo strings ordered by similarity score (DESC);
+	*   false on DB execute failure
+	*/
 	public static function search_fuzzy_term(
 		string $text,
 		?string $model = null,
@@ -756,16 +948,25 @@ abstract class dd_ontology_db_manager {
 		$conn = DBi::_getConnection();
 
 		// Build JSONPath regex pattern from input text.
-		// Escape special chars for JSONPath like_regex:
-		//   1. Escape backslash and double-quote for JSONPath regex syntax
-		//   2. Escape single quotes for PostgreSQL string literals (double them)
+		// PostgreSQL does not support pg_query_params placeholders inside a JSONPath
+		// string literal — the JSONPath operator @? takes its argument as a string
+		// constant in the SQL text, not as a bind parameter. Therefore the user
+		// input must be escaped in PHP before being inlined:
+		//   1. Escape backslash and double-quote for JSONPath like_regex syntax
+		//   2. Double single-quotes for PostgreSQL string literal quoting
+		// (!) This inline-escaping means callers must trust that preg_replace and
+		//     str_replace fully neutralise the input. All other search parameters
+		//     ($1, $2, …) are safely parameterised via pg_query_params.
 		$jsonpath_regex = preg_replace('/([\\\\"])/', '\\\\$1', $text);
 		$jsonpath_regex = str_replace("'", "''", $jsonpath_regex);
 
 		$params = [];
 		$param_idx = 1;
 
-		// $1 — the search text for similarity and trigram
+		// $1 — the search text, bound once but referenced in two SQL clauses.
+		// $trigram_param remembers the positional index so both the WHERE trigram
+		// clause and the SELECT similarity() expression can reference the same
+		// bind slot without duplicating the value in $params.
 		$params[] = $text;
 		$trigram_param = $param_idx;
 		$param_idx++;

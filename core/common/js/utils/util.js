@@ -10,10 +10,41 @@ import {get_instance} from '../../js/instances.js'
 
 
 /**
+* UTIL
+* General-purpose utility library for Dédalo's client-side JS.
+*
+* Exports standalone helper functions covering:
+* - Deep cloning and structural equality comparison (clone, is_equal, array_equals, object_equals)
+* - Logging (dd_console) and safe JSON parsing (JSON_parse_safely)
+* - DOM asset loading with deduplication (load_style, load_script)
+* - URL encoding/decoding (object_to_url_vars, url_vars_to_object)
+* - Window/navigation helpers (open_window, open_records_in_window, open_window_with_post)
+* - File download (download_file)
+* - DOM traversal (find_up_node, find_up_tag)
+* - Text/number formatting (bytes_format, printf, strip_tags, get_font_fit_size, time_unit_auto)
+* - Non-cryptographic hashing (generate_hash)
+* - Ontology tipo parsing (get_tld_from_tipo, get_section_id_from_tipo)
+* - Instance tree traversal (get_caller_by_model)
+* - Language data resolution (get_json_langs)
+* - Tool URL resolution (tool_base_url)
+*
+* None of these functions carry module-level state except for the deduplication Maps
+* (pending_styles, pending_scripts) and the singleton promise (_json_langs_promise),
+* which are intentionally module-scoped.
+*/
+
+
+
+/**
 * CLONE
-* Exec a deep safe clone of object
-* @param mixed item
-* @return mixed item
+* Returns a deep, independent copy of any serialisable value using the
+* platform-native structuredClone algorithm.
+*
+* Prefer this over JSON.parse(JSON.stringify(x)) because structuredClone
+* correctly handles Dates, TypedArrays, Maps, Sets, and circular references
+* (though Dédalo data objects are plain JSON-safe structures in practice).
+* @param {*} item - The value to clone; must be structuredClone-compatible
+* @returns {*} A deep clone of item with no shared references to the original
 */
 export function clone(item) {
 
@@ -25,11 +56,19 @@ export function clone(item) {
 
 /**
 * DD_CONSOLE
-* Custom console log from Dédalo
-* @param string msg
-* @param string level
-* @param mixed items
-* @return void
+* Branded console output for Dédalo runtime messages.
+*
+* Routes messages through console.error (ERROR level) or console.warn
+* (WARNING and DEBUG levels), mapped from the level string. Applies a violet-on-black CSS style so
+* Dédalo messages stand out in mixed browser consoles.
+*
+* DEBUG-level messages are silently suppressed unless the SHOW_DEBUG or
+* SHOW_DEVELOPER globals are set to true, keeping development noise out of
+* production deployments.
+* @param {string} msg - The message text to display
+* @param {string} [level='WARNING'] - Severity: 'DEBUG' | 'WARNING' | 'ERROR'
+* @param {*} [items] - Optional extra data appended after the message
+* @returns {void}
 */
 export function dd_console(msg, level='WARNING', items){
 
@@ -56,9 +95,16 @@ export function dd_console(msg, level='WARNING', items){
 
 /**
 * JSON_PARSE_SAFELY
-* Custom console log from Dédalo
-* @param string str
-* @param string error_value = null
+* Wraps JSON.parse with a try/catch so callers do not need to handle
+* SyntaxError on malformed input.
+*
+* Logs the parse error to console.error so failures are still visible
+* during development, then returns error_value instead of throwing.
+* Use this whenever the JSON source is untrusted (e.g. server responses,
+* localStorage, user-supplied strings).
+* @param {string} str - The JSON string to parse
+* @param {*} [error_value=null] - Value returned when parsing fails
+* @returns {*} The parsed JavaScript value, or error_value on failure
 */
 export function JSON_parse_safely(str, error_value=null) {
 	try {
@@ -75,9 +121,14 @@ export function JSON_parse_safely(str, error_value=null) {
 
 /**
 * GROUP_OBJECTS_BY
-* Group object inside an array by a given property
-* @param array xs
-* @param string|int key
+* Groups an array of objects into a plain object keyed by a shared property.
+*
+* Equivalent to SQL GROUP BY — each key maps to an array of all objects whose
+* [key] property equals that key value. Objects with a missing/undefined key
+* are grouped under the string "undefined".
+* @param {Array} xs - The array of objects to group
+* @param {string|number} key - The property name to group by
+* @returns {Object} A plain object mapping key values to arrays of matching objects
 */
 export function group_objects_by(xs, key) {
 
@@ -92,12 +143,17 @@ export function group_objects_by(xs, key) {
 
 /**
 * WAIT_FOR_GLOBAL
-* Waits for global is available with timeout
-* @param string name
-*	global name like 'Leaftlet L.'
-* @param int timeout
-*	time limit to wait in seconds
-* @return promise
+* Polls window[name] on an exponentially increasing interval until the value
+* is defined or the timeout expires.
+*
+* Designed for loading optional third-party libraries (e.g. Leaflet) via
+* dynamic <script> tags where the library sets a global when ready. The
+* doubling backoff (30 ms → 60 ms → 120 ms …) keeps CPU usage low without
+* adding unnecessary latency for fast loads.
+* @param {string} name - Property name on window to watch, e.g. 'L' for Leaflet
+* @param {number} [timeout=300] - Maximum wait time in seconds before rejecting
+* @returns {Promise<void>} Resolves when window[name] is defined; rejects with
+*   {message: 'Timeout'} if the limit is reached
 */
 export function wait_for_global(name, timeout=300) {
 
@@ -128,7 +184,23 @@ export function wait_for_global(name, timeout=300) {
 
 /**
 * OBSERVE_CHANGES
-* Used by service_tinymce.js
+* Wraps a MutationObserver in a Promise so callers can await a single DOM
+* mutation instead of managing observer lifecycle manually.
+*
+* Currently used by service_tinymce.js to detect when the editor has finished
+* injecting its DOM structure.
+*
+* When once is true the observer is disconnected after the first matching
+* mutation, preventing memory leaks from long-lived observers. When once is
+* false the observer remains active and the promise resolves on every matching
+* event (though awaiting a promise that resolves multiple times is unusual —
+* callers relying on repeated notifications should use the MutationObserver
+* directly).
+* @param {HTMLElement} element - The target node to observe
+* @param {MutationObserverInit} config - Observer options (childList, attributes, etc.)
+* @param {boolean} once - When true, disconnects the observer after the first event
+* @returns {Promise<string>} Resolves with mutation.type for childList mutations
+*   or mutation.attributeName for attribute mutations
 */
 export async function observe_changes(element, config, once) {
 
@@ -170,12 +242,20 @@ export async function observe_changes(element, config, once) {
 
 /**
 * LOAD_STYLE
-* @param string src
-* @return promise
-* 	resolve/reject src
+* Dynamically inserts a <link rel="stylesheet"> for src and returns a Promise
+* that resolves/rejects with src when the browser finishes loading.
+*
+* Idempotent: if src is already present as a <link href> in the document, the
+* promise resolves immediately without creating a duplicate element.
+*
+* Concurrent calls for the same src return the same in-flight Promise (stored
+* in pending_styles) to prevent race conditions that would otherwise create
+* duplicate <link> tags and fire the load event prematurely.
+* @param {string} src - Absolute or root-relative URL of the stylesheet
+* @returns {Promise<string>} Resolves with src on success; rejects with src on error
 */
-// pending_styles: tracks in-flight style loads to prevent race conditions
-// (duplicate <link> elements and premature resolves from concurrent calls)
+// pending_styles: module-level deduplication registry for in-flight <link> loads;
+// cleared per entry once the load/error event fires.
 const pending_styles = new Map();
 export function load_style(src) {
 
@@ -226,13 +306,26 @@ export function load_style(src) {
 
 /**
 * LOAD_SCRIPT
-* @param string src
-* @param string|null content
-* @return promise
-* 	resolve/reject src
+* Dynamically inserts a <script defer> element for src and returns a Promise
+* that resolves/rejects with src when the browser finishes loading.
+*
+* Idempotent: if a <script src="src"> already exists in the document, the
+* promise resolves immediately without creating a duplicate element.
+*
+* When content is provided, it is injected as the script's textContent (not
+* innerHTML) to avoid HTML-parser side-effects. This is the correct way to set
+* inline script source (SEC-XSS-004).
+*
+* Concurrent calls for the same src return the same in-flight Promise (stored
+* in pending_scripts) to prevent race conditions that would otherwise create
+* duplicate <script> tags.
+* @param {string} src - URL of the external script file
+* @param {string|null} [content=null] - Optional inline script source; when provided
+*   textContent is set before appending the element to the document
+* @returns {Promise<string>} Resolves with src on success; rejects with src on network error
 */
-// pending_scripts: tracks in-flight script loads to prevent race conditions
-// (duplicate <script> elements and premature resolves from concurrent calls)
+// pending_scripts: module-level deduplication registry for in-flight <script> loads;
+// cleared per entry once the load/error event fires.
 const pending_scripts = new Map();
 export function load_script(src, content=null) {
 
@@ -289,13 +382,19 @@ export function load_script(src, content=null) {
 
 /**
 * OBJECT_TO_URL_VARS
-* @param object vars_obj
-* sample:
-* {
-* 	tipo: 'rsc197',
-* 	menu: false
-* }
-* @return string url_vars
+* Serialises a plain object into a URL query string (without the leading '?').
+*
+* Each value is percent-encoded with encodeURIComponent. Boolean and numeric
+* values are coerced to strings automatically by encodeURIComponent.
+*
+* The key 't' is explicitly forbidden (it conflicts with the reserved Dédalo
+* query-string abbreviation for tipo) — a console.error is emitted and the
+* key is still included (callers must not pass it).
+*
+* Example input:  { tipo: 'rsc197', menu: false }
+* Example output: 'tipo=rsc197&menu=false'
+* @param {Object} vars_obj - Key/value map of URL parameters
+* @returns {string} Ampersand-delimited query string without a leading '?'
 */
 export function object_to_url_vars(vars_obj) {
 
@@ -319,8 +418,15 @@ export function object_to_url_vars(vars_obj) {
 
 /**
 * URL_VARS_TO_OBJECT
-* @param string query_string
-* @return object vars_obj
+* Parses a URL query string into a plain key/value object.
+*
+* Falls back to window.location.search when query_string is falsy. Keys that
+* appear more than once (e.g. checkboxes) are returned as an Array of values;
+* single-occurrence keys are returned as plain strings.
+* @param {string} [query_string] - Query string to parse, with or without a
+*   leading '?'; defaults to window.location.search when omitted/falsy
+* @returns {Object} Plain object mapping parameter names to string values (or
+*   string arrays for repeated keys)
 */
 export function url_vars_to_object(query_string) {
 
@@ -349,7 +455,18 @@ export function url_vars_to_object(query_string) {
 
 /**
 * OPEN_WINDOW_WITH_POST
-* @return bool false
+* Opens a new browser tab/window and submits data via a synthetic HTML form POST.
+*
+* Browsers block window.open with POST natively, so this function constructs a
+* hidden <form>, populates it with hidden <input> fields from the data object,
+* appends it to the body, submits it targeting _blank, then immediately removes
+* it. The new window opens with the POST response.
+*
+* (!) The form is removed synchronously after submit() — this works because the
+* browser has already captured the form state before the call returns.
+* @param {string} url - The action URL that will receive the POST request
+* @param {Object} data - Key/value pairs to submit as hidden form fields
+* @returns {boolean} Always returns false (useful as an event handler return value)
 */
 export function open_window_with_post(url, data) {
 
@@ -379,9 +496,15 @@ export function open_window_with_post(url, data) {
 
 /**
 * BYTES_FORMAT
-* Convert bytes to human readable text like '152 kB'
-* @param integer bytes
-* @return bool string | bool false
+* Converts a raw byte count to a human-readable size string.
+*
+* Uses binary prefixes where 1 KB = 1024 bytes, 1 MB = 1024 KB, 1 GB = 1024 MB.
+* Locale is fixed to 'en-US' for consistent decimal separators regardless of
+* the user's browser locale. Returns false for zero, negative, or falsy input.
+*
+* Examples: 1536 → '2 KB', 1572864 → '1.5 MB', 1610612736 → '1.5 GB'
+* @param {number} bytes - Raw byte count; falsy or < 1 returns false
+* @returns {string|boolean} Formatted size string (e.g. '1.5 MB') or false on invalid input
 */
 export function bytes_format(bytes) {
 
@@ -430,12 +553,20 @@ export function bytes_format(bytes) {
 
 /**
 * PRINTF
-* JavaScript equivalent to printf/String.Format
-* Tokens '{0}', '{1}', etc. will be replaced by arguments preserving order
-* Example: 'The content of {0} records from {1}' => 'The content of 25 records from 12'
-* @param mixed format
-* 	Like: 'The content of {0} records from {1}', 25, 12
-* @return string
+* JavaScript equivalent to printf / String.Format with positional token substitution.
+*
+* Tokens of the form {N} (where N is a zero-based integer) are replaced by the
+* Nth extra argument. Tokens with no corresponding argument are left as-is.
+*
+* Also handles legacy-style %s placeholders from Dédalo label strings (e.g. dd340):
+* each %s is converted to {0}, {1}, … in left-to-right order before the numeric
+* substitution pass runs.
+*
+* Example: printf('The content of {0} records from {1}', 25, 12)
+*          → 'The content of 25 records from 12'
+* @param {string} format - Template string with {0}, {1}, … or %s placeholders
+* @param {...*} args - Values to substitute into the template, in order
+* @returns {string} The formatted output string
 */
 export function printf(format) {
 
@@ -462,8 +593,18 @@ export function printf(format) {
 
 /**
 * STRIP_TAGS
-* @param string value
-* @return string text_clean
+* Removes all HTML tags from a string and returns plain text.
+*
+* Uses a detached <template> element so that innerHTML parsing happens in an
+* inert context: scripts are never executed and subresources (images, iframes)
+* are never loaded (SEC-XSS-003). The parsed node tree's textContent is then
+* extracted, which automatically decodes HTML entities (e.g. &amp; → &).
+*
+* (!) Do NOT use a plain <div> with insertAdjacentHTML here — parsing in a live
+* context can trigger side-effects on certain browsers even for detached nodes.
+* @param {string} value - HTML string to sanitise
+* @returns {string} Plain text content with all tags removed; empty string when
+*   the template produces no text content
 */
 export function strip_tags(value) {
 
@@ -484,10 +625,18 @@ export function strip_tags(value) {
 
 /**
 * ARRAY_EQUALS
-* Compares two arrays for equality
-* @param array source
-* @param array array
-* @return bool
+* Deep-compares two arrays for structural equality.
+*
+* Recursively delegates to is_equal for element-level comparison so that
+* nested arrays and plain objects are handled correctly. Two different object
+* instances with identical contents are considered equal.
+*
+* Returns false immediately when lengths differ (short-circuit). Returns false
+* when array is falsy (null/undefined).
+* @param {Array} source - The reference array
+* @param {Array} array - The array to compare against source
+* @returns {boolean} true when both arrays have the same length and every
+*   corresponding element is deeply equal
 */
 export function array_equals(source, array) {
 	// if the other array is a false value, return
@@ -520,21 +669,20 @@ export function array_equals(source, array) {
 
 /**
 * OBJECT_EQUALS
-* Deep Equality comparison example
+* Deep-compares two plain objects for structural equality.
 *
-* This is an example of how to implement an object-comparison function in
-* JavaScript (ES5+). A few points of interest here:
+* Considers two objects equal when they have the same set of own enumerable
+* keys and every corresponding value is deeply equal (via is_equal). The null
+* case is handled explicitly because typeof null === 'object' in JavaScript —
+* a null operand causes the function to fall back to strict === comparison
+* rather than key-walking.
 *
-* * You can get an array of all an object's properties in ES5+ by calling
-*   the class method Object.keys(obj).
-* * The function recursively calls itself in the for / in loop when it
-*   compares the contents of each property
-* * You can hide a "private" function inside a function of this kind by
-*   placing one function declaration inside of another. The inner function
-*   is not hoisted out into the global scope, so it is only visible inside
-*   of the parent function.
-* * The reason this nested helper function is necessary is that
-*   `typeof null` is still "object" in JS, a major "gotcha" to watch out for.
+* The commented-out block below (object_equals_DES) is an earlier alternative
+* implementation that used a nested isObject helper. It is preserved for
+* reference and must not be removed.
+* @param {Object} o1 - First object
+* @param {Object} o2 - Second object
+* @returns {boolean} true when both objects are structurally identical
 */
 	// export function object_equals_DES(obj1, obj2) {
 
@@ -584,9 +732,20 @@ export function object_equals(o1, o2) {
 
 /**
 * IS_EQUAL
-* Check elements equality deeply
-* 	Could compare strings, arrays and objects
-* @return bool
+* Polymorphic deep-equality check for any JS value.
+*
+* Dispatches to the correct comparison strategy based on the runtime type of
+* the arguments:
+* - Primitive values (string, number, boolean): strict ===
+* - Arrays: array_equals (recursive)
+* - Plain objects: object_equals (recursive)
+* - null / undefined: both sides must be null/undefined simultaneously
+*
+* Note: `typeof null === 'object'` in JS, so null is guarded explicitly
+* before the object branch to avoid incorrect object_equals calls.
+* @param {*} el1 - First value to compare
+* @param {*} el2 - Second value to compare
+* @returns {boolean} true when el1 and el2 are deeply structurally equal
 */
 export function is_equal(el1, el2) {
 
@@ -622,16 +781,34 @@ export function is_equal(el1, el2) {
 
 /**
 * OPEN_WINDOW
-* Unified open window function
-* @param object options
-* {
-* 	url : /dedalo/core/page/?tipo=oh1,
-* 	target : My new window name,
-* 	width : 1280,
-* 	height : 900,
-* 	features : null
-* }
-* @return object new_window
+* Unified helper for opening a Dédalo page in a separate browser window.
+*
+* Applies safe defaults (1280×905) and clamps the dimensions to the current
+* screen size so that the new window always fits on screen. Accepts a special
+* features value of 'new_tab' to open without window.open feature constraints
+* (resulting in a true new tab in most browsers).
+*
+* Safari workaround: prevent_open_new_window() currently always returns false
+* (the Safari-detection branch is commented out), but the guard remains so
+* that tool URLs can be redirected to window.location instead of window.open
+* if Safari logout issues recur.
+*
+* The optional on_blur callback is invoked via a 'focus' event on the opener
+* window (the inverse of the new window losing focus) rather than a 'blur'
+* event on the child window, because cross-origin event access is restricted.
+* The commented-out direct approach is preserved for reference.
+* @param {Object} options - Window options
+* @param {string} options.url - URL to open
+* @param {string} [options.target] - Window name / target (also accepts options.name)
+* @param {number} [options.width] - Desired width in pixels; capped to screen width
+* @param {number} [options.height] - Desired height in pixels; capped to screen height
+* @param {number} [options.top=0] - Vertical offset from screen top
+* @param {number} [options.left=0] - Horizontal offset from screen left
+* @param {string|null} [options.features] - Raw window.open features string, or 'new_tab'
+* @param {Function|null} [options.on_blur] - Callback fired when the opener window
+*   regains focus (i.e. the user switches back from the new window)
+* @returns {Window} The opened window object; returns the current window when
+*   the Safari redirect path is taken
 */
 export function open_window(options) {
 
@@ -679,6 +856,8 @@ export function open_window(options) {
 				target,
 				window_features
 			)
+			// window.open returns null when the popup is blocked; bail out gracefully
+			// instead of throwing a TypeError that would abort the caller.
 			new_window.resizeTo(width, height); // needed for Firefox
 			new_window.focus()
 
@@ -712,8 +891,14 @@ export function open_window(options) {
 
 /**
 * PREVENT_OPEN_NEW_WINDOW
-* Check browser navigator.userAgent for detect Safari
-* @return bool
+* Guards against Safari-specific logout problems that occurred when opening
+* tool URLs in new tabs via window.open.
+*
+* Currently returns false unconditionally — the Safari user-agent detection
+* is disabled (see commented-out line). The function is kept so that
+* open_window can re-enable the workaround without restructuring its call site.
+* @returns {boolean} true when opening a new window should be suppressed in
+*   favour of a same-window navigation; currently always false
 */
 export function prevent_open_new_window() {
 	return false
@@ -724,13 +909,32 @@ export function prevent_open_new_window() {
 
 /**
 * OPEN_RECORDS_IN_WINDOW
-* Target section filter is calculated and fixed in server.
-* Then, opens a new window to navigate the results
-* @param object caller (caller instance)
-* @param string section_tipo
-* @param array ar_section_id
-* @param string|null target_window
-* @return bool true
+* Opens a new window pre-filtered to show only the given section_id records.
+*
+* The filter cannot be passed via URL because large id arrays (thousands of
+* person relationships, for example) would exceed URL length limits. Instead,
+* a temporary ("dummy") section instance is built client-side with the desired
+* SQO filter; building it causes the server to store the filter in the PHP
+* session keyed to section_tipo. The new window then loads the section
+* normally and picks up the session filter automatically.
+*
+* The dummy section is destroyed immediately after building to avoid leaking
+* client-side state. Inter-window event messaging is intentionally avoided
+* because its reliability varies when the target window may be new or recycled.
+*
+* (!) The session-filter approach means only one filter per section_tipo can
+* be active in a given browser session at a time. Concurrent calls for the
+* same section_tipo will overwrite each other's session filter.
+* @param {Object} options - Open options
+* @param {Object} options.caller - The calling Dédalo instance (used in request_config)
+* @param {string} options.section_tipo - Ontology tipo of the target section
+* @param {Array} options.ar_section_id - Array of section_id values to show
+* @param {string} [options.target_window] - window.open target name for reuse
+* @param {number} [options.width=1280] - Window width in pixels
+* @param {number} [options.height=900] - Window height in pixels
+* @param {number} [options.left=0] - Horizontal screen offset
+* @param {number} [options.top=0] - Vertical screen offset
+* @returns {Promise<boolean>} Resolves to true once the window has been opened
 */
 export const open_records_in_window = async function( options ) {
 
@@ -816,8 +1020,20 @@ export const open_records_in_window = async function( options ) {
 
 /**
 * DOWNLOAD_FILE
-* Unified download files function
-* @return object new_window
+* Triggers a browser file download for the given URL using a synthetic anchor
+* click, without navigating the current page.
+*
+* The anchor is created with rel="noopener noreferrer" (SEC-033) to prevent
+* the opened resource from accessing the opener window via window.opener.
+* The download attribute hints to the browser to save as file_name rather than
+* displaying inline; behaviour is subject to browser content-type enforcement.
+*
+* The anchor is removed immediately after the click event is dispatched.
+* @param {Object} options - Download options
+* @param {string} options.url - URL of the file to download
+* @param {string} [options.file_name] - Suggested filename; falls back to the
+*   last path segment of the URL when not provided
+* @returns {boolean} Always returns true
 */
 export function download_file(options) {
 
@@ -841,12 +1057,19 @@ export function download_file(options) {
 
 /**
 * FIND_UP_NODE
-* Search parent node recursively until reach the target
-* @param HTMLElement el
-* @param string target_tag
-* 	Sample: 'div'
-* @param function compare
-* @return HTMLElement|null
+* Walks up the DOM from el, returning the first ancestor that satisfies
+* the given compare predicate, or the first ancestor whose tagName equals
+* target_tag when no predicate is supplied.
+*
+* The walk continues until parentNode is null (document root reached), at
+* which point null is returned. Compare takes precedence: when provided,
+* target_tag is ignored.
+* @param {HTMLElement} el - Starting element (not included in the search)
+* @param {string} target_tag - Uppercase tag name to match, e.g. 'DIV'; ignored when
+*   compare is supplied
+* @param {Function} [compare] - Optional predicate (node) => boolean; return true
+*   to select that node
+* @returns {HTMLElement|null} The matching ancestor, or null if none found
 */
 export function find_up_node(el, target_tag, compare) {
 
@@ -871,10 +1094,16 @@ export function find_up_node(el, target_tag, compare) {
 
 /**
 * FIND_UP_TAG
-* Search parent with given CSS selector looking up recursively
-* @param HTMLElement el
-* @param string class_name 'wrap_ts_object'
-* @return HTMLElement|null
+* Walks up the DOM from el, returning the first ancestor (or el itself) that
+* has the given CSS class name in its classList.
+*
+* Unlike find_up_node this function checks el itself before traversing, and
+* uses classList.contains rather than tagName matching, making it suitable for
+* locating wrapper elements by semantic class (e.g. 'wrap_ts_object').
+* @param {HTMLElement} el - Starting element (included in the search)
+* @param {string} class_name - CSS class to match, e.g. 'wrap_ts_object'
+* @returns {HTMLElement|null} The matched element, or null if none found
+*   before reaching the top of the DOM
 */
 export function find_up_tag(el, class_name) {
 	// Use a while loop to traverse up the DOM tree from the starting element
@@ -894,10 +1123,13 @@ export function find_up_tag(el, class_name) {
 
 /**
 * PAUSE
-* Creates a pause in the async execution
-* using a promise over a timeout
-* @param int milliseconds
-* @return promise
+* Returns a Promise that resolves to true after the given number of milliseconds,
+* providing a lightweight async sleep for throttling, animation timing, or
+* sequencing operations that depend on external state settling.
+*
+* Example: await pause(200) // wait 200 ms before continuing
+* @param {number} milliseconds - Duration to wait before resolving
+* @returns {Promise<boolean>} Resolves to true after the delay
 */
 export function pause(milliseconds) {
 	return new Promise(function(resolve){
@@ -911,15 +1143,20 @@ export function pause(milliseconds) {
 
 /**
 * GET_FONT_FIT_SIZE
-* Calculate the convenient font size based on text length
-* and threshold. Usually vw units are used.
-* The idea is to apply a reduction factor to size when the string
-* size exceed the desired font base size
-* Used mainly by section_id column font size fit
-* @param string text
-* @param float base_size = 1.07
-* @param int threshold = 4
-* @return float font_size
+* Calculates a CSS font-size value (typically in vw units) that scales down
+* proportionally when the text is longer than a threshold, keeping labels
+* legible within a fixed-width container.
+*
+* The formula applies a reduction factor of 0.037 per character beyond the
+* combined (base_size + threshold) ceiling. Used primarily by section_id
+* column cells to prevent numeric identifiers from overflowing their column.
+*
+* At the defaults (base_size=1.7, threshold=4), strings of 5 characters or
+* fewer receive 1.7 vw; a 10-character string receives ~1.33 vw.
+* @param {string} text - Text whose rendered length drives the scaling
+* @param {number} [base_size=1.7] - Base font size (in vw or any CSS unit)
+* @param {number} [threshold=4] - Character count below which no scaling occurs
+* @returns {number} The calculated font size value (caller appends the unit)
 */
 export function get_font_fit_size(text, base_size=1.7, threshold=4) {
 
@@ -935,10 +1172,18 @@ export function get_font_fit_size(text, base_size=1.7, threshold=4) {
 
 
 /**
- * TIME_UNIT_AUTO
- * @param {number} total_ms - time expressed in milliseconds from function start_time()
- * @returns {string} result
- */
+* TIME_UNIT_AUTO
+* Converts a raw millisecond duration to a human-readable string with the
+* most appropriate time unit (ms, sec, min, hour, day).
+*
+* Selects the unit by successive division: values under 1 s stay as ms, under
+* 1 min become seconds (no decimal), and longer durations show three decimal
+* places. Intended for profiling/logging output, not UI display.
+*
+* Example: time_unit_auto(75430) → '1.257 min'
+* @param {number} total_ms - Elapsed time in milliseconds (e.g. from Date.now() diff)
+* @returns {string} Formatted duration string with unit suffix
+*/
 export function time_unit_auto(total_ms) {
 
 	const round = 3;
@@ -969,12 +1214,24 @@ export function time_unit_auto(total_ms) {
 
 /**
 * GET_JSON_LANGS
-* Reads '../common/js/lang.json' JSON file and store value in window['json_langs']
-* It's used by service_ckeditor and component_geolocation
-* Sample data:
-* [{"section_id":34,"dd_lang":"lg-aar","tld4":"aar","tld2":"aa","glotocode":"afar1241","walls":"qaf","lat":12.0,"long":42.0,"locale":"aa"},...]
-* @return array|null json_langs
+* Fetches the Dédalo language registry from core/common/js/lang.json and
+* caches the result as window['json_langs'] for subsequent synchronous access.
+*
+* Returns immediately from the window cache when the data has already been
+* loaded. Concurrent calls before the first response arrives all receive the
+* same in-flight Promise (_json_langs_promise) to prevent duplicate HTTP
+* requests. The request is sent with cache: 'force-cache' because lang.json
+* does not change at runtime.
+*
+* Sample record shape:
+* { section_id: 34, dd_lang: 'lg-aar', tld4: 'aar', tld2: 'aa',
+*   glotocode: 'afar1241', walls: 'qaf', lat: 12.0, long: 42.0, locale: 'aa' }
+*
+* Used by: service_ckeditor, component_geolocation
+* @returns {Promise<Array>} Resolves to the array of language registry objects
 */
+// _json_langs_promise: module-level singleton to deduplicate concurrent fetches;
+// reset to null once the response is cached in window['json_langs'].
 let _json_langs_promise = null
 export const get_json_langs = function () {
 
@@ -1008,10 +1265,15 @@ export const get_json_langs = function () {
 
 /**
 * GET_TLD_FROM_TIPO
-* Extract the tld from given tipo
-* like 'rsc' from 'rsc1'
-* @param string $tipo
-* @return string|false
+* Extracts the alphabetic TLD (top-level domain) prefix from a Dédalo ontology tipo.
+*
+* A tipo is a string of the form <tld><id>, where <tld> is two or more lowercase
+* letters and <id> is a positive integer. For example 'rsc197' → 'rsc'.
+*
+* Returns false and logs a console.error when the input does not start with at
+* least two lowercase letters (invalid tipo).
+* @param {string} tipo - Ontology tipo identifier, e.g. 'rsc197', 'dd1', 'oh42'
+* @returns {string|boolean} The alphabetic prefix (e.g. 'rsc'), or false on invalid input
 */
 export const get_tld_from_tipo = function (tipo) {
 
@@ -1029,10 +1291,17 @@ export const get_tld_from_tipo = function (tipo) {
 
 /**
 * GET_SECTION_ID_FROM_TIPO
-* Extract the section_id from given tipo
-* like '1' from 'rsc1'
-* @param string tipo
-* @returns string|false
+* Extracts the numeric section_id portion from a Dédalo ontology tipo.
+*
+* A tipo is a string of the form <tld><id>; this function returns the numeric
+* <id> part as a string (not a number). For example 'rsc197' → '197'.
+*
+* Returns false and logs a console.error when the input contains no numeric
+* substring (invalid tipo). Note: section_id 0 is considered invalid by the
+* guard condition — this is intentional as Dédalo ids are 1-based.
+* @param {string} tipo - Ontology tipo identifier, e.g. 'rsc197', 'dd1'
+* @returns {string|boolean} The numeric portion as a string (e.g. '197'), or
+*   false on invalid input
 */
 export const get_section_id_from_tipo = function (tipo) {
 
@@ -1050,11 +1319,23 @@ export const get_section_id_from_tipo = function (tipo) {
 
 /**
 * GET_CALLER_BY_MODEL
-* Find the caller instance of the given model
-* e.g. section caller of the component
-* @param object instance
-* @param string model
-* @return object|null instance
+* Walks the caller chain from instance upward and returns the first ancestor
+* whose .model property equals the given model string.
+*
+* Every Dédalo instance holds a reference to its parent through the .caller
+* property, forming a chain: component → section → page, for example. This
+* function allows any nested component to locate the enclosing section or page
+* without hard-coding depth assumptions.
+*
+* A Set of visited instances guards against circular references in the caller
+* chain (which should not occur in normal operation but have been observed
+* during hot reloads / incomplete teardown).
+*
+* Returns null when: instance has no .model, the chain terminates without a
+* match, or a circular reference is detected.
+* @param {Object} instance - The starting Dédalo instance
+* @param {string} model - The model name to search for, e.g. 'section', 'page'
+* @returns {Object|null} The first matching ancestor instance, or null
 */
 export const get_caller_by_model = function(instance, model) {
 
@@ -1088,23 +1369,23 @@ export const get_caller_by_model = function(instance, model) {
 
 
 /**
- * Generates a 32-bit integer hash from a string using a simple rolling hash algorithm.
- *
- * This is a non-cryptographic hash function suitable for hash tables, checksums,
- * and other general-purpose hashing needs where security is not a concern.
- *
- * @param {string} input_string - The string to be hashed
- * @returns {number} A 32-bit integer hash value
- * @throws {TypeError} If the input is not a string
- *
- * @example
- * // Basic usage
- * generate_hash('hello world'); // Returns: -1058936117
- *
- * @example
- * // Consistent output for same input
- * generate_hash('test') === generate_hash('test'); // true
- */
+* GENERATE_HASH
+* Generates a signed 32-bit integer hash from a string using the djb2-style
+* rolling hash algorithm (hash = hash * 31 + charCode, kept 32-bit by bitwise OR 0).
+*
+* This is a non-cryptographic hash function suitable for cache keys, deduplication
+* identifiers, and fast equality hints where security is not a concern. The same
+* input always produces the same output within a JS engine session.
+*
+* The function also exposes generate_hash.toHex for a zero-padded 8-character
+* hexadecimal representation of the same hash value.
+* @param {string} input_string - The string to hash; must be a string
+* @returns {number} Signed 32-bit integer hash value (may be negative)
+* @throws {TypeError} When input_string is not a string
+* @example
+* generate_hash('hello world'); // e.g. -1058936117
+* generate_hash('test') === generate_hash('test'); // true — deterministic
+*/
 export const generate_hash = (input_string) => {
   // Input validation
   if (typeof input_string !== 'string') {
@@ -1127,8 +1408,16 @@ export const generate_hash = (input_string) => {
   return hash;
 };//end generate_hash
 /**
- * Get the same hash, but encoded in HEX mode
- */
+* GENERATE_HASH.TOHEX
+* Returns the same 32-bit hash as generate_hash but as a zero-padded 8-character
+* lowercase hex string. The unsigned right-shift (>>> 0) converts the potentially
+* negative signed integer to its unsigned 32-bit equivalent before hex formatting,
+* ensuring the result is always exactly 8 characters.
+*
+* Example: generate_hash.toHex('hello world') → 'c1925e0b'
+* @param {string} input_string - The string to hash (forwarded to generate_hash)
+* @returns {string} Zero-padded 8-character lowercase hex string
+*/
 generate_hash.toHex = (input_string) => {
   const hash = generate_hash(input_string);
   // Convert to unsigned 32-bit integer and format as hex
@@ -1139,12 +1428,20 @@ generate_hash.toHex = (input_string) => {
 
 /**
 * TOOL_BASE_URL
-* Per-tool base web URL, multi-root aware.
-* Tools living in DEDALO_ADDITIONAL_TOOLS roots are mapped in the
-* DEDALO_TOOLS_URLS global (server: tool_paths::get_additional_tools_url_map);
-* an absent key means the tool lives in the primary tools root.
-* @param {string} model - tool model/name, e.g. 'tool_lang'
-* @return {string} base URL, e.g. '/dedalo/tools/tool_lang' or '/custom_tools/tool_x'
+* Resolves the base web URL for a given tool model, accounting for multi-root
+* tool installations (DEDALO_ADDITIONAL_TOOLS).
+*
+* Tools that live outside the primary tools directory are registered in the
+* DEDALO_TOOLS_URLS global map, which is populated server-side by
+* tool_paths::get_additional_tools_url_map(). When a model key is present in
+* that map its value is returned directly. Otherwise the URL is constructed
+* from the primary DEDALO_TOOLS_URL root.
+*
+* Example outputs:
+*   'tool_lang'   → '/dedalo/tools/tool_lang'   (primary root)
+*   'tool_custom' → '/custom_tools/tool_custom'  (additional root)
+* @param {string} model - Tool model identifier, e.g. 'tool_lang', 'tool_export'
+* @returns {string} Absolute-path base URL for the tool, without a trailing slash
 */
 export function tool_base_url(model) {
 

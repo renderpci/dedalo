@@ -1,15 +1,57 @@
 <?php declare(strict_types=1);
 /**
 * DD_TOOLS_API
-* Manage API REST data with Dédalo
+* HTTP API surface for the Dédalo tools subsystem.
 *
+* Handles two remote-callable actions exposed through the REST gateway:
+*  - user_tools   : returns the list of tools the current user is authorised to access,
+*                   optionally filtered to a requested subset (used to populate UI toolbars).
+*  - tool_request : secure generic dispatcher that loads a tool class, validates the
+*                   caller's authorisation and the method's signature, then invokes a
+*                   single public static method, either synchronously (HTTP response)
+*                   or asynchronously (detached CLI process via exec_::request_cli).
+*
+* Security layers applied in tool_request (in order):
+*  1. sanitize_key_dir($source->model) — strip path-traversal chars from the tool name.
+*  2. Global registry whitelist — the tool must be in tool_common::get_all_registered_tools().
+*  3. Per-user authorisation — the logged-in user must hold the tool via their profile
+*     (tool_common::get_user_tools).
+*  4. Path confinement (SEC-069 / SEC-084) — realpath() of the class file must sit under
+*     an approved tool root returned by tool_paths::get_roots().
+*  5. API_ACTIONS allowlist (SEC-024) — the requested method must be listed in the tool
+*     class's `public const API_ACTIONS` declaration, resolved by tool_security::resolve_action.
+*  6. Reflection visibility check — the method must be public and static.
+*  7. Signature contract (SEC-084) — the method must accept either zero parameters or a
+*     single `object` / class-typed parameter; scalar or multi-param signatures are rejected.
+*  8. Declarative per-action permission gate — tool_security::assert_action_permission runs
+*     any map-form API_ACTIONS permission spec against the incoming options before dispatch.
+*
+* Called by dd_manager, which routes any request whose `dd_api` value is 'dd_tools_api'
+* to the matching method here.
+*
+* Relationships:
+*  - Dispatched by: core/api/v1/common/class.dd_manager.php
+*  - Tool registry/auth: tools/tool_common/class.tool_common.php
+*  - Path resolution: tools/tool_common/class.tool_paths.php
+*  - Method allowlist + permission gates: tools/tool_common/class.tool_security.php
+*  - Background execution: core/common/class.exec_.php (exec_::request_cli)
+*
+* @package Dédalo
+* @subpackage Core
 */
 final class dd_tools_api {
 
 
 
 	/**
-	* SEC-024: explicit allowlist of methods callable as remote API actions.
+	* Explicit allowlist of methods callable as remote API actions.
+	*
+	* dd_manager enforces this constant (SEC-024): any action not listed here
+	* is rejected before the method is ever looked up. Adding a new entry
+	* here also requires the corresponding public static method to exist in
+	* this class.
+	*
+	* @var array<string>
 	*/
 	public const API_ACTIONS = [
 		'user_tools',
@@ -20,17 +62,31 @@ final class dd_tools_api {
 
 	/**
 	* USER_TOOLS
-	* Get user authorized tools filtered by custom list (optional)
-	* @param object $rqo
+	* Returns the list of tools the logged-in user is authorised to access.
+	*
+	* Each entry in the result is a DDO (Dédalo Data Object) representing a single
+	* tool in "simple context" form, containing the tool's tipo, label, icon, URL,
+	* and other fields needed to render a toolbar entry on the client.
+	*
+	* If `options.ar_requested_tools` is provided, only tools whose `name` property
+	* appears in that array are included. This lets a caller request only the subset
+	* of tools relevant to a particular UI area without needing a second round-trip.
+	*
+	* @param object $rqo - Dédalo request object:
 	* {
-	*	dd_api	: 'dd_tools_api',
-	*	action	: 'user_tools',
-	*	source	: source,
-	*	options	: {
-	*		ar_requested_tools : ar_requested_tools
-	*	}
+	*   dd_api  : 'dd_tools_api',
+	*   action  : 'user_tools',
+	*   source  : source,
+	*   options : {
+	*     ar_requested_tools : string[]  // optional — names to include; null means all
+	*   }
 	* }
-	* @return object $response
+	* @return object $response - Standard response:
+	* {
+	*   result : object[]  // array of DDO tool contexts (empty array if none match)
+	*   msg    : string
+	*   errors : array
+	* }
 	*/
 	public static function user_tools(object $rqo) : object {
 
@@ -51,6 +107,8 @@ final class dd_tools_api {
 		$result = [];
 		foreach ($user_tools as $tool_object) {
 
+			// Filter step — skip tools the caller did not ask for.
+			// When $ar_requested_tools is null or empty, all authorised tools pass through.
 			if(!empty($ar_requested_tools) && !in_array($tool_object->name, $ar_requested_tools)) {
 				continue;
 			}
@@ -75,32 +133,46 @@ final class dd_tools_api {
 
 	/**
 	* TOOL_REQUEST
-	* Call to tool method given and return and object with the response
+	* Secure generic dispatcher: loads a tool class, validates the caller's authorisation
+	* and the requested method, then invokes it — either synchronously or as a detached
+	* background CLI process.
 	*
-	* Class file of current tool must be exists in path: DEDALO_TOOLS_PATH / my_tool_name / class.my_tool_name.php
-	* Method must be static and accept a only one object argument
-	* Method must return an object like { result: mixed, msg: string }
+	* Successful invocation requires passing eight sequential security gates (see class-level
+	* doc for the ordered list). Any gate failure returns an error response immediately without
+	* proceeding to subsequent checks.
 	*
-	* @param object $rqo
-	* sample:
+	* The `options` object from the RQO is forwarded verbatim as the sole argument to the
+	* tool method. The tool method must conform to the Dédalo single-object-argument contract:
+	*   public static function my_action(object $options) : object { ... }
+	*
+	* Background mode (`options.background_running === true`) delegates to exec_::request_cli,
+	* which spawns a detached PHP process via process_runner.php and returns immediately.
+	* The permission gate (assert_action_permission) runs BEFORE the fork to ensure the
+	* HTTP caller cannot bypass it via the asynchronous path.
+	*
+	* @param object $rqo - Dédalo request object:
 	* {
-	* 	action: "tool_request"
-	* 	dd_api: "dd_utils_api"
-	* 	source: {
-	* 		typo: "source",
-	* 		action: "delete_tag",
-	* 		model: "tool_indexation"
-	* 	},
-	* 	options: {
-	*		indexing_component_tipo: "rsc860"
-	*		main_component_lang: "lg-eng"
-	*		main_component_tipo: "rsc36"
-	*		section_id: "1"
-	*		section_tipo: "rsc167"
-	*		tag_id: "5"
-	*    }
+	*   action  : "tool_request",
+	*   dd_api  : "dd_tools_api",
+	*   source  : {
+	*     typo   : "source",
+	*     action : string,  // method name to call on the tool class
+	*     model  : string   // tool name, e.g. "tool_indexation"
+	*   },
+	*   options : {
+	*     background_running : bool     // optional; true → async CLI fork
+	*     // ... tool-specific parameters forwarded as-is to the method
+	*   }
 	* }
-	* @return object response { result: mixed, msg: string }
+	* @return object $response - Shape mirrors the tool method's return value on success:
+	* {
+	*   result : mixed
+	*   msg    : string
+	*   errors : array  // only present on API-layer failures; tool may add its own
+	* }
+	* @throws permission_exception - Thrown by assert_action_permission when a declarative
+	*   permission spec is violated; caught by dd_manager and converted to a 'permissions_denied'
+	*   client response.
 	*/
 	public static function tool_request(object $rqo) : object {
 
@@ -111,6 +183,7 @@ final class dd_tools_api {
 
 		// source
 			$source			= $rqo->source;
+			// sanitize_key_dir strips path-traversal characters (../ etc.) from the name.
 			$tool_name		= sanitize_key_dir($source->model);
 			$tool_method	= $source->action;
 
@@ -121,6 +194,9 @@ final class dd_tools_api {
 				$response->errors	= [];
 
 		// check valid options
+			// Guard: $options was derived from $rqo->options which may have been overridden
+			// by a client supplying a non-object value. Reject early to prevent type errors
+			// in subsequent gates that call object-property access on $options.
 			if (!is_object($options)) {
 				$response->msg = 'Error. invalid options ';
 				$response->errors[] = 'Invalid options type';
@@ -133,6 +209,8 @@ final class dd_tools_api {
 			}
 
 		// whitelist validation - get valid tool names from registered tools
+			// Gate 2: the tool must be in the global registry before any file I/O
+			// or per-user check. This prevents probing for arbitrary class names.
 			$registered_tools	= tool_common::get_all_registered_tools();
 			$valid_tool_names	= array_map(fn($tool) => $tool->name, $registered_tools);
 			if (!in_array($tool_name, $valid_tool_names)) {
@@ -161,6 +239,8 @@ final class dd_tools_api {
 			}
 
 		// load tool class file (multi-root aware, see tool_paths)
+			// tool_paths::get_tool_class_file searches DEDALO_TOOLS_PATH and any
+			// DEDALO_ADDITIONAL_TOOLS roots in declaration order.
 			$class_file = tool_paths::get_tool_class_file($tool_name);
 			if ($class_file===null || !file_exists($class_file)) {
 				$response->msg = 'Error. tool class_file do not exists. Create a new one in format class.my_tool_name.php ';
@@ -221,6 +301,10 @@ final class dd_tools_api {
 			}
 
 		// method (static) + signature validation
+			// Gate 6: ensure the method actually exists, is public, and is static.
+			// Lifecycle/framework hooks intentionally excluded from API_ACTIONS would
+			// already have been caught above; this is a final defence against
+			// accidental resolution to a non-dispatchable method.
 			$is_valid       = false;
 			$reflection     = null;
 			$signature_ok   = false;
@@ -314,6 +398,9 @@ final class dd_tools_api {
 				case ($background_running===true):
 
 					// running in CLI
+					// Build the descriptor object expected by exec_::request_cli.
+					// The method is invoked inside a detached process_runner.php child;
+					// the HTTP response returns the PID / status immediately.
 					$cli_options = new stdClass();
 						$cli_options->class_name	= $tool_name;
 						$cli_options->method_name	= $tool_method;
@@ -326,7 +413,8 @@ final class dd_tools_api {
 				default:
 
 					// direct case
-
+					// Synchronous invocation: call the tool method in-process and
+					// return its result as the HTTP response body.
 					try {
 
 						$fn_result = call_user_func(array($tool_name, $tool_method), $fn_arguments);
@@ -349,6 +437,9 @@ final class dd_tools_api {
 					break;
 			}
 
+		// The tool's own response object entirely replaces $response; the API-layer
+		// error fields ($response->errors etc.) are not merged in. Callers must
+		// inspect $fn_result->result and $fn_result->msg directly.
 		$response = $fn_result;
 
 		return $response;
@@ -356,4 +447,4 @@ final class dd_tools_api {
 
 
 
-}//end dd_utils_api
+}//end dd_tools_api

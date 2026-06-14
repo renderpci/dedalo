@@ -254,10 +254,10 @@ final class ts_object_test extends BaseTestCase {
 
 
 	/**
-	* TEST_get_term_dato_by_locator
+	* TEST_get_term_data_by_locator
 	* @return void
 	*/
-	public function test_get_term_dato_by_locator(): void {
+	public function test_get_term_data_by_locator(): void {
 
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -269,7 +269,7 @@ final class ts_object_test extends BaseTestCase {
 			    "from_component_tipo": "hierarchy49"
 			}
 		');
-		$result = ts_object::get_term_dato_by_locator(
+		$result = ts_object::get_term_data_by_locator(
 			$locator
 		);
 		// dump($result, ' result ++ '.to_string( gettype($result) ));
@@ -286,7 +286,7 @@ final class ts_object_test extends BaseTestCase {
 			$eq,
 			'expected true !empty($result[0]) and received type: ' . !empty($result[0])
 		);
-	}//end test_get_term_dato_by_locator
+	}//end test_get_term_data_by_locator
 
 
 

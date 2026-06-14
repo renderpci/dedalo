@@ -52,7 +52,15 @@ export const component_image = function(){
 	component_image.prototype.build				= component_common.prototype.build
 	component_image.prototype.render			= common.prototype.render
 	component_image.prototype.refresh			= common.prototype.refresh
-	component_image.prototype.destroy			= common.prototype.destroy
+	// destroy: release the vector editor's document-level listeners (if it was
+	// loaded) before delegating to the generic destructor.
+	component_image.prototype.destroy			= function() {
+		if (this.vector_editor && typeof this.vector_editor.destroy==='function') {
+			this.vector_editor.destroy()
+			this.vector_editor = null
+		}
+		return common.prototype.destroy.call(this)
+	}
 
 	// change data
 	component_image.prototype.save				= component_common.prototype.save
