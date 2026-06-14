@@ -388,7 +388,7 @@ export const delete_instances = function(options) {
 				const expected	= options[key];
 				const actual	= item[key];
 
-				if (expected != null && expected !== actual) {
+				if (expected !== null && expected !== undefined && expected !== actual) {
 					match = false;
 					break; // There is no need to check the other keys if one of them does not match.
 				}
