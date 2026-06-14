@@ -4,6 +4,50 @@
 
 
 
+/**
+* RENDER_TS_LINE
+* Builds the interactive row content for a single thesaurus/ontology node (ts_object).
+*
+* This module owns the "ts line" — the flat horizontal strip rendered inside every
+* ts_object wrapper that contains the term label, action buttons, and auxiliary
+* indicators.  It is imported by view_default_edit_ts_object.js, which calls it
+* from get_content_data() during each render cycle.
+*
+* ELEMENT DISPATCH MODEL
+* The server delivers `self.data.ar_elements` — an ordered array of element
+* descriptors.  Each descriptor carries at minimum:
+*   { type, tipo, model, value, [count_result], [show_data], [model_value] }
+*
+* render_ts_line() walks this array and dispatches on `element_case`, which is:
+*   - 'component_relation_index' when element.model === 'component_relation_index'
+*     (regardless of `type`, which is often 'icon' in ddo_map — see inline note)
+*   - element.type  for every other element
+*
+* Known `element_case` values and their DOM output:
+*   'term'                   → term label node (render_term or render_ontology_term)
+*   'link_children_nd'       → ND (non-descriptor) toggle button
+*   'link_children'          → arrow that expands/collapses descriptor children
+*   'component_relation_index' → "U:N" indexation count badge / recursive variant
+*   'img'                    → thumbnail that opens the component editor
+*   default                  → generic button_show_component for all other types
+*
+* After the switch, any element with a `model_value` property appends a small
+* model-name badge (hidden unless page_globals.show_models is true).
+*
+* TERM RENDERING
+* Two render paths exist for the 'term' case:
+*   • render_term          — standard thesaurus view (area_thesaurus caller)
+*   • render_ontology_term — ontology view (area_ontology caller); parses an
+*     encoded value string "label tipo id" to separate term text from tipo/id.
+*
+* SIDE EFFECTS
+* - Sets self.term_node and self.term_text pointers on the ts_object instance.
+* - Attaches live DOM event listeners (mousedown / click) on each rendered element.
+* - Does NOT touch self.indexations_container (built after this function returns).
+*
+* @module render_ts_line
+*/
+
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
@@ -15,9 +59,20 @@
 
 /**
 * RENDER_TS_LINE
-* Render standardized complete ts line with term ans buttons
-* @param object self - ts_object instance
-* @return DocumentFragment fragment
+* Assembles the full interactive ts line (term + buttons) as a DocumentFragment.
+*
+* The function iterates self.data.ar_elements and maps each server-supplied
+* element descriptor to a DOM node via a switch on element_case (see module
+* header).  The resulting fragment is appended into the ts_object content_data
+* node by get_content_data() in view_default_edit_ts_object.js.
+*
+* Guard: if ar_elements is empty (hierarchy not installed) a placeholder span
+* is returned immediately so the tree row is never left blank.
+*
+* @param {Object} self - ts_object instance. Must have self.data.ar_elements,
+*   self.section_tipo, self.section_id, self.is_descriptor, self.thesaurus_mode,
+*   self.has_descriptor_children, and self.element_to_hilite populated by init().
+* @returns {DocumentFragment} fragment containing all element nodes for the row.
 */
 export const render_ts_line = function(self) {
 
@@ -49,6 +104,8 @@ export const render_ts_line = function(self) {
 
 		const current_element = ar_elements[j]
 
+		// children_dataset — data-* attributes applied to most element nodes so
+		// that CSS selectors and event handlers can read the ontology tipo/type.
 		const children_dataset	= {
 			tipo	: current_element.tipo,
 			type	: current_element.type
@@ -65,7 +122,12 @@ export const render_ts_line = function(self) {
 		switch(element_case) {
 
 			// TERM
+			// Renders the clickable term label.  In area_ontology context the
+			// value string encodes "label tipo id" and needs separate parsing;
+			// an additional [tipo_id] badge and a Duplicate button are also added.
 			case ('term'): {
+				// Choose the appropriate term renderer based on whether the
+				// immediate caller chain contains an area_ontology instance.
 				const area_ontology_caller = get_caller_by_model(self, 'area_ontology')
 				const render_handler = area_ontology_caller
 					? render_ontology_term
@@ -82,6 +144,12 @@ export const render_ts_line = function(self) {
 				self.term_node = term_node
 
 				// id_info (show_section)
+				// Builds the bracketed identifier badge shown after the term,
+				// e.g. "[hierarchy1_246]" (standard) or "[dd246]" (ontology).
+				// In ontology mode the value string is "label tipo id", so a
+				// regex extracts the tipo+id pair to build a compact badge like
+				// "[dd1]".  Falls back to section_tipo+section_id if the regex
+				// fails (malformed value).
 				const term_id = (area_ontology_caller)
 					? (()=>{
 						// id_info. Like '[hierarchy1_246]' (Term tipo)
@@ -98,6 +166,9 @@ export const render_ts_line = function(self) {
 
 				const section = self.section_tipo + ' - ' + self.section_id
 
+				// The id_info span is read-only debug information; stopPropagation
+				// on mousedown prevents the thesaurus row from reacting to clicks
+				// on the badge (which would otherwise trigger term selection).
 				const id_info = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'id_info ontology',
@@ -113,6 +184,10 @@ export const render_ts_line = function(self) {
 					e.stopPropagation()
 				}
 				id_info.addEventListener('mousedown', mousedown_handler_id_info)
+				// click on id_info badge:
+				// • metaKey+altKey while SHOW_DEBUG → force-refresh the ts_object instance
+				// • altKey alone while SHOW_DEBUG  → log the instance to console
+				// • otherwise                      → no-op (stopPropagation only)
 				const click_handler_id_info = (e) => {
 					e.stopPropagation()
 					if(SHOW_DEBUG===true) {
@@ -135,6 +210,9 @@ export const render_ts_line = function(self) {
 				id_info.addEventListener('click', click_handler_id_info)
 
 				// button_duplicate
+				// Only shown in the ontology area (area_ontology_caller is truthy).
+				// Duplicates the current section, then refreshes the parent's children
+				// list and scrolls/highlights the newly created term.
 				if (area_ontology_caller) {
 					const button_duplicate = ui.create_dom_element({
 						element_type	: 'button',
@@ -153,6 +231,7 @@ export const render_ts_line = function(self) {
 						const section_tipo	= self.section_tipo
 						const section_id	= self.section_id
 
+						// Retrieve (or create) the section instance to call duplicate_section().
 						const section = await get_instance({
 							model			: 'section',
 							section_tipo	: section_tipo,
@@ -177,6 +256,8 @@ export const render_ts_line = function(self) {
 							: null
 
 						// children_data - render_children_data from API
+						// cache:false forces a fresh server call so the duplicated
+						// record appears immediately in the children list.
 						const children_data = await parent_instance.get_children_data({
 							pagination	: pagination,
 							children	: null,
@@ -218,6 +299,9 @@ export const render_ts_line = function(self) {
 			}
 
 			// ND BUTTON
+			// Renders a clickable label for a non-descriptor (ND) term — i.e. an
+			// entry that exists in the hierarchy but is not a preferred descriptor.
+			// Clicking toggles the nd_container below the row via self.toggle_nd().
 			case ('link_children_nd'): {
 				// Button for non descriptor [nd]
 				const element_children_nd = ui.create_dom_element({
@@ -244,6 +328,9 @@ export const render_ts_line = function(self) {
 			}
 
 			// ARROW ICON (link_children)
+			// Renders the expand/collapse arrow for descriptor children.
+			// Skipped (self.link_children_element set to null) when the node has
+			// no descriptor children so the arrow never appears on leaf nodes.
 			case ('link_children'): {
 				if (self.has_descriptor_children) {
 					// button arrow link children.
@@ -257,11 +344,20 @@ export const render_ts_line = function(self) {
 			}
 
 			// INDEXATIONS
+			// Renders the indexation count badge ("U:N") for component_relation_index
+			// elements.  Two sub-modes:
+			//   !show_data  → direct indexations of this node only; badge shows total
+			//                 and calls self.show_indexations() with a single locator.
+			//   show_data==='children' → recursive indexations; fetches all descendant
+			//                 locators first via self.get_children_recursive(), then
+			//                 passes the full list to self.show_indexations().
+			// If total is 0 in the direct case, no button is rendered at all.
 			case ('component_relation_index'): {
 				if (!current_element.show_data) {
 					const total = parseInt(current_element.count_result?.total || 0)
 					if(total > 0){
 						// button_show_indexations. Build button
+						// text_node produces a <span> child like "<span>U:37</span>"
 						const button_show_indexations = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'button_show_indexations',
@@ -274,8 +370,12 @@ export const render_ts_line = function(self) {
 							e.stopPropagation()
 
 							button_show_indexations.classList.add('loading_spinner')
+							// uid: unique identifier for this indexation panel so that
+							// show_indexations() can recycle or close the same panel.
 							const uid = current_element.tipo +'_'+ self.section_tipo +'_'+ self.section_id
 
+							// Re-read total at click time in case the badge was rendered
+							// before the count_result was updated by a background refresh.
 							const current_total = parseInt(current_element.count_result?.total || 0)
 
 							self.show_indexations({
@@ -304,6 +404,8 @@ export const render_ts_line = function(self) {
 
 				}else if(current_element.show_data === 'children') {
 					// recursive indexations
+					// The "⇣" prefix visually distinguishes the recursive badge from
+					// the direct-indexations badge when both appear in the same row.
 					const button_recursive_indexations = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'button_show_indexations',
@@ -317,6 +419,9 @@ export const render_ts_line = function(self) {
 
 						button_recursive_indexations.classList.add('loading_spinner')
 
+						// First resolve all descendant locators, then pass them as
+						// filter_by_locators so show_indexations() searches across the
+						// full subtree rather than just this node.
 						self.get_children_recursive({
 							section_tipo	: self.section_tipo,
 							section_id		: self.section_id
@@ -347,6 +452,11 @@ export const render_ts_line = function(self) {
 			}
 
 			// IMG
+			// Renders a thumbnail image for the current term (e.g. a linked media
+			// component).  Only rendered when current_element.value is non-empty
+			// (i.e. the server resolved an image URL for this element).
+			// Clicking the thumbnail opens the component editor via
+			// self.show_component_in_ts_object().
 			case ('img'): {
 				if(current_element.value) {
 
@@ -383,6 +493,10 @@ export const render_ts_line = function(self) {
 			}
 
 			// OTHERS. Buttons for show component to edit, etc.
+			// Generic fallback for any element type not matched above
+			// (e.g. custom icon buttons, extra component links).  Creates a
+			// clickable div that opens the element's component in the editor
+			// panel via self.show_component_in_ts_object().
 			default: {
 				const current_value = current_element.value
 
@@ -415,6 +529,9 @@ export const render_ts_line = function(self) {
 		}//end switch(true)
 
 		// ontology model case
+		// When the server attaches a model_value (the raw ontology model name of
+		// the element's component), append a small badge div so developers can
+		// inspect it.  Visibility is gated on window.page_globals.show_models.
 		if (current_element.model_value) {
 			const show_models_class = window.page_globals.show_models===true ? '' : ' hide';
 			ui.create_dom_element({
@@ -434,19 +551,32 @@ export const render_ts_line = function(self) {
 
 /**
 * RENDER_TERM
-* Creates the term nodes like:
-* <div class="list_thesaurus_element term" data-tipo="hierarchy25" data-type="term" data-section_tipo="aa1" data-section_id="1">
-*  <span class="term_text">Social Anthropology</span>
-*  <span class="id_info"> [aa1_1]</span>
-* </div>
-* @param object options
-* {
-*	child_data: object {ar_elements:[{}], has_descriptor_children:true, is_descriptor:true, ..}
-* 	is_descriptor: bool
-*	key: int
-* 	self: object
-* }
-* @return HTMLElement term_node
+* Creates the term label node for a standard thesaurus row (area_thesaurus context).
+*
+* Produces a structure like:
+*   <div class="term">
+*     <span class="term_text [no_descriptor]">Social Anthropology</span>
+*   </div>
+*
+* The term value may arrive as a string or an array of strings; arrays are
+* joined with a space before rendering.  The tipo field may also be an array
+* (multi-component terms); only the first entry is used when calling
+* show_component_in_ts_object().
+*
+* Side effects:
+* - Sets self.term_node to the returned div.
+* - Sets self.term_text to the inner span.
+* - Schedules a hilite via dd_request_idle_callback if self.element_to_hilite
+*   matches this node's section_tipo/section_id (compares DOM dataset which is
+*   set by the caller, NOT by this function — the dataset is absent here so
+*   the hilite check always evaluates to false in practice).
+*
+* @param {Object} options
+* @param {Object} options.self          - ts_object instance.
+* @param {Array}  options.ar_elements   - Full ar_elements array from self.data.
+* @param {boolean} options.is_descriptor - Whether this node is a descriptor term.
+* @param {number}  options.key          - Index j into ar_elements for this element.
+* @returns {HTMLElement} term_node div element.
 */
 const render_term = function(options) {
 
@@ -458,6 +588,8 @@ const render_term = function(options) {
 
 	// short vars
 		const item	= ar_elements[key]
+		// tipo may be an array when multiple component tipos map to one term slot;
+		// use the first entry as the canonical tipo for UI operations.
 		const tipo	= Array.isArray(item?.tipo) ? item.tipo[0] : item.tipo
 
 	// term_node
@@ -469,6 +601,8 @@ const render_term = function(options) {
 		self.term_node = term_node
 
 		// term_text
+		// value may be a plain string or an array of partial strings (multi-lang or
+		// multi-component concatenation); join with space when array.
 		const term_text_value = Array.isArray( ar_elements[key].value )
 			? item.value.join(' ')
 			: item.value
@@ -479,7 +613,9 @@ const render_term = function(options) {
 			parent			: term_node
 		})
 		self.term_text = term_text
-		// click event
+		// click on term text → open component editor in the ts_object panel,
+		// except when thesaurus_mode==='relation' (indexation tool context)
+		// where clicks are intentionally ignored to avoid accidental navigation.
 		const click_handler = (e) => {
 			e.stopPropagation()
 
@@ -502,6 +638,12 @@ const render_term = function(options) {
 		term_text.addEventListener('click', click_handler)
 
 	// element_to_hilite
+	// (!) Note: term_node has no data-set assigned here, so dataset.section_id
+	// and dataset.section_tipo are both undefined.  The equality check below
+	// will never match and the hilite scheduled via dd_request_idle_callback
+	// is never triggered from this render path.  Hiliting in the standard
+	// view happens instead via the caller passing element_to_hilite and the
+	// ts_object re-render cycle.
 		if (self.element_to_hilite) {
 			if(		term_node.dataset.section_id == self.element_to_hilite.section_id
 				&& 	term_node.dataset.section_tipo===self.element_to_hilite.section_tipo) {
@@ -522,19 +664,35 @@ const render_term = function(options) {
 
 /**
 * RENDER_ONTOLOGY_TERM
-* Creates the term nodes like:
-* <div class="list_thesaurus_element term" data-tipo="hierarchy25" data-type="term" data-section_tipo="aa1" data-section_id="1">
-*  <span class="term_text">Social Anthropology</span>
-*  <span class="id_info"> [aa1_1]</span>
-* </div>
-* @param object options
-* {
-*	child_data: object {ar_elements:[{}], has_descriptor_children:true, is_descriptor:true, ..}
-* 	is_descriptor: bool
-*	key: int
-* 	self: object
-* }
-* @return HTMLElement term_node
+* Creates the term label node for an ontology row (area_ontology caller context).
+*
+* Unlike render_term, this variant:
+* 1. Parses the encoded value string — the server encodes it as
+*    "label tipo id" (e.g. "Social Anthropology aa1 246") and this function
+*    extracts the label part via regex for display; tipo+id are used for the
+*    id_info badge built in render_ts_line.
+* 2. Attaches a full data-set (section_tipo, section_id, tipo, type) to term_node
+*    so that element_to_hilite matching works correctly.
+* 3. Uses item.tipo[0] (always an array here) when calling
+*    show_component_in_ts_object().
+*
+* Produces the same DOM shape as render_term:
+*   <div class="term" data-section_tipo="..." data-section_id="..." ...>
+*     <span class="term_text [no_descriptor]">Social Anthropology</span>
+*   </div>
+*
+* Side effects:
+* - Sets self.term_node to the returned div.
+* - Sets self.term_text to the inner span.
+* - Schedules a hilite via dd_request_idle_callback if self.element_to_hilite
+*   matches (comparison works here because the data-set is applied to term_node).
+*
+* @param {Object} options
+* @param {Object} options.self          - ts_object instance.
+* @param {Array}  options.ar_elements   - Full ar_elements array from self.data.
+* @param {boolean} options.is_descriptor - Whether this node is a descriptor term.
+* @param {number}  options.key          - Index j into ar_elements for this element.
+* @returns {HTMLElement} term_node div element.
 */
 const render_ontology_term = function(options) {
 
@@ -559,6 +717,9 @@ const render_ontology_term = function(options) {
 		}
 
 	// parse parts
+	// The ontology value encodes "label tipo id" (e.g. "Social Anthropology aa1 246").
+	// Capture groups: [1]=label, [2]=tipo, [3]=id.
+	// Falls back to the raw value (or ts_id) when the pattern does not match.
 		const regex				= /^(.*) ([a-z]{2,}) ([0-9]+)$/gm;
 		const term_regex_result	= regex.exec(item.value)
 		// term_text
@@ -582,7 +743,8 @@ const render_ontology_term = function(options) {
 			inner_html		: term_text,
 			parent			: term_node
 		})
-		// click event
+		// click on term text → open component editor.
+		// Guard: ignore clicks when thesaurus_mode==='relation' (indexation tool).
 		const click_handler = (e) => {
 			e.stopPropagation()
 
@@ -610,6 +772,8 @@ const render_ontology_term = function(options) {
 		self.term_text = term_text_node
 
 	// element_to_hilite
+	// The data-set on term_node provides section_id and section_tipo so that
+	// the equality check here is effective (unlike render_term which lacks a data-set).
 		if (self.element_to_hilite) {
 			if(		term_node.dataset.section_id == self.element_to_hilite.section_id
 				&& 	term_node.dataset.section_tipo===self.element_to_hilite.section_tipo) {

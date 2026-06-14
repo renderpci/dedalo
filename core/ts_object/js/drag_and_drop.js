@@ -1,6 +1,33 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 
 
+/**
+* DRAG_AND_DROP
+* HTML5 drag-and-drop event handlers for the ts_object (thesaurus/ontology) tree.
+*
+* This module exports five named functions that are wired to the native browser
+* drag events on each `wrap_ts_object` DIV inside `render_wrapper` (see
+* `view_default_edit_ts_object.js`). Only descriptor nodes (is_descriptor===true)
+* receive these listeners; non-descriptor (ND) nodes are excluded at attachment time.
+*
+* Two drop scenarios are handled by `on_drop`:
+*   1. "Default" — inter-thesaurus move: the dragged term's ts_object instance is
+*      relocated under a new parent within the same thesaurus/ontology tree by
+*      calling `ts_object.prototype.swap_parent`.
+*   2. "External caller" — e.g. tool_cataloging drops a cataloguing record onto a
+*      thesaurus term node: a new child section is created via
+*      `ts_object.prototype.add_child`, then the originating component is updated
+*      through an `event_manager.publish` event keyed `ts_add_child_<caller_name>`.
+*
+* The `event_handle` DOM property is a temporary flag set on the `wrap_ts_object`
+* element by the drag-icon `mousedown` listener in `render_wrapper`. It acts as a
+* gate in `on_dragstart`: a drag is only initiated when the user presses the
+* dedicated drag-handle icon; clicking elsewhere on the term row leaves the
+* event_handle null and cancels the drag via `event.preventDefault()`.
+*
+* Exports: on_dragstart, on_dragend, on_drop, on_dragover, on_dragleave
+*/
+
 // imports
 	import {get_instance_by_id} from '../../common/js/instances.js'
 	import {dd_request_idle_callback} from '../../common/js/events.js'
@@ -11,12 +38,32 @@
 
 /**
 * ON_DRAGSTART
-* Handles term drag start actions
-* @param object self
-*  ts_object instance
-* @param event event
-*  mousedown event from dragger HTMLElment
-* @return void
+* Initiates a thesaurus term drag operation and serialises the drag payload.
+*
+* The handler is attached to the `wrap_ts_object` DIV (the outer wrapper of each
+* tree row). Because `dragstart` bubbles, `event.target` here IS the
+* `wrap_ts_object` element — NOT the inner drag-handle icon that originally fired.
+*
+* The `event_handle` DOM property acts as a guard: it is set to a truthy value only
+* when the user presses the dedicated drag-icon (mousedown in `render_wrapper`).
+* If the user drags from anywhere else on the row the property is null/falsy, and
+* this handler cancels the operation via `event.preventDefault()` and returns.
+*
+* When dragging is allowed the payload is JSON-stringified and stored in
+* `dataTransfer` as `text/plain`.  The payload shape is:
+* ```json
+* {
+*   "source_type"       : "default",
+*   "moving_instance_id": "<ts_object instance id>",
+*   "parent_instance_id": "<caller ts_object instance id | undefined>"
+* }
+* ```
+* `parent_instance_id` may be undefined when `self.caller` has no `id` (e.g. the
+* dragged node is a root attached directly to an area_thesaurus).
+*
+* @param {Object}    self  - The ts_object instance being dragged.
+* @param {DragEvent} event - Native browser dragstart event fired on the wrap_ts_object DIV.
+* @returns {void}
 */
 export const on_dragstart = function(self, event) {
 	event.stopPropagation()
@@ -51,11 +98,21 @@ export const on_dragstart = function(self, event) {
 
 /**
 * ON_DRAGEND
-* Handles term drag end actions
-* @param object self
-*  ts_object instance
-* @param event event
-* @return void
+* Cleans up ts_object drag state when a drag sequence completes.
+*
+* Called regardless of whether the drop was accepted or cancelled (native browser
+* behaviour). Resets the two mutable drag-state properties on the ts_object
+* instance so that a subsequent drag always starts from a clean slate:
+*   - `self.target` is reset to false (no active drop target)
+*   - `self.source` is reset to null (no dragged node)
+*
+* `event_handle` on the `wrap_ts_object` DOM element is nulled out by the dragend
+* listener in `render_wrapper` before this function is called, so no cleanup is
+* needed here.
+*
+* @param {Object}    self  - The ts_object instance whose drag has ended.
+* @param {DragEvent} event - Native browser dragend event.
+* @returns {void}
 */
 export const on_dragend = function(self, event) {
 	event.preventDefault()
@@ -72,18 +129,48 @@ export const on_dragend = function(self, event) {
 
 /**
 * ON_DROP
-* Handles term drop actions
-* Note that they can be handled in two ways:
-* 	1 . Using event.dataTransfer (tool_cataloging and similar)
-* 	2 . Thesaurus within (dragging normal thesaurus terms between them) - Default
-* @param object self
-*  ts_object pointer (not instance fro now)
-* @param event event
-* 	drag event
-* @para HTMLElement wrap_ts_object
-* 	Thesaurus dropped wrapper (see ts_object.render_wrapper)
-* @return bool
-* 	True on success
+* Handles a drop event on a thesaurus tree node and dispatches to one of two flows.
+*
+* This is an async handler because both dispatch paths ultimately await server calls.
+* The `wrap_ts_object` parameter is the target element that received the drop — it is
+* passed explicitly (not derived from event.target) because the listener in
+* `render_wrapper` already holds a stable reference to it.
+*
+* Flow 1 — default (source_type === 'default'):
+*   The dragged term is being re-parented within the same thesaurus/ontology tree.
+*   Both the moving instance (`moving_instance_id`) and its old parent instance
+*   (`parent_instance_id`) are resolved from the global instances map.  If either
+*   lookup fails, the drop is aborted with an error log.
+*   `self.swap_parent()` is then called, with `self` acting as the new target parent;
+*   it handles the server update, old-parent child list refresh, and new-parent child
+*   list update.
+*
+* Flow 2 — external caller (source_type !== 'default', e.g. tool_cataloging):
+*   An external component is dropping an item onto a thesaurus node to create a new
+*   child term and link the component to it.  The drop target's `section_tipo`,
+*   `section_id`, and `children_tipo` are read from the node's dataset.
+*   `self.add_child()` is awaited to create the new section on the server.  If the
+*   `data_transfer_json.caller` field is present the handler also resolves the parent
+*   instance from `wrap_ts_object.dataset.id`, then publishes an
+*   `event_manager` event named `ts_add_child_<caller_name>` with:
+*   - `locator`        {Object}   — component locator from the data transfer payload
+*   - `new_ts_section` {Object}   — `{section_id, section_tipo}` of the new child
+*   - `callback`       {Function} — called by the subscriber; inside it, the parent
+*                                   ts_object triggers a children-state refresh via
+*                                   `dd_request_idle_callback` to avoid blocking the
+*                                   drop animation frame.
+*
+* The `drag_over` CSS class is removed from `wrap_ts_object` at entry, before any
+* async work, so the visual hover highlight is cleared immediately on drop.
+*
+* (!) The `button_obj` navigation in flow 2 (`wrap_target.firstChild?.firstChild`)
+* relies on a stable DOM structure inside the drop target. If `render_wrapper`
+* internals change this path will silently return false.
+*
+* @param {Object}      self           - The ts_object instance acting as the drop target.
+* @param {DragEvent}   event          - Native browser drop event.
+* @param {HTMLElement} wrap_ts_object - The wrap_ts_object DIV element that received the drop.
+* @returns {Promise<boolean>} true on a successful default-flow re-parent; false on any error or unhandled path.
 */
 export const on_drop = async function(self, event, wrap_ts_object) {
 	event.preventDefault();
@@ -226,11 +313,22 @@ export const on_drop = async function(self, event, wrap_ts_object) {
 
 /**
 * ON_DRAGOVER
-* Handles term drag over actions
-* @param object self
-*  ts_object instance
-* @param event event
-* @return void
+* Allows a dragged term to be dropped on the current node and marks it visually.
+*
+* Called repeatedly while the pointer moves over the target element. The early
+* return on `drag_over` already being set avoids redundant classList mutations on
+* every pointermove tick, which keeps the handler cheap.
+*
+* The `find_up_tag` utility walks up the DOM from `event.target` (which may be a
+* deeply-nested child of the row) to locate the `wrap_ts_object` ancestor.
+*
+* `event.preventDefault()` is required by the HTML5 drag-and-drop spec to signal
+* that this element accepts drops; without it, the browser will show a "not allowed"
+* cursor and `on_drop` will never fire.
+*
+* @param {Object}    self  - The ts_object instance over which the pointer is moving.
+* @param {DragEvent} event - Native browser dragover event.
+* @returns {void|boolean} Returns false early when drag_over is already active (no-op).
 */
 export const on_dragover = function(self, event) {
 	event.preventDefault();
@@ -253,11 +351,22 @@ export const on_dragover = function(self, event) {
 
 /**
 * ON_DRAGLEAVE
-* Handles term drag leave actions
-* @param object self
-*  ts_object instance
-* @param event event
-* @return void
+* Removes the visual drop-target highlight when the drag pointer exits the node.
+*
+* The `drag_over` CSS class is removed unconditionally when the pointer truly leaves
+* the `wrap_ts_object` element.  If the class was not present (e.g. the leave fired
+* for a child element that did not trigger `on_dragover`), the handler falls back to
+* `event.preventDefault()` to stay in a consistent drag-protocol state.
+*
+* (!) `dragleave` fires for EVERY child boundary crossing, not only when the pointer
+* exits the outer wrapper.  Calling `find_up_tag` here re-anchors the check to the
+* `wrap_ts_object` ancestor so that crossing inner borders does not spuriously strip
+* the highlight.  A full enter/leave counter-based solution is not used; the current
+* approach is "good enough" for the thesaurus tree row size.
+*
+* @param {Object}    self  - The ts_object instance the pointer is leaving.
+* @param {DragEvent} event - Native browser dragleave event.
+* @returns {void}
 */
 export const on_dragleave = function(self, event) {
 	event.stopPropagation();
