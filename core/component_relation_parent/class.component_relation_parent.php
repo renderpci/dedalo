@@ -1,25 +1,49 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_RELATION_PARENT
-* Manages hierarchical parent relationships between sections in Dédalo.
+* Stores and manages the upward (parent) link in a Dédalo hierarchical tree.
 *
-* Establishes parent-child hierarchies where records can reference other records
-* as their parent, creating tree-like structures for organizing data.
-* The inverse view (children) is provided by component_relation_children.
+* Each record that participates in a hierarchy holds exactly one
+* component_relation_parent whose dato is an array of locator objects pointing
+* to the parent record(s).  The complementary downward view is owned by
+* component_relation_children on the parent record.
 *
-* Key features:
-* - Parent reference storage using locator objects
-* - Duplicate prevention when adding parent relations
-* - Auto-reference protection (prevents a record from being its own parent)
-* - Automatic child ordering when adding parents
-* - Parent locator validation (type and from_component_tipo checks)
+* Responsibilities
+* ----------------
+* - Validates incoming locators before insertion: rejects auto-references, descendant
+*   cycles, and malformed locators missing 'type' or 'from_component_tipo'.
+* - Delegates duplicate detection to component_relation_common::add_locator_to_data
+*   using $test_equal_properties as the equality key.
+* - Maintains sibling order via a context-keyed component_number (the 'order' field
+*   from the section_map thesaurus block) when a parent is added or removed.
+* - Provides static tree-traversal helpers (get_parents, get_parents_recursive,
+*   is_ancestor, fetch_ancestors_recursive) used by the TS-tree subsystem and the
+*   add_parent cycle guard.
+* - Exposes get_possible_root_hierarchy to locate the hierarchy-root locator when a
+*   record is declared a root node inside the Dédalo ontology hierarchy section.
 *
-* Example hierarchy:
-* - Section A (parent) is referenced by Section B (child)
-* - Section B uses component_relation_parent pointing to Section A
-* - Section A uses component_relation_children to view Sections B, C, etc.
+* Data shape
+* ----------
+* The component dato (stored in the 'relation' matrix column) is a JSON array of
+* locator objects, each with at minimum:
+*   { section_tipo, section_id, type: DEDALO_RELATION_TYPE_PARENT_TIPO ('dd47'),
+*     from_component_tipo }
+* In a well-formed tree each child has exactly one parent locator; the array length
+* is normally 1, but the code tolerates and returns multiple parents.
 *
-* Extends component_relation_common with DEDALO_RELATION_TYPE_PARENT_TIPO relation type.
+* Ordering
+* --------
+* Child order within a parent is stored in the child's own component_number whose
+* tipo comes from section_map->thesaurus->order.  Each order datum is context-keyed
+* (section_tipo_key + section_id_key) to the parent record so that a child with
+* multiple parents carries independent order values per parent.
+*
+* Relationships
+* -------------
+* Extends: component_relation_common.
+* Inverse: component_relation_children (parent-side view of the same edges).
+* Uses: section::get_section_map, component_relation_children::get_children_of_type,
+*       hierarchy::get_hierarchy_section, ontology_node::get_model_by_tipo.
 *
 * @package Dédalo
 * @subpackage Core
@@ -32,29 +56,39 @@ class component_relation_parent extends component_relation_common {
 	* CLASS VARS
 	*/
 		/**
-		 * Default relation type for parent relations (DEDALO_RELATION_TYPE_PARENT_TIPO).
-		 * Used to filter locators in the 'relations' container data.
+		 * Fallback relation type for parent locators.
+		 * Resolves to DEDALO_RELATION_TYPE_PARENT_TIPO ('dd47') and is used as the
+		 * 'type' field written into every locator stored in this component's dato.
+		 * Overrides the null default defined in component_relation_common so that
+		 * __construct picks the correct value when the ontology properties do not
+		 * supply config_relation->relation_type explicitly.
 		 * @var ?string $default_relation_type
 		 */
 		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_PARENT_TIPO;
 
 		/**
-		 * Properties used to verify duplicate locators when adding relations.
-		 * Array of property names that must match to consider two locators equal.
+		 * Property names compared to decide whether two locators are duplicates.
+		 * add_locator_to_data (component_relation_common) iterates the existing dato
+		 * and compares each stored locator against the candidate using these keys; a
+		 * full match on all four properties blocks the insert.
+		 * Mirrors the identical property set used by component_relation_children.
 		 * @var array $test_equal_properties
 		 */
 		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
 		/**
-		 * Last SQL query executed for get_parents operations.
-		 * Stored for debugging purposes only.
+		 * Last SQL query string produced during a get_parents call.
+		 * Populated only when SHOW_DEBUG is true; use for diagnostic inspection only.
+		 * Not used for any runtime logic.
 		 * @var ?string $get_parents_query
 		 */
 		public static ?string $get_parents_query = null;
 
 		/**
-		 * Static storage for class-level errors.
-		 * Accumulates errors encountered during parent relation operations.
+		 * Accumulated error objects from the most recent get_parents_recursive call.
+		 * Reset to [] at the start of every get_parents_recursive invocation so that
+		 * callers can inspect cycle/loop errors after the call returns.
+		 * Each entry is a stdClass with properties: type (string), msg (string), info (object).
 		 * @var array $errors
 		 */
 		public static array $errors = [];
@@ -62,11 +96,28 @@ class component_relation_parent extends component_relation_common {
 
 
 	/**
-	* add_parent
-	* Add one locator to current 'data'. Verify is exists to avoid duplicates
-	* NOTE: This method updates component 'data' and save
-	* @param locator $locator
-	* @return bool
+	* ADD_PARENT
+	* Validate and append a parent locator to this component's dato array.
+	*
+	* Performs three safety checks before delegating to add_locator_to_data:
+	* 1. Auto-reference guard — rejects a locator pointing to the same record
+	*    (section_tipo + section_id) as the component's own host record.
+	* 2. Descendant-cycle guard — rejects a locator whose target is already a
+	*    descendant of the current node (would create an ancestor-of-self cycle).
+	*    Calls is_ancestor() which walks the prospective parent's ancestor chain.
+	* 3. Missing-property repair — silently sets from_component_tipo and type to
+	*    their expected defaults if the caller omitted them, logging a WARNING.
+	*
+	* When all checks pass, the method also assigns a sibling order value to the
+	* child (this record) within the new parent via set_child_order(), then
+	* delegates the actual insertion to add_locator_to_data which performs final
+	* duplicate detection using $test_equal_properties.
+	*
+	* (!) This method mutates component data in-memory but does NOT save to the
+	* database; callers must call save() separately.
+	*
+	* @param locator $locator - The parent locator to add; must have section_tipo and section_id set.
+	* @return bool - false on any validation failure or duplicate; true on success.
 	*/
 	public function add_parent( locator $locator ) : bool {
 
@@ -145,10 +196,21 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* REMOVE_PARENT
-	* Iterate current component 'data' and if math requested locator, removes it the locator from the 'data' array
-	* NOTE: This method updates component 'data'
-	* @param locator $locator
-	* @return bool
+	* Remove a parent locator from this component's dato array and clean up the
+	* associated sibling order entry.
+	*
+	* Calls remove_child_order() first so the child's order datum for this parent
+	* context is deleted before the locator itself is removed; the sibling list
+	* maintained by component_number is then implicitly compacted on the next
+	* recalculate_sibling_orders call.
+	*
+	* Delegates the actual locator removal to remove_locator_from_data, which
+	* matches against the full locator identity using the default equality set.
+	*
+	* (!) Mutates data in-memory only; callers must call save() after this method.
+	*
+	* @param locator $locator - The parent locator to remove; must match a stored locator.
+	* @return bool - false when the locator was not found or removal failed; true on success.
 	*/
 	public function remove_parent( locator $locator ) : bool {
 
@@ -167,8 +229,20 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* GET_COMPONENT_RELATION_CHILDREN_TIPO
-	* @param string $component_tipo
-	* @return string $component_relation_children_tipo
+	* Resolve the ontology tipo of the component_relation_children sibling that
+	* corresponds to the given component_relation_parent tipo.
+	*
+	* Uses common::get_ar_related_by_model to walk the ontology tree for the
+	* section that contains $component_tipo and collect all sibling components
+	* whose model is 'component_relation_children'.  Returns the first match.
+	*
+	* Logs an ERROR and returns null when no component_relation_children is
+	* found in the same section, and an ERROR (with first-match fallback) when
+	* more than one is found.  The multi-result case should not occur in a
+	* well-formed ontology but is tolerated for robustness.
+	*
+	* @param string $component_tipo - Tipo of the component_relation_parent whose inverse is needed.
+	* @return ?string - The component_relation_children tipo, or null when none exists in the section.
 	*/
 	public static function get_component_relation_children_tipo(string $component_tipo) : ?string {
 
@@ -208,9 +282,19 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* GET_PARENT_TIPO
-	* get ontology tipo for component_relation_parent of the section_tipo given
-	* @param string $section_tipo
-	* @return string|null $children_tipo
+	* Resolve the ontology tipo of the component_relation_parent component that
+	* belongs to the given section tipo.
+	*
+	* Calls section::get_ar_children_tipo_by_model_name_in_section with recursive
+	* and resolve_virtual flags enabled so that virtual/alias section nodes are
+	* also traversed.  The from_cache flag is always true: ontology topology is
+	* stable at runtime and the cache avoids repeated traversals.
+	*
+	* Logs an ERROR and returns null when the section does not contain any
+	* component of model 'component_relation_parent'.
+	*
+	* @param string $section_tipo - Section tipo to inspect.
+	* @return ?string - The component_relation_parent tipo, or null when absent.
 	*/
 	public static function get_parent_tipo( string $section_tipo ) : ?string {
 
@@ -249,14 +333,25 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* GET_PARENTS
-	* Get parents of current section
-	* If you call this method from component_relation_parent, always send $from_component_tipo var to avoid recreate the component statically
-	* @param int|string $section_id
-	* @param string $section_tipo
-	* @param string|null $from_component_tipo = null
-	*	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
-	* @return array|null $parents
-	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
+	* Return the raw dato array of the component_relation_parent for the given
+	* section record, i.e. the direct parent locators (not recursive).
+	*
+	* Instantiates a component_relation_parent in 'list' mode for the target
+	* record and calls get_data(), which reads the stored locator array from the
+	* matrix 'relation' column.  The result is whatever the component stores:
+	* typically an array with one locator object per parent.
+	*
+	* The $from_component_tipo parameter allows callers that already hold the
+	* component tipo to bypass the ontology lookup in get_parent_tipo().
+	* When called from within component_relation_parent itself, always supply
+	* $from_component_tipo to avoid an unnecessary static reconstruction.
+	*
+	* @param int|string $section_id - Target record ID.
+	* @param string $section_tipo - Target section tipo.
+	* @param string|null $from_component_tipo = null - Pre-resolved component_relation_parent tipo.
+	*   When null, resolved via get_parent_tipo($section_tipo).
+	* @return array|null - Flat array of locator objects, or [] when no parent component found.
+	*   Each locator has at minimum: section_tipo, section_id, type, from_component_tipo.
 	*/
 	public static function get_parents( int|string $section_id, string $section_tipo, ?string $from_component_tipo=null ) : ?array {
 
@@ -291,16 +386,25 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* GET_PARENTS_RECURSIVE
-	* Public facing function to get all unique ancestor parents recursively.
-	* This acts as a clean entry point and initializes the process.
-	* @param int|string $section_id
-	* 	The starting section ID.
-	* @param string $section_tipo
-	* 	The starting section type.
-	* @param string|null $component_tipo
-	* 	Optional component type filter passed to get_parents.
-	* @return array
-	* 	An array of unique parent objects/arrays, generally ordered from direct parents upwards.
+	* Public entry point: collect every unique ancestor of a given section record
+	* by walking the parent chain upward, breadth-first, avoiding cycles.
+	*
+	* Resets self::$errors on every call so that the caller can inspect errors
+	* (e.g. cycle detections) after the traversal completes.  Delegates the
+	* actual depth-first walk to fetch_ancestors_recursive(), passing the
+	* $unique_ancestors accumulator by reference for efficiency.
+	*
+	* The returned array is numerically indexed; order reflects the BFS/DFS
+	* discovery order (direct parents first, then their parents, and so on).
+	* Duplicate paths converging on the same ancestor are deduplicated by the
+	* 'section_tipo_section_id' key used inside fetch_ancestors_recursive.
+	*
+	* @param int|string $section_id - The starting record ID.
+	* @param string $section_tipo - The starting section tipo.
+	* @param string|null $component_tipo = null - Optional component_relation_parent tipo override passed
+	*   through to each get_parents() call; null triggers auto-resolution per section tipo.
+	* @return array - Numerically indexed array of unique ancestor locator objects.
+	*   Empty when the node has no parents or only self-referencing edges.
 	*/
 	public static function get_parents_recursive(int|string $section_id, string $section_tipo, ?string $component_tipo = null): array {
 
@@ -324,17 +428,26 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* IS_ANCESTOR
-	* True when the node (node_section_tipo, node_section_id) is an ancestor of
-	* the node (of_section_tipo, of_section_id), walking the parent chain upwards.
-	* Used as the descendant-cycle guard on tree mutations: a node must never be
-	* moved or linked under its own descendant. Walking the ancestors of the
-	* prospective parent (tree depth) is far cheaper than enumerating the node's
-	* descendants (subtree width).
-	* @param string $node_section_tipo
-	* @param int|string $node_section_id
-	* @param string $of_section_tipo
-	* @param int|string $of_section_id
-	* @return bool
+	* Determine whether one node is an ancestor of another by walking the parent
+	* chain of the target node upward.
+	*
+	* Returns true when the node identified by ($node_section_tipo, $node_section_id)
+	* appears anywhere in the ancestor chain of ($of_section_tipo, $of_section_id).
+	*
+	* Designed as the descendant-cycle guard used by add_parent: before accepting
+	* a new parent link, add_parent calls is_ancestor(current, prospective_parent)
+	* to ensure the prospective parent is not already a descendant of the current
+	* node.  Walking ancestors (tree depth) is far cheaper than enumerating the
+	* full subtree of descendants (subtree width), which may be unbounded.
+	*
+	* The same-node case ($node === $of) returns false because the auto-reference
+	* guard in add_parent already handles it separately.
+	*
+	* @param string $node_section_tipo - Tipo of the candidate ancestor node.
+	* @param int|string $node_section_id - ID of the candidate ancestor node.
+	* @param string $of_section_tipo - Tipo of the node whose ancestors are searched.
+	* @param int|string $of_section_id - ID of the node whose ancestors are searched.
+	* @return bool - true if $node is an ancestor of $of; false otherwise.
 	*/
 	public static function is_ancestor( string $node_section_tipo, int|string $node_section_id, string $of_section_tipo, int|string $of_section_id ) : bool {
 
@@ -364,20 +477,36 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* FETCH_ANCESTORS_RECURSIVE
-	* Optimized internal recursive function to fetch ancestors.
-	* Prevents duplicates and cycles efficiently. Avoids redundant processing of already visited nodes.
-	* @param int|string $section_id
-	* 	The ID of the current section being processed.
-	* @param string $section_tipo
-	* 	The type of the current section being processed.
-	* @param string|null $component_tipo
-	* 	Optional component type filter.
-	* @param array &$unique_ancestors
-	* 	Associative array (passed by reference) to collect unique ancestors, keyed by 'type_id'.
-	* @param array $visited
-	*	Associative array tracking nodes visited *in the current recursion path* to detect cycles. Keys are 'type_id'. Passed by value.
-	* @return void
-	* 	This function modifies $unique_ancestors directly.
+	* Internal recursive worker that populates the $unique_ancestors accumulator.
+	*
+	* Two complementary data structures prevent infinite loops and redundant work:
+	*
+	* - $visited (passed BY VALUE): tracks nodes on the current call-stack path.
+	*   Because it is passed by value, each recursive branch receives an independent
+	*   copy; a node that appears on one path can legitimately be visited again via
+	*   a different path (diamond inheritance in a DAG).  If the same node appears
+	*   twice on a single path a true cycle exists — logged to self::$errors and
+	*   aborted for that branch.
+	*
+	* - $unique_ancestors (passed BY REFERENCE): global accumulator keyed by
+	*   'section_tipo_section_id'.  When a parent is already in this map its entire
+	*   ancestor subtree has already been (or is currently being) added, so further
+	*   recursion into that parent is skipped; this is the memoisation that keeps
+	*   the algorithm O(nodes) rather than O(paths).
+	*
+	* Parents are added to $unique_ancestors BEFORE recursing so that concurrent
+	* recursive branches triggered by diamond inheritance converge without
+	* re-processing the shared ancestor.
+	*
+	* (!) Private: call get_parents_recursive() from outside the class.
+	*
+	* @param int|string $section_id - Record ID of the node currently being expanded.
+	* @param string $section_tipo - Section tipo of the node currently being expanded.
+	* @param string|null $component_tipo - Optional component_relation_parent tipo override; null = auto-resolve.
+	* @param array &$unique_ancestors - Accumulator of unique parent objects, keyed by 'tipo_id' string.
+	*   Modified in-place by every recursive call.
+	* @param array $visited - Path-local cycle-detection map (keys are 'tipo_id' strings). Passed by value.
+	* @return void - Results accumulate in $unique_ancestors.
 	*/
 	private static function fetch_ancestors_recursive(
 		int|string $section_id,
@@ -457,15 +586,30 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* GET_POSSIBLE_ROOT_HIERARCHY
-	* Searches if the current section is defined as a root node in any hierarchy.
-	* It is used mainly for diffusion compatibility.
-	* Key steps:
-	* 1. Resolves the hierarchy section ID associated with the current section tipo via hierarchy::get_hierarchy_section.
-	* 2. Loads the 'hierarchy_children' portal (DEDALO_HIERARCHY_CHILDREN_TIPO) for that hierarchy section.
-	* 3. Iterates through the children portal data to see if it contains a locator pointing to the current section record.
-	* 4. If found, returns a locator object representing the link to the root hierarchy.
+	* Determine whether the current record is declared as a root node in a
+	* Dédalo ontology hierarchy, and return a synthetic locator pointing to that
+	* hierarchy section if so.
 	*
-	* @return object|null A locator-like object {section_tipo, section_id, from_component_tipo, type} or null if not found.
+	* Used primarily by the diffusion pipeline, which needs an explicit parent
+	* locator for records that sit at the top of a tree and would otherwise have
+	* an empty component_relation_parent dato.
+	*
+	* Algorithm:
+	* 1. Calls hierarchy::get_hierarchy_section($section_tipo, DEDALO_HIERARCHY_TARGET_SECTION_TIPO)
+	*    to find the hierarchy1 section ID that governs the current section tipo.
+	*    Returns null immediately when no matching hierarchy section exists.
+	* 2. Instantiates the hierarchy_children portal component (DEDALO_HIERARCHY_CHILDREN_TIPO,
+	*    i.e. 'hierarchy45') on that hierarchy section in 'list' mode and loads its dato.
+	* 3. Scans the portal locators for one whose section_tipo + section_id match the
+	*    current record.  On match, returns a synthetic locator object:
+	*    { section_tipo: DEDALO_HIERARCHY_SECTION_TIPO ('hierarchy1'),
+	*      section_id: $hierarchy_section_id,
+	*      from_component_tipo: $this->tipo,
+	*      type: DEDALO_RELATION_TYPE_PARENT_TIPO }
+	* 4. Returns null when the current record is not listed as a root child of any
+	*    hierarchy section.
+	*
+	* @return object|null - Synthetic locator object when the record is a hierarchy root; null otherwise.
 	*/
 	public function get_possible_root_hierarchy() : ?object {
 
@@ -528,11 +672,19 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* MAKE_ME_YOUR_PARENT
-	* Add one locator to current 'data' from children side
-	* NOTE: This method updates component 'data' and save
-	* @param string $section_tipo
-	* @param string|int $section_id
-	* @return bool
+	* Convenience wrapper: register the given child record ($section_tipo, $section_id)
+	* as a child of the section that owns this component_relation_parent.
+	*
+	* Constructs a locator pointing to the child and delegates to add_parent().
+	* This method is called from the children side of a newly created parent-child
+	* link (i.e. when a user selects a parent in the child's form), keeping the
+	* naming intention readable from the parent component's perspective.
+	*
+	* (!) Mutates data in-memory only; callers must call save() after this method.
+	*
+	* @param string $section_tipo - Section tipo of the child record to register.
+	* @param string|int $section_id - Record ID of the child to register.
+	* @return bool - false when add_parent rejects the locator; true on success.
 	*/
 	public function make_me_your_parent( string $section_tipo, string|int $section_id ) : bool {
 
@@ -555,9 +707,18 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* REMOVE_ME_AS_YOUR_PARENT
-	* @param string $section_tipo
-	* @param string|int $section_id
-	* @return bool
+	* Convenience wrapper: unregister the given child record ($section_tipo, $section_id)
+	* from the section that owns this component_relation_parent.
+	*
+	* Constructs the matching locator and delegates to remove_parent().
+	* Mirror of make_me_your_parent; called when a parent-child link is severed
+	* from the child's perspective.
+	*
+	* (!) Mutates data in-memory only; callers must call save() after this method.
+	*
+	* @param string $section_tipo - Section tipo of the child record to deregister.
+	* @param string|int $section_id - Record ID of the child to deregister.
+	* @return bool - false when remove_parent cannot find the locator; true on success.
 	*/
 	public function remove_me_as_your_parent( string $section_tipo, string|int $section_id ) : bool {
 
@@ -581,8 +742,13 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* 	Default is false. Override when component is sortable
+	* Report that this component supports manual reordering of its entries.
+	*
+	* Overrides the component_common base which returns false.  Returning true
+	* enables the drag-reorder UI in list/grid modes and signals the client that
+	* save-order API calls should be dispatched after drag operations.
+	*
+	* @return bool - Always true: component_relation_parent entries are user-sortable.
 	*/
 	public function get_sortable() : bool {
 
@@ -593,8 +759,20 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* GET_ORDER_DATAFRAME
-	* Get the order component (dataframe) for this section from section_map
-	* @return component_number|null
+	* Instantiate the component_number that stores sibling-order values for the
+	* current record within its parent context.
+	*
+	* Reads the 'order' key from the section_map thesaurus block
+	* (section_map->thesaurus->order) to obtain the component tipo that holds
+	* order data.  Returns null when the section_map does not define an order
+	* component (some sections do not participate in ordered hierarchies).
+	*
+	* The returned component is loaded in 'edit' mode with DEDALO_DATA_NOLAN so
+	* its dato is the raw context-keyed array rather than a language-resolved
+	* scalar.  The instance is NOT cached; each call creates a fresh object.
+	*
+	* @return component_number|null - Fresh component_number instance, or null when the
+	*   section has no order component defined in its section_map.
 	*/
 	protected function get_order_dataframe() : ?component_number {
 		$section_map = section::get_section_map($this->section_tipo);
@@ -618,10 +796,31 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* SET_CHILD_ORDER
-	* Set order value for the new parent by getting parent's children count
-	* @param string $parent_section_tipo
-	* @param int $parent_section_id
-	* @return bool
+	* Assign an initial sibling-order position to the current record within a
+	* newly added parent context.
+	*
+	* Strategy: count the parent's existing children via
+	* component_relation_children::get_children_of_type() and use (count + 1) as
+	* the next order value.  The value is written into the current record's own
+	* component_number (the 'order' component from section_map) using
+	* add_value_with_context(), which attaches the parent context key
+	* ($parent_section_tipo, $parent_section_id) so that the order is scoped to
+	* this specific parent.
+	*
+	* (!) Race condition: the count-then-write pattern is not atomic.  Concurrent
+	* add_parent calls may produce colliding order values unless the caller holds
+	* the parent advisory lock inside a PostgreSQL transaction (see
+	* matrix_db_manager::acquire_node_lock).  A warning is logged in debug mode
+	* when set_child_order is called outside a transaction.
+	*
+	* (!) add_value_with_context is marked @deprecated in trait.dataframe_common.php
+	* (superseded by the dataframe locator pairing contract).  This call site uses
+	* the legacy context-key mechanism intentionally for the pre-dataframe order
+	* subsystem and should be migrated when the order system is updated.
+	*
+	* @param string $parent_section_tipo - Section tipo of the parent receiving the new child.
+	* @param int $parent_section_id - Record ID of the parent receiving the new child.
+	* @return bool - false when no order component exists or the save fails; true on success.
 	*/
 	protected function set_child_order(string $parent_section_tipo, int $parent_section_id) : bool {
 
@@ -679,10 +878,28 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* REMOVE_CHILD_ORDER
-	* Remove order for removed parent and recalculate siblings
-	* @param string $parent_section_tipo
-	* @param int $parent_section_id
-	* @return bool
+	* Delete the sibling-order datum for the current record within the given
+	* parent context, typically called just before remove_locator_from_data.
+	*
+	* Calls component_number::remove_by_context() to strip the context-keyed
+	* order entry (matching $parent_section_tipo + $parent_section_id) from the
+	* order component's dato, then saves the component.
+	*
+	* Returns false early (without saving) when the section has no order
+	* component or when get_order_dataframe() returns null.
+	*
+	* (!) Note: when remove_by_context() returns false the method returns true
+	* unconditionally, which masks any removal failure.  This is existing
+	* behaviour; document-flag only.
+	*
+	* (!) remove_by_context is marked @deprecated in trait.dataframe_common.php.
+	* This call site uses the legacy context-key mechanism intentionally and
+	* should be migrated when the order system is updated.
+	*
+	* @param string $parent_section_tipo - Section tipo of the parent being unlinked.
+	* @param int $parent_section_id - Record ID of the parent being unlinked.
+	* @return bool - false when no order component exists; otherwise the result of save()
+	*   when removal succeeded, or true when remove_by_context() returned false.
 	*/
 	protected function remove_child_order(string $parent_section_tipo, int $parent_section_id) : bool {
 		$section_map = section::get_section_map($this->section_tipo);
@@ -713,10 +930,20 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* GET_NEXT_ORDER_IN_CONTEXT
-	* Get the next order value by asking parent for children count
-	* @param string $parent_section_tipo
-	* @param int $parent_section_id
-	* @return int
+	* Compute the next available sibling-order integer for a new child within the
+	* specified parent context.
+	*
+	* Delegates to component_relation_children::get_children_of_type() with the
+	* 'descriptor' type filter to obtain the current ordered children list, then
+	* returns count + 1.  The result is 1 when the parent has no children yet.
+	*
+	* (!) Shares the same count-then-use race condition as set_child_order.
+	* Use only from within a transaction that holds the parent node lock when
+	* order uniqueness matters.
+	*
+	* @param string $parent_section_tipo - Section tipo of the parent.
+	* @param int $parent_section_id - Record ID of the parent.
+	* @return int - Next order value (1-based).
 	*/
 	public function get_next_order_in_context(string $parent_section_tipo, int $parent_section_id) : int {
 		$children = component_relation_children::get_children_of_type(
@@ -732,10 +959,17 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* RECALCULATE_SIBLING_ORDERS
-	* Recalculate orders for all siblings of a given parent
-	* @param string $parent_section_tipo
-	* @param int $parent_section_id
-	* @return bool
+	* Instance-method façade: recompute the sibling-order values for all current
+	* children of $parent after a removal or reorder operation.
+	*
+	* Delegates to the static recalculate_sibling_orders_static() using the
+	* instance's own $section_tipo as the child section tipo.  Providing an
+	* instance method allows callers holding a component object to call this
+	* without knowing the static class name.
+	*
+	* @param string $parent_section_tipo - Section tipo of the parent whose children will be renumbered.
+	* @param int $parent_section_id - Record ID of the parent whose children will be renumbered.
+	* @return bool - Result of recalculate_sibling_orders_static().
 	*/
 	public function recalculate_sibling_orders(string $parent_section_tipo, int $parent_section_id) : bool {
 
@@ -750,11 +984,32 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* RECALCULATE_SIBLING_ORDERS_STATIC
-	* Static version to recalculate orders for all siblings of a given parent
-	* @param string $section_tipo
-	* @param string $parent_section_tipo
-	* @param int $parent_section_id
-	* @return bool
+	* Renumber the sibling-order values for every child of a given parent in
+	* dense ascending order (1, 2, 3, …), skipping children whose stored order
+	* is already correct to avoid unnecessary saves.
+	*
+	* Algorithm:
+	* 1. Resolve the order component tipo from section_map->thesaurus->order for
+	*    $section_tipo.  Returns false early when none is configured.
+	* 2. Fetch the current ordered children list via
+	*    component_relation_children::get_children_of_type() (type='descriptor').
+	*    The list is already sorted by stored order, so its iteration order is
+	*    the canonical desired order after renumbering.
+	* 3. For each child, instantiate its component_number in 'edit' mode and call
+	*    get_value_by_context() to read the existing value.  If the current value
+	*    already equals the target position the child is skipped (no save).
+	*    Otherwise update_value_by_context() + save() writes the new value.
+	*
+	* This method is typically called after a child is removed or reordered so
+	* that the remaining siblings form a gapless sequence starting at 1.
+	*
+	* (!) update_value_by_context is marked @deprecated in trait.dataframe_common.php.
+	* Used here intentionally as part of the legacy context-key order subsystem.
+	*
+	* @param string $section_tipo - Section tipo of the children being renumbered.
+	* @param string $parent_section_tipo - Section tipo of the parent.
+	* @param int $parent_section_id - Record ID of the parent.
+	* @return bool - false when no order component exists; true after processing all siblings.
 	*/
 	public static function recalculate_sibling_orders_static( string $section_tipo, string $parent_section_tipo, int $parent_section_id ) : bool {
 
