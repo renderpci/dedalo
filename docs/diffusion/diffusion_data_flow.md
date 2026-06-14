@@ -49,8 +49,8 @@ Work system will need access to MariaDB / MySQL database to publish data, to con
 1. Changing parameters of [database configuration file](../config/config_db.md#changing-parameters-of-dédalo-database-config-file).
    1. Changing parameters of database for diffusion system [configuration](../config/config_db.md#diffusion-system-database-variables)
 
-Diffusion system has his own publication API to connect public web pages with the public database:
-2. Changing parameters of Dédalo public API [configuration file](./publication_api/public_api_configuration.md).
+Diffusion system has his own [Publication API](./publication_api/index.md) to connect public web pages with the public database (use [v2](./publication_api/v2/index.md) for new integrations):
+2. Changing parameters of Dédalo public API configuration: [v2 deployment](./publication_api/v2/deployment.md) (`.env`) for new servers, or the legacy v1 [configuration file](./publication_api/public_api_configuration.md).
 
 ## Diffusion ontology
 
