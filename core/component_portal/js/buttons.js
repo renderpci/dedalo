@@ -18,7 +18,28 @@
 
 /**
 * BUTTONS
-* Manages component buttons render
+* Factory namespace for all action-button DOM elements rendered by component_portal.
+*
+* Each exported function creates one `<span>` button node, binds its event
+* listeners, and returns the node ready to be appended by the caller view
+* (e.g. view_default_edit_portal, view_line_edit_portal).
+*
+* The `self` argument received by every factory is the live component_portal
+* instance. Key properties consulted:
+*   - self.target_section {Array<{tipo:string,label:string}>} — ordered list of
+*     section types this portal can point to (derived from request_config_object
+*     .sqo.section_tipo during build()).
+*   - self.rqo {Object} — the current Request Query Object sent to the server.
+*   - self.data {Object} — the last resolved data payload from the server,
+*     containing `entries` (Array of {section_tipo, section_id, …} locators).
+*   - self.events_tokens {Array} — token list managed by component_common; push
+*     event_manager subscription tokens here so they are cleaned up on destroy().
+*   - self.id_base {string} — stable identifier prefix used for pub/sub events.
+*   - self.modal {Object|null} — reference to the active dd-modal, written by
+*     render_button_link so that downstream code (e.g. set_value handlers) can
+*     close it programmatically.
+*
+* Exported: buttons (namespace object, not a class).
 */
 export const buttons = () => {}
 
@@ -26,9 +47,22 @@ export const buttons = () => {}
 
 /**
 * RENDER_BUTTON_UPDATE_DATA_EXTERNAL
-* Builds the button nodes and events
-* @param object self (component instance)
-* @return HTMLElement button_update_data_external
+* Creates a 'sync' button that forces the server to recalculate the portal's
+* external data source and then re-renders the component content.
+*
+* This is relevant only when the portal's source.mode is 'external' (the
+* context properties define an external data provider rather than a user-
+* managed relation list).  Clicking the button injects the
+* `get_dato_external: true` flag into rqo.source.build_options before calling
+* self.refresh(), which causes the PHP JSON handler
+* (component_portal_json.php → set_data_external()) to re-fetch and persist
+* the external data.
+*
+* Guard: if self.rqo.source is absent the handler logs an error and aborts
+* rather than attempting to write a property on undefined.
+*
+* @param {Object} self - Live component_portal instance.
+* @returns {HTMLElement} Span element with class 'button sync'.
 */
 buttons.render_button_update_data_external = (self) => {
 
@@ -70,9 +104,31 @@ buttons.render_button_update_data_external = (self) => {
 
 /**
 * RENDER_BUTTON_ADD
-* Builds the button nodes and events
-* @param object self (component instance)
-* @return HTMLElement button_add
+* Creates an 'add' button that creates a new related section record inline,
+* then immediately opens it in a modal for the user to fill in.
+*
+* Flow:
+*  1. The target section list is sorted alphabetically by label so the first
+*     element is always the lexicographically earliest section type.
+*  2. When exactly one target section type is configured, its tipo is used
+*     directly.  When more than one is configured, target_section_tipo is set
+*     to false and an alert is shown (multi-target add is not supported here;
+*     the button itself is hidden by build() in that case).
+*  3. self.add_new_element() POSTs to the API to create the record and returns
+*     true on success.  On success the last entry in self.data.entries contains
+*     the new record's section_tipo and section_id locator.
+*  4. A section instance is built and rendered in a modal.  On modal close,
+*     self.refresh() is called and 'add_row_<id>' is published so row views
+*     can animate/scroll to the new entry.
+*  5. The global service_autocomplete (if active) is destroyed after the click
+*     to avoid stale autocomplete overlays.
+*
+* Guards: alerts (not console.error) are used for validation failures so the
+* user sees explicit feedback — this matches the existing UI contract in the
+* portal.
+*
+* @param {Object} self - Live component_portal instance.
+* @returns {HTMLElement} Span element with class 'button add'.
 */
 buttons.render_button_add = (self) => {
 
@@ -175,9 +231,33 @@ buttons.render_button_add = (self) => {
 
 /**
 * RENDER_BUTTON_LINK
-* Builds the button nodes and events
-* @param object self (component instance)
-* @return HTMLElement|null button_link
+* Creates a 'link' button that opens an iframe-based section-list modal so the
+* user can browse existing records and link one to the portal.
+*
+* The iframe URL points to the target section in 'list' mode and passes
+* `initiator=self.id` so the list page can call back to this portal instance
+* (via event_manager or window.opener) when the user selects a record.
+*
+* When multiple target sections are configured a `<select>` element is added
+* to the modal header; changing the selection reloads the iframe to the chosen
+* section type.  For a single target section the select is rendered with class
+* 'mono' (visually hidden in CSS) but the DOM element is still present.
+*
+* A reference to the modal is stored on self.modal so that downstream handlers
+* (e.g. the set_value callback inside component_portal.js) can close it after
+* the user picks a record.
+*
+* Guard: returns null early (with a console.warn) if target_section is empty,
+* preventing render errors when the portal context lacks a configured section.
+*
+* (!) The cleanup function registered on self.modal.cleanup uses anonymous
+* functions for removeEventListener, which means the listeners are NOT actually
+* removed (anonymous functions cannot be de-registered by reference). This is a
+* known pre-existing limitation — do not attempt to fix it here.
+*
+* @param {Object} self - Live component_portal instance.
+* @returns {HTMLElement|null} Span element with class 'button link', or null
+*   when no target sections are configured.
 */
 buttons.render_button_link = (self) => {
 
@@ -315,9 +395,24 @@ buttons.render_button_link = (self) => {
 
 /**
 * RENDER_BUTTON_LIST
-* Builds the button nodes and events
-* @param object self (component instance)
-* @return HTMLElement button_list
+* Creates a 'pen' (open-list) button that opens the target section's list view
+* in a new browser window.
+*
+* The button title is the human-readable label of the first (and typically
+* only) target section.  When SHOW_DEBUG is true, the section's tipo string is
+* appended in brackets to aid development.  HTML tags are stripped from the
+* label before it is used as a tooltip value.
+*
+* When the new window is blurred (user switches back to the main tab), the
+* portal calls self.refresh() with build_autoload:true to pick up any changes
+* made in the separate window.
+*
+* Guard: returns null with a console.error if target_section is empty or
+* DEDALO_CORE_URL is undefined at click time.
+*
+* @param {Object} self - Live component_portal instance.
+* @returns {HTMLElement|null} Span element with class 'button pen', or null
+*   when no target sections are configured.
 */
 buttons.render_button_list = (self) => {
 
@@ -391,13 +486,25 @@ buttons.render_button_list = (self) => {
 
 /**
 * RENDER_LIST_FROM_COMPONENT_DATA_BUTTON
-* Builds the button nodes and events to get raw data of the component
-* It show a modal with 2 options:
-* 	current: uses current record data of the component caller
-* 	found : uses the all records found data of the component caller
-* Open new window of the target section and the section_id data of the component
-* @param object self (component instance)
-* @return HTMLElement list_from_component_data_button
+* Creates a 'list' button that opens the render_open_list_with_direct_relations
+* dialog, which lets the user view all records directly related to this portal
+* either for the current record only or for the full found set.
+*
+* The button is hidden via the CSS class 'hide' until at least one entry is
+* present in self.data.entries.  Visibility is maintained reactively by
+* subscribing to 'update_value_<id_base>' events, which are published whenever
+* the portal's data changes (e.g. after save or refresh).  The subscription
+* token is pushed to self.events_tokens so it is cleaned up on destroy().
+*
+* The options bag forwarded to render_open_list_with_direct_relations includes:
+*   - sqo: the parent section's current Search Query Object (from
+*     caller_section.rqo.sqo), used to scope the found-set query.
+*   - caller_tipo / rqo_options: locator information so the dialog can build
+*     the correct raw-read API request for this specific portal component.
+*   - label / total: display strings shown in the dialog body.
+*
+* @param {Object} self - Live component_portal instance.
+* @returns {HTMLElement} Span element with class 'button list'.
 */
 buttons.render_list_from_component_data_button = (self) => {
 
@@ -464,9 +571,17 @@ buttons.render_list_from_component_data_button = (self) => {
 
 /**
 * RENDER_BUTTON_TREE_SELECTOR
-* Builds the button nodes and events
-* @param object self (component instance)
-* @return HTMLElement button_tree_selector
+* Creates a 'tree' button that opens the area_thesaurus or area_ontology window
+* in 'relation' mode, allowing the user to browse the hierarchical thesaurus
+* and link a term to this portal.
+*
+* The correct target window (thesaurus vs. ontology) is determined inside
+* component_portal.open_ontology_window() based on whether the portal's
+* section_tipo belongs to the ontology root (section_id === '0') or to a
+* thesaurus section.  This button always passes 'relation' as the mode string.
+*
+* @param {Object} self - Live component_portal instance.
+* @returns {HTMLElement} Span element with class 'button tree'.
 */
 buttons.render_button_tree_selector = (self) => {
 

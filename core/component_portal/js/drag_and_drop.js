@@ -6,17 +6,63 @@
 	import {get_all_instances} from '../../common/js/instances.js'
 
 
+/**
+* DRAG_AND_DROP
+* Native HTML5 drag-and-drop handlers for `component_portal` list/mosaic views.
+*
+* Exports six event-handler functions — on_dragstart, on_dragstart_mosaic,
+* on_dragover, on_dragleave, on_dragend, and on_drop — that are wired by the
+* portal's render layer to the matching DOM drag events.
+*
+* Two operations are supported:
+*   REORDER  — dragging a record within the same portal repositions it by calling
+*              `component_portal.prototype.sort_data`, which persists the new order
+*              via the change_value → API pipeline.
+*   COPY     — dragging a record from one portal to a compatible portal calls
+*              `link_record` on the target and `unlink_record` on the source,
+*              effectively moving the relation.
+*
+* Compatibility between portals is governed by `properties.draggable_to`, an
+* array of tipo strings (e.g. ['dd1234', 'dd1235']) declared on the source portal.
+* A drop is allowed only when the target portal's `tipo` appears in that array, or
+* when source and target are the same portal (same-portal reorder always allowed).
+*
+* The `tmp` module-level object is used as an out-of-band channel to pass
+* `transfer_data` to `on_dragover`, because `event.dataTransfer.getData()` is
+* blocked by browsers during dragover for security reasons.
+*
+* Exported symbols:
+*   on_dragstart        — list-view drag start (drag icon node)
+*   on_dragstart_mosaic — mosaic-view drag start (section record node)
+*   on_dragover         — dragover on a drop target node
+*   on_dragleave        — dragleave on a drop target node
+*   on_dragend          — drag operation ended (cleanup)
+*   on_drop             — drop on a target node (commit reorder or copy)
+*/
+
+
+
 // Temporary object to provide access to `dataTransfer`` object that is not available in all events
 	const tmp = {}
 
 /**
 * ON_DRAGSTART
-* Get element dataset path as event.dataTransfer from selected component
-* @param DOM node
-* 	Usually a drag icon node
-* @param event
-* @param object options
-* @return bool true
+* Initialises a drag operation from the list view of a component_portal.
+* Serialises the record's locator and position into `event.dataTransfer` as JSON
+* text (readable on drop), and also stores it in the `tmp` module object so that
+* `on_dragover` can inspect the source tipo without triggering browser security
+* restrictions on getData().
+*
+* Also resizes and reveals all `.drop` overlay nodes so they span their parent
+* section-record row, providing visible drop targets across the full grid width.
+*
+* @param {HTMLElement} node - the drag-handle icon node that received the dragstart event
+* @param {DragEvent} event - native browser DragEvent
+* @param {Object} options - context injected by the render layer
+*   @param {Object} options.locator - full locator object for the dragged record
+*   @param {number} options.paginated_key - zero-based position of the record in the current page
+*   @param {Object} options.caller - the component_portal instance owning this list
+* @returns {boolean} always true
 */
 export const on_dragstart = function(node, event, options) {
 	event.stopPropagation();
@@ -86,13 +132,19 @@ export const on_dragstart = function(node, event, options) {
 
 
 /**
-* ON_DRAGSTART
-* Get element dataset path as event.dataTransfer from selected component
-* @param DOM node
-*	Its a section record (only in mosaic mode)
-* @param event
-* @param object options
-* @return bool true
+* ON_DRAGSTART_MOSAIC
+* Initialises a drag operation from the mosaic view of a component_portal.
+* Functionally equivalent to `on_dragstart` but operates on the section-record
+* node directly (the draggable tile), rather than a dedicated drag-icon handle.
+* Does NOT resize drop overlays — mosaic view manages drop targets differently.
+*
+* @param {HTMLElement} node - the mosaic tile (section_record node) being dragged
+* @param {DragEvent} event - native browser DragEvent
+* @param {Object} options - context injected by the render layer
+*   @param {Object} options.locator - full locator object for the dragged record
+*   @param {number} options.paginated_key - zero-based position of the record in the current page
+*   @param {Object} options.caller - the component_portal instance owning this mosaic
+* @returns {boolean} always true
 */
 export const on_dragstart_mosaic = function(node, event, options) {
 	// event.preventDefault();
@@ -129,11 +181,22 @@ export const on_dragstart_mosaic = function(node, event, options) {
 
 /**
 * ON_DRAGOVER
-* Actives the drop node action when the drag over it
-* @param DOM node
-* 	This node is the drop node
-* @param event
-* @return void
+* Fires repeatedly while a dragged element passes over a `.drop` target node.
+* Validates that the drag source is compatible with this portal (same portal, or
+* the target's tipo appears in the source's `draggable_to` list), then adds the
+* visual `dragover` highlight to the node.
+*
+* Uses `tmp.data` rather than `event.dataTransfer.getData()` because browsers
+* block getData() calls during dragover for cross-origin security reasons.
+*
+* (!) Must call `event.preventDefault()` to signal that this is a valid drop
+* target; omitting it causes the browser to reject the subsequent `drop` event.
+*
+* @param {HTMLElement} node - the `.drop` overlay node currently under the pointer
+* @param {DragEvent} event - native browser DragEvent
+* @param {Object} options - context injected by the render layer
+*   @param {Object} options.caller - the component_portal instance that owns this drop node
+* @returns {boolean} true when the drop is permitted; false when rejected
 */
 export const on_dragover = function(node, event, options) {
 	event.preventDefault();
@@ -163,10 +226,12 @@ export const on_dragover = function(node, event, options) {
 
 /**
 * ON_DRAGLEAVE
-* @param DOM node
-* 	This node is the drop node
-* @param event
-* @return void
+* Removes the `dragover` visual highlight when the dragged element leaves a
+* `.drop` target node. Paired with `on_dragover`.
+*
+* @param {HTMLElement} node - the `.drop` overlay node the pointer left
+* @param {DragEvent} event - native browser DragEvent
+* @returns {void}
 */
 export const on_dragleave = function(node, event) {
 	event.preventDefault()
@@ -179,12 +244,17 @@ export const on_dragleave = function(node, event) {
 
 /**
 * ON_DRAGEND
-* Reset drop nodes to the original size and hide them
-* @param DOM node
-* 	Usually a drag icon node
-* @param event
-* @param object options
-* @return void
+* Cleans up after a drag operation finishes (whether or not a successful drop
+* occurred). Removes the `dragging` CSS class from the drag source, resets all
+* `.drop` overlay nodes back to zero size, hides them, and clears `tmp.data`.
+*
+* Called on the original drag source node, NOT on the drop target.
+*
+* @param {HTMLElement} node - the drag-handle node (same node passed to on_dragstart)
+* @param {DragEvent} event - native browser DragEvent
+* @param {Object} options - context injected by the render layer
+*   @param {Object} options.caller - the component_portal instance that owns this list
+* @returns {void}
 */
 export const on_dragend = function(node, event, options) {
 	event.preventDefault();
@@ -216,11 +286,34 @@ export const on_dragend = function(node, event, options) {
 
 /**
 * ON_DROP
-* Get data path from event.dataTransfer and call to build required component html
-* @param DOM node
-* @param event event
-* @param object options
-* @return bool true
+* Commits the result of a completed drag-and-drop operation.
+*
+* Two branches:
+*
+*   COPY (cross-portal): when `source_tipo !== self.tipo`, the dragged record is
+*   being moved from another portal. After verifying compatibility via
+*   `draggable_to`, calls `link_record` on this portal and `unlink_record` on
+*   the source portal instance (looked up via `get_all_instances`).
+*
+*   REORDER (same-portal): when source and target are the same portal, computes
+*   the absolute `target_key` (accounting for the current paginator offset) and
+*   delegates to `self.sort_data`, which persists the new order via the
+*   change_value → API pipeline and refreshes the portal view.
+*
+* The `target_key` sent to the server is offset-adjusted so that the sort
+* operation targets the correct absolute position in the full (unpaginated) data
+* array, not just the position within the current page.
+*
+* (!) `event.preventDefault()` is required here to allow the drop to proceed;
+* without it the browser may execute its default action (e.g. navigate to the
+* drag data as a URL).
+*
+* @param {HTMLElement} node - the `.drop` overlay node that received the drop
+* @param {DragEvent} event - native browser DragEvent
+* @param {Object} options - context injected by the render layer
+*   @param {number|undefined} options.paginated_key - zero-based position of this drop target in the current page
+*   @param {Object} options.caller - the component_portal instance that owns this drop node
+* @returns {boolean} true on success; false when the drop is rejected (same position or incompatible portal)
 */
 export const on_drop = function(node, event, options) {
 	event.preventDefault() // Necessary. Allows us to drop.

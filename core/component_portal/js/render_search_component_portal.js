@@ -17,7 +17,59 @@
 
 /**
 * RENDER_SEARCH_COMPONENT_PORTAL
-* Manages the component's logic and appearance in client side
+*
+* Prototype mixin that provides the `search` render method for `component_portal`
+* in search mode.  In search mode the portal lets users pick filter values from
+* a linked section — it renders either an autocomplete trigger (when no value is
+* selected yet) or the already-selected section records with a remove button.
+*
+* The constructor is a no-op stub; its prototype is mixed into `component_portal`
+* via direct prototype assignment in component_portal.js:
+*
+*   component_portal.prototype.search = render_search_component_portal.prototype.search
+*
+* Exported symbols:
+*   - `render_search_component_portal`  — prototype host (constructor is never called).
+*   - `render_column_remove`            — standalone remove-button column renderer,
+*                                         also imported and reused by the list/edit modules.
+*
+* Private helpers (module-scoped, not exported):
+*   - `render_content_data`   — assembles the inner content_data element.
+*   - `rebuild_columns_map`   — extends the base columns_map with control columns.
+*
+* Key data shapes consumed from the component instance (`self`):
+*   - `self.data.q_operator` {string|null}   — persisted boolean operator ('AND'/'OR'); written
+*                                              by the q_operator input on change.
+*   - `self.q_operator`      {string|null}   — legacy fallback slot for the operator value
+*                                              (set by some sibling components; read-only here).
+*   - `self.data.entries`    {Array}          — locator array for already-selected records.
+*   - `self.context.children_view` {string}  — view name forwarded to child section records;
+*                                              falls back to `self.context.view`.
+*   - `self.show_interface.show_autocomplete` {boolean} — when true and no records are selected,
+*                                              shows the fake-input autocomplete trigger.
+*   - `self.columns_map`     {Array}          — base column descriptors resolved by `get_columns_map`.
+*   - `self.add_component_info` {boolean}     — when true, appends the optional 'ddinfo' info column.
+*   - `self.fixed_columns_map`  {boolean}     — guards against `rebuild_columns_map` running twice.
+*   - `self.ar_instances`    {Array}          — accumulator for child section-record instances
+*                                              (used for cleanup during destroy).
+*   - `self.events_tokens`   {Array}          — accumulator for event subscription tokens
+*                                              (used for cleanup during destroy).
+*   - `self.request_config_object` {Object}   — request-config (search/show branches) used to
+*                                              propagate `fixed_mode` to child ddo_map items.
+*   - `self.node`            {HTMLElement}    — root DOM node of the component (set by render()).
+*
+* Event bus interactions:
+*   - Publishes `change_search_element` with `self` whenever the q_operator or the
+*     remove button changes the search state.  The search bar header reacts to this
+*     event to reflect the updated operator label and value count.
+*   - Subscribes to `deactivate_component` to reset the fake-input visibility when the
+*     autocomplete panel closes (token stored in `self.events_tokens`).
+*
+* @module render_search_component_portal
+* @see component_portal.js            for the constructor and prototype wiring.
+* @see render_edit_component_portal.js for `activate_autocomplete` and
+*                                      `render_column_component_info` (imported here).
+* @see docs/core/components/component_portal.md for the full specification.
 */
 export const render_search_component_portal = function() {
 
@@ -28,9 +80,28 @@ export const render_search_component_portal = function() {
 
 /**
 * SEARCH
-* Render node for use in search mode
-* @param object options
-* @return HTMLElement wrapper
+* Entry point for search-mode rendering of a `component_portal` instance.
+*
+* Orchestrates the full search render pipeline:
+*   1. Ensures the columns_map is complete (adds control columns via `rebuild_columns_map`).
+*   2. Determines the `children_view` used when rendering the linked section records.
+*   3. Fetches and renders child section-record instances via `get_section_records`.
+*   4. Builds the inner `content_data` element via `render_content_data`.
+*   5. Wraps content in a standard search wrapper via `ui.component.build_wrapper_search`
+*      and adds the 'portal' and 'view_line' CSS classes for layout.
+*
+* When `options.render_level === 'content'`, only the `content_data` element is returned
+* (bypassing wrapper creation) — used during partial refreshes that update only the
+* inner region without rebuilding the outer wrapper.
+*
+* Child section-record instances are appended to `self.ar_instances` so that they can be
+* destroyed as part of the standard component lifecycle (`common.destroy`).
+*
+* @param {Object} options                        - Render options.
+* @param {string} [options.render_level='full']  - 'full' builds the complete wrapper element;
+*                                                   'content' rebuilds only the inner content area.
+* @returns {Promise<HTMLElement>} Resolves to the wrapper (render_level 'full') or the
+*                                  content_data element (render_level 'content').
 */
 render_search_component_portal.prototype.search = async function(options) {
 
@@ -77,9 +148,41 @@ render_search_component_portal.prototype.search = async function(options) {
 
 /**
 * RENDER_CONTENT_DATA
-* @param object self
-* @param array ar_section_record
-* @return HTMLElement content_data
+* Builds the inner content_data HTMLElement for search-mode rendering.
+*
+* The element contains up to three kinds of children, appended in order:
+*
+* 1. **q_operator input** (most models) — a small text input holding the boolean
+*    query operator (e.g. 'AND'/'OR').  Skipped for models in `non_q_operator_models`
+*    (currently only 'component_relation_children', which always implies a single
+*    record match).  Initial value comes from `self.data.q_operator` (persisted in
+*    search state) or `self.q_operator` (legacy fallback written by some sibling
+*    components).  On `change` the new value is written to `self.data.q_operator`
+*    and `change_search_element` is published so the search bar header can react.
+*    A click stopPropagation prevents the wrapper activation logic from firing.
+*
+* 2. **Fake-input autocomplete trigger** — rendered only when no section records have
+*    been selected yet (`ar_section_record_length === 0`) AND
+*    `self.show_interface.show_autocomplete === true`.  On click:
+*      a. The fake input is hidden (CSS class 'input_disable').
+*      b. A skeleton autocomplete wrapper is inserted immediately in the same DOM
+*         position to occupy space and prevent layout shift while the real service loads.
+*      c. `activate_autocomplete(self, self.node)` is awaited — this lazily constructs
+*         the `service_autocomplete` instance and mounts it onto `self.node`.
+*      d. The skeleton is removed once the real autocomplete is in the DOM.
+*    A `deactivate_component` subscription re-shows the fake input if the user closes
+*    the autocomplete without selecting a value (token stored in `self.events_tokens`).
+*    Models in `non_q_operator_models` receive the extra CSS class 'no_operator' on the
+*    fake input because the q_operator field is absent and the layout must compensate.
+*
+* 3. **Section record nodes** — each resolved `ar_section_record` instance has its
+*    `render()` method called and the resulting node appended.  These show the already-
+*    selected values including child-component columns and the remove button.
+*
+* @param {Object} self               - The `component_portal` instance.
+* @param {Array}  ar_section_record  - Array of section_record instances already fetched
+*                                      by `get_section_records`; may be empty.
+* @returns {Promise<HTMLElement>} Populated content_data div element.
 */
 const render_content_data = async function(self, ar_section_record) {
 
@@ -197,9 +300,28 @@ const render_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will be processed by section_records
-* @param object self
-* @return array columns_map
+* Extends the portal's base columns_map with search-specific control columns.
+*
+* Runs once per component lifecycle: after the first run `self.fixed_columns_map`
+* is set to `true` so subsequent calls return the already-built map immediately,
+* preventing duplicate control columns from being appended on re-renders.
+*
+* Side effects (only on the first run):
+*   1. **fixed_mode propagation** — iterates the ddo_map of whichever
+*      request_config branch contains a ddo_map (preferring the 'search' branch,
+*      falling back to 'show') and stamps `fixed_mode = true` on every item.
+*      This forces child `section_record` instances to preserve the search
+*      component mode rather than switching to their default mode.
+*   2. **ddinfo column** — if `self.add_component_info === true` (set during
+*      `build()` when any ddo_map item includes `value_with_parents`) a column
+*      descriptor for the 'ddinfo' overlay is pushed.  The `callback` is
+*      `render_column_component_info` from render_edit_component_portal.
+*   3. **remove column** — always appended last; a remove-button column using
+*      `render_column_remove` (defined in this module and exported).
+*
+* @param {Object} self - The `component_portal` instance.
+* @returns {Promise<Array>} Resolves to the complete columns_map array, including
+*                            any control columns appended by this function.
 */
 const rebuild_columns_map = async function(self) {
 
@@ -257,10 +379,29 @@ const rebuild_columns_map = async function(self) {
 
 /**
 * RENDER_COLUMN_REMOVE
-* Render column_remove node
-* Shared across views
-* @param object options
-* @return DocumentFragment
+* Renders the remove-button column cell for a selected portal record in search mode.
+*
+* Unlike the heavier `render_column_remove` in render_edit_component_portal.js, this
+* search-mode variant performs an immediate, silent unlink without a confirmation modal.
+* Clicking the button:
+*   1. Builds a frozen `changed_data_item` with `action: 'remove'` and null id/value —
+*      the server identifies which locator to remove by position/context.
+*   2. Calls `self.update_data_value(changed_data_item)` to update the component's
+*      in-memory data (does NOT trigger a network save).
+*   3. Publishes `change_search_element` so the surrounding search bar header rerenders.
+*   4. Calls `self.refresh({ build_autoload: true })` to rebuild the component's DOM
+*      with the updated (now empty) state, restoring the fake-input trigger.
+*
+* The click handler calls `e.stopPropagation()` to prevent the component activation
+* logic from firing alongside the removal.
+*
+* NOTE: this function is exported and reused by other portal modules (list/edit)
+* when a simplified remove action is appropriate.  The edit module defines its own
+* extended version with a confirmation modal for full edit mode.
+*
+* @param {Object} options        - Column renderer options (standard columns_map callback contract).
+* @param {Object} options.caller - The `component_portal` instance (`self`).
+* @returns {DocumentFragment} Fragment containing the remove button with its icon span.
 */
 export const render_column_remove = function(options) {
 

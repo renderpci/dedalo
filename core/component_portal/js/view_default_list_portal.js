@@ -13,7 +13,23 @@
 
 /**
 * VIEW_DEFAULT_LIST_PORTAL
-* Manages the component's logic and appearance in client side
+* Default list-mode view renderer for `component_portal`.
+*
+* Handles the common grid layout: iterates the portal's linked entries, renders
+* each as a `section_record` child instance, and inserts the resulting nodes into
+* a CSS-grid list body.  This view is the fallback for both 'default' and 'mosaic'
+* portal views (see `render_list_component_portal.js`).
+*
+* The CSS grid column widths are computed on-the-fly from `self.columns_map` via
+* `ui.flat_column_items()` and injected as a scoped stylesheet rule via
+* `set_element_css()`.  The mosaic view is exempted because it does not use the
+* column-based grid layout.
+*
+* Exported static methods:
+*   view_default_list_portal.render(self, options) — entry point called by `list()`.
+*
+* Private helpers (module-scoped, not exported):
+*   get_content_data(self, ar_section_record) — builds the content_data container.
 */
 export const view_default_list_portal = function() {
 
@@ -24,10 +40,36 @@ export const view_default_list_portal = function() {
 
 /**
 * RENDER
-* Render component nodes in current view
-* @param component_portal instance self
-* @param object options
-* @return HTMLElement wrapper
+* Entry point for the default list view of a portal component.
+*
+* Orchestrates the full render pipeline:
+*   1. Resolves the child view name from context (falls back to 'default').
+*   2. Calls `get_section_records()` to obtain fully-built `section_record`
+*      instances for every locator in `self.data.entries`.
+*   3. Delegates to `get_content_data()` to render each record node.
+*   4. Builds the list_body grid container and injects per-section CSS grid
+*      column widths using `set_element_css()`.
+*   5. Wraps everything in a standard list wrapper with an absorbing click
+*      listener (prevents click propagation to the parent section).
+*
+* When `options.render_level === 'content'`, steps 4–5 are skipped and the
+* raw content_data element is returned directly.  This path is used by the
+* portal's refresh mechanism to replace only the inner record area without
+* rebuilding the full outer shell.
+*
+* Side effects:
+*   - Pushes all created `section_record` instances into `self.ar_instances`
+*     so that `common.destroy()` can tear them down on unmount.
+*   - Calls `set_element_css()` (async, not awaited here) to inject a scoped
+*     CSS rule for `grid-template-columns` on the `.list_body` cell.
+*     The key is scoped to `<section_tipo>_<tipo>.list.view_<view_name>` to
+*     avoid collisions between different portals on the same page.
+*
+* @param {Object} self    - The `component_portal` instance being rendered.
+* @param {Object} options - Render options forwarded from `list()`.
+* @param {string} [options.render_level='full'] - 'full' returns the complete
+*   wrapper element; 'content' returns only the inner content_data node.
+* @returns {Promise<HTMLElement>} The wrapper (full) or content_data (content) node.
 */
 view_default_list_portal.render = async function(self, options) {
 
@@ -107,10 +149,22 @@ view_default_list_portal.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Render all received section records and place it into a new div 'content_data'
-* @param object self
-* @param array ar_section_record
-* @return HTMLElement content_data
+* Renders all section_record instances and collects their DOM nodes into a
+* single `content_data` container element.
+*
+* Uses `Promise.all()` to fan-out the per-record `render()` calls concurrently,
+* then appends the resolved nodes via a `DocumentFragment` to minimise reflows.
+* Records whose `render()` resolves to a falsy value are silently skipped — this
+* covers records that failed to build (null returned by `get_instance()` inside
+* `get_section_records()`).
+*
+* Returns an empty `content_data` immediately when `ar_section_record` is empty,
+* avoiding unnecessary async work.
+*
+* @param {Object} self              - The `component_portal` instance being rendered.
+* @param {Array}  ar_section_record - Array of built `section_record` instances
+*   returned by `get_section_records()`.  May be empty.
+* @returns {Promise<HTMLElement>} The populated `content_data` div element.
 */
 const get_content_data = async function(self, ar_section_record) {
 

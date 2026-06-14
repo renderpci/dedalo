@@ -4,6 +4,44 @@
 
 
 
+/**
+* MODULE component_portal
+*
+* Client-side class for `component_portal` — the relational workhorse of Dédalo.
+* A portal links one host record to one or more target records in another (or the same) section
+* and presents those linked records as a paginated, drag-reorderable list.  It is the v7 successor
+* of the old `component_autocomplete` / `component_autocomplete_hi` components.
+*
+* This module defines the `component_portal` constructor, all prototype methods that are
+* specific to the portal (init, build, link_record, unlink_record, add_new_element,
+* sort_data, sort_by_column, navigate, filter_data_by_tag_id, …), and the private
+* helper `data_limit_reached`.
+*
+* Prototype methods are mixed in from three sources:
+*   - `common`            — lifecycle: render, refresh, destroy, rqo builders.
+*   - `component_common`  — change-data pipeline: save, change_value, update_datum, …
+*   - Per-mode render classes (`render_edit_component_portal`, `render_list_component_portal`,
+*     `render_search_component_portal`) — view dispatch.
+*
+* Data shape stored in `self.data.entries`: an array of locator objects, e.g.
+*   { id, type, section_tipo, section_id, from_component_tipo }
+*
+* Event bus tokens used by this module (all stored in `self.events_tokens` for cleanup):
+*   `initiator_link_<id>`    — user selects a record from the picker modal.
+*   `initiator_unlink_<id>`  — user removes a linked record from the picker modal.
+*   `link_term_<id>`         — thesaurus tree link button click (tree/indexation views).
+*   `deactivate_component`   — portal loses focus; destroys any live autocomplete service.
+*   `paginator_goto_<pid>`   — paginator emits a new offset.
+*   `paginator_show_all_<pid>` — show-all button resets limit to 0.
+*   `reset_paginator_<pid>`  — reset button restores the configured limit.
+*
+* @see docs/core/components/component_portal.md for the full specification.
+* @see render_edit_component_portal.js, render_list_component_portal.js,
+*      render_search_component_portal.js for per-mode DOM rendering.
+*/
+
+
+
 // imports
 	import {clone,object_to_url_vars, open_window, get_section_id_from_tipo} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -27,7 +65,54 @@
 
 /**
 * COMPONENT_PORTAL
-* Portal component for managing relationships between sections
+* Constructor for the portal component, which stores and manages ordered arrays of
+* locators that point at records in target sections.
+*
+* Only declares the property skeleton; all meaningful values are set by `init()` and
+* `build()`.  Prototype methods from `common`, `component_common`, and the three
+* per-mode render classes are mixed in below the constructor.
+*
+* Key properties (set during lifecycle):
+*   @var {string|null} id                    - Unique instance identifier (from common.init).
+*   @var {string|null} model                 - Class name, always 'component_portal'.
+*   @var {string|null} tipo                  - Ontology tipo of this component, e.g. 'oh24'.
+*   @var {string|null} section_tipo          - Ontology tipo of the host section, e.g. 'oh1'.
+*   @var {string|number|null} section_id     - Record id within the host section.
+*   @var {string|null} mode                  - Render mode: 'edit'|'list'|'tm'|'search'.
+*   @var {string|null} lang                  - Active language tag, always 'lg-nolan' for portals
+*                                              (portals are non-translatable).
+*   @var {string|null} section_lang          - Language of the parent section UI.
+*   @var {string|null} column_id             - Column instance id when rendered as a list column.
+*   @var {*|null} parent                     - Ontology parent tipo of this component node.
+*   @var {HTMLElement|null} node             - Root DOM element, populated by render().
+*   @var {object|null} modal                 - Reference to the modal instance that hosts this
+*                                              portal, if opened in a picker modal; null otherwise.
+*   @var {object|null} caller               - Parent instance (section, tool, etc.) that owns
+*                                              this portal instance.
+*   @var {object|null} caller_dataframe     - The dataframe component instance that paired with
+*                                              this portal (used by component_dataframe).
+*   @var {boolean|null} standalone          - When true the portal owns its datum independently
+*                                              rather than sharing it with the parent section.
+*   @var {object|null} datum                - Full datum {data:[], context:[]} including any
+*                                              sub-datums from target sections.
+*   @var {object|null} context              - Server-resolved component context (properties,
+*                                              tools, permissions, request_config, view, …).
+*   @var {object|null} data                 - Resolved component data for the current record;
+*                                              `data.entries` holds the locator array.
+*   @var {number|null} total                - Total number of linked records (server-authoritative).
+*   @var {object|null} paginator            - Paginator child instance; null in list/search mode.
+*   @var {object|null} autocomplete         - Live service_autocomplete instance, if active.
+*   @var {boolean|null} autocomplete_active - True while an autocomplete service is mounted.
+*   @var {object|null} request_config_object - The `api_engine:'dedalo' + type:'main'` item
+*                                              extracted from context.request_config; used to
+*                                              build the RQO.
+*   @var {object|null} rqo                  - The current Request Query Object sent to the API.
+*   @var {boolean|null} fixed_columns_map   - False after each build; true once
+*                                              rebuild_columns_map has run to prevent double
+*                                              application.
+*   @var {boolean|null} delete_diffusion_records - When true, deleting a linked record also
+*                                              triggers diffusion record deletion (default true
+*                                              in delete_linked_record).
 */
 export const component_portal = function() {
 
@@ -77,7 +162,24 @@ export const component_portal = function() {
 
 /**
 * COMMON FUNCTIONS
-* Extend component functions from component common
+* Prototype assignments that mix inherited behaviour into component_portal.
+*
+* Lifecycle (from common):
+*   render, refresh, destroy
+*
+* Change-data pipeline (from component_common):
+*   save, update_data_value, update_datum, change_value, set_changed_data,
+*   change_mode
+*
+* RQO builders (from common):
+*   build_rqo_show, build_rqo_search, build_rqo_choose
+*
+* Per-mode rendering (from the dedicated render classes):
+*   list / tm  → render_list_component_portal.prototype.list
+*   edit       → render_edit_component_portal.prototype.edit
+*   search     → render_search_component_portal.prototype.search
+*
+* Note: `tm` (Time Machine) reuses the list render with limit=1 per row.
 */
 // prototypes assign
 	// life-cycle
@@ -107,18 +209,39 @@ export const component_portal = function() {
 
 /**
 * INIT
-* Fix instance main properties and set up event listeners
-* @param {object} options - Initialization options
-* @param {string} [options.id] - Component ID
-* @param {string} [options.tipo] - Component tipo
-* @param {string} [options.section_tipo] - Section tipo
-* @param {string} [options.section_id] - Section ID
-* @param {string} [options.mode] - Component mode (edit, list, etc.)
-* @param {string} [options.lang] - Language code
-* @param {object} [options.columns_map] - Columns configuration
-* @param {object} [options.caller_dataframe] - Caller dataframe reference
-* @param {Array} [options.request_config] - Request configuration array
-* @returns {Promise<boolean>} Returns true if initialization successful
+* Initializes the portal instance: seeds portal-specific properties, registers all
+* event-bus subscriptions that last for the lifetime of the instance, and populates
+* the `render_views` registry.
+*
+* Delegates base property setup (id, tipo, section_tipo, mode, lang, caller, …) to
+* `component_common.prototype.init`, which in turn calls `common.prototype.init`.
+* All three event tokens are pushed into `self.events_tokens` so they are cleaned
+* up during `destroy()`.
+*
+* Event subscriptions registered here:
+*   `initiator_link_<id>`   — user confirms selection in picker; calls `link_record`.
+*   `initiator_unlink_<id>` — user removes a record from picker; calls `unlink_record`.
+*   `link_term_<id>`        — thesaurus tree or indexation view link button; enriches
+*                             the locator with tag_id / tag_component_tipo / top_locator
+*                             before delegating to `link_record`.
+*   `deactivate_component`  — any component blur; tears down the live autocomplete
+*                             service when this portal loses focus.
+*
+* @param {Object} options                          - Initialization options bag.
+* @param {string} options.model                    - Class name, e.g. 'component_portal'.
+* @param {string} options.tipo                     - Ontology tipo of this component.
+* @param {string} options.section_tipo             - Ontology tipo of the host section.
+* @param {string|number} options.section_id        - Host record identifier.
+* @param {string} options.mode                     - Render mode: 'edit'|'list'|'tm'|'search'.
+* @param {string} options.lang                     - Active language tag.
+* @param {object|null} [options.columns_map]       - Pre-built columns map; if supplied it is
+*                                                    used as-is and rebuilt from context otherwise.
+* @param {object|null} [options.caller_dataframe]  - The dataframe component that paired with
+*                                                    this portal, if any.
+* @param {Array|null} [options.request_config]     - Request config array used when no server
+*                                                    context is available yet (first build).
+* @returns {Promise<boolean>} Resolves to the result of `component_common.prototype.init`,
+*                             which is `true` on success or `false` on duplicate-init guard.
 */
 component_portal.prototype.init = async function(options) {
 
@@ -169,13 +292,17 @@ component_portal.prototype.init = async function(options) {
 					if (SHOW_DEBUG===true) {
 						console.log('-> event fn_initiator_unlink locator:', locator);
 					}
-				
+
 					if (!locator.id) {
 						console.warn('Value to unlink not found in current entries');
 						return
 					}
 
 				// row_key
+				// (!) FLAG: `current_entries` and `paginated_key` are not in scope here —
+				// they are not defined anywhere in this closure or the outer function.
+				// `row_key` is computed but never read; this block appears to be dead /
+				// leftover draft code. Do not remove — leave for explicit review.
 					const row_key = current_entries[paginated_key].id || null
 
 				// remove locator selected
@@ -193,6 +320,9 @@ component_portal.prototype.init = async function(options) {
 			)
 
 		// link_term. Observes thesaurus tree link index button click
+		// Published by area_thesaurus / tool_indexation when the user clicks a term's link button.
+		// The handler enriches the incoming locator with view-specific metadata before
+		// delegating to link_record().
 			const link_term_handler = async (locator) => {
 
 				switch (self.view) {
@@ -206,6 +336,8 @@ component_portal.prototype.init = async function(options) {
 								// overwrite/set tag_id
 								locator.tag_id	= tag_id
 							}else{
+								// No tag is selected yet; confirm whether to index the whole record
+								// (i.e. tag the relation at record level rather than at an inline tag).
 								if (!confirm(get_label.no_hay_etiqueta_seleccionada ||
 									'No tag selected. If you continue, the entire record will be indexed.')) {
 									return
@@ -213,6 +345,8 @@ component_portal.prototype.init = async function(options) {
 							}
 
 						// tag_component_tipo
+						// Mandatory for indexation portals: identifies which text component
+						// carries the inline tag.  Defined in properties->config_relation.
 							const tag_component_tipo = self.context.properties?.config_relation?.tag_component_tipo
 							if (tag_component_tipo) {
 								locator.tag_component_tipo = tag_component_tipo
@@ -222,6 +356,8 @@ component_portal.prototype.init = async function(options) {
 							}
 
 						// top_locator add
+						// top_locator is injected by tool_indexation onto self.caller; it carries
+						// the section locator of the record currently open in the indexation tool.
 							const top_locator = self.caller.top_locator // property from tool_indexation
 							// check active tag is already set
 							if (!top_locator) {
@@ -233,6 +369,7 @@ component_portal.prototype.init = async function(options) {
 					}
 					case 'tree':
 						// set relation type standard portal (dd151)
+						// Tree view always uses the generic link type; no tag metadata needed.
 						locator.type = DD_TIPOS.DEDALO_RELATION_TYPE_LINK ?? 'dd151'
 						break;
 
@@ -249,6 +386,8 @@ component_portal.prototype.init = async function(options) {
 				// add locator selected
 					const result = await self.link_record(locator)
 					if (result===false) {
+						// (!) alert() used here deliberately to notify the user of a duplicate.
+						// The duplicate check in link_record() already logged to console (level 1).
 						alert("Value already exists! "+ JSON.stringify(locator));
 						return
 					}
@@ -258,12 +397,17 @@ component_portal.prototype.init = async function(options) {
 			)
 
 		// deactivate_component. Observes current component deactivation event
+		// The global 'deactivate_component' event fires whenever any component loses focus.
+		// We check if it is this portal's own id before tearing down the autocomplete service,
+		// so that sibling portals on the same page are unaffected.
 			const deactivate_component_handler = (component) => {
 				if (component.id===self.id) {
 					if(SHOW_DEBUG===true) {
 						console.log('self.autocomplete_active:', self.autocomplete_active);
 					}
 					if(self.autocomplete_active===true){
+						// Defer to the idle callback so the autocomplete can finish any
+						// in-flight selection before it is torn down.
 						dd_request_idle_callback(
 							() => {
 								self.autocomplete.destroy(
@@ -283,15 +427,16 @@ component_portal.prototype.init = async function(options) {
 			)
 
 	// render_views
-		// Definition of the rendering views that could de used.
-		// Tools or another components could add specific views dynamically
-		// Sample:
-		// {
-		// 		view	: 'default',
-		// 		mode	: 'edit',
-		// 		render	: 'view_default_edit_portal'
-		// 		path 	: './view_default_edit_portal.js'
-		// }
+	// Maps {view, mode} pairs to the render module name (and optional dynamic-import path).
+	// Used by common.render() to dispatch the correct render function.
+	// Tools or external components may push additional entries here at runtime to add custom views.
+	// Sample structure for a dynamically-added entry:
+	// {
+	// 		view	: 'default',
+	// 		mode	: 'edit',
+	// 		render	: 'view_default_edit_portal'
+	// 		path 	: './view_default_edit_portal.js'
+	// }
 		self.render_views = [
 			{
 				view	: 'text',
@@ -359,9 +504,41 @@ component_portal.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Load and parse necessary data to create a full ready instance
-* @param {boolean} [autoload=false] - Whether to autoload data
-* @returns {Promise<boolean>} Returns true if build successful
+* Loads server data (context + data) when `autoload=true`, then resolves all
+* instance state that depends on context: RQO, columns_map, paginator, show_interface
+* flags, separators, and data_limit guards.
+*
+* Called once after `init()` and again on every `refresh()` cycle.  Follows the
+* Dédalo lifecycle contract: transitions `self.status` from 'building' → 'built'.
+*
+* When `autoload=true`:
+*  1. Calls `build_autoload()` to fetch context + data from the API in one round-trip.
+*  2. Preserves an existing `self.context` (context may have been customised by a ddo_map
+*     override injected by section_record.js, which must not be overwritten by the raw
+*     server context).
+*  3. Calls `self.destroy(false, true, false)` to tear down child instances before
+*     rebuilding, so stale sub-component nodes are not left in the DOM.
+*  4. Sets `self.data` from the API result for the matching tipo+section_id.
+*  5. Updates `self.datum` (shared datum) unless the portal is standalone.
+*  6. Synchronises `self.rqo.sqo.limit` from the updated request_config (the server
+*     may have adjusted the limit at resolve time).
+*
+* After (optional) autoload, regardless of `autoload` flag:
+*  - `generate_rqo()` builds or reuses `self.rqo`.
+*  - `set_context_vars()` copies shorthand properties from context to self.
+*  - `init_events_subscription()` wires observe/observable hooks (idempotent; only
+*    fires once per instance).
+*  - Paginator is created (edit/tm mode only) or updated if already exists.
+*  - `show_interface` flags are adjusted for multi-target sections and external mode.
+*  - `self.add_component_info` is set from the ddo_map `value_with_parents` marker, used
+*    by service_autocomplete to decide whether to request ddinfo for autocomplete entries.
+*
+* @param {boolean} [autoload=false] - When true, fetches context+data from the API.
+*                                     Pass false when the caller already injected
+*                                     `self.context` and `self.data` (e.g. section_record
+*                                     embedding context, or refresh with tmp_api_response).
+* @returns {Promise<boolean>} Resolves to `true` when build completes successfully.
+*                             Returns `false` if the API call fails or returns no context.
 */
 component_portal.prototype.build = async function(autoload=false) {
 	// const t0 = performance.now()
@@ -384,21 +561,27 @@ component_portal.prototype.build = async function(autoload=false) {
 		self.data.changed_data = []
 
 	// rqo
+	// generate_rqo is defined as an inner async function and called twice:
+	// once here (pre-autoload, to build the initial RQO) and again after autoload
+	// (to regenerate the RQO with the refreshed context and correct limit).
 		const generate_rqo = async function() {
 
 			if (!self.context) {
-				// request_config_object. get the request_config_object from request_config
+				// No context yet (first build before API response): read from options.request_config.
 				self.request_config_object = self.request_config
 					? self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}else{
-				// request_config_object. get the request_config_object from context
+				// Context is available: use the server-resolved request_config from context.
 				self.request_config_object	= self.context && self.context.request_config
 					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 					: {}
 			}
 
 			// rqo build
+			// In search mode the portal acts as a filter input; it sends 'resolve_data'
+			// with the current locator entries as the source value so the search engine
+			// can identify matching records.
 			const action	= (self.mode==='search') ? 'resolve_data' : 'get_data'
 			const add_show	= false
 			self.rqo = self.rqo || await self.build_rqo_show(
@@ -407,6 +590,8 @@ component_portal.prototype.build = async function(autoload=false) {
 				add_show // bool add_show
 			)
 			if(self.mode==='search') {
+				// Inject current entries as the RQO source value so the server knows
+				// which records to resolve for the search filter.
 				self.rqo.source.value = self.data.entries || []
 			}
 		}
@@ -442,8 +627,8 @@ component_portal.prototype.build = async function(autoload=false) {
 		if (autoload===true) {
 
 			// build_autoload
-			// Use unified way to load context and data with
-			// errors and not login situation managing
+			// Unified loader: sends the RQO to the API, handles login-expired and
+			// network-error cases, and returns the raw api_response or null/false.
 				const api_response = await build_autoload(self)
 
 				// server: wrong response
@@ -457,6 +642,9 @@ component_portal.prototype.build = async function(autoload=false) {
 				}
 
 			// destroy dependencies
+			// Tear down child instances before re-building so stale nodes are removed.
+			// delete_self=false keeps the portal itself alive; remove_dom=false avoids
+			// a flash because the DOM will be repopulated during the upcoming render.
 				await self.destroy(
 					false, // bool delete_self
 					true, // bool delete_dependencies
@@ -464,16 +652,12 @@ component_portal.prototype.build = async function(autoload=false) {
 				)
 
 			// set Context
-				// context is only set when it's empty the origin context,
-				// if the instance has previous context, it will need to preserve.
-				// because the context could be modified by ddo configuration and it can no be changed
-				// ddo_map -----> context
-				// ex: oh27 define the specific ddo_map for rsc368
-				// 		{ mode: list, view: line, children_view: text ... }
-				// if you call to API to get the context of the rsc368 the context will be the default config
-				// 		{ mode: edit, view: default }
-				// but it's necessary to preserve the specific ddo_map configuration in the new context.
-				// Context is set and changed in section_record.js to get the ddo_map configuration
+				// Context is preserved when it was already set before this build cycle.
+				// Reason: a ddo_map override (e.g. oh27 defines a custom mode/view/children_view
+				// for rsc368) is injected by section_record.js into self.context *before* the
+				// first build.  The raw API context for rsc368 uses the default config, so if we
+				// overwrote self.context here we would lose the ddo_map customisation on every
+				// refresh.  Context is therefore treated as write-once from the outside.
 				if(!self.context){
 					const context = api_response.result.context.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo)
 					if (!context) {
@@ -484,6 +668,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				}
 
 			// set Data
+			// Match by tipo + section_tipo + section_id (string-coerced).
 				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id) === String(self.section_id))
 				if(!data){
 					console.warn("data not found in api_response:",api_response);
@@ -491,9 +676,13 @@ component_portal.prototype.build = async function(autoload=false) {
 				self.data = data || {}
 
 			// Update datum when the component is not standalone, it's dependent of section or others with common datum
+			// In non-standalone mode, update_datum merges this response into the shared
+			// datum that the parent section instance also holds, so sub-component
+			// instances that share the same datum are all kept in sync.
 				if(!self.standalone){
 					await self.update_datum(api_response.result)
 				}else{
+					// Standalone portals own their datum independently; assign directly.
 					self.datum.context	= api_response.result.context
 					self.datum.data		= api_response.result.data
 				}
@@ -503,14 +692,18 @@ component_portal.prototype.build = async function(autoload=false) {
 			// 	self.datum.context	= api_response.result.context
 
 			// force re-assign self.total
+			// Reset so that the post-build logic reads total from the fresh data.pagination.
 				self.total = null
 
 			// rqo regenerate
+			// Regenerate now that self.context is populated with the freshly-loaded context.
 				await generate_rqo()
 				// console.log("portal generate_rqo 2 self.rqo:",self.rqo);
 
 			// update rqo.sqo.limit. Note that it may have been updated from the API response
+			// The server may have clamped or overridden the limit in the resolved request_config.
 			// Paginator takes limit from: self.rqo.sqo.limit
+			// (!) Two possible locations for the limit: sqo.limit (newer) and show.sqo_config.limit (legacy).
 				const request_config_item = self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 				if (request_config_item) {
 					// Updated self.rqo.sqo.limit. Try sqo and show.sqo_config
@@ -529,16 +722,23 @@ component_portal.prototype.build = async function(autoload=false) {
 
 
 	// update instance properties from context
+	// Copies shorthand properties from the resolved context to self
+	// (e.g. self.label, self.permissions, self.view, self.type, …).
 		set_context_vars(self, self.context)
 
 	// subscribe to the observer events (important: only once)
+	// Registers any observe/observable wiring declared in the ontology properties.
+	// The function is idempotent: it guards against double-subscription internally.
 		init_events_subscription(self)
 
 	// mode cases
 		if (self.mode==='edit' || self.mode==='tm') {
-			// pagination vars only in edit mode
+			// Pagination state is only meaningful in edit / tm mode.
+			// In list and search modes the paginator is not shown.
 
 			// pagination. update element pagination vars when are used
+			// Sync local offset/total from the data.pagination object that the
+			// API returns together with the entries array.
 				if (self.data.pagination && !self.total) {
 					self.total			= self.data.pagination.total
 					self.rqo.sqo.offset	= self.data.pagination.offset
@@ -549,6 +749,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				if (!self.paginator) {
 
 					// create new one
+					// 'micro' mode renders a compact paginator bar (prev/next/page count).
 					self.paginator = new paginator()
 					self.paginator.init({
 						caller	: self,
@@ -557,6 +758,8 @@ component_portal.prototype.build = async function(autoload=false) {
 					await self.paginator.build()
 
 					// paginator_goto_ event
+					// The paginator publishes this event when the user clicks a page number or
+					// prev/next.  The callback updates self.rqo.sqo.offset then calls navigate().
 						const paginator_goto_handler = function(offset) {
 							// navigate
 							self.navigate({
@@ -571,6 +774,8 @@ component_portal.prototype.build = async function(autoload=false) {
 
 
 					// paginator_show_all_
+					// Published when the user clicks the "show all" button.
+					// limit=0 tells the server to return all records without pagination.
 						const paginator_show_all_handler = function() {
 							// navigate
 							self.navigate({
@@ -586,6 +791,8 @@ component_portal.prototype.build = async function(autoload=false) {
 						)
 
 					// reset_paginator_
+					// Published by the paginator when the user resets from "show all" back to
+					// paged mode.  `limit` is the page size to restore.
 						const reset_paginator_handler = function(limit) {
 							// navigate
 							self.navigate({
@@ -601,7 +808,8 @@ component_portal.prototype.build = async function(autoload=false) {
 						)
 
 				}else{
-					// refresh existing
+					// Paginator already exists (subsequent refresh): sync its state with the
+					// new offset and total without fully rebuilding it.
 					self.paginator.offset = self.rqo.sqo.offset
 					self.paginator.total  = self.total
 					// self.paginator.refresh()
@@ -612,16 +820,21 @@ component_portal.prototype.build = async function(autoload=false) {
 		}else if(self.mode==='search') {
 
 			// active / prepare the autocomplete in search mode
+			// (placeholder for future search-mode autocomplete setup if needed)
 
 		}// end if(self.mode==="edit")
 
 	// check self.context.request_config
+	// A missing request_config is a fatal misconfiguration: the portal cannot build
+	// its RQO or render anything useful without it.
 		if (!self.context.request_config) {
 			console.error('Error. context.request_config not found. self:', self);
 			throw 'Error';
 		}
 
 	// target_section
+	// The ontology tipo(s) of the target section(s) this portal links to.
+	// May be a single string or an array of strings (multi-target portal).
 		self.target_section = self.request_config_object && self.request_config_object.sqo
 			? self.request_config_object.sqo.section_tipo
 			: null
@@ -640,6 +853,8 @@ component_portal.prototype.build = async function(autoload=false) {
 		})
 
 	// self.add_component_info. Indicates if exists any ddinfo (value_with_parents) in the ddo_map items list
+	// When true, service_autocomplete will request ddinfo (ancestor chain) for each
+	// autocomplete option so the user sees the full hierarchy path in the picker.
 		// (!) This is used by service_autocomplete to decide whether to add ddinfo or not
 		// sample item
 		// {
@@ -663,19 +878,27 @@ component_portal.prototype.build = async function(autoload=false) {
 		}
 
 	// set the server data to preserve the data that is saved in DDBB
+	// db_data is a deep clone used to detect whether data has changed since the last save.
 		self.db_data = clone(self.data)
 
 	// set fields_separator
+	// Controls how multiple column values within a single linked record are joined
+	// (e.g. "Title | Author" in the default view row).
+	// Priority: context.fields_separator > request_config show.fields_separator > default ' | '
 		self.context.fields_separator = self.context?.fields_separator
 									|| self.request_config_object?.show.fields_separator
 									|| ' | '
 
 	// set records_separator
+	// Controls how multiple linked records are joined in text/list views.
+	// Priority: context.records_separator > request_config show.records_separator > default ' | '
 		self.context.records_separator = self.context?.records_separator
 									|| self.request_config_object?.show.records_separator
 									|| ' | '
 
 	// check if the target section is multiple to remove the add button
+	// Multi-target portals cannot offer the "add new record" button because the server
+	// would not know which target section to create the new record in.
 		self.show_interface.button_add = (Array.isArray(self.target_section) && self.target_section.length > 1)
 			? false
 			: self.show_interface.button_add ?? true
@@ -685,11 +908,14 @@ component_portal.prototype.build = async function(autoload=false) {
 			? false
 			: self.show_interface.button_list ?? true
 
-	// self.show_interface is defined in component_comom init()
-	// Default source external buttons configuration,
-	// if show.interface is defined in properties used the definition, else use this default
+	// self.show_interface is defined in component_common init()
+	// Override show_interface buttons based on source.mode and caller type.
+	// If show.interface is defined in properties it takes precedence; this switch sets
+	// safe defaults when it is not.
 		switch (true) {
 
+			// External mode: portal data is computed server-side (inverse / dependent relations).
+			// The user can view but not add/link/edit — only the external button and list are shown.
 			case (self.context.properties?.source?.mode==='external'):
 				self.show_interface.button_add			= false
 				self.show_interface.button_link			= false
@@ -700,6 +926,8 @@ component_portal.prototype.build = async function(autoload=false) {
 				self.show_interface.show_autocomplete	= self.show_interface.show_autocomplete ?? false
 				break;
 
+			// Tool caller: the portal is embedded inside a tool (e.g. tool_indexation).
+			// Strip all action buttons; the tool controls the interaction itself.
 			case (self.caller && self.caller.type==='tool'):
 				self.show_interface.button_add		= false
 				self.show_interface.button_link		= false
@@ -725,16 +953,38 @@ component_portal.prototype.build = async function(autoload=false) {
 
 /**
 * LINK_RECORD
-* Adds a record to the portal data
-* Called from service autocomplete when the user selects a datalist option
-* Uses component_common function change_value to call API
-* @verified 07-09-2023 Paco
-* @param {object} value - The locator object to add
-* @param {string} value.section_tipo - Section tipo
-* @param {string|number} value.section_id - Section ID
-* @param {string} [value.tag_id] - Tag ID for indexation
-* @param {string} [value.type] - Relation type
-* @returns {Promise<boolean>} Returns false if value already exists, true otherwise
+* Inserts a new locator into the portal, persisting the change via the API.
+*
+* Entry points:
+*  - `service_autocomplete` when the user picks an option from the datalist.
+*  - `initiator_link_<id>` event handler (picker modal confirm).
+*  - `link_term_handler` (thesaurus tree / indexation view link button).
+*
+* Duplicate detection is performed at two levels:
+*  1. Client-side fast path (level 1): scans `current_entries` (the currently loaded
+*     paginated page only) for an entry with the same section_tipo + section_id.
+*  2. Server-side authoritative check (level 2): after `change_value`, compares the
+*     new `total` against `total_before`.  If the server total did not increase, the
+*     locator already existed in the full (non-paginated) dataset.
+*
+* For `component_dataframe` models, pairing keys (`type`, `id_key`, `section_id_key`,
+* `section_tipo_key`, `main_component_tipo`) are copied from `self.data` into the
+* locator before the API call so the server can attach the correct dataframe stub.
+*
+* (!) `self.data.pagination.limit` is explicitly set before calling `change_value` so
+* the server uses the paginator's current page size when refreshing the portal data.
+* This is critical for `component_relation_index` portals (e.g. 'rsc860' in Oral History)
+* which have small page limits and would otherwise receive the wrong page slice.
+*
+* @param {Object} value                      - Locator to insert.  Will be mutated:
+*                                             `from_component_tipo` is always added.
+* @param {string} value.section_tipo         - Target section tipo.
+* @param {string|number} value.section_id    - Target record id.
+* @param {string} [value.type]               - Relation type, e.g. 'dd151'.
+* @param {string} [value.tag_id]             - Inline tag id (indexation portals).
+* @param {string} [value.tag_component_tipo] - Component tipo carrying the tag (indexation).
+* @returns {Promise<boolean>} `false` if the locator already exists or the API fails;
+*                             `true` after a successful insert and refresh.
 */
 component_portal.prototype.link_record = async function(value) {
 
@@ -749,7 +999,9 @@ component_portal.prototype.link_record = async function(value) {
 			return false
 		}
 
-	// exists. Check if value already exists. (!) Note that only current loaded paginated values are available for compare, not the whole portal data
+	// exists. Check if value already exists.
+	// (!) Only the currently loaded paginated page is available for this check; the
+	// server performs the authoritative full-dataset check after the insert (level 2 below).
 		const exists = current_entries.find(item => item.section_tipo===value.section_tipo && String(item.section_id) === String(value.section_id))
 		if (typeof exists!=='undefined') {
 			console.log('[link_record] Value already exists (1) !');
@@ -761,6 +1013,8 @@ component_portal.prototype.link_record = async function(value) {
 		}
 
 	// adds its own tipo as 'from_component_tipo' to the new locator
+	// This property is used by the section's relations bag to partition locators
+	// per component.  Without it the server cannot assign the locator to this portal.
 		value.from_component_tipo = self.tipo
 
 	// dataframe case
@@ -776,6 +1030,7 @@ component_portal.prototype.link_record = async function(value) {
 		}
 
 	// changed_data
+	// Frozen to prevent accidental mutation after this point.
 		const changed_data	= [Object.freeze({
 			action	: 'insert',
 			id		: null,
@@ -788,6 +1043,7 @@ component_portal.prototype.link_record = async function(value) {
 		}
 
 	// total_before
+	// Snapshot the current total before the insert so we can detect duplicates at level 2.
 		const total_before = clone(self.total)
 
 	// (!) fix pagination limit in data to force server to use it. Important
@@ -800,6 +1056,7 @@ component_portal.prototype.link_record = async function(value) {
 		}
 
 	// api_response : change_value (and save)
+	// refresh:false — we handle the refresh manually below after the total check.
 		const api_response = await self.change_value({
 			changed_data	: changed_data,
 			refresh			: false // not refresh here (!)
@@ -810,7 +1067,7 @@ component_portal.prototype.link_record = async function(value) {
 			return false
 		}
 
-	// total check (after save)
+	// total check (after save) — server-authoritative duplicate detection (level 2)
 		const current_data	= api_response.result.data.find(el => el.tipo===self.tipo)
 		const total			= current_data
 			? current_data.pagination.total
@@ -829,12 +1086,16 @@ component_portal.prototype.link_record = async function(value) {
 		}
 
 	// refresh self component
+	// Pass tmp_api_response so build() reuses the save response instead of
+	// issuing a second API call for the same data.
 		await self.refresh({
 			build_autoload		: true,
 			tmp_api_response	: api_response // pass api_response before build to avoid call API again
 		})
 
 	// filter data. check if the caller has tag_id
+	// If the portal is in indexation mode with an active tag, re-apply the tag
+	// filter so the newly-inserted locator appears in the correct tag subset.
 		if(self.active_tag){
 			self.node.classList.add('hide')
 			// filter component data by tag_id and re-render content
@@ -866,13 +1127,27 @@ component_portal.prototype.link_record = async function(value) {
 
 /**
 * ADD_NEW_ELEMENT
-* Creates a new element in the target section and adds it to the portal
-* Called from button add
-* Create an new record in the target section and add the result locator as value to current component
-* (Set default project too based on current user privileges and assigned projects)
+* Creates a new blank record in the target section and immediately links it to this portal.
+*
+* Called by the "add" button rendered by the portal's edit view.  Combines two operations
+* in a single API call: section record creation + portal locator insertion.  The server
+* assigns the new record a section_id, writes the locator into the portal data, and
+* returns the updated portal datum so the client can refresh without a second request.
+*
+* The server also assigns the new record to the correct project based on the current
+* user's privileges and the section's project configuration.
+*
+* Unlike `link_record` (which links an *existing* record), this function always creates
+* a *new* record.  The duplicate-detection step in `link_record` does not apply here.
+*
+* (!) Respects the `data_limit` property: if the portal is already at capacity the
+* action is blocked before the API call.
+*
 * @verified 07-09-2023 Paco
-* @param {string} target_section_tipo - The section tipo where to create the new element
-* @returns {Promise<boolean>} Returns true if successful
+* @param {string} target_section_tipo - Ontology tipo of the section in which the new
+*                                       record should be created (e.g. 'rsc197').
+* @returns {Promise<boolean>} `true` after a successful create+link and refresh;
+*                             `false` if the data limit is reached or the API fails.
 */
 component_portal.prototype.add_new_element = async function(target_section_tipo) {
 
@@ -888,6 +1163,7 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 		const source = create_source(self, null)
 
 	// data
+	// Clone self.data to avoid mutating the live data before the server confirms.
 		const data = clone(self.data)
 		data.changed_data = [{
 			action	: 'add_new_element',
@@ -903,6 +1179,8 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 		}
 
 	// data_manager. create new record
+	// Short timeout (10 s) and a single retry: record creation must not be retried
+	// silently because a retry could create a duplicate record.
 		const api_response = await data_manager.request({
 			body : rqo,
 			retries : 1, // one try only
@@ -912,8 +1190,8 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 		if (api_response.result) {
 
 			// save return the datum of the component
-			// to refresh the component, inject this api_response to use as "read" api_response
-			// the build process will use it and does not re-call to API.
+			// Inject the save response as tmp_api_response so the build phase uses it
+			// directly rather than issuing a redundant API read.
 				await self.refresh({
 					destroy				: false,
 					build_autoload		: true,
@@ -933,9 +1211,21 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 
 /**
 * DATA_LIMIT_REACHED
-* Checks if the portal has reached its maximum allowed records
-* @param {object} self - Component instance
-* @returns {boolean} Returns true if limit is reached, false otherwise
+* Module-private guard that checks whether the portal has reached the maximum
+* number of linked records allowed by `context.properties.data_limit`.
+*
+* Called at the start of `link_record` and `add_new_element` before any API call.
+* If the limit is exceeded, it alerts the user (using the localised `exceeded_limit`
+* label when available) and returns `true` so the caller can bail out early.
+*
+* The check compares `self.data.entries.length` against `data_limit`, so it only
+* counts entries on the **currently loaded page**.  This is a soft client-side cap;
+* a server-side check would be needed for strict enforcement across pages.
+*
+* @param {Object} self - The component_portal instance (not `this`; called as a
+*                        module-level function, not a method).
+* @returns {boolean} `true` if the portal is at or above its limit and the action
+*                    should be blocked; `false` if the insert may proceed.
 */
 const data_limit_reached = function (self) {
 
@@ -966,9 +1256,29 @@ const data_limit_reached = function (self) {
 
 /**
 * UPDATE_PAGINATION_VALUES
-* Updates pagination values based on action
-* @param {string} action - Pagination action ('next', 'previous', 'first', 'last', 'page')
-* @returns {boolean} Returns true if successful
+* Synchronises `self.total`, `self.rqo.sqo.offset/total`, `self.data.pagination`, and
+* the paginator child instance after a local data change (insert or remove).
+*
+* This method is used when the portal wants to adjust pagination state *without*
+* making a new API call — specifically to keep the paginator showing the correct
+* page after an insert or remove operation that has already been confirmed by the
+* server.
+*
+* The `last_offset` IIFE calculates the offset of the *last page* so that after an
+* insert the paginator navigates to the page where the new entry appears (the end),
+* and after a remove it navigates to the last valid page.
+*
+* A one-shot `render_<id>` subscription triggers `self.paginator.refresh()` after the
+* next render cycle to avoid updating the paginator DOM before the portal content is
+* ready (which would cause visual artifacts).
+*
+* Note: the commented-out `self.data.pagination.total++/--` lines are intentionally
+* preserved — the live adjustment is done via `self.total` only; `self.data.pagination`
+* is synced afterwards.
+*
+* @param {string} action - 'add' increments `self.total`; 'remove' decrements it.
+*                          Any other value leaves the total unchanged.
+* @returns {boolean} Always `true`.
 */
 component_portal.prototype.update_pagination_values = function(action) {
 
@@ -997,6 +1307,8 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 
 	// last_offset
+	// Compute the offset of the last page so the paginator navigates there.
+	// Returns 0 when total or limit is 0 (no pagination needed).
 		const last_offset = (()=>{
 
 			const total	= self.total
@@ -1025,6 +1337,8 @@ component_portal.prototype.update_pagination_values = function(action) {
 		self.paginator.total	= self.total
 
 	// paginator content data update (after self update to avoid artifacts (!))
+	// Subscribe to the next render_<id> event to defer the paginator DOM refresh
+	// until the portal content has finished rendering.
 		let token
 		const render_handler = () => {
 			// remove the event to prevent multiple equal events
@@ -1045,23 +1359,36 @@ component_portal.prototype.update_pagination_values = function(action) {
 
 /**
 * FILTER_DATA_BY_TAG_ID
-* Filtered data with the tag clicked by the user
-* The portal will show only the locators for the tag selected
-* This function is fired directly to add or unlink a locator or by event defined in properties look: rsc860
-* @param object options - Filter options
-* sample
-* {
-*	"tag": {
-*		"node_name": "img",
-*		"type": "indexOut",
-*		"tag_id": "4",
-*		"state": "d",
-*		"label": "",
-*		"data": ""
-*	}
-* @param {object} options.tag - Tag object with tag_id and other properties
-* @param {string} options.tag.tag_id - Tag ID to filter by
-* @returns {Promise<object>} Returns self.render promise
+* Filters the portal's displayed entries to only those whose `tag_id` matches the
+* given tag, then re-renders the portal content without a server round-trip.
+*
+* Used in the `indexation` view: when the user clicks on an inline text tag in the
+* text editor, the portal should show only the thesaurus terms that are indexed against
+* that specific tag.  Clicking a different tag calls this function again; clicking away
+* calls `reset_filter_data`.
+*
+* The function always re-reads `full_data` from `self.datum` (the unfiltered server-
+* authoritative data) so that switching between tags does not progressively narrow the
+* dataset — without this, the second tag click would filter the already-filtered subset.
+* A deep clone of `full_data` is assigned to `self.data` to protect `self.datum` from
+* mutation.
+*
+* Also called after `link_record` / `unlink_record` when `self.active_tag` is set, so
+* the post-save display reflects the current tag filter.
+*
+* Fired by:
+*  - Direct call from `link_record` / `unlink_record` when `self.active_tag` is set.
+*  - Event handler defined in ontology properties (e.g. `rsc860` in Oral History).
+*
+* @param {Object} options               - Active-tag descriptor (stored in `self.active_tag`).
+* @param {Object} options.tag           - Tag metadata object from the text editor.
+* @param {string} options.tag.node_name - DOM node name of the tag element (e.g. 'img').
+* @param {string} options.tag.type      - Tag type string (e.g. 'indexOut').
+* @param {string} options.tag.tag_id    - The tag's unique id; used as the filter key.
+* @param {string} options.tag.state     - Tag state (e.g. 'd' for default).
+* @param {string} options.tag.label     - Display label of the tag.
+* @param {string} options.tag.data      - Additional tag data payload.
+* @returns {Promise<HTMLElement|null>} The result of `self.render({render_level:'content'})`.
 */
 component_portal.prototype.filter_data_by_tag_id = function(options) {
 
@@ -1071,6 +1398,8 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 		const tag = options.tag // object
 
 	// Fix received options from event as 'active_tag'
+	// Store the full options object as self.active_tag so subsequent operations
+	// (link_record, unlink_record, reset_filter_data) know the current filter state.
 		self.active_tag = options
 
 	// short vars
@@ -1104,14 +1433,24 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 
 /**
 * RESET_FILTER_DATA
-* Reset filtered data to the original and full server data
-* @returns {Promise<object>} Returns self.render promise
+* Clears the active tag filter and restores `self.data` to the full, unfiltered
+* server-authoritative dataset from `self.datum`.
+*
+* Counterpart of `filter_data_by_tag_id`: called when the user deselects a tag or
+* navigates away from the tag-filtered view so the full list of linked records is shown again.
+*
+* Directly assigns from `self.datum.data` (no clone needed here because there is no
+* partial mutation of the datum — self.data simply points at the matching entry).
+*
+* @returns {Promise<HTMLElement|null>} The result of `self.render({render_level:'content'})`.
 */
 component_portal.prototype.reset_filter_data = function() {
 
 	const self = this
 
 	// reset self.active_tag (important)
+	// Clearing self.active_tag tells link_record / unlink_record not to re-apply
+	// the filter after the next save.
 		self.active_tag = null
 
 	// refresh the data with the full data from datum and render portal.
@@ -1136,8 +1475,17 @@ component_portal.prototype.reset_filter_data = function() {
 
 /**
 * GET_SEARCH_VALUE
-* Gets the current search value from the portal
-* @returns {Array} Array of locators representing the search value
+* Returns a stripped copy of the portal's current entries for use as an SQO filter value.
+*
+* In search mode the portal acts as an SQO filter input; each locator the user has added
+* to the portal is sent to the server as part of the filter so the search engine can find
+* records that match any of those linked records.  Only the properties required by the
+* search engine are included; all other locator metadata (tag_id, type, matrix_id, …) is
+* intentionally stripped to keep the filter payload small and unambiguous.
+*
+* @returns {Array<Object>} Array of minimal locator objects, each with:
+*   `id`, `section_tipo`, `section_id`, `from_component_tipo`.
+*   Returns an empty array if the portal has no entries.
 */
 component_portal.prototype.get_search_value = function() {
 
@@ -1164,12 +1512,25 @@ component_portal.prototype.get_search_value = function() {
 
 /**
 * NAVIGATE
-* Refresh the portal instance with new sqo params.
-* Used to paginate and sort records
-* @param {object} options - Navigation options
-* @param {string} options.action - Navigation action
-* @param {number} [options.offset] - Page offset for 'page' action
-* @returns {Promise<boolean>} Returns true if navigation successful
+* Executes a paginator-driven navigation or sort by refreshing the portal with updated
+* SQO parameters (offset, limit, order).
+*
+* The caller supplies an async `callback` that mutates `self.rqo.sqo` (and optionally
+* `self.request_config_object.sqo`) *before* the refresh is triggered.  This approach
+* keeps the SQO mutation logic close to the event handler that initiated the navigation
+* (see the paginator event subscriptions in `build()`).
+*
+* The `container` reference — `list_body` for the table view or `content_data` for the
+* line view — receives the 'loading' CSS class during the fetch so the user sees a visual
+* indicator.  `destroy:false` is passed to `refresh` to preserve the portal node and
+* allow recovery from login-expiry scenarios without a full re-mount.
+*
+* @param {Object} options              - Navigation options.
+* @param {Function} [options.callback] - Async function that updates `self.rqo.sqo`
+*                                        before the refresh.  Called and awaited before
+*                                        fetching new data.
+* @returns {Promise<boolean>} `false` if the container node is not found in the DOM;
+*                             `true` after a successful refresh.
 */
 component_portal.prototype.navigate = async function(options) {
 
@@ -1179,11 +1540,15 @@ component_portal.prototype.navigate = async function(options) {
 		const callback = options.callback
 
 	// callback execute
+	// The callback mutates self.rqo.sqo (offset, limit, etc.) before the refresh
+	// so the API call uses the updated parameters.
 		if (callback) {
 			await callback()
 		}
 
 	// container
+	// Prefer list_body (table / default view) or fall back to content_data (line view).
+	// If neither exists the portal DOM is not in the expected state.
 		const container = self.node?.list_body // view table
 					   || self.node?.content_data // view line
 
@@ -1211,12 +1576,30 @@ component_portal.prototype.navigate = async function(options) {
 
 /**
 * DELETE_LOCATOR
-* Deletes a locator from the portal data
-* @param {object} locator - Locator complete or partial to match
-* @param {string} [locator.tag_id] - Tag ID to match
-* @param {string} [locator.type] - Relation type (e.g., DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO // dd96)
-* @param {Array<string>} ar_properties - Properties to compare locators (e.g., ['tag_id','type'])
-* @returns {Promise<object>} API request response
+* Deletes one or more portal locators that match a partial locator specification.
+*
+* Unlike `unlink_record` (which removes by the locator's `id`) this function removes by
+* **property match**: the server compares the stored locators against the `locator` object
+* using only the properties listed in `ar_properties`, so it is suitable for bulk removes
+* (e.g. delete all indexation locators for a given `tag_id` + `type` combination).
+*
+* Uses the `dd_component_portal_api` action handler (`action: 'delete_locator'`) directly
+* via `data_manager.request`, bypassing the normal `change_value` path.  The caller is
+* responsible for refreshing the portal after this call.
+*
+* Note: the `source` comments inside the body still reference 'component_text_area'; that
+* is a copy-paste artefact in the original code — the actual source values are correctly
+* taken from `self` (this component_portal instance).
+*
+* @param {Object} locator              - Partial locator used as the match template.
+*                                        Only the properties named in `ar_properties`
+*                                        are compared by the server.
+* @param {string} [locator.tag_id]     - Tag id to match (indexation use case).
+* @param {string} [locator.type]       - Relation type to match
+*                                        (e.g. DD_TIPOS.DEDALO_RELATION_TYPE_INDEX_TIPO // dd96).
+* @param {Array<string>} ar_properties - Names of the locator properties to use for
+*                                        matching, e.g. ['tag_id', 'type'].
+* @returns {Promise<Object>} Raw `data_manager.request` response from the API.
 */
 component_portal.prototype.delete_locator = function(locator, ar_properties) {
 
@@ -1246,15 +1629,28 @@ component_portal.prototype.delete_locator = function(locator, ar_properties) {
 
 /**
 * SORT_DATA
-* Create ad saves new sorted values
-* Used by on_drop method
-* @see on_drop
+* Persists a manual drag-and-drop reorder of portal entries.
+*
+* Called by `on_drop` in `drag_and_drop.js` after the user drops a row at a new
+* position.  Sends a `sort_data` changed_data action to the server, which reorders
+* the locator array in storage and returns the updated data.
+*
+* Clears `self.column_order_state` (FEJS-02) because a manual reorder supersedes any
+* previously applied column sort — the advisory sort indicator in the column header
+* would be misleading after a drag reorder.
+*
+* Uses `refresh:false` in `change_value` then manually calls `self.refresh` with the
+* API response to avoid an extra round-trip.
+*
+* @see on_drop (drag_and_drop.js)
 * @verified 07-09-2023 Paco
-* @param {object} options - Sort options
-* @param {object} options.value - Value to sort
-* @param {string} options.source_key - Source key
-* @param {string} options.target_key - Target key
-* @returns {Promise<object>} API request response
+* @param {Object} options              - Reorder parameters.
+* @param {Object} options.value        - The locator object that was dragged.
+* @param {string|number} options.source_key - The position key of the dragged entry
+*                                             before the drop.
+* @param {string|number} options.target_key - The position key of the drop target
+*                                             (the entry the dragged item was dropped onto).
+* @returns {Promise<Object>} Raw API response from `change_value`.
 */
 component_portal.prototype.sort_data = async function(options) {
 
@@ -1298,14 +1694,30 @@ component_portal.prototype.sort_data = async function(options) {
 
 /**
 * SORT_BY_COLUMN
-* Persistently reorders the full portal data (all locators, across pagination)
-* by the value of the given column component in the target section.
-* The new order is resolved and saved in the server (changed_data action 'sort_by_column').
-* Available when the ontology property 'sort_by_column' is enabled.
-* @see ui.add_column_order_set
-* @param {object} column - columns_map item (uses column.tipo)
-* @param {string} direction - 'ASC'|'DESC'
-* @returns {Promise<object>} API request response
+* Persistently reorders the **full** portal locator array (all pages) by the resolved
+* value of a target-section component, then saves the new order to the database.
+*
+* The server sorts the set of linked `section_id`s by querying the target section's
+* matrix for the named `component_tipo` value, ordered ASC/DESC with NULLS LAST, and
+* writes the resulting ordered locator array back to the portal's relation data.  This
+* is a real data change and is recorded by Time Machine.
+*
+* Available only when `properties.sort_by_column` is enabled in the ontology node
+* (see `component_portal.md` for configuration details).
+*
+* `self.column_order_state` records the last successfully applied column sort as an
+* advisory indicator so the column header can show a sort arrow.  It is cleared to
+* `null` by `sort_data` when the user does a drag-and-drop reorder that overrides the
+* column order.
+*
+* (!) `value: null` in `changed_data` is intentional: the client's `update_data_value`
+* skips null-value items with no id, so only the server performs the actual reorder.
+*
+* @see ui.add_column_order_set (render files) for column-header sort button setup.
+* @param {Object} column          - A `columns_map` entry (from `get_columns_map`).
+*                                   Only `column.tipo` is used by the server.
+* @param {string} direction       - Sort direction: 'ASC' or 'DESC'.
+* @returns {Promise<Object>} Raw API response from `change_value`.
 */
 component_portal.prototype.sort_by_column = async function(column, direction) {
 
@@ -1351,9 +1763,17 @@ component_portal.prototype.sort_by_column = async function(column, direction) {
 
 /**
 * GET_TOTAL
-* Gets the total number of records in the portal
-* Total is resolved in server and comes in data, so it's not necessary call to server to get it
-* @returns {Promise<number>} Returns self.total
+* Returns the total number of records in the portal (across all pages).
+*
+* `self.total` is set from `data.pagination.total` during `build()`, where the server
+* provides the authoritative count alongside each data page.  No API call is needed;
+* the value is already in memory.
+*
+* The method is async to satisfy a uniform interface across components that may need
+* to compute their total asynchronously (e.g. via a count query).
+*
+* @returns {Promise<number|null>} The total record count, or `null` if the portal has
+*                                  not been built yet.
 */
 component_portal.prototype.get_total = async function() {
 
@@ -1366,9 +1786,27 @@ component_portal.prototype.get_total = async function() {
 
 /**
 * UNLINK_RECORD
-* Removes a record from the portal
-* @param {object} locator - Unlink options
-* @returns {Promise<boolean>} Returns true if successful
+* Removes a locator from the portal by its `id` (the per-item counter id), persists
+* the change via the API, and refreshes the portal.
+*
+* The `remove_dialog` callback is supplied as `() => true` (auto-confirm) because the
+* delete confirmation was already shown to the user by the remove button handler that
+* published the `initiator_unlink_<id>` event.  Passing the callback here prevents a
+* second confirmation dialog from appearing.
+*
+* Publishes `remove_element_<id>` after the refresh so that any sibling UI elements
+* (e.g. an open picker modal showing the now-unlinked record) can update themselves.
+*
+* If the portal is in indexation mode with an active tag filter, the filter is
+* re-applied after the refresh so the display remains consistent.
+*
+* @param {Object} locator           - The locator to remove.  Must have `id` set (the
+*                                     portal item's per-record counter id, not the section_id).
+* @param {number|string} locator.id - Per-item counter id used to identify the entry to remove.
+* @param {string} [locator.section_id] - Used only as the label in the delete dialog
+*                                        (passed as `label` to `change_value`).
+* @returns {Promise<boolean>} `false` if the API call fails or the user cancelled;
+*                             `true` after a successful unlink and refresh.
 */
 component_portal.prototype.unlink_record = async function(locator) {
 
@@ -1382,8 +1820,9 @@ component_portal.prototype.unlink_record = async function(locator) {
 		})]
 
 	// change_value (implies saves too)
-	// remove the remove_dialog it's controlled by the event of the button that call
-	// prevent the double confirmation
+	// The remove confirmation dialog is controlled by the button that called this function
+	// (via the initiator_unlink event); supplying remove_dialog:()=>true here prevents
+	// a second confirmation from appearing.
 		const api_response = await self.change_value({
 			changed_data	: changed_data,
 			refresh			: false,
@@ -1406,6 +1845,7 @@ component_portal.prototype.unlink_record = async function(locator) {
 		})
 
 	// check if the caller has active a tag_id
+	// Re-apply the tag filter so the portal does not show entries from other tags.
 		if(self.active_tag){
 			self.node.classList.add('hide')
 			// filter component data by tag_id and re-render content
@@ -1416,6 +1856,8 @@ component_portal.prototype.unlink_record = async function(locator) {
 		}
 
 	// event to update the DOM elements of the instance
+	// Allows external listeners (e.g. picker modals, sibling portals) to react
+	// to the removal without polling or re-building.
 		event_manager.publish('remove_element_'+self.id, locator.id)
 
 
@@ -1426,12 +1868,28 @@ component_portal.prototype.unlink_record = async function(locator) {
 
 /**
 * DELETE_LINKED_RECORD
-* Deletes a record that is linked in the portal
-* @param {object} options - Delete options
-* @param {object} options.locator - The locator of the record to delete
-* @param {string} options.locator.section_tipo - Section tipo
-* @param {string|number} options.locator.section_id - Section ID
-* @returns {Promise<boolean>} Returns delete_section_result
+* Hard-deletes a target section record that is linked in this portal, then returns
+* the result of the section's `delete_section` call.
+*
+* This is a destructive operation distinct from `unlink_record`: it permanently
+* deletes the **target record** itself (not just the portal's locator).  Calling this
+* requires write/delete permission on the *target* section (REL-06), not just on the
+* host record.
+*
+* Implementation: a lightweight section instance is spun up in 'list' mode (`id_variant:
+* 'delete_section'` ensures a unique instance key so it does not collide with any
+* existing editor instance for the same section_id).  The section's `delete_section`
+* method handles the SQO-based record lookup, confirmation dialog, and diffusion
+* propagation.  The temporary section instance is destroyed immediately after.
+*
+* `delete_diffusion_records` defaults to `true` (propagates to the diffusion/MariaDB
+* layer) unless overridden via `self.delete_diffusion_records`.
+*
+* @param {Object} options                - Delete parameters.
+* @param {string} options.section_tipo   - Ontology tipo of the target section.
+* @param {string|number} options.section_id - Record id of the target record to delete.
+* @returns {Promise<boolean|Object>} The result of `section.delete_section()`; typically
+*                                    `false` if the user cancelled or `true` on success.
 */
 component_portal.prototype.delete_linked_record = async function(options) {
 
@@ -1443,10 +1901,12 @@ component_portal.prototype.delete_linked_record = async function(options) {
 		// const caller_dataframe	= options.caller_dataframe || null
 
 	// delete_diffusion_records
+	// Defaults to true so that deleting a linked record also cleans up its diffusion entries.
 		const delete_diffusion_records = self.delete_diffusion_records ?? true
 
 	// create the instance of the section called by the row of the portal,
 	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
+	// 'id_variant: delete_section' prevents collision with any live editor instance for the same record.
 		const instance_options = {
 			model			: 'section',
 			tipo			: section_tipo,
@@ -1491,12 +1951,35 @@ component_portal.prototype.delete_linked_record = async function(options) {
 
 /**
 * EDIT_RECORD_HANDLER
-* Opens a record in edit mode in a new window
-* @param {object} options - Edit options
-* @param {object} options.locator - The locator of the record to edit
-* @param {string} options.locator.section_tipo - Section tipo
-* @param {string|number} options.locator.section_id - Section ID
-* @returns {Promise<object>} Returns new_window object
+* Opens a linked target record for viewing/editing in a separate browser window.
+*
+* The URL and window name depend on whether the target record belongs to a Dédalo
+* section or an external system (e.g. Zenon bibliographic catalog):
+*
+*   - **External engine** (`api_engine !== 'dedalo'`): opens `api_config.ui_base_url +
+*     section_id` directly.  The portal has no way to refresh after an external-engine
+*     edit, so no `on_blur` handler is registered.
+*
+*   - **Dédalo engine**: opens the record's edit page via `DEDALO_CORE_URL/page/?tipo=…`.
+*     `session_save: false` prevents the new window from overwriting the calling
+*     window's section navigation session.  The `on_blur` handler fires when the edit
+*     window loses focus (i.e. the user returns to the original window) and triggers
+*     a portal refresh so changes are reflected immediately.
+*
+* The `fn_window_blur` / `get_edit_caller` inner function climbs the caller chain to
+* find the nearest edit-mode component instance to refresh.  It was deliberately limited
+* to 2 levels (self → caller → caller.caller) to avoid an infinite recursion that was
+* observed in some tool-hosted portal configurations (see comment dated 21-12-2023).
+*
+* Publishes `button_edit_click` so the mosaic-view modal can close itself when the
+* user navigates to a full-screen edit.
+*
+* @param {Object} options              - Edit parameters.
+* @param {string} options.section_tipo - Ontology tipo of the target section.
+* @param {string|number} options.section_id - Record id of the target record.
+* @returns {Promise<Window|undefined>} The native `Window` object of the opened window,
+*                                      or `undefined` if no `engine_request_config` is
+*                                      found for the given `section_tipo`.
 */
 component_portal.prototype.edit_record_handler = async function(options) {
 
@@ -1507,6 +1990,8 @@ component_portal.prototype.edit_record_handler = async function(options) {
 		const section_id	= options.section_id
 
 	// engine_request_config. Get current section engine
+	// Determine which API engine owns this section_tipo by matching against the
+	// sqo.section_tipo list in each request_config entry.
 		const request_config		= self.context.request_config
 		const engine_request_config	= request_config.find(el => {
 			const sections_tipo = el.sqo.section_tipo.map(item => {
@@ -1556,6 +2041,9 @@ component_portal.prototype.edit_record_handler = async function(options) {
 			const fn_window_blur = function() {
 				// refresh. Get the proper element to refresh based on some criteria.
 				// Note that portals in text view are not self refresh able
+				// Climbs the caller chain to find the nearest edit-mode component to refresh.
+				// Capped at 2 levels to avoid infinite recursion in tool-hosted portals
+				// (see removed recursive branch below, dated 21-12-2023).
 				function get_edit_caller(instance) {
 					if(instance && instance.mode==='edit' && instance.type==='component') {
 						return instance
@@ -1603,9 +2091,15 @@ component_portal.prototype.edit_record_handler = async function(options) {
 
 /**
 * FOCUS_FIRST_INPUT
-* Sets focus to the first input element in the portal
-* Used to prevent default behavior
-* @returns {boolean} Returns true if focus was set
+* No-op focus stub for the portal component.
+*
+* `common` calls `focus_first_input()` on the active component when the user
+* activates a record.  Most components use this to move keyboard focus to their
+* first text input.  Portals have no meaningful single input to focus — the
+* autocomplete is opened explicitly by a button click — so this method simply
+* returns `true` to satisfy the interface without changing focus.
+*
+* @returns {boolean} Always `true`.
 */
 component_portal.prototype.focus_first_input = function() {
 
@@ -1616,11 +2110,32 @@ component_portal.prototype.focus_first_input = function() {
 
 /**
 * OPEN_ONTOLOGY_WINDOW
-* Opens the ontology/thesaurus window for term selection
-* Unified open ontology window method used to relate terms or search a target term in tree view (area_ontology)
-* @param {string} thesaurus_mode - Thesaurus mode ('relation', 'search', etc.)
-* @param {Array<string>} [search_tipos] - Array of tipos to search for
-* @returns {object} tree_window - Instance of the created/recycled window
+* Opens the ontology (area_ontology) or thesaurus (area_thesaurus) picker window and
+* returns a reference to it.
+*
+* The opened window listens for a `link_term_<caller_id>` event (published by the
+* thesaurus/ontology tree when the user clicks a term's link button); that event is
+* handled by `link_term_handler` registered in `init()`.
+*
+* Routing logic:
+*  - If the portal's `section_tipo` has `section_id === '0'` (i.e. an ontology node),
+*    the ontology area (`tipo: 'dd5'`) is opened with optional `search_tipos` to
+*    highlight specific nodes.
+*  - Otherwise, the thesaurus area (`tipo: 'dd100'`) is opened with:
+*    - `hierarchy_sections` — the target section tipo(s) from `self.rqo.sqo.section_tipo`,
+*      telling the thesaurus which section branches to show.
+*    - `hierarchy_terms` — an optional `fixed_filter` of type `hierarchy_terms` from the
+*      portal's `source.request_config[0].sqo.fixed_filter`, restricting which top-level
+*      thesaurus branches are shown.
+*
+* The window name `'tree_window'` is fixed so that re-clicking the button reuses the
+* existing window (browser brings it to front) instead of opening a duplicate.
+*
+* @param {string} thesaurus_mode          - Mode passed as a URL parameter to the opened
+*                                           window (e.g. 'relation', 'search').
+* @param {Array<string>} [search_tipos]   - Array of ontology tipos to highlight/search in
+*                                           area_ontology; ignored in area_thesaurus mode.
+* @returns {Window} The native `Window` object for the opened/reused picker window.
 */
 component_portal.prototype.open_ontology_window = function (thesaurus_mode, search_tipos) {
 
@@ -1630,6 +2145,7 @@ component_portal.prototype.open_ontology_window = function (thesaurus_mode, sear
 		const url_vars = {}
 
 		// tipo
+		// Distinguish between ontology nodes (section_id='0') and thesaurus records.
 		const is_ontology	= get_section_id_from_tipo(self.section_tipo) === '0'
 		const tipo			= is_ontology
 			? 'dd5' // ONTOLOGY_TIPO
@@ -1653,12 +2169,15 @@ component_portal.prototype.open_ontology_window = function (thesaurus_mode, sear
 			// only for area_thesaurus
 
 			// hierarchy_sections. Add to url if present
+			// Informs the thesaurus which section tipo branches should be shown as roots.
 			const hierarchy_sections = self.rqo.sqo.section_tipo || null
 			if (hierarchy_sections) {
 				url_vars.hierarchy_sections = JSON.stringify(hierarchy_sections)
 			}
 
 			// hierarchy_terms optional. Add to url if present
+			// Extracted from properties.source.request_config[0].sqo.fixed_filter items
+			// whose source is 'hierarchy_terms'.  Restricts visible top-level branches.
 			const hierarchy_terms = self.context?.properties?.source
 			&& self.context.properties.source.request_config
 			&& self.context.properties.source.request_config[0]
@@ -1672,6 +2191,8 @@ component_portal.prototype.open_ontology_window = function (thesaurus_mode, sear
 		}
 
 		// caller_id
+		// Passed to the tree window so it knows which `link_term_<id>` event to publish
+		// when the user confirms a term selection.
 		const caller_id = self.id || null
 		if(caller_id){
 			url_vars.initiator = JSON.stringify(caller_id)
@@ -1681,6 +2202,7 @@ component_portal.prototype.open_ontology_window = function (thesaurus_mode, sear
 	const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
 
 	// open window
+	// Fixed name 'tree_window' so the browser reuses an existing window if already open.
 	const tree_window = open_window({
 		url		: url,
 		name	: 'tree_window',
@@ -1696,9 +2218,21 @@ component_portal.prototype.open_ontology_window = function (thesaurus_mode, sear
 
 /**
 * IS_EMPTY
-* Checks if the portal has any data
-* Used in search mode for highlight the component wrapper when has value
-* @returns {boolean} Returns true if portal is empty
+* Returns whether the portal currently has no linked entries.
+*
+* Used primarily in search mode: when the portal is part of an SQO filter, the
+* component wrapper receives an 'active' / highlighted CSS class only when the user
+* has picked at least one locator.  `is_empty` drives that highlight logic.
+*
+* Checks `this.data.entries.length` first (the fast path), then verifies that
+* `entries[0]` is truthy as a safety guard against sparse arrays or entries containing
+* falsy stub values.
+*
+* Note: only the currently loaded pagination page is inspected; an empty page does
+* not necessarily mean the full portal dataset is empty across all pages.
+*
+* @returns {boolean} `true` if the portal has no entries on the current page;
+*                    `false` if at least one entry exists and is truthy.
 */
 component_portal.prototype.is_empty = function() {
 
