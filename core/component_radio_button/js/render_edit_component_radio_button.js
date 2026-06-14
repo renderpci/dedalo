@@ -89,7 +89,7 @@ export const get_content_data_edit = function(self) {
 			const data_value = entries[i]
 			const current_datalist_item	= datalist.find(el =>
 				el.value &&
-				el.value.section_id==data_value.section_id &&
+				String(el.value.section_id)===String(data_value.section_id) &&
 				el.value.section_tipo===data_value.section_tipo
 			)
 			if(current_datalist_item){

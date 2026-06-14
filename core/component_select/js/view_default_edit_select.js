@@ -180,7 +180,7 @@ const get_content_value = (i, current_value, self) => {
 					if (parsed_value) {
 						const datalist_item = datalist.find(el =>
 							el.value &&
-							el.value.section_id==parsed_value.section_id &&
+							String(el.value.section_id)===String(parsed_value.section_id) &&
 							el.value.section_tipo==parsed_value.section_tipo
 						)
 						if (datalist_item) {
