@@ -2,17 +2,56 @@
 
 /**
  * CLASS INSTALL_DATA_SEEDER
- * Encapsulates seeding of default data: root user,
- * main project, profiles, and test record.
+ * Seeds the mandatory bootstrap rows needed for a fresh Dédalo v7 installation.
  *
- * @package Dedalo
+ * Responsibilities:
+ * - Inserts the root user (section_id -1, section_tipo 'dd128') into matrix_users.
+ * - Inserts the default "General project" (section_id 1, section_tipo 'dd153') into matrix_projects.
+ * - Inserts the two baseline profiles "Admin" (id 1) and "User" (id 2) into matrix_profiles,
+ *   both under section_tipo 'dd234'.
+ * - Inserts a minimal fixture row into matrix_test that unit tests rely on.
+ *
+ * Each method truncates its target table and resets the PK sequence before inserting, so
+ * these operations are idempotent when re-run against a blank install database.
+ *
+ * All SQL is executed against the install database connection obtained from
+ * install_config_manager::get_db_install_conn() — NOT the production connection.
+ *
+ * Data is stored in the Dédalo v7 typed-column matrix schema:
+ *   - data     (JSONB) — section-level metadata (label, dates, user ids)
+ *   - relation (JSONB) — outbound locators keyed by from_component_tipo
+ *   - string   (JSONB) — string-type component values (input_text, password), keyed by tipo
+ *   - date     (JSONB) — date-type component values, keyed by tipo
+ *   - meta     (JSONB) — per-component item counts, keyed by tipo
+ *
+ * This class has no constructor (static utility). It is called during installation
+ * and collaborates with install_config_manager for config and connection details.
+ *
+ * @package Dédalo
  * @subpackage Install
  */
 class install_data_seeder {
 
 	/**
 	* CREATE_ROOT_USER
-	* @return object $response
+	* Truncates matrix_users, resets its PK sequence, and inserts the built-in root
+	* user with section_id -1 (a sentinel value that bypasses normal save guards).
+	*
+	* The inserted row encodes:
+	*   - string['dd132']: username = 'root' (lang lg-nolan, language-neutral)
+	*   - string['dd133']: password array is intentionally left empty — the actual
+	*     encrypted password is written later by install_config_manager::set_root_pw().
+	*   - relation['dd131']: points to project section_id=1 (the main project, dd64).
+	*   - relation['dd244']: points to profile section_id=2 (the "User" profile, dd64).
+	*   - relation['dd1725']: points to profile section_id=2 in the profiles table (dd234).
+	*   - relation['dd200'/'dd197']: self-referencing locators (created_by / modified_by).
+	*   - date['dd199'/'dd201']: created_date / modified_date as structured date objects.
+	*
+	* (!) The $exec flag is hard-coded to true; it was originally a dry-run toggle and
+	*     is never set false in production. Do not remove it — it serves as a pattern
+	*     for future dry-run support.
+	*
+	* @return object $response - stdClass with bool result and string msg
 	*/
 	public static function create_root_user() : object {
 
@@ -27,6 +66,7 @@ class install_data_seeder {
 
 		// v7 schema: data distributed across typed columns
 		// data column: section-level metadata
+		// 'label' is the human-readable table name shown in DB management views; not a user-visible field
 			$data = json_encode((object)[
 				'label'             => 'Usuarios',
 				'section_tipo'      => 'dd128',
@@ -36,6 +76,10 @@ class install_data_seeder {
 				'modified_by_user_id' => -1
 			]);
 		// relation column: locators grouped by from_component_tipo
+		// Each locator is an object with: id (position in the component array), type (relation type ontology term),
+		// section_id (target record), section_tipo (target section's ontology tipo), from_component_tipo (the component owning this relation).
+		// dd131 = projects membership; dd200 = created_by; dd197 = modified_by;
+		// dd244 = profile (via dd64 projects table); dd1725 = profile (via dd234 profiles table)
 			$relation = json_encode((object)[
 				'dd131' => [
 					(object)['id' => 1, 'type' => 'dd151', 'section_id' => '1', 'section_tipo' => 'dd64', 'from_component_tipo' => 'dd131']
@@ -54,6 +98,7 @@ class install_data_seeder {
 				]
 			]);
 		// string column: string values (component_input_text, component_password) with id+value+lang wrapper
+		// dd132 = username; dd133 = password — empty array intentionally: password is written later by set_root_pw()
 			$string = json_encode((object)[
 				'dd132' => [
 					(object)['id' => 1, 'value' => 'root', 'lang' => 'lg-nolan']
@@ -61,6 +106,8 @@ class install_data_seeder {
 				'dd133' => [] // password is null by default, set via set_root_pw
 			]);
 		// date column: date values with id property
+		// 'time' is a Dédalo internal epoch (seconds since a custom epoch, not Unix epoch)
+		// dd199 = created_date; dd201 = modified_date — both set to the same instant on initial seed
 			$date = json_encode((object)[
 				'dd199' => [
 					(object)['id' => 1, 'start' => (object)['day' => 30, 'hour' => 12, 'time' => 64772914091, 'year' => 2022, 'month' => 9, 'minute' => 8, 'second' => 11]]
@@ -70,6 +117,8 @@ class install_data_seeder {
 				]
 			]);
 		// meta column: counters per component tipo
+		// Each entry tracks how many items exist for a given component in this section row.
+		// The count drives pagination, display-order resolution, and next-id generation.
 			$meta = json_encode((object)[
 				'dd131'  => [(object)['count' => 1]],
 				'dd200'  => [(object)['count' => 1]],
@@ -80,6 +129,10 @@ class install_data_seeder {
 				'dd199'  => [(object)['count' => 1]],
 				'dd201'  => [(object)['count' => 1]]
 			]);
+		// TRUNCATE + SEQUENCE RESET ensures idempotency: re-running this during a reinstall
+		// always produces the same row with the same id and section_id values.
+		// (!) section_id is explicitly set to '-1' rather than relying on the sequence,
+		//     because -1 is a hard-coded sentinel used throughout the codebase to identify root.
 		$sql = '
 			TRUNCATE "matrix_users";
 			ALTER SEQUENCE matrix_users_id_seq RESTART WITH 1;
@@ -90,6 +143,8 @@ class install_data_seeder {
 		if ($exec) {
 			$result   = pg_query($db_install_conn, $sql);
 			if (!$result) {
+				// (!) Error message label says "matrix_counter" — this is a copy-paste artifact;
+				//     the operation targets matrix_users, not matrix_counter.
 				$msg = " Error on db execution (matrix_counter): ".pg_last_error($db_install_conn);
 				debug_log(__METHOD__.$msg, logger::ERROR);
 				$response->msg = $msg;

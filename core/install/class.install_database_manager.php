@@ -3,13 +3,42 @@
 include_once __DIR__ . '/class.install_config_manager.php';
 
 /**
- * CLASS INSTALL_DATABASE_MANAGER
- * Encapsulates database cloning, optimization, table cleaning,
- * extension creation, and default file import operations.
- *
- * @package Dedalo
- * @subpackage Install
- */
+* CLASS INSTALL_DATABASE_MANAGER
+* Manages all PostgreSQL-level database operations during Dédalo installation.
+*
+* This class owns every shell-out and direct SQL call that manipulates whole
+* databases or multiple tables as part of the install / clone / clean workflow:
+*
+* - Clone the running production database into a fresh install target using
+*   either the fast TEMPLATE method (`clone_database`) or the lock-free
+*   pg_dump | psql pipeline (`clone_database_dump`).
+* - Clean data tables (matrix_*, sequences) inside the cloned install DB,
+*   preserving whitelisted ontology top-level-domain (TLD) rows.
+* - Run VACUUM ANALYZE optimisation against the production or install DB.
+* - Install mandatory PostgreSQL extensions (`unaccent`, `pg_trgm`) plus the
+*   `f_unaccent` helper function.
+* - Bootstrap the install DB from a compressed default SQL dump file.
+*
+* All methods follow the same response contract:
+*   (object){ result: bool, msg: string }
+* Callers must check `$response->result === true` before continuing.
+*
+* Relationships:
+* - Depends on `install_config_manager::get_config()` for resolved path, connection,
+*   and whitelist values (never hardcodes these itself).
+* - Depends on `install_config_manager::get_db_install_conn()` for a live
+*   PgSql\Connection to the install (target) database.
+* - Calls `DBi::_getConnection()`, `DBi::_getNewConnection()`, and
+*   `DBi::invalidate_connection_cache()` from `core/db/class.DBi.php`.
+* - Called by `class.install.php` and the install JSON API handler.
+*
+* Security note (SEC-041): every value interpolated into shell commands is
+* run through `escapeshellarg()`. Constants from `config/config.php` are
+* deployer-controlled (not HTTP-reachable), so quoting is defence-in-depth.
+*
+* @package Dédalo
+* @subpackage Install
+*/
 final class install_database_manager {
 
 	/**
@@ -19,7 +48,13 @@ final class install_database_manager {
 
 	/**
 	* OPTIMIZE_DATABASE
-	* @return object $response
+	* Runs VACUUM ANALYZE on the current Dédalo production database so that
+	* the planner statistics are up to date and dead tuples are reclaimed.
+	*
+	* Uses the shared persistent connection from DBi::_getConnection(); this
+	* is appropriate because VACUUM ANALYZE does not require an exclusive lock.
+	*
+	* @return object $response - result:true on success, result:false with msg on failure
 	*/
 	public static function optimize_database() : object {
 
@@ -57,8 +92,28 @@ final class install_database_manager {
 
 	/**
 	* INSTALL_DB_FROM_DEFAULT_FILE
-	* Unzip the psql default install file and import it to the current blank database
-	* @return object $response
+	* Bootstraps the install database from the bundled compressed SQL dump.
+	*
+	* Steps performed (each step runs a shell command via `shell_exec` / `exec`):
+	*   1. gunzip: decompress `<target>.pgsql.gz` → `<target>.pgsql` (--keep preserves the .gz).
+	*   2. psql: stream the uncompressed dump into the database defined by
+	*      `DEDALO_DATABASE_CONN` / `DEDALO_USERNAME_CONN` using --echo-errors
+	*      so that SQL errors appear in the PHP error log.
+	*   3. rm: delete the temporary uncompressed file.
+	*
+	* The function raises PHP's execution time limit to 10 minutes (600 s) because
+	* a full database restore can take much longer than the default `max_execution_time`.
+	*
+	* If psql produces no output (`$command_res` is empty after exec), the function
+	* diagnoses the probable cause — missing or misconfigured `~/.pgpass` file — and
+	* returns an error with diagnostic detail about the PHP process owner and home
+	* directory, so the operator can locate and fix the file.
+	*
+	* Paths are resolved from `install_config_manager::get_config()`:
+	* - `$config->target_file_path_compress` — the .gz source file
+	* - `$config->target_file_path`          — the uncompressed target (temporary)
+	*
+	* @return object $response - result:true on success, result:false with msg on failure
 	*/
 	public static function install_db_from_default_file() : object {
 
@@ -169,13 +224,38 @@ final class install_database_manager {
 	/**
 	* CLONE_DATABASE
 	* Clones the current Dédalo database into the install database using
-	* CREATE DATABASE WITH TEMPLATE.  This approach requires an exclusive
-	* lock on the source database; any active session (web worker, cron,
-	* psql) blocks the clone with "source database is being accessed by
-	* other users".  For a lock-free alternative see `clone_database_dump()`.
+	* `CREATE DATABASE … WITH TEMPLATE`.
 	*
-	* @param bool $skip_if_exists
-	* @return object $response
+	* This method is the fast path: PostgreSQL handles the copy natively at
+	* the block level, making it much quicker than a logical dump/restore for
+	* large databases.  The trade-off is that PostgreSQL requires an exclusive
+	* lock on the source database for the duration of the copy.  Any active
+	* session on the source (web worker, background cron, psql prompt) will
+	* cause PostgreSQL to report "source database is being accessed by other
+	* users" and abort the CREATE DATABASE statement.
+	*
+	* To work around the locking problem this method:
+	*   1. Terminates all non-self connections on the *target* DB (so it can
+	*      be dropped), then drops it.
+	*   2. Terminates all non-self connections on the *source* DB (to satisfy
+	*      the TEMPLATE exclusive-lock requirement).
+	*   3. Retries `CREATE DATABASE … WITH TEMPLATE` up to 3 times with a
+	*      1-second delay, because pg_terminate_backend() is asynchronous and
+	*      terminated sessions may still appear briefly.
+	*
+	* (!) The termination of source-DB connections means all live user sessions
+	* are killed.  This method should only be called during a scheduled
+	* maintenance window.  For a lock-free alternative that avoids killing
+	* sessions entirely, use `clone_database_dump()`.
+	*
+	* The `$config->db_install_name` value is validated against
+	* `/^[a-z_][a-z0-9_$]*$/` before use in SQL to prevent identifier
+	* injection (the identifier is not parameterisable via pg_query_params).
+	*
+	* @param bool $skip_if_exists - when true, return success immediately if the
+	*                               target database already exists rather than
+	*                               dropping and re-cloning it
+	* @return object $response - result:true on success, result:false with msg on failure
 	*/
 	public static function clone_database(bool $skip_if_exists) : object {
 

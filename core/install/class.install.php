@@ -9,11 +9,37 @@ include_once __DIR__ . '/class.install_data_seeder.php';
 
 /**
 * INSTALL
-* Facade class for install operations. Delegates to specialized manager classes.
-* Extends common for API compatibility (install_json.php, dd_utils_api).
+* Façade entry-point for all Dédalo installation and upgrade operations.
 *
-* @package Dedalo
-* @subpackage Install
+* Responsibilities:
+* - Exposes the single public API surface consumed by install_json.php and
+*   dd_utils_api (the install API controller), keeping callers decoupled from
+*   the underlying manager hierarchy.
+* - Delegates every real operation to one of five specialised managers:
+*     install_config_manager   – config resolution, DB status, install-status file
+*     install_database_manager – DB cloning, cleaning, extensions, optimization
+*     install_ontology_manager – ontology stripping, recovery file export/import
+*     install_hierarchy_manager – hierarchy file discovery, import, activation
+*     install_data_seeder      – seeding root user, projects, profiles, test record
+* - Extends `common` to satisfy the API compatibility contract (same constructor
+*   shape, set_tipo / set_lang / set_mode / set_model calls) that install_json.php
+*   and dd_utils_api expect from every handler object.
+* - Provides `get_structure_context()`, which is the standard method the JS client
+*   calls to build the installation wizard UI (pre-flight checks, DB status,
+*   version info, available hierarchy files).
+*
+* Lifecycle of a fresh installation (typical call sequence):
+*  1. get_structure_context()      – pre-flight: filesystem, DB, PHP version
+*  2. install_db_from_default_file() – load the bundled .pgsql.gz seed database
+*  3. set_root_pw($options)         – set the root user password
+*  4. install_hierarchies($options) – activate the selected knowledge hierarchies
+*  5. set_install_status('installed') / to_update() – seal the installation
+*
+* Lifecycle of building a distributable install image (developer / CI):
+*  build_install_version()          – clone → clean → seed → pg_dump → .pgsql.gz
+*
+* @package Dédalo
+* @subpackage Core
 */
 class install extends common {
 
@@ -22,8 +48,10 @@ class install extends common {
 	*/
 
 	/**
-	 * Database name used for initial installation and setup.
-	 * Contains the default database for creating Dédalo tables and ontology.
+	 * Name of the ephemeral PostgreSQL database used during install-image creation.
+	 * The current production database is cloned into this database, stripped of
+	 * user data, seeded with defaults, and then pg_dumped to the distributable
+	 * compressed file.  Mirrored from install_config_manager::$db_install_name.
 	 * @var string $db_install_name
 	 */
 	public static string $db_install_name = 'dedalo7_install';
@@ -32,7 +60,14 @@ class install extends common {
 
 	/**
 	* __CONSTRUCT
-	* @param string $mode = 'install'
+	* Initialises the install façade as an API-compatible handler.
+	*
+	* Sets tipo to 'dd1590' (the Dédalo install section ontology node), language to
+	* the configured data language, mode to the supplied $mode, and model to
+	* 'install'.  These values mirror the shape expected by install_json.php and
+	* dd_utils_api so that the install object behaves like any other common handler.
+	*
+	* @param string $mode [= 'install'] - Operating mode passed to common::set_mode().
 	*/
 	public function __construct(string $mode='install') {
 
@@ -48,9 +83,32 @@ class install extends common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
-	* @param int $permissions = 1
-	* @param bool $add_request_config = false
-	* @return dd_object $dd_object
+	* Builds the dd_object payload the install wizard JS client consumes to render
+	* its UI and decide which setup steps to show.
+	*
+	* Execution is guarded by a cascade of early-return checks; each successive
+	* check is only reached when all previous ones passed:
+	*  1. Already-installed guard – if DEDALO_INSTALL_STATUS === 'installed', return
+	*     a minimal dd_object immediately (no further checks needed).
+	*  2. Filesystem / permissions pre-flight via dd_init_test.php – missing
+	*     directories, wrong permissions, etc.  A false result stops execution and
+	*     logs at ERROR level; the partial properties object is still returned so the
+	*     UI can display the specific failure message.
+	*  3. Database configuration and connection check (install_config_manager::get_db_status()).
+	*     A false global_status stops execution.
+	*  4. If all guards pass, assembles the full properties object containing:
+	*       - dedalo_entity, db_config (name, user, host, port, socket)
+	*       - db_data_version (array from get_current_data_version(), or null)
+	*       - version string (DEDALO_VERSION + DEDALO_BUILD)
+	*       - target_file_path_compress and target_file_path_exists flag
+	*       - hierarchy_files_dir_path, hierarchies (available .copy.gz files), hierarchy_typologies
+	*       - install_checked_default (pre-selected hierarchy codes)
+	*       - php_version and php_version_supported (>= 8.1.0)
+	*       - max_execution_time (from php.ini)
+	*
+	* @param int  $permissions       [= 1]     - Unused parameter; kept for interface compatibility.
+	* @param bool $add_request_config [= false] - Unused parameter; kept for interface compatibility.
+	* @return dd_object $dd_object - Always returns a dd_object; properties are partial on failure.
 	*/
 	public function get_structure_context(int $permissions=1, bool $add_request_config=false) : dd_object {
 
@@ -160,6 +218,10 @@ class install extends common {
 
 	/**
 	* GET_CONFIG
+	* Returns the resolved install configuration object.
+	* Delegates to install_config_manager::get_config(), which assembles
+	* path constants, connection details, table lists, and hierarchy typologies
+	* into a single stdClass.  See install_config_manager for full shape.
 	* @return object $config
 	*/
 	public static function get_config() : object {
@@ -168,6 +230,10 @@ class install extends common {
 
 	/**
 	* GET_DB_INSTALL_CONN
+	* Opens and returns a new PostgreSQL connection to the ephemeral install
+	* database (db_install_name, not the current production database).
+	* Used by the manager classes during install-image creation steps.
+	* Returns false on connection failure.
 	* @return PgSql\Connection|bool
 	*/
 	public static function get_db_install_conn() : PgSql\Connection|bool {
@@ -176,6 +242,10 @@ class install extends common {
 
 	/**
 	* GET_DB_STATUS
+	* Verifies that all required database constants have been customised from
+	* their placeholder defaults and that a live PostgreSQL connection can be
+	* established.  Returns a stdClass with per-check boolean flags plus a
+	* global_status that is false if any individual check fails.
 	* @return object
 	*/
 	public static function get_db_status() : object {
@@ -184,6 +254,9 @@ class install extends common {
 
 	/**
 	* GET_DB_DATA_VERSION
+	* Returns the data-schema version recorded in the current database
+	* (e.g. ['5', '8', '2']), or null if the version cannot be determined
+	* (missing table, exception during query).
 	* @return array|null
 	*/
 	public function get_db_data_version() : ?array {
@@ -192,6 +265,10 @@ class install extends common {
 
 	/**
 	* TO_UPDATE
+	* Marks the Dédalo installation as complete by writing the
+	* 'installed' status to config_core.php.  Called at the end of an
+	* upgrade workflow (as opposed to a fresh install which calls
+	* set_install_status() directly).
 	* @return object $response
 	*/
 	public static function to_update() : object {
@@ -200,8 +277,39 @@ class install extends common {
 
 	/**
 	* BUILD_INSTALL_VERSION
-	* Creates a clean install database and file
+	* Orchestrates the full install-image creation pipeline, suitable for
+	* developer / CI use.  The pipeline runs entirely on the server and
+	* produces a distributable compressed .pgsql.gz snapshot of a clean,
+	* seeded Dédalo database.
+	*
+	* Steps (each step returns on failure, accumulating non-fatal errors):
+	*  1. Clone current production DB to the ephemeral install database via
+	*     install_database_manager::clone_database() (requires exclusive lock;
+	*     see clone_database_dump() for the lock-free alternative).
+	*  2. Strip custom ontology rows, leaving only core TLD namespaces
+	*     (dd, rsc, hierarchy, ontology, ontologytype, localontology, lg, oh).
+	*  3. Truncate all counter tables and reset their sequences.
+	*  4. Delete user data from all configurable matrix tables.
+	*  5. Install required PostgreSQL extensions (unaccent, pg_trgm) and
+	*     the f_unaccent() helper function.
+	*  6. Insert the default root user (section_id = -1, password null).
+	*  7. Insert the default main project (section_id = 1).
+	*  8. Insert the default Admin and User profiles (section_ids 1 and 2).
+	*  9. Insert a minimal test record required by unit tests.
+	* 10. Import matrix_hierarchy_main.sql (countries and root hierarchies).
+	* 11. Run VACUUM ANALYZE on the install database.
+	* 12. pg_dump the install database to a gzip-compressed .pgsql file.
+	*
+	* Time limit is raised to 600 s (10 minutes) before execution.
+	* Progress is printed to stdout when running in CLI mode.
+	*
+	* Response $response->errors accumulates non-fatal per-step warnings.
+	* Any step that returns result === false causes an immediate early return.
+	*
 	* @return object $response
+	*   - result bool   – true on full success, false on hard failure
+	*   - msg    string – human-readable summary including source/target DB names
+	*   - errors array  – accumulated non-fatal warnings from individual steps
 	*/
 	public static function build_install_version() : object {
 
@@ -416,6 +524,8 @@ class install extends common {
 
 	/**
 	* OPTIMIZE_DATABASE
+	* Runs PostgreSQL VACUUM ANALYZE on the current production database to
+	* reclaim storage and update query-planner statistics.
 	* @return object $response
 	*/
 	public static function optimize_database() : object {
@@ -424,6 +534,11 @@ class install extends common {
 
 	/**
 	* INSTALL_DB_FROM_DEFAULT_FILE
+	* Decompresses and imports the bundled .pgsql.gz install seed file into
+	* the current (empty) database.  This is the standard fresh-install path:
+	* gunzip the file, run psql to load it, then delete the uncompressed copy.
+	* Requires a .pgpass entry for the PostgreSQL user so psql can authenticate
+	* without a password prompt.
 	* @return object $response
 	*/
 	public static function install_db_from_default_file() : object {
@@ -432,7 +547,16 @@ class install extends common {
 
 	/**
 	* CLONE_DATABASE
-	* @param bool $skip_if_exists
+	* Clones the current production database to the ephemeral install database
+	* using PostgreSQL CREATE DATABASE … WITH TEMPLATE.  Requires an exclusive
+	* lock on the source database; any active client connection will block the
+	* operation.  See install_database_manager::clone_database_dump() for the
+	* lock-free pg_dump alternative.
+	*
+	* (!) This method is private; the build_install_version() pipeline invokes
+	* install_database_manager::clone_database() directly.
+	*
+	* @param bool $skip_if_exists - If true, skip the clone when the target DB already exists.
 	* @return object $response
 	*/
 	private static function clone_database(bool $skip_if_exists) : object {
@@ -441,7 +565,13 @@ class install extends common {
 
 	/**
 	* CLONE_DATABASE_DUMP
-	* @param bool $skip_if_exists
+	* Lock-free alternative to clone_database().  Uses a pg_dump | psql
+	* pipeline with an MVCC snapshot on the source database, so no active
+	* sessions need to be terminated first.  Currently unused by
+	* build_install_version() (the commented-out line in that method), but
+	* kept available as a private utility.
+	*
+	* @param bool $skip_if_exists - If true, skip the clone when the target DB already exists.
 	* @return object $response
 	*/
 	private static function clone_database_dump(bool $skip_if_exists) : object {
@@ -450,6 +580,13 @@ class install extends common {
 
 	/**
 	* CLEAN_ONTOLOGY
+	* Removes custom ontology rows from the install database, retaining only
+	* the core TLD namespaces defined in install_config_manager::$to_preserve_tld.
+	* Also re-indexes affected tables and invalidates the diffusion section-map
+	* cache when the diffusion subsystem is available.
+	*
+	* (!) Private — called from build_install_version() via install_ontology_manager.
+	*
 	* @return object $response
 	*/
 	private static function clean_ontology() : object {
@@ -458,6 +595,12 @@ class install extends common {
 
 	/**
 	* CLEAN_COUNTERS
+	* Truncates matrix_counter and matrix_counter_dd (resetting their sequences
+	* to 1) and removes custom rows from main_dd, preserving only the core TLD
+	* entries.  Counters are re-created on demand as records are inserted.
+	*
+	* (!) Private — called from build_install_version() via install_database_manager.
+	*
 	* @return object $response
 	*/
 	private static function clean_counters() : object {
@@ -466,6 +609,13 @@ class install extends common {
 
 	/**
 	* CLEAN_TABLES
+	* Drops tables not in the install_config_manager valid_tables allowlist,
+	* deletes all rows from the configurable to_clean_tables list (with special
+	* handling for matrix_ontology and matrix_ontology_main), resets sequences,
+	* and runs VACUUM ANALYZE on every remaining table.
+	*
+	* (!) Private — called from build_install_version() via install_database_manager.
+	*
 	* @return object $response
 	*/
 	private static function clean_tables() : object {
@@ -474,6 +624,12 @@ class install extends common {
 
 	/**
 	* CREATE_EXTENSIONS
+	* Installs the required PostgreSQL extensions (unaccent, pg_trgm) and
+	* defines the f_unaccent() immutable helper function in the install database.
+	* These extensions power accent-insensitive full-text search across Dédalo.
+	*
+	* (!) Private — called from build_install_version() via install_database_manager.
+	*
 	* @return object $response
 	*/
 	private static function create_extensions() : object {
@@ -482,6 +638,13 @@ class install extends common {
 
 	/**
 	* CREATE_ROOT_USER
+	* Seeds the root user record (section_id = -1) into matrix_users with
+	* username 'root' and a null password.  Password must be set separately via
+	* set_root_pw().  The negative section_id is intentional; normal data-save
+	* paths refuse to write records with section_id < 1 as a safety guard.
+	*
+	* (!) Private — called from build_install_version() via install_data_seeder.
+	*
 	* @return object $response
 	*/
 	private static function create_root_user() : object {
@@ -490,6 +653,12 @@ class install extends common {
 
 	/**
 	* CREATE_MAIN_PROJECT
+	* Seeds the default 'General project' record (section_id = 1) into
+	* matrix_projects.  Every Dédalo installation requires at least one project
+	* for user/profile associations to be valid.
+	*
+	* (!) Private — called from build_install_version() via install_data_seeder.
+	*
 	* @return object $response
 	*/
 	private static function create_main_project() : object {
@@ -498,6 +667,14 @@ class install extends common {
 
 	/**
 	* CREATE_MAIN_PROFILES
+	* Seeds two default permission profiles into matrix_profiles:
+	*   - section_id 1: Admin
+	*   - section_id 2: User
+	* These profiles are referenced by the root user record and are required
+	* before any user login can succeed.
+	*
+	* (!) Private — called from build_install_version() via install_data_seeder.
+	*
 	* @return object $response
 	*/
 	private static function create_main_profiles() : object {
@@ -506,6 +683,12 @@ class install extends common {
 
 	/**
 	* CREATE_TEST_RECORD
+	* Seeds the minimal record required for Dédalo's unit-test suite into
+	* matrix_test (section_id = 1, section_tipo = 'test3').  Without this
+	* record the test harness cannot execute component read/write round-trips.
+	*
+	* (!) Private — called from build_install_version() via install_data_seeder.
+	*
 	* @return object $response
 	*/
 	private static function create_test_record() : object {
@@ -514,6 +697,14 @@ class install extends common {
 
 	/**
 	* IMPORT_HIERARCHY_MAIN_RECORDS
+	* Loads the bundled matrix_hierarchy_main.sql seed file into the install
+	* database, populating the root-level hierarchy records for countries and
+	* the main thematic/special/semantic/language hierarchies.  All imported
+	* hierarchies are inactive by default; call activate_hierarchy() to load
+	* their term/model data and make them visible.
+	*
+	* (!) Private — called from build_install_version() via install_hierarchy_manager.
+	*
 	* @return object $response
 	*/
 	private static function import_hierarchy_main_records() : object {
@@ -522,6 +713,10 @@ class install extends common {
 
 	/**
 	* BUILD_INSTALL_DB_FILE
+	* pg_dumps the ephemeral install database to the distributable gzip-compressed
+	* .pgsql file at install/db/dedalo7_install.pgsql.gz.  Any existing file is
+	* first renamed to a timestamped archive.  This is the last step of
+	* build_install_version().
 	* @return object $response
 	*/
 	public static function build_install_db_file() : object {
@@ -530,7 +725,14 @@ class install extends common {
 
 	/**
 	* ACTIVATE_HIERARCHY
-	* @param object $options
+	* Activates a single hierarchy by its TLD, wiring up the ontology virtual
+	* section, setting typology, label, language, active/active_in_thesaurus
+	* flags, target section types, and (for typology 2) the general term and
+	* model children locators.  Creates a new hierarchy_main record when the
+	* TLD does not yet exist.
+	*
+	* @param object $options - Hierarchy descriptor with fields:
+	*   tld (string), typology (int), label (string), active_in_thesaurus (bool)
 	* @return object $response
 	*/
 	public static function activate_hierarchy(object $options) : object {
@@ -539,7 +741,11 @@ class install extends common {
 
 	/**
 	* GET_AVAILABLE_HIERARCHY_FILES
-	* @return object $response
+	* Scans the hierarchy files directory for .copy.gz files, enriches each
+	* with label, type ('term'|'model'), typology and active_in_thesaurus from
+	* hierarchies.json, and returns the list.  Returns an empty result (not an
+	* error) when the directory is empty or missing.
+	* @return object $response - result is array of hierarchy descriptor objects or false
 	*/
 	public static function get_available_hierarchy_files() : object {
 		return install_hierarchy_manager::get_available_hierarchy_files();
@@ -547,6 +753,14 @@ class install extends common {
 
 	/**
 	* GET_HIERARCHY_TYPLOLOGIES
+	* Returns the array of available hierarchy typology definitions read from
+	* hierarchies_typologies.json.  Each entry has at minimum 'typology' (int)
+	* and 'label' (string) fields.  Returns an empty array when the file is
+	* missing.
+	*
+	* Note: the method name contains a typo ('typlologies'); kept as-is for
+	* backward compatibility.
+	*
 	* @return array $typlologies
 	*/
 	public static function get_hierarchy_typlologies() : array {
@@ -555,8 +769,16 @@ class install extends common {
 
 	/**
 	* INSTALL_HIERARCHIES
-	* @param object $options
-	* @return object $response
+	* Batch-activates a list of selected hierarchies from $options.
+	* For each selected hierarchy, imports its .copy.gz data file via
+	* backup::import_from_copy_file() and then calls activate_hierarchy().
+	* Collects per-hierarchy responses; errors do not stop processing of
+	* subsequent hierarchies.
+	*
+	* @param object $options - Must contain:
+	*   selected_hierarchies (array) – list of hierarchy descriptor objects,
+	*   each with at least tld, typology, label, active_in_thesaurus.
+	* @return object $response - result true, responses array of per-hierarchy results
 	*/
 	public static function install_hierarchies(object $options) : object {
 		return install_hierarchy_manager::install_hierarchies($options);
@@ -564,7 +786,11 @@ class install extends common {
 
 	/**
 	* SYSTEM_IS_ALREADY_INSTALLED
-	* @return object $response
+	* Checks whether the system has been previously installed by verifying that
+	* the matrix_users table exists and contains more than one row.  A fresh
+	* install seed has exactly one row (root); a count above 1 indicates a
+	* configured installation.
+	* @return object $response - result true when already installed, false otherwise
 	*/
 	public static function system_is_already_installed() : object {
 		return install_config_manager::system_is_already_installed();
@@ -572,7 +798,20 @@ class install extends common {
 
 	/**
 	* SET_ROOT_PW
-	* @param object $options
+	* Sets the root user's password during the installation wizard.  This method
+	* is restricted to the install phase: it guards against execution on an
+	* already-installed system (DEDALO_INSTALL_STATUS === 'installed') and
+	* refuses if the root record already has a non-default password.
+	*
+	* The password is XSS-sanitised, encrypt/decrypt cycle-tested, and stored
+	* in the string column of matrix_users (section_id = -1) using the v7
+	* [{id, value, lang}] item format.  The session auth cache is cleared after
+	* a successful update.
+	*
+	* (!) To change the root password after installation, the admin must manually
+	* clear the string column and remove the installed status from config_core.php.
+	*
+	* @param object $options - Must contain: password (string, plain-text).
 	* @return object $response
 	*/
 	public static function set_root_pw(object $options) : object {
@@ -581,7 +820,15 @@ class install extends common {
 
 	/**
 	* SET_INSTALL_STATUS
-	* @param string $status
+	* Writes or updates a DEDALO_INSTALL_STATUS define() call in config_core.php,
+	* sealing the current installation state.  After a successful write the
+	* session data is cleared so the next request re-evaluates the constant.
+	*
+	* Supported $status values: 'installed'.
+	* No-ops (returns success) when the constant is already set to $status.
+	* Creates config_core.php if it does not yet exist.
+	*
+	* @param string $status - Target install status; currently only 'installed' is used.
 	* @return object $response
 	*/
 	public static function set_install_status(string $status) : object {
@@ -590,7 +837,12 @@ class install extends common {
 
 	/**
 	* BUILD_RECOVERY_VERSION_FILE
-	* @return object $response
+	* Exports a recovery snapshot of the core ontology (dd, rsc, lg, hierarchy,
+	* ontology, ontologytype TLDs) to install/db/dd_ontology_recovery.sql.gz.
+	* Uses a temporary dd_ontology_recovery table as an intermediate copy target
+	* so the live dd_ontology table is not affected.  The temp table is dropped
+	* after the pg_dump completes.
+	* @return object $response - Includes file_size (bytes) on success.
 	*/
 	public static function build_recovery_version_file() : object {
 		return install_ontology_manager::build_recovery_version_file();
@@ -598,6 +850,10 @@ class install extends common {
 
 	/**
 	* RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
+	* Imports the gzip-compressed recovery SQL file
+	* (install/db/dd_ontology_recovery.sql.gz) into the current database via
+	* a gunzip | psql pipeline.  This recreates the dd_ontology_recovery table
+	* that was exported by build_recovery_version_file().
 	* @return object $response
 	*/
 	public static function restore_dd_ontology_recovery_from_file() : object {
