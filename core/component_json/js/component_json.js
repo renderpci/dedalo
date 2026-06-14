@@ -81,13 +81,20 @@ export const component_json = function(){
 */
 export const parse_editor_content = function(content) {
 
-	const json_value = content.json !== undefined
-		? content.json
-		: content.text === ''
-			? null
-			: JSON.parse(content.text)
+	if (content.json !== undefined) {
+		return content.json
+	}
 
-	return json_value
+	if (content.text === '' || content.text === undefined || content.text === null) {
+		return null
+	}
+
+	try {
+		return JSON.parse(content.text)
+	} catch (error) {
+		console.error('parse_editor_content: invalid JSON text', content.text, error)
+		return null
+	}
 }//end parse_editor_content
 
 
@@ -129,7 +136,7 @@ export const handle_json_change = function(self, content, key=0) {
 		const json_value = parse_editor_content(content)
 
 	// deep clone to make immutable
-		const immutable_value = JSON.parse(JSON.stringify(json_value))
+		const immutable_value = structuredClone(json_value)
 
 	// resolve id dynamically from self.data
 		const id = self.data.entries?.[key]?.id || null
