@@ -1,4 +1,39 @@
 <?php declare(strict_types=1);
+/**
+ * DD_TIPOS — GLOBAL ONTOLOGY TIPO CONSTANTS
+ *
+ * Every structural node in Dédalo is identified by a "tipo": a short ontology
+ * identifier such as 'dd1', 'hierarchy25', 'rsc29', or 'ontology6'.  These tipos
+ * are defined in the master ontology and drive the entire data model — they
+ * determine which section stores users, what the thesaurus term field is, which
+ * relation type marks a parent link, and so on.
+ *
+ * This file centralises the most critical tipos as PHP constants so that all PHP
+ * code references them by name instead of by raw string.  Changing a tipo here
+ * propagates the change everywhere without needing a grep-replace.
+ *
+ * NAMING CONVENTION
+ *   DEDALO_<DOMAIN>_<ROLE>_TIPO  — section or component tipo
+ *   DEDALO_<DOMAIN>_<ROLE>       — non-tipo constant (integer, string, array)
+ *   ONTOLOGY_SECTION_TIPOS        — associative array of tipos for the v7 ontology
+ *                                   search/resolution layer
+ *   ANSI_*                        — terminal colour/style escape sequences used
+ *                                   by CLI tools and logging helpers
+ *
+ * NAMESPACE PREFIXES USED IN TIPO STRINGS
+ *   dd*         — core Dédalo ontology nodes
+ *   hierarchy*  — thesaurus / hierarchy subsystem nodes
+ *   rsc*        — resources (media, notes, AV, images) nodes
+ *   ontology*   — v7 ontology section nodes
+ *   lg*         — language registry nodes
+ *
+ * (!) When adding relation types update core_functions::get_relation_name() too.
+ * (!) DEDALO_SUPERUSER is an integer sentinel (-1), not a tipo string.
+ *
+ * Loaded early in the bootstrap (before any class or session logic) so constants
+ * are available application-wide including CLI scripts and tools.
+ */
+
 // TIPOS : Resolve important tipos
 
 // root tipo
@@ -21,7 +56,7 @@ define('DEDALO_USER_PASSWORD_TIPO',						'dd133');
 define('DEDALO_ACTIVE_ACCOUNT_TIPO',					'dd131');
 define('DEDALO_FULL_USER_NAME_TIPO',					'dd452');
 define('DEDALO_USER_PROFILE_TIPO',						'dd1725');
-define('DEDALO_SUPERUSER',								-1);
+define('DEDALO_SUPERUSER',								-1); // sentinel integer meaning "super-administrator" — NOT a tipo string
 define('DEDALO_FILTER_MASTER_TIPO',						'dd170'); // USER COMPONENT_FILTER_MASTER
 define('DEDALO_USER_COMPONENT_FILTER_RECORDS_TIPO',		'dd478');
 define('DEDALO_USER_DEVELOPER_TIPO',					'dd515');
@@ -248,6 +283,23 @@ define('USER_ACTIVITY_DATE_TIPO',			'dd1530');
 define('USER_ACTIVITY_TOTALS_TIPO',			'dd1523');
 
 // ontology section tipos
+/**
+ * ONTOLOGY_SECTION_TIPOS
+ * Associative map of logical role => tipo for the v7 ontology storage section.
+ * Used by ontology resolvers to locate fields without hard-coding tipo strings
+ * inline.  Keys:
+ *   section_tipo — the ontology section itself (dd1500)
+ *   id           — numeric sequential id component (dd1483)
+ *   tld          — top-level domain / namespace component (dd1482)
+ *   term_id      — machine identifier for the term (dd1475)
+ *   term         — human-readable term label (dd1477)
+ *   definition   — term definition text (dd1478)
+ *   observations — additional observations / notes (dd1476)
+ *   json_item    — full JSON blob for the ontology node (dd1556)
+ *
+ * (!) tld shares the value 'dd1482' with DEDALO_VALUE_TYPE_MEDIA — these are
+ * different conceptual roles resolved in different contexts; do not conflate them.
+ */
 define('ONTOLOGY_SECTION_TIPOS', [
 	'section_tipo'	=> 'dd1500',
 	'id'			=> 'dd1483',
