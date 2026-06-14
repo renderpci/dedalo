@@ -11,8 +11,7 @@
 *   it ($options->get_context), choosing between the full context and the
 *   lightweight 'simple' variant used by list/portal views.
 * - Return an empty data array: button_new is a pure UI action trigger with no
-*   storable data of its own. Its HTML representation is served by a separate
-*   PHP controller (button_delete.php), not this file.
+*   storable data of its own.
 * - Return a stdClass {context: array, data: array} via
 *   common::build_element_json_output().
 *
