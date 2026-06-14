@@ -55,14 +55,14 @@ final class cache_manager {
 		});
 
 		// common::clear() — clears structure_context_cache and other static caches
-		$this->register('common', function(): void {
-			if (class_exists('\common')) {
-				\common::$structure_context_cache = [];
-				// if (method_exists('\common', 'clear')) {
-				// 	\common::clear();
-				// }
-			}
-		});
+		// $this->register('common', function(): void {
+		// 	if (class_exists('\common')) {
+		// 		\common::$structure_context_cache = [];
+		// 		// if (method_exists('\common', 'clear')) {
+		// 		// 	\common::clear();
+		// 		// }
+		// 	}
+		// });
 
 		// section instances
 		$this->register('section', function(): void {
