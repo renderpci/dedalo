@@ -673,7 +673,7 @@ class login extends common {
 		// the SAML idp_ip allowlist by injecting a forged X-Forwarded-For header.
 		// Strict comparison prevents loose-typing surprises if SAML_CONFIG['idp_ip']
 		// happens to contain non-string entries.
-			if (defined('SAML_CONFIG') && !empty(SAML_CONFIG['idp_ip'])) {
+			if (defined('SAML_CONFIG') && is_array(SAML_CONFIG) && !empty(SAML_CONFIG['idp_ip'])) {
 				$client_ip = get_client_ip_trusted();
 				if ($client_ip === '' || !in_array($client_ip, SAML_CONFIG['idp_ip'], true)) {
 					$response->msg = "[Login_SAML] Error. Invalid client IP !";
@@ -1756,7 +1756,7 @@ class login extends common {
 
 
 		// saml logout
-			if (defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {
+			if (defined('SAML_CONFIG') && is_array(SAML_CONFIG) && (SAML_CONFIG['active'] ?? false) === true && isset(SAML_CONFIG['logout_url'])) {
 				# code...
 			}
 
@@ -1928,7 +1928,7 @@ class login extends common {
 			}
 
 		// saml. If set, a button will be displayed on the login form.
-			if (defined('SAML_CONFIG')) {
+			if (defined('SAML_CONFIG') && is_array(SAML_CONFIG) && (SAML_CONFIG['active'] ?? false) === true) {
 				// format:
 				// [
 				//	  'active'		=> true,

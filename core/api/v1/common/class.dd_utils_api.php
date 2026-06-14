@@ -457,7 +457,7 @@ final class dd_utils_api {
 			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 			// saml logout
-				if ($login_type==='saml' && defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {
+				if ($login_type==='saml' && defined('SAML_CONFIG') && is_array(SAML_CONFIG) && (SAML_CONFIG['active'] ?? false) === true && isset(SAML_CONFIG['logout_url'])) {
 					$response->saml_redirect = SAML_CONFIG['logout_url'];
 				}
 
