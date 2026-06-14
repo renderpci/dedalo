@@ -1,7 +1,41 @@
 <?php declare(strict_types=1);
 /**
 * UPDATE
-* Manage Dédalo data updates defined in file updates.php
+* Orchestrates Dédalo data-version migration from one release to the next.
+*
+* Every Dédalo release that changes stored data formats ships a corresponding
+* entry in core/base/update/updates.php. The entry describes:
+*  - which installed version it upgrades FROM  (update_from_major/medium/minor)
+*  - which version the database will reach AFTER the upgrade  (version_major/medium/minor)
+*  - an optional list of DDL queries  (SQL_update[])
+*  - an optional list of component-model names whose stored datos need reformatting (components_update[])
+*  - an optional list of arbitrary class::method calls  (run_scripts[])
+*  - an optional list of pre-flight scripts that must pass BEFORE the main steps (run_pre_scripts[])
+*  - an optional execution_order array that controls the sequence of the three main step types
+*  - a boolean update_data flag that, when false, marks the entry as code-only (no data migration needed)
+*
+* The current installed data version is retrieved from the `matrix_updates` PostgreSQL table
+* via the global helper get_current_data_version().  On success, update_dedalo_data_version()
+* inserts a new row in that same table recording the new version.
+*
+* Typical call sequence (initiated by the maintenance widget update_data_version):
+*   1. update::get_update_version()   — determine which version to migrate to
+*   2. update::pre_update_version()   — run run_pre_scripts, abort on stop_on_error
+*   3. update::update_version($checks)— run SQL_update / components_update / run_scripts in order
+*
+* Responsibilities of this class:
+*  - Loading and resolving the correct update descriptor from updates.php
+*  - Driving SQL DDL execution (SQL_update)
+*  - Iterating every section and calling per-component update_data_version() hooks (components_update)
+*  - Dispatching arbitrary migration callbacks (run_scripts / run_pre_scripts)
+*  - Writing progress information to both the debug log and a flat update.log file
+*  - Advancing the `matrix_updates` version record on completion
+*
+* Lower-level helpers (tables_rows_iterator, convert_table_data, check_section_data)
+* are also provided for bulk raw-row transformations used by upgrade scripts.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class update {
 
@@ -10,6 +44,11 @@ class update {
 	/**
 	* GET_UPDATES
 	* Load file updates/update.php and get var object '$updates'
+	*
+	* The file uses a global stdClass $updates whose properties are keyed by a
+	* concatenated integer (major * 100 + medium * 10 + minor, e.g. 700 for v7.0.0).
+	* Each property is itself a stdClass descriptor — see updates.php for the full shape.
+	*
 	* @return object $updates
 	*/
 	public static function get_updates() {
@@ -23,7 +62,21 @@ class update {
 
 	/**
 	* GET_UPDATE_VERSION
-	* @return array|null $update_version
+	* Returns the target version triple [major, medium, minor] that corresponds to
+	* the current installed data version, or null when no matching update exists.
+	*
+	* The matching is done by comparing the installed version (from matrix_updates via
+	* get_current_data_version()) against each update descriptor's update_from_* triplet.
+	* Only the first match is returned; updates are applied one step at a time.
+	*
+	* Descriptors whose update_data property is explicitly false are skipped because
+	* they represent code-only releases that do not require a data migration pass.
+	*
+	* Returns null when:
+	*  - get_current_data_version() returns an empty value (fresh install or DB unavailable)
+	*  - no descriptor in updates.php matches the currently installed version
+	*
+	* @return array|null $update_version  [major, medium, minor] or null
 	*/
 	public static function get_update_version() : ?array {
 
@@ -64,7 +117,30 @@ class update {
 
 	/**
 	* PRE_UPDATE_VERSION
-	* @return object $updates_checked
+	* Runs the run_pre_scripts stage of an update descriptor before the main
+	* SQL / component / run_scripts steps begin.
+	*
+	* Pre-scripts are intended for tasks that must complete (or partially complete)
+	* before any data is migrated — for example, restructuring the ontology table
+	* before new component formats are written.
+	*
+	* Behaviour:
+	*  - Matches the currently installed version against the updates.php descriptors.
+	*  - Disables the backend activity logger for the duration of the process to
+	*    avoid polluting audit records with migration noise.
+	*  - Iterates run_pre_scripts in declaration order, calling update::run_scripts()
+	*    for each entry.
+	*  - If a pre-script fails AND its stop_on_error property is true, the method
+	*    returns immediately with result = false so the caller can abort the upgrade.
+	*  - Other pre-script errors are recorded in $response->errors but iteration
+	*    continues to the next entry.
+	*
+	* @return object $response
+	*   stdClass with:
+	*     bool   result  — true on full success, false on fatal pre-script error or
+	*                      version-matching failure
+	*     string|array msg     — human-readable status messages (array on return from loop)
+	*     array  errors  — list of error strings collected during the run
 	*/
 	public static function pre_update_version() : object {
 
@@ -186,7 +262,39 @@ class update {
 	* UPDATE_VERSION
 	* Updates Dédalo data version.
 	* Allow change components data format or add new tables or index
-	* @param object $updates_checked
+	*
+	* This is the main migration driver. It locates the correct update descriptor for
+	* the currently installed data version and then executes the enabled steps in the
+	* order defined by $update->execution_order (defaults to
+	* ['SQL_update', 'components_update', 'run_scripts']).
+	*
+	* The $updates_checked parameter carries a checkbox map produced by the maintenance
+	* UI. Only items whose corresponding key is explicitly set to true are executed;
+	* unchecked items are silently skipped. Key format: '<step_type>_<0-based-index>',
+	* e.g. 'SQL_update_0', 'components_update_2', 'run_scripts_1'.
+	*
+	* Step semantics:
+	*   SQL_update        — raw DDL/DML strings executed directly against PostgreSQL via
+	*                       update::SQL_update(). A false result aborts the entire update.
+	*   components_update — iterates every section's records and calls the component class's
+	*                       static update_data_version() hook (result codes: 0=skip, 1=save,
+	*                       2=no change). See update::components_update().
+	*   run_scripts       — arbitrary class::method calls dispatched by update::run_scripts().
+	*                       A false result with stop_on_error=true aborts the update.
+	*
+	* Side effects:
+	*  - Backend activity logging is disabled for the entire method and always restored
+	*    in the finally block.
+	*  - $_ENV['DEDALO_UPDATING'] is set to true to suppress verbose sub-system logs.
+	*  - Progress is written to both the Dédalo debug log and the update.log file whose
+	*    path is taken from the UPDATE_LOG_FILE constant (falls back to
+	*    DEDALO_CONFIG_PATH . '/update.log').
+	*  - On full success, update::update_dedalo_data_version() inserts the new version
+	*    into matrix_updates.
+	*  - sleep(1) + gc_collect_cycles() are called after each individual step to help
+	*    PHP's GC reclaim memory between heavy migration passes.
+	*
+	* @param object $updates_checked  Map of step keys to booleans, e.g.:
 	* {
 	*	"SQL_update_1": true,
 	*	"components_update_1": true,
@@ -197,6 +305,11 @@ class update {
 	*	"run_scripts_2": true
 	* }
 	* @return object $response
+	*   stdClass with:
+	*     bool         result  — true on full success, false on any hard error
+	*     string|array msg     — status/error messages collected during the run
+	*     array        errors  — list of error strings
+	* @throws Exception  Caught internally; sets result=false and populates errors[]
 	*/
 	public static function update_version(object $updates_checked) : object {
 
@@ -554,8 +667,23 @@ class update {
 
 	/**
 	* SQL_UPDATE
-	* @param string $SQL_update
+	* Executes a single raw SQL statement against the PostgreSQL connection.
+	*
+	* Used by update_version() to run DDL/DML migration queries (CREATE TABLE,
+	* ALTER COLUMN, UPDATE datos ... etc.) defined in the update descriptor's
+	* SQL_update array. Each call is atomic at the pg_query level; transactions
+	* within the query string itself are the caller's responsibility.
+	*
+	* On failure the PostgreSQL error is captured via pg_last_error() and included
+	* in the response message. The update_version() caller treats a false result
+	* as a hard abort to prevent data corruption.
+	*
+	* @param string $SQL_update  Raw SQL string to execute (may include multiple
+	*                            statements wrapped in DO $$ … $$ or plain DDL)
 	* @return object $response
+	*   stdClass with:
+	*     bool   result — true on success, false on pg_query failure
+	*     string msg    — human-readable status or pg_last_error() on failure
 	*/
 	public static function SQL_update( string $SQL_update ) : object {
 
@@ -597,10 +725,44 @@ class update {
 
 	/**
 	* COMPONENTS_UPDATE
-	* Iterate ALL structure sections and search components to update based on their model
-	* @param string $model_name
-	* @param array $update_version
-	* @return bool
+	* Iterates ALL ontology sections and calls each matching component's
+	* static update_data_version() hook for every stored record.
+	*
+	* The method:
+	*  1. Resolves all section tipos from the ontology via ontology_utils::get_ar_tipo_by_model('section').
+	*  2. Skips section tipos whose underlying PostgreSQL table does not exist yet
+	*     (guards against partially migrated schemas).
+	*  3. Skips sections that have no records (pg_num_rows < 1).
+	*  4. Finds the component tipos of $model_name that exist in each section using
+	*     section::get_ar_children_tipo_by_model_name_in_section() with recursive/virtual resolution.
+	*  5. Fetches every row in the section using section::get_resource_all_section_records_unfiltered()
+	*     and streams the pg result set row-by-row to keep peak memory low.
+	*  6. For each (row × component_tipo × lang) triple, instantiates the component with
+	*     cache=false (critical: prevents the component cache from accumulating across
+	*     thousands of records and exhausting memory), calls get_data(), and dispatches
+	*     update_data_version($update_options).
+	*  7. Interprets the result code returned by update_data_version():
+	*       0 — component class has no migration for this version; skip remaining
+	*           (row × component × lang) iterations via continue 4
+	*       1 — data changed; set_data() + Save() with save_modified=false so that
+	*           the section's modification timestamp is not clobbered by the migration
+	*       2 — data required no transformation; do nothing
+	*  8. Calls usleep(10000) + gc_collect_cycles() every 5 001 rows and after each
+	*     section to give the GC a chance to reclaim memory during long runs.
+	*
+	* Special cases:
+	*  - DEDALO_ACTIVITY_SECTION_TIPO is normally skipped unless $model_name is one of
+	*    component_filter, component_autocomplete, or component_ip, which need updating
+	*    within the activity section too.
+	*  - The time-machine update block is currently commented out (preserved for reference).
+	*  - A large commented-out $ar_section_skip list is preserved for historical reference.
+	*
+	* @param string $model_name     PHP class name of the component to update
+	*                               (e.g. 'component_date', 'component_input_text')
+	* @param array  $update_version Target version triple [major, medium, minor] passed
+	*                               through to update_data_version() as update_options->update_version
+	* @return bool  Always true; individual per-component errors are logged but do not
+	*               halt the iteration
 	*/
 	public static function components_update( string $model_name, array $update_version ) : bool {
 
@@ -801,6 +963,7 @@ class update {
 
 					foreach($ar_component_tipo as $current_component_tipo) {
 
+						// (!) Translatable components use DEDALO_DATA_NOLAN; non-translatable iterate all project langs.
 						$ar_langs = ontology_node::get_translatable( $current_component_tipo )
 							? [DEDALO_DATA_NOLAN]
 							: DEDALO_PROJECTS_DEFAULT_LANGS;
@@ -947,9 +1110,33 @@ class update {
 
 	/**
 	* RUN_SCRIPTS
-	* Simply executes static methods based on received $script_obj properties
-	* @param object $script_obj
+	* Dispatches a single script descriptor by calling the specified static method
+	* via call_user_func_array().
+	*
+	* The script descriptor object ($script_obj) must carry:
+	*   string script_class   — PHP class name (must be autoloaded or pre-included)
+	*   string script_method  — public static method name on that class
+	*   mixed  script_vars    — arguments forwarded to the method:
+	*                           null / omitted → no arguments
+	*                           array → spread as positional args
+	*                           any other value → wrapped in a single-element array
+	*
+	* Return-value normalisation:
+	*   - If the called method returns an object, that object replaces $response entirely
+	*     (callers expect result/msg/errors properties on the returned object).
+	*   - If the called method returns false, result is set to false.
+	*   - Any other truthy return value is converted to string for $response->msg and
+	*     result is set to true.
+	*
+	* Exceptions are caught (but NOT re-thrown); result is left false.
+	*
+	* @param object $script_obj  Script descriptor; must have script_class and script_method;
+	*                            optionally script_vars (null|array|mixed)
 	* @return object $response
+	*   stdClass with:
+	*     bool   result  — true on success, false on failure or caught exception
+	*     array  errors  — list of error strings (may be empty)
+	*     string msg     — status or error description
 	*/
 	public static function run_scripts( object $script_obj ) : object {
 
@@ -1011,8 +1198,21 @@ class update {
 
 	/**
 	* UPDATE_DEDALO_DATA_VERSION
-	* @param string $version_to_update
-	* @return bool
+	* Records the newly reached data version in the matrix_updates table.
+	*
+	* Inserts a JSONB row with the following shape:
+	*   { "dedalo_version": "<major>.<medium>.<minor>", "update_date": "YYYY-MM-DD HH:MM:SS" }
+	*
+	* This table is the authoritative source for get_current_data_version(); the most
+	* recent row (ordered by data->>'dedalo_version' DESC) determines which update step
+	* will be offered on the next maintenance screen load.
+	*
+	* A parameterised query ($1) is used instead of string concatenation because
+	* json_encode() does not escape single quotes, making direct interpolation unsafe
+	* if a caller ever passes a version string with special characters.
+	*
+	* @param string $version_to_update  Dot-separated version string, e.g. "7.0.0"
+	* @return bool  Always true (failures are logged but not surfaced as a false return)
 	*/
 	public static function update_dedalo_data_version( string $version_to_update ) : bool {
 
@@ -1042,11 +1242,32 @@ class update {
 
 	/**
 	* CONVERT_TABLE_DATA
-	* Get all data from required tables and apply the action required to every row
-	* @param array $ar_tables
-	* @param string $action
-	* @return bool
-	* 	true
+	* Applies a data-transformation callback to every row of a list of raw PostgreSQL
+	* matrix tables, updating the 'datos' column in place.
+	*
+	* This is a higher-level helper used by upgrade scripts (e.g. v6_to_v7) to
+	* bulk-rewrite section datos JSON without going through the component layer.
+	* It delegates row iteration to tables_rows_iterator() and additionally:
+	*  - decodes the raw 'datos' JSON column for each row
+	*  - runs check_section_data() to backfill any missing metadata fields
+	*  - calls the transformation method ($action) on the class ($called_class)
+	*  - re-encodes and writes the result back via a prepared UPDATE statement
+	*
+	* The $action string may optionally include a class prefix using '::' notation
+	* (e.g. 'v6_to_v7::convert_section_dato_to_data'). When provided, the class
+	* part overrides $called_class so that upgrade scripts in subclasses can delegate
+	* to a specific converter class.
+	*
+	* Null return values from the $action method are treated as a skip signal —
+	* the row is not updated. All other return values are JSON-encoded and saved.
+	*
+	* Uses DBi::$prepared_statements to cache per-table prepared UPDATE statements
+	* across rows, avoiding repeated pg_prepare() calls for the same table.
+	*
+	* @param array  $ar_tables  List of PostgreSQL table names to process
+	* @param string $action     Static method name (optionally 'ClassName::method')
+	*                           called as $called_class::{$action}($datos)
+	* @return bool  Always true; row-level errors are logged but do not halt iteration
 	*/
 	public static function convert_table_data(array $ar_tables, string $action) : bool {
 
@@ -1156,11 +1377,28 @@ class update {
 
 	/**
 	* TABLES_ROWS_ITERATOR
-	* Get the row (with all columns) from required tables and apply the action required to every row
-	* @param array $ar_tables
-	* @param callable $callback
-	* @return bool
-	* 	true
+	* Low-level row streaming helper: iterates every row in each supplied table
+	* and invokes a callback for each, then frees PostgreSQL result resources.
+	*
+	* Memory strategy:
+	*  - Fetches the minimum and maximum primary-key values first (two fast index scans).
+	*  - Iterates from $min to $max with a per-id SELECT rather than a full table scan,
+	*    so that the PostgreSQL client never holds the entire result set in memory at once.
+	*    (!) Rows deleted since the min/max scan will simply produce empty result sets
+	*    for their id; they are silently skipped.
+	*  - pg_free_result() is called after every id to release the PHP resource handle.
+	*  - time_nanosleep(0, 5000) + gc_collect_cycles() run every 10 000 ids to keep
+	*    PHP memory usage stable across multi-million-row tables.
+	*  - set_time_limit(0) prevents the PHP execution timeout from aborting long runs.
+	*
+	* The callback signature expected is: function(array $row, string $table, int $max): void
+	*   $row   — associative array of all columns for the current row
+	*   $table — name of the current table
+	*   $max   — highest id in the table (available for progress reporting)
+	*
+	* @param array    $ar_tables  List of PostgreSQL table names to iterate
+	* @param callable $callback   Called once per row; return value is ignored
+	* @return bool  Always true
 	*/
 	public static function tables_rows_iterator(array $ar_tables, $callback) : bool {
 
@@ -1311,16 +1549,31 @@ class update {
 
 	/**
 	* CHECK_SECTION_DATA
-	* check the section data in JSON for missing properties
-	* like section_tipo, section_id, created_date, created_by_userID
-	* @param string|int id
-	* @param string $table
-	* @param string|int $section_id
-	* @param string $section_tipo
-	* @param object &$data
-	* 	Passed by reference !
-	* @return bool $section_to_save
-	* 	If true, an update of the database will be performed
+	* Validates and backfills required metadata fields on a section's decoded datos object.
+	*
+	* During migration, older section rows may lack fields that were introduced in later
+	* versions. This method repairs the following missing fields in place (by reference):
+	*   section_id      — copied from the $section_id column value
+	*   section_tipo    — copied from the $section_tipo column value
+	*   created_date    — looked up from the earliest matrix_time_machine row for this
+	*                     section (using $section_id + $section_tipo as the key)
+	*   created_by_userID — likewise taken from the earliest time-machine row
+	*
+	* If any field was absent and is now set, the repaired datos JSON is immediately
+	* written back to the database using a prepared UPDATE on the 'data' column
+	* (not 'datos' — note the column name differs from the v6 convention).
+	*
+	* Prepared statements are cached in DBi::$prepared_statements keyed by
+	* __METHOD__ . '_' . $table so that repeated calls for the same table reuse the
+	* same server-side plan.
+	*
+	* @param string|int $id           Primary-key value of the row being checked
+	* @param string     $table        PostgreSQL table name ('matrix_*')
+	* @param string|int $section_id   Section record identifier (row content)
+	* @param string     $section_tipo Ontology tipo string identifying the section type
+	* @param object     &$data        Decoded datos object, passed by reference so that
+	*                                 the caller's copy reflects any backfilled fields
+	* @return bool $section_to_save   true if any field was backfilled and saved; false otherwise
 	*/
 	public static function check_section_data(string|int $id, string $table, string|int $section_id, string $section_tipo, object &$data) : bool {
 
