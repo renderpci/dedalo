@@ -694,7 +694,7 @@ class component_image extends component_media_common implements component_media_
 				debug_log(__METHOD__
 					." Unable to create create_default_svg_string_node. Default quality file does not exists:". PHP_EOL
 					.' file_path: ' . $file_path,
-					logger::ERROR
+					logger::WARNING
 				);
 				return null;
 			}
@@ -1176,7 +1176,7 @@ class component_image extends component_media_common implements component_media_
 					.' section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
 					.' section_id: ' . to_string($this->section_id) . PHP_EOL
 					.' quality: ' . to_string($quality)
-					, logger::ERROR
+					, logger::WARNING
 				);
 
 				// response

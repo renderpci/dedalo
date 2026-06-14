@@ -346,7 +346,7 @@ class component_av extends component_media_common implements component_media_int
 						. " Invalid source path. Unable to create posterframe " . PHP_EOL
 						. ' src_file: ' 		. to_string($src_file) . PHP_EOL
 						. ' target_quality: ' 	. to_string($target_quality)
-						, logger::ERROR
+						, logger::WARNING
 					);
 					return false;
 				}

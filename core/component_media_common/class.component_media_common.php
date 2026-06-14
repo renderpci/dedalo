@@ -3134,7 +3134,7 @@ class component_media_common extends component_common {
 					. ' id: ' . $id . PHP_EOL
 					. ' quality: ' .$quality . PHP_EOL
 					. ' original_quality: ' . to_string($original_quality)
-					, logger::ERROR
+					, logger::WARNING
 				);
 				$response->errors[] = 'invalid empty original_file_path';
 				return $response;
