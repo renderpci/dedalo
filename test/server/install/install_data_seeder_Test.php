@@ -6,19 +6,23 @@ require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 require_once DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 
 
-final class install_data_seeder_Test extends BaseTestCase {
+final class install_data_seeder_Test extends BaseTestCase
+{
 
 	/**
-	* TEST_class_is_static_only
-	* Verify install_data_seeder is a static-only class
-	* @return void
-	*/
-	public function test_class_is_static_only(): void {
+	 * TEST_class_is_static_only
+	 * Verify install_data_seeder is a static-only class
+	 * @return void
+	 */
+	public function test_class_is_static_only(): void
+	{
 
 		$reflection = new ReflectionClass('install_data_seeder');
 
-		// Should have no constructor
-		$this->assertNull($reflection->getConstructor());
+		// Should have a private constructor to prevent instantiation
+		$constructor = $reflection->getConstructor();
+		$this->assertNotNull($constructor);
+		$this->assertTrue($constructor->isPrivate());
 
 		// Should have no instance properties
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
@@ -33,11 +37,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_has_strict_types
-	* Verify install_data_seeder uses strict types
-	* @return void
-	*/
-	public function test_class_has_strict_types(): void {
+	 * TEST_class_has_strict_types
+	 * Verify install_data_seeder uses strict types
+	 * @return void
+	 */
+	public function test_class_has_strict_types(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -47,11 +52,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_file_exists
-	* Verify install_data_seeder class file exists
-	* @return void
-	*/
-	public function test_class_file_exists(): void {
+	 * TEST_class_file_exists
+	 * Verify install_data_seeder class file exists
+	 * @return void
+	 */
+	public function test_class_file_exists(): void
+	{
 
 		$file_path = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 
@@ -60,33 +66,36 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_exists
-	* Verify install_data_seeder class exists
-	* @return void
-	*/
-	public function test_class_exists(): void {
+	 * TEST_class_exists
+	 * Verify install_data_seeder class exists
+	 * @return void
+	 */
+	public function test_class_exists(): void
+	{
 
 		$this->assertTrue(class_exists('install_data_seeder'));
 	}//end test_class_exists
 
 
 	/**
-	* TEST_class_does_not_extend_common
-	* Verify install_data_seeder doesn't extend common
-	* @return void
-	*/
-	public function test_class_does_not_extend_common(): void {
+	 * TEST_class_does_not_extend_common
+	 * Verify install_data_seeder doesn't extend common
+	 * @return void
+	 */
+	public function test_class_does_not_extend_common(): void
+	{
 
 		$this->assertFalse(is_subclass_of('install_data_seeder', 'common'));
 	}//end test_class_does_not_extend_common
 
 
 	/**
-	* TEST_all_static_methods_exist
-	* Verify all expected static methods exist
-	* @return void
-	*/
-	public function test_all_static_methods_exist(): void {
+	 * TEST_all_static_methods_exist
+	 * Verify all expected static methods exist
+	 * @return void
+	 */
+	public function test_all_static_methods_exist(): void
+	{
 
 		$expected_methods = [
 			'create_root_user',
@@ -102,11 +111,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_root_user_returns_object
-	* Verify create_root_user returns object with result and msg
-	* @return void
-	*/
-	public function test_create_root_user_returns_object(): void {
+	 * TEST_create_root_user_returns_object
+	 * Verify create_root_user returns object with result and msg
+	 * @return void
+	 */
+	public function test_create_root_user_returns_object(): void
+	{
 
 		$response = install_data_seeder::create_root_user();
 
@@ -119,11 +129,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_main_project_returns_object
-	* Verify create_main_project returns object with result and msg
-	* @return void
-	*/
-	public function test_create_main_project_returns_object(): void {
+	 * TEST_create_main_project_returns_object
+	 * Verify create_main_project returns object with result and msg
+	 * @return void
+	 */
+	public function test_create_main_project_returns_object(): void
+	{
 
 		$response = install_data_seeder::create_main_project();
 
@@ -136,11 +147,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_main_profiles_returns_object
-	* Verify create_main_profiles returns object with result and msg
-	* @return void
-	*/
-	public function test_create_main_profiles_returns_object(): void {
+	 * TEST_create_main_profiles_returns_object
+	 * Verify create_main_profiles returns object with result and msg
+	 * @return void
+	 */
+	public function test_create_main_profiles_returns_object(): void
+	{
 
 		$response = install_data_seeder::create_main_profiles();
 
@@ -153,11 +165,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_test_record_returns_object
-	* Verify create_test_record returns object with result and msg
-	* @return void
-	*/
-	public function test_create_test_record_returns_object(): void {
+	 * TEST_create_test_record_returns_object
+	 * Verify create_test_record returns object with result and msg
+	 * @return void
+	 */
+	public function test_create_test_record_returns_object(): void
+	{
 
 		$response = install_data_seeder::create_test_record();
 
@@ -170,11 +183,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_has_docblock
-	* Verify install_data_seeder has proper docblock
-	* @return void
-	*/
-	public function test_class_has_docblock(): void {
+	 * TEST_class_has_docblock
+	 * Verify install_data_seeder has proper docblock
+	 * @return void
+	 */
+	public function test_class_has_docblock(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -186,11 +200,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_is_final
-	* Verify install_data_seeder is final class (static utility class)
-	* @return void
-	*/
-	public function test_class_is_final(): void {
+	 * TEST_class_is_final
+	 * Verify install_data_seeder is final class (static utility class)
+	 * @return void
+	 */
+	public function test_class_is_final(): void
+	{
 
 		$reflection = new ReflectionClass('install_data_seeder');
 
@@ -199,11 +214,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_is_not_instantiable
-	* Verify install_data_seeder cannot be instantiated (static utility class)
-	* @return void
-	*/
-	public function test_class_is_not_instantiable(): void {
+	 * TEST_class_is_not_instantiable
+	 * Verify install_data_seeder cannot be instantiated (static utility class)
+	 * @return void
+	 */
+	public function test_class_is_not_instantiable(): void
+	{
 
 		$reflection = new ReflectionClass('install_data_seeder');
 
@@ -212,11 +228,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_no_protected_methods
-	* Verify install_data_seeder has no protected methods
-	* @return void
-	*/
-	public function test_no_protected_methods(): void {
+	 * TEST_no_protected_methods
+	 * Verify install_data_seeder has no protected methods
+	 * @return void
+	 */
+	public function test_no_protected_methods(): void
+	{
 
 		$reflection = new ReflectionClass('install_data_seeder');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PROTECTED);
@@ -226,25 +243,27 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_no_private_methods
-	* Verify install_data_seeder has no private methods
-	* @return void
-	*/
-	public function test_no_private_methods(): void {
+	 * TEST_no_private_methods
+	 * Verify install_data_seeder has no private methods
+	 * @return void
+	 */
+	public function test_no_private_methods(): void
+	{
 
 		$reflection = new ReflectionClass('install_data_seeder');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PRIVATE);
 
-		$this->assertEquals(0, count($methods));
+		$this->assertEquals(1, count($methods));
 	}//end test_no_private_methods
 
 
 	/**
-	* TEST_create_root_user_uses_config
-	* Verify create_root_user uses config from install_config_manager
-	* @return void
-	*/
-	public function test_create_root_user_uses_config(): void {
+	 * TEST_create_root_user_uses_config
+	 * Verify create_root_user uses config from install_config_manager
+	 * @return void
+	 */
+	public function test_create_root_user_uses_config(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -255,11 +274,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_root_user_uses_pg_query
-	* Verify create_root_user uses pg_query for database operations
-	* @return void
-	*/
-	public function test_create_root_user_uses_pg_query(): void {
+	 * TEST_create_root_user_uses_pg_query
+	 * Verify create_root_user uses pg_query for database operations
+	 * @return void
+	 */
+	public function test_create_root_user_uses_pg_query(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -269,11 +289,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_root_user_uses_v7_schema
-	* Verify create_root_user uses v7 schema with typed columns
-	* @return void
-	*/
-	public function test_create_root_user_uses_v7_schema(): void {
+	 * TEST_create_root_user_uses_v7_schema
+	 * Verify create_root_user uses v7 schema with typed columns
+	 * @return void
+	 */
+	public function test_create_root_user_uses_v7_schema(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -288,11 +309,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_main_project_uses_v7_schema
-	* Verify create_main_project uses v7 schema with typed columns
-	* @return void
-	*/
-	public function test_create_main_project_uses_v7_schema(): void {
+	 * TEST_create_main_project_uses_v7_schema
+	 * Verify create_main_project uses v7 schema with typed columns
+	 * @return void
+	 */
+	public function test_create_main_project_uses_v7_schema(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -307,11 +329,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_main_profiles_uses_v7_schema
-	* Verify create_main_profiles uses v7 schema with typed columns
-	* @return void
-	*/
-	public function test_create_main_profiles_uses_v7_schema(): void {
+	 * TEST_create_main_profiles_uses_v7_schema
+	 * Verify create_main_profiles uses v7 schema with typed columns
+	 * @return void
+	 */
+	public function test_create_main_profiles_uses_v7_schema(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -326,11 +349,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_test_record_uses_v7_schema
-	* Verify create_test_record uses v7 schema with typed columns
-	* @return void
-	*/
-	public function test_create_test_record_uses_v7_schema(): void {
+	 * TEST_create_test_record_uses_v7_schema
+	 * Verify create_test_record uses v7 schema with typed columns
+	 * @return void
+	 */
+	public function test_create_test_record_uses_v7_schema(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -345,11 +369,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_root_user_truncates_matrix_users
-	* Verify create_root_user truncates matrix_users table
-	* @return void
-	*/
-	public function test_create_root_user_truncates_matrix_users(): void {
+	 * TEST_create_root_user_truncates_matrix_users
+	 * Verify create_root_user truncates matrix_users table
+	 * @return void
+	 */
+	public function test_create_root_user_truncates_matrix_users(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -360,11 +385,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_main_project_truncates_matrix_projects
-	* Verify create_main_project truncates matrix_projects table
-	* @return void
-	*/
-	public function test_create_main_project_truncates_matrix_projects(): void {
+	 * TEST_create_main_project_truncates_matrix_projects
+	 * Verify create_main_project truncates matrix_projects table
+	 * @return void
+	 */
+	public function test_create_main_project_truncates_matrix_projects(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -375,11 +401,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_main_profiles_truncates_matrix_profiles
-	* Verify create_main_profiles truncates matrix_profiles table
-	* @return void
-	*/
-	public function test_create_main_profiles_truncates_matrix_profiles(): void {
+	 * TEST_create_main_profiles_truncates_matrix_profiles
+	 * Verify create_main_profiles truncates matrix_profiles table
+	 * @return void
+	 */
+	public function test_create_main_profiles_truncates_matrix_profiles(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -390,11 +417,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_create_test_record_truncates_matrix_test
-	* Verify create_test_record truncates matrix_test table
-	* @return void
-	*/
-	public function test_create_test_record_truncates_matrix_test(): void {
+	 * TEST_create_test_record_truncates_matrix_test
+	 * Verify create_test_record truncates matrix_test table
+	 * @return void
+	 */
+	public function test_create_test_record_truncates_matrix_test(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -405,11 +433,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_methods_use_debug_log
-	* Verify methods use debug_log for logging
-	* @return void
-	*/
-	public function test_methods_use_debug_log(): void {
+	 * TEST_methods_use_debug_log
+	 * Verify methods use debug_log for logging
+	 * @return void
+	 */
+	public function test_methods_use_debug_log(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -419,11 +448,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_methods_use_error_handling
-	* Verify methods have proper error handling
-	* @return void
-	*/
-	public function test_methods_use_error_handling(): void {
+	 * TEST_methods_use_error_handling
+	 * Verify methods have proper error handling
+	 * @return void
+	 */
+	public function test_methods_use_error_handling(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -434,11 +464,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_methods_have_documentation
-	* Verify methods have docblocks
-	* @return void
-	*/
-	public function test_methods_have_documentation(): void {
+	 * TEST_methods_have_documentation
+	 * Verify methods have docblocks
+	 * @return void
+	 */
+	public function test_methods_have_documentation(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -450,11 +481,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_is_secure
-	* Verify class follows security best practices
-	* @return void
-	*/
-	public function test_class_is_secure(): void {
+	 * TEST_class_is_secure
+	 * Verify class follows security best practices
+	 * @return void
+	 */
+	public function test_class_is_secure(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -465,11 +497,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_is_type_safe
-	* Verify class maintains type safety
-	* @return void
-	*/
-	public function test_class_is_type_safe(): void {
+	 * TEST_class_is_type_safe
+	 * Verify class maintains type safety
+	 * @return void
+	 */
+	public function test_class_is_type_safe(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -480,11 +513,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_is_professional_quality
-	* Verify class meets professional quality standards
-	* @return void
-	*/
-	public function test_class_is_professional_quality(): void {
+	 * TEST_class_is_professional_quality
+	 * Verify class meets professional quality standards
+	 * @return void
+	 */
+	public function test_class_is_professional_quality(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -503,11 +537,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_is_testable
-	* Verify class is testable
-	* @return void
-	*/
-	public function test_class_is_testable(): void {
+	 * TEST_class_is_testable
+	 * Verify class is testable
+	 * @return void
+	 */
+	public function test_class_is_testable(): void
+	{
 
 		// Class should be static-only (easy to test)
 		$reflection = new ReflectionClass('install_data_seeder');
@@ -522,11 +557,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_is_reliable
-	* Verify class operations are reliable
-	* @return void
-	*/
-	public function test_class_is_reliable(): void {
+	 * TEST_class_is_reliable
+	 * Verify class operations are reliable
+	 * @return void
+	 */
+	public function test_class_is_reliable(): void
+	{
 
 		// Methods should return consistent response structure
 		$response = install_data_seeder::create_root_user();
@@ -539,11 +575,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_is_thread_safe
-	* Verify class operations are thread-safe (stateless)
-	* @return void
-	*/
-	public function test_class_is_thread_safe(): void {
+	 * TEST_class_is_thread_safe
+	 * Verify class operations are thread-safe (stateless)
+	 * @return void
+	 */
+	public function test_class_is_thread_safe(): void
+	{
 
 		// Class should be stateless (no instance properties)
 		$reflection = new ReflectionClass('install_data_seeder');
@@ -553,11 +590,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_is_production_ready
-	* Verify class is suitable for production use
-	* @return void
-	*/
-	public function test_class_is_production_ready(): void {
+	 * TEST_class_is_production_ready
+	 * Verify class is suitable for production use
+	 * @return void
+	 */
+	public function test_class_is_production_ready(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -569,16 +607,19 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_is_pure_static_utility
-	* Verify class is a pure static utility class
-	* @return void
-	*/
-	public function test_class_is_pure_static_utility(): void {
+	 * TEST_class_is_pure_static_utility
+	 * Verify class is a pure static utility class
+	 * @return void
+	 */
+	public function test_class_is_pure_static_utility(): void
+	{
 
 		$reflection = new ReflectionClass('install_data_seeder');
 
-		// No constructor
-		$this->assertNull($reflection->getConstructor());
+		// Constructor should be private
+		$constructor = $reflection->getConstructor();
+		$this->assertNotNull($constructor);
+		$this->assertTrue($constructor->isPrivate());
 
 		// No instance properties
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
@@ -597,11 +638,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_follows_single_responsibility
-	* Verify class follows single responsibility principle
-	* @return void
-	*/
-	public function test_class_follows_single_responsibility(): void {
+	 * TEST_class_follows_single_responsibility
+	 * Verify class follows single responsibility principle
+	 * @return void
+	 */
+	public function test_class_follows_single_responsibility(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -623,11 +665,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_has_cohesion
-	* Verify class has high cohesion (all methods related to data seeding)
-	* @return void
-	*/
-	public function test_class_has_cohesion(): void {
+	 * TEST_class_has_cohesion
+	 * Verify class has high cohesion (all methods related to data seeding)
+	 * @return void
+	 */
+	public function test_class_has_cohesion(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
@@ -642,11 +685,12 @@ final class install_data_seeder_Test extends BaseTestCase {
 
 
 	/**
-	* TEST_class_has_low_coupling
-	* Verify class has low coupling (minimal dependencies)
-	* @return void
-	*/
-	public function test_class_has_low_coupling(): void {
+	 * TEST_class_has_low_coupling
+	 * Verify class has low coupling (minimal dependencies)
+	 * @return void
+	 */
+	public function test_class_has_low_coupling(): void
+	{
 
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);

@@ -8,7 +8,7 @@ Information regarding project tasks and migration progress. NOT for agents.
 
 1. **Installation**: Refactor for clean installation and v6 migration compatibility.
 2. **Ontology Update**: Export from version 6 and import into master v7.
-OK - 3. **Time Machine**: 
+OK - 3. **Time Machine**:
     * Fix broken section (dd15) and search functionality.
     * Review component history inspector and fix (error: matrix_db_manager::read Invalid table. This table is not allowed to load matrix data.)
     * Permissions for non root users do not work in time machine. Profile do not display the time machine section to set permissions. Set temporally as 1 in core/security/class.security.php
@@ -26,7 +26,7 @@ OK - 3. **Time Machine**:
 10. **Activity Log**: Remove `component_filter` (project) from activity logging, the ontology, and `component_filter->save`.
 11. **Activity Optimization**: Implement `matrix_activity` exceptions to minimize size (exclude counters, ID values, section data columns, projects, etc.).
 12. **Publication Logger**: Consolidate into a single logger for the entire process. Avoid per-component logging to reduce noise and memory overhead during batch processing.
-14. **Search with Children**: Fix "propagate and publish" logic where currently only the parent is affected.
+OK - 14. **Search with Children**: Fix "propagate and publish" logic where currently only the parent is affected.
 15. **Naming Inconsistency**: Resolve structural naming differences between platforms:
     *   **Server-side (PHP)**: `data` -> `[data_elements]` -> `data_element` -> `{value, lang, ...}`
     *   **Client-side (JS)**: `datum` -> `data` -> `[entries]` -> `entry` -> `{value, lang, ...}`
@@ -59,4 +59,5 @@ OK - 33. **new record** add a mechanish what, on if the creation of new reord fa
 35. **permissions**: check permissions issues. Admin user works but others don't.
 OK - 36. ***tools** download registered tool fix
 37. ***ontology output markdown** Add tool ontology output to generate comprehensible IA information in MD
-38. **activity** Investigate connection with time machine to view users changes in each save action stored in activity 
+38. **activity** Investigate connection with time machine to view users changes in each save action stored in activity
+39. **update data v6 -> v7** Extract publication data (first and last publication date and user) from v6 section and create matrix_activity_diffusion records with the equivalence.

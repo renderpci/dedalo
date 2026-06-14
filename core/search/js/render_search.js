@@ -610,6 +610,21 @@ render_search.prototype.render_search_buttons = function(){
 		}
 		reset_button.addEventListener('mousedown', reset_mousedown_handler)
 
+	// Show all
+		const show_all_fn = (e) => {
+			e.stopPropagation()
+			self.show_all(show_all_button)
+			// Close search div
+			toggle_search_panel(self) // toggle to open from default state close
+		}
+		const show_all_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'button show_all',
+			inner_html		: get_label.show_all || 'Show all',
+			parent			: reset_group
+		})
+		show_all_button.addEventListener('mousedown', show_all_fn)
+
 	// Submit button
 		const submit_fn = (e) => {
 			e.stopPropagation()
@@ -855,7 +870,13 @@ render_search.prototype.build_search_component = async function(options) {
 	const section_id		= options.section_id
 
 	// short vars
-		const path			= JSON.parse(path_plain)
+		let path
+		try {
+			path = JSON.parse(path_plain)
+		} catch (error) {
+			console.error('build_search_component: invalid path_plain JSON', path_plain, error)
+			return false
+		}
 		const last_item		= path[path.length-1]
 		const first_item	= path[0]
 
@@ -1420,9 +1441,14 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 	// cookie value (selected_search_sections)
 		const cookie_name						= 'selected_search_sections'
 		const selected_search_sections_value	= localStorage.getItem(cookie_name)
-		const selected_search_sections			= selected_search_sections_value
-			? JSON.parse(selected_search_sections_value)
-			: {}
+		let selected_search_sections = {}
+		if (selected_search_sections_value) {
+			try {
+				selected_search_sections = JSON.parse(selected_search_sections_value)
+			} catch (error) {
+				console.error('Invalid selected_search_sections in localStorage', error)
+			}
+		}
 		// sample expected parsed format
 			// {
 			// 	"1": [

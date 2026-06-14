@@ -130,6 +130,10 @@ install.prototype.build = async function(autoload=false) {
 					body : rqo
 				})
 
+				if (SHOW_DEBUG) {
+					console.log('----> install build api_response', api_response);
+				}
+
 			// set context and data to current instance
 				self.context	= api_response.result.find(element => element.model===self.model);
 				self.data		= {}

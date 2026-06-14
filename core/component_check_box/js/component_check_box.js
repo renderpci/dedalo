@@ -159,7 +159,7 @@ export const build_changed_data_item = function(checked, datalist_value, entries
 
 	const action		= (checked===true) ? 'insert' : 'remove'
 	const locator		= entries.find(item => {
-		return (item.section_id==datalist_value.section_id &&
+		return (String(item.section_id)===String(datalist_value.section_id) &&
 				item.section_tipo===datalist_value.section_tipo)
 	})
 	const changed_value	= (action==='insert') ? datalist_value : null

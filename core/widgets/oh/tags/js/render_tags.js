@@ -55,7 +55,7 @@ render_tags.prototype.edit = async function(options) {
 */
 const get_content_data_edit = async function(self) {
 
-	if (!self.value || self.value.lenght<1) {
+	if (!self.value || self.value.length<1) {
 		console.warn("tags get_content_data_edit. Value is empty!", self);
 	}
 

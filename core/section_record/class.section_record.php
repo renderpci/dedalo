@@ -295,10 +295,28 @@ class section_record {
 			case DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO : // dd996
 			case DEDALO_SECTION_PROFILES_TIPO : // dd234. Profile edits change per-user tool authorization (dd1067)
 				// This affects all users cache.
-				// Single orchestrator: clears in-memory statics, the shared
-				// file caches (registered tools list, config lists dd1324/dd996)
-				// and the per-user tool resolution caches.
-				tools_register::invalidate_all_tool_caches();
+				// Invalidate tools config cache file. E.g. 'cache_tools_config_list_dd996.php'
+				$cache_file_name = tools_register::get_config_list_cache_name(DEDALO_TOOLS_CONFIGURATION_SECTION_TIPO);
+				dd_cache::delete_cache_files(
+					[$cache_file_name],
+					''
+				);
+				// Also invalidate per-user tool resolution caches (tool_config changed)
+				tools_register::clean_cache();
+				break;
+
+			case DEDALO_ONTOLOGY_SECTION_TIPO : // ontology35
+				// Invalidate shared diffusion data cache used by diffusion_utils.
+				// Diffusion-derived data (map, virtual tree, section map) changes
+				// whenever the ontology is modified
+				$cache_file_name = diffusion_utils::get_diffusion_cache_file_name();
+				dd_cache::delete_cache_files(
+					[$cache_file_name],
+					''
+				);
+				// Also clear in-memory static caches so the current request
+				// does not continue using stale data
+				diffusion_utils::clear();
 				break;
 
 			default:

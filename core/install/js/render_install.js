@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG*/
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 // SEC-032: install runs WITHOUT authentication. All `*_status.innerHTML = api_response.msg`
@@ -19,8 +19,222 @@
 
 
 
+// ─────────────────────────────────────────────────
+// REUSABLE HELPERS
+// ─────────────────────────────────────────────────
+
 /**
-* RENDER_LOGIN
+* CREATE_SECTION_BLOCK
+* Creates a section card with title, content div, and optional hide state.
+* Sets a pointer on content_data for programmatic access.
+* @param object options { label, class_name, hidden, parent, content_data }
+* @return object { section, content_div }
+*/
+const create_section_block = function(options) {
+
+	const label			= options.label || ''
+	const class_name	= options.class_name || ''
+	const hidden		= options.hidden ?? true
+	const parent		= options.parent
+	const content_data	= options.content_data
+
+	const section = ui.create_dom_element({
+		element_type	: 'section',
+		class_name		: class_name + (hidden ? ' hide' : ''),
+		parent			: parent
+	})
+	// set pointer on content_data
+	content_data[class_name] = section
+
+	// title
+	ui.create_dom_element({
+		element_type	: 'h1',
+		inner_html		: label,
+		parent			: section
+	})
+
+	// content wrapper
+	const content_div = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'content',
+		parent			: section
+	})
+
+	return { section, content_div }
+}//end create_section_block
+
+
+/**
+* CREATE_STATUS_MSG
+* Creates a status message node with ok/error/warning class.
+* @param HTMLElement parent
+* @return HTMLElement status_node
+*/
+const create_status_msg = function(parent) {
+
+	const status_node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'msg',
+		parent			: parent
+	})
+
+	return status_node
+}//end create_status_msg
+
+
+/**
+* ADD_SPINNER
+* Appends a spinner element to the given parent.
+* @param HTMLElement parent
+* @return HTMLElement spinner
+*/
+const add_spinner = function(parent) {
+
+	const spinner = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'spinner',
+		parent			: parent
+	})
+
+	return spinner
+}//end add_spinner
+
+
+/**
+* API_CALL_WITH_SPINNER
+* Performs a data_manager API call with spinner and status message management.
+* @param object options { action, dd_action, body_options, status_node, button_node, retries, timeout }
+* @return object api_response
+*/
+const api_call_with_spinner = async function(options) {
+
+	const action			= options.action
+	const dd_action		= options.dd_action || 'install'
+	const dd_api			= options.dd_api || 'dd_utils_api'
+	const body_options		= options.body_options || {}
+	const status_node		= options.status_node
+	const button_node		= options.button_node
+	const retries			= options.retries ?? 1
+	const timeout			= options.timeout ?? 10 * 1000
+
+	// lock button
+	if (button_node) {
+		button_node.classList.add('loading')
+	}
+
+	// reset status
+	if (status_node) {
+		status_node.classList.remove('ok', 'error', 'warning')
+		status_node.textContent = ''
+	}
+
+	// add spinner
+	const spinner = status_node
+		? add_spinner(status_node)
+		: null
+
+	// API call
+	const api_response = await data_manager.request({
+		body : {
+			action	: dd_action,
+			dd_api	: dd_api,
+			options	: {
+				action	: action,
+				...body_options
+			}
+		},
+		retries	: retries,
+		timeout	: timeout
+	})
+
+	// unlock button
+	if (button_node) {
+		button_node.classList.remove('loading')
+	}
+
+	// remove spinner
+	if (spinner) {
+		spinner.remove()
+	}
+
+	return api_response
+}//end api_call_with_spinner
+
+
+/**
+* SET_STATUS_RESULT
+* Sets status message class and text based on API response.
+* @param HTMLElement status_node
+* @param object api_response
+*/
+const set_status_result = function(status_node, api_response) {
+
+	if (api_response.result === true) {
+		status_node.classList.add('ok')
+		status_node.textContent = api_response.msg
+	} else {
+		status_node.classList.add('error')
+		status_node.textContent = api_response.msg
+	}
+}//end set_status_result
+
+
+/**
+* UPDATE_STEP_INDICATOR
+* Updates the step indicator dots and lines to reflect current progress.
+* @param HTMLElement step_indicator
+* @param number active_step (1-based)
+*/
+const update_step_indicator = function(step_indicator, active_step) {
+
+	if (!step_indicator) return
+
+	const dots		= step_indicator.querySelectorAll('.step_dot')
+	const lines		= step_indicator.querySelectorAll('.step_line')
+	const total		= dots.length
+
+	for (let i = 0; i < total; i++) {
+		const dot = dots[i]
+		dot.classList.remove('active', 'completed')
+		if (i + 1 < active_step) {
+			dot.classList.add('completed')
+		} else if (i + 1 === active_step) {
+			dot.classList.add('active')
+		}
+	}
+	for (let i = 0; i < lines.length; i++) {
+		const line = lines[i]
+		line.classList.remove('completed')
+		if (i + 1 < active_step) {
+			line.classList.add('completed')
+		}
+	}
+}//end update_step_indicator
+
+
+/**
+* COUNTDOWN_AND_RELOAD
+* Shows a countdown in the status node then reloads the page.
+* @param HTMLElement status_node
+* @param number seconds
+*/
+const countdown_and_reload = function(status_node, seconds=5) {
+
+	let counter = seconds
+	const interval = setInterval(() => {
+		status_node.textContent = 'Initializing in ' + counter
+		counter--
+		if (counter < 0) {
+			clearInterval(interval)
+			location.reload()
+		}
+	}, 1000)
+}//end countdown_and_reload
+
+
+
+/**
+* RENDER_INSTALL
 * Manages the component's logic and appearance in client side
 */
 export const render_install = function() {
@@ -49,7 +263,7 @@ render_install.prototype.render = async function(options) {
 			return content_data
 		}
 
-	// wrapper. ui build_edit returns wrapper
+	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'wrapper install'
@@ -65,15 +279,13 @@ render_install.prototype.render = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* Builds the full installer UI: header, step indicator, and all section blocks.
 * @param instance self
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
-	// add_hidden_block
-		const add_hidden_block = (name) => {
-			return ' hide'
-		}
+	const properties = self.context?.properties || {}
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -81,220 +293,181 @@ const get_content_data = function(self) {
 			class_name		: 'content_data'
 		})
 
-	// help block
-		const help_block = ui.create_dom_element({
-			element_type	: 'section',
-			class_name		: 'help_block',
+	// ── HEADER / BRAND ──
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'install_header',
 			parent			: content_data
 		})
-		// set pointers
-		content_data.help_block = help_block
-		// title
 		ui.create_dom_element({
-			element_type	: 'h1',
-			inner_html		: get_label.installation_help || 'Installation help',
-			parent			: help_block
+			element_type	: 'img',
+			class_name		: 'install_logo',
+			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo_white.svg',
+			parent			: header
 		})
-		// content
-		const help_block_content = ui.create_dom_element({
+		const brand = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content',
-			parent			: help_block
+			class_name		: 'install_brand',
+			parent			: header
 		})
-		help_block_content.appendChild(
-			render_help_block(self)
-		)
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'install_title',
+			inner_html		: 'Dédalo',
+			parent			: brand
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'install_subtitle',
+			inner_html		: get_label.installation_help || 'Installation Wizard',
+			parent			: brand
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'install_version',
+			inner_html		: properties.version || '',
+			parent			: header
+		})
 
-	// init_test_block
-		const init_test_block = ui.create_dom_element({
-			element_type	: 'section',
-			class_name		: 'init_test_block',
+	// ── STEP INDICATOR ──
+		const step_indicator = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'step_indicator',
 			parent			: content_data
 		})
-		// set pointers
-		content_data.init_test_block = init_test_block
-		// title
-		ui.create_dom_element({
-			element_type	: 'h1',
-			inner_html		: get_label.init_text || 'Init test',
-			parent			: init_test_block
+		content_data.step_indicator = step_indicator
+		const step_labels = [
+			get_label.init_text || 'Diagnostics',
+			get_label.installation_config_test || 'Configuration',
+			get_label.install_db_label || 'Install Dédalo DDBB',
+			get_label.set_root_pw_label || 'Set root password',
+			get_label.login_label || 'Login',
+			get_label.import_hierarchies_label || 'Install hierarchies',
+			get_label.install_done || 'Done!'
+		]
+		for (let i = 0; i < step_labels.length; i++) {
+			if (i > 0) {
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name	: 'step_line',
+					parent		: step_indicator
+				})
+			}
+			const dot = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'step_dot',
+				inner_html		: String(i + 1),
+				parent			: step_indicator
+			})
+			dot.title = step_labels[i]
+		}
+		// initial state: step 1 active
+		update_step_indicator(step_indicator, 1)
+
+	// ── HELP BLOCK ──
+		const help = create_section_block({
+			label			: get_label.installation_help || 'Installation help',
+			class_name		: 'help_block',
+			hidden			: false,
+			parent			: content_data,
+			content_data	: content_data
 		})
-		// content
-		const init_test_block_content = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content',
-			parent			: init_test_block
+		help.content_div.appendChild(render_help_block(self))
+
+	// ── INIT TEST BLOCK ──
+		const init_test = create_section_block({
+			label			: get_label.init_text || 'Server Diagnostics',
+			class_name		: 'init_test_block',
+			hidden			: false,
+			parent			: content_data,
+			content_data	: content_data
 		})
-		init_test_block_content.appendChild(
+		init_test.content_div.appendChild(
 			render_init_test_block(self)
 		)
 
-	// config block
-		const config_block = ui.create_dom_element({
-			element_type	: 'section',
-			class_name		: 'config_block' + add_hidden_block('config_block'),
-			parent			: content_data
+	// ── CONFIG BLOCK ──
+		const config = create_section_block({
+			label			: get_label.installation_config_test || 'Configuration',
+			class_name		: 'config_block',
+			hidden			: true,
+			parent			: content_data,
+			content_data	: content_data
 		})
-		// set pointers
-		content_data.config_block = config_block
-		// title
-		ui.create_dom_element({
-			element_type	: 'h1',
-			inner_html		: get_label.installation_config_test || 'Configuration',
-			parent			: config_block
-		})
-		// content
-		const config_block_status = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content',
-			parent			: config_block
-		})
-		config_block_status.appendChild(
-			render_config_block(self)
-		)
-		content_data.config_block.config_block_status = config_block_status
+		config.content_div.appendChild(render_config_block(self))
+		content_data.config_block.config_block_status = config.content_div
 
-		// content
 		const config_block_options = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content',
-			parent			: config_block
+			parent			: content_data.config_block
 		})
-		config_block_options.appendChild(
-			render_config_options(self)
-		)
+		config_block_options.appendChild(render_config_options(self))
 		content_data.config_block.config_block_options = config_block_options
 
-	// install_db_block
-		const install_db_block = ui.create_dom_element({
-			element_type	: 'section',
-			class_name		: 'install_db_block' + add_hidden_block('install_db_block'),
-			parent			: content_data
+	// ── INSTALL DB BLOCK ──
+		const install_db = create_section_block({
+			label			: get_label.install_db_label || 'Install Dédalo DDBB',
+			class_name		: 'install_db_block',
+			hidden			: true,
+			parent			: content_data,
+			content_data	: content_data
 		})
-		// set pointers
-		content_data.install_db_block = install_db_block
-		// title
-		ui.create_dom_element({
-			element_type	: 'h1',
-			inner_html		: get_label.install_db_label || '1. Install Dédalo DDBB',
-			parent			: install_db_block
-		})
-		// content
-		const install_db_block_content = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content',
-			parent			: install_db_block
-		})
-		install_db_block_content.appendChild(
-			render_install_db_block(self)
-		)
+		install_db.content_div.appendChild(render_install_db_block(self))
 
-	// set_root_password_block
-		const set_root_password_block = ui.create_dom_element({
-			element_type	: 'section',
-			class_name		: 'set_root_password_block' + add_hidden_block('set_root_password_block'),
-			parent			: content_data
+	// ── SET ROOT PASSWORD BLOCK ──
+		const set_pw = create_section_block({
+			label			: get_label.set_root_pw_label || 'Set root password',
+			class_name		: 'set_root_password_block',
+			hidden			: true,
+			parent			: content_data,
+			content_data	: content_data
 		})
-		// set pointers
-		content_data.set_root_password_block = set_root_password_block
-		// title
-		ui.create_dom_element({
-			element_type	: 'h1',
-			inner_html		: get_label.set_root_pw_label || '2. Set root password',
-			parent			: set_root_password_block
-		})
-		// content
-		const set_root_password_block_content = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content',
-			parent			: set_root_password_block
-		})
-		set_root_password_block_content.appendChild(
-			render_set_root_password_block(self)
-		)
+		set_pw.content_div.appendChild(render_set_root_password_block(self))
 
-	// login_block
-		const login_block = ui.create_dom_element({
-			element_type	: 'section',
-			class_name		: 'login_block' + add_hidden_block('login_block'),
-			parent			: content_data
-		})
-		// set pointers
-		content_data.login_block = login_block
-		// title
-		ui.create_dom_element({
-			element_type	: 'h1',
-			inner_html		: get_label.set_root_pw_label || '3. Login',
-			parent			: login_block
-		})
-		// content
-		const login_block_content = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content',
-			parent			: login_block
+	// ── LOGIN BLOCK ──
+		const login = create_section_block({
+			label			: get_label.login_label || 'Login',
+			class_name		: 'login_block',
+			hidden			: true,
+			parent			: content_data,
+			content_data	: content_data
 		})
 		render_login_block(self)
-		.then(function(response){
-			login_block_content.appendChild(response)
-		})
+	.then(function(response){
+		login.content_div.appendChild(response)
+	})
 
-	// hierarchies_import_block
-		const hierarchies_import_block = ui.create_dom_element({
-			element_type	: 'section',
-			class_name		: 'hierarchies_import_block' + add_hidden_block('hierarchies_import_block'),
-			parent			: content_data
+	// ── HIERARCHIES IMPORT BLOCK ──
+		const hierarchies = create_section_block({
+			label			: get_label.import_hierarchies_label || 'Install hierarchies',
+			class_name		: 'hierarchies_import_block',
+			hidden			: true,
+			parent			: content_data,
+			content_data	: content_data
 		})
-		// set pointers
-		content_data.hierarchies_import_block = hierarchies_import_block
-		// title
-		ui.create_dom_element({
-			element_type	: 'h1',
-			inner_html		: get_label.import_hierarchies_label || '4. Install/activate selected hierarchies',
-			parent			: hierarchies_import_block
-		})
-		// content
-		const hierarchies_import_block_content = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content',
-			parent			: hierarchies_import_block
-		})
-
 		const hierarchies_import_options = {
-			hierarchies				: self.context.properties.hierarchies,
-			default_checked			: self.context.properties.install_checked_default,
-			hierarchy_typologies	: self.context.properties.hierarchy_typologies,
+			hierarchies				: properties.hierarchies,
+			default_checked			: properties.install_checked_default,
+			hierarchy_typologies	: properties.hierarchy_typologies,
 			callback		: function() {
-				// show next block
 				self.node.content_data.install_finish_block.classList.remove('hide')
+				update_step_indicator(self.node.content_data.step_indicator, 7)
 			}
 		}
-		hierarchies_import_block_content.appendChild(
+		hierarchies.content_div.appendChild(
 			render_hierarchies_import_block(hierarchies_import_options)
 		)
 
-	// install_finish_block
-		const install_finish_block = ui.create_dom_element({
-			element_type	: 'section',
-			class_name		: 'install_finish_block' + add_hidden_block('install_finish_block'),
-			parent			: content_data
+	// ── INSTALL FINISH BLOCK ──
+		const finish = create_section_block({
+			label			: get_label.install_done || 'Done!',
+			class_name		: 'install_finish_block',
+			hidden			: true,
+			parent			: content_data,
+			content_data	: content_data
 		})
-		// set pointers
-		content_data.install_finish_block = install_finish_block
-		// title
-		ui.create_dom_element({
-			element_type	: 'h1',
-			inner_html		: get_label.install_done || '5. Done!',
-			parent			: install_finish_block
-		})
-		// content
-		const install_finish_block_content = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'content',
-			parent			: install_finish_block
-		})
-		install_finish_block_content.appendChild(
-			render_install_finish_block(self)
-		)
+		finish.content_div.appendChild(render_install_finish_block(self))
 
 
 	return content_data
@@ -368,19 +541,22 @@ const render_help_block = function(self) {
 
 /**
 * RENDER_INIT_TEST_BLOCK
-* Creates contents nodes for current block
+* Creates diagnostic cards grid and summary banner.
+* Shows server environment details: PHP version, memory, PG version,
+* disk space, tools availability, etc.
 * @param object self
-* @return HTMLElement
+* @return HTMLElement DocumentFragment
 */
 const render_init_test_block = function(self) {
 
 	// short vars
 		const properties	= self.context.properties
 		const init_test		= properties.init_test || null
+		const server_info	= properties.server_info || null
 
 	const fragment = new DocumentFragment()
 
-	// fail init_test case
+	// init_test result banner (always show, regardless of pass/fail)
 		if (!init_test || init_test.result===false) {
 			const msg = init_test && init_test.msg
 				? init_test.msg.join('<br>')
@@ -392,29 +568,232 @@ const render_init_test_block = function(self) {
 				parent			: fragment
 			})
 
-			return fragment
-		}//end if (!db_status)
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'init_test_summary fail',
+				inner_html		: '<span class="summary_icon">&#10060;</span> Server diagnostics failed',
+				parent			: fragment
+			})
+		}
 
-	// config is OK message
-		const msg = init_test.msg
-			? init_test.msg.join('<br>')
-			: 'Init test test passed!'
-		const add_css = init_test.errors===true
-			? 'warning'
-			: 'ok'
-		const msg_node = ui.create_dom_element({
+	// ── DIAGNOSTICS GRID ──
+		const diagnostics_grid = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'msg ' + add_css,
-			inner_html		: msg,
+			class_name		: 'diagnostics_grid',
 			parent			: fragment
 		})
 
-	when_in_viewport(
-		msg_node,
-		() => {
-			self.node.content_data.config_block.classList.remove('hide')
+		// helper: add a diagnostic card
+		const add_card = function(label, value, status) {
+			const card = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'diagnostic_card',
+				parent			: diagnostics_grid
+			})
+			// icon
+			const icon_class = status || 'info'
+			const icon_char	= status === 'pass' ? '&#10003;'
+				: status === 'fail' ? '&#10007;'
+				: status === 'warn' ? '&#9888;'
+				: '&#8505;'
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'diagnostic_icon ' + icon_class,
+				inner_html		: icon_char,
+				parent			: card
+			})
+			// info
+			const info = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'diagnostic_info',
+				parent			: card
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'diagnostic_label',
+				inner_html		: label,
+				parent			: info
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'diagnostic_value',
+				inner_html		: value,
+				parent			: info
+			})
 		}
-	)
+
+		// PHP version
+		add_card(
+			'PHP Version',
+			server_info?.php_version || PHP_VERSION || '—',
+			server_info?.php_version_supported !== false ? 'pass' : 'fail'
+		)
+
+		// PHP memory limit
+		add_card(
+			'Memory Limit',
+			server_info?.memory_limit || '—',
+			server_info?.memory_limit ? 'pass' : 'info'
+		)
+
+		// PHP memory (resolved GB)
+		add_card(
+			'PHP Memory',
+			server_info?.php_memory || '—',
+			'info'
+		)
+
+		// Max execution time
+		add_card(
+			'Max Execution Time',
+			server_info?.max_execution_time || '—',
+			'info'
+		)
+
+		// RAM
+		add_card(
+			'System RAM',
+			server_info?.ram || '—',
+			server_info?.ram ? 'pass' : 'info'
+		)
+
+		// CPU frequency
+		add_card(
+			'CPU Frequency',
+			server_info?.cpu_mhz || '—',
+			server_info?.cpu_mhz ? 'info' : 'info'
+		)
+
+		// PostgreSQL version
+		add_card(
+			'PostgreSQL',
+			server_info?.pg_version || '—',
+			server_info?.pg_version ? 'pass' : 'warn'
+		)
+
+		// Apache version
+		add_card(
+			'Apache',
+			server_info?.apache_version || '—',
+			server_info?.apache_version ? 'pass' : 'info'
+		)
+
+		// Disk free space
+		add_card(
+			'Disk Free Space',
+			server_info?.disk_free_space || '—',
+			server_info?.disk_free_space ? 'pass' : 'info'
+		)
+
+		// OS / Platform
+		add_card(
+			'Platform',
+			server_info?.platform || '—',
+			'info'
+		)
+
+		// Server software
+		add_card(
+			'Server Software',
+			server_info?.server_software || '—',
+			'info'
+		)
+
+		// PHP user
+		add_card(
+			'PHP User',
+			server_info?.php_user || '—',
+			'info'
+		)
+
+		// ImageMagick
+		add_card(
+			'ImageMagick',
+			server_info?.imagemagick || '—',
+			server_info?.imagemagick_supported === true ? 'pass'
+				: server_info?.imagemagick ? 'warn'
+				: 'warn'
+		)
+
+		// FFmpeg
+		add_card(
+			'FFmpeg',
+			server_info?.ffmpeg || '—',
+			server_info?.ffmpeg_supported === true ? 'pass'
+				: server_info?.ffmpeg ? 'warn'
+				: 'warn'
+		)
+
+		// cURL
+		add_card(
+			'cURL',
+			server_info?.curl || '—',
+			server_info?.curl ? 'pass' : 'warn'
+		)
+
+		// OpenSSL
+		add_card(
+			'OpenSSL',
+			server_info?.openssl || '—',
+			server_info?.openssl ? 'pass' : 'warn'
+		)
+
+		// GD library
+		add_card(
+			'GD Library',
+			server_info?.gd || '—',
+			server_info?.gd ? 'pass' : 'warn'
+		)
+
+		// mbstring
+		add_card(
+			'mbstring',
+			server_info?.mbstring || '—',
+			server_info?.mbstring ? 'pass' : 'fail'
+		)
+
+	// ── SUMMARY BANNER ──
+		const has_errors	= init_test && init_test.errors && init_test.errors.length > 0
+		const summary_status = !init_test || init_test.result === false
+			? 'fail'
+			: has_errors
+				? 'warn'
+				: 'pass'
+		const summary_icon	= summary_status === 'pass' ? '&#10003;'
+			: summary_status === 'fail' ? '&#10060;'
+			: '&#9888;'
+		const summary_text	= summary_status === 'pass'
+			? 'All diagnostics passed'
+			: summary_status === 'fail'
+				? 'Diagnostics failed — fix errors above to continue'
+				: 'Diagnostics passed with warnings'
+
+		const summary_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'init_test_summary ' + summary_status,
+			inner_html		: '<span class="summary_icon">' + summary_icon + '</span> ' + summary_text,
+			parent			: fragment
+		})
+
+	// show individual test messages if any (only when init_test passed, since errors are already shown above on fail)
+		if (init_test && init_test.result !== false && init_test.msg && init_test.msg.length > 0) {
+			const add_css = has_errors ? 'warning' : 'ok'
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'msg ' + add_css,
+				inner_html		: init_test.msg.join('<br>'),
+				parent			: fragment
+			})
+		}
+
+	// auto-reveal config block when diagnostics are in viewport
+		when_in_viewport(
+			summary_node,
+			() => {
+				self.node.content_data.config_block.classList.remove('hide')
+				update_step_indicator(self.node.content_data.step_indicator, 2)
+			}
+		)
 
 
 	return fragment;
@@ -565,6 +944,20 @@ const render_config_block = function(self) {
 					parent			: fragment
 				})
 
+			// db writable_check
+				const db_writable_check_label = db_status.db_writable_check
+					? get_label.db_writable_check_ok || 'Database: db writable ok'
+					: get_label.db_writable_check_invalid || 'Database: db is not writable! Check user permissions'
+				const db_writable_check_class = db_status.db_writable_check
+					? 'ok'
+					: 'error'
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg ' + db_writable_check_class,
+					inner_html		: db_writable_check_label,
+					parent			: fragment
+				})
+
 			return fragment
 		}//end if (db_status.global_status===false)
 
@@ -600,6 +993,7 @@ const render_config_options = function(self) {
 		install_button.addEventListener('mouseup', async function() {
 			// show the install_db
 			self.node.content_data.install_db_block.classList.remove('hide')
+			update_step_indicator(self.node.content_data.step_indicator, 3)
 			self.node.content_data.config_block.config_block_options.remove();
 		})//end mouse_up event
 
@@ -609,6 +1003,8 @@ const render_config_options = function(self) {
 			: null
 		if (db_data_version && db_data_version[0] && parseInt(db_data_version[0])<6) {
 
+			const to_update_status = create_status_msg(fragment)
+
 			const update_button = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'primary update_button',
@@ -617,68 +1013,28 @@ const render_config_options = function(self) {
 			})
 			update_button.addEventListener('mouseup', async function() {
 
-				// lock button
-					update_button.classList.add('loading')
-
 				// remove other options
 					install_button.remove()
 
-				// add spinner
-				const spinner = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'spinner',
-					parent			: to_update_status
-				})
-
-				// data_manager API call
-					const api_response = await data_manager.request({
-						body : {
-							action	: 'install',
-							dd_api	: 'dd_utils_api',
-							options	: {
-								action : 'to_update'
-							}
-						},
-						retries : 1, // one try only
-						timeout : 10 * 1000 // 10 secs waiting response
+				// API call with spinner
+					const api_response = await api_call_with_spinner({
+						action			: 'to_update',
+						status_node		: to_update_status,
+						button_node		: update_button
 					})
 
 				// manage result
 					if (api_response.result===false) {
-
-						// fail case
-
 						console.error("to_update api_response:", api_response);
-
 					}else{
-
-						// all is OK case
-
 						console.log("to_update api_response:", api_response);
-
-						let counter = 5;
-						const interval = setInterval(() => {
-							to_update_status.textContent = 'Initializing in ' + counter
-							counter--;
-							if (counter < 0 ) {
-								spinner.remove()
-								clearInterval(interval);
-								location.reload()
-							}
-						}, 1000);
-
+						countdown_and_reload(to_update_status, 5)
 						update_button.remove()
 					}
 
 				// unlock button
 					self.node.content_data.config_block.config_block_options.remove();
 			})//end mouse_up event
-
-			const to_update_status = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'msg',
-				parent			: fragment
-			})
 		}
 
 	// to reset root pw
@@ -754,6 +1110,9 @@ const render_install_db_block = function(self) {
 			})
 		}
 
+	// install_db_status msg
+		const install_db_status = create_status_msg(fragment)
+
 	// install_db_button
 		const install_db_button = ui.create_dom_element({
 			element_type	: 'button',
@@ -763,70 +1122,27 @@ const render_install_db_block = function(self) {
 		})
 		install_db_button.addEventListener('mouseup', async function() {
 
-			// lock button
-				install_db_button.classList.add('loading')
-
-			// reset messages
-				install_db_status.classList.remove('ok')
-				install_db_status.classList.remove('error')
-				install_db_status.textContent = ''
-
-			// add spinner
-				const spinner = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'spinner',
-					parent			: install_db_status
+			// API call with spinner
+				const api_response = await api_call_with_spinner({
+					action			: 'install_db_from_default_file',
+					status_node		: install_db_status,
+					button_node		: install_db_button
 				})
 
-			// data_manager API call
-				const api_response = await data_manager.request({
-					body : {
-						action	: 'install',
-						dd_api	: 'dd_utils_api',
-						options	: {
-							action : 'install_db_from_default_file'
-						}
-					},
-					retries : 1, // one try only
-					timeout : 10 * 1000 // 10 secs waiting response
-				})
-				// manage result
+			// manage result
 				if (api_response.result===true) {
-
-					// all is OK case
-
 					console.log('DBB installed:', api_response);
-
-					install_db_status.classList.add('ok')
-					install_db_status.textContent = api_response.msg
-
+					set_status_result(install_db_status, api_response)
 					// show set_root_password_block
 					self.node.content_data.set_root_password_block.classList.remove('hide')
-
+					update_step_indicator(self.node.content_data.step_indicator, 4)
 					install_db_button.remove();
-
 				}else{
-
-					// fail case
-
 					console.error(api_response.msg);
-
-					install_db_status.classList.add('error')
-					install_db_status.textContent = api_response.msg
+					set_status_result(install_db_status, api_response)
 				}
-
-			// unlock button
-				install_db_button.classList.remove('loading')
-				spinner.remove()
 		})//end mouse_up event
 
-
-	// install_db_status msg
-		const install_db_status = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'msg',
-			parent			: fragment
-		})
 
 	return fragment
 }//end render_install_db_block
@@ -880,33 +1196,19 @@ const render_set_root_password_block = function(self) {
 		input_new_pw.autocomplete = 'new-password'
 		input_new_pw.addEventListener('keyup', function(e) {
 			e.preventDefault()
-
-			// validated. Test password is acceptable string
-				const validated_obj = component_password.prototype.validate_password_format(
-					input_new_pw.value,
-					password_validation_options
-				)
-
-			// message
-				set_message(
-					validated_obj,
-					input_new_pw
-				)
+			const validated_obj = component_password.prototype.validate_password_format(
+				input_new_pw.value,
+				password_validation_options
+			)
+			set_message(validated_obj, input_new_pw)
 		})
 		input_new_pw.addEventListener('change', function(e) {
 			e.preventDefault()
-
-			// validated. Test password is acceptable string
-				const validated_obj = component_password.prototype.validate_password_format(
-					input_new_pw.value,
-					password_validation_options
-				)
-
-			// message
-				set_message(
-					validated_obj,
-					input_new_pw
-				)
+			const validated_obj = component_password.prototype.validate_password_format(
+				input_new_pw.value,
+				password_validation_options
+			)
+			set_message(validated_obj, input_new_pw)
 		})
 
 		function set_message(validated_obj, input_node) {
@@ -917,19 +1219,14 @@ const render_set_root_password_block = function(self) {
 				set_pw_status.textContent = ''
 
 			if (validated_obj.result===false) {
-				// decorate input_node as valid (green)
 				input_node.classList.remove('valid')
 				input_node.classList.add('invalid')
-				// message
 				set_pw_status.classList.add('error')
 				set_pw_status.textContent = validated_obj.msg
-				// button lock
 				change_root_pw_button.classList.add('loading')
 			}else{
-				// decorate input_node as not valid (red)
 				input_node.classList.remove('invalid')
 				input_node.classList.add('valid')
-				// button lock
 				change_root_pw_button.classList.remove('loading')
 			}
 
@@ -954,21 +1251,17 @@ const render_set_root_password_block = function(self) {
 
 		input_new_pw_retype.addEventListener('keyup', function(e) {
 			e.preventDefault()
-
-			// validated. Test password is acceptable string
-				const validated_obj = component_password.prototype.validate_password_format(
-					input_new_pw.value,
-					password_validation_options
-				)
-
-			// message
-				set_message(
-					{
-						result	: input_new_pw_retype.value===input_new_pw.value && validated_obj.result===true, // bool
-						msg		: input_new_pw_retype.value!==input_new_pw.value ? 'Error. Password do not match!' : ''
-					},
-					input_new_pw_retype
-				)
+			const validated_obj = component_password.prototype.validate_password_format(
+				input_new_pw.value,
+				password_validation_options
+			)
+			set_message(
+				{
+					result	: input_new_pw_retype.value===input_new_pw.value && validated_obj.result===true,
+					msg		: input_new_pw_retype.value!==input_new_pw.value ? 'Error. Password do not match!' : ''
+				},
+				input_new_pw_retype
+			)
 		})
 
 	// checkbox show/hide
@@ -995,11 +1288,7 @@ const render_set_root_password_block = function(self) {
 		})
 
 	// set_pw_status msg
-		const set_pw_status = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'msg',
-			parent			: fragment
-		})
+		const set_pw_status = create_status_msg(fragment)
 
 	// change_root_pw_button
 		const change_root_pw_button = ui.create_dom_element({
@@ -1010,90 +1299,45 @@ const render_set_root_password_block = function(self) {
 		})
 		change_root_pw_button.addEventListener('mouseup', async function() {
 
-			// reset messages
-				set_pw_status.classList.remove('ok')
-				set_pw_status.classList.remove('error')
-				set_pw_status.textContent = ''
-
 			// validate again first password input
 				const validated_obj = component_password.prototype.validate_password_format(
 					input_new_pw.value,
 					password_validation_options
 				)
-				// password_value_is_valid
 				if (validated_obj.result!==true) {
-					// message
-						set_message(
-							validated_obj,
-							input_new_pw
-						)
+					set_message(validated_obj, input_new_pw)
 					return false
 				}
 
 			// check again mismatch retype
 				if(input_new_pw_retype.value!==input_new_pw.value) {
-					// message
-						set_message(
-							{
-								result	: false, // bool
-								msg		: 'Error. Password do not match!'
-							},
-							input_new_pw_retype
-						)
+					set_message(
+						{ result: false, msg: 'Error. Password do not match!' },
+						input_new_pw_retype
+					)
 					return false
 				}
 
-			// lock button
-				change_root_pw_button.classList.add('loading')
-
-			// add spinner
-				const spinner = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'spinner',
-					parent			: set_pw_status
+			// API call with spinner
+				const api_response = await api_call_with_spinner({
+					action			: 'set_root_pw',
+					body_options	: { password: input_new_pw.value },
+					status_node		: set_pw_status,
+					button_node		: change_root_pw_button
 				})
 
-			// data_manager API call
-				const api_response = await data_manager.request({
-					body : {
-						action	: 'install',
-						dd_api	: 'dd_utils_api',
-						options	: {
-							action		: 'set_root_pw',
-							password	: input_new_pw.value
-						}
-					},
-					retries : 1, // one try only
-					timeout : 10 * 1000 // 10 secs waiting response
-				})
-				// manage result
+			// manage result
 				if (api_response.result===true) {
-
-					// all is OK case
-
 					console.log('api_response:', api_response.msg)
-
-					set_pw_status.classList.add('ok')
-					set_pw_status.textContent = api_response.msg
-
+					set_status_result(set_pw_status, api_response)
 					change_root_pw_button.remove();
-
 					// show next block
 					self.node.content_data.login_block.classList.remove('hide')
-
+					update_step_indicator(self.node.content_data.step_indicator, 5)
 				}else{
-
-					// fail case
-
 					console.error(api_response.msg);
-
-					set_pw_status.classList.add('error')
-					set_pw_status.textContent = api_response.msg
+					set_status_result(set_pw_status, api_response)
 				}
-
-			// unlock button
-				change_root_pw_button.classList.remove('loading')
-				spinner.remove()
 		})
 
 
@@ -1139,28 +1383,20 @@ const render_login_block = async function(self) {
 					if (api_response.result===true) {
 
 						// all is OK case
-
-						// login_status
 							login_status.classList.add('ok')
 							login_status.classList.remove('hide')
-						// login_node
 							login_container.classList.add('hide')
-
-						// remove button to prevent press again
 							to_login_button.remove()
 
 						// show next block hierarchies_import_block
 							self.node.content_data.hierarchies_import_block.classList.remove('hide')
+							update_step_indicator(self.node.content_data.step_indicator, 6)
 
 					}else{
 
 						// fail case
-
-						// login_status
 							login_status.classList.add('error')
 							login_status.textContent = api_response.msg || 'API response login fails'
-
-						// debug
 							console.warn('api_response:', api_response);
 					}
 
@@ -1173,7 +1409,8 @@ const render_login_block = async function(self) {
 
 			// render and assign node
 				const login_node = await login.render()
-				login_container.appendChild(login_node)
+				// login_container.appendChild(login_node)
+				self.node.appendChild(login_node)
 
 			// show the login_container
 				login_container.classList.remove('hide')
@@ -1202,18 +1439,16 @@ export const render_hierarchies_import_block = function(options) {
 
 	// options
 		const hierarchies				= options.hierarchies || []
-
 		const default_checked			= options.default_checked || []
-		const active_hierarchies		= options.active_hierarchies || [] // already activated hierarchies
-		const hierarchy_files_dir_path	= options.hierarchy_files_dir_path || '' // informative only
-		const callback					= options.callback // executed on finish importation
-		const hierarchy_typologies		= options.hierarchy_typologies || [] // array with typology definitions
+		const active_hierarchies		= options.active_hierarchies || []
+		const hierarchy_files_dir_path	= options.hierarchy_files_dir_path || ''
+		const callback					= options.callback
+		const hierarchy_typologies		= options.hierarchy_typologies || []
 
 	// DocumentFragment
 		const fragment = new DocumentFragment();
 
 		hierarchies.sort((a,b) => (a.label < b.label) ? 1 : ((b.label < a.label) ? -1 : 0))
-
 		hierarchy_typologies.sort((a,b) => (a.label < b.label) ? 1 : ((b.label < a.label) ? -1 : 0))
 
 	// info
@@ -1232,7 +1467,7 @@ export const render_hierarchies_import_block = function(options) {
 			parent			: fragment
 		})
 
-		// hierarchies
+	// hierarchies
 		const hierarchy_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'hierarchy_container',
@@ -1244,7 +1479,6 @@ export const render_hierarchies_import_block = function(options) {
 		for (let i = hierarchy_typologies_length - 1; i >= 0; i--) {
 
 			const current_hierarchy_typology = hierarchy_typologies[i]
-
 			const found_hierarchies = hierarchies.filter(el => el.typology === current_hierarchy_typology.typology)
 
 			if(found_hierarchies.length < 1){
@@ -1277,9 +1511,7 @@ export const render_hierarchies_import_block = function(options) {
 
 				// is_default check
 					const is_default_checked	= default_checked.find(el => el===current_hierarchy.tld)
-					const checked				= is_default_checked
-						? true
-						: false
+					const checked				= is_default_checked ? true : false
 
 				// li element
 					const hierarchy_li = ui.create_dom_element({
@@ -1312,7 +1544,6 @@ export const render_hierarchies_import_block = function(options) {
 					hierarchy_label.prepend(hierarchy_checkbox)
 					hierarchy_checkbox.checked = checked ? 'checked' : ''
 					hierarchy_checkbox.addEventListener('change', function() {
-
 						if(hierarchy_checkbox.checked){
 							hierarchies_to_install.push(current_hierarchy.tld)
 						}else{
@@ -1325,9 +1556,13 @@ export const render_hierarchies_import_block = function(options) {
 					if(checked){
 						hierarchies_to_install.push(current_hierarchy.tld)
 					}
-			}//end for (let j = hierarchies_len - 1; j >= 0; j--)
-		}//end for (let i = hierarchy_typologies_length - 1; i >= 0; i--)
+			}
+		}
 
+	// import_hierarchies_status msg
+		const import_hierarchies_status = create_status_msg(fragment)
+
+	// import button
 		const import_hierarchies_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary import_hierarchies_button',
@@ -1348,80 +1583,43 @@ export const render_hierarchies_import_block = function(options) {
 					return false
 				}
 
-			// lock button
+			// lock container
 				import_hierarchies_button.classList.add('loading')
 				hierarchy_container.classList.add('loading')
 
-			// add spinner
-				const spinner = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'spinner',
-					parent			: import_hierarchies_status
-				})
-
-			// data_manager API call
-				const api_response = await data_manager.request({
-					body : {
-						action	: 'install',
-						dd_api	: 'dd_utils_api',
-						options	: {
-							action		: 'install_hierarchies',
-							hierarchies	: hierarchies_to_install
-						}
-					},
-					retries : 1, // one try only
-					timeout : 10 * 1000 // 10 secs waiting response
+			// API call with spinner
+				const api_response = await api_call_with_spinner({
+					action			: 'install_hierarchies',
+					body_options	: { hierarchies: hierarchies_to_install },
+					status_node		: import_hierarchies_status,
+					button_node		: import_hierarchies_button
 				})
 				console.log('install_hierarchies response: ', api_response);
 
 			// manage result
 				if (api_response.result===false) {
-
-					// fail case
-
 					console.error(api_response.msg);
-
 					import_hierarchies_status.classList.add('error')
 					import_hierarchies_status.textContent = api_response.msg
-
 				}else{
-
 					const false_check = api_response.result.find(el => el.result === false)
 					if(false_check) {
-
-						// some import file fail case
-
 						import_hierarchies_status.classList.add('error')
 						import_hierarchies_status.textContent = false_check.msg
-
 					}else{
-
-						// all is OK case
-
 						import_hierarchies_status.classList.add('ok')
 						import_hierarchies_status.textContent = api_response.msg
-
 						import_hierarchies_button.remove()
-
-						// callback on success
 						if (typeof callback==='function') {
 							callback(api_response)
 						}
 					}
 				}
 
-			// unlock button
+			// unlock container
 				import_hierarchies_button.classList.remove('loading')
 				hierarchy_container.classList.remove('loading')
-				spinner.remove()
 		}
-
-	// import_hierarchies_status msg
-		const import_hierarchies_status = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'msg',
-			parent			: fragment
-		})
 
 
 	return fragment
@@ -1446,6 +1644,10 @@ const render_install_finish_block = function(self) {
 			parent			: fragment
 		})
 
+	// install_finish_status msg
+		const install_finish_status = create_status_msg(fragment)
+
+	// install_finish_button
 		const install_finish_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'success install_finish_button',
@@ -1454,74 +1656,25 @@ const render_install_finish_block = function(self) {
 		})
 		install_finish_button.addEventListener('mouseup', async function(){
 
-			// lock button
-				install_finish_button.classList.add('loading')
-
-			// add spinner
-				const spinner = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'spinner',
-					parent			: description_node
-				})
-
-			// data_manager API call
-				const api_response = await data_manager.request({
-					body : {
-						action	: 'install',
-						dd_api	: 'dd_utils_api',
-						options	: {
-							action	: 'install_finish'
-						}
-					},
-					retries : 1, // one try only
-					timeout : 10 * 1000 // 10 secs waiting response
+			// API call with spinner
+				const api_response = await api_call_with_spinner({
+					action			: 'install_finish',
+					status_node		: install_finish_status,
+					button_node		: install_finish_button
 				})
 
 			// manage result
 				if (api_response.result===false) {
-
-					// fail case
-
 					console.error("install_finish api_response:", api_response);
-
 					install_finish_status.classList.add('error')
 					install_finish_status.textContent = api_response.msg
-
-					spinner.remove()
-
 				}else{
-
-					// all is OK case
-
 					console.log("install_finish api_response:", api_response);
-
 					install_finish_status.classList.add('ok')
 					install_finish_status.textContent = api_response.msg + ' Setting up!'
-
-					let counter = 5;
-					const interval = setInterval(() => {
-						install_finish_status.textContent = 'Initializing in ' + counter
-						counter--;
-						if (counter < 0 ) {
-							spinner.remove()
-							clearInterval(interval);
-							location.reload()
-						}
-					}, 1000);
-
 					install_finish_button.remove()
+					countdown_and_reload(install_finish_status, 5)
 				}
-
-			// unlock button
-				install_finish_button.classList.remove('loading')
-
-		})
-
-	// install_finish_status msg
-		const install_finish_status = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'msg',
-			parent			: fragment
 		})
 
 

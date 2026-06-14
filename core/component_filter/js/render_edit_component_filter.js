@@ -376,7 +376,7 @@ export const get_input_element = (element, self) => {
 					entries[j].section_id===datalist_value.section_id &&
 					entries[j].section_tipo===datalist_value.section_tipo
 					) {
-						input_node.checked = 'checked'
+						input_node.checked = true
 				}
 			}
 

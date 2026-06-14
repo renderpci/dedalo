@@ -1668,7 +1668,7 @@ search.prototype.track_show_panel = async function(options) {
 			id		: self.panels_status_id,
 			value	: value
 		}
-		data_manager.set_local_db_data(
+		await data_manager.set_local_db_data(
 			data,
 			'context'
 		)

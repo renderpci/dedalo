@@ -26,7 +26,7 @@
 	}
 
 // check is in maintenance mode
-	if (DEDALO_MAINTENANCE_MODE || DEDALO_MAINTENANCE_MODE_CUSTOM) {
+	if (DEDALO_MAINTENANCE_MODE || (defined('DEDALO_MAINTENANCE_MODE_CUSTOM') && DEDALO_MAINTENANCE_MODE_CUSTOM)) {
 		die("Error. System is in maintenance mode. Unable to test in this mode.");
 	}
 

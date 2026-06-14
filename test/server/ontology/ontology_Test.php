@@ -64,7 +64,8 @@ final class ontology_test extends BaseTestCase {
 	*/
 	public function test_class_vars() {
 
-		// disable log
+		// disable log (restored at the end of this test to avoid static state pollution)
+		$prev_enable_log = logger_backend_activity::$enable_log;
 		logger_backend_activity::$enable_log = false;
 
 		// ontology::$main_table
@@ -84,6 +85,8 @@ final class ontology_test extends BaseTestCase {
 				'expected:' . $expected . PHP_EOL
 				.'result: ' .$result . PHP_EOL
 			);
+		// restore log setting to avoid static state pollution across test suites
+		logger_backend_activity::$enable_log = $prev_enable_log;
 	}//end test_class_vars
 
 

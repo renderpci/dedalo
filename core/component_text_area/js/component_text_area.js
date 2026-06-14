@@ -1320,7 +1320,9 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 				tag_id	: tag_id
 			})
 		// Fire click into the image node of the tag
-			inserted_tag_in.firstChild.click()
+			if (inserted_tag_in?.firstChild) {
+				inserted_tag_in.firstChild.click()
+			}
 
 
 	return (range_clon)

@@ -102,6 +102,13 @@ class login extends common {
 	*/
 	private static function get_login_throttle_file(string $key) : ?string {
 
+		if (defined('DEDALO_CACHE_PATH')) {
+			$base_path = DEDALO_CACHE_PATH;
+		} elseif (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
+			$base_path = DEDALO_CACHE_MANAGER['files_path'];
+		} else {
+			return null;
+		}
 		// AUTH-08 (known limitation): throttle state is local-disk only, so lockout
 		// is per-node. Under a multi-node deployment behind a load balancer (or a
 		// shared KV/redis session backend), an attacker's attempts spread across nodes
@@ -111,10 +118,6 @@ class login extends common {
 		// counters there with atomic increments + TTL and keep this file path as the
 		// single-node fallback. Tracked as a deliberate follow-up (needs the shared
 		// backend wiring), not a code change here.
-		if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
-			return null;
-		}
-		$base_path = DEDALO_CACHE_MANAGER['files_path'];
 		if (!is_dir($base_path)) {
 			return null;
 		}
@@ -484,7 +487,7 @@ class login extends common {
 					# STOP : PASSWORD IS WRONG
 					#
 					$activity_data['result']	= 'deny';
-					$activity_data['cause']	= 'wrong password';
+					$activity_data['cause']		= 'wrong password';
 					$activity_data['username']	= $username;
 
 					# LOGIN ACTIVITY REPORT
@@ -679,7 +682,7 @@ class login extends common {
 		// the SAML idp_ip allowlist by injecting a forged X-Forwarded-For header.
 		// Strict comparison prevents loose-typing surprises if SAML_CONFIG['idp_ip']
 		// happens to contain non-string entries.
-			if (defined('SAML_CONFIG') && !empty(SAML_CONFIG['idp_ip'])) {
+			if (defined('SAML_CONFIG') && is_array(SAML_CONFIG) && !empty(SAML_CONFIG['idp_ip'])) {
 				$client_ip = get_client_ip_trusted();
 				if ($client_ip === '' || !in_array($client_ip, SAML_CONFIG['idp_ip'], true)) {
 					$response->msg = "[Login_SAML] Error. Invalid client IP !";
@@ -839,6 +842,7 @@ class login extends common {
 						sleep(2);
 					}
 					$response->msg = label::get_label('user_code_does_not_exist_error'); # "Error: User Code not exists! Please try again";
+					$response->errors[] = 'user_code_does_not_exist';
 					error_log("[Login_SAML] DEDALO LOGIN ERROR : Invalid saml code");
 					return $response;
 			}
@@ -1713,7 +1717,7 @@ class login extends common {
 
 
 		// saml logout
-			if (defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {
+			if (defined('SAML_CONFIG') && is_array(SAML_CONFIG) && (SAML_CONFIG['active'] ?? false) === true && isset(SAML_CONFIG['logout_url'])) {
 				# code...
 			}
 
@@ -1885,7 +1889,7 @@ class login extends common {
 			}
 
 		// saml. If set, a button will be displayed on the login form.
-			if (defined('SAML_CONFIG')) {
+			if (defined('SAML_CONFIG') && is_array(SAML_CONFIG) && (SAML_CONFIG['active'] ?? false) === true) {
 				// format:
 				// [
 				//	  'active'		=> true,

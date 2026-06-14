@@ -221,7 +221,7 @@ component_email.prototype.get_ar_emails = async function() {
 	// builder should be section or portal, the self.caller normally will be a section_record, and his caller should be the builder
 	const builder = self.caller?.caller
 	// check if the builder is a section or portal. Sometimes it could be a tool, or widget,...
-	if(!builder || builder?.model !== 'section' || builder?.model !== 'component_portal'){
+	if(!builder || (builder?.model !== 'section' && builder?.model !== 'component_portal')){
 		return false
 	}
 	// get the rqo of the builder, it will use to redo the search but only for the email

@@ -535,7 +535,7 @@ class component_pdf extends component_media_common implements component_media_in
 					. " $response->msg " . PHP_EOL
 					. " original_quality: " . $original_quality . PHP_EOL
 					. ' original_file_path: ' . to_string($original_file_path)
-					, logger::ERROR
+					, logger::WARNING
 				);
 				$response->errors[] = 'invalid empty original_file_path';
 				return $response;

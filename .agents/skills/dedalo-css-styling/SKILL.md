@@ -9,7 +9,7 @@ Dédalo uses a custom design system built with **LESS**. It relies on a centrali
 
 ## Design System Basics
 
-### Core Variables (`vars.less`)
+### Core Variables (`vars.less`) Colors and sizes
 Always use established variables from [vars.less](file:///Users/render/Desktop/trabajos/dedalo/v6/master_dedalo/core/page/css/layout/vars.less) instead of hardcoded hex values.
 
 | Variable | Usage | Hex |
@@ -35,13 +35,13 @@ Most UI elements in Dédalo follow the `.wrapper_component` pattern:
 <div class="wrapper_component edit active">
     <!-- Component Label -->
     <div class="label">Component Name</div>
-    
+
     <!-- Dynamic Buttons (Visible on hover/active) -->
     <div class="buttons_container">
         <span class="button edit"></span>
         <span class="button delete"></span>
     </div>
-    
+
     <!-- Actual Data Container -->
     <div class="content_data">
         <div class="content_value">...</div>

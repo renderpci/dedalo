@@ -118,8 +118,8 @@ view_mini_geolocation.render = async function(self, options) {
 		})
 		const value_string = string_values.join(self.context.fields_separator)
 
-	// Set value
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
+	// Set value (as text node to avoid HTML injection)
+		wrapper.prepend(value_string)
 
 
 	return wrapper

@@ -36,6 +36,7 @@ define('DEDALO_ENTITY_ID',0);
 define('DEVELOPMENT_SERVER', false);
 define('DEDALO_SESSIONS_PATH','');
 define('DEDALO_SESSION_HANDLER','');
+define('DEDALO_CACHE_PATH','');
 define('DEDALO_CACHE_MANAGER',[]);
 define('SHOW_DEBUG', false);
 define('SHOW_DEVELOPER',false);

@@ -191,7 +191,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 			// get the clipboard data
 			const clipboard = event.clipboardData.getData('text/plain')
 			// check if the clipboard is a svg data
-			if ( clipboard.indexOf('<svg version="')!=-1 ) {
+			if ( clipboard.indexOf('<svg version="')!==-1 ) {
 
 				// const pasted_svg = self.current_paper.project.importSVG( clipboard )
 				// pasted_svg.clipped = true;

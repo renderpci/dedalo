@@ -585,7 +585,7 @@ final class dd_utils_api {
 			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 			// saml logout
-				if ($login_type==='saml' && defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {
+				if ($login_type==='saml' && defined('SAML_CONFIG') && is_array(SAML_CONFIG) && (SAML_CONFIG['active'] ?? false) === true && isset(SAML_CONFIG['logout_url'])) {
 					$response->saml_redirect = SAML_CONFIG['logout_url'];
 				}
 
@@ -914,7 +914,7 @@ final class dd_utils_api {
 
 				// filename
 				$file_name		= $file_to_upload['name'];
-				$file_tmp_name	= $file_to_upload['tmp_name'];
+				$file_tmp_name	= $file_to_upload['tmp_name']; // Like: '/tmp/php9ecci0m0mr3q9rJk8n2'
 				$file_type 		= $file_to_upload['type']; // mime like 'image/tiff'
 
 				// blob case (componen_3d posterframe auto-generated)
@@ -923,7 +923,7 @@ final class dd_utils_api {
 				}
 
 				// extension
-				$extension	= strtolower( pathinfo($file_name, PATHINFO_EXTENSION) );
+				$extension= strtolower( pathinfo($file_name, PATHINFO_EXTENSION) );
 
 				// Do not trust $file_to_upload['mime'] VALUE !!
 				// Check MIME Type by yourself.
@@ -942,6 +942,10 @@ final class dd_utils_api {
 					$name			= "{$chunk_index}-{$tmp_name}.{$extension}";
 					$file_mime		= 'application/octet-stream';
 				}
+
+			// Sanitize filename to match what add_file() will search for
+			// This prevents mismatch when add_file() sanitizes tmp_name with sanitize_key_dir()
+				$name = sanitize_key_dir($name);
 
 			// CHECKING
 				$known_mime_types = self::get_known_mime_types();

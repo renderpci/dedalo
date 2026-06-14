@@ -126,6 +126,10 @@ component_radio_button.prototype.get_checked_value_label = function() {
 		return (item.section_id===self.data.entries[0]?.section_id)
 	})
 
+	if (checked_key === -1) {
+		return ''
+	}
+
 	const label = self.data.datalist[checked_key].label
 
 	return label

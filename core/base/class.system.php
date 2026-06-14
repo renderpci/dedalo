@@ -661,9 +661,32 @@ class system {
 
 
 	/**
-	 * DELETE_OLD_SESSIONS_FILES
-	 * Cleans old files (sessions and caches) from
-	 * 'DEDALO_SESSIONS_PATH' directory
+	* CHECK_CACHE_PATH
+	* Checks if Dédalo cache path is set and available
+	* constant 'DEDALO_CACHE_PATH' is defined in bootstrap.php
+	* @see bootstrap.php
+	* @return bool
+	*/
+	public static function check_cache_path() : bool {
+
+		if (!defined('DEDALO_CACHE_PATH')) {
+			return false;
+		}
+
+		$dir_exists = create_directory(DEDALO_CACHE_PATH, 0750);
+		if( $dir_exists===true ){
+			return true;
+		}
+
+
+		return false;
+	}//end check_cache_path
+
+
+
+	/**
+	 * DELETE_OLD_CACHE_FILES
+	 * Cleans old cache files from 'DEDALO_CACHE_PATH' directory
 	 * Note that each Dédalo process creates an individual process log file.
 	 *
 	 * Iterates all files in the sessions directory and removes any whose last
@@ -674,28 +697,27 @@ class system {
 	 * without aborting the loop so remaining files are still processed.
 	 * @return bool
 	 */
-	public static function delete_old_sessions_files(): bool
-	{
+	public static function delete_old_cache_files(): bool {
 
-		if (!system::check_sessions_path()) {
+		if (!defined('DEDALO_CACHE_PATH')) {
 			debug_log(
 				__METHOD__
-					. " Unable to delete session files. Sessions directory is unavailable" . PHP_EOL
-					. ' DEDALO_SESSIONS_PATH: ' . (defined('DEDALO_SESSIONS_PATH') ? DEDALO_SESSIONS_PATH : 'undefined'),
+					. " Unable to delete cache files. Cache directory is undefined" . PHP_EOL
+					. ' DEDALO_CACHE_PATH: undefined',
 				logger::WARNING
 			);
 			return false;
 		}
 
 		$cache_life	= 2 * 24 * 60 * 60; // caching time, in seconds - 2 days -
-		$files		= glob(DEDALO_SESSIONS_PATH . '/*');
+		$files		= glob(DEDALO_CACHE_PATH . '/*');
 
 		// check glob() result
 		if ($files === false) {
 			debug_log(
 				__METHOD__
-					. " Error reading sessions directory" . PHP_EOL
-					. ' DEDALO_SESSIONS_PATH: ' . DEDALO_SESSIONS_PATH,
+					. " Error reading cache directory" . PHP_EOL
+					. ' DEDALO_CACHE_PATH: ' . DEDALO_CACHE_PATH,
 				logger::ERROR
 			);
 			return false;
@@ -738,6 +760,99 @@ class system {
 				debug_log(
 					__METHOD__
 						. " Deleted cache file " . PHP_EOL
+						. ' file: ' . to_string($file) . PHP_EOL
+						. ' date_modified: ' . to_string($date_modified),
+					logger::DEBUG
+				);
+			}
+		}
+
+		return true;
+	}//end delete_old_cache_files
+
+
+
+	/**
+	 * DELETE_OLD_SESSIONS_FILES
+	 * Cleans old session files from 'DEDALO_SESSIONS_PATH' directory
+	 * Uses session.gc_maxlifetime as the threshold (default 8 hours)
+	 * Only applies when DEDALO_SESSION_HANDLER is 'files'
+	 * @return bool
+	 */
+	public static function delete_old_sessions_files(): bool {
+
+		if (!defined('DEDALO_SESSIONS_PATH')) {
+			debug_log(
+				__METHOD__
+					. " Unable to delete session files. Sessions directory is undefined" . PHP_EOL
+					. ' DEDALO_SESSIONS_PATH: undefined',
+				logger::WARNING
+			);
+			return false;
+		}
+
+		// Only file-based sessions need manual cleanup
+		if (defined('DEDALO_SESSION_HANDLER') && DEDALO_SESSION_HANDLER !== 'files') {
+			return false;
+		}
+
+		// Use session.gc_maxlifetime as the session lifetime threshold
+		$session_life = (int) ini_get('session.gc_maxlifetime');
+		if ($session_life < 1) {
+			// Fallback to 8 hours if ini value is not usable
+			$session_life = 8 * 3600;
+		}
+
+		$files = glob(DEDALO_SESSIONS_PATH . '/*');
+
+		// check glob() result
+		if ($files === false) {
+			debug_log(
+				__METHOD__
+					. " Error reading sessions directory" . PHP_EOL
+					. ' DEDALO_SESSIONS_PATH: ' . DEDALO_SESSIONS_PATH,
+				logger::ERROR
+			);
+			return false;
+		}
+
+		foreach ($files as $file) {
+
+			// skip if not a file (e.g., directories like saml_seen, parallel_*)
+			if (!is_file($file)) {
+				continue;
+			}
+
+			// time in seconds (number of seconds since the Unix Epoch (January 1 1970 00:00:00 GMT))
+			$date_now		= time();
+			$date_modified	= filemtime($file);
+
+			// check filemtime() result
+			if ($date_modified === false) {
+				debug_log(
+					__METHOD__
+						. " Error getting file modification time" . PHP_EOL
+						. ' file: ' . to_string($file),
+					logger::ERROR
+				);
+				continue;
+			}
+
+			if (($date_now - $date_modified) >= $session_life) {
+				$deleted = unlink($file);
+				if (!$deleted) {
+					debug_log(
+						__METHOD__
+							. " Error deleting session file " . PHP_EOL
+							. ' file: ' . to_string($file),
+						logger::ERROR
+					);
+					continue;
+				}
+
+				debug_log(
+					__METHOD__
+						. " Deleted session file " . PHP_EOL
 						. ' file: ' . to_string($file) . PHP_EOL
 						. ' date_modified: ' . to_string($date_modified),
 					logger::DEBUG
@@ -1037,6 +1152,98 @@ class system {
 
 		return $megabytes;
 	}//end get_disk_free_space
+
+
+
+	/**
+	* GET_IMAGEMAGICK_VERSION
+	* Get the ImageMagick binary version string
+	* Uses the Dédalo ImageMagick class which resolves the installed path from config
+	* @return string $version Empty string if not found
+	*/
+	public static function get_imagemagick_version() : string {
+
+		$cmd  = ImageMagick::get_imagemagick_installed_path();
+		$cmd .= ' -version | sed -n "s/Version: ImageMagick \([-0-9.]*\).*/\1/p;" ';
+
+		$version = trim(shell_exec($cmd) ?? '');
+
+		return $version;
+	}//end get_imagemagick_version
+
+
+
+	/**
+	* TEST_IMAGEMAGICK_VERSION_SUPPORTED
+	* Test if ImageMagick version meets Dédalo minimum requirements
+	* @param string $minimum_version = '6.9'
+	* @return bool
+	*/
+	public static function test_imagemagick_version_supported(string $minimum_version='6.9') : bool {
+
+		$version = system::get_imagemagick_version();
+
+		if (empty($version)) {
+			return false;
+		}
+
+		if (version_compare(trim($version), trim($minimum_version)) >= 0) {
+			return true;
+		}
+
+		debug_log(__METHOD__
+			." ImageMagick version ($version) is below minimum ($minimum_version)"
+			, logger::ERROR
+		);
+
+		return false;
+	}//end test_imagemagick_version_supported
+
+
+
+	/**
+	* GET_FFMPEG_VERSION
+	* Get the FFmpeg binary version string
+	* Uses the Dédalo Ffmpeg class which resolves the installed path from config
+	* @return string $version Empty string if not found
+	*/
+	public static function get_ffmpeg_version() : string {
+
+		$cmd  = Ffmpeg::get_ffmpeg_installed_path();
+		$cmd .= ' -version | sed -n "s/ffmpeg version \([-0-9.]*\).*/\1/p;" ';
+
+		$version = trim(shell_exec($cmd) ?? '');
+
+		return $version;
+	}//end get_ffmpeg_version
+
+
+
+	/**
+	* TEST_FFMPEG_VERSION_SUPPORTED
+	* Test if FFmpeg version meets Dédalo minimum requirements
+	* @param string $minimum_version = '4.4.2'
+	* @return bool
+	*/
+	public static function test_ffmpeg_version_supported(string $minimum_version='4.4.2') : bool {
+
+		$version = system::get_ffmpeg_version();
+
+		if (empty($version)) {
+			return false;
+		}
+
+		if (version_compare(trim($version), trim($minimum_version)) >= 0) {
+			return true;
+		}
+
+		debug_log(__METHOD__
+			." FFmpeg version ($version) is below minimum ($minimum_version)"
+			, logger::ERROR
+		);
+
+		return false;
+	}//end test_ffmpeg_version_supported
 
 
 

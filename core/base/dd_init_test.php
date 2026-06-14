@@ -169,6 +169,27 @@
 
 
 
+// CACHE DIRECTORY CHECK
+	// Verifies that the cache directory is writable by the PHP user.
+	// This is critical for caching frequently accessed data like security trees.
+	if (defined('DEDALO_CACHE_PATH')) {
+		// verify directory already exists
+		$dir_exists = system::check_cache_path();
+		if( !$dir_exists ){
+			$init_response->msg[] = 'Error. Unable to write cache. Review your permissions for cache directory path (php user: $php_user)';
+			$init_response->errors[] = 'Cache dir permission denied';
+			debug_log(
+				implode(PHP_EOL, $init_response->msg)
+				, logger::ERROR
+			);
+			return $init_response;
+		}
+		// Maintenance Task: cleanup expired cache files to prevent disk bloat.
+		system::delete_old_cache_files();
+	}
+
+
+
 // BACKUPS DIRECTORY CHECK
 	// Ensures the main backup directory exists and is writable.
 	// Dédalo uses this for database dumps, ontology exports, and temporary migration files.
@@ -855,7 +876,10 @@
 		return $init_response;
 	}else{
 
-		$files_path = DEDALO_CACHE_MANAGER['files_path'] ?? null;
+		// Resolve cache path: DEDALO_CACHE_PATH takes priority over DEDALO_CACHE_MANAGER files_path
+		$files_path = defined('DEDALO_CACHE_PATH')
+			? DEDALO_CACHE_PATH
+			: (DEDALO_CACHE_MANAGER['files_path'] ?? null);
 
 		// create directory if is not already created
 		if (!empty($files_path)) {

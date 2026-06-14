@@ -149,7 +149,9 @@ const t0 = performance.now()
 	// (!) readAndUpdatePage is currently a no-op stub. The rAF scheduling
 	// infrastructure is wired up but the actual read/update work has not been
 	// implemented yet.  `e` (the rAF timestamp) is accepted but unused.
-	const readAndUpdatePage = (e) => {
+	const readAndUpdatePage = () => {
+		// reset the flag so subsequent scroll events can schedule a new frame
+		scheduledAnimationFrame = false
 	}
 	/**
 	* ONSCROLL

@@ -313,16 +313,16 @@ component_security_access.prototype.update_value = function(item, input_value) {
 
 	const self = this
 
+	// value . Copy of current data.entries
+		const value = self.filled_value
+			? [...self.filled_value]
+			: []
+
 	// item check
 		if (!item) {
 			console.error("Ignored undefined item:", input_value);
 			return value
 		}
-
-	// value . Copy of current data.entries
-		const value = self.filled_value
-			? [...self.filled_value]
-			: []
 
 	// find if already exists
 		const found = value.find(el => el.tipo===item.tipo && el.section_tipo===item.section_tipo)

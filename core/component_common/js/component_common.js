@@ -397,7 +397,7 @@ const do_build = async (self, autoload) => {
 				}
 
 			// data
-				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				const data = api_response.result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id)===String(self.section_id))
 				if(!data){
 					console.warn("data not found in api_response:",api_response);
 				}
@@ -754,7 +754,7 @@ component_common.prototype.save = async function(new_changed_data) {
 			}
 
 			// Update Data Model
-				const data = result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && el.section_id==self.section_id)
+				const data = result.data.find(el => el.tipo===self.tipo && el.section_tipo===self.section_tipo && String(el.section_id)===String(self.section_id))
 				if(!data){
 					if(SHOW_DEBUG===true) {
 						console.warn(`Warn: data not found for ${self.tipo} in API result.`, result);

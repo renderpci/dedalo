@@ -91,11 +91,8 @@ view_mini_list_filter.render = async function(self) {
 		// Join with ' | ' for a compact, scannable single-line representation.
 		const value_string = entries.join(' | ')
 
-	// Set value
-		// insertAdjacentHTML('afterbegin', …) prepends the text before any child
-		// nodes that build_wrapper_mini may have added (currently none, but kept
-		// future-safe).
-		wrapper.insertAdjacentHTML('afterbegin', value_string)
+	// Set value (as text node to avoid HTML injection)
+		wrapper.prepend(value_string)
 
 
 	return wrapper

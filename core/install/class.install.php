@@ -75,6 +75,81 @@ class install extends common {
 			$init_test_response = require DEDALO_CORE_PATH.'/base/dd_init_test.php';
 			$properties->init_test = $init_test_response;
 
+		// server_info. Detailed server environment diagnostics (using system class)
+			$server_info = new stdClass();
+				$server_info->php_version			= PHP_VERSION;
+				$server_info->php_version_supported	= system::test_php_version_supported();
+				$server_info->memory_limit			= ini_get('memory_limit') ?: '—';
+				$server_info->php_memory			= system::get_php_memory() . ' GB';
+				$server_info->max_execution_time	= ini_get('max_execution_time') ?: '—';
+				$server_info->platform				= PHP_OS_FAMILY . ' ' . php_uname('r') . ' ' . php_uname('m');
+				$server_info->server_software		= $_SERVER['SERVER_SOFTWARE'] ?? 'CLI';
+				$server_info->ram					= system::get_ram() . ' GB';
+				$server_info->cpu_mhz				= system::get_mhz() ? system::get_mhz() . ' MHz' : '—';
+				$server_info->mbstring				= extension_loaded('mbstring') ? 'Available' : 'Not found';
+				$server_info->curl					= system::check_curl() ? 'Available' : 'Not found';
+				$server_info->openssl				= extension_loaded('openssl') ? 'Available' : 'Not found';
+				$server_info->gd					= system::check_gd_lib() ? 'Available' : 'Not found';
+				$server_info->pg_version			= '—';
+				$server_info->apache_version		= system::get_apache_version() ?: '—';
+				$server_info->imagemagick			= '—';
+				$server_info->ffmpeg				= '—';
+				$server_info->disk_free_space		= '—';
+				$server_info->php_user				= '—';
+
+			// PostgreSQL version (from system class, fallback to DB query)
+				$pg_version = system::get_postgresql_version();
+				if (!empty($pg_version)) {
+					$server_info->pg_version = 'PostgreSQL ' . $pg_version;
+				}else{
+					try {
+						$conn = install_config_manager::get_db_install_conn();
+						if ($conn !== false) {
+							$pg_result = pg_query($conn, 'SELECT version()');
+							if ($pg_result !== false) {
+								$pg_row = pg_fetch_row($pg_result);
+								if ($pg_row !== false) {
+									if (preg_match('/^PostgreSQL\s+(\S+)/', $pg_row[0], $matches)) {
+										$server_info->pg_version = 'PostgreSQL ' . $matches[1];
+									}else{
+										$server_info->pg_version = $pg_row[0];
+									}
+								}
+							}
+						}
+					} catch (Throwable $e) {
+						// ignore - will show '—'
+					}
+				}
+
+			// ImageMagick (from system class)
+				$im_version = system::get_imagemagick_version();
+				if (!empty($im_version)) {
+					$server_info->imagemagick			= 'ImageMagick ' . $im_version;
+					$server_info->imagemagick_supported	= system::test_imagemagick_version_supported();
+				}
+
+			// FFmpeg (from system class)
+				$ff_version = system::get_ffmpeg_version();
+				if (!empty($ff_version)) {
+					$server_info->ffmpeg				= 'FFmpeg ' . $ff_version;
+					$server_info->ffmpeg_supported		= system::test_ffmpeg_version_supported();
+				}
+
+			// Disk free space (from system class)
+				$disk_mb = system::get_disk_free_space();
+				if ($disk_mb !== null) {
+					$server_info->disk_free_space = round($disk_mb / 1024, 1) . ' GB';
+				}
+
+			// PHP user
+				$php_user_info = system::get_php_user_info();
+				if ($php_user_info !== null) {
+					$server_info->php_user = $php_user_info->name ?? ($php_user_info->current_user ?? '—');
+				}
+
+			$properties->server_info = $server_info;
+
 		// errors found on init test (Don't stop execution here)
 			if ($init_test_response->result===false) {
 

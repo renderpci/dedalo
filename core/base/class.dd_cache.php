@@ -93,7 +93,9 @@ class dd_cache {
 			);
 			return false;
 		}
-		$base_path = DEDALO_CACHE_MANAGER['files_path'];
+		$base_path = defined('DEDALO_CACHE_PATH')
+			? DEDALO_CACHE_PATH
+			: DEDALO_CACHE_MANAGER['files_path'];
 
 		if (!is_dir($base_path) || !is_writable($base_path)) {
 			debug_log(__METHOD__." Error: base_path is not writable: $base_path", logger::ERROR);

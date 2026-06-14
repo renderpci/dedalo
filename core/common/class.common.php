@@ -789,7 +789,6 @@ abstract class common {
 
 
 
-
 	/**
 	* IS_TRANSLATABLE
 	* Convenience accessor for the $translatable property loaded by

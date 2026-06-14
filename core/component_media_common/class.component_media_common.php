@@ -985,7 +985,7 @@ class component_media_common extends component_common {
 			if (!file_exists($source_file)) {
 				$response->msg .= ' Source file not found: ' . basename($source_file);
 				debug_log(__METHOD__
-					.' ' .$response->msg . PHP_EOL
+					.' Source file do not exists:' . $source_file . PHP_EOL
 					. ' source_file: ' . $source_file
 					, logger::ERROR
 				);
@@ -2829,7 +2829,7 @@ class component_media_common extends component_common {
 	*/
 	private function sanitize_quality(string $quality) : string {
 
-		if ($quality==='.' || $quality==='..' || preg_match('/^[A-Za-z0-9_\-\.]+$/', $quality) !== 1) {
+		if ($quality==='.' || $quality==='..' || preg_match('/^[<>]?[A-Za-z0-9_\-\.]+$/', $quality) !== 1) {
 			debug_log(__METHOD__
 				. ' SEC-065/MEDIA-04: rejecting unsafe quality: ' . to_string($quality)
 				, logger::ERROR
@@ -3573,7 +3573,7 @@ class component_media_common extends component_common {
 					. ' id: ' . $id . PHP_EOL
 					. ' quality: ' .$quality . PHP_EOL
 					. ' original_quality: ' . to_string($original_quality)
-					, logger::ERROR
+					, logger::WARNING
 				);
 				$response->errors[] = 'invalid empty original_file_path';
 				return $response;

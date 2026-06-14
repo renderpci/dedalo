@@ -104,11 +104,11 @@ const get_content_data_edit = async function(self) {
 
 			const data_item = value[i]
 
-			for (let i = 0; i < ipo_length; i++) {
+			for (let j = 0; j < ipo_length; j++) {
 
-				const current_ipo = ipo[i]
+				const current_ipo = ipo[j]
 
-				const value_element_node = get_value_element(i, data_item, self, current_ipo)
+				const value_element_node = get_value_element(j, data_item, self, current_ipo)
 				values_container.appendChild(value_element_node)
 			}
 		}
@@ -203,7 +203,11 @@ const get_value_element = (i, data, self, current_ipo) => {
 		icon_media_node.addEventListener('click', (e) => {
 			e.stopPropagation();
 
-			const ipo_input_paths = current_ipo.input.paths[0][0];
+			const ipo_input_paths = current_ipo?.input?.paths?.[0]?.[0];
+			if (!ipo_input_paths) {
+				console.warn('media_icons: missing ipo input paths', current_ipo);
+				return;
+			}
 
 			// open a new window
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({

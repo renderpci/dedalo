@@ -360,10 +360,10 @@ const get_content_value = function(i, current_value, self) {
 						top.document.removeEventListener('webviewerloaded', fn_webviewerloaded, false)
 				}//end fn_webviewerloaded
 
-			// register webviewerloaded listener before setting src to prevent race conditions
+			// register webviewerloaded listener before setting src to prevent race conditions.
 			// (!) Must be registered before iframe.src is assigned. If src is set first,
 			//     fast connections may fire 'webviewerloaded' before this listener is active.
-				top.document.addEventListener('webviewerloaded', fn_webviewerloaded, false)
+				top.document.addEventListener('webviewerloaded', fn_webviewerloaded, { once: true })
 
 			// set iframe src to start loading the pdfjs viewer
 				const viewer_url = DEDALO_ROOT_WEB + '/lib/pdfjs/web/viewer.html'
