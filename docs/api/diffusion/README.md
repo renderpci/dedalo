@@ -16,7 +16,8 @@ Welcome to the technical documentation for the Dédalo Diffusion Engine. This sy
 ## Related Resources
 
 - **[Existing PHP API Docs](../diffusion_api_documentation.md)**: Details on the raw PHP resolution engine and SQO structure.
-- **[Search Query Object (SQO)](../core/sqo.md)**: Comprehensive guide to the search object used to filter records.
+- **[Publication API](../../diffusion/publication_api/index.md)**: The read-only public API that serves the diffusion-published databases to websites, integrations and AI agents — use [v2](../../diffusion/publication_api/v2/index.md) (Bun/TypeScript) for new integrations.
+- **[Search Query Object (SQO)](../../core/sqo.md)**: Comprehensive guide to the search object used to filter records.
 - **[DDO Mapping](../../diffusion/ddo_mapping.md)**: How the ontology defines the output structure.
 
 ## Quick Start for Developers

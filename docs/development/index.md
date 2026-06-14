@@ -173,6 +173,19 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
         import {push_browser_history} from '../../common/js/common.js';
         ```
 
+## Extending Dédalo
+
+Most "new" work in Dédalo is **ontology authoring**, not code — a new section, a new field, or a new menu area is usually just a node in the ontology. You write code only for a genuinely new component model, service or widget. The extending cookbooks explain the ontology-first principle and give a focused, step-by-step procedure per typology.
+
+- [Extending Dédalo (overview)](extending/index.md) — the ontology-first decision guide: when you need code at all, the file-layout conventions and the universal checklist
+- [Add a component](extending/add_a_component.md) — a new field model (PHP + JS + CSS + the one `$column_map` entry)
+- [Add a section](extending/add_a_section.md) — a new record type (mostly ontology)
+- [Add an area](extending/add_an_area.md) — a new back-office area (thin subclass + menu wiring)
+- [Add a service](extending/add_a_service.md) — a reusable client interaction hosted by a component
+- [Add a widget](extending/add_a_widget.md) — a computed, read-only display embedded in a host
+
+For the *tool* extension surface (which has its own scaffolder and registration flow), see the [Tools](#tools) section below.
+
 ## GIT commit style
 
 Since v6 Dédalo follows the conventional method [Commits v1.0](https://www.conventionalcommits.org/en/v1.0.0/) for commits.
@@ -283,6 +296,18 @@ The commit enhances, adds to, revised, or otherwise changes the suite of automat
 For example:
 >test: Add unit tests for user authentication
 
+## Testing
+
+Dédalo ships an automated test suite in three layers: server (PHPUnit), client (in-browser Mocha) and a manual diffusion acceptance gate. Only the server suite is gated by CI.
+
+See [testing.md](testing.md) for full documentation on:
+
+- The three test layers and what each is for
+- How to run each, the exact commands and the `phpunit.xml` config
+- The `test/` directory layout, `BaseTestCase`, fixtures and `*_Test.php` naming
+- What contract (snapshot) tests verify
+- Writing a new server test
+
 ## Breaking Change Detection
 
 Dédalo includes an automated system to detect breaking changes in API contracts, method signatures, and data models. This helps prevent regressions when developing new features.
@@ -306,3 +331,48 @@ See [metrics.md](metrics.md) for full documentation on:
 - What is measured per subsystem, including read/write split and tail latency (`*_max_time` / `*_slow_calls`)
 - Reading the debug-log breakdown and the monitor configuration
 - How to add a new metric
+
+## Tools
+
+A Dédalo tool is an isolated block of code that extends a component, section or area without that element knowing about it. The tools documentation covers building, registering, securing and serving tools.
+
+- [Tools catalog](tools/reference/index.md) — every tool shipped with Dédalo v7, grouped by purpose, with per-tool reference pages
+- [Creating new tools](tools/creating_tools.md) — end-to-end tutorial (scaffold → register → authorize)
+- [register.json reference](tools/register_json.md) — every field of the registration file
+- [Server contract](tools/server_contract.md) — PHP class, API actions, configuration, lifecycle hooks
+- [JS lifecycle](tools/js_lifecycle.md) — the client tool lifecycle and helpers
+- [Security](tools/security.md) — what the framework enforces and what you must do
+- [Architecture audit](tools/architecture_audit.md) — the subsystem internals and design decisions
+
+## Runtime & persistent workers
+
+The work-system server runs as a long-lived RoadRunner worker process. Because state persists across requests, the per-request state reset is mandatory.
+
+See [runtime_and_workers.md](runtime_and_workers.md) for full documentation on:
+
+- The per-request loop in `worker/` (`worker/index.php` + its `class.*.php` modules)
+- The mandatory per-request state reset (`cache_manager` + `common::clear()`)
+- Session handling, request-context hydration, response building and SSE streaming
+
+## Media pipeline
+
+A media file in Dédalo is never a database blob — it is a preserved master plus generated derivatives on disk, governed by a thin JSON pointer in a media component's matrix column. The media pipeline doc maps the full lifecycle that the five media components share.
+
+See [media_pipeline.md](media_pipeline.md) for the end-to-end stages:
+
+- Upload (`service_upload` → `tool_upload` → the component as the single DB writer)
+- Master storage and the deterministic on-disk path / filename grammar
+- Transcode and derive qualities / alternative formats via `media_engine` (`Ffmpeg` / `ImageMagick`)
+- Thumbnails, poster frames and per-language VTT subtitles
+- Web-server-enforced access control (`media_protection`) and publication to the diffusion media index
+
+## Internationalization (i18n)
+
+Dédalo is multilingual to the core: the same record can hold a value per language, the interface can be shown in any configured language, and content can be tagged with the language it is in. The i18n doc ties together the two independent translation planes (data vs interface).
+
+See [internationalization.md](internationalization.md) for full documentation on:
+
+- The DATA plane vs the INTERFACE plane and the `DEDALO_DATA_LANG` / `DEDALO_APPLICATION_LANG` constants
+- The `lg` TLD: how a language is itself a thesaurus record, and the `lang` resolver
+- Translatable, non-translatable and transliterate components, and the empty-slot fallback hierarchy
+- The translation workflow tools (`tool_lang` / `tool_lang_multi`) and how to add a new language

@@ -241,8 +241,10 @@ You can find specific documentation on the [Dedalo ontology here.](./ontology/in
 ### Start here
 
 - **[Architecture Overview](./architecture_overview.md)** — the recommended starting point: the two systems, the matrix data model, the active ontology, and how data flows from server build to client render.
+- **[Data model](./data_model/index.md)** — the data architecture: how a value actually lives inside Dédalo (the JSON/JSONB foundation, the typed `matrix` columns, the consolidated v7 value-item envelope) and the per-type pages that document each data type — [locator](./locator.md), [date](./data_model/dd_date.md), [string](./data_model/string.md), [number](./data_model/number.md), [IRI](./data_model/iri.md), [geolocation](./data_model/geolocation.md), [media](./data_model/media.md), [relations](./data_model/relations.md) and [misc](./data_model/misc.md).
 - **[Sections](./sections/index.md)** — the table abstraction (a group of records of the same kind) in depth.
 - **[Components](./components/index.md)** — the field abstraction: typologies, inheritance, datum, and the full per-component reference.
+- **[Browser client](./client/index.md)** — the thin DOM builder over the server: bootstrap, instance registry, render layer, event bus and RQO transport. Per-page references: [lifecycle](./client/lifecycle.md), [instances](./client/instances.md), [render & views](./client/render_and_views.md), [data_manager](./client/data_manager.md), [event_manager](./client/event_manager.md).
 - **[Glossary](./glossary.md)** — the full Dédalo nomenclature (section, component, tipo, locator, sqo, rqo, ddo, dd_date, …).
 
 ### Domains
@@ -268,13 +270,17 @@ The `request_config` system defines how sections and components retrieve and dis
 
 ### Data Objects
 
+- **[Data model](./data_model/index.md)** - How a value lives in Dédalo: the JSONB foundation, typed `matrix` columns and the consolidated v7 value item, plus the per-type pages
+- **[Value item](./data_model/value_item.md)** - The consolidated `{id, lang?, value}` envelope every component reads and writes
 - **[DD Object (ddo)](./dd_object.md)** - Normalized object for requests
-- **[Locator](./locator.md)** - Pointer between data
-- **[DD Date](./glossary.md#dd_date)** - Date representation
+- **[Locator](./locator.md)** - Pointer between data (the value item of every relation component)
+- **[DD Date](./data_model/dd_date.md)** - Date representation
 
 ### Ontology
 
 - **[Ontology Documentation](./ontology/index.md)** - Schema and definitions
+- **[Ontology Authoring](./ontology/authoring.md)** - Writing the ontology: node shape, creating/editing sections, components, groups and tools, the `properties` grammar, TLD management
+- **[section_map](./ontology/section_map.md)** - The global scope/term resolver: which component tipos play role X for a section, with the main → thesaurus → relation_list fallback
 - **[Request Config Presets](./ontology/request_config_presets.md)** - User-defined layouts
 
 ### Components
