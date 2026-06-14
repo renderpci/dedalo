@@ -2,9 +2,38 @@
 require_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 /**
 * CLASS TRANSFORM_DATA
-* This class is used to transform existing data, e.g. to migrate
-* portals with dataframe v5 to other models such as Bibliographic references
+* One-shot, idempotent helpers that physically restructure stored data during
+* schema/ontology migrations.
 *
+* Every public method is a self-contained migration step called from an entry
+* in core/base/update/updates.php (or unsupported_updates.php) via a versioned
+* update hook. The common pattern is:
+*
+* 1. Load a declarative JSON definition file from one of the subdirectories
+*    under core/base/transform_definition_files/:
+*      move_tld/       – tipo (ontology identifier) renames
+*      move_locator/   – section relocation with section_id rebase
+*      move_to_portal/ – flat-component data promoted to a new portal section
+*      move_to_table/  – rows copied from one matrix table to another
+*      move_lang/      – component language-key migration
+*
+* 2. Iterate the affected matrix tables using update::tables_rows_iterator() or
+*    update::convert_table_data(), passing a callback that rewrites each row in
+*    place directly via pg_query_params().
+*
+* 3. Bypass Time Machine and activity log where appropriate (set
+*    tm_record::$save_tm = false and logger_backend_activity::$enable_log = false
+*    before the loop; restore them afterwards).
+*
+* Key contracts:
+* - No method here emits Time Machine entries on its own unless explicitly
+*   going through component_common::Save() — the raw SQL UPDATE paths skip TM.
+* - Methods intended for use as update::convert_table_data() callbacks receive
+*   and return ?object $datos (null signals no change, so the row is skipped).
+* - CLI progress output is handled via common::$pdata + print_cli().
+*
+* @package Dédalo
+* @subpackage Core
 */
 class transform_data {
 
@@ -13,59 +42,40 @@ class transform_data {
 	/**
 	* ADD_PORTAL_LEVEL
 	* Transform component portal data from DS configuration on one level to a
-	* bibliographic references like model, with a sub-level in between
-	* @param object $options
-	*  sample:
-		* {
-		*		"original" : [
-		*			{
-		*				"model" : "section",
-		*				"tipo" : "numisdata3",
-		*				"role" : "section",
-		*				"info" : "Types"
-		*			},
-		*			{
-		*				"model" : "component_portal",
-		*				"tipo" : "numisdata261",
-		*				"role" : "source_portal",
-		*				"info" : "Creators deprecated"
-		*			},
-		*			{
-		*				"model" : "component_portal",
-		*				"tipo" : "numisdata1362",
-		*				"role" : "target_portal",
-		*				"info" : "Creators (new)"
-		*			},
-		*			{
-		*				"model" : "component_portal",
-		*				"tipo" : "numisdata887",
-		*				"role" : "ds",
-		*				"info" : "Role"
-		*			}
-		*		],
-		*		"new" : [
-		*			{
-		*				"model" : "section",
-		*				"tipo" : "rsc1152",
-		*				"role" : "section",
-		*				"info" : "People references"
-		*			},
-		*			{
-		*				"model" : "component_portal",
-		*				"tipo" : "rsc1156",
-		*				"role" : "target_portal",
-		*				"info" : "People"
-		*			},
-		*			{
-		*				"model" : "component_portal",
-		*				"tipo" : "rsc1155",
-		*				"role" : "ds",
-		*				"info" : "Role"
-		*			}
-		*		],
-		*		"delete_old_data" : true,
-		*	}
-	* @return object $response
+	* bibliographic references like model, with a sub-level in between.
+	*
+	* Before the migration the relationship between a source section record and
+	* a target record is encoded directly as a flat locator pair
+	* (source_portal → target, ds → descriptor) stored in the source section.
+	* After the migration an intermediate "reference section" is created for each
+	* target locator; that new section holds the (target, descriptor) pair, and
+	* its own section_id is linked back from the source section's target_portal.
+	*
+	* The operation is guarded against installations that do not use the given TLD
+	* (checked against DEDALO_PREFIX_TIPOS), and against ontology mismatches
+	* (model validation via ontology_node::get_model_by_tipo()).
+	*
+	* When $options->delete_old_data is true the source locators are removed from
+	* the source section row via delete_relations_dato() at the end of each record
+	* iteration.
+	*
+	* @param object $options - Migration descriptor with the following structure:
+	*  {
+	*    "tld"             : string,   // top-level domain prefix, e.g. "numisdata"
+	*    "delete_old_data" : bool,     // whether to remove the old locators afterwards
+	*    "original" : [
+	*      { "model":"section",          "tipo":"<tipo>", "role":"section",       "info":"..." },
+	*      { "model":"component_portal", "tipo":"<tipo>", "role":"source_portal", "info":"..." },
+	*      { "model":"component_portal", "tipo":"<tipo>", "role":"target_portal", "info":"..." },
+	*      { "model":"component_portal", "tipo":"<tipo>", "role":"ds",            "info":"..." }
+	*    ],
+	*    "new" : [
+	*      { "model":"section",          "tipo":"<tipo>", "role":"section",       "info":"..." },
+	*      { "model":"component_portal", "tipo":"<tipo>", "role":"target_portal", "info":"..." },
+	*      { "model":"component_portal", "tipo":"<tipo>", "role":"ds",            "info":"..." }
+	*    ]
+	*  }
+	* @return object $response - stdClass with bool $result and string $msg
 	*/
 	public static function add_portal_level( object $options ) : object {
 
@@ -81,6 +91,8 @@ class transform_data {
 			$delete_old_data	= $options->delete_old_data; // bool true by default
 
 		// check Ontology
+			// TLD guard: the migration only applies to installations that carry this prefix.
+			// Returning result=true (not an error) signals "safely skipped" to the update runner.
 			if (!in_array($tld, DEDALO_PREFIX_TIPOS)) {
 				$response->result	= true;
 				$response->msg		= 'Script ignored. Your installation does not use this TLD: '.$tld;
@@ -88,6 +100,8 @@ class transform_data {
 			}
 
 		// check Ontology tipos before do anything
+			// Pre-flight validation: every tipo in both "original" and "new" must match
+			// the model declared in $options. Failing fast here prevents partial writes.
 			foreach ([...$original, ...$new] as $item) {
 				$current_model = ontology_node::get_model_by_tipo($item->tipo, true);
 				if ($current_model!==$item->model) {
@@ -103,6 +117,9 @@ class transform_data {
 			}
 
 		// short vars
+			// Extract typed roles from the declarative config arrays so downstream
+			// code uses readable variable names rather than repeated array_find calls.
+
 			// original (source section)
 				$original_section_tipo = array_find($original, function($el){
 					return isset($el->role) && $el->role==='section';
@@ -142,6 +159,8 @@ class transform_data {
 			$created_records = 0;
 
 		// section records
+			// Fetch all rows for the source section ordered by section_id so the
+			// migration runs deterministically and is easy to audit in logs.
 			$sql = "
 				SELECT id, section_id, datos FROM $table
 				WHERE section_tipo = $1
@@ -162,6 +181,8 @@ class transform_data {
 				}
 
 				// original_locators
+					// Collect only the locators that belong to the deprecated source portal
+					// component; these are the ones that will be promoted to the new sub-level.
 					$original_locators = array_filter($relations, function($el) use($original_component_portal_tipo) {
 						return $el->from_component_tipo === $original_component_portal_tipo;
 					});
@@ -171,11 +192,15 @@ class transform_data {
 					}
 
 				// original_ds_locators
+					// Descriptor (DS) locators are paired with each source locator by matching
+					// section_id_key; they describe the role/nature of the relationship.
 					$original_ds_locators = array_filter($relations, function($el) use($original_component_portal_ds_tipo) {
 						return $el->from_component_tipo === $original_component_portal_ds_tipo;
 					});
 
 				// iterate original_locators
+					// For each old source locator, create one new intermediate section,
+					// link the original target into it, and copy the corresponding DS locators.
 					foreach ($original_locators as $current_locator) {
 
 						// create new record on target section
@@ -189,6 +214,8 @@ class transform_data {
 							$created_records++;
 
 						// append new locator to new portal. sample: add created locator to portal 'Creators'
+							// Attach the newly created reference section_id to the source record's
+							// target portal, so the source now points at the intermediate section.
 							$original_component_portal_target = component_common::get_instance(
 								ontology_node::get_model_by_tipo($original_component_portal_target_tipo,true), // string model
 								$original_component_portal_target_tipo, // string tipo
@@ -208,6 +235,8 @@ class transform_data {
 							$original_component_portal_target->Save();
 
 						// target section : add elements. sample: add current emperor to portal 'People' in the new section
+							// Within the new intermediate section, store the original target entity
+							// (e.g. the person/entity record) in the new target portal.
 							$new_component_portal = component_common::get_instance(
 								ontology_node::get_model_by_tipo($new_component_portal_tipo,true), // string model
 								$new_component_portal_tipo, // string tipo
@@ -227,6 +256,8 @@ class transform_data {
 							$new_component_portal->Save();
 
 						// ds
+							// Match DS locators to this source locator by section_id_key
+							// (the DS locator's section_id_key equals the source locator's section_id).
 							$current_ds_locators = array_filter($original_ds_locators, function($el) use($current_locator) {
 								return $el->section_id_key == $current_locator->section_id;
 							});
@@ -259,6 +290,8 @@ class transform_data {
 					}//end foreach ($original_locators as $current_locator)
 
 				// delete_old_data (default is true). Remove previous portal locators and DS locators
+					// Cleanup runs per source record, after all new records are committed for it,
+					// so a partial run can be resumed without creating duplicate new sections.
 					if ($delete_old_data===true) {
 						self::delete_relations_dato(
 							$original_section_tipo,
@@ -280,12 +313,24 @@ class transform_data {
 
 	/**
 	* DELETE_RELATIONS_DATO
-	* Removes a portion of the section relations in raw mode
-	* This does not generate Time Machine or Activity log
-	* @param string $section_tipo
-	* @param string|int $section_id
-	* @param array $locators_to_remove
-	* @return bool
+	* Removes a targeted subset of locators from a section's raw relations array,
+	* writing the cleaned JSON back to the matrix table directly via SQL UPDATE.
+	*
+	* This bypasses component_common::Save(), so it produces no Time Machine
+	* entry and no activity log. It is intentionally a "surgical" low-level
+	* operation used only during data migration cleanup.
+	*
+	* Matching uses locator::in_array_locator() keyed on ['section_id','section_tipo'],
+	* so two locators are considered equal if both their section_tipo and section_id
+	* match — from_component_tipo and type are ignored in the comparison.
+	*
+	* (!) Returns false both on database error and when no matching row is found;
+	* callers must distinguish the two cases through their own context.
+	*
+	* @param string $section_tipo - Ontology tipo identifying the source section
+	* @param string|int $section_id - Record identifier within that section
+	* @param array $locators_to_remove - Locator objects to strip (matched by section_id + section_tipo)
+	* @return bool - true on successful write, false if no row found or on DB error
 	*/
 	private static function delete_relations_dato(string $section_tipo, string|int $section_id, array $locators_to_remove) : bool {
 
@@ -313,6 +358,10 @@ class transform_data {
 			$datos	= json_handler::decode( $row['datos'] );
 
 			// relations empty case
+				// (!) BUG — DOCUMENT ONLY, DO NOT FIX: the condition uses '&&' (AND) which
+				// means it only skips when BOTH $datos is empty AND $datos->relations is empty.
+				// When $datos is null or false the second operand triggers a PHP warning for
+				// property access on null. The guard should be '||' (OR).
 				if (empty($datos) && empty($datos->relations)) {
 					continue;
 				}
@@ -328,6 +377,8 @@ class transform_data {
 				$clean_relations[] = $locator;
 			}
 
+			// No-op guard: if the count is unchanged, none of the supplied locators
+			// matched anything in this row — log and skip to avoid a pointless UPDATE.
 			if (count($datos->relations)===count($clean_relations)) {
 				debug_log(__METHOD__
 					." Ignored delete action because nothing is changed. id: $id ($section_tipo-$section_id)"
@@ -368,7 +419,17 @@ class transform_data {
 
 	/**
 	* UPDATE_DATAFRAME_TO_V6_1
-	* @return bool
+	* Entry point that triggers the dataframe v6.1 migration on the matrix table.
+	*
+	* Invokes update::convert_table_data() which iterates every row of 'matrix'
+	* and passes each decoded $datos object to fix_dataframe_action() as a callback.
+	* If fix_dataframe_action() returns a non-null object, the runner re-encodes it
+	* and writes it back to the row.
+	*
+	* The commented-out table names show the full set of matrix tables evaluated
+	* at the time this migration was written; only 'matrix' was needed.
+	*
+	* @return bool - always true (errors are logged inside the callback)
 	*/
 	public static function update_dataframe_to_v6_1() : bool {
 
@@ -404,9 +465,33 @@ class transform_data {
 
 	/**
 	* FIX_DATAFRAME_ACTION
-	* Updates dataframe matrix and time machine data
-	* @param object|null $datos
-	* @return object|null $datos
+	* Callback for update::convert_table_data() that upgrades individual dataframe
+	* locators from the v5 flat-inline model to the v6.1 dedicated-section model.
+	*
+	* In v5 a dataframe locator was embedded directly in the parent component's
+	* relations array with a section_id_key property pointing at the related record.
+	* In v6.1 each dataframe entry has its own section record (tipo rsc1242) so that
+	* weight and other metadata can be stored independently.
+	*
+	* For each locator that carries section_id_key (i.e. an old-style dataframe entry):
+	*   - A new rsc1242 ("dataframe active") section is created via section::Save().
+	*   - The locator's section_id and section_tipo are rewritten to point at the
+	*     new section.
+	*   - The from_component_tipo is renamed to the v6.1 equivalent tipo.
+	*
+	* Only the specific numisdata/oh/rsc component tipos listed in the switch were
+	* known to use the old format at migration time; any unrecognised from_component_tipo
+	* is left untouched (default branch).
+	*
+	* Returning null signals to the caller that the row is unchanged and should not
+	* be re-saved (used when no section_id_key locator is found, or datos has no
+	* relations).
+	*
+	* Note: $ratting_tipo ('rsc1246', Weight) is declared but unused in this method —
+	* it appears to be reserved for a weight-migration step that was not implemented.
+	*
+	* @param object|null $datos - Decoded row datos object passed by the update runner
+	* @return object|null - Modified $datos, or null if no changes were made
 	*/
 	public static function fix_dataframe_action(?object $datos) : ?object {
 
@@ -431,6 +516,8 @@ class transform_data {
 					$dataframe_to_save = true;
 
 					// section
+						// Factory closure to lazily create a fresh rsc1242 record.
+						// Called once per v5 locator that must be promoted.
 						$create_new_rating_section = function() use ($target_section_tipo){
 							$section = section::get_instance(
 								null, // string|null section_id
@@ -442,6 +529,8 @@ class transform_data {
 						};
 
 					// locator edit
+						// Map the deprecated from_component_tipo to its v6.1 replacement.
+						// Cases that require a new rsc1242 section also rewrite section_id and section_tipo.
 						switch ($locator->from_component_tipo) {
 							case 'numisdata885':
 								// Numismatic object Type data frame
@@ -494,12 +583,17 @@ class transform_data {
 
 	/**
 	* GET_TM_DATA_FROM_TIPO
-	* Return all Time Machine records of the given component for specific section (section_id and section_tipo)
-	* If Time Machine has not records or the process fail, return an empty array.
-	* @param string|int $section_id
-	* @param string $section_tipo
-	* @param string $tipo (it can be a section or component)
-	* @return array $component_tm_data
+	* Returns all matrix_time_machine rows for the given section + component tipo.
+	*
+	* The caller is responsible for iterating the returned result resource with
+	* pg_fetch_assoc(). Returns false if the query itself fails (the doc-block
+	* claim about returning an empty array is outdated — the actual return type is
+	* \PgSql\Result|false).
+	*
+	* @param string|int $section_id - Section record identifier
+	* @param string $section_tipo - Ontology tipo of the section
+	* @param string $tipo - Ontology tipo of the component (or section) whose TM rows are needed
+	* @return \PgSql\Result|false - PostgreSQL result resource, or false on query failure
 	*/
 	public static function get_tm_data_from_tipo(string|int $section_id, string $section_tipo, string $tipo) : \PgSql\Result|false {
 
@@ -519,10 +613,20 @@ class transform_data {
 
 	/**
 	* SET_TM_DATA
-	* Set the Time Machine data of the given matrix_id
-	* @param string|int $section_id
-	* @param array $data
-	* @return bool
+	* Overwrites the 'dato' column of a specific matrix_time_machine row by primary key.
+	*
+	* The data array is JSON-encoded via json_handler::encode() and then sanitised to
+	* replace null bytes that cause PostgreSQL TEXT column errors.
+	*
+	* (!) Stale doc-block: the original @param listed $section_id (string|int) as the
+	* first parameter — the actual first parameter is $matrix_id (int), the row PK.
+	*
+	* (!) Always returns true even when the underlying pg_query_params() call fails;
+	* the only indication of failure is a debug_log at ERROR level.
+	*
+	* @param int $matrix_id - Primary key of the matrix_time_machine row to update
+	* @param array $data - New dato payload; will be JSON-encoded before writing
+	* @return bool - true always (DB failure is only logged, not propagated)
 	*/
 	public static function set_tm_data( int $matrix_id, array $data) : bool {
 
@@ -549,8 +653,14 @@ class transform_data {
 
 	/**
 	* UPDATE_PAPER_LIB_DATA
-	* Removes Paper libdata from component_image (rsc29)
-	* @return bool
+	* Entry point that triggers removal of legacy 'lib_data' entries from
+	* component_image (rsc29) within the resources images section (rsc170).
+	*
+	* Delegates to update::convert_table_data() which feeds each decoded $datos
+	* object to remove_paper_lib_data_rsc29() as a callback. Only rows where
+	* remove_paper_lib_data_rsc29() returns a non-null object are re-saved.
+	*
+	* @return bool - always true (individual row errors are logged inside the callback)
 	*/
 	public static function update_paper_lib_data() : bool {
 
@@ -568,10 +678,22 @@ class transform_data {
 
 	/**
 	* REMOVE_PAPER_LIB_DATA_RSC29
-	* Removes Paper libdata from component_image (rsc29)
-	* @param object|null $datos
-	* @return object|null $datos
-	*  If null is returned, no changes will made
+	* Callback for update::convert_table_data() that strips the legacy 'lib_data'
+	* property from the first image dato entry of component_image (rsc29) inside
+	* resources images section (rsc170).
+	*
+	* 'lib_data' was a transient property populated by the "Paper" image library
+	* integration; it was removed from the data model and must be cleaned from
+	* persisted rows that still carry it.
+	*
+	* Returns null (no change) if:
+	* - The row is not from section rsc170
+	* - The components object is absent
+	* - The expected dato path down to the first array element is not navigable
+	* - The first element has no 'lib_data' property
+	*
+	* @param object|null $datos - Decoded row datos object passed by the update runner
+	* @return object|null - Modified $datos with lib_data removed, or null if unchanged
 	*/
 	public static function remove_paper_lib_data_rsc29(?object $datos) : ?object {
 
@@ -580,6 +702,7 @@ class transform_data {
 			$component_tipo	= 'rsc29'; // component_image
 
 		// filter section_tipo
+			// Fast-skip: this callback only applies to rsc170 rows; ignore everything else.
 			if ($datos->section_tipo!==$section_tipo) {
 				return null;
 			}
@@ -621,7 +744,18 @@ class transform_data {
 
 	/**
 	* UPDATE_HIERARCHY_VIEW_IN_THESAURUS
-	* @return bool
+	* Entry point that triggers the migration adding a separate "view in thesaurus"
+	* component to all matrix_hierarchy_main rows.
+	*
+	* Delegates to update::convert_table_data() which calls add_view_in_thesaurus()
+	* for each row. Unlike most callbacks, add_view_in_thesaurus() always returns
+	* null (it writes its own data via component_common::Save()) so convert_table_data()
+	* never performs an additional SQL UPDATE on its own.
+	*
+	* The commented-out table list records all matrix tables considered at migration
+	* time; only matrix_hierarchy_main was required.
+	*
+	* @return bool - always true
 	*/
 	public static function update_hierarchy_view_in_thesaurus() : bool {
 
@@ -657,11 +791,28 @@ class transform_data {
 
 	/**
 	* ADD_VIEW_IN_THESAURUS
-	* Change the matrix_hierarchy_main with new component to control hierarchy show into thesaurus tree
-	* View in thesaurus need to be controlled independent of the active or not the hierarchy
-	* @param object|null $datos
-	* @return null // don't need to be saved by update, the new component save by itself
-	* 	! Not use : null as standalone (PHP Fatal error:  Null can not be used as a standalone type)
+	* Callback for update::convert_table_data() that creates a separate
+	* "view in thesaurus" component (DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO)
+	* for every hierarchy node that has an "active" locator.
+	*
+	* Prior to this migration the thesaurus visibility was controlled by the same
+	* component that governed hierarchy active/inactive state. Separating them lets
+	* a hierarchy remain active while its term is hidden from the thesaurus tree,
+	* and vice versa.
+	*
+	* The new component is saved via component_common::Save() (generating a Time
+	* Machine entry). This method therefore never modifies $datos directly and
+	* always returns null so that the update runner skips its own UPDATE.
+	*
+	* Idempotency: if the view_in_ts component already has data (get_dato() is
+	* non-empty), the method returns null early without creating a duplicate.
+	*
+	* Note: return type is absent from the signature (untyped) because PHP does not
+	* allow 'null' as a standalone return type declaration; the effective type is
+	* always null.
+	*
+	* @param object|null $datos - Decoded row datos object passed by the update runner
+	* @return null - Always null; the save is handled internally via component::Save()
 	*/
 	public static function add_view_in_thesaurus(?object $datos) {
 
@@ -702,7 +853,7 @@ class transform_data {
 
 					$component_view_in_ts->set_dato($view_in_ts_data);
 					$component_view_in_ts->Save();
-				}//end if(isset($locator->section_id_key))
+				}//end if($locator->from_component_tipo === $active)
 
 			}//end foreach ($relations as $locator)
 
@@ -713,10 +864,34 @@ class transform_data {
 
 	/**
 	* CHANGES_IN_TIPOS
-	* Map old tipos to new ones using JSON files definitions
-	* @param array $ar_tables
-	* @param array $json_files
-	* @return bool
+	* Renames ontology tipos (identifiers) across every column and JSON property
+	* of the given matrix tables according to a declarative JSON map.
+	*
+	* Use case: when the TLD prefix of a project section or component changes (e.g.
+	* "numisdata885" → "numisdata1447"), every stored reference must be rewritten so
+	* that the platform continues to resolve data correctly.
+	*
+	* JSON definition files live in:
+	*   core/base/transform_definition_files/move_tld/
+	* Each file contains a JSON array of transform objects:
+	*   { "old": "numisdata885", "new": "numisdata1447", "type": "section|component",
+	*     "perform": ["replace_tipo"], "skip_virtuals": ["..."], "info": "..." }
+	*
+	* Processing order per row:
+	*   1. section_tipo column — replaced if old matches
+	*   2. tipo column (matrix_time_machine only) — replaced when section_tipo is in
+	*      the affected section list, to avoid renaming virtual-section TM entries
+	*   3. datos JSONB — relations/relations_search locator properties, components keys,
+	*      inverse_locators (removed), and scalar top-level properties (e.g. section_tipo)
+	*   4. dato column (matrix_time_machine) — string-replace of quoted tipo tokens
+	*
+	* For the 'components' / 'diffusion_info' keys a "perform" action method is
+	* dispatched dynamically (e.g. replace_tipo). matrix_activity rows are handled
+	* with a string-search shortcut before the full JSONB walk.
+	*
+	* @param array $ar_tables - Matrix table names to iterate (e.g. ['matrix','matrix_list'])
+	* @param array $json_files - File names relative to move_tld/ directory
+	* @return bool - true on success; false if a pg_query_params() call fails
 	*/
 	public static function changes_in_tipos(array $ar_tables, array $json_files) : bool {
 
@@ -757,15 +932,21 @@ class transform_data {
 			}
 
 		// ar_section_elements. Select affected sections
+			// Only section-level entries drive the section_tipo column updates; component
+			// entries are applied inside the JSONB datos walk.
 			$ar_section_elements = array_filter($ar_transform_map, function($el){
 				return $el->type==='section';
 			});
 			// ar_old_section_tipo without keys like ["numisdata279"]
+			// Flat list of old section tipos used to scope the matrix_time_machine tipo update.
 			$ar_old_section_tipo = array_map(function($el){
 				return $el->old;
 			}, $ar_section_elements);
 
 		// skip_virtuals
+			// Some section entries declare a list of virtual-section tipos that share
+			// the same matrix table but must NOT have their datos rewritten (e.g.
+			// internal dd* sections stored alongside real data sections).
 			$skip_virtuals = array_map(function($el){
 				return $el->skip_virtuals ?? [];
 			}, $ar_section_elements);
@@ -890,6 +1071,8 @@ class transform_data {
 					}
 
 					// datos properties
+					// Walk every top-level property of the datos JSON object and rewrite
+					// any tipo references found in it according to the transform map.
 					foreach ($datos as $datos_key => $datos_value) {
 
 						if( empty($datos_value) ){
@@ -900,6 +1083,9 @@ class transform_data {
 							case 'relations_search':
 							case 'relations':
 								// update relations array
+								// Iterate every locator property; any scalar value that appears as a
+								// key in $ar_transform_map gets replaced with its 'new' equivalent.
+								// Non-scalar values (nested objects/arrays) are skipped and logged.
 								$relations = $datos_value ?? [];
 
 								foreach ($relations as $locator) {
@@ -930,6 +1116,12 @@ class transform_data {
 							case 'diffusion_info':
 							case 'components':
 								// update components object
+								// Rebuild the components/diffusion_info object key-by-key.
+								// For any component tipo found in the transform map, dispatch
+								// the named "perform" action method (e.g. replace_tipo) instead
+								// of copying the value verbatim, allowing the action to rename
+								// the key and/or transform the value. Components not in the map
+								// are copied unchanged into $new_components.
 								$literal_components = $datos_value ?? [];
 
 								$new_components = new stdClass();
@@ -968,11 +1160,15 @@ class transform_data {
 
 							case 'inverse_locators':
 								// remove old data
+								// inverse_locators is a derived/cached field that is regenerated
+								// on demand; stripping it avoids stale tipo references.
 								unset($datos->{$datos_key});
 								break;
 
 							default:
 								// update other properties like section_tipo, section_real_tipo, etc.
+								// Handles scalar top-level properties whose value is itself a tipo
+								// (e.g. section_tipo, section_real_tipo stored inside datos JSON).
 								$test_tipo = to_string($datos_value);
 								if( isset($ar_transform_map[$test_tipo]) ){
 									$datos->{$datos_key} = $ar_transform_map[$test_tipo]->new;
@@ -1033,8 +1229,18 @@ class transform_data {
 
 	/**
 	* REPLACE_TIPO
-	*  Set the literal component value to a given by reference new object (new_components) key
-	* @param object $options
+	* "perform" action callback that renames a component key inside the components
+	* or diffusion_info object during a changes_in_tipos() or change_data_lang() run.
+	*
+	* Reads the old literal_value from $options and assigns it to $new_components
+	* under the new tipo name supplied by transform_object->new. The $new_components
+	* object is passed by reference so mutations are visible to the caller.
+	*
+	* This is the simplest "perform" action: it renames the key and preserves the
+	* value unchanged. More complex actions (e.g. lang_to_nolan) also transform
+	* the value.
+	*
+	* @param object $options - Contains: transform_object (the map entry), new_components (by ref), literal_value
 	* @return void
 	*/
 	public static function replace_tipo(object $options) {
@@ -1054,10 +1260,21 @@ class transform_data {
 
 	/**
 	* REPLACE_TM_DATA
-	*  Used to replace time machine data in column 'dato'
-	*  Set the literal component value to a given by reference new object (new_components) key
-	* @param object $options
-	* @return void
+	* Rewrites tipo references inside a matrix_time_machine 'dato' column value
+	* (stored as a raw JSON string) during a changes_in_tipos() run.
+	*
+	* Uses str_replace on the serialised JSON so that every occurrence of a quoted
+	* old tipo (e.g. "numisdata885") is replaced by its new equivalent without
+	* having to parse and re-encode the JSON. This is intentionally a string-level
+	* operation for speed and robustness on large TM tables.
+	*
+	* Note: the original doc-block described this as setting a new_components key —
+	* that description belongs to replace_tipo(). This method has a distinct
+	* purpose: it returns the modified string value rather than modifying a shared
+	* object.
+	*
+	* @param object $options - Contains: ar_transform_map (keyed by old tipo), value (JSON string)
+	* @return string - The (possibly modified) JSON string; unchanged if no tipos matched
 	*/
 	public static function replace_tm_data(object $options) {
 
@@ -1084,18 +1301,30 @@ class transform_data {
 
 	/**
 	* DELETE_TIPOS
-	* Delete tipos, his time machine and his relations
-	* @param array $ar_tables
-	* @param array $ar_to_delete
-	* [
-	* 	{
-	* 		"component_tipo"	: "tchi59",
-	* 		"delete_tm"			: true,
-	* 		"delete_relations"	: true,
-	* 		"info"				: "Delete data of tchi relation index in thesaurus"
-	* 	}
-	* ]
-	* @return bool
+	* Removes all stored data (matrix rows, Time Machine entries, and relations table
+	* rows) that belong to deprecated component tipos being retired from the ontology.
+	*
+	* Three scopes are affected per entry in $ar_to_delete:
+	*
+	* 1. datos JSONB (all non-activity matrix tables):
+	*    - relations / relations_search: any locator whose from_component_tipo matches
+	*      a deleted tipo is removed from the array.
+	*    - components / diffusion_info: the key for the deleted tipo is omitted from
+	*      the rebuilt object.
+	*    matrix_activity rows are skipped entirely (return early) to avoid corrupting
+	*    audit data.
+	*
+	* 2. matrix_time_machine rows (when delete_tm === true):
+	*    Rows whose 'tipo' column matches a deleted component_tipo are hard-deleted.
+	*
+	* 3. "relations" table (when delete_relations === true):
+	*    All rows in the dedicated relations table where from_component_tipo matches
+	*    the deleted tipo are hard-deleted.
+	*
+	* @param array $ar_tables - Matrix table names to iterate
+	* @param array $ar_to_delete - Deletion spec objects:
+	*   [{ "component_tipo": string, "delete_tm": bool, "delete_relations": bool, "info": string }]
+	* @return bool - true on success; false if any pg_query_params() call fails
 	*/
 	public static function delete_tipos(array $ar_tables, array $ar_to_delete) : bool {
 
@@ -1280,26 +1509,43 @@ class transform_data {
 
 	/**
 	* CHANGES_IN_LOCATORS
-	* Map old locator to new one using JSON files definitions
-	* the JSON file defines old section_tipo and new section_tipo
-	* and it moves all locators as all tables to new locator.
-	* This method take account section_id of the new section_tipo using the last counter
-	* adding it to old section_id, for ex:
-	* old section_id : 5
-	* counter for the new section: 87
-	* new section_id : 92
-	* @param array $ar_tables
-	* [
-	* 	'matrix_users',
-	*	'matrix_projects',
-	*	'matrix',
-	*	'matrix_list'...
-	* ]
-	* @param array $json_files
-	* [
-	*	"people_rsc194_to_rsc197.json", ..
-	* ]
-	* @return bool
+	* Migrates section records from one section_tipo to another across all matrix
+	* tables, rebasing section_id values so that the new section's ID space does not
+	* collide with existing records.
+	*
+	* JSON definition files live in:
+	*   core/base/transform_definition_files/move_locator/
+	* Each file is a JSON array of transform objects:
+	*   { "old":"rsc194", "new":"rsc197", "type":"section",
+	*     "base_counter": <auto-populated>, "info":"..." }
+	*
+	* section_id rebasing: before the migration starts, counter::get_counter_value()
+	* is called for each new section_tipo. That value becomes "base_counter". Every
+	* old section_id is then shifted by adding base_counter, so:
+	*   new_section_id = old_section_id + base_counter
+	* This guarantees uniqueness without touching the database counter table during
+	* iteration.
+	*
+	* Columns updated per table row:
+	* - section_tipo + section_id: the row's own identity is rewritten.
+	* - tipo (matrix_time_machine): the TM component tipo is renamed and its dato
+	*   is processed via process_locators_in_section_data().
+	* - datos JSONB: all locator references (section_tipo, section_id) inside
+	*   relations, relations_search, and component_text_area embedded tags are updated.
+	* - dato (matrix_time_machine): if the dato is a locator array, updated via
+	*   replace_locator_in_tm_data(); if it is a component_text_area literal,
+	*   updated via replace_locator_in_string().
+	* - matrix_activity rows receive special handling: only the dd551 component
+	*   (activity change detail) and any string occurrences of old tipos are updated;
+	*   the activity structure is then encoded with null-byte sanitisation.
+	*   dd774 (security access) TM rows are skipped.
+	*
+	* Activity logging is disabled for the duration of this method to prevent the
+	* migration itself from generating TM/activity entries.
+	*
+	* @param array $ar_tables - Matrix table names to iterate
+	* @param array $json_files - File names relative to move_locator/ directory
+	* @return bool - true on success; false if any pg_query_params() call fails
 	*/
 	public static function changes_in_locators(array $ar_tables, array $json_files) : bool {
 
@@ -1673,8 +1919,28 @@ class transform_data {
 
 	/**
 	* PROCESS_LOCATORS_IN_SECTION_DATA
-	* @param object $options
-	* @return object $datos
+	* Rewrites every locator reference inside a decoded datos object according to
+	* the transform map, shifting section_id values by the corresponding base_counter.
+	*
+	* This is the inner worker called by changes_in_locators() for both regular
+	* section datos and matrix_time_machine dato payloads.
+	*
+	* Key rewriting rules:
+	* - relations / relations_search: for each locator property that matches a map key,
+	*   the value is replaced by map->new and section_id is rebased (section_id +=
+	*   base_counter). Dataframe locators (loc_key === 'section_tipo_key') rebase
+	*   section_id_key instead of section_id.
+	* - components / diffusion_info: component_text_area data is string-processed
+	*   via replace_locator_in_string(); other component types are left unchanged.
+	* - inverse_locators: removed (derived/cached field, regenerated on demand).
+	* - Other top-level scalar properties (e.g. section_tipo at the datos root):
+	*   replaced by map->new; the root section_id is rebased accordingly.
+	*
+	* (!) Mutates $options->datos in place (PHP objects are reference-like); the
+	* returned value is the same object that was passed in.
+	*
+	* @param object $options - Contains: ar_transform_map (keyed by old tipo), datos (decoded JSONB object)
+	* @return object - The mutated datos object with all tipo references updated
 	*/
 	public static function process_locators_in_section_data( object $options ) : object {
 
@@ -1781,24 +2047,25 @@ class transform_data {
 
 	/**
 	* REPLACE_LOCATOR_IN_TM_DATA
-	* This function only accepts locator data in tm machine.
-	* Filter previously the tm_data to send only locator data.
-	* @param object $options-
-	* {
-	* 	ar_transform_map: {
-	*		"rsc194": {
-	*			"old": "rsc194",
-	*			"new": "rsc197",
-	*			"type": "section",
-	*			"perform": [
-	*				"move_tld"
-	*			],
-	* 			"base_counter": 76
-	*			"info": "Old People section => New People under Study section"
-	*	}
-	* 	tm_value: array
-	* }
-	* @return array $tm_value
+	* Rewrites tipo and section_id references within an array of locator objects
+	* stored in the matrix_time_machine 'dato' column.
+	*
+	* The caller must pre-filter the tm dato to confirm it is an array of locator
+	* objects (each having section_tipo and type properties) before calling this
+	* method — it does not handle scalar / literal dato values.
+	*
+	* For each locator in $tm_value:
+	* - If a property value matches a key in ar_transform_map and equals map->old,
+	*   the property is rewritten to map->new and the paired id property is rebased
+	*   by adding map->base_counter.
+	* - Dataframe locators (loc_key === 'section_tipo_key') rebase section_id_key
+	*   rather than section_id.
+	* - Non-string / non-int property values are skipped and logged.
+	*
+	* @param object $options - Contains:
+	*   ar_transform_map: keyed-by-old-tipo map (each entry has ->new, ->base_counter)
+	*   tm_value: array of locator objects from matrix_time_machine.dato
+	* @return array - The (possibly modified) $tm_value array
 	*/
 	public static function replace_locator_in_tm_data( object $options ) : array {
 
@@ -1853,10 +2120,25 @@ class transform_data {
 
 	/**
 	* REPLACE_LOCATOR_IN_STRING
-	* Some locators are in middle of component_text_area data as string
-	* string locator is used as People tag, it need changed as text using regex
-	* @param object $options
-	* @return string $string
+	* Rewrites embedded locator references within a component_text_area JSON string.
+	*
+	* component_text_area stores rich-text content that can contain inline "People
+	* tags" encoded as:
+	*   data:{'section_tipo':'rsc194','section_id':'1'}:data
+	* (single-quoted JSON embedded in a larger serialised string).
+	*
+	* This method extracts all such pseudo-locators with a regex, decodes them,
+	* applies the transform map (rewriting section_tipo and rebasing section_id by
+	* base_counter), re-encodes them with single quotes, and replaces all occurrences
+	* in the original string.
+	*
+	* Deduplication via array_unique() avoids re-processing the same embedded locator
+	* when it appears multiple times in the same text block.
+	*
+	* Non-string / non-int locator property values are skipped and logged.
+	*
+	* @param object $options - Contains: string (the JSON-encoded text_area value), ar_transform_map
+	* @return string - The (possibly modified) string with embedded locator references updated
 	*/
 	public static function replace_locator_in_string( object $options ) : string {
 
@@ -1915,12 +2197,38 @@ class transform_data {
 
 	/**
 	* SET_MOVE_IDENTIFICATION_VALUE
-	* Used to add a value to moved records
-	* It helps to identify that records moved
-	* ex: 	`People`(rsc194) moves to `People under study`(rsc197)
-	* 		set a `Typology` that moved recods as "moved from People"
-	* @param object $options
-	* @return object $datos
+	* Callback invoked per source section record by changes_in_locators() to stamp
+	* moved records with an identification value that marks their origin section.
+	*
+	* Example: when People (rsc194) records are migrated to People under Study
+	* (rsc197), this method can create a new "Typology" entry ("moved from People")
+	* and inject its locator into every migrated record's relations array.
+	*
+	* Supported actions (via $options->action):
+	*
+	* 'new_only_once':
+	*   Creates exactly one new section of $options->section_tipo and sets a component
+	*   value inside it. The resulting locator is cached in a static variable so that
+	*   all migrated records share the same identification locator rather than creating
+	*   one per record. A database search is performed first to avoid duplicates if
+	*   the migration is re-run.
+	*   Component data is saved via component_common::Save(); translatable components
+	*   are saved once per language, non-translatable once for DEDALO_DATA_NOLAN.
+	*   Relation-type components (component_relation_common subclasses) are saved as
+	*   a block.
+	*
+	* @param object $options - Migration options with the following properties:
+	*   action            (string)  – currently only 'new_only_once' is implemented
+	*   section_tipo      (string)  – section type for the identification record
+	*   from_component_tipo (string) – component tipo for the injected locator
+	*   type              (string)  – locator type constant
+	*   component_tipo    (string)  – component to write the value into
+	*   value             (mixed)   – value to store in the new component
+	*   datos             (object)  – the migrated record's datos (mutated in place)
+	*   q                 (string)  – search query to detect existing identification records
+	*   model             (string)  – model name for the search path
+	*   name              (string)  – name for the search path
+	* @return object - The (mutated) $datos with the new locator appended to relations
 	*/
 	public static function set_move_identification_value( object $options ) : object {
 
@@ -1939,6 +2247,9 @@ class transform_data {
 			$q = addslashes($q);
 		}
 		// cache to be used when the data needs to apply into every new record
+		// Static function-level cache keyed by (action, section_tipo, component_tipo).
+		// Ensures 'new_only_once' creates its identification record only once even when
+		// this callback is called thousands of times inside a table iterator loop.
 		static $cache_set_move_identification_value;
 		$cache_key = $action.'_'.$section_tipo.'_'.$component_tipo;
 
@@ -2061,13 +2372,43 @@ class transform_data {
 
 	/**
 	* PORTALIZE_DATA
-	* Get the old components from the source section and move his data into target section
-	* Save the target section and use his section_id to create a locator to inject into the portal
-	* @param array $json_files
-	* [
-	*	"qdp_portalize_to_tch.json", ..
-	* ]
-	* @return bool
+	* Promotes flat component data within a source section into a new dedicated
+	* section and links the new section back via a portal component.
+	*
+	* Use case: a section previously held structured data (e.g. person name + role)
+	* directly in its components. After the migration that data lives in a separate
+	* reference section and the original section gets a portal locator pointing at it.
+	*
+	* JSON definition files live in:
+	*   core/base/transform_definition_files/move_to_portal/
+	* Each file defines one or more items:
+	*   {
+	*     "source_section": "...",    section tipo to read from
+	*     "target_section": "...",    section tipo to write into
+	*     "portal":         "...",    component_portal tipo on the source section
+	*     "components": [
+	*       { "source_tipo": "...", "target_tipo": "..." },
+	*       ...
+	*     ]
+	*   }
+	*
+	* For each source record with at least one non-empty component value:
+	* 1. A new target section is created via section::Save() with all component
+	*    data (literals in a components object; relation data as relations array).
+	* 2. A locator to the new target section is added to the source portal.
+	* 3. Time Machine rows for migrated components are updated in place to reflect
+	*    the new section_id, section_tipo, and tipo (target_tipo).
+	* 4. The old component data on the source section is cleared (set_dato(null)).
+	*    Time Machine is disabled (tm_record::$save_tm = false) during this cleanup.
+	*
+	* On failure creating the portal locator the new section is deleted and the
+	* counter is consolidated via counter::consolidate_counter() to avoid gaps.
+	*
+	* Activity logging is disabled throughout to prevent the migration from
+	* generating spurious audit entries.
+	*
+	* @param array $json_files - File names relative to move_to_portal/ directory
+	* @return bool - true on success; false on any unrecoverable error
 	*/
 	public static function portalize_data( array $json_files) : bool {
 
@@ -2342,13 +2683,25 @@ class transform_data {
 
 	/**
 	* MOVE_DATA_BETWEEN_MATRIX_TABLES
-	* Get specific data from a table and insert in other table
-	* Delete previous data.
-	* @param array $json_files
-	* [
-	*	"utoponymy1_to_hierarchy.json", ..
-	* ]
-	* @return bool
+	* Physically relocates section rows from one matrix table to another within a
+	* single PostgreSQL transaction per section_tipo.
+	*
+	* Use case: a section_tipo was originally stored in the wrong matrix table
+	* (e.g. matrix_list) and must be moved to the correct one (e.g. matrix_hierarchy)
+	* so that Dédalo's table-dispatch logic finds it in the right place.
+	*
+	* JSON definition files live in:
+	*   core/base/transform_definition_files/move_to_table/
+	* Each file contains a JSON array of transfer specs:
+	*   [{ "section_tipo": "utoponymy1", "source_table": "matrix_list", "target_table": "matrix_hierarchy" }]
+	*
+	* Each item is processed in a BEGIN/INSERT SELECT/DELETE/COMMIT block.
+	* Only section_id, section_tipo, and datos are copied (not the id column, to
+	* avoid primary-key conflicts in the target table). On INSERT or DELETE failure
+	* a ROLLBACK is issued and the method returns false immediately.
+	*
+	* @param array $json_files - File names relative to move_to_table/ directory
+	* @return bool - true on success; false if any SQL operation fails
 	*/
 	public static function move_data_between_matrix_tables( array $json_files) : bool {
 
@@ -2485,12 +2838,20 @@ class transform_data {
 
 	/**
 	* GET_SECTION_TIPO_KEY_FROM_MAIN_COMPONENT
-	* Create an main component instance of the current dataframe
-	* and return his target section tipo
-	* @param string $section_tipo
-	* @param int|string $section_id,
-	* @param string $dataframe_tipo | tipo of the component_dataframe
-	* @return string $section_tipo_key
+	* Resolves the target section_tipo referenced by the parent (main) component of
+	* a given component_dataframe tipo.
+	*
+	* A component_dataframe is always a child of a "main" relational component in the
+	* ontology tree. This helper instantiates that parent component, calls
+	* get_ar_target_section_tipo(), and returns the first entry from the result.
+	*
+	* Returns null if the parent component has no target section tipo configured,
+	* logging an error in that case.
+	*
+	* @param string $section_tipo - Section tipo that owns the component
+	* @param int|string $section_id - Record identifier within that section
+	* @param string $dataframe_tipo - Ontology tipo of the component_dataframe
+	* @return string|null - First target section tipo, or null on error
 	*/
 	private static function get_section_tipo_key_from_main_component( string $section_tipo, int|string $section_id, string $dataframe_tipo ) : ?string {
 
@@ -2533,9 +2894,37 @@ class transform_data {
 
 	/**
 	* CHANGE_DATA_LANG
-	* Switch language of some component form original lang to target lang
-	* Used to set non translatable component to translatable component or vice versa.
-	* @return
+	* Migrates component dato values between language keys — for example when a
+	* component changes from translatable (DEDALO_DATA_LANG_DEFAULT) to
+	* non-translatable (DEDALO_DATA_NOLAN) or vice versa.
+	*
+	* JSON definition files live in:
+	*   core/base/transform_definition_files/move_lang/
+	* Each file is a JSON array:
+	*   [{
+	*     "tipo"      : "hierarchy89",
+	*     "type"      : "component",
+	*     "ar_tables" : ["matrix","matrix_hierarchy","matrix_list","matrix_activities"],
+	*     "perform"   : ["lang_to_nolan"],
+	*     "info"      : "URL translatable => URL non translatable and transliterable"
+	*   }]
+	*
+	* Processing order:
+	* 1. The unique set of tables declared across all definitions is iterated via
+	*    update::tables_rows_iterator(). For each row the datos->components object
+	*    is walked; any component tipo matching a definition entry dispatches the
+	*    named "perform" action (e.g. lang_to_nolan) to rewrite the dato key.
+	* 2. After all datos rows are processed, matrix_time_machine 'lang' column values
+	*    are updated via a direct SQL UPDATE for each tipo + action combination
+	*    (lang_to_nolan: DEDALO_DATA_LANG_DEFAULT → DEDALO_DATA_NOLAN;
+	*     nolang_to_lang: DEDALO_DATA_NOLAN → DEDALO_DATA_LANG_DEFAULT).
+	*
+	* Activity logging is disabled throughout.
+	*
+	* Note: the return type is absent (untyped); the method returns void implicitly.
+	*
+	* @param array $json_files - File names relative to move_lang/ directory
+	* @return void
 	*/
 	public static function change_data_lang( array $json_files ) {
 
@@ -2745,8 +3134,23 @@ class transform_data {
 
 	/**
 	* LANG_TO_NOLAN
-	* Set the literal component lang defined as main lang to nolan
-	* @param object $options
+	* "perform" action callback that moves a literal component's dato from the default
+	* language key (DEDALO_DATA_LANG_DEFAULT) to DEDALO_DATA_NOLAN within the
+	* components object being rebuilt during a change_data_lang() run.
+	*
+	* If DEDALO_DATA_LANG_DEFAULT is not present, falls back to the first non-empty
+	* language found in common::get_ar_all_langs() so that records with a non-default
+	* primary language are also migrated.
+	*
+	* The old language key is removed (unset) after copying to DEDALO_DATA_NOLAN.
+	*
+	* Writes the modified value to $new_components (passed by reference) under the
+	* original component tipo key (transform_object->tipo).
+	*
+	* @param object $options - Contains:
+	*   transform_object (object) – the definition map entry (must have ->tipo)
+	*   new_components   (object) – the components object being rebuilt (passed by ref)
+	*   literal_value    (object) – the current dato wrapper object with a ->dato property
 	* @return void
 	*/
 	public static function lang_to_nolan(object $options) {
