@@ -4,17 +4,38 @@ include_once 'trait.request_config_ddo.php';
 include_once 'trait.request_config_v6.php';
 include_once 'trait.request_config_v5.php';
 /**
-* COMMON (ABSTRACT CLASS)
-* Shared methods by sections and components.
+* COMMON
+* Abstract base shared by all section and component classes in Dédalo v7.
 *
-* This abstract class serves as a base for all section and component classes in the application.
-* It defines shared functionality and reusable logic that is common across different components,
-* such as data handling, validation, and permission checks.
+* Responsibilities:
+* - Identity: tipo, section_tipo, section_id, mode, view, lang properties
+*   that every element in the system carries.
+* - Context building: build_structure_context / build_structure_context_core
+*   produce the invariant (cached) + per-call stamped dd_object that drives
+*   both the UI render and client-side DDO matching.
+* - Request-config orchestration: three-stage pipeline
+*   (RQO-derived → ontology/preset base → per-call overlay) via
+*   build_request_config(), delegating detail to the four request_config traits.
+* - Sub-datum resolution: get_subdatum() iterates locators → DDO map →
+*   instantiates child sections/components and collects their JSON output.
+* - Ontology helpers: get_matrix_table_from_tipo(), get_ar_related_by_model(),
+*   get_main_lang(), get_section_elements_context(), etc.
+* - Tools and buttons context: get_tools(), get_buttons_context() (filtered by
+*   user permissions and tool-declared availability).
+* - Static cache management: all per-request caches are held as public static
+*   arrays so common::clear() can purge them between persistent-worker requests
+*   (see audit-2026-06-worker-state-bleed).
 *
-* Sub-classes such as 'section' or 'component_common' extend this class, implementing or overriding
-* specific methods to fulfill their specific behaviors.
+* Traits used (mixed in via 'use' at the top):
+* - request_config_utils  : validation, caching, pagination helpers
+* - request_config_ddo    : ddo_map processing (enrichment, self-resolution)
+* - request_config_v6     : V6 strategy (properties->source->request_config)
+* - request_config_v5     : V5 legacy fallback (ontology relation nodes)
 *
-* Note: This class is not meant to be instantiated directly.
+* Extended by: section, component_common (which is extended by every component).
+*
+* @package Dédalo
+* @subpackage Core
 */
 abstract class common {
 
@@ -442,7 +463,12 @@ abstract class common {
 
 		/**
 		* CLEAR
-		* Purges persistent caches to prevent memory leaks across worker requests.
+		* Purges ALL class-static caches held by common and its sub-systems.
+		* Must be called at the end of every persistent-worker request to prevent
+		* state bleed between requests (see audit-2026-06-worker-state-bleed memory
+		* entry). Also conditionally resets search::reset_filter_user_records_cache()
+		* when search is already loaded, to avoid triggering an unnecessary autoload.
+		* @return void
 		*/
 		public static function clear() : void {
 			self::$cache_structure_context = [];
@@ -464,6 +490,22 @@ abstract class common {
 
 
 
+	/**
+	* __CALL
+	* Magic method implementing a generic get_X / set_X accessor pattern and a
+	* diffusion_fn forwarding bridge.
+	*
+	* Resolution order:
+	* 1. If $strFunction is callable on diffusion_fn, forward it there with $this
+	*    as the first argument (diffusion_fn acts as a mixin for diffusion logic).
+	* 2. If the name starts with 'set_', delegate to SetAccessor.
+	* 3. If the name starts with 'get_', delegate to GetAccessor.
+	* 4. Otherwise return false.
+	*
+	* @param string $strFunction Called method name, e.g. 'set_tipo', 'get_mode'
+	* @param array $arArguments Arguments passed to the phantom call
+	* @return mixed False on unknown method; bool from SetAccessor; property value from GetAccessor
+	*/
 	# ACCESSORS
 	final public function __call(string $strFunction, array $arArguments) {
 
@@ -485,6 +527,14 @@ abstract class common {
 		}
 		return(false);
 	}
+	/**
+	* SETACCESSOR
+	* Writes a named instance property if it exists on this class.
+	* Used internally by the __call accessor bridge.
+	* @param string $strMember Property name (without 'set_' prefix)
+	* @param mixed $strNewValue New value to assign
+	* @return bool True if the property existed and was assigned; false otherwise
+	*/
 	# SET
 	final protected function SetAccessor(string $strMember, $strNewValue) : bool {
 
@@ -498,6 +548,13 @@ abstract class common {
 			return false;
 		}
 	}
+	/**
+	* GETACCESSOR
+	* Reads a named instance property if it exists on this class.
+	* Used internally by the __call accessor bridge.
+	* @param string $strMember Property name (without 'get_' prefix)
+	* @return mixed Property value, or false if the property does not exist
+	*/
 	# GET
 	final protected function GetAccessor(string $strMember) {
 
@@ -507,12 +564,14 @@ abstract class common {
 	}//end GetAccessor
 
 	/**
-	 * __GET
-	 * Avoid to get undeclared properties
-	 * @param string $name
-	 * @throws Exception
-	 * @return void
-	 */
+	* __GET
+	* Prevents accidental reads of the private $data property through dynamic
+	* property access, which would otherwise silently return null instead of
+	* raising an error. All data access must go through get_data() / set_data().
+	* @param string $name Name of the property being read
+	* @throws Exception When $name is 'data'
+	* @return void
+	*/
 	public function __get(string $name) {
 		if($name === 'data') {
 			throw new Exception("Attempt to access undeclared property: $name");
@@ -522,14 +581,16 @@ abstract class common {
         // return null;
     }
 
-    /**
-     * __SET
-     * Avoid to set undeclared properties
-     * @param string $name
-     * @param mixed $value
-     * @throws Exception
-     * @return void
-     */
+	/**
+	* __SET
+	* Prevents accidental writes to the private $data property through dynamic
+	* property assignment, guarding against v6 patterns that wrote data directly.
+	* All data mutations must go through set_data().
+	* @param string $name Name of the property being written
+	* @param mixed $value Value to assign
+	* @throws Exception When $name is 'data'
+	* @return void
+	*/
 	public function __set(string $name, mixed $value) {
 		if($name === 'data') {
 			throw new Exception("Attempt to set undeclared property: $name");
@@ -539,10 +600,21 @@ abstract class common {
 
 	/**
 	* GET_PERMISSIONS
-	* Do not use this method directly to resolve component permissions
-	* @param string|null $parent_tipo = null
-	* @param string|null $tipo = null
-	* @return int $permissions
+	* Low-level security check: returns the user's numeric permission level (0–3)
+	* for a given element within its parent section.
+	*
+	* (!) Do not call this method directly to resolve component permissions; use
+	* the permission-aware wrappers (e.g. component_common::get_component_permissions)
+	* which apply context-specific rules on top of this result.
+	*
+	* Special cases:
+	* - Not logged in → always 0.
+	* - Time-machine section → global admins get 1, everyone else 0 (read-only guard).
+	* - Empty parent_tipo or tipo → logs an error and returns 0.
+	*
+	* @param string|null $parent_tipo = null Section tipo that owns the element
+	* @param string|null $tipo = null Element tipo to check
+	* @return int Permission level: 0 = none, 1 = read, 2 = read/write, 3 = admin
 	*/
 	public static function get_permissions( ?string $parent_tipo=null, ?string $tipo=null ) : int {
 
@@ -593,8 +665,11 @@ abstract class common {
 
 	/**
 	* GET_MODEL
-	* @return string $model
-	* 	Is the self class name like 'component_autocomplete'
+	* Returns the runtime PHP class name of this instance (e.g. 'component_input_text',
+	* 'section'). Used throughout the codebase as a model discriminator.
+	* Late-static binding (get_called_class) ensures the concrete subclass name is
+	* returned, not 'common'.
+	* @return string Class name of the called object
 	*/
 	public function get_model() : string {
 
@@ -605,7 +680,11 @@ abstract class common {
 
 	/**
 	* SET_PERMISSIONS
-	* @param int $number
+	* Directly sets the cached permission level for this instance.
+	* Normally permissions are resolved lazily; this allows callers (e.g.
+	* get_subdatum permission inheritance logic) to override the resolved value.
+	* @param int $number Permission level to assign (0–3)
+	* @return void
 	*/
 	public function set_permissions( int $number ) : void {
 
@@ -614,9 +693,17 @@ abstract class common {
 
 
 	/**
-	* LOAD STRUCTURE DATA
-	* Get data once from Ontology (tipo, model, order_number, is_translatable, etc.)
-	* @return bool
+	* LOAD_STRUCTURE_DATA
+	* Populates instance properties from the ontology node exactly once per
+	* instance (guarded by $bl_loaded_structure_data). Fills: ontology_node,
+	* model, order_number, label, translatable, and properties.
+	*
+	* Side effect: when the element is not translatable, calls fix_language_nolan()
+	* to force lang = DEDALO_DATA_NOLAN so downstream data queries use the correct
+	* language key.
+	*
+	* (!) $tipo must be set before calling; returns false and logs an error otherwise.
+	* @return bool True on success; false when tipo is missing or already loaded
 	*/
 	protected function load_structure_data() : bool {
 
@@ -663,8 +750,10 @@ abstract class common {
 
 	/**
 	* GET_INFO
-	* Returns a basic element information
-	* @return object $info
+	* Returns a lightweight identity object for this element.
+	* Used internally (e.g. get_diffusion_data_info) when a full context is not
+	* needed. Falls back to $this->tipo for section_tipo when it is not set.
+	* @return object {section_tipo, tipo, label, model}
 	*/
 	public function get_info() : object {
 		return (object)[
@@ -679,9 +768,11 @@ abstract class common {
 
 	/**
 	* GET_DIFFUSION_DATA_INFO
-	* Returns a basic element information for diffusion
-	* formatted for diffusion data compatibility
-	* @return array $diffusion_data_object
+	* Wraps get_info() output into a single-element array of diffusion_data_object
+	* for consumption by the diffusion pipeline. The 'id' field is set to 'a'
+	* (a sentinel meaning "structural, not a data record") and lang is null
+	* (structural info is language-neutral).
+	* @return array Single-element array of diffusion_data_object
 	*/
 	public function get_diffusion_data_info() : array {
 
@@ -701,7 +792,10 @@ abstract class common {
 
 	/**
 	* IS_TRANSLATABLE
-	* @return bool
+	* Convenience accessor for the $translatable property loaded by
+	* load_structure_data(). Returns false when translatable is null (not yet
+	* resolved), treating an unloaded state as non-translatable.
+	* @return bool True when the element stores per-language values
 	*/
 	public function is_translatable() : bool {
 
@@ -713,9 +807,24 @@ abstract class common {
 
 
 	/**
-	* GET MATRIX_TABLE FROM TIPO
-	* @param string $tipo
-	* @return string|null $matrix_table
+	* GET_MATRIX_TABLE_FROM_TIPO
+	* Resolves the PostgreSQL matrix table name that stores data for the given
+	* section tipo (e.g. 'oh1' → 'matrix', 'dd64' → 'matrix_users').
+	*
+	* Resolution order:
+	* 1. Static cache (self::$cache_matrix_table_from_tipo).
+	* 2. Special literal 'all' → null (multi-table queries bypass this).
+	* 3. Ontology-section exception: section_id === '0' → 'matrix_ontology'.
+	* 4. Well-known section constants (projects, users).
+	* 5. Ontology lookup: related node of model 'matrix_table' whose term name
+	*    is the table name; falls back to real-section resolution for virtual sections.
+	* 6. Fallback to 'matrix' with a WARNING log.
+	*
+	* (!) Always call with a section tipo, never a component tipo; logs an error
+	* and returns null when a non-section model is passed.
+	*
+	* @param string $tipo Section tipo to resolve
+	* @return string|null Table name, or null for area/menu/invalid tipos
 	*/
 	public static function get_matrix_table_from_tipo(string $tipo) : ?string {
 
@@ -849,8 +958,19 @@ abstract class common {
 
 	/**
 	* GET_MATRIX_TABLES_WITH_RELATIONS
-	* Note: Currently tables are static. make a connection to db to do dynamic ASAP
-	* @return array $ar_tables_with_relations
+	* Returns the list of matrix table names that have inverse-relation columns
+	* (i.e. store cross-record relation data queried by the relation/diffusion subsystems).
+	*
+	* Source: ontology children of 'dd627' (matrix table registry) whose
+	* properties->inverse_relations === true. 'matrix_test' is included only in
+	* development server context. 'matrix_ontology' is always appended (v6.5+).
+	*
+	* Falls back to a hardcoded default list when the ontology walk returns empty
+	* (old ontology version pre-2018-01-26).
+	*
+	* Note: table membership is currently static (ontology-driven). Dynamic DB
+	* introspection is a future improvement.
+	* @return array List of table name strings, e.g. ['matrix','matrix_hierarchy',...]
 	*/
 	public static function get_matrix_tables_with_relations() : array {
 
@@ -926,9 +1046,12 @@ abstract class common {
 
 	/**
 	* SET_LANG
-	* When isset lang, valor and data are cleaned
-	* @param string $lang
-	* @return bool
+	* Sets the active language code for this element and invalidates any
+	* previously resolved data cache (by calling set_to_force_reload_data).
+	* Must be called before get_data() when switching languages within the same
+	* instance, otherwise stale data from the previous language will be returned.
+	* @param string $lang Language code, e.g. 'lg-spa', 'lg-eng', 'lg-nolan'
+	* @return bool Always true
 	*/
 	public function set_lang(string $lang) : bool {
 
@@ -946,9 +1069,10 @@ abstract class common {
 
 	/**
 	* SET_TO_FORCE_RELOAD_DATA
-	* Clean data caches and set the 'loaded_matrix_data' as false
-	* forcing new get data actions to refresh the data.
-	* It usually called when a set lang is made.
+	* Clears the $data_resolved cached value so that the next get_data() call
+	* re-fetches from the database. Skipped in time-machine mode ('tm') because
+	* the data is injected externally and must not be discarded.
+	* Called automatically by set_lang() whenever the language changes.
 	* @return void
 	*/
 	public function set_to_force_reload_data() : void {
@@ -966,9 +1090,23 @@ abstract class common {
 
 	/**
 	* GET_MAIN_LANG
-	* @param string|null $section_tipo = null
-	* @param mixed $section_id = null
-	* @return string $main_lang
+	* Resolves the "main" (authoritative/default) language for the given section.
+	* The main language is used to identify the term/descriptor component in
+	* thesaurus hierarchies and to drive diffusion language selection.
+	*
+	* Resolution rules:
+	* - Languages section (DEDALO_LANGS_SECTION_TIPO) → always 'lg-eng'.
+	* - Hierarchy section (DEDALO_HIERARCHY_SECTION_TIPO) → reads the language
+	*   component from that hierarchy record; defaults to 'lg-spa'.
+	* - Virtual thesaurus sections → delegates to hierarchy::get_main_lang();
+	*   falls back to DEDALO_DATA_LANG_DEFAULT on empty result.
+	* - All other sections → DEDALO_DATA_LANG_DEFAULT.
+	*
+	* Results are cached per section_tipo + section_id pair.
+	*
+	* @param string|null $section_tipo Section tipo to resolve
+	* @param mixed $section_id = null Record identifier; used only for hierarchy sections
+	* @return string Language code, e.g. 'lg-spa'
 	*/
 	public static function get_main_lang( ?string $section_tipo, mixed $section_id=null ) : string {
 
@@ -1049,9 +1187,13 @@ abstract class common {
 
 	/**
 	* SETVAR
-	* @param string $name
-	* @param mixed $default = false
-	* @return mixed
+	* Reads a named value from the HTTP request ($_REQUEST) with XSS sanitization.
+	* Returns $default when the key is absent. The name 'name' is forbidden to
+	* prevent variable-variable collisions in the implementation.
+	* @param string $name Request parameter name to read
+	* @param mixed $default = false Value returned when the key is absent
+	* @return mixed Sanitized request value, or $default / false when not present
+	* @throws Exception When $name === 'name'
 	*/
 	public static function setVar(string $name, $default=false) : mixed {
 
@@ -1074,8 +1216,15 @@ abstract class common {
 
 	/**
 	* SETVARDATA
-	* @param string $name
-	* @param object|false $data_obj
+	* Reads a named property from a data object (not from the HTTP request),
+	* returning $default when the property is absent. Unlike setVar, it does NOT
+	* apply XSS sanitization (raw transcription tags must be preserved).
+	* The name 'name' is forbidden for the same reason as setVar.
+	* @param string $name Property name to read from $data_obj
+	* @param object|false $data_obj Source data object
+	* @param mixed $default = false Value returned when the property is absent
+	* @return mixed Property value as-is, or $default / false when not present
+	* @throws Exception When $name === 'name'
 	*/
 	public static function setVarData(string $name, $data_obj, $default=false) : mixed {
 
@@ -1092,16 +1241,17 @@ abstract class common {
 		}
 
 		return false;
-	}//end setVar
+	}//end setVarData
 
 
 
 	/**
 	* GET_AR_ALL_LANGS
-	* Return array of langs of all projects in Dédalo
-	* from the configuration constant DEDALO_PROJECTS_DEFAULT_LANGS.
-	* @return array $ar_all_langs
-	* Like ["lg-eng","lg-spa"]
+	* Returns the list of language codes active across all Dédalo projects,
+	* sourced from the DEDALO_PROJECTS_DEFAULT_LANGS installation constant.
+	* This is the canonical list used by import, export, and diffusion to iterate
+	* all translatable values.
+	* @return array Language code strings, e.g. ['lg-eng', 'lg-spa']
 	*/
 	public static function get_ar_all_langs() : array {
 
@@ -1114,14 +1264,10 @@ abstract class common {
 
 	/**
 	* GET_AR_ALL_LANGS_RESOLVED
-	* @param string $lang
-	*	Default DEDALO_DATA_LANG
-	* @return array $ar_all_langs_resolved
-	* Like [
-	*	lg-spa : Spanish,
-	*   lg-eng : English,
-	*   ..
-	* ]
+	* Returns an associative map of language code → human-readable language name
+	* for all project languages, resolved in the given UI language.
+	* @param string $lang = DEDALO_DATA_LANG UI language for name resolution (e.g. 'lg-eng')
+	* @return array Associative array, e.g. ['lg-spa' => 'Spanish', 'lg-eng' => 'English']
 	*/
 	public static function get_ar_all_langs_resolved( string $lang=DEDALO_DATA_LANG ) : array {
 
@@ -1141,8 +1287,12 @@ abstract class common {
 
 	/**
 	* GET_PROPERTIES
-	* Alias of $this->ontology_node->get_properties() but json decoded
-	* @return object|array|null $properties
+	* Returns the decoded ontology properties object for this element, with a
+	* one-level instance cache ($this->properties). When set_properties() was
+	* called earlier, the injected value is returned instead of the ontology one.
+	* Returns null (not false) when properties are absent, so callers can safely
+	* use null-coalescing without needing to handle the false sentinel.
+	* @return object|null Decoded properties object, or null when none exist
 	*/
 	public function get_properties() : ?object {
 
@@ -1164,8 +1314,19 @@ abstract class common {
 
 	/**
 	* SET_PROPERTIES
-	* @param mixed $value
-	* @return bool
+	* Injects an override properties object for this instance, replacing the
+	* ontology-derived value for all subsequent get_properties() calls.
+	* Accepts either a JSON string or a decoded object/null.
+	*
+	* Sets $this->properties_injected = true so build_structure_context_core()
+	* extends the cache key with a hash of the injected value, preventing the
+	* ontology-derived cache entry from being served to callers that expect the
+	* overridden properties.
+	*
+	* (!) Always use this method instead of writing $this->properties directly;
+	* direct writes bypass the injected flag and break context caching.
+	* @param mixed $value JSON string or decoded object; null clears the properties
+	* @return bool Always true
 	*/
 	public function set_properties($value) : bool {
 
@@ -1186,8 +1347,13 @@ abstract class common {
 
 
 	/**
-	* GET_PROPIEDADES : V5 compatibility for diffusion
-	* Don't used it in V6 calls!!!
+	* GET_PROPIEDADES
+	* V5 Spanish-named compatibility shim. Returns the raw ontology 'propiedades'
+	* string decoded as an object, used exclusively by the diffusion pipeline for
+	* backward compatibility with v5 ontology nodes.
+	*
+	* (!) Do not call this method from any v6/v7 code. Use get_properties() instead.
+	* @return object|null Decoded propiedades object, or null when absent
 	*/
 	public function get_propiedades() {
 
@@ -1206,7 +1372,10 @@ abstract class common {
 
 	/**
 	* GET_AR_RELATED_COMPONENT_TIPO
-	* @return array $ar_related_component_tipo
+	* Returns the list of related component tipos declared in this element's
+	* ontology node relations. Used when iterating the relation targets of a
+	* component (e.g. to discover which sections a portal points to).
+	* @return array Array of tipo strings from the ontology 'relations' list
 	*/
 	public function get_ar_related_component_tipo() : array {
 
@@ -1227,10 +1396,20 @@ abstract class common {
 
 	/**
 	* GET_AR_RELATED_BY_MODEL
-	* @param string $model_name
-	* @param string $tipo
-	* @param bool $strict = true
-	* @return array $ar_related_by_model
+	* Finds the types related to $tipo whose ontology model matches $model_name.
+	* Commonly used to locate related nodes of a specific type (e.g. to find the
+	* 'matrix_table' relation of a section tipo, or the 'section' relation of a
+	* virtual section).
+	*
+	* Strict mode (default): exact string equality of model names.
+	* Non-strict mode: substring match via str_contains (less common).
+	*
+	* Results are cached in self::$ar_related_by_model_data keyed by
+	* modelName_tipo_strict.
+	* @param string $model_name Model name to match (e.g. 'section', 'matrix_table')
+	* @param string $tipo Ontology tipo whose relations to inspect
+	* @param bool $strict = true When false, matches if $model_name is a substring
+	* @return array List of related tipo strings matching the model constraint
 	*/
 	public static function get_ar_related_by_model(string $model_name, string $tipo, bool $strict=true) : array {
 
@@ -1290,8 +1469,12 @@ abstract class common {
 
 	/**
 	* GET_ALLOWED_RELATION_TYPES
-	* Search in structure and return an array of tipos
-	* @return array $ar_allowed
+	* Returns the canonical list of relation-type constants that the system
+	* recognises as valid cross-record relation kinds (children, parent, related,
+	* index, model, link, filter). Used by the relation and diffusion subsystems
+	* to filter or validate relation type campos.
+	* Note: DEDALO_RELATION_TYPE_RECORD_TIPO is intentionally excluded.
+	* @return array Array of relation-type constant values (tipo strings)
 	*/
 	public static function get_allowed_relation_types() : array {
 
@@ -1315,10 +1498,11 @@ abstract class common {
 
 	/**
 	* BUILD_ELEMENT_JSON_OUTPUT
-	* It simply groups the context and the data into one object.
-	* @param array $context
-	* @param array $data
-	* @return object $result
+	* Packages a context array and a data array into the standard two-property
+	* response envelope {context, data} expected by the client API.
+	* @param array $context Array of dd_object context items
+	* @param array $data = [] Array of data items
+	* @return object {context: array, data: array}
 	*/
 	public static function build_element_json_output(array $context, array $data=[]) : object {
 
@@ -1333,14 +1517,20 @@ abstract class common {
 
 	/**
 	* GET_JSON
-	* Loads the JSON controller file and returns the normalized API response JSON object
-	* @param object|null $request_options
-	* @return object $json
-	*	Object with data and context (configurable) like:
-	*	{
-	*		context : [...],
-	*		data : [...]
-	*	}
+	* Entry point for building the API response for this element. Includes the
+	* model-specific JSON controller file (e.g. section_json.php,
+	* component_input_text_json.php) and returns its result.
+	*
+	* The controller file is responsible for assembling context + data based on
+	* the options flags; this method only provides path resolution, options
+	* normalization, and debug timing.
+	*
+	* @param object|null $request_options = null Options object with boolean flags:
+	*   - get_context (bool, default true): include context array in response
+	*   - context_type (string, default 'default'): context variant key
+	*   - get_data (bool, default true): include data array in response
+	*   - get_request_config (bool, default false): include request_config in response
+	* @return object {context?: array, data?: array, debug?: object}
 	*/
 	public function get_json( ?object $request_options=null ) : object {
 
@@ -1405,11 +1595,12 @@ abstract class common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
-	* 	Common function to resolve element context
-	* @param int $permissions = 0
-	* @param bool $add_request_config = false
-	*
-	* @return dd_object $dd_object
+	* Public entry point for building the full element context. Delegates to
+	* build_structure_context with simple=false, so tools and buttons are
+	* calculated. Use this in JSON controllers that need the complete context.
+	* @param int $permissions = 0 Permission level to stamp on the returned dd_object
+	* @param bool $add_request_config = false When true, computes and attaches request_config
+	* @return dd_object Stamped context object (a clone of the cached core)
 	*/
 	public function get_structure_context(int $permissions=0, bool $add_request_config=false) : dd_object {
 
@@ -2013,13 +2204,17 @@ abstract class common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT_SIMPLE
-	* Calculates the structure_context but ignoring some properties
-	* such as tools, permissions, buttons context..
-	* (!) Unlike previous versions, it does not mutate the instance
-	* (tools, buttons_context and permissions are left untouched).
-	* @param int $permissions = 0
-	* @param bool $add_request_config = false
-	* @return dd_object $ddo
+	* Lightweight variant of get_structure_context() that skips the tools and
+	* buttons calculations (simple=true). Preferred in get_section_elements_context
+	* and other callers that iterate many elements and do not need the full
+	* tools/buttons payload (saves permissions DB lookups per element).
+	*
+	* (!) Unlike previous versions, this method does NOT mutate the instance:
+	* $this->tools, $this->buttons_context, and $this->permissions are left
+	* untouched even when $permissions is non-zero.
+	* @param int $permissions = 0 Permission level to stamp on the returned dd_object
+	* @param bool $add_request_config = false When true, attaches request_config
+	* @return dd_object Stamped context object (a clone of the cached core, tools=[])
 	*/
 	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : dd_object {
 
@@ -2030,15 +2225,32 @@ abstract class common {
 
 	/**
 	* GET_SUBDATUM
-	* Used by sections and portal that has relations with other components and it need get the information of the other components
-	* subdatum: is the context and data of every section or component that the caller (this component) need to show, search or select
-	* ex: if the caller is a portal that call to toponymy section it will need the context and data of the pointer section and the components that will be showed or searched.
-	* This method use the data of the caller (ar_locators) to get only the data to be used, ex: only the first records of the section to show in list mode.
-	* For get the subdatum will used the request_config. If the request_config has external api it will get the section of the ontology that has the representation of the external service (Zenon)
-	* @param string|null $from_parent = null
-	* @param array $ar_locators = []
-	* @return object $subdatum
-	* 	Object with two properties: context, data
+	* Resolves the context and data for all child DDO entries that this element
+	* (section, portal, etc.) must load in order to populate its display.
+	*
+	* A "subdatum" is the combined context + data set of every nested section or
+	* component that the caller needs to show, search, or select. For example, a
+	* portal pointing at Toponymy resolves the Toponymy section context and the
+	* data items matched by the given locators.
+	*
+	* Algorithm (high-level):
+	* 1. Flattens all show + hide ddo_map entries from $this->context->request_config
+	*    into a single deduped set, grouped by section_tipo for fast per-locator lookup.
+	* 2. For each locator in $ar_locators, iterates the matching DDOs:
+	*    - section DDOs   → instantiates a section + adds a section_record.
+	*    - component DDOs → instantiates via component_common::get_instance, inherits
+	*      permissions, narrows request_config to the child's DDO slice.
+	*    - grouper DDOs   → instantiates the grouper class directly.
+	*    - component_dataframe DDOs → special pairing using the locator id rather than
+	*      section_id (see IRI id–dataframe pairing memory entry).
+	*    - dd_grid in TM  → reads from tm_record and builds a synthetic data item.
+	* 3. Calls get_json on each instantiated element and deduplicates context items
+	*    by tipo+section_tipo+mode (first occurrence wins, same as sections_json.php).
+	* 4. Stamps row_section_id and parent_tipo on every data item for grid coherence.
+	*
+	* @param string|null $from_parent = null Tipo to stamp as from_parent on children
+	* @param array $ar_locators = [] Array of locator objects {section_id, section_tipo, ...}
+	* @return object {context: array, data: array}
 	*/
 	public function get_subdatum( ?string $from_parent=null, array $ar_locators=[] ) : object {
 
@@ -2652,6 +2864,9 @@ abstract class common {
 
 	/**
 	* BUILD_COMPONENT_SUBDATA
+	* (!) Commented-out method body — kept for reference only.
+	* Was an early helper to build sub-JSON for a single component; superseded by
+	* the full DDO-iteration logic in get_subdatum().
 	* @return object $element_json
 	*/
 		// public function build_component_subdata(string $model, string $tipo, $section_id, string $section_tipo, string $mode, string $lang, string$source_model, $custom_data='no_value') : object {
@@ -3310,9 +3525,10 @@ abstract class common {
 
 	/**
 	* GET_REQUEST_CONFIG_OBJECT
-	* Call method get_ar_request_config whit current options
-	* and return the first request_config_object
-	* @return request_config_object|null $request_config_object
+	* Convenience wrapper: calls get_ar_request_config() and returns only the
+	* first request_config_object (the 'dedalo' api_engine entry in the typical
+	* single-engine case). Returns null when the config is empty.
+	* @return request_config_object|null First entry of the request config, or null
 	*/
 	public function get_request_config_object() : ?request_config_object {
 
@@ -3331,7 +3547,11 @@ abstract class common {
 
 	/**
 	* GET_RECORDS_MODE
-	* @return string $records_mode
+	* Determines the mode used when fetching related records for this component.
+	* For relation components (portal, children, etc.) the records mode is always
+	* 'list'; for others it follows the instance mode unless overridden by
+	* properties->source->records_mode.
+	* @return string Mode string, e.g. 'list', 'edit'
 	*/
 	public function get_records_mode() : string {
 
@@ -3351,8 +3571,9 @@ abstract class common {
 
 	/**
 	* GET_SOURCE
-	* Unified source object builder
-	* @return object $source
+	* Builds the standard 'source' descriptor object used in API requests and
+	* request_config contexts to identify the originating element.
+	* @return object {tipo, model, section_tipo, section_id, lang, mode}
 	*/
 	public function get_source() : object {
 
@@ -3373,10 +3594,14 @@ abstract class common {
 
 	/**
 	* GET_DDINFO_PARENTS
-	* Creates ddinfo object with parents data
-	* @param object $locator
-	* @param string $source_component_tipo
-	* @return object $dd_info
+	* Builds a synthetic 'ddinfo' data item containing the breadcrumb / parents
+	* path for a given locator. Used when a DDO's value_with_parents flag is true:
+	* callers append the result to ar_subdata so the client can render ancestors.
+	* The value is resolved via component_relation_common::get_locator_value with
+	* show_parents=true and include_self=false.
+	* @param object $locator Locator with section_id and section_tipo
+	* @param string $source_component_tipo Tipo of the component requesting this info (stamped as 'parent')
+	* @return object {tipo:'ddinfo', section_id, section_tipo, value: array|null, parent: string}
 	*/
 	public static function get_ddinfo_parents(object $locator, string $source_component_tipo) : object {
 
@@ -3409,8 +3634,11 @@ abstract class common {
 
 
 	/**
-	* GET SECTION ID
-	* @param string|int|null
+	* GET_SECTION_ID
+	* Returns the record identifier this element is bound to.
+	* Can be a numeric string, an integer, a temp string (e.g. 'temp1'), or null
+	* for unsaved new records.
+	* @return string|int|null Current section_id or null if not set
 	*/
 	public function get_section_id() : string|int|null {
 
@@ -3421,9 +3649,12 @@ abstract class common {
 
 	/**
 	* GET_DATA_ITEM
-	* Only to maintain vars and format unified
-	* @param mixed $value
-	* @return object $item
+	* Wraps a resolved component value in the standard data-item envelope that the
+	* client API expects in the 'data' array. Every data entry in an API response
+	* carries these fields so the client can unambiguously match items to their
+	* context DDO (by section_id + section_tipo + tipo).
+	* @param mixed $value Resolved data value for this component
+	* @return object {section_id, section_tipo, tipo, pagination, from_component_tipo, value}
 	*/
 	public function get_data_item($value) : object {
 
@@ -3442,11 +3673,14 @@ abstract class common {
 
 	/**
 	* GET_ELEMENT_LANG
-	* Used to resolve component lang before construct it
-	* @param string $tipo
-	* @param string|null $data_lang
-	* @return string lang
-	* 	code like 'lg-spa'
+	* Resolves the language code to use when constructing a component instance:
+	* translatable elements use the supplied $data_lang; non-translatable elements
+	* always use DEDALO_DATA_NOLAN ('lg-nolan') regardless of $data_lang.
+	* Called before component_common::get_instance() to avoid creating instances
+	* with an incorrect language key.
+	* @param string $tipo Component tipo to check translatability for
+	* @param string|null $data_lang = null Active data language (defaults to DEDALO_DATA_LANG)
+	* @return string Language code, e.g. 'lg-spa' or 'lg-nolan'
 	*/
 	public static function get_element_lang( string $tipo, ?string $data_lang=null ) : string {
 
@@ -3464,17 +3698,26 @@ abstract class common {
 
 	/**
 	* GET_SECTION_ELEMENTS_CONTEXT
-	* Get list of all components available for current section using get_context_simple
-	* Used to build search presets in filter, and components list in tool_export
-	* @param object $options
-	* {
-	* 	ar_section_tipo: array|null
-	* 	use_real_sections: bool = false
-	* 	skip_permissions: bool = false
-	* 	ar_tipo_exclude_elements: array (optional)
-	* 	ar_components_exclude: array (optional)
-	* }
-	* @return array $context
+	* Builds a flat list of structure-context objects (dd_object) for every
+	* component and grouper visible in the given sections. Used by:
+	* - filter components to build search-preset menus
+	* - tool_export to enumerate exportable columns
+	*
+	* The result respects user permissions (section-level and element-level),
+	* excludes binary/media/sensitive components by default ($ar_components_exclude),
+	* and handles virtual vs real section deduplication via $use_real_sections.
+	* Section-info elements (e.g. record meta) are appended after children; they
+	* are visible only to global admins.
+	*
+	* @param object $options Configuration object with fields:
+	*   - ar_section_tipo (array|null): section tipos to include
+	*   - use_real_sections (bool = false): deduplicate virtual sections by real tipo
+	*   - skip_permissions (bool = false): bypass security checks (thesaurus case)
+	*   - caller_tipo (string|null): used to detect thesaurus callers (dd100)
+	*   - ar_tipo_exclude_elements (array|false): element tipos to skip
+	*   - ar_components_exclude (array): model names to exclude (has default list)
+	*   - ar_include_elements (array): model name prefixes to include
+	* @return array Flat array of dd_object context items in display order
 	*/
 	public static function get_section_elements_context(object $options) : array {
 
@@ -3762,10 +4005,21 @@ abstract class common {
 
 	/**
 	* GET_TOOLS
-	* Resolves current element (component, section, ...) tools filtered by user permissions
-	* Gets tool_common::get_user_tools and filters the tools that affect this element
-	* Note that the resultant tools list is always shorter than the user full tools list
-	* @return array $tools
+	* Returns the subset of registered tools that are applicable to this element
+	* for the current user. Filters tool_common::get_user_tools() by:
+	* - affected_models: tool applies to this element's class name
+	* - affected_tipos: tool applies to this specific tipo
+	* - 'all_components': catch-all for component tools
+	* - in_properties: tool_config key present in this element's ontology properties
+	*
+	* Additional exclusion rules:
+	* - Autocomplete API requests: returns [] immediately (performance fast-path).
+	* - Time-machine section: only tool_export is allowed.
+	* - requirement_translatable: tool requires element to be translatable.
+	* - Tool-declared availability: tools may implement static is_available($context).
+	*
+	* Results are cached per (user_id, tipo, section_tipo) in self::$cache_get_tools.
+	* @return array Array of tool definition objects
 	*/
 	public function get_tools() : array {
 
@@ -3912,8 +4166,16 @@ abstract class common {
 
 	/**
 	* GET_BUTTONS_CONTEXT
-	* @return array $ar_button_ddo
-	* 	Array of dd_object
+	* Resolves the button context array for sections and areas. Buttons (button_*
+	* model children in the ontology) are filtered by user write permissions (≥ 2)
+	* and disabled flag. For button_import and button_trigger types, their tools
+	* sub-context is also resolved and cached per (user_id, button_tipo, section_tipo)
+	* in self::$cache_buttons_tools to avoid repeated O(N × T) iterations when
+	* the same button appears across many portal rows.
+	*
+	* Returns [] immediately for non-section, non-area callers: only sections and
+	* areas carry buttons.
+	* @return array Array of dd_object button context items
 	*/
 	public function get_buttons_context() : array {
 
@@ -4068,8 +4330,12 @@ abstract class common {
 
 	/**
 	* GET_COLUMNS_MAP
-	* Columns_map define the order and how the section or component will build the columns in list, the columns maps was defined in the properties.
-	* @return array|null $columns_map
+	* Returns the columns_map definition from the element's ontology properties,
+	* which controls the column order and rendering in list/tm views. In list and
+	* tm modes, the properties are read from the 'section_list' child node if one
+	* exists (portals and sections can have separate list configurations); otherwise
+	* falls back to the element's own properties.
+	* @return array|null columns_map array from properties->source->columns_map, or null
 	*/
 	public function get_columns_map() : ?array {
 
@@ -4112,10 +4378,11 @@ abstract class common {
 
 	/**
 	* GET_AR_INVERTED_PATHS
-	* Resolve the unique and isolated paths into the ddo_map with all dependencies (portal into portals, portals into sections, etc)
-	* get the path in inverse format, the last in the chain will be the first object [0]
-	* @return array ar_inverted_paths the the specific paths, with inverse path format.
-	* (!) Commented because nobody calls it (21-11-2022)
+	* (!) Commented-out method — kept for historical reference only (unused since 2022-11-21).
+	* Would have resolved unique leaf-to-root DDO paths through a portal chain
+	* (portal → portal → section) in reverse order so callers could walk data
+	* top-down. Superseded by the DDO-group loop in get_subdatum().
+	* @return array Inverted path arrays, each entry being a leaf-first chain
 	*/
 		// public function get_ar_inverted_paths(array $full_ddo_map) : array {
 
@@ -4173,6 +4440,10 @@ abstract class common {
 
 	/**
 	* SET_VIEW
+	* Injects a view variant for this instance, overriding any ontology-derived
+	* or legacy-model default resolved by get_view(). Typically set from the
+	* ddo_map 'view' property during get_subdatum() processing.
+	* @param string|null $view View identifier, e.g. 'line', 'mini', 'default'; null clears it
 	* @return void
 	*/
 	public function set_view(?string $view) : void {
@@ -4184,7 +4455,12 @@ abstract class common {
 
 	/**
 	* GET_VIEW
-	* @return string|null $view
+	* Resolves the view variant for this element, following this priority:
+	* 1. Injected instance view ($this->view set by set_view or ddo_map).
+	* 2. list-mode section_list child node properties->view.
+	* 3. Element's own ontology properties->view.
+	* 4. Legacy-model default via resolve_view() (e.g. autocomplete → 'line').
+	* @return string|null View identifier or null for the default rendering
 	*/
 	public function get_view() : ?string {
 
@@ -4234,8 +4510,13 @@ abstract class common {
 
 	/**
 	* RESOLVE_VIEW
-	* @param object $options
-	* @return string|null $view
+	* Static helper that maps a legacy ontology model name to its default view
+	* variant. Called by get_view() as a last-resort fallback when neither the
+	* instance nor ontology properties specify a view. Relation-type portals and
+	* autocomplete components resolve to 'line'; component_html_text to 'html_text';
+	* all others return null (framework default).
+	* @param object $options {model: string, tipo: string}
+	* @return string|null View identifier or null
 	*/
 	public static function resolve_view(object $options) : ?string {
 
@@ -4282,7 +4563,12 @@ abstract class common {
 
 	/**
 	* GET_CHILDREN_VIEW
-	* @return string|null $children_view
+	* Resolves the view variant for child elements rendered under this element.
+	* Priority:
+	* 1. Injected instance children_view ($this->children_view).
+	* 2. Ontology properties->children_view.
+	* 3. Legacy-model default (relation/autocomplete components → 'text').
+	* @return string|null Children view identifier or null
 	*/
 	public function get_children_view() : ?string {
 
@@ -4320,7 +4606,11 @@ abstract class common {
 
 	/**
 	* RESOLVE_LIMIT
-	* @return int|null
+	* Extracts the pagination limit from the element's ontology properties
+	* request_config definition, trying first properties->source->request_config
+	* sqo->limit and then show->sqo_config->limit. Returns null when neither is set,
+	* signalling that default pagination limits should apply.
+	* @return int|null Configured limit value, or null when not specified
 	*/
 	public function resolve_limit() : ?int {
 
@@ -4358,11 +4648,15 @@ abstract class common {
 
 
 	/**
-	 * WARNING INVALID TIPO
-	 * Its used to prevent to show the same warning multiple times.
-	 * @param string $tipo
-	 * @param string|null $expected_model
-	 */
+	* WARNING_INVALID_TIPO
+	* Emits a logger::WARNING for an invalid tipo exactly once per process
+	* (guarded by a static local cache so the same tipo never produces duplicate
+	* log noise even when called in a loop). Used by request_config validation
+	* when a DDO tipo cannot be resolved to a valid, active ontology node.
+	* @param string $tipo The invalid tipo string
+	* @param string|null $expected_model = null Expected ontology model name for context
+	* @return void
+	*/
 	private function warning_invalid_tipo(string $tipo, ?string $expected_model=null) : void {
 
 		static $warning_invalid_tipo_cache;
