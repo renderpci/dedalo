@@ -1,7 +1,42 @@
 <?php declare(strict_types=1);
 /**
 * CLASS BACKUP
+* Abstract utility class that centralises all database backup and restore
+* operations for the Dédalo platform.
 *
+* Responsibilities:
+* - Triggering and throttling PostgreSQL pg_dump backups (init_backup_sequence)
+*   as a nohup background process so the HTTP response is not blocked.
+* - Importing PostgreSQL COPY-format files into the matrix or ontology tables
+*   (import_from_copy_file, copy_from_file).
+* - Delegating MariaDB/MySQL dumps to the Bun diffusion engine via
+*   diffusion_api_client::call('backup_database') — PHP itself never connects
+*   to MariaDB (see MariaDB-is-Bun's-responsibility memory note).
+* - Enumerating existing backup files for the maintenance UI.
+* - Regenerating compiled JS label files for a given language (write_lang_file).
+* - Performing a connectivity check against configured ontology servers
+*   (check_remote_server).
+*
+* Architecture notes:
+* - The class is abstract and never instantiated; all methods are static.
+* - Heavy shell operations (pg_dump, gunzip, psql COPY) are run via shell_exec
+*   or exec rather than PHP's pg_* functions so that large dumps do not exhaust
+*   PHP memory limits.
+* - Time-range throttling in init_backup_sequence uses get_last_modification_date()
+*   to avoid redundant dumps within the configured DEDALO_BACKUP_TIME_RANGE window.
+* - The DEDALO_DB_MANAGEMENT constant opt-out allows installations whose database
+*   is managed externally (remote server, cloud provider) to bypass all local
+*   dump logic transparently.
+*
+* Related classes:
+* - DBi (core/db/class.DBi.php) — provides get_connection_string() for CLI tools.
+* - matrix_db_manager (core/db/class.matrix_db_manager.php) — lower-level DB access.
+* - diffusion_api_client (diffusion/class.diffusion_api_client.php) — Bun bridge.
+* - label (core/common/class.label.php) — provides label arrays written to JS files.
+* - process (core/base/class.processes.php) — wraps nohup background execution.
+*
+* @package Dédalo
+* @subpackage Core
 */
 abstract class backup {
 
@@ -11,16 +46,19 @@ abstract class backup {
 	* CLASS VARS
 	*/
 		/**
-		 * Columns to export/save from the dd_ontology table for backup operations.
-		 * Used by copy commands to specify which columns to include in SQL dumps.
-		 * Note: id column is intentionally excluded to allow proper data restoration.
-		 * @var array $dd_ontology_columns
+		 * Ordered list of dd_ontology columns included in COPY export/import operations.
+		 * The auto-incremented 'id' column is intentionally absent so that rows
+		 * re-inserted after a DELETE re-acquire IDs without PK conflicts.
+		 * copy_from_file() references this list when building the psql \copy command.
+		 * @var array<int,string> $dd_ontology_columns
 		 */
 		public static array $dd_ontology_columns = ['tipo', 'parent', 'term', 'model', 'order_number', 'relations', 'tld', 'properties', 'model_tipo', 'is_model', 'is_translatable', 'propiedades'];
 
 		/**
-		 * Flag indicating whether the download directory has been verified/created.
-		 * Prevents repeated filesystem checks during backup operations.
+		 * Whether the download/output directory has already been verified or created
+		 * in the current request lifetime.
+		 * Acts as a one-shot guard so repeated calls within the same request skip
+		 * redundant filesystem stat() calls.
 		 * @var bool $checked_download_str_dir
 		 */
 		public static bool $checked_download_str_dir = false;
@@ -29,9 +67,45 @@ abstract class backup {
 
 	/**
 	* INIT_BACKUP_SEQUENCE
-	* Make backup (compressed SQL dump) of current dedalo DB before login
-	* @param object $options {user_id: int, username: string, skip_backup_time_range: bool}
-	* @return object $response
+	* Launch a non-blocking pg_dump of the Dédalo PostgreSQL database.
+	*
+	* The dump is spawned as a background nohup process (nice -n 19) so the HTTP
+	* response is not held waiting for a potentially large dump to complete.
+	* The process PID and a per-process output file are returned to the caller
+	* so that the maintenance UI can track progress.
+	*
+	* Throttle logic:
+	*   By default the method respects a time-range guard: if a .backup file whose
+	*   mtime is within DEDALO_BACKUP_TIME_RANGE hours already exists in the backup
+	*   directory, the dump is skipped and result=true is returned immediately.
+	*   Pass skip_backup_time_range=true to force an immediate dump regardless
+	*   (useful for "backup now" buttons in the maintenance UI).
+	*
+	* Opt-out:
+	*   When the constant DEDALO_DB_MANAGEMENT is explicitly set to false the method
+	*   returns result=true without doing anything, allowing installations that delegate
+	*   backups to an external system (cron, cloud provider, etc.) to call this method
+	*   unconditionally without side-effects.
+	*
+	* File naming:
+	*   Normal run   — "Y-m-d_H.<conn>.<type>_<user_id>_dbv<version>.custom.backup"
+	*                  (hourly resolution; a second call within the same clock-hour
+	*                   is skipped by the file_exists() guard below the time-range check)
+	*   Forced run   — "Y-m-d_His.<conn>.<type>_<user_id>_forced_dbv<version>.custom.backup"
+	*                  (second-level resolution so forced dumps never collide)
+	*
+	* @param object $options {
+	*   user_id              : int    [= logged_user_id()]   — user triggering the backup
+	*   username             : string [= logged_user_username()]
+	*   skip_backup_time_range : bool [= false] — when true, bypass throttle check
+	* }
+	* @return object $response {
+	*   result : bool   — true on success or skip, false on error
+	*   msg    : string — human-readable status
+	*   errors : array  — populated on failure
+	*   pid    : int|null    — PID of spawned pg_dump process (on success)
+	*   pfile  : string|null — path to the process stdout/stderr file (on success)
+	* }
 	*/
 	public static function init_backup_sequence(object $options) : object {
 
@@ -46,7 +120,10 @@ abstract class backup {
 				$response->msg		= 'Error. Request failed '.__METHOD__;
 				$response->errors	= [];
 
-		// non dedalo_db_management case. Used when DB is in a external server or when backups are managed externally
+		// DEDALO_DB_MANAGEMENT opt-out
+		// When DEDALO_DB_MANAGEMENT is explicitly false the database is managed
+		// outside of PHP (remote server, cloud provider, external cron). In that
+		// case we return success immediately without touching the filesystem.
 			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
 
 				$response->msg		= 'OK. Skipped request by db config management '.__METHOD__;
@@ -82,7 +159,13 @@ abstract class backup {
 					);
 				}
 
-			// name : file name formatted as date . (one hour resolution)
+			// file-name construction
+			// Normal dumps use one-hour resolution ("Y-m-d_H") so that a second
+			// call within the same clock-hour is caught by the file_exists() guard
+			// below and avoids a duplicate dump.  Forced dumps use full second
+			// resolution ("Y-m-d_His") so they never collide with each other.
+			// The Dédalo data-version array (from matrix_updates) is appended so
+			// the filename encodes which schema version the dump was taken at.
 				$ar_dd_data_version	= get_current_data_version();
 				$db_name			= ($skip_backup_time_range===true)
 					? date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $user_id .'_forced_dbv' . implode('-', $ar_dd_data_version)
@@ -100,15 +183,26 @@ abstract class backup {
 				}else{
 
 					// Time range for backups in hours
+					// DEDALO_BACKUP_TIME_RANGE can be overridden in config.php.
+					// The default (8 h) prevents multiple large pg_dump processes
+					// from queuing up when several users log in close together.
 					if (!defined('DEDALO_BACKUP_TIME_RANGE')) {
 						define('DEDALO_BACKUP_TIME_RANGE', 8); // Minimum lapse of time (in hours) for run backup script again. Default: (int) 4
 					}
+					// get_last_modification_date() scans only files with '.backup'
+					// extension and excludes any path containing '/acc/' (access logs).
+					// It returns 0 when no matching file is found, causing
+					// difference_in_hours to be very large and always pass the guard.
 					$last_modification_time_secs = get_last_modification_date(
 						$file_path, // string path
 						['backup'], // array|null allowedExtensions
 						['/acc/'] // array ar_exclude
 					);
 					$current_time_secs		= time();
+					// (!) Integer arithmetic on epoch seconds / 3600 before rounding
+					// intentionally truncates to whole-hour boundaries, not elapsed
+					// wall-clock hours, so two dumps at 07:59 and 08:01 are 1 hour
+					// apart in this formula even though only 2 minutes elapsed.
 					$difference_in_hours	= round( ($current_time_secs/3600) - round($last_modification_time_secs/3600), 0 );
 					if ( $difference_in_hours < DEDALO_BACKUP_TIME_RANGE ) {
 						$msg = ' Skipped backup. A recent backup (about '.$difference_in_hours.' hours early) already exists. It is not necessary to build another one';
@@ -140,10 +234,19 @@ abstract class backup {
 					return $response; // stop here
 				}
 
-			// postgresExportPath . Export the database and output the status to the page
+			// pg_dump command
+			// -F c  : custom (compressed) format for pg_restore compatibility
+			// -b    : include large objects (BLOBs) in the dump
+			// -v    : verbose output written to the process file for progress tracking
+			// DBi::get_connection_string() returns "-h <host> [-p <port>] -U <user>"
+			// so no password is exposed in the process list (pg_password must be set
+			// in .pgpass or PGPASSWORD environment variable on the server).
 			$cmd = DB_BIN_PATH.'pg_dump '.DBi::get_connection_string().' -F c -b -v '.DEDALO_DATABASE_CONN.' > "'.$file_path .'"';
 
 			// process
+			// nohup + '& echo $!' lets PHP capture the PID and return immediately
+			// while pg_dump continues in the background.  nice -n 19 ensures the
+			// dump runs at lowest priority so it does not starve the web server.
 				$pfile		= process::get_unique_process_file(); // like 'process_1_2024-03-31_23-47-36_3137757' usually stored in the sessions directory
 				$file_path	= process::get_process_path() . DIRECTORY_SEPARATOR . $pfile; // output file with errors and stream data
 				$command	= "nohup sh -c 'nice -n 19 $cmd' >$file_path 2>&1 & echo $!";
@@ -190,8 +293,17 @@ abstract class backup {
 
 	/**
 	* GET_TABLES
-	* Get all tables (unfiltered) from current database
-	* @return array $tableList
+	* Returns the names of all user tables in the 'public' schema of the active
+	* PostgreSQL database, ordered by table name.
+	*
+	* Queries information_schema.tables so the result is portable across PostgreSQL
+	* versions. Only BASE TABLE rows are returned — views, foreign tables, and
+	* temporary tables are excluded.
+	*
+	* Used by class.update (core/base/update) to enumerate tables when checking
+	* or applying schema migrations.
+	*
+	* @return array<int,string> - Flat list of table names. Empty array on DB error.
 	*/
 	public static function get_tables() : array {
 
@@ -221,15 +333,35 @@ abstract class backup {
 
 	/**
 	* COPY_FROM_FILE
-	* Copy rows from PostgreSQL 'COPY' (like CVS) to table
-	* Previously, existing records whit current tld are deleted
-	* Delete is made as regular php query to database
-	* Copy is made using psql daemon
-	* @param string $table
-	* @param string $path_file
-	* @param string|null $tld = null
+	* Load a PostgreSQL COPY-format flat file into the given table via the psql
+	* client-side \copy meta-command.
 	*
-	* @return string $res
+	* For known tables (dd_ontology, matrix_dd) the method follows a safe
+	* three-step protocol:
+	*   1. CREATE TABLE AS SELECT (safety duplicate) so the original data can be
+	*      recovered if the import fails.
+	*   2. DELETE rows for the given tld (dd_ontology) or all rows (matrix_dd).
+	*   3. \copy … from <file> to load the new data.
+	*
+	* The safety duplicate is intentionally left in place after the operation.
+	* Callers are responsible for dropping it (e.g. DROP TABLE dd_ontology_copy)
+	* once they are satisfied the import is correct.
+	*
+	* Security:
+	*   - The table name is validated against a strict identifier regex before use
+	*     in shell commands.
+	*   - $tld is passed through escapeshellarg() when inserted into DELETE commands.
+	*   - $path_file is passed through escapeshellarg() when used in \copy.
+	*
+	* Note: This method is an older, lower-level counterpart to import_from_copy_file().
+	* New code that needs to import .gz COPY files should prefer import_from_copy_file().
+	*
+	* @param string      $table     - Target table name; must match /^[a-zA-Z_][a-zA-Z0-9_]*$/.
+	* @param string      $path_file - Absolute path to the COPY-format file to load.
+	* @param string|null $tld       [= null] - Top-level domain identifier; required when
+	*                                $table is 'dd_ontology' (scopes the DELETE to one TLD).
+	* @return string - Concatenated shell output from all executed commands.
+	*                  Empty string if table name is invalid or file does not exist.
 	*/
 	public static function copy_from_file( string $table, string $path_file, ?string $tld=null ) : string {
 
@@ -259,6 +391,10 @@ abstract class backup {
 
 		$command_history = array();
 
+		// psql connection string
+		// The two commented-out lines show the legacy manual construction; the
+		// current form delegates host/port/user assembly to DBi::get_connection_string()
+		// so that future credential changes only need updating in one place.
 		// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
 		// $command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN .' -h '.DEDALO_HOSTNAME_CONN . $port_command;
 		$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
@@ -278,6 +414,9 @@ abstract class backup {
 				$command_history[] = $command;
 
 				# COPY . Load data from file
+				// The column list from $dd_ontology_columns excludes 'id' so
+				// PostgreSQL assigns new serial values; addslashes() escapes the
+				// comma-separated list for embedding inside a double-quoted shell string.
 				$path_file_escaped = escapeshellarg($path_file);
 				$command = $command_base . " -c \"\copy dd_ontology(".addslashes(implode(',', backup::$dd_ontology_columns)).") from {$path_file_escaped}\" ";
 				$ar_res[] = shell_exec($command);
@@ -321,11 +460,36 @@ abstract class backup {
 
 	/**
 	* CHECK_REMOTE_SERVER
-	* Exec a curl request wit given data to check current server status
-	* @return object $response
+	* Probes the configured ontology/structure server with a lightweight cURL
+	* POST and returns the server's response object.
+	*
+	* The method supports two configuration styles (new preferred, legacy fallback):
+	*   - ONTOLOGY_SERVERS (array of objects with 'name', 'url', 'code' keys)
+	*     — only the first entry is probed; multi-server support is not yet used here.
+	*   - STRUCTURE_SERVER_URL + STRUCTURE_SERVER_CODE (v6 legacy constants)
+	*     — wrapped into an anonymous object so the rest of the code is uniform.
+	*
+	* The POST payload includes:
+	*   code              : the ontology server access code
+	*   check_connection  : true (signals the remote that this is a health-check)
+	*   dedalo_version    : running Dédalo version string for compatibility checks
+	*
+	* Timeout is hard-coded to 5 seconds; SSL peer verification is disabled to
+	* accommodate self-signed certificates on development/staging ontology servers.
+	* If SERVER_PROXY is defined and non-empty it is forwarded to curl_request().
+	*
+	* @return object $response - Result from curl_request(); shape depends on the
+	*   remote server. result=false with a 'msg' string is returned locally when
+	*   the required constants are missing or empty.
 	*/
 	public static function check_remote_server() : object {
 
+		// server config resolution
+		// Prefer the v7 ONTOLOGY_SERVERS array constant; fall back to the v6
+		// STRUCTURE_SERVER_URL / STRUCTURE_SERVER_CODE pair for installations that
+		// have not yet migrated their config.  An empty-URL sentinel is used when
+		// neither constant is defined so the validation block below can emit a
+		// clear diagnostic rather than crashing on an undefined constant.
 		if (defined('ONTOLOGY_SERVERS')) {
 			$servers = ONTOLOGY_SERVERS;
 		}else if (defined('STRUCTURE_SERVER_URL') && defined('STRUCTURE_SERVER_CODE')) {
