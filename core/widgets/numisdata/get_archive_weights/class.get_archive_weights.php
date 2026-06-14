@@ -24,8 +24,9 @@
  * pass-through hook.
  *
  * Known issue (flag, do not fix): the IPO type key for diameter is spelled
- * "data_diamenter" (typo, missing 't') in both the ontology configuration and the
- * array_reduce call at line ~161. Any caller must use the same misspelling.
+ * "data_diamenter" (typo, extra 'e' — 'diamenter' instead of 'diameter') in both
+ * the ontology configuration and the array_reduce call at line ~161. Any caller
+ * must use the same misspelling.
  *
  * @package Dédalo
  * @subpackage Widgets
@@ -43,8 +44,9 @@ class get_archive_weights extends widget_common {
 	* component descriptors from the "input" array, and then:
 	*   1. Loads the source portal to get all coin locators linked to the current record.
 	*   2. For each coin: checks the "used" and "duplicated" portal flags; coins where
-	*      the used flag is absent/false (section_id === '2') are skipped, and coins
-	*      where the duplicated flag IS set (section_id === '2') are also skipped.
+	*      the used flag is absent (not yet classified) or section_id === '2' (meaning
+	*      "unused" in the numismatic schema) are skipped; coins where the duplicated
+	*      flag IS set (section_id === '2') are also skipped.
 	*   3. Reads the weight and diameter component values from each qualifying coin record.
 	*   4. Averages within-record values (a single record may store multiple measurements),
 	*      then appends that per-record mean to $weights / $diameter.
@@ -163,9 +165,11 @@ class get_archive_weights extends widget_common {
 
 			// used descriptor
 			// The "used" input entry points to a boolean-style portal on each coin
-			// record whose section_id indicates whether the coin is "in use".
-			// section_id === '2' means the flag value is TRUE (the coin IS used).
-			// Coins where used is absent or not '2' are skipped (not counted).
+			// record that flags whether the coin is "not in use / unused".
+			// In Dédalo's numismatic schema, section_id === '2' conventionally
+			// represents a TRUE boolean: here, it means the coin IS marked as unused.
+			// Coins where used is absent (not yet classified) or where section_id is '2'
+			// (explicitly marked unused) are excluded from the aggregation.
 			$component_used = array_reduce($input, function ($carry, $item){
 
 				if ($item->type==='used') {
@@ -244,9 +248,11 @@ class get_archive_weights extends widget_common {
 					$section_tipo 	= $current_locator->section_tipo;
 
 					// used flag check
-					// Load the "used" portal for this coin. If the portal is empty
-					// (flag not set) or the first locator's section_id is '2' (flag = TRUE),
-					// the coin is considered "not in use" and must be excluded.
+					// Load the "used" portal for this coin. In Dédalo's numismatic schema
+					// the "used" portal records the "NOT IN USE / UNUSED" state: if the portal
+					// is empty (flag absent, coin not yet classified) or if the first locator's
+					// section_id is '2' (the conventional TRUE value, meaning "IS unused"),
+					// the coin must be excluded from the aggregation.
 					$used_model_name	= ontology_node::get_model_by_tipo($component_tipo_used,true); // Expected portal
 					$used 				= component_common::get_instance(
 						$used_model_name,
