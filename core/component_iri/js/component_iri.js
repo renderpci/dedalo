@@ -4,6 +4,36 @@
 
 
 
+/**
+* COMPONENT_IRI
+* Client-side controller for the IRI (Internationalized Resource Identifier) component.
+*
+* `component_iri` stores web URLs together with optional human-readable title labels
+* following RFC 3987. Data is kept as a flat array of objects (`dd_iri` shape), one
+* object per value, each carrying:
+*   - `id`    {number}  — server-minted per-item counter; used as the pairing key for
+*                         the title label dataframe (slot `DEDALO_COMPONENT_IRI_LABEL_DATAFRAME`).
+*   - `iri`   {string}  — the URL, including http/https scheme.
+*   - `title` {string}  — deprecated literal label; kept for legacy data fallback until
+*                         the title-materialisation migration runs. New labels live in the
+*                         paired label dataframe and are resolved by `resolve_title()`.
+*   - `lang`  {string}  — language marker (e.g. `lg-nolan`, `lg-eng`). The component is
+*                         non-translatable by default but supports per-language variants
+*                         shared by `id` (surfaced as `transliterate_value` in the data layer).
+*
+* This class wires the lifecycle, data-change, save, and render methods by delegating
+* to shared prototypes from `component_common` and `common`. Mode-specific rendering is
+* handled by the dedicated render modules imported below.
+*
+* Registered render modes / views:
+*   - `edit`   — view_default_edit_iri, view_line_edit_iri, view_mini_iri, print (read-only)
+*   - `list`   — view_default_list_iri, view_mini_iri, view_text_list_iri
+*   - `tm`     — aliases list renderer (Time Machine read mode)
+*   - `search` — render_search_component_iri
+*
+* Exports: {Function} component_iri (constructor)
+*/
+
 // imports
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -14,6 +44,11 @@
 
 
 
+/**
+* COMPONENT_IRI
+* Constructor. Declares instance property slots consumed throughout the lifecycle.
+* All properties are populated during `init()` via `component_common.prototype.init`.
+*/
 export const component_iri = function() {
 
 	this.id
@@ -73,10 +108,17 @@ export const component_iri = function() {
 
 /**
 * BUILD_VALUE
-* Create a full object value from only title text or url partial values
-* @param int key
-* 	Key of content_value element inside content_data
-* @return object|null value
+* Constructs a single IRI data object from the two raw `<input>` values that make up
+* one edit row (a `<input type="text">` for the title and a `<input type="url">` for
+* the IRI). Both fields are read from `self.node.content_data[key]`.
+*
+* Returns `null` when both fields are empty so that a blank, unfilled row is not
+* persisted as `{iri:"",title:""}`.
+*
+* @param {number} key - Index of the content_value element inside `content_data`.
+*   Corresponds to the position of the value within `data.entries`.
+* @returns {Object|null} A plain object `{iri, title}` when at least one field has
+*   content, otherwise `null`.
 */
 component_iri.prototype.build_value = function(key) {
 
@@ -99,12 +141,22 @@ component_iri.prototype.build_value = function(key) {
 
 /**
 * CHANGE_HANDLER
-* Store current value in self.data.changed_data
-* deactivate() event is listen to the changed data of the instance
-* If key pressed is 'Enter', deactivate will force to save the value
-* @param int key
-* @param object self
-* @return bool
+* Records a pending edit for a single IRI entry in `self.data.changed_data`.
+*
+* Called from the `change` events of both the title and IRI `<input>` elements in the
+* edit view. The frozen `changed_data_item` object carries enough state for
+* `component_common.prototype.update_data_value` (called by `change_value`) to splice,
+* update, or remove the item from the entries array on the server.
+*
+* The `deactivate` lifecycle event listens for a non-empty `changed_data` and will
+* trigger `save()` automatically when the component loses focus. Pressing Enter in the
+* IRI field dispatches a `change` event followed by an explicit `save()` call from the
+* render layer.
+*
+* @param {number} key - Zero-based index of the edited entry in `data.entries`.
+* @param {Object|null} current_value - The updated value object `{id, iri, title}` as it
+*   stands after the user's edit, or `null` when the entry is being removed.
+* @returns {boolean} Always `true`.
 */
 component_iri.prototype.change_handler = function(key, current_value) {
 
@@ -129,8 +181,19 @@ component_iri.prototype.change_handler = function(key, current_value) {
 
 /**
 * FOCUS_FIRST_INPUT
-* Overwrites default behavior set in ui.component.activate
-* @return bool
+* Overrides the default `focus_first_input` behaviour defined in `ui.component.activate`.
+*
+* The standard behaviour focuses the first `<input>` in the component. For `component_iri`
+* the URL field (type="url") is more relevant than the title field, so this method
+* focuses the URL input instead, but only when it is not already the active element and
+* no `q_operator` input has stolen focus (which happens when tabbing through search
+* filters).
+*
+* The focus is deferred with `dd_request_idle_callback` to avoid fighting with the
+* browser's own tab-focus cycle on the same event tick.
+*
+* @returns {boolean} `false` if the title input already has focus (nothing to do),
+*   `true` in all other cases.
 */
 component_iri.prototype.focus_first_input = function() {
 
@@ -172,9 +235,23 @@ component_iri.prototype.focus_first_input = function() {
 
 /**
 * CHECK_IRI_VALUE
-* Verifies if the given URI is valid
-* @param string input_iri_value
-* @return bool
+* Validates that `input_iri_value` is an acceptable IRI for storage.
+*
+* Two-stage check:
+*  1. A strict regex ensures the string begins with `http://` or `https://` followed
+*     by a valid host segment (no double dots, no unencoded spaces). This pre-check is
+*     needed because the `URL` constructor is permissive and accepts pathological inputs
+*     like `https:///` that the server-side `parse_url()` would reject.
+*  2. `new URL()` is used for structural parse; the resulting `.protocol` and `.hostname`
+*     are inspected against the same rules.
+*
+* Empty values (null, empty string) are accepted: they signal deletion of an existing
+* entry rather than an invalid edit.
+*
+* @param {string} input_iri_value - Raw string from the IRI `<input type="url">` field.
+* @returns {boolean} `true` when the value is empty or is a valid http/https URL;
+*   `false` when the format is recognisably wrong (wrong scheme, multiple dots in host,
+*   or a string that `URL` cannot parse).
 */
 component_iri.prototype.check_iri_value = function( input_iri_value ) {
 

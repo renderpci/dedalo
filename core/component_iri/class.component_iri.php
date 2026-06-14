@@ -5,28 +5,44 @@ include dirname(__FILE__) . '/class.dd_iri.php';
 * CLASS COMPONENT_IRI
 * Manages Internationalized Resource Identifier (IRI) components in Dédalo.
 *
-* Stores and displays web URLs and URIs with optional title labels.
-* Supports Unicode characters in URLs (IRI standard), unlike plain ASCII URIs.
+* Stores one or more web URLs / URIs per record, each with an optional
+* human-readable title label. Supports Unicode characters in URLs (IRI
+* standard, RFC 3987), unlike plain ASCII URIs. The component is
+* "literal-direct": it holds final URL strings, not locators to other
+* sections (contrast with component_portal or component_select).
 *
-* Data format:
+* Typical use-cases in cultural-heritage records:
+* - Linked-open-data authority references (Wikidata, VIAF, GeoNames, Getty AAT/ULAN, nomisma …)
+* - Permalinks to external catalogues, archives or bibliographic records
+* - External media source URLs paired with companion media components via
+*   the `use_active_check` property flag
+*
+* Data shape stored in the matrix `iri` column (flat array, language per item):
+* ```json
+* [
+*   { "id": 1, "iri": "https://dedalo.dev", "lang": "lg-nolan" },
+*   { "id": 2, "iri": "https://nomisma.org", "lang": "lg-nolan" }
+* ]
 * ```
-* [{
-*   "id": 1,
-*   "iri": "https://dedalo.dev",
-*   "title": "Dédalo web site"
-* }]
-* ```
+* Each item is a dd_iri DTO; `id` is the per-item counter minted server-side
+* and is the pairing key for the structured title label held in the companion
+* component_dataframe (slot dd560, DEDALO_COMPONENT_IRI_LABEL_DATAFRAME).
 *
-* Key features:
-* - Stores URLs with multilingual title labels
-* - Supports Unicode characters in IRIs (RFC 3987)
-* - Language version support for localized titles
-* - Dataframe integration for contextual metadata
-* - Clickable link rendering in list and edit modes
+* The literal `title` property on each item is deprecated since 6.8.0. New
+* labels are stored only in the paired dataframe; the literal title is kept
+* readable as a fallback for legacy rows until the title-materialization
+* migration runs.
 *
-* Data is stored in the 'iri' column of matrix tables.
+* The component is non-translatable by default (translatable=false, fixed in
+* __construct), but sets with_lang_versions=true so per-language URL variants
+* can be added via tool_lang / tool_lang_multi; language variants share the
+* same `id`.
 *
-* Extends component_common and uses search_component_iri trait for IRI-specific queries.
+* get_properties() always injects the title label dataframe into
+* source.request_config — callers never need to declare it explicitly.
+*
+* Extends component_common.
+* Uses trait search_component_iri for JSONB-path search SQL.
 *
 * @package Dédalo
 * @subpackage Core
@@ -51,18 +67,34 @@ class component_iri extends component_common {
 	protected bool $supports_translation = true;
 
 	// bool . included_dataframe_properties
+	// Guards against re-injecting the title dataframe into source.request_config
+	// on repeated get_properties() calls for the same instance.
 	private bool $included_dataframe_properties = false;
 
 	// string . Label dataframe target section tipo
+	// The ontology section that holds label records for component_iri titles (dd1706).
 	private static string $label_target_section_tipo = 'dd1706';
 
 	// string . Label dataframe target component tipo
+	// The component inside dd1706 that stores the human-readable label text (dd1715).
 	private static string $label_target_component_tipo = 'dd1715';
 
 
 
 	/**
 	* __CONSTRUCT
+	* Initialises a component_iri instance.
+	* Forces with_lang_versions=true (language variants share one id) and
+	* translatable=false (values default to lg-nolan; per-language versions are
+	* added through the lang tools, not via the translatable data path).
+	* Delegates all remaining setup to component_common::__construct.
+	* @param string $tipo - ontology node tipo (e.g. 'rsc217')
+	* @param mixed $section_id = null - record id within the owning section
+	* @param string $mode = 'list' - rendering mode: 'edit'|'list'|'tm'|'search'
+	* @param string $lang = DEDALO_DATA_NOLAN - active language key
+	* @param ?string $section_tipo = null - owning section tipo (mandatory in practice)
+	* @param bool $cache = true - whether to use the instance cache
+	* @return void
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, ?string $section_tipo=null, bool $cache=true ) {
 
@@ -346,8 +378,26 @@ class component_iri extends component_common {
 
 	/**
 	* IMPORT_SAVE
-	* Overwrites component_common method.
-	* @return bool
+	* Overwrites component_common::import_save() to handle the structured title
+	* label dataframe during import.
+	*
+	* When import data contains a `label_id` property on a value item, that id
+	* indicates the target section_id of the companion label dataframe record.
+	* This method:
+	*   1. Strips `label_id` from each value item (it must not reach the matrix).
+	*   2. Builds a locator (DEDALO_RELATION_TYPE_DATAFRAME type) pointing at the
+	*      label record and saves it through the title label dataframe component
+	*      (DEDALO_COMPONENT_IRI_LABEL_DATAFRAME, slot dd560).
+	*   3. Temporarily disables tm_record::$save_tm while saving the dataframe so
+	*      that the Time Machine entry covers only the main component_iri save that
+	*      follows; the TM guard is always re-enabled in the finally path (inline).
+	*   4. Calls $this->save() to persist the clean IRI data.
+	*
+	* (!) The locator also sets the legacy section_id_key / section_tipo_key
+	* fields alongside id_key for backward compatibility until the data migration
+	* removes them (see dataframe unified contract).
+	*
+	* @return bool - true on successful save of both dataframe and component data
 	*/
 	public function import_save() : bool {
 
@@ -724,7 +774,7 @@ class component_iri extends component_common {
 
 	/**
 	* URL_TO_IRI
-	* Return valid operators for search in current component
+	* Wraps a plain URL string in a dd_iri DTO for use with component_iri data.
 	* @param string $url
 	* @return dd_iri $data_iri
 	*/
