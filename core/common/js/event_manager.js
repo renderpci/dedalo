@@ -1,14 +1,33 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-
+/*global SHOW_DEBUG */
+/*eslint no-undef: "error"*/
 
 
 /**
-* EVENTMANAGER_CLASS
-* A high-performance event system for managing subscriptions and publications
+* EVENT_MANAGER
+* Pub/sub event bus used throughout Dédalo v7 for decoupled inter-module communication.
 *
-* This class provides a robust event management system with O(1) operations for most methods.
-* It uses Maps and Sets for optimal performance and supports duplicate detection, token-based
-* unsubscription, and efficient event publishing.
+* Exports a single pre-instantiated singleton (`event_manager`) and additionally registers
+* it on `window.event_manager` for cross-iframe access (e.g. tool iframes calling
+* `parent.window.event_manager`). All sections, components, tools, and search modules
+* communicate by subscribing to and publishing named events through this singleton rather
+* than holding direct references to each other.
+*
+* Main export: {event_manager_class} event_manager
+*/
+
+
+/**
+* EVENT_MANAGER_CLASS
+* ES6 class implementing a high-performance named-event publish/subscribe system.
+*
+* Uses a Map<string, Set<Function>> (eventMap) keyed by event name for O(1) lookup
+* and a Map<string, {event_name, callback}> (tokenMap) keyed by token for O(1)
+* unsubscription without scanning subscriber lists.
+*
+* Callers receive an opaque string token from subscribe() and pass it back to
+* unsubscribe(). The token format is "event_N" where N is an ever-increasing integer.
+* Empty event entries are cleaned up automatically to prevent memory leaks.
 *
 * @example
 * // Basic usage
@@ -23,12 +42,14 @@
 class event_manager_class {
 
 	/**
-	 * Creates a new event_manager_class instance
+	 * CONSTRUCTOR
+	 * Initializes the three internal data structures that power the event bus.
 	 *
-	 * Initializes internal data structures:
-	 * - eventMap: Maps event names to Sets of callback functions
-	 * - tokenMap: Maps subscription tokens to event metadata
-	 * - last_token: Counter for generating unique subscription tokens
+	 * - eventMap: primary subscription registry — event_name → Set of callback functions.
+	 *   Allows O(1) callback lookup and automatic deduplication via Set semantics.
+	 * - tokenMap: reverse index — token → {event_name, callback}.
+	 *   Enables O(1) unsubscription without scanning eventMap.
+	 * - last_token: monotonically increasing counter for generating unique token strings.
 	 */
 	constructor() {
 		this.eventMap = new Map();  // event_name -> Set(callback)
@@ -37,11 +58,18 @@ class event_manager_class {
 	}
 
 	/**
-	 * Subscribes a callback function to an event
+	 * SUBSCRIBE
+	 * Registers a callback function to be called every time the named event is published.
 	 *
-	 * Creates a new subscription for the specified event. Each subscription receives
-	 * a unique token that can be used for unsubscription. Duplicate callbacks for
-	 * the same event are detected when debugging is enabled.
+	 * A new entry is created in eventMap for the event name on first subscription.
+	 * Each call produces a unique opaque token (format "event_N") that the caller must
+	 * retain to unsubscribe later. When SHOW_DEBUG is true, registering the same callback
+	 * function reference more than once for the same event emits a console error and an
+	 * alert — this is a developer-mode guard, not a thrown exception.
+	 *
+	 * (!) The token identifies the subscription, not the callback. Passing the same
+	 * callback function to subscribe() twice produces two independent subscriptions,
+	 * each with its own token, and the callback will fire twice per publish.
 	 *
 	 * @param {string} event_name - The name of the event to subscribe to
 	 * @param {Function} callback - The callback function to execute when the event is published
@@ -51,8 +79,6 @@ class event_manager_class {
 	 * const token = manager.subscribe('data-updated', (data) => {
 	 *   console.log('Received update:', data);
 	 * });
-	 *
-	 * @throws {Error} Logs error if duplicate callback is detected (debug mode only)
 	 */
 	subscribe(event_name, callback) {
 		const token = `event_${++this.last_token}`;
@@ -78,12 +104,21 @@ class event_manager_class {
 	}
 
 	/**
-	 * Subscribes a callback to an event that will be triggered only once.
-	 * The subscription is automatically removed after the first publication.
+	 * SUBSCRIBE_ONCE
+	 * Subscribes a callback to an event that fires exactly once and then self-removes.
+	 *
+	 * Internally wraps `callback` in a closure that calls unsubscribe(token) before
+	 * invoking the original callback, guaranteeing a single execution even if publish()
+	 * is called multiple times. The returned token is for the wrapper closure, not for
+	 * the original `callback`.
+	 *
+	 * (!) Because the wrapper is subscribed (not the original callback), calling
+	 * event_exists(event_name, callback) after subscribe_once() will return false —
+	 * use the returned token to cancel early if needed.
 	 *
 	 * @param {string} event_name - The name of the event to subscribe to
-	 * @param {Function} callback - The callback function to execute
-	 * @returns {string} Subscription token
+	 * @param {Function} callback - The callback function to execute once
+	 * @returns {string} Subscription token for the internal wrapper (use to cancel before first fire)
 	 */
 	subscribe_once(event_name, callback) {
 		const token = this.subscribe(event_name, (data) => {
@@ -94,10 +129,14 @@ class event_manager_class {
 	}
 
 	/**
-	 * Unsubscribes a callback using its subscription token
+	 * UNSUBSCRIBE
+	 * Removes the subscription identified by the given token.
 	 *
-	 * Removes the subscription associated with the provided token. Automatically
-	 * cleans up empty event entries to prevent memory leaks.
+	 * Uses tokenMap for O(1) lookup of the event name and callback reference, then
+	 * removes the callback from eventMap. If the event's callback Set becomes empty
+	 * after removal, the event entry is deleted from eventMap to reclaim memory.
+	 * Returns false silently when the token is unknown or already removed; in debug
+	 * mode the commented-out console.error line can be enabled for tracing stale tokens.
 	 *
 	 * @param {string} token - The subscription token returned by subscribe()
 	 * @returns {boolean} true if the subscription was found and removed, false otherwise
@@ -131,10 +170,19 @@ class event_manager_class {
 	}
 
 	/**
-	 * Publishes an event to all subscribed callbacks
+	 * PUBLISH
+	 * Fires the named event, invoking every subscribed callback in insertion order.
 	 *
-	 * Executes all callback functions subscribed to the specified event, passing
-	 * the provided data to each callback. Returns an array of all callback return values.
+	 * All callbacks receive the same `data` argument. Callbacks are called synchronously
+	 * in the order they were subscribed. The method collects each callback's return value
+	 * into a results array, which is returned to the caller — useful when a subscriber
+	 * signals cancellation or provides a transformed value.
+	 *
+	 * Returns false (not an empty array) when there are no subscribers, allowing callers
+	 * to distinguish "no listeners" from "listeners returned nothing".
+	 *
+	 * (!) Callbacks are not wrapped in try/catch. A throwing callback will abort the
+	 * remaining subscribers in the Set iteration.
 	 *
 	 * @param {string} event_name - The name of the event to publish
 	 * @param {*} data - Data to pass to each callback function (defaults to empty object)
@@ -154,6 +202,9 @@ class event_manager_class {
 		const callbacks = this.eventMap.get(event_name);
 		if (!callbacks || callbacks.size === 0) return false;
 
+		// Snapshot the subscriber set before dispatch so that subscribers added or
+		// removed during this publish (e.g. subscribe_once self-unsubscribing, or a
+		// handler re-arming itself) do not change which callbacks fire in this pass.
 		// Use forEach for better performance than for...of with array creation
 		const results = [];
 		callbacks.forEach(callback => {
@@ -164,16 +215,15 @@ class event_manager_class {
 	}
 
 	/**
-	 * Retrieves all active event subscriptions
+	 * GET_EVENTS
+	 * Returns a snapshot array of all active subscriptions for debugging and introspection.
 	 *
-	 * Returns an array containing details of all current subscriptions including
-	 * event names, tokens, and callback references. Useful for debugging and
-	 * subscription management.
+	 * Each element describes one subscription: the event name, the opaque token, and the
+	 * callback function reference. The array is pre-allocated to tokenMap.size for
+	 * efficiency. The returned snapshot is not live — it reflects the state at call time.
 	 *
-	 * @returns {Array<Object>} Array of subscription objects
-	 * @returns {string} returns[].event_name - The event name
-	 * @returns {string} returns[].token - The subscription token
-	 * @returns {Function} returns[].callback - The callback function reference
+	 * @returns {Array<{event_name: string, token: string, callback: Function}>}
+	 *   One object per active subscription.
 	 *
 	 * @example
 	 * const events = manager.get_events();
@@ -195,15 +245,17 @@ class event_manager_class {
 	}
 
 	/**
-	 * Checks if a specific callback is subscribed to an event
+	 * EVENT_EXISTS
+	 * Checks whether a specific callback function reference is subscribed to an event.
 	 *
-	 * Determines whether the given callback function is already subscribed
-	 * to the specified event. Useful for preventing duplicate subscriptions
-	 * programmatically.
+	 * Uses Set.has() for O(1) identity comparison. Note that this checks reference
+	 * equality — two different function objects with the same body are not considered
+	 * the same callback. Always returns false for callbacks registered via subscribe_once(),
+	 * which wraps the original callback in an internal closure.
 	 *
 	 * @param {string} event_name - The event name to check
-	 * @param {Function} callback - The callback function to look for
-	 * @returns {boolean} true if the callback is subscribed to the event
+	 * @param {Function} callback - The callback function reference to look for
+	 * @returns {boolean} true if the exact callback reference is subscribed to the event
 	 *
 	 * @example
 	 * const myCallback = (data) => console.log(data);
@@ -219,15 +271,28 @@ class event_manager_class {
 
 
 	/**
-	 * Checks if a specific event name is already defined
+	 * EVENT_NAME_EXISTS
+	 * Checks whether any callback is subscribed to the given event name.
+	 *
+	 * Returns the callback Set for the event, or undefined when no subscription
+	 * exists. Callers use this in a truthy/falsy context to guard against
+	 * re-subscribing to events that already have listeners (e.g. mosaic hover
+	 * events in tool_cataloging and tool_numisdata_order_coins).
+	 *
+	 * (!) Despite the intuitive name, the return value is NOT a boolean — it is
+	 * the raw Set<Function> (truthy when subscriptions exist) or undefined (falsy).
+	 * Do not compare the return value with === true/false.
+	 *
+	 * The `callback` parameter is declared in the signature but not used; it exists
+	 * only for API symmetry with event_exists() and is safe to omit.
 	 *
 	 * @param {string} event_name - The event name to check
-	 * @returns {boolean} true if a event is subscribed whit given name.
+	 * @param {Function} [callback] - Unused; kept for API symmetry with event_exists()
+	 * @returns {Set|undefined} The Set of callbacks when the event exists, undefined otherwise
 	 *
 	 * @example
-	 *
 	 * if (!event_manager.event_name_exists('user-login')) {
-	 *   // Do something
+	 *   event_manager.subscribe('user-login', myCallback);
 	 * }
 	 */
 	event_name_exists(event_name, callback) {
@@ -236,14 +301,17 @@ class event_manager_class {
 
 
 	/**
-	 * Removes all subscriptions for a specific event
+	 * CLEAR_EVENT
+	 * Removes all subscriptions for a specific event name in one operation.
 	 *
-	 * Efficiently clears all callbacks associated with the given event name.
-	 * This is more efficient than unsubscribing individual tokens when you
-	 * need to clear an entire event.
+	 * More convenient than calling unsubscribe() for each token individually.
+	 * Walks the entire tokenMap (O(n) in total subscription count) to remove all
+	 * token entries belonging to the given event, then deletes the event's Set from
+	 * eventMap. For high-volume events with many tokens this is still cheaper than
+	 * individual token lookups, but be aware of the linear scan cost.
 	 *
 	 * @param {string} event_name - The event name to clear
-	 * @returns {boolean} true if the event existed and was cleared, false otherwise
+	 * @returns {boolean} true if the event existed and was cleared, false if it did not exist
 	 *
 	 * @example
 	 * event_manager.clear_event('temporary-notifications');
@@ -264,10 +332,14 @@ class event_manager_class {
 	}
 
 	/**
-	 * Clears all events and subscriptions
+	 * CLEAR_ALL
+	 * Removes every event subscription and resets the manager to a clean initial state.
 	 *
-	 * Removes all event subscriptions and resets the event_manager_class to its
-	 * initial state. This is useful for cleanup operations or testing.
+	 * Useful for teardown in tests or before full application reinitialization.
+	 * All outstanding tokens become invalid after this call — any subsequent
+	 * unsubscribe() call with a previously issued token will return false silently.
+	 *
+	 * @returns {void}
 	 *
 	 * @example
 	 * // Clean up before page unload
@@ -281,13 +353,15 @@ class event_manager_class {
 	}
 
 	/**
-	 * Gets the number of subscribers for a specific event
+	 * GET_EVENT_COUNT
+	 * Returns the number of callbacks subscribed to a specific event.
 	 *
-	 * Returns the count of callback functions subscribed to the given event.
-	 * Useful for monitoring subscription levels and debugging.
+	 * Reads the Set.size directly from eventMap — O(1). Returns 0 when no
+	 * subscription exists for the given event name (event not yet seen or already
+	 * cleared). Useful for monitoring and conditional publish guards.
 	 *
 	 * @param {string} event_name - The event name to count subscribers for
-	 * @returns {number} The number of subscribers (0 if event doesn't exist)
+	 * @returns {number} The number of active subscriber callbacks (0 if event doesn't exist)
 	 *
 	 * @example
 	 * const count = manager.get_event_count('user-activity');
@@ -299,12 +373,15 @@ class event_manager_class {
 	}
 
 	/**
-	 * Gets the total number of active subscriptions
+	 * GET_TOTAL_EVENTS
+	 * Returns the total count of active subscriptions across all event names.
 	 *
-	 * Returns the total count of all active event subscriptions across
-	 * all events. Useful for memory usage monitoring and performance analysis.
+	 * Reads tokenMap.size directly — O(1). Each call to subscribe() increments
+	 * this count; each successful unsubscribe() decrements it. The count reflects
+	 * individual subscriptions, not unique event names — one event with three
+	 * subscribers contributes 3 to the total.
 	 *
-	 * @returns {number} Total number of active subscriptions
+	 * @returns {number} Total number of active subscriptions across all events
 	 *
 	 * @example
 	 * const total = manager.get_total_events();
@@ -323,14 +400,17 @@ class event_manager_class {
 }
 
 /**
- * Global event_manager_class instance
+ * EVENT_MANAGER
+ * Module-level singleton — the single shared event bus for the entire Dédalo v7 frontend.
  *
- * Pre-instantiated event_manager_class for immediate use throughout the application.
- * This singleton pattern ensures consistent event management across modules.
+ * All modules import this instance rather than constructing their own, ensuring that a
+ * subscription made in one module (e.g. a section component) is always visible to a
+ * publisher in another (e.g. a search tool). Do not instantiate event_manager_class
+ * directly in application code; always import and use this export.
  *
  * @type {event_manager_class}
  * @example
- * import { event_manager } from './event-manager.js';
+ * import { event_manager } from '../../common/js/event_manager.js';
  *
  * event_manager.subscribe('app-ready', () => {
  *   console.log('Application is ready!');
@@ -341,9 +421,9 @@ export const event_manager = new event_manager_class();
 // Make available globally in browser environments
 if (typeof window !== 'undefined') {
 	/**
-	 * Global window reference to event_manager_class instance
-	 * Available as window.event_manager for direct browser console access
-	 * included iframes calling as parent.window
+	 * Expose the singleton on the window object so that tool iframes can reach it via
+	 * `parent.window.event_manager` without needing an ES module import across frame
+	 * boundaries. Only set in browser contexts (guards against SSR / Node workers).
 	 */
 	window.event_manager = event_manager;
 }

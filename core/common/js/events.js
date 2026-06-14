@@ -2,7 +2,25 @@
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
-
+/**
+* EVENTS
+* Page-level event helpers for the Dédalo application shell.
+*
+* Responsibilities:
+* - Bootstrap global DOM event listeners (visibilitychange, save) via events_init().
+* - Track unsaved-data state through window.unsaved_data and set_before_unload().
+* - Provide DOM-readiness utilities (when_in_dom, when_in_viewport) used by
+*   components such as maps and media players that require the node to be in
+*   layout before they can initialise.
+* - Expose scheduling helpers (dd_request_idle_callback, yield_to_main) that
+*   defer low-priority work so the browser stays responsive during heavy renders.
+* - Attach keyboard shortcuts and other global event bindings defined in tool
+*   configuration objects via set_tool_event().
+*
+* Exports: events_init, set_before_unload, when_in_dom, when_in_viewport,
+*          dd_request_idle_callback, set_tool_event.
+*          yield_to_main is a module-private helper (not exported).
+*/
 
 // import
 	import {event_manager} from './event_manager.js'
@@ -11,6 +29,8 @@
 
 /**
 * unsaved_data set default
+* Initialise the global flag only once; avoids overwriting state if the module
+* is evaluated more than once in a multi-frame context.
 */
 if (typeof window!=='undefined' && typeof window.unsaved_data==='undefined') {
 	window.unsaved_data = false
@@ -19,12 +39,20 @@ if (typeof window!=='undefined' && typeof window.unsaved_data==='undefined') {
 
 
 /**
-* INIT  (!) WORK IN PROGRESS
-* set the main events to the document
-* event as visibilityState or beforeunload are init at load of the page
-* this events are global and use to control the unsaved data of the page
-* see the main page initialization in /page/index.html
-* @return bool
+* EVENTS_INIT  (!) WORK IN PROGRESS
+* Attach global document-level event listeners at application startup.
+*
+* Called once from the main page initialisation (/page/index.html). Registers:
+* - A 'visibilitychange' listener to detect tab-switch with unsaved changes
+*   (the await-save path is stubbed, pending full implementation).
+* - A subscription to the 'save' event_manager channel so this module can react
+*   when any component successfully persists its data.
+*
+* (!) This function is intentionally incomplete. The visibilitychange handler
+* currently does nothing when unsaved_data is true — the real save-on-hide flow
+* is deferred.
+*
+* @returns {boolean} Always returns true after listeners are attached.
 */
 export const events_init = function() {
 
@@ -56,12 +84,21 @@ export const events_init = function() {
 
 /**
 * SET_BEFORE_UNLOAD
-* On true, attach a event listener to the window to prevent that user loose changed data on reload
-* On false, the listener is removed to allow reload the page normally
-* Note that this function is triggered as true when component input or editor data changes and
-* with false when the component saves the data
-* @param bool value
-* @return bool
+* Toggle the global unsaved-data flag and (when active) the beforeunload guard.
+*
+* Components call this with true as soon as the user edits content, and with
+* false once the data has been saved. The flag is stored on window.unsaved_data
+* so other parts of the application (e.g. events_init's visibilitychange
+* handler) can read it without importing this module.
+*
+* The beforeunload listener block is currently commented out (see dead code below);
+* only the flag assignment is active. When the listener is re-enabled it will
+* show the browser's native "leave page?" dialog on navigation while unsaved
+* data exists.
+*
+* @param {boolean} value - true to signal unsaved changes; false to clear the guard.
+* @returns {boolean|undefined} true when the flag was changed; undefined when
+*   the flag already matched value (no-op fast path).
 */
 export const set_before_unload = function(value) {
 	if(SHOW_DEBUG===true) {
@@ -93,9 +130,14 @@ export const set_before_unload = function(value) {
 
 
 /**
-* BEFOREUNLOADLISTENER
-* Prevent to accidentally user leaves the page with unsaved changes
-* @param object event
+* BEFORE_UNLOAD_LISTENER  (dead code — disabled, kept for future re-activation)
+* Intercept the browser's beforeunload event when unsaved changes are present.
+*
+* Sets event.returnValue to trigger the native "leave page?" confirmation dialog.
+* Falls back to a hardcoded English string if the localised label is unavailable.
+* Re-enable by restoring the listener registration inside set_before_unload above.
+*
+* @param {BeforeUnloadEvent} event - The native beforeunload event.
 */
 	// const before_unload_listener = function(event) {
 	// 	event.preventDefault();
@@ -113,12 +155,21 @@ export const set_before_unload = function(value) {
 
 /**
 * WHEN_IN_DOM
-* Exec a callback when node element is placed in the DOM (then is possible to know their size, etc.)
-* Useful to render leaflet maps and so forth
-* @param DOM node 'node'
-* @param function callback
+* Execute a callback the first time the given node is attached to the document.
 *
-* @return mutation observer
+* Many third-party components (Leaflet maps, canvas renderers, media players)
+* must query layout metrics that are only available once the element is part of
+* the live DOM. This helper either fires the callback immediately (if the node
+* is already present) or defers until a MutationObserver detects insertion.
+*
+* The observer watches the entire document subtree and disconnects itself after
+* the first successful detection to avoid memory leaks.
+*
+* @param {HTMLElement} node - The element to watch for DOM insertion.
+* @param {Function} callback - Called with no arguments once the node is in the DOM.
+*   When the node is already present, the callback's own return value is forwarded.
+* @returns {MutationObserver|*} The live MutationObserver when deferred, or the
+*   callback's return value when the node was already in the DOM.
 */
 export const when_in_dom = function(node, callback) {
 
@@ -144,12 +195,25 @@ export const when_in_dom = function(node, callback) {
 
 /**
 * WHEN_IN_VIEWPORT
-* Exec a callback when node element is visible in document viewport
-* @param HTMLElement node
-* @param function callback
-* @param bool once = true
+* Execute a callback whenever the given node enters the visible viewport.
 *
-* @return mutation observer
+* Uses IntersectionObserver with a threshold of 0, meaning the callback fires
+* as soon as even one pixel of the element becomes visible. The callback receives
+* the matching IntersectionObserverEntry so callers can inspect intersection
+* geometry (e.g. for analytics or progressive loading).
+*
+* By default (once=true) the observer disconnects after the first intersection,
+* making this a one-shot "lazy init" trigger. Pass once=false to keep observing
+* for repeated visibility changes (e.g. scroll-driven animations).
+*
+* The callback is deferred through requestAnimationFrame so the DOM has settled
+* and layout properties are safe to read.
+*
+* @param {HTMLElement} node - The element to observe. Must be an HTMLElement instance.
+* @param {Function} callback - Invoked with the IntersectionObserverEntry on visibility.
+* @param {boolean} [once=true] - When true, disconnect after the first intersection.
+* @throws {Error} When node is not an HTMLElement instance.
+* @returns {IntersectionObserver|undefined} The active observer, or undefined when callback is invalid.
 */
 export const when_in_viewport = function(node, callback, once=true) {
 
@@ -193,11 +257,22 @@ export const when_in_viewport = function(node, callback, once=true) {
 
 /**
 * DD_REQUEST_IDLE_CALLBACK
-* Queues a function to be called during a browser's idle periods.
-* This enables to perform background and low priority work on the main event loop,
-* without impacting latency-critical events such as animation and input response
-* @param function callback
-* @return void
+* Schedule a callback for execution during the browser's idle periods.
+*
+* Wraps the native requestIdleCallback API with a cross-browser fallback:
+* when requestIdleCallback is unavailable (Safari as of early 2024), the
+* callback is queued via requestAnimationFrame so it runs at the next paint
+* boundary rather than truly idle time. A timeout of 1000 ms is passed to
+* requestIdleCallback to guarantee the callback runs even on a busy main thread.
+*
+* Use this for background, low-priority work that should not interfere with
+* animations or user input — for example, pre-computing search indices or
+* flushing non-critical log entries.
+*
+* @param {Function} callback - The function to invoke during an idle period.
+*   When called via the native API it receives an IdleDeadline argument;
+*   the requestAnimationFrame fallback passes a DOMHighResTimeStamp instead.
+* @returns {void}
 */
 export const dd_request_idle_callback = function (callback) {
 
@@ -214,14 +289,24 @@ export const dd_request_idle_callback = function (callback) {
 
 
 /**
-* DD_REQUEST_IDLE_CALLBACK
-* The yield() method of the Scheduler interface is used for yielding to the main thread
-* during a task and continuing execution later, with the continuation scheduled as a prioritized task.
-* This allows long-running work to be broken up so the browser stays responsive.
+* YIELD_TO_MAIN
+* Yield control back to the browser's main thread inside a long-running async task.
+*
+* Breaks up long-running work into smaller chunks so the browser can process user
+* input and paint frames between chunks, keeping the UI responsive. Call with
+* `await yield_to_main()` at natural breakpoints in loops or sequential operations.
+*
+* Uses the Prioritized Task Scheduling API (scheduler.yield) when available
+* (Chromium 115+). Falls back to a zero-timeout Promise on Safari and Firefox,
+* which achieves the same task-queue handoff at the cost of true priority hints.
+*
+* (!) This function is module-private. It is not exported because callers should
+* await it inline; there is no need to pass it as a reference.
+*
 * @see https://developer.mozilla.org/en-US/docs/Web/API/Scheduler/yield#browser_compatibility
 * @see https://web.dev/articles/optimize-long-tasks?utm_source=devtools
-* Version with fallback to allow Safari and Firefox use
-* @return promise
+* @returns {Promise<void>} Resolves after the browser has had a chance to run
+*   other queued tasks.
 */
 function yield_to_main () {
 	if (globalThis.scheduler?.yield) {
@@ -238,16 +323,36 @@ function yield_to_main () {
 
 /**
 * SET_TOOL_EVENT
-* Apply a tool event configuration to current tool button
-* It is used in tool_ontology for example, to attach a keyup event
-* to the document and allow to use keyboard keys as Control + s
-* to open the tool easily.
-* @param object options
-* {
-* 	tool_event: object,
-* 	tool_button: HTMLElement
-* }
-* @return bool
+* Bind a keyboard (or other DOM) shortcut defined in a tool's configuration to
+* its toolbar button, so the user can trigger the tool without clicking.
+*
+* The binding is declared in the tool's ontology JSON under a `tool_event` key:
+*
+*   {
+*     "type": "keyup",
+*     "validate": [
+*       { "key": "ctrlKey", "value": true },
+*       { "key": "key",     "value": "s"  }
+*     ],
+*     "action": "click"
+*   }
+*
+* Each entry in `validate` checks that a named property on the KeyboardEvent (or
+* other event type) matches the expected value. All conditions must pass for the
+* action to fire. This makes multi-modifier shortcuts (Ctrl+Shift+S, etc.) easy
+* to express without bespoke code per tool.
+*
+* The handler registers itself on the document and performs a self-cleanup check
+* on every invocation: if tool_button is no longer connected to the DOM (e.g. the
+* tool panel was closed), the listener is removed automatically, preventing leaks.
+*
+* Currently the only supported `action` is 'click', which programmatically clicks
+* the button element. Unknown actions emit a console warning.
+*
+* @param {Object} options - Configuration object with the following shape:
+*   @param {Object}      options.tool_event  - Event descriptor (type, validate, action).
+*   @param {HTMLElement} options.tool_button  - The toolbar button to click on match.
+* @returns {boolean} Always true after the document listener has been attached.
 */
 export const set_tool_event = function (options) {
 
