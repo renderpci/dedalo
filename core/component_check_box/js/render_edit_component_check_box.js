@@ -15,7 +15,41 @@
 
 /**
 * RENDER_EDIT_COMPONENT_CHECK_BOX
-* Manage the components logic and appearance in client side
+* Edit-mode render mixin for component_check_box.
+*
+* This module is NOT a standalone class.  It is a prototype-assignment vehicle:
+* component_check_box.prototype.edit is wired to
+* render_edit_component_check_box.prototype.edit (see component_check_box.js).
+* The constructor itself is a no-op placeholder so that prototype methods can be
+* attached to it using the standard Dédalo pattern.
+*
+* Exports (named):
+*   render_edit_component_check_box — constructor / prototype carrier
+*   get_content_data_edit           — builds the main content_data DOM node with all
+*                                     checkbox inputs (or read-only labels for permission=1)
+*   get_buttons                     — builds the buttons_container (list / reset / tools)
+*
+* Data shape expected on self.data:
+*   datalist {Array<{value:{section_id,section_tipo}, label:string, section_id:string}>}
+*     The full option list resolved by get_datalist() on the server.
+*   entries  {Array<{type:string, section_id:string, section_tipo:string, from_component_tipo:string}>}
+*     The subset of relation locators that are currently checked; a subset of datalist.
+*
+* Data shape expected on self.context:
+*   view             {string}  — render view name: 'default'|'line'|'print'|'tools'
+*   properties       {Object}  — ontology properties block (show_interface, mandatory, …)
+*   target_sections  {Array<{tipo:string, label:string}>} — one item per target section
+*                                for the button_list navigation buttons
+*
+* self.show_interface keys consumed here:
+*   button_list   {boolean} — when true, renders a "go to list" navigation button per target_section
+*   button_delete {boolean} — when true, renders a bulk-reset button
+*   tools         {boolean} — when true, renders the tool buttons via ui.add_tools()
+*
+* Global references (page-provided, declared in the /*global*\/ directive):
+*   get_label       — localised label map ({reset:'Reset', …})
+*   SHOW_DEBUG      — boolean flag; when true, developer debug badges are shown
+*   DEDALO_CORE_URL — base URL for building deep-link navigation URLs
 */
 export const render_edit_component_check_box = function() {
 
@@ -26,9 +60,29 @@ export const render_edit_component_check_box = function() {
 
 /**
 * EDIT
-* Chose the view render module to generate DOM nodes
-* @param object options
-* @return HTMLElement wrapper|null
+* Dispatch to the appropriate view renderer based on self.context.view.
+*
+* View routing:
+*   'tools'   — two-column grid with a Select-all master checkbox and tool icons;
+*               used for the security-tools profiles field (dd1067).
+*   'line'    — same content as 'default' but wrapped for compact inline display
+*               (label:null, display:contents).
+*   'print'   — forces self.permissions to 1 (read-only) then falls through to
+*               'default'.  This is an intentional fall-through (no return/break).
+*               The mutation of self.permissions is side-effectful on the instance
+*               for the lifetime of the render call; the view_print CSS class is
+*               applied by ui.component.build_wrapper_edit() from the context.view.
+*   'default' — full wrapper: label row, buttons_container, content_data with one
+*               checkbox per datalist option.  Read users (permissions=1) see only the
+*               selected labels as read-only nodes.
+*
+* (!) The 'print' case intentionally falls through to 'default' via a missing break/
+*     return.  Do not add one.  The permissions mutation is the entire purpose of the
+*     'print' branch; it must execute before build_wrapper_edit() is called.
+*
+* @param {Object} options - Render options forwarded verbatim to the selected view renderer
+* @returns {Promise<HTMLElement>} Resolved component wrapper node (or content_data when
+*                                 options.render_level==='content')
 */
 render_edit_component_check_box.prototype.edit = async function(options) {
 
@@ -63,8 +117,29 @@ render_edit_component_check_box.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param instance self
-* @return HTMLElement content_data
+* Build the content_data DOM node that holds all checkbox inputs (or read-only labels).
+*
+* Branching on self.permissions:
+*
+*   permissions === 1 (read-only):
+*     Iterates self.data.entries (the currently selected locators), finds the
+*     matching datalist item for each, and renders a read-only content_value node
+*     containing only the label text.  If no entries match any datalist item
+*     (e.g. empty selection), one empty content_value node is appended at index 0
+*     so the wrapper is never completely empty.  This prevents the UI from
+*     collapsing in list/print contexts.
+*
+*   permissions >= 2 (read-write):
+*     Iterates the full self.data.datalist and renders one interactive checkbox
+*     per option (via get_content_value).  Each checkbox is pre-checked when its
+*     datalist_value locator matches an entry in self.data.entries.
+*
+* Numeric index pointers are set on the content_data node itself
+* (content_data[i] = content_value_node) so that callers can access individual
+* slots by index for targeted refresh.
+*
+* @param {Object} self - Component instance (component_check_box)
+* @returns {HTMLElement} content_data node with all child content_value nodes appended
 */
 export const get_content_data_edit = function(self) {
 
@@ -127,13 +202,38 @@ export const get_content_data_edit = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* Render a input element based on passed value
-* @param int i
-* 	data.value array key
-* @param object current_value
-* @param object self
+* Build a single interactive checkbox option node for one datalist item.
 *
-* @return HTMLElement content_value
+* DOM output shape (appended to the parent content_data by the caller):
+*   <div class="content_value">
+*     <label>
+*       <input type="checkbox" [checked]>
+*       {label text}
+*     </label>
+*     [<span class="developer_info show_on_active">[section_id]</span>]  (SHOW_DEBUG only)
+*   </div>
+*
+* The checkbox is pre-checked when any entry in self.data.entries has the same
+* (section_id, section_tipo) pair as datalist_value.  Both comparisons use strict
+* equality (===).  Note: the read-only branch in get_content_data_edit uses loose
+* equality (==) for section_id because that value may arrive as a string from the
+* server and as a number from the client.
+*
+* Events attached to input_checkbox:
+*   focus  — activates the component via ui.component.activate(self) if not already
+*             active; supports keyboard tab-navigation between checkboxes.
+*   change — delegates to self.change_handler() with (self, e, i, datalist_value,
+*             input_checkbox) so the shared handler in component_check_box.js can build
+*             a changed_data atom (insert/remove) and call self.change_value().
+*   click  — stopPropagation only; prevents the click from bubbling to the wrapper's
+*             activation listener and causing a double-activate.
+*
+* @param {number} i             - Zero-based index of this item in the datalist array;
+*                                 passed through to change_handler as the slot key
+* @param {Object} current_value - One datalist item: {value:{section_id,section_tipo},
+*                                 label:string, section_id:string}
+* @param {Object} self          - Component instance (component_check_box)
+* @returns {HTMLElement} content_value <div> with the checkbox label inside
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -213,14 +313,23 @@ const get_content_value = (i, current_value, self) => {
 
 /**
 * GET_CONTENT_VALUE_READ
-* Render a element based on passed value
-* @param int i
-* 	data.value array key
-* @param string current_value
-* 	label from datalist item that match current data value
-* @param object self
+* Build a single read-only content_value node that displays a label string.
 *
-* @return HTMLElement content_value
+* Used when permissions === 1 or the component is rendered in 'print' view.
+* Only the matched, currently-selected entries are rendered (not the full datalist),
+* so the returned node simply shows the resolved label text without any interactive
+* elements.  The node receives both 'content_value' and 'read_only' CSS classes so
+* that the print/read stylesheet can apply the correct appearance.
+*
+* @param {number} i             - Zero-based slot index (currently unused inside this
+*                                 function; reserved for potential caller use / pointer set)
+* @param {string} current_value - Resolved label string for the matched datalist item,
+*                                 or an empty string when the selection is empty
+* @param {Object} self          - Component instance (component_check_box); not used
+*                                 inside this function but kept for API symmetry with
+*                                 get_content_value
+* @returns {HTMLElement} <div class="content_value read_only"> with inner_html set to
+*                        the label text
 */
 const get_content_value_read = (i, current_value, self) => {
 
@@ -238,8 +347,34 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object instance
-* @return HTMLElement buttons_container
+* Build the buttons_container DOM node for the edit toolbar.
+*
+* Three optional button groups are assembled into a DocumentFragment, then
+* placed inside a buttons_fold wrapper that allows sticky positioning on
+* taller components.  Each group is guarded by its self.show_interface flag,
+* so ontology config drives what is visible without code changes:
+*
+*   button_list  {boolean} — one navigation button per target_section in
+*     self.context.target_sections.  Each button opens the target list section in
+*     a new browser window via open_window(), and refreshes the current instance
+*     on window blur (so newly created options appear immediately).  In SHOW_DEBUG
+*     mode the button title includes the section tipo.
+*
+*   button_delete {boolean} — a bulk-reset "trash" button.  Guards against
+*     an already-empty entries array (early return true) to avoid a no-op save
+*     round-trip.  Issues a single changed_data atom of action:'remove' with
+*     id:null and value:null, which the server interprets as "remove all relations
+*     for this component"; triggers a full refresh.
+*
+*   tools {boolean} — appends the ontology-configured tool buttons from self.tools[]
+*     via ui.add_tools(self, fragment).  Tools are assembled server-side from the
+*     model + ontology; no tool types are hardcoded here.
+*
+* @param {Object} self - Component instance (component_check_box); must have
+*                        self.show_interface, self.context.target_sections,
+*                        self.data.entries, self.tools, and self.permissions set
+* @returns {HTMLElement} buttons_container node with the buttons_fold child already
+*                        populated
 */
 export const get_buttons = (self) => {
 

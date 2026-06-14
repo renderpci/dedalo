@@ -12,8 +12,30 @@
 
 
 /**
-* RENDER_LIST_COMPONENT_password
-* Manage the components logic and appearance in client side
+* RENDER_LIST_COMPONENT_PASSWORD
+* Client-side list renderer for component_password.
+*
+* This constructor function's prototype method `list` is mixed into the
+* component_password prototype (see component_password.js), making it the
+* entry point for all read-only render contexts:
+*   - mode === 'list'   → component_password.prototype.list
+*   - mode === 'tm'     → component_password.prototype.tm  (Time Machine; reuses list)
+*   - mode === 'search' → component_password.prototype.search (reuses list)
+*
+* Passwords are NEVER shown in plain text in any list view. Every view
+* implementation unconditionally renders the obfuscation string '****************'
+* regardless of the actual stored value, ensuring stored credentials are not
+* leaked into list or search result DOM.
+*
+* Supported views (resolved from `context.view`):
+*   - 'default' — full wrapper element via ui.component.build_wrapper_list()
+*   - 'mini'    — compact wrapper used by autocomplete service overlays
+*   - 'text'    — bare <span> element, no chrome; intended for embedded/text contexts
+*
+* @see view_default_list_password — 'default' view implementation
+* @see view_mini_password         — 'mini' view implementation
+* @see view_text_list_password    — 'text' view implementation
+* @see component_password         — prototype assignments that install `list` as `tm`/`search`
 */
 export const render_list_component_password = function() {
 
@@ -24,8 +46,18 @@ export const render_list_component_password = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @return HTMLElement wrapper
+* Builds and returns the DOM node for this component in list, tm, and search modes.
+*
+* Reads `context.view` (set by the server-side context layer) to select the
+* appropriate view renderer. Falls through to 'default' for any unrecognised
+* view value. The chosen renderer is responsible for producing the wrapper
+* element with the obfuscated placeholder string in place of the real value.
+*
+* All three renderers set `wrapper.type = 'password'` on the returned node so
+* that container code can identify the component type at the DOM level.
+*
+* @param {Object} options - render options forwarded unchanged to the view renderer
+* @returns {Promise<HTMLElement>} the rendered wrapper element with obfuscated content
 */
 render_list_component_password.prototype.list = async function(options) {
 

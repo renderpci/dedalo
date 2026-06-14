@@ -52,8 +52,8 @@ See: [dd_object](dd_object.md), [Introduction](index.md#definitions-of-dédalos-
 ### data
 *SQL equivalent: the cell payload (the value plus its envelope).*
 
-The data container of a [component](#component) or element: the stored [value](#value) plus optional companions such as the [datalist](#datalist) (option list) or value fallbacks. Sits opposite [context](#context) in the `{context, data}` [datum](#datum). Note the difference from the raw JSONB storage of a [matrix](#matrix-table) row — a single legacy `datos` column, or the v7 typed columns (`string`, `number`, `relation`, …) — which holds *all* of the record's data.
-See: [Introduction](index.md#definitions-of-dédalos-nomenclature); skill *dedalo-context-data-layers*. Related: [value](#value), [datum](#datum), [subdata](#subdata), [datalist](#datalist), [context](#context).
+The data container of a [component](#component) or element: the stored [value](#value) plus optional companions such as the [datalist](#datalist) (option list) or value fallbacks. Sits opposite [context](#context) in the `{context, data}` [datum](#datum). Note the difference from the raw JSONB storage of a [matrix](#matrix-table) row — a single legacy `datos` column, or the v7 typed columns (`string`, `number`, `relation`, …) — which holds *all* of the record's data. v7 settled the vocabulary on **`data`** (not the v6 term `dato`): raw stored `data`, resolved `value`, transport `datum.data` — see the [data model](data_model/index.md).
+See: [Introduction](index.md#definitions-of-dédalos-nomenclature), [data model](data_model/index.md); skill *dedalo-context-data-layers*. Related: [value item](#value-item), [value](#value), [datum](#datum), [subdata](#subdata), [datalist](#datalist), [context](#context).
 
 ### datalist
 *SQL equivalent: the candidate rows of a foreign-key `SELECT` (the option list).*
@@ -82,8 +82,8 @@ See: [locator](locator.md#properties). Related: [locator](#locator), [relation](
 ### dd_date
 *SQL equivalent: a normalized date/time literal (richer than SQL `DATE`).*
 
-A normalized Dédalo object representing dates, able to express ranges, periods, calendars and uncertainty beyond a single SQL date.
-See: [Introduction](index.md#definitions-of-dédalos-nomenclature). Related: [DDO (dd_object)](#ddo-dd_object), [ts_object](#ts_object), [dd_grid](#dd_grid).
+A normalized Dédalo object representing dates, able to express ranges, periods, calendars and uncertainty beyond a single SQL date. It is the `value` of a [value item](#value-item) in the `date` typed column, produced by `component_date`.
+See: [Date values (data model)](data_model/dd_date.md), [Introduction](index.md#definitions-of-dédalos-nomenclature). Related: [value item](#value-item), [DDO (dd_object)](#ddo-dd_object), [ts_object](#ts_object), [dd_grid](#dd_grid).
 
 ### dd_grid
 *SQL equivalent: a flat result set / pivoted view with rows and columns.*
@@ -149,8 +149,8 @@ See: `config/sample.config.php` (`DEDALO_DATA_NOLAN`). Related: [translatable / 
 ### locator
 *SQL equivalent: a foreign-key relation (a pointer between rows).*
 
-The object Dédalo uses to connect data — a relative, multi-reference, directional pointer. The minimal form is `{section_id, section_tipo}`; it can also target a [component](#component) (`component_tipo`) or a tag (`tag_id`), and names its source with the `from_` prefix. The `type` property carries the relation flavor (e.g. [dd151](#dd151) link, `dd47` parent). A flat string form (`component_tipo_section_tipo_section_id`, e.g. `rsc29_rsc170_3`) is used as media filenames.
-See: [Locator](locator.md). Related: [relation](#relation-bidirectional--unidirectional), [from_component_tipo](#from_component_tipo), [dd151](#dd151), [relations array](#relations-array), [datalist](#datalist).
+The object Dédalo uses to connect data — a relative, multi-reference, directional pointer. The minimal form is `{section_id, section_tipo}`; it can also target a [component](#component) (`component_tipo`) or a tag (`tag_id`), and names its source with the `from_` prefix. The `type` property carries the relation flavor (e.g. [dd151](#dd151) link, `dd47` parent). A flat string form (`component_tipo_section_tipo_section_id`, e.g. `rsc29_rsc170_3`) is used as media filenames. A locator is the [value item](#value-item) of every relation component, stored in the `relation` typed column.
+See: [Locator](locator.md), [data model — relations](data_model/relations.md). Related: [value item](#value-item), [relation](#relation-bidirectional--unidirectional), [from_component_tipo](#from_component_tipo), [dd151](#dd151), [relations array](#relations-array), [datalist](#datalist).
 
 ---
 
@@ -159,8 +159,8 @@ See: [Locator](locator.md). Related: [relation](#relation-bidirectional--unidire
 ### matrix (table)
 *SQL equivalent: a single physical table standing in for ~1100 logical tables.*
 
-The PostgreSQL table where Dédalo stores most data, with only four columns: `id`, `section_id`, `section_tipo` and `datos` (a JSONB column holding the whole record). There are a few sibling matrix tables sharing this schema (`matrix_hierarchy`, `matrix_users`, `matrix_dataframe`, `matrix_activities`…), plus per-type JSONB projection columns (`string`, `relation`, `iri`, `number`, `date`…) used by search. A full schema can hold ~1100 sections / ~16,000 components in these few tables.
-See: [Introduction](index.md#definitions-of-dédalos-nomenclature), [Locator → Function and structure](locator.md#function-and-structure). Related: [section](#section), [section_tipo](#section_tipo), [id](#id), [section_id](#section_id), [data](#data).
+The PostgreSQL table where Dédalo stores most data, with only four columns: `id`, `section_id`, `section_tipo` and `datos` (a JSONB column holding the whole record). There are a few sibling matrix tables sharing this schema (`matrix_hierarchy`, `matrix_users`, `matrix_dataframe`, `matrix_activities`…), plus per-type JSONB typed columns (`data`, `string`, `relation`, `iri`, `number`, `date`, `geo`, `media`, `misc`, `relation_search`, `meta`) that hold each data shape. The **`meta`** column keeps the per-component id counters that mint stable [value item](#value-item) ids. A full schema can hold ~1100 sections / ~16,000 components in these few tables.
+See: [Introduction](index.md#definitions-of-dédalos-nomenclature), [data model](data_model/index.md), [Locator → Function and structure](locator.md#function-and-structure). Related: [section](#section), [section_tipo](#section_tipo), [id](#id), [section_id](#section_id), [data](#data), [value item](#value-item).
 
 ### mode (edit / list / search / tm)
 *SQL equivalent: the request/view mode (no direct analogue).*
@@ -223,14 +223,14 @@ See: [The Raspa Data Quality Score](raspa_score.md). Related: [ontology](#ontolo
 ### relation (bidirectional / unidirectional)
 *SQL equivalent: a foreign key — one-way or mutually maintained.*
 
-A connection between records, materialized as one or more [locators](#locator) whose `type` carries the flavor. A **unidirectional** relation points only one way (the source stores the locator); a **bidirectional** relation is mirrored on both records so each knows the other; a **multidirectional** relation links several. The related-relation tipos: `dd620` unidirectional, `dd467` bidirectional, `dd621` multidirectional (also `dd89` related, [dd151](#dd151) link, `dd47`/`dd48` parent/children).
-See: [Locator](locator.md). Related: [locator](#locator), [dd151](#dd151), [relations array](#relations-array), [from_component_tipo](#from_component_tipo).
+A connection between records, materialized as one or more [locators](#locator) whose `type` carries the flavor. A **unidirectional** relation points only one way (the source stores the locator); a **bidirectional** relation is mirrored on both records so each knows the other; a **multidirectional** relation links several. The related-relation tipos: `dd620` unidirectional, `dd467` bidirectional, `dd621` multidirectional (also `dd89` related, [dd151](#dd151) link, `dd47`/`dd48` parent/children). All relation locators are stored in the `relation` typed column, keyed by component tipo.
+See: [Locator](locator.md), [data model — relations](data_model/relations.md). Related: [locator](#locator), [dd151](#dd151), [relations array](#relations-array), [from_component_tipo](#from_component_tipo).
 
 ### relations array
 *SQL equivalent: a join/junction table for one record (inline).*
 
-The `relations` container of a section record (`section::get_relations()`): a flat array of all the [locators](#locator) that record participates in. It is the section-level index of relationships, kept alongside the components' own data inside the `datos` JSONB.
-See: [Locator](locator.md), `core/section/class.section.php`. Related: [locator](#locator), [relation](#relation-bidirectional--unidirectional), [section](#section), [matrix (table)](#matrix-table).
+The `relations` container of a section record (`section::get_relations()`): a flat array of all the [locators](#locator) that record participates in. It is the section-level index of relationships, kept alongside the components' own data inside the `datos` JSONB. Distinct from the **`relation` typed column** (the per-component locator store keyed by component tipo, from which the section assembles this array).
+See: [Locator](locator.md), [data model — relations](data_model/relations.md), `core/section/class.section.php`. Related: [locator](#locator), [relation](#relation-bidirectional--unidirectional), [section](#section), [matrix (table)](#matrix-table).
 
 ### request_config
 *No direct SQL equivalent (a layout/retrieval configuration layer).*
@@ -332,7 +332,13 @@ See: [Thesaurus and Ontology tree](thesaurus/index.md), [Introduction](index.md#
 *SQL equivalent: the stored cell value.*
 
 The data actually stored in the database for a [component](#component) — the payload inside the [data](#data) container, distinct from its companions ([datalist](#datalist), fallbacks) and from the [context](#context) that describes it. For relation components the value is an array of [locators](#locator).
-See: [Introduction](index.md#definitions-of-dédalos-nomenclature), [component_portal](components/component_portal.md). Related: [data](#data), [datum](#datum), [datalist](#datalist), [locator](#locator).
+See: [Introduction](index.md#definitions-of-dédalos-nomenclature), [component_portal](components/component_portal.md), [data model](data_model/index.md). Related: [value item](#value-item), [data](#data), [datum](#datum), [datalist](#datalist), [locator](#locator).
+
+### value item
+*SQL equivalent: one stored cell value plus its identity/language envelope.*
+
+The consolidated v7 envelope every component stores inside a typed [matrix](#matrix-table) column: an **array** of `{id, lang?, value}` item objects (even mono-value fields store a one-element array). `id` is a stable, server-minted per-item identity (never recycled — the pairing key for [dataframes](#dataframe) and Time Machine); `lang` is `lg-xxx` or [`lg-nolan`](#lg-nolan); `value` is the payload (a scalar, or a structural object such as an IRI `{title, uri}` or a date datum). **Relation** components carry no `value` — their item *is* a [locator](#locator). Empty values are deliberately preserved to hold a multivalue position and keep dataframe attachments alive.
+See: [Value item](data_model/value_item.md), [data model](data_model/index.md). Related: [value](#value), [data](#data), [locator](#locator), [dd_date](#dd_date), [dataframe](#dataframe), [lg-nolan](#lg-nolan).
 
 ### view
 *SQL equivalent: none (a presentation/render template).*

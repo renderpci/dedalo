@@ -1,106 +1,39 @@
 <?php declare(strict_types=1);
 /**
-*  DD_GRID_CELL_OBJECT
+* CLASS DD_GRID_CELL_OBJECT
+* Polymorphic value-cell descriptor used by the client grid renderer.
 *
-*  Used as standard object format to use in client to render tables with unspecific data or component.
-*  The grid will process the object as simple table with heads, captions and rows, etc, but the object doesn't has type of the row, only the CSS that will used to render the data.
-*  The format use flat data and add possibility to include buttons or links to the data.
+* dd_grid_cell_object is the canonical transfer object that PHP components
+* place inside their get_grid_value() return value so that the JavaScript
+* grid can render tabular data without knowing the component model.
 *
-*  Sample:
-
-	[
-	  [
-	    {
-	      "class_list": "head grey",
-	      "column": "portal",
-	      "fields_separator": ", ",
-	      "records_separator": "<br>",
-	      "total_rows":3,
-	      "data": [
-	        {
-	          "column": "id",
-	          "data": [
-	            5,
-	            8
-	          ]
-	        },
-	        {
-	          "column": "nombre",
-	          "data": [
-	            "paco",
-	            "Pepe"
-	          ]
-	        },
-	        {
-	          "column": "apellido",
-	          "data": [
-	            "otro",
-	            "mas"
-	          ]
-	        }
-	      ]
-	    },
-	    {
-	      "class_list": "head grey",
-	      "column": "input_x",
-	      "fields_separator": null,
-	      "records_separator": "<br>",
-	      "data": [
-	        {
-	          "column": "my input",
-	          "data": [
-	            "raspa"
-	          ]
-	        }
-	      ]
-	    }
-	  ],
-	  [
-	    {
-	      "class_list": "head grey",
-	      "column": "portal",
-	      "fields_separator": ", ",
-	      "records_separator": "<br>",
-	      "data": [
-	        {
-	          "column": "id",
-	          "data": [
-	            5,
-	            8
-	          ]
-	        },
-	        {
-	          "column": "nombre",
-	          "data": [
-	            "paco",
-	            "Pepe"
-	          ]
-	        },
-	        {
-	          "column": "apellido",
-	          "data": [
-	            "otro",
-	            "mas"
-	          ]
-	        }
-	      ]
-	    },
-	    {
-	      "class_list": "head grey",
-	      "column": "input_x",
-	      "fields_separator": null,
-	      "records_separator": "<br>",
-	      "data": [
-	        {
-	          "column": "my input",
-	          "data": [
-	            "raspa"
-	          ]
-	        }
-	      ]
-	    }
-	  ]
-	]
+* Structural roles — one instance can represent any of these:
+* - A 'column' cell: a leaf data field. Carries $value (flat array of
+*   scalars), $label, $cell_type, $fields_separator, and the companion
+*   $ar_columns_obj (column-definition metadata the JS header row reads).
+* - A 'row' cell: a logical record inside a relation component. $value
+*   is an array of column dd_grid_cell_object instances, one per resolved
+*   child component. $row_count and $column_count describe the overall
+*   relation grid dimensions.
+* - A head/caption cell: same shape as 'column', with $class_list set to
+*   a CSS modifier ('head grey', etc.) to drive header styling.
+*
+* Wire format — the outer grid is a PHP array of arrays of these objects.
+* Each row is an array; each element of that array is one dd_grid_cell_object.
+* JSON-encoding is implicit (PHP object → JSON object).
+*
+* Key callers:
+* - component_common::get_grid_value() and export_value_to_grid_cell()
+*   (base implementation for leaf components)
+* - component_relation_common::get_grid_value() (relation / nested rows)
+* - class.indexation_grid.php (section-level grid assembly)
+*
+* Note: the atoms-based export path (get_export_value / export_value /
+* export_atom) supersedes this object for the export tabulator but is not
+* a drop-in replacement for the visual grid layer. Both coexist.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class dd_grid_cell_object {
 
@@ -109,137 +42,152 @@ class dd_grid_cell_object {
 	*/
 
 		/**
-		 * Unique identifier for the column. Format: "oh1_id".
-		 * Used to identify data within the same column across rows.
+		 * Unique column identifier, e.g. "oh1_id".
+		 * Typically the component tipo. Used to correlate data across rows.
 		 * @var ?string $id
 		 */
 		public ?string $id = null;
 
 		/**
-		 * CSS class list for styling the cell. Example: "caption bold".
-		 * Space-separated CSS selectors applied to the cell element.
+		 * Space-separated CSS class tokens applied to the rendered cell element.
+		 * Example: "caption bold", "head grey".
 		 * @var ?string $class_list
 		 */
 		public ?string $class_list = null;
 
 		/**
-		 * Type of grid element. Values: 'row', 'column'.
-		 * Defines whether this cell represents a row header or data column.
+		 * Structural type of this cell in the grid.
+		 * 'row'    — the cell's $value is an array of column dd_grid_cell_objects.
+		 * 'column' — the cell's $value is an array of scalar data values.
 		 * @var ?string $type
 		 */
 		public ?string $type = null;
 
 		/**
-		 * Human-readable label for the column. Example: "name".
-		 * Displayed as column header in the grid.
+		 * Human-readable column header, displayed above data values.
+		 * Sourced from the component's own label (ontology term label).
 		 * @var ?string $label
 		 */
 		public ?string $label = null;
 
 		/**
-		 * Total number of rows in the component.
-		 * Used by portals to define separable row groups.
+		 * Number of relation records that produced this cell.
+		 * Set on the outer 'column' wrapper by relation components so that the
+		 * client can allocate the correct grid row spans.
 		 * @var ?int $row_count
 		 */
 		public ?int $row_count = null;
 
 		/**
-		 * Total number of columns in the component.
-		 * Used by portals to define separable column groups.
+		 * Number of child columns inside a relation component.
+		 * Together with $row_count, defines the two-dimensional extent of the
+		 * rendered sub-grid for portal / relation components.
 		 * @var ?int $column_count
 		 */
 		public ?int $column_count = null;
 
 		/**
-		 * Array of column labels for portal sub-columns.
-		 * Names used by portals to define nested column headers.
+		 * Ordered list of column-header labels for a portal or relation component.
+		 * Each entry corresponds to one resolved child component column.
 		 * @var ?array $column_labels
 		 */
 		public ?array $column_labels = null;
 
 		/**
-		 * Separator string between fields within a cell. Example: ", ".
-		 * Glue used when concatenating multiple field values.
+		 * Separator inserted between field values within a single cell.
+		 * Null falls back to the client default (typically ", ").
+		 * Used by resolve_value() and the client renderer alike.
 		 * @var ?string $fields_separator
 		 */
 		public ?string $fields_separator = null;
 
 		/**
-		 * Separator string between records/rows. Example: "<br>".
-		 * HTML or string used to separate multiple records in the same cell.
+		 * Separator inserted between records (rows) in a multi-record cell.
+		 * Typically "<br>" for HTML output or " | " for plain text.
 		 * @var ?string $records_separator
 		 */
 		public ?string $records_separator = null;
 
 		/**
-		 * Type of element to render within the cell.
-		 * Values: 'av', 'img', 'iri', 'button', 'json', 'section_id', 'text'.
+		 * Rendering hint for the cell's data values.
+		 * Drives which client sub-renderer is chosen. Recognized values:
+		 * 'av', 'img', 'iri', 'button', 'json', 'section_id', 'text'.
 		 * @var ?string $cell_type
 		 */
 		public ?string $cell_type = null;
 
 		/**
-		 * Action configuration for interactive elements (buttons).
-		 * Object with method, options, and event properties defining user actions.
-		 * Every object defines one column of data and action - [{"type": "button","action": "hello","data": []}] -
-		 * every item inside the array will be a row of the column of his position inside the array
+		 * Action descriptor for interactive cells (buttons, links).
+		 * When set, the client attaches the described event handler to each value.
+		 * Shape example: {"method":"open_record","options":{},"event":"click"}.
+		 * The property is typed object|string|null to accommodate both a
+		 * pre-encoded JSON string and a decoded stdClass from round-trip deserialization.
+		 * (!) The setter set_action() only accepts ?string — callers that need to pass
+		 * an object must set the property directly or cast first.
 		 * @var object|string|null $action
 		 */
 		public object|string|null $action = null;
 
 		/**
-		 * Array of cell values. Array of strings or objects defining column data.
-		 * Each item represents a row in its column position.
+		 * Flat array of scalar data values for this column, one entry per record.
+		 * For 'row' cells, each entry is itself a dd_grid_cell_object (column).
+		 * Null until explicitly set.
 		 * @var array|null $value
 		 */
 		public array|null $value = null;
 
 		/**
-		 * Fallback values when current language has no data.
-		 * When a component doesn't has value in the current lang, use the fallback_value with one value in another language.
-		 * Array of strings with values from other languages.
+		 * Fallback values used when the current-language data in $value is empty.
+		 * Indexed in parallel with $value so that $fallback_value[$key] is the
+		 * substitute for an empty $value[$key].
 		 * @var ?array $fallback_value
 		 */
 		public ?array $fallback_value = null;
 
 		/**
-		 * Raw component data in current language (optional).
-		 * Used for special cases like COMPONENT_IRI.
+		 * Raw component data in the current language, for special renderers.
+		 * Currently used only by component_iri (which embeds its label/IRI pair
+		 * here so the client can render a hyperlink without a second request).
 		 * @var ?array $data
 		 */
 		public ?array $data = null;
 
 		/**
-		 * Whether to render the column label/heading.
-		 * Controls visibility of the column header text.
+		 * Whether the client should render the $label above the column values.
+		 * False or null suppresses the header; true renders it.
 		 * @var ?bool $render_label
 		 */
 		public ?bool $render_label = null;
 
 		/**
-		 * Column identifier for grouping and positioning.
-		 * Defines which column group this cell belongs to.
+		 * Column group identifier, matching the component tipo or a named group key.
+		 * The client uses this to align cells that belong to the same logical column
+		 * across multiple rows.
 		 * @var ?string $column
 		 */
 		public ?string $column = null;
 
 		/**
-		 * Array of column objects for nested column definitions.
-		 * Used for complex grid layouts with sub-columns.
+		 * Column-definition metadata objects, one per child component.
+		 * The JS grid header row reads these to render column titles and widths.
+		 * Usually an array, but tool_export may pass a single object; see set_ar_columns_obj().
 		 * @var array|object|null $ar_columns_obj
 		 */
 		public array|object|null $ar_columns_obj = null;
 
 		/**
-		 * Multipurpose container for additional cell features.
-		 * Used to pass extra information like section color.
+		 * Arbitrary extra metadata attached to the cell.
+		 * Open-ended container for features that do not fit the fixed properties.
+		 * Current use: carries the section color code so the client can highlight rows.
 		 * @var ?object $features
 		 */
 		public ?object $features = null;
 
 		/**
-		 * Component model/type identifier.
-		 * Specifies which component model this cell represents.
+		 * PHP class name of the component model that produced this cell.
+		 * Example: 'component_av', 'component_input_text'.
+		 * Lets the client pick a model-specific sub-renderer when $cell_type alone
+		 * is insufficient.
 		 * @var ?string $model
 		 */
 		public ?string $model = null;
@@ -266,8 +214,13 @@ class dd_grid_cell_object {
 
 	/**
 	* __CONSTRUCT
-	* @param object|null $options
-	* optional . Default is null
+	* Builds the object either as an empty shell (no arguments) or from an
+	* existing plain-object representation (e.g. decoded from JSON or a
+	* persisted cache). When $options is provided each of its properties is
+	* applied through the corresponding set_*() accessor.
+	* @param object|null $options = null
+	*   Optional property bag. Each key must match a declared set_*() method.
+	* @return void
 	*/
 	public function __construct( ?object $options=null ) {
 
@@ -440,6 +393,9 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_ACTION
+	* (!) Type narrowing mismatch: the $action property declares object|string|null
+	* but this setter only accepts ?string. Callers that need to assign a decoded
+	* action object must bypass the setter and write $cell->action = $obj directly.
 	* @param string|null $value
 	* @return void
 	*/
@@ -542,8 +498,21 @@ class dd_grid_cell_object {
 	* test/server/components/export_value_parity_Test.php. Do not call it
 	* from new code; delete it when those overrides converge.
 	*
+	* Algorithm overview:
+	* - 'row' cells: iterate records, recurse into each row's columns,
+	*   join fields with $fields_separator, join records with $records_separator.
+	* - 'column' cells: iterate values; recurse when a value is itself an
+	*   object (nested cell); use $fallback_value when a value is empty.
+	*   Scalar values are cast to string via to_string() if needed.
+	*
+	* (!) empty() semantics drop the string '0' — this is a known bug-for-bug
+	* parity with export_value::to_flat_string() and must NOT be fixed here.
+	*
 	* @param dd_grid_cell_object $dd_grid
-	* @return string $column_value|$row_value
+	*   The cell to flatten. Typically the outer 'column' wrapper returned by
+	*   a component's get_grid_value().
+	* @return string
+	*   Fully joined, human-readable string representation of all cell values.
 	*/
 	public static function resolve_value(dd_grid_cell_object $dd_grid) : string {
 

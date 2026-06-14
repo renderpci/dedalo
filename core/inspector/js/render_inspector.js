@@ -1,8 +1,57 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEVELOPER, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
+// (!) DEDALO_API_URL is used at line ~710 but is NOT listed in the /*global*/ declaration above.
+// It is injected at page load as a global constant from the PHP template. If eslint runs in
+// strict mode this will produce a no-undef error. Flagged for a future /*global*/ addition.
 
 
+
+/**
+* RENDER_INSPECTOR
+* Client-side rendering module for the Dédalo v7 inspector panel.
+*
+* The inspector is a collapsible sidebar that floats to the right of a section's
+* edit view and provides developers and power users with:
+*   - section / component metadata (tipo, model, matrix_table, audit trail)
+*   - quick-action buttons (search, new, duplicate, delete, graph view, diffusion, tools)
+*   - project filter widget (component_project_filter, injected via event)
+*   - relations list (lazy-loaded, paginated)
+*   - time-machine list  — recent changes across all components of the section
+*   - component history  — full value history for the currently selected component
+*   - activity feed      — live save-notification bubbles
+*   - ontology navigation links (documentation, local ontology, master ontology)
+*
+* Layout / state persistence:
+*   The panel width and rail-collapsed state are saved globally in IndexedDB
+*   (table 'status', keys 'inspector_rail_state' / 'inspector_width').  The state
+*   is loaded before first paint so that layout is stable with no flicker.
+*   On viewports ≤ 1024 px (is_narrow_viewport) the panel is inline full-width
+*   and rail/resize controls are inert.
+*
+* Relationship with inspector.js:
+*   inspector.js holds the lifecycle prototype (init / build / destroy) and all
+*   event subscriptions.  This module holds the DOM construction functions that
+*   inspector.js delegates to, plus a small set of exported helpers consumed by
+*   view_default_edit_section.js (apply_inspector_state, init_inspector_resize,
+*   toggle_inspector_rail).
+*
+* Exports (public API of this module):
+*   render_inspector            — constructor stub (prototype.edit defined here)
+*   toggle_inspector_rail       — collapse / expand the panel
+*   apply_inspector_state       — pre-paint state application
+*   init_inspector_resize       — wires the drag-resize handle
+*   update_project_container_body
+*   render_section_info
+*   render_component_info
+*   render_time_machine_list
+*   load_time_machine_list
+*   render_component_history (private, consumed via inspector.js init)
+*   load_component_history
+*   render_activity_info (private)
+*   load_activity_info
+*   open_ontology_window
+*/
 
 // import
 	import { ui } from '../../common/js/ui.js'
@@ -37,7 +86,10 @@
 
 /**
 * RENDER_INSPECTOR
-* Manages the component's logic and appearance in client side
+* Constructor stub for the inspector instance.
+* All prototype methods are assigned in inspector.js (lifecycle) and below
+* (render_inspector.prototype.edit).  The actual work is done by get_content_data
+* and the render_* / load_* helpers in this file.
 */
 export const render_inspector = function() {
 
@@ -47,19 +99,24 @@ export const render_inspector = function() {
 
 
 // Persisted UI state (IndexedDB table 'status', global keys shared across sections)
+// These constants are intentionally global across all section instances so that the
+// inspector always opens at the same width/collapsed state regardless of which record
+// the user navigates to.
 	const RAIL_STATE_KEY	= 'inspector_rail_state' // {value:true} => collapsed to rail
 	const WIDTH_KEY			= 'inspector_width'      // {value:'24rem'} user chosen width
-	const DEFAULT_WIDTH		= '19rem'                // matches --inspector_width default
-	const RAIL_WIDTH_VAR	= 'var(--inspector_rail_width)'
+	const DEFAULT_WIDTH		= '19rem'                // matches --inspector_width CSS default
+	const RAIL_WIDTH_VAR	= 'var(--inspector_rail_width)' // narrow strip that shows only icons
 
 
 
 /**
 * SET_INSPECTOR_WIDTH
 * Writes --inspector_width on :root. The section content width and the panel
-* position are calc() consumers of this var, so the layout reflows automatically.
-* @param string value
-* @return void
+* position are calc() consumers of this CSS variable, so the layout reflows
+* automatically whenever this value changes — no manual DOM repositioning required.
+* @param {string} value - Any CSS length value: '19rem', '320px', or
+*   'var(--inspector_rail_width)' when collapsing to the icon rail.
+* @returns {void}
 */
 const set_inspector_width = (value) => {
 	document.documentElement.style.setProperty('--inspector_width', value)
@@ -69,9 +126,11 @@ const set_inspector_width = (value) => {
 
 /**
 * IS_NARROW_VIEWPORT
-* Below @width_break_point_0 (1024px) the inspector is inline full-width;
-* rail collapse and resize are inert there.
-* @return bool
+* Returns true when the viewport is at most 1024 px wide (the CSS
+* @width_break_point_0 breakpoint). Below this threshold the inspector renders
+* as an inline full-width block and rail collapse + drag-resize are both
+* disabled so they do not interfere with the stacked layout.
+* @returns {boolean} true when viewport width ≤ 1024 px
 */
 const is_narrow_viewport = () => window.matchMedia('(max-width: 1024px)').matches
 
@@ -79,11 +138,20 @@ const is_narrow_viewport = () => window.matchMedia('(max-width: 1024px)').matche
 
 /**
 * TOGGLE_INSPECTOR_RAIL
-* Collapses the inspector to / expands it from the icon rail, reflowing content
-* via --inspector_width, and persists the new state.
-* @param object self
-* 	inspector instance (uses self._saved_width)
-* @return bool
+* Collapses the inspector panel to a narrow icon-only rail, or expands it back
+* to its last saved width.  The transition is purely CSS-driven via
+* --inspector_width, so the section content area reflows automatically.
+*
+* The new state is written to IndexedDB ('status' table, key 'inspector_rail_state')
+* so it survives page reloads.
+*
+* No-ops silently when:
+*   - the viewport is narrow (≤ 1024 px) — inline layout, no rail concept
+*   - #inspector_container is absent from the DOM
+*
+* @param {Object} self - Inspector instance. Reads self._saved_width (the last
+*   explicit pixel/rem width chosen by the user) and updates self._rail_collapsed.
+* @returns {boolean} false when the toggle was suppressed; true on success.
 */
 export const toggle_inspector_rail = (self) => {
 
@@ -96,6 +164,8 @@ export const toggle_inspector_rail = (self) => {
 		return false
 	}
 
+	// Determine direction from current DOM state, not from self._rail_collapsed,
+	// so the UI and the flag stay in sync even after a hot reload or external toggle.
 	const collapsing = !container.classList.contains('inspector_rail')
 	container.classList.toggle('inspector_rail', collapsing)
 	self._rail_collapsed = collapsing
@@ -119,13 +189,17 @@ export const toggle_inspector_rail = (self) => {
 
 /**
 * APPLY_INSPECTOR_STATE
-* Applies the persisted rail/width state to the freshly created inspector_container
-* BEFORE it is attached to the DOM, so the first paint is already correct (no flicker).
-* @param object inspector
-* 	inspector instance (uses _rail_collapsed and _saved_width stashed in edit())
-* @param HTMLElement container
-* 	#inspector_container element
-* @return bool
+* Applies the persisted rail/width state to the freshly created #inspector_container
+* BEFORE it is attached to the DOM, so the very first paint is already at the right
+* dimensions and no layout shift occurs.
+*
+* Called by view_default_edit_section.js immediately after the container element is
+* created and before it is appended to the section fragment.
+*
+* @param {Object} inspector - Inspector instance. Must have _rail_collapsed (boolean)
+*   and _saved_width (string | falsy) already populated by edit() awaiting IndexedDB.
+* @param {HTMLElement} container - The #inspector_container element to configure.
+* @returns {boolean} false when container is falsy (nothing to do); true otherwise.
 */
 export const apply_inspector_state = (inspector, container) => {
 
@@ -149,12 +223,31 @@ export const apply_inspector_state = (inspector, container) => {
 
 /**
 * INIT_INSPECTOR_RESIZE
-* Wires the left-edge drag handle to resize the panel live (rAF-coalesced),
-* clamped, persisting the chosen width on release. Disabled while railed or narrow.
-* @param HTMLElement handle
-* @param object inspector
-* 	inspector instance (updates _saved_width)
-* @return bool
+* Wires a left-edge drag handle to allow the user to resize the inspector panel live.
+*
+* Resize behaviour:
+*   - Uses the Pointer Events API with pointer capture so the drag continues even when
+*     the pointer leaves the handle element.
+*   - Width updates are batched through requestAnimationFrame (rAF-coalesced) to avoid
+*     forced-layout thrashing on every pointermove event.
+*   - Width is clamped between MIN (14 rem) and get_max() (60 % of viewport or 40 rem,
+*     whichever is smaller) to prevent the panel from covering the entire content area.
+*   - The handle is on the LEFT edge of the panel, so dragging left (lower clientX)
+*     makes the panel wider: dx = start_x − current_x > 0 means growth.
+*   - On pointerup the resolved value is read back from the CSS variable (post-clamp)
+*     and written to IndexedDB so subsequent page loads restore the same width.
+*   - The body class 'inspector_resizing' suppresses pointer-events on content while
+*     dragging to prevent accidental text selections or hover effects.
+*
+* No-ops silently when:
+*   - handle is falsy
+*   - pointerdown fires while the panel is in rail mode (inspector_rail class present)
+*   - pointerdown fires on a narrow viewport (≤ 1024 px)
+*
+* @param {HTMLElement} handle - The drag-resize strip element on the panel's left edge.
+* @param {Object} inspector - Inspector instance. Updated: inspector._saved_width is
+*   set to the final CSS string (e.g. '320px') when the user releases the pointer.
+* @returns {boolean} false when handle is falsy; true after the listener is attached.
 */
 export const init_inspector_resize = (handle, inspector) => {
 
@@ -192,6 +285,7 @@ export const init_inspector_resize = (handle, inspector) => {
 	const on_up = (e) => {
 		window.removeEventListener('pointermove', on_move)
 		window.removeEventListener('pointerup', on_up)
+		// flush the last pending frame before persisting
 		if (raf_id!==null) {
 			cancelAnimationFrame(raf_id)
 			apply_pending()
@@ -231,13 +325,18 @@ export const init_inspector_resize = (handle, inspector) => {
 
 /**
 * DECORATE_BLOCK_HEADER
-* Adds a leading mask icon and a text-label wrapper to a collapsible block header,
-* so the text can hide in rail mode while the icon remains.
-* @param HTMLElement header
-* @param string icon_class
-* 	one of: info|gear|link|history|note|activity|inspector
-* @param string label_html
-* @return HTMLElement header
+* Adds a CSS-mask icon span and a text-label span to a collapsible block header.
+* This two-node structure lets CSS hide only the label text in rail mode while
+* the icon span remains visible as the sole visual indicator.
+*
+* Must be called once per header; calling it a second time would duplicate the
+* icon and label inside the same header element.
+*
+* @param {HTMLElement} header - The block header element to decorate (mutated in place).
+* @param {string} icon_class - BEM modifier used as the mask icon source.
+*   Known values: 'info' | 'gear' | 'link' | 'history' | 'note' | 'activity' | 'panel'
+* @param {string} label_html - Inner HTML of the label span (may contain HTML entities).
+* @returns {HTMLElement} The same header element, for optional chaining.
 */
 const decorate_block_header = (header, icon_class, label_html) => {
 
@@ -260,9 +359,27 @@ const decorate_block_header = (header, icon_class, label_html) => {
 
 /**
 * EDIT
-* Render node for use in this mode
-* @param object options
-* @return HTMLElement wrapper
+* Builds the full inspector DOM tree and returns the outermost wrapper element.
+* This is the prototype method assigned to render_inspector.prototype.edit and
+* called by common.prototype.render() during the section edit lifecycle.
+*
+* Render-level semantics:
+*   'content' — return only the content_data node (inner body, used by refresh).
+*   'full'    — return the complete wrapper including the sticky header label.
+*
+* Persisted state is loaded from IndexedDB BEFORE constructing the DOM so that
+* apply_inspector_state (called by view_default_edit_section.js immediately after)
+* receives the correct _rail_collapsed and _saved_width values, avoiding any
+* visible layout jump on first render.
+*
+* The sticky label uses an IntersectionObserver to toggle the 'is_pinned' class
+* when the header is obscured at the top of its scroll container, allowing CSS to
+* add a shadow/border to indicate the pinned state.
+*
+* @param {Object} options
+* @param {string} [options.render_level='full'] - 'full' or 'content'
+* @returns {Promise<HTMLElement>} wrapper (#inspector element) or content_data node
+*   when render_level === 'content'
 */
 render_inspector.prototype.edit = async function(options) {
 
@@ -320,6 +437,8 @@ render_inspector.prototype.edit = async function(options) {
 		function expose() {
 			label.classList.add('up')
 		}
+		// IntersectionObserver: adds 'is_pinned' class when the sticky header is
+		// scrolled out of view (intersectionRatio < 1), enabling a CSS drop-shadow.
 		const observer = new IntersectionObserver(
 			([e]) => e.target.classList.toggle('is_pinned', e.intersectionRatio < 1),
 			{ threshold: [1] }
@@ -356,10 +475,33 @@ render_inspector.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* Renders the whole content_data node
-* @param object self
-* 	inspector instance
-* @return HTMLElement content_data
+* Builds the complete body of the inspector panel: paginator, all action buttons,
+* tool shortcut buttons, project filter, info blocks, time-machine list, component
+* history, and the activity feed.
+*
+* This function owns the full content_data subtree.  The outer label/wrapper is
+* assembled by render_inspector.prototype.edit().  When render_level === 'content'
+* edit() returns this node directly (used by refresh cycles to replace only the body).
+*
+* Block rendering order:
+*   1. paginator_container (section_id display, pointer stored for live updates)
+*   2. buttons_container top (search / new / duplicate / delete / target-section /
+*      graph / diffusion / tool shortcuts)
+*   3. tools_container (when >1 inspector tool; single tool goes into buttons_container)
+*   4. selection_info block
+*   5. element_info block (info panel, lazily populated by render_section_info /
+*      render_component_info via event subscriptions in inspector.js)
+*   6. project block (only when component_filter_node is already available)
+*   7. relation_list block (only when context.config.relation_list_tipo is set)
+*   8. time_machine_list block (always rendered; historically guarded by a commented-out
+*      ontology check — see commented-out block at line ~676)
+*   9. component_history block (always rendered alongside time_machine_list)
+*  10. activity_info block
+*  11. buttons_bottom_container (data link, register download for dd1340)
+*
+* @param {Object} self - Inspector instance. section = self.caller must already have
+*   context.buttons and context.tools populated from the server response.
+* @returns {HTMLElement} content_data - The populated inspector body element.
 */
 const get_content_data = function(self) {
 
@@ -372,6 +514,9 @@ const get_content_data = function(self) {
 			element_type	: 'div',
 			class_name		: 'content_data inspector_content_data hide'
 		})
+		// Stop mousedown from bubbling to the section, which would deactivate the
+		// currently selected component (section listens for mousedown on document
+		// and deactivates the active component unless the click is inside it).
 		content_data.addEventListener('mousedown', function(e) {
 			e.stopPropagation();
 		})
@@ -493,6 +638,8 @@ const get_content_data = function(self) {
 			}
 
 		// button_target_section
+			// Opens the list of all sections that have a direct relation to the current
+			// one, rendered via render_open_list_with_direct_relations.
 			const button_target_section = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light list',
@@ -517,6 +664,9 @@ const get_content_data = function(self) {
 					},
 					label		: self.caller.label,
 					total		: self.caller.total,
+					// (!) duplicate key: the first 'self_caller : self' (inspector instance)
+					// is silently overwritten by the second assignment 'self_caller : self.caller'
+					// (section instance). Flagged — the first line is dead code.
 					self_caller : self,
 					self_caller : self.caller
 				}
@@ -542,12 +692,17 @@ const get_content_data = function(self) {
 				}
 
 				// set graph view (both flags: render_edit_section reads context.view, create_source reads view)
+				// Both section.view and section.context.view must be updated because different
+				// render paths read from different sources (context is the server-side shape;
+				// view is the live client override).
 				section.view = 'graph'
 				if (section.context) {
 					section.context.view = 'graph'
 				}
 
 				// re-render reusing already-loaded client data (no extra API call)
+				// build_autoload:false prevents re-fetching the section record from the API;
+				// the graph renderer only needs the relation map, not the full record data.
 				await section.refresh({
 					build_autoload	: false,
 					render_level	: 'full'
@@ -577,6 +732,10 @@ const get_content_data = function(self) {
 			}
 
 	// tools_container. Section tools buttons
+	// Tools marked show_in_inspector:true in the ontology appear here.
+	// When only one tool is present it is appended directly to buttons_container so
+	// that the layout stays flush with the core action buttons.  When there are two
+	// or more, a dedicated tools_container row is created.
 		const inspector_tools			= self.caller.context.tools.filter( el => el.show_in_inspector )
 		const inspector_tools_length	= inspector_tools.length
 		let tools_container				= null
@@ -590,12 +749,12 @@ const get_content_data = function(self) {
 			}
 			for (let i = 0; i < inspector_tools_length; i++) {
 				const tool_context = inspector_tools[i]
-				// load tool CSS
+				// load tool CSS lazily (no duplicate injection — load_style is idempotent)
 				const tool_css_url = tool_base_url(tool_context.model) + '/css/' + tool_context.model + '.css' + `?v=${page_globals.dedalo_version}`
 				load_style(tool_css_url)
 				// tool_button
-					// bg color. E.g. '--tool_ontology_color'
-					const button_bg_color = `--${tool_context.name}_color`					
+					// bg color. E.g. '--tool_ontology_color'  (a CSS custom property defined by the tool)
+					const button_bg_color = `--${tool_context.name}_color`
 					const tool_button = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'light blank',
@@ -658,6 +817,13 @@ const get_content_data = function(self) {
 		content_data.appendChild(element_info)
 
 	// project container
+		// The filter node (component_project_filter rendered DOM) is delivered
+		// asynchronously via the event 'render_component_filter_<section_tipo>'
+		// that is subscribed in inspector.prototype.init().  On the very first render
+		// it may not yet be available (self.component_filter_node is undefined), in
+		// which case the project block is omitted entirely.  On subsequent refreshes
+		// (pagination) the event fires again and update_project_container_body() is
+		// called to refresh the content without re-building the block structure.
 		// (!) Note that the filter node is collected from a subscribed
 		// event 'render_component_filter_xx' from self inspector init event
 		if (self.component_filter_node) {
@@ -673,6 +839,10 @@ const get_content_data = function(self) {
 
 	// Note that 'time_machine_list' is a Ontology item children of current section if defined
 	// as 'numisdata588' and is used ONLY to determine if current section have a history changes list or not
+	// The guard `if (self.caller.context.time_machine_list)` was previously used to show
+	// the block only for sections that expose a time-machine ontology item.  It is now
+	// commented out and both blocks are always rendered; visibility is controlled instead
+	// by the collapse-toggle (default_state: 'closed') and by the lazy-load in expose().
 		// if (self.caller.context.time_machine_list) {
 			// time_machine_list container
 				const time_machine_list = render_time_machine_list(self)
@@ -695,6 +865,9 @@ const get_content_data = function(self) {
 		})
 
 		// data_link . Open window to full section JSON data
+		// Builds the full RQO for the current record and opens the raw API response
+		// in a new tab so developers can inspect the JSON structure without leaving the
+		// edit view.  Uses DEDALO_API_URL which is injected globally by the PHP template.
 			const data_link = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light eye data_link',
@@ -720,6 +893,9 @@ const get_content_data = function(self) {
 			data_link.addEventListener('mousedown', data_link_click_handler)
 
 		// tool register files.	dd1340
+		// dd1340 is the ontology tipo for 'Tool register' sections (tool scaffolding records).
+		// This button downloads the raw section record as a register.json file, which is the
+		// canonical serialization format for tool registration in the v7 tools architecture.
 			if (self.section_tipo==='dd1340') {
 				const register_download = ui.create_dom_element({
 					element_type	: 'button',
@@ -1294,10 +1470,23 @@ export const render_component_info = function(self, component) {
 
 /**
 * RENDER_ELEMENT_INFO
-* Note that self.element_info_containe is fixed to allow inspector init event
-* to locate the target node when is invoked
-* @param object self
-* @return HTMLElement element_info_wrap
+* Builds the collapsible "Info" block in the inspector.  The block header is
+* rendered immediately; the body (element_info_body) starts empty and is
+* populated on demand by render_section_info() or render_component_info() when
+* the user focuses a component or the section re-renders.
+*
+* A pointer to the body element is stored as self.element_info_container so
+* that inspector.js event handlers (activate_component, render_) can locate
+* the target node without searching the DOM.
+*
+* (!) Note: the comment in the original source contains a typo:
+* 'self.element_info_containe' — the actual property name is
+* 'self.element_info_container'.  Flagged but not fixed (doc-only rule).
+*
+* @param {Object} self - Inspector instance. self.element_info_container is set
+*   to the body element as a side effect.
+* @returns {HTMLElement} element_info_wrap - The block wrapper containing the
+*   collapsible head and the (initially empty) body.
 */
 const render_element_info = function(self) {
 
@@ -1351,11 +1540,21 @@ const render_element_info = function(self) {
 
 /**
 * RENDER_PROJECT_BLOCK
-* Show full component_project_filter of current section
-* to allow user configure section projects
-* @param object self
-* 	inspector instance
-* @return HTMLElement project_wrap
+* Builds the collapsible "Project" block in the inspector.  The block body hosts
+* the component_project_filter widget, which lets the user select which projects
+* the current record belongs to.
+*
+* The filter node itself (self.component_filter_node) is delivered asynchronously
+* via the 'render_component_filter_<section_tipo>' event subscribed in
+* inspector.prototype.init().  This function calls update_project_container_body()
+* immediately (in case the node is already available) and stores the body element
+* pointer as self.project_container_body so that subsequent event firings can
+* refresh the content via update_project_container_body().
+*
+* @param {Object} self - Inspector instance. Must have self.component_filter_node
+*   available (may be undefined on first call).  self.project_container_body is
+*   set as a side effect.
+* @returns {HTMLElement} project_wrap - The block wrapper element.
 */
 const render_project_block = function(self) {
 
@@ -1549,10 +1748,23 @@ const render_relation_list = function(self) {
 
 /**
 * RENDER_TIME_MACHINE_LIST
-* Show whole section recent activity (component value changes) list
-* @param object self
-* 	inspector instance
-* @return HTMLElement time_machine_list_wrap
+* Builds the collapsible "Latest changes" block in the inspector.  When the user
+* opens (exposes) the block, load_time_machine_list() is called via
+* dd_request_idle_callback to lazily load the service_time_machine instance that
+* renders a mini grid of recent component-value changes across the whole section.
+*
+* The time_machine_list_body element pointer is stored as
+* self.time_machine_list_container so that load_time_machine_list() can locate
+* it without searching the DOM and can guard against loading when the block is
+* collapsed (is_open check).
+*
+* Note: the commented-out event subscription block below the head would have
+* refreshed the list on every section pagination ('render_' + self.caller.id).
+* It was disabled in favour of the lazy expose approach.
+*
+* @param {Object} self - Inspector instance. self.time_machine_list_container is
+*   set to the body element as a side effect.
+* @returns {HTMLElement} time_machine_list_wrap - The block wrapper element.
 */
 export const render_time_machine_list = function(self) {
 
@@ -1620,10 +1832,31 @@ export const render_time_machine_list = function(self) {
 
 /**
 * LOAD_TIME_MACHINE_LIST
-* Get section time_machine history records
-* @param object self
-* 	inspector instance
-* @return HTMLElement|null container
+* Lazily instantiates and renders the service_time_machine for the entire
+* section (all components, all users) in a compact 'mini' view.
+*
+* Render contract:
+*   - Returns null immediately when the container is collapsed ('hide' class present)
+*     to avoid redundant API calls on background refreshes.
+*   - Destroys the previous service_time_machine instance (if any) before creating a
+*     new one, to avoid accumulating orphaned instances across pagination.
+*   - Guards against inspector destruction during the await: if self.status becomes
+*     'destroyed' while the get_instance promise resolves, the freshly-created
+*     service is destroyed and null is returned.
+*
+* Called from:
+*   - render_time_machine_list expose_callback (user opens the block)
+*   - inspector.prototype.init save_handler (after any component save)
+*   - inspector.js update_section_info (after section pagination)
+*
+* ddo_map note: dd1574 is the generic time-machine value ontology item.
+*   model is set to 'dd_grid' (rather than the real component model) to allow
+*   identification and special rendering by service_time_machine.
+*
+* @param {Object} self - Inspector instance. Must have self.time_machine_list_container,
+*   self.caller (section), and self.section_tipo populated.
+* @returns {Promise<HTMLElement|null>} The body container element on success,
+*   or null when loading was skipped or the inspector was destroyed.
 */
 export const load_time_machine_list = async function(self) {
 
@@ -1640,7 +1873,7 @@ export const load_time_machine_list = async function(self) {
 	// (!) Note that expose is called on each section pagination, whereby must be generated
 	// even if user close and re-open the time_machine_list inspector tab
 
-	// destroy previous service
+	// destroy previous service to avoid instance leaks across pagination events
 		if (self.service_time_machine) {
 			await self.service_time_machine.destroy(
 				true, // delete_self
@@ -1778,11 +2011,32 @@ const render_component_history = function(self) {
 
 /**
 * LOAD_COMPONENT_HISTORY
-* Asynchronously initializes and renders the time machine history and notes for a specific component.
-* Manages the loading state and replaces the existing content in the history container.
-* @param {Object} self - Inspector instance.
-* @param {Object} component - Component instance to fetch history for.
-* @returns {Promise<HTMLElement|null>} The history container or null if loading was skipped.
+* Asynchronously initializes and renders the time machine history and annotation
+* notes for a specific component.  Combines two ddo_map entries:
+*   1. The selected component itself (mode:'tm') — shows its raw value at each
+*      historical record.
+*   2. An annotation component (rsc329 in section_tipo rsc832) — a text_area that
+*      stores user notes attached to each time-machine entry.
+*
+* Guard conditions (returns null and clears the container):
+*   - component is null/falsy: clears the container (called when section re-renders
+*     with no active component).
+*   - component.section_tipo !== self.section_tipo: skips update for components
+*     belonging to modal/nested sections that share the event bus.
+*   - Container is collapsed ('hide' class): skips the API call until the user opens
+*     the block.
+*   - Inspector is destroyed after the await: cleans up the fresh instance.
+*
+* Called from:
+*   - render_component_history expose_callback (user opens the block)
+*   - inspector.prototype.init activate_component_handler (user clicks a component)
+*   - inspector.prototype.init save_handler (after saving the active component)
+*
+* @param {Object} self - Inspector instance with self.component_history_container
+*   and self.section_tipo set.
+* @param {Object|null} component - The component instance to show history for,
+*   or null to clear the container.
+* @returns {Promise<HTMLElement|null>} The container element on success, or null.
 */
 export const load_component_history = async function(self, component) {
 
@@ -1799,7 +2053,9 @@ export const load_component_history = async function(self, component) {
 			return null
 		}
 
-	// prevent to affect modals
+	// prevent to affect modals: components in nested/modal sections fire the same
+	// 'activate_component' event on the shared event bus, but should not update
+	// the inspector of a different section.
 		if (component.section_tipo!==self.section_tipo) {
 			return null
 		}
@@ -1890,10 +2146,20 @@ export const load_component_history = async function(self, component) {
 
 /**
 * RENDER_ACTIVITY_INFO
-* Show component save and error messages
-* @param object self
-* 	inspector instance
-* @return HTMLElement wrapper
+* Builds the collapsible "Activity" block in the inspector.  The block body is a
+* bubbles_notification_container that accumulates save confirmations and error
+* notifications in real time via load_activity_info().
+*
+* Unlike the time-machine and component-history blocks, the activity feed does NOT
+* clear on collapse: bubbles remain in the DOM so the user can review past
+* notifications after reopening the block.
+*
+* A pointer to the body element is stored as self.activity_info_container so
+* that load_activity_info() can prepend new notification nodes without a DOM search.
+*
+* @param {Object} self - Inspector instance. self.activity_info_container is set
+*   to the body element as a side effect.
+* @returns {HTMLElement} wrapper - The block wrapper element.
 */
 const render_activity_info = function(self) {
 
@@ -1943,12 +2209,16 @@ const render_activity_info = function(self) {
 
 /**
 * LOAD_ACTIVITY_INFO
-* Get selected component time_machine history records and notes
-* @param object self
-* 	inspector instance
-* @param object options
-* 	event save subscription received options
-* @return HTMLElement|null container
+* Renders a new save/error notification bubble and prepends it to the activity
+* feed container.  Called by inspector.js save_handler on every component save,
+* regardless of whether the activity block is currently open (so the badge count
+* stays accurate even when collapsed).
+*
+* @param {Object} self - Inspector instance with self.activity_info_container set.
+* @param {Object} options - The options object received from the 'save' event.
+*   Shape mirrors the save event payload (instance, result, etc.) passed through
+*   to render_node_info() for display.
+* @returns {Promise<HTMLElement>} The activity container element (always non-null).
 */
 export const load_activity_info = async function(self, options) {
 
@@ -1969,12 +2239,30 @@ export const load_activity_info = async function(self, options) {
 
 /**
 * OPEN_ONTOLOGY_WINDOW
-* Opens Dédalo Ontology page in a new window
-* @param object self
-* @param string url
-* @param string docu_type
-* @param bool focus = true
-* @return bool
+* Opens or reuses a single dedicated ontology window (window.docu_window) to show
+* the given URL.
+*
+* Window reuse policy: if a window with target name 'docu_window' is already open
+* (window.docu_window not null and not closed), its location is updated in-place
+* rather than opening a second tab.  This provides a coherent single-window
+* navigation experience when the user activates multiple components in sequence.
+*
+* The self.last_docu_type property is updated so that inspector.js activate_component_handler
+* can re-navigate the window to the correct documentation type when the user switches
+* component focus while the ontology window is already open.
+*
+* Position: the window is placed at the right edge of the primary screen
+* (left = screen_width − window_width) so it does not overlap the Dédalo edit view.
+*
+* @param {Object} self - Inspector instance. self.last_docu_type is updated as a
+*   side effect.
+* @param {string} url - Full URL to navigate to (built by get_ontology_url).
+* @param {string} docu_type - One of 'docu_link' | 'local_ontology' |
+*   'local_ontology_search' | 'master_ontology'. Stored on self for subsequent calls.
+* @param {boolean} [focus=false] - Whether to bring the ontology window to the
+*   foreground after navigation. Defaults to false to avoid focus-stealing when
+*   called automatically on component activation.
+* @returns {boolean} Always true.
 */
 export const open_ontology_window = function(self, url, docu_type, focus=false) {
 
@@ -1991,7 +2279,7 @@ export const open_ontology_window = function(self, url, docu_type, focus=false) 
 			window.docu_window.focus()
 		}
 	}else{
-		// create a window from scratch
+		// create a window from scratch; position to the right edge of the screen
 		const window_width	= 1310
 		const screen_width	= window.screen.width
 		const screen_height	= window.screen.height
@@ -2011,17 +2299,38 @@ export const open_ontology_window = function(self, url, docu_type, focus=false) 
 
 /**
 * RENDER_DOCU_LINKS
-* Opens Dédalo Ontology page in a new window
-* @param object self
-* @param string tipo
-* @return DocumentFragment fragment
+* Builds a DocumentFragment containing icon-link buttons for navigating to
+* ontology documentation related to a given tipo.  Always renders the public
+* 'Documentation' link; adds three developer-only links when SHOW_DEVELOPER===true.
+*
+* Button set (always visible):
+*   - docu_link  ('button link') — opens https://dedalo.dev/ontology/<tipo>
+*
+* Button set (SHOW_DEVELOPER only):
+*   - local_ontology  ('button pen')  — opens the local instance's ontology page
+*     for this tipo (e.g. https://localhost/dedalo/core/page/?tipo=dd0&section_id=1)
+*   - local_ontology_search ('button tree') — opens the thesaurus tree (dd5) with a
+*     pre-filled search_tipos parameter so the user lands directly on this tipo's node
+*   - master_ontology ('button edit') — opens master.dedalo.dev for the canonical
+*     source ontology record
+*
+* All buttons call open_ontology_window(), which reuses a single 'docu_window' popup
+* so that clicking multiple links does not spawn multiple windows.
+*
+* Note: the local_ontology_search handler assigns the result of open_window() to
+* const tree_window but never uses tree_window after that.  Flagged as unused
+* variable (not fixed per doc-only rule).
+*
+* @param {Object} self - Inspector instance passed through to open_ontology_window().
+* @param {string} tipo - Ontology tipo identifier (e.g. 'dd345', 'tch38').
+* @returns {DocumentFragment} fragment containing the rendered link buttons.
 */
 const render_docu_links = function(self, tipo) {
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
-	// docu_link
+	// docu_link — always visible; opens the public Dédalo ontology documentation site
 		const docu_link = ui.create_dom_element({
 			element_type	: 'a',
 			class_name		: 'button link',
@@ -2044,7 +2353,7 @@ const render_docu_links = function(self, tipo) {
 
 	if (SHOW_DEVELOPER===true) {
 
-		// local_ontology
+		// local_ontology — opens the running instance's ontology section for this tipo
 			const local_ontology = ui.create_dom_element({
 				element_type	: 'a',
 				class_name		: 'button pen',
@@ -2070,7 +2379,7 @@ const render_docu_links = function(self, tipo) {
 			}
 			local_ontology.addEventListener('mousedown', mousedown_handler_local)
 
-		// local ontology tree search
+		// local ontology tree search — opens the thesaurus (dd5) pre-filtered for this tipo
 			const local_ontology_search = ui.create_dom_element({
 				element_type	: 'a',
 				class_name		: 'button tree',
@@ -2080,7 +2389,8 @@ const render_docu_links = function(self, tipo) {
 			// mousedown event
 			const mousedown_handler_tree = async (e) => {
 				e.stopPropagation()
-				// url vars
+				// url vars: extract tld prefix and numeric section_id from tipo
+				// e.g. tipo 'tch38' → tld='tch', section_id='38'
 				const tld			= get_tld_from_tipo(tipo)
 				const section_id	= get_section_id_from_tipo(tipo)
 				const url_vars = {
@@ -2090,6 +2400,7 @@ const render_docu_links = function(self, tipo) {
 				}
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
 				// open window
+				// (!) tree_window is declared but never used after this point — flagged.
 				const tree_window = open_window({
 					url		: url,
 					name	: 'tree_window',
@@ -2099,7 +2410,7 @@ const render_docu_links = function(self, tipo) {
 			}
 			local_ontology_search.addEventListener('mousedown', mousedown_handler_tree)
 
-		// master_ontology
+		// master_ontology — opens master.dedalo.dev for the canonical source ontology record
 			const master_ontology = ui.create_dom_element({
 				element_type	: 'a',
 				class_name		: 'button edit',

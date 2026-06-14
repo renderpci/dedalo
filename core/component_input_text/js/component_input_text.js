@@ -4,6 +4,42 @@
 
 
 
+/**
+* COMPONENT_INPUT_TEXT
+* Dédalo client-side component for single-line, plain-text string fields.
+*
+* Responsibilities:
+* - Holds one or more short text strings per record in `this.data.entries` (multi-value
+*   via entries array; each entry is `{id, value, lang?}`).
+* - Optionally validates input on each keystroke using a regex rule from
+*   `context.properties.validation` (client-side shaping only; see `validate()`).
+* - Optionally enforces uniqueness across the same `section_tipo` by querying the API
+*   via `find_equal()` and surfacing an inline warning with a link to the conflicting record.
+* - Delegates rendering to the per-mode render sub-modules:
+*     - `render_edit_component_input_text`  → edit / line / text / mini / colorpicker / print
+*     - `render_list_component_input_text`  → list / tm (time-machine reuses list)
+*     - `render_search_component_input_text` → search
+* - Inherits the full component lifecycle (init → build → render → save → destroy) from
+*   `component_common` and `common`.
+*
+* Data shape (`this.data.entries`): Array of plain objects
+*   `{ id: number|null, value: string, lang: string }`
+* One entry per value item (translatable components hold one entry per language per item;
+* search mode can hold SQO-filter objects instead of persisted datum objects).
+*
+* Relevant `context.properties` keys consumed by this component:
+*   `unique`      – enables `find_equal` duplicate check on every change
+*   `mandatory`   – toggles `mandatory` CSS class when the input is empty
+*   `validation`  – `{mode, regex, options, replace, process}` object for `validate()`
+*   `has_dataframe` – pairs the component with a component_dataframe for structured metadata
+*
+* @see component_common  Generic lifecycle, save, change_value, mode-switch.
+* @see render_edit_component_input_text   Edit-mode view dispatch.
+* @see render_list_component_input_text   List / TM view dispatch.
+* @see render_search_component_input_text  Search-filter view and ontology7 TLD-split logic.
+* @see docs/core/components/component_input_text.md  Full data-model and properties reference.
+*/
+
 // imports
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common, create_source} from '../../common/js/common.js'
@@ -15,6 +51,29 @@
 
 
 
+/**
+* COMPONENT_INPUT_TEXT
+* Constructor. Declares all instance properties used throughout the lifecycle.
+* All fields are initialised to null (or a sensible default); `component_common.init()`
+* populates them from the options object passed at mount time.
+*
+* Property notes:
+* - `find_equal_cache`      – per-instance Map keyed by value string; stores the matching
+*                             `section_id` (or null when no duplicate) so repeated keystrokes
+*                             do not re-query the API for the same string.
+* - `find_equal_request_id` – monotonically incremented counter for stale-response detection;
+*                             `find_equal()` discards any response whose counter no longer
+*                             matches the current value, preventing race conditions when the
+*                             user types faster than the API responds.
+* - `search_q_operator_default` – Map of `component_tipo → q_operator` overrides used in
+*                             search mode. The only built-in entry pins `ontology7` (TLD
+*                             field) to exact-match `'=='` instead of the default `'like'`.
+* - `minimum_width_px`      – CSS minimum-width hint read by the view layer to prevent the
+*                             component from collapsing in compressed grid layouts.
+* - `q_split`               – when true, the search layer allows the query string to be
+*                             tokenised into sub-terms (space-split AND logic) server-side.
+*                             Set to false per-instance to force whole-string matching.
+*/
 export const component_input_text = function(){
 
 	this.id				= null
@@ -57,7 +116,9 @@ export const component_input_text = function(){
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend component_input_text with shared prototype methods from component_common and common.
+* No own implementations for these methods — all logic lives in the shared prototypes.
+* The `tm` (Time Machine) render mode reuses the standard list renderer unchanged.
 */
 // prototypes assign
 	// lifecycle
@@ -78,7 +139,7 @@ export const component_input_text = function(){
 
 	// render
 	component_input_text.prototype.list					= render_list_component_input_text.prototype.list
-	component_input_text.prototype.tm					= render_list_component_input_text.prototype.list
+	component_input_text.prototype.tm					= render_list_component_input_text.prototype.list // TM view reuses the standard list renderer
 	component_input_text.prototype.edit					= render_edit_component_input_text.prototype.edit
 	component_input_text.prototype.search				= render_search_component_input_text.prototype.search
 
@@ -88,8 +149,18 @@ export const component_input_text = function(){
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Initialises the component instance by delegating to the shared `component_common.prototype.init`.
+* All property wiring (tipo, section_tipo, section_id, lang, context, data, parent, node …)
+* happens inside that call; component_input_text-specific state is already set in the constructor.
+*
+* (!) Override of the prototype-assigned `component_common.prototype.init` — this method is
+* declared AFTER the prototype block so it takes precedence on the instance chain. Any
+* additional component-specific setup before/after the common call should be added here.
+*
+* @param {Object} options - Mount-time options object (tipo, section_tipo, section_id, mode,
+*   lang, parent, caller, …) passed from the parent section or portal.
+* @returns {Promise<boolean>} Resolves to the result of `component_common.prototype.init`,
+*   which is `true` on success or `false` when the init could not complete.
 */
 component_input_text.prototype.init = async function(options) {
 
@@ -105,12 +176,30 @@ component_input_text.prototype.init = async function(options) {
 
 /**
 * FIND_EQUAL
-* Check if the given value already exists in the database for the same section tipo.
-* Excludes the current record (self.section_id) from the search.
-* Uses a per-instance cache to avoid redundant DB queries and a request ID
-* to discard stale responses when a newer call supersedes an older one.
-* @param string value
-* @return int|null section_id of the matching record, or null if no duplicate found
+* Checks whether the given value already exists in the database for the same section_tipo,
+* excluding the current record so a user editing an existing title is not warned about
+* their own record.
+*
+* Two concurrency guards prevent race conditions and unnecessary API traffic:
+*  1. Cache (`find_equal_cache`, keyed by value string) — returns a stored result immediately
+*     on cache hit, avoiding a round-trip for repeated keystrokes with the same value.
+*     The cache stores `null` for values with no duplicate (falsy, not cache-miss).
+*     The render layer (`check_duplicates`) must invalidate the cache entry for the OLD value
+*     before calling this method, because a rename might free the old string.
+*  2. Request ID (`find_equal_request_id`) — a monotonically incrementing counter captured at
+*     call start. If the counter has advanced by the time the API responds (i.e. the user
+*     typed again while the request was in flight), the stale response is discarded and null
+*     is returned rather than showing a potentially wrong warning.
+*
+* The SQO uses `skip_projects_filter: true` so that duplicates are detected across all
+* projects in the installation, not only the current project's records. This is intentional
+* for fields such as inventory numbers that must be globally unique.
+* `ddo_map: []` in `show` suppresses component data in the response, reducing payload size.
+*
+* @param {string} value - The text string to look up. Empty strings return null immediately.
+* @returns {Promise<number|null>} Resolves to the `section_id` (integer) of the first
+*   matching record in the same `section_tipo`, or null when no duplicate is found or when
+*   the response was discarded as stale.
 */
 component_input_text.prototype.find_equal = async function(value) {
 
@@ -232,9 +321,39 @@ component_input_text.prototype.find_equal = async function(value) {
 
 /**
 * VALIDATE
-* Check the value of the input_text with the given regex defined in properties
-* @param string value
-* @result string safe_value
+* Applies the client-side input-shaping rule defined in `context.properties.validation`
+* to produce a sanitised version of the user's raw input. Called on every change event
+* in the edit view (`change_handler`) when `context.properties.validation` is set.
+*
+* Supported shape for `context.properties.validation`:
+* ```json
+* {
+*   "mode"    : "replace",
+*   "regex"   : "[\\d\\s]",
+*   "options" : "g",
+*   "replace" : "",
+*   "process" : "toLowerCase"
+* }
+* ```
+*
+* Only one mode is currently implemented: `"replace"`. It builds a `RegExp` from
+* `validation.regex` and `validation.options`, then runs `String.prototype.replace`.
+* If `validation.process` is present, the named method is called on the result (e.g.
+* `"toLowerCase"` → `safe_value.toLowerCase()`). Unknown modes fall through the switch
+* and return the original value unchanged.
+*
+* (!) `validation.process` is executed via property access on the string (e.g.
+* `safe_value[validation.process]()`). Only standard `String.prototype` method names
+* should appear in the ontology configuration — no input sanitisation is performed on the
+* method name itself.
+*
+* Returns the original value immediately when it is an empty string (no validation needed
+* for a clear-field action). If `validation.mode` is missing, a `console.warn` is emitted
+* and the original value is returned unchanged.
+*
+* @param {string} value - The raw string from the input element.
+* @returns {string} The shaped/safe version of the input, or the original value when no
+*   transformation applies.
 */
 component_input_text.prototype.validate = function( value ) {
 
@@ -291,8 +410,10 @@ component_input_text.prototype.validate = function( value ) {
 
 /**
 * GET_FALLBACK_VALUE --> MOVED TO COMMON !
-* Get the fallback values when the current language version of the data is missing
-* @return array values data with fallback
+* Fallback-value resolution for missing language versions was extracted to component_common
+* (`component_common::get_component_data_fallback`) so that all string-based components
+* share a single implementation. The dead code below is preserved for historical reference.
+* @returns {Array} values data with fallback markers applied
 */
 	// component_input_text.prototype.get_fallback_value = (value, fallback_value)=>{
 

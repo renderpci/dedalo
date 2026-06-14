@@ -6,6 +6,7 @@ Dédalo tools are isolated blocks of code that extend components, sections and a
 
 This page is the end-to-end tutorial. The companion references are:
 
+- [Tools catalog](reference/index.md) — every tool shipped with Dédalo v7, grouped by purpose, with per-tool reference pages
 - [register.json reference](register_json.md) — every field of the registration file
 - [Server contract](server_contract.md) — the PHP class contract, API actions, configuration, hooks
 - [JS lifecycle](js_lifecycle.md) — the client tool lifecycle and helpers

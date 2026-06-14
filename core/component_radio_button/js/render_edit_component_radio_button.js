@@ -16,7 +16,47 @@
 
 /**
 * RENDER_EDIT_COMPONENT_RADIO_BUTTON
-* Manage the components logic and appearance in client side
+* Edit-mode render mixin for component_radio_button.
+*
+* This module is NOT a standalone class. It is a prototype-assignment vehicle:
+* component_radio_button.prototype.edit is wired to
+* render_edit_component_radio_button.prototype.edit (see component_radio_button.js).
+* The constructor itself is a no-op placeholder so that prototype methods can be
+* attached to it using the standard Dédalo pattern.
+*
+* Exports (named):
+*   render_edit_component_radio_button — constructor / prototype carrier
+*   get_content_data_edit              — builds the main content_data DOM node containing
+*                                        all radio inputs (or read-only labels for permissions=1)
+*   get_buttons                        — builds the buttons_container (list / reset / tools)
+*
+* Data shape expected on self.data:
+*   datalist {Array<{value:{section_id:string, section_tipo:string}, label:string, section_id:string}>}
+*     The full option list resolved by get_datalist() on the server. Each item represents
+*     one selectable radio option.
+*   entries  {Array<{id:number|null, section_id:string, section_tipo:string, type:string, from_component_tipo:string}>}
+*     The currently selected relation locators (at most one entry for a radio button).
+*     Radio buttons are single-selection: only one entry is expected in this array.
+*
+* Data shape expected on self.context:
+*   view             {string} — render view name: 'default' | 'line' | 'rating' | 'print'
+*   properties       {Object} — ontology properties block (show_interface, mandatory, …)
+*   target_sections  {Array<{tipo:string, label:string}>} — one entry per navigable target
+*                              section, used for button_list navigation buttons
+*
+* self.show_interface keys consumed here:
+*   button_list   {boolean} — when true, renders a "go to list" navigation button per target_section
+*   button_delete {boolean} — when true, renders a reset button that clears the current selection
+*   tools         {boolean} — when true, appends ontology-configured tool buttons via ui.add_tools()
+*
+* Global references (page-provided, declared in the global directive):
+*   SHOW_DEBUG      — boolean; when true, developer debug badges are shown in button labels
+*   DEDALO_CORE_URL — base URL used when constructing deep-link navigation URLs
+*
+* (!) get_label (used in get_buttons for the reset button title) is referenced at line ~297
+*     but is NOT declared in the /*global*\/ directive at the top of this file. This may
+*     trigger an eslint no-undef warning. The missing declaration is a pre-existing issue
+*     and should be added to the /*global*\/ line: get_label, SHOW_DEBUG, DEDALO_CORE_URL.
 */
 export const render_edit_component_radio_button = function() {
 
@@ -27,9 +67,28 @@ export const render_edit_component_radio_button = function() {
 
 /**
 * EDIT
-* Render node for use in modes: edit, edit_in_list
-* @param object options
-* @return HTMLElement|null
+* Dispatch to the appropriate view renderer based on self.context.view.
+*
+* View routing:
+*   'line'    — compact inline view (no buttons_container, exit-edit button appended to
+*               content_data); used when the component is rendered in a list row.
+*   'rating'  — visual star/score rating variant where datalist items are sorted by
+*               section_id and each item is rendered as a ratable cell.
+*   'print'   — forces self.permissions to 1 (read-only), then falls through to 'default'.
+*               This is an intentional fall-through (no return/break). The mutation of
+*               self.permissions is side-effectful on the instance for the duration of the
+*               render; the CSS class 'view_print' is applied by build_wrapper_edit() from
+*               the context.view value. See inline comment preserved from original code.
+*   'default' — full wrapper: label row, buttons_container, content_data with one radio
+*               input per datalist option. Read users (permissions=1) see only the matched
+*               entry label as a read-only node.
+*
+* (!) The 'print' case intentionally falls through to 'default' via a missing break/return.
+*     Do not add one. The permissions mutation must execute before view_default renders.
+*
+* @param {Object} options - Render options forwarded verbatim to the selected view renderer
+* @returns {Promise<HTMLElement>} Resolved component wrapper node (or content_data when
+*                                 options.render_level === 'content')
 */
 render_edit_component_radio_button.prototype.edit = async function(options) {
 
@@ -64,8 +123,32 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Build the content_data DOM node that holds all radio button inputs or read-only labels.
+*
+* Branching on self.permissions:
+*
+*   permissions === 1 (read-only):
+*     Iterates self.data.entries (the currently selected locators) and, for each entry,
+*     finds the matching datalist item by comparing (section_id, section_tipo). When a
+*     match is found, a read-only content_value node is appended displaying only the label
+*     text. If no entry matches (e.g. empty selection) nothing is appended, so the
+*     content_data may remain empty — contrast with component_check_box which always
+*     ensures at least one empty node. The section_id comparison uses loose equality (==)
+*     because values may be string from the server vs number from the client.
+*
+*   permissions >= 2 (read-write):
+*     Iterates the full self.data.datalist and renders one interactive radio input node
+*     per option (via get_content_value). Each radio is pre-checked when its datalist_value
+*     locator matches an entry in self.data.entries. Because radio buttons are single-select,
+*     only one can ever be checked at a time.
+*
+* Numeric index pointers are also set on the content_data node itself
+* (content_data[i] = content_value_node) so that callers can target individual slots by
+* index for fine-grained refresh.
+*
+* @param {Object} self - Component instance (component_radio_button); must have
+*                        self.data.datalist, self.data.entries, and self.permissions set
+* @returns {HTMLElement} content_data node with all child content_value nodes appended
 */
 export const get_content_data_edit = function(self) {
 
@@ -123,13 +206,43 @@ export const get_content_data_edit = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* Note that param 'i' is key from datalist, not from component value
-* @param int i
-* 	datalist key
-* @param object datalist_item
-* @param object self
+* Build a single interactive radio button option node for one datalist item.
 *
-* @return HTMLElement content_value
+* DOM output shape:
+*   <div class="content_value">
+*     <label class="label [checked]">
+*       <input type="radio" name="{self.id}" [disabled]>
+*       {label text}
+*     </label>
+*   </div>
+*
+* The radio input is pre-checked when any entry in self.data.entries has the same
+* (section_id, section_tipo) pair as datalist_value. Strict equality is used for
+* both fields (===), unlike the read-only path in get_content_data_edit which uses
+* loose equality (==) for section_id.
+*
+* All inputs in a component share the same `name` attribute (self.id) so the browser
+* enforces single-selection across the group automatically.
+*
+* Events attached to input:
+*   focus  — activates the component via ui.component.activate(self) when not already
+*             active; supports keyboard tab-navigation to the radio group.
+*   change — delegates to handle_radio_change(self, datalist_value), which reads the
+*             current entry id from self.data (not from the closure) to avoid stale-id
+*             issues after the first save, then calls self.change_value(). After the
+*             async change completes, update_status(this) re-applies the CSS 'checked'
+*             class to the label so the visual state stays in sync with the data.
+*
+* The nested update_status function iterates all current entries and applies the
+* 'checked' CSS class to input_label when the entry matches datalist_value, or removes
+* it otherwise. It is also called immediately after construction to reflect the initial
+* persisted selection.
+*
+* @param {number} i             - Zero-based index of this item in the datalist array
+* @param {Object} datalist_item - One datalist entry: {value:{section_id, section_tipo},
+*                                 label:string, section_id:string}
+* @param {Object} self          - Component instance (component_radio_button)
+* @returns {HTMLElement} content_value <div> with the radio label inside
 */
 const get_content_value = (i, datalist_item, self) => {
 
@@ -210,14 +323,23 @@ const get_content_value = (i, datalist_item, self) => {
 
 /**
 * GET_CONTENT_VALUE_READ
-* Render a element based on passed value
-* @param int i
-* 	data.value array key
-* @param string current_value
-* 	label from datalist item that match current data value
-* @param object self
+* Build a single read-only content_value node that displays a label string.
 *
-* @return HTMLElement content_value
+* Used when permissions === 1 or the component is rendered in 'print' view.
+* Only matched, currently-selected entries are rendered (not the full datalist),
+* so the returned node simply shows the resolved label text without any interactive
+* elements. The node receives both 'content_value' and 'read_only' CSS classes so
+* that the print/read stylesheet can apply the appropriate appearance.
+*
+* @param {number} i             - Zero-based slot index (currently unused inside this
+*                                 function; reserved for potential caller use and pointer
+*                                 assignment consistency with get_content_value)
+* @param {string} current_value - Resolved label string for the matched datalist item
+* @param {Object} self          - Component instance (component_radio_button); not used
+*                                 inside this function but kept for API symmetry with
+*                                 get_content_value
+* @returns {HTMLElement} <div class="content_value read_only"> with inner_html set to
+*                        the label text
 */
 const get_content_value_read = (i, current_value, self) => {
 
@@ -235,8 +357,41 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object instance
-* @return HTMLElement buttons_container
+* Build the buttons_container DOM node for the edit toolbar.
+*
+* Three optional button groups are assembled into a DocumentFragment, then placed
+* inside a buttons_fold wrapper that allows sticky positioning on taller components.
+* Each group is guarded by its self.show_interface flag, so ontology configuration
+* drives what is visible without any code changes:
+*
+*   button_list  {boolean} — one navigation button per entry in self.context.target_sections.
+*     Each button opens the target list section in a new browser window via open_window(),
+*     and triggers a full refresh of the current component on window blur (so newly created
+*     options appear immediately). In SHOW_DEBUG mode the button title includes the section
+*     tipo in square brackets. Falls back to an empty array if target_sections is absent.
+*
+*   button_delete {boolean} — a reset button that clears the current radio selection.
+*     Guards against an already-empty entries array (early return true) to avoid a
+*     no-op save round-trip. Issues a single frozen changed_data atom with action:'remove',
+*     id read dynamically from self.data.entries[0].id (not from a stale closure), and
+*     value:null, then calls self.change_value() with refresh:true. The label shown in the
+*     confirmation is the currently checked value via self.get_checked_value_label().
+*
+*   tools {boolean} — appends the ontology-configured tool buttons from self.tools[] via
+*     ui.add_tools(self, fragment). Tool types are assembled server-side from the model and
+*     ontology; none are hardcoded here.
+*
+* (!) The reset button uses `title_label` (not `title`) in ui.create_dom_element.
+*     In ui.js, title_label is an alias for title: HTML tags are stripped before assignment.
+*     The effective behaviour is identical to using `title`.
+*
+* (!) `get_label` is referenced at line ~297 (get_label.reset) but is not declared in
+*     the /*global*\/ directive at the top of this file. This is a pre-existing issue.
+*
+* @param {Object} self - Component instance (component_radio_button); must have
+*                        self.show_interface, self.context.target_sections,
+*                        self.data.entries, self.tools, and self.permissions set
+* @returns {HTMLElement} buttons_container node with the buttons_fold child populated
 */
 export const get_buttons = (self) => {
 

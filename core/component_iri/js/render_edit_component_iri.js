@@ -17,7 +17,28 @@
 
 /**
 * RENDER_EDIT_COMPONENT_IRI
-* Manage the components logic and appearance in client side
+* Edit-mode render layer for component_iri (IRI + title pairs with optional dataframe).
+*
+* This module provides all DOM-building logic needed when a component_iri instance is
+* rendered in 'edit', 'line', 'mini', or 'print' mode. It is consumed by component_iri
+* via prototype delegation (component_iri.prototype.edit = render_edit_component_iri.prototype.edit).
+*
+* Data shape managed here:
+*   self.data = {
+*     entries            : Array<{id, iri, title, dataframe?}>  — persisted rows
+*     counter            : number                               — next provisional id hint
+*     transliterate_value: Array<{id?, iri, title}|null>        — same-indexed rows from the
+*                                                                  fallback/other-lang datum
+*     changed_data       : Array<Object>                        — pending unsaved mutations
+*   }
+*
+* Each entry row is paired with a component_dataframe identified by the entry's `id`
+* (server-assigned) or a provisional counter+1 for unsaved rows. See the dataframe
+* unified contract in docs/core/components/component_dataframe.md and memory note
+* [IRI id dataframe pairing].
+*
+* Main exports: render_edit_component_iri (constructor + .edit prototype),
+*   get_content_data, get_buttons, render_transliterate_value.
 */
 export const render_edit_component_iri = function() {
 
@@ -28,9 +49,19 @@ export const render_edit_component_iri = function() {
 
 /**
 * EDIT
-* Render node for use in current mode
-* @param object options
-* @return HTMLElement wrapper
+* Entry point for rendering a component_iri instance in edit mode.
+* Dispatches to the correct view renderer based on self.context.view:
+*   'line'    → view_line_edit_iri  (compact single-line layout)
+*   'mini'    → view_mini_iri       (minimal display, typically inside tool panels)
+*   'print'   → view_default_edit_iri rendered read-only (permissions forced to 1)
+*   'default' → view_default_edit_iri (full two-field layout with buttons)
+*
+* The 'print' case deliberately falls through to 'default' after setting
+* self.permissions = 1. This ensures read-only DOM elements are used while
+* still applying a 'view_print' CSS class on the wrapper (added by
+* ui.component.build_wrapper_edit when permissions === 1).
+* @param {Object} options - render options forwarded to the view renderer
+* @returns {Promise<HTMLElement>} wrapper node produced by the selected view
 */
 render_edit_component_iri.prototype.edit = async function(options) {
 
@@ -65,8 +96,20 @@ render_edit_component_iri.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Builds the content_data container that holds one content_value row per entry.
+* If self.data.entries is empty or absent, a single blank row is rendered so
+* the user always sees at least one editable slot.
+*
+* For each entry, the function decides between the full editable renderer
+* (get_content_value) and the read-only renderer (get_content_value_read)
+* based on self.permissions: permissions === 1 → read-only.
+*
+* The returned element also carries numeric index properties (content_data[0],
+* content_data[1], …) pointing to each content_value node so callers can
+* address them by position (used by component_iri.build_value and get_buttons
+* when auto-focusing the new row's URL input).
+* @param {Object} self - component_iri instance
+* @returns {HTMLElement} content_data container populated with content_value nodes
 */
 export const get_content_data = function(self) {
 
@@ -99,11 +142,46 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* Renders the current value DOM nodes.
-* @param int i - Value key from the data array
-* @param object current_value - Value itself
-* @param object self - component instance
-* @return HTMLElement content_value
+* Builds the editable DOM subtree for a single IRI entry.
+*
+* Structure of the returned node:
+*   .content_value
+*     .dataframe          (component_dataframe rendered asynchronously, if resolved)
+*     input.input_value.title  (free-text label for the IRI, optional via use_title)
+*     input.input_value.url    (the IRI itself)
+*     input.input_iri_active   (checkbox, optional via use_active_check)
+*     span.button.remove       (triggers confirmation modal before deletion)
+*     span.button.link         (opens the IRI in a new window)
+*     .transliterate_value     (sibling-language value hint, appended if present)
+*
+* Dataframe pairing:
+*   Persisted rows carry a server-assigned `id` that is used as section_id_key
+*   when requesting the paired component_dataframe. New, unsaved rows lack an id,
+*   so a provisional key (self.data.counter + 1) is used as a render-context hint
+*   only — it is NEVER written into the entry value; real ids are minted server-side
+*   on save. When the entry is empty but the transliterate_value for the same index
+*   carries an id, that id is shared into current_value so the dataframe pairing
+*   works across languages (the subdatum may already exist in another lang).
+*
+* The dataframe is fetched asynchronously inside .then(); the surrounding
+* content_value node is returned synchronously and the dataframe node is
+* appended when the promise resolves. If the row is still empty when first
+* rendered (value_is_empty && transliterate_value present), the dataframe node
+* receives a 'loading' class and is refreshed on the first valid IRI change event.
+*
+* Event handlers attached:
+*   - title input: change, focus, click, mousedown, keyup (Enter tabs to IRI input)
+*   - IRI input:   change (validates URL, updates current_value, triggers dataframe
+*                  refresh if 'loading'), click, mousedown, focus, keyup (Enter saves
+*                  if pending data exists in changed_data)
+*   - active checkbox: change (writes current_value.dataframe flag, calls change_value)
+*   - remove button: mousedown (shows confirmation modal; real delete via _do_remove_iri_entry)
+*   - link button:   mousedown (opens IRI in a popup window; clears opener to prevent
+*                   reverse tabnabbing)
+* @param {number} i - zero-based index of this entry in self.data.entries
+* @param {Object} current_value - the entry object { id?, iri, title, dataframe? }, may be {}
+* @param {Object} self - component_iri instance
+* @returns {HTMLElement} content_value node (dataframe appended asynchronously)
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -462,9 +540,17 @@ const get_content_value = (i, current_value, self) => {
 
 /**
 * RENDER_TRANSLITERATE_VALUE
-* Create the transliterate value DOM nodes from transliterate_value
-* @param object transliterate_value
-* @return HTMLElement transliterate_value_container
+* Builds a read-only display node showing the IRI entry value from a sibling
+* language (the transliteration fallback). This helps editors cross-reference
+* the equivalent record in another language without leaving the edit form.
+*
+* Only fields that are present and non-empty on transliterate_value are rendered:
+*   .title → <span class="title">
+*   .iri   → <span class="iri">
+* Elements are separated by a <span class="separator"> ' - ' inserted between
+* each adjacent pair (not after the last).
+* @param {Object} transliterate_value - sibling-language entry { title?, iri?, id? }
+* @returns {HTMLElement} transliterate_value_container div with child spans
 */
 export const render_transliterate_value = function (transliterate_value) {
 
@@ -520,11 +606,25 @@ export const render_transliterate_value = function (transliterate_value) {
 
 /**
 * GET_CONTENT_VALUE_READ
-* Renders the current value DOM nodes for read only cases.
-* @param int i
-* @param object current_value
-* @param object self
-* @return HTMLElement content_value
+* Builds the read-only DOM subtree for a single IRI entry (permissions === 1).
+*
+* Used when the component is rendered in 'print' view or when the current user
+* has read-only permissions. Unlike the editable variant (get_content_value),
+* no inputs or action buttons are created. Instead:
+*   - The paired component_dataframe is fetched only when current_value.id is
+*     defined (rows without an id have no server-stored dataframe to display).
+*     Rows that do have a value (component_dataframe.data?.value?.length > 0)
+*     are rendered; empty dataframes are silently omitted.
+*   - title is rendered as a <span class="title">.
+*   - iri is rendered as an <a class="iri"> with rel="noopener noreferrer" to
+*     prevent reverse tabnabbing when the link is opened in a new tab.
+*
+* The dataframe fetch is async; the content_value node is returned immediately
+* and filled when the promise resolves.
+* @param {number} i - zero-based index of this entry in self.data.entries
+* @param {Object} current_value - the entry object { id?, iri, title }, may be {}
+* @param {Object} self - component_iri instance
+* @returns {HTMLElement} content_value node (read-only; dataframe appended asynchronously)
 */
 const get_content_value_read = (i, current_value, self) => {
 
@@ -598,10 +698,23 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* Renders the component main buttons DOM nodes displayed at top.
-* Included 'Add' and tool buttons.
-* @param object self - component instance
-* @return HTMLElement buttons_container
+* Builds the component's top-level action buttons container.
+*
+* Rendered buttons are controlled by self.show_interface flags:
+*   button_add : when true, adds a '+' button that appends a new blank entry row.
+*                After insertion, an idle-callback focuses the new row's URL input.
+*                If the position to be inserted already has a transliterate_value,
+*                build_autoload is set to true so that the component immediately
+*                fetches the dataframe subdatum from the server (otherwise the
+*                dataframe starts in 'loading' state and refreshes on the first
+*                IRI change).
+*   tools      : when true, calls ui.add_tools to append any registered tool
+*                buttons (e.g. tool_lang_multi, tool_history).
+*
+* The returned container uses a nested buttons_fold div to allow CSS sticky
+* positioning on tall components.
+* @param {Object} self - component_iri instance
+* @returns {HTMLElement} buttons_container element with all applicable buttons inside
 */
 export const get_buttons = (self) => {
 
@@ -681,12 +794,30 @@ export const get_buttons = (self) => {
 
 /**
 * _DO_REMOVE_IRI_ENTRY
-* Executes the actual remove operation for an iri entry after confirmation
-* @param object self
-* @param object current_value
-* @param int i - array key
-* @param HTMLElement button_remove
-* @return void
+* Performs the confirmed deletion of a single IRI entry after the user has
+* approved the confirmation modal opened by the button_remove mousedown handler.
+*
+* Steps:
+*  1. Blurs any active input to commit pending changes before the remove.
+*  2. Calls self.change_value with action:'remove' and the entry's server id
+*     (null for unsaved rows). This persists the deletion and re-renders the
+*     component.
+*  3. Dataframe cleanup is server-authoritative: the PHP update_data_value
+*     'remove' action cascades the paired dataframe row deletion. No client-side
+*     dataframe delete call is made here.
+*  4. If the component lives inside a caller (e.g. tool_lang_multi) that owns
+*     other component_iri instances for the same model, those sibling instances
+*     are refreshed so all language panels stay in sync.
+*
+* (!) alert() is called on caught errors. This is the existing contract;
+*     it should ideally be replaced with a ui modal, but changing it is out of
+*     scope for documentation-only edits.
+* @param {Object} self - component_iri instance performing the removal
+* @param {Object} current_value - the entry being removed { id?, iri, title, ... }
+* @param {number} i - zero-based index of the entry in self.data.entries
+* @param {HTMLElement} button_remove - the remove button span, used to read the
+*   label from its previousElementSibling for the change_value label parameter
+* @returns {Promise<void>}
 */
 const _do_remove_iri_entry = async function(self, current_value, i, button_remove) {
 

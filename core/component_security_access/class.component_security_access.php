@@ -3,26 +3,58 @@
 * CLASS COMPONENT_SECURITY_ACCESS
 * Manages ontology access control and permission management in Dédalo.
 *
-* Handles the security access tree for controlling user permissions across
-* ontology elements (areas, sections, components). Used primarily in the
-* User section to define what users can access and do within the system.
+* Responsibilities:
+* - Builds and caches a flat datalist that represents the full ontology tree
+*   (areas → sections → components/groupers/buttons) used by the permissions UI.
+* - Exposes per-element access level values (0 = none, 1 = read, 2 = edit, 3 = admin)
+*   stored in the 'misc' column of the profiles matrix table.
+* - Provides helpers for programmatic permission grants (e.g. when a new section is
+*   created for a user via hierarchy generation).
+* - Blocks diffusion and sorting, which are meaningless for a security-control component.
 *
-* Key features:
-* - Generates and caches ontology tree hierarchy for permission management
-* - Controls access levels (none, read, edit, admin) for ontology elements
-* - Provides datalist of areas, sections, and components for permission UI
-* - Caches tree structure per language for performance
-* - Supports permission inheritance through hierarchy
+* Data shape stored in the matrix (get_data / set_data):
+*   Each element of the returned array is a plain object:
+*   {
+*       "tipo":         "<ontology_tipo>",   // element being granted access to
+*       "section_tipo": "<section_tipo>",    // owning section (same as tipo for areas)
+*       "value":        0|1|2|3             // permission level
+*   }
+*
+* Datalist shape (get_datalist / calculate_tree):
+*   [
+*       {
+*           "tipo":         "<ontology_tipo>",
+*           "section_tipo": "<section_tipo>",
+*           "model":        "<model_name>",
+*           "label":        "<human label for DEDALO_APPLICATION_LANG>",
+*           "parent":       "<direct parent tipo>",
+*           "ar_parent":    ["<ancestor_1>", "<ancestor_2>", ...]  // breadcrumb chain
+*       },
+*       ...
+*   ]
+*   The datalist contains NO permission values — it is the same tree for every profile.
+*   Clients overlay the per-profile data values on top of the shared tree.
+*
+* Cache strategy:
+*   The datalist is expensive to compute (~3–6 s on large installations).
+*   calculate_tree() is invoked by the login sequence as a background CLI process
+*   (calculate_tree.php) which writes the result via OpcacheObjectManager::generateCode()
+*   to a file named 'cache_tree_{lang}.php' under DEDALO_CACHE_MANAGER['files_path'].
+*   get_datalist() reads this file via dd_cache::cache_from_file() before falling back
+*   to a live computation.
+*
+* Relationships:
+*   - Extends component_common (standard Dédalo component lifecycle).
+*   - Read by security::get_permissions_table() to build the flat lookup table
+*     ["<section_tipo>_<tipo>" => <int>] used on every permission check.
+*   - Retrieved via security::get_user_security_access($user_id).
+*   - Complementary CLI entry point: core/component_security_access/calculate_tree.php.
 *
 * Permission levels:
-* - 0: No access
-* - 1: Read-only
-* - 2: Read and edit
-* - 3: Admin (full control)
-*
-* Data is stored in the 'misc' column of matrix tables.
-*
-* Extends component_common for standard component functionality.
+*   - 0: No access
+*   - 1: Read-only
+*   - 2: Read and edit
+*   - 3: Admin (full control)
 *
 * @package Dédalo
 * @subpackage Core
@@ -35,43 +67,37 @@ class component_security_access extends component_common {
 	* CLASS VARS
 	*/
 		/**
-		 * Datalist containing the ontology tree hierarchy for access permissions.
-		 * Stores the complete security access tree with areas, sections, and components.
-		 * Generated during user login and used for permission management UI.
-		 * @var array $datalist
-		 */
+		* Datalist containing the ontology tree hierarchy for access permissions.
+		* Stores the complete security access tree with areas, sections, and components.
+		* Populated lazily by get_datalist() and reused within the same request.
+		* The datalist holds NO permission values — it is a shared structure-only tree.
+		* @var array $datalist
+		*/
 		public array $datalist = [];
 
 		/**
-		 * Static cache for admin tipo lookups.
-		 * Stores resolved admin types to avoid repeated ontology queries.
-		 * @var array $ar_tipo_admin_cache
-		 */
+		* Static cache for the admin-area tipo list returned by get_ar_tipo_admin().
+		* Populated on first call; null signals "not yet computed".
+		* @var ?array $ar_tipo_admin_cache
+		*/
 		public static ?array $ar_tipo_admin_cache = null;
 
 
 
 	/**
 	* GET_CACHE_TREE_FILE_NAME
-	* Generates the cache file name for storing the ontology tree datalist
+	* Generates the cache file name for storing the ontology tree datalist.
 	*
-	* This method creates a standardized filename used by the caching system to store
-	* the pre-calculated security access tree (datalist) for a specific language.
-	* The cache file is generated during user login (in background) and contains the
-	* complete ontology hierarchy with areas, sections, and components.
+	* The returned name is used as the key passed to dd_cache::cache_from_file() /
+	* dd_cache::cache_to_file(). The actual on-disk path is resolved by the cache
+	* manager using DEDALO_CACHE_MANAGER['files_path'].
 	*
-	* The actual cache file path is managed by dd_cache::cache_from_file() using
-	* DEDALO_CACHE_MANAGER['files_path'] configuration.
+	* The file is written by the background CLI process calculate_tree.php (invoked
+	* once per language during user login) using OpcacheObjectManager::generateCode().
+	* Reading it back is fast because PHP's OPcache keeps the decoded array in memory.
 	*
-	* @see get_datalist() - Uses this method to retrieve/store cached datalist
-	* @see dd_cache::cache_from_file() - Handles the actual file operations
-	*
-	* @param string $lang
-	* 	Language code (e.g., 'lg-eng', 'lg-spa')
-	*
-	* @return string
-	* 	Cache filename in format: 'cache_tree_{lang}.php'
-	* 	Example: 'cache_tree_lg-eng.php'
+	* @param string $lang Language code (e.g. 'lg-eng', 'lg-spa').
+	* @return string Cache filename, e.g. 'cache_tree_lg-eng.php'.
 	*/
 	public static function get_cache_tree_file_name(string $lang) : string {
 
@@ -82,11 +108,17 @@ class component_security_access extends component_common {
 
 	/**
 	* GET_DIFFUSION_VALUE
-	* Overwrite component_common method
-	* @see class.diffusion_mysql.php
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
+	* Overrides component_common::get_diffusion_value() to block diffusion for this component.
+	*
+	* Security-access data is internal permission metadata and must never be exported
+	* to any diffusion target (SQL/RDF/XML). The method always returns a sentinel
+	* string so that callers in the diffusion pipeline receive a non-null, non-empty
+	* value that is clearly not real data, rather than silently emitting nothing.
+	*
+	* @see class.diffusion_mysql.php for how the return value is consumed.
+	* @param string|null $lang = null  Unused; present to match the parent signature.
+	* @param object|null $option_obj = null  Unused; present to match the parent signature.
+	* @return string|null Always returns a fixed sentinel string.
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
@@ -97,16 +129,36 @@ class component_security_access extends component_common {
 
 	/**
 	* GET_DATALIST
-	* Generates the whole component datalist (ontology tree) to set access permissions by admins
-	* The datalist will use to represent the tree hierarchy,
-	* The datalist has not the permissions because it is a common tree for all profiles, and permissions are different for every profile.
-	* As only section children nodes has permissions data (0,1,2)
-	* Areas and Sections render and propagate permissions to its children making a calculation of the real data (provided by its own children).
-	* Datalist includes all parents chain to locate easily all children of one node or get all parents of one node.
-	* Note that login sequence launch a background process to calculate this datalist because
-	* the resolution is considerably expensive (about 3 to 6 secs)
-	* @param int $user_id
-	* @return array $datalist
+	* Builds the complete ontology-tree datalist used for the permissions management UI.
+	*
+	* The datalist is a flat array of items representing every area, section, and
+	* element (component/grouper/button/tab/relation_list…) reachable from the
+	* installed ontology. Each item carries a full ancestor chain ('ar_parent') so
+	* that the client can reconstruct the tree and propagate inherited permissions
+	* without additional server round-trips.
+	*
+	* The datalist itself contains NO permission values — it is the same structural
+	* tree for all profiles. Per-profile permission integers are stored separately in
+	* the component's data (get_data()) and are overlaid client-side.
+	*
+	* Resolution order (fast-path first):
+	*   1. Instance cache ($this->datalist) — set on first call, reused within request.
+	*   2. File cache (dd_cache::cache_from_file) — pre-built by background calculate_tree.php.
+	*   3. Live computation — walks area::get_areas(), resolves children recursively.
+	*
+	* Access filtering:
+	*   Global admins receive the full unfiltered tree.
+	*   Non-admins receive only the areas present in their own security_access data,
+	*   preventing exposure of areas they have no entry for at all.
+	*
+	* Performance note:
+	*   Live computation can take 3–6 s on large ontologies. The login sequence
+	*   pre-warms the file cache in background so normal UI requests hit path 1 or 2.
+	*
+	* @param int $user_id  ID of the currently logged-in user; used to determine
+	*                       global-admin status and to filter visible areas.
+	* @return array  Flat datalist array; each element has keys:
+	*                tipo, section_tipo, model, label, parent, ar_parent.
 	*/
 	public function get_datalist(int $user_id) : array {
 		$start_time = start_time();
@@ -162,6 +214,8 @@ class component_security_access extends component_common {
 			}else{
 
 				// filtered by user data case
+				// Non-admins only see areas that already appear in their own security-access data.
+				// This prevents leaking ontology structure for areas outside the user's scope.
 
 				$user_component_security_access	= security::get_user_security_access($user_id);
 				$user_data						= !empty($user_component_security_access) ? ($user_component_security_access->get_data() ?? []) : [];
@@ -184,6 +238,8 @@ class component_security_access extends component_common {
 		// datalist. resolve section (real and virtual) components
 			$datalist	= [];
 			$ar_check	= [];
+			// ar_parent tracks the rolling ancestor chain as we traverse the ordered area list.
+			// Each area's position in the list implicitly encodes depth via the parent pointer.
 			$ar_parent	= [];
 			$ar_areas_length = sizeof($ar_areas);
 			for ($i=0; $i < $ar_areas_length ; $i++) {
@@ -237,6 +293,8 @@ class component_security_access extends component_common {
 					$children = self::get_element_datalist($current_area->tipo);
 					// add already calculated section parents to the chain
 					foreach ($children as &$child) {
+						// Prepend the section-level ancestor chain so each child's ar_parent
+						// is complete from the top-level root down to its own direct parent.
 						$section_parents = [...$ar_parent, ...$child['ar_parent']];
 						$child['ar_parent'] = $section_parents;
 					}
@@ -271,9 +329,29 @@ class component_security_access extends component_common {
 
 	/**
 	* GET_ELEMENT_DATALIST
-	* Create the datalist items inside sections.
-	* @param string $section_tipo
-	* @return array $datalist
+	* Builds the flat datalist of all child elements inside a given section.
+	*
+	* Two resolution strategies are used depending on whether the section defines
+	* a v6-style 'source.request_config.ddo_map' in its ontology properties:
+	*
+	*   Default path (no ddo_map):
+	*     Uses get_children_recursive_security_access() to walk the ontology tree
+	*     and collect all component/grouper/tab/button children.
+	*
+	*   v6 compatibility path (ddo_map present):
+	*     Reads the explicit DDO map from the section's request_config and generates
+	*     datalist items from it. Non-component, non-section_group items from the
+	*     recursive walk are appended afterward (tabs, buttons, etc. that are not
+	*     listed in ddo_map but still need to appear in the tree).
+	*
+	* The method also applies ontology-level exclusions: if the section defines an
+	* 'exclude_elements' relation node, those tipos are removed from the output.
+	*
+	* Returns items WITHOUT an 'ar_parent' key; the caller (get_datalist) appends
+	* that field once the area-level ancestor chain is known.
+	*
+	* @param string $section_tipo  Tipo of the section whose children are enumerated.
+	* @return array  Array of items with keys: tipo, section_tipo, model, label, parent.
 	*/
 	public static function get_element_datalist(string $section_tipo) : array {
 
@@ -310,6 +388,8 @@ class component_security_access extends component_common {
 				foreach ($section_properties->source->request_config as $item_request_config) {
 					if(isset($item_request_config->show->ddo_map)){
 						$ddo_map = $item_request_config->show->ddo_map;
+						// Only include DDOs whose parent is 'self' or the section itself;
+						// DDOs belonging to sub-sections inside this section are excluded here.
 						$filtered = array_filter($ddo_map, function($el) use ($section_tipo){
 							return ($el->parent === 'self' || $el->parent === $section_tipo);
 						});
@@ -336,6 +416,8 @@ class component_security_access extends component_common {
 				}
 
 				// add 'default' calculated items excluding components and section_groups
+				// (tabs, buttons, relation_list nodes etc. that are not in the v6 ddo_map
+				//  but still exist in the ontology and need to appear in the permission tree)
 				foreach ($children_recursive as $current_item) {
 					if (strpos($current_item['model'], 'component_')===0 || $current_item['model']==='section_group'){
 						continue;
@@ -353,6 +435,8 @@ class component_security_access extends component_common {
 		$ar_parent = [];
 		foreach ($children_list as $current_child) {
 
+			// Maintain the rolling ancestor chain exactly as get_datalist() does
+			// at the area level: push a new parent or splice back to a known position.
 			$parent_key = $current_child['parent'];
 			$position = array_search($parent_key, $ar_parent);
 			if( $position===false ){
@@ -380,12 +464,32 @@ class component_security_access extends component_common {
 
 
 	/**
-	 * GET_CHILDREN_RECURSIVE_SECURITY_ACCESS
-	 * Custom recursive children resolve
-	 * @param string $tipo
-	 * @param array|null $ar_tipo_to_be_exclude
-	 * @return array $element_datalist
-	 */
+	* GET_CHILDREN_RECURSIVE_SECURITY_ACCESS
+	* Recursively walks the ontology tree under a given tipo and returns a flat list
+	* of all descendant nodes eligible for inclusion in the security-access datalist.
+	*
+	* Traversal strategy differs by model:
+	*   - 'section': fetches children via section::get_ar_children_tipo_by_model_name_in_section()
+	*     with resolve_virtual=true, then re-fetches without virtual resolution for virtual
+	*     sections (to capture virtual-specific buttons that only appear on the virtual node).
+	*   - Everything else (area, section_group, …): uses ontology_node::get_ar_children_of_this().
+	*
+	* Exclusion filters applied before recursing into each child:
+	*   1. $ar_tipo_to_be_exclude — tipos listed in the section's 'exclude_elements'
+	*      ontology relation (ontology-level opt-out).
+	*   2. $ar_exclude_model — hard-coded model names that are never relevant to
+	*      permission management (component_security_administrator, search_list, etc.).
+	*   3. DEDALO_AR_EXCLUDE_COMPONENTS — installation-level config constant that
+	*      lists tipos to hide across all contexts.
+	*
+	* Each included node is appended to the result with its direct parent set to $tipo
+	* (not the child's own ontology parent), which may differ for virtual sections.
+	*
+	* @param string $tipo  Tipo of the node to walk.
+	* @param array|null $ar_tipo_to_be_exclude  Tipos to skip, or null for none.
+	* @return array  Flat list of items with keys: tipo, section_tipo, model, label, parent.
+	*                Does NOT include an 'ar_parent' key (added by the caller).
+	*/
 	private static function get_children_recursive_security_access(string $tipo, ?array $ar_tipo_to_be_exclude = null): array {
 
 		$ar_elements = [];
@@ -430,6 +534,9 @@ class component_security_access extends component_common {
 		}
 
 		// ar_exclude_model
+		// Hard-coded list of model names that are structural/administrative ontology nodes
+		// and are never user-facing permission targets. These are stripped before the
+		// permission tree is displayed or written to the user profile.
 			$ar_exclude_model = array(
 				'component_security_administrator',
 				'section_list',
@@ -441,6 +548,8 @@ class component_security_access extends component_common {
 			);
 
 		// ar_exclude_components
+		// Installation-level opt-out: DEDALO_AR_EXCLUDE_COMPONENTS is defined in
+		// the site config and lists tipos that should be hidden from all contexts.
 			$ar_exclude_components = defined('DEDALO_AR_EXCLUDE_COMPONENTS')
 				? DEDALO_AR_EXCLUDE_COMPONENTS
 				: [];
@@ -475,6 +584,8 @@ class component_security_access extends component_common {
 				];
 				$ar_elements[] = $item;
 
+			// Recurse into this child; the returned items are merged in order so
+			// the flat array preserves depth-first tree order.
 			$ar_elements = [
 				...$ar_elements,
 				...self::get_children_recursive_security_access($element_tipo, $ar_tipo_to_be_exclude)
@@ -488,9 +599,20 @@ class component_security_access extends component_common {
 
 
 	/**
-	* GET ARRAY TIPO ADMIN
-	* Returns the 'Admin' area as well as its children (used to exclude the admin options in the tree)
-	* @return array $ar_admin_tipos
+	* GET_AR_TIPO_ADMIN
+	* Returns the admin-area tipo and all its direct ontology children.
+	*
+	* Used to identify the Admin area subtree so it can be excluded from the
+	* permission tree presented to non-global-admin users, preventing ordinary
+	* users from seeing or granting access to admin-only sections.
+	*
+	* The result is memoised in $ar_tipo_admin_cache for the lifetime of the
+	* PHP process. The first element of the returned array is the admin-area
+	* tipo itself (the root); subsequent elements are its direct children.
+	*
+	* Returns an empty array if no 'area_admin' model is found in the ontology.
+	*
+	* @return array  Array of tipos: [admin_area_tipo, child_tipo_1, child_tipo_2, …].
 	*/
 	public static function get_ar_tipo_admin() : array {
 
@@ -522,11 +644,29 @@ class component_security_access extends component_common {
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $request_options
-	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	* Handles schema-migration requests for stored component data.
+	*
+	* component_security_access does not define any data-version migrations.
+	* All version strings fall through to the default case, which returns
+	* result=0 (no migration defined for this component).
+	*
+	* The $options object is read using a whitelist pattern: only keys that exist
+	* on the local $options stdClass are copied, preventing injection of unexpected
+	* properties from the caller.
+	*
+	* Return semantics (inherited from component_common contract):
+	*   result = 0 — no migration defined for the requested version (this component).
+	*   result = 1 — migration performed successfully.
+	*   result = 2 — migration attempted but data was already up-to-date.
+	*
+	* @param object $request_options  Migration request object; expected properties:
+	*   - array       $update_version   Version number parts (joined with '.').
+	*   - mixed|null  $data_unchanged   Caller-supplied unchanged-data flag.
+	*   - mixed|null  $reference_id     Record reference for targeted migration.
+	*   - string|null $tipo             Component tipo being migrated.
+	*   - int|null    $section_id       Section record ID.
+	*   - string|null $section_tipo     Section tipo.
+	* @return object  Response with at least ->result (int) and ->msg (string).
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -562,8 +702,13 @@ class component_security_access extends component_common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* 	Default is true. Override when component is sortable
+	* Reports whether records of this component can be manually sorted.
+	*
+	* Security-access data is a keyed permission map; ordering of entries has no
+	* meaning, so this method always returns false, overriding the component_common
+	* default of true.
+	*
+	* @return bool  Always false.
 	*/
 	public function get_sortable() : bool {
 
@@ -574,9 +719,27 @@ class component_security_access extends component_common {
 
 	/**
 	* CALCULATE_TREE
-	* @param int $user_id
-	* @param string $lang = DEDALO_DATA_LANG
-	* @return array $datalist
+	* Instantiates the component for the given user's profile and computes the full
+	* datalist in a way that can be called from the background CLI process.
+	*
+	* This is the main entry point used by calculate_tree.php (the background CLI
+	* script that pre-warms the datalist file cache on every user login). It can
+	* also be called inline when no cached file is available.
+	*
+	* Sequence:
+	*   1. Resolve the profile section_id for non-global-admin users.
+	*      Global admins use section_id=null (no profile record required).
+	*   2. Get a component_security_access instance for the resolved profile section.
+	*   3. Delegate to get_datalist($user_id) which applies the same caching and
+	*      access-filtering logic described there.
+	*
+	* The caller (calculate_tree.php) writes the returned array to the file cache
+	* using OpcacheObjectManager::generateCode() so that subsequent web requests
+	* can retrieve it in O(1) via dd_cache::cache_from_file().
+	*
+	* @param int    $user_id  ID of the user for whom to calculate the tree.
+	* @param string $lang     Language code for label resolution; defaults to DEDALO_DATA_LANG.
+	* @return array  Full datalist array (same shape as get_datalist()).
 	*/
 	public static function calculate_tree(int $user_id, string $lang=DEDALO_DATA_LANG) : array {
 		$start_time = start_time();
@@ -633,10 +796,36 @@ class component_security_access extends component_common {
 
 
 	/**
-	* SET_SECTION_PERMISSIONS (USED BY GENERATE HIERARCHY BY USERS)
-	* Allow current user access to created default sections
-	* @param object $options
-	* @return bool
+	* SET_SECTION_PERMISSIONS
+	* Grants a uniform permission level to one or more sections and all their
+	* child elements for a specific user, then persists the result.
+	*
+	* Intended for programmatic use by the hierarchy-generation workflow (e.g. when
+	* a new user-specific section tree is created and must immediately be accessible
+	* to that user). It is not normally called from the UI.
+	*
+	* Algorithm:
+	*   1. Load the user's current component_security_access data via
+	*      security::get_user_security_access().
+	*   2. For each section tipo in $options->ar_section_tipo, yield:
+	*      a. A permission record for the section itself.
+	*      b. Permission records for every component/button/section_group/relation_list
+	*         child of the section's real tipo (non-virtual, recursive).
+	*   3. Merge with existing data: update value on existing records, append new ones.
+	*   4. Persist via set_data() + save().
+	*   5. Invalidate the in-memory permissions table via security::reset_permissions_table()
+	*      so the change takes effect immediately without a page reload.
+	*
+	* The inner $values_list_generator is a PHP generator (closure using yield) so
+	* that large section trees do not need to be fully materialised before merging.
+	*
+	* @param object $options  Configuration object:
+	*   - array    $ar_section_tipo   One or more section tipos to grant access to.
+	*   - int      $permissions       Permission level to assign (default 2 = edit).
+	*                                  Zero (no access) is a valid value.
+	*   - int|null $user_id           Target user ID; required — returns false if empty.
+	* @return bool  True on success, false if $user_id is missing or the component
+	*               cannot be loaded.
 	*/
 	public static function set_section_permissions(object $options) : bool {
 
@@ -688,6 +877,8 @@ class component_security_access extends component_common {
 						];
 
 					// Components inside section
+					// Resolve to the real (non-virtual) section tipo before fetching
+					// children so that virtual aliases do not duplicate the child list.
 						$real_section	= section::get_section_real_tipo_static( $current_section_tipo );
 						$ar_children	= section::get_ar_children_tipo_by_model_name_in_section(
 							$real_section, // section_tipo
@@ -717,6 +908,8 @@ class component_security_access extends component_common {
 			$unique_values = [];
 			foreach ($values_list_generator() as $value) {
 				// check if already exists
+				// If the record already exists, update its value in-place (mutate $found via reference).
+				// If not, collect it as a new entry to be appended after the loop.
 				$found = array_find($component_security_access_data, function($el) use($value) {
 					return ($el->tipo===$value->tipo && $el->section_tipo===$value->section_tipo);
 				});
@@ -742,6 +935,8 @@ class component_security_access extends component_common {
 			}
 
 		// Regenerate permissions table
+		// (!) Invalidates the in-memory permissions cache immediately so the newly
+		// granted access is enforced on the very next permission check in this request.
 			security::reset_permissions_table();
 
 

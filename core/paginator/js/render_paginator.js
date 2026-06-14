@@ -12,7 +12,22 @@
 
 /**
 * RENDER_PAGINATOR
-* Manages the component's logic and appearance in client side
+* Client-side render module for the full paginator variant used in edit, list,
+* and time-machine views of a section or portal.
+*
+* Responsibilities:
+* - Build the navigation button strip (first / prev / next / last).
+* - Render a page-info area that shows the current page number, total pages,
+*   and a displayed-records summary ("Showing X-Y of Z").
+* - Provide an inline numeric input that lets the user jump directly to any page.
+* - Defer the DB round-trip (get_total) until the browser is idle so that the
+*   outer wrapper can be inserted into the DOM immediately without blocking paint.
+*   Active-value callbacks are queued and fired once the total resolves.
+*
+* Entry point: render_paginator.prototype.edit (aliased as list / tm / edit_in_list
+* by paginator.js). The micro and mini variants live in their own render modules.
+*
+* Exports: render_paginator (constructor, prototype carries .edit only)
 */
 export const render_paginator = function() {
 
@@ -23,9 +38,20 @@ export const render_paginator = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @param object options
-* @return HTMLElement wrapper
+* Build and return the full paginator DOM node for edit / list / time-machine mode.
+*
+* When render_level is 'content', only the inner content_data fragment is returned
+* (used during refresh cycles so the caller can replace just the inner content
+* without rebuilding the outer wrapper). For any other render_level the full wrapper
+* is returned with content_data already appended.
+*
+* Side effects:
+* - Calls get_content_data, which schedules an async get_total via dd_request_idle_callback.
+* - Attaches an alt+click debug listener to the wrapper when SHOW_DEBUG is true.
+*
+* @param {Object} options - Render options passed down from paginator.prototype.render
+* @param {string} [options.render_level='full'] - 'full' builds outer wrapper + content; 'content' returns inner fragment only
+* @returns {Promise<HTMLElement>} wrapper (full) or content_data fragment (content refresh)
 */
 render_paginator.prototype.edit = async function(options) {
 
@@ -70,8 +96,28 @@ render_paginator.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Build the inner content fragment containing all paginator controls.
+*
+* The function is intentionally split into two phases to avoid blocking the
+* initial paint:
+*
+* Phase 1 (synchronous) — all DOM nodes are created and appended to a
+* DocumentFragment. Navigation buttons start with the CSS class 'inactive';
+* the page-info span shows "Loading data …". Each button and info node
+* registers a closure (active_value) that knows how to update itself once
+* real pagination values are available.
+*
+* Phase 2 (deferred via dd_request_idle_callback) — self.get_total() is
+* called. After the Promise resolves, every active_value callback is invoked
+* in order, passing the corresponding property from self (e.g. self.total,
+* self.page_number). This activates buttons and fills in the page counts.
+*
+* The active_values array is the glue between the two phases: it holds
+* { name, callback } pairs where name is the property key on self whose
+* value the callback needs.
+*
+* @param {Object} self - The paginator instance (provides get_total, paginate, page_number, total, total_pages, etc.)
+* @returns {Promise<HTMLElement>} content_data div containing all paginator controls
 */
 const get_content_data = async function(self) {
 
@@ -102,6 +148,9 @@ const get_content_data = async function(self) {
 				parent			: paginator_div_links
 			})
 			// active_value
+			// Activates the "go to first page" button only when not already on page 1.
+			// The mousedown listener is added only when the button is active to avoid
+			// spurious paginate calls from a permanently inactive button.
 			const update_offset_first = (value) => {
 				if(self.page_number>1) {
 					paginator_first.classList.remove('inactive')
@@ -126,6 +175,8 @@ const get_content_data = async function(self) {
 				parent			: paginator_div_links
 			})
 			// active_value
+			// prev_page_offset is negative when on the first page; use >=0 as the
+			// active guard so that offset 0 (first page) does not enable the button.
 			const update_offset_prev = (value) => {
 				if(self.prev_page_offset>=0) {
 					paginator_prev.classList.remove('inactive')
@@ -150,6 +201,7 @@ const get_content_data = async function(self) {
 				parent			: paginator_div_links
 			})
 			// active_value
+			// next_page_offset >= total means we are on the last page; disable the button.
 			const update_offset_next = (value) => {
 				if(self.next_page_offset<self.total) {
 					paginator_next.classList.remove('inactive')
@@ -174,6 +226,7 @@ const get_content_data = async function(self) {
 				parent			: paginator_div_links
 			})
 			// active_value
+			// page_number >= total_pages means we are on the last page; keep inactive.
 			const update_offset_last = (value) => {
 				if(self.page_number<self.total_pages) {
 					paginator_last.classList.remove('inactive')
@@ -237,6 +290,8 @@ const get_content_data = async function(self) {
 				input_go_to_page.addEventListener('keyup', keyup_handler)
 
 				// blur event
+				// On blur, clear any invalid state and reset the input to the placeholder
+				// (current page number) so it does not retain a stale typed value.
 				const blur_handler = (e) => {
 					if (input_go_to_page.classList.contains('invalid')) {
 						input_go_to_page.classList.remove('invalid')
@@ -247,6 +302,8 @@ const get_content_data = async function(self) {
 				input_go_to_page.addEventListener('blur', blur_handler)
 
 				// input event
+				// Resize the input width as the user types so it stays visually tight.
+				// Enter key is excluded here because keyup already handles submission.
 				const input_handler = (e) => {
 					e.preventDefault()
 					if (e.key!=='Enter' ) {
@@ -256,6 +313,7 @@ const get_content_data = async function(self) {
 				input_go_to_page.addEventListener('input', input_handler)
 
 				// active_value
+				// Sets the placeholder to the current page number once the total is known.
 				const update_page_number = (value) => {
 					input_go_to_page.placeholder = value
 					fit_input_go_to_page_to_value(input_go_to_page, value)
@@ -266,6 +324,9 @@ const get_content_data = async function(self) {
 				})
 
 			// page_info label
+			// (!) locale is hardcoded to 'es-ES'. The commented-out line that reads from
+			// page_globals.locale was disabled intentionally; do not re-enable without
+			// verifying locale availability at render time across all caller contexts.
 			const locale = 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
 			const total_pages_node	= ui.create_dom_element({
 				element_type	: 'span',
@@ -274,6 +335,7 @@ const get_content_data = async function(self) {
 				parent			: paginator_info
 			})
 			// active_value
+			// Replaces "Loading data ..." with "of <total_pages>" once the DB responds.
 			const update_total_pages = (value) => {
 				const total_pages_label	= new Intl.NumberFormat(locale, {}).format(value);
 				total_pages_node.textContent = (get_label.of || 'of') + ' ' + total_pages_label
@@ -291,6 +353,10 @@ const get_content_data = async function(self) {
 				parent			: paginator_info
 			})
 			// active_value
+			// Formats the "Records shown from X to Y of Z" summary using the v5-inherited
+			// label template from get_label.records_displayed. The template uses literal
+			// X / Y / Z placeholders that are replaced with locale-formatted numbers.
+			// Falls back to a plain English string when the label is not available.
 			const update_total = (value) => {
 				const total_label = new Intl.NumberFormat(locale, {}).format(value);
 				// displayed_records_label . Using legacy format label from v5 in PHP
@@ -322,6 +388,10 @@ const get_content_data = async function(self) {
 		content_data.appendChild(fragment)
 
 	// total. get from DDBB
+	// dd_request_idle_callback defers the API call until the browser has spare cycles,
+	// ensuring that paint and layout are not blocked by the network round-trip.
+	// Once get_total resolves, all queued active_value callbacks are fired in
+	// registration order to activate buttons and fill in the page counts.
 		dd_request_idle_callback(
 			() => {
 				self.get_total()
@@ -348,10 +418,15 @@ const get_content_data = async function(self) {
 
 /**
 * FIT_INPUT_GO_TO_PAGE_TO_VALUE
-* Set input element style width based on number length of chars
-* @param DOM node input_node
-* @param int page_number
-* @return void
+* Resize the go-to-page input element's width to fit the number of characters
+* in the current value, with a minimum of 3 characters.
+*
+* Delegates to ui.fit_input_width_to_value with a fixed minimum of 3 chars
+* so that a single-digit page number does not produce a tiny, hard-to-click input.
+*
+* @param {HTMLElement} input_node - The numeric input element to resize
+* @param {number|string} page_number - Current page number or typed value; used to derive char count
+* @returns {void}
 */
 const fit_input_go_to_page_to_value = function(input_node, page_number) {
 

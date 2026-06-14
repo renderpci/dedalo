@@ -1,18 +1,40 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_PDF
-* Manages PDF document components in Dédalo.
+* Concrete media component that manages PDF document assets in Dédalo.
 *
-* Handles PDF file operations including:
-* - Upload, download, and deletion of PDF files
-* - Quality level management for different PDF variants
-* - PDF text extraction and content indexing
-* - Thumbnail/preview generation for PDF documents
-* - MIME type handling for PDF formats
-* - File path and URL generation for PDF assets
+* Responsibilities:
+* - Declares the quality levels for PDF storage: 'original' (uploaded file) and
+*   'web' (the processed/distributable copy). Config constants that govern these
+*   are DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT, and
+*   DEDALO_PDF_AR_QUALITY (typically ['original', 'web']).
+* - Handles the full upload pipeline (process_uploaded_file) which, for true PDF
+*   uploads, calls regenerate_component to copy the original, optionally run OCR
+*   (ocrmypdf), and extract text via pdftotext into a related component_text_area.
+* - Overrides build_version to copy the original PDF to the web quality directory
+*   and then generate any configured alternative format variants (e.g. a JPEG
+*   cover image) via create_alternative_version / ImageMagick::convert.
+* - Generates thumbnail previews (create_thumb) of the first page using
+*   ImageMagick, falling back to a runtime define of DEDALO_QUALITY_THUMB if the
+*   config constant is absent.
+* - Overrides rename_old_files to skip renaming when the current quality is
+*   'original'; originals are deliberately preserved across re-uploads.
+* - Provides UTF-8 validation/cleaning helpers (valid_utf8, utf8_clean) used
+*   internally by get_text_from_pdf before saving extracted text.
 *
-* Extends component_media_common and implements component_media_interface
-* for standard media component behavior across the system.
+* Extends component_media_common (which in turn extends component_common) and
+* implements component_media_interface. The concrete media pipeline is therefore:
+*   component_common → component_media_common → component_pdf
+*
+* Accepted upload extensions (DEDALO_PDF_EXTENSIONS_SUPPORTED) include non-PDF
+* document formats (doc, odt, pages …). For those, the component stores the file
+* as-is and skips text extraction; only files whose extension matches
+* DEDALO_PDF_EXTENSION ('pdf') are processed by pdftotext / OCR.
+*
+* Alternative format extensions (DEDALO_PDF_ALTERNATIVE_EXTENSIONS, e.g. ['jpg'])
+* control which raster cover images are generated from the PDF first page via
+* ImageMagick during build_version. They are optional and may be null/absent in
+* some deployments.
 *
 * @package Dédalo
 * @subpackage Core
@@ -24,15 +46,22 @@ class component_pdf extends component_media_common implements component_media_in
 	/**
 	* CLASS VARS
 	*/
-	// file name formatted as 'tipo'-'order_id' like dd732-1
+	/**
+	* Cached public URL for this PDF file, formatted as '<tipo>-<order_id>',
+	* e.g. 'dd732-1'. Lazily populated; null until first requested.
+	* @var ?string $pdf_url
+	*/
 	public ?string $pdf_url = null;
 
 
 
 	/**
 	* GET_AR_QUALITY
-	* Get the list of defined image qualities in Dédalo config
-	* @return array $ar_image_quality
+	* Returns the full list of configured quality levels for PDF components.
+	* Quality levels are defined in the global config as DEDALO_PDF_AR_QUALITY,
+	* typically ['original', 'web']. Each level corresponds to a sub-directory
+	* under the PDF media folder.
+	* @return array - list of quality-level strings, e.g. ['original', 'web']
 	*/
 	public function get_ar_quality() : array {
 
@@ -45,8 +74,11 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_DEFAULT_QUALITY
-	* @return string $default_quality
-	* Defined in config file
+	* Returns the default (web-distributable) quality level for PDFs.
+	* Sourced from the config constant DEDALO_PDF_QUALITY_DEFAULT (typically 'web').
+	* The 'web' copy is a plain file-system copy of the original; it is the
+	* quality served to end users.
+	* @return string - e.g. 'web'
 	*/
 	public function get_default_quality() : string {
 
@@ -57,7 +89,11 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_ORIGINAL_QUALITY
-	* @return string $original_quality
+	* Returns the original (uploaded) quality level identifier for PDFs.
+	* Sourced from the config constant DEDALO_PDF_QUALITY_ORIGINAL (typically 'original').
+	* Original files are preserved across re-uploads; only non-original qualities
+	* are renamed/archived by rename_old_files.
+	* @return string - e.g. 'original'
 	*/
 	public function get_original_quality() : string {
 
@@ -70,7 +106,12 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_NORMALIZED_AR_QUALITY
-	* @return array $normalized_ar_quality
+	* Returns the subset of quality levels that should be treated as 'normalized'
+	* (i.e. derived from the original and deletable/rebuildable on demand).
+	* For PDFs only the default/web quality is considered normalized — the original
+	* is never auto-deleted. This narrows the parent's default of
+	* [original, default] to [default] only.
+	* @return array - e.g. ['web']
 	*/
 	public function get_normalized_ar_quality() : array {
 
@@ -86,7 +127,11 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_EXTENSION
-	* @return string DEDALO_PDF_EXTENSION from config
+	* Returns the primary file extension for PDF components.
+	* Falls back to the config constant DEDALO_PDF_EXTENSION ('pdf') unless
+	* $this->extension has been set on the instance (e.g. for a non-PDF upload
+	* like .doc that was stored under this component type).
+	* @return string - e.g. 'pdf'
 	*/
 	public function get_extension() : string {
 
@@ -97,7 +142,11 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
+	* Returns the list of file extensions accepted during upload for this component.
+	* Sourced from config DEDALO_PDF_EXTENSIONS_SUPPORTED (e.g. ['pdf','doc','odt','pages',...]).
+	* Extensions beyond 'pdf' (doc, odt, pages, etc.) are stored as-is without
+	* text extraction or OCR processing.
+	* @return array - list of accepted extension strings
 	*/
 	public function get_allowed_extensions() : array {
 
@@ -110,8 +159,10 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_FOLDER
-	* Get element DEDALO_PDF_FOLDER value from config
-	* @return string
+	* Returns the media sub-directory path for PDF files, relative to the
+	* Dédalo media root. Defaults to the config constant DEDALO_PDF_FOLDER (e.g. '/pdf')
+	* unless overridden on the instance.
+	* @return string - e.g. '/pdf'
 	*/
 	public function get_folder() : string {
 
@@ -122,9 +173,11 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_BEST_EXTENSIONS
-	* Extensions list of preferable extensions in original or modified qualities.
-	* Ordered by most preferable extension, first is the best.
-	* @return array
+	* Returns the ordered list of preferred file extensions when resolving which
+	* stored file represents the 'best' available version of this component.
+	* The list is ordered from most to least preferred; only 'pdf' is supported
+	* for PDF components.
+	* @return array - ['pdf']
 	*/
 	public function get_best_extensions() : array {
 
@@ -135,8 +188,14 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_RELATED_COMPONENT_TEXT_AREA_TIPO
-	* Returns related component_text_area tipos (used to write PDF text)
-	* @return array $related_component_text_area_tipo
+	* Returns the list of component_text_area tipo identifiers that are
+	* ontologically related to this PDF component. The first entry in the list
+	* is the target into which extracted PDF text (from pdftotext or OCR) is
+	* saved during regenerate_component.
+	*
+	* Delegates to common::get_ar_related_by_model, which walks the ontology
+	* to find related components of the given model type.
+	* @return array - tipo strings, e.g. ['dd522'] (may be empty if none defined)
 	*/
 	public function get_related_component_text_area_tipo() : array {
 
@@ -152,13 +211,28 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* CREATE_THUMB
-	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
-	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
-	* So I modified my delegates.xml file, which in my case is located in [i]/usr/local/Cellar/imagemagick/6.9.3-0_1/etc/ImageMagick-6/delegates.xml[/] and replaced
-	* command="&quot;gs&quot;
-	* with
-	* command="&quot;/usr/local/bin/gs&quot;
-	* @return bool
+	* Generates a thumbnail JPEG image from the first page of the uploaded PDF
+	* using ImageMagick (via the ImageMagick::convert wrapper).
+	*
+	* The thumbnail dimensions come from DEDALO_IMAGE_THUMB_WIDTH /
+	* DEDALO_IMAGE_THUMB_HEIGHT with safe fallbacks (224×149) in case those
+	* constants are undefined. The render density is 72 dpi, quality 75.
+	*
+	* Note on macOS / Homebrew deployments:
+	*   ImageMagick delegates PDF rendering to Ghostscript. If Apache cannot
+	*   locate 'gs' via PATH, thumbnail creation silently fails. Fix by editing
+	*   ImageMagick's delegates.xml and replacing:
+	*     command="&quot;gs&quot;
+	*   with an absolute path:
+	*     command="&quot;/usr/local/bin/gs&quot;
+	*   Reference: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096
+	*
+	* Returns false without attempting conversion if the default-quality PDF
+	* file does not exist yet (e.g. during an aborted upload).
+	*
+	* (!) DEDALO_QUALITY_THUMB is runtime-defined here if the config omits it,
+	* which logs a WARNING so the gap in configuration is visible.
+	* @return bool - true on success, false if the source PDF is missing
 	*/
 	public function create_thumb() : bool {
 
@@ -212,27 +286,38 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* Note that this is the last method called in a sequence started on upload file.
-	* The sequence order is:
-	* 	1 - dd_utils_api::upload
-	* 	2 - tool_upload::process_uploaded_file
-	* 	3 - component_media_common::add_file
-	* 	4 - component:process_uploaded_file
-	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
-	* @param object|null $file_data
-	*	Data from trigger upload file
-	* {
-	* 	original_file_name : string like 'Homogenous categories.doc',
-	* 	full_file_name : string like 'rsc37_rsc176_18.doc',
-	* 	full_file_path : string like '/../dedalo/media/pdf/original/0/rsc37_rsc176_18.doc'
-	* }
-	* @param object|null $process_options
-	* optional parameters to process the file
-	* {
-	* 	ocr : true // true||false  process the file with the OCR engine
-	* 	ocr_lang : 'lg-eng' // to be used in the OCR process
-	* }
-	* @return object $response
+	* Final step in the upload pipeline; called after the file has been moved
+	* to its target quality directory by component_media_common::add_file.
+	*
+	* Full upload sequence:
+	*   1 - dd_utils_api::upload
+	*   2 - tool_upload::process_uploaded_file
+	*   3 - component_media_common::add_file
+	*   4 - component_pdf::process_uploaded_file  ← this method
+	*
+	* Behaviour:
+	* - For the 'original' quality: stores upload metadata (original_file_name,
+	*   original_normalized_name, original_upload_date) into component data at index 0.
+	* - If a target_filename property is set in component properties, saves the
+	*   original file name into the companion component_input_text component.
+	* - If the uploaded file is not a native PDF (extension ≠ DEDALO_PDF_EXTENSION),
+	*   saves the component and returns early — no text extraction is performed.
+	* - For native PDF uploads at 'original' quality: calls regenerate_component,
+	*   which copies to web quality, optionally runs OCR, and extracts text.
+	* - For non-original quality uploads: updates files_info metadata and saves.
+	*
+	* @param object|null $file_data - upload metadata; shape:
+	*   {
+	*     original_file_name : string  // user-visible name, e.g. 'My Document.pdf'
+	*     full_file_name     : string  // normalised stored name, e.g. 'rsc37_rsc176_18.pdf'
+	*     full_file_path     : string  // absolute path to the uploaded file on disk
+	*   }
+	* @param object|null $process_options - optional processing flags; shape:
+	*   {
+	*     ocr      : bool    // whether to run OCR via PDF_OCR_ENGINE (default false)
+	*     ocr_lang : string  // Dédalo lang ID used for OCR, e.g. 'lg-eng' (default null)
+	*   }
+	* @return object $response - {result: bool|string, msg: string}
 	*/
 	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
@@ -373,14 +458,32 @@ class component_pdf extends component_media_common implements component_media_in
 
 
 	/**
-	* BUILD_VERSION - Overwrite in each component for real process
-	* Creates a new version based on target quality
-	* (!) Note that this generic method only copy files,
-	* to real process, overwrite in each component !
-	* @param string $quality
-	* @param bool $async = true
-	* @param bool $save = true
-	* @return object $response
+	* BUILD_VERSION
+	* Creates a specific quality version of the PDF file from the stored original.
+	* Overrides the generic parent stub; the actual work done here is:
+	*   1. Thumb quality → delegates to create_thumb() and returns immediately.
+	*   2. Any other quality:
+	*      a. Validates that the original source file exists on disk.
+	*      b. Ensures the target quality directory exists (creates it if needed).
+	*      c. Copies the original PDF file into the target quality directory,
+	*         unless target path === source path (i.e. building the original itself).
+	*      d. Iterates DEDALO_PDF_ALTERNATIVE_EXTENSIONS (e.g. ['jpg']) and calls
+	*         create_alternative_version for each configured format.
+	*
+	* Note: the 'web' quality is literally a copy of the original PDF, not a
+	* transcoded form. Down-sampling or compression happens only for thumbnails
+	* and raster alternative versions.
+	*
+	* (!) $copy_result is only assigned when $target_quality_path !== $original_file_path.
+	* When paths are equal the copy block is skipped and $copy_result is undefined,
+	* but the response still uses it at line 532. This is a pre-existing edge-case:
+	* in practice the 'original' → 'original' build is never requested, so the
+	* paths always differ when copy is expected. Do not change this code; flag only.
+	*
+	* @param string $quality - target quality level to build, e.g. 'web' or 'thumb'
+	* @param bool $async = true - reserved for async processing (unused in this override)
+	* @param bool $save = true - reserved; parent contract; unused in this override
+	* @return object $response - {result: bool|string|null, msg: string, errors: array}
 	* @test true
 	*/
 	public function build_version( string $quality, bool $async=true, bool $save=true ) : object {
@@ -541,14 +644,21 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* RENAME_OLD_FILES
-	* @param string $file_name string
-	* 	as 'test175_test65_3'
-	* @param $folder_path string
-	* @return object $response
-	* {
-	* 	result : boo
-	* 	msg: string
-	* }
+	* Conditionally archives existing files of the given name in the given folder,
+	* preserving the original quality file across re-uploads.
+	*
+	* Original-quality files (DEDALO_PDF_QUALITY_ORIGINAL = 'original') are never
+	* renamed/archived here — each upload of a new original is stored alongside
+	* previous originals so the complete upload history is retained. Originals are
+	* managed separately (e.g. by the delete pipeline).
+	*
+	* For all other quality levels (e.g. 'web', 'thumb'), the method delegates
+	* directly to the parent component_media_common::rename_old_files, which moves
+	* the existing file(s) into a timestamped 'deleted/' sub-directory.
+	*
+	* @param string $file_name - base file name without extension, e.g. 'test175_test65_3'
+	* @param string $folder_path - absolute filesystem path to the quality directory
+	* @return object $response - {result: bool, msg: string}
 	*/
 	public function rename_old_files( string $file_name, string $folder_path ) : object {
 
@@ -576,8 +686,13 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_ALTERNATIVE_EXTENSIONS
-	* Read config DEDALO_PDF_ALTERNATIVE_EXTENSIONS value or null
-	* @return array|null $alternative_extensions
+	* Returns the list of alternative raster format extensions to generate from
+	* the PDF (e.g. ['jpg'] for cover-page JPEG images), or null if the
+	* DEDALO_PDF_ALTERNATIVE_EXTENSIONS config constant is not defined.
+	*
+	* When null is returned, callers must apply the '?? []' guard before iterating
+	* (as build_version and create_alternative_versions in the parent both do).
+	* @return array|null - extension strings (e.g. ['jpg']) or null if unconfigured
 	*/
 	public function get_alternative_extensions() : ?array {
 
@@ -592,9 +707,38 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* GET_TEXT_FROM_PDF
-	* Extract text from PDF file
-	* @param object $options
-	* @return object $response
+	* Extracts text content from the default-quality PDF file using an external
+	* command-line engine (PDF_AUTOMATIC_TRANSCRIPTION_ENGINE, typically pdftotext).
+	*
+	* Process:
+	* 1. Verifies the source PDF file exists and the extraction engine is on PATH.
+	* 2. Builds a shell command with optional page-range flags (-f / -l).
+	* 3. For 'text_engine' mode: generates a .txt file; for 'html_engine': .html.
+	*    The output file is written to the same directory as the PDF.
+	* 4. Reads the output file, validates and cleans UTF-8 encoding.
+	* 5. Round-trips through JSON encode/decode to confirm string serializability.
+	* 6. Splits the text on form-feed characters (^L, ASCII 0x0C) to detect page
+	*    boundaries and wraps each page in <p>[page-n-N]</p><p>…</p> markup.
+	*
+	* The page-splitting character (^L / form-feed) is embedded as a literal
+	* invisible character in the str_replace and explode calls. pdftotext emits
+	* this character between pages in its default output mode.
+	*
+	* $response->result holds the final HTML-wrapped text string on success.
+	* $response->original holds the raw text without page markup.
+	*
+	* (!) Shell arguments ($source_file, $text_filename) are passed through
+	* escapeshellarg. $engine_config is composed only from config constants,
+	* not from user input.
+	*
+	* @param object $options - extraction parameters; shape:
+	*   {
+	*     engine   : string  // executable name/path; defaults to PDF_AUTOMATIC_TRANSCRIPTION_ENGINE
+	*     method   : string  // 'text_engine' (default) or 'html_engine'
+	*     page_in  : int     // first page to extract (1-based, default 1)
+	*     page_out : int|null // last page to extract (null = all pages)
+	*   }
+	* @return object $response - {result: string|false|'error', msg: string, errors: array, original?: string}
 	*/
 	public function get_text_from_pdf( object $options ) : object {
 
@@ -780,8 +924,31 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* PROCESS_OCR_FILE
-	* @param object $options
-	* @return object $response
+	* Runs Optical Character Recognition on a PDF file using the configured
+	* PDF_OCR_ENGINE (typically ocrmypdf). The OCR engine rewrites the input
+	* file in-place with an embedded text layer (--force-ocr --pdfa-image-compression
+	* lossless), creating a PDF/A-compliant output.
+	*
+	* Language handling:
+	* - Accepts a Dédalo lang ID string (e.g. 'lg-eng', 'lg-cat') and strips
+	*   the 'lg-' prefix to obtain the tesseract lang code.
+	* - Special case: 'vlca' (Valencian) is remapped to 'cat' (Catalan) because
+	*   the Valencian language shares the Catalan tesseract model.
+	* - Falls back to DEDALO_DATA_LANG if $options->ocr_lang is not set.
+	*
+	* (!) PDF_OCR_ENGINE must be defined in config. If it is undefined, the method
+	* logs the undefined-constant access (which itself triggers a PHP notice because
+	* PDF_OCR_ENGINE is evaluated in to_string() even when defined() is false) and
+	* returns an error response. The debug_log call inside the defined()===false
+	* branch references the undefined constant directly — pre-existing behaviour,
+	* do not change.
+	*
+	* @param object $options - OCR parameters; shape:
+	*   {
+	*     source_file : string  // absolute path to the PDF file to process (overwritten in-place)
+	*     ocr_lang    : string  // Dédalo lang ID, e.g. 'lg-eng'; falls back to DEDALO_DATA_LANG
+	*   }
+	* @return object $response - {result: 'ok'|'error', msg: string}
 	*/
 	public function process_ocr_file( object $options ) : object {
 
@@ -864,13 +1031,24 @@ class component_pdf extends component_media_common implements component_media_in
 
 
 	/**
-	*  VALID_UTF8
-	* utf8 encoding validation developed based on Wikipedia entry at:
-	* http://en.wikipedia.org/wiki/UTF-8
-	* Implemented as a recursive descent parser based on a simple state machine
-	* copyright 2005 Maarten Meijer
-	* This cries out for a C-implementation to be included in PHP core
-	* @return bool
+	* VALID_UTF8
+	* Validates that a string is well-formed UTF-8 by walking each byte sequence
+	* using RFC 3629 / Unicode 6.0 rules (1-, 2-, 3-, and 4-byte sequences).
+	*
+	* Implemented as a recursive-descent byte-walk; returns false as soon as
+	* an invalid byte is encountered. The helper functions (valid_1byte,
+	* valid_2byte, …, valid_nextbyte) are declared as global functions with
+	* function_exists guards to avoid redefinition errors when called repeatedly.
+	*
+	* This validator is intentionally conservative: it only checks structural
+	* well-formedness, not Unicode code-point validity (e.g. surrogates or
+	* values beyond U+10FFFF are not rejected here).
+	*
+	* Based on the algorithm by Maarten Meijer (2005) described at:
+	*   http://en.wikipedia.org/wiki/UTF-8
+	*
+	* @param string $string - the raw string to validate
+	* @return bool - true if the string is structurally valid UTF-8
 	*/
 	public static function valid_utf8( string $string ) : bool {
 		$len = strlen($string);
@@ -939,8 +1117,15 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* UTF8_CLEAN
-	* @param string $string = ''
-	* @param string $string
+	* Strips bytes that are not valid UTF-8 from the given string using iconv
+	* with the //IGNORE transliteration flag, which silently discards any
+	* sequence that cannot be represented in the target encoding.
+	*
+	* Called after valid_utf8 returns false to sanitize extracted PDF text
+	* before storing it in the database.
+	*
+	* @param string $string = '' - the string to sanitize
+	* @return string - the input string with invalid UTF-8 bytes removed
 	*/
 	public static function utf8_clean( string $string='' ) : string {
 
@@ -953,11 +1138,27 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $options
-	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	* Migration hook called by the data-version upgrade tool to transform
+	* component data from one schema version to another.
+	*
+	* This implementation has no version-specific upgrade logic for component_pdf;
+	* it returns result=0 for all versions to signal 'no action taken'.
+	* The result codes are:
+	*   0 - component has no handler for this version (skipped)
+	*   1 - component performed the upgrade
+	*   2 - component checked but found no change was needed
+	*
+	* @param object $options - migration context; shape:
+	*   {
+	*     update_version  : array   // version segments, e.g. [7, 0, 1]
+	*     data_unchanged  : mixed   // hint from caller (unused here)
+	*     reference_id    : mixed   // optional reference record id
+	*     tipo            : string  // component tipo
+	*     section_id      : int     // section record id
+	*     section_tipo    : string  // section tipo
+	*     context         : string  // caller context, default 'update_component_data'
+	*   }
+	* @return object $response - {result: int, msg: string}
 	*/
 	public static function update_data_version( object $options ) : object {
 
@@ -988,10 +1189,35 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* REGENERATE_COMPONENT
-	* Force the current component to re-build and save its data
+	* Rebuilds all derived artefacts of this PDF component from the stored original
+	* and (optionally) updates the linked text transcription component.
+	*
+	* Steps performed:
+	* 1. Resolves the original file path using get_original_file_path() (preferred
+	*    over get_original_extension() because the latter can return stale extension
+	*    values from leftover files in the directory; see inline comment).
+	* 2. If the uploaded file is not a native PDF (extension ≠ get_extension()),
+	*    sets $delete_normalized_files = false to avoid deleting the single stored file.
+	* 3. If $options->ocr is true and the source file exists, runs process_ocr_file
+	*    to embed a text layer in the PDF before copying it to web quality.
+	* 4. Calls parent::regenerate_component to handle quality-directory cleanup,
+	*    build_version calls, and file-info data updates.
+	* 5. If $options->transcription is true and a related component_text_area is
+	*    configured, calls get_text_from_pdf on the web-quality PDF and saves the
+	*    resulting page-tagged HTML into the text-area component.
+	*    Extraction is attempted unconditionally (the commented-out empty-check
+	*    guard is intentionally disabled — existing text is overwritten on regenerate).
+	*
 	* @see class.tool_update_cache.php
-	* @param object|null $options=null
-	* @return bool
+	* @param object|null $options = null - regeneration flags; shape:
+	*   {
+	*     first_page             : int   // 1-based page offset for page-tag numbering (default 1)
+	*     transcription          : bool  // whether to extract and save PDF text (default true)
+	*     ocr                    : bool  // whether to run OCR before text extraction (default false)
+	*     ocr_lang               : string|null // Dédalo lang ID for OCR (default null → DEDALO_DATA_LANG)
+	*     delete_normalized_files: bool  // whether to archive derived files before rebuild (default true)
+	*   }
+	* @return bool - true on success (mirrors parent::regenerate_component return value)
 	*/
 	public function regenerate_component( ?object $options=null ) : bool {
 
@@ -1111,12 +1337,32 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* CREATE_ALTERNATIVE_VERSION
-	* Render a new alternative_version file from given quality and target extension.
-	* This method overwrites any existing file with same path
-	* @param string $quality
-	* @param string $extension
-	* @param object|null $options = null
-	* @return bool
+	* Renders a raster image (e.g. JPEG) of the first page of the PDF using
+	* ImageMagick, writing it as an alternative format file alongside the PDF.
+	*
+	* The output file is written to the quality directory with path:
+	*   <media_path_dir($quality)>/<component_id>.<extension>
+	*
+	* Render parameters scale with quality:
+	* - Original quality: 300 dpi, quality 100, resize 100%
+	* - Web/non-original quality: 150 dpi, quality 95, resize 75%
+	*
+	* $options->page (default 0) selects which PDF page layer to render
+	* (0-based index passed to ImageMagick as ar_layers).
+	*
+	* Returns false without rendering if:
+	* - The requested quality is the thumb quality (thumbnails use create_thumb).
+	* - The extension is not in get_alternative_extensions() (safety guard).
+	* - The source PDF file does not exist in the given quality directory.
+	* - ImageMagick fails to produce the output file.
+	*
+	* @param string $quality - the quality directory to read the source PDF from
+	* @param string $extension - target raster extension, e.g. 'jpg'
+	* @param object|null $options = null - optional overrides; shape:
+	*   {
+	*     page : int  // 0-based PDF page index to render (default 0 = cover page)
+	*   }
+	* @return bool - true if the output file was successfully created
 	*/
 	public function create_alternative_version( string $quality, string $extension, ?object $options=null ) : bool {
 

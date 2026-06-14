@@ -3,6 +3,36 @@
 /*eslint no-undef: "error"*/
 
 
+/**
+* VIEWER
+* Three.js-based interactive 3-D model viewer for component_3d.
+*
+* Provides a self-contained WebGL scene that loads, displays, and animates
+* glTF 2.0 / GLB assets.  The module is a singleton-like namespace object
+* (not a class) whose methods are assigned directly on the exported `viewer`
+* function.  Callers must first call `viewer.init()` and then `viewer.build()`
+* before loading any model.
+*
+* Lifecycle (in order):
+*   1. viewer.init(options)       — creates loader instances; called once.
+*   2. viewer.build(el, options)  — builds the Three.js scene, renderer,
+*                                   controls, GUI, and starts the animation loop.
+*   3. viewer.load(file_uri)      — fetches and places a glTF model in the scene.
+*   4. viewer.get_image(options)  — captures a JPEG thumbnail at custom resolution.
+*   5. viewer.clear()             — disposes scene geometry and textures.
+*
+* The viewer depends on Three.js r≥152 and its add-on loaders/controls.
+* All Three.js symbols are resolved via an importmap that maps the bare
+* specifier 'three' to '/lib/threejs/jsm/' (defined in page/index.html).
+*
+* State object (`self.state`):
+*   All mutable viewer settings (environment, lighting, wireframe, etc.) live
+*   in `self.state` so that they can be serialised and round-tripped through
+*   the GUI without touching the Three.js object graph directly.
+*
+* Exports: viewer (namespace/singleton)
+*/
+
 // imports
 	import {dd_request_idle_callback} from '../../../common/js/events.js'
 	// used a importmap define in page/index.html to resolve directories
@@ -47,6 +77,10 @@
 
 /**
 * VIEWER
+* Namespace constructor for the Three.js-based 3-D viewer.
+* All functionality is exposed as static properties on this function object
+* (e.g. `viewer.init`, `viewer.build`, `viewer.load`).
+* The constructor itself is a no-op placeholder; it is never instantiated with `new`.
 */
 export const viewer = function () {
 
@@ -56,9 +90,20 @@ export const viewer = function () {
 
 /**
 * INIT
-* @param object options
-* @return object self
-* 	Self instance
+* One-time setup: creates the shared loader instances and enables or disables
+* the Three.js asset cache.  Must be called before `build()`.
+*
+* Loaders are created here so they can be shared across multiple `load()` calls
+* without reconstructing the DRACO/KTX2 transcoder pipelines on every model load.
+*
+* @param {Object} options - initialisation options
+* @param {boolean} [options.cache=true] - whether to enable Three.js `Cache`
+*   (caches raw XHR responses by URL; set false during development to always
+*    reload from disk)
+* @param {string} [options.default_camera='[default]'] - name sentinel used to
+*   identify the built-in OrbitControls camera vs. cameras embedded in the glTF
+* @returns {Promise<Object>} resolves to `self` (the viewer namespace) so callers
+*   can chain: `const v = await viewer.init(opts)`
 */
 viewer.init = async function (options) {
 
@@ -83,9 +128,29 @@ viewer.init = async function (options) {
 
 /**
 * BUILD
-* @param content_value HTMLElement
-* @param options object
-* 	saved viewer options
+* Constructs the entire Three.js scene, renderer, controls, GUI, and axes overlay,
+* then starts the render loop via `requestAnimationFrame`.  Must be called once
+* after `init()` and before `load()`.
+*
+* Side effects:
+*   - Appends the WebGL canvas (`renderer.domElement`) to `content_value`.
+*   - Appends a small axes-overlay `<div class="axes">` to `content_value`.
+*   - Appends a `<div class="gui-wrapper">` containing the lil-gui panel.
+*   - Attaches a ResizeObserver to `content_value` for responsive resizing
+*     (preferred over a global window 'resize' listener so user-resizable
+*     component panels update correctly).
+*   - Starts an infinite `requestAnimationFrame` animation loop (see `animate`).
+*
+* State defaults — all values may be overridden via `options`:
+*   environment, background, playback_speed, action_states, camera, wireframe,
+*   skeleton, grid, punctual_lights, exposure, tone_mapping, ambient_intensity,
+*   ambient_color, direct_intensity, direct_color, bg_color
+*
+* @param {HTMLElement} content_value - container element that will receive the
+*   renderer canvas and GUI overlay
+* @param {Object} options - saved viewer state; any key absent falls back to
+*   the sensible defaults shown in `self.state` below
+* @returns {Promise<void>}
 */
 viewer.build = async function (content_value, options) {
 
@@ -181,8 +246,15 @@ viewer.build = async function (content_value, options) {
 
 /**
 * RENDER
-* Is triggered for each frame (x frames/sec)
-* @return void
+* Draws one frame: renders the main scene with the active camera, then (when the
+* grid overlay is visible) mirrors the default camera's position into the axes
+* overlay camera and re-renders the small axes scene.
+*
+* Called by `animate()` on every `requestAnimationFrame` tick.
+* The function is declared `async` to satisfy the Three.js renderer API but does
+* not itself perform any asynchronous work — the renderer call is synchronous.
+*
+* @returns {Promise<void>}
 */
 viewer.render = async function() {
 
@@ -205,7 +277,15 @@ viewer.render = async function() {
 
 /**
 * RESIZE
-* When the window is resize it's necessary to update the aspect of the camera and the size of the rendered node
+* Responds to a ResizeObserver notification on `content_value` and updates the
+* camera aspect ratios and renderer sizes to match the container's new dimensions.
+*
+* Uses `dd_request_idle_callback` to decouple the layout read from the render
+* flush: this prevents layout thrashing during an animated resize where the
+* browser would otherwise interleave forced-reflows with repaints.
+*
+* Both the main renderer and the axes overlay renderer are updated together so
+* they stay in sync.
 */
 viewer.resize = function() {
 
@@ -231,10 +311,19 @@ viewer.resize = function() {
 
 /**
 * LOAD
-* @param string file_uri
-* 	uri of the file to be load
-* @return promise
-* 	resolve object gltf
+* Fetches a glTF / GLB file from the given URI and places it in the scene via
+* `set_content()`.  Configures the GLTFLoader with DRACO geometry compression,
+* KTX2 texture transcoding (detecting GPU support at runtime), and meshopt
+* decoding so that all standard glTF 2.0 extension combinations are handled.
+*
+* The function validates that the loaded asset contains at least one scene graph;
+* sceneless assets (e.g. raw mesh libraries) are rejected with a descriptive error.
+*
+* @param {string} file_uri - absolute or relative URL of the glTF/GLB asset
+* @returns {Promise<Object>} resolves to the raw `gltf` object on success, or
+*   resolves to `undefined` after logging an error if the loader fails (the
+*   `.catch` swallows the rejection to prevent unhandled promise warnings in the
+*   component)
 */
 viewer.load = function( file_uri ) {
 
@@ -289,8 +378,30 @@ viewer.load = function( file_uri ) {
 
 /**
 * SET_CONTENT
-* @param {THREE.Object3D} scene
-* @param {Array<THREE.AnimationClip} clips
+* Places a newly loaded glTF scene into the Three.js scene graph and adapts all
+* camera, controls, lighting, and GUI settings to the new model's bounding box.
+*
+* Called automatically by `load()` after a successful glTF parse.
+*
+* Steps performed:
+*   1. Calls `clear()` to dispose any previously loaded geometry/textures.
+*   2. Computes the scene's axis-aligned bounding box to derive a canonical size
+*      and centre position.
+*   3. Translates the scene root so the model's centre sits at the world origin.
+*   4. Scales camera near/far planes and orbit control limits to the model size
+*      so the clipping planes are always tight regardless of model scale.
+*   5. Positions the camera either from a saved `options.cameraPosition` or by
+*      computing a sensible default isometric-ish offset from the bounding centre.
+*   6. Traverses all nodes: disables `punctual_lights` state flag when the model
+*      itself contains lights (model lights take precedence); sets `depthWrite`
+*      based on material transparency to avoid z-fighting artefacts on blended
+*      surfaces.
+*   7. Updates lights, GUI folders, environment, and display state.
+*
+* @param {Object} scene - Three.js `Object3D` / `Group` that is the root of the
+*   loaded glTF scene graph
+* @param {Array} clips - array of `THREE.AnimationClip` objects extracted from
+*   the glTF; may be empty if the asset contains no animations
 */
 viewer.set_content = function( scene, clips ) {
 
@@ -342,8 +453,12 @@ viewer.set_content = function( scene, clips ) {
 
 	self.content.traverse((node) => {
 		if (node.isLight) {
+			// Model contains its own lights — disable the viewer's synthetic
+			// punctual lights to avoid double-illumination.
 			self.state.punctual_lights = false;
 		} else if (node.isMesh) {
+			// Transparent materials must not write to the depth buffer; doing so
+			// causes opaque objects that render later to incorrectly occlude them.
 			node.material.depthWrite = !node.material.transparent;
 		}
 	});
@@ -362,12 +477,21 @@ viewer.set_content = function( scene, clips ) {
 
 /**
 * GET_IMAGE
-* get image jpg of the model loaded
-* @param options object
-* {
-* 	width : 720
-* 	height: 404
-* }
+* Captures a JPEG snapshot of the current scene at an arbitrary resolution and
+* returns it as a `Blob`.
+*
+* The renderer is temporarily resized to the requested dimensions, a single frame
+* is rendered, the canvas is exported, and then the renderer is restored to its
+* original size.  The aspect ratio of the default camera is updated accordingly
+* for each phase so the captured image is not distorted.
+*
+* Note: pixel dimensions are divided by 2 internally (presumably for HiDPI
+* compensation where the canvas logical size is half the physical pixel count).
+*
+* @param {Object} options - capture options
+* @param {number} options.width  - desired output width in pixels (before halving)
+* @param {number} options.height - desired output height in pixels (before halving)
+* @returns {Promise<Blob>} JPEG blob at quality 0.75
 */
 viewer.get_image = function(options){
 
@@ -406,8 +530,12 @@ viewer.get_image = function(options){
 
 /**
 * DUMP_GRAPH
-* show the object structure in console
-* @param object
+* Recursively prints the Three.js object hierarchy to the browser console using
+* `console.group` / `console.groupEnd`, showing each node's type and name.
+* Intended for debugging model structure during development; not called in
+* production paths (see the commented-out call in `set_content`).
+*
+* @param {Object} object - any Three.js `Object3D` node to start the traversal from
 */
 viewer.dump_graph = function(object) {
 
@@ -421,8 +549,23 @@ viewer.dump_graph = function(object) {
 
 /**
 * DUMP_OBJECT
-* show mesh structure in console (alternative view of dump_graph)
-* @param object
+* Produces an ASCII-art tree representation of the Three.js object hierarchy
+* as an array of strings, using box-drawing characters ('├─', '└─', '│') to
+* express parent-child relationships.  Each line shows the node name and type.
+*
+* This is an alternative to `dump_graph`: where `dump_graph` uses console groups
+* (collapsible in DevTools), `dump_object` builds a flat string array that can be
+* joined and printed in one shot or inspected programmatically.
+*
+* The function is called recursively; callers should normally invoke it as:
+*   `console.log(viewer.dump_object(root).join('\n'))`
+*
+* @param {Object} object - Three.js `Object3D` node
+* @param {Array} [lines=[]] - accumulator array; pass `[]` on first call
+* @param {boolean} [isLast=true] - whether this node is the last child of its
+*   parent (controls the branch character used)
+* @param {string} [prefix=''] - indentation string built up through recursion
+* @returns {Array} flat array of formatted strings, one per scene-graph node
 */
 viewer.dump_object = function(object, lines = [], isLast = true, prefix = '') {
 	const localPrefix = isLast ? '└─' : '├─';
@@ -440,8 +583,22 @@ viewer.dump_object = function(object, lines = [], isLast = true, prefix = '') {
 
 /**
 * ANIMATE
-* show mesh structure in console (alternative view of dump_graph)
-* @param time number
+* The main render loop callback, called by `requestAnimationFrame` on every
+* browser paint cycle.  Schedules itself recursively so the loop runs indefinitely
+* until the page is navigated away.
+*
+* Responsibilities per frame:
+*   - Advances the OrbitControls damping/auto-rotation.
+*   - Updates the Stats (FPS/memory) panel.
+*   - Steps the AnimationMixer by the elapsed delta time `dt` (in seconds).
+*   - Calls `render()` to draw the frame.
+*   - Saves the current timestamp as `prev_time` for the next delta calculation.
+*
+* `self.animate` is bound to `self` in `build()` so that the `requestAnimationFrame`
+* callback receives the correct `this` context.
+*
+* @param {number} time - DOMHighResTimeStamp provided by `requestAnimationFrame`
+*   (milliseconds since navigation start)
 */
 viewer.animate = function(time) {
 
@@ -462,7 +619,18 @@ viewer.animate = function(time) {
 
 /**
 * SET_CLIPS
-* @param {Array<THREE.AnimationClip} clips
+* Replaces the current AnimationMixer and registers the new set of animation
+* clips extracted from a just-loaded glTF asset.
+*
+* When an existing mixer is present (from a previous model load) it is cleanly
+* torn down: all actions are stopped and the root's cached data is freed before
+* the mixer reference is nulled.  This prevents memory leaks when the user
+* reloads the viewer with a different model.
+*
+* If `clips` is empty the function returns early without creating a new mixer
+* because an AnimationMixer with no clips is meaningless overhead.
+*
+* @param {Array} clips - array of `THREE.AnimationClip` objects; may be empty
 */
 viewer.set_clips = function( clips ) {
 
@@ -484,6 +652,12 @@ viewer.set_clips = function( clips ) {
 
 /**
 * PLAY_ALL_CLIPS
+* Resets and starts playback of every animation clip in `self.clips` simultaneously,
+* updating `self.state.action_states` so the GUI checkboxes stay in sync.
+*
+* Intended to be wired to the 'Play All' button in the Animation GUI folder.
+* Requires that `self.mixer` is already initialised (i.e. `set_clips` has been
+* called with a non-empty clips array).
 */
 viewer.play_all_clips = function() {
 
@@ -498,7 +672,16 @@ viewer.play_all_clips = function() {
 
 /**
 * SET_CAMERA
-* @param {string} name
+* Switches the active camera used by the renderer.
+*
+* When `name` equals `DEFAULT_CAMERA` the built-in OrbitControls camera is
+* activated and orbit interaction is re-enabled.  When `name` matches a camera
+* node embedded in the loaded glTF model, that node is promoted to active and
+* OrbitControls are disabled (the glTF camera provides a fixed/scripted viewpoint
+* that the user should not be able to orbit away from).
+*
+* @param {string} name - camera name; use the value of `self.DEFAULT_CAMERA` for
+*   the built-in orbit camera, or the exact `node.name` of an embedded glTF camera
 */
 viewer.set_camera = function( name ) {
 
@@ -521,6 +704,17 @@ viewer.set_camera = function( name ) {
 
 /**
 * UPDATE_LIGHTS
+* Synchronises the Three.js scene lighting to the current `self.state` values.
+*
+* Behaviour:
+*   - Adds synthetic punctual lights if `state.punctual_lights` is true and none
+*     exist yet; removes them if the flag is false and they are present.
+*     (Lights embedded in the glTF model set `state.punctual_lights = false` in
+*      `set_content()` to avoid double-illumination.)
+*   - Updates tone mapping and exposure on the renderer.
+*   - Applies new intensity / colour values to the two synthetic lights when they
+*     are active.  Assumes `self.lights` contains exactly the two lights created
+*     by `add_lights()`: index 0 = AmbientLight, index 1 = DirectionalLight.
 */
 viewer.update_lights = function() {
 
@@ -549,8 +743,18 @@ viewer.update_lights = function() {
 
 
 /**
-* UPDATE_LIGHTS
-* @return void
+* ADD_LIGHTS
+* Creates and attaches the two synthetic lights used when a glTF model does not
+* supply its own light nodes.
+*
+*   Light 0: AmbientLight — fills the scene with uniform soft light at
+*     `state.ambient_intensity` / `state.ambient_color`.
+*   Light 1: DirectionalLight — positioned at (0.5, 0, 0.866) relative to the
+*     default camera, approximating a ~60° sun angle.  Attaching both lights to
+*     `default_camera` rather than the scene root means they follow the camera as
+*     the user orbits, providing consistent illumination from any viewpoint.
+*
+* @returns {void}
 */
 viewer.add_lights = function() {
 
@@ -573,7 +777,14 @@ viewer.add_lights = function() {
 
 /**
 * REMOVE_LIGHTS
-* @return void
+* Detaches and discards all entries in `self.lights`.
+*
+* Each light is removed from its parent (the default camera) via the standard
+* Three.js `parent.remove()` API.  The array is then truncated to zero length
+* (by setting `.length = 0`) so `update_lights()` can detect the empty state
+* on the next call.
+*
+* @returns {void}
 */
 viewer.remove_lights = function() {
 
@@ -585,8 +796,20 @@ viewer.remove_lights = function() {
 
 
 /**
-* REMOVE_LIGHTS
-* @return void
+* UPDATE_ENVIRONMENT
+* Resolves the environment descriptor whose name matches `self.state.environment`
+* and loads its cube-map texture via `get_cube_map_texture()`.
+*
+* Once the texture is available:
+*   - Sets it as the scene's IBL (image-based lighting) environment so materials
+*     with env-map reflections update automatically.
+*   - Applies it as the scene background only when `self.state.background` is
+*     true; otherwise the flat `self.background_color` is used.
+*
+* Triggered by: initial `build()`, GUI background/environment controls, and
+* any reload that changes the active model.
+*
+* @returns {void}
 */
 viewer.update_environment = function() {
 
@@ -601,6 +824,30 @@ viewer.update_environment = function() {
 }//end update_environment
 
 
+/**
+* GET_CUBE_MAP_TEXTURE
+* Loads and returns the pre-filtered environment (PMREM) texture for the given
+* environment descriptor.
+*
+* Three cases:
+*   'neutral' — returns the pre-computed `RoomEnvironment` PMREM that was built
+*     during `build()` without any network request.
+*   '' (none) — resolves immediately with `envMap: null` to clear the environment.
+*   Any other — fetches the EXR HDR file from `environment.path`, converts it to
+*     a PMREM via `PMREMGenerator.fromEquirectangular`, and disposes the generator
+*     to free GPU memory.
+*
+* (!) The generator is disposed after the first EXR load.  If `get_cube_map_texture`
+* is called again for another EXR environment after this point, `self.pmrem_generator`
+* will be in a disposed state and the call will throw.  The neutral environment
+* is safe to re-request because it does not use the generator.
+*
+* @param {Object} environment - environment descriptor from `environments.js`
+* @param {string} environment.id   - unique id; '' = none, 'neutral' = RoomEnvironment
+* @param {string} environment.path - URL to the .exr HDR file (null for none/neutral)
+* @returns {Promise<{envMap: Object|null}>} resolves to an object with `envMap`
+*   set to the PMREM texture, or `null` for the 'none' environment
+*/
 viewer.get_cube_map_texture = function( environment ) {
 
 	const self = this
@@ -635,7 +882,22 @@ viewer.get_cube_map_texture = function( environment ) {
 
 /**
 * UPDATE_DISPLAY
-* @return void
+* Synchronises scene display settings (wireframe, skeleton helpers, grid) with
+* `self.state` after a state change from the GUI.
+*
+* Steps:
+*   1. Removes any previously added SkeletonHelpers from the scene.
+*   2. Traverses all materials via `traverse_materials()` to toggle wireframe mode.
+*   3. Re-builds SkeletonHelper instances for every skinned mesh when
+*      `self.state.skeleton` is true.
+*   4. Toggles the GridHelper and AxesHelper: adds them when `state.grid` becomes
+*      true; removes them and clears the axes renderer when it becomes false.
+*
+* The `axes_helper` managed here (a world-space AxesHelper added to the main scene)
+* is distinct from the `axes_corner` in the separate axes overlay renderer that
+* always shows orientation.
+*
+* @returns {void}
 */
 viewer.update_display = function() {
 
@@ -663,6 +925,8 @@ viewer.update_display = function() {
 			self.grid_helper = new GridHelper();
 			self.axes_helper = new AxesHelper();
 			self.axes_helper.renderOrder = 999;
+			// Force-clear the depth buffer before rendering the axes so they
+			// always draw on top of scene geometry regardless of depth values.
 			self.axes_helper.onBeforeRender = (renderer) => renderer.clearDepth();
 			self.scene.add(self.grid_helper);
 			self.scene.add(self.axes_helper);
@@ -677,6 +941,15 @@ viewer.update_display = function() {
 }//end update_display
 
 
+/**
+* UPDATE_BACKGROUND
+* Applies the current `self.state.bg_color` hex value to `self.background_color`,
+* which is the Three.js `Color` instance used as the scene's solid background when
+* the environment skybox is disabled.
+*
+* Called by the GUI's bg_color color-picker `onChange` handler; changes take effect
+* on the next rendered frame.
+*/
 viewer.update_background = function() {
 
 	const self = this
@@ -686,8 +959,22 @@ viewer.update_background = function() {
 
 
 /**
-* Adds AxesHelper.
+* ADD_AXES_HELPER
+* Creates a small secondary WebGL canvas in the corner of `content_value` that
+* renders a persistent world-axis indicator (red=X, green=Y, blue=Z) using a
+* separate scene, camera, and renderer.
 *
+* The overlay is implemented as a second `WebGLRenderer` (with `alpha: true`) so
+* it is composited transparently over the main canvas at the CSS level.  This
+* avoids the complexity of rendering two scenes in one renderer pass and ensures
+* the axis gizmo is always visible even when the main scene's background is opaque.
+*
+* The `axes_camera` shares its `up` vector with `default_camera` so the gizmo
+* orientation is always consistent with the main view.  Its position and lookAt
+* are updated each frame in `render()` when the grid is active.
+*
+* `self.axes_corner` is an `AxesHelper` scaled to match the loaded model's bounding
+* size in `set_content()` so axis lines are always a sensible proportion of the model.
 */
 viewer.add_axes_helper = function() {
 
@@ -715,6 +1002,32 @@ viewer.add_axes_helper = function() {
 }
 
 
+/**
+* ADD_GUI
+* Builds the lil-gui control panel and wires all its controls to the viewer's
+* state and update methods.
+*
+* The GUI is mounted in a `<div class="gui-wrapper">` appended to `content_value`
+* so it can be positioned absolutely over the canvas via CSS.
+*
+* Folders and what they control:
+*   Display    — background toggle, wireframe, skeleton, grid, screen-space panning,
+*                background colour picker.
+*   Lighting   — environment map selector, tone mapping (Linear / ACES Filmic),
+*                exposure slider, punctual lights toggle, ambient & directional
+*                intensity and colour.
+*   Animation  — playback speed, 'Play All' button.  Hidden until a model with
+*                animations is loaded (see `update_GUI`).
+*   Morph Targets — per-mesh morph influence sliders.  Hidden until a model with
+*                   morph targets is loaded.
+*   Cameras    — dropdown to switch between the default orbit camera and any
+*                cameras embedded in the glTF.  Hidden until a model with cameras
+*                is loaded.
+*   Performance — embeds the Stats.js DOM node (FPS / memory counters).
+*
+* The GUI is initialised in the closed state (`gui.close()`) to minimise visual
+* clutter when the viewer first appears.
+*/
 viewer.add_GUI = function() {
 
 	const self = this
@@ -791,6 +1104,30 @@ viewer.add_GUI = function() {
 }
 
 
+/**
+* UPDATE_GUI
+* Rebuilds the dynamic GUI sections (Cameras, Morph Targets, Animation) after a
+* new model is loaded.  Static sections (Display, Lighting, Performance) are
+* built once in `add_GUI()` and are not touched here.
+*
+* Steps:
+*   1. Hides all three dynamic folders and destroys all previously created controls
+*      to avoid accumulating stale controllers across model reloads.
+*   2. Traverses the loaded scene to collect embedded camera names and meshes with
+*      morph targets.
+*   3. If the model contains cameras, shows the Cameras folder and populates a
+*      dropdown with the default camera name plus all embedded camera names.
+*   4. If the model contains morph targets, shows the Morph Targets folder and adds
+*      a slider per influence per mesh, labelled from `morphTargetDictionary` where
+*      available.
+*   5. If the model contains animations, shows the Animation folder, auto-plays the
+*      first clip, and adds a toggle control per clip that plays/stops the action
+*      via the AnimationMixer.
+*
+* (!) The first animation clip is auto-played on every model load (clipIndex === 0).
+* `action_states` is reset to a fresh object so stale action names from a previous
+* model do not persist in the GUI state.
+*/
 viewer.update_GUI = function() {
 
 	const self = this
@@ -873,6 +1210,21 @@ viewer.update_GUI = function() {
 }
 
 
+/**
+* CLEAR
+* Removes the current scene content from the Three.js scene graph and disposes
+* all associated GPU resources (geometry buffers and textures) to prevent memory
+* leaks when loading a new model.
+*
+* Returns early if no content is currently loaded (`self.content === null`).
+*
+* Geometry: traverses the scene and calls `geometry.dispose()` on every mesh node.
+*
+* Textures: traverses materials via `traverse_materials()` and disposes every
+* texture property that is not 'envMap'.  The environment map is intentionally
+* excluded because it belongs to the viewer's environment system and must persist
+* across model loads.
+*/
 viewer.clear = function() {
 
 	const self = this
@@ -900,6 +1252,20 @@ viewer.clear = function() {
 
 
 
+/**
+* TRAVERSE_MATERIALS
+* Module-private helper that visits every `THREE.Material` instance on every mesh
+* in the given object hierarchy and invokes `callback` with the material.
+*
+* Handles multi-material meshes (where `node.material` is an array) by normalising
+* the value to an array before iterating, so `callback` always receives a single
+* material object.
+*
+* @param {Object} object - Three.js `Object3D` node; traversal descends into all
+*   children recursively via `object.traverse()`
+* @param {Function} callback - called once per material with signature
+*   `(material: THREE.Material) => void`
+*/
 function traverse_materials (object, callback) {
 	object.traverse((node) => {
 		if (!node.isMesh) return;

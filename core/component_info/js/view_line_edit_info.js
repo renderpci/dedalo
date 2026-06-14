@@ -4,6 +4,23 @@
 
 
 
+/**
+* VIEW_LINE_EDIT_INFO
+* Compact single-line edit view for component_info.
+*
+* This view is selected when `context.view === 'line'` inside
+* render_edit_component_info.prototype.edit.  It differs from
+* view_default_edit_info in two ways:
+*   - The component label is suppressed (label: null) so the wrapper
+*     renders without a visible label column, keeping the row compact.
+*   - No toolbar buttons are added; the view is intentionally read-only
+*     in appearance regardless of the component's permission level.
+*
+* Exports:
+*   view_line_edit_info  – namespace object; its static .render() method
+*                          is the sole public entry point.
+*/
+
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {
@@ -15,7 +32,9 @@
 
 /**
 * VIEW_LINE_EDIT_INFO
-* Manages the component's logic and appearance in client side
+* Namespace constructor for the line-edit view of component_info.
+* Instantiation returns true immediately; all behaviour lives on the
+* static method VIEW_LINE_EDIT_INFO.render.
 */
 export const view_line_edit_info = function() {
 
@@ -26,10 +45,34 @@ export const view_line_edit_info = function() {
 
 /**
 * RENDER
-* Render node for use in current view
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Build and return the DOM subtree for the 'line' edit view of
+* component_info.
+*
+* Behaviour by render_level:
+*   'content' – resolves and returns only the content_data element
+*               (the inner widget container), skipping the outer wrapper.
+*               Useful when the caller embeds the component inside a
+*               larger composite layout that supplies its own wrapper.
+*   'full'    – default; returns the complete wrapper element produced
+*               by ui.component.build_wrapper_edit, with content_data
+*               appended and exposed as wrapper.content_data.
+*
+* The label is explicitly suppressed (label: null) to keep the line
+* view compact.  No toolbar buttons are injected in this view.
+*
+* Side effects:
+*   Calls self.get_widgets(), which dynamically imports and initialises
+*   all widget modules listed in self.context.properties.widgets, storing
+*   instances in self.ar_instances.
+*
+* @param {Object} self    - component_info instance providing context,
+*                           data, and the get_widgets() method.
+* @param {Object} options - Render options.
+* @param {string} [options.render_level='full'] - 'content' to return
+*                           only the inner content_data node; 'full' (or
+*                           omitted) to return the complete wrapper.
+* @returns {Promise<HTMLElement>} Resolves to the wrapper element (full)
+*                                 or the content_data element (content).
 */
 view_line_edit_info.render = async function(self, options) {
 
@@ -48,7 +91,7 @@ view_line_edit_info.render = async function(self, options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			label			: null
+			label			: null  // label suppressed to keep line view compact
 		})
 		// set pointers
 		wrapper.content_data = content_data

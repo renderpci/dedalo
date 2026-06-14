@@ -20,7 +20,45 @@
 
 /**
 * VIEW_DEFAULT_EDIT_DATE
-* Manage the components logic and appearance in client side
+* Default full-page edit view for component_date.
+*
+* This module is selected by render_edit_component_date.prototype.edit when the
+* view is 'default' or unrecognised (or 'print', with self.permissions forced
+* to 1 beforehand). It builds the complete component wrapper, content area,
+* and — for users with write access — the action buttons.
+*
+* Supported date_mode values (read from context.properties.date_mode):
+*   'date'       — single date, one text input (default)
+*   'range'      — start + end date pair, two inputs with a visual separator
+*   'time_range' — start + end date-time pair (date + time fields)
+*   'period'     — duration expressed as year/month/day counters
+*   'time'       — time-of-day only, one text input
+*
+* The date_mode is applied as a CSS class on the wrapper so that mode-specific
+* layout rules can be targeted without extra attribute checks.
+*
+* Entry rendering:
+*   If the component data contains no entries an empty entry placeholder ([''])
+*   is used so that at least one (empty) input is always shown.
+*   For read-only users (permissions === 1) each entry is rendered via
+*   get_content_value_read (plain text); for writers via get_content_value
+*   (interactive input with calendar picker).
+*
+* Main exports:
+*   view_default_edit_date  — constructor placeholder (callable; returns true)
+*   get_content_data        — shared by other callers that need only the inner
+*                             content area (e.g. refresh path)
+*   get_content_value       — exported for unit-level reuse; builds a single
+*                             entry's DOM node
+*/
+
+
+
+/**
+* VIEW_DEFAULT_EDIT_DATE
+* Constructor placeholder. All logic lives on the static .render() method.
+* The function itself is never called as a constructor — it exists only as a
+* namespace that other modules can import.
 */
 export const view_default_edit_date = function() {
 
@@ -31,10 +69,28 @@ export const view_default_edit_date = function() {
 
 /**
 * RENDER
-* Render node for use in current view
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Build and return the full component DOM node for the default edit view.
+*
+* When options.render_level is 'content', only the inner content_data node is
+* returned (no outer wrapper, no buttons). This allows the refresh path to
+* replace only the content area without discarding the outer wrapper and its
+* event listeners.
+*
+* Side effects:
+*   - Sets wrapper.content_data as a direct property so callers can reach
+*     individual entry nodes via self.node.content_data[i].
+*   - Adds the active date_mode as a CSS class on the wrapper so that
+*     mode-specific layout rules are applied automatically.
+*
+* @param {Object} self - The component_date instance.
+*   Expected properties: self.permissions {number}, self.data {Object|null},
+*   self.context {Object}, self.show_interface {Object}, self.get_date_mode
+*   {Function}, self.load_editor {Function}.
+* @param {Object} options - Render configuration.
+*   @param {string} [options.render_level='full'] - 'full' returns the outer
+*   wrapper; 'content' returns only the content_data element.
+* @returns {Promise<HTMLElement>} The wrapper div (render_level='full') or the
+*   content_data div (render_level='content').
 */
 view_default_edit_date.render = async function(self, options) {
 
@@ -77,9 +133,20 @@ view_default_edit_date.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* 	component instance
-* @return HTMLElement content_data
+* Build and return the content_data element containing one entry node per
+* data entry (or a single empty entry node when there is no data).
+*
+* The built element exposes numeric index properties (content_data[0],
+* content_data[1], …) pointing to each entry's DOM node so that other
+* subsystems (e.g. the refresh path) can address them directly.
+*
+* The selection between read-only (permissions === 1) and interactive
+* (permissions > 1) rendering is made here: read-only entries use
+* get_content_value_read; interactive entries use get_content_value.
+*
+* @param {Object} self - The component_date instance.
+*   Expected properties: self.data {Object|null}, self.permissions {number}.
+* @returns {HTMLElement} content_data - The populated content container element.
 */
 export const get_content_data = function(self) {
 
@@ -92,6 +159,8 @@ export const get_content_data = function(self) {
 
 	// build values
 		const input_nodes 	= []
+		// When no entries are saved, synthesise a single empty entry so the
+		// user always sees at least one input field ready to type into.
 		const inputs_value	= (entries.length<1) ? [''] : entries
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
@@ -112,10 +181,34 @@ export const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @param int i
-* @param object|null current_value
-* @param object self
-* @return HTMLElement content_value
+* Build and return the DOM node for a single date entry in interactive
+* (write-access) edit mode.
+*
+* The rendered inner input node is chosen based on date_mode:
+*   'date'       → render_input_element_date     (one text input)
+*   'range'      → render_input_element_range     (start + end date inputs)
+*   'time_range' → render_input_element_time_range (start + end time inputs)
+*   'period'     → render_input_element_period    (year / month / day counters)
+*   'time'       → render_input_element_time      (one time input)
+*
+* The date_mode is applied as a CSS class on content_value so that
+* mode-specific layout rules target the correct element.
+*
+* If the component has an associated component_dataframe, attach_item_dataframe
+* appends the dataframe glue below the input node; if there is no dataframe the
+* call is a no-op.
+*
+* @param {number} i - Zero-based index of this entry within data.entries.
+*   Used by the render_input_element_* functions and by the change handler to
+*   address the correct slot when saving back.
+* @param {Object|null} current_value - The raw entry object from data.entries[i].
+*   Shape depends on date_mode; e.g. for 'date': { start: dd_date } where
+*   dd_date is { year, month, day[, time] }.  May be null/empty for new entries.
+* @param {Object} self - The component_date instance.
+*   Expected: self.get_date_mode {Function}, self.view {string},
+*   self.permissions {number}.
+* @returns {HTMLElement} content_value - The div wrapping the input node and any
+*   attached dataframe glue.
 */
 export const get_content_value = (i, current_value, self) => {
 
@@ -129,6 +222,8 @@ export const get_content_value = (i, current_value, self) => {
 		})
 
 	// input node
+		// The IIFE receives date_mode as an argument to avoid closure over the
+		// outer variable, making the switch-case fully self-contained.
 		const input_node = ((date_mode)=>{
 
 			// build date base on date_mode
@@ -173,8 +268,24 @@ export const get_content_value = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object instance
-* @return HTMLElement buttons_container
+* Build and return the buttons container for the component toolbar.
+*
+* Only called when permissions > 1 (write access). Renders:
+*   - An "Add input" button (span.button.add) when show_interface.button_add
+*     is true. Clicking it dispatches a change_value call with action 'insert'
+*     and refresh: true, which causes the whole content area to re-render with
+*     a new empty entry appended.
+*   - Standard tool buttons (via ui.add_tools) when show_interface.tools is
+*     true (e.g. delete-all, copy from another language, …).
+*
+* (!) get_label is a global object injected at page level — it is NOT imported.
+*   A missing get_label will cause a ReferenceError at runtime.  The fallback
+*   string 'New' guards against a null/undefined label key only.
+*
+* @param {Object} self - The component_date instance.
+*   Expected: self.show_interface {Object} (with boolean keys button_add, tools),
+*   self.change_value {Function}.
+* @returns {HTMLElement} buttons_container - The populated buttons toolbar element.
 */
 const get_buttons = (self) => {
 

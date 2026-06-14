@@ -3,34 +3,61 @@
 * CLASS COMPONENT_GEOLOCATION
 * Manages geographic coordinate components in Dédalo.
 *
-* Stores and handles latitude/longitude location data in GeoJSON-compatible format.
-* Used for mapping, spatial queries, and geographic visualization of records.
+* Stores one or more map locations per record as structured objects containing
+* latitude, longitude, altitude, zoom level, and an optional set of drawn map
+* layers (lib_data). The persisted datum array is always language-neutral
+* (DEDALO_DATA_NOLAN) because coordinates carry no language dimension.
 *
-* Data format (GeoJSON-like):
+* Stored datum shape (one element per location point):
 * ```
-* {
-*   "type": "FeatureCollection",
-*   "features": [{
-*     "type": "Feature",
-*     "properties": {},
-*     "geometry": {
-*       "type": "Point",
-*       "coordinates": [longitude, latitude]
-*     }
-*   }]
-* }
+* [
+*   {
+*     "id":      3,
+*     "alt":     16,
+*     "lat":     28.760289075631214,
+*     "lon":    -17.87981450557709,
+*     "zoom":    17,
+*     "lib_data": [
+*       {
+*         "layer_id": 1,
+*         "layer_data": {
+*           "type": "FeatureCollection",
+*           "features": [
+*             {
+*               "type": "Feature",
+*               "properties": { "layer_id": 1 },
+*               "geometry": {
+*                 "type": "Point",
+*                 "coordinates": [-17.879337, 28.760041]
+*               }
+*             }
+*           ]
+*         }
+*       }
+*     ]
+*   }
+* ]
 * ```
 *
-* Key features:
-* - Latitude and longitude coordinate storage
-* - GeoJSON FeatureCollection format for map integration
-* - Tag-based location references for text components
-* - Support for multiple location points per component
+* The magic default coordinates lat=39.462571 / lon=-0.376295 represent the
+* factory "no location set" sentinel. Both get_latitude() and get_longitude()
+* and get_diffusion_value_as_geojson() treat them as null / absent so that
+* un-placed records do not pollute maps or diffusion targets.
 *
-* Data is stored in the 'geo' column of matrix tables.
-* Always uses DEDALO_DATA_NOLAN (language-neutral) for storage.
+* The static helper build_geolocation_tag_string() produces an inline text tag
+* that embeds a point's GeoJSON inside rich-text component values for
+* inline map rendering.
 *
-* Extends component_common for standard component functionality.
+* Key responsibilities:
+* - Force DEDALO_DATA_NOLAN in the constructor (overrides any caller-supplied lang).
+* - Expose lat/lon scalar accessors for consumers that do not parse the full datum.
+* - Produce Socrata-compatible and generic GeoJSON diffusion values.
+* - Implement conform_import_data() accepting four distinct import formats
+*   (full v7 dato array, bare item object, bare FeatureCollection, flat CSV string).
+* - Implement update_data_version() as a no-op stub (no migrations required yet).
+*
+* Extends component_common (the abstract root for all Dédalo components).
+* Extended by: none (leaf class).
 *
 * @package Dédalo
 * @subpackage Core
@@ -41,10 +68,24 @@ class component_geolocation extends component_common {
 
 	/**
 	* __CONSTRUCT
+	* Initialises the component and forces language-neutral storage.
+	*
+	* Geographic coordinates carry no linguistic dimension, so lang is always
+	* overridden to DEDALO_DATA_NOLAN before delegating to the parent constructor.
+	* Any $lang argument supplied by the caller is silently discarded.
+	*
+	* @param string $tipo - Ontology tipo identifying this component definition (e.g. 'dd1234').
+	* @param mixed $section_id = null - Record identifier within the parent section.
+	* @param string $mode = 'list' - Rendering mode ('list', 'edit', 'search', 'tm', …).
+	* @param string $lang = DEDALO_DATA_LANG - Ignored; always forced to DEDALO_DATA_NOLAN.
+	* @param ?string $section_tipo = null - Ontology tipo of the parent section, when known.
+	* @param bool $cache = true - Whether to use the component instance cache.
 	*/
 	protected function __construct( string $tipo, mixed $section_id=null, string $mode='list', string $lang=DEDALO_DATA_LANG, ?string $section_tipo=null, bool $cache=true ) {
 
 		// Force always DEDALO_DATA_NOLAN
+		// (!) Coordinates are language-neutral: overwrite the caller's $lang so
+		// the parent stores and retrieves data under the correct matrix column.
 		$this->lang = DEDALO_DATA_NOLAN;
 
 		// Build the component
@@ -55,25 +96,24 @@ class component_geolocation extends component_common {
 
 	/**
 	* BUILD_GEOLOCATION_TAG_STRING
-	* Sample:
-	* [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.304362542927265,41.82053505145308]}}]}:data]
-	* {
-	*	"type": "FeatureCollection",
-	*	"features": [
-	*	    {
-	*	      "type": "Feature",
-	*	      "properties": {},
-	*	      "geometry": {
-	*	        "type": "Point",
-	*	        "coordinates": [
-	*	          2.304362542927265,
-	*	          41.82053505145308
-	*	        ]
-	*	      }
-	*	    }
-	*	]
-	* }
-	* @return string $result
+	* Builds an inline geo-tag string suitable for embedding inside rich-text component values.
+	*
+	* The tag format is understood by the client renderer to display an inline
+	* map pin inside textual content (e.g. oral-history transcripts referencing
+	* a specific place). The embedded coordinates follow GeoJSON order
+	* [longitude, latitude].
+	*
+	* Example output:
+	* [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},
+	*   'geometry':{'type':'Point','coordinates':[2.304362542927265,41.82053505145308]}}]}:data]
+	*
+	* The embedded JSON uses single quotes so the tag delimiters (square brackets
+	* and colons) remain unambiguous within the surrounding rich-text string.
+	*
+	* @param string $tag_id - Numeric identifier for this tag within the text (e.g. '1').
+	* @param string|float $lon - Longitude value (GeoJSON x-axis, range −180 … 180).
+	* @param string|float $lat - Latitude value (GeoJSON y-axis, range −90 … 90).
+	* @return string - The assembled inline geo-tag string.
 	*/
 	public static function build_geolocation_tag_string(string $tag_id, string|float $lon, string|float $lat) : string {
 
@@ -87,14 +127,21 @@ class component_geolocation extends component_common {
 
 	/**
 	* REGENERATE_COMPONENT
-	* Force the current component to re-save its data
-	* Note that the first action is always load data to avoid save empty content
+	* Force the current component to re-save its data.
+	* Note that the first action is always load data to avoid save empty content.
+	*
+	* Called by tool_update_cache when rebuilding cached component data.
+	* The explicit get_data() call is mandatory: without it, save() would
+	* persist an empty datum, erasing the stored location.
+	*
 	* @see class.tool_update_cache.php
-	* @return bool
+	* @return bool - Always true (errors are surfaced through exception / logger paths).
 	*/
 	public function regenerate_component() : bool {
 
 		// Force loads data always !IMPORTANT
+		// (!) Do not remove: without this call save() would write null/empty,
+		// silently erasing all stored coordinate data for the record.
 		$data = $this->get_data();
 
 		// Save component data
@@ -108,8 +155,13 @@ class component_geolocation extends component_common {
 
 	/**
 	* GET_LATITUDE
-	* Get the latitude of the component, if the data has the default data, return null
-	* @return float $latitude
+	* Returns the latitude scalar from the first stored location datum.
+	*
+	* Returns null when no data exists, when the datum has no 'lat' property, or
+	* when the latitude equals the factory default sentinel value (39.462571),
+	* which indicates the record has never had a real location assigned.
+	*
+	* @return ?float - Latitude in decimal degrees, or null if absent / sentinel.
 	*/
 	public function get_latitude() : ?float {
 
@@ -124,6 +176,10 @@ class component_geolocation extends component_common {
 		if(empty($data_latitude)){
 			return null;
 		}
+		// Sentinel check
+		// The factory default lat=39.462571 / lon=-0.376295 is the "no location set"
+		// state written when a component is created without coordinates. Treat it as null
+		// so consumers (maps, exports, diffusion) do not display a bogus pin.
 		$latitude = strval($data_latitude)==='39.462571'
 			? null
 			: floatval($data_latitude);
@@ -136,8 +192,13 @@ class component_geolocation extends component_common {
 
 	/**
 	* GET_LONGITUDE
-	* Get the longitude of the component, if the data has the default data, return null
-	* @return float $longitude
+	* Returns the longitude scalar from the first stored location datum.
+	*
+	* Returns null when no data exists, when the datum has no 'lon' property, or
+	* when the longitude equals the factory default sentinel value (−0.376295),
+	* which indicates the record has never had a real location assigned.
+	*
+	* @return ?float - Longitude in decimal degrees, or null if absent / sentinel.
 	*/
 	public function get_longitude() : ?float {
 
@@ -152,6 +213,10 @@ class component_geolocation extends component_common {
 		if(empty($data_longitude)){
 			return null;
 		}
+		// Sentinel check
+		// See get_latitude() for the rationale. The pair lat=39.462571 / lon=-0.376295
+		// is the factory default; only one of the two needs to match, but in practice
+		// both are set together. Returning null here keeps diffusion targets clean.
 		$longitude = strval($data_longitude)==='-0.376295'
 			? null
 			: floatval($data_longitude);
@@ -164,10 +229,17 @@ class component_geolocation extends component_common {
 
 	/**
 	* GET_DIFFUSION_VALUE_SOCRATA
-	* Calculate current component diffusion value for target field in socrata
-	* Used by diffusion to unify components diffusion value call to publish in socrata
-	* @return object $diffusion_value_socrata
+	* Produces a GeoJSON Point object for publication to a Socrata open-data endpoint.
 	*
+	* Socrata's geo column type expects a plain GeoJSON Point object (not a
+	* FeatureCollection). Coordinates follow the GeoJSON convention [longitude, latitude].
+	* Returns null when no datum is stored or when the datum is missing lon/lat.
+	*
+	* The commented-out WKT alternative ('POINT (lat, lon)') and the
+	* latitude/longitude plain-object alternative are left as reference; they
+	* reflect earlier iterations of the Socrata integration.
+	*
+	* @return ?object - stdClass with {type:"Point", coordinates:[lon, lat]}, or null.
 	*/
 	public function get_diffusion_value_socrata() : ?object {
 
@@ -210,32 +282,46 @@ class component_geolocation extends component_common {
 
 	/**
 	* GET_DIFFUSION_VALUE_AS_GEOJSON
-	* Sample
-		* [
-		*    {
-		*      "layer_id": 1,
-		*      "text": "...",
-		*      "layer_data": {
-		*        "type": "FeatureCollection",
-		*        "features": [
-		*          {
-		*            "type": "Feature",
-		*            "properties": {},
-		*            "geometry": {
-		*              "type": "Point",
-		*              "coordinates": [
-		*                2.011618, // longitude
-		*                41.562546 // latitude
-		*              ]
-		*            }
-		*          }
-		*        ]
-		*      }
-		*    }
-		* ]
+	* Produces a JSON-encoded GeoJSON layer array for generic map diffusion targets.
+	*
+	* The returned string encodes a single-element array containing a layer object
+	* with layer_id=1, an empty text field, and a full FeatureCollection wrapping
+	* one Point geometry. Coordinates are formatted to 16 decimal places with dot
+	* notation to preserve JSON integrity across locales that use comma decimals.
+	*
+	* Returns null when:
+	* - The stored datum is empty or missing lon/lat properties.
+	* - The stored lat/lon match the factory default sentinel (39.462571 / -0.376295),
+	*   which represents an un-placed record.
+	*
+	* Output format:
+	* ```
+	* [
+	*   {
+	*     "layer_id": 1,
+	*     "text": "",
+	*     "layer_data": {
+	*       "type": "FeatureCollection",
+	*       "features": [
+	*         {
+	*           "type": "Feature",
+	*           "properties": {},
+	*           "geometry": {
+	*             "type": "Point",
+	*             "coordinates": [
+	*               2.011618, // longitude
+	*               41.562546 // latitude
+	*             ]
+	*           }
+	*         }
+	*       ]
+	*     }
+	*   }
+	* ]
+	* ```
+	*
 	* @see ontology publication use in mdcat4091
-	* @return string $value
-	* 	Encoded GEOJSON data
+	* @return ?string - JSON-encoded layer array, or null when coordinates are absent/sentinel.
 	*/
 	public function get_diffusion_value_as_geojson() : ?string {
 
@@ -255,6 +341,8 @@ class component_geolocation extends component_common {
 			// "lat": 39.462571,
 			// "lon": -0.376295,
 			// "zoom": 12
+			// Sentinel guard: factory-default coordinates mean "no location set".
+			// Normalise comma-decimal locales to dot before string comparison.
 			$value_lat_str	= isset($value->lat)
 				? strval($value->lat)
 				: null;
@@ -268,6 +356,9 @@ class component_geolocation extends component_common {
 			}
 
 		// coordinates. Converts float number to 16 decimals number using '.' separator
+			// number_format with '.' decimal separator and '' thousands separator prevents
+			// locale-sensitive formatting (e.g. French locale would produce '2,011618')
+			// that would break the JSON string assembled by the inline json_decode below.
 			$lon = !empty($value->lon)
 				? number_format( (float)$value->lon, 16, '.', '')
 				: 0; // string as "2.012151410452" (use dot notation to preserve JSON integrity)
@@ -276,6 +367,8 @@ class component_geolocation extends component_common {
 				: 0; // string as "41.562363467527" (use dot notation to preserve JSON integrity)
 
 		// GEOJSON
+			// Assemble via string interpolation inside a JSON literal then immediately
+			// decode+re-encode to normalise trailing zeros in the coordinates.
 			$ar_value = json_decode('[
 			  {
 			      "layer_id": 1,
@@ -307,8 +400,13 @@ class component_geolocation extends component_common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* 	Default is true. Override when component is sortable
+	* Declares that this component type does not support column sorting.
+	*
+	* Geographic data cannot be meaningfully sorted as a flat scalar, so the
+	* base class default (true) is overridden to false. The list view uses this
+	* to hide the sort affordance for geolocation columns.
+	*
+	* @return bool - Always false; geolocation components are not sortable.
 	*/
 	public function get_sortable() : bool {
 
@@ -319,21 +417,44 @@ class component_geolocation extends component_common {
 
 	/**
 	* CONFORM_IMPORT_DATA
-	* Accepted import formats:
-	* 1. Full v7 dato (JSON array of items):
-	* 	[{"lat":39.4625,"lon":-0.3762,"zoom":16,"alt":0,"lib_data":[{"layer_id":1,"layer_data":{FeatureCollection}}]}]
-	* 2. A single bare item (JSON object):
-	* 	{"lat":39.4625,"lon":-0.3762}
-	* 3. A bare GeoJSON FeatureCollection (JSON object). The map center is taken
-	*    from the first 'Point' feature and the collection is stored as lib_data layer 1.
-	*    Note that GeoJSON coordinates are [lon, lat]
-	* 4. A flat string as 'lat, lon[, zoom[, alt]]' with dot decimals:
-	* 	39.4625, -0.3762, 16
-	*    Note that, unlike GeoJSON, the flat string order is latitude first (human convention)
-	* Empty value returns null (clears the existing component data)
-	* @param string $import_value
-	* @param string $column_name
-	* @return object $response
+	* Validates and normalises an import value into the v7 geolocation datum array.
+	*
+	* Accepts four distinct input formats plus an empty-string sentinel (tried in order):
+	*
+	* 1. Full v7 dato — JSON array of location item objects:
+	*    [{"lat":39.4625,"lon":-0.3762,"zoom":16,"alt":0,
+	*      "lib_data":[{"layer_id":1,"layer_data":{FeatureCollection}}]}]
+	*
+	* 2. Single bare item — JSON object with at minimum lat and lon:
+	*    {"lat":39.4625,"lon":-0.3762}
+	*    Wrapped into a single-element array before processing.
+	*
+	* 3. Bare GeoJSON FeatureCollection — JSON object with type="FeatureCollection".
+	*    The map center (lat/lon) is derived from the first Point feature found in
+	*    features[]. The whole FeatureCollection is stored as lib_data layer 1.
+	*    Note: GeoJSON coordinates are [longitude, latitude] — opposite to human order.
+	*
+	* 4. Flat CSV string — 'lat, lon[, zoom[, alt]]' with dot decimal separators:
+	*    "39.4625, -0.3762, 16"
+	*    Note: unlike GeoJSON, the flat string places latitude first (human convention).
+	*
+	* 5. Empty string — result null, which clears the existing component datum.
+	*
+	* Legacy raw export format detection: if the decoded JSON is a lang-keyed object
+	* ({"lg-nolan":[…]}), the first key's value is extracted. This handles round-trips
+	* from older export formats.
+	*
+	* Per-item validation (enforced by the inner $conform_item closure):
+	* - lat and lon must be present, numeric, and within valid WGS-84 ranges.
+	* - zoom defaults to 16; alt defaults to 0 if missing or non-numeric.
+	* - lib_data, when present, must be an array of objects each carrying layer_id
+	*   and layer_data as a valid GeoJSON FeatureCollection.
+	*
+	* @param string $import_value - Raw import cell value.
+	* @param string $column_name - Source column name (used for error context by callers).
+	* @return object - Standard import response: {result: array|null, errors: array, msg: string}.
+	*   result is the normalised datum array on success, or null to clear existing data.
+	*   errors contains failed-item objects when validation rejects the input.
 	*/
 	public function conform_import_data(string $import_value, string $column_name) : object {
 
@@ -509,6 +630,8 @@ class component_geolocation extends component_common {
 			}
 
 		// flat string case as 'lat, lon[, zoom[, alt]]'
+			// Split on commas and require 2–4 numeric parts.
+			// Note the order is lat first (human convention), unlike GeoJSON [lon, lat].
 			$ar_parts = array_map('trim', explode(',', $import_value));
 			$len_parts = count($ar_parts);
 			if ($len_parts < 2 || $len_parts > 4) {
@@ -546,11 +669,26 @@ class component_geolocation extends component_common {
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $request_options
-	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	* Handles versioned datum migrations triggered by tool_update_cache or similar tools.
+	*
+	* Result codes (documented here, matching the contract in component_common):
+	* - 0: This component type does not implement an update for the requested version.
+	* - 1: Update was applied successfully.
+	* - 2: Update was attempted but the datum was already in the target format (no change needed).
+	*
+	* Currently no migration versions are defined for component_geolocation, so all
+	* calls fall through to the default branch and return result=0.
+	*
+	* $request_options recognised keys:
+	* - update_version (array)  — version tuple, e.g. [7, 1, 0].
+	* - data_unchanged (mixed)  — passed through for caller use.
+	* - reference_id   (mixed)  — record identifier context.
+	* - tipo           (string) — component tipo being migrated.
+	* - section_id     (mixed)  — section record identifier.
+	* - section_tipo   (string) — parent section tipo.
+	*
+	* @param object $request_options - Migration request parameters (see keys above).
+	* @return object - {result: int, msg: string}. result=0 means no-op for this version.
 	*/
 	public static function update_data_version(object $request_options) : object {
 

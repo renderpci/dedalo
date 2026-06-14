@@ -12,6 +12,46 @@
 	import {dd_request_idle_callback, when_in_viewport} from '../../common/js/events.js'
 
 
+
+/**
+* VIEW_DEFAULT_EDIT_SECURITY_ACCESS
+*
+* Edit-mode view for the component_security_access component.
+*
+* Renders a hierarchical permission tree that lets administrators grant or
+* revoke access to every ontology element (areas, sections, components,
+* section_groups, buttons…) for a given user profile.
+*
+* The tree distinguishes two node types:
+*   - Area/section nodes  (tipo === section_tipo): rendered with a tri-state
+*     checkbox (checked = rw, indeterminate = r, unchecked = no access) and a
+*     "global" radio-button group that bulk-sets all child components at once.
+*   - Permission nodes (tipo !== section_tipo, i.e. actual components or
+*     buttons): rendered with a three-option radio group (x / r / rw).
+*
+* Permission values used throughout this module:
+*   0 → no access (x)
+*   1 → read-only  (r--)
+*   2 → read-write (rw-)
+*
+* Key data sources on `self` (the component_security_access instance):
+*   self.data.datalist      – flat ontology tree fetched from the server cache,
+*                             each entry: {tipo, section_tipo, parent, label, model}
+*   self.data.changes_files – chronological list of JSON change-log file names
+*   self.filled_value       – datalist mirrored with a resolved permission value
+*                             for every node (value 0 for nodes absent from DDBB)
+*   self.permissions        – numeric permission level of the current *viewer*
+*                             (1 = read-only → read-only tree, >1 → editable)
+*
+* Lazy rendering: branch children are built on first expand using
+* `requestAnimationFrame`, keeping initial paint cost low for large trees.
+*
+* Exports a single named factory function `view_default_edit_security_access`
+* plus a static `.render` method consumed by the component render dispatch.
+*/
+
+
+
 /**
 * VIEW_DEFAULT_EDIT_SECURITY_ACCESS
 * Manages the component's logic and appearance in client side
@@ -25,10 +65,22 @@ export const view_default_edit_security_access = function() {
 
 /**
 * RENDER
-* Render node for use in current view
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Entry point called by the component render dispatch for the 'edit' mode.
+*
+* Builds either a full wrapper (with toolbar buttons) or a bare content_data
+* node depending on `options.render_level`.
+*
+* When `self.permissions === 1` the tree is rendered read-only (no checkboxes,
+* no save button).  When permissions > 1 the editable tree is shown together
+* with a Save button that is initially disabled and becomes enabled whenever
+* any permission value is mutated (via the `show_save_button_<id>` event).
+*
+* @param {Object} self - component_security_access instance
+* @param {Object} options - render configuration
+* @param {string} [options.render_level='full'] - 'full' builds a complete
+*   wrapper node; 'content' returns only the inner content_data element
+* @returns {Promise<HTMLElement>} the wrapper element (render_level='full') or
+*   the content_data element (render_level='content')
 */
 view_default_edit_security_access.render = async function(self, options) {
 
@@ -66,8 +118,28 @@ view_default_edit_security_access.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Builds the main content area containing the permission tree and the
+* change-history selector.
+*
+* Branches on `self.permissions`:
+*   - 1 (read-only viewer): renders the static read tree via
+*     `render_tree_items_read` and returns immediately without adding the Save
+*     button or its associated event subscriptions.
+*   - >1 (editor): renders the interactive editable tree via `render_tree_items`,
+*     subscribes to `show_save_button_<id>` events, and attaches a Save button
+*     that calls `self.save_changes()` on click.
+*
+* The `content_data` element carries a `.content_data` pointer on the returned
+* `wrapper` node so callers can reach the inner DOM without querying.
+*
+* Note: `value` here is `self.filled_value`, NOT `data.value`. The
+* server-side `data.value` omits entries with permission 0; `filled_value` is
+* the expanded mirror that includes a zero-valued entry for every datalist
+* node, making client-side propagation safe.
+*
+* @param {Object} self - component_security_access instance
+* @returns {Promise<HTMLElement>} content_data element containing the full
+*   permission tree and (when editable) the Save button
 */
 const get_content_data = async function(self) {
 
@@ -209,13 +281,32 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_TREE_ITEMS
-* Render given tree items hierarchically
-* @param array items
-* @param array datalist
-* @param array value
-* @param instance self
-* @return DocumentFragment
-* 	Containing li nodes
+* Renders a flat list of datalist items into a hierarchical DOM tree and
+* returns them as a DocumentFragment ready to be appended to any `ul`.
+*
+* Two-pass algorithm:
+*   Pass 1 – render every item in the `items` array into a `li` node (via
+*             `render_tree_item`) and index it by `tipo` in `tree_object`.
+*   Pass 2 – for each node, look up its `item.parent` in `tree_object`; if
+*             found, move the node into the parent's `.branch` sub-list;
+*             otherwise add it to the root-level DocumentFragment.
+*
+* This approach avoids recursion while correctly building arbitrarily deep
+* trees as long as every ancestor also appears in `items`.
+*
+* (!) `tree_item_node.item` and `tree_item_node.branch` are DOM expando
+* properties set by `render_tree_item` / `render_area_item`. They must be
+* present before the hierarchisation pass runs.
+*
+* @param {Array} items - datalist entries to render (may be a root-level
+*   subset or a full datalist for a branch)
+* @param {Array} datalist - complete flat ontology list used to resolve
+*   children during lazy branch expansion
+* @param {Array} value - self.filled_value array; each entry:
+*   {section_tipo: string, tipo: string, value: number}
+* @param {Object} self - component_security_access instance
+* @returns {DocumentFragment} fragment whose direct children are the
+*   root-level `li` nodes of the rendered sub-tree
 */
 const render_tree_items = function(items, datalist, value, self) {
 
@@ -267,12 +358,24 @@ const render_tree_items = function(items, datalist, value, self) {
 
 /**
 * RENDER_TREE_ITEM
-* Recursive function to render tree items
-* @param object item
-* @param array datalist
-* @param array value
-* @param object self
-* @return HTMLElement tree_item_node
+* Dispatches a single datalist entry to the appropriate renderer based on
+* whether the item represents a structural node (area/section) or a
+* permission leaf (component, button, section_group, etc.).
+*
+* The distinguishing rule: when `item.tipo === item.section_tipo` the item
+* IS the section root and is rendered as an area/section node with a
+* tri-state checkbox and a collapsible branch.  Otherwise it is a
+* permission leaf rendered with a radio group.
+*
+* After rendering, the expando property `tree_item_node.item` is set so
+* the two-pass hierarchisation in `render_tree_items` can read the parent
+* key without keeping a separate map.
+*
+* @param {Object} item - single datalist entry
+* @param {Array} datalist - full flat ontology list
+* @param {Array} value - self.filled_value
+* @param {Object} self - component_security_access instance
+* @returns {HTMLElement} `li` element with `.item` expando set
 */
 const render_tree_item = function(item, datalist, value, self) {
 
@@ -300,15 +403,42 @@ const render_tree_item = function(item, datalist, value, self) {
 /**
 * RENDER_AREA_ITEM
 * Create default tree item node (section, area)
-* @param object item
-* 	datalist current item
-* @param array datalist
-* 	full list of section elements from ontology
-* @param array value
-* 	full list of elements in self.data (DB) at key zero (this component has only one value but format is array)
-* @param object self
-* 	self component instance
-* @return HTMLElement li
+*
+* Builds a `li` for an area or section node — i.e. an ontology element whose
+* `tipo === section_tipo`.  The node contains:
+*   - A tri-state checkbox (`checked` = rw, `indeterminate` = r, unchecked = x)
+*   - A label with an expand/collapse arrow when the node has children
+*   - An `[info_text]` span showing tipo / model / current permission (debug aid)
+*   - A collapsible `ul.branch` whose children are built lazily on first expand
+*   - A "global" radio group (x / r / rw) that bulk-applies a value to all
+*     permission-leaf children of this area
+*
+* Checkbox change propagation logic:
+*   When the user ticks/unticks the checkbox, `dd_request_idle_callback` is
+*   used to defer the expensive propagation off the main thread:
+*     1. All *area* children receive the same value (sections cascade down).
+*     2. All parents up the hierarchy are updated.  If the new value is >= 2
+*        every parent is set to 2 (give read-write access up the chain).
+*        If the value is 1 or 0, each parent is only cleared when none of its
+*        direct children still hold value >= 2 (the `parents_loop` label
+*        implements an early-exit scan).
+*     3. The item itself is updated last.
+*     4. The `show_save_button_<id>` event is published to reveal the Save button.
+*
+* Change-of-value from sibling interactions is received via the
+* `update_item_value_<id>_<tipo>_<section_tipo>` event, which updates the
+* checkbox visual state without triggering further propagation.
+*
+* Expand / collapse state is persisted through `ui.collapse_toggle_track`
+* using the key `security_acccess_<tipo>` (note: double-c typo in the key is
+* intentional and must remain stable to avoid breaking stored states).
+*
+* @param {Object} item - datalist current item
+* @param {Array} datalist - full list of section elements from ontology
+* @param {Array} value - full list of elements in self.data (DB) at key zero
+*   (this component has only one value but format is array)
+* @param {Object} self - self component instance
+* @returns {HTMLElement} li element with expando `.branch` for child nodes
 */
 const render_area_item = function(item, datalist, value, self) {
 
@@ -582,15 +712,31 @@ const render_area_item = function(item, datalist, value, self) {
 /**
 * RENDER_PERMISSIONS_ITEM
 * Create tree item node to check permissions (components, section_groups, buttons, etc.)
-* @param object item
-* 	datalist current item
-* @param array datalist
-* 	full list of section elements from ontology
-* @param array value
-* 	full list of elements in self.data (DB) at key zero (this component has only one value but format is array)
-* @param object self
-* 	self component instance
-* @return HTMLElement li
+*
+* Builds a `li` for a permission-leaf item — i.e. an ontology element whose
+* `tipo !== section_tipo`.  These nodes represent concrete components, buttons,
+* or section groups that carry individual access settings.
+*
+* The node contains:
+*   - A three-option radio group (x / r / rw) created by
+*     `create_permissions_radio_group`, which handles its own change propagation
+*     up to parent checkboxes.
+*   - A label displaying the item's human-readable ontology label.
+*   - An `[info_text]` span with debug details (tipo / model / current value).
+*   - An empty `.branch` `ul` expando when the item has further children in the
+*     datalist (child nodes are appended later by the hierarchisation pass in
+*     `render_tree_items`).
+*
+* (!) `direct_children` here uses `datalist.find` (returns one element or
+* undefined) only to test for the *presence* of child nodes.  The actual child
+* nodes are built and added by the two-pass loop in `render_tree_items`.
+*
+* @param {Object} item - datalist current item
+* @param {Array} datalist - full list of section elements from ontology
+* @param {Array} value - full list of elements in self.data (DB) at key zero
+*   (this component has only one value but format is array)
+* @param {Object} self - self component instance
+* @returns {HTMLElement} li element with optional expando `.branch`
 */
 const render_permissions_item = function(item, datalist, value, self) {
 
@@ -655,10 +801,35 @@ const render_permissions_item = function(item, datalist, value, self) {
 /**
 * CREATE_PERMISSIONS_RADIO_GROUP
 * Creates a triple radio group options (x,r,rw)
-* @param object self
-* @param object $item
-* @param int permissions
-* @return DocumentFragment
+*
+* Builds a DocumentFragment with three labelled radio inputs representing
+* the three permission levels (0=x, 1=r, 2=rw) for a single permission-leaf
+* item.
+*
+* Each radio input:
+*   - Shares a `name` attribute keyed to `section_tipo + '_' + tipo` so only
+*     one can be selected at a time for the same item.
+*   - Subscribes to `update_item_value_<id>_<tipo>_<section_tipo>` to receive
+*     reactive updates when a parent-level global radio or area checkbox changes
+*     the value programmatically.
+*   - On change, defers the propagation work via `dd_request_idle_callback`:
+*       1. Sets all recursive children to the new value.
+*       2. Calls `self.update_parents_radio_butons` to recalculate and update
+*          the parent area checkboxes and global radio groups.
+*       3. Publishes `show_save_button_<id>` to enable the Save button.
+*
+* A temporary "Propagating…" span is inserted into the grandparent node while
+* the idle-callback runs, giving visual feedback during the propagation.
+*
+* (!) The `datalist` parameter is declared in the signature of the outer
+* function but is NOT referenced inside the body.  It is kept for API
+* consistency with `create_global_radio_group`.
+*
+* @param {Object} self - component_security_access instance
+* @param {Object} item - ontology item: {tipo, section_tipo, label, model, parent}
+* @param {number} permissions - current permission value (0, 1, or 2)
+* @returns {DocumentFragment} fragment with three `label > input[type=radio]`
+*   elements for 'x', 'r', and 'rw'
 */
 const create_permissions_radio_group = function(self, item, permissions) {
 
@@ -762,13 +933,52 @@ const create_permissions_radio_group = function(self, item, permissions) {
 /**
 * CREATE_GLOBAL_RADIO_GROUP
 * Creates a triple radio group options (x,r,rw) that appears in areas / sections
-* @param object self
-* @param object item
-* @param int permissions
-* @param array datalist
-* @param HTMLElement components_container
-* @param object children
-* @return DocumentFragment
+*
+* Builds a DocumentFragment with three labelled radio inputs that control the
+* permission value for ALL permission-leaf children of an area/section at once.
+* This "global" radio group sits beside the area label in `render_area_item`.
+*
+* Initial checked state is derived from `self.filled_value`:
+*   - If every permission-leaf child has the same value (0, 1, or 2), that
+*     radio is pre-selected (`child_value` equals the common value).
+*   - If children have mixed values, no radio is pre-selected (`child_value`
+*     is null).
+*
+* Child identification uses a Set of `tipo_section_tipo` keys (`children_key`)
+* built from the `children` array.  Only items where `tipo !== section_tipo`
+* (i.e. actual permission leaves, not area nodes) are considered.
+*
+* On change (`change_handler`):
+*   1. Iterates `self.filled_value` in reverse; for each item whose composite
+*      key is in `children_key`:
+*        - Area sub-items publish `update_area_radio_<id>_<tipo>_<section_tipo>`
+*          so any nested global radio group in a child area is also updated.
+*        - Permission leaves update their `.value` in-place and publish
+*          `update_item_value_<id>_<tipo>_<section_tipo>` to sync radio buttons.
+*   2. Calls `self.update_parents_radio_butons` to re-evaluate the area's own
+*      parent chain.
+*   3. Publishes `show_save_button_<id>`.
+*
+* The `update_area_radio_<id>_<tipo>_<section_tipo>` subscription keeps this
+* radio group in sync when a child changes and the common value is resolved
+* again:
+*   - `changed_data` equals the new uniform value → check the matching radio.
+*   - `changed_data === null` (mixed values) and the radio was checked → uncheck
+*     it to reflect ambiguity.
+*
+* (!) The `components_container` parameter (`branch`) is declared but not used
+* inside the body.  It is kept for potential future use or historical reasons.
+*
+* @param {Object} self - component_security_access instance
+* @param {Object} item - area/section datalist entry: {tipo, section_tipo, …}
+* @param {number} permissions - current permission value of the area node itself
+* @param {Array} datalist - full flat ontology list
+* @param {HTMLElement} components_container - the branch `ul` element (unused
+*   inside this function; kept for API symmetry)
+* @param {Array} children - all recursive descendant datalist entries for this
+*   area, as returned by `self.get_children(item)`
+* @returns {DocumentFragment} fragment with three `label > input[type=radio]`
+*   elements for 'x', 'r', and 'rw'
 */
 const create_global_radio_group = function(self, item, permissions, datalist, components_container, children) {
 
@@ -912,8 +1122,22 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 
 /**
 * GET_BUTTONS
-* @param object instance
-* @return HTMLElement buttons_container
+* Builds the component's toolbar buttons container for the edit view.
+*
+* Creates an outer buttons_container (via `ui.component.build_buttons_container`)
+* and, when `self.show_interface.tools` is true, prepends the standard tool
+* buttons (e.g. history, info) via `ui.add_tools`.
+*
+* The inner `buttons_fold` div enables the sticky-position layout that keeps
+* action buttons visible while the user scrolls through a large permission tree.
+*
+* This function is only called when `self.permissions > 1`; callers with
+* read-only permission receive `null` instead.
+*
+* @param {Object} self - component_security_access instance; must expose
+*   `.show_interface.tools` and compatible state for `ui.add_tools`
+* @returns {HTMLElement} buttons_container element ready to be passed to
+*   `ui.component.build_wrapper_edit`
 */
 const get_buttons = (self) => {
 
@@ -948,11 +1172,21 @@ const get_buttons = (self) => {
 /**
 * RENDER_TREE_ITEMS_READ
 * Render given tree items hierarchically
-* @param array items
-* @param array datalist
-* @param array value
-* @return DocumentFragment
-* 	Containing li nodes
+*
+* Read-only counterpart of `render_tree_items`.  Uses the same two-pass
+* algorithm (render → index in `tree_object` → hierarchise by parent key)
+* but delegates to `render_tree_item_read` which produces static nodes with
+* no interactive controls.
+*
+* Called when `self.permissions === 1`.
+*
+* @param {Array} items - datalist entries to render (root-level subset or a
+*   full datalist for a branch)
+* @param {Array} datalist - complete flat ontology list
+* @param {Array} value - self.filled_value; each entry:
+*   {section_tipo: string, tipo: string, value: number}
+* @returns {DocumentFragment} fragment whose direct children are the
+*   root-level `li` nodes of the read-only sub-tree
 */
 const render_tree_items_read = function(items, datalist, value) {
 
@@ -1004,10 +1238,17 @@ const render_tree_items_read = function(items, datalist, value) {
 /**
 * RENDER_TREE_ITEM_READ
 * Recursive function to render tree items
-* @param object item
-* @param array datalist
-* @param array value
-* @return HTMLElement tree_item_node
+*
+* Read-only dispatcher: mirrors `render_tree_item` but routes to the
+* `*_read` renderers (`render_area_item_read` / `render_permissions_item_read`)
+* which produce static, non-interactive DOM nodes.
+*
+* Sets the `tree_item_node.item` expando for the hierarchisation pass.
+*
+* @param {Object} item - single datalist entry
+* @param {Array} datalist - full flat ontology list
+* @param {Array} value - self.filled_value
+* @returns {HTMLElement} `li` element with `.item` expando set
 */
 const render_tree_item_read = function(item, datalist, value) {
 
@@ -1034,13 +1275,26 @@ const render_tree_item_read = function(item, datalist, value) {
 /**
 * RENDER_AREA_ITEM_READ
 * Create default tree item node (section, area)
-* @param object item
-* 	datalist current item
-* @param array datalist
-* 	full list of section elements from ontology
-* @param array value
-* 	full list of elements in self.data (DB) at key zero (this component has only one value but format is array)
-* @return HTMLElement li
+*
+* Read-only counterpart of `render_area_item`.  Builds a `li` node that
+* displays the permission level as a Unix-style permission string prefix
+* on the label (`---`, `r--`, or `rw-`) with no interactive controls.
+*
+* Children are still revealed lazily: the branch `ul` starts hidden and
+* is populated on first expand using `window.requestAnimationFrame` to
+* avoid blocking the main thread.  Collapse/expand state is persisted
+* through the same `security_acccess_<tipo>` key used by the editable tree.
+*
+* (!) `self.selected_tipo` is referenced at line 1335 but `self` is NOT a
+* parameter of this function — it is captured from the outer module scope.
+* This is a latent `no-undef` / scoping issue in the original code; do NOT
+* fix it here; document only.
+*
+* @param {Object} item - datalist current item
+* @param {Array} datalist - full list of section elements from ontology
+* @param {Array} value - full list of elements in self.data (DB) at key zero
+*   (this component has only one value but format is array)
+* @returns {HTMLElement} li element with optional expando `.branch`
 */
 const render_area_item_read = function(item, datalist, value) {
 
@@ -1142,13 +1396,21 @@ const render_area_item_read = function(item, datalist, value) {
 /**
 * RENDER_PERMISSIONS_ITEM_READ
 * Create tree item node to check permissions (components, section_groups, buttons, etc.)
-* @param object item
-* 	datalist current item
-* @param array datalist
-* 	full list of section elements from ontology
-* @param array value
-* 	full list of elements in self.data (DB) at key zero (this component has only one value but format is array)
-* @return HTMLElement li
+*
+* Read-only counterpart of `render_permissions_item`.  Produces a static `li`
+* whose label carries the Unix-style permission prefix (`---`, `r--`, `rw-`)
+* followed by the item's ontology label.  No radio buttons or event listeners
+* are attached.
+*
+* An empty `.branch` expando is added when `datalist` contains a child node,
+* ensuring the two-pass hierarchisation in `render_tree_items_read` can still
+* relocate child nodes into this item correctly.
+*
+* @param {Object} item - datalist current item
+* @param {Array} datalist - full list of section elements from ontology
+* @param {Array} value - full list of elements in self.data (DB) at key zero
+*   (this component has only one value but format is array)
+* @returns {HTMLElement} li element with optional expando `.branch`
 */
 const render_permissions_item_read = function(item, datalist, value) {
 
@@ -1203,8 +1465,37 @@ const render_permissions_item_read = function(item, datalist, value) {
 /**
 * RENDER_CHANGES_FILES_SELECTOR
 * Creates a select node with all changes files
-* @param object options
-* @return HTMLElement changes_container
+*
+* Builds the "Latest changes" section that appears above the permission tree.
+* It contains:
+*   - A `<label>` heading (localised via `get_label.latest_changes`).
+*   - A `<select>` populated with one `<option>` per JSON change-log file on
+*     disk, formatted as "DD/MM/YYYY HH:MM:SS" by `parse_filename`.
+*   - A `changes_data_container` div that receives the rendered diff result
+*     when the user picks a file from the selector.
+*
+* File name format expected: `simple_schema_changes_YYYY-MM-DD_HH-MM-SS.json`
+* (the internal `parse_filename` closure strips the prefix and extension and
+* reformats to `DD/MM/YYYY HH:MM:SS`).
+*
+* On `<select>` change:
+*   1. Validates that a filename was selected; clears the container and logs
+*      an error if none.
+*   2. Shows a spinner inside `changes_data_container` via `ui.load_item_with_spinner`
+*      while the API call `self.get_changes_data(filename)` is in-flight.
+*   3. Renders the returned change data with `render_changes_data` and inserts
+*      the result into `changes_data_container`.
+*
+* @param {Object} options - configuration bag
+* @param {Object} options.self - component_security_access instance
+* @param {Array} options.changes_files - ordered array of change-log file names
+*   (most recent first); each entry is a string filename
+* @param {Array} options.datalist - full flat ontology list
+* @param {Array} options.value - self.filled_value
+* @param {HTMLElement} options.ul - the main tree `ul` element; passed through
+*   to `render_changes_data` for tree re-rendering on section click
+* @returns {HTMLElement} changes_container div encompassing the label, selector,
+*   and the response container
 */
 const render_changes_files_selector = function (options) {
 
@@ -1326,12 +1617,38 @@ const render_changes_files_selector = function (options) {
 * - parents: array with all parents. Used to show the path to the section, and open the nodes path into the tree
 * - section: Object. main section that changed and need to review his permissions, it will be open to show all components
 * - children: array with new children. Only informative nodes, no active, only show the additions of the section.
-* @param object options
-* 	changes_data: new ontology nodes
-* 	datalist: all ontology nodes
-* 	value: data permissions of the profile
-* 	ul: main node to build the tree
-* @return DocumentFragment
+*
+* Iterates over the `changes_data` array (one entry per modified section) and
+* builds a visual change-log panel.  Each change entry renders:
+*   - A breadcrumb path (`parents_labels`) showing the ancestry chain, with
+*     the root `dd1` entry filtered out for readability.
+*   - A clickable `section_label` div.  When clicked (`mouseup`):
+*       1. Writes `false` to `data_manager.set_local_db_data` for every parent
+*          and the section itself under the key `security_acccess_<tipo>`.
+*          Setting these keys to `false` instructs `ui.collapse_toggle_track`
+*          to restore the nodes as open on the next render.
+*       2. Re-renders the entire permission tree from the root, which will
+*          honour the stored open-state and display the targeted section
+*          with all its parent nodes already expanded.
+*       3. Preserves the tree container height during the re-render to prevent
+*          layout jump; clears `minHeight` after ~1.5 s via `setTimeout`.
+*   - A `children_container` `ul` listing the newly added child ontology
+*     elements (informational only — not interactive).
+*
+* (!) The `mouseup` event is used instead of `click` to ensure the handler
+* fires even when the pointer moves slightly between press and release —
+* intentional behaviour in the original code.
+*
+* @param {Object} options - configuration bag
+* @param {Array} options.changes_data - array of change objects, each:
+*   {parents: Array<{tipo, label}>, section: {tipo, label}, children: Array<{label}>}
+* @param {Array} options.datalist - all ontology nodes (full flat list)
+* @param {Array} options.value - data permissions of the profile (self.filled_value)
+* @param {Object} options.self - component_security_access instance
+* @param {HTMLElement} options.ul - main `ul` node housing the permission tree;
+*   cleared and repopulated when a section label is clicked
+* @returns {DocumentFragment} fragment containing one `.change` div per entry
+*   in `changes_data`
 */
 const render_changes_data = function (options) {
 

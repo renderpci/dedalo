@@ -4,17 +4,25 @@
 * Manages single-line text input components in Dédalo.
 *
 * Provides a simple text field for short string values with support for:
-* - Multi-language content with fallback to default language
+* - Multi-language content with fallback to the default language
 * - Grid display with configurable record separators
 * - Data resolution for list views and exports
 * - Type-ahead/autocomplete integration via search
 *
-* Stores text data as simple string values. For rich text or multi-line content,
+* Stores text data as simple string values wrapped in v7 item objects
+* ({ value: string, lang: string }). For rich text or multi-line content,
 * use component_text_area instead.
 *
-* Data format: Objects with 'value' property containing the text string.
+* Data format: Arrays of objects with a 'value' property containing the text string
+* (e.g. [{"value":"My text","lang":"lg-eng"}]).
 *
 * Extends component_string_common for string-based component functionality.
+* component_string_common in turn extends component_common (the root component base).
+*
+* Known direct callers / extension points:
+* - tool_export calls get_export_value() via the export tabulator pipeline.
+* - The import tool calls conform_import_data() before set_data_lang().
+* - The Time Machine inspector calls get_list_value() for display in the history panel.
 *
 * @package Dédalo
 * @subpackage Core
@@ -25,14 +33,27 @@ class component_input_text extends component_string_common {
 
 	/**
 	* GET_EXPORT_VALUE
-	* Atoms based export contract (see component_common::get_export_value).
-	* One atom per data item in the current lang; when the current lang is
-	* empty, fallback items are emitted flagged as is_fallback.
-	* Note that the leaf segment fields_separator is set to the resolved
-	* records_separator because the legacy grid pre-joined the items with
-	* records_separator (flat output parity).
-	* @param export_context|null $context = null
-	* @return export_value
+	* Atoms-based export contract implementation (see component_common::get_export_value).
+	*
+	* Produces an export_value containing one export_atom per data item in the
+	* current language. When the current language slice is empty, the method
+	* falls back to another available language via get_component_data_fallback()
+	* and marks every atom with is_fallback=true so the tabulator can style or
+	* filter untranslated content.
+	*
+	* records_separator resolution order (first wins):
+	*   1. $context->ddo->records_separator (caller override via ddo_map entry)
+	*   2. $this->get_properties()->records_separator (component definition in ontology)
+	*   3. ' | ' (hardcoded default, matching legacy get_grid_value behaviour)
+	*
+	* Note: fields_separator is deliberately set to the same value as
+	* records_separator on the leaf segment. This preserves flat-output parity
+	* with the legacy get_grid_value() which pre-joined items with records_separator
+	* before returning a single string.
+	*
+	* @param export_context|null $context = null - Export context; a default context is
+	*   created when null, which uses the instance's own lang and no path prefix.
+	* @return export_value - Container holding one atom per text item (empty when no data).
 	*/
 	public function get_export_value( ?export_context $context=null ) : export_value {
 
@@ -94,9 +115,16 @@ class component_input_text extends component_string_common {
 
 	/**
 	* GET_LIST_VALUE
-	* Overwrites the component_common method adding a special case
-	* resolution for time machine mode ('tm') and user Root (-1)
-	* @return array
+	* Returns the component data for list-view display, with a special-case
+	* override for the Root user (-1) in Time Machine ('tm') mode.
+	*
+	* Delegates to parent::get_list_value() (component_common), which returns
+	* the current-language data slice. The override is needed because the Root
+	* user record has section_id === -1 and typically has no stored name value;
+	* without this guard the inspector's 'Component history' panel would show
+	* an empty cell for the user column.
+	*
+	* @return array|null - Language-filtered data items for list display, or null when empty.
 	*/
 	public function get_list_value() : ?array {
 
@@ -118,11 +146,29 @@ class component_input_text extends component_string_common {
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $request_options
-	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	* Migration hook called by tool_update_cache and similar batch scripts when
+	* the stored data format for this component type needs to be upgraded.
+	*
+	* component_input_text currently has no known versioned migration; the
+	* switch has no matching case and always falls through to the default,
+	* returning result=0 (no update available for the requested version).
+	*
+	* Result codes (documented here and in parent component_common::update_data_version):
+	*   0 - Component does not implement an update for this version (no-op, safe to ignore).
+	*   1 - Data was updated and persisted.
+	*   2 - Data was inspected but required no change (already at target version).
+	*
+	* Recognised keys in $request_options (unknown keys are silently ignored):
+	*   update_version  array   Version tuple, e.g. [7,4,0]; joined to "7.4.0" for the switch.
+	*   data_unchanged  mixed   Passed by the caller; available for comparison if needed.
+	*   reference_id    mixed   Caller-side reference for log correlation.
+	*   tipo            string  Ontology tipo of the component being migrated.
+	*   section_id      int     Section row being migrated.
+	*   section_tipo    string  Section ontology tipo.
+	*   context         string  Calling context tag (default 'update_component_data').
+	*
+	* @param object $request_options - Migration options; see recognised keys above.
+	* @return object $response - {result: int, msg: string}
 	*/
 	public static function update_data_version(object $request_options) : object {
 
@@ -140,6 +186,8 @@ class component_input_text extends component_string_common {
 			$data_unchanged	= $options->data_unchanged;
 			$reference_id	= $options->reference_id;
 
+		// version string. $update_version is an array tuple (e.g. [7,4,0])
+		// imploded to "7.4.0" so the switch can match readable version strings
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
@@ -158,9 +206,35 @@ class component_input_text extends component_string_common {
 
 	/**
 	* CONFORM_IMPORT_DATA
-	* @param string $import_value
-	* @param string $column_name
-	* @return object $response
+	* Validates and transforms a raw import cell value into the v7 data format
+	* expected by set_data_lang() (an array of item objects with a 'value' property,
+	* or a lang-keyed object for multi-language imports).
+	*
+	* Handles three input shapes (detected in order):
+	*
+	* 1. JSON string — decoded, then normalised per its decoded type:
+	*    - array    → each element is wrapped in {value:...} if not already an object
+	*                 with 'value' or 'section_id'.
+	*    - object keyed by 'lg-*' (multi-language map) → each lang value is expanded
+	*                 to an array of normalised items so the import tool can call
+	*                 set_data_lang() once per language key.
+	*    - plain object (single item) → wrapped into a single-element array.
+	*
+	* 2. Plain bracket string (non-JSON starting with '[' but not '["') — treated
+	*    as literal text (e.g. numismatic legend '[Ac]'); wrapped into
+	*    [{value: $import_value}].
+	*
+	* 3. Malformed bracket string (starts with '["' or ends with '"]') — rejected as
+	*    likely corrupted JSON; logs an error and returns result=null with errors populated.
+	*
+	* Result contract (mirrors component_common::conform_import_data):
+	*   result  array|object|null   The normalised v7 data, or null on failure.
+	*   errors  array               Non-fatal error descriptors (empty on success).
+	*   msg     string              'OK' on success, error description on failure.
+	*
+	* @param string $import_value - Raw cell value from the import file (CSV or JSON).
+	* @param string $column_name  - Column name from the import file (used for error context).
+	* @return object $response - {result: array|object|null, errors: array, msg: string}
 	*/
 	public function conform_import_data(string $import_value, string $column_name) : object {
 

@@ -11,7 +11,17 @@
 
 /**
 * RENDER_EDIT_COMPONENT_SECTION_ID
-* Manage the components logic and appearance in client side
+* Edit-mode render controller for component_section_id.
+*
+* Acts as the view router for the 'edit' rendering mode: reads the
+* view name from the component context and delegates to the appropriate
+* view module. Currently all supported views (default, line, print)
+* share the same underlying template (view_default_edit_section_id)
+* but the 'print' view additionally forces read-only rendering by
+* overriding the instance permissions before the call.
+*
+* Assigned as component_section_id.prototype.edit via the prototype
+* chain in component_section_id.js.
 */
 export const render_edit_component_section_id = function() {
 
@@ -22,8 +32,19 @@ export const render_edit_component_section_id = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @return HTMLElement wrapper
+* Async edit-mode entry point — resolves the active view name and
+* delegates DOM construction to the matching view module.
+*
+* The section_id component is read-only in normal edit context; only
+* the search mode provides an editable input (see render_search_component_section_id).
+* The 'print' case intentionally falls through to 'default' so that
+* the same template is used, but with permissions forced to 1 (read) so
+* that view_default_edit_section_id renders a non-interactive value node.
+*
+* @param {Object} options - render options forwarded unchanged to the view module
+*   @param {string} [options.render_level='full'] - 'full' returns the complete wrapper;
+*     'content' returns only the content_data node (used by partial refresh)
+* @returns {Promise<HTMLElement>} the component wrapper element (or content_data if render_level==='content')
 */
 render_edit_component_section_id.prototype.edit = async function(options) {
 
@@ -40,6 +61,7 @@ render_edit_component_section_id.prototype.edit = async function(options) {
 			// sample: <div class="wrapper_component component_section_id oh62 oh1_oh62 edit view_print disabled_component">...</div>
 			// take account that to change the css when the component will render in print context
 			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
+			// (!) Intentional fall-through: 'print' downgrades permissions then renders via the default template.
 			self.permissions = 1
 
 		case 'line':

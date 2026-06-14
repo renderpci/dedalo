@@ -13,7 +13,17 @@
 
 /**
 * RENDER_LIST_COMPONENT_SECTION_ID
-* Manage the components logic and appearance in client side
+* View-dispatch renderer for component_section_id in list and TM (Time Machine) modes.
+*
+* This constructor is a hollow stub — the real work lives on the prototype.
+* component_section_id wires both `list` and `tm` to
+* render_list_component_section_id.prototype.list, so any change here
+* affects both rendering contexts.
+*
+* Supported views (resolved from context.view):
+*  - 'default' — standard list cell via view_default_list_section_id
+*  - 'mini'    — compact autocomplete / datalist chip via view_mini_section_id
+*  - 'text'    — inline <span> text-only rendering via view_text_section_id
 */
 export const render_list_component_section_id = function() {
 
@@ -24,8 +34,20 @@ export const render_list_component_section_id = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @return HTMLElement wrapper
+* Dispatch rendering of the section_id value to the appropriate view module
+* based on the context view name.
+*
+* This method is assigned to both component_section_id.prototype.list and
+* component_section_id.prototype.tm so that Time Machine columns display
+* identically to ordinary list cells.
+*
+* The view is read from self.context.view; when absent or unrecognised, the
+* 'default' branch renders a standard list-cell wrapper built by ui.component.
+*
+* @param {Object} options - Render options forwarded verbatim to the selected view's render().
+*   Contents are view-specific; current views do not use this argument but it
+*   is preserved for forward-compatibility with callers that supply generic options.
+* @returns {HTMLElement} Fully constructed DOM wrapper element ready for insertion.
 */
 render_list_component_section_id.prototype.list = function(options) {
 

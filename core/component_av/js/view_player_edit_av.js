@@ -13,7 +13,61 @@
 
 /**
 * VIEW_PLAYER_EDIT_AV
-* Manages the component's logic and appearance in client side
+* Dedicated "player" view for the component_av edit mode.
+*
+* This module exports the render entry-point and the two helper builders
+* that assemble the HTML5 video element and its accompanying transport controls.
+* It is selected when context.view === 'player' (as opposed to the default 'default'
+* or 'viewer' views handled by sibling modules).
+*
+* Key responsibilities:
+*  - Lazily load the video source via IntersectionObserver (when_in_viewport) so
+*    the browser does not fetch media bytes until the player enters the visible
+*    viewport — important for list views that may render dozens of AV components.
+*  - Apply fragment time-range constraints (vbegin / vend) as media-fragment URI
+*    parameters when self.fragment is set (e.g. from a linked timecode annotation).
+*  - Attach a <track kind="captions"> element when subtitles are available in
+*    self.data.subtitles, and subscribe to the 'updated_subtitles_file_<id>' event
+*    so the track is hot-swapped whenever tool_transcription regenerates the VTT file.
+*  - Restrict right-click context menu and show 'nodownload' on the native controls
+*    when the component's permission level is read-only (self.permissions <= 1).
+*  - Render a custom transport-control bar (get_av_control_buttons) that exposes
+*    frame-accurate navigation driven by the r_frame_rate reported in self.media_streams.
+*
+* Data shapes expected on `self` (the component_av instance):
+*   self.context            {Object}  - component context DDO from the server
+*   self.context.features   {Object}  - { quality: string, extension: string, ... }
+*   self.data               {Object}  - component data DDO from the server
+*   self.data.entries       {Array}   - array of entry objects; entries[0] is the primary file group
+*   self.data.entries[0].files_info {Array} - array of file_info objects per quality/extension
+*     file_info shape: { quality, extension, file_path, file_exist, file_size, file_time }
+*   self.data.posterframe_url {string} - absolute URL of the poster image (cache-busted at render time)
+*   self.data.subtitles     {Object|undefined}
+*     subtitles shape: { subtitles_url: string, lang: string, lang_name: string }
+*   self.fragment           {Object|null} - active fragment window; null means no fragment
+*     fragment shape: { tc_in: string|null, tc_out: string|null }
+*   self.media_streams      {Array}   - FFprobe stream objects; index 0 is the video stream
+*     stream shape: { r_frame_rate: '25/1', ... }  (r_frame_rate is a rational string)
+*   self.quality            {string}  - active quality level, e.g. 'original' | '404' | '720'
+*   self.permissions        {number}  - 1 = read-only, 2 = read/write
+*   self.video              {HTMLVideoElement} - set by get_content_data_player after DOM append
+*   self.events_tokens      {Array}   - accumulator for event_manager subscription tokens
+*   self.id                 {string}  - component instance id (used as event channel suffix)
+*
+* Exports:
+*   view_player_edit_av          — namespace constructor (returns true; not instantiated)
+*   view_player_edit_av.render   — async entry-point; builds and returns the full wrapper node
+*   get_content_data_player      — exported so sibling views can embed the player inside their own layout
+*/
+
+
+
+/**
+* VIEW_PLAYER_EDIT_AV
+* Namespace constructor. Not instantiated; serves only as an object carrier for
+* the static render method below. Mirrors the pattern used by all other
+* view_*_edit_*.js modules in this component.
+* @returns {boolean} Always true.
 */
 export const view_player_edit_av = function() {
 
@@ -24,10 +78,27 @@ export const view_player_edit_av = function() {
 
 /**
 * RENDER
-* Render node for use in modes: edit, edit_in_list
-* @param object self
-* @param object options
-* @return HTMLElement wrapper
+* Async entry-point called by render_edit_component_av when the active view is 'player'.
+*
+* Two operating modes controlled by options.render_level:
+*   'content' — returns only the content_data node (used when re-rendering in-place,
+*               e.g. after an upload, without rebuilding the outer wrapper).
+*   'full'    — (default) returns the full component wrapper including the outer
+*               chrome built by ui.component.build_wrapper_edit. A pointer from
+*               wrapper.content_data back to the inner node is always set.
+*
+* Side effects:
+*   - Fetches self.media_streams from the server API if not already cached on self.
+*     media_streams is needed by get_av_control_buttons for frame-rate calculations.
+*   - Populates self.video (via get_content_data_player → video element append).
+*
+* (!) The add_events call is currently commented out (line 59). Events are wired inside
+*     get_content_data_player instead (viewport observer, subtitle reload, permission guard).
+*
+* @param {Object} self    - component_av instance
+* @param {Object} options - render options
+* @param {string} [options.render_level='full'] - 'content' | 'full'
+* @returns {Promise<HTMLElement>} wrapper (full mode) or content_data node (content mode)
 */
 view_player_edit_av.render = async function(self, options) {
 
@@ -67,8 +138,52 @@ view_player_edit_av.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_PLAYER
-* @param object options
-* @return HTMLElement content_data
+* Build the inner content node containing the HTML5 video element and, optionally,
+* the transport control bar.
+*
+* Exported so that sibling view modules (e.g. a modal overlay) can embed the
+* player without constructing the full edit wrapper.
+*
+* Video source resolution:
+*   The function selects the file_info entry whose quality matches self.quality
+*   (or context.features.quality as fallback) AND whose extension matches
+*   context.features.extension AND whose file_exist is true. If no matching
+*   entry is found, video_url is null and the video element is omitted entirely.
+*
+* Fragment URL syntax:
+*   When self.fragment is set, Media Fragment URI parameters are appended to the
+*   video src: `?vbegin=<tc_in_seconds>&vend=<tc_out_seconds>`.  tc_in defaults
+*   to 0 when self.fragment.tc_in is falsy.  tc_out falls back to self.video.duration
+*   — which at this point may be undefined because the video has not yet loaded;
+*   callers relying on tc_out should ensure the video metadata is available first.
+*
+* Lazy loading:
+*   The <video> element's src attribute is NOT set immediately. Instead, the node
+*   is registered with when_in_viewport so that the src (and preload='metadata') are
+*   applied only after the element scrolls into the visible area. This prevents
+*   unnecessary network requests for AV components that are off-screen.
+*
+* Subtitle track:
+*   When self.data.subtitles.subtitles_url is present and the video is not a fragment
+*   (tc_in is null), a <track kind="captions"> element is created and appended.
+*   A subscription to the event channel 'updated_subtitles_file_<self.id>' is also
+*   registered so the track src can be rewritten when the VTT file changes.
+*   The subscription token is stored in self.events_tokens for cleanup on destroy.
+*
+* (!) DEDALO_MEDIA_URL is a global constant (listed in the file-top globals pragma)
+*     injected by the PHP page shell. If undefined at runtime, video_url construction
+*     will throw. Similarly, event_manager is used without an explicit import — it must
+*     be available as a page-level global. This is a known pattern in this codebase but
+*     should be reviewed if the module is ever refactored into strict ESM isolation.
+*
+* (!) self.video.duration (used in tc_out fallback at line 114) may be NaN or undefined
+*     when this function runs synchronously before the video fires 'loadedmetadata'.
+*     The fragment URL could therefore contain 'vend=NaN' for the fallback case.
+*
+* @param {Object}  options                       - call options
+* @param {Object}  options.self                  - component_av instance
+* @param {boolean} options.with_control_buttons  - when true, append the transport control bar
+* @returns {HTMLElement} content_data - the populated content wrapper node
 */
 export const get_content_data_player = function(options) {
 
@@ -102,6 +217,9 @@ export const get_content_data_player = function(options) {
 		if (video_url) {
 
 			// fragment
+			// Build Media Fragment URI parameters when self.fragment is set.
+			// vbegin/vend are expected to carry TC strings (HH:MM:SS.mmm) as produced
+			// by component_av.prototype.time_to_tc — the browser interprets them as seconds.
 				const tc_in = (!self.fragment)
 					? null
 					: (self.fragment.tc_in)
@@ -175,6 +293,9 @@ export const get_content_data_player = function(options) {
 								const url	= options.url || subtitles.subtitles_url
 
 							// lang_tld2
+							// Look up the ISO 3166-1 alpha-2 language code (tld2) from the global
+							// dedalo_projects_default_langs list so the track srclang attribute can be
+							// updated accurately even when the incoming lang is a Dédalo lang-id (e.g. 'lg-es').
 								const lang_item = page_globals.dedalo_projects_default_langs.find(
 									el => el.value===lang
 								)
@@ -189,6 +310,9 @@ export const get_content_data_player = function(options) {
 								}
 
 							// URL src replace
+							// Replace the language path segment (e.g. 'lg-es') in the existing URL with
+							// the new lang, then append a cache-buster to force the browser to reload
+							// the VTT file even if the path is identical to what was previously cached.
 								const new_url = subtitles_track.srclang!==lang_tld2
 									? url.replace(/(lg-[a-z]{2,})/, lang)
 									: subtitles_track.src
@@ -229,14 +353,44 @@ export const get_content_data_player = function(options) {
 
 
 	return content_data
-}//end get_content_data_edit
+}//end get_content_data_player
 
 
 
 /**
 * GET_AV_CONTROL_BUTTONS
-* @param object self
-* @return HTMLElement av_control_buttons
+* Build the custom transport-control bar that sits below the native HTML5 video controls.
+*
+* The bar provides:
+*   - Beginning     : seek to t=0
+*   - Play/Pause    : toggle playback; icon class switches between 'play' and 'pause'
+*                     by listening to the native 'play' and 'pause' events on self.video
+*   - SMPTE display : live timecode readout updated on every 'timeupdate' event
+*   - < 10s / < 5s : seek backward by 10 or 5 seconds
+*   - - 1 / + 1    : step one video frame backward or forward (frame-accurate)
+*   - > 5s / > 10s : seek forward by 5 or 10 seconds
+*
+* Frame-accurate navigation:
+*   The ±1 frame buttons compute the per-frame duration from the FFprobe r_frame_rate
+*   rational string stored in self.media_streams[0].r_frame_rate (e.g. '25/1' or '30000/1001').
+*   The resulting time_for_frame is added to / subtracted from self.video.currentTime
+*   and passed to self.go_to_time(). The computed target is rounded to 3 decimal places
+*   to avoid floating-point drift accumulating across many frame-step operations.
+*
+* Event handling strategy:
+*   All interactive controls listen on 'mouseup' (not 'click') to allow the user to
+*   position the playhead precisely without triggering an accidental click event from a
+*   mousedown-drag sequence. The ±seconds buttons also call e.stopPropagation() to
+*   prevent the event from bubbling to a potential parent drag handler in the section.
+*
+* (!) The Play/Pause button's event listeners use `async` arrow functions but perform
+*     no await operations — they are synchronous in practice and the async keyword is
+*     unnecessary. This is existing code; do not remove async.
+*
+* (!) The 'timeupdate' event listener is also marked async without a reason — same note.
+*
+* @param {Object} self - component_av instance; self.video and self.media_streams must be set
+* @returns {HTMLElement} av_control_buttons - container div with class 'av_control_buttons'
 */
 const get_av_control_buttons = (self) => {
 
@@ -427,7 +581,18 @@ const get_av_control_buttons = (self) => {
 
 /**
 * BUILD_VIDEO_HTML5
-* @return DOM element video
+* Legacy HTML5 video builder — superseded by the inline video construction in
+* get_content_data_player and left commented out for historical reference.
+*
+* This block was the original generic video factory that supported multi-source,
+* restricted-fragment skipping, and loadedmetadata-driven subtitle injection.
+* The approach was replaced by the current viewport-lazy pattern (when_in_viewport).
+*
+* (!) Do not remove this block; it documents the prior architecture and the
+*     specific problems (event-handler map, play-on-ready) that the current
+*     implementation deliberately avoids.
+*
+* @returns {HTMLElement} video - the constructed HTML5 video element
 */
 	// const build_video_html5 = function(request_options) {
 
@@ -504,12 +669,12 @@ const get_av_control_buttons = (self) => {
 
 	// 				handler_events.loadedmetadata.play = (e) => {
 	// 			  		try {
-	// 						//video.play()
-	// 					}catch(error){
-	// 				  		console.warn("Error on video play:",error);
-	// 				  	}
-	// 				}
-	// 			  }
+	// 					//video.play()
+	// 				}catch(error){
+	// 			  		console.warn("Error on video play:",error);
+	// 			  	}
+	// 			}
+	// 		  }
 
 	// 		// src. video sources
 	// 			for (let i = 0; i < options.src.length; i++) {

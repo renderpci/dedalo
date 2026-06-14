@@ -1,8 +1,45 @@
 <?php declare(strict_types=1);
 /**
 * CLASS INDEXATION_GRID
-* Manage the indexations of the thesaurus term
-* build the grid of the indexation to show in the thesaurus
+* Builds the dd_grid representation of all records that index a given thesaurus term.
+*
+* When a thesaurus term is opened in the area_thesaurus UI the system must show a
+* structured table ("indexation grid") listing every record across the catalogue that
+* tags this term.  This class orchestrates that process:
+*
+*  1. Accepts a Search Query Object (SQO) carrying the thesaurus locator to search
+*     for and one or more target section tipos to restrict results.
+*  2. Calls search_related::get_referenced_locators() (via get_ar_locators()) to find
+*     all inverse locators — i.e., every catalogue record that contains a relation
+*     pointing back to the current thesaurus term.
+*  3. Groups the resulting locators by section_top_tipo → section_top_id, applies a
+*     per-user project-visibility filter (non-global-admin users only see rows whose
+*     component_filter matches a project they belong to), and passes the filtered map
+*     to build_indexation_grid().
+*  4. For each section group, resolves the Ontology 'indexation_list' child node for
+*     that section, reads the head/row ddo_map stored there, and assembles a tree of
+*     dd_grid_cell_object instances (rows and columns) that the client renders as a
+*     dynamic table.
+*
+* Data flow summary:
+*   SQO (section_tipo, filter_by_locators, limit, offset)
+*     → get_ar_locators()      — raw inverse locators via search_related
+*     → get_ar_section_top_tipo() — grouped + project-filtered map
+*     → build_indexation_grid()   — dd_grid_cell_object tree (returned to caller)
+*
+* Relationships:
+*  - Uses dd_grid_cell_object for the output cell/row objects.
+*  - Uses search_related::get_referenced_locators() for inverse-relation lookup.
+*  - Uses component_relation_index::parse_data() to normalise raw search rows into
+*    locator objects.
+*  - Uses ontology_node to resolve section labels, colours, and the indexation_list
+*    component tipo for each section.
+*  - Uses component_common::get_instance() to instantiate each grid column component
+*    and call its get_grid_value() method.
+*  - Used by ts_object and the dd_core_api indexation handler.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class indexation_grid {
 
@@ -12,65 +49,76 @@ class indexation_grid {
 	* CLASS VARS
 	*/
 		/**
-		 * Ontology tipo (component identifier) for this indexation grid.
-		 * Identifies which component type is being indexed/queried.
-		 * @var ?string $tipo
-		 */
+		* Ontology tipo (component identifier) whose inverse relations are indexed.
+		* Typically a component_relation_index tipo (e.g. 'rsc860') that holds the
+		* thesaurus tag links within the section being queried.
+		* @var ?string $tipo
+		*/
 		protected ?string $tipo = null;
 
 		/**
-		 * Section ID of the thesaurus term being indexed.
-		 * Identifies the specific record within the section for detail views.
-		 * @var ?int $section_id
-		 */
+		* Section ID of the thesaurus term whose indexations are being displayed.
+		* Identifies the specific thesaurus record (the "tagged" term).
+		* @var int|string|null $section_id
+		*/
 		protected int|string|null $section_id = null;
 
 		/**
-		 * Section tipo (ontology identifier) of the thesaurus term.
-		 * Defines which hierarchy/section the indexation belongs to.
-		 * @var ?string $section_tipo
-		 */
+		* Section tipo (ontology identifier) of the thesaurus term.
+		* Identifies the thesaurus hierarchy this term belongs to (e.g. 'tchi1').
+		* @var ?string $section_tipo
+		*/
 		protected ?string $section_tipo = null;
 
 		/**
-		 * Filter value for indexation queries. Array of section tipos.
-		 * Used to filter locators to specific section types like ['oh1', 'rsc1'].
-		 * @var ?array $value
-		 */
+		* Optional filter array of section tipos used to restrict the locator lookup.
+		* When present, only locators whose section_tipo matches an entry in this
+		* array are returned by the search.  Passed directly to the constructor and
+		* forwarded to the SQO as supplementary filter data.
+		* Example: ['oh1'] restricts results to records in the 'oh1' section.
+		* @var ?array $value
+		*/
 		protected ?array $value = null;
 
 		/**
-		 * Pagination configuration object for indexation results.
-		 * Contains limit, offset, and total properties for result paging.
-		 * @var ?object $pagination
-		 */
+		* Pagination configuration for the indexation result set.
+		* Initialised in __construct() with defaults (limit=500, offset=0, total=null)
+		* and overwritten by the SQO values passed to build_indexation_grid().
+		* @var ?object $pagination
+		*/
 		protected ?object $pagination = null;
 
 		/**
-		 * Target section tipos to filter indexation results.
-		 * Array of section tipo like ['rsc205','tchi1'] (the related-mode SQO
-		 * carries one or various sections; 'all' sentinel allowed). Limits the
-		 * indexation grid to records from these sections and is passed as is
-		 * to search_related::get_referenced_locators (array typed).
-		 * @var ?array $target_section
-		 */
+		* Target section tipos used to scope the inverse-relation search.
+		* Derived from $sqo->section_tipo in build_indexation_grid() and normalised
+		* to an array (the SQO property may arrive as a single string or an array).
+		* A null value or empty array causes build_indexation_grid() to return early
+		* with an empty result.  Passed as-is to search_related::get_referenced_locators().
+		* Example: ['rsc205', 'tchi1'] or ['all'] to include every section.
+		* @var ?array $target_section
+		*/
 		protected ?array $target_section = null;
 
 		/**
-		 * Search Query Object for building the indexation filter.
-		 * Contains the SQO used to query and filter indexation data.
-		 * @var ?object $sqo
-		 */
+		* The Search Query Object for the current build pass.
+		* Populated at the start of build_indexation_grid() and consumed by
+		* get_ar_locators() to drive the inverse-relation search.
+		* @var ?object $sqo
+		*/
 		protected ?object $sqo = null;
 
 
 
 	/**
 	* CONSTRUCT
-	* @param string $section_tipo Section tipo (ontology identifier) of the thesaurus term.
-	* @param int|string $section_id Section ID of the thesaurus term being indexed.
-	* @param string $tipo Ontology tipo (component identifier) for this indexation grid.
-	* @param ?array $value Filter value for indexation queries. Array of section tipos.
+	* Stores the identity of the thesaurus term to index and initialises pagination
+	* defaults.  Does not perform any I/O; call build_indexation_grid() to produce
+	* the grid.
+	*
+	* @param string         $section_tipo  Ontology tipo of the thesaurus section (e.g. 'tchi1').
+	* @param int|string     $section_id    Record ID of the thesaurus term to index.
+	* @param string         $tipo          Component tipo whose back-relations are queried (e.g. 'rsc860').
+	* @param ?array         $value         [= null] Optional section-tipo filter forwarded to queries.
 	* @return void
 	*/
 	public function __construct(string $section_tipo, int|string $section_id, string $tipo, ?array $value=null) {
@@ -95,8 +143,55 @@ class indexation_grid {
 
 	/**
 	* BUILD_INDEXATION_GRID
-	* @param object $sqo
-	* @return array $ar_indexation_grid
+	* Main entry point.  Accepts the caller's SQO, resolves and filters all inverse
+	* locators for the current thesaurus term, then assembles a tree of
+	* dd_grid_cell_object instances that the client renders as the indexation table.
+	*
+	* Processing steps:
+	*  1. Stores the SQO and extracts pagination + target section from it.
+	*  2. Returns an empty array immediately if target_section is empty (nothing to
+	*     show — typically means the user has not selected any section filter yet).
+	*  3. Calls get_ar_section_top_tipo() to obtain the project-filtered locator map:
+	*       { section_top_tipo: { section_top_id: [locator, ...], ... }, ... }
+	*  4. For each section group:
+	*     a. Creates a 'row'-type dd_grid_cell_object as the section container.
+	*     b. Creates a 'column'-type dd_grid_cell_object labelled with the section
+	*        name and optionally coloured via Ontology properties.
+	*     c. Looks up the 'indexation_list' Ontology child for the section (falling
+	*        back to the real section tipo if the given tipo is a virtual/alias one).
+	*        Skips with an ERROR log entry if none is found (misconfigured Ontology).
+	*     d. Processes head_ddo_map and row_ddo_map via process_ddo_map() to resolve
+	*        'self' placeholders and populate labels/models.
+	*     e. For every section_top_id within the group, calls get_grid_value() for the
+	*        head (once) and for each locator (one per row), collecting the resulting
+	*        dd_grid_cell_object cells and accumulating row counts.
+	*  5. Returns the flat array of section container rows; one entry per section tipo.
+	*
+	* Output shape (array of dd_grid_cell_object):
+	*   [
+	*     // one entry per section_top_tipo
+	*     dd_grid_cell_object { type:'row', row_count:<int>,
+	*       value: [
+	*         dd_grid_cell_object { type:'column', label:<section_name>,
+	*           class_list:'caption section <tipo>[ <class_list>]',
+	*           features:{ color:<hex> }?,     // only when Ontology defines a colour
+	*           value: [
+	*             dd_grid_cell_object { type:'row', ... },  // head (optional)
+	*             dd_grid_cell_object { type:'row', ... },  // data rows …
+	*           ]
+	*         }
+	*       ]
+	*     },
+	*     ...
+	*   ]
+	*
+	* @param object $sqo  Search Query Object.  Required properties:
+	*                       - section_tipo (string|string[]) — target section(s)
+	*                       - filter_by_locators (array)     — source thesaurus locators
+	*                       - limit (int)   [optional, default 500]
+	*                       - offset (int)  [optional, default 0]
+	*                       - total (mixed) [optional]
+	* @return array $ar_indexation_grid  Flat array of section-level dd_grid_cell_object rows.
 	*/
 	public function build_indexation_grid( object $sqo ) : array {
 
@@ -335,11 +430,40 @@ class indexation_grid {
 
 	/**
 	* GET_GRID_VALUE
+	* Resolves the display values for a single data row or head row in the grid.
 	*
-	* @param array $ar_ddo
-	* @param object $locator
+	* Given a processed ddo_map (from process_ddo_map()) and a single locator
+	* representing the catalogue record to read from, this method:
+	*  1. Normalises the locator: if section_top_tipo / section_top_id are absent
+	*     (direct locators that have no "top" indirection), copies section_tipo /
+	*     section_id to the top_* properties so all downstream code can rely on them.
+	*  2. Filters the ddo_map to only the entries whose section_tipo matches the
+	*     locator's section_top_tipo ("children_ddo").  Sub-component ddo entries
+	*     whose section_tipo differs from the top tipo are handled as portal children
+	*     — they are injected into the portal's request_config->show->ddo_map instead
+	*     of being instantiated here as top-level columns.
+	*  3. For each top-level ddo, determines the correct current_section_tipo and
+	*     current_section_id to use (direct-match vs top-level fallback).
+	*  4. Instantiates the component via component_common::get_instance() and calls
+	*     its get_grid_value($ddo) method to obtain a dd_grid_cell_object.
+	*  5. When the ddo has child entries (sub_ddo_map — identified by $child->parent
+	*     matching the current $ddo->tipo), builds a minimal request_config carrying
+	*     those child ddos and injects it into the component so that portals know
+	*     which sub-fields to render.  If the child section_tipo matches the locator's
+	*     own section_tipo (not the top), the locator itself is pre-set as the
+	*     component's dato to resolve the correct portal row.
 	*
-	* @return object $value
+	* Return shape:
+	*   stdClass {
+	*     ar_row_count : int[]   — one entry per column, value = number of rows that
+	*                              column contributes (used by caller to compute
+	*                              the maximum row span for the grid row).
+	*     ar_cells     : dd_grid_cell_object[]  — one cell per top-level column ddo.
+	*   }
+	*
+	* @param array  $ar_ddo   Processed ddo_map (output of process_ddo_map()).
+	* @param object $locator  A single inverse locator from get_ar_section_top_tipo().
+	* @return object $value   stdClass with ar_row_count (int[]) and ar_cells (dd_grid_cell_object[]).
 	*/
 	public function get_grid_value(array $ar_ddo, object $locator) : object {
 
@@ -450,7 +574,31 @@ class indexation_grid {
 
 	/**
 	* PROCESS_DDO_MAP
-	* @return array $final_ddo_map
+	* Enriches a raw Ontology ddo_map array so it is ready for use in get_grid_value().
+	*
+	* The ddo_map entries stored in Ontology properties use sentinel values ('self')
+	* for section_tipo and parent to keep them section-agnostic.  This method
+	* resolves those sentinels to the concrete section_tipo of the current context
+	* and also decorates every entry with its human-readable label and component model
+	* so callers do not need to re-query the Ontology per row.
+	*
+	* Per-entry transformations applied:
+	*  - Entries without a 'tipo' property are skipped and logged as ERROR
+	*    (indicates an Ontology misconfiguration).
+	*  - 'label'        — populated from ontology_node::get_term_by_tipo().
+	*  - 'section_tipo' — 'self' sentinel replaced with the caller-supplied $section_tipo.
+	*  - 'parent'       — 'self' sentinel replaced with $section_tipo.
+	*  - 'mode'         — defaults to 'indexation_list' when not already set.
+	*  - 'model'        — populated from ontology_node::get_model_by_tipo().
+	*
+	* Note: mutates the incoming ddo_map objects in-place before collecting them
+	* into $final_ddo_map.  Callers must not re-use the original objects after
+	* calling this method if they depend on the original sentinel values.
+	*
+	* @param array  $ar_ddo_map    Raw ddo_map from Ontology properties (head->show->ddo_map
+	*                              or row->show->ddo_map).
+	* @param string $section_tipo  Concrete section tipo used to replace 'self' sentinels.
+	* @return array $final_ddo_map Enriched ddo_map ready for get_grid_value().
 	*/
 	public function process_ddo_map(array $ar_ddo_map, string $section_tipo) : array {
 
@@ -497,9 +645,38 @@ class indexation_grid {
 
 	/**
 	* GET_AR_SECTION_TOP_TIPO
-	* Map/group ar_locators (indexations of current term) as formatted array section[id] = ar_data
-	* Filter locators for current user (by project)
+	* Retrieves and groups all inverse locators for the current thesaurus term,
+	* then applies a per-user project-visibility filter.
+	*
+	* Step 1 — collect and group:
+	*   Calls get_ar_locators() to fetch every catalogue record that references the
+	*   current thesaurus term.  Each raw locator is examined for section_top_tipo /
+	*   section_top_id; when absent (direct locators with no indirection layer) the
+	*   section_tipo / section_id values are copied to the top_* slots.  Locators are
+	*   then accumulated in a 3-level map:
+	*     $ar_section_top_tipo[section_top_tipo][section_top_id][] = $locator
+	*   This groups rows first by section type and then by the top-level record ID,
+	*   matching the nested display structure expected by build_indexation_grid().
+	*
+	* Step 2 — project filter (non-global-admin only):
+	*   Global admins see all rows.  Other users are restricted to records whose
+	*   component_filter value overlaps with the projects that user belongs to.  For
+	*   each section_top_tipo a component_filter tipo is located via
+	*   section::get_ar_children_tipo_by_model_name_in_section().  Then, for each
+	*   section_top_id, the component_filter data is loaded and compared against the
+	*   user's project locators (locator::in_array_locator on section_id + section_tipo).
+	*   Rows with no matching project are removed from the map and logged at DEBUG level.
+	*
+	* Step 3 — performance guard:
+	*   When SHOW_DEBUG is enabled, the total wall-clock nanosecond time is checked
+	*   against 150 ms; methods that exceed this threshold are dumped to the log to
+	*   help identify performance regressions.
+	*
 	* @return array $ar_section_top_tipo
+	*   Shape: array<string, array<int|string, locator[]>>
+	*   — top-level key: section_top_tipo string
+	*   — second-level key: section_top_id (int or string)
+	*   — value: array of locator objects for that record
 	*/
 	protected function get_ar_section_top_tipo() : array {
 		$start_time=start_time();
@@ -599,8 +776,38 @@ class indexation_grid {
 
 	/**
 	* GET_AR_LOCATORS
-	* Get all indexations (locators) of current thesaurus term
-	* @return array $ar_locators
+	* Fetches the flat array of inverse locators for the current thesaurus term.
+	*
+	* This method is the bridge between the high-level indexation_grid and the
+	* low-level search_related infrastructure:
+	*
+	*  1. Reads the SQO's filter_by_locators array.  Each entry is a plain object
+	*     (section_tipo + section_id) identifying the thesaurus term locator(s) whose
+	*     back-relations should be found.  These are converted into typed locator
+	*     instances with the relation_type obtained from the component itself.
+	*
+	*  2. Calls search_related::get_referenced_locators() passing the built filter
+	*     locators, the current pagination limit/offset, and the target_section array.
+	*     This executes a JSONB matrix scan across all relation tables and returns raw
+	*     result rows.
+	*
+	*  3. Passes the raw rows through component_relation_index::parse_data(), which
+	*     remaps the search_related row fields (section_tipo, section_id, section_top_tipo,
+	*     section_top_id, tag_id, from_component_tipo, etc.) into proper locator
+	*     objects ready for grouping in get_ar_section_top_tipo().
+	*
+	* The commented-out block at the bottom of the method preserves the previous
+	* implementation that routed through component::get_data_paginated(); it is
+	* intentionally retained for reference during the ongoing search architecture
+	* consolidation and MUST NOT be removed or re-activated without verifying parity.
+	*
+	* (!) $sqo->filter_by_locators is accessed without a null guard (line 612).
+	*     If the SQO arrives without filter_by_locators set, PHP will raise a warning
+	*     and the foreach will be skipped silently, returning an empty locator array.
+	*     Callers must ensure the SQO carries a non-null filter_by_locators.
+	*
+	* @return array $ar_locators  Flat array of locator objects representing all
+	*                              catalogue records that tag the current thesaurus term.
 	*/
 	public function get_ar_locators() : array {
 

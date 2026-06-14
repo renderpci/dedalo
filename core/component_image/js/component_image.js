@@ -15,6 +15,39 @@
 
 
 
+/**
+* COMPONENT_IMAGE
+* Client-side controller for image components in Dédalo.
+*
+* Manages the full lifecycle of a single image component instance: initialisation,
+* rendering (edit / list / search / TM views), SVG-layer vector-drawing integration,
+* image quality switching, and persistence of layer data back to the server.
+*
+* Key responsibilities:
+* - Delegates lifecycle and data-change operations to component_common / common prototypes.
+* - Exposes view-specific render methods by aliasing the corresponding render_* module
+*   prototypes (edit, list, search, tm).
+* - Owns the optional vector_editor (lazy-loaded SVG drawing canvas built on SvgCanvas).
+*   When the editor is active, `ar_layers` is the single source of truth for layer state;
+*   `update_draw_data` serialises it back into `self.data.changed_data` ready for save().
+* - Handles quality changes across both the vector-editor path and the raw SVG <object>
+*   path via the unified `image_quality_change_handler`.
+*
+* Data shape (self.data.entries[]):
+*   {
+*     lib_data            : Array<LayerDescriptor> // vector-editor layer definitions
+*     svg_file_data       : string                 // full SVG string exported for persistence
+*     files_info          : Array<FileInfo>        // per-quality/per-extension availability
+*     original_file_name  : string                 // uploaded filename before normalisation
+*     original_normalized_name : string            // filesystem-safe normalised filename
+*   }
+*
+* LayerDescriptor shape:
+*   { layer_id, layer_data, layer_color, layer_opacity, user_layer_name, name, visible }
+*
+* @package Dédalo
+* @subpackage Core
+*/
 export const component_image = function(){
 
 	this.id
@@ -83,8 +116,24 @@ export const component_image = function(){
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Initialises the component instance after the generic component_common init completes.
+* Sets up image-specific instance properties and subscribes to the quality-change event
+* for this component id.
+*
+* Instance properties set here:
+*   self.image_container  {HTMLElement|null}  - DOM container for the SVG <object> tag
+*   self.img_height       {number|null}       - natural pixel height of the loaded image
+*   self.img_width        {number|null}       - natural pixel width of the loaded image
+*   self.img_src          {string|null}       - current image URI (updated on quality change)
+*   self.img_view_height  {number}            - max display height for the image (px)
+*   self.canvas_height    {number}            - canvas height for the vector editor (px)
+*   self.canvas_width     {number|null}       - canvas width (computed later, null until set)
+*   self.canvas_node      {HTMLElement|null}  - DOM canvas element used by the vector editor
+*   self.ar_layers        {Array}             - ordered list of LayerDescriptor objects
+*   self.vector_editor    {Object|null}       - lazy-loaded vector_editor instance
+*
+* @param {Object} options - initialisation options forwarded from build()
+* @returns {Promise<boolean>} resolves with the result of component_common.prototype.init
 */
 component_image.prototype.init = async function(options) {
 
@@ -124,8 +173,25 @@ component_image.prototype.init = async function(options) {
 
 /**
 * GET_DATA_TAG
-* Send the data_tag to the text_area when it need create a new tag
-* @return object data_tag
+* Builds a fresh tag descriptor for creating a new SVG annotation tag in the
+* associated text-area component. Called when the user initiates a new draw tag
+* from within a component that is linked to this image component.
+*
+* The returned object carries the layer metadata needed by the text-area so that
+* the tag can reference the correct SVG layers later. When no lib_data exists yet
+* (image not yet saved / no layers defined), a minimal single-raster-layer descriptor
+* is returned as a safe default.
+*
+* @returns {Object} data_tag - tag descriptor with shape:
+*   {
+*     type          : 'draw',
+*     tag_id        : null,
+*     state         : 'n',      // 'n' = new / unsaved
+*     label         : '',
+*     data          : '',
+*     last_layer_id : number|null,
+*     layers        : Array<{ layer_id: number, user_layer_name: string }>
+*   }
 */
 component_image.prototype.get_data_tag = function() {
 
@@ -175,8 +241,14 @@ component_image.prototype.get_data_tag = function() {
 
 /**
 * GET_LIB_DATA
-* get the lib_data in self.data, lib_data is the specific data of the library used (svgEdit js)
-* @return array|null lib_data
+* Returns the lib_data array from the first entry of self.data.
+* lib_data is the vector-editor layer store (SvgCanvas / svgEdit format) and is
+* the canonical source for all layer operations when a vector editor is in use.
+*
+* Returns null when the first entry does not exist or has no lib_data, which is
+* the expected state for a freshly uploaded image that has never been annotated.
+*
+* @returns {Array|null} lib_data - array of LayerDescriptor objects, or null
 */
 component_image.prototype.get_lib_data = function() {
 
@@ -197,8 +269,14 @@ component_image.prototype.get_lib_data = function() {
 
 /**
 * GET_LAST_LAYER_ID
-* Get the last layer_id in the data
-* @param int last_layer_id
+* Scans lib_data and returns the highest numeric layer_id currently in use.
+* Used to compute the next layer_id when the user adds a new annotation tag
+* (see get_data_tag: last_layer_id + 1).
+*
+* (!) Assumes lib_data is non-null. Call get_lib_data() first and guard
+* against null before invoking this method.
+*
+* @returns {number} last_layer_id - the maximum layer_id value found in lib_data
 */
 component_image.prototype.get_last_layer_id = function() {
 
@@ -217,9 +295,20 @@ component_image.prototype.get_last_layer_id = function() {
 
 
 /**
-* LOAD_VECTOR_EDITOR-
-* @param object options
-* @return bool true
+* LOAD_VECTOR_EDITOR
+* Lazily loads and initialises the vector_editor module and populates ar_layers
+* from the saved lib_data (or seeds a default raster layer if no data exists yet).
+*
+* The vector_editor module import is deferred to this method so that the heavy
+* SvgCanvas dependency is only fetched when the user explicitly opens the editor.
+* A CSS 'loading' class is applied to self.node while the dynamic import resolves.
+*
+* After this call:
+*   - self.vector_editor is a fully initialised vector_editor instance.
+*   - self.ar_layers holds either the persisted LayerDescriptor list or a
+*     single default raster layer with layer_id 0.
+*
+* @returns {Promise<boolean>} resolves true when the editor is ready
 */
 component_image.prototype.load_vector_editor = async function() {
 
@@ -287,9 +376,18 @@ component_image.prototype.load_vector_editor = async function() {
 
 /**
 * LOAD_TAG_INTO_VECTOR_EDITOR
-* usually fire with 'click_tag_draw' event
-* @param object options
-* @return bool true
+* Activates one or more SVG layers in the vector editor to display the annotation
+* referenced by the given tag. Typically fired in response to a 'click_tag_draw' event.
+*
+* tag.data is expected to be a JSON-serialised array of layer_id values
+* (e.g. '[2, 5]'). Each id is parsed and forwarded to vector_editor.activate_layer().
+* If tag.data is empty or missing, the method returns false without side effects.
+*
+* The vector editor is loaded on demand if it has not been initialised yet.
+*
+* @param {Object} options - handler options
+* @param {Object} options.tag - tag descriptor; must carry a .data string
+* @returns {Promise<boolean>} false when tag has no drawable data, true on success
 */
 component_image.prototype.load_tag_into_vector_editor = async function(options) {
 
@@ -326,7 +424,25 @@ component_image.prototype.load_tag_into_vector_editor = async function(options) 
 
 /**
 * UPDATE_DRAW_DATA
-* @return bool true
+* Serialises the current state of the active PaperJS/SvgCanvas layer into
+* self.data.changed_data so that save() can persist it to the server.
+*
+* Reads the active layer from the `project` global (a PaperJS / SvgCanvas
+* namespace injected by the vector editor at runtime) and:
+*   1. Updates the matching LayerDescriptor in self.ar_layers with the
+*      exportJSON representation of the current layer's drawn paths.
+*   2. Builds an 'update' changed_data action that wraps the full entry value
+*      including the updated lib_data and a fresh SVG string export.
+*
+* (!) `project` is an implicit global provided by the vector editor environment.
+*     This method must only be called while the vector editor is active and a
+*     canvas has been initialised; calling it outside that context will throw
+*     because `project` will be undefined.
+*
+* (!) The commented-out block at the end is dead code from an earlier tag-save
+*     approach and should be removed in a separate cleanup pass.
+*
+* @returns {boolean} true when changed_data has been updated
 */
 component_image.prototype.update_draw_data = function() {
 
@@ -374,9 +490,17 @@ component_image.prototype.update_draw_data = function() {
 
 /**
 * GET_DEFAULT_FILE_INFO
+* Returns the FileInfo descriptor for the quality configured as the default in
+* self.context.features.default_quality. Used by render views to select the
+* initial image variant to display without an explicit quality override.
 *
-* @param int key
-* @return object|null default_file_info
+* Returns null when no default quality is configured or when the requested
+* entry index does not exist in self.data.entries.
+*
+* FileInfo shape (typical): { quality, extension, url, file_exist, width, height }
+*
+* @param {number} key - zero-based index into self.data.entries (default 0)
+* @returns {Object|null} default_file_info - matching FileInfo object, or null
 */
 component_image.prototype.get_default_file_info = function(key=0) {
 
@@ -397,12 +521,19 @@ component_image.prototype.get_default_file_info = function(key=0) {
 
 /**
 * GET_QUALITY_FILE_INFO
-* Select specific quality information of the given extension
+* Returns the FileInfo descriptor that matches both the requested quality level
+* and file extension for the given entry index.
 *
-* @param string quality
-* @param string extension
-* @param int key
-* @return object|null default_file_info
+* This is the primary accessor used when a specific quality/format combination
+* must be resolved (e.g. when the user switches quality via the quality selector
+* or when a specific export format is needed).
+*
+* Returns null when the entry does not exist or no matching FileInfo is found.
+*
+* @param {string} quality - quality level identifier (e.g. 'original', 'thumb', 'medium')
+* @param {string} extension - file extension without leading dot (e.g. 'jpg', 'tif', 'webp')
+* @param {number} key - zero-based index into self.data.entries (default 0)
+* @returns {Object|null} quality_file_info - matching FileInfo object, or null
 */
 component_image.prototype.get_quality_file_info = function( quality='original', extension='jpg', key=0) {
 
@@ -421,10 +552,14 @@ component_image.prototype.get_quality_file_info = function( quality='original', 
 
 /**
 * GET_ORIGINAL_FILE_NAME
-* Get the original file name (the original name of the image when the users upload it)
+* Returns the raw original filename as provided by the user at upload time,
+* before any normalisation or filesystem sanitisation. Useful for display
+* purposes where the user-facing name should be preserved.
 *
-* @param int key
-* @return string|null original_file_name
+* Returns null when the entry does not exist or has no original_file_name.
+*
+* @param {number} key - zero-based index into self.data.entries (default 0)
+* @returns {string|null} original_file_name - the original upload filename, or null
 */
 component_image.prototype.get_original_file_name = function( key=0 ) {
 
@@ -443,10 +578,15 @@ component_image.prototype.get_original_file_name = function( key=0 ) {
 
 /**
 * GET_ORIGINAL_NORMALIZED_FILE_NAME
-* Get the original file name (the original name of the image when the users upload it)
+* Returns the filesystem-safe normalised version of the original filename.
+* Unlike get_original_file_name, this name has been sanitised for safe storage
+* (e.g. diacritics removed, spaces replaced). Used when constructing download
+* links or referencing the stored file on disk.
 *
-* @param int key
-* @return string|null original_file_name
+* Returns null when the entry does not exist or has no original_normalized_name.
+*
+* @param {number} key - zero-based index into self.data.entries (default 0)
+* @returns {string|null} original_normalized_file_name - normalised filename, or null
 */
 component_image.prototype.get_original_normalized_file_name = function( key=0 ) {
 
@@ -465,9 +605,14 @@ component_image.prototype.get_original_normalized_file_name = function( key=0 ) 
 
 /**
 * GET_ACTIVE_EXTENSIONS
-* mix the main extension and all alternative extension and return an array
+* Combines the primary extension from context.features with any alternative
+* extensions configured for this component and returns a flat ordered array.
+* The primary extension is always first.
 *
-* @return array
+* Used by the quality selector and file-info lookup to iterate over all
+* supported file variants (e.g. ['jpg', 'tif', 'webp']).
+*
+* @returns {Array} active_extensions - array of extension strings (e.g. ['jpg', 'webp'])
 */
 component_image.prototype.get_active_extensions = function() {
 
@@ -488,9 +633,21 @@ component_image.prototype.get_active_extensions = function() {
 * Unified handler for image quality changes across all views.
 * Handles both SVG object node updates and vector editor integration.
 * Subscribed to 'image_quality_change_'+self.id event in init.
-* @param string url
-*	The new image URL
-* @return void
+*
+* Two code paths based on component state:
+*   1. Vector editor active (self.vector_editor is set): updates the image via
+*      the vector editor's stage.setHref() so the drawing canvas stays in sync.
+*   2. SVG <object> node (default edit view): directly updates the xlink:href
+*      attribute on the <image> element inside the SVG document embedded in the
+*      object_node, with a cache-busting timestamp appended as a query parameter.
+*      A 'loading' CSS class is toggled on the parent content_value element
+*      while the new image loads.
+*
+* (!) The querySelector('image') call is awaited even though querySelector is
+*     synchronous. The await has no semantic effect and is a pre-existing pattern.
+*
+* @param {string} url - the new image URL to load
+* @returns {Promise<void>}
 */
 component_image.prototype.image_quality_change_handler = async function(url) {
 

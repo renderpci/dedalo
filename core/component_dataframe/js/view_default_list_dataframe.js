@@ -12,7 +12,44 @@
 
 /**
 * VIEW_DEFAULT_LIST_DATAFRAME
-* Manage the components logic and appearance in client side
+* Default list-mode view renderer for `component_dataframe`.
+*
+* `component_dataframe` is an alias of `component_portal` (see `component_dataframe.js`)
+* that attaches frame records to individual data items of a main component.  In list
+* mode, each dataframe button represents one attached frame section.  This view renders
+* the compact button UI that appears inside the main component's list row:
+*
+*   - A pill-shaped "activate" button labelled with the component's ontology label.
+*     When there is an existing frame record, clicking opens it in a modal.
+*     When there is no frame record yet, clicking briefly reveals the "add" button.
+*   - A hidden "add" (+) icon button that creates a new frame section via
+*     `self.create_new_section()` and then opens the same modal.
+*   - Optional background-color theming based on a rating value stored inside the
+*     frame section's `hide.ddo_map` (a `component_radio_button` with role 'rating').
+*     This provides at-a-glance visual feedback (e.g. quality confidence) directly
+*     on the pill button without exposing the underlying radio component.
+*
+* Exported static methods:
+*   view_default_list_dataframe.render(self, options) — entry point called by `list()`.
+*
+* Private module-scoped helpers (not exported):
+*   get_content_data(self)                — builds the .content_data container node.
+*   render_content_value(options)         — builds the activate+add buttons and wires events.
+*   open_target_section(self)             — creates the frame section instance and modal.
+*
+* Data shapes consumed from `self`:
+*   self.data.entries  {Array}   — array of frame locators; each is a dataframe locator
+*                                  of shape {type, section_tipo, section_id, id_key, …}.
+*                                  Length 0 → no frame exists yet; ≥1 → at least one frame.
+*   self.properties.label {string} — ontology label shown on the activate button.
+*   self.get_rating()  {Object|null} — returns a datum entry for the 'rating' ddo, or null.
+*   self.target_section {Array}   — array of {label, tipo} objects from the sqo section_tipo
+*                                   config; index 0 is used as the modal header.
+*   self.datum.data    {Array}    — full unfiltered datum data shared with parent section.
+*
+* Relationship to the mini view: `view_mini_list_dataframe` provides the same
+* activate-button concept for inline/mini render contexts but omits click behaviour
+* (read-only display).  This module adds full interactive create/open/delete flows.
 */
 export const view_default_list_dataframe = function() {
 
@@ -23,11 +60,26 @@ export const view_default_list_dataframe = function() {
 
 /**
 * RENDER
-* Manages the component's logic and appearance in client side
-* @param object self
-* @param object options
-* @return promise
-* 	DOM node wrapper
+* Entry point for the default list view of a `component_dataframe` instance.
+*
+* Builds the content_data subtree and optionally wraps it in the standard
+* component wrapper produced by `ui.component.build_wrapper_edit()`.
+*
+* Two render levels are supported (mirrors the pattern used by other list views):
+*   - 'full'    (default): returns the full wrapper element including the outer
+*     component shell.  Used on initial render.
+*   - 'content': returns only the inner content_data node.  Used by the parent
+*     component's refresh mechanism to replace only the dataframe cell area
+*     without rebuilding the full outer shell.
+*
+* The returned wrapper carries a `content_data` pointer so callers can access
+* the inner node without re-querying the DOM.
+*
+* @param {Object} self    - The `component_dataframe` instance (alias of `component_portal`).
+* @param {Object} options - Render options passed from the list/render pipeline.
+* @param {string} [options.render_level='full'] - 'full' → full wrapper;
+*   'content' → content_data node only.
+* @returns {Promise<HTMLElement>} The wrapper element (full) or content_data node (content).
 */
 view_default_list_dataframe.render = async function(self, options) {
 
@@ -56,8 +108,13 @@ view_default_list_dataframe.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Builds the `.content_data` container element and populates it with the
+* rendered content_value subtree (activate button + add button).
+*
+* Delegates all interactive logic to `render_content_value()`.
+*
+* @param {Object} self - The `component_dataframe` instance.
+* @returns {HTMLElement} A `.content_data` div containing the button UI.
 */
 const get_content_data = function(self) {
 
@@ -78,11 +135,41 @@ const get_content_data = function(self) {
 
 /**
 * RENDER_CONTENT_VALUE
-* @param object options
-* {
-* 	self : object instance
-* }
-* @return HTMLElement content_value
+* Builds the interactive button area for the dataframe list cell.
+*
+* Renders two sibling elements inside a `.content_value` div:
+*
+*   1. **button_activate** — a pill-shaped `<span>` labelled with the
+*      component's ontology label (`self.properties.label`).  Its visual state
+*      depends on whether a frame record already exists:
+*
+*      - No frame (entries.length === 0): clicking the button briefly hides itself
+*        and reveals the "add" button for 5 seconds, then restores the original state.
+*        This avoids a permanent mode switch and prevents accidental record creation.
+*      - Frame exists (entries.length >= 1): clicking calls `open_target_section()`
+*        to open the most-recent frame section in a modal.
+*
+*   2. **button_new** — a hidden "add" icon button.  On click it calls
+*      `self.create_new_section()` (inherited from `component_dataframe.js`).
+*      If that method returns `false` (meaning pending main-component changes were
+*      flushed first — the save-then-attach rule), the modal is suppressed because
+*      the component will re-render with fresh pairing keys.  Otherwise the new
+*      frame section is immediately opened via `open_target_section()`.
+*
+* Rating colour theming:
+*   When entries exist AND the request_config's hide.ddo_map contains a ddo with
+*   `role === 'rating'` (a `component_radio_button`), the activate button's
+*   background colour is driven by the matched datalist item's `hide[0].literal`
+*   hex colour.  The text colour is auto-computed via `ui.get_text_color()` for
+*   WCAG contrast.  When no rating value is set, `--color_blue_3` (#006ed2) is used
+*   as the default background.
+*
+* The `altKey` modifier on mousedown is reserved for debugging instance selection
+* (a developer tool) and bypasses all click handling.
+*
+* @param {Object} options      - Configuration object.
+* @param {Object} options.self - The `component_dataframe` instance.
+* @returns {HTMLElement} A `.content_value` div containing button_activate and button_new.
 */
 const render_content_value = function(options) {
 
@@ -196,8 +283,48 @@ const render_content_value = function(options) {
 
 /**
 * OPEN_TARGET_SECTION
-* Create the target section and open it in a modal
-* @param object self
+* Creates a `section` instance for the most-recent frame record and opens it in a modal.
+*
+* This is the primary interactive surface for editing dataframe content.  The modal
+* provides a full edit form for the linked frame section, including a footer Delete
+* button that soft-deletes the frame by calling `self.unlink_record()`.
+*
+* Flow:
+*   1. Reads the LAST entry from `self.data.entries` (the most-recently linked frame
+*      record).  The dataframe contract allows only one frame per main item in the
+*      standard list view, so the last entry is the canonical one.
+*   2. Builds a modal body container with a fixed height (34rem).
+*   3. Uses `self.target_section[0].label` as the modal header title.  This value
+*      comes from the ontology label of the frame section type resolved during
+*      `component_portal.build()` into `self.target_section`.
+*   4. Adds a Delete button in the modal footer.  On confirmation:
+*      - Calls `self.unlink_record(last_value)` — soft-deletes the frame locator from
+*        the matrix; the frame target section record is NOT hard-deleted (see
+*        `dataframe_common::get_dataframe_delete_policy()` for the hard-delete opt-in).
+*      - Closes the modal immediately after the unlink.
+*   5. Opens the modal via `ui.attach_to_modal()`.  The `callback` is invoked once
+*      the modal DOM is attached; it uses `ui.load_item_with_spinner()` to show a
+*      loading spinner while the section instance is built asynchronously.
+*   6. Inside the spinner callback, creates a `section` instance via `get_instance()`
+*      using `session_key: 'section_<section_tipo>_<self.tipo>'`.  The session key
+*      scopes the instance to this exact dataframe component so that multiple
+*      dataframe columns on the same section record do not share state.
+*      `session_save: false` prevents the section from being persisted to the
+*      browser session store (frame records are transient to the modal).
+*   7. When the modal closes (`modal.on_close`), calls `self.refresh()` with
+*      `build_autoload: true` to re-fetch data from the server, ensuring the button's
+*      rating colour and label reflect any edits made inside the modal.
+*
+* Hard-delete commented-out block (lines inside button_delete handler):
+*   The `hard_delete` branch is intentionally left commented out.  It was the
+*   previous deletion mechanism; the current default is always soft-delete via
+*   `unlink_record`.  Do NOT remove the commented-out code without a deprecation
+*   decision in the issue tracker.
+*
+* @param {Object} self - The `component_dataframe` instance.
+*   self.data.entries must be non-empty (caller's responsibility; this function
+*   does not guard against an empty entries array).
+* @returns {Promise<void>}
 */
 const open_target_section = async function (self) {
 

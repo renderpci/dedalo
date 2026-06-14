@@ -1,10 +1,58 @@
 <?php declare(strict_types=1);
 /**
- * TRAIT search_component_json_tm
- * From class component_json
- * Common search methods for json components
- * Note that this trait is a clone of search_component_string_common_tm, but with the column resolution for the time machine table.
- * The only time_machine column that is supported is the data column (dd1574).
+ * TRAIT SEARCH_COMPONENT_JSON_TM
+ * Time Machine SQL-builder variant for component_json searches against matrix_time_machine.
+ *
+ * This trait provides all search operator handlers that target the `matrix_time_machine`
+ * PostgreSQL table when the searched component is of type `component_json`. It is the
+ * temporal counterpart to the JSONB-path based `search_component_json` trait, and mirrors
+ * the pattern established by `search_component_string_common_tm` for string components.
+ *
+ * WHY a separate TM trait?
+ * The `matrix_time_machine` table stores snapshot rows with a flat scalar schema:
+ *   id, section_tipo, section_id, tipo, lang, timestamp, user_id, bulk_process_id, data (JSONB)
+ * Unlike the normal `matrix_*` tables where component data sits inside a JSONB column
+ * keyed by component tipo (`column->>'dd1574'`), in the TM table the JSON snapshot is
+ * stored in a top-level `data` column whose value is the raw datum array:
+ *   [{"value": <any JSON>, "id": 1, ...}]
+ * This means the JSONB-path expressions used by `search_component_json` (which navigate
+ * `$.component_tipo[*].value`) cannot be applied; instead, simpler column-direct SQL
+ * (IS NULL, IS NOT NULL, LIKE, =, CAST … AS text LIKE …) is emitted here.
+ *
+ * Column resolution:
+ * - The only column from `matrix_time_machine` that this trait supports is `data`
+ *   (constant DEDALO_TIME_MACHINE_COLUMN_DATA = 'dd1574'). Any other component tipo
+ *   falls through the `match` in `dispatch_operator_sql_tm()` unchanged, leaving
+ *   `$ctx->column` set to whatever the general search context resolved it to.
+ * - Contrast with `search_component_string_common_tm`, which also maps `tipo` (dd577)
+ *   and `section_tipo` (dd1772) columns; this trait is intentionally narrower because
+ *   `component_json` values only ever occupy the `data` column.
+ *
+ * SQL parameter model:
+ * - All user input is carried in named placeholders (`_Q1_`) stored in
+ *   `$query_object->params`; the outer search WHERE-builder performs prepared-statement
+ *   binding. No raw user input is ever interpolated directly into SQL strings.
+ *
+ * Operator dispatch chain (see dispatch_operator_sql_tm):
+ *   !*   → IS NULL           (empty / no value)
+ *   *    → IS NOT NULL       (not empty / has value)
+ *   !=   → != or NOT LIKE    (different from, with optional wildcards)
+ *   ==   → =                 (exactly equal)
+ *   -    → NOT LIKE '%x%'    (does not contain)
+ *   !!   → EXISTS subquery   (duplicated value across records)
+ *   *x / x* / 'x' → LIKE patterns or exact = (wildcard / literal)
+ *   default (data column)  → CAST(column AS text) LIKE '%x%'  (contains)
+ *   default (other column) → =                                 (exactly equal)
+ *
+ * Relationship to other types:
+ * - `search_component_json`            — sister trait for regular matrix tables (JSONB-path)
+ * - `search_component_string_common_tm`— canonical TM trait this was cloned from
+ * - `component_json`                   — the class that `use`s both TM and non-TM traits
+ * - `search_tm`                        — the SQO-to-SQL builder that sets table='matrix_time_machine'
+ *   and calls each component's resolve_query_object_sql_tm() path
+ *
+ * @package Dédalo
+ * @subpackage Core
  */
 trait search_component_json_tm {
 
@@ -12,17 +60,38 @@ trait search_component_json_tm {
 
     /**
     * DISPATCH_OPERATOR_SQL_TM
-    * Routes the search resolution to the correct operator handler for time machine string queries.
-    * Handles special column resolution for specific component tipos (dd577, dd1772).
+    * Entry point for all component_json Time Machine searches — resolves the physical column
+    * name then routes to the appropriate operator handler based on the search operator prefix.
     *
-    * @param object $query_object The query object containing search parameters and SQL building state
-    * @param string $q The search query value with operators and wildcards
-    * @param object $ctx The search context containing table_alias, column info, and metadata
-    * @return object The modified query object with SQL sentence and params set
+    * Called by `dispatch_json_operator_sql()` in `search_component_json` when the target
+    * table is `matrix_time_machine`. The method mutates `$ctx->column` in place before any
+    * handler sees it, so all downstream resolvers always receive the final physical column name.
+    *
+    * Column remapping (applied before the switch):
+    *   dd1574 (DEDALO_TIME_MACHINE_COLUMN_DATA) → physical column 'data'
+    *   <any other tipo>                          → $ctx->column left unchanged
+    *
+    * Note: Unlike `search_component_string_common_tm`, this trait does NOT remap the
+    * 'tipo' (dd577) or 'section_tipo' (dd1772) columns — component_json values can only
+    * appear in the 'data' column of matrix_time_machine.
+    *
+    * Default-case behavior:
+    *   When no prefix operator matches, the column determines the fallback strategy:
+    *   - 'data' column → resolve_contains_sql_tm() (CAST to text, LIKE '%value%')
+    *   - any other column → resolve_exactly_equal_sql_tm() (equality)
+    *   The commented-out single-branch default above the conditional is intentionally
+    *   preserved; it documents the original design before the column-conditional split.
+    *
+    * @param object $query_object SQO being built; ->sentence and ->params are written on return
+    * @param string $q            Normalised search string, may carry an operator prefix (!=, ==, -, !!, !*, *)
+    * @param object $ctx          Mutable search context; ->column is overwritten here before dispatch
+    * @return object              The same $query_object with ->sentence and ->params populated
     */
     protected static function dispatch_operator_sql_tm(object $query_object, string $q, object $ctx) : object {
 
         // column resolve. time machine cases
+        // Remap the ontology tipo to the physical column in matrix_time_machine.
+        // Only the 'data' column (dd1574) is relevant for component_json snapshots.
         $ctx->column = match($ctx->component_tipo) {
             DEDALO_TIME_MACHINE_COLUMN_DATA => 'data', // dd1574
             default  => $ctx->column
@@ -52,6 +121,9 @@ trait search_component_json_tm {
 
             default:
                 // return self::resolve_contains_sql_tm($query_object, $q, $ctx);
+                // (!) Intentional two-branch default: the 'data' column holds a JSONB value
+                // that must be cast to text for LIKE to work; other columns (if ever added)
+                // use exact equality since they are plain scalars in the TM schema.
                 return $ctx->column==='data'
                     ? self::resolve_contains_sql_tm($query_object, $q, $ctx)
                     : self::resolve_exactly_equal_sql_tm($query_object, $q, $ctx);
@@ -62,16 +134,28 @@ trait search_component_json_tm {
 
     /**
     * RESOLVE_EMPTY_VALUE_SQL_TM (!*)
-    * !* Is Empty (Time Machine version)
-    * Translation: "Is empty" / "Does not have data"
-    * Technical Logic: Direct column IS NULL check for matrix_time_machine table
-    * What it returns: Records where the specific string field is null.
-    * When to use: To find time machine records with empty string values.
-    * Example: "Show me all time machine records with empty titles."
+    * Operator: !* — "Is Empty / Has no data" (Time Machine version)
     *
-    * @param object $query_object The query object to modify with SQL
-    * @param object $ctx The search context with table_alias and column name
-    * @return object The query object with SQL sentence set to "column IS NULL"
+    * Generates an IS NULL predicate against the physical column in matrix_time_machine.
+    * Matches snapshot rows where the component data column has never been written or was
+    * explicitly set to NULL.
+    *
+    * TM simplification vs. regular JSON:
+    * - The non-TM variant (`resolve_json_empty_value_sql`) also tests for an empty JSONB
+    *   array via a NOT EXISTS subquery, because the regular matrix stores the datum as a
+    *   JSONB array that may be present but empty.
+    * - In matrix_time_machine the `data` column is always NULL when absent, so a single
+    *   IS NULL check is sufficient.
+    *
+    * (!) BUG — the SQL sentence opens a parenthesis `(` but never closes it.
+    * The produced fragment is:  "({table_alias}.{column} IS NULL"
+    * A conforming fragment should be: "({table_alias}.{column} IS NULL)"
+    * This will cause a PostgreSQL syntax error if this fragment is the outermost clause.
+    * Do NOT fix here (doc-only constraint) — flag to the owning developer.
+    *
+    * @param object $query_object SQO being built; ->sentence is set to the IS NULL predicate
+    * @param object $ctx          Search context providing ->table_alias and ->column
+    * @return object              $query_object with ->sentence set (no ->params needed)
     */
     protected static function resolve_empty_value_sql_tm(object $query_object, object $ctx) : object {
 
@@ -83,16 +167,19 @@ trait search_component_json_tm {
 
     /**
     * RESOLVE_NOT_EMPTY_VALUE_SQL_TM (*)
-    * * Not Empty (Time Machine version)
-    * Translation: "Not empty" / "Has data"
-    * Technical Logic: Direct column IS NOT NULL check for matrix_time_machine table
-    * What it returns: Records that have a non-null string value.
-    * When to use: To find time machine records with non-empty string values.
-    * Example: "Show me all time machine records that have title data."
+    * Operator: * — "Not Empty / Has data" (Time Machine version)
     *
-    * @param object $query_object The query object to modify with SQL
-    * @param object $ctx The search context with table_alias and column name
-    * @return object The query object with SQL sentence set to "column IS NOT NULL"
+    * Generates an IS NOT NULL predicate against the physical column in matrix_time_machine.
+    * Matches snapshot rows where the component data column has been written with any value,
+    * including empty arrays or empty strings (only a SQL NULL causes exclusion).
+    *
+    * Simpler than the non-TM counterpart (`resolve_json_not_empty_value_sql`), which uses a
+    * JSONB path existence check (`@?`) to detect at least one array element. In the TM table
+    * the absence of data is represented by a NULL column, so IS NOT NULL is sufficient.
+    *
+    * @param object $query_object SQO being built; ->sentence is set to the IS NOT NULL predicate
+    * @param object $ctx          Search context providing ->table_alias and ->column
+    * @return object              $query_object with ->sentence set (no ->params needed)
     */
     protected static function resolve_not_empty_value_sql_tm(object $query_object, object $ctx) : object {
 
@@ -104,23 +191,26 @@ trait search_component_json_tm {
 
     /**
     * RESOLVE_DIFFERENT_SQL_TM (!=)
-    * != Different (Time Machine version)
-    * Translation: "Does not equal X."
-    * Technical Logic: Direct column inequality check with wildcard support for matrix_time_machine
-    * What it returns: Records with string values different from the specified pattern.
-    * When to use: To find time machine records not matching a specific string value.
-    * Example: "Show me all time machine records with titles not equal to 'Draft'."
+    * Operator: != — "Does not equal / Does not match pattern" (Time Machine version)
     *
-    * Wildcard Support:
-    *   - *text* : NOT LIKE '%text%' (does not contain)
-    *   - *text  : NOT LIKE '%text' (does not end with)
-    *   - text*  : NOT LIKE 'text%' (does not start with)
-    *   - text   : != 'text' (not equal)
+    * Generates an inequality or NOT LIKE predicate depending on whether the search value
+    * contains wildcard characters. The `!=` prefix is stripped before wildcard detection.
     *
-    * @param object $query_object The query object to modify with SQL and params
-    * @param string $q The search query with != operator and optional wildcards
-    * @param object $ctx The search context with table_alias and column name
-    * @return object The query object with SQL sentence and params set
+    * Wildcard expansion table (applied to the cleaned value after stripping '!='):
+    *   *text*  → column NOT LIKE '%text%'   (does not contain)
+    *   *text   → column NOT LIKE '%text'    (does not end with)
+    *   text*   → column NOT LIKE 'text%'    (does not start with)
+    *   text    → column != 'text'           (strict inequality)
+    *
+    * Note: The `data` column in matrix_time_machine stores a JSONB value. Comparing a
+    * JSONB column with LIKE or != performs a text-cast comparison internally in PostgreSQL.
+    * For substring searches on JSONB data, prefer `resolve_contains_sql_tm` (which uses
+    * an explicit CAST) or the regular JSONB-path operators in `search_component_json`.
+    *
+    * @param object $query_object SQO being built; ->sentence and ->params are written on return
+    * @param string $q            Raw search string including the leading '!=' prefix
+    * @param object $ctx          Search context providing ->table_alias and ->column
+    * @return object              $query_object with ->sentence and ->params['_Q1_'] set
     */
     protected static function resolve_different_sql_tm(object $query_object, string $q, object $ctx) : object {
         $q_clean = trim(str_replace('!=', '', $q));
@@ -157,17 +247,23 @@ trait search_component_json_tm {
 
     /**
     * RESOLVE_EXACTLY_EQUAL_SQL_TM (==)
-    * == Exactly Equal (Time Machine version)
-    * Translation: "Equals exactly X."
-    * Technical Logic: Direct column equality check for matrix_time_machine table
-    * What it returns: Records where the string value matches exactly.
-    * When to use: To find time machine records with exact string matches.
-    * Example: "Show me all records with title exactly 'Final Version'."
+    * Operator: == — "Exactly Equal" (Time Machine version)
     *
-    * @param object $query_object The query object to modify with SQL and params
-    * @param string $q The search query with == operator
-    * @param object $ctx The search context with table_alias and column name
-    * @return object The query object with SQL sentence "column = _Q1_" and params set
+    * Generates a column = _Q1_ equality predicate against matrix_time_machine. The '=='
+    * prefix is stripped, then the remaining value is bound as a prepared parameter.
+    *
+    * For the `data` JSONB column this performs a JSONB equality comparison (PostgreSQL
+    * compares the JSONB text representation). To match a plain text value against JSONB
+    * use `resolve_contains_sql_tm` which casts to text first.
+    *
+    * This handler is also used as the default fallback in `dispatch_operator_sql_tm()`
+    * for any column that is NOT the `data` column (i.e. hypothetical future scalar columns
+    * that may be added to matrix_time_machine).
+    *
+    * @param object $query_object SQO being built; ->sentence and ->params are written on return
+    * @param string $q            Raw search string including the leading '==' prefix
+    * @param object $ctx          Search context providing ->table_alias and ->column
+    * @return object              $query_object with ->sentence = "col = _Q1_" and ->params['_Q1_'] set
     */
     protected static function resolve_exactly_equal_sql_tm(object $query_object, string $q, object $ctx) : object {
         $q_clean = trim(str_replace('==', '', $q));
@@ -182,17 +278,22 @@ trait search_component_json_tm {
 
     /**
     * RESOLVE_NOT_CONTAIN_SQL_TM (-)
-    * - Does Not Contain (Time Machine version)
-    * Translation: "Does not contain string X anywhere."
-    * Technical Logic: Direct column NOT LIKE check with wildcards for matrix_time_machine
-    * What it returns: Records that do not have the provided string fragment.
-    * When to use: To find records not containing a specific substring.
-    * Example: "Show me all records not containing 'temp' in the title."
+    * Operator: - — "Does Not Contain" (Time Machine version)
     *
-    * @param object $query_object The query object to modify with SQL and params
-    * @param string $q The search query with - operator prefix
-    * @param object $ctx The search context with table_alias and column name
-    * @return object The query object with SQL sentence "column NOT LIKE '%value%'" and params set
+    * Generates a `column NOT LIKE '%value%'` predicate, ensuring the search fragment
+    * does not appear anywhere in the column value. The leading '-' operator prefix is
+    * stripped and the remainder is wrapped in SQL '%' wildcards on both sides.
+    *
+    * Applied to the `data` JSONB column: PostgreSQL will implicitly cast JSONB to text
+    * before applying LIKE, which means the match operates on the JSON serialisation string
+    * (e.g. `[{"value":"foo","id":1}]`). For precise searches against the inner JSON value
+    * use the JSONB-path operators in `search_component_json` (regular matrix table).
+    *
+    * @param object $query_object SQO being built; ->sentence and ->params are written on return
+    * @param string $q            Raw search string including the leading '-' prefix
+    * @param object $ctx          Search context providing ->table_alias and ->column
+    * @return object              $query_object with ->sentence = "col NOT LIKE _Q1_" and
+    *                             ->params['_Q1_'] = '%value%'
     */
     protected static function resolve_not_contain_sql_tm(object $query_object, string $q, object $ctx) : object {
         $q_clean = trim(str_replace('-', '', $q));
@@ -207,18 +308,36 @@ trait search_component_json_tm {
 
     /**
     * RESOLVE_DUPLICATED_SQL_TM (!!)
-    * !! Duplicated (Time Machine version)
-    * Translation: "Has any value shared by another record."
-    * Technical Logic: EXISTS subquery finding records with same column value in matrix_time_machine
-    * What it returns: Records containing string values found in other records of the same type.
-    * When to use: To find duplicate string values across time machine records.
-    * Example: "Show me all records that share the same title with other records."
+    * Operator: !! — "Duplicated value" (Time Machine version)
     *
-    * Note: Sets $query_object->duplicated=true and $query_object->unaccent=true for downstream processing.
+    * Generates an EXISTS subquery that matches snapshot rows whose column value is also
+    * present in at least one other row of the same section_tipo. This detects records
+    * that share a component value, which is useful for data quality audits on historical
+    * snapshots.
     *
-    * @param object $query_object The query object to modify with SQL and flags
-    * @param object $ctx The search context with table_alias, table, and column name
-    * @return object The query object with EXISTS subquery SQL sentence and flags set
+    * Produced SQL structure:
+    *   EXISTS (
+    *     SELECT 1
+    *     FROM matrix_time_machine AS m2
+    *     WHERE m2.{column}       = {alias}.{column}      -- same value
+    *       AND m2.section_id    != {alias}.section_id    -- different record
+    *       AND m2.section_tipo   = {alias}.section_tipo  -- same section type
+    *   )
+    *
+    * Flags written to $query_object:
+    * - ->duplicated = true  — signals the outer WHERE builder that this is a duplicate check
+    * - ->unaccent   = true  — requests accent-insensitive text comparison where the DB supports it
+    *   (Note: For the JSONB `data` column the `unaccent` flag has no effect unless the
+    *   outer builder explicitly wraps the column in `unaccent()`; behaviour depends on the
+    *   search trait's upstream handling.)
+    *
+    * The `section_tipo` guard in the subquery limits duplication detection to snapshots of
+    * the same section type, avoiding false positives across conceptually unrelated entities
+    * (e.g. a JSON object in a 'Place' section matching an identical object in an 'Event').
+    *
+    * @param object $query_object SQO being built; ->sentence, ->duplicated, ->unaccent are set
+    * @param object $ctx          Search context providing ->table_alias, ->table, and ->column
+    * @return object              $query_object with ->sentence set to the EXISTS predicate
     */
     protected static function resolve_duplicated_sql_tm(object $query_object, object $ctx) : object {
         $query_object->duplicated = true;
@@ -238,23 +357,32 @@ trait search_component_json_tm {
 
     /**
     * RESOLVE_WILDCARD_LITERAL_SQL_TM (*text, text*, 'text')
-    * Wildcard / Literal Match (Time Machine version)
-    * Translation: "Matches pattern X (startsWith, endsWith, or literal)."
-    * Technical Logic: Direct LIKE comparison with wildcard patterns for matrix_time_machine
-    * What it returns: Records matching the specified string pattern.
-    * When to use: To find records using wildcard or exact literal patterns.
-    * Example: "Show me records starting with 'Draft' (Draft*) or ending with '2024' (*2024)."
+    * Operators: *text (ends-with), text* (begins-with), 'text' (literal exact) — Time Machine version
     *
-    * Pattern Support:
-    *   - 'text'  : Exact literal match (=)
-    *   - *text   : Ends with (LIKE '%text')
-    *   - text*   : Starts with (LIKE 'text%')
-    *   - default : Contains (LIKE '%text%')
+    * Consolidates three related pattern-matching cases into a single handler for the
+    * matrix_time_machine `data` column (or any resolved scalar column):
     *
-    * @param object $query_object The query object to modify with SQL and params
-    * @param string $q The search query with wildcards or literal quotes
-    * @param object $ctx The search context with table_alias and column name
-    * @return object The query object with SQL sentence and params set based on pattern type
+    *   'text'  → column =      _Q1_    (exact literal match; single-quotes stripped)
+    *   *text   → column LIKE  '%text'  (ends-with; leading * replaced by '%')
+    *   text*   → column LIKE  'text%'  (begins-with; trailing * replaced by '%')
+    *   default → column LIKE  '%text%' (contains; should not be reached in normal dispatch
+    *             because the default path in dispatch_operator_sql_tm handles fallback
+    *             via resolve_contains_sql_tm or resolve_exactly_equal_sql_tm)
+    *
+    * The literal case (`is_literal`) is detected by `search::is_literal($q)` before
+    * this handler is called (and the case is re-evaluated here for correctness); a value
+    * enclosed in single-quotes (`'text'`) requests an exact equality comparison rather
+    * than a LIKE pattern.
+    *
+    * Note: The default branch inside this switch exists as a safety net but is unlikely
+    * to be reached in practice — `dispatch_operator_sql_tm()` routes `*x`, `x*`, and
+    * literal cases here but sends all other unrecognised patterns through the explicit
+    * default branch in the outer switch.
+    *
+    * @param object $query_object SQO being built; ->sentence and ->params are written on return
+    * @param string $q            Raw search string (may include '*' wildcards or wrapping single-quotes)
+    * @param object $ctx          Search context providing ->table_alias and ->column
+    * @return object              $query_object with ->sentence and ->params['_Q1_'] set
     */
     protected static function resolve_wildcard_literal_sql_tm(object $query_object, string $q, object $ctx) : object {
 
@@ -264,14 +392,17 @@ trait search_component_json_tm {
         $match_logic = '';
         switch (true) {
             case $is_literal:
+                // Single-quoted input: treat as exact equality rather than a LIKE pattern.
                 $query_object->params = ['_Q1_' => $q_clean];
                 $match_logic = "= _Q1_";
                 break;
             case substr($q, 0, 1)==='*':
+                // Leading wildcard: match values ending with the search term.
                 $query_object->params = ['_Q1_' => '%'.$q_clean];
                 $match_logic = "LIKE _Q1_";
                 break;
             case substr($q, -1)==='*':
+                // Trailing wildcard: match values starting with the search term.
                 $query_object->params = ['_Q1_' => $q_clean.'%'];
                 $match_logic = "LIKE _Q1_";
                 break;
@@ -289,20 +420,37 @@ trait search_component_json_tm {
 
 
     /**
-    * RESOLVE_CONTAINS_SQL_TM (Default)
-    * Contains (Time Machine version)
-    * Translation: "Contains string X."
-    * Technical Logic: Direct LIKE '%value%' comparison for matrix_time_machine table
-    * What it returns: Records containing the provided string fragment.
-    * When to use: Default fallback when no specific operator is matched.
-    * Example: "Show me all records containing 'project' in any position."
+    * RESOLVE_CONTAINS_SQL_TM (Default for 'data' column)
+    * Operator: (none / default) — "Contains substring X" (Time Machine version)
     *
-    * Note: This is currently unused - the dispatcher falls back to resolve_exactly_equal_sql_tm instead.
+    * Generates a `CAST(column AS text) LIKE '%value%'` predicate. This is the default
+    * fallback handler for the `data` column in matrix_time_machine when no explicit
+    * operator prefix is present in the search string.
     *
-    * @param object $query_object The query object to modify with SQL and params
-    * @param string $q The search query string (cleaned of +, *, = characters)
-    * @param object $ctx The search context with table_alias and column name
-    * @return object The query object with SQL sentence "column LIKE '%value%'" and params set
+    * WHY CAST to text?
+    * The `data` column is typed as JSONB in PostgreSQL. The standard LIKE operator does
+    * not operate on JSONB directly; without the explicit cast PostgreSQL raises a type
+    * error. The cast serialises the JSONB value to its text representation
+    * (e.g. `[{"value":"foo","id":1}]`) and then applies the LIKE pattern on that string.
+    * This means the match covers the full JSON serialisation, not just the inner `value`
+    * field — callers who need precise field-level matching should use the JSONB-path
+    * operators in `search_component_json` (regular matrix searches).
+    *
+    * The operator characters '+', '*', and '=' are stripped from the search value before
+    * building the LIKE pattern. This is consistent with how the non-TM JSON handler
+    * (`resolve_json_contains_sql`) cleans its input.
+    *
+    * Routing:
+    * This method is NOT called for non-'data' columns (the default branch in
+    * `dispatch_operator_sql_tm()` uses `resolve_exactly_equal_sql_tm()` for those).
+    * For the 'data' column it is reached when none of the prefix operators match and
+    * the value is a plain substring search.
+    *
+    * @param object $query_object SQO being built; ->sentence and ->params are written on return
+    * @param string $q            Search string with operator characters (+, *, =) already cleaned out
+    * @param object $ctx          Search context providing ->table_alias and ->column
+    * @return object              $query_object with ->sentence = "CAST(col AS text) LIKE _Q1_"
+    *                             and ->params['_Q1_'] = '%value%'
     */
     protected static function resolve_contains_sql_tm(object $query_object, string $q, object $ctx) : object {
         $q_clean = str_replace(['+', '*', '='], '', $q);

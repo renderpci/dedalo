@@ -1,19 +1,51 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_AV
-* Manages audio/video media components in Dédalo.
+* Audio/video media component for Dédalo, managing the full lifecycle of AV files.
 *
-* Handles audio and video file operations including:
-* - Upload, download, and deletion of AV files
-* - Quality level management (original, modified, audio, thumb)
-* - FFmpeg-based transcoding and processing
-* - Poster frame generation for video previews
-* - Subtitle management (VTT, SRT)
-* - TC (timecode) processing and subtitle generation
-* - Video stream handling and alternative format generation
+* Responsible for:
+* - Resolving AV-specific quality levels (original, delivery sizes such as '1080'/'720'/
+*   '576'/'404'/'240', audio-only, and thumb) backed by DEDALO_AV_AR_QUALITY.
+* - Building filesystem paths and public URLs for AV files, posterframes, and subtitles.
+* - Orchestrating FFmpeg-based transcoding via Ffmpeg::build_av_alternate_command() and
+*   Ffmpeg::create_posterframe(). Transcoding can run synchronously (shell_exec) or as a
+*   background process via exec_::exec_sh_file() when $async===true.
+* - Handling uploaded files through the upload pipeline:
+*     dd_utils_api::upload → tool_upload::process_uploaded_file
+*     → component_media_common::add_file → component_av::process_uploaded_file
+* - Persisting original filename and computed duration to companion ontology components
+*   identified by $properties->target_filename and $properties->target_duration.
+* - Moving superseded files to a sibling 'deleted/' directory (never truly deleting);
+*   restoring from 'deleted/' on time-machine recovery.
+* - Generating and serving WebVTT/SRT subtitle files from DEDALO_SUBTITLES_FOLDER.
+* - Expanding DVD-in-ZIP bundles into the expected VIDEO_TS/AUDIO_TS directory layout.
 *
-* Extends component_media_common and implements component_media_interface
-* for standard media component behavior across the system.
+* Quality constants (defined in config/sample.config.php):
+* - DEDALO_AV_QUALITY_ORIGINAL ('original') — lossless source, never transcoded
+* - DEDALO_AV_QUALITY_DEFAULT  ('404')       — standard delivery quality
+* - DEDALO_AV_AR_QUALITY       (['original','1080','720','576','404','240','audio'])
+*
+* Extends component_media_common (which extends component_common) and implements
+* component_media_interface, the contract shared by component_3d, component_image,
+* component_pdf, and component_svg.
+*
+* Data shape (stored in the matrix 'media' column):
+* [{
+*   "files_info": [{
+*     "quality"          : "original",
+*     "file_name"        : "rsc35_rsc167_1.mov",
+*     "file_path"        : "/…/media/av/original/…/rsc35_rsc167_1.mov",
+*     "file_url"         : "/media/av/original/…/rsc35_rsc167_1.mov",
+*     "file_size"        : 25165824,
+*     "file_time"        : 1680000000,
+*     "upload_file_name" : "interview.mov",
+*     "upload_date"      : "2023-04-01T12:00:00",
+*     "upload_user"      : 42
+*   }],
+*   "original_file_name"      : "interview.mov",
+*   "original_normalized_name": "rsc35_rsc167_1.mov",
+*   "original_upload_date"    : "…"
+* }]
 *
 * @package Dédalo
 * @subpackage Core
@@ -24,14 +56,23 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* CLASS VARS
+	* All per-instance media properties (quality, folder, id, extension, additional_path, etc.)
+	* are inherited from component_media_common and set during construction.
+	* component_av declares no additional instance variables of its own.
 	*/
 
 
 
 	/**
 	* GET_AR_QUALITY
-	* Get the list of defined av qualities in Dédalo config
-	* @return array $ar_quality
+	* Returns the full ordered list of recognised AV quality names from config.
+	*
+	* The array is defined in config as DEDALO_AV_AR_QUALITY and typically
+	* contains ['original','1080','720','576','404','240','audio']. Callers
+	* such as delete_file() use this list to validate the quality parameter
+	* before performing any destructive filesystem operation.
+	*
+	* @return array $ar_quality - ordered list of valid quality identifiers
 	*/
 	public function get_ar_quality() : array {
 
@@ -44,7 +85,14 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_DEFAULT_QUALITY
-	* @return string $default_quality
+	* Returns the standard delivery quality identifier for AV files.
+	*
+	* Maps to DEDALO_AV_QUALITY_DEFAULT, typically '404' (a pixel-height shorthand
+	* for the 404-pixel-tall delivery resolution). This is the quality served to
+	* end-users in the absence of a higher-bandwidth selection, and is the quality
+	* used by get_export_value() when building URLs for 'edit' mode exports.
+	*
+	* @return string $default_quality - e.g. '404'
 	*/
 	public function get_default_quality() : string {
 
@@ -57,7 +105,15 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_ORIGINAL_QUALITY
-	* @return string $original_quality
+	* Returns the quality identifier reserved for the lossless source file.
+	*
+	* Maps to DEDALO_AV_QUALITY_ORIGINAL, typically the string 'original'.
+	* Files stored under this quality are never transcoded by Dédalo; they
+	* represent the file exactly as uploaded. build_version() uses this value
+	* as the preferred transcoding source and create_posterframe() falls back
+	* to it when no other source file can be found.
+	*
+	* @return string $original_quality - e.g. 'original'
 	*/
 	public function get_original_quality() : string {
 
@@ -70,7 +126,14 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_AUDIO_QUALITY
-	* @return string $audio_quality
+	* Returns the quality identifier for the audio-only derivative of an AV file.
+	*
+	* The audio quality track is automatically generated from the original whenever
+	* a file is uploaded at 'original' quality (see process_uploaded_file()).
+	* The identifier is the hard-coded string 'audio' rather than a config constant;
+	* no video stream is included in this derivative.
+	*
+	* @return string $audio_quality - always 'audio'
 	*/
 	public function get_audio_quality() : string {
 
@@ -83,7 +146,14 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_EXTENSION
-	* @return string DEDALO_AV_EXTENSION from config
+	* Returns the canonical container format extension for delivery-quality AV files.
+	*
+	* Prefers an instance-level override ($this->extension) set during upload processing,
+	* falling back to the global DEDALO_AV_EXTENSION constant (typically 'mp4').
+	* This extension is used when constructing file paths for non-original quality
+	* variants; the original file retains its uploaded extension.
+	*
+	* @return string - file extension without dot, e.g. 'mp4'
 	*/
 	public function get_extension() : string {
 
@@ -94,7 +164,15 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
+	* Returns the list of upload-accepted file extensions for AV components.
+	*
+	* Sourced from DEDALO_AV_EXTENSIONS_SUPPORTED (sample value:
+	* ['mp4','wave','wav','aiff','aif','mp3','mov','avi','mpg','mpeg','vob','zip','flv']).
+	* The 'zip' entry supports DVD bundles uploaded as compressed archives; see
+	* move_zip_file() for the extraction logic.
+	* Validation against this list is performed by component_media_common::valid_file_extension().
+	*
+	* @return array $allowed_extensions - lower-case extension strings without dots
 	*/
 	public function get_allowed_extensions() : array {
 
@@ -107,8 +185,14 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_FOLDER
-	* 	Get element dir from config
-	* @return string
+	* Returns the root media sub-directory name for AV files.
+	*
+	* Prefers $this->folder (overridable per-instance) then falls back to the
+	* DEDALO_AV_FOLDER constant (e.g. '/av'). This value is concatenated with
+	* DEDALO_MEDIA_PATH / DEDALO_MEDIA_URL to form the base storage location
+	* for all quality variants of AV files.
+	*
+	* @return string - folder path segment, e.g. '/av'
 	*/
 	public function get_folder() : string {
 
@@ -119,9 +203,18 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_BEST_EXTENSIONS
-	* Extensions list of preferable extensions in original or modified qualities.
-	* Ordered by most preferable extension, first is the best.
-	* @return array
+	* Returns the priority-ordered list of preferred source extensions for transcoding.
+	*
+	* When multiple original-quality files exist (e.g. both 'mov' and 'mp4'), the
+	* parent class uses this list to pick the best source before delegating to FFmpeg.
+	* The first entry in the array is the most preferred; others are considered in order.
+	*
+	* If DEDALO_AV_BEST_EXTENSIONS is not defined in the project config, a safe fallback
+	* of ['mov'] is registered here to avoid a fatal error. Installations wanting a
+	* different preference order should define DEDALO_AV_BEST_EXTENSIONS in their config
+	* before this method is called.
+	*
+	* @return array - extension strings without dots, e.g. ['mov']
 	*/
 	public function get_best_extensions() : array {
 
@@ -137,12 +230,25 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_EXPORT_VALUE
-	* Atoms based export contract (see component_common::get_export_value).
-	* Single atom with the AV URL (edit mode) or posterframe URL, cell_type 'img'.
-	* URL absoluteness comes from the export_context (replaces the legacy
-	* $this->caller==='tool_export' switch)
-	* @param export_context|null $context = null
-	* @return export_value
+	* Atoms-based export implementation (see component_common::get_export_value contract).
+	*
+	* Produces a single export_value atom carrying an AV-related URL. The URL choice
+	* differs by rendering context:
+	* - 'edit' mode   → URL of the default-quality AV file (playable in the editor).
+	*                   Absoluteness is controlled by $context->absolute_urls rather than
+	*                   a legacy $this->caller==='tool_export' switch.
+	* - other modes   → URL of the JPEG posterframe image (used in list/view contexts
+	*                   where a still image is more appropriate than a video URL).
+	*
+	* The atom's cell_type is 'img' so that flat-table exporters (tool_export, diffusion)
+	* render the URL as an image reference rather than plain text.
+	*
+	* When no data is set on the component the URL is returned as an empty string rather
+	* than null, to keep the atom shape consistent for downstream serialisers.
+	*
+	* @param export_context|null $context = null - export settings; a default context is
+	*   created when null is passed
+	* @return export_value - single-atom export result
 	*/
 	public function get_export_value( ?export_context $context=null ) : export_value {
 
@@ -180,8 +286,16 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_POSTERFRAME_FILE_NAME
-	*  like 'rsc35_rsc167_1.jpg'
-	* @return string $posterframe_file_name;
+	* Returns the filename (without directory) of this component's posterframe image.
+	*
+	* The name is derived from the component's unique ID ($this->get_id()) combined with
+	* the configured posterframe extension (DEDALO_AV_POSTERFRAME_EXTENSION, typically 'jpg').
+	* Example result: 'rsc35_rsc167_1.jpg'
+	*
+	* Both get_posterframe_filepath() and get_posterframe_url() delegate to this method
+	* to ensure the naming is consistent across path and URL resolution.
+	*
+	* @return string $posterframe_file_name - base filename, e.g. 'rsc35_rsc167_1.jpg'
 	*/
 	public function get_posterframe_file_name() : string {
 
@@ -194,8 +308,17 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_POSTERFRAME_FILEPATH
-	* Get full file path
-	* @return string $posterframe_filepath
+	* Returns the absolute filesystem path to this component's posterframe image file.
+	*
+	* Path structure:
+	*   DEDALO_MEDIA_PATH + folder + '/posterframe' + additional_path + '/' + file_name
+	* Example: /var/www/media/av/posterframe/404/rsc35_rsc167_1.jpg
+	*
+	* The 'posterframe' sub-directory sits at the same level as quality variant folders
+	* (e.g. 'original', '404') within the AV media directory. $additional_path provides
+	* a configurable bucket segment (e.g. '/404') used to shard files across sub-dirs.
+	*
+	* @return string $posterframe_filepath - absolute path; file may or may not exist yet
 	*/
 	public function get_posterframe_filepath() : string {
 
@@ -213,10 +336,24 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_POSTERFRAME_URL
-	* @param bool $test_file = true
-	* @param bool $absolute = false
-	* @param bool $avoid_cache = false
-	* @return string $posterframe_url
+	* Returns the public URL for this component's posterframe JPEG image.
+	*
+	* Behaviour flags (all default to false / non-caching / relative):
+	* - $test_file    : When true, the method checks whether the posterframe file
+	*                   actually exists on disk. If it does not, the URL falls back to
+	*                   the Dédalo logo placeholder (DEDALO_CORE_URL/themes/default/0.jpg).
+	* - $absolute     : When true, prepends DEDALO_PROTOCOL + DEDALO_HOST to produce
+	*                   an absolute URL (required for email or external embedding).
+	* - $avoid_cache  : When true, appends '?t=<unix_timestamp>' to bust browser/proxy
+	*                   caches after a posterframe has been regenerated.
+	*
+	* The $test_file check performs a synchronous file_exists() call; avoid enabling it
+	* in tight loops or list-rendering contexts to prevent excessive I/O.
+	*
+	* @param bool $test_file = false  - check filesystem before returning URL
+	* @param bool $absolute = false   - prepend protocol + host
+	* @param bool $avoid_cache = false - append cache-busting timestamp query string
+	* @return string $posterframe_url - relative or absolute URL (never null)
 	*/
 	public function get_posterframe_url(bool $test_file=false, bool $absolute=false, bool $avoid_cache=false) : string {
 
@@ -251,8 +388,19 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* DELETE_THUMB
-	* Remove posterframe and thumb file version from disk
-	* @return bool
+	* Removes the posterframe JPEG and delegates thumb file removal to the parent.
+	*
+	* The AV-specific posterframe (stored in the 'posterframe' sub-directory) is a
+	* separate artifact from the generic 'thumb' quality file maintained by the parent
+	* class. This override ensures both are cleaned up when the thumb is deleted:
+	* 1. Unlinks the posterframe file identified by get_posterframe_filepath().
+	* 2. Calls parent::delete_thumb() to remove the thumb quality file and trigger
+	*    the parent's save() call that updates files_info metadata.
+	*
+	* Returns false immediately if the posterframe unlink fails; the parent's thumb
+	* deletion is skipped in that case.
+	*
+	* @return bool - true on full success, false if any unlink operation fails
 	*/
 	public function delete_thumb() {
 
@@ -276,15 +424,26 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* CREATE_POSTERFRAME
-	* Creates a image 'posterframe' from the default quality of current video file
+	* Extracts a single JPEG frame from the AV file at the specified playback position.
 	*
-	* @param string|float $current_time
-	* 	A double-precision floating-point value indicating the current playback time in seconds.
-	* 	From HML5 video element command 'currentTime'
-	* @param string|null $target_quality = null
-	* 	Optional string like 'original'. if not defined, default is used
-	* @return bool $command_response
-	* 	FFMPEG terminal command response
+	* Called from the client when the user scrubs the video player to a desired timecode
+	* and clicks "set as posterframe". The resulting JPEG replaces any previously stored
+	* posterframe and a new thumb is generated from it immediately afterwards.
+	*
+	* Source file resolution:
+	* 1. Attempts to use $target_quality (defaults to 'original' when null).
+	* 2. If the file for that quality does not exist and it is not already the default
+	*    quality, falls back to get_default_quality() (e.g. '404').
+	* 3. If neither file exists, logs an error and returns false.
+	*
+	* After successful FFmpeg extraction, create_thumb() is called to regenerate the
+	* thumbnail from the new posterframe so both artifacts stay in sync.
+	*
+	* @param string|float $current_time - playback position in seconds (from HTML5
+	*   video.currentTime); also accepts a timecode string such as '00:00:10'
+	* @param string|null $target_quality = null - quality variant to extract the frame
+	*   from; defaults to 'original' when null
+	* @return bool - true when FFmpeg succeeded, false on any error
 	*/
 	public function create_posterframe( string|float $current_time, ?string $target_quality=null ) : bool {
 
@@ -334,8 +493,18 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* DELETE_POSTERFRAME
-	* 	Remove the file 'posterframe' from the disk
-	* @return bool
+	* Permanently removes the posterframe JPEG from the filesystem.
+	*
+	* Unlike remove_component_media_files() / delete_file() — which move files to a
+	* 'deleted/' sub-directory for potential recovery — this method calls unlink()
+	* directly and the file cannot be restored. Intended only for cases where the
+	* entire media set is being cleaned up or a fresh posterframe will be regenerated.
+	*
+	* Returns false (with a logger::DEBUG entry) when the file does not exist; this is
+	* treated as a non-error because the outcome (no posterframe on disk) is already
+	* achieved. Returns false (with logger::ERROR) when unlink() fails due to permissions.
+	*
+	* @return bool - true when the file was successfully removed, false otherwise
 	*/
 	public function delete_posterframe() : bool {
 
@@ -368,8 +537,25 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* CREATE_THUMB
-	* Creates a thumbnail version of av file using the posterframe if available
-	* @return bool
+	* Generates a small thumbnail JPEG from the component's posterframe image.
+	*
+	* Thumbnails for AV components are always derived from the posterframe rather
+	* than directly from the video, because extracting a thumbnail-size frame via
+	* FFmpeg on every request would be prohibitively slow. ImageMagick::dd_thumb()
+	* is used for the actual resize/conversion.
+	*
+	* Execution flow:
+	* 1. Ensures DEDALO_QUALITY_THUMB is defined; defines the fallback 'thumb' if missing.
+	* 2. Resolves the target file path using get_media_filepath('thumb', <thumb_extension>).
+	* 3. Checks whether the posterframe file exists on disk.
+	*    - If not: tries create_posterframe(10.00) to auto-generate one at the 10-second
+	*      mark. If that also fails (file still missing), returns false.
+	* 4. Calls ImageMagick::dd_thumb($posterframe, $target_file) to produce the thumb.
+	*
+	* (!) The auto-posterframe is generated at 10 seconds — not 5 as the inline comment
+	* above the call states. This may produce a black frame for very short clips.
+	*
+	* @return bool - true on success, false when source posterframe is unavailable
 	*/
 	public function create_thumb() : bool {
 
@@ -417,8 +603,18 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_SUBTITLES_PATH
-	* @param string $lang = DEDALO_DATA_LANG
-	* @return string $subtitles_path
+	* Returns the absolute filesystem path to the WebVTT subtitle file for a given language.
+	*
+	* Path structure:
+	*   DEDALO_MEDIA_PATH + folder + DEDALO_SUBTITLES_FOLDER + '/' + id + '_' + lang + '.' + ext
+	* Example: /var/www/media/av/subtitles/rsc35_rsc167_1_es.vtt
+	*
+	* DEDALO_SUBTITLES_FOLDER is typically '/subtitles' and
+	* DEDALO_AV_SUBTITLES_EXTENSION is typically 'vtt'.
+	* The $lang parameter should be a Dédalo language code (e.g. 'es', 'en', 'fr').
+	*
+	* @param string $lang = DEDALO_DATA_LANG - language code for which to resolve the path
+	* @return string $subtitles_path - absolute path; file may or may not exist
 	*/
 	public function get_subtitles_path( string $lang=DEDALO_DATA_LANG ) : string  {
 
@@ -433,8 +629,17 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_SUBTITLES_URL
-	* @param string $lang = DEDALO_DATA_LANG
-	* @return string $subtitles_url
+	* Returns the public URL for the WebVTT subtitle file for a given language.
+	*
+	* Mirrors get_subtitles_path() but uses DEDALO_MEDIA_URL as the root instead of
+	* DEDALO_MEDIA_PATH. The URL is always relative (protocol-relative) and does not
+	* go through get_posterframe_url()'s $absolute flag; callers that need an absolute
+	* URL must prepend DEDALO_PROTOCOL + DEDALO_HOST themselves.
+	*
+	* Used by the client-side AV player to attach a <track> element for subtitles.
+	*
+	* @param string $lang = DEDALO_DATA_LANG - language code (e.g. 'es', 'en')
+	* @return string $subtitles_url - relative URL to the .vtt file
 	*/
 	public function get_subtitles_url( string $lang=DEDALO_DATA_LANG ) : string {
 
@@ -448,12 +653,33 @@ class component_av extends component_media_common implements component_media_int
 
 
 	/**
-	* GET_VIDEO SIZE
-	* Calculate the current quality file size in the more human readable unit (kilobytes, megabytes, et.)
-	* @param string|null $quality = null
-	* @param string|null $filename = null
-	* @return string
-	* 	Sample: '35.2 MB'
+	* GET_VIDEO_SIZE
+	* Returns a human-readable file-size string for the specified AV quality variant.
+	*
+	* Supports two storage layouts:
+	* - Regular file  : uses filesize() on the file path. The result is expressed as
+	*                   rounded KB (when ≤ 1024 bytes) or rounded MB otherwise.
+	*                   Example: '35 MB'
+	* - DVD directory : when the path is a directory containing a VIDEO_TS sub-dir,
+	*                   accumulates the sizes of all VOB files larger than 512 KB
+	*                   (skipping the small 'end-of-disc' VOB stubs).
+	*
+	* Parameter resolution order:
+	* - If $filename is provided it is used directly (no quality look-up).
+	* - If only $quality is provided, the filepath is derived via get_media_filepath().
+	* - If neither is provided, the component's current quality is used.
+	*
+	* Returns null when the file/directory does not exist or when filesize() fails
+	* (e.g. for remote streams). The filesize() call is intentionally suppressed with
+	* '@' to avoid PHP warnings on non-seekable streams.
+	*
+	* (!) The size threshold comparison uses bytes (size <= 1024) to decide between KB
+	* and MB labels, but the MB calculation divides by 1024 — producing round megabytes,
+	* not mebibytes. For a file exactly 1025 bytes the result is '1 MB'.
+	*
+	* @param string|null $quality = null  - quality identifier; uses current quality if null
+	* @param string|null $filename = null - explicit file path override
+	* @return string|null - size string such as '35 MB' or '512 KB', or null on failure
 	*/
 	public function get_video_size( ?string $quality=null, ?string $filename=null ) : ?string {
 
@@ -512,10 +738,22 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_DURATION
-	* Get file av duration from file metadata reading attributes
-	* Note that this calculation, read fiscally the file and this is slow (about 200 ms)
-	* @param string|null $quality
-	* @return float $duration
+	* Returns the total duration of the AV file in seconds by reading its container metadata.
+	*
+	* Delegates to get_media_attributes() → Ffmpeg::get_media_attributes() which runs
+	* ffprobe on the file. The duration is extracted from the ffprobe JSON output at
+	* $media_attributes->format->duration (a string such as '172.339000').
+	*
+	* (!) This method physically reads the file via ffprobe and takes approximately
+	* 200 ms per call. Do not invoke it in list-rendering loops. Results should be
+	* cached when needed repeatedly — for example, process_uploaded_file() calls it
+	* once and immediately persists the result to the target_duration component.
+	*
+	* Returns 0.0 when the file does not exist, ffprobe fails, or the duration field
+	* is missing from the metadata. The return value is always cast to float.
+	*
+	* @param string|null $quality - quality variant to measure; uses current quality if null
+	* @return float $duration - duration in seconds (0.0 when unavailable)
 	*/
 	public function get_duration( ?string $quality=null ) : float {
 
@@ -561,13 +799,31 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
-	* "Remove" (rename and move files to deleted folder) all media file linked to current component (all quality versions)
-	* Is triggered wen section that contains media elements is deleted
-	* @see section:remove_section_media_files
-	* @param array $ar_quality = []
-	* @param string|null $extension = null
-	* @param bool $remove_posterframe = true
-	* @return bool
+	* Moves all AV quality files and (optionally) the posterframe to a 'deleted/' folder.
+	*
+	* "Remove" is a soft-delete: files are renamed and moved rather than unlinked, allowing
+	* time-machine recovery via restore_component_media_files(). Called by section-level
+	* deletion logic (section::remove_section_media_files) when a record is removed.
+	*
+	* Execution flow:
+	* 1. Resolves $ar_quality to the full quality list when the parameter is empty.
+	* 2. Delegates AV quality file removal to parent::remove_component_media_files().
+	* 3. When $remove_posterframe===true, also moves the posterframe JPEG:
+	*    a. Ensures the 'posterframe/<additional_path>/deleted/' directory exists
+	*       (creates it with mkdir 0775 recursive if needed).
+	*    b. Renames the posterframe to '<id>_deleted_<Y-m-d_Hi>.<ext>' inside that directory.
+	*    The date-stamped naming allows multiple deletion events to coexist and natsort()
+	*    to identify the most recent on restore.
+	*
+	* Returns false on the first failure encountered (mkdir error, rename error). Returns
+	* the parent's boolean result when only AV files are processed without a posterframe.
+	*
+	* @see component_av::restore_component_media_files()
+	* @see section::remove_section_media_files()
+	* @param array $ar_quality = []            - quality variants to remove; empty = all
+	* @param string|null $extension = null     - limit removal to one extension; null = all
+	* @param bool $remove_posterframe = true   - whether to also move the posterframe file
+	* @return bool - true when all requested files were moved successfully
 	*/
 	public function remove_component_media_files( array $ar_quality=[], ?string $extension=null, bool $remove_posterframe=true ) : bool {
 
@@ -632,10 +888,27 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* RESTORE_COMPONENT_MEDIA_FILES
-	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
-	* Is triggered when tool_time_machine recover a section
+	* Restores the most recently soft-deleted AV files and posterframe from 'deleted/' backups.
+	*
+	* Counterpart to remove_component_media_files(). Called by the time-machine tool when
+	* recovering a section to a previous state.
+	*
+	* Execution flow:
+	* 1. Calls parent::restore_component_media_files() to restore quality-variant AV files.
+	* 2. Resolves the 'posterframe/<additional_path>/deleted/' directory for this component.
+	* 3. Globs for files matching '<id>_*.<DEDALO_AV_POSTERFRAME_EXTENSION>' in that directory.
+	*    - If no files are found: logs a WARNING and continues (posterframe restore is
+	*      non-fatal; the video itself may still be usable without a posterframe).
+	*    - Otherwise: natsort() orders the glob results, end() picks the latest
+	*      (alphabetically last = most recently date-stamped name), and rename() moves
+	*      it back to the live posterframe path.
+	*
+	* Always returns true (even when posterframe restoration fails) because the primary
+	* concern is restoring the video files. Callers should check the logger for warnings.
+	*
 	* @see tool_time_machine::recover_section_from_time_machine
-	* @return bool
+	* @see component_av::remove_component_media_files()
+	* @return bool - always true (failures are logged, not propagated)
 	*/
 	public function restore_component_media_files() : bool {
 
@@ -684,11 +957,29 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* MOVE_ZIP_FILE
-	* Used to move zip files like compressed DVD
-	* @param string $tmp_name
-	* @param string $folder_path
-	* @param string $file_name
+	* Expands a DVD-in-ZIP archive into the standard VIDEO_TS / AUDIO_TS directory layout.
+	*
+	* When a user uploads a DVD as a compressed ZIP bundle, this method extracts it into
+	* the expected directory structure so that FFmpeg and the media player can process it
+	* as a regular VOB-based DVD:
+	*   <folder_path>/<file_name>/VIDEO_TS/  — extracted VIDEO_TS files
+	*   <folder_path>/<file_name>/AUDIO_TS/  — extracted AUDIO_TS files
+	*
+	* The target directory tree is created by mkdir if it does not already exist.
+	* Files are copied entry-by-entry using the 'zip://' stream wrapper rather than
+	* a full extract, giving control over the destination path of each file.
+	* The top-level VIDEO_TS and AUDIO_TS directory entries in the ZIP are skipped
+	* (only their contents are copied) to avoid creating a duplicate nesting level.
+	*
+	* All three parameters are mandatory; the method returns an error response object
+	* if any are empty.
+	*
+	* @param string $tmp_name   - absolute path to the uploaded temporary ZIP file
+	* @param string $folder_path - target base directory (no trailing slash)
+	* @param string $file_name  - name for the new DVD directory (without path)
 	* @return object $response
+	*   ->result bool   - true on success, false on any error
+	*   ->msg   string  - human-readable outcome or error description
 	*/
 	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_name) : object {
 
@@ -782,23 +1073,42 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* PROCESS_UPLOADED_FILE
-	* Note that this is the last method called in a sequence started on upload file.
-	* The sequence order is:
-	* 	1 - dd_utils_api::upload
-	* 	2 - tool_upload::process_uploaded_file
-	* 	3 - component_media_common::add_file
-	* 	4 - component:process_uploaded_file
-	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
-	* @param object|null $file_data
-	*	Data from trigger upload file
-	* 	Format:
-	* {
-	*     "original_file_name": "my_video.mp4",
-	*     "full_file_name": "test81_test65_2.mp4",
-	*     "full_file_path": "/mypath/media/av/original/test81_test65_2.mp4"
-	* }
-	* @param object|null $process_options = null
+	* Final step of the AV upload pipeline — normalises metadata and triggers transcoding.
+	*
+	* Upload sequence (this method is step 4):
+	*   1. dd_utils_api::upload          — receives the multipart HTTP upload
+	*   2. tool_upload::process_uploaded_file — moves temp file, sets component quality
+	*   3. component_media_common::add_file  — registers the file in files_info
+	*   4. component_av::process_uploaded_file (this method)
+	*
+	* Actions performed:
+	* - Validates all required $file_data fields; returns an error response early if any
+	*   are missing or the resolved file path does not exist on disk.
+	* - Derives the file extension from the original filename for format-specific routing.
+	* - When quality is 'original', automatically starts building an audio-only derivative
+	*   via build_version('audio').
+	* - If $properties->target_filename is configured on the ontology node, saves the
+	*   original filename to the designated companion component (usually component_input_text).
+	* - If $properties->target_duration is configured, computes the file duration via
+	*   get_duration() → OptimizeTC::seg2tc() and saves the timecode to the companion
+	*   component (typically mapped to 'rsc54').
+	* - Stamps original_file_name, original_normalized_name, and original_upload_date onto
+	*   the component data array (index 0) when quality is 'original'.
+	* - Calls regenerate_component() which runs FFmpeg normalisation/transcoding and saves.
+	*
+	* All operations are wrapped in a try/catch; exceptions are logged and returned as
+	* error responses rather than propagating.
+	*
+	* @param object|null $file_data - file metadata from the upload pipeline:
+	*   {
+	*     "original_file_name": "my_video.mp4",        // user-supplied filename
+	*     "full_file_name":     "test81_test65_2.mp4",  // Dédalo normalised name
+	*     "full_file_path":     "/…/av/original/test81_test65_2.mp4"
+	*   }
+	* @param object|null $process_options = null - reserved; currently unused
 	* @return object $response
+	*   ->result bool   - true on success, false on any error
+	*   ->msg   string  - human-readable outcome or error description
 	*/
 	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
@@ -976,9 +1286,17 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_MEDIA_STREAMS
-	* Check the file to get the head streams of the video file
-	* @param string $quality
-	* @return object|null $media_streams
+	* Returns the stream information (video, audio, subtitle tracks) for an AV file.
+	*
+	* Wraps Ffmpeg::get_media_streams() which runs ffprobe on the resolved file path
+	* and returns a parsed object of stream descriptors. Useful in the editor to show
+	* codec, resolution, frame-rate, and channel information per track before deciding
+	* which quality variant to use for a conversion.
+	*
+	* Returns null when ffprobe fails or the file does not exist.
+	*
+	* @param string $quality - quality variant to inspect (e.g. 'original', '404')
+	* @return object|null $media_streams - ffprobe stream data object, or null on failure
 	*/
 	public function get_media_streams(string $quality) : ?object {
 
@@ -996,14 +1314,30 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* DELETE_FILE
-	* Remove quality version moving the file to a deleted files dir
-	* @see component_av->remove_component_media_files
-	* @param string $quality
-	* 	Quality to delete as '1.5MB'
-	* @param string|null $extension=null
-	* 	Optional extension as 'avif'. On empty, all quality files will be deleted,
-	* 	else only the selected file in current quality will be deleted
+	* Soft-deletes a single quality variant by delegating to remove_component_media_files().
+	*
+	* The file is moved to a 'deleted/' sub-directory rather than permanently unlinked,
+	* preserving the ability to restore it via the time-machine tool. The posterframe is
+	* intentionally NOT moved here ($remove_posterframe=false) because deleting one quality
+	* variant should not destroy the shared posterframe used by all qualities.
+	*
+	* Validation: the $quality string is checked against get_ar_quality() before any
+	* filesystem operation is attempted. Passing an unrecognised quality returns an error
+	* response without touching any files.
+	*
+	* On success:
+	* - Appends a 'DELETE FILE' entry to the activity logger.
+	* - Calls $this->Save() to refresh files_info metadata so the client's version list
+	*   reflects the removal immediately.
+	*
+	* @see component_av::remove_component_media_files()
+	* @param string $quality         - quality variant to delete (must be in get_ar_quality())
+	* @param string|null $extension = null - limit removal to one file extension; null removes
+	*   all files for that quality
 	* @return object $response
+	*   ->result bool   - true on success, false on validation failure or filesystem error
+	*   ->msg   string  - human-readable outcome
+	*   ->errors array  - list of error code strings (empty on success)
 	*/
 	public function delete_file( string $quality, ?string $extension=null ) : object {
 
@@ -1058,10 +1392,47 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* BUILD_VERSION
-	* Creates a new version using FFMEPG conversion using settings based on target quality
-	* @param string $quality
-	* @param bool $async = true
+	* Transcodes the AV source into the specified quality variant using FFmpeg.
+	*
+	* Handles two execution modes:
+	* - $async===false (default) : runs shell_exec() synchronously and waits for the
+	*   FFmpeg process to finish before returning. Suitable for batch jobs and cases
+	*   where the caller needs to know the conversion succeeded before continuing.
+	*   Calls $this->save() immediately after completion.
+	* - $async===true            : launches the pre-built shell script via
+	*   exec_::exec_sh_file() as a detached background process and returns the PID.
+	*   The $save call is intentionally skipped here — the client is expected to poll
+	*   for the output file and then call 'force_save' from tool_media_versions.
+	*
+	* Special case — thumb quality:
+	* When $quality matches get_thumb_quality() the method short-circuits to create_thumb()
+	* (ImageMagick resize from posterframe) and returns immediately, because thumb
+	* generation does not involve FFmpeg.
+	*
+	* Source file resolution:
+	* 1. get_source_quality_to_build() determines the best available source quality.
+	* 2. get_original_file_path() provides the primary source path.
+	* 3. If the original file is missing, falls back to get_default_quality().
+	* 4. If neither exists, returns an error response.
+	*
+	* Ffmpeg::get_setting_name() selects the FFmpeg preset for the source/target
+	* combination. Ffmpeg::build_av_alternate_command() writes a .sh script that wraps
+	* the full FFmpeg invocation, which is either exec'd inline or run in background.
+	*
+	* Activity is logged via logger::$obj['activity'] regardless of sync/async mode.
+	*
+	* (!) The $save parameter in the method signature is declared but not consumed in the
+	* method body. Sync mode always saves; async mode never saves. The parameter has no
+	* effect in either branch.
+	*
+	* @param string $quality  - target quality identifier (must be in get_ar_quality())
+	* @param bool $async = false - false = wait for FFmpeg; true = background process
+	* @param bool $save = true  - declared but currently unused (see note above)
 	* @return object $response
+	*   ->result bool            - true on success, false on any error
+	*   ->msg    string          - human-readable outcome
+	*   ->errors array           - list of error code strings (empty on success)
+	*   ->command_response mixed - shell_exec() output in sync mode, null in async mode
 	*/
 	public function build_version(string $quality, bool $async=false, bool $save=true) : object {
 
@@ -1213,9 +1584,28 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* CONFORM_HEADERS
-	* Creates a new version from original in given quality rebuilding headers
-	* @param string $quality
+	* Rebuilds the container headers (moov atom) of a quality variant using FFmpeg faststart.
+	*
+	* Some video files (particularly those not produced by Dédalo's own pipeline) have the
+	* MOOV atom placed at the end of the container rather than the beginning. This prevents
+	* HTTP progressive playback because the browser cannot seek until the entire file is
+	* downloaded. This method calls Ffmpeg::conform_header() to move the MOOV atom to the
+	* front of the file (qt-faststart / ffmpeg -movflags +faststart), enabling streaming.
+	*
+	* The operation always runs in the background (via Ffmpeg::conform_header()'s internal
+	* async dispatch). No save() is triggered here; the caller is responsible for
+	* refreshing file metadata after the background process completes.
+	*
+	* Returns an error response (with logger::ERROR) if the target file does not exist on
+	* disk before the conform is attempted.
+	*
+	* Activity is logged to logger::$obj['activity'] on both success and failure paths.
+	*
+	* @param string $quality - quality variant whose file headers should be conformed
 	* @return object $response
+	*   ->result          bool   - true when the conform command was dispatched
+	*   ->msg             string - human-readable outcome
+	*   ->command_response mixed - output from Ffmpeg::conform_header()
 	*/
 	public function conform_headers(string $quality) : object {
 
@@ -1272,9 +1662,19 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* GET_MEDIA_ATTRIBUTES
-	* Read file and get attributes using Ffmpeg
-	* @param string $file_path
-	* @return object|null $media_attributes
+	* Returns full container-level metadata for an AV file as parsed by ffprobe.
+	*
+	* Delegates to Ffmpeg::get_media_attributes() which runs ffprobe with JSON output
+	* and returns the 'format' section of the result. Consumers such as get_duration()
+	* read $result->format->duration from the returned object.
+	*
+	* Example return value structure (see get_duration() for a full annotated sample):
+	*   { "format": { "filename": "…", "duration": "172.339000", "size": "22126087", … } }
+	*
+	* Returns null when ffprobe is unavailable or the file cannot be probed.
+	*
+	* @param string $file_path - absolute filesystem path to the AV file to inspect
+	* @return object|null $media_attributes - ffprobe format metadata, or null on failure
 	*/
 	public function get_media_attributes(string $file_path) : ?object {
 
@@ -1288,11 +1688,32 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* UPDATE_DATA_VERSION
-	* @param object $options
+	* Migration hook called by the data-version update toolchain to transform stored data
+	* to a new schema version.
+	*
+	* The $options object carries the target version and contextual identifiers:
+	* - $options->update_version  string[] - version segments, joined to a dotted string
+	*                                        (e.g. ['7','4','2'] → '7.4.2')
+	* - $options->data_unchanged  mixed    - reference data for comparison (optional)
+	* - $options->reference_id    mixed    - record identifier for logging
+	* - $options->tipo            string   - ontology term identifier
+	* - $options->section_id      mixed    - section record ID
+	* - $options->section_tipo    string   - section type identifier
+	* - $options->context         string   - caller context (default 'update_component_data')
+	*
+	* Response result codes (shared convention across all components):
+	* - 0 : this component has no migration for the requested version (no-op)
+	* - 1 : migration was applied
+	* - 2 : migration was attempted but the stored data was already up to date
+	*
+	* Currently no version-specific migrations are implemented for component_av.
+	* All versions fall through to the default case which returns result=0.
+	* Add case blocks for each new migration as '7.x.y' string keys.
+	*
+	* @param object $options - migration context (see property descriptions above)
 	* @return object $response
-	*	$response->result = 0; // the component don't have the function "update_data_version"
-	*	$response->result = 1; // the component do the update"
-	*	$response->result = 2; // the component try the update but the data don't need change"
+	*   ->result int    - 0 (no-op), 1 (migrated), or 2 (already current)
+	*   ->msg    string - human-readable outcome
 	*/
 	public static function update_data_version(object $options) : object {
 

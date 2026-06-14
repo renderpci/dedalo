@@ -13,6 +13,38 @@
 
 
 
+/**
+* COMPONENT_JSON
+* Client-side component for storing and editing arbitrary JSON values.
+*
+* Each instance wraps a single JSON document (or null) held in
+* `data.entries[0].value`. The component delegates rendering to view modules:
+*   - edit/list/tm  → render_edit_component_json / render_list_component_json
+*   - search        → render_search_component_json
+*
+* Shared utility functions exported from this module are consumed by all view
+* modules to keep change-handling logic in one place:
+*   - parse_editor_content  – normalises {json}/{text} editor output
+*   - build_changed_data_item – constructs the frozen payload for set_changed_data
+*   - handle_json_change    – wires editor onChange to component state
+*
+* Data shape (component_json.data):
+*   {
+*     entries : [ { id: number|null, value: * } ],  // always length 0 or 1
+*     q_operator : string|null                       // search mode only
+*   }
+*
+* Changed-data shape written by build_changed_data_item:
+*   { action: 'update', id: number|null, value: { value: * } }
+*
+* Prototype methods are mixed in from component_common and common so that only
+* JSON-specific behaviour lives here; see the prototype-assign block below.
+*
+* @exports component_json
+* @exports parse_editor_content
+* @exports build_changed_data_item
+* @exports handle_json_change
+*/
 export const component_json = function(){
 
 	this.id					= null
@@ -75,9 +107,21 @@ export const component_json = function(){
 
 /**
 * PARSE_EDITOR_CONTENT
-* Extracts JSON value from JSONEditor content format {json, text}
-* @param object content - Editor content {json: unknown} | {text: string}
-* @return mixed|null - Parsed JSON value or null
+* Normalises the content object returned by the JSONEditor library into a
+* plain JavaScript value suitable for persistence.
+*
+* JSONEditor emits one of two shapes depending on the active mode:
+*   {json: value}   – structured mode; value is already a JS value (object,
+*                     array, primitive, or undefined when the editor is empty).
+*   {text: string}  – text mode; value is a raw JSON string that must be
+*                     parsed, or an empty string that maps to null.
+*
+* When `content.json` is present (even if it is null or false) the structured
+* value is used directly, avoiding a redundant serialise/parse round-trip.
+*
+* @param {Object} content - Editor content emitted by JSONEditor onChange/get():
+*                           {json: *} (structured) or {text: string} (text mode)
+* @returns {*} The resolved JavaScript value, or null when the editor is empty
 */
 export const parse_editor_content = function(content) {
 
@@ -101,11 +145,23 @@ export const parse_editor_content = function(content) {
 
 /**
 * BUILD_CHANGED_DATA_ITEM
-* Builds a frozen changed_data_item object for component_json.
-* Used by edit views (via handle_json_change) and search view (directly).
-* @param mixed value - The parsed JSON value
-* @param int|null id - Entry id from data
-* @return object changed_data_item
+* Constructs the frozen changed_data_item payload expected by
+* component_common.set_changed_data and ultimately by the server save API.
+*
+* The returned object is frozen to prevent accidental mutation after it has
+* been enqueued. The value is wrapped in an extra `{ value: … }` envelope
+* because the server-side component unpacks one level of nesting when
+* persisting entries (matching the data.entries[n] shape on read).
+*
+* Used by:
+*   - handle_json_change  (edit views via JSONEditor onChange)
+*   - set_value           (programmatic value assignment)
+*   - save_sequence       (explicit save with validation)
+*   - render_search_component_json (search input onChange)
+*
+* @param {*} value - The parsed JavaScript value to persist (any JSON-safe type)
+* @param {number|null} id - Entry id taken from data.entries[n].id; null for new entries
+* @returns {Object} Frozen changed_data_item: { action, id, value: { value } }
 */
 export const build_changed_data_item = function(value, id=null) {
 
@@ -122,13 +178,27 @@ export const build_changed_data_item = function(value, id=null) {
 
 /**
 * HANDLE_JSON_CHANGE
-* Common change handler for component_json across edit views.
-* Parses the editor content, builds changed_data_item, and sets changed_data.
-* Note: Does NOT auto-save. Use save_sequence for explicit save.
-* @param object self - Component instance
-* @param object content - Editor content {json, text}
-* @param int key - Entry index
-* @return bool - Result from set_changed_data
+* Shared onChange handler wiring the JSONEditor instance to component state.
+* Called from the editor's onChange callback inside view_default_edit_json
+* whenever the editor content changes without parse errors.
+*
+* Steps:
+*  1. Parses the raw editor content into a JS value via parse_editor_content.
+*  2. Deep-clones the value through JSON round-trip to produce an immutable
+*     snapshot (prevents aliasing between the editor's internal state and the
+*     component's changed_data queue).
+*  3. Resolves the entry id from data.entries[key] (optional chaining returns
+*     null for new/empty entries).
+*  4. Builds a frozen changed_data_item and records it via set_changed_data.
+*
+* Note: this function marks data as changed but does NOT trigger a save.
+* The user must click the Save button, which calls save_sequence explicitly.
+*
+* @param {Object} self - The component_json instance
+* @param {Object} content - Raw editor content: {json: *} or {text: string}
+* @param {number} key - Zero-based index of the entry being edited (always 0
+*                       for component_json, which stores at most one entry)
+* @returns {boolean} Result from set_changed_data (true when state was updated)
 */
 export const handle_json_change = function(self, content, key=0) {
 
@@ -153,9 +223,18 @@ export const handle_json_change = function(self, content, key=0) {
 /**
 * SET_VALUE
 * Overwrites component_common method
-* @param mixed value
-* @param int key = 0
-* @return bool
+* Programmatically sets the component value, bypassing the JSONEditor widget.
+* Useful for tools and automated workflows that need to inject a value without
+* user interaction (e.g. sample-data injection, import flows).
+*
+* Builds a changed_data_item from the supplied value and the current entry id,
+* then records it via set_changed_data. Does NOT auto-save; call save() or
+* save_sequence() separately if persistence is required.
+*
+* @param {*} value - Any JSON-serialisable value to set
+* @param {number} key - Zero-based entry index (default 0; component_json only
+*                       supports a single entry)
+* @returns {Promise<boolean>} Resolves to the result of set_changed_data
 */
 component_json.prototype.set_value = async function(value, key=0) {
 
@@ -177,9 +256,25 @@ component_json.prototype.set_value = async function(value, key=0) {
 
 /**
 * SAVE_SEQUENCE
-* Check if value is JSON valid and save it when true
-* @param object editor
-* @return object|bool
+* Validates the current JSONEditor state and persists it to the server if
+* both the value is valid JSON and the value has actually changed since the
+* last server read.
+*
+* Validation guard: the JSONEditor.validate() method returns undefined when
+* the content is valid and a non-undefined value (array of errors) when it
+* is not. Only a valid document is allowed to proceed.
+*
+* Change guard: the current editor value is compared by JSON-stringified
+* equality against data.entries[0] (the last server-known value). If they
+* match, the save is skipped to avoid unnecessary network round-trips.
+*
+* Called by the Save button click handler injected into the editor node by
+* view_default_edit_json.get_content_value.
+*
+* @param {Object} editor - Live JSONEditor instance exposing validate() and get()
+* @returns {Promise<Object|boolean>} Resolves to the server save_response when
+*          a save was performed, or false when validation fails or no change
+*          was detected
 */
 component_json.prototype.save_sequence = async function(editor) {
 

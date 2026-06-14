@@ -109,6 +109,12 @@ is **lazy**: raw JSON strings from each column are kept undecoded until the
 first access (`section_record_data::ensure_decoded()`), which keeps list mode
 cheap.
 
+This page describes the typed columns from the *storage* side. For the **data
+formats those columns hold** — the consolidated v7 value-item envelope
+(`{id, lang?, value|locator}`), what each column's payload looks like, and a page
+per data type (string, number, date, IRI, geo, media, relations, misc) — see the
+[data model](../data_model/index.md).
+
 ```mermaid
 flowchart TB
     subgraph matrix["matrix table (one table for everything)"]
@@ -540,6 +546,8 @@ abstraction.
 - [`section_group`](section_group.md) · [`section_tab`](section_tab.md) — the layout groupers that organise a section's form.
 - [`section_list`](section_list.md) — the client list view for many records of a section.
 - [Components](../components/index.md) — the fields that live inside a section.
+- [Data model](../data_model/index.md) — the data formats the typed `matrix`
+  columns hold: the v7 value item and a page per data type.
 - [Ontology](../ontology/index.md) — how sections, components and relations are
   defined as nodes.
 - [Request config](../request_config.md) — how a section's context/subcontext is

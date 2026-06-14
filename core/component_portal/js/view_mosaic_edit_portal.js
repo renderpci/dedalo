@@ -22,7 +22,76 @@
 
 /**
 * VIEW_MOSAIC_EDIT_PORTAL
-* Manage the component's logic and appearance in client side
+* Edit-mode mosaic (card grid) view for `component_portal`.
+*
+* This module renders the portal's linked records as a CSS grid of visual cards rather
+* than a table.  It is dispatched by `render_edit_component_portal.prototype.edit` when
+* `self.context.view === 'mosaic'`.
+*
+* Layout overview:
+*
+*   wrapper
+*     └── list_body  (CSS grid; card tiles built from the `in_mosaic` column subset)
+*           └── content_data
+*                 └── <section_record_node>   ×N   (one mosaic tile per linked record)
+*                       └── hover_view        (overlaid on mouseenter; hidden by default)
+*                             └── button_alt_container  (info icon → opens table detail modal)
+*     └── buttons  (portal toolbar; only when permissions > 1)
+*
+* Three separate sets of section_records are built, each with its own `columns_map` slice
+* and `id_variant` so their DOM ids never collide:
+*
+*   1. **Mosaic records** (`id_variant` default) — rendered using only the columns that
+*      carry `in_mosaic: true` in `self.columns_map`.  These become the visible card tiles.
+*
+*   2. **Hover records** (`id_variant: 'hover'`) — rendered using columns that carry
+*      `hover: true`.  Each hover record is prepended into its matching mosaic tile and
+*      remains hidden until the user mouses over the tile.
+*
+*   3. **Alternative table records** (`id_variant: 'table'`) — a full-column table view
+*      of one record, revealed inside a modal when the user clicks the info icon on the
+*      hover overlay.  This is built inside an IIFE at the start of `render` so the DOM
+*      node is available before the mosaic cards are wired.  It is intentionally NOT
+*      appended to the DOM here; it is passed into the modal on demand inside
+*      `render_alternative_table_view`'s event handler (see below).
+*
+* Pub/Sub bridge (mosaic ↔ table detail):
+*   - `render_hover_view` publishes `mosaic_show_<id_base>_<section_tipo>_<section_id>`
+*     when the user clicks the info icon button.
+*   - `render_alternative_table_view` subscribes to that same event (deduplicated via
+*     `event_manager.get_events()`) and, upon receipt, opens the matching table row in a
+*     `dd-modal` (see `ui.attach_to_modal`).
+*   - A separate `button_edit_click` subscription inside the handler closes the modal
+*     when the user triggers a record-open action from within the table view.
+*
+* All child section_record instances are pushed into `self.ar_instances` so they are
+* properly destroyed when the portal is refreshed or destroyed.
+* All event subscriptions are pushed into `self.events_tokens` for cleanup.
+*
+* Key `self` properties consumed:
+*   @see component_portal.js for the full instance shape.
+*   - `self.columns_map`      {Array}   — full columns map; `in_mosaic` and `hover` flags
+*                                         select the two sub-sets (set by `get_columns_map`
+*                                         in `common.js` for the `'mosaic'` view).
+*   - `self.ar_instances`     {Array}   — accumulator for child section_record instances.
+*   - `self.events_tokens`    {Array}   — accumulator for event subscriptions.
+*   - `self.permissions`      {number}  — 1 = read-only, 2 = full edit.
+*   - `self.caller`           {Object}  — parent instance; checked for `tool_time_machine`.
+*   - `self.data.references`  {Array}   — optional back-reference list rendered at the
+*                                         bottom of the alternative table view.
+*   - `self.context.css`      {Object}  — optional CSS overrides applied to `content_data`.
+*   - `self.context.view`     {string}  — expected to be `'mosaic'` for this module.
+*   - `self.total`            {number}  — total linked records (used by drag/drop clamp).
+*
+* Exports:
+*   `view_mosaic_edit_portal`        — namespace constructor (never instantiated directly).
+*   `view_mosaic_edit_portal.render` — async static entry point called by the dispatcher.
+*
+* @module view_mosaic_edit_portal
+* @see render_edit_component_portal.js  for the view-dispatch switch and all shared helpers.
+* @see view_default_edit_portal.js      for the simpler table-row equivalent.
+* @see component_portal.js             for the constructor, data shape, and lifecycle.
+* @see docs/core/components/component_portal.md for the full specification.
 */
 export const view_mosaic_edit_portal = function() {
 
@@ -33,9 +102,41 @@ export const view_mosaic_edit_portal = function() {
 
 /**
 * RENDER
-* Manages the component's appearance in client side
-* @param object self
-* @param object options
+* Build and return the complete portal wrapper node in mosaic (card grid) view.
+*
+* This is the async static entry point called by `render_edit_component_portal.prototype.edit`
+* when `self.context.view === 'mosaic'`.  It orchestrates three parallel data flows
+* (mosaic, hover, and alternative-table section_records) and wires them together
+* through a pub/sub bridge before assembling the final wrapper.
+*
+* Execution order:
+*   1. Build the **alternative table view** (`alt_list_body`) inside an IIFE.
+*      The IIFE returns the node but it is intentionally discarded here (not appended to
+*      the DOM yet); `render_alternative_table_view` holds a closure reference and inserts
+*      it into a modal on demand.  The IIFE is skipped when the caller is `tool_time_machine`
+*      because time-machine snapshots are read-only and do not need inline editing.
+*   2. Build the **hover section_records** using the `hover: true` subset of `columns_map`.
+*   3. Build the **mosaic section_records** using the `in_mosaic: true` subset of `columns_map`.
+*   4. Assemble `content_data` (card grid) by calling `get_content_data`, which:
+*      - Renders each mosaic tile.
+*      - Prepends the matching hover view into each tile.
+*      - Attaches `mouseenter`/`mouseleave` toggle events per tile.
+*      - Attaches drag-and-drop handlers when permissions ≥ 2.
+*   5. When `render_level === 'content'` return only the `content_data` node (partial refresh).
+*   6. Otherwise wrap in `list_body` → `wrapper`, attach the toolbar buttons, wire
+*      wrapper-level autocomplete + drag/drop events, and apply read-only context-menu
+*      suppression when permissions < 2.
+*
+* (!) The IIFE at step 1 is `await`ed but its return value is unused (`alt_list_body` is
+* captured only inside `render_alternative_table_view`'s closure).  The outer `await` is
+* kept to preserve the original execution ordering in case the IIFE is extended in future.
+*
+* @param {Object} self    - The `component_portal` instance (see component_portal.js).
+* @param {Object} options - Render options.
+* @param {string} [options.render_level='full'] - `'full'` rebuilds the entire wrapper;
+*   `'content'` returns only the refreshed `content_data` node for an in-place swap.
+* @returns {Promise<HTMLElement>} The rendered wrapper node (full mode) or the
+*   `content_data` node (content mode).
 */
 view_mosaic_edit_portal.render = async function(self, options) {
 
@@ -193,10 +294,29 @@ view_mosaic_edit_portal.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
-* Render all received section records and place it into a new div 'content_data'
-* @param object self
-* @param array ar_section_record
-* @return HTMLElement content_data
+* Render each mosaic tile, pair it with its hover overlay, attach interaction events,
+* and return the assembled `content_data` container.
+*
+* For each mosaic section_record:
+*   1. Renders the mosaic tile (`section_record.render()`) and its paired hover overlay
+*      (`render_hover_view`) concurrently via `Promise.all` to reduce serial await chains.
+*   2. Prepends the hover overlay into the tile node so it sits above the card content
+*      in DOM order (the overlay is hidden via CSS `display_none` until `mouseenter`).
+*   3. Attaches `mouseenter` / `mouseleave` listeners to toggle the `display_none` class
+*      on the hover overlay and the `mosaic_over` highlight class on the tile.
+*   4. Attaches drag-and-drop handlers to the tile when `self.permissions >= 2`.
+*
+* After all tiles are appended to a `DocumentFragment`, the fragment is inserted into the
+* `content_data` wrapper produced by `ui.component.build_content_data`.  Any `height`
+* style override declared in `self.context.css['.content_data'].style.height` is applied
+* inline to support ontology-driven CSS customisation per portal instance.
+*
+* @param {Object} self                       - The `component_portal` instance.
+* @param {Array}  ar_section_record          - Array of mosaic section_record instances
+*                                              (one per linked record, `in_mosaic` columns).
+* @param {Array}  hover_ar_section_record    - Parallel array of hover section_record instances
+*                                              (same length; index-aligned with `ar_section_record`).
+* @returns {Promise<HTMLElement>} The populated `content_data` div node.
 */
 const get_content_data = async function(self, ar_section_record, hover_ar_section_record) {
 
@@ -272,12 +392,44 @@ const get_content_data = async function(self, ar_section_record, hover_ar_sectio
 
 /**
 * RENDER_ALTERNATIVE_TABLE_VIEW
-* Render all received section records and place it into a DocumentFragment
-* @param instance self
-* @param array ar_section_record
-* @param DOM node alt_list_body
+* Render each alternative-table section_record into a DocumentFragment and wire each
+* to the pub/sub bridge that opens it in a modal when the user clicks the hover info icon.
 *
-* @return DocumentFragment
+* This function is the subscriber side of the mosaic ↔ table-detail bridge:
+*
+*   For each section_record:
+*   1. Renders the section_record node and adds `display_none` so it is initially hidden.
+*   2. Derives the event key:
+*        `mosaic_show_<id_base>_<section_tipo>_<section_id>`
+*      where `id_base` is the section_record's stable cross-page identifier (a composite
+*      string of tipo + section_id + parent context — see `section_record.id_base`).
+*   3. Checks `event_manager.get_events()` to prevent duplicate subscriptions when the
+*      portal is refreshed without being fully destroyed.
+*   4. Subscribes `fn_mosaic_show_alt`: on the first publish of the event it —
+*      a. Hides all peer nodes in the same parent (keeping only the header and close button).
+*      b. Makes `alt_list_body` and this record's node visible.
+*      c. Wraps both in a `dd-modal` (via `ui.attach_to_modal`) labelled "Editing mosaic inline".
+*      d. Subscribes a one-shot `button_edit_click` listener that closes the modal and
+*         unsubscribes itself via `event_manager.unsubscribe(token)`.
+*   5. References block: if `self.data.references` is non-empty, appends the back-reference
+*      list (from `render_references`) after all section_record nodes.
+*
+* (!) The `fn_mosaic_show_alt` closure captures both `section_record_node` and `alt_list_body`.
+* `alt_list_body` is a reference to the shared node created in `render`'s IIFE; moving it
+* into the modal body removes it from any prior DOM parent (correct behaviour — only one
+* modal can show it at a time).
+*
+* (!) The `modal.on_close` callback is commented out deliberately: auto-refreshing on
+* close caused UX issues. Manual refresh via the edit-button path is the intended flow.
+*
+* @param {Object}        self               - The `component_portal` instance.
+* @param {Array}         ar_section_record  - Array of alternative-table section_record
+*                                             instances (`id_variant: 'table'`; full columns).
+* @param {HTMLElement}   alt_list_body      - The shared `alt_list_body` container node
+*                                             created in `render`'s IIFE; passed by reference
+*                                             so the event handler can move it into a modal.
+* @returns {Promise<DocumentFragment>} Fragment with all rendered (hidden) table rows
+*   and the optional references block.
 */
 const render_alternative_table_view = async function(self, ar_section_record, alt_list_body) {
 
@@ -376,11 +528,28 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 
 /**
 * RENDER_HOVER_VIEW
-* Render all received section records and place it into a DocumentFragment
-* @param instance self
-* @param array ar_section_record
-* @param DOM node alt_list_body
-* @return HTMLElement section_record_node
+* Build the hover overlay node for a single mosaic tile.
+*
+* The hover view is a rendered section_record (using the `hover`-flagged columns) with two
+* extras appended on top:
+*
+*   1. The section_record's own component nodes (e.g. a label or thumbnail defined in the
+*      ontology with `hover: true`) provide at-a-glance info without needing to open the
+*      full record.
+*
+*   2. A `button_alt_container` div with an info icon (`<span class="button info with_bg">`)
+*      is appended to the rendered node.  Clicking this button publishes the event:
+*        `mosaic_show_<id_base>_<section_tipo>_<section_id>`
+*      which is picked up by the matching subscriber in `render_alternative_table_view`
+*      to open the full table detail in a modal.
+*
+* The returned node starts life with the classes `sr_mosaic_hover display_none`; the
+* `display_none` is toggled by `get_content_data`'s `mouseenter`/`mouseleave` handlers.
+*
+* @param {Object} self                  - The `component_portal` instance.
+* @param {Object} hover_section_record  - A single section_record instance built from the
+*                                         `hover: true` column subset (`id_variant: 'hover'`).
+* @returns {Promise<HTMLElement>} The rendered hover overlay node (initially hidden).
 */
 const render_hover_view = async function(self, hover_section_record) {
 
@@ -416,11 +585,32 @@ const render_hover_view = async function(self, hover_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_records
-* @param array base_columns_map
-* @param object self
-* @param bool view_mosaic
-* @return array full_columns_map
+* Prepend and append control columns to a base columns_map slice before it is
+* passed to `get_section_records`.
+*
+* The function adds structural columns that are not declared in the ontology / request
+* config but are needed by the portal's table controls:
+*
+*   - **`section_id` column** (prepended, table mode only) — renders the "open record"
+*     button, drag handle, and drop target via `render_column_id`.  Skipped in mosaic
+*     mode (`view_mosaic === true`) because card tiles do not have an ID column.
+*
+*   - **`ddinfo` column** (appended, table mode only) — shows the `component_info`
+*     summary string.  Added only when `self.add_component_info === true`.
+*
+*   - **`remove` column** (appended, table mode only) — unlink / delete button.  Added
+*     when the portal's source mode is not `'external'` AND `self.permissions > 1`.
+*
+* When `view_mosaic === true` (building the main mosaic card columns_map) none of the
+* control columns are added; only the raw `base_columns_map` items are returned.
+*
+* @param {Array}   base_columns_map - The pre-filtered column descriptor slice to extend.
+*   Each item shape: `{ id, label, width?, callback, tipo?, in_mosaic?, hover?, … }`.
+* @param {Object}  self             - The `component_portal` instance (read: `add_component_info`,
+*   `permissions`, `context.properties.source.mode`).
+* @param {boolean} view_mosaic      - When `true`, suppress all control columns (mosaic card mode).
+*   When `false`, add the full set of control columns (table / hover mode).
+* @returns {Promise<Array>} The extended columns_map array with control columns spliced in.
 */
 const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) {
 

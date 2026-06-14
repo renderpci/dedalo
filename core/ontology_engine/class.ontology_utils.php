@@ -1,15 +1,30 @@
 <?php declare(strict_types=1);
 /**
- * ONTOLOGY_UTILS
- *
- * Complementary utilities used to get multiple records from the dd_ontology table.
- * Manages active and functional ontology records.
- * Used to interpret data, schemas, behaviors, etc., at runtime.
- * Resolves multiple active nodes and interfaces with the `dd_ontology` table.
- *
- * This is a read-only object for retrieval purposes.
- * Note: To modify ontology records, use core/ontology/class.ontology.php.
- */
+* CLASS ONTOLOGY_UTILS
+* Bulk read and maintenance utilities for the `dd_ontology` table.
+*
+* Responsibilities:
+* - Query multiple ontology nodes at once (by model name, model tipo, is_model flag, or TLD).
+* - Validate individual tipos against the live ontology (safe format + model resolution).
+* - Manage the set of active TLDs (Top Level Domains / ontology namespaces) with a two-level
+*   cache: an in-process static array and a persisted PHP file written by dd_cache.
+* - Provide DBA-level helpers for atomic TLD replacement (backup → delete → insert → restore on
+*   failure) used by `ontology::regenerate_records_in_dd_ontology()`.
+*
+* Relationships:
+* - Delegates single-node lookups to `ontology_node` (class.ontology_node.php).
+* - Delegates multi-node DB queries to `dd_ontology_db_manager` (class.dd_ontology_db_manager.php).
+* - Issues raw PostgreSQL queries through `matrix_db_manager` and `DBi` for operations that need
+*   DDL (CREATE TABLE / DROP TABLE) or bulk DELETE outside the ORM layer.
+* - Called by `class.locator.php`, `class.common.php`, `trait.request_config_ddo.php`,
+*   `class.component_relation_common.php`, and `class.ontology.php`.
+*
+* Read-only note: This class only reads ontology data or performs maintenance.
+* To create, update, or structurally modify ontology records use `core/ontology/class.ontology.php`.
+*
+* @package Dédalo
+* @subpackage Core
+*/
 class ontology_utils {
 
 
@@ -19,22 +34,24 @@ class ontology_utils {
 	*/
 
 		/**
-		 * Static cache mapping model names to their matching tipo arrays.
-		 * Avoids repeated ontology searches for the same model lookups.
+		 * In-process singleton cache: maps model name → array of matching tipos.
+		 * Populated on first call to get_ar_tipo_by_model() for a given name and reused for the
+		 * lifetime of the PHP process. Cleared by common::clear() on request boundaries.
 		 * @var array $ar_tipo_by_model_name_cache
 		 */
 		public static array $ar_tipo_by_model_name_cache = [];
 
 		/**
-		 * Static cache for active TLDs (Top Level Domains) in the ontology.
-		 * Null until loaded, then populated with the list of currently active namespaces.
+		 * In-process singleton cache for the list of installed TLDs.
+		 * Null means "not yet loaded"; populated by get_active_tlds() and never evicted within a
+		 * single request. The authoritative source is the disk cache written by dd_cache.
 		 * @var ?array $active_tlds_cache
 		 */
 		public static ?array $active_tlds_cache = null;
 
 		/**
-		 * Filename for the cached active TLDs file on disk.
-		 * Used to persist active TLD lookups across requests for performance.
+		 * Filename used by dd_cache to persist the active TLD list across requests.
+		 * The cache is invalidated externally (e.g., after a TLD import) by deleting this file.
 		 * @var string $active_tlds_cache_file_name
 		 */
 		public static string $active_tlds_cache_file_name = 'cache_active_tlds.php';
@@ -43,11 +60,15 @@ class ontology_utils {
 
 	/**
 	 * GET_AR_TIPO_BY_MODEL
+	 * Returns all tipo identifiers whose `model` column matches the given model name.
 	 *
-	 * Resolves all terms matching the given model name.
+	 * Results are memoised in `$ar_tipo_by_model_name_cache` so repeated calls within the same
+	 * request are free. The cache key is the model name string itself.
 	 *
-	 * @param string $model_name The model name to filter by (e.g., 'section', 'component_input_text').
-	 * @return array List of found tipos.
+	 * @param string $model_name - Ontology model name to filter by (e.g. 'section',
+	 *                             'component_input_text'). Must be non-empty.
+	 * @return array - List of tipo strings that carry this model. Empty array when none found or
+	 *                 when the DB query fails.
 	 */
 	public static function get_ar_tipo_by_model( string $model_name ) : array {
 
@@ -74,11 +95,14 @@ class ontology_utils {
 
 	/**
 	 * GET_AR_ALL_MODELS
+	 * Returns all ontology records that are themselves model definitions (is_model = true).
 	 *
-	 * Retrieves all ontology records designated as models.
-	 * Used in selectors to assign models to terms.
+	 * Used primarily in ontology-editor UIs to populate model selectors when assigning a model
+	 * type to a new ontology node. Examples of model tipos: 'dd3' (section), 'dd6' (section_list),
+	 * 'dd918' (component_input_text).
 	 *
-	 * @return array Array of model tipos, e.g., ["dd3", "dd1226", ...].
+	 * @return array - Array of tipo strings flagged as models. Empty array when none found or on
+	 *                 DB failure.
 	 */
 	public static function get_ar_all_models() : array {
 
@@ -96,12 +120,15 @@ class ontology_utils {
 
 	/**
 	 * GET_AR_ALL_TIPO_OF_MODEL_TIPO
+	 * Returns all tipo identifiers that belong to a specific model tipo.
 	 *
-	 * Resolves all term IDs belonging to a specific model tipo.
-	 * Example: dd6 => ["oh1", "dd917", ...]
+	 * Inverse of get_ar_tipo_by_model(): where that method accepts a model name string,
+	 * this method accepts a tipo identifier (e.g. 'dd6' for the section_list model).
+	 * Used when enumerating all ontology nodes that share the same structural blueprint.
+	 * Example: get_ar_all_tipo_of_model_tipo('dd6') → ['oh1', 'dd917', ...].
 	 *
-	 * @param string $model_tipo The source model tipo (e.g., 'dd6' for sections).
-	 * @return array Array of term IDs.
+	 * @param string $model_tipo - The tipo of the model node (e.g. 'dd6' for sections).
+	 * @return array - Array of tipo strings that reference this model tipo. Empty on failure.
 	 */
 	public static function get_ar_all_tipo_of_model_tipo( string $model_tipo ) : array {
 
@@ -119,12 +146,21 @@ class ontology_utils {
 
 	/**
 	 * CHECK_TIPO_IS_VALID
+	 * Determines whether a tipo is usable at runtime: well-formed, exists in the ontology, and
+	 * has a resolvable model (or is itself a model node).
 	 *
-	 * Checks if a given tipo is usable by attempting to resolve its model.
-	 * If the model is empty, the tipo is considered invalid (ontology damage or missing TLD).
+	 * Three-stage check:
+	 * 1. Null guard — returns false immediately for null input.
+	 * 2. Format guard via safe_tipo() — rejects strings that do not match /^[a-z]{2,}[0-9]+$/
+	 *    (e.g. SQL injection payloads, empty strings, or malformed identifiers).
+	 * 3. Ontology guard — the tipo must exist in dd_ontology with a non-empty model; model nodes
+	 *    (is_model = true) bypass the model-resolution step because they are structural roots.
 	 *
-	 * @param string|null $tipo The tipo to validate (section, component, etc.).
-	 * @return bool True if valid, false otherwise.
+	 * Callers use this as a fast validation gate before building request configs or locators, to
+	 * silently drop references to tipos from uninstalled TLDs or deleted records.
+	 *
+	 * @param string|null $tipo - The tipo identifier to validate (e.g. 'oh1', 'dd345').
+	 * @return bool - True if the tipo is safe, exists, and has a valid model.
 	 */
 	public static function check_tipo_is_valid( ?string $tipo ) : bool {
 
@@ -157,10 +193,19 @@ class ontology_utils {
 
 	/**
 	 * GET_ACTIVE_TLDS
+	 * Returns the list of TLD namespaces currently installed in the `dd_ontology` table.
 	 *
-	 * Retrieves all active/installed TLDs from the `dd_ontology` table.
+	 * Lookup order (fastest to slowest):
+	 * 1. In-process static array (`$active_tlds_cache`) — zero DB cost.
+	 * 2. Disk cache file managed by dd_cache — single file read, avoids a DB query.
+	 * 3. Direct SQL query: `SELECT "tld" FROM "dd_ontology" GROUP BY "tld"` — populates both
+	 *    the disk cache and the static array for subsequent calls.
 	 *
-	 * @return array List of installed TLDs (e.g., ['dd', 'activity', 'oh']).
+	 * The cache file is invalidated externally (e.g., by the ontology importer after a TLD
+	 * install). Callers must not assume a particular TLD order in the returned array.
+	 *
+	 * @return array - Indexed array of TLD strings (e.g. ['dd', 'activity', 'oh']).
+	 *                 Empty array when the table is empty or the query fails.
 	 */
 	public static function get_active_tlds() : array {
 
@@ -208,11 +253,17 @@ class ontology_utils {
 
 	/**
 	 * CHECK_ACTIVE_TLD
+	 * Returns true when the TLD of the given tipo is currently installed in the ontology.
 	 *
-	 * Checks if the TLD of a given tipo is available and installed.
+	 * Used as a lightweight pre-filter in locator validation and request-config building to
+	 * silently discard references to ontology namespaces that are not yet imported on this
+	 * installation. Callers should treat false as "skip this tipo", not as a fatal error.
 	 *
-	 * @param string $tipo The tipo to check.
-	 * @return bool True if the TLD is active.
+	 * Special case: 'section_id' is a virtual pseudo-tipo used in SQO filters; it has no real
+	 * TLD and is always considered active to avoid false negatives in search pipelines.
+	 *
+	 * @param string $tipo - The tipo whose TLD membership to check (e.g. 'oh1', 'dd345').
+	 * @return bool - True if the tipo's TLD appears in get_active_tlds(), or if tipo = 'section_id'.
 	 */
 	public static function check_active_tld( string $tipo ) : bool {
 
@@ -231,11 +282,19 @@ class ontology_utils {
 
 	/**
 	 * DELETE_TLD_NODES
+	 * Permanently removes every ontology row whose `tld` column matches the given TLD.
 	 *
-	 * Removes all ontology records belonging to a specific TLD.
+	 * This is a destructive bulk-delete used as the first step in atomic TLD replacement
+	 * (backup → delete → re-import → restore-on-failure). It must only be called after a
+	 * successful create_bk_table() snapshot or after confirming a clean deletion is safe.
 	 *
-	 * @param string $tld The TLD identifier (e.g., 'oh').
-	 * @return bool True on success, false on failure.
+	 * The TLD string is validated with safe_tld() — which requires /^[a-z]{2,}$/ — before
+	 * being interpolated into the query. A mismatched safe_tld produces an ERROR log entry
+	 * and an early false return, leaving dd_ontology untouched.
+	 *
+	 * @param string $tld - The TLD namespace to purge (e.g. 'oh'). Must pass safe_tld() validation.
+	 * @return bool - True when the DELETE executed without error; false on validation failure or
+	 *                DB error.
 	 */
 	public static function delete_tld_nodes( string $tld ) : bool {
 
@@ -269,12 +328,23 @@ class ontology_utils {
 
 	/**
 	 * CREATE_BK_TABLE
+	 * Snapshots the current dd_ontology rows for the given TLDs into a dedicated backup table
+	 * `dd_ontology_bk`.
 	 *
-	 * Creates a backup table `dd_ontology_bk` from selected TLDs.
-	 * Used to protect records during major ontology operations.
+	 * Called as the first step of atomic TLD replacement inside ontology::regenerate_records_in_dd_ontology().
+	 * The backup allows a rollback via restore_from_bk_table() if the subsequent delete + re-import
+	 * pipeline fails at any point.
 	 *
-	 * @param array $tlds Array of TLD identifiers.
-	 * @return bool True on success.
+	 * Implementation notes:
+	 * - Drops any pre-existing `dd_ontology_bk` with CASCADE before creating a fresh one.
+	 * - Uses pg_escape_literal() for each TLD to prevent injection — NOT positional params,
+	 *   because CREATE TABLE AS … WHERE … does not support them in PostgreSQL.
+	 * - Operates on the same table identified by ontology_node::$table (normally 'dd_ontology').
+	 *
+	 * @param array $tlds - Indexed array of TLD strings to back up (e.g. ['oh', 'activity']).
+	 *                      Must be non-empty; returns false immediately on empty input.
+	 * @return bool - True when the backup table was created successfully; false on empty input
+	 *                or DB failure.
 	 */
 	public static function create_bk_table( array $tlds ) : bool {
 
@@ -310,10 +380,13 @@ class ontology_utils {
 
 	/**
 	 * DELETE_BK_TABLE
+	 * Drops the `dd_ontology_bk` backup table created by create_bk_table().
 	 *
-	 * Removes the backup table `dd_ontology_bk`.
+	 * Must be called after a successful ontology regeneration cycle (or after restore_from_bk_table()
+	 * completes) to avoid leaving stale backup data on disk. Uses IF EXISTS so it is safe to call
+	 * even when no backup exists.
 	 *
-	 * @return bool True on success.
+	 * @return bool - True when the DROP executed without error; false on DB failure.
 	 */
 	public static function delete_bk_table() : bool {
 
@@ -339,11 +412,22 @@ class ontology_utils {
 
 	/**
 	 * RESTORE_FROM_BK_TABLE
+	 * Rolls back dd_ontology to the snapshot stored in `dd_ontology_bk` for the given TLDs.
 	 *
-	 * Restores ontology records from the backup table for specific TLDs.
+	 * Called on error paths inside ontology::regenerate_records_in_dd_ontology() to undo a
+	 * partially-completed TLD delete + re-import cycle. The process:
+	 * 1. Deletes the current (potentially partial) dd_ontology rows for each requested TLD by
+	 *    calling delete_tld_nodes() — uses positional params via matrix_db_manager.
+	 * 2. Re-inserts all matching rows from dd_ontology_bk into dd_ontology via a single
+	 *    INSERT … SELECT … WHERE tld = $1 OR tld = $2 … query.
 	 *
-	 * @param array $tlds Array of TLD identifiers to restore.
-	 * @return bool True on success.
+	 * (!) The caller is responsible for calling delete_bk_table() afterwards. This method does
+	 * not clean up the backup table itself.
+	 *
+	 * @param array $tlds - Indexed array of TLD strings to restore (e.g. ['oh', 'activity']).
+	 *                      Must be non-empty; returns false immediately on empty input.
+	 * @return bool - True when the INSERT completed without DB error; false on empty input or
+	 *                DB failure.
 	 */
 	public static function restore_from_bk_table( array $tlds ) : bool {
 

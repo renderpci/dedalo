@@ -1,22 +1,59 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_INFO
-* Manages information display components that aggregate widget data in Dédalo.
+* Read-only, display-only component that aggregates one or more widget outputs
+* into a single component slot in a Dédalo section.
 *
-* Serves as a container for multiple widgets, each computing and displaying specific
-* information about the current record or related data. Unlike standard components
-* that store data in the database, component_info generates data dynamically from widgets.
+* Unlike ordinary data components, component_info never stores user-entered values
+* in the database matrix tables. Its "data" is computed on-demand by delegating
+* to a set of widgets whose definitions are stored in the component's ontology
+* properties under the 'widgets' key. Because no row-level data is persisted,
+* `use_db_data` is false by default.
 *
-* Key features:
-* - Aggregates data from multiple configured widgets
-* - Widgets compute their own data dynamically (use_db_data = false)
-* - Supports language-specific widget rendering via widget_lang
-* - Display mode control for different contexts (edit, list, etc.)
-* - No direct database storage; data is generated on-demand
+* Widget lifecycle (per request):
+*  1. get_widgets()        — reads the 'widgets' array from ontology properties.
+*  2. For each widget entry, widget_common::get_instance() instantiates the
+*     concrete widget class identified by widget_obj->widget_name.
+*  3. The widget receives section_tipo, section_id, lang, mode, path, and ipo
+*     (Input-Process-Output configuration object) via a stdClass $widget_options
+*     bag passed to the factory.
+*  4. Async widgets (those whose is_async() returns true) are skipped; they
+*     fetch their own data client-side via the API.
+*  5. The widget's get_data() (or get_data_parsed() / get_data_list()) result
+*     is merged into the component-level result using the spread operator.
 *
-* Data is stored in the 'misc' column of matrix tables (when needed for widget configuration).
+* IPO (Input-Process-Output):
+*  Each widget carries an 'ipo' array that declares its expected inputs, the
+*  computation steps, and the output map. Each output entry has at minimum an
+*  'id' string key that names the computed scalar (e.g. 'media_weight'). The
+*  output map is used by get_grid_value() and get_export_value() to generate
+*  one grid column / one export atom per declared output, keyed by that id.
 *
-* Extends component_common for standard component functionality.
+* Widget options shape (stdClass):
+*  {
+*    section_tipo : string,   // e.g. 'mdcat1'
+*    section_id   : int|string,
+*    lang         : string,   // DEDALO_DATA_LANG
+*    widget_name  : string,   // PHP class name e.g. 'get_archive_weights'
+*    path         : mixed,    // ontology path passed through from properties
+*    ipo          : array,    // Input-Process-Output config
+*    mode         : string    // 'edit' | 'list' | …
+*  }
+*
+* Data shape returned by get_data() / get_data_parsed():
+*  A flat array of stdClass objects, each produced by a widget. A widget
+*  typically emits objects with at least 'widget', 'id', and 'value' keys:
+*  [
+*    { "widget": "get_archive_weights", "key": 0, "id": "media_weight",  "value": 4.47 },
+*    { "widget": "get_archive_weights", "key": 0, "id": "max_weight",    "value": 4.47 },
+*    …
+*  ]
+*  (The exact shape is widget-specific; the 'id' field is the stable contract
+*  used by get_grid_value() and get_export_value() to match output columns.)
+*
+* Extends component_common for standard component lifecycle (permissions, context,
+* JSON API controller, label resolution, etc.). Does NOT use the search trait
+* because the component holds no matrix-stored data.
 *
 * @package Dédalo
 * @subpackage Core
@@ -29,22 +66,28 @@ class component_info extends component_common {
 	* CLASS VARS
 	*/
 		/**
-		 * Language code for widget content display within this component. E.g. 'lg-spa'
-		 * Determines the language version used when rendering widget information.
+		 * Language code used when passing lang context to instantiated widgets.
+		 * Typically set by the caller before rendering to select the language
+		 * in which widget labels or resolved terms are displayed.
+		 * Example values: 'lg-spa', 'lg-cat', 'lg-eng'.
 		 * @var ?string $widget_lang
 		 */
 		public ?string $widget_lang = null;
 
 		/**
-		 * Display mode for widgets within this component info instance.
-		 * Controls widget rendering context: 'edit', 'list', etc.
+		 * Display mode forwarded to each instantiated widget.
+		 * Mirrors the component's own mode ('edit', 'list', etc.) so that
+		 * individual widgets can adjust their output accordingly.
+		 * When null the widget falls back to its own default.
 		 * @var ?string $widget_mode
 		 */
 		public ?string $widget_mode = null;
 
 		/**
-		 * Whether this component should use database-stored data.
-		 * When false, data is computed/generated rather than retrieved from storage.
+		 * Whether this component should read its value from database matrix rows.
+		 * Always false for component_info: data is computed by widgets, not stored.
+		 * The JSON controller (component_info_json.php) branches on this flag to
+		 * decide between get_db_data() (parent matrix read) and get_data() / get_list_value().
 		 * @var bool $use_db_data
 		 */
 		public bool $use_db_data = false;
@@ -53,7 +96,22 @@ class component_info extends component_common {
 
 	/**
 	* GET_DATA
-	* @return array|null $data
+	* Computes and returns the aggregated output of all configured widgets for
+	* the current section record. On subsequent calls within the same request,
+	* the memoised $data_resolved value is returned directly.
+	*
+	* Each widget is instantiated via widget_common::get_instance(). Async widgets
+	* (those that declare is_async() === true) are excluded because they deliver
+	* their data independently to the client via a dedicated API call.
+	*
+	* The result is the ordered union of every non-async widget's get_data() array,
+	* merged with the PHP spread operator so all widget items appear in a single
+	* flat array (no sub-keys per widget).
+	*
+	* The computed result is stored in $this->data_resolved to avoid redundant
+	* widget instantiation and computation within a single request.
+	* @return array|null - Flat array of widget output objects, or null if no
+	*                      widgets are configured / all widgets return empty data.
 	*/
 	public function get_data() : ?array {
 
@@ -118,7 +176,18 @@ class component_info extends component_common {
 
 	/**
 	* GET_DATA_PARSED
-	* @return array|null $data_parsed
+	* Returns the aggregated "parsed" output of all configured widgets.
+	* Parallel to get_data() but calls each widget's get_data_parsed() instead,
+	* allowing widgets to apply post-processing (e.g. sum_dates in mdcat
+	* converts raw timestamps into human-readable aggregated strings).
+	*
+	* Unlike get_data(), the result is NOT cached in $data_resolved, so calling
+	* both get_data() and get_data_parsed() within a request will instantiate
+	* the widgets twice.
+	*
+	* Async widgets are skipped for the same reason as in get_data().
+	* @return array|null - Flat array of parsed widget output objects, or null
+	*                      if no widgets are configured / all outputs are empty.
 	*/
 	public function get_data_parsed() : ?array {
 
@@ -175,7 +244,14 @@ class component_info extends component_common {
 
 	/**
 	* GET_DB_DATA
-	* @return mixed $data
+	* Attempts to return data from the parent (matrix) storage first; falls back
+	* to the widget-computed get_data() when the parent returns empty.
+	*
+	* This method exists to support the (rare) case where component_info has been
+	* configured with use_db_data = true and something was previously persisted to
+	* the misc column of the matrix. In the normal (use_db_data = false) workflow
+	* this path is not taken — the JSON controller selects get_data() directly.
+	* @return mixed - Parent-stored data when present; widget-computed data otherwise.
 	*/
 	public function get_db_data() {
 
@@ -195,7 +271,19 @@ class component_info extends component_common {
 	* GET_WIDGETS
 	* Resolve list of widgets for current component_info
 	* They are defined in properties
-	* @return array|null $widgets
+	*
+	* Reads the 'widgets' array from the ontology properties object of this
+	* component instance. Each entry in the array is an object describing one
+	* widget:
+	*  {
+	*    widget_name : string,  // PHP class name to instantiate
+	*    path        : mixed,   // optional ontology path hint for the widget
+	*    ipo         : array    // Input-Process-Output configuration
+	*  }
+	*
+	* Returns null (and logs an ERROR) when the property is absent or the
+	* component has not been set up in the ontology with any widget definitions.
+	* @return array|null $widgets - Array of widget configuration objects, or null.
 	*/
 	public function get_widgets() : ?array {
 
@@ -221,6 +309,12 @@ class component_info extends component_common {
 
 	/**
 	* GET_DIFFUSION_DATO
+	* (!) This entire method body is commented out. It was the previous diffusion
+	* extraction path for component_info, superseded by get_diffusion_value().
+	* Kept for reference; the commented sample shows the expected dato shape and
+	* the options contract used by diffusion_sql::resolve_component_value callers.
+	*
+	* Original contract (when active):
 	* @param object $options
 	* Sample:
 		* {
@@ -345,7 +439,19 @@ class component_info extends component_common {
 	/**
 	* GET_DATA_LIST
 	* Get and fix the ontology defined widgets data_list
-	* @return array|null $data_list
+	*
+	* Collects the 'data_list' (auxiliary list of selectable items) from every
+	* configured widget that implements a get_data_list() method. Widgets that do
+	* not implement get_data_list() are silently skipped (method_exists guard).
+	*
+	* Note: unlike get_data(), this method does NOT pass the 'mode' key to the
+	* widget options stdClass. If a widget requires mode to build its data_list,
+	* it will receive null for that property.
+	*
+	* Returns null when no widgets are configured or all widgets return null from
+	* get_data_list().
+	* @return array|null $data_list - Flat merged array of widget data_list items,
+	*                                 or null if none exist.
 	*/
 	public function get_data_list() : ?array {
 
@@ -398,7 +504,11 @@ class component_info extends component_common {
 	* GET_TOOLS
 	* Overrides common method to prevent loading of default tools
 	* This component don't have tools
-	* @return array
+	*
+	* component_info has no editable data and therefore offers no toolbar actions
+	* to the user. Returning an empty array suppresses the standard tools bar in
+	* the edit UI and avoids unnecessary tool registration overhead.
+	* @return array - Always an empty array.
 	*/
 	public function get_tools() : array {
 
@@ -409,8 +519,12 @@ class component_info extends component_common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool
-	* 	Default is true. Override when component is not sortable
+	* Reports that this component cannot be used as a sort column in list views.
+	*
+	* Overrides the parent default (true) because component_info data is computed
+	* dynamically at read time — there is no indexed database column to ORDER BY,
+	* making sort support meaningless.
+	* @return bool - Always false.
 	*/
 	public function get_sortable() : bool {
 
@@ -424,7 +538,11 @@ class component_info extends component_common {
 	* Unified value list output
 	* By default, list value is equivalent to data. Override in other cases.
 	* Note that empty array or string are returned as null
-	* @return array|null $list_value
+	*
+	* For component_info, the list representation is the same flat widget output
+	* array produced by get_data(). Returning null for empty results keeps the
+	* JSON API response consistent with other component types.
+	* @return array|null $list_value - Widget output array, or null when empty.
 	*/
 	public function get_list_value() : ?array {
 
@@ -443,8 +561,23 @@ class component_info extends component_common {
 	/**
 	* GET_CALCULATION_DATA
 	* Obtain the component data for a calculation
-	* @param object|null $options = null
-	* @return array $data
+	*
+	* Returns the raw widget output array augmented with individual scalar values
+	* extracted from each item matching the $options->select key (defaults to
+	* 'value'). This allows numeric widgets (e.g. sum_weights) to supply their
+	* aggregated scalar to an outer calculation component.
+	*
+	* (!) Known issue: $data is initialised to [] (line 1), immediately overwritten
+	* by get_data() (line 2), and then new scalar items are appended to it inside
+	* the foreach. Because foreach in PHP iterates a copy of the array at the time
+	* the loop starts, new items appended during iteration are NOT visited again,
+	* so the loop is safe in practice — but the returned array is a mix of the
+	* original widget objects AND the extracted scalars, which may surprise callers.
+	*
+	* @param object|null $options = null - Optional configuration object.
+	*   $options->select (string) — property name to extract from each widget item.
+	*   Defaults to 'value'.
+	* @return array $data - Widget output items merged with extracted scalar values.
 	*/
 	public function get_calculation_data( ?object $options=null ) : array {
 
@@ -475,8 +608,26 @@ class component_info extends component_common {
 	* grid value use the `output` definition to create columns for every value
 	* The column will named as the output id as label (TODO, add tipo for the label of the column)
 	* By default the widget will return his data, but is possible to overwrite it with get_data_parsed() in the widget
-	* @param object|null $ddo = null
-	* @return dd_grid_cell_object $dd_grid_cell_object
+	*
+	* Implementation notes:
+	* - The outer dd_grid_cell_object (returned as $value) has type 'column',
+	*   row_count = 1, column_count = N (where N is the total IPO output entries
+	*   across all widgets), and its value is the $ar_columns array of per-output
+	*   dd_grid_cell_object instances.
+	* - Each per-output cell is looked up against get_data_parsed() using array_find()
+	*   on the 'id' field, then wrapped as a single-element array for the cell value
+	*   contract (the grid expects arrays, not scalars).
+	* - Object values are json_encode()d to strings before wrapping so the grid
+	*   renderer always receives a scalar or null.
+	* - Column ids are built as <section_tipo>_<tipo>_widget_<output_id_with_spaces>.
+	*   The str_replace('_', ' ', ...) in the id is intentional (spaces in id).
+	* - (!) $ar_cells is declared and initialised but never populated or used.
+	*   It is a leftover from an earlier implementation iteration.
+	* - (!) $format_columns is extracted from $ddo but never referenced afterwards.
+	* @param object|null $ddo = null - DDO configuration object. Recognised keys:
+	*   fields_separator, records_separator, format_columns, class_list.
+	* @return dd_grid_cell_object $dd_grid_cell_object - Outer wrapper cell containing
+	*   one inner cell per widget IPO output entry.
 	*/
 	public function get_grid_value( ?object $ddo=null ) : dd_grid_cell_object {
 
@@ -610,8 +761,19 @@ class component_info extends component_common {
 	* One atom per widget IPO output: the output id travels as the segment
 	* sub_id (own column per output, label = output id verbatim).
 	* Replaces the legacy '_widget_' string-suffixed column ids.
-	* @param export_context|null $context = null
-	* @return export_value
+	*
+	* The export path for each output is:
+	*   [...$context->path_prefix, $own_segment, $sub_segment]
+	* where $sub_segment carries sub_id = $data_map->id.
+	*
+	* Object and array values are json_encode()d to strings so every atom carries
+	* a scalar or null — matching the flat-table export contract.
+	*
+	* Unlike get_grid_value(), this method uses get_data_parsed() so that widget
+	* post-processing (e.g. mdcat sum_dates) is applied before serialisation.
+	* @param export_context|null $context = null - Caller-supplied export context.
+	*   A default context is created when null.
+	* @return export_value - Container with one export_atom per widget output entry.
 	*/
 	public function get_export_value( ?export_context $context=null ) : export_value {
 
@@ -665,9 +827,43 @@ class component_info extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Calculate current component diffusion value
-	* @param string|null $lang = null
-	* @param object|null $option_obj = null
-	* @return string|null $diffusion_value
+	*
+	* Produces a flat string representation of the component's value for use
+	* by the diffusion subsystem (SQL/RDF/XML publishing targets).
+	*
+	* (!) This method calls $this->get_valor($diffusion_lang), which is a v6-era
+	* method that has no definition in the v7 core. If no widget or parent class
+	* provides this method, PHP will throw a fatal error at runtime. The call is
+	* most likely a copy-paste from v6 component classes and should be reviewed
+	* and replaced with get_data() / get_list_value() or a dedicated widget-aware
+	* diffusion path.
+	*
+	* When $option_obj->key_values is provided (array of integer positions), the
+	* method splits the string on $option_obj->separator (default ', '), selects
+	* only the elements at the specified positions, and rejoins with the same
+	* separator. This allows diffusion mappings to cherry-pick individual widget
+	* output fields from a concatenated string value.
+	*
+	* Example diffusion property using key_values selection
+	* (see mdcat1181 for a real-world case):
+	* {
+	*   "process_dato": "diffusion_sql::resolve_component_value",
+	*   "process_dato_arguments": {
+	*     "component_method": "get_diffusion_value",
+	*     "custom_arguments": [
+	*       {
+	*         "key_values": [0],
+	*         "separator": ", "
+	*       }
+	*     ]
+	*   }
+	* }
+	*
+	* @param string|null $lang = null - Target diffusion language code.
+	*   Defaults to DEDALO_DATA_LANG when null.
+	* @param object|null $option_obj = null - Optional post-processing options.
+	*   Recognised key: key_values (int[]), separator (string).
+	* @return string|null $diffusion_value - Serialised value string, or null when empty.
 	*
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {

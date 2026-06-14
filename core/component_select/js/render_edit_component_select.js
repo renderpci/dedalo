@@ -13,7 +13,27 @@
 
 /**
 * RENDER_EDIT_COMPONENT_SELECT
-* Manages the component's logic and appearance in client side
+* Edit-mode render dispatcher for component_select.
+*
+* This module is the edit-render layer of component_select. It is responsible for:
+*   - Routing the edit render call to the correct view implementation based on
+*     context.view ('default', 'line', 'print').
+*   - Providing get_content_data, the shared content-data builder consumed by
+*     every edit view (view_default_edit_select, view_line_edit_select).
+*
+* Architecture: this module uses the prototype-assignment pattern. The constructor
+* is a no-op; methods are assigned to its prototype and then mixed onto
+* component_select.prototype by component_select.js.
+*
+* Exported symbols:
+*   render_edit_component_select  — constructor (prototype carrier)
+*   get_content_data              — shared DOM builder for content_data nodes
+*
+* Data shapes (from self.data, populated server-side):
+*   data.datalist  — Array of {label: string, value: {section_id, section_tipo}, section_id?}
+*                    The full list of selectable options.
+*   data.entries   — Array of {id, section_id, section_tipo}  (the saved locators).
+*                    component_select is single-value; only entries[0] is expected.
 */
 export const render_edit_component_select = function() {
 
@@ -24,9 +44,27 @@ export const render_edit_component_select = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @param object options
-* @return HTMLElement wrapper
+* Edit-mode entry point — dispatches to the appropriate view renderer.
+*
+* Reads context.view to select among three render paths:
+*   'line'    — compact inline select (view_line_edit_select)
+*   'print'   — read-only layout using the default view with permissions forced
+*               to 1 so that the select renders as a static label instead of
+*               an interactive <select> element
+*   'default' — interactive <select> with optional button_edit and dataframe
+*               (view_default_edit_select)
+*
+* Side effect: for global admins (page_globals.is_global_admin === true), forces
+* show_interface.button_edit = true so the pen icon appears in the wrapper.
+*
+* (!) The 'print' case deliberately falls through to 'default' after setting
+* self.permissions = 1. The switch has no break/return before 'default', which
+* is intentional: the same view_default_edit_select renderer is used but the
+* lowered permissions flag makes it call render_content_value_read instead of
+* the interactive get_content_value.
+*
+* @param {Object} options - Render options forwarded to the view renderer
+* @returns {Promise<HTMLElement>} wrapper node built by the selected view renderer
 */
 render_edit_component_select.prototype.edit = async function(options) {
 
@@ -64,9 +102,38 @@ render_edit_component_select.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @param object options
-* @return HTMLElement content_data
+* Builds the content_data container element and populates it with one
+* content_value node per entry, delegating actual node construction to view-
+* specific callbacks supplied by the caller.
+*
+* This function is shared by view_default_edit_select and view_line_edit_select
+* so that both views produce a consistent content_data structure while keeping
+* their own content_value renderers separate.
+*
+* The rendering strategy differs by permissions level:
+*   permissions === 1 (read-only / print):
+*     Iterates self.data.entries, looks each entry up in data.datalist by
+*     {section_id, section_tipo} match, and calls render_content_value_read with
+*     the human-readable label string. Falls back to a single empty node when
+*     there are no matching entries, so the layout always has at least one slot.
+*
+*   permissions > 1 (edit):
+*     Iterates up to max(entries.length, 1) slots and calls render_content_data
+*     with the raw entry locator {section_id, section_tipo} (or undefined for the
+*     empty slot). component_select is single-value so this loop runs at most once
+*     in practice.
+*
+* Numeric index pointers (content_data[0], content_data[1], …) are set on the
+* container element after each appendChild so callers can reach individual slots
+* without querying the DOM.
+*
+* @param {Object} self - Component instance
+* @param {Object} options - Callbacks for rendering individual slots
+* @param {Function} options.render_content_data - Called for edit slots:
+*   (i: {number}, entry: {Object|undefined}, self: {Object}) => {HTMLElement}
+* @param {Function} options.render_content_value_read - Called for read-only slots:
+*   (i: {number}, label: {string}, self: {Object}) => {HTMLElement}
+* @returns {HTMLElement} content_data container with child content_value nodes attached
 */
 export const get_content_data = function(self, options) {
 

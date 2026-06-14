@@ -1,5 +1,12 @@
 # Publication API
 
+!!! warning "Legacy (v1) API"
+    This page documents the **v1 PHP Publication API**, kept in Dédalo v7 for backward compatibility
+    with existing published websites. It is in **maintenance / legacy status** — no new features.
+    For new projects and integrations, use the current [Publication API v2](v2/index.md)
+    (Bun/TypeScript): resource-oriented REST, RFC 9457 errors, `ETag` / `Link` caching, a bracketed
+    filter DSL, batch queries and MCP support.
+
 Dédalo Publication API connects your archive data with the web.
 
 ## Introduction

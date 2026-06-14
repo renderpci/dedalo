@@ -2,26 +2,36 @@
 include_once 'trait.search_component_section_id.php';
 /**
 * CLASS COMPONENT_SECTION_ID
-* Read-only component for displaying section ID in Dédalo.
+* Virtual, read-only component that exposes a section's integer primary key.
 *
-* Provides a virtual component that exposes the section's primary identifier
-* for display, querying, and export purposes. Does not store or modify any data.
+* Unlike normal components, component_section_id does not own a JSONB datum
+* column: the value it displays and exports is the 'section_id' INTEGER column
+* that the section class writes directly to every matrix table row. This class
+* only reads that column; it never writes anything.
 *
-* Key characteristics:
-* - READ-ONLY: Cannot save or set data; set_data() and save() are no-ops
-* - Displays the section_id for user reference in edit/list views
-* - Enables database queries filtering by section ID
-* - Supports CSV/spreadsheet export as a column
-* - Language-neutral (uses DEDALO_DATA_NOLAN)
+* Responsibilities:
+* - Render the row's section_id for display in edit and list views.
+* - Participate in the standard export pipeline (get_export_value / tool_export)
+*   so a user can include the numeric ID as a spreadsheet/CSV column. Each atom
+*   carries cell_type 'section_id' so downstream formatters can distinguish it
+*   from free-form integer fields.
+* - Provide ORDER BY support for sorted list views via get_order_path(), pointing
+*   at the 'section_id' column (or 'id' when the component tipo is the special
+*   time-machine constant DEDALO_TIME_MACHINE_COLUMN_ID / dd1573).
+* - Delegate all SQO search handling to trait search_component_section_id, which
+*   supports numeric equality, comparison, range (between '...'), and sequence
+*   (',') operators directly against the integer column without JSONB casting.
 *
-* Use cases:
-* - Exporting record IDs alongside other data
-* - Displaying row numbers in list views
-* - Building custom queries or reports
+* What it does NOT do:
+* - set_data() is a no-op; set the section_id via the section class only.
+* - save() logs an error and returns true (no database write ever happens).
+* - get_tools() returns [] to suppress tool buttons that make no sense here.
 *
-* Data is stored in the 'section_id' column of matrix tables (managed by section class).
+* Data shape: get_data() always returns a single-element array: [(int)section_id]
+* or [null] when section_id is not set on the instance.
 *
-* Extends component_common and uses search_component_section_id trait for ID-based queries.
+* Extends: component_common
+* Uses trait: search_component_section_id
 *
 * @package Dédalo
 * @subpackage Core
@@ -37,7 +47,18 @@ class component_section_id extends component_common {
 
 	/**
 	* GET_DATA
-	* @return array|null $data
+	* Returns the section's primary key as a single-element array.
+	*
+	* The value is cast to int to guarantee a numeric type in the returned array.
+	* The wrapping array is required by the component_common data contract: every
+	* get_data() return must be an array (or null) so callers can iterate uniformly
+	* over single-valued and multi-valued components with the same loop.
+	*
+	* Returns [null] when $this->section_id is empty (e.g. the instance was built
+	* without loading a record) rather than an empty array, so downstream code
+	* checking is_array() still finds a valid array rather than null.
+	*
+	* @return array|null - [(int)section_id] or [null] when section_id is absent
 	*/
 	public function get_data() : ?array {
 
@@ -52,7 +73,15 @@ class component_section_id extends component_common {
 
 	/**
 	* GET_DATA_LANG
-	* @return array|null $data
+	* Language-aware data accessor — proxies get_data() directly.
+	*
+	* component_section_id is language-neutral: the section primary key has the
+	* same value regardless of the active language (equivalent to DEDALO_DATA_NOLAN
+	* storage). The $lang parameter is accepted to satisfy the component_common
+	* interface but is intentionally ignored.
+	*
+	* @param string|null $lang [= null] - Ignored; kept for interface compatibility
+	* @return array|null - Same as get_data()
 	*/
 	public function get_data_lang( ?string $lang=null ) : ?array {
 
@@ -65,12 +94,16 @@ class component_section_id extends component_common {
 
 	/**
 	* SET_DATA
-	* @override component_common set_data()
-	* @note This component is read only dont't save or set data,
-	* is used only to show the id of the section, and perform queries into the database
-	* or export as a column in csv or spreadsheet files
-	* @param int|null $data
-	* @return bool
+	* No-op override that silently discards any attempt to set data.
+	*
+	* component_section_id is strictly read-only. The section_id column is managed
+	* exclusively by the section class and is never writable through a component.
+	* This override prevents accidental writes when generic code iterates all
+	* components of a section and calls set_data() on each.
+	*
+	* @override component_common::set_data()
+	* @param array|null $data - Ignored
+	* @return bool - Always true (treated as a successful no-op)
 	*/
 	public function set_data( ?array $data ) : bool {
 
@@ -81,9 +114,16 @@ class component_section_id extends component_common {
 
 	/**
 	* SAVE
-	* @override component_common save()
-	* Only used to catch common method here
-	* @return bool
+	* No-op override that logs an error and returns true without writing anything.
+	*
+	* If save() is called on this component it means the calling code has a logic
+	* error (e.g. iterating all section components and calling save() on each).
+	* The ERROR-level log entry makes this visible in diagnostics without aborting
+	* the request. Returning true keeps the caller from treating the call as a
+	* failure.
+	*
+	* @override component_common::save()
+	* @return bool - Always true
 	*/
 	public function save() : bool {
 
@@ -99,10 +139,25 @@ class component_section_id extends component_common {
 
 	/**
 	* GET_EXPORT_VALUE
-	* Atoms based export contract (see component_common::get_export_value).
-	* One int atom per data item with cell_type 'section_id'
-	* @param export_context|null $context = null
-	* @return export_value
+	* Atoms-based export contract implementation (see component_common::get_export_value).
+	*
+	* Produces one export_atom per element returned by get_data() (normally exactly
+	* one). Each atom carries:
+	*   - path   : the component's position in the export column hierarchy,
+	*              built via build_export_path_segment() so tool_export can place
+	*              the value in the correct spreadsheet/NDJSON column.
+	*   - value  : (int) the section_id cast to integer.
+	*   - meta   : {cell_type: 'section_id', value_index: (int)key}
+	*              cell_type 'section_id' is consumed by export_value_to_grid_cell()
+	*              to apply ID-appropriate formatting rather than generic number
+	*              formatting.
+	*
+	* Returns an empty export_value (no atoms) when get_data() returns an empty or
+	* non-array result.
+	*
+	* @param export_context|null $context [= null] - Export context carrying path prefix,
+	*        ddo overrides, and item_index. A default context is created when null.
+	* @return export_value - Atom container for the tool_export pipeline
 	*/
 	public function get_export_value( ?export_context $context=null ) : export_value {
 
@@ -135,9 +190,16 @@ class component_section_id extends component_common {
 
 	/**
 	* GET_TOOLS
-	* @override component_common get_tools()
-	* Catch get_tools call to prevent load tools sections
-	* @return array $tools
+	* Returns an empty tools array, suppressing all tool buttons for this component.
+	*
+	* Tool buttons (edit history, version control, media tools, etc.) are defined
+	* per-component in the ontology and loaded by component_common::get_tools().
+	* For component_section_id there are no meaningful tools — the value is
+	* system-managed and immutable — so this override short-circuits that loading.
+	* Avoids unnecessary ontology lookups on every list-view render.
+	*
+	* @override component_common::get_tools()
+	* @return array - Always []
 	*/
 	public function get_tools() : array {
 
@@ -148,14 +210,31 @@ class component_section_id extends component_common {
 
 	/**
 	* GET_ORDER_PATH
-	* Calculate full path of current element to use in columns order path (context)
+	* Builds the ORDER BY path descriptor for sorted list and grid views.
+	*
+	* Delegates to parent::get_order_path() to obtain the standard path array
+	* (which includes section_tipo, component_tipo, model name, etc.), then
+	* overrides the 'column' property on the first path element to point at the
+	* correct physical database column:
+	*
+	*   - Normal case: 'section_id' — the named integer column present in every
+	*     matrix table, used for ordering records by their primary key.
+	*   - Time-machine case: when $this->tipo === DEDALO_TIME_MACHINE_COLUMN_ID
+	*     (dd1573), the column must be 'id' instead. The time-machine table stores
+	*     its sequential row identifier in the 'id' column, not 'section_id'.
+	*
+	* Setting the 'column' property prevents the query builder from interpreting
+	* the path as a JSONB accessor; it instead uses the column name literally in
+	* the ORDER BY clause.
+	*
 	* @see https://habr.com/en/company/postgrespro/blog/500440/
 	* @see https://www.postgresql.org/docs/current/functions-json.html
 	* @see https://www.postgresql.org/docs/current/datatype-json.html#TYPE-JSONPATH-ACCESSORS
 	*
-	* @param string $component_tipo
-	* @param string $section_tipo
-	* @return array $path
+	* @param string $component_tipo - Ontology tipo identifier of the component
+	* @param string $section_tipo   - Ontology tipo identifier of the owning section
+	* @return array - Path descriptor array; $path[0]->column is set to 'section_id'
+	*                 or 'id' (time-machine case)
 	*/
 	public function get_order_path(string $component_tipo, string $section_tipo) : array {
 

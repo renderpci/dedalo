@@ -11,7 +11,21 @@
 
 /**
 * RENDER_SEARCH_COMPONENT_FILTER_RECORDS
-* Manage the components logic and appearance in client side
+* Client-side search-mode renderer for component_filter_records.
+*
+* component_filter_records is a row-level access-control component that lives in
+* the User section (dd128, tipo dd478) and stores a per-section allow-list of
+* permitted record IDs.  This module provides the search-mode view: it renders
+* one text input per datalist entry so the searcher can type comma-separated
+* record IDs that constrain the WHERE clause injected by the search WHERE builder.
+*
+* Architecture note: the constructor is intentionally empty — Dédalo uses
+* prototype delegation to mix the search() method onto component_filter_records
+* instances.  All state lives on the component instance (self), not in this
+* constructor.
+*
+* Exported:
+*   render_search_component_filter_records  — constructor; prototype hosts search()
 */
 export const render_search_component_filter_records = function() {
 
@@ -22,8 +36,22 @@ export const render_search_component_filter_records = function() {
 
 /**
 * SEARCH
-* Render node for use in edit
-* @return HTMLElement wrapper
+* Builds the search-mode DOM wrapper for a component_filter_records instance.
+*
+* When render_level is 'content' the function short-circuits and returns only the
+* inner content_data fragment (used by callers that need the content without the
+* full wrapper shell, e.g. inline re-renders).  Otherwise it builds and returns a
+* full component wrapper that includes content_data and event bindings.
+*
+* Side effects:
+*   - Sets wrapper.content_data pointer for later DOM lookups.
+*   - Registers a delegated 'change' event listener via add_events().
+*
+* @param {Object} options - render options passed by the component lifecycle
+* @param {string} [options.render_level='full'] - 'full' for the whole wrapper,
+*   'content' to return only the inner content_data node
+* @returns {Promise<HTMLElement>} the built wrapper (or content_data node when
+*   render_level === 'content')
 */
 render_search_component_filter_records.prototype.search = async function(options) {
 
@@ -56,6 +84,24 @@ render_search_component_filter_records.prototype.search = async function(options
 
 /**
 * ADD_EVENTS
+* Attaches delegated DOM event listeners to the search wrapper.
+*
+* Uses a single delegated 'change' listener on the wrapper rather than
+* per-input listeners, which avoids listener leaks when the inner DOM is
+* re-rendered.  Only input[type="text"].input_value elements inside the
+* wrapper are handled; all other change events bubble past without action.
+*
+* On a matching change event, delegates to self.change_handler() which is
+* responsible for splitting the comma-separated string, building the
+* changed_data_item, updating self.data, and publishing 'change_search_element'
+* so that the search result set is refreshed.
+*
+* The commented-out subscription block at the top of the function body is
+* dead code from an earlier observable pattern and is retained for reference.
+*
+* @param {Object} self - the component_filter_records instance
+* @param {HTMLElement} wrapper - the search wrapper node built by search()
+* @returns {boolean} always true
 */
 const add_events = function(self, wrapper) {
 
@@ -94,7 +140,23 @@ const add_events = function(self, wrapper) {
 
 /**
 * GET_CONTENT_DATA
-* @return dom object content_data
+* Builds the inner content_data DOM node for search mode.
+*
+* Iterates over self.data.datalist and creates one <li> row per entry via
+* get_input_element().  After all rows are appended, a second reverse-order pass
+* re-parents any <li> that carries a data-parent attribute under the matching
+* sibling node — this allows hierarchical nesting of section entries without
+* changing the flat rendering loop.
+*
+* Data contracts expected on self:
+*   self.data.datalist  — Array of {tipo, label, value} objects describing the
+*                         sections this user may filter by
+*   self.data.entries   — Array of {tipo, value: number[]} objects holding the
+*                         currently active filter values
+*   self.mode           — component mode string, expected to be 'search' here
+*
+* @param {Object} self - the component_filter_records instance
+* @returns {HTMLElement} the fully-built content_data node
 */
 const get_content_data = function(self) {
 
@@ -149,7 +211,26 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return HTMLElement li
+* Builds a single <li> row for one datalist entry in search mode.
+*
+* The row contains three child elements:
+*   - a <span.tipo>  showing the section_tipo identifier (e.g. 'mdcat3112')
+*   - a <span.label> showing the human-readable section label
+*   - an <input[type=text].input_value> pre-filled with the current search value
+*     for this tipo, serialised as a comma-separated string of record IDs
+*
+* The input carries data-key (index in the datalist) and data-tipo (section tipo)
+* attributes so the delegated change listener in add_events() can identify which
+* datalist entry changed without a per-element closure.
+*
+* The two commented-out lines for input.pattern are retained from an earlier
+* attempt to enforce numeric-only input at the HTML level.  They are superseded
+* by the server-side validator and component_filter_records.validate_value().
+*
+* @param {number} i - zero-based index of this entry in the datalist array
+* @param {Object} datalist_item - single datalist entry: {tipo, label, value}
+* @param {Object} self - the component_filter_records instance
+* @returns {HTMLElement} the built <li> element
 */
 const get_input_element = (i, datalist_item, self) => {
 
@@ -158,6 +239,8 @@ const get_input_element = (i, datalist_item, self) => {
 	const tipo	 		 	 = datalist_item.tipo
 
 	// value
+	// Look up the active filter entry for this tipo so the input is pre-filled
+	// with any IDs already stored in self.data.entries from a previous search.
 	const entries  		 	= self.data.entries || []
 	const entries_length   	 = entries.length
 	const item 		  	 	= entries.find(item => item.tipo===tipo)

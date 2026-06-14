@@ -4,6 +4,59 @@
 
 
 
+/**
+* RENDER_EDIT_COMPONENT_PORTAL
+*
+* Edit-mode rendering layer for `component_portal` — the relational component that
+* links a host record to one or more records in a target section and presents them as
+* a paginated, drag-reorderable list.
+*
+* This module fulfils two roles:
+*
+* 1. **View dispatch** (`render_edit_component_portal.prototype.edit`)
+*    Mixed into `component_portal` as its `edit` prototype method.  Reads
+*    `self.context.view` and delegates to the appropriate view render module
+*    (`view_default_edit_portal`, `view_line_edit_portal`, etc.).  The `print` view
+*    forces read-only permissions before falling through to the `default` handler.
+*    Unknown or future views can be registered dynamically via `self.render_views`.
+*
+* 2. **Shared DOM helpers** (all exported)
+*    These are imported and called by every concrete view module:
+*    - `render_column_id`           — "open record" button + drag handle + drop zone per row.
+*    - `render_column_component_info` — optional `ddinfo` overlay for a row.
+*    - `render_column_remove`       — unlink / delete button with confirmation modal.
+*    - `get_buttons`                — toolbar above the list (add, link, tree, fullscreen…).
+*    - `activate_autocomplete`      — lazily instantiates `service_autocomplete` on demand.
+*    - `build_header`               — column-header row (hidden when list is empty).
+*    - `render_references`          — read-only back-reference list for relation-related views.
+*    - `add_wrapper_events`         — click-to-activate-autocomplete + optional drag/drop on wrapper.
+*    - `add_section_record_drag_and_drop` — marks a row node as draggable (mosaic/line).
+*
+* Key data shapes consumed from the component instance (`self`):
+* - `self.data.entries`      — `Array<Locator>` where each Locator is
+*                              `{ id, type, section_tipo, section_id, from_component_tipo }`.
+* - `self.datum.data`        — flat array of all component data items for the portal's records,
+*                              used to pull `ddinfo` values.
+* - `self.data.pagination`   — `{ offset, limit }` for the current page window.
+* - `self.total`             — total matched records (used to clamp sort-order input).
+* - `self.show_interface`    — flags controlling which UI elements are visible
+*                              (`button_add`, `button_link`, `button_list`, `show_section_id`, …).
+* - `self.target_section`    — Array of DDO descriptors for the target section(s);
+*                              each entry may carry a `buttons` array with `button_new` /
+*                              `button_delete` entries that gate the corresponding UI buttons.
+* - `self.render_views`      — Array of `{ view, mode, render, path? }` entries for
+*                              dynamic-import of custom view modules.
+* - `self.permissions`       — `1` = read-only, `2` = full edit.
+*
+* @module render_edit_component_portal
+* @see component_portal.js            for the constructor and prototype wiring.
+* @see view_default_edit_portal.js    for the default table view implementation.
+* @see drag_and_drop.js               for the drag-and-drop event handlers.
+* @see docs/core/components/component_portal.md for the full specification.
+*/
+
+
+
 // imports
 	import {get_instance} from '../../common/js/instances.js'
 	import {when_in_dom,dd_request_idle_callback} from '../../common/js/events.js'
@@ -32,7 +85,11 @@
 
 /**
 * RENDER_EDIT_COMPONENT_PORTAL
-* Manages the component's logic and appearance in client side
+* Constructor stub mixed into `component_portal` as the edit-mode render delegate.
+*
+* Its prototype methods are used directly by `component_portal` via prototype assignment
+* (see component_portal.js: `component_portal.prototype.edit = render_edit_component_portal.prototype.edit`).
+* The constructor itself is a no-op; instantiation never occurs — only the prototype is used.
 */
 export const render_edit_component_portal = function() {
 
@@ -43,13 +100,25 @@ export const render_edit_component_portal = function() {
 
 /**
 * EDIT
-* Choose the view render module to generate DOM nodes
-* based on self.context.view value
-* @param object options
-* {
-* 	render_level : string full|content_data
-* }
-* @return HTMLElement|null
+* Dispatch to the appropriate view render module based on the portal's configured view.
+*
+* The view is resolved from `self.view` (runtime override) or `self.context.view`
+* (set from the ontology / request config at build time). Each case delegates entirely to
+* the corresponding view module's static `render(self, options)` method and returns its result.
+*
+* Special cases:
+* - `'print'` forces `self.permissions = 1` (read-only) before falling through to the
+*   `'default'` branch, so inner components render without edit controls. The wrapper node
+*   receives the CSS class `view_print` so print-specific CSS can target it.
+* - `'default'` (and any unrecognised view) first checks `self.render_views` for a
+*   dynamically registered view descriptor `{ view, mode, render, path? }`. If found, the
+*   module is loaded via dynamic `import()` and its named export called. This lets integrators
+*   register custom views without patching this switch.
+*
+* @param {Object} options - Render options forwarded verbatim to the view module.
+* @param {string} [options.render_level='full'] - `'full'` rebuilds the entire wrapper;
+*   `'content_data'` only refreshes the record list inside an existing wrapper.
+* @returns {Promise<HTMLElement|null>} The rendered wrapper node, or null on failure.
 */
 render_edit_component_portal.prototype.edit = async function(options) {
 
@@ -108,10 +177,32 @@ render_edit_component_portal.prototype.edit = async function(options) {
 
 /**
 * RENDER_COLUMN_ID
-* Generic render_column_id
-* Used by view table and mosaic renders
-* @param object options
-* @return DocumentFragment
+* Build the ID-column cell for a single portal row: the "open record" button,
+* the drag handle (edit-permission only), and the drag-drop target zone.
+*
+* The column serves three purposes:
+* 1. **Navigation** — left-click calls `self.edit_record_handler()` to open the linked
+*    record in the standard way (inline panel or separate page, depending on config).
+* 2. **Context-menu navigation** — right-click opens the target record in a new window
+*    (or a new browser tab when Alt is held). The window is given a stable name so
+*    the browser reuses the same tab on repeated opens. An `on_blur` callback refreshes
+*    the portal after the user returns from editing the target.
+* 3. **Drag-to-reorder** — when permissions ≥ 2 the drag handle is added. The handle is
+*    hidden by default (CSS class `hide`) and revealed on `mouseenter` of the button.
+*    Double-clicking the handle opens a modal that lets the cataloguer type a target
+*    position directly (useful for very long lists where dragging is impractical).
+*
+* The `drop_node` beneath the row is the drop target for reordering via drag-and-drop;
+* it handles `dragover`, `dragleave`, and `drop` events using the shared handlers from
+* `drag_and_drop.js`.
+*
+* @param {Object} options - Options bag passed from the view module.
+* @param {Object} options.caller - The `component_portal` instance (`self`).
+* @param {string} options.section_id - The section_id of the linked target record.
+* @param {string} options.section_tipo - The section_tipo of the linked target record.
+* @param {Object} options.locator - The full locator object for this row.
+* @param {number} options.paginated_key - Zero-based position within the current page window.
+* @returns {DocumentFragment} Fragment containing the button, (optional) drag handle, and drop zone.
 */
 export const render_column_id = function(options) {
 
@@ -213,6 +304,7 @@ export const render_column_id = function(options) {
 
 		// section_id node
 			if(show_interface.show_section_id){
+				// apply smaller font when the ID string is long (> 5 chars)
 				const small_css = section_id.length>5 ? ' small' : ''
 				ui.create_dom_element({
 					element_type	: 'span',
@@ -229,7 +321,7 @@ export const render_column_id = function(options) {
 				parent			: button_edit
 			})
 
-	// drop_node
+	// drop_node: invisible drop target sitting below each row; reveals on dragover
 		const drop_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'drop hide',
@@ -247,8 +339,34 @@ export const render_column_id = function(options) {
 
 /**
 * RENDER_DRAG_NODE
-* @param object options
-* @return HTMLElement drag_node
+* Build the drag handle icon element for a single portal row.
+*
+* The drag node is a small icon div that is hidden by default (`hide` class) and
+* revealed when the user hovers over the parent `button_edit`. It supports:
+*
+* - **Standard drag-and-drop** — `dragstart` / `dragend` events communicate position
+*   data to the drop zone via `DataTransfer` (and the `tmp` object in drag_and_drop.js,
+*   since `dataTransfer` is unavailable in `dragover` for security reasons).
+* - **Double-click to type a position** — Opens a small modal with a numeric input
+*   pre-filled with the row's current 1-based position. The user can type any valid
+*   position; the code clamps input to `[0, total_records - 1]` (0-based array indices)
+*   and calls `self.sort_data()`. This is the primary ordering method for very long lists
+*   where dragging across pages would be impractical.
+*
+* The node's own `mouseenter`/`mouseout` listeners keep it visible while the cursor is
+* on the handle itself (complementing the parent button's enter/leave listeners).
+*
+* (!) The `change_order_modal` inner function relies on `modal` via closure — `modal`
+* is declared after `button_ok` but the function is only called on click/keyup by which
+* time the `modal` binding has been set. This temporal dependency is intentional.
+*
+* @param {Object} options - Options bag from the view module.
+* @param {Object} options.caller - The `component_portal` instance (`self`).
+* @param {string} options.section_id - The target record's section_id (used in modal title).
+* @param {Object} options.locator - The full locator object for this row.
+* @param {number} options.paginated_key - Zero-based position in the current page window;
+*   used as `source_key` when sorting and as the default value in the position input.
+* @returns {HTMLElement} The drag handle div node.
 */
 const render_drag_node = function(options) {
 
@@ -395,9 +513,24 @@ const render_drag_node = function(options) {
 
 /**
 * RENDER_COLUMN_COMPONENT_INFO
-* Render node for use in edit
-* @param object options
-* @return DocumentFragment|null
+* Build the component-info cell for a single portal row.
+*
+* `component_info` is the Dédalo `ddinfo` virtual component — a synthetic item injected
+* into `self.datum.data` by the server when the target section contains a descriptor field
+* (typically `ddinfo`, an auto-generated summary string).  Its `value` is an array of
+* strings that is joined with `', '` for display.
+*
+* The column is only shown when `self.add_component_info === true` (set during init when
+* the ontology or request config declares the column) and when a matching `ddinfo` entry
+* is found for the current `section_id` / `section_tipo` pair.  If neither condition is met
+* the returned fragment is an empty placeholder, keeping the column cell present in the DOM
+* grid so column widths are not disturbed.
+*
+* @param {Object} options - Options bag from the view module.
+* @param {Object} options.caller - The `component_portal` instance (`self`).
+* @param {string} options.section_id - Target record's section_id.
+* @param {string} options.section_tipo - Target record's section_tipo.
+* @returns {DocumentFragment} Fragment with an optional `.ddinfo_value` span.
 */
 export const render_column_component_info = function(options) {
 
@@ -437,10 +570,41 @@ export const render_column_component_info = function(options) {
 
 /**
 * RENDER_COLUMN_REMOVE
-* Render column_remove node
-* Shared across views
-* @param object options
-* @return DocumentFragment
+* Build the remove-column cell for a single portal row: an icon button that opens a
+* confirmation modal with two deletion strategies.
+*
+* The button is only rendered when the target section's ontology-declared `button_delete`
+* descriptor is present in `self.target_section[tipo].buttons`. This means the button
+* visibility is server-authoritative — the ontology controls it, not client-side logic.
+*
+* The confirmation modal offers two actions, each behind a separate user confirmation:
+*
+* 1. **Unlink only** (`button_unlink_record`) — removes the locator from the portal's
+*    data array via `self.unlink_record(locator)`.  The server cascades the paired
+*    dataframe rows automatically (single-writer rule), so no `delete_dataframe` call is
+*    needed here.  This is the default and receives keyboard focus so Enter triggers it.
+*
+* 2. **Delete resource and all links** (`button_unlink_and_delete`) — only shown when
+*    `show_interface.button_delete_link_and_record === true` AND the target section's
+*    `button_delete.permissions > 1`.  Calls `self.delete_linked_record()` to remove
+*    the target record itself, then `delete_dataframe()` to clean up any paired dataframe
+*    rows on the client side (here the server does NOT auto-cascade, so the explicit call
+*    is required).  Requires two consecutive `confirm()` dialogs to prevent accidental
+*    deletion of shared authority records.  Optionally also deletes diffusion records when
+*    the `delete_diffusion_records` checkbox is checked (default: true).
+*
+* Pagination guard: when the deleted row is the first item on a non-first page (`key===0`
+* and `offset>0`), the offset is decremented by one `limit` so the API returns the
+* correct page after the refresh.
+*
+* @param {Object} options - Options bag from the view module.
+* @param {Object} options.caller - The `component_portal` instance (`self`).
+* @param {number} options.row_key - Zero-based position in the full data array (string|number).
+* @param {number} options.paginated_key - Zero-based position within the current page window.
+* @param {string} options.section_id - Target record's section_id.
+* @param {string} options.section_tipo - Target record's section_tipo.
+* @param {Object} options.locator - The full locator object (must include `.id` for dataframe pairing).
+* @returns {DocumentFragment} Fragment containing an optional `.button_remove` button.
 */
 export const render_column_remove = function(options) {
 
@@ -458,6 +622,8 @@ export const render_column_remove = function(options) {
 		const fragment = new DocumentFragment()
 
 	// button_remove
+		// Resolve the target section DDO for this row's section_tipo to read its
+		// ontology-declared buttons; defaults to empty object if no match found.
 		const target_section_ddo	= self.target_section.find(el => el.tipo===section_tipo) || {}
 		const section_buttons		= target_section_ddo.buttons || []
 		const button_delete			= section_buttons.find(el => el.model==='button_delete')
@@ -691,9 +857,35 @@ export const render_column_remove = function(options) {
 
 /**
 * GET_BUTTONS
-* Render buttons DOM nodes
-* @param object self instance
-* @return HTMLElement buttons_container
+* Build the full portal toolbar (buttons_container + buttons_fold) for edit mode.
+*
+* Each button is guarded by its corresponding `show_interface` flag.  All flags default
+* to `false`; they are set during `component_portal.prototype.init` from the ontology /
+* request config `show.interface` property.
+*
+* Buttons rendered (in order, when enabled):
+* - `button_external`  — syncs data from an external source (`source.mode: 'external'`).
+* - `button_add`       — creates a new linked record in the target section. Requires the
+*                        target section's `button_new.permissions > 1`. Only the first
+*                        `target_section` entry is consulted; mixed-tipo portals that need
+*                        per-tipo add buttons must use a custom view.
+* - `button_link`      — opens the link picker to search and attach existing records.
+* - `button_list`      — navigates to the target section in list mode. Skipped when
+*                        `target_section` is empty (e.g. autocomplete-hi with unresolved tipo).
+* - `list_from_component_data` — shows a filtered list derived from the portal's current data.
+*                        Only rendered when a parent `section` caller can be resolved.
+* - `button_tree`      — opens a thesaurus tree selector.
+* - `tools`            — injects tool buttons (time-machine, propagate, etc.) via `ui.add_tools`.
+* - `button_fullscreen` — toggles the component node into fullscreen; publishes
+*                        `full_screen_<id>` on the event bus before and after.
+*
+* (!) `event_manager` is used inside the `button_fullscreen` click handler but is not
+* imported in this file.  It is expected to be available as a module-scope global via
+* the page environment.  See the global directive at the top of the file — `event_manager`
+* is not listed there, which may cause an eslint no-undef warning at runtime.
+*
+* @param {Object} self - The `component_portal` instance.
+* @returns {HTMLElement} The fully populated buttons_container node.
 */
 export const get_buttons = (self) => {
 
@@ -820,11 +1012,40 @@ export const get_buttons = (self) => {
 
 /**
 * ACTIVATE_AUTOCOMPLETE
-* Shared across views
-* Activate service autocomplete. Enable the service_autocomplete when the user clicks
-* @param object self
-* @param HTMLElement wrapper
-* @return bool
+* Lazily instantiate and show the `service_autocomplete` overlay when the user clicks
+* inside the portal wrapper.
+*
+* This function is called from the wrapper's `click` handler (via `add_wrapper_events`)
+* every time the portal receives a click while active.  It is idempotent:
+* - If the autocomplete is already open (`self.autocomplete_active === true`), it simply
+*   calls `.show()` and re-focuses the search input without rebuilding.
+* - If `self.autocomplete_active === false` (initial state set by `component_portal.prototype.init`)
+*   and all guards pass, it builds and appends the service node on demand.
+* - If `self.autocomplete` is explicitly `false`, autocomplete is disabled for this
+*   instance and the function exits early via the guard condition.
+*
+* Guards that suppress the autocomplete:
+* - `self.permissions < 2` — read-only; editing is not allowed.
+* - `self.show_interface.show_autocomplete !== true` — feature flag is off.
+* - External source mode without an explicit show-interface override — in this case the
+*   portal's data is computed server-side and the autocomplete picker would be meaningless.
+*
+* After first build the service node is appended directly to `self.node` (not the wrapper)
+* and animated in with an `opacity` fade via the `active` CSS class.  In `search` mode
+* the fade is skipped (`transition:none`) so the input appears instantly.
+*
+* The `id_variant` is randomised with a timestamp to prevent the instance cache from
+* returning a stale autocomplete that belongs to another page component.
+*
+* Side effects:
+* - Sets `self.autocomplete_active = true`.
+* - Pushes the service instance onto `self.services` (for lifecycle cleanup on destroy).
+*
+* @param {Object} self - The `component_portal` instance.
+* @param {HTMLElement} wrapper - The portal's wrapper node (not used directly, passed for
+*   context; the service node is appended to `self.node`).
+* @returns {Promise<boolean|undefined>} `true` when the autocomplete is shown or built;
+*   `undefined` (implicit) when the function exits early due to a guard condition.
 */
 export const activate_autocomplete = async function(self, wrapper) {
 
@@ -907,16 +1128,25 @@ export const activate_autocomplete = async function(self, wrapper) {
 
 /**
 * BUILD_HEADER
-* Render portal list_header_node node ready to place it into 'list_body' node
-* Note that component_info column will be added if self.add_component_info is true. That if defined
-* when the component is built
-* Also, note that the list_header_node is hidden if the portal records are empty for clean look
-* Shared across views
-* @param array columns_map
-* @param array ar_section_record
-* @param object self
-* 	component instance
-* @return HTMLElement list_header_node
+* Build the column-header row for a portal list and hide it when the list is empty.
+*
+* Delegates to `ui.render_list_header(columns_map, self)` which builds a row of header
+* cells based on the ordered `columns_map` array.  The `component_info` column is
+* included in `columns_map` only when `self.add_component_info === true` (set during
+* `component_portal.prototype.init`); this function does not control that — it simply
+* passes the map through.
+*
+* When `ar_section_record` is empty (no linked records on the current page) the header is
+* hidden with the `hide` CSS class.  This avoids an orphaned header row floating above an
+* empty list.  The header is re-shown on next render when records are present.
+*
+* @param {Array} columns_map - Ordered array of column descriptor objects, each with at
+*   minimum `{ id, label, width }`.  Built by the view module before calling this helper.
+* @param {Array} ar_section_record - Array of resolved section-record instances for the
+*   current page (may be empty).
+* @param {Object} self - The `component_portal` instance (forwarded to `ui.render_list_header`
+*   for column width / sort-state context).
+* @returns {HTMLElement} The list_header_node element, ready to prepend to the list body.
 */
 export const build_header = function(columns_map, ar_section_record, self) {
 
@@ -935,11 +1165,23 @@ export const build_header = function(columns_map, ar_section_record, self) {
 
 /**
 * RENDER_REFERENCES
-* Create references nodes. It used in component_relation_related to
-* show the related items of current component
-* @see numisdata3 > numisdata36
-* @param array ar_references
-* @return DocumentFragment
+* Build the back-reference list used by `component_relation_related` views to show
+* records that point *at* the current component from the inverse side.
+*
+* Each entry in `ar_references` is an object of the shape:
+*   `{ label: string, value: { section_tipo: string, section_id: string } }`
+* where `label` is the display string for the referring record and `value` holds its
+* locator coordinates.  Clicking the link icon opens the referring record in a new window.
+*
+* The `menu: false` flag hides the global navigation chrome in the popup window so the
+* user gets a focused record view without the full page header.
+*
+* @see numisdata3 > numisdata36  (canonical example in the ontology)
+*
+* @param {Array} ar_references - Array of reference descriptors; each must have
+*   `{ label: string, value: { section_tipo: string, section_id: string } }`.
+* @returns {DocumentFragment} Fragment containing a `.references` `<ul>` list, or an
+*   empty fragment when `ar_references` is empty.
 */
 export const render_references = function(ar_references) {
 
@@ -1010,14 +1252,29 @@ export const render_references = function(ar_references) {
 
 /**
 * ADD_WRAPPER_EVENTS
-* Shared across views. Sets up common wrapper event handlers:
-* - Click handler for autocomplete activation
-* - Optional drag and drop events on wrapper
-* @param object self - Component instance
-* @param HTMLElement wrapper - Wrapper DOM element
-* @param object [options] - Options
-* @param bool [options.drag_drop=false] - Whether to add drag/drop events on wrapper
-* @return bool
+* Attach the common set of event listeners to the portal's top-level wrapper node.
+*
+* Two categories of events are managed:
+*
+* 1. **Click → autocomplete** (always attached)
+*    A `click` listener deferred via `dd_request_idle_callback` calls
+*    `activate_autocomplete` when the portal is active (`self.active === true`).
+*    The idle-callback deferral ensures the click has fully propagated and any
+*    preceding focus changes have settled before the autocomplete is shown.
+*
+* 2. **Drag-and-drop on the wrapper** (only when `options.drag_drop === true`)
+*    The default and mosaic views set this flag because they render records as a
+*    flat list where the wrapper itself is a valid drop zone (e.g. for dropping a
+*    drag that started from a different portal or from a tree view).  The handler
+*    passes `{ caller: self }` as the minimal options bag required by the shared
+*    drag-and-drop handlers in `drag_and_drop.js`.
+*
+* @param {Object} self - The `component_portal` instance.
+* @param {HTMLElement} wrapper - The portal's main wrapper node.
+* @param {Object} [options={}] - Optional configuration.
+* @param {boolean} [options.drag_drop=false] - When `true`, also attaches
+*   `dragover`, `dragleave`, and `drop` listeners to the wrapper.
+* @returns {boolean} Always returns `true`.
 */
 export const add_wrapper_events = function(self, wrapper, options={}) {
 
@@ -1058,10 +1315,25 @@ export const add_wrapper_events = function(self, wrapper, options={}) {
 
 /**
 * ADD_SECTION_RECORD_DRAG_AND_DROP
-* Set section_record_node ready to drag and drop
-* Shared across views (line, mosaic)
-* @param object options
-* @return bool
+* Make an individual row node draggable and set up the full drag-and-drop event suite.
+*
+* Used by the `line` and `mosaic` views where entire row/card nodes are the draggable
+* units (as opposed to the small drag-icon handle used in the `default` table view).
+* The `dragstart` handler used here is `on_dragstart_mosaic` — a variant that encodes
+* the full row node reference in the transfer data rather than just a locator/key pair.
+*
+* After this call the node:
+* - Has `draggable="true"` set as an attribute.
+* - Has the CSS class `draggable` added (for cursor and visual styling).
+* - Listens for `dragstart`, `dragover`, `dragleave`, and `drop` events using the shared
+*   handlers from `drag_and_drop.js`.
+*
+* @param {Object} options - Options bag from the view module. Must include at minimum:
+* @param {HTMLElement} options.section_record_node - The row/card node to make draggable.
+* @param {Object} options.caller - The `component_portal` instance.
+* @param {Object} options.locator - The locator for this row (forwarded to drag handlers).
+* @param {number} options.paginated_key - The row's position in the current page.
+* @returns {boolean} `true` on success; `false` if `section_record_node` is missing.
 */
 export const add_section_record_drag_and_drop = function(options) {
 

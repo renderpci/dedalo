@@ -15,7 +15,26 @@
 
 /**
 * VIEW_LINE_EDIT_TEXT_AREA
-* Manage the components logic and appearance in client side
+* Compact single-line rich-text editor view for component_text_area.
+*
+* This module implements the 'line' and 'print' display variants used when a
+* text-area component is rendered inside a list row or other space-constrained
+* context (e.g. edit_in_list mode). It differs from view_default_edit_text_area
+* in that:
+*
+*   - The wrapper is built WITHOUT a header label node (label: null).
+*   - The toolbar is intentionally slim: bold / italic / underline / undo / redo /
+*     button_save only — no find-and-replace, html-source, or semantic-tag buttons.
+*   - Editor initialisation is deferred to first mousedown (or immediate if
+*     auto_init_editor === true or render_level === 'content').
+*
+* The 'print' case is handled upstream in render_edit_component_text_area by
+* forcing self.permissions = 1 before calling this module, so get_content_value
+* will fall back to the read-only path transparently.
+*
+* Exported symbol:
+*   view_line_edit_text_area  — static namespace; only the .render() method is
+*                               used externally.
 */
 export const view_line_edit_text_area = function() {
 
@@ -27,7 +46,29 @@ export const view_line_edit_text_area = function() {
 /**
 * RENDER
 * Render node for use in modes: edit, edit_in_list
-* @return HTMLElement wrapper
+*
+* Entry point called by render_edit_component_text_area.prototype.edit when
+* self.context.view === 'line' (or 'print', after permissions are clamped to 1).
+*
+* When render_level === 'content' the function returns the bare content_data
+* node (an HTMLElement with per-entry child nodes) so the caller can splice it
+* into an existing wrapper without rebuilding it. For any other render_level the
+* function builds and returns the full component wrapper via
+* ui.component.build_wrapper_edit, which also holds a direct pointer to
+* content_data as wrapper.content_data.
+*
+* Side effect: sets self.render_level so downstream helpers (e.g. auto_init_editor
+* defaulting logic) can read it.
+*
+* @param {Object} self - component_text_area instance; must expose .data, .context,
+*                        .permissions, .render_level, .show_interface, .auto_init_editor,
+*                        .service_text_editor, .service_text_editor_instance, .text_editor,
+*                        .events_tokens, .id, .view, .lang, .tags_to_html()
+* @param {Object} options - render options
+* @param {string} [options.render_level='full'] - 'full' builds the whole wrapper;
+*        'content' returns only the content_data node
+* @returns {Promise<HTMLElement>} wrapper node (render_level 'full') or content_data
+*          node (render_level 'content')
 */
 view_line_edit_text_area.render = async function(self, options) {
 	// render_level
@@ -58,8 +99,22 @@ view_line_edit_text_area.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Build the content_data container and populate it with one content_value node
+* per entry in self.data.entries.
+*
+* Iterates self.data.entries (the array of datum objects held by this component).
+* Each entry produces either a read-only node (permissions === 1) or a full
+* editable node with deferred CKEditor initialisation (permissions >= 2).
+*
+* When entries is empty the loop still runs once (value_length defaults to 1)
+* so that a single blank editor slot is rendered, ready to accept new input.
+*
+* The resulting content_data node holds numeric index properties (content_data[0],
+* content_data[1], …) that point to each child content_value node for direct
+* access from callers.
+*
+* @param {Object} self - component_text_area instance
+* @returns {HTMLElement} content_data node containing one content_value per entry
 */
 const get_content_data_edit = function(self) {
 
@@ -92,7 +147,46 @@ const get_content_data_edit = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @return HTMLElement content_value
+* Build a single editable entry node and wire up the CKEditor service.
+*
+* Constructs the DOM skeleton for one text-area entry:
+*   content_value
+*     ├── toolbar_container   (hidden initially; revealed by the editor service)
+*     └── value_container     (editor mount point; receives the CKEditor instance)
+*
+* The CKEditor instance (self.service_text_editor) is NOT created immediately.
+* Initialisation is deferred in one of two ways:
+*
+*   a) auto_init_editor === true (or render_level === 'content'):
+*      A dd_request_idle_callback is scheduled so that the heavy editor
+*      initialisation runs asynchronously after the current paint cycle.
+*
+*   b) Otherwise (default for render_level 'full'):
+*      A one-shot 'mousedown' listener on content_value initialises the editor
+*      on first user interaction and removes itself immediately afterwards to
+*      prevent duplicate initialisations.
+*
+* Fallback value handling:
+*   get_fallback_value() may return HTML-tagged strings (e.g. <em>fallback</em>).
+*   get_fallback_value_clean() lazily strips all tags via a temporary DOM node,
+*   producing plain text suitable for the CKEditor placeholder attribute.
+*
+* Once the editor is ready it is stored in both:
+*   self.service_text_editor_instance[i]  — the raw service instance
+*   self.text_editor[i]                   — the activated editor (same object)
+*
+* An 'editor_ready_{self.id}' event is published via event_manager so that
+* tool_indexation and other observers can attach after editor boot.
+*
+* The dataframe glue (attach_item_dataframe) is appended outside the editor
+* value_container so that dataframe nodes are never swallowed by CKEditor.
+*
+* @param {number} i - zero-based entry index within self.data.entries
+* @param {Object|undefined} current_value - datum object for this entry; shape:
+*        { value: string|null }  where value is the stored HTML content string,
+*        or undefined when the entry slot is empty (new record)
+* @param {Object} self - component_text_area instance
+* @returns {HTMLElement} content_value node ready to be appended to content_data
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -174,6 +268,9 @@ const get_content_value = (i, current_value, self) => {
 				self.service_text_editor_instance[i] = current_service_text_editor
 
 			// toolbar. create the toolbar base
+				// (!) Intentionally narrow: only the most essential formatting controls.
+				// view_default_edit_text_area additionally provides find_and_replace,
+				// html_source, and semantic-tag buttons (person, geo, draw, note, etc.).
 				const toolbar = ['bold','italic','underline','|','undo','redo','|', 'button_save']
 				// toolbar add custum_buttons
 					if(self.context?.toolbar_buttons){
@@ -293,7 +390,21 @@ const get_content_value = (i, current_value, self) => {
 
 /**
 * GET_CONTENT_VALUE_READ
-* @return HTMLElement content_value
+* Build a read-only display node for a single entry.
+*
+* Used when self.permissions === 1 (view-only access). No editor service is
+* created and no event listeners are attached. The stored HTML is rendered
+* directly via tags_to_html (which converts internal tag markers to visible
+* HTML representations) and injected as inner_html.
+*
+* The CSS class 'read_only' on content_value disables pointer interactions via
+* the stylesheet and signals to parent tools that no editing is possible.
+*
+* @param {number} i - zero-based entry index (unused in the body but kept for
+*        signature parity with get_content_value)
+* @param {Object|undefined} current_value - datum object; { value: string|null }
+* @param {Object} self - component_text_area instance; must expose .tags_to_html()
+* @returns {HTMLElement} content_value node with class 'content_value editor_container read_only'
 */
 const get_content_value_read = (i, current_value, self) => {
 
@@ -315,10 +426,32 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_CUSTOM_BUTTONS
-* @param instance self
-* @param int i
-*	self data element from array of values
-* @return array custom_buttons
+* Build the custom-button descriptor array for the slim line-edit toolbar.
+*
+* Returns an array of button descriptor objects consumed by the text-editor
+* service (service_ckeditor). Each descriptor has the shape:
+*   {
+*     name           : string   — button identifier used by the toolbar slot array
+*     manager_editor : boolean  — true: the editor service manages the button
+*                                 state (active/disabled) itself; false: Dédalo
+*                                 manages the click handler directly
+*     options        : Object   — tooltip, image path, class_name, onclick handler
+*   }
+*
+* The 'line' view toolbar is intentionally minimal:
+*   separator | bold | italic | underline | undo | redo | button_save
+*
+* button_save calls text_editor.save() directly (which in turn delegates to the
+* component's save_value() method) rather than relying on a blur/auto-save
+* mechanism. The save label text is stripped of HTML tags via a regex before
+* display.
+*
+* @param {Object} self - component_text_area instance (needed for label lookups)
+* @param {Object} text_editor - service_text_editor instance bound to entry i;
+*        its .save() method is wired to the Save button onclick
+* @param {number} i - zero-based entry index (reserved for future per-entry
+*        customisation; not currently used inside the function body)
+* @returns {Array} array of button descriptor objects
 */
 const get_custom_buttons = (self, text_editor, i) => {
 
@@ -413,12 +546,39 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 /**
 * GET_CUSTOM_EVENTS
-* @param instance self
-* @param int i
-*	self data element from array of values
-* @param function text_editor
-*	select and return current text_editor
-* @return object custom_events
+* Build the custom-event handler map for the CKEditor service instance.
+*
+* Returns a plain object whose keys are CKEditor event names and whose values
+* are handler functions. The service_ckeditor calls these after forwarding the
+* raw CKEditor event so Dédalo logic remains decoupled from the editor library.
+*
+* Handlers defined here:
+*
+*   focus       — Activates the component via ui.component.activate(self) when it
+*                 is not already the active component. This ensures the inspector
+*                 panel and toolbar update to reflect this component's context.
+*
+*   click       — Prevents default browser and event-propagation behaviour for all
+*                 clicks inside the editor. The line view does not implement
+*                 tag-type routing (tc, indexIn/Out, geo, draw, etc.); those are
+*                 only needed in the full-size view_default_edit_text_area.
+*
+*   KeyUp       — Handles two keyboard shortcuts:
+*                   NumpadEnter → save immediately (same as clicking Save button)
+*                   Tab         → suppressed entirely to prevent focus jumping to
+*                                 the next browser tab stop while editing inline.
+*
+*   changeData  — Delegates to self.change_data_handler(options) whenever the
+*                 editor's internal data changes (key strokes, paste, undo, etc.).
+*                 This is the primary dirty-tracking pathway for the component.
+*
+* @param {Object} self - component_text_area instance; must expose .active,
+*        .change_data_handler(), and .context.features
+* @param {number} i - zero-based entry index (available to closures; currently
+*        used implicitly via the outer text_editor binding)
+* @param {Object} text_editor - service_text_editor instance; its .save() method
+*        is called from the KeyUp NumpadEnter handler
+* @returns {Object} custom_events map keyed by event name
 */
 const get_custom_events = (self, i, text_editor) => {
 

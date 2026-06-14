@@ -19,7 +19,52 @@
 
 /**
 * VIEW_DEFAULT_EDIT_TEXT_AREA
-* Manage the components logic and appearance in client side
+* Default edit-mode view module for component_text_area.
+*
+* Responsible for building the full CKEditor-backed rich-text editing UI used
+* when context.view is 'default' or 'html_text'. Key exports:
+*
+*   view_default_edit_text_area         — constructor shell (no state; exists so
+*                                         its static methods can be called as a
+*                                         namespace and the module is importable
+*                                         by render_edit_component_text_area.js)
+*   view_default_edit_text_area.render  — main async factory: builds the wrapper
+*                                         DOM node that contains the editor
+*   build_node_tag                      — public helper that converts a serialised
+*                                         Dédalo tag descriptor into an <img> DOM
+*                                         node (used by service_ckeditor to render
+*                                         index, draw, geo, tc, page … tags inline
+*                                         inside the editor content)
+*
+* Internal (non-exported) helpers:
+*   get_content_data_edit       — iterates data.entries and dispatches each slot
+*                                 to get_content_value (edit) or
+*                                 get_content_value_read (read-only)
+*   get_content_value           — builds one editable rich-text slot including
+*                                 the CKEditor init logic and all event wiring
+*   get_content_value_read      — builds a static read-only HTML view of one slot
+*   get_buttons                 — assembles the component's outer button bar
+*   get_custom_buttons          — returns the ordered list of CKEditor toolbar
+*                                 button descriptors consumed by service_ckeditor
+*   get_custom_events           — returns the event-handler map consumed by
+*                                 service_ckeditor for focus, click, keyup, etc.
+*   render_note                 — opens a modal showing (or creating) a linked
+*                                 note section
+*   render_persons_list         — opens a modal listing person tags available for
+*                                 quick insertion
+*   render_langs_list           — opens a modal listing project languages for
+*                                 quick lang-tag insertion
+*
+* Tag types handled in get_custom_events.click:
+*   tc, indexOut, indexIn, svg, draw, geo, page, person, note, lang, reference
+*
+* Keyboard shortcuts wired in get_custom_events.KeyUp:
+*   NumpadEnter              → save
+*   av_player.av_play_pause_code (Escape by default) → publish key_up_esc event
+*   av_player.av_insert_tc_code (F2 by default)      → build_tag (timecode/draw)
+*   Ctrl+0..9               → insert person tag by index
+*   Ctrl+Shift+0..9         → insert lang tag by index
+*   Tab                     → suppress default browser focus-move behaviour
 */
 export const view_default_edit_text_area = function() {
 
@@ -30,8 +75,27 @@ export const view_default_edit_text_area = function() {
 
 /**
 * RENDER
-* Render node for use in modes: edit, edit_in_list
-* @return HTMLElement wrapper
+* Build and return the full component wrapper DOM node for edit and edit_in_list modes.
+*
+* When render_level is 'content', the function returns only the inner content_data
+* node (skipping the outer wrapper and button bar). This is used by internal re-render
+* calls that need to refresh only the editing area without rebuilding the surrounding
+* chrome.
+*
+* Side effects:
+*   - Sets self.render_level to the resolved render_level value.
+*   - Attaches content_data as wrapper.content_data (pointer for later DOM access).
+*   - When SHOW_DEVELOPER is true and view !== 'line', appends a lang badge to the label.
+*
+* (!) SHOW_DEVELOPER is used here but is not listed in the module's global directive.
+*     This will trigger an eslint no-undef warning. The global is declared elsewhere
+*     (page bootstrap) — document only, do not remove the reference.
+*
+* @param {Object} self - component_text_area instance
+* @param {Object} options - render call options
+* @param {string} [options.render_level='full'] - 'full' builds the complete wrapper;
+*   'content' returns only the content_data node
+* @returns {Promise<HTMLElement>} wrapper node (full mode) or content_data node (content mode)
 */
 view_default_edit_text_area.render = async function(self, options) {
 
@@ -46,12 +110,15 @@ view_default_edit_text_area.render = async function(self, options) {
 		// 	: [null]
 
 	// content_data
+		// Build the editable (or read-only) slot container. Returned early when
+		// only the inner area needs to be refreshed, skipping wrapper/button overhead.
 		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
 
 	// buttons
+		// Outer button bar is suppressed entirely for read-only users (permissions <= 1).
 		const buttons = (self.permissions > 1)
 			? get_buttons(self)
 			: null
@@ -69,6 +136,8 @@ view_default_edit_text_area.render = async function(self, options) {
 		wrapper.content_data = content_data
 
 		// label add lang
+		// Developer mode only: append a badge showing the active language code so
+		// editors can confirm which language slot they are editing.
 		if (SHOW_DEVELOPER===true && self.view!=='line') {
 			wrapper.label.innerHTML += ' <span class="note">[' + self.lang + ']</span>'
 		}
@@ -105,8 +174,21 @@ view_default_edit_text_area.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Build the content_data container and populate it with one slot per data entry.
+*
+* Each entry in self.data.entries becomes a single content_value child node.
+* When self.data.entries is empty the loop still runs once (value_length fallback
+* to 1) so an empty editor slot is always visible.
+*
+* Permissions gate: read-only users (permissions === 1) get a static HTML node
+* via get_content_value_read; all other users get the full CKEditor wrapper via
+* get_content_value.
+*
+* Side effect: numeric index properties (content_data[0], content_data[1], …)
+* are set on the returned node as convenience pointers to each slot.
+*
+* @param {Object} self - component_text_area instance
+* @returns {HTMLElement} content_data node containing all slot children
 */
 const get_content_data_edit = function(self) {
 
@@ -138,7 +220,41 @@ const get_content_data_edit = function(self) {
 
 /**
 * GET_CONTENT_VALUE
-* @return HTMLElement content_value
+* Build one editable rich-text slot for entry index i.
+*
+* Structure of the returned node:
+*   content_value (div)
+*     ├── toolbar_container (div.toolbar_container.hide) — CKEditor toolbar mount point
+*     ├── value_container   (div.value_container.editor_container.ck-content.ck)
+*     │     [placeholder_node] — shown only when there is no stored value
+*     └── [dataframe node]  — appended by attach_item_dataframe when applicable
+*
+* Editor initialisation strategy (lazy vs. eager):
+*   The CKEditor instance (service_ckeditor) is expensive to initialise. Two paths exist:
+*     - auto_init_editor === true  → initialise immediately via dd_request_idle_callback
+*       (used when the component is opened in 'content' render_level or when explicitly
+*        configured via ontology property or tool call, e.g. tool_indexation).
+*     - auto_init_editor === false → attach a one-shot mousedown handler on content_value;
+*       the editor is created the first time the user clicks inside the component and the
+*       handler removes itself to avoid double-init.
+*
+* Tag URL pre-selection:
+*   After init, the idle callback inspects window.location.search for a `raw_data`
+*   LZString-encoded parameter. When the decoded object carries caller_options.tag_id
+*   the corresponding indexIn tag is selected in the editor automatically. This supports
+*   deep-linking from dd_grid indexation buttons.
+*
+* Fallback value:
+*   Derived from data.fallback_value (API-supplied array of locale-keyed fallbacks).
+*   Stripping HTML tags from the fallback is deferred via get_fallback_value_clean()
+*   because it requires a DOM parse — only executed when the placeholder is needed or
+*   the editor requests it.
+*
+* @param {number} i - zero-based index into self.data.entries
+* @param {Object|undefined} current_value - data entry for slot i; may be undefined
+*   when data.entries has fewer items than value_length
+* @param {Object} self - component_text_area instance
+* @returns {HTMLElement} content_value node (editable slot)
 */
 const get_content_value = (i, current_value, self) => {
 
@@ -152,6 +268,9 @@ const get_content_value = (i, current_value, self) => {
 		const dirty_fallback_value	= fallback[i]
 
 	// clean fallback of any tag (deferred until needed)
+		// The fallback may contain HTML tags from the API (inline formatting, tag markers).
+		// Strip them by parsing through a temporary DOM node so the plain-text string
+		// can be used as the CKEditor placeholder attribute, which must be plain text.
 		let fallback_value = null
 		const get_fallback_value_clean = () => {
 			if (fallback_value !== null) {
@@ -168,6 +287,8 @@ const get_content_value = (i, current_value, self) => {
 		}
 
 	// value_string is a raw html without parse into nodes (txt format)
+		// tags_to_html converts Dédalo tag serialisation to inline <img> placeholders
+		// that CKEditor treats as atomic nodes (non-editable images).
 		const value_string = current_value?.value
 			? self.tags_to_html(current_value.value)
 			: null
@@ -179,6 +300,8 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// toolbar_container
+		// CKEditor mounts its toolbar here; starts hidden (class 'hide') and is
+		// shown by the editor itself once it attaches.
 		const toolbar_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'toolbar_container hide',
@@ -186,6 +309,8 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// value_container
+		// Pre-populate with converted HTML so the content is visible even before
+		// CKEditor initialises (progressive enhancement).
 		const value_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value_container editor_container ck-content ck',
@@ -193,6 +318,8 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		// placeholder_node. Create a Place placeholder if no value found
+		// Mimics CKEditor's own placeholder styling (.ck-placeholder) so the pre-init
+		// DOM looks identical to the post-init state.
 		const placeholder_node = (!value_string)
 			? ui.create_dom_element({
 				element_type	: 'p',
@@ -203,6 +330,8 @@ const get_content_value = (i, current_value, self) => {
 			: null
 
 	// init_current_service_text_editor
+		// Closure that creates and wires up one CKEditor instance for this slot.
+		// Called either immediately (auto_init) or on first user click.
 		const init_current_service_text_editor = async function() {
 
 			// permissions check
@@ -211,6 +340,7 @@ const get_content_value = (i, current_value, self) => {
 				}
 
 			// placeholder_node. Remove it from value_container
+				// The real CKEditor placeholder will take over once the editor attaches.
 				if (placeholder_node) {
 					placeholder_node.remove()
 				}
@@ -219,9 +349,12 @@ const get_content_value = (i, current_value, self) => {
 				const current_service_text_editor = new self.service_text_editor()
 
 			// fix service instance with current input key
+				// Store by index so other parts of the component can reach the raw
+				// service instance (e.g. before the editor is fully ready).
 				self.service_text_editor_instance[i] = current_service_text_editor
 
 			// toolbar. create the toolbar base
+				// Core buttons are always present; custom buttons follow.
 				const toolbar = ['bold','italic','underline','|','undo','redo','find_and_replace','html_source','|']
 				// toolbar add custum_buttons
 					if(self.context?.toolbar_buttons){
@@ -241,6 +374,8 @@ const get_content_value = (i, current_value, self) => {
 				}
 
 			// init editor
+				// 'html_text' view uses CKEditor's InlineEditor (no toolbar chrome);
+				// all other views use the full ddEditor balloon toolbar variant.
 				await current_service_text_editor.init({
 					caller				: self,
 					value_container		: value_container,
@@ -254,6 +389,8 @@ const get_content_value = (i, current_value, self) => {
 				})
 
 			// fix current_service_text_editor when is ready
+				// Exposed on self.text_editor[i] for use by component methods (save_value,
+				// build_tag, etc.) once the editor is fully initialised.
 				self.text_editor[i] = current_service_text_editor
 
 			// permissions <2 turn editor read only
@@ -264,12 +401,17 @@ const get_content_value = (i, current_value, self) => {
 				// }
 
 			// event ready
+				// Signal to subscribers (e.g. tool_indexation) that the editor for
+				// this component id is now interactive.
 				event_manager.publish(
 					'editor_ready_' + self.id,
 					current_service_text_editor
 				)
 
 			// tag selected case (URL) Normally from dd_grid indexation tag button
+				// When the page was opened via a deep-link carrying a compressed
+				// raw_data param, automatically select the referenced tag in the editor
+				// so the user lands in the correct indexation context.
 				dd_request_idle_callback(
 					() => {
 						const url_vars = url_vars_to_object(window.location.search)
@@ -303,6 +445,10 @@ const get_content_value = (i, current_value, self) => {
 	// user click in the wrapper and init the editor. When it's not read only
 		if (self.show_interface.read_only !== true && self.permissions > 1) {
 
+			// auto_init_editor resolution order:
+			//   1. self.auto_init_editor (set by tool calls or ontology property)
+			//   2. true when render_level is 'content' (inline re-render always eager)
+			//   3. false (default: lazy init on first click)
 			const auto_init_editor = self.auto_init_editor!==undefined
 				? self.auto_init_editor
 				: (self.render_level==='content') ? true : false
@@ -330,6 +476,8 @@ const get_content_value = (i, current_value, self) => {
 				// activate on user click
 
 				// click event
+				// (!) Uses mousedown (not click) so the editor receives focus before
+				// any click event on child elements fires, avoiding a missed first click.
 				const click_handler = function(e) {
 					e.stopPropagation()
 
@@ -374,7 +522,18 @@ const get_content_value = (i, current_value, self) => {
 
 /**
 * GET_CONTENT_VALUE_READ
-* @return HTMLElement content_value
+* Build a static (non-interactive) HTML view of one text-area entry slot.
+*
+* Used when self.permissions === 1 (view-only access). No CKEditor instance is
+* created; the stored HTML is converted via tags_to_html and injected directly.
+* The class list mirrors value_container in get_content_value so shared CSS rules
+* apply for consistent typography, but the 'read_only' class suppresses editing chrome.
+*
+* @param {number} i - zero-based index into self.data.entries (not used internally
+*   but kept for signature parity with get_content_value)
+* @param {Object|undefined} current_value - data entry for slot i
+* @param {Object} self - component_text_area instance
+* @returns {HTMLElement} content_value node (static, read-only)
 */
 const get_content_value_read = (i, current_value, self) => {
 
@@ -395,8 +554,20 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object instance
-* @return HTMLElement buttons_container
+* Build the outer button bar shown above the component for write-access users.
+*
+* Which buttons appear is controlled by self.show_interface flags (all optional,
+* default false):
+*   show_interface.tools            → generic tool buttons via ui.add_tools
+*   show_interface.button_fullscreen → fullscreen toggle (expands self.node)
+*   show_interface.button_save       → explicit save button (calls text_editor[0].save)
+*
+* Layout: all buttons are collected into a DocumentFragment, then moved into a
+* 'buttons_fold' wrapper inside the standard buttons_container so that the fold
+* div can use sticky positioning on tall components without the bar scrolling away.
+*
+* @param {Object} self - component_text_area instance
+* @returns {HTMLElement} buttons_container node
 */
 const get_buttons = (self) => {
 
@@ -438,6 +609,9 @@ const get_buttons = (self) => {
 			save.addEventListener('click', fn_save)
 			function fn_save(e) {
 				e.stopPropagation()
+				// (!) Hard-coded index 0: the save button always targets the first
+				// (and normally only) editor slot. Multi-slot components would need
+				// a separate approach.
 				self.text_editor[0].save()
 			}
 		}
@@ -461,10 +635,40 @@ const get_buttons = (self) => {
 
 /**
 * GET_CUSTOM_BUTTONS
-* @param instance self
-* @param int i
-*	self data element from array of values
-* @return array custom_buttons
+* Return the ordered list of custom button descriptors consumed by service_ckeditor.
+*
+* Each descriptor is an object of the shape:
+*   {
+*     name           : {string}   — button identifier; '|' creates a visual separator
+*     manager_editor : {boolean}  — when true the button is managed by the CKEditor
+*                                   plugin (built-in CKEditor command); when false the
+*                                   onclick handler below controls behaviour entirely
+*     options        : {
+*       tooltip      : {string}   — tooltip text shown on hover
+*       image        : {string}   — relative path to the SVG icon
+*       class_name   : {string}   — optional extra CSS class
+*       onclick      : {Function|null} — click handler (only used when manager_editor=false)
+*     }
+*   }
+*
+* Buttons in insertion order:
+*   separator, bold, italic, underline, undo, redo, find_and_replace, html_source,
+*   button_person, button_geo, button_draw, button_note, reference, button_lang
+*
+* button_person onclick → render_persons_list (modal)
+* button_geo onclick    → publishes 'create_geo_tag_{id_base}'
+* button_draw onclick   → if the selection is a 'draw' tag: open render_draw modal;
+*                         otherwise: publish 'build_tag_{id_base}'
+* button_note onclick   → calls self.create_note_tag, then inserts the tag and opens
+*                         render_note modal on success
+* button_lang onclick   → render_langs_list (modal)
+*
+* The button_save button is commented-out (deferred; see end of function).
+*
+* @param {Object} self - component_text_area instance
+* @param {Object} text_editor - service_ckeditor instance for this slot
+* @param {number} i - zero-based index of this editor slot within data.entries
+* @returns {Array} ordered array of button descriptor objects
 */
 const get_custom_buttons = (self, text_editor, i) => {
 
@@ -604,6 +808,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 					if(tag_selected.type === 'draw'){
 						// get a default draw tag, it get the layers avalible into the image
 						// to be used to create the layer selector into the draw editor.
+						// (!) event_manager.publish returns an array of subscriber return values;
+						// index 0 is expected to be the layer descriptor from component_image.
 						const default_tag = event_manager.publish('key_up_f2' +'_'+ self.id_base, 'F2')
 
 						tag_selected.layers = default_tag[0].layers
@@ -615,7 +821,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 							tag			: tag_selected,
 						})
 					}else{
-
+						// No draw tag is currently selected: ask component_image (or another
+						// subscriber) to build a fresh tag object via the build_tag event.
 						event_manager.publish('build_tag_'+ self.id_base, {
 							caller		: self,
 							text_editor	: text_editor
@@ -730,12 +937,49 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 /**
 * GET_CUSTOM_EVENTS
-* @param instance self
-* @param int i
-*	self data element from array of values
-* @param function text_editor
-*	select and return current text_editor
-* @return object custom_events
+* Return the event-handler map consumed by service_ckeditor for one editor slot.
+*
+* The returned object maps CKEditor event names to handler functions. service_ckeditor
+* calls these after applying its own internal processing, so handlers can assume the
+* editor is fully ready when they execute.
+*
+* Handler summary:
+*
+*   focus        — activates the component (ui.component.activate) if not already active,
+*                  making it the current working component for tools such as tool_indexation.
+*
+*   click        — dispatches tag-type–specific events when the user clicks on an embedded
+*                  <img> or <reference> node. Each type publishes a named event so external
+*                  tools/components can react (e.g. tool_indexation subscribes to
+*                  'click_tag_index_{id_base}'). The 'person' and 'lang' types additionally
+*                  open small info modals inline, parsing the tag's data attribute (stored as
+*                  JSON with single-quotes that must be replaced before JSON.parse).
+*
+*   MouseUp      — publishes 'text_selection_{id}' with the current selection string so
+*                  other components (e.g. fragment-creation UI) can react to user selections.
+*                  Also publishes 'click_no_tag_{id_base}' when evt is falsy (no event object
+*                  means a programmatic deselect).
+*
+*   KeyUp        — keyboard shortcuts for audio/video transcription workflows:
+*                    NumpadEnter                              → text_editor.save()
+*                    features.av_player.av_play_pause_code   → publish 'key_up_esc_{id_base}'
+*                    features.av_player.av_insert_tc_code    → self.build_tag()
+*                    Ctrl+digit                              → insert person tag by index
+*                    Ctrl+Shift+digit                        → insert lang tag by index
+*                    Tab                                     → swallow (prevent focus escape)
+*
+*   changeData   — delegates to self.change_data_handler for data-change bookkeeping
+*                  (dirty-state tracking, syncing to component data model).
+*
+* (!) Note on 'person' tag data attribute: the HTML stores JSON with single-quotes
+*     (e.g. data="{'section_tipo':'dd123','section_id':5}") because CKEditor
+*     serialises attribute values inside double-quoted HTML. These must be replaced
+*     with double-quotes before JSON.parse. Same applies to the 'lang' tag type.
+*
+* @param {Object} self - component_text_area instance
+* @param {number} i - zero-based index of this editor slot within data.entries
+* @param {Object} text_editor - service_ckeditor instance for this slot
+* @returns {Object} custom_events map with handler functions for each event name
 */
 const get_custom_events = (self, i, text_editor) => {
 
@@ -759,6 +1003,10 @@ const get_custom_events = (self, i, text_editor) => {
 		custom_events.click = (evt, options) => {
 			// use the observe property into ontology of the components to subscribe to this events
 			// img : click on img
+			// (!) CKEditor delivers the click as a synthetic options object, not a raw DOM Event.
+			// options.node_name identifies what was clicked ('img' for inline tag images,
+			// 'reference' for CKEditor reference plugin nodes). Only these two cases carry
+			// tag metadata; plain text clicks fall through to the else branch.
 			evt.preventDefault()
 			evt.stopPropagation()
 
@@ -777,6 +1025,8 @@ const get_custom_events = (self, i, text_editor) => {
 						// (!) Note publish 2 events: using 'id_base' to allow properties definition and
 						// 'self.id' for specific uses like tool indexation
 						// console.log("PUBLISH self.id:",self.id, self.id_base);
+						// id_base is shared across all instances of the same component tipo,
+						// so ontology-level tools receive every click for that component type.
 						event_manager.publish('click_tag_index_'+ self.id_base, {tag: tag_obj})
 						break;
 
@@ -1073,9 +1323,30 @@ const get_custom_events = (self, i, text_editor) => {
 
 /**
 * BUILD_NODE_TAG
-* Create a DOM node from tag info (type, state, label, data, id)
-* @param object view_data
-* @return HTMLElement node_tag
+* Convert a Dédalo tag descriptor object into an <img> DOM node for use inside
+* the CKEditor rich-text area.
+*
+* Dédalo embeds semantic tags (index, draw, geo, tc, page, person, note, lang, …)
+* as atomic <img> elements inside the editor HTML. This keeps the editor content
+* serialisable as plain HTML while preserving structured metadata in the element's
+* dataset attributes. service_ckeditor reads back these dataset properties when the
+* user interacts with a tag (click, selection) and when saving the editor value.
+*
+* The view_data shape expected:
+*   {
+*     src        : {string}  — SVG icon URL for the tag type (shown as the img visual)
+*     id         : {string}  — unique DOM id, e.g. 'indexIn_1' / 'geo_3'
+*     class_name : {string}  — CSS classes, typically the tag type + state
+*     type       : {string}  — Dédalo tag type ('indexIn', 'indexOut', 'tc', 'draw', …)
+*     tag_id     : {string}  — sequential identifier of this tag within the component value
+*     state      : {string}  — tag state code ('a' = inactive/draft, 'b' = active/published)
+*     label      : {string|number} — human-readable label shown as tooltip / tag overlay
+*     data       : {string}  — JSON string (with single-quote encoding) holding the tag
+*                              payload (locator, timecode value, language code, etc.)
+*   }
+*
+* @param {Object} view_data - tag descriptor object (see shape above)
+* @returns {HTMLElement} <img> node with data-* attributes populated from view_data
 */
 export const build_node_tag = function(view_data) {
 
@@ -1088,6 +1359,8 @@ export const build_node_tag = function(view_data) {
 	const label			= view_data.label
 	const data			= view_data.data
 
+	// dataset mirrors the tag descriptor so service_ckeditor can read back every
+	// field from the DOM without re-parsing the serialised editor HTML.
 	const dataset = {
 		type	: type,
 		tag_id	: tag_id,
@@ -1111,9 +1384,39 @@ export const build_node_tag = function(view_data) {
 
 /**
 * RENDER_NOTE
-* Creates a modal dialog with note options
-* @param object options
-* @return HTMLElement fragment
+* Open a modal dialog that displays (or allows deletion of) a linked note section.
+*
+* A 'note' tag in a text_area holds a locator pointing at a separate Dédalo section
+* (tipo defined in self.context.features.notes_section_tipo). This function:
+*   1. Parses the tag's serialised locator (JSON with single-quote encoding).
+*   2. Subscribes to the note section's publication-component change event so that the
+*      tag state (active 'b' / inactive 'a') is kept in sync when the user toggles
+*      the note's publication status inside the modal.
+*   3. Builds a modal with header (note number + creator), body (note section rendered
+*      in edit mode), and footer (date info + delete button).
+*   4. Lazy-loads the note section via get_instance() inside a spinner; shows a
+*      permissions error message if the current user cannot access the note.
+*
+* Tag state mapping (note publication status):
+*   'a' = not publishable (component_publication section_id === '2')
+*   'b' = publishable
+*
+* (!) The 'note_section' variable referenced inside fn_remove is declared in the
+*     outer scope of get_note_section's resolved Promise, but the Promise may not
+*     have resolved by the time fn_remove fires if the user clicks Delete very
+*     quickly. The code handles this with an explicit 'undefined' guard and an
+*     alert() call. The alert() is a known deficiency — document only, do not remove.
+*
+* (!) SEC-030: user-editable fields (created_by_user_name, section tipo) are written
+*     via textContent (not innerHTML) to prevent HTML injection.
+*
+* @param {Object} options - call options
+* @param {Object} options.self - component_text_area instance
+* @param {Object} options.text_editor - active service_ckeditor instance
+* @param {number} options.i - editor slot index
+* @param {Object} options.tag - view_tag descriptor (from service_ckeditor tag click event)
+* @returns {Promise<true>} resolves true after the modal has been constructed
+*   (note section load is asynchronous and continues inside the spinner callback)
 */
 const render_note = async function(options) {
 
@@ -1127,6 +1430,8 @@ const render_note = async function(options) {
 		const data_string		= view_tag.data
 		// convert the data_tag form string to json*-
 		// replace the ' to " stored in the html data to JSON "
+		// (!) CKEditor stores dataset attribute values inside double-quoted HTML attributes,
+		// so JSON is serialised with single-quotes to avoid attribute-escaping issues.
 		const data				= data_string.replace(/\'/g, '"')
 		const locator			= JSON.parse(data)
 		const note_section_id	= locator.section_id
@@ -1350,8 +1655,39 @@ const render_note = async function(options) {
 
 /**
 * RENDER_PERSONS_LIST
-* Creates a modal dialog with persons_list options
-* @return HTMLElement fragment|null
+* Open a modal listing the persons available for quick insertion as 'person' tags.
+*
+* The persons list is built from two sources that are merged:
+*   1. self.data.related_sections — persons from sections that are linked to this
+*      component's section (e.g. an interview recording linked to interviewer sections).
+*      Each related section is grouped under a section label heading.
+*   2. self section itself (self.section_tipo + self.section_id) — persons directly
+*      attached to the component's own section (e.g. the person being interviewed).
+*
+* Each person entry displays:
+*   - keyboard shortcut hint (Ctrl + sequential index k)
+*   - inline tag HTML preview (the icon image as it will appear in the editor)
+*   - full name
+*   - role label
+*
+* Clicking a person item calls text_editor.set_content(tag) to insert the person tag
+* at the current caret position.
+*
+* Returns null (without opening a modal) when:
+*   - ar_persons is falsy, empty, or undefined
+*   - the related_sections data is absent or contains no 'sections' entry
+*
+* (!) The condition `ar_persons.length === 0 || typeof(ar_persons)==='undefined'`
+*     checks undefined after a length access — if ar_persons were truly undefined the
+*     length access would throw first. The order is a no-op guard. Document only.
+*
+* (!) The inner loop uses `el.typo` (likely a typo for `el.type`) when looking up
+*     the 'sections' entry in data. Document only, do not fix.
+*
+* @param {Object} self - component_text_area instance
+* @param {Object} text_editor - active service_ckeditor instance
+* @param {number} i - editor slot index (not used internally; kept for signature parity)
+* @returns {true|null} true after modal is opened; null if no persons are available
 */
 const render_persons_list = function(self, text_editor, i) {
 
@@ -1386,6 +1722,7 @@ const render_persons_list = function(self, text_editor, i) {
 			const ref_datum	= self.data.related_sections || {}
 			const context	= ref_datum.context
 			const data		= ref_datum.data
+			// (!) 'el.typo' is likely a typo for 'el.type'; do not fix here.
 			const sections	= data.find(el => el.typo==='sections')
 
 			if(!sections){
@@ -1510,8 +1847,28 @@ const render_persons_list = function(self, text_editor, i) {
 
 /**
 * RENDER_LANGS_LIST
-* Creates a modal dialog with langs_list options
-* @return HTMLElement fragment
+* Open a modal listing the project's configured languages for quick lang-tag insertion.
+*
+* Each language from page_globals.dedalo_projects_default_langs is shown as a clickable
+* row displaying:
+*   - a lang icon (CSS-based, no separate image)
+*   - the language label (localised name)
+*   - keyboard shortcut hint (Ctrl+Shift + sequential index k)
+*
+* Clicking a language row:
+*   1. Constructs a 'lang' tag descriptor with the language code as data
+*      (e.g. data: ['es-ES']), using get_last_tag_id + 1 to assign a unique tag_id.
+*   2. Calls text_editor.set_content(tag) to insert the tag at the caret.
+*   3. Calls text_editor.set_dirty(true) to mark the editor as having unsaved changes.
+*   4. Closes the modal.
+*
+* Lang tag data format: an array with a single BCP-47 language code string, e.g. ['es-ES'].
+* The label shown in the editor uses the country/region part only (split('-')[1]).
+*
+* @param {Object} self - component_text_area instance
+* @param {Object} text_editor - active service_ckeditor instance
+* @param {number} i - editor slot index (not used internally; kept for signature parity)
+* @returns {true} always returns true after opening the modal
 */
 const render_langs_list = function(self, text_editor, i) {
 

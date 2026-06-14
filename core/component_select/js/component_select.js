@@ -4,6 +4,31 @@
 
 
 
+/**
+* COMPONENT_SELECT
+* Client-side model for the component_select component — a single-value
+* dropdown that stores a locator ({section_id, section_tipo}) pointing to a
+* record in a fixed set of allowed target sections.
+*
+* Responsibilities:
+* - Holds instance state (tipo, section_tipo, context, data, …).
+* - Delegates lifecycle (init/build/render/refresh/destroy) and persistence
+*   (save/update_data_value/change_value) to the shared component_common and
+*   common prototypes.
+* - Exposes render entry-points (edit/list/tm/search) implemented by the
+*   dedicated render_* sub-modules.
+* - Exports the stateless helpers `build_changed_data_item` and
+*   `handle_select_change` for use by all view sub-modules.
+*
+* Data shape (self.data):
+*   {
+*     entries  : [{id, section_id, section_tipo}, …],  // at most one entry for select
+*     datalist : [{label, value: {section_id, section_tipo}}, …]
+*   }
+*
+* @module component_select
+*/
+
 // imports
 	import {common, create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
@@ -15,37 +40,52 @@
 
 
 
+/**
+* COMPONENT_SELECT
+* Constructor for the component_select instance.
+* All properties are intentionally left uninitialized here (undefined) so that
+* component_common.prototype.init populates them from the options object.
+* The only exception is minimum_width_px, which carries a UI default that
+* view sub-modules may override.
+*/
 export const component_select = function(){
 
 	this.id
 
 	// element properties declare
-	this.model
-	this.tipo
-	this.section_tipo
-	this.section_id
-	this.mode
-	this.lang
+	this.model        // {string} structure model name, e.g. 'component_select'
+	this.tipo         // {string} component structure tipo, e.g. 'dd745'
+	this.section_tipo // {string} parent section tipo, e.g. 'oh1'
+	this.section_id   // {number|string} current record's section_id
+	this.mode         // {string} rendering mode: 'edit' | 'list' | 'tm' | 'search'
+	this.lang         // {string} active language code, e.g. 'lg-eng'
 
-	this.section_lang
-	this.context
-	this.data
-	this.parent
-	this.node
+	this.section_lang // {string} section-level language (may differ from component lang)
+	this.context      // {Object} server-side context: properties, tools, permissions, view, etc.
+	this.data         // {Object} component data: entries array + datalist for option rendering
+	this.parent       // {string} tipo of the structural parent (section group, portal, etc.)
+	this.node         // {HTMLElement|null} the component's root DOM node once rendered
 
-	this.tools
+	this.tools        // {Array} tool instances attached to this component
 
-	this.datum
+	this.datum        // {Object|null} full datum payload including dependent data (portals, etc.)
 
 	// ui
-	this.minimum_width_px = 120 // integer pixels
+	this.minimum_width_px = 120 // integer pixels — minimum CSS width applied to the select wrapper
 }//end component_select
 
 
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend component_select with shared lifecycle, persistence, and render
+* prototypes. No logic is defined here — these assignments wire in the
+* canonical implementations from component_common and common so that all
+* Dédalo components behave uniformly.
+*
+* Commented-out lines (build_rqo / build_rqo_show) are preserved as future
+* override points: when component_select needs custom request-query-object
+* construction, uncomment and implement locally.
 */
 	// prototypes assign
 	// lifecycle
@@ -64,9 +104,9 @@ export const component_select = function(){
 	// component_select.prototype.build_rqo			= common.prototype.build_rqo
 	// component_select.prototype.build_rqo_show	= common.prototype.build_rqo_show
 
-	// render
+	// render — delegates to the matching render_* sub-module
 	component_select.prototype.list					= render_list_component_select.prototype.list
-	component_select.prototype.tm					= render_list_component_select.prototype.list
+	component_select.prototype.tm					= render_list_component_select.prototype.list // tm reuses the list renderer
 	component_select.prototype.edit					= render_edit_component_select.prototype.edit
 	component_select.prototype.search				= render_search_component_select.prototype.search
 
@@ -76,19 +116,28 @@ export const component_select = function(){
 
 /**
 * ADD_NEW_ELEMENT
-* Called from button add
-* Create an new record in the target section and add the result locator as value to current component
-* (Set default project too based on current user privileges and assigned projects)
-* @verified 07-09-2023 Paco
-* @param string target_section_tipo
-* 	Like: rsc197
-* @return bool
+* Creates a new record in the target section and stores the returned locator
+* as the component's value. Triggered by the "Add" toolbar button.
+*
+* Because component_select is single-value, any existing entry is cleared via
+* a 'remove' save before the 'add_new_element' save is issued. The server
+* assigns the new record's section_id and returns it inside api_response.result;
+* the component is then refreshed in-place using that response as a pre-fetched
+* API reply so no extra round-trip is needed.
+*
+* Default project assignment (based on user privileges) is handled server-side.
+*
+* @param {string} target_section_tipo - Structure tipo of the section in which
+*   to create the new record, e.g. 'rsc197'.
+* @returns {Promise<boolean>} true on success; false when either the pre-removal
+*   save or the creation save fails.
 */
 component_select.prototype.add_new_element = async function(target_section_tipo) {
 
 	const self = this
 
 	// check current value. LImit to one
+	// (component_select is single-value: remove any pre-existing entry before adding)
 		const current_data	= self.data || {}
 		const entries		= current_data.entries || []
 		if (entries.length>0) {
@@ -114,7 +163,7 @@ component_select.prototype.add_new_element = async function(target_section_tipo)
 				}
 				if (api_response.response===false) {
 					console.error('Error removing previous value. api_response:', api_response);
-					alert("Error on remove previous value");
+					alert("Error on remove previous value"); // (!) alert used intentionally for user-facing blocking error
 					return false;
 				}
 		}
@@ -123,6 +172,7 @@ component_select.prototype.add_new_element = async function(target_section_tipo)
 		const source = create_source(self, null)
 
 	// data
+	// pass target_section_tipo as the value so the server knows which section to create in
 		const data = clone(self.data)
 		data.changed_data = [{
 			action	: 'add_new_element',
@@ -169,11 +219,29 @@ component_select.prototype.add_new_element = async function(target_section_tipo)
 
 /**
 * BUILD_CHANGED_DATA_ITEM
-* Parses the select value and builds a frozen changed_data_item object.
-* Used by edit views (via handle_select_change) and search view (directly).
-* @param HTMLSelectElement select
-* @param int|null id
-* @return object {changed_data_item, parsed_value}
+* Parses the current value of a <select> element and constructs the
+* changed_data_item descriptor used by the persistence layer.
+*
+* The select option values are JSON-stringified locators
+* ({section_id, section_tipo}); the empty first option has value ''.
+* When the empty option is selected, parsed_value is null and the action
+* becomes 'remove', telling the server to delete the stored entry.
+*
+* The returned changed_data_item is frozen to prevent accidental mutation
+* before it is handed off to set_changed_data / change_value.
+*
+* Exported so that render_search_component_select can call it directly
+* (the search view builds the item inline rather than going through
+* handle_select_change).
+*
+* @param {HTMLSelectElement} select - The <select> DOM element whose current
+*   .value is a JSON-stringified locator or an empty string.
+* @param {number|null} id - The entry id from data.entries[i].id, or null
+*   when the component had no prior value. The id is injected into
+*   parsed_value so the server can locate the existing database row.
+* @returns {Object} An object with two keys:
+*   - changed_data_item {Object} — frozen; safe to pass to save routines.
+*   - parsed_value {Object|null} — the decoded locator, or null for empty.
 */
 export const build_changed_data_item = function(select, id=null) {
 
@@ -183,11 +251,13 @@ export const build_changed_data_item = function(select, id=null) {
 		: null
 
 	// add id to parsed_value if available
+	// (needed so the server can UPDATE the existing row rather than INSERT)
 	if (parsed_value && id) {
 		parsed_value.id = id
 	}
 
 	// build changed_data_item
+	// action is 'remove' when the user picks the empty option (parsed_value === null)
 	const changed_data_item = Object.freeze({
 		action	: (parsed_value != null) ? 'update' : 'remove',
 		id		: id,
@@ -204,13 +274,28 @@ export const build_changed_data_item = function(select, id=null) {
 
 /**
 * HANDLE_SELECT_CHANGE
-* Common change handler for component_select across all edit views.
-* Parses the select value, builds changed_data_item, sets changed_data,
-* and saves via change_value. Returns parsed_value for view-specific hooks.
-* @param object self - Component instance
-* @param HTMLSelectElement select - The select DOM element
-* @param int|null id - Entry id from data
-* @return object|null parsed_value - The parsed locator or null
+* Shared change handler wired to the <select> element's 'change' event in
+* all edit views (view_default_edit_select, view_line_edit_select, …).
+*
+* Flow:
+*   1. Resolves the entry id from live instance data rather than a stale
+*      closure, so re-selections after the first save carry the correct row id.
+*   2. Delegates parsing and item construction to build_changed_data_item.
+*   3. Registers the changed item on the instance via set_changed_data.
+*   4. Immediately persists the change with change_value (refresh: false avoids
+*      a full DOM rebuild on every keystroke; remove_dialog: false suppresses the
+*      unsaved-changes prompt that would otherwise appear on navigation).
+*   5. Returns parsed_value so callers can update derived UI (e.g. a linked
+*      preview node) without re-parsing the select value a second time.
+*
+* @param {Object} self - The component_select instance.
+* @param {HTMLSelectElement} select - The <select> DOM element that fired the
+*   change event.
+* @param {number|null} id - Entry id captured at render time; may be null when
+*   the component had no prior value. The function re-reads the live id from
+*   self.data.entries[0].id to handle the post-first-save case.
+* @returns {Promise<Object|null>} The parsed locator object
+*   ({section_id, section_tipo}), or null when the empty option was chosen.
 */
 export const handle_select_change = async function(self, select, id=null) {
 

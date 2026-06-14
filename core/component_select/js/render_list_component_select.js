@@ -13,7 +13,18 @@
 
 /**
 * RENDER_LIST_COMPONENT_SELECT
-* Manages the component's logic and appearance in client side
+* View router for component_select in list and time-machine (tm) modes.
+*
+* Acts as the prototype host for the `list` method that is assigned to
+* component_select.prototype.list and component_select.prototype.tm in
+* component_select.js. The constructor itself is never instantiated; it is
+* used purely so that the prototype method can be declared and later copied
+* onto the component class.
+*
+* Supported views (resolved from self.context.view):
+*   - 'mini'    → view_mini_list_select   (compact; used by autocomplete/datalist services)
+*   - 'text'    → view_text_list_select   (plain text span; used in print/export contexts)
+*   - 'default' → view_default_list_select (standard list cell with click-to-edit modal)
 */
 export const render_list_component_select = function() {
 
@@ -24,8 +35,17 @@ export const render_list_component_select = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @return HTMLElement wrapper
+* Render the component_select cell for list (and tm) mode.
+*
+* Reads `self.context.view` to select the appropriate view module, then
+* delegates rendering entirely to that module's static `render` function.
+* Falls through to 'default' for any unrecognised view string.
+*
+* Called via component_select.prototype.list and component_select.prototype.tm
+* (both point to this method — see component_select.js prototype assignments).
+*
+* @param {Object} options - Render options forwarded verbatim to the view module
+* @returns {Promise<HTMLElement>} The wrapper element produced by the chosen view
 */
 render_list_component_select.prototype.list = async function(options) {
 

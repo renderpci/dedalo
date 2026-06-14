@@ -1,6 +1,46 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
+// (!) SHOW_DEVELOPER is used in this module (lines ~149, ~187) but is NOT listed in the
+//     /*global*/ directive above. Depending on the ESLint config, this may produce a no-undef
+//     warning. SHOW_DEVELOPER is defined in core/common/js/environment.js.php and declared as
+//     global in other modules (e.g. common.js, util.js) — flag for the /*global*/ maintainer.
+
+
+
+/**
+* COMPONENT_TEXT_AREA
+* Rich-text component for multi-language, multi-paragraph text with inline annotation support.
+*
+* Wraps a CKEditor 5 instance (via service_ckeditor) and extends component_common for
+* standard lifecycle (init → build → render → destroy) and change-tracking (change_value,
+* set_changed_data, save). The component stores its data as an array of "entries", each an
+* object {lang, value} where `value` is Dédalo's internal tag-markup string.
+*
+* Tag markup uses bracket-delimited tokens embedded in otherwise HTML text, e.g.:
+*   [index-n-1-label_in_1-data::data]...[/index-n-1-label_in_1-data::data]
+*   [TC_00:15:12:01.000]                   (timecode)
+*   [geo-n-3-3-data::data]                 (geolocation anchor)
+* These tokens are converted to/from <img> placeholder nodes in the editor
+* by tr.add_tag_img_on_the_fly() (tags_to_html) and preprocess_text_to_save() (html→tags).
+*
+* Annotation types supported:
+*   index (fragment pairs), tc / tc2 (timecodes), svg, draw, geo, page, person, note, lang,
+*   reference (cross-section links).
+*
+* Render modes:  edit · list · tm · search · render_reference
+* Views (edit):  default · mini · line · print · html_text
+*
+* Key properties set at init:
+*   - service_text_editor        — the service_ckeditor constructor (set once, not per-instance)
+*   - service_text_editor_instance[] — live CKEditor service instances (keyed by int)
+*   - text_editor[]              — alias array; same instances (used in render helpers)
+*   - auto_init_editor           — whether the editor opens immediately on render
+*   - show_interface             — UI capability flags (read_only, button_create_fragment, …)
+*   - q_split                    — search option: split query terms for full-text matching
+*
+* @exports component_text_area
+*/
 
 
 
@@ -25,6 +65,11 @@
 
 
 
+/**
+* COMPONENT_TEXT_AREA
+* Constructor — declares instance properties; all methods live on the prototype.
+* Instances are created by component_common.prototype.init via the component factory.
+*/
 export const component_text_area = function(){
 
 	// element properties declare
@@ -92,9 +137,25 @@ export const component_text_area = function(){
 
 /**
 * INIT
-* @param object options
-* @return bool
-* 	Promise resolve bool
+* Lifecycle entry point. Calls the generic component_common init, then wires up
+* all event subscriptions specific to this component's annotation workflow.
+*
+* Event channels subscribed (all scoped to self.id or self.id_base):
+*   create_fragment_    — user clicks "Create fragment" button; wraps selection in index tags
+*   click_tag_index_    — user clicks an index-tag <img>; activates component and scrolls editor
+*   click_tag_reference_ — user clicks a reference-tag <img>; same activate-and-scroll flow
+*   text_selection_     — CKEditor fires on every selection change; shows/hides create_fragment btn
+*   create_geo_tag_     — external caller requests a new geo tag be inserted
+*   build_tag_          — external caller (e.g. tool_indexation) requests a generic new tag
+*   deactivate_component — fires globally; used here only for debug logging
+*
+* Side effects:
+*   - Sets self.service_text_editor to the service_ckeditor constructor.
+*   - Forces show_interface.read_only when permissions < 2.
+*   - Applies options.auto_init_editor (if provided and permissions allow).
+*
+* @param {Object} options - Init options (auto_init_editor, plus those forwarded to component_common)
+* @returns {Promise<boolean>} Resolves with the result of component_common.prototype.init
 */
 component_text_area.prototype.init = async function(options) {
 
@@ -364,9 +425,16 @@ component_text_area.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param object options
-* @return bool common_build
-* 	Promise resolve bool
+* Lifecycle step that follows init. Resolves auto_init_editor and ensures
+* context.features is initialised to an empty object when absent.
+*
+* auto_init_editor resolution priority:
+*   1. Value already set on self (e.g. via options.auto_init_editor in init)
+*   2. self.context.properties.auto_init_editor (Ontology-configured default)
+*   3. false (hard default — editor is activated manually by the user)
+*
+* @param {Object} options - Build options forwarded to component_common.prototype.build
+* @returns {Promise<boolean>} Resolves with the result of component_common.prototype.build
 */
 component_text_area.prototype.build = async function(options) {
 
@@ -397,11 +465,17 @@ component_text_area.prototype.build = async function(options) {
 * DESTROY
 * Force service_ckeditor instances to destroy editors (ckeditor instance)
 * and later execute a standard self destroy from common
-* @param bool delete_self=true
-* @param bool delete_dependencies=false
-* @param bool remove_dom=false
-* @return bool
-* 	Promise resolve bool
+*
+* CKEditor instances must be explicitly destroyed before unmounting their DOM
+* to release internal event listeners and avoid memory leaks. This override
+* iterates self.text_editor[] and calls service_ckeditor.destroy() on each,
+* then delegates to the standard common.prototype.destroy for DOM cleanup and
+* events_token unsubscription.
+*
+* @param {boolean} [delete_self=true] - Whether to delete the instance from the registry
+* @param {boolean} [delete_dependencies=false] - Whether to destroy dependent child components
+* @param {boolean} [remove_dom=false] - Whether to remove self.node from the DOM
+* @returns {Promise<boolean>} Resolves with the result of common.prototype.destroy
 */
 component_text_area.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
 
@@ -429,8 +503,14 @@ component_text_area.prototype.destroy = async function(delete_self=true, delete_
 * TAGS_TO_HTML
 * Parses Dédalo server side tags to html tags
 * e.g. '[TC_00:15:12:01.000]' => '<img id="[TC_00:00:25.684_TC]" class="tc" src="" ... />'
-* @param string value
-* @return string html
+*
+* Delegates the token-to-img conversion to tr.add_tag_img_on_the_fly() and then
+* applies a legacy path fix for old data that embedded '/inc/btn.php/' image paths.
+* The fix rewrites those paths to the current component_text_area tag endpoint.
+*
+* @param {string} value - Raw stored text value containing Dédalo bracket tokens
+* @returns {string|null} HTML string with bracket tokens replaced by <img> placeholders,
+*   or null when value is falsy
 */
 component_text_area.prototype.tags_to_html = function(value) {
 
@@ -459,9 +539,16 @@ component_text_area.prototype.tags_to_html = function(value) {
 /**
 * SET_VALUE
 * Set individual value based on element key
-* @param inte key 				// int  : defined in value
-* @param string string_value 	// string : value from active text editor
-* @return promise
+*
+* Constructs a change_value call with a frozen changed_data item and triggers
+* a component refresh. Unlike save_value, this method does NOT preprocess
+* (i.e. does not convert HTML to Dédalo bracket tokens) — it stores the
+* string_value verbatim. Use save_value when the source is the live CKEditor
+* HTML output.
+*
+* @param {number} key - Entry index (corresponds to the language slot in data.entries)
+* @param {string} string_value - Raw string value to store (already in Dédalo tag format)
+* @returns {Promise<*>} Result of component_common.prototype.change_value
 */
 component_text_area.prototype.set_value = function(key, string_value) {
 
@@ -491,11 +578,16 @@ component_text_area.prototype.set_value = function(key, string_value) {
 /**
 * SAVE_VALUE
 * Saves individual value based on element key
-* @param int key
-*	defined in container dataset key
-* @param string value
-*	value from active text editor
-* @return promise
+*
+* Preprocesses the HTML from the CKEditor (converting <img> placeholders back
+* to Dédalo bracket tokens, stripping temporary UI elements) via
+* preprocess_text_to_save(), then persists the result through change_value
+* with refresh:false (avoids re-rendering the component after save).
+* Resets self.is_data_changed to false on success.
+*
+* @param {number} key - Entry index; corresponds to the language slot in data.entries
+* @param {string} string_value - Raw HTML from the CKEditor (may include <img> tag-nodes)
+* @returns {Promise<*>} Result of change_value (which calls the Dédalo API save action)
 */
 component_text_area.prototype.save_value = async function(key, string_value) {
 
@@ -539,8 +631,15 @@ component_text_area.prototype.save_value = async function(key, string_value) {
 /**
 * SAVE_EDITOR
 * Order text_editor[key] to save (only if state is dirty)
-* @param int key = 0
-* @return bool result
+*
+* Delegates to the underlying service_ckeditor_instance[key].save() method.
+* The service is responsible for checking its own dirty state before POSTing.
+*
+* (!) Note: concatenation error on the error log string — uses `.` (PHP-style) instead
+*     of `+` (JS) when building the error message; this is a pre-existing bug, do NOT fix here.
+*
+* @param {number} [key=0] - Index into service_text_editor_instance (normally always 0)
+* @returns {Promise<boolean>} Resolves with the service save result, or false on missing instance
 */
 component_text_area.prototype.save_editor = async function(key=0) {
 
@@ -563,13 +662,18 @@ component_text_area.prototype.save_editor = async function(key=0) {
 /**
 * SAVE
 * 	Alias of component_common.prototype.save with component specific added actions
-* @param object changed_data = undefined
+*
+* Resolves the changed_data to use: the caller may pass an explicit changed_data
+* object (e.g. from a toolbar save button), otherwise the pending changed_data
+* already set on self.data.changed_data (populated by update_changed_data) is used.
+*
+* @param {Object} [changed_data] - Optional explicit changed_data payload:
 * 	{
 * 		action : "update",
 * 		key : 0,
 * 		value : "XXX"
 * 	}
-* @return promise save_promise
+* @returns {Promise<*>} Resolves with the result of component_common.prototype.save
 */
 component_text_area.prototype.save = async function(changed_data = undefined) {
 
@@ -593,8 +697,27 @@ component_text_area.prototype.save = async function(changed_data = undefined) {
 * PREPROCESS_TEXT_TO_SAVE
 * Replace <section> tags to internal Dédalo tags
 * Unify text content format
-* @param string html_value
-* @return string
+*
+* Takes the raw HTML produced by CKEditor and converts it to the Dédalo internal
+* storage format before persisting. The transformation pipeline is:
+*
+* 1. Clone the HTML into a detached <div> (avoids mutating live DOM nodes).
+* 2. Convert <reference> custom elements → bracket tokens
+*    e.g. <reference data-tag_id="2" ...>text</reference>
+*      → [reference-n-2--data::data]text[/reference-n-2--data::data]
+* 3. If context.legacy_model === 'component_html_text': return innerHTML as-is (no img conversion).
+* 4. Convert <img> placeholder nodes (data-type set) → bracket tokens via build_data_tag.
+*    SVG images are renumbered on the fly to avoid duplicate tag_id collisions.
+* 5. Strip ephemeral UI elements: <h2> (TOC headings), <header> (TOC container),
+*    <caret> (fake caret), and elements with data-mce-bogus="1" (TinyMCE leftovers).
+* 6. Replace bare <br>/<br/> elements with </p><p> paragraph boundaries.
+*
+* (!) querySelectorAll is used for img tags (instead of getElementsByTagName) because
+*     it returns a static NodeList — safe to iterate forward even when nodes are removed.
+*     Reference elements use getElementsByTagName and iterate in reverse for the same reason.
+*
+* @param {string} html_value - Raw HTML string from the CKEditor getData() call
+* @returns {Promise<string>} Processed Dédalo tag-markup string ready for API save
 */
 component_text_area.prototype.preprocess_text_to_save = async function(html_value) {
 
@@ -739,9 +862,18 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 
 /**
 * UPDATE_CHANGED_DATA
+* Reads the current CKEditor HTML, preprocesses it to Dédalo bracket-token format,
+* and writes the result to self.data.changed_data via set_changed_data.
+*
+* This is the "mark dirty" path: called by service_editor.set_dirty whenever the
+* editor content changes, so the pending save payload is always up to date before
+* any auto-save or manual save fires.
+*
 * @see service_editor.set_dirty
-* @param object options
-* @return void
+* @param {Object} options
+* @param {Object} options.text_editor - The service_ckeditor instance that changed
+* @param {number} options.key - Entry index (language slot) that was edited
+* @returns {void}
 */
 component_text_area.prototype.update_changed_data = function (options) {
 
@@ -782,8 +914,15 @@ component_text_area.prototype.update_changed_data = function (options) {
 * CHANGE_DATA_HANDLER
 * Unified changeData event handler for text editor changes across views.
 * Iterates over editor changes and publishes tag-specific events.
-* @param array options - Array of change objects from editor
-* @return void
+*
+* When CKEditor reports a batch of data-model changes (e.g. an attribute update
+* on a tag widget), this handler re-publishes each change as a named event
+* 'editor_tag_<type>_change_<id_base>' so that tool panels (indexation, notes, geo)
+* can react independently to the specific tag type that changed.
+*
+* @param {Array} options - Array of change objects from the CKEditor change:data event,
+*   each with at least { type: string } identifying the changed annotation type
+* @returns {void}
 */
 component_text_area.prototype.change_data_handler = function(options) {
 
@@ -808,8 +947,15 @@ component_text_area.prototype.change_data_handler = function(options) {
 
 /**
 * UNWRAP_ELEMENT
-* @param HTMLElement el
-* @return bool
+* Replaces an element in the DOM with its own child nodes, effectively stripping
+* the wrapper element while preserving its content.
+*
+* Used during preprocess_text_to_save to remove custom element wrappers (<reference>,
+* <img>) after their content has been converted to Dédalo bracket tokens and placed
+* as innerHTML — the converted token string must live directly in the parent text node.
+*
+* @param {HTMLElement} el - The element to unwrap; must have a parentNode
+* @returns {boolean} Always true
 */
 const unwrap_element = function(el) {
 
@@ -831,9 +977,22 @@ const unwrap_element = function(el) {
 * UPDATE_TAG
 * Edit selected tag adding or modifying the dataset and image url
 * This method has been unified to allow to use different services in the same way
-* @param object options
-* @return promise
-* 	resolve bool (Unified component_text_area change-tag method. This method has been unified to allow to use different services in the same way (service_ckeditor, service_tinymce))
+*
+* Converts a type string that may carry an 'In'/'Out' suffix into a [typeIn, typeOut]
+* pair so the underlying service can update both bracket endpoints atomically.
+* Types without a directional suffix (e.g. 'tc', 'geo') are passed as a single-element array.
+*
+* (!) Uses alert() to notify the user of missing options — retained from the original
+*     code; alert() is not the preferred notification path (use event_manager 'notification'
+*     instead). Do NOT change this — flag only.
+*
+* @param {Object} options - Tag update descriptor
+* @param {string} options.type - Annotation type, e.g. 'indexIn', 'tc', 'geo'
+* @param {string|number} options.tag_id - Numeric identifier of the tag to update
+* @param {Object} options.new_data_obj - New dataset values to write to the tag node
+* @param {number} [options.key=0] - Editor instance index
+* @returns {Promise<boolean>} Resolves with the service update_tag result,
+*   or false when options is undefined
 */
 component_text_area.prototype.update_tag = async function(options) {
 
@@ -883,14 +1042,26 @@ component_text_area.prototype.update_tag = async function(options) {
 /**
 * BUILD_DATA_TAG
 * Unified way of create Dedalo internal custom tags from JAVASCRIPT
-* i.e. '[index-d-7--data::data][/index-d-7--data::data]'
-* @param string type
-* @param string|int tag_id
-* @param string state
-* @param string label
-* @param string data
+* i.e. '[index-d-7--data::data]'
 *
-* @return string tag
+* Produces the Dédalo bracket-token string for a given annotation type:
+*   - Opening tags:  [type_name-state-tag_id-safe_label-data_string]
+*   - Closing tags:  [/type_name-state-tag_id-safe_label-data_string]
+*   - Timecode (tc): the raw tag_id string (which already embeds the TC brackets)
+*
+* Labels are truncated to 22 characters and hyphens replaced with underscores
+* to avoid ambiguity with the hyphen delimiter in the token format.
+*
+* (!) Uses alert() on invalid type — retained from original; flag only.
+*
+* @param {string} type - Annotation type, must be one of:
+*   'indexIn','indexOut','tc','tc2','svg','draw','geo','page','person','note','lang',
+*   'referenceIn','referenceOut'
+* @param {string|number} tag_id - Numeric ID of the tag (or the full TC string for timecodes)
+* @param {string} state - Tag state flag, typically 'n' (normal) or 'a' (active)
+* @param {string} label - Human-readable label; truncated to 22 chars, hyphens → underscores
+* @param {string|null} data - Optional JSON-like data payload; wrapped as 'data:...:data'
+* @returns {string|boolean} The bracket-token string, or false on invalid type
 */
 component_text_area.prototype.build_data_tag = function(type, tag_id, state, label, data) {
 
@@ -937,9 +1108,33 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 /**
 * BUILD_VIEW_TAG_OBJ
 * Create a view object from tag info (type, state, label, data, id)
-* @param object data_tag
-* @param int tag_id
-* @return object view_tag_obj
+*
+* Converts the parsed server-side tag descriptor into the view-layer tag object
+* consumed by service_ckeditor.set_content() / update_tag() to insert or update
+* an <img> placeholder node in the editor.
+*
+* The returned object encodes all attributes needed to reconstruct the bracket token
+* on save, plus the src URL for the tag thumbnail image served by the tag endpoint
+* (core/component_text_area/tag/?id=...).
+*
+* Timecode ('tc') tags have a special format — their tag_id already encodes the full
+* [TC_HH:MM:SS.mmm_TC] string so the src/id fields differ from all other types.
+*
+* @param {Object} data_tag - Parsed tag descriptor from the server data
+* @param {string} data_tag.type - Annotation type (e.g. 'indexIn', 'geo', 'tc')
+* @param {string} data_tag.state - State flag ('n', 'a', …)
+* @param {string} data_tag.label - Display label
+* @param {Object|null} [data_tag.data] - Optional structured data payload
+* @param {string|number} tag_id - The numeric tag identifier
+* @returns {Object} view_tag_obj with properties:
+*   {string} src        - URL for the tag image endpoint
+*   {string} id         - HTML id attribute value
+*   {string} class_name - CSS class for the <img> node
+*   {string} type       - Original type (with 'In'/'Out' suffix if applicable)
+*   {string} tag_id     - String form of the id (or TC string for timecodes)
+*   {string} state      - State flag
+*   {string} label      - Display label
+*   {string|null} data  - Serialised data string (single-quoted JSON for HTML5 dataset)
 */
 component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 
@@ -999,8 +1194,17 @@ component_text_area.prototype.build_view_tag_obj = function(data_tag, tag_id) {
 
 /**
 * TAG_DATA_OBJECT_TO_STRING
-* @param object data
-* @return string data_string
+* Serialises a tag data object to a string safe for HTML5 dataset attributes.
+*
+* JSON.stringify produces double-quoted keys/values. HTML5 data-* attributes that
+* themselves live inside a double-quoted HTML attribute would break the markup, so
+* all double-quote characters are replaced with single-quotes after serialisation.
+*
+* (!) This means the result is NOT valid JSON — it cannot be parsed with JSON.parse
+*     directly. Callers that later need to re-parse it must first convert ' → ".
+*
+* @param {Object} data - Tag payload object to serialise
+* @returns {string|null} Single-quote JSON string, or null when data is not an object
 */
 component_text_area.prototype.tag_data_object_to_string = function(data) {
 
@@ -1024,11 +1228,15 @@ component_text_area.prototype.tag_data_object_to_string = function(data) {
 /**
 * GET_LAST_TAG_ID
 * Calculates all current text_editor editor tags id of given type (ex. 'reference') and get last used id
-* @param tag_type
-*	Class name of image searched like 'geo'
-* @param object text_editor
 *
-* @return int tag_id
+* Delegates to service_ckeditor_instance.get_last_tag_id which inspects the live
+* editor model for all existing tag widgets of the given type and returns the highest
+* numeric id found, or 0 when no tags of that type exist yet.
+* Used before creating a new tag to determine the next sequential id.
+*
+* @param {string} tag_type - CSS class / annotation type name, e.g. 'index', 'geo', 'reference'
+* @param {Object} text_editor - service_ckeditor instance to inspect
+* @returns {number} Highest existing tag_id for the given type, or 0
 */
 component_text_area.prototype.get_last_tag_id = function(tag_type, text_editor) {
 
@@ -1047,9 +1255,20 @@ component_text_area.prototype.get_last_tag_id = function(tag_type, text_editor) 
 /**
 * CREATE FRAGMENT (using index tags)
 * Create the images (with the tags) at the beginning and end of the selected text
-* @param int key
-* @param object text_editor
-* @return bool|int tag_id
+*
+* Wraps the current editor text selection with a pair of index tag <img> nodes
+* ([indexIn] / [indexOut]) numbered sequentially after the last existing index tag.
+* After insertion, fires a click on the newly inserted opening tag node so that
+* the indexation panel activates immediately.
+*
+* Returns false (instead of a tag_id) in the following cases:
+*   - text_editor is missing
+*   - current selection is empty (nothing to wrap)
+*   - wrap_selection_with_tags fails (range_clon is null/falsy)
+*
+* @param {number} key - Editor instance index (currently always 0)
+* @param {Object} text_editor - service_ckeditor instance owning the active selection
+* @returns {number|boolean} The new tag_id (integer ≥ 1) on success, or false on failure
 */
 component_text_area.prototype.create_fragment = function(key, text_editor) {
 
@@ -1115,14 +1334,16 @@ component_text_area.prototype.create_fragment = function(key, text_editor) {
 
 /**
 * DELETE_TAG
-* @param string tag_id
-* 	e.g. '2'
-* @param string type
-* 	e.g. 'index'
-* @param int key = 0
-* 	editors key (default zero)
-* @return promise
-* 	resolve object response
+* Calls the server API to delete the metadata for a given annotation tag, then
+* removes the corresponding <img> node(s) from the CKEditor model.
+*
+* For 'index' tags the server deletes both the In and Out records; the client
+* mirror maps 'index' → ['indexIn','indexOut'] for the service delete call.
+*
+* @param {string} tag_id - Numeric id of the tag to delete, e.g. '2'
+* @param {string} type - Annotation type without In/Out suffix, e.g. 'index', 'geo'
+* @param {number} [key=0] - Editor instance index
+* @returns {Promise<Object>} Resolves with the raw api_response from the server
 */
 component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 
@@ -1166,12 +1387,19 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 
 /**
 * GET_TAGS_INFO
-* @param array type
-* 	e.g. ['index']
-* @param int key = 0
-* 	editors key (default zero)
-* @return promise
-* 	resolve object response
+* Fetches server-side metadata for all tags of the specified type(s) in this
+* component's current record (section_tipo + section_id + tipo + lang).
+*
+* Used by annotation panels (indexation, notes, geo) to load the structured data
+* associated with each tag_id so the panel can render details and allow editing.
+*
+* (!) The Promise does not resolve when api_response.result is false — callers
+*     that depend on a resolved value may hang if the server returns an error.
+*     This is a pre-existing design; do NOT change.
+*
+* @param {Array<string>} ar_type - List of annotation types to retrieve, e.g. ['index']
+* @param {number} [key=0] - Entry key (language slot) to query
+* @returns {Promise<*>} Resolves with api_response.result (the tags metadata array/object)
 */
 component_text_area.prototype.get_tags_info = function(ar_type, key=0) {
 
@@ -1208,12 +1436,25 @@ component_text_area.prototype.get_tags_info = function(ar_type, key=0) {
 
 /**
 * UPDATED_LAYER_DATA
-* @param object options
-* {
-* 	type // type of the layer, it's equivalent to tag.type ('geo', 'svg', ...)
-* 	layer_id // number of the layer, it's equivalent to tag.tag_id ex: 2
-* }
-* @return void
+* Synchronises the editor when a geo/svg layer tool reports that a layer has been
+* updated (e.g. a new polygon drawn). If the corresponding tag_id does not already
+* exist in the editor, a new tag <img> node is inserted at the current caret.
+*
+* The tag_id is stringified from options.layer.layer_id before lookup/construction
+* because the editor model stores all tag_ids as strings.
+*
+* (!) `inserted_tag` is declared twice with `const` in the same function scope —
+*     once in the outer scope (from get_view_tag) and once inside the if-block
+*     (from set_content). This is a pre-existing issue; the inner const shadows
+*     but does not conflict because the outer is not used inside the block.
+*     Do NOT change.
+*
+* @param {Object} options - Update descriptor
+* @param {Object} options.caller - The tool/component that triggered the update
+* @param {Object} options.layer - Layer info object
+* @param {string} options.layer.type - Annotation type, e.g. 'geo', 'svg'
+* @param {number} options.layer.layer_id - Numeric layer/tag id
+* @returns {void}
 */
 component_text_area.prototype.updated_layer_data = function(options) {
 
@@ -1258,12 +1499,19 @@ component_text_area.prototype.updated_layer_data = function(options) {
 * ADD_COMPONENT_HISTORY_NOTE
 * Creates a new record in matrix_notes and set 'code' field value with received
 * matrix_id from time_machine
-* @param object options
-* 	{
-*		matrix_id			: int matrix_id,
-* 		notes_section_tipo	: string notes_section_tipo
-*   }
-* @return string|null new_section_id
+*
+* Enforces an ownership rule: only the user who originally created the time-machine
+* row (identified by self.caller.locator.user_id) may attach a note. If the current
+* page_globals.user_id differs, a 'warning' notification is published and null is returned.
+*
+* On success:
+* 1. Creates a new section record in notes_section_tipo via 'create' API action.
+* 2. Saves the matrix_id into the code component (hard-coded tipo 'rsc835') of that record.
+*
+* @param {Object} options - Note creation options
+* @param {number} options.matrix_id - The time-machine matrix record id to link
+* @param {string} options.notes_section_tipo - Section tipo of the notes matrix (e.g. 'rsc834')
+* @returns {Promise<string|null>} The new section_id string on success, or null on any failure
 */
 component_text_area.prototype.add_component_history_note = async function(options) {
 
@@ -1373,12 +1621,28 @@ component_text_area.prototype.add_component_history_note = async function(option
 /**
 * BUILD_TAG
 * Build a new annotation when user clicks on text editor button
-* @param object options
-* {
-* 	caller: object (component_text_area_instance),
-* 	text_editor: object (service_ckeditor instance)
-* }
-* @return void
+*
+* Responds to a toolbar button press (typically F2 keybinding or toolbar icon) by
+* publishing 'key_up_f2_<id_base>' and collecting all subscriber responses. Each
+* response is a data_tag descriptor from an annotation panel that is currently
+* listening (e.g. tool_indexation, component_geolocation).
+*
+* For each response the method:
+*   - Calculates the next sequential tag_id.
+*   - Dispatches to type-specific creation logic via a switch:
+*       'draw'  → render_layer_selector (callback: create_draw_tag)
+*       'geo'   → render_layer_selector (callback: create_geo_tag)
+*       'page'  → render_page_selector (modal)
+*       default → build_view_tag_obj + text_editor.set_content
+*
+* (!) options parameter here is the raw event options from the build_tag_ event,
+*     not a structured object. The caller (component_text_area instance) is extracted
+*     as options.caller.
+*
+* @param {Object} options - Event options
+* @param {Object} options.caller - The component_text_area instance that owns the editor
+* @param {Object} options.text_editor - The service_ckeditor instance to insert into
+* @returns {void}
 */
 component_text_area.prototype.build_tag = function(options) {
 
@@ -1466,8 +1730,14 @@ component_text_area.prototype.build_tag = function(options) {
 	/**
 	* CREATE_NEW_NOTE
 	* Build a new annotation when user clicks on text editor button
-	* @param object options
-	* @return string|null note_section_id
+	*
+	* Creates a new section record in the notes matrix (identified by
+	* self.context.features.notes_section_tipo) and returns the new section_id.
+	* The note tag <img> node is inserted into the editor separately by the caller.
+	*
+	* @param {Object} options - Creation options
+	* @param {Object} options.text_editor - The service_ckeditor instance (passed for context)
+	* @returns {Promise<string|null>} The newly created note section_id, or null on failure
 	*/
 	component_text_area.prototype.create_note_tag = async function(options) {
 
@@ -1504,12 +1774,17 @@ component_text_area.prototype.build_tag = function(options) {
 	* CREATE_GEO_TAG
 	* Build a new annotation when user clicks on text editor button
 	* It is called wen user press F2 in the keyboard
-	* @param object options
-	* {
-	*	data_tag : object as {data:[1], label:'15.1', last_layer_id: 3, layers: [{},{}], state: 'n', tag_id: 15, type: 'geo'}
-	* 	text_editor : object (service_ckeditor instance)
-	* }
-	* @return bool inserted
+	*
+	* Inserts a new 'geo' tag <img> node at the current caret position.
+	* The tag_id is assigned sequentially after the last existing 'geo' tag in the editor.
+	* The actual geolocation data (coordinates, layers) is managed by the geo tool panel
+	* and linked via the tag_id; this method only handles the editor side of the workflow.
+	*
+	* @param {Object} options - Geo tag creation options
+	* @param {Object} options.data_tag - Tag descriptor:
+	*   {data:[1], label:'15.1', last_layer_id: 3, layers: [{},{}], state: 'n', tag_id: 15, type: 'geo'}
+	* @param {Object} options.text_editor - service_ckeditor instance to insert into
+	* @returns {boolean} Result of text_editor.set_content (true on success)
 	*/
 	component_text_area.prototype.create_geo_tag = function(options) {
 
@@ -1551,8 +1826,18 @@ component_text_area.prototype.build_tag = function(options) {
 	/**
 	* CREATE_REFERENCE
 	* Build a new virtual section of reference when user clicks on text editor button
-	* @param object options
-	* @return string|null note_section_id
+	*
+	* Creates a new section record in the references matrix
+	* (self.context.features.references_section_tipo) and returns the new section_id.
+	*
+	* (!) BUG (pre-existing, do not fix): The 'create' API call at line ~1564 uses
+	*     `notes_section_tipo` (undefined in this scope) instead of
+	*     `references_section_tipo`. The variable `references_section_tipo` is correctly
+	*     declared but never used. This means the API request will fail with a ReferenceError.
+	*
+	* @param {Object} options - Creation options
+	* @param {Object} options.text_editor - The service_ckeditor instance (passed for context)
+	* @returns {Promise<string|null>} The new section_id on success, or null on failure
 	*/
 	component_text_area.prototype.create_reference = async function(options) {
 
@@ -1590,7 +1875,18 @@ component_text_area.prototype.build_tag = function(options) {
 	* CREATE_DRAW_TAG
 	* Build a new annotation when user clicks on text editor button
 	*
-	* @return
+	* Inserts a 'draw' type tag <img> node at the current caret using the
+	* data_tag descriptor already populated by build_tag (which includes a
+	* validated tag_id from the layer tool response).
+	* The function does not compute a new tag_id — callers must set data_tag.tag_id first.
+	*
+	* (!) No return value — the result of text_editor.set_content (inserted_tag) is
+	*     captured but not returned. Callers cannot confirm insertion success.
+	*
+	* @param {Object} options - Draw tag options
+	* @param {Object} options.data_tag - Tag descriptor with type:'draw' and tag_id already set
+	* @param {Object} options.text_editor - service_ckeditor instance to insert into
+	* @returns {void}
 	*/
 	component_text_area.prototype.create_draw_tag = function(options) {
 
@@ -1625,10 +1921,15 @@ component_text_area.prototype.build_tag = function(options) {
 	},
 	"component_tipo": "rsc263"
  }
-* @param string|null lang
-* @param int n_try = 1
-* 	Number of try (limited to 4)
-* @return bool
+*
+* Switches the component's active language and triggers a refresh to re-render the
+* content for the new language. If the component is not yet in 'rendered' state,
+* retries with an exponential-delay strategy (up to 4 attempts, 300ms apart).
+* Silently returns false if the requested lang matches the current one.
+*
+* @param {string|null} lang - BCP-47 language code to switch to, e.g. 'lang_es'
+* @param {number} [n_try=1] - Internal retry counter; callers should never set this
+* @returns {Promise<boolean>} true after successful refresh, false when skipped or exceeded retries
 */
 component_text_area.prototype.change_lang = async function(lang, n_try=1) {
 
@@ -1668,7 +1969,13 @@ component_text_area.prototype.change_lang = async function(lang, n_try=1) {
 /**
 * FOCUS_FIRST_INPUT
 * Allow focus editor area from service
-* @return bool
+*
+* Focuses the CKEditor editing view (the contenteditable area). If the editor
+* instance is not yet ready (e.g. called before auto_init_editor completes),
+* subscribes to the 'editor_ready_<id>' event and defers the focus call until
+* the service emits readiness.
+*
+* @returns {boolean} Always true (focus may be deferred if editor is not ready yet)
 */
 component_text_area.prototype.focus_first_input = function() {
 

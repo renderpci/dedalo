@@ -1,8 +1,36 @@
 <?php declare(strict_types=1);
 /**
 * TRAIT SEARCH_COMPONENT_DATE_TM
-* From class component_date
-* Common search methods for date components
+* From class component_date — Time Machine search variant for date components.
+*
+* Provides SQL-building methods that operate against the dedicated 'timestamp' column
+* of the matrix_time_machine (and matrix_activity) tables rather than against the
+* JSONB data matrix used by ordinary records.
+*
+* Context: when search::resolve_query_object_sql() detects that the target table is
+* 'matrix_time_machine' or 'matrix_activity', dispatch_date_mode_sql() in the companion
+* trait search_component_date delegates immediately to dispatch_date_mode_sql_tm() here.
+* All SQL produced by this trait references the literal "timestamp" column (a PostgreSQL
+* timestamptz column) rather than any JSONPath expression.
+*
+* Key design decision — SARGable range predicates:
+*   Comparisons use half-open timestamp ranges (>= start AND < exclusive_end) instead of
+*   wrapping the column in EXTRACT() or DATE() function calls. Function calls on a column
+*   prevent the query planner from using a B-tree index on 'timestamp'; range literals do not.
+*   The commented-out EXTRACT/DATE alternatives that appear in the code are the original
+*   implementations preserved for historical reference.
+*
+* Supported operators: '=', '<', '<=', '>', '>=', '!*' (is null), '*' (is not null).
+* Only 'date' mode is handled because matrix_time_machine stores a single timestamp per
+* row, making range/period/time modes irrelevant.
+*
+* Used exclusively by component_date via:
+*   use search_component_date_tm;
+*
+* Companion trait: search_component_date (standard JSONB date search, same host class).
+*
+* @package Dédalo
+* @subpackage Core
 */
 trait search_component_date_tm {
 
@@ -10,13 +38,21 @@ trait search_component_date_tm {
 
     /**
     * DISPATCH_DATE_MODE_SQL_TM
-    * Routes the search resolution to the correct date mode handler for time machine queries.
-    * Currently only supports 'date' mode resolution.
+    * Entry point for Time Machine date SQL generation; routes to the 'date' mode handler.
     *
-    * @param object $query_object The query object containing search parameters and SQL building state
-    * @param ?object $q_object The parsed query object with date information
-    * @param object $ctx The search context containing table_alias, operator, and metadata
-    * @return object The modified query object with SQL sentence and params set
+    * Currently only one date mode is meaningful for the time machine tables: the 'date'
+    * mode which compares against the 'timestamp' column. All ontology date_mode values
+    * ('range', 'period', 'time', 'date_time') collapse here because matrix_time_machine
+    * stores a single timestamptz per row, not structured JSONB date containers.
+    *
+    * Called from search_component_date::dispatch_date_mode_sql() when the target table
+    * is 'matrix_time_machine' or 'matrix_activity'.
+    *
+    * @param object  $query_object The SQO being built; mutated in place with sentence/params.
+    * @param ?object $q_object     Parsed query object produced by extract_normalized_date_q();
+    *                              contains a 'start' property with a dd_date-shaped object.
+    * @param object  $ctx          Search context: table_alias, operator (sanitized), date_mode.
+    * @return object $query_object with sentence and params set.
     */
 	protected static function dispatch_date_mode_sql_tm(object $query_object, ?object $q_object, object $ctx) : object {
 
@@ -27,22 +63,39 @@ trait search_component_date_tm {
 
     /**
     * RESOLVE_DATE_MODE_DATE_SQL_TM
-    * Handles date searches for time machine records with partial/full date support.
-    * Translation: Match specific date or date range.
-    * Technical Logic: Uses EXTRACT(YEAR/MONTH) or DATE() functions on timestamp column
-    * What it returns: Records where the provided date matches or falls within the record's range.
-    * When to use: To find time machine records by specific dates, years, or year-month combinations.
-    * Example: "Show me all records from 2024" or "Find records before 2023-06-15".
+    * Builds a SARGable PostgreSQL predicate against the matrix_time_machine 'timestamp' column
+    * for partial or full date searches.
     *
-    * Partial Date Support:
-    *   - Year only (2024): Uses EXTRACT(YEAR FROM DATE(timestamp))
-    *   - Year-month (2024-06): Uses EXTRACT(YEAR) and EXTRACT(MONTH)
-    *   - Full date (2024-06-15): Uses DATE(timestamp) comparison
+    * All comparison operators ('=', '<', '<=', '>', '>=') are handled inside a single switch
+    * case (including the default) because the SARGable range strategy produces an inclusive
+    * half-open interval predicate that works correctly for equality and, in practice, the only
+    * distinguishing behavior is the partial-date shape. Directional inequality operators on a
+    * timestamp column would require a different strategy; those are not yet implemented and all
+    * fall through to the range equality treatment.
     *
-    * @param object $query_object The query object to modify with SQL and params
-    * @param ?object $q_object The parsed query object containing dd_date and time info
-    * @param object $ctx The search context with table_alias, operator, and date shape info
-    * @return object The query object with SQL sentence and params set based on date precision
+    * Partial date precision is detected via dd_date::get_shape() and drives three branches:
+    *
+    *   Year-only  (shape->year && !shape->month):
+    *     Generates: ("timestamp" >= '2024-01-01'::date AND "timestamp" < '2025-01-01'::date)
+    *     Covers the entire calendar year. next_year = year + 1 forms the exclusive upper bound.
+    *
+    *   Year+month (shape->year && shape->month && !shape->day):
+    *     Generates: ("timestamp" >= '2024-06-01'::date AND "timestamp" < '2024-07-01'::date)
+    *     December wraps to year+1/01/01 to handle the month-12 overflow case.
+    *
+    *   Full date  (all other cases, including day set):
+    *     Generates: ("timestamp" >= '2024-06-15'::date AND "timestamp" < '2024-06-16'::date)
+    *     next_day is computed via strtotime("+1 day") so that leap-year boundaries are handled
+    *     by the PHP runtime rather than inline arithmetic.
+    *
+    * (!) The commented-out EXTRACT(YEAR FROM DATE("timestamp")) and DATE("timestamp") alternatives
+    * in the code body are the original non-SARGable implementations. They are intentionally
+    * preserved for historical reference and must NOT be restored — they prevent index use.
+    *
+    * @param object  $query_object SQO to populate; mutated in place.
+    * @param ?object $q_object     Parsed query; expected shape: { start: { year, month?, day?, time } }.
+    * @param object  $ctx          Search context: table_alias, operator (sanitized allowlist).
+    * @return object $query_object with sentence and params set.
     */
 	protected static function resolve_date_mode_date_sql_tm(object $query_object, ?object $q_object, object $ctx) : object {
 
@@ -112,16 +165,21 @@ trait search_component_date_tm {
 
     /**
     * RESOLVE_COMMON_DATE_OPERATORS_TM
-    * Handles empty (!*) and not-empty (*) operators for time machine date searches.
-    * Translation: "Is empty" / "Is not empty" for timestamp field.
-    * Technical Logic: Direct IS NULL / IS NOT NULL check on table_alias for matrix_time_machine
-    * What it returns: Records with or without timestamp data in the time machine table.
-    * When to use: To find time machine records that have or lack timestamp values.
-    * Example: "Show me all records with no timestamp" or "Show records that have timestamp data".
+    * Handles the meta-operators '!*' (is empty / IS NULL) and '*' (is not empty / IS NOT NULL)
+    * for the matrix_time_machine 'timestamp' column.
     *
-    * @param object $query_object The query object to modify with SQL
-    * @param object $ctx The search context with table_alias and operator
-    * @return object|null The query object with SQL sentence set, or null if operator not handled
+    * These two operators are independent of date precision and are processed before any
+    * date-value parsing, so this method acts as a short-circuit guard called first by
+    * resolve_date_mode_date_sql_tm(). Returning non-null signals "handled; stop processing".
+    *
+    * Note: $ctx->table_alias here refers directly to the 'timestamp' column alias set by the
+    * TM search context, not to a table alias in the standard JOIN sense. The generated SQL
+    * therefore evaluates the raw column rather than a JSONB path expression.
+    *
+    * @param object $query_object SQO to populate; sentence is set, params left unchanged.
+    * @param object $ctx          Search context; only ctx->table_alias is consumed.
+    * @return object|null Returns the populated $query_object if the operator was handled,
+    *                     or null to signal that the caller should continue to value-based logic.
     */
 	protected static function resolve_common_date_operators_tm(object $query_object, object $ctx) : object|null {
 

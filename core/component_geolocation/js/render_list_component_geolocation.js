@@ -10,9 +10,29 @@
 	import {view_text_list_geolocation} from './view_text_list_geolocation.js'
 
 
+
 /**
-* render_list_component_geolocation
-* Manage the components logic and appearance in client side
+* RENDER_LIST_COMPONENT_GEOLOCATION
+* View-dispatcher for component_geolocation in list (read-only) contexts.
+*
+* This module is the render entry point for every list-mode display of
+* geolocation data. It is assigned to component_geolocation.prototype.list
+* from component_geolocation.js and is never instantiated directly — the
+* constructor is a no-op placeholder required by Dédalo's prototype-assignment
+* pattern.
+*
+* The active view is determined by `self.context.view` (populated by the
+* server context layer). Supported values:
+*   'mini'    — compact inline representation; used in relation-picker
+*               autocomplete lists and datalist popups
+*   'text'    — renders geolocation entries serialised to JSON inside a
+*               <span> wrapper; suited for inline/portal contexts
+*   'default' — standard list column wrapper produced by
+*               ui.component.build_wrapper_list; entries are JSON-serialised
+*               and joined with self.context.fields_separator
+*
+* All view modules receive `self` (the component instance) and `options`
+* unchanged, so they have full access to self.data, self.context, etc.
 */
 export const render_list_component_geolocation = function() {
 
@@ -23,8 +43,26 @@ export const render_list_component_geolocation = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @return HTMLElement wrapper
+* View-dispatch entry point for component_geolocation list-mode rendering.
+*
+* Reads `self.context.view` (set by the server context layer) to select the
+* appropriate view module and delegates all DOM construction to it. When the
+* view is absent or unrecognised the method falls back to 'default'.
+*
+* Geolocation data shape (self.data):
+*   { entries: Array<Object> }
+* Each entry is a GeoJSON-compatible coordinate/feature object; the view
+* modules serialise them with JSON.stringify and join them via
+* self.context.fields_separator before inserting into the DOM.
+*
+* Note: the `return null` statement after the switch is unreachable because
+* every branch of the switch returns — it is dead code left for defensive
+* intent. (!) Do not remove it without reviewing callers that may rely on
+* the switch always returning.
+*
+* @param {Object} options - render options forwarded verbatim to the chosen
+*   view module (e.g. render_level, mode overrides)
+* @returns {Promise<HTMLElement>} the rendered wrapper element
 */
 render_list_component_geolocation.prototype.list = async function(options) {
 

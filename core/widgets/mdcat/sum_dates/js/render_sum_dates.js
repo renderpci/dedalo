@@ -12,6 +12,70 @@
 
 /**
 * RENDER_SUM_DATES
+* Client-side renderer for the `sum_dates` widget (mdcat package).
+*
+* The `sum_dates` widget accumulates date intervals across a set of linked records
+* sourced through a portal component. The server-side `class.sum_dates.php`
+* iterates every record in the portal, computes the DateInterval between a
+* `date_in` and `date_out` component for each record, sums all intervals, and
+* separates real intervals from estimated ones. This module consumes that resolved
+* data to build the display DOM.
+*
+* Expected shape of `self.value` (array of objects, one entry per widget_id per
+* IPO group, as returned by class.sum_dates::get_data()):
+*   [
+*     { widget: 'sum_dates', key: 0, widget_id: 'sum_intervals',
+*       value: { y: 2, m: 3, d: 15, h: 0, i: 0, s: 0 } },
+*     { widget: 'sum_dates', key: 0, widget_id: 'sum_estitmated_time_add',
+*       value: { y: 0, m: 0, d: 1, h: 0, i: 0, s: 0 } },
+*     { widget: 'sum_dates', key: 0, widget_id: 'estitmated_time_undefined',
+*       value: true }
+*   ]
+*
+* The `value` field for `sum_intervals` and `sum_estitmated_time_add` mirrors a
+* PHP DateInterval object: keys are `y` (years), `m` (months), `d` (days), `h`,
+* `i`, `s`. Only `y`, `m`, and `d` are rendered.
+*
+* Expected shape of `self.ipo` (mirrors the server-side IPO ontology config —
+* each entry maps one portal+date pair to a set of output widget_ids):
+*   [
+*     {
+*       input: [
+*         { type: 'source',   section_tipo: 'mdcat1', component_tipo: 'mdcat1' },
+*         { type: 'date_in',  section_tipo: 'mdcat2', component_tipo: 'mdcat2' },
+*         { type: 'date_out', section_tipo: 'mdcat3', component_tipo: 'mdcat3' }
+*       ],
+*       output: [
+*         { id: 'sum_intervals' },
+*         { id: 'sum_estitmated_time_add' },
+*         { id: 'estitmated_time_undefined' }
+*       ]
+*     }
+*   ]
+*
+* The render result is a `<ul class="values_container">` holding one `<li>` per
+* IPO group. Each `<li>` contains:
+*   - A `<div class="sum_intervals">` with the total computed time span.
+*   - Optionally, a `<span class="sum_dates_period_notes">` with estimated and/or
+*     indeterminate additions, shown in Catalan ("Temps estimat afegit:").
+*
+* NOTE: The estimated-time suffix label is hardcoded in Catalan
+* ("Temps estimat afegit:", "indeterminat"). A future i18n pass should replace
+* these literals with `get_label` calls.
+*
+* NOTE: The `event_manager` import and commented-out subscription block in
+* `get_value_element` are intentionally kept for a planned reactive update
+* feature (see inline comment at the commented-out block).
+*
+* Exports:
+*   - `render_sum_dates` constructor, wired to `sum_dates.prototype.edit`
+*     via a prototype alias in sum_dates.js.
+*/
+
+
+
+/**
+* RENDER_SUM_DATES
 * Manages the component's logic and appearance in client side
 */
 export const render_sum_dates = function() {
@@ -24,7 +88,18 @@ export const render_sum_dates = function() {
 /**
 * EDIT
 * Render node for use in modes: edit, edit_in_list
-* @return HTMLElement wrapper
+*
+* Builds the full widget DOM for the sum_dates widget in edit (display) mode.
+* When `options.render_level` is `'content'`, only the inner content_data node
+* is returned (used when embedding this widget inside a parent container that
+* already supplies its own wrapper). Otherwise, a full `ui.widget.build_wrapper_edit`
+* wrapper is returned with content_data slotted in.
+*
+* @param {Object} options - Render options passed by widget_common.prototype.render.
+* @param {string} [options.render_level] - If `'content'`, skip wrapper creation and
+*   return the raw content_data node directly.
+* @returns {Promise<HTMLElement>} Resolves to either the full wrapper element or the
+*   content_data node (when render_level is 'content').
 */
 render_sum_dates.prototype.edit = async function(options) {
 
@@ -51,7 +126,22 @@ render_sum_dates.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return HTMLElement content_data
+* Build the inner content DOM for the sum_dates widget.
+*
+* Iterates `self.ipo` (the IPO configuration array from the ontology) to produce
+* one `<li>` element per IPO group. For each group, server value items from
+* `self.value` are filtered by the group index (`key === i`) and forwarded to
+* `get_value_element` for DOM construction.
+*
+* The returned `content_data` `<div>` wraps a `<ul class="values_container">`
+* whose children are the individual interval display rows.
+*
+* @param {Object} self - The sum_dates widget instance. Expected properties:
+*   - `self.ipo`   {Array}  IPO configuration groups from the ontology.
+*   - `self.value` {Array}  Resolved data items from the server
+*                           ({ key, widget_id, value, … }).
+* @returns {Promise<HTMLElement>} Resolves to the `<div>` content_data node
+*   containing the rendered interval rows.
 */
 const get_content_data_edit = async function(self) {
 
@@ -87,7 +177,54 @@ const get_content_data_edit = async function(self) {
 
 /**
 * GET_VALUE_ELEMENT
-* @return HTMLElement li
+* Build a single `<li>` row representing one IPO group's computed date interval
+* and append it to `values_container`.
+*
+* The function extracts three data items from `data` (the filtered server values
+* for IPO group `i`) by their `widget_id`:
+*   - `sum_intervals`           — total summed DateInterval object {y,m,d,…}
+*   - `sum_estitmated_time_add` — additional estimated interval when a date was
+*                                  missing and a 1-day default was injected by the
+*                                  server (object or null)
+*   - `estitmated_time_undefined` — boolean flag: true when an intermediate gap
+*                                   between records could not be precisely measured
+*
+* Rendering logic:
+*   1. The total interval (`sum_intervals`) is formatted as a space-joined string
+*      of non-zero y/m/d parts. Singular/plural forms are selected via `get_label`
+*      (e.g. `get_label.years` vs `get_label.year`). Zero-value parts are omitted.
+*   2. If there is any estimated time addition OR the undefined flag is true, a
+*      `<span class="sum_dates_period_notes">` is appended showing:
+*        "( Temps estimat afegit: [estimated time] [+ indeterminat] )"
+*      — both the label prefix and "indeterminat" are currently hardcoded in
+*      Catalan (see module-level NOTE about i18n).
+*
+* (!) `data.find(item => item.widget_id === 'sum_estitmated_time_add').value`
+* falls back to `null` when the find returns undefined. The subsequent property
+* accesses on `sum_estitmated_time_add` (`.y`, `.m`, `.d`) are guarded by
+* truthiness checks (`sum_estitmated_time_add.y > 0`). However, when the server
+* returns `null` for this field (no estimated time), those checks safely return
+* false because `null > 0` is false in JS. If the server omits the item entirely,
+* `find` returns `undefined` and `.value` would throw — the `|| null` default
+* guards against this only if the item exists with an undefined value. A missing
+* item would still throw; no defensive guard is present.
+*
+* (!) The event_manager subscription block at the end of this function is fully
+* commented out. It was a planned reactive-update feature (updating the displayed
+* interval when an upstream component in the same section changes) that was not
+* implemented because the widget's source data comes from a different section than
+* the one the user is currently editing — so the live-update channel never fires
+* in practice. The commented code (lines ~192–211) is left intentionally for
+* future reference; do not remove it.
+*
+* @param {number}      i                - IPO group index (zero-based); used to
+*                                         label the event channel if activated.
+* @param {Array}       data             - Server value items for this IPO group;
+*                                         each element is { widget, key, widget_id,
+*                                         value }.
+* @param {HTMLElement} values_container - The `<ul>` node to append the new `<li>` to.
+* @param {Object}      self             - The sum_dates widget instance.
+* @returns {HTMLElement} The constructed `<li>` element.
 */
 const get_value_element = (i, data, values_container, self) => {
 
