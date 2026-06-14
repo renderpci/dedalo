@@ -1,16 +1,44 @@
 <?php declare(strict_types=1);
 /**
-* Class MATRIX_ACTIVITY_DB_MANAGER
+* CLASS MATRIX_ACTIVITY_DB_MANAGER
+* Specialised DB manager for the `matrix_activity` audit-log table.
 *
-* Provides core operations for managing matrix records.
-* This class ensures data consistency by enforcing predefined
-* table and column definitions within the matrix model.
+* Extends matrix_db_manager and overrides `create()` with a simplified
+* insert strategy that bypasses the parent's advisory-lock counter
+* mechanism. `matrix_activity` relies on a native PostgreSQL sequence
+* (`matrix_activity_section_id_seq`) for row identity, so there is no
+* need to synchronise with the shared `matrix_counter` table.
+*
+* Responsibilities:
+* - Gate write access to the single allowed table ('matrix_activity').
+* - Enumerate and insert all schema columns in a fixed, deterministic
+*   order so the same prepared statement can be recycled across calls
+*   (high-frequency: every user action generates at least one insert).
+* - Encode JSONB columns transparently via json_handler.
+* - Return a stable non-false sentinel (int 1) on success; the real
+*   auto-assigned section_id is not fetched because callers (notably
+*   logger_backend_activity::log_message_defer) do not use it.
+*
+* Relationships:
+* - Extends matrix_db_manager (inherits exec_search, update, delete, …).
+* - Used exclusively by logger_backend_activity to write activity records.
+* - Its sibling matrix_activity_diffusion_db_manager mirrors this pattern
+*   for the 'matrix_activity_diffusion' diffusion-log table.
+* - section_record selects this class as data_handler when table === 'matrix_activity'.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class matrix_activity_db_manager extends matrix_db_manager {
 
 
 
-	// Allowed matrix tables
+	/**
+	* Whitelist of tables this manager is permitted to write.
+	* Overrides the parent's broad table list to restrict operations to
+	* the activity-log table only, preventing accidental writes elsewhere.
+	* @var array<string, true> $tables
+	*/
 	public static array $tables = [
 		'matrix_activity' => true
 	];
@@ -19,23 +47,45 @@ class matrix_activity_db_manager extends matrix_db_manager {
 
 	/**
 	* CREATE
-	* Inserts a single row into a "matrix" table with automatic handling for JSON columns
-	* and guaranteed inclusion of the `section_tipo` and `section_id` columns.
-	* Before insert, creates/updates the proper counter value and uses the result as `section_id` value.
-	* It is executed using prepared statement when the values are empty (default creation of empty record
-	* adding `section_tipo` and `section_id` only) and with query params when is not (other
-	* dynamic combinations of columns data).
+	* Inserts one row into the `matrix_activity` table with a simplified
+	* strategy that skips the counter/advisory-lock mechanism used by the
+	* parent class.
+	*
+	* Unlike matrix_db_manager::create(), this override:
+	* - Does NOT touch matrix_counter or matrix_counter_dd.
+	* - Does NOT include section_id in the INSERT column list; the column
+	*   is auto-populated by the table sequence
+	*   'matrix_activity_section_id_seq'.
+	* - Iterates self::$columns in a fixed order (inherited from the parent)
+	*   so that the resulting SQL is always identical and the prepared
+	*   statement stored in DBi::$prepared_statements can be recycled on
+	*   every subsequent call — this is important because activity logging
+	*   is called very frequently.
+	* - Returns the sentinel value 1 instead of the actual new section_id
+	*   because callers never need the assigned id; skipping the extra
+	*   pg_fetch_result() saves a round-trip per call.
+	*
+	* (!) The commented-out empty-values guard (lines 55-63) was intentionally
+	* left disabled: the logger may legitimately create sparse rows where all
+	* typed columns are null, and blocking those would silence audit events.
+	*
 	* @param string $table
-	* 	The name of the table to query. The function validates this against
-	* 	a predefined list of allowed tables to prevent SQL injection vulnerabilities.
+	*   Name of the target table. Must be present in self::$tables or the
+	*   call is rejected to prevent SQL injection.
 	* @param string $section_tipo
-	* 	A string identifier representing the type of section. Used as part of the WHERE clause in the SQL query.
-	* @param object|null $values = {} (optional)
-	* 	Object with {column name : value} structure.
-	* 	Keys are column names, values are their new values.
-	* @return int|false $section_id
-	* 	Returns the new $section_id on success, or `false` if validation fails,
-	* 	query preparation fails, or execution fails.
+	*   Section tipo that identifies the activity-log section
+	*   (DEDALO_ACTIVITY_SECTION_TIPO, normally 'dd542').
+	*   Always inserted as the first positional parameter ($1).
+	* @param object|null $values [= null]
+	*   Optional stdClass whose properties match matrix column names.
+	*   Keys not present in self::$columns are silently ignored here
+	*   (the iteration walks self::$columns, not $values).
+	*   JSON columns are encoded via json_handler::encode(); scalar columns
+	*   are passed through unmodified. Pass null to create an empty row.
+	* @return int|false
+	*   Returns 1 on successful insert (not the real section_id).
+	*   Returns false if the table guard fails, the prepared statement
+	*   cannot be compiled, or pg_execute reports an error.
 	*/
 	public static function create( string $table, string $section_tipo, ?object $values=null ) : int|false {
 
@@ -72,6 +122,9 @@ class matrix_activity_db_manager extends matrix_db_manager {
 		$param_index	= 2; // next param index ($2, $3, ...)
 
 		// Add fixed columns (this allows use prepared statements)
+		// Iterating self::$columns (the parent's canonical schema list) rather
+		// than $values ensures the column order — and therefore the generated
+		// SQL string — is always the same, enabling prepared-statement reuse.
 		foreach (self::$columns as $col => $col_value) {
 			// Prevent double columns (section_tipo and section_id are added by default)
 			if ($col==='section_tipo' || $col==='section_id') continue;
@@ -98,6 +151,8 @@ class matrix_activity_db_manager extends matrix_db_manager {
 		// auto created by table sequence 'matrix_activity_section_id_seq', not by the counter.
 
 		// SQL query for insert
+		// section_id is intentionally absent from the column list; the table
+		// sequence assigns it automatically, avoiding any counter coordination.
 		$sql  = "INSERT INTO $table (" . implode(',', $columns) . ")" . PHP_EOL;
 		$sql .= "VALUES (" . implode(',', $placeholders) . ")";
 
