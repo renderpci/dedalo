@@ -33,9 +33,7 @@ export const render_components_list = function(options) {
 		const ar_components_exclude = options.ar_components_exclude || null
 
 	// clean target_div
-		while (target_div.hasChildNodes()) {
-			target_div.removeChild(target_div.lastChild);
-		}
+		target_div.replaceChildren()
 
 	// First item check
 		if (!section_elements || typeof section_elements[0]==="undefined") {
