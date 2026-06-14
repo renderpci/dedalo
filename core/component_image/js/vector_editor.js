@@ -15,7 +15,31 @@
 
 /**
 * VECTOR_EDITOR
-* @return bool
+* SVG-based vector drawing overlay for component_image.
+*
+* Wraps the third-party SvgCanvas (SVG-Edit) library to provide a
+* multi-layer vector annotation editor on top of a raster image.
+* The editor is initialised once per component_image instance via
+* init_canvas() and holds:
+*   - A named-layer stack (ar_layers) where layer_id 0 is always the
+*     immutable raster base and higher ids are freely deletable vector layers.
+*   - An iro.js colour picker that drives both the active fill and the
+*     per-element fill/opacity on the live SVG stage.
+*   - A keyboard shortcut registry (this.shortcuts) populated before the
+*     SvgCanvas 'extensions_added' event fires.
+*
+* Data is persisted back to component_image via save_data(), which
+* serialises each layer's SVG children as JSON and writes the result to
+* self.data.changed_data before delegating to component_common.change_value().
+*
+* Typical lifecycle:
+*   1. component_image instantiates vector_editor and calls init_canvas(self).
+*   2. init_canvas() creates the SvgCanvas, loads existing lib_data, binds
+*      events, and renders the tool palette via render_tools_buttons(self).
+*   3. The user draws shapes, switches layers, and eventually clicks Save.
+*   4. save_data(self) serialises all layers and calls self.change_value().
+*
+* @returns {boolean} true — constructor sentinel used by the prototype chain
 */
 export const vector_editor = function() {
 
@@ -54,10 +78,31 @@ export const vector_editor = function() {
 
 /**
 * INIT_CANVAS
-* @param instance self
-* 	component_image instance
-* @return promise
-* 	bool true
+* Bootstrap the SVG vector editor inside the given component_image instance.
+*
+* Steps performed:
+*   1. Sizes the svg_canvas div to the full screen so users can scroll/zoom freely.
+*   2. Reads the original image URL and dimensions from the DOM image node that
+*      component_image has already rendered (object_node), then removes that node so
+*      the SVG canvas occupies the same position.
+*   3. Creates a SvgCanvas instance (third-party, lib/svgedit/) with default fill,
+*      stroke, text and dimension settings derived from the image size.
+*   4. Binds SvgCanvas events: 'selected' → selected_changed, 'extensions_added' →
+*      keyboard_shortcuts, 'zoomed' → zoom_changed, 'exported' → export_handler.
+*   5. Attaches document-level 'paste' and 'copy' listeners.
+*      (!) The 'copy' handler references an undefined `project` variable — it is
+*      currently dead/broken code left from a Paper.js migration.
+*   6. Calls load_data(self) to hydrate the stage from existing layer data stored in
+*      component_image's lib_data.
+*   7. Calls update_canvas() to scale the stage to fit the container, then
+*      render_tools_buttons(self) to build the tool palette.
+*   8. Subscribes to the 'full_screen_<id>' event so the canvas reflows on
+*      full-screen toggle.
+*
+* @param {Object} self - The owning component_image instance. Must expose:
+*   self.image_container {HTMLElement}, self.events_tokens {Array},
+*   self.id {string}, self.vector_editor_tools {HTMLElement|falsy}
+* @returns {Promise<boolean>} Resolves true when the stage is fully ready.
 */
 vector_editor.prototype.init_canvas = async function(self) {
 
@@ -204,12 +249,20 @@ vector_editor.prototype.init_canvas = async function(self) {
 
 /**
 * SELECTED_CHANGED
-* Called when we've selected a different element
-* @param {external:Window} win
-* @param {module:svgcanvas.SvgCanvas#event:selected} elems Array of elements that were selected
+* Called by the SvgCanvas 'selected' event when the user selects one or more
+* SVG elements on the canvas.
+*
+* Updates this.selected_element to the single selected element (null when
+* multiple elements are selected simultaneously) and then synchronises the
+* colour-picker button to reflect the selected element's fill colour via
+* set_color_picker().
+*
+* @param {Window} win - The host window reference forwarded by SvgCanvas.
+* @param {Array<SVGElement>} elems - Array of currently selected SVG elements.
+*   An empty second slot (elems[1] falsy) indicates a single-element selection.
+* @returns {void}
 * @listens module:svgcanvas.SvgCanvas#event:selected
 * @fires module:svgcanvas.SvgCanvas#event:ext_selectedChanged
-* @returns void
 */
 vector_editor.prototype.selected_changed = function(win, elems) {
 
@@ -263,7 +316,19 @@ vector_editor.prototype.selected_changed = function(win, elems) {
 
 /**
 * ELEMENT_TRANSITION
-* @return void
+* Handles mouse-move events on the canvas while in path-edit mode.
+*
+* Intended to be bound to the SvgCanvas 'mouseMove' event (currently commented
+* out in init_canvas). When in 'pathedit' mode it wires a keydown listener that
+* toggles SvgCanvas linkControlPoints() on/off as the user holds Alt.
+*
+* (!) This method is not currently connected — the bind call in init_canvas is
+* commented out. The local `seglist` and `node_point` variables are declared but
+* never read. Left for future path-editing feature work.
+*
+* @param {Window} win - Host window reference forwarded by SvgCanvas.
+* @param {Array<SVGElement>} elems - Elements under the cursor (forwarded by SvgCanvas).
+* @returns {void}
 */
 vector_editor.prototype.element_transition = function(win, elems) {
 
@@ -306,11 +371,29 @@ vector_editor.prototype.element_transition = function(win, elems) {
 
 /**
 * KEYBOARD_SHORTCUTS
-* @param {external:Window} win
-* @param {module:svgcanvas.SvgCanvas#event:selected} elems Array of elements that were selected
-* @listens module:svgcanvas.SvgCanvas#event:selected
-* @fires module:svgcanvas.SvgCanvas#event:ext_selectedChanged
+* Registers the vector editor's keyboard shortcuts with the document.
+*
+* Called once when the SvgCanvas fires the 'extensions_added' event, which
+* signals that all internal extensions are ready. The method builds a flat
+* key→handler map from this.shortcuts (populated in the constructor), then
+* attaches a single 'keydown' listener on document.
+*
+* Key format normalisation: modifier prefix order is
+*   alt+ → shift+ → meta+ → ctrl+ → lowercase key name.
+* Only events targeting BODY are processed so that text inputs retain normal
+* key behaviour.
+*
+* Shortcut entries support a two-element array form:
+*   [keyString, preventDefault] e.g. ['delete/backspace', true]
+* The '/' separator allows a single handler to cover two physical keys.
+*
+* (!) The original baseline carried @param and @listens/@fires annotations
+* copied from the SvgCanvas 'selected' event handler — they do not match
+* this function, which takes no arguments and listens to 'extensions_added'.
+* Those misleading tags have been removed; the function signature is definitive.
+*
 * @returns {void}
+* @listens module:svgcanvas.SvgCanvas#event:extensions_added
 */
 vector_editor.prototype.keyboard_shortcuts = function() {
 
@@ -362,8 +445,21 @@ vector_editor.prototype.keyboard_shortcuts = function() {
 
 /**
 * POINTER
-* init pointer tool
-* @return bool true
+* Activates the SvgCanvas select/pointer mode and auto-converts the currently
+* selected non-path shape to a path.
+*
+* SVG shapes like rect and ellipse cannot be edited at the node level while
+* they remain native SVG shape elements. This method calls
+* stage.convertToPath() to promote them to <path> elements so the user can
+* immediately edit individual nodes after switching to the pointer tool.
+*
+* (!) convertToPath() must only be applied once per element. Calling it a
+* second time on an element that is already a <path> can disconnect control
+* points. The guard on element_name covers known safe types: image, text,
+* path, g, and use.
+*
+* @returns {boolean} true — implicit end-of-function sentinel; the stage
+*   mutation is a side effect.
 */
 vector_editor.prototype.pointer = function() {
 
@@ -389,6 +485,21 @@ vector_editor.prototype.pointer = function() {
 
 
 
+/**
+* CREATE_RECTANGLE
+* Activates the SvgCanvas rectangle-drawing mode on the current vector layer.
+*
+* Clears any current selection, sets the fill colour to the active layer's
+* colour with 30 % opacity, and switches the stage to 'rect' mode so the next
+* drag gesture draws a new rectangle.
+*
+* Drawing is blocked on the raster layer (layer_id === 0) because that layer
+* is reserved exclusively for the background image. Returns false without
+* changing the stage mode when blocked.
+*
+* @returns {boolean|undefined} false when the raster layer is active; otherwise
+*   returns undefined (implicit void — the draw-mode activation is a side effect).
+*/
 vector_editor.prototype.create_rectangle = function () {
 
 	const stage	= this.stage
@@ -412,6 +523,20 @@ vector_editor.prototype.create_rectangle = function () {
 
 
 
+/**
+* CREATE_CIRCLE
+* Activates the SvgCanvas ellipse-drawing mode on the current vector layer.
+*
+* Clears any current selection, applies the active layer's colour at 30 %
+* opacity, and switches the stage to 'ellipse' mode so the next drag gesture
+* draws a new circle or ellipse.
+*
+* Unlike create_rectangle(), this method does not guard against the raster
+* layer — callers are responsible for ensuring a vector layer is active before
+* invoking this tool.
+*
+* @returns {void}
+*/
 vector_editor.prototype.create_circle = function () {
 
 	const stage			= this.stage
@@ -430,6 +555,19 @@ vector_editor.prototype.create_circle = function () {
 
 
 
+/**
+* CREATE_VECTOR
+* Activates the SvgCanvas freehand path-drawing mode on the current vector layer.
+*
+* Clears any current selection, applies the active layer's colour at 30 %
+* opacity, and switches the stage to 'path' mode for Bezier/poly-line drawing.
+*
+* The large block of commented-out code below the mode switch is residual
+* exploration of path-editing APIs (getNodePoint, linkControlPoints, segType).
+* It is left in place for reference during future path-edit tooling work.
+*
+* @returns {void}
+*/
 vector_editor.prototype.create_vector = function () {
 
 	const stage			= this.stage
@@ -469,6 +607,16 @@ vector_editor.prototype.create_vector = function () {
 
 
 
+/**
+* ACTIVATE_ZOOM
+* Activates the SvgCanvas zoom mode.
+*
+* After activation the user can click or drag on the canvas to zoom in;
+* double-clicking the zoom button in render_tools_buttons() resets the zoom
+* to 1:1 and reflows the canvas via update_canvas().
+*
+* @returns {void}
+*/
 vector_editor.prototype.activate_zoom = function () {
 
 	const stage = this.stage
@@ -479,12 +627,24 @@ vector_editor.prototype.activate_zoom = function () {
 
 /**
 * ZOOM_CHANGED
-* @function module:svgcanvas.SvgCanvas#zoom_changed
-* @param {external:Window} win
-* @param {module:svgcanvas.SvgCanvas#event:zoomed} bbox
-* @param {boolean} autoCenter
-* @listens module:svgcanvas.SvgCanvas#event:zoomed
+* Handles the SvgCanvas 'zoomed' event and reflows the scroll container.
+*
+* Computes the new canvas dimensions by asking SvgCanvas to fit the
+* selected bounding-box (bbox) into the visible area, then expands
+* the image_container element to match the enlarged canvas so the browser
+* scrollbar appears correctly. Finally it centres the scroll viewport on
+* the zoomed bounding box centre.
+*
+* The zoomlevel is clamped to 0.1 when setBBoxZoom() returns a value
+* below 0.001 to prevent near-zero scale rendering artifacts.
+*
+* @param {Window} win - Host window reference forwarded by SvgCanvas.
+* @param {Object} bbox - Bounding box descriptor forwarded by SvgCanvas
+*   (fields: x, y, width, height, zoom — exact shape is library-defined).
+* @param {boolean} autoCenter - Whether SvgCanvas requests automatic
+*   centring (forwarded; not currently used locally).
 * @returns {void}
+* @listens module:svgcanvas.SvgCanvas#event:zoomed
 */
 vector_editor.prototype.zoom_changed = function(win, bbox, autoCenter) {
 
@@ -534,8 +694,23 @@ vector_editor.prototype.zoom_changed = function(win, bbox, autoCenter) {
 
 /**
 * UPDATE_CANVAS
-* Fit the canvas and image to the space
-* @return void
+* Fits the SVG canvas and image to the current image_container dimensions.
+*
+* Recalculates the correct image width by applying the stored aspect ratio
+* (image_definition.image_ratio) to the container's current height, then:
+*   1. Clears the SvgCanvas selection (selections do not scale correctly and
+*      would appear misaligned after resize).
+*   2. Calls stage.setBBoxZoom('canvas', ...) to compute the zoom factor that
+*      makes the image fill the available space.
+*   3. Calls stage.updateCanvas() twice — first for the image area, then for
+*      the larger scroll-area (max of container and zoomed content dimensions).
+*   4. Centres the scroll offset so the image appears in the middle of the
+*      scroll container.
+*
+* Called on first render (from init_canvas), on save-button click, and
+* whenever the 'full_screen_<id>' event fires.
+*
+* @returns {void}
 */
 vector_editor.prototype.update_canvas = function(){
 
@@ -584,7 +759,35 @@ vector_editor.prototype.update_canvas = function(){
 
 /**
 * RENDER_TOOLS_BUTTONS
-* @return bool
+* Builds and mounts the vector editor's tool palette DOM inside
+* self.vector_editor_tools.
+*
+* Creates and wires up the following controls in order:
+*   - layer_selector_button: opens a floating layer panel (render_layer_selector).
+*     Subscribes to 'active_layer_<id>' so the button label tracks the current layer.
+*   - pointer: activates select/pointer mode.
+*   - rectangle: activates rectangle-drawing mode.
+*   - circle: activates ellipse-drawing mode.
+*   - vector: activates freehand path-drawing mode.
+*   - zoom: activates zoom mode; double-click resets to 1:1.
+*   - save: serialises all layers and persists to the server. Before saving
+*     it temporarily switches the displayed image to the default-quality file
+*     so the SVG image href stored in lib_data points to the canonical URL,
+*     then restores the user's chosen quality afterwards.
+*   - button_color_picker: toggles the iro.js colour wheel panel. The picker
+*     drives both the active-fill state and the fill/opacity of any currently
+*     selected SVG element via stage.setColor() / stage.setOpacity().
+*
+* The local activate_status() helper manages the 'vector_tool_active' CSS
+* class across all registered buttons so only one is visually active at a time.
+*
+* (!) DEDALO_MEDIA_URL is referenced in the save handler but is not declared
+* in the file-level /*global*\/ comment — it relies on the global scope at
+* runtime. This is an existing inconsistency; do not change the code.
+*
+* @param {Object} self - The owning component_image instance.
+* @returns {boolean} true on success; returns undefined (early) if
+*   self.vector_editor_tools is not available.
 */
 vector_editor.prototype.render_tools_buttons = function(self) {
 
@@ -883,7 +1086,20 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 
 /**
 * EXPORT_HANDLER
-* @return void
+* Handles the SvgCanvas 'exported' event by opening the exported file in a
+* new browser window.
+*
+* SvgCanvas fires this event after a rasterExport() or SVG export call
+* completes. The handler opens (or reuses) the named export window and
+* navigates it to the blob URL or data URI provided by the library.
+*
+* @param {Window} win - Host window reference forwarded by SvgCanvas.
+* @param {Object} data - Export result object from SvgCanvas. Expected fields:
+*   {string} data.WindowName - Target window name for window.open().
+*   {string} [data.bloburl] - Blob URL preferred when available.
+*   {string} [data.datauri] - Data URI fallback when bloburl is absent.
+*   {Array}  [data.issues] - Any export warnings from the library (not used locally).
+* @returns {void}
 */
 vector_editor.prototype.export_handler = function(win, data){
 	const {
@@ -898,8 +1114,24 @@ vector_editor.prototype.export_handler = function(win, data){
 
 /**
 * SET_COLOR_PICKER
-* get the color of the current active layer to set to the color picker and the button color picker
-* @return void
+* Synchronises the colour-picker button and iro.js picker state with the
+* currently selected SVG element (or the stage defaults when nothing is selected).
+*
+* Called from selected_changed() whenever the canvas selection changes.
+*
+* Reads fill colour and opacity from the selected SVG element's attributes
+* (getAttribute('fill') / getAttribute('opacity')). Falls back to the stage's
+* global colour/opacity when no element is selected.
+*
+* Skips colour inspection for 'image' and 'use' elements because they do not
+* carry a 'fill' attribute, so reading getAttribute('fill') would return null.
+*
+* Side effects:
+*   - Updates this.active_fill_color and this.active_opacity.
+*   - Sets the button_color_picker background-color to the new fill colour.
+*   - Pushes the new colour and alpha into this.color_picker (iro.js instance).
+*
+* @returns {void}
 */
 vector_editor.prototype.set_color_picker = function() {
 
@@ -936,8 +1168,31 @@ vector_editor.prototype.set_color_picker = function() {
 
 /**
 * LOAD_DATA
-* get the layers loaded and show into window
-* @return object new_layer
+* Hydrates the SvgCanvas stage from the layer data stored in the owning
+* component_image instance (self.ar_layers / self.get_lib_data()).
+*
+* Two code paths:
+*
+* A) Existing data (lib_data is truthy):
+*   Iterates self.ar_layers in order. Layer 0 (raster) maps to the default
+*   layer that SvgCanvas creates automatically, renamed to 'layer_0'.
+*   Subsequent layers are created via drawing.createLayer(). For each layer,
+*   every element in layer_data[] is re-added via stage.addSVGElementsFromJson().
+*   When a layer_id 0 element is an 'image', its xlink:href is captured back
+*   into image_definition so the save process records the correct URL.
+*
+* B) Empty data (lib_data is falsy — first-time use):
+*   Renames the default layer to 'layer_0', sets active_layer to the raster
+*   layer descriptor, creates an SVG <image> element positioned at the top-left
+*   of the canvas, and wires an onload callback to push the src URL into the
+*   SVG element via stage.setHref() once the browser has resolved the image.
+*
+* After load, this.active_layer always points to the last processed layer
+* in path A, or the newly created raster layer in path B.
+*
+* @param {Object} self - The owning component_image instance. Must expose
+*   self.get_lib_data() {Function→Array|null} and self.ar_layers {Array}.
+* @returns {boolean} true — the stage mutation is the real side effect.
 */
 vector_editor.prototype.load_data = function(self) {
 
@@ -1042,8 +1297,15 @@ vector_editor.prototype.load_data = function(self) {
 
 /**
 * GET_LAST_LAYER_ID
-* Get the last layer_id in the ar_layers
-* @param int last_layer_id
+* Returns the highest layer_id currently present in self.ar_layers.
+*
+* Used by add_layer() to compute the next sequential layer_id. Relies on
+* Math.max with spread, so an empty ar_layers array would return -Infinity —
+* callers should ensure at least the raster layer (layer_id 0) exists before
+* calling this method.
+*
+* @param {Object} self - The owning component_image instance with ar_layers {Array}.
+* @returns {number} The maximum layer_id value found in self.ar_layers.
 */
 vector_editor.prototype.get_last_layer_id = function(self) {
 
@@ -1057,8 +1319,23 @@ vector_editor.prototype.get_last_layer_id = function(self) {
 
 /**
 * ADD_LAYER
-* get the layers loaded and show into window
-* @return object new_layer
+* Creates a new vector layer, registers it in the SvgCanvas drawing, and
+* appends it to self.ar_layers.
+*
+* Assigns the next sequential layer_id (get_last_layer_id() + 1) and
+* generates a random hex colour string for use as the default drawing colour
+* of shapes on this layer. The new layer is immediately set as active_layer.
+*
+* The colour is generated with Math.random() and padded to 6 hex digits —
+* this can occasionally produce very light or low-contrast colours; no
+* contrast check is performed.
+*
+* @param {Object} self - The owning component_image instance. Must expose
+*   self.ar_layers {Array} (mutated in place).
+* @returns {Object} new_layer - The newly created layer descriptor:
+*   { layer_id {number}, layer_data {null}, layer_color {string},
+*     layer_opacity {number}, user_layer_name {string}, name {string},
+*     visible {boolean} }
 */
 vector_editor.prototype.add_layer = function(self) {
 
@@ -1102,8 +1379,28 @@ vector_editor.prototype.add_layer = function(self) {
 
 /**
 * SAVE_DATA
-* get the layers loaded and save it
-* @return object new_layer
+* Serialises all SvgCanvas layers to JSON and persists them via
+* component_common.change_value().
+*
+* For each layer in the SvgCanvas drawing:
+*   1. Retrieves the underlying SVG <g> element (group_).
+*   2. Converts it to a JSON structure via stage.getJsonFromSvgElements().
+*   3. Strips <title> children (they are internal SvgCanvas metadata, not
+*      user data, and will be regenerated on load).
+*   4. Writes the resulting array back to the matching entry in self.ar_layers.
+*
+* After layer serialisation, builds a changed_data envelope:
+*   { action: 'update', id: <entry_id|null>, value: { lib_data, svg_file_data } }
+* and calls self.change_value() with refresh: false so the component does not
+* re-render (the vector editor stays open after saving).
+*
+* The SVG string (svg_file_data) is stored alongside lib_data as a convenience
+* for diffusion / export pipelines that need raw SVG.
+*
+* @param {Object} self - The owning component_image instance. Must expose:
+*   self.data.entries {Array}, self.ar_layers {Array},
+*   self.change_value {Function}.
+* @returns {Promise<*>} Resolves with the return value of self.change_value().
 */
 vector_editor.prototype.save_data = async function(self) {
 
@@ -1154,8 +1451,22 @@ vector_editor.prototype.save_data = async function(self) {
 
 /**
 * ACTIVATE_LAYER
-* @param int layer_id
-* @return void
+* Makes a specific layer the current drawing target and hides all other
+* vector layers by setting their opacity to 0.
+*
+* Iterates the layer stack in reverse (top to bottom), skipping layer index 0
+* (the raster base) which is always visible. Sets opacity 1.0 for the layer
+* matching layer_id and 0 for all others.
+*
+* (!) this.active_layer is set to the SvgCanvas layer name string for non-
+* matching layers, and then overwritten with the matching layer name — the
+* final value after the loop is the name of the last non-matching layer
+* processed, not the activated one. This appears to be a residual bug; do not
+* fix here, document only.
+*
+* @param {number} layer_id - The layer_id of the layer to activate
+*   (corresponds to its position index in the SvgCanvas drawing stack).
+* @returns {void}
 */
 vector_editor.prototype.activate_layer = function(layer_id) {
 
@@ -1180,7 +1491,24 @@ vector_editor.prototype.activate_layer = function(layer_id) {
 
 /**
 * RENDER_LAYER_SELECTOR
-* @return HTMLElement layer_selector
+* Builds and returns a floating layer-management panel as a DOM element.
+*
+* The panel contains:
+*   - An "Add" button that calls add_layer() and prepends the new row via
+*     render_layer_row().
+*   - A "Close" button that removes the panel from the DOM.
+*   - A <ul> list populated with one <li> row per layer (rendered in reverse
+*     order so the topmost layer appears first), each row built by
+*     render_layer_row().
+*
+* The returned element is not appended by this method; the caller
+* (render_tools_buttons) inserts it into layer_selector_container.
+*
+* @param {Object} self - The owning component_image instance. Must expose
+*   self.ar_layers {Array}.
+* @returns {HTMLElement} A div.layer_selector containing the full panel,
+*   or undefined if the method returns without building (not currently possible
+*   but callers should guard for null/undefined).
 */
 vector_editor.prototype.render_layer_selector = function(self) {
 
@@ -1248,7 +1576,45 @@ vector_editor.prototype.render_layer_selector = function(self) {
 
 /**
 * RENDER_LAYER_ROW
-* @return HTMLElement layer_li
+* Builds a single <li> row for the layer selector panel representing one layer.
+*
+* Each row contains the following interactive sub-elements:
+*   - layer_icon (eye button): toggles the layer's visibility by setting its
+*     opacity via drawing.setLayerOpacity(). The raster layer (layer_id 0)
+*     uses 0.5 transparency when hidden rather than 0.
+*   - layer_id label: read-only numeric display of the layer's id.
+*   - user_layer_name: editable text div; double-click enables contentEditable,
+*     blur or Enter commits the new name back to layer.user_layer_name.
+*   - layer_delete: opens a confirmation modal via ui.attach_to_modal(). On
+*     confirm, deletes the layer from both the SvgCanvas drawing and self.ar_layers.
+*     For the raster layer (layer_id 0) it calls this.load_data(self) to
+*     re-create the base image instead of splicing the array.
+*   - layer_color swatch: a double-click assigns the current active_fill_color
+*     to this layer's layer_color property (does not auto-save).
+*
+* The row subscribes to 'active_layer_<id>' events to toggle the 'active' CSS
+* class and call stage.setCurrentLayer() when the active layer changes from
+* another row's click handler.
+*
+* (!) The layer_delete click handler is a classic function (not an arrow
+* function), so 'this' inside the button_delete click handler refers to the
+* button element, not the vector_editor instance. The call
+* `this.load_data(self)` on line ~1437 therefore fails at runtime for the
+* raster-layer delete path. Do not fix here; document only.
+*
+* (!) `modal` is referenced inside the button_delete click handler via closure
+* before the `const modal = ui.attach_to_modal(...)` declaration at the bottom
+* of the outer click handler. This works at runtime because the modal variable
+* is in the same function scope and the button_delete click fires after the
+* outer handler has completed and modal is assigned.
+*
+* @param {Object} self - The owning component_image instance.
+* @param {Object} layer - Layer descriptor object:
+*   { layer_id {number}, layer_color {string}, layer_opacity {number},
+*     user_layer_name {string}, name {string}, visible {boolean},
+*     layer_icon {*}, layer_delete {*} }
+* @returns {HTMLElement} The constructed <li> element ready for insertion into
+*   the layer selector <ul>.
 */
 vector_editor.prototype.render_layer_row = function(self, layer) {
 

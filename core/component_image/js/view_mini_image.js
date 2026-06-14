@@ -11,7 +11,31 @@
 
 /**
 * VIEW_MINI_IMAGE
-* Manage the components logic and appearance in client side
+* Inline thumbnail renderer for component_image in 'mini' display mode.
+*
+* 'mini' mode is used wherever a compact, single-image preview is required
+* without interactive controls — typically inside autocomplete suggestion
+* rows, relation chips, or any embedded list cell that only needs a small
+* visual reference. It does NOT include viewer, editor, or lazy-loading
+* logic; those concerns belong to the list/mosaic/edit views.
+*
+* Exported members:
+*   view_mini_image          — constructor stub (returns true; no instance state)
+*   view_mini_image.render   — static factory: builds and returns the wrapper node
+*
+* Globals consumed (declared in the /*global* / pragma above):
+*   - page_globals.dedalo_quality_thumb  — string key for the thumbnail quality tier
+*                                          (e.g. '1.5MB') used to select the matching
+*                                          file_info entry from data.entries
+*   - page_globals.fallback_image        — absolute URL of the placeholder image shown
+*                                          when no matching file_info entry exists or
+*                                          the resolved URL fails to load
+*
+* (!) DEDALO_MEDIA_URL is referenced at line 45 but is NOT listed in the /*global* /
+*     pragma. It is injected by the page bootstrap as a browser-side global. The eslint
+*     pragma only declares the symbols actually named in it; omitting DEDALO_MEDIA_URL
+*     causes an eslint no-undef warning at runtime linting. Consider adding it to the
+*     pragma to keep it consistent with component_image's other view files.
 */
 export const view_mini_image = function() {
 
@@ -22,8 +46,34 @@ export const view_mini_image = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any list
-* @return HTMLElement wrapper
+* Builds the mini-mode DOM node for a component_image instance.
+*
+* Priority order for resolving the image URL:
+*   1. data.external_source — absolute URL provided by the server when the image
+*      is hosted externally (e.g. a third-party media repository); bypasses the
+*      Dédalo media store entirely.
+*   2. entries entry whose 'quality' matches page_globals.dedalo_quality_thumb —
+*      a Dédalo-hosted thumbnail; URL is constructed as:
+*        DEDALO_MEDIA_URL + file_info.file_path + '?t=<timestamp>'
+*      The timestamp cache-buster ensures browsers re-fetch after server-side
+*      re-processing without explicit cache invalidation.
+*   3. page_globals.fallback_image — shown when neither of the above resolves,
+*      keeping the layout stable even for records with no uploaded file.
+*
+* The error handler on the <img> element swaps in the fallback image only once:
+* the guard 'image.src !== page_globals.fallback_image' prevents infinite retry
+* loops if the fallback URL itself is broken or the error event re-fires.
+*
+* Note: unlike the list/mosaic views, this renderer does NOT set 'loading=lazy'
+* or attach a viewer handler; mini nodes are expected to be lightweight and
+* immediately visible.
+*
+* @param {Object} self    - The component_image instance. Must expose:
+*                             self.data    {Object}  — server response data layer
+*                             self.view    {string}  — current view name (used as CSS class)
+* @param {Object} options - Unused by this renderer; reserved for future extension.
+* @returns {HTMLElement} wrapper — A <span> element (built by ui.component.build_wrapper_mini)
+*                                  containing the resolved <img> element.
 */
 view_mini_image.render = function(self, options) {
 
@@ -37,6 +87,8 @@ view_mini_image.render = function(self, options) {
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// url
+		// Select the thumbnail quality entry from the file list; fall back through
+		// external_source and the global placeholder as described above.
 		const quality	= page_globals.dedalo_quality_thumb // '1.5MB'
 		const file_info	= files_info.find(item => item.quality===quality)
 		const url		= external_source
@@ -46,11 +98,14 @@ view_mini_image.render = function(self, options) {
 				: page_globals.fallback_image
 
 	// image
+		// CSS class carries the view name so LESS rules can target '.view_mini' specifically.
 		const image = ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'view_' + self.view,
 			parent			: wrapper
 		})
+		// Fall back to the global placeholder on load failure.
+		// Guard prevents an infinite retry loop if the fallback itself returns an error.
 		image.addEventListener('error', function(e) {
 			if (image.src!==page_globals.fallback_image) {
 				image.src = page_globals.fallback_image

@@ -15,7 +15,16 @@
 
 /**
 * RENDER_LIST_COMPONENT_IMAGE
-* Manage the components logic and appearance in client side
+* Constructor for the list-mode render object of component_image.
+*
+* This module provides the `list` prototype method that component_image.prototype.list
+* and component_image.prototype.tm are both assigned to (see component_image.js).
+* It dispatches to the appropriate view module based on the context view value:
+*   - 'viewer'  → view_viewer_image   (standalone popup viewer window)
+*   - 'mini'    → view_mini_image     (compact thumbnail, e.g. autocomplete results)
+*   - 'text'    → view_text_list_image (inline <span>-based text + image)
+*   - 'mosaic'  → view_mosaic_list_image (grid mosaic with click-to-open viewer)
+*   - 'default' → view_default_list_image (standard list thumbnail with lazy loading)
 */
 export const render_list_component_image = function() {
 
@@ -26,9 +35,21 @@ export const render_list_component_image = function() {
 
 /**
 * LIST
-* Render node for use in list
-* @param object options
-* @return HTMLElement wrapper
+* Builds and returns the DOM node for the image component in list (and tm) mode.
+*
+* Reads `self.context.view` to select the appropriate view module and delegates
+* to its static `render(self, options)` method. Falls through to 'default' for
+* any unrecognised view value.
+*
+* This method is assigned to both component_image.prototype.list and
+* component_image.prototype.tm so that the thesaurus-mode render uses the same
+* view dispatch as the regular record list.
+*
+* @param {Object} options - Render options forwarded verbatim to the view module.
+*   Relevant keys depend on the selected view; the mosaic view uses
+*   `options.render_level` ('full'|'content') to support partial re-renders.
+* @returns {HTMLElement} The assembled wrapper (or content_data) node ready to
+*   be inserted into the page by the caller (common.prototype.render).
 */
 render_list_component_image.prototype.list = function(options) {
 
