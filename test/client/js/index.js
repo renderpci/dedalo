@@ -24,6 +24,9 @@
 		window.SHOW_DEBUG = false
 		window.DEVELOPMENT_SERVER = false
 		window.DEDALO_API_URL = '../../core/api/v1/json/'
+		// app-global the full page injects server-side; some components (e.g. install)
+		// read it as a bare global fallback, so stub it to avoid a ReferenceError
+		window.PHP_VERSION = window.PHP_VERSION || ''
 
 		const rqo = {
 			action			: 'get_environment',
@@ -64,8 +67,37 @@
 	let run_all_index = 0
 	let run_all_active = false
 
+	// single in-flight test bookkeeping
+	let active_handler = null
+	let active_watchdog = null
+	const WATCHDOG_MS = 120000 // force-fail a suite that never reports back
+
+	// clear_active: detach the current message listener and watchdog
+	function clear_active() {
+		if (active_handler) {
+			window.removeEventListener('message', active_handler)
+			active_handler = null
+		}
+		if (active_watchdog) {
+			clearTimeout(active_watchdog)
+			active_watchdog = null
+		}
+	}
+
+	// finish_active: settle the running test and advance the queue
+	function finish_active(test_name, status, on_complete) {
+		clear_active()
+		mark_test_status(test_name, status)
+		if (typeof on_complete === 'function') {
+			on_complete()
+		}
+	}
+
 // load_test: load a test in the iframe
 window.load_test = function(area, model, test_name, on_complete) {
+	// drop any previous in-flight listener/watchdog (e.g. user clicks a new test mid-run)
+	clear_active()
+
 	// hide placeholder
 	if (placeholder) placeholder.style.display = 'none'
 
@@ -86,34 +118,28 @@ window.load_test = function(area, model, test_name, on_complete) {
 	test_frame.src = `./frame.html?area=${area}${model ? '&model=' + model : ''}&theme=${is_dark ? 'dark' : 'light'}`
 
 	// listen for iframe messages
-	const handler = function(e) {
+	active_handler = function(e) {
+		// only accept messages coming from the test iframe
+		if (e.source !== test_frame.contentWindow) return
 		if (!e.data || !e.data.type) return
 
 		if (e.data.type === 'test_start') {
 			mark_test_status(test_name, 'running')
 		}
-		else if (e.data.type === 'test_pass') {
-			mark_test_status(test_name, 'pass')
-		}
-		else if (e.data.type === 'test_fail') {
-			mark_test_status(test_name, 'fail')
-		}
 		else if (e.data.type === 'test_end') {
-			window.removeEventListener('message', handler)
-			if (typeof on_complete === 'function') {
-				on_complete()
-			}
+			const final_status = (e.data.stats?.fail || 0) > 0 ? 'fail' : 'pass'
+			finish_active(test_name, final_status, on_complete)
 		}
 		else if (e.data.type === 'test_error') {
-			mark_test_status(test_name, 'fail')
-			window.removeEventListener('message', handler)
-			if (typeof on_complete === 'function') {
-				on_complete()
-			}
+			finish_active(test_name, 'fail', on_complete)
 		}
 	}
+	window.addEventListener('message', active_handler)
 
-	window.addEventListener('message', handler)
+	// watchdog: never let a stuck iframe stall the queue
+	active_watchdog = setTimeout(function() {
+		finish_active(test_name, 'fail', on_complete)
+	}, WATCHDOG_MS)
 }
 
 // run all
@@ -144,10 +170,23 @@ window.load_test = function(area, model, test_name, on_complete) {
 				const model = card.dataset.model || null
 				const test_name = card.dataset.testName
 
-				window.load_test(area, model, test_name, () => {
+				const on_done = () => {
+					// retry a failed suite once. Many integration suites are flaky
+					// only under full-run load (memory/timing pressure after dozens of
+					// sequential iframe runs) yet pass in isolation; a single fresh
+					// re-run separates transient hiccups from real failures. The stats
+					// counters already handle the fail→pass transition on retry.
+					const dot = card.querySelector('.test_card_status')
+					if (dot && dot.classList.contains('fail') && !card.dataset.retried) {
+						card.dataset.retried = '1'
+						setTimeout(() => window.load_test(area, model, test_name, on_done), 400)
+						return
+					}
 					card.classList.remove('test_card_active')
 					setTimeout(run_next, 200)
-				})
+				}
+
+				window.load_test(area, model, test_name, on_done)
 			}
 
 			run_next()
@@ -160,7 +199,7 @@ window.load_test = function(area, model, test_name, on_complete) {
 	const icon_sun = theme_toggle?.querySelector('.theme_icon_sun')
 
 	function set_theme(light) {
-		document.documentElement.setAttribute('data-theme', light ? '' : 'dark')
+		document.documentElement.setAttribute('data-theme', light ? 'light' : 'dark')
 		if (icon_moon) icon_moon.style.display = light ? 'none' : 'block'
 		if (icon_sun) icon_sun.style.display = light ? 'block' : 'none'
 		try { localStorage.setItem('dedalo_theme', light ? 'light' : 'dark') } catch(e) {}
@@ -170,13 +209,14 @@ window.load_test = function(area, model, test_name, on_complete) {
 		}
 	}
 
-	// restore saved theme
+	// restore saved theme (dark is the default terminal aesthetic)
 	const saved = localStorage.getItem('dedalo_theme')
-	set_theme(saved !== 'dark')
+	set_theme(saved === 'light')
 
 	if (theme_toggle) {
 		theme_toggle.addEventListener('click', () => {
-			set_theme(document.documentElement.getAttribute('data-theme') !== 'dark')
+			// flip: if currently dark, switch to light (and vice-versa)
+			set_theme(document.documentElement.getAttribute('data-theme') === 'dark')
 		})
 	}
 

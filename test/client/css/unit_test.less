@@ -1,19 +1,33 @@
 /**
 * unit_test
-* Elegant dark terminal interface — two-panel layout
+* Elegant terminal interface — two-panel layout.
+* Dark by default; light theme via `data-theme="light"` on <html>.
 * Font: San Francisco (system) + SF Mono
+*
+* Theming is driven by a single set of CSS custom properties (--ut-*).
+* The toggle in index.js sets `data-theme` on <html> ("dark" | "light"),
+* the same attribute main.css uses for the embedded Dédalo components, so
+* the test chrome and the components under test always share one theme.
 */
 @import (once) '../../../core/page/css/layout/vars';
 
-// ── dark theme tokens (default) ─────────────────────────
-@bg_chrome: #1e1e1e;
+// ── fonts & sizes (theme-independent) ───────────────────
+@font_sans: -apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
+@font_mono: 'SF Mono', 'SF Mono Regular', 'Menlo', 'Monaco', 'Courier New', monospace;
+
+@size_base: 15px;
+@size_sm: 13px;
+@size_lg: 18px;
+@size_xl: 22px;
+
+// ── dark theme palette (LESS source values) ─────────────
 @bg_terminal: #161616;
 @bg_line: #1c1c1c;
 @bg_hover: #252525;
 @bg_input: #0a0a0a;
 @bg_active: rgba(90,200,250,.06);
+@html_bg: #0a0a0a;
 
-@border_dim: rgba(255,255,255,.04);
 @border_subtle: rgba(255,255,255,.07);
 @border_line: rgba(255,255,255,.06);
 
@@ -27,23 +41,102 @@
 
 @green: #30d158;
 @green_dim: rgba(48,209,88,.12);
+@green_glow: rgba(48,209,88,.35);
 @red: #ff453a;
 @red_dim: rgba(255,69,58,.12);
+@red_glow: rgba(255,69,58,.35);
 @yellow: #ffd60a;
 
-@font_sans: -apple-system, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', sans-serif;
-@font_mono: 'SF Mono', 'SF Mono Regular', 'Menlo', 'Monaco', 'Courier New', monospace;
+@scrollbar_hover: rgba(255,255,255,.12);
 
-@size_base: 15px;
-@size_sm: 13px;
-@size_lg: 18px;
-@size_xl: 22px;
+// ── light theme palette (LESS source values) ────────────
+@bg_terminal_l: #ffffff;
+@bg_line_l: #f0f0f2;
+@bg_hover_l: #e8e8ea;
+@bg_input_l: #f5f5f7;
+@bg_active_l: rgba(0,122,255,.06);
+@html_bg_l: #fcfcfc;
+
+@border_subtle_l: rgba(0,0,0,.1);
+@border_line_l: rgba(0,0,0,.07);
+
+@text_primary_l: #1d1d1f;
+@text_secondary_l: #6e6e73;
+@text_muted_l: #86868b;
+@text_dim_l: #aeaeb2;
+
+@accent_l: #007aff;
+@accent_dim_l: rgba(0,122,255,.1);
+
+@green_l: #34c759;
+@green_dim_l: rgba(52,199,89,.12);
+@green_glow_l: rgba(52,199,89,.35);
+@red_l: #ff3b30;
+@red_dim_l: rgba(255,59,48,.12);
+@red_glow_l: rgba(255,59,48,.35);
+@yellow_l: #ff9500;
+
+@scrollbar_hover_l: rgba(0,0,0,.2);
+
+// ── theme tokens ────────────────────────────────────────
+// Dark is the default (no FOUC for the terminal aesthetic);
+// `data-theme="dark"` is also accepted explicitly so the toggle is symmetric.
+:root,
+html[data-theme="dark"] {
+	--ut_html_bg: @html_bg;
+	--ut_bg_terminal: @bg_terminal;
+	--ut_bg_line: @bg_line;
+	--ut_bg_hover: @bg_hover;
+	--ut_bg_input: @bg_input;
+	--ut_bg_active: @bg_active;
+	--ut_border_subtle: @border_subtle;
+	--ut_border_line: @border_line;
+	--ut_text_primary: @text_primary;
+	--ut_text_secondary: @text_secondary;
+	--ut_text_muted: @text_muted;
+	--ut_text_dim: @text_dim;
+	--ut_accent: @accent;
+	--ut_accent_dim: @accent_dim;
+	--ut_green: @green;
+	--ut_green_dim: @green_dim;
+	--ut_green_glow: @green_glow;
+	--ut_red: @red;
+	--ut_red_dim: @red_dim;
+	--ut_red_glow: @red_glow;
+	--ut_yellow: @yellow;
+	--ut_scrollbar_hover: @scrollbar_hover;
+}
+
+html[data-theme="light"] {
+	--ut_html_bg: @html_bg_l;
+	--ut_bg_terminal: @bg_terminal_l;
+	--ut_bg_line: @bg_line_l;
+	--ut_bg_hover: @bg_hover_l;
+	--ut_bg_input: @bg_input_l;
+	--ut_bg_active: @bg_active_l;
+	--ut_border_subtle: @border_subtle_l;
+	--ut_border_line: @border_line_l;
+	--ut_text_primary: @text_primary_l;
+	--ut_text_secondary: @text_secondary_l;
+	--ut_text_muted: @text_muted_l;
+	--ut_text_dim: @text_dim_l;
+	--ut_accent: @accent_l;
+	--ut_accent_dim: @accent_dim_l;
+	--ut_green: @green_l;
+	--ut_green_dim: @green_dim_l;
+	--ut_green_glow: @green_glow_l;
+	--ut_red: @red_l;
+	--ut_red_dim: @red_dim_l;
+	--ut_red_glow: @red_glow_l;
+	--ut_yellow: @yellow_l;
+	--ut_scrollbar_hover: @scrollbar_hover_l;
+}
 
 // ── global ──────────────────────────────────────────────
 html {
-	background-color: #0a0a0a;
+	background-color: var(--ut_html_bg);
 	font-family: @font_sans;
-	color: @text_primary;
+	color: var(--ut_text_primary);
 	font-size: @size_base;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
@@ -52,7 +145,7 @@ html {
 body {
 	margin: 0;
 	padding: 0;
-	background: #0a0a0a00;
+	background: transparent;
 }
 
 // ── terminal chrome ─────────────────────────────────────
@@ -61,7 +154,7 @@ body {
 	height: 100vh;
 	display: flex;
 	flex-direction: column;
-	background: @bg_terminal;
+	background: var(--ut_bg_terminal);
 }
 
 /* title */
@@ -70,9 +163,9 @@ body {
 	font-family: @font_mono;
 	font-size: 26px;
 	font-weight: 500;
-	color: @text_primary;
+	color: var(--ut_text_primary);
 	letter-spacing: -.02em;
-	border-bottom: 1px solid @border_subtle;
+	border-bottom: 1px solid var(--ut_border_subtle);
 	flex-shrink: 0;
 }
 
@@ -82,22 +175,22 @@ body {
 	align-items: center;
 	gap: 10px;
 	padding: 14px 20px;
-	border-bottom: 1px solid @border_subtle;
-	background: @bg_terminal;
+	border-bottom: 1px solid var(--ut_border_subtle);
+	background: var(--ut_bg_terminal);
 	flex-shrink: 0;
 }
 
 .terminal_prompt_prefix {
 	font-family: @font_mono;
 	font-size: @size_sm;
-	color: @text_muted;
+	color: var(--ut_text_muted);
 	flex-shrink: 0;
 }
 
 .terminal_prompt_arrow {
 	font-family: @font_mono;
 	font-size: @size_lg;
-	color: @accent;
+	color: var(--ut_accent);
 	flex-shrink: 0;
 	line-height: 1;
 }
@@ -107,13 +200,13 @@ body {
 	background: transparent;
 	border: none;
 	outline: none;
-	color: @text_primary;
+	color: var(--ut_text_primary);
 	font-family: @font_mono;
 	font-size: @size_base;
-	caret-color: @accent;
+	caret-color: var(--ut_accent);
 
 	&::placeholder {
-		color: @text_dim;
+		color: var(--ut_text_dim);
 	}
 }
 
@@ -136,24 +229,24 @@ body {
 .stat {
 	padding: 4px 10px;
 	border-radius: 6px;
-	background: @bg_line;
-	color: @text_muted;
+	background: var(--ut_bg_line);
+	color: var(--ut_text_muted);
 	transition: all .2s;
 	min-width: 32px;
 	text-align: center;
 
-	&.stat-pass  { background: @green_dim; color: @green; }
-	&.stat-fail  { background: @red_dim; color: @red; }
-	&.stat-pending { color: @text_dim; }
+	&.stat-pass  { background: var(--ut_green_dim); color: var(--ut_green); }
+	&.stat-fail  { background: var(--ut_red_dim); color: var(--ut_red); }
+	&.stat-pending { color: var(--ut_text_dim); }
 }
 
 /* button */
 .terminal_btn {
 	padding: 6px 16px;
-	border: 1px solid @accent;
+	border: 1px solid var(--ut_accent);
 	border-radius: 6px;
 	background: transparent;
-	color: @accent;
+	color: var(--ut_accent);
 	font-family: @font_mono;
 	font-size: @size_sm;
 	font-weight: 500;
@@ -162,15 +255,15 @@ body {
 	letter-spacing: .02em;
 
 	&:hover {
-		background: @accent;
-		color: @bg_terminal;
+		background: var(--ut_accent);
+		color: var(--ut_bg_terminal);
 	}
 
 	&:disabled {
 		opacity: .35;
 		cursor: not-allowed;
 		background: transparent;
-		color: @accent;
+		color: var(--ut_accent);
 	}
 
 	&.terminal_btn_icon {
@@ -203,9 +296,9 @@ body {
 	min-width: 280px;
 	max-width: 420px;
 	overflow-y: auto;
-	border-right: 1px solid @border_subtle;
+	border-right: 1px solid var(--ut_border_subtle);
 	flex-shrink: 0;
-	background: @bg_terminal;
+	background: var(--ut_bg_terminal);
 }
 
 .terminal_content {
@@ -223,7 +316,7 @@ body {
 .terminal_main {
 	flex: 1;
 	overflow: hidden;
-	background: @bg_terminal;
+	background: var(--ut_bg_terminal);
 	position: relative;
 }
 
@@ -232,14 +325,14 @@ body {
 	align-items: center;
 	gap: 10px;
 	padding: 20px 28px;
-	color: @text_dim;
+	color: var(--ut_text_dim);
 	font-family: @font_mono;
 	font-size: @size_sm;
-	border-bottom: 1px solid @border_line;
+	border-bottom: 1px solid var(--ut_border_line);
 }
 
 .placeholder_prefix {
-	color: @accent;
+	color: var(--ut_accent);
 }
 
 .placeholder_text {
@@ -255,7 +348,7 @@ body {
 
 // ── group sections ──────────────────────────────────────
 .test_group {
-	border-bottom: 1px solid @border_subtle;
+	border-bottom: 1px solid var(--ut_border_subtle);
 	animation: group_in .4s ease-out both;
 
 	&:nth-child(1) { animation-delay: .08s; }
@@ -277,7 +370,7 @@ body {
 	transition: background .15s;
 
 	&:hover {
-		background: @bg_hover;
+		background: var(--ut_bg_hover);
 	}
 
 	&.collapsed .test_group_chevron {
@@ -288,7 +381,7 @@ body {
 .test_group_chevron {
 	font-family: @font_mono;
 	font-size: @size_sm;
-	color: @text_muted;
+	color: var(--ut_text_muted);
 	transition: transform .2s ease;
 }
 
@@ -297,7 +390,7 @@ body {
 	font-family: @font_mono;
 	font-size: @size_lg;
 	font-weight: 500;
-	color: @text_primary;
+	color: var(--ut_text_primary);
 	flex: 1;
 	letter-spacing: -.01em;
 }
@@ -305,9 +398,9 @@ body {
 .test_group_count {
 	font-family: @font_mono;
 	font-size: @size_sm;
-	color: @text_muted;
+	color: var(--ut_text_muted);
 	padding: 3px 8px;
-	border: 1px solid @border_subtle;
+	border: 1px solid var(--ut_border_subtle);
 	border-radius: 4px;
 }
 
@@ -321,13 +414,13 @@ body {
 .group_stat {
 	padding: 3px 8px;
 	border-radius: 4px;
-	background: @bg_line;
-	color: @text_muted;
+	background: var(--ut_bg_line);
+	color: var(--ut_text_muted);
 	transition: all .2s;
 
-	&.group_stat_pass   { background: @green_dim; color: @green; }
-	&.group_stat_fail   { background: @red_dim; color: @red; }
-	&.group_stat_pending { color: @text_dim; }
+	&.group_stat_pass   { background: var(--ut_green_dim); color: var(--ut_green); }
+	&.group_stat_fail   { background: var(--ut_red_dim); color: var(--ut_red); }
+	&.group_stat_pending { color: var(--ut_text_dim); }
 }
 
 .test_group_body {
@@ -347,9 +440,9 @@ body {
 	align-items: center;
 	gap: 12px;
 	padding: 10px 18px 10px 24px;
-	border-bottom: 1px solid @border_line;
+	border-bottom: 1px solid var(--ut_border_line);
 	text-decoration: none;
-	color: @text_secondary;
+	color: var(--ut_text_secondary);
 	font-family: @font_mono;
 	font-size: @size_sm;
 	transition: all .12s ease;
@@ -361,8 +454,8 @@ body {
 	}
 
 	&:hover {
-		background: @bg_hover;
-		color: @text_primary;
+		background: var(--ut_bg_hover);
+		color: var(--ut_text_primary);
 
 		.test_card_status {
 			transform: scale(1.4);
@@ -374,17 +467,17 @@ body {
 	}
 
 	&.test_card_generic {
-		border-left: 3px solid @text_dim;
+		border-left: 3px solid var(--ut_text_dim);
 	}
 
 	&.test_card_component {
-		border-left: 3px solid @accent;
+		border-left: 3px solid var(--ut_accent);
 	}
 
 	&.test_card_active {
-		background: @bg_active;
-		color: @text_primary;
-		border-left-color: @accent;
+		background: var(--ut_bg_active);
+		color: var(--ut_text_primary);
+		border-left-color: var(--ut_accent);
 
 		.test_card_status {
 			transform: scale(1.3);
@@ -395,7 +488,7 @@ body {
 .test_card_index {
 	font-family: @font_mono;
 	font-size: @size_sm;
-	color: @text_dim;
+	color: var(--ut_text_dim);
 	min-width: 20px;
 	opacity: 0;
 	transition: opacity .15s;
@@ -406,22 +499,22 @@ body {
 	width: 8px;
 	height: 8px;
 	border-radius: 50%;
-	background: @text_dim;
+	background: var(--ut_text_dim);
 	flex-shrink: 0;
 	transition: all .25s ease;
 
-	&.pending  { background: @text_dim; }
+	&.pending  { background: var(--ut_text_dim); }
 	&.running  {
-		background: @yellow;
+		background: var(--ut_yellow);
 		animation: term_blink 1s step-end infinite;
 	}
 	&.pass     {
-		background: @green;
-		box-shadow: 0 0 8px rgba(48,209,88,.35);
+		background: var(--ut_green);
+		box-shadow: 0 0 8px var(--ut_green_glow);
 	}
 	&.fail     {
-		background: @red;
-		box-shadow: 0 0 8px rgba(255,69,58,.35);
+		background: var(--ut_red);
+		box-shadow: 0 0 8px var(--ut_red_glow);
 	}
 }
 
@@ -438,7 +531,7 @@ body {
 .test_card_type {
 	font-family: @font_mono;
 	font-size: @size_sm;
-	color: @text_dim;
+	color: var(--ut_text_dim);
 }
 
 // ── mocha ───────────────────────────────────────────────
@@ -451,27 +544,27 @@ body {
 		font-family: @font_mono;
 		font-size: @size_lg;
 		font-weight: 500;
-		color: @text_primary;
+		color: var(--ut_text_primary);
 	}
 
 	.stats {
-		color: @text_secondary;
+		color: var(--ut_text_secondary);
 		font-size: @size_sm;
 	}
 
 	.test {
-		color: @text_primary;
+		color: var(--ut_text_primary);
 		font-size: @size_sm;
 		padding: 6px 0;
 
-		&.pass::before { color: @green; }
-		&.fail::before { color: @red; }
+		&.pass::before { color: var(--ut_green); }
+		&.fail::before { color: var(--ut_red); }
 
 		pre.error {
-			background: @bg_input !important;
-			border: 1px solid @border_subtle;
+			background: var(--ut_bg_input) !important;
+			border: 1px solid var(--ut_border_subtle);
 			border-radius: 6px;
-			color: @red !important;
+			color: var(--ut_red) !important;
 			font-family: @font_mono;
 			font-size: @size_sm;
 			padding: 12px 16px;
@@ -479,7 +572,7 @@ body {
 	}
 
 	.failures .test {
-		border-left: 3px solid @red;
+		border-left: 3px solid var(--ut_red);
 		padding-left: 12px;
 	}
 }
@@ -495,14 +588,14 @@ body {
 
 .pair_container {
 	padding: 24px;
-	border-top: 1px solid @border_subtle;
+	border-top: 1px solid var(--ut_border_subtle);
 	margin-bottom: 32px;
 	display: block;
-	background: @bg_line;
+	background: var(--ut_bg_line);
 
 	>.wrapper_component {
 		margin-bottom: 20px;
-		outline: 1px solid @border_subtle;
+		outline: 1px solid var(--ut_border_subtle);
 	}
 }
 
@@ -514,98 +607,13 @@ body {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-	background: @border_subtle;
+	background: var(--ut_border_subtle);
 	border-radius: 3px;
-	&:hover { background: rgba(255,255,255,.12); }
+	&:hover { background: var(--ut_scrollbar_hover); }
 }
 
 // ── selection ───────────────────────────────────────────
 ::selection {
-	background: @accent_dim;
-	color: @accent;
-}
-
-// ── light theme ─────────────────────────────────────────
-@bg-terminal-l: #ffffff;
-@bg-line-l: #f0f0f2;
-@bg-hover-l: #e8e8ea;
-@bg-active-l: rgba(0,122,255,.06);
-@border-subtle-l: rgba(0,0,0,.1);
-@border-line-l: rgba(0,0,0,.07);
-@text-primary-l: #1d1d1f;
-@text-secondary-l: #6e6e73;
-@text-muted-l: #86868b;
-@text-dim-l: #aeaeb2;
-@accent-l: #007aff;
-@green-l: #34c759;
-@green-dim-l: rgba(52,199,89,.12);
-@red-l: #ff3b30;
-@red-dim-l: rgba(255,59,48,.12);
-@yellow-l: #ff9500;
-
-html.light {
-	background-color: #fcfcfc;
-	color: @text-primary-l;
-
-	body { background: #ffffff00; }
-
-	.terminal { background: @bg-terminal-l; }
-	.terminal_title { color: @text-primary-l; border-bottom-color: @border-subtle-l; }
-	.terminal_prompt_bar { background: @bg-terminal-l; border-bottom-color: @border-subtle-l; }
-	.terminal_prompt_prefix { color: @text-muted-l; }
-	.terminal_prompt_arrow { color: @accent-l; }
-	.terminal_input { color: @text-primary-l; caret-color: @accent-l; }
-	.terminal_input::placeholder { color: @text-dim-l; }
-
-	.stat { background: @bg-line-l; color: @text-muted-l; }
-	.stat.stat-pass { background: @green-dim-l; color: @green-l; }
-	.stat.stat-fail { background: @red-dim-l; color: @red-l; }
-	.stat.stat-pending { color: @text-dim-l; }
-
-	.terminal_btn { border-color: @accent-l; color: @accent-l; }
-	.terminal_btn:hover { background: @accent-l; color: @bg-terminal-l; }
-	.terminal_btn:disabled { color: @accent-l; }
-
-	.terminal_sidebar { background: @bg-terminal-l; border-right-color: @border-subtle-l; }
-	.terminal_main { background: @bg-terminal-l; }
-	.terminal_placeholder { color: @text-dim-l; border-bottom-color: @border-line-l; }
-	.placeholder_prefix { color: @accent-l; }
-
-	.test_group { border-bottom-color: @border-subtle-l; }
-	.test_group_header:hover { background: @bg-hover-l; }
-	.test_group_chevron { color: @text-muted-l; }
-	.test_group_title { color: @text-primary-l; }
-	.test_group_count { color: @text-muted-l; border-color: @border-subtle-l; }
-	.group_stat { background: @bg-line-l; color: @text-muted-l; }
-	.group_stat.group_stat_pass { background: @green-dim-l; color: @green-l; }
-	.group_stat.group_stat_fail { background: @red-dim-l; color: @red-l; }
-	.group_stat.group_stat_pending { color: @text-dim-l; }
-
-	.test_card { color: @text-secondary-l; border-bottom-color: @border-line-l; }
-	.test_card:hover { background: @bg-hover-l; color: @text-primary-l; }
-	.test_card.test_card_generic { border-left-color: @text-dim-l; }
-	.test_card.test_card_component { border-left-color: @accent-l; }
-	.test_card.test_card_active { background: @bg-active-l; color: @text-primary-l; border-left-color: @accent-l; }
-	.test_card_index { color: @text-dim-l; }
-	.test_card_status { background: @text-dim-l; }
-	.test_card_status.running { background: @yellow-l; }
-	.test_card_status.pass { background: @green-l; box-shadow: 0 0 8px rgba(52,199,89,.35); }
-	.test_card_status.fail { background: @red-l; box-shadow: 0 0 8px rgba(255,59,48,.35); }
-	.test_card_type { color: @text-dim-l; }
-
-	#mocha h1 { color: @text-primary-l; }
-	#mocha .stats { color: @text-secondary-l; }
-	#mocha .test { color: @text-primary-l; }
-	#mocha .test.pass::before { color: @green-l; }
-	#mocha .test.fail::before { color: @red-l; }
-	#mocha .test pre.error { background: #f5f5f7 !important; border-color: @border-subtle-l; color: @red-l; }
-	#mocha .failures .test { border-left-color: @red-l; }
-
-	.pair_container { background: @bg-line-l; border-top-color: @border-subtle-l; }
-	.pair_container > .wrapper_component { outline-color: @border-subtle-l; }
-
-	::-webkit-scrollbar-thumb { background: @border-subtle-l; }
-	::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.2); }
-
-	::selection { background: rgba(0,122,255,.1); color: @accent-l; }
+	background: var(--ut_accent_dim);
+	color: var(--ut_accent);
 }

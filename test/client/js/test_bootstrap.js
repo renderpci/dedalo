@@ -9,6 +9,20 @@
 * with the Content-Security-Policy (see root .htaccess script-src).
 */
 
+// early theme init — runs in <head> before the body paints to avoid a
+// theme flash. frame.html passes ?theme=...; index.html falls back to the
+// saved preference. The module runners re-apply the same value later.
+;(function () {
+	try {
+		const params = new URLSearchParams(window.location.search)
+		let theme = params.get('theme')
+		if (theme !== 'light' && theme !== 'dark') {
+			theme = localStorage.getItem('dedalo_theme') === 'light' ? 'light' : 'dark'
+		}
+		document.documentElement.setAttribute('data-theme', theme)
+	} catch (e) {}
+})()
+
 mocha.setup({
 	ui			: 'bdd',
 	checkLeaks	: true,
