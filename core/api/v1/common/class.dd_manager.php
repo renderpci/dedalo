@@ -1,48 +1,56 @@
 <?php declare(strict_types=1);
 /**
-* DD_MANAGER
-* Central API manager for handling Dédalo web requests.
+* CLASS DD_MANAGER
+* Central request dispatcher for the Dédalo v7 JSON API.
 *
-* Key features:
-* - Entry point for all API requests to the system
-* - Request validation and authentication enforcement
-* - Dynamic routing to appropriate API handlers
-* - Performance metrics and debug information collection
-* - Special handling for maintenance area access control
+* All HTTP clients (browser UI, CLI tools, MCP, workers) route their API calls
+* through a single JSON entrypoint (core/api/v1/json/index.php) that instantiates
+* this class and calls manage_request(). The class is responsible for:
 *
-* Architecture:
-* - Receives request objects (rqo) from client via JSON API
-* - Validates structure and authenticates user sessions
-* - Routes to specific API classes (dd_core_api, dd_area_maintenance_api, etc.)
-* - Returns standardized response objects with debug info when enabled
+* - Validating the incoming request object (rqo) shape.
+* - Enforcing authentication via login::is_logged() for all non-exempt actions.
+* - Minting and verifying per-session CSRF tokens (SEC-008).
+* - Enforcing a strict allowlist of routable API class names (dd_core_api,
+*   dd_area_maintenance_api, dd_utils_api, dd_ontology_api, dd_agent_api,
+*   dd_diffusion_api, dd_tools_api, dd_ts_api, dd_component_portal_api,
+*   dd_component_text_area_api, dd_component_av_api, dd_component_3d_api,
+*   dd_mcp_api, dd_component_info).
+* - Requiring target methods to be declared public static and, when the API class
+*   defines an API_ACTIONS constant, listed in that constant (SEC-024).
+* - Checking maintenance-area permissions before routing to dd_area_maintenance_api.
+* - Catching permission_exception from security::assert_* gates and converting them
+*   to uniform error responses.
+* - Appending a CSRF token and, when SHOW_DEBUG or SHOW_DEVELOPER is enabled, full
+*   timing/memory/cache-hit debug metadata to every response.
+*
+* The entrypoint also calls sanitize_client_rqo() on every untrusted HTTP request
+* (before manage_request()) to strip server-only SQO fields and clamp limits.
 *
 * @package Dédalo
 * @subpackage API
-* @version 1.0.0
-* @date 05-06-2019
 */
 final class dd_manager {
 
 
 	/**
-	 * Version constant.
-	 * Format: "Major.Minor.Patch" (e.g., "1.0.0" for Dédalo 7.x).
-	 * @var string
-	 */
+	* Semantic version of this class, following Major.Minor.Patch convention.
+	* Increment when the request/response contract of manage_request() changes in a
+	* way that client code may need to detect (e.g. new required rqo fields).
+	* @var string $version
+	*/
 	public static string $version = '1.0.0'; // 05-06-2019
 
 	/**
-	* SEC-008: CSRF protection.
+	* Actions that are exempt from CSRF token verification (SEC-008).
 	*
-	* The server mints a per-session 32-byte random token on first contact and
-	* echoes it back on every response (`$response->csrf_token`). The client
-	* must echo it on every subsequent state-changing call via the
-	* `X-Dedalo-Csrf-Token` HTTP header (or as `rqo->csrf_token` for clients
-	* that cannot set custom headers).
+	* These are read-only or bootstrap calls that may legitimately arrive before
+	* the client has obtained a token (e.g. the very first 'start' call that
+	* establishes a session). Every action NOT in this list must present a valid
+	* X-Dedalo-Csrf-Token header (or rqo->csrf_token body field) that matches the
+	* per-session token stored in $_SESSION['dedalo']['csrf_token'].
 	*
-	* The actions in CSRF_EXEMPT_ACTIONS are read-only / bootstrap calls that may
-	* run before the client has obtained a token; everything else is rejected
-	* with a 403-style error if the token is missing or wrong.
+	* Extend with caution: any write or data-mutating action added here bypasses
+	* CSRF protection entirely.
 	*/
 	private const CSRF_EXEMPT_ACTIONS = [
 		'start',
@@ -208,6 +216,10 @@ final class dd_manager {
 
 	/**
 	* __CONSTRUCT
+	* No-op constructor. dd_manager has no per-instance state; all methods are
+	* either public static (CSRF helpers, sanitize gate) or instance-dispatched
+	* through manage_request(). The class is instantiated once by the JSON API
+	* entrypoint solely to call manage_request().
 	*/
 	public function __construct() {
 
@@ -217,44 +229,52 @@ final class dd_manager {
 
 	/**
 	* MANAGE_REQUEST
-	* Central API request handler that validates, authenticates, and routes
-	* incoming requests to the appropriate API class methods.
+	* Primary dispatcher: validates, authenticates, and routes an incoming API
+	* request to the correct handler method on the target API class.
 	*
-	* Key features:
-	* - Validates request object (rqo) structure
-	* - Authentication check with whitelist for public actions
-	* - Dynamic routing to API classes based on `dd_api` property
-	* - Special permission handling for maintenance area
-	* - Debug and performance metrics collection
+	* Execution order:
+	* 1. Start timing and (when SHOW_DEBUG) emit a request log entry.
+	* 2. Reject the rqo immediately if it has no 'action' property.
+	* 3. Reject 'dd_api' values that are not in the hard-coded allowlist.
+	* 4. Enforce authentication for all actions not in $no_login_needed_actions.
+	* 5. Enforce CSRF token verification for all actions not in CSRF_EXEMPT_ACTIONS.
+	* 6. Confirm the target method exists, is public+static, and (when the API
+	*    class declares API_ACTIONS) is listed in that constant (SEC-024).
+	* 7. For dd_area_maintenance_api, verify the logged user has permission >= 2
+	*    on DEDALO_AREA_MAINTENANCE_TIPO before dispatching.
+	* 8. Call the method via $dd_api::{$rqo->action}($rqo); convert any
+	*    permission_exception to a uniform error response.
+	* 9. Skip response decoration for Generator return values (streaming SSE).
+	* 10. Append csrf_token and, when SHOW_DEBUG/SHOW_DEVELOPER, a debug
+	*     sub-object containing timing, memory, rqo snapshot, and per-subsystem
+	*     cache metrics.
 	*
-	* Flow:
-	* 1. Logs request details when SHOW_DEBUG is enabled
-	* 2. Validates that rqo has required `action` property
-	* 3. Checks user authentication (skips for whitelisted actions)
-	* 4. Routes to appropriate API class (`dd_core_api` by default)
-	* 5. Validates target method exists and executes
-	* 6. Enforces maintenance area permissions if applicable
-	* 7. Attaches debug info and performance metrics to response
+	* All error paths return an stdClass with result=false, msg, and errors[].
+	* permission_exception is caught internally and never propagates to the caller.
 	*
-	* @param object $rqo Request object containing:
-	*                    - action (string) Required. API method to invoke
-	*                    - dd_api (string) Optional. API class name, defaults to 'dd_core_api'
-	*                    - id (string) Optional. Request identifier
-	*                    - source (object) Optional. May contain tipo property
-	* @return object $response Standard response object with:
-	*                    - result (bool) Success/failure status
-	*                    - msg (string) Response message
-	*                    - errors (array) Error codes if any
-	*                    - action (string) The action that was processed
-	*                    - debug (object) Optional. Debug info when enabled
-	*
-	* @throws Exception If authentication or permission checks fail
-	*                   (returned as error response, not thrown)
+	* @param object $rqo - Request object. Expected properties:
+	*   - action    (string) Required. Name of the public static method to invoke.
+	*   - dd_api    (string) Optional. Target API class name; defaults to 'dd_core_api'.
+	*   - id        (string) Optional. Request identifier echoed in debug end-line.
+	*   - source    (object) Optional. May carry a 'tipo' used in the debug end-line.
+	*   - csrf_token (string) Optional. CSRF token for clients that cannot set headers.
+	*   - options    (object) Optional. Action-specific payload; may carry csrf_token as fallback.
+	* @return object - Response object. Always has:
+	*   - result     (bool)   true on success, false on any error.
+	*   - msg        (string) Human-readable outcome description.
+	*   - action     (string) Echo of the requested action (set on most paths).
+	*   - errors     (array)  Error code strings on failure.
+	*   - csrf_token (string) Current session CSRF token (appended before return).
+	*   - debug      (object) Present when SHOW_DEBUG or SHOW_DEVELOPER is true.
 	*/
 	final public function manage_request( object $rqo ) : object {
 		$api_manager_start_time = start_time();
 
-		// debug
+		// debug request header
+		// Emits the full rqo as a bordered block in the PHP error log so that
+		// developers can trace the exact payload that reached the dispatcher.
+		// setAnalytics(false) arms the per-request hit/miss tracker; it is read
+		// back at the end of the method if analytics mode was activated.
 			if(SHOW_DEBUG===true) {
 				$action			= $rqo->action ?? 'undefined';
 				$text			= 'API REQUEST ' . $action;
@@ -281,6 +301,9 @@ final class dd_manager {
 			}
 
 		// dd_api class whitelist check
+		// Accepting any class name from the client would allow arbitrary method calls
+		// on any loaded PHP class. The allowlist is the primary guard that limits the
+		// routable API surface to known, intentional handler classes.
 			$allowed_api_classes = [
 				'dd_core_api',
 				'dd_area_maintenance_api',
@@ -308,6 +331,9 @@ final class dd_manager {
 					$response->errors[]	= 'invalid_api_class';
 				return $response;
 			}
+			// (!) $dd_api is used as a class name string for static dispatch ($dd_api::{$action}).
+			// The commented-out 'new $dd_api_type()' form was the original instantiation pattern;
+			// all API handler methods are now static so no instantiation is needed.
 			$dd_api			= $dd_api_type; // new $dd_api_type(); // class selected
 
 		// logged check
@@ -388,7 +414,10 @@ final class dd_manager {
 			}
 
 			if ( !$is_valid_public_method ) {
-				// error
+				// Method not found, not public+static, or not listed in API_ACTIONS.
+				// Unified error shape: the client always receives 'Undefined method' regardless
+				// of whether the method exists but is private vs. truly missing — intentional
+				// information hiding (avoid leaking internal class structure).
 				$response = new stdClass();
 					$response->result	= false;
 					$response->msg		= "Error. Undefined or unauthorized $dd_api_type method (action) : ".$rqo->action;
@@ -396,9 +425,12 @@ final class dd_manager {
 					$response->action	= $action;
 				return $response;
 			}else{
-				// success
+				// Method is valid — proceed with secondary checks and dispatch.
 				if($dd_api==='dd_area_maintenance_api'){
 					// check access to maintenance area
+					// Permissions level 2 = write access; level 1 = read-only; 0 = no access.
+					// Maintenance operations always require write level, regardless of the
+					// specific action requested, to avoid per-action permission gaps.
 					$permissions = common::get_permissions(DEDALO_AREA_MAINTENANCE_TIPO, DEDALO_AREA_MAINTENANCE_TIPO);
 					if ($permissions<2) {
 						$response = new stdClass();
@@ -428,7 +460,10 @@ final class dd_manager {
 						$response->errors	= ['permissions_denied'];
 				}
 
-				// SEC: do not attempt to decorate Generators (PHP 8.2+ forbids dynamic properties on them)
+				// SEC: do not attempt to decorate Generators (PHP 8.2+ forbids dynamic properties on them).
+				// Streaming SSE actions (e.g. workers) return a Generator that yields chunks
+				// directly to the output buffer. Attaching ->action or ->csrf_token would throw
+				// an Error on PHP 8.2+ readonly-object enforcement.
 				if ($response instanceof \Generator) {
 					return $response;
 				}
