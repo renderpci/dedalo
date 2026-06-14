@@ -1,25 +1,44 @@
 <?php declare(strict_types=1);
 /**
 * CLASS COMPONENT_SELECT
-* Manages single-select dropdown components for creating relationships in Dédalo.
+* Single-select dropdown relation component that links the host record to exactly one
+* target record via a locator stored in the 'relation' matrix column.
 *
-* Provides a dropdown interface for selecting a single record from a target section,
-* creating a one-to-one or many-to-one relationship. Unlike component_portal which
-* shows a list with multiple selections, component_select uses a simple dropdown.
+* Responsibilities:
+* - Renders as a native HTML <select> dropdown (or equivalent client widget) listing
+*   every record in the configured target section as an option.
+* - Stores the chosen option as a single locator object
+*   (type dd151 / DEDALO_RELATION_TYPE_LINK) in the 'relation' matrix column.
+* - Builds the full option list (datalist) via get_list_of_values() (inherited from
+*   component_relation_common), which executes the SQO defined in the component's
+*   'source.request_config' ontology property against the target section.
+* - In 'edit' mode the JSON controller returns both the current value (get_data_lang)
+*   and the full option list (datalist) so the client can render a populated dropdown.
+* - Overrides get_sortable() to return true, exposing the component as sortable in
+*   list and export views (the closed vocabulary makes value-based sorting well-defined).
+* - When a dataframe is present in the request_config ddo_map, the JSON controller
+*   also resolves and injects subdatum context/data for the selected locator.
+* - Inherits all locator validation, duplicate prevention, save, search, export,
+*   and diffusion logic from component_relation_common.
 *
-* Key features:
-* - Single selection only (dropdown behavior)
-* - Creates locator-based relationships to target sections
-* - Supports sorting by selected value
-* - Dropdown options populated from ar_list_of_values
-* - Duplicate prevention when setting values
+* Contrast with related components:
+*   component_radio_button : Identical single-select semantics but rendered as radio
+*     buttons; shares the same default_relation_type and test_equal_properties.
+*   component_check_box    : Multi-select — accumulates an array of locators.
+*   component_portal       : Multi-record navigation list, not a closed dropdown.
 *
-* Common use cases:
-* - Selecting a single category, status, or type
-* - Choosing a parent record in hierarchical relationships
-* - Assigning a single owner or responsible entity
+* Data shape (stored in the 'relation' matrix column):
+*   [ { "type": "dd151", "section_tipo": "dd64", "section_id": "1",
+*       "from_component_tipo": "test91" } ]
+*   (An array of one locator; an empty array means no selection.)
 *
-* Extends component_relation_common for relationship management capabilities.
+* JSON output (component_select_json.php):
+*   context : structure context including target_sections with permissions.
+*   data    : [ { value: <locator[]>, datalist: <option[]> } ] in 'edit' mode;
+*             [ { value: <locator> } ] in 'list'/'tm' mode.
+*
+* Extended by: nothing — this is a concrete leaf class.
+* Extends: component_relation_common (which extends component_common).
 *
 * @package Dédalo
 * @subpackage Core
@@ -32,15 +51,31 @@ class component_select extends component_relation_common {
 	* CLASS VARS
 	*/
 		/**
-		 * Default relation type for select components (DEDALO_RELATION_TYPE_LINK).
-		 * Defines the ontology tipo used for link-type relations in this component.
+		 * Default relation type written into each locator's 'type' field when no
+		 * explicit 'config_relation.relation_type' is present in the ontology properties.
+		 * DEDALO_RELATION_TYPE_LINK = 'dd151' (generic link relation, defined in
+		 * core/base/dd_tipos.php).
+		 * The base class (component_relation_common) defaults to null; this subclass
+		 * overrides it so every select locator automatically carries the link type
+		 * without requiring per-instance ontology configuration.
 		 * @var ?string $default_relation_type
 		 */
 		protected ?string $default_relation_type = DEDALO_RELATION_TYPE_LINK;
 
 		/**
-		 * Properties used to verify duplicate locators when adding relations.
-		 * Array of property names that must match to consider two locators equal.
+		 * Keys used by locator::in_array_locator() to detect duplicate locators before
+		 * a new one is added to the data array. A locator is considered a duplicate when
+		 * every key in this list has an identical value in an existing entry.
+		 *
+		 * Fields:
+		 * - section_tipo        : Type identifier of the target section (e.g. 'dd64').
+		 * - section_id          : Record ID in the target section.
+		 * - type                : Relation type of the locator (e.g. 'dd151').
+		 * - from_component_tipo : Tipo of this component, scoping the locator to it.
+		 *
+		 * The four-field combination ensures that the same target record cannot be added
+		 * twice through the same component, preventing corrupted multi-locator state in
+		 * data that should contain at most one locator.
 		 * @var array $test_equal_properties
 		 */
 		public array $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
@@ -49,8 +84,20 @@ class component_select extends component_relation_common {
 
 	/**
 	* GET_SORTABLE
-	* @return bool true
-	* 	Default is false. Override when component is sortable
+	* Declares that this component's column is sortable in list and export views.
+	*
+	* component_relation_common::get_sortable() returns false for all relation components
+	* by default — sorting a free-form relation list makes no semantic sense for most of
+	* them. component_select overrides to true because its option list is a closed
+	* vocabulary fetched from a target section; each host record holds at most one
+	* selected value, so sorting by the resolved label string is well-defined and
+	* expected by end users (e.g. "sort records by assigned category").
+	*
+	* The actual sort is performed by sort_data_by_column() (inherited from
+	* component_relation_common) when a 'sort_by_column' changed_data action is received;
+	* this method only advertises the capability to callers such as the list-view renderer
+	* and tool_export.
+	* @return bool - Always true.
 	*/
 	public function get_sortable() : bool {
 
