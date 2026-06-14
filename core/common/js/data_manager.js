@@ -1495,14 +1495,20 @@ data_manager.clear_local_db_table = async function(table) {
 * Download url blob data and create a temporal auto-fired link
 */
 export function download_url(url, filename) {
-	fetch(url).then(function(response) {
+	return fetch(url).then(function(response) {
 		return response.blob().then((blob)=>{
+			const object_url = URL.createObjectURL(blob);
 			const a = document.createElement("a");
-			a.href = URL.createObjectURL(blob);
+			a.href = object_url;
 			a.setAttribute("download", filename);
 			a.click();
 			a.remove();
+			// release the object URL to avoid leaking memory
+			URL.revokeObjectURL(object_url);
 		});
+	})
+	.catch((error) => {
+		console.error('download_url failed:', url, error);
 	});
 }//end download_url
 
