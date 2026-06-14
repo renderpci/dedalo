@@ -14,6 +14,37 @@
 
 
 
+/**
+* COMPONENT_RADIO_BUTTON
+* Single-choice component backed by a server-supplied datalist of locator values.
+*
+* The component stores at most one entry at a time (radio-button semantics).
+* Each entry is a locator object {section_id, section_tipo, id?} that references
+* a row in the configured target section.  The display label is resolved from
+* self.data.datalist at render time.
+*
+* Responsibilities:
+* - Declare the instance property skeleton shared by all render modes.
+* - Delegate lifecycle, persistence, and render to component_common / common
+*   prototypes via the prototype-assignment block below.
+* - Export the two shared helpers (build_changed_data_item, handle_radio_change)
+*   used by render_edit and render_search views so that the changed-data shape is
+*   always constructed in one place.
+*
+* Data shapes (set by component_common.init before render):
+*   self.data = {
+*     entries  : Array<{section_id: number, section_tipo: string, id?: number}>,
+*     datalist : Array<{label: string, section_id: string, value: {section_id: string, section_tipo: string, ...}}>,
+*     q_operator?: string   // search mode only
+*   }
+*   self.context = { view?: string, target_sections?: Array, ... }
+*
+* Modes / views:
+*   edit   → render_edit_component_radio_button (views: default, line, rating, print)
+*   list   → render_list_component_radio_button (views: default, mini, text)
+*   tm     → same as list (thesaurus-matrix reuse)
+*   search → render_search_component_radio_button
+*/
 export const component_radio_button = function(){
 
 	this.id
@@ -70,7 +101,18 @@ export const component_radio_button = function(){
 
 /**
 * GET_CHECKED_VALUE_LABEL
-* @return string label
+* Returns the display label of the currently selected radio option by looking
+* up the first entry's section_id in self.data.datalist.
+*
+* Returns an empty string when the component has no value (entries is empty,
+* undefined, or its first element is null/undefined).
+*
+* (!) Accesses self.data.datalist[checked_key].label without guarding against
+* checked_key === -1 (findIndex not found).  If datalist and entries become
+* de-synced the call will throw a TypeError.  The caller (get_buttons reset
+* handler) should only invoke this when entries.length > 0.
+*
+* @returns {string} Human-readable label of the checked datalist item, or ''
 */
 component_radio_button.prototype.get_checked_value_label = function() {
 
@@ -95,7 +137,7 @@ component_radio_button.prototype.get_checked_value_label = function() {
 * FOCUS_FIRST_INPUT
 * Captures ui.component.activate calls
 * to prevent default behavior
-* @return bool
+* @returns {boolean} Always true — signals that activation is handled externally
 */
 component_radio_button.prototype.focus_first_input = function() {
 
@@ -108,11 +150,21 @@ component_radio_button.prototype.focus_first_input = function() {
 * BUILD_CHANGED_DATA_ITEM
 * Clones the datalist value, adds the entry id to it, and builds a frozen changed_data_item object.
 * Used by edit views (via handle_radio_change) and search view (directly).
-* @param object|null datalist_value
-* 	Locator value from datalist
-* @param int|null id
-* 	Entry id from data
-* @return object {changed_data_item, value}
+*
+* The returned changed_data_item follows the standard Dédalo changed-data contract:
+*   { action: 'update'|'remove', id: number|null, value: Object|null }
+*
+* Cloning datalist_value ensures that the shared datalist reference is not mutated
+* when the `id` property is injected after the first API save.
+*
+* When datalist_value is null the action is set to 'remove' and value is null,
+* which signals the persistence layer to delete the current entry.
+*
+* @param {Object|null} datalist_value - Locator value from datalist ({section_id, section_tipo, ...}),
+*   or null to build a 'remove' action
+* @param {number|null} id - Database entry id from data.entries[0].id; null for new (unsaved) entries
+* @returns {{changed_data_item: Object, parsed_value: Object|null}} Frozen changed_data_item and
+*   the cloned+merged value (parsed_value) ready to optimistically update local state
 */
 export const build_changed_data_item = function(datalist_value, id=null) {
 
@@ -142,10 +194,21 @@ export const build_changed_data_item = function(datalist_value, id=null) {
 * Common change handler for component_radio_button across all edit views.
 * Resolves id dynamically from self.data (not from stale closure),
 * builds changed_data_item, sets changed_data, and saves via change_value.
-* @param object self - Component instance
-* @param object|null datalist_value - The locator value from datalist
-* @param int|null id - Entry id from data
-* @return object|null value - The value with id preserved, or null
+*
+* The id is resolved from self.data.entries[0].id rather than from a closure
+* because the component may have been empty when the closure was created (id
+* would be null), but a prior save in the same session may have assigned a
+* database id to the entry.  Refreshing from self.data ensures the correct id
+* is always used on subsequent changes without forcing a full component refresh.
+*
+* change_value is called with refresh:false to avoid a round-trip re-render
+* after each keystroke/click; the DOM state is updated locally instead.
+*
+* @param {Object} self - Component instance (component_radio_button)
+* @param {Object|null} datalist_value - The locator value from datalist for the chosen option,
+*   or null when clearing the selection
+* @param {number|null} id - Entry id from data; if null, resolved from self.data at call time
+* @returns {Promise<Object|null>} The cloned+id-merged value that was saved, or null on 'remove'
 */
 export const handle_radio_change = async function(self, datalist_value, id=null) {
 
