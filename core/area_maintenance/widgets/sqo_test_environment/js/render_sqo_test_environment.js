@@ -68,6 +68,9 @@ render_sqo_test_environment.prototype.list = async function(options) {
 */
 const get_content_data_edit = async function(self) {
 
+	// reset per-build state so a refresh rebuilds the editor into the new container
+		self.editor = null
+
 	// short vars
 		const value = self.value || {}
 

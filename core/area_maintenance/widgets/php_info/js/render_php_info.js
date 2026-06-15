@@ -75,10 +75,15 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// defer the heavy iframe load until the widget is opened (host calls load())
+		self._activated = false
 		self.activate = () => {
 			if (self._activated) { return }
 			self._activated = true
 			content_data.src = src
+		}
+		// if the widget is already open (e.g. after a refresh), load now
+		if (self._open) {
+			self.activate()
 		}
 
 
