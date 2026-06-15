@@ -48,10 +48,13 @@ async function main() {
 	await page.setViewport({ width: 1280, height: 1400 });
 	page.on('dialog', (d) => d.accept().catch(() => {}));
 
-	// network capture: tag every get_widget_value request with its widget id
-	page.on('request', (req) => {
-		const data = req.postData();
-		if (data && data.includes('"action":"get_widget_value"')) {
+	// capture ALL network requests incl. worker-originated (get_value uses use_worker:true,
+	// which page.on('request') does not see)
+	const cdp = await page.createCDPSession();
+	await cdp.send('Network.enable');
+	cdp.on('Network.requestWillBeSent', (params) => {
+		const data = (params.request && params.request.postData) || '';
+		if (data.includes('"action":"get_widget_value"')) {
 			let id = 'unknown';
 			try { id = JSON.parse(data)?.source?.model || 'unknown'; } catch (e) { /* keep unknown */ }
 			bump(id);
@@ -73,9 +76,15 @@ async function main() {
 			if (pi) { pi.value = p; pi.dispatchEvent(new Event('input', { bubbles: true })); }
 			if (sb) sb.click();
 		}, username, password);
-		await page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 30000 }).catch(() => {});
+		await page.waitForFunction(
+			() => window.page_globals && window.page_globals.is_logged === true,
+			{ timeout: 15000 }
+		).catch(() => {});
 		await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
 	}
+
+	// exclude any requests captured during login navigation
+	Object.keys(counts).forEach(k => delete counts[k]);
 
 	// wait for the dashboard grid and let any background loads settle
 	await page.waitForSelector('.maintenance_groups .widget_container', { timeout: 20000 });
@@ -107,7 +116,7 @@ async function main() {
 		else fail(`opening ${LAZY_PROBE} triggered ${delta} fetches (expected 1)`);
 
 		// ASSERTION 3: collapse + re-open does not refetch (cached)
-		const beforeReopen = counts[LAZY_PROBE];
+		const beforeReopen = counts[LAZY_PROBE] || 0;
 		await page.evaluate((probeId) => {
 			const label = document.getElementById(probeId).querySelector('.widget_label');
 			label.click(); // collapse
