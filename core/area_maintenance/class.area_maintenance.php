@@ -38,10 +38,8 @@ class area_maintenance extends area_common {
 	 * SEC-044: explicit allowlist of methods callable through
 	 * `dd_area_maintenance_api::class_request` (synchronous OR async).
 	 * Without this constant, `class_request` falls back to "any public-static
-	 * method on the class", exposing every helper on this class
-	 * (`get_file_constants`, `get_definitions_files`, `set_maintenance_mode`,
-	 * `set_recovery_mode`, `restore_dd_ontology_recovery_from_file`, …) to
-	 * invocation by anyone with maintenance-area write.
+	 * method on the class", exposing every helper on this class to invocation
+	 * by anyone with maintenance-area write.
 	 *
 	 * The list below is derived by grepping `dd_area_maintenance_api` and
 	 * `action: 'class_request'` under the area_maintenance widgets JS tree
@@ -55,7 +53,11 @@ class area_maintenance extends area_common {
 	public const array API_ACTIONS = [
 		'create_test_record',
 		'long_process_stream',
-		'rebuild_lang_files'
+		'rebuild_lang_files',
+		'restore_dd_ontology_recovery_from_file',
+		'set_maintenance_mode',
+		'set_notification',
+		'set_recovery_mode',
 	];
 
 
