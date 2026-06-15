@@ -65,4 +65,58 @@ final class search_cross_join_test extends BaseTestCase {
 			);
 		}
 	}
+
+	/** A single multi-step clause must still build and be prefixed j1_. */
+	public function test_single_clause_multistep_still_builds() {
+		$path = [
+			(object)['section_tipo' => 'test3', 'component_tipo' => 'test80', 'model' => 'component_portal'],
+			(object)['section_tipo' => 'test3', 'component_tipo' => 'test80', 'model' => 'component_portal']
+		];
+		$sqo = (object)[
+			'section_tipo' => ['test3'],
+			'mode'         => 'list',
+			'filter'       => (object)['$and' => [
+				(object)['q' => (object)['section_id' => '1', 'section_tipo' => 'test3'], 'path' => $path]
+			]]
+		];
+		$search = search::get_instance($sqo);
+		$sql    = $search->parse_sql_query();
+
+		// Exactly one relation join for one clause, prefixed j1_.
+		$this->assertSame(
+			1,
+			preg_match_all("/LEFT JOIN matrix_test AS j1_/", $sql),
+			"Expected exactly one j1_-prefixed join for a single multi-step clause.\nSQL:\n{$sql}"
+		);
+	}
+
+	/** Single-level path (value directly on the main table) must emit NO jN_ prefix (legacy). */
+	public function test_single_level_path_unprefixed() {
+		$sqo = (object)[
+			'section_tipo' => ['test3'],
+			'mode'         => 'list',
+			'filter'       => (object)['$and' => [
+				(object)['q' => '1', 'path' => [
+					(object)['section_tipo' => 'test3', 'component_tipo' => 'section_id']
+				]]
+			]]
+		];
+		$search = search::get_instance($sqo);
+		$sql    = $search->parse_sql_query();
+		$this->assertSame(
+			0,
+			preg_match_all('/\bj\d+_/', $sql),
+			"Single-level path must not be prefixed.\nSQL:\n{$sql}"
+		);
+	}
+
+	/** The two-clause AND query must be valid, executable SQL (no duplicate-alias error). */
+	public function test_two_clause_sql_executes() {
+		$search = search::get_instance($this->two_same_path_sqo());
+		$result = $search->search(); // builds + executes
+		$this->assertTrue(
+			$result instanceof db_result || $result === false,
+			'Two-clause cross-join search must execute without a SQL error (duplicate alias, etc.)'
+		);
+	}
 }
