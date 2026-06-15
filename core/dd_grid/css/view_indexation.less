@@ -308,6 +308,20 @@
 					}
 				}//end .tch
 
+				// rsc170 . Image (resource). indexation_list dd1188
+				// 8 fixed columns -> id | image | title | collection | photographer | footer | date | description
+				// Without this grid the generic flex fallback sizes each row's columns
+				// from its own content, so columns do not align between rows.
+				&.rsc170 {
+					>.row.line {
+						width: 100%;
+						display: grid;
+						grid-template-columns: 5rem 8rem 2fr 1fr 1fr 1fr 7rem 2fr;
+						align-items: start;
+						border-bottom: 1px solid @color_grey_13;
+					}//end >.row.line
+				}//end .rsc170
+
 			}//end >.caption
 		}//end >.row
 

@@ -9149,6 +9149,13 @@ dd-modal .footer.distribute {
   background-color: var(--color_white);
   object-fit: contain;
 }
+.wrapper_dd_grid.view_indexation .content_data > .row > .caption.rsc170 > .row.line {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 5rem 8rem 2fr 1fr 1fr 1fr 7rem 2fr;
+  align-items: start;
+  border-bottom: 1px solid var(--color_grey_13);
+}
 /**
 *	dd_grid view_indexation_audiovisual
 *
