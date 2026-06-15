@@ -96,45 +96,12 @@ const render_content_data = async function(self) {
 			parent			: content_data
 		})
 
-		// get system data from API
-		let load_status = null
-		const load_data = () => {
-			// prevent to load multiple times
-			if (load_status!==null) {
-				return
-			}
-
-			// clean node
-			while (datalist_container.firstChild) {
-				datalist_container.removeChild(datalist_container.firstChild);
-			}
-
-			load_status = 'loading'
-			const spinner = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'spinner',
-				parent			: datalist_container
-			})
-			const info = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'info',
-				inner_html		: 'Collecting system info. Please wait..',
-				parent			: datalist_container
-			})
-
-			self.get_value()
-			.then(function(value){
-				load_status = 'loaded'
-				spinner.remove()
-				info.remove()
-				// fix value
-				self.value = value
-				// render system info to datalist_container
-				render_datalist(self, datalist_container)
-			})
+		// render from value when loaded. The host triggers the background/open
+		// load (widget_common.load), which fetches self.value then re-renders
+		// content (render_level 'content'); render_datalist clears the placeholder.
+		if (self.value) {
+			render_datalist(self, datalist_container)
 		}
-		// force load system info to allow update widget label color
-		setTimeout(load_data, 1500)
 
 	// body_response
 		const body_response = ui.create_dom_element({

@@ -7,6 +7,7 @@
 // imports
 	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {area_maintenance} from '../../../../area_maintenance/js/area_maintenance.js'
+	import {event_manager} from '../../../../common/js/event_manager.js'
 	import {render_update_data_version} from './render_update_data_version.js'
 
 
@@ -96,10 +97,7 @@ update_data_version.prototype.build = async function(autoload=false) {
 
 	try {
 
-		if (autoload) {
-			// specific actions.. like fix main_element for convenience
-			self.value = await self.get_value()
-		}
+		// data loads at idle via the unified background load (see render_area_maintenance)
 
 	} catch (error) {
 		self.error = error
