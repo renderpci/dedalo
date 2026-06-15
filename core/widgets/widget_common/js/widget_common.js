@@ -312,13 +312,15 @@ widget_common.prototype.load = async function() {
 
 	try {
 
+		self.error = null
 		self.value = await self.get_value()
-		self._load_state = 'loaded'
 
 		// repaint content (spinner lives in the old content node, replaced here)
 		if (self.node) {
 			await self.render({ render_level : 'content' })
 		}
+
+		self._load_state = 'loaded'
 
 	} catch (error) {
 		self.error = error
