@@ -541,7 +541,9 @@ const render_columns_mapper = async function(self, item) {
 		}
 
 	// check section_id column exists
-		const first_row				= item.data[0]
+		// TOOLS-07: the listing response no longer ships the full parsed 'data';
+		// the first row (header / column names) is file_info (server: (array)$ar_data[0]).
+		const first_row				= file_info
 		const columns_section_id	= first_row
 			? first_row.find(el => el==='section_id')
 			: null
