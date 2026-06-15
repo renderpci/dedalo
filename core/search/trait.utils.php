@@ -49,9 +49,11 @@ trait utils {
 	*
 	* @param array $path - array of stdClass steps from get_query_path();
 	*                      each step has ->section_tipo and ->component_tipo
+	* @param ?int $join_id - optional per-clause discriminator; when set (and path is
+	*                        multi-step) prefixes the joined-relation alias with "j{id}_"
 	* @return string $table_alias - underscore-joined SQL alias string
 	*/
-	public function get_table_alias_from_path( array $path ) : string {
+	public function get_table_alias_from_path( array $path, ?int $join_id=null ) : string {
 
 		$total	= count($path);
 		$ar_key = [];
@@ -71,6 +73,14 @@ trait utils {
 		}//foreach ($path as  $step_object)
 
 		$table_alias = implode('_', $ar_key);
+
+		// Per-clause discriminator. Multi-step paths only: prefix the joined-relation
+		// alias so two clauses sharing the same path get INDEPENDENT joins (each clause
+		// traverses the relation array on its own row). Single-step paths use the shared
+		// main table alias and must never be prefixed. join_id===null preserves legacy SQL.
+		if ($join_id!==null && $total>1) {
+			$table_alias = 'j' . $join_id . '_' . $table_alias;
+		}
 
 		return $table_alias;
 	}//end get_table_alias_from_path
