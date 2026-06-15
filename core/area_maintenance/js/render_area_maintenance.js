@@ -5,7 +5,7 @@
 
 
 // imports
-	import {when_in_dom, when_in_viewport, dd_request_idle_callback} from '../../common/js/events.js'
+	import {when_in_dom, dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
