@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light" data-accent="orange">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dédalo v7 — Calm Scholarly redesign mockup</title>
+<style>
+/* ============================================================
+   DESIGN TOKENS — "Calm Scholarly" direction
+   Warm-neutral field, pine/deep-teal accent, surfaces over borders
+   ============================================================ */
+:root {
+  /* warm neutral ramp (light) */
+  --bg-app:        #f7f6f4;
+  --bg-surface:    #fffefc;
+  --bg-surface-2:  #f1efea;   /* faint tinted panel = grouping without borders */
+  --bg-sunken:     #efece6;
+  --fg-default:    #23211e;
+  --fg-muted:      #8a857c;
+  --fg-faint:      #b4afa5;
+  --hairline:      #e7e4df;   /* used rarely */
+
+  /* accent: pine / deep teal (default) */
+  --accent:        #2f6b63;   /* fills / brand */
+  --accent-text:   #2f6b63;   /* links / icons on light */
+  --accent-hover:  #28594f;
+  --accent-soft:   #e3ece9;   /* selection / focus tint */
+  --accent-ring:   #2f6b6355;
+
+  /* desaturated status */
+  --st-pending:    #b08a2e;
+  --st-pending-bg: #f3ecd9;
+  --st-review:     #7a6cae;
+  --st-valid:      #4f8a5b;
+  --st-valid-bg:   #e3efe4;
+  --st-vacant:     #9a8f80;
+  --st-down:       #b25c50;
+  --st-down-bg:    #f5e4df;   /* faint danger surface for tool headers */
+
+  /* shape & motion */
+  --radius:   8px;
+  --radius-sm: 5px;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-5: 24px; --space-6: 32px;
+  --shadow-float: 0 6px 24px -8px rgba(30,28,24,.28), 0 1px 2px rgba(30,28,24,.08);
+  --ease: cubic-bezier(.2,.6,.2,1);
+
+  --font: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+/* ---- official Dédalo orange accent (light) ---- */
+:root[data-accent="orange"] {
+  --accent:        #f78a1c;   /* official Dédalo orange, used for fills/brand/selection */
+  --accent-text:   #b5610c;   /* deepened burnt-orange for legible links/icons on light */
+  --accent-hover:  #e07d12;
+  --accent-soft:   #fbe7cf;   /* warm selection / focus tint */
+  --accent-ring:   #f78a1c55;
+}
+:root[data-theme="dark"] {
+  --bg-app:        #1c1b19;
+  --bg-surface:    #26241f;
+  --bg-surface-2:  #211f1b;
+  --bg-sunken:     #181715;
+  --fg-default:    #e8e5df;
+  --fg-muted:      #989183;
+  --fg-faint:      #6a655c;
+  --hairline:      #34322c;
+  --accent:        #5aa399;
+  --accent-text:   #6fb3a9;
+  --accent-hover:  #6fb3a9;
+  --accent-soft:   #21302d;
+  --accent-ring:   #5aa39955;
+  --st-pending-bg: #34301f;
+  --st-valid-bg:   #20302a;
+  --st-down-bg:    #38231e;
+  --shadow-float:  0 8px 28px -8px rgba(0,0,0,.6), 0 1px 2px rgba(0,0,0,.4);
+}
+/* ---- official Dédalo orange accent (dark) ---- */
+:root[data-theme="dark"][data-accent="orange"] {
+  --accent:        #ffa54a;   /* Dédalo orange, brightened for dark surfaces */
+  --accent-text:   #ffb968;
+  --accent-hover:  #ffb968;
+  --accent-soft:   #3a2c18;
+  --accent-ring:   #ffa54a55;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: var(--font);
+  background: var(--bg-app);
+  color: var(--fg-default);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- top menu ---------- */
+.menu {
+  display: flex; align-items: center; gap: var(--space-5);
+  height: 46px; padding: 0 var(--space-5);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--hairline);
+  position: sticky; top: 0; z-index: 20;
+}
+.brand { display: flex; align-items: center; gap: var(--space-2); font-weight: 600; letter-spacing: .2px; }
+.brand .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent); }
+.menu nav { display: flex; gap: var(--space-4); color: var(--fg-muted); }
+.menu nav a { color: inherit; text-decoration: none; padding: 4px 2px; cursor: pointer; position: relative; }
+.menu nav a:hover { color: var(--fg-default); }
+.menu nav a.active { color: var(--fg-default); }
+.menu nav a.active::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -14px; height: 2px; background: var(--accent);
+}
+.menu .spacer { flex: 1; }
+.menu .right { display: flex; align-items: center; gap: var(--space-4); color: var(--fg-muted); }
+.menu .right .pill { padding: 3px 10px; border-radius: 999px; background: var(--bg-surface-2); font-size: 12.5px; }
+
+/* ---- unfolded (expanded) menu dropdown ---- */
+.navitem { position: relative; }
+.navitem > a .caret { font-size: 9px; color: var(--fg-faint); margin-left: 3px; }
+.navitem.open > a { color: var(--fg-default); }
+.menu-dd {
+  position: absolute; top: calc(100% + 13px); left: -8px; z-index: 40;
+  width: 560px; padding: var(--space-3);
+  background: var(--bg-surface); border: 1px solid var(--hairline);
+  border-radius: var(--radius); box-shadow: var(--shadow-float);
+  display: none; grid-template-columns: 1.25fr 1fr; gap: var(--space-3);
+}
+.navitem.open .menu-dd { display: grid; }
+.menu-col h4 { margin: 4px 10px 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); font-weight: 600; }
+.menu-link { display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: var(--radius-sm); color: var(--fg-default); cursor: pointer; font-size: 13.5px; }
+.menu-link:hover { background: var(--bg-surface-2); }
+.menu-link.active { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+.menu-link .lead { width: 7px; height: 7px; border-radius: 2px; background: var(--fg-faint); flex: none; }
+.menu-link.active .lead { background: var(--accent); }
+.menu-link .count { margin-left: auto; color: var(--fg-faint); font-variant-numeric: tabular-nums; font-size: 12px; }
+.menu-link.child { margin-left: 18px; font-size: 13px; }
+.menu-col.alt { background: var(--bg-surface-2); border-radius: var(--radius-sm); padding: var(--space-2); }
+.recent .r { padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer; }
+.recent .r:hover { background: var(--bg-surface); }
+.recent .r .t { font-size: 13px; }
+.recent .r .s { font-size: 11.5px; color: var(--fg-muted); }
+.menu-foot { grid-column: 1 / -1; display: flex; gap: 6px; padding: var(--space-2) var(--space-1) 0; border-top: 1px solid var(--hairline); margin-top: 4px; }
+.iconbtn {
+  width: 30px; height: 30px; display: grid; place-items: center; border-radius: var(--radius-sm);
+  cursor: pointer; color: var(--fg-muted); background: transparent; border: 0; font-size: 15px;
+}
+.iconbtn:hover { background: var(--bg-surface-2); color: var(--fg-default); }
+.accentsw { display: flex; border: 1px solid var(--hairline); border-radius: 999px; overflow: hidden; }
+.accentsw button { font: inherit; font-size: 12px; border: 0; background: var(--bg-surface); color: var(--fg-muted); padding: 4px 11px; cursor: pointer; }
+.accentsw button.active { background: var(--accent); color: #fff; }
+
+/* ---------- status strip ---------- */
+.statusbar {
+  display: flex; gap: var(--space-4); align-items: center;
+  padding: 4px var(--space-5); font-size: 11.5px; color: var(--fg-faint);
+  background: var(--bg-app);
+}
+.statusbar b { color: var(--fg-muted); font-weight: 500; }
+
+/* ---------- view switch ---------- */
+.viewswitch { display: flex; gap: 6px; padding: var(--space-3) var(--space-5) 0; }
+.viewswitch button {
+  font: inherit; font-size: 13px; border: 1px solid var(--hairline); background: var(--bg-surface);
+  color: var(--fg-muted); padding: 6px 14px; border-radius: 999px; cursor: pointer;
+}
+.viewswitch button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.screen { display: none; padding: var(--space-4) var(--space-5) var(--space-6); }
+.screen.active { display: block; }
+
+/* ============================================================
+   LIST VIEW
+   ============================================================ */
+.toolbar {
+  display: flex; align-items: center; gap: var(--space-2);
+  margin-bottom: var(--space-4); flex-wrap: wrap;
+}
+.toolbar .group { display: flex; align-items: center; gap: var(--space-1); }
+.btn {
+  font: inherit; font-size: 13px; cursor: pointer; border-radius: var(--radius-sm);
+  padding: 7px 13px; border: 1px solid transparent; background: transparent; color: var(--fg-default);
+  display: inline-flex; align-items: center; gap: 7px; transition: background .12s var(--ease);
+}
+.btn .ic { color: var(--fg-muted); font-size: 14px; }
+.btn:hover { background: var(--bg-surface-2); }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.primary .ic { color: #fff; }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.ghost { color: var(--fg-muted); }
+.sep { width: 1px; align-self: stretch; background: var(--hairline); margin: 4px var(--space-2); }
+.toolbar .spacer { flex: 1; }
+
+.searchbox {
+  display: flex; align-items: center; gap: 8px; background: var(--bg-surface);
+  border: 1px solid var(--hairline); border-radius: var(--radius); padding: 6px 12px; min-width: 240px;
+  color: var(--fg-muted);
+}
+.searchbox input { border: 0; background: transparent; font: inherit; color: var(--fg-default); outline: none; width: 100%; }
+
+.resultmeta { color: var(--fg-muted); font-size: 12.5px; margin: 0 0 var(--space-3); }
+.resultmeta b { color: var(--fg-default); font-weight: 600; }
+
+.tablewrap { background: var(--bg-surface); border-radius: var(--radius); overflow: hidden; }
+table.list { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.list thead th {
+  text-align: left; font-weight: 500; color: var(--fg-muted); font-size: 11.5px;
+  letter-spacing: .04em; text-transform: uppercase; padding: 10px var(--space-3);
+  border-bottom: 1px solid var(--hairline); background: var(--bg-surface);
+  white-space: nowrap; cursor: pointer; user-select: none;
+}
+table.list thead th .sort { color: var(--fg-faint); margin-left: 4px; }
+table.list tbody td { padding: 11px var(--space-3); vertical-align: top; border-bottom: 1px solid var(--bg-surface-2); }
+table.list tbody tr:hover td { background: var(--bg-surface-2); }
+table.list tbody tr.sel td { background: var(--accent-soft); }
+table.list tbody tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.id { font-variant-numeric: tabular-nums; color: var(--fg-muted); font-weight: 600; }
+.rowtools { color: var(--fg-faint); display: flex; gap: 6px; margin-top: 4px; }
+.rowtools span { cursor: pointer; }
+.rowtools span:hover { color: var(--accent); }
+
+/* toggle */
+.toggle { width: 34px; height: 19px; border-radius: 999px; background: var(--st-valid); position: relative; display: inline-block; }
+.toggle::after { content:""; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%; background:#fff; transition: left .15s var(--ease);}
+.toggle.off { background: var(--fg-faint); }
+.toggle.off::after { left: 17px; }
+
+.tag {
+  font-size: 11.5px; padding: 2px 9px; border-radius: 999px; display: inline-block;
+  background: var(--bg-surface-2); color: var(--fg-muted);
+}
+.density { color: var(--fg-muted); font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
+.density .seg { display: flex; border: 1px solid var(--hairline); border-radius: 999px; overflow: hidden; }
+.density .seg button { font: inherit; font-size: 12px; border: 0; background: var(--bg-surface); color: var(--fg-muted); padding: 4px 10px; cursor: pointer; }
+.density .seg button.active { background: var(--accent-soft); color: var(--accent-text); }
+
+/* compact density variant */
+.tablewrap.compact table.list tbody td { padding: 6px var(--space-3); }
+.tablewrap.compact .rowtools { display: none; }
+
+/* ============================================================
+   RECORD VIEW (ficha + inspector)
+   ============================================================ */
+.record-layout { display: grid; grid-template-columns: 1fr 320px; gap: var(--space-5); align-items: start; }
+.insp-cell { min-width: 0; }
+/* collapsed inspector → narrow icon rail */
+.record-layout.insp-collapsed { grid-template-columns: 1fr 46px; }
+.record-layout.insp-collapsed .inspector { display: none; }
+.insp-rail { display: none; flex-direction: column; align-items: center; gap: 6px; position: sticky; top: 60px; }
+.record-layout.insp-collapsed .insp-rail { display: flex; }
+.insp-rail .railbtn {
+  width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center;
+  background: var(--bg-surface); border: 1px solid var(--hairline); color: var(--fg-muted);
+  cursor: pointer; font-size: 15px; transition: background .12s var(--ease), color .12s var(--ease), border-color .12s var(--ease);
+}
+.insp-rail .railbtn:hover { color: var(--accent-text); border-color: var(--accent); background: var(--accent-soft); }
+.insp-rail .railbtn.expand { color: #fff; background: var(--accent); border-color: var(--accent); }
+.insp-rail .sep-rail { width: 24px; height: 1px; background: var(--hairline); margin: 2px 0; }
+.insp-nav #inspCollapse { font-size: 14px; }
+.ficha { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.fsection {
+  background: var(--bg-surface); border-radius: var(--radius); padding: var(--space-5);
+}
+.fsection > h3 {
+  margin: 0 0 var(--space-4); font-size: 11.5px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--fg-muted);
+}
+.fields { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-4) var(--space-5); }
+.field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.field.span2 { grid-column: span 2; }
+.field > label { font-size: 11.5px; color: var(--fg-muted); }
+.field .val { font-size: 14.5px; color: var(--fg-default); font-weight: 500; }
+.field .val.empty { color: var(--fg-faint); font-weight: 400; }
+.field .input {
+  background: var(--bg-sunken); border-radius: var(--radius-sm); padding: 7px 10px; font-size: 14px;
+  border: 1px solid transparent;
+}
+.field .input:focus-within, .field .input.focus { background: var(--bg-surface); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+.linkval { color: var(--accent-text); cursor: pointer; }
+
+.record-title { display: flex; align-items: baseline; gap: var(--space-3); margin-bottom: 2px; }
+.record-title .clave { font-family: var(--font-serif); font-size: 26px; font-weight: 600; }
+.record-title .num { color: var(--fg-muted); font-variant-numeric: tabular-nums; }
+
+.radios { display: flex; gap: var(--space-4); flex-wrap: wrap; }
+.radio { display: flex; align-items: center; gap: 6px; color: var(--fg-muted); font-size: 13.5px; }
+.radio .dotmark { width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--fg-faint); }
+.radio.on { color: var(--fg-default); }
+.radio.on .dotmark { border-color: var(--accent); background:
+   radial-gradient(circle, var(--accent) 0 4px, transparent 5px); }
+
+.mediagrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-3); }
+.media {
+  aspect-ratio: 1; background: var(--bg-sunken); border-radius: var(--radius-sm);
+  display: grid; place-items: center; color: var(--fg-faint); overflow: hidden;
+}
+.media svg { width: 46%; opacity: .5; }
+
+/* inspector */
+.inspector { display: flex; flex-direction: column; gap: var(--space-3); position: sticky; top: 60px; }
+.insp-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: var(--space-2) var(--space-3); background: var(--bg-surface); border-radius: var(--radius);
+}
+.insp-nav .pager { display: flex; align-items: center; gap: 2px; color: var(--fg-muted); }
+.insp-nav .pager .iconbtn { width: 26px; height: 26px; font-size: 13px; }
+.insp-actions { display: flex; gap: 2px; padding: 6px; background: var(--bg-surface); border-radius: var(--radius); justify-content: space-between; }
+.card { background: var(--bg-surface); border-radius: var(--radius); overflow: hidden; }
+.card > header {
+  display: flex; align-items: center; gap: 8px; padding: 11px var(--space-4);
+  cursor: pointer; font-weight: 600; font-size: 13px;
+}
+.card > header .ic { color: var(--accent-text); }
+.card > header .chev { margin-left: auto; color: var(--fg-faint); transition: transform .15s var(--ease); }
+.card.collapsed > header .chev { transform: rotate(-90deg); }
+.card .body { padding: 0 var(--space-4) var(--space-4); }
+.card.collapsed .body { display: none; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px var(--space-3); font-size: 13px; }
+.kv dt { color: var(--fg-muted); }
+.kv dd { margin: 0; text-align: right; }
+.kv dd.mono { font-variant-numeric: tabular-nums; }
+.proj-tree { font-size: 13px; }
+.proj-tree label { display: flex; align-items: center; gap: 8px; padding: 4px 0; color: var(--fg-default); }
+.proj-tree .indent { padding-left: 20px; }
+.proj-tree input { accent-color: var(--accent); }
+.headline-card { padding: var(--space-4); }
+.headline-card .type { font-size: 18px; font-weight: 600; }
+.headline-card .sub { color: var(--fg-muted); font-size: 12.5px; }
+
+/* ============================================================
+   MODAL — component / record selector with in-modal tools
+   ============================================================ */
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 100; padding: 40px;
+  background: rgba(28,27,25,.45); backdrop-filter: blur(2px);
+  display: none; place-items: center;
+}
+.modal-backdrop.open { display: grid; }
+.modal {
+  width: min(900px, 96vw); max-height: 86vh; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--bg-surface); border: 1px solid var(--hairline); border-top: 3px solid var(--accent);
+  border-radius: 12px; box-shadow: var(--shadow-float);
+}
+.modal > header { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--hairline); }
+.modal .m-title { font-weight: 600; font-size: 15px; }
+.modal .m-title small { color: var(--fg-muted); font-weight: 400; margin-left: 8px; }
+.modal .m-tools { display: flex; align-items: center; gap: 10px; padding: 11px 18px; background: var(--bg-surface-2); border-bottom: 1px solid var(--hairline); flex-wrap: wrap; }
+.modal .m-tools .searchbox { min-width: 200px; flex: 1; }
+.chip-filter { font-size: 12px; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--hairline); background: var(--bg-surface); color: var(--fg-muted); cursor: pointer; }
+.chip-filter.on { background: var(--accent-soft); color: var(--accent-text); border-color: var(--accent); }
+.m-body { display: grid; grid-template-columns: 1.35fr 1fr; min-height: 240px; overflow: hidden; }
+.m-pane { padding: 14px 16px; overflow: auto; }
+.m-pane.right { border-left: 1px solid var(--hairline); background: var(--bg-surface-2); }
+.m-pane h5 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); font-weight: 600; }
+.opt { display: flex; align-items: center; gap: 11px; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.opt:hover { background: var(--bg-surface-2); }
+.m-pane.right .opt:hover { background: var(--bg-surface); }
+.opt.sel { background: var(--accent-soft); }
+.opt input { accent-color: var(--accent); flex: none; }
+.opt .thumb { width: 30px; height: 30px; border-radius: 50%; background: var(--bg-sunken); display: grid; place-items: center; color: var(--fg-faint); flex: none; }
+.opt .thumb svg { width: 60%; }
+.opt .o-main { font-size: 13.5px; }
+.opt .o-sub { font-size: 11.5px; color: var(--fg-muted); }
+.opt .rm { margin-left: auto; color: var(--fg-faint); cursor: pointer; padding: 0 4px; }
+.opt .rm:hover { color: var(--st-down); }
+.modal > footer { display: flex; align-items: center; gap: 10px; padding: 12px 18px; border-top: 1px solid var(--hairline); }
+.modal > footer .count { color: var(--fg-muted); font-size: 13px; }
+.modal > footer .count b { color: var(--fg-default); }
+.section-head { display: flex; align-items: center; gap: 12px; margin-bottom: var(--space-4); }
+.section-head h3 { margin: 0; }
+.section-head .spacer { flex: 1; }
+
+/* ---- tool modal: danger variant (e.g. Propagate component data) ---- */
+.modal.tool-danger { border-top-color: var(--st-down); }
+.modal.tool-danger > header { background: var(--st-down-bg); }
+.modal.tool-danger > header .m-icon { color: var(--st-down); }
+.modal > header .m-head { display: flex; flex-direction: column; gap: 2px; }
+.modal > header .m-icon { font-size: 17px; color: var(--accent-text); }
+.modal > header .m-sub { font-size: 12px; color: var(--fg-muted); }
+.btn.danger { background: var(--st-down); color: #fff; }
+.btn.danger .ic { color: #fff; }
+.btn.danger:hover { filter: brightness(.94); }
+.btn.outline { border-color: var(--hairline); }
+
+/* the component the tool operates on, shown inside the modal */
+.comp-body { padding: 18px; display: flex; flex-direction: column; gap: 16px; overflow: auto; }
+.comp-head { display: flex; align-items: baseline; gap: 12px; }
+.comp-head .c-name { font-size: 19px; font-weight: 600; }
+.comp-head .c-type { margin-left: auto; color: var(--fg-faint); font-size: 13px; }
+
+/* active/focused component: in-place tool strip + selection search */
+.comp-active { border: 1px solid var(--accent); border-radius: 10px; overflow: hidden; }
+.comp-toolstrip { display: flex; gap: 2px; padding: 6px 8px; background: var(--accent); }
+.comp-toolstrip .t { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 6px; color: #fff; cursor: pointer; font-size: 14px; }
+.comp-toolstrip .t:hover { background: rgba(255,255,255,.18); }
+.comp-toolstrip .spacer { flex: 1; }
+.comp-current { display: flex; align-items: center; gap: 8px; padding: 11px 14px; font-size: 14.5px; border-bottom: 1px solid var(--hairline); }
+.comp-current label { font-size: 11.5px; color: var(--fg-muted); width: 100%; }
+.comp-current .pencil, .comp-current .trash { color: var(--fg-faint); cursor: pointer; }
+.comp-current .ok { color: var(--st-valid); }
+.comp-search { display: flex; align-items: center; gap: 8px; padding: 12px 14px; }
+.comp-search .field-search { flex: 1; display: flex; align-items: center; gap: 8px; background: var(--bg-sunken); border: 1px solid var(--hairline); border-radius: 8px; padding: 8px 12px; color: var(--fg-muted); }
+.comp-search .field-search input { flex: 1; border: 0; background: transparent; font: inherit; color: var(--fg-default); outline: none; }
+.comp-explain { font-size: 14px; color: var(--fg-default); line-height: 1.6; }
+.comp-explain b { color: var(--fg-default); }
+.comp-explain .scope { color: var(--accent-text); font-weight: 600; }
+
+.note { color: var(--fg-faint); font-size: 11.5px; text-align: center; padding: var(--space-5) 0 var(--space-2); }
+</style>
+</head>
+<body>
+
+<!-- ============ MENU ============ -->
+<div class="menu">
+  <div class="brand"><span class="dot"></span> Dédalo</div>
+  <nav>
+    <div class="navitem open" id="navInventario">
+      <a class="active">Inventario <span class="caret">▼</span></a>
+      <div class="menu-dd">
+        <div class="menu-col">
+          <h4>Catálogos</h4>
+          <div class="menu-link"><span class="lead"></span> Bibliografía <span class="count">1.204</span></div>
+          <div class="menu-link"><span class="lead"></span> Colecciones <span class="count">7.901</span></div>
+          <div class="menu-link child"><span class="lead"></span> Numancia <span class="count">812</span></div>
+          <div class="menu-link child"><span class="lead"></span> Museo de Palencia <span class="count">2.330</span></div>
+          <div class="menu-link"><span class="lead"></span> Moneda ibérica <span class="count">41.6k</span></div>
+          <div class="menu-link child active"><span class="lead"></span> MIB Antigüedad <span class="count">38.448</span></div>
+          <div class="menu-link child"><span class="lead"></span> MIB medieval-moderno <span class="count">2.011</span></div>
+          <div class="menu-link child"><span class="lead"></span> MIB Visigodas <span class="count">640</span></div>
+          <div class="menu-link"><span class="lead"></span> Tesoros <span class="count">318</span></div>
+        </div>
+        <div class="menu-col alt">
+          <h4>Registros recientes</h4>
+          <div class="recent">
+            <div class="r"><div class="t">Dos esfinges</div><div class="s">MIB 062 · hace 5 min</div></div>
+            <div class="r"><div class="t">Prótomo de toro</div><div class="s">MIB 061 · hace 1 h</div></div>
+            <div class="r"><div class="t">Jarra con asa izq.</div><div class="s">MIB 087 · ayer</div></div>
+          </div>
+        </div>
+        <div class="menu-foot">
+          <button class="btn primary"><span class="ic">＋</span> Nuevo registro</button>
+          <button class="btn ghost">Mostrar todos</button>
+          <span class="spacer" style="flex:1"></span>
+          <button class="btn ghost">Gestionar catálogos</button>
+        </div>
+      </div>
+    </div>
+    <a>Actividades</a><a>Recursos</a><a>Procesos</a>
+    <a>Tesauro</a><a>Grafos</a><a>Administración</a><a>Ontología</a>
+  </nav>
+  <span class="spacer"></span>
+  <div class="right">
+    <span class="pill">root</span>
+    <span class="pill">Castellano</span>
+    <span class="accentsw" id="accentsw">
+      <button data-accent="orange" class="active">Naranja Dédalo</button>
+      <button data-accent="pine">Pino</button>
+    </span>
+    <button class="iconbtn" id="themebtn" title="Tema">◑</button>
+    <button class="iconbtn" title="Mensajes">💬</button>
+    <button class="iconbtn" title="Salir">⏻</button>
+  </div>
+</div>
+<div class="statusbar">
+  <span><b>v7.0.0.dev</b> · 2026-03-09</span><span>DB <b>dedalo7_mib</b></span>
+  <span>PG 16.13</span><span>PHP 8.5.4</span><span>memory 8G</span><span>monedaiberica</span>
+</div>
+
+<div class="viewswitch">
+  <button class="active" data-screen="list">Lista de registros</button>
+  <button data-screen="record">Ficha + Inspector</button>
+  <span style="flex:1"></span>
+  <button class="btn outline" data-modal-open style="border-radius:999px"><span class="ic">⤴</span> Ver modal de herramienta</button>
+</div>
+
+<!-- ============ LIST SCREEN ============ -->
+<section class="screen active" id="list">
+  <div class="toolbar">
+    <button class="btn primary"><span class="ic">＋</span> Nuevo</button>
+    <div class="searchbox"><span>🔍</span><input placeholder="Buscar en MIB…"></div>
+    <button class="btn ghost">Mostrar todos</button>
+    <span class="sep"></span>
+    <button class="btn"><span class="ic">▦</span> Catalogar</button>
+    <button class="btn"><span class="ic">⤓</span> Exportar</button>
+    <button class="btn"><span class="ic">⤒</span> Importación</button>
+    <span class="spacer"></span>
+    <div class="density">Densidad
+      <span class="seg"><button class="active" data-d="cozy">Cómoda</button><button data-d="compact">Compacta</button></span>
+    </div>
+    <button class="btn ghost" title="Más">⋯</button>
+  </div>
+
+  <p class="resultmeta">Mostrando <b>1–10</b> de <b>38.448</b> registros · página 1 de 3.845</p>
+
+  <div class="tablewrap" id="tablewrap">
+    <table class="list">
+      <thead><tr>
+        <th>Id</th><th>Púb.</th><th>Catálogo</th><th>Número <span class="sort">↑</span></th>
+        <th>Ceca</th><th>Clave</th><th>Fecha</th><th>Denominación</th><th>Diseño anverso</th><th>Diseño reverso</th>
+      </tr></thead>
+      <tbody>
+        <tr class="sel">
+          <td><span class="id">1</span><div class="rowtools"><span>✎</span><span>🗑</span></div></td>
+          <td><span class="toggle"></span></td><td><span class="tag">MIB</span></td><td>062</td>
+          <td>Emporion</td><td>Dos esfinges</td><td>−480 / −440</td><td>Óbolo</td>
+          <td>Dos esfinges, con el cuerpo enfrentado y las cabezas unidas de forma janiforme</td><td>Cuadrado incuso</td>
+        </tr>
+        <tr>
+          <td><span class="id">2</span><div class="rowtools"><span>✎</span><span>🗑</span></div></td>
+          <td><span class="toggle"></span></td><td><span class="tag">MIB</span></td><td>061</td>
+          <td>Emporion</td><td>Prótomo de toro</td><td>−480 / −440</td><td>Óbolo</td>
+          <td>Prótomo de toro androcéfalo, a izquierda</td><td>Cuadrado incuso</td>
+        </tr>
+        <tr>
+          <td><span class="id">3</span><div class="rowtools"><span>✎</span><span>🗑</span></div></td>
+          <td><span class="toggle"></span></td><td><span class="tag">MIB</span></td><td>087</td>
+          <td>Emporion</td><td>Jarra con asa izq.</td><td>−480 / −440</td><td>Hemióbolo</td>
+          <td>Jarra, con asa en la parte izq.</td><td>Ojo</td>
+        </tr>
+        <tr>
+          <td><span class="id">4</span><div class="rowtools"><span>✎</span><span>🗑</span></div></td>
+          <td><span class="toggle"></span></td><td><span class="tag">MIB</span></td><td>086</td>
+          <td>Emporion</td><td>Jarra con asa dcha.</td><td>−480 / −440</td><td>Hemióbolo</td>
+          <td>Jarra, con asa en la parte dcha.</td><td>Ojo</td>
+        </tr>
+        <tr>
+          <td><span class="id">5</span><div class="rowtools"><span>✎</span><span>🗑</span></div></td>
+          <td><span class="toggle"></span></td><td><span class="tag">MIB</span></td><td>051</td>
+          <td>Emporion</td><td>Lengüetas rectangulares</td><td>−500 / −480</td><td>Tritartemorion</td>
+          <td>Cabeza de carnero, a izq.</td><td>Cuadrado incuso con cuatro lengüetas y cruz de puntos</td>
+        </tr>
+        <tr>
+          <td><span class="id">6</span><div class="rowtools"><span>✎</span><span>🗑</span></div></td>
+          <td><span class="toggle off"></span></td><td><span class="tag">MIB</span></td><td>047</td>
+          <td>Emporion</td><td>Sin puntos en anverso</td><td>−500 / −480</td><td>Tritartemorion</td>
+          <td>Cabeza de carnero, a dcha.</td><td>Cuadrado incuso con cuatro lengüetas y cruz de puntos</td>
+        </tr>
+        <tr>
+          <td><span class="id">7</span><div class="rowtools"><span>✎</span><span>🗑</span></div></td>
+          <td><span class="toggle"></span></td><td><span class="tag">MIB</span></td><td>053</td>
+          <td>Emporion</td><td>Círculo en cruz de puntos</td><td>−500 / −480</td><td>1/32 estatera</td>
+          <td>Cabeza de carnero, a izq.</td><td>Cuadrado incuso, cruz de puntos y círculo</td>
+        </tr>
+        <tr>
+          <td><span class="id">8</span><div class="rowtools"><span>✎</span><span>🗑</span></div></td>
+          <td><span class="toggle"></span></td><td><span class="tag">MIB</span></td><td>049</td>
+          <td>Emporion</td><td>Círculo en cruz de puntos</td><td>−500 / −480</td><td>1/64 estatera</td>
+          <td>Cabeza de carnero, a dcha.</td><td>Cuadrado incuso, cruz de puntos y círculo</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ RECORD SCREEN ============ -->
+<section class="screen" id="record">
+  <div class="record-layout" id="recLayout">
+    <div class="ficha">
+
+      <div class="fsection">
+        <div class="record-title">
+          <span class="clave">Dos esfinges</span>
+          <span class="num">MIB · nº 062 · id 1</span>
+        </div>
+        <h3 style="margin-top:18px">Identificación</h3>
+        <div class="fields">
+          <div class="field"><label>Público</label><div class="val"><span class="toggle"></span></div></div>
+          <div class="field"><label>Catálogo</label><div class="val">MIB [1]</div></div>
+          <div class="field"><label>Número</label><div class="input">062</div></div>
+          <div class="field"><label>Clave</label><div class="input">Dos esfinges</div></div>
+
+          <div class="field"><label>Ceca</label><div class="val linkval">Emporion</div></div>
+          <div class="field"><label>Material</label><div class="val linkval">Plata</div></div>
+          <div class="field"><label>Denominación</label><div class="val linkval">Óbolo</div></div>
+          <div class="field"><label>Fecha</label><div class="val">−480 &lt;&gt; −440</div></div>
+
+          <div class="field span2"><label>Estado</label>
+            <div class="radios">
+              <span class="radio on"><span class="dotmark"></span>Pendiente</span>
+              <span class="radio"><span class="dotmark"></span>Para revisar</span>
+              <span class="radio"><span class="dotmark"></span>Validada</span>
+              <span class="radio"><span class="dotmark"></span>Vacante</span>
+              <span class="radio"><span class="dotmark"></span>Baja</span>
+            </div>
+          </div>
+          <div class="field"><label>Categoría</label><div class="val empty">— sin valor —</div></div>
+          <div class="field"><label>Área de circulación</label><div class="val empty">— sin valor —</div></div>
+        </div>
+      </div>
+
+      <div class="fsection">
+        <h3>Descripción</h3>
+        <div class="fields">
+          <div class="field span2"><label>Diseño anverso</label>
+            <div class="val">Dos esfinges, con el cuerpo enfrentado y las cabezas unidas de forma janiforme</div></div>
+          <div class="field"><label>Símbolo anverso</label><div class="val empty">—</div></div>
+          <div class="field"><label>Símbolo reverso</label><div class="val empty">—</div></div>
+          <div class="field span2"><label>Diseño reverso</label><div class="val">Cuadrado incuso</div></div>
+          <div class="field"><label>Leyenda anverso</label><div class="val empty">—</div></div>
+          <div class="field"><label>Leyenda reverso</label><div class="val empty">—</div></div>
+        </div>
+      </div>
+
+      <div class="fsection">
+        <h3>Documentación · Monedas (32)</h3>
+        <div class="mediagrid">
+          <div class="media"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg></div>
+          <div class="media"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg></div>
+          <div class="media"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg></div>
+          <div class="media"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.4"/><circle cx="12" cy="12" r="3.5" fill="currentColor"/></svg></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- INSPECTOR -->
+    <div class="insp-cell">
+    <aside class="inspector">
+      <div class="insp-nav">
+        <button class="iconbtn" id="inspCollapse" title="Plegar inspector">⟩⟩</button>
+        <div class="pager">
+          <button class="iconbtn">⏮</button><button class="iconbtn">‹</button>
+          <span style="font-variant-numeric:tabular-nums">1 / 38.448</span>
+          <button class="iconbtn">›</button><button class="iconbtn">⏭</button>
+        </div>
+      </div>
+      <div class="insp-actions">
+        <button class="iconbtn" title="Buscar">🔍</button>
+        <button class="iconbtn" title="Nuevo">＋</button>
+        <button class="iconbtn" title="Duplicar">⧉</button>
+        <button class="iconbtn" title="Borrar">🗑</button>
+        <button class="iconbtn" title="Lista">≣</button>
+        <button class="iconbtn" title="Relaciones">⌥</button>
+      </div>
+
+      <div class="headline-card card">
+        <div class="type">numisdata3</div>
+        <div class="sub">section · matrix · view default-edit</div>
+      </div>
+
+      <div class="card">
+        <header><span class="ic">ⓘ</span> Información <span class="chev">▾</span></header>
+        <div class="body">
+          <dl class="kv">
+            <dt>Section id</dt><dd class="mono">1</dd>
+            <dt>Creado</dt><dd>—</dd>
+            <dt>Modificado</dt><dd>—</dd>
+            <dt>Publicado</dt><dd>Never</dd>
+          </dl>
+        </div>
+      </div>
+
+      <div class="card">
+        <header><span class="ic">⚙</span> Proyecto <span class="chev">▾</span></header>
+        <div class="body">
+          <div class="proj-tree">
+            <label><input type="checkbox"> Bibliografía</label>
+            <label><input type="checkbox"> Colecciones</label>
+            <label><input type="checkbox" checked> Moneda ibérica</label>
+            <label class="indent"><input type="checkbox" checked> MIB Antigüedad</label>
+            <label class="indent"><input type="checkbox"> MIB medieval-moderno</label>
+            <label class="indent"><input type="checkbox"> MIB Visigodas</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card collapsed">
+        <header><span class="ic">⌥</span> Relaciones <span class="chev">▾</span></header>
+        <div class="body"></div>
+      </div>
+      <div class="card collapsed">
+        <header><span class="ic">↺</span> Últimos cambios <span class="chev">▾</span></header>
+        <div class="body"></div>
+      </div>
+    </aside>
+
+    <!-- collapsed inspector rail -->
+    <div class="insp-rail">
+      <button class="railbtn expand" id="inspExpand" title="Desplegar inspector">←</button>
+      <div class="sep-rail"></div>
+      <button class="railbtn" title="Buscar">🔍</button>
+      <button class="railbtn" title="Nuevo">＋</button>
+      <button class="railbtn" title="Duplicar">⧉</button>
+      <button class="railbtn" title="Borrar">🗑</button>
+      <button class="railbtn" title="Lista">≣</button>
+      <button class="railbtn" title="Relaciones">⌥</button>
+      <div class="sep-rail"></div>
+      <button class="railbtn" title="Información">ⓘ</button>
+      <button class="railbtn" title="Proyecto">⚙</button>
+      <button class="railbtn" title="Enlaces">🔗</button>
+      <button class="railbtn" title="Últimos cambios">↺</button>
+      <button class="railbtn" title="Actividad">💬</button>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TOOL MODAL: Propagate component data ============ -->
+<div class="modal-backdrop" id="propModal">
+  <div class="modal tool-danger" role="dialog" aria-modal="true">
+    <header>
+      <span class="m-icon">⤴</span>
+      <div class="m-head">
+        <span class="m-title">Propagar datos de componente <small>· Diseño reverso</small></span>
+        <span class="m-sub">Propaga los datos del componente al mismo componente en los registros de la sección actual</span>
+      </div>
+      <span class="spacer" style="flex:1"></span>
+      <button class="iconbtn" title="Minimizar">—</button>
+      <button class="iconbtn" data-modal-close title="Cerrar">✕</button>
+    </header>
+
+    <div class="comp-body">
+      <div class="comp-head">
+        <span class="c-name">Diseño reverso</span>
+        <span class="c-type">numisdata70</span>
+      </div>
+
+      <!-- the component, focused, with its in-place tool strip + selection search -->
+      <div class="comp-active">
+        <div class="comp-toolstrip">
+          <span class="t" title="Nuevo">＋</span>
+          <span class="t" title="Enlazar">🔗</span>
+          <span class="t" title="Editar">✎</span>
+          <span class="t" title="Lista">≣</span>
+          <span class="t" title="Propagar">⤴</span>
+          <span class="t" title="Deshacer">↺</span>
+          <span class="spacer"></span>
+          <span class="t" title="Cerrar">✕</span>
+        </div>
+        <div class="comp-current">
+          <span class="pencil">✎</span>
+          <span>bbbb-2</span><span class="ok">✓</span>
+          <span class="trash" style="margin-left:auto">🗑</span>
+        </div>
+        <div class="comp-search">
+          <div class="field-search"><span>🔍</span><input placeholder="Buscar valor para seleccionar…"></div>
+          <button class="iconbtn" title="Opciones">⚙</button>
+        </div>
+      </div>
+
+      <p class="comp-explain">El contenido se añadirá o eliminará del campo <b>Diseño reverso</b> en los <span class="scope">107 registros</span> actuales (Todos).</p>
+    </div>
+
+    <footer>
+      <button class="btn primary"><span class="ic">＋</span> Reemplazar valores</button>
+      <button class="btn outline"><span class="ic">＋</span> Añadir contenido</button>
+      <span class="spacer" style="flex:1"></span>
+      <button class="btn danger"><span class="ic">🗑</span> Eliminar contenido</button>
+    </footer>
+  </div>
+</div>
+
+<p class="note">Mockup estático · dirección «Calm Scholarly» · acento pino/teal · superficies en lugar de bordes — alterna tema ◑ y vista arriba</p>
+
+<script>
+  // theme toggle
+  document.getElementById('themebtn').onclick = () => {
+    const h = document.documentElement;
+    h.dataset.theme = h.dataset.theme === 'dark' ? 'light' : 'dark';
+  };
+  // unfolded menu toggle
+  const navInv = document.getElementById('navInventario');
+  navInv.querySelector('a').onclick = (e) => { e.stopPropagation(); navInv.classList.toggle('open'); };
+  document.addEventListener('click', (e) => { if (!navInv.contains(e.target)) navInv.classList.remove('open'); });
+  // accent switch
+  document.querySelectorAll('#accentsw button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('#accentsw button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    document.documentElement.dataset.accent = b.dataset.accent;
+  });
+  // view switch
+  document.querySelectorAll('.viewswitch button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.viewswitch button').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById(b.dataset.screen).classList.add('active');
+  });
+  // density
+  document.querySelectorAll('.density .seg button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.density .seg button').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    document.getElementById('tablewrap').classList.toggle('compact', b.dataset.d === 'compact');
+  });
+  // collapsible inspector cards
+  document.querySelectorAll('.card > header').forEach(h => h.onclick = () => h.parentElement.classList.toggle('collapsed'));
+  // inspector collapse / expand to icon rail
+  const recLayout = document.getElementById('recLayout');
+  document.getElementById('inspCollapse').onclick = () => recLayout.classList.add('insp-collapsed');
+  document.getElementById('inspExpand').onclick = () => recLayout.classList.remove('insp-collapsed');
+  // tool modal open / close
+  const propModal = document.getElementById('propModal');
+  document.querySelectorAll('[data-modal-open]').forEach(b => b.onclick = () => propModal.classList.add('open'));
+  propModal.querySelectorAll('[data-modal-close]').forEach(b => b.onclick = () => propModal.classList.remove('open'));
+  propModal.onclick = (e) => { if (e.target === propModal) propModal.classList.remove('open'); };
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') propModal.classList.remove('open'); });
+</script>
+</body>
+</html>
