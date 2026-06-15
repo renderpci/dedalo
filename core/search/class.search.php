@@ -93,6 +93,11 @@ class search {
 		// ar_sql_joins
 		public $ar_sql_joins;
 
+		// join_counter. Monotonic per-query counter used to give each multi-step filter clause
+		// a unique join alias namespace, so two clauses sharing the same path get INDEPENDENT
+		// joins (cross-record AND/OR) instead of collapsing onto one joined record.
+		public $join_counter = 0;
+
 		// control for duplicated operator to include itself in the where ( operator !! )
 		public $skip_duplicated = false;
 
@@ -2096,6 +2101,10 @@ class search {
 			}
 
 
+			// Reset the per-clause join discriminator before (re)building the filter, so
+			// alias generation is deterministic across repeated builds on the same instance.
+			$this->join_counter = 0;
+
 			$parsed_string = $this->filter_parser($operator, $ar_value);
 			if (!empty($parsed_string)) {
 				$filter_query .= ' AND (' . $parsed_string . ')';
@@ -2302,9 +2311,15 @@ class search {
 
 				#if (!empty($search_object->q)) {
 					$n_levels = count($search_object->path);
+					// Multi-step paths (value lives inside a related record reached through a
+					// relation/portal) get a unique join_id so each clause traverses the relation
+					// INDEPENDENTLY. This makes "value A AND value B" match across different linked
+					// records, not within a single one. Single-step paths keep join_id null (legacy).
+					$join_id = ($n_levels>1) ? ++$this->join_counter : null;
+					$search_object->join_id = $join_id;
 					if ($n_levels>1) {
 						// $this->join_group[] = $this->build_sql_join($search_object->path);
-						$this->build_sql_join($search_object->path);
+						$this->build_sql_join($search_object->path, $join_id);
 					}
 
 					$string_query .= $this->get_sql_where($search_object);
@@ -2359,12 +2374,17 @@ class search {
 		]
 	* @return bool true
 	*/
-	public function build_sql_join(array $path) : bool {
+	public function build_sql_join(array $path, ?int $join_id=null) : bool {
 
 		$rel_table		= self::$relations_table;
 		$ar_key_join	= [];
 		$base_key		= '';
 		$total_paths	= count($path);
+
+		// Per-clause discriminator prefix. Keeps two clauses with the same path from collapsing
+		// onto one joined row (see get_table_alias_from_path). Empty when join_id is null →
+		// legacy alias names unchanged. The main table alias ($base_key) is never prefixed.
+		$prefix			= ($join_id!==null) ? 'j'.$join_id.'_' : '';
 
 		foreach ($path as $key => $step_object) {
 
@@ -2376,7 +2396,7 @@ class search {
 
 			$current_key = ($key===1)
 				? $base_key
-				: implode('_', $ar_key_join);
+				: $prefix . implode('_', $ar_key_join);
 
 			$ar_key_join[] = ($key === $total_paths-1)
 				? self::trim_tipo($step_object->section_tipo)
@@ -2393,7 +2413,7 @@ class search {
 				continue;
 			}
 			$last_section_tipo	= $step_object->section_tipo;
-			$t_name				= implode('_', $ar_key_join);
+			$t_name				= $prefix . implode('_', $ar_key_join);
 			$t_relation			= 'r_'.$t_name ;
 
 			if (!isset($this->ar_sql_joins[$t_name])) {
@@ -2527,7 +2547,7 @@ class search {
 			}
 
 		// table_alias : string
-			$table_alias = $this->get_table_alias_from_path( (array)$path );
+			$table_alias = $this->get_table_alias_from_path( (array)$path, $search_object->join_id ?? null );
 
 		// lang. If isset, add to component_path
 			if (isset($search_object->lang) && $search_object->lang!=='all') {
@@ -2826,7 +2846,7 @@ class search {
 	* @param array $path
 	* @return string $table_alias
 	*/
-	public function get_table_alias_from_path(array $path) : string {
+	public function get_table_alias_from_path(array $path, ?int $join_id=null) : string {
 
 		$total	= count($path);
 		$ar_key = [];
@@ -2866,6 +2886,14 @@ class search {
 
 		$table_alias = implode('_', $ar_key);
 		#$table_alias = $step_object->section_tipo; // Test !!
+
+		// Per-clause discriminator. Multi-step paths only: prefix the joined-relation alias so
+		// two clauses sharing the same path get INDEPENDENT joins (each traverses the relation
+		// on its own row). Single-step paths use the shared main table alias and must never be
+		// prefixed. join_id===null preserves legacy alias names. Must match build_sql_join().
+		if ($join_id!==null && $total>1) {
+			$table_alias = 'j' . $join_id . '_' . $table_alias;
+		}
 
 		return $table_alias;
 	}//end get_table_alias_from_path
