@@ -30,7 +30,10 @@ invents its own loading strategy:
   `move_tld`, `move_locator`, `move_to_portal`, `move_to_table`, `move_lang`,
   `environment`, `lock_components`, `php_user`, `publication_api`,
   `sequences_status`, `unit_test`. These already comply.
-- **User-triggered** — `register_tools` fetches on form submit only.
+- **User-triggered** — `register_tools` reloads its value on form submit
+  (`on_done`). Note: it *also* has an eager `build()` fetch for its initial
+  display value — that eager fetch is in scope and becomes lazy (see below);
+  the on-submit reload is unchanged.
 
 ## Goal
 
@@ -52,8 +55,9 @@ This reduces server load on dashboard open and makes every widget load its data
   background widgets — see "Load policy".
 - No redesign of widget visuals, categories, search/filter, or the
   collapse/expand toggle itself.
-- `register_tools` on-submit behaviour is unchanged (that is an action, not
-  value display).
+- `register_tools` on-submit / `on_done` reload behaviour is unchanged (that is
+  an action, not eager display). Its eager `build()` display fetch is migrated
+  to lazy along with the other eager widgets.
 - Static widgets (inline `item.value`) are untouched.
 
 ## Design
