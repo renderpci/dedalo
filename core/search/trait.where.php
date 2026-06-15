@@ -449,6 +449,18 @@ trait where {
 			$t_name		= $prefix . implode('_', $ar_key_join);
 			$t_relation	= 'rel_' . $t_name;
 
+			// Deduplicate by alias: the same (path, join_id) can reach this builder more than
+			// once for a single query — e.g. add_relation_search() wraps a clause in
+			// {$or:[clause, clone]} and for the '=='/default operator the clone is identical.
+			// Emitting the join again would repeat the table alias and PostgreSQL rejects it
+			// ("table name specified more than once"). Skip re-emission; the alias is reused
+			// by the duplicate clause's WHERE fragment, which is the intended behavior.
+			if (isset($this->sql_obj->joined_aliases[$t_name])) {
+				$last_table_name = $t_name;
+				continue;
+			}
+			$this->sql_obj->joined_aliases[$t_name] = true;
+
 			$sql_join = '';
 			if(SHOW_DEBUG===true) {
 				$section_name = ontology_node::get_term_by_tipo($step_object->section_tipo, null, true, false);

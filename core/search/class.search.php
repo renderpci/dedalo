@@ -316,6 +316,12 @@ class search {
 			$this->sql_obj->select			= [];
 			$this->sql_obj->from			= [];
 			$this->sql_obj->join			= [];
+			// Set of join aliases already emitted into ->join, keyed by alias name. Prevents
+			// the same table alias being joined twice (PostgreSQL "table name specified more
+			// than once"). This happens when the same (path, join_id) reaches build_sql_join
+			// more than once — e.g. add_relation_search() wraps a clause in {$or:[clause, clone]}
+			// and for the '=='/default operator the clone is identical to the original.
+			$this->sql_obj->joined_aliases	= [];
 			$this->sql_obj->main_where		= [];
 			$this->sql_obj->where			= [];
 			$this->sql_obj->order			= [];
@@ -1090,6 +1096,13 @@ class search {
 			// Pre-parse search_query_object with components always before begins
 			$this->parse_sqo();
 		}
+
+		// Reset the join accumulator and its alias dedup set before (re)building. The
+		// assemblers below rebuild all joins from the conformed SQO, so a clean slate keeps
+		// repeated parses on a reused instance from accumulating duplicate joins and keeps
+		// joined_aliases consistent with ->join.
+		$this->sql_obj->join			= [];
+		$this->sql_obj->joined_aliases	= [];
 
 		$search_type = null;
 

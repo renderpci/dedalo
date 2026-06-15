@@ -120,4 +120,39 @@ final class search_cross_join_test extends BaseTestCase {
 			'Two-clause cross-join search must execute without a SQL error (duplicate alias, etc.)'
 		);
 	}
+
+	/**
+	* The same (path, join_id) reaching build_sql_join more than once must emit the join
+	* only ONCE. This happens in production when add_relation_search() wraps a hierarchical
+	* relation clause in {$or:[clause, clone]} and the clone is identical (default operator),
+	* so both sub-clauses carry the same join_id. Without dedup the alias is repeated and
+	* PostgreSQL rejects it: "table name ... specified more than once".
+	*/
+	public function test_build_sql_join_dedupes_identical_alias() {
+		$search = search::get_instance((object)['section_tipo' => ['test3'], 'mode' => 'list']);
+		$path = [
+			(object)['section_tipo' => 'test3', 'component_tipo' => 'test80'],
+			(object)['section_tipo' => 'test3', 'component_tipo' => 'test80']
+		];
+
+		$ref = new ReflectionProperty($search, 'sql_obj');
+		$ref->setAccessible(true);
+
+		// Same (path, join_id) twice → a single join (deduped).
+		$search->build_sql_join($path, 1);
+		$search->build_sql_join($path, 1);
+		$this->assertCount(
+			1,
+			$ref->getValue($search)->join,
+			'Identical (path, join_id) must not emit a duplicate join (PG: alias specified more than once)'
+		);
+
+		// A distinct join_id is an independent join.
+		$search->build_sql_join($path, 2);
+		$this->assertCount(
+			2,
+			$ref->getValue($search)->join,
+			'A distinct join_id must add an independent join'
+		);
+	}
 }
