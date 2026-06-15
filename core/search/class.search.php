@@ -103,6 +103,12 @@ class search {
 		// ar_duplicated_fields. Store the JSON queries when searching duplicates
 		public array $ar_duplicated_fields = [];
 
+		// having vars (or_link v5 inheritance)
+		protected $having_query_object;
+		protected $having_ar_sql_joins;
+		protected $having_search_objects;
+		protected $having_path;
+
 	/**
 	* GET_INSTANCE
 	* @param object $search_query_object
@@ -1371,7 +1377,7 @@ class search {
 		$sql_query .= ';' . PHP_EOL;
 
 		// debug
-			// dump(null, ' sql_query ++ '.to_string($sql_query)); #die();
+			dump(null, ' sql_query ++ '.to_string($sql_query)); #die();
 			// debug_log(__METHOD__." SQL QUERY: ".PHP_EOL.to_string($sql_query), logger::DEBUG);
 			// debug_log(__METHOD__." this->search_query_object: ".to_string($this->search_query_object), logger::DEBUG);
 			// debug_log(__METHOD__." total time ".exec_time_unit($start_time,'ms').' ms', logger::DEBUG);
@@ -2238,6 +2244,19 @@ class search {
 
 		$string_query = '';
 
+		// or_link case
+		if ($op==='$or_link') {
+
+			$obj = new stdClass();
+				$obj->{$op} = $ar_value;
+
+ 			// store search_object. E.g. { "$or_link": [{"q":[{..}], ...}] }
+			$this->having_query_object = $obj;
+
+			// override operator !
+			$op = '$or';
+		}
+
 		$total		= count($ar_value);
 		$operator	= strtoupper( substr($op, 1) );
 
@@ -2279,7 +2298,21 @@ class search {
 
 				$op2 = array_key_first(get_object_vars($search_object));
 
-				$ar_value2 	= $search_object->$op2;
+				// or_link case
+				if ($op2==='$or_link') {
+
+					// store search_object
+					if (!isset($this->having_query_object)) {
+						$this->having_query_object = $search_object;
+					}
+
+					// override current operator !
+					$op2 = '$or';
+				}
+
+				// $ar_value2 	= $search_object->$op2;
+				$real_op	= array_key_first(get_object_vars($search_object)); // v5 inheritance
+				$ar_value2 	= $search_object->{$real_op};
 
 				// $operator2 = strtoupper( substr($op2, 1) );
 				// if ($key > 1) {
@@ -2322,6 +2355,82 @@ class search {
 
 		return $string_query;
 	}//end filter_parser
+
+
+
+	/**
+	* BUILD_SQL_FILTER_HAVING
+	* or_link v5 inheritance
+	* @return string $filter_query
+	*/
+	protected function build_sql_filter_having($ar_options=[]) {
+
+		$filter_query  = '';
+
+		if (!empty($this->having_query_object)) {
+
+			// $operator	= key($this->having_query_object); // deprecated PHP>=8.1
+			$operator		= array_key_first(get_object_vars($this->having_query_object));
+
+			$ar_value 	= $this->having_query_object->{$operator};
+			// exec to add all search_objects to '$this->having_search_objects' and count later
+			$this->filter_parser_having($operator, $ar_value);
+
+			$q_unique = [];
+			foreach ((array)$this->having_search_objects as $current) {
+				if (!in_array($current->q, $q_unique)) $q_unique[] = $current->q;
+			}
+
+			if (isset($this->having_path)) {
+				$filter_query .= PHP_EOL.PHP_EOL . "  GROUP BY {$this->main_section_tipo_alias}.id";
+				$filter_query .= " HAVING COUNT(DISTINCT {$this->having_path}) >= " .count($q_unique) .PHP_EOL;
+			}
+		}
+
+		return $filter_query;
+	}//end build_sql_filter_having
+
+
+
+	/**
+	* FILTER_PARSER_HAVING
+	* or_link v5 inheritance
+	* @param string $op
+	*	like '$or_link'
+	* @param array $ar_value
+	* @return bool true
+	*/
+	public function filter_parser_having($op, $ar_value) {
+
+		foreach ($ar_value as $key => $search_object) {
+
+			// operator ? check
+			$op2 = array_key_first(get_object_vars($search_object));
+
+			if ($op2==='$or_link') {
+
+				// recursion
+				$this->filter_parser_having($op2, $search_object->$op2);
+
+			}else if ($op2==='$or' || $op2==='$and') {
+
+				$this->filter_parser_having($op2, $search_object->$op2);
+
+			}else{
+
+				// store all iterated search objects to count later
+					$this->having_search_objects[] = $search_object;
+
+				// force calculate deep joins
+					$current_path 	= $search_object->path;
+					$path 			= $this->get_deep_path($current_path);
+					$this->build_sql_join($path, true);
+			}
+		}//end foreach ($ar_value as $key => $search_object) {
+
+
+		return true;
+	}//end filter_parser_having
 
 
 
@@ -2421,6 +2530,9 @@ class search {
 
 				# Join next table
 				$sql_join .= ' LEFT JOIN '.$matrix_table.' AS '.$t_name .' ON ('. $t_relation.'.target_section_id='.$t_name.'.section_id AND '.$t_relation.'.target_section_tipo='.$t_name.'.section_tipo)';
+
+				// store having_path (overwrite until last). or_link
+				$this->having_path = $t_name . '.section_id';
 
 				// Add to joins
 				$this->ar_sql_joins[$t_name] = $sql_join;
