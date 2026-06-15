@@ -188,6 +188,7 @@ class area_maintenance extends area_common {
 		$item->category = 'data';
 		$item->class = 'success width_100';
 		$item->type = 'widget';
+		$item->background = true; // load at idle while collapsed to surface available-update status
 		$item->tipo = $this->tipo;
 		$item->label = label::get_label('update') . ' ' . label::get_label('data');
 		$ar_widgets[] = $this->widget_factory($item);
@@ -372,6 +373,7 @@ class area_maintenance extends area_common {
 		$item->id = 'system_info';
 		$item->category = 'system';
 		$item->type = 'widget';
+		$item->background = true; // load at idle while collapsed to surface server-issue status
 		$item->tipo = $this->tipo;
 		$item->label = 'SYSTEM INFO';
 		$item->class = 'width_100';
@@ -407,6 +409,7 @@ class area_maintenance extends area_common {
 		$widget->run = $item->run ?? [];
 		$widget->trigger = $item->trigger ?? null;
 		$widget->value = $item->value ?? null;
+		$widget->background = $item->background ?? false;
 
 
 		return $widget;
