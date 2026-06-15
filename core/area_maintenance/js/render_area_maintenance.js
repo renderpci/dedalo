@@ -9,6 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
+	import {widget_common} from '../../widgets/widget_common/js/widget_common.js'
 
 
 
@@ -331,6 +332,23 @@ const render_widget = async (item, self) => {
 
 	let widget_instance = null
 
+	// background-status widgets load at idle priority even while collapsed,
+	// so admins see status without opening them. Server may also flag via item.background.
+	const background_widget_ids = ['system_info', 'update_data_version']
+	const is_background = item.background===true || background_widget_ids.includes(item.id)
+
+	// unified load trigger (uses the widget's own load() override if present,
+	// else the shared widget_common default)
+	const trigger_load = () => {
+		if (!widget_instance) {
+			return
+		}
+		const loader = (typeof widget_instance.load==='function')
+			? widget_instance.load.bind(widget_instance)
+			: widget_common.prototype.load.bind(widget_instance)
+		loader()
+	}
+
 	// label
 		const label = ui.create_dom_element({
 			element_type	: 'div',
@@ -359,6 +377,8 @@ const render_widget = async (item, self) => {
 		}
 		const expose = () => {
 			label.classList.add('up')
+			// unified lazy load: fetch widget data only when opened
+			trigger_load()
 		}
 		ui.collapse_toggle_track({
 			toggler				: label,
@@ -397,14 +417,9 @@ const render_widget = async (item, self) => {
 				caller			: self
 			})
 
-			// render and append widget node
-
-			const autoload = (item.value)
-				? false
-				: true
-
-			// build
-			await widget.build( autoload )
+			// build shell only — no eager data fetch.
+			// Data loads on open via trigger_load() (see expose / background below).
+			await widget.build()
 
 			// render
 			const node = await widget.render()
@@ -420,6 +435,17 @@ const render_widget = async (item, self) => {
 			}
 
 			widget_instance = widget
+
+			// background widgets: low-priority load while still collapsed
+			if (is_background) {
+				dd_request_idle_callback(() => {
+					trigger_load()
+				})
+			} else if (!body.classList.contains('hide')) {
+				// restored-open state: expose_callback may have fired before the
+				// instance was ready, so ensure the load runs now.
+				trigger_load()
+			}
 
 		} catch (error) {
 			if (error.message.includes('Failed to fetch dynamically imported module') || error.message.includes('Cannot find module')) {
