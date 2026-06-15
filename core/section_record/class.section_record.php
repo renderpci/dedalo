@@ -308,15 +308,15 @@ class section_record {
 			case DEDALO_ONTOLOGY_SECTION_TIPO : // ontology35
 				// Invalidate shared diffusion data cache used by diffusion_utils.
 				// Diffusion-derived data (map, virtual tree, section map) changes
-				// whenever the ontology is modified
-				$cache_file_name = diffusion_utils::get_diffusion_cache_file_name();
-				dd_cache::delete_cache_files(
-					[$cache_file_name],
-					''
-				);
-				// Also clear in-memory static caches so the current request
-				// does not continue using stale data
-				diffusion_utils::clear();
+				// whenever the ontology is modified. delete_section_map_cache_file()
+				// is the canonical ontology write-chokepoint invalidation (see
+				// diffusion_utils::get_section_diffusion_map docblock): it removes the
+				// persistent section-map cache file and nulls its static mirror.
+				diffusion_utils::delete_section_map_cache_file();
+				// Also clear the remaining in-memory static caches (virtual tree,
+				// is_publishable, diffusion map) so the current request does not
+				// continue using stale data
+				diffusion_utils::reset_cache();
 				break;
 
 			default:

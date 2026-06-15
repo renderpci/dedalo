@@ -16,6 +16,14 @@ final class context_cache_determinism_test extends BaseTestCase {
 		$this->user_login();
 		// start every scenario from a cold context cache
 		common::$cache_structure_context = [];
+		// Order-independence: an earlier suite (e.g. area_maintenance / SEC) can
+		// invalidate the tool caches, leaving tool_common::$user_tools_cache memoised
+		// as empty. That makes get_tools() (and thus the full structure context)
+		// return zero tools here, failing test_simple_call_does_not_poison_full_context
+		// for the wrong reason. Reset the tool caches so get_tools() rebuilds from the
+		// registry, and clear the per-element get_tools memo.
+		tool_common::reset_static_caches();
+		common::$cache_get_tools = [];
 	}
 
 	private function build_component(int $section_id=1) : component_common {

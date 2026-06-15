@@ -17,8 +17,9 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 		$reflection = new ReflectionClass('install_ontology_manager');
 
-		// Should have no constructor
-		$this->assertNull($reflection->getConstructor());
+		// Constructor must not be public (private constructor is allowed for static-only classes)
+		$c = $reflection->getConstructor();
+		$this->assertTrue($c===null || !$c->isPublic());
 
 		// Should have no instance properties
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
@@ -180,7 +181,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
 		$this->assertStringContainsString('@subpackage Install', $content);
 	}//end test_class_has_docblock
 
@@ -233,7 +234,14 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	public function test_no_private_methods(): void {
 
 		$reflection = new ReflectionClass('install_ontology_manager');
-		$methods = $reflection->getMethods(ReflectionMethod::IS_PRIVATE);
+		// Exclude the private constructor (allowed for static-only classes);
+		// there must be no other private methods.
+		$methods = array_filter(
+			$reflection->getMethods(ReflectionMethod::IS_PRIVATE),
+			function($method) {
+				return $method->getName() !== '__construct';
+			}
+		);
 
 		$this->assertEquals(0, count($methods));
 	}//end test_no_private_methods
@@ -278,8 +286,11 @@ final class install_ontology_manager_Test extends BaseTestCase {
 		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('DELETE FROM "dd_ontology"', $content);
-		$this->assertStringContainsString('WHERE tld NOT IN', $content);
+		// The DELETE statement is built as a multi-line SQL string, so assert
+		// the literal fragments that actually appear in the source.
+		$this->assertStringContainsString('DELETE', $content);
+		$this->assertStringContainsString('FROM "dd_ontology"', $content);
+		$this->assertStringContainsString('tld NOT IN(', $content);
 	}//end test_clean_ontology_deletes_from_dd_ontology
 
 
@@ -293,7 +304,10 @@ final class install_ontology_manager_Test extends BaseTestCase {
 		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('DELETE FROM "matrix_descriptors_dd"', $content);
+		// The matrix_descriptors_dd deletion is gated by a table-exists check and
+		// built as a multi-line SQL string; assert the literals actually present.
+		$this->assertStringContainsString("check_table_exists('matrix_descriptors_dd')", $content);
+		$this->assertStringContainsString('FROM "matrix_descriptors_dd"', $content);
 		$this->assertStringContainsString('parent !~', $content);
 	}//end test_clean_ontology_deletes_from_matrix_descriptors_dd
 
@@ -531,7 +545,7 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 		// Class should have comprehensive docblock
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
 		$this->assertStringContainsString('@subpackage Install', $content);
 
 		// Methods should have docblocks
@@ -549,9 +563,10 @@ final class install_ontology_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_testable(): void {
 
-		// Class should be static-only (easy to test)
+		// Class should be static-only (easy to test): constructor must not be public
 		$reflection = new ReflectionClass('install_ontology_manager');
-		$this->assertNull($reflection->getConstructor());
+		$c = $reflection->getConstructor();
+		$this->assertTrue($c===null || !$c->isPublic());
 
 		// Methods should be public and static
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
@@ -620,8 +635,9 @@ final class install_ontology_manager_Test extends BaseTestCase {
 
 		$reflection = new ReflectionClass('install_ontology_manager');
 
-		// No constructor
-		$this->assertNull($reflection->getConstructor());
+		// No public constructor (private constructor enforces static-only usage)
+		$c = $reflection->getConstructor();
+		$this->assertTrue($c===null || !$c->isPublic());
 
 		// No instance properties
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
@@ -649,10 +665,12 @@ final class install_ontology_manager_Test extends BaseTestCase {
 		$file = DEDALO_CORE_PATH . '/install/class.install_ontology_manager.php';
 		$content = file_get_contents($file);
 
-		// Class docblock should describe single responsibility
-		$this->assertStringContainsString('Encapsulates ontology cleaning', $content);
-		$this->assertStringContainsString('recovery file operations', $content);
-		$this->assertStringContainsString('install database file export', $content);
+		// Class docblock should describe its single responsibility: ontology-level
+		// database operations (clean, recovery export/import, install db dump).
+		$this->assertStringContainsString('ontology-level database operations', $content);
+		$this->assertStringContainsString('Strip dd_ontology', $content);
+		$this->assertStringContainsString('recovery operation', $content);
+		$this->assertStringContainsString('install-database SQL dump', $content);
 
 		// All methods should be related to ontology operations
 		$this->assertStringContainsString('ontology', $content);

@@ -10,7 +10,7 @@
                     "tipo": "test3",
                     "model": "section",
                     "permissions": 3,
-                    "label": "Unit Test Section (using matrix_test table)",
+                    "label": "Test Unit (data on matrix_test)",
                     "buttons": [
                         {
                             "model": "button_new",
@@ -85,12 +85,77 @@
                 },
                 {
                     "typo": "ddo",
+                    "tipo": "test140",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_iri",
+                    "label": "iri"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test18",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_json",
+                    "label": "json"
+                },
+                {
+                    "typo": "ddo",
                     "tipo": "test91",
                     "section_tipo": "test3",
                     "parent": "test3",
                     "mode": "list",
                     "model": "component_select",
                     "label": "select"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test88",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_check_box",
+                    "label": "check_box"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test201",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_relation_children",
+                    "label": "relation_children",
+                    "view": "line"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test80",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_portal",
+                    "label": "portal",
+                    "view": "default"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test101",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_filter",
+                    "label": "filter"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test208",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "list",
+                    "model": "component_email",
+                    "label": "email"
                 },
                 {
                     "typo": "ddo",

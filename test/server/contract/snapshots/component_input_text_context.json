@@ -1,15 +1,30 @@
 {
     "context": [
         {
-            "tipo": {
+            "typo": {
                 "__type": "string",
                 "__nullable": false
             },
+            "new_dataframe": {
+                "__type": "null",
+                "__nullable": true
+            },
+            "path": [],
+            "debug": {
+                "exec_time": {
+                    "__type": "string",
+                    "__nullable": false
+                }
+            }
+        }
+    ],
+    "data": [
+        {
             "section_tipo": {
                 "__type": "string",
                 "__nullable": false
             },
-            "model": {
+            "tipo": {
                 "__type": "string",
                 "__nullable": false
             },
@@ -21,46 +36,49 @@
                 "__type": "string",
                 "__nullable": false
             },
-            "label": {
+            "from_component_tipo": {
                 "__type": "string",
+                "__nullable": false
+            },
+            "entries": [],
+            "debug_model": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "debug_label": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "debug_dataframe": {
+                "__type": "null",
                 "__nullable": true
             },
-            "properties": {
-                "__type": "object",
-                "__nullable": true
+            "parent_tipo": {
+                "__type": "string",
+                "__nullable": false
             },
-            "permissions": {
-                "__type": "object",
-                "__nullable": true
+            "parent_section_id": {
+                "__type": "integer",
+                "__nullable": false
             },
-            "tools": {
-                "__type": "array",
-                "__nullable": true
-            }
+            "fallback_value": [
+                {
+                    "lang": {
+                        "__type": "string",
+                        "__nullable": false
+                    },
+                    "value": {
+                        "__type": "string",
+                        "__nullable": false
+                    }
+                }
+            ]
         }
     ],
-    "data": [
-        {
-            "tipo": {
-                "__type": "string",
-                "__nullable": false
-            },
-            "section_tipo": {
-                "__type": "string",
-                "__nullable": false
-            },
-            "section_id": {
-                "__type": "string",
-                "__nullable": false
-            },
-            "value": {
-                "__type": "array",
-                "__nullable": true
-            },
-            "fallback_value": {
-                "__type": "array",
-                "__nullable": true
-            }
+    "debug": {
+        "exec_time": {
+            "__type": "double",
+            "__nullable": false
         }
-    ]
+    }
 }

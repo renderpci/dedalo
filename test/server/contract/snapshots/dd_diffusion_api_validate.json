@@ -7,12 +7,83 @@
         "__type": "string",
         "__nullable": false
     },
-    "validation_errors": {
-        "__type": "array",
-        "__nullable": true
-    },
-    "warnings": {
-        "__type": "array",
-        "__nullable": true
-    }
+    "errors": [],
+    "data": [
+        {
+            "element_tipo": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "label": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "type": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "result": {
+                "__type": "boolean",
+                "__nullable": false
+            },
+            "checks": [
+                {
+                    "check": {
+                        "__type": "string",
+                        "__nullable": false
+                    },
+                    "result": {
+                        "__type": "boolean",
+                        "__nullable": false
+                    },
+                    "msg": {
+                        "__type": "string",
+                        "__nullable": false
+                    }
+                },
+                {
+                    "check": {
+                        "__type": "string",
+                        "__nullable": false
+                    },
+                    "result": {
+                        "__type": "boolean",
+                        "__nullable": false
+                    },
+                    "msg": {
+                        "__type": "string",
+                        "__nullable": false
+                    }
+                },
+                {
+                    "check": {
+                        "__type": "string",
+                        "__nullable": false
+                    },
+                    "result": {
+                        "__type": "boolean",
+                        "__nullable": false
+                    },
+                    "msg": {
+                        "__type": "string",
+                        "__nullable": false
+                    }
+                },
+                {
+                    "check": {
+                        "__type": "string",
+                        "__nullable": false
+                    },
+                    "result": {
+                        "__type": "boolean",
+                        "__nullable": false
+                    },
+                    "msg": {
+                        "__type": "string",
+                        "__nullable": false
+                    }
+                }
+            ]
+        }
+    ]
 }

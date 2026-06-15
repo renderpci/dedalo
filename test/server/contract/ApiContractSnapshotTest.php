@@ -152,7 +152,9 @@ final class ApiContractSnapshotTest extends BaseTestCase {
         $this->assertIsObject($response, 'Response should be an object');
         $this->assertTrue(property_exists($response, 'result'), 'Response should have result property');
         $this->assertTrue(property_exists($response, 'msg'), 'Response should have msg property');
-        $this->assertTrue(property_exists($response, 'data'), 'Response should have data property');
+        // dd_diffusion_api::get_ontology_map returns {result, msg, errors}; the map
+        // payload is carried in `result` (there is no separate `data` property).
+        $this->assertTrue(property_exists($response, 'errors'), 'Response should have errors property');
 
         // Compare against snapshot
         $this->assertMatchesSnapshot(
@@ -181,9 +183,11 @@ final class ApiContractSnapshotTest extends BaseTestCase {
         $this->assertTrue(property_exists($response, 'result'), 'Response should have result property');
         $this->assertTrue(property_exists($response, 'msg'), 'Response should have msg property');
 
-        // Login context returns context in result
+        // Login context returns the context list (array of context objects) in result
         if ($response->result !== false) {
-            $this->assertIsObject($response->result, 'Result should be context object');
+            $this->assertIsArray($response->result, 'Result should be a context array');
+            $this->assertNotEmpty($response->result, 'Result context array should not be empty');
+            $this->assertIsObject($response->result[0], 'Each context entry should be an object');
         }
 
         $this->assertMatchesSnapshot(
@@ -199,27 +203,31 @@ final class ApiContractSnapshotTest extends BaseTestCase {
      */
     public function test_get_element_context_contract(): void {
 
-        // Use a test component tipo (component_input_text)
+        // get_element_context lives on dd_core_api (not dd_utils_api). test52 is the
+        // component_input_text test tipo (test80 is a component_portal).
         $rqo = (object)[
             'action' => 'get_element_context',
-            'dd_api' => 'dd_utils_api',
+            'dd_api' => 'dd_core_api',
             'source' => (object)[
-                'tipo' => 'test80', // component_input_text test tipo
+                'tipo' => 'test52', // component_input_text test tipo
                 'section_tipo' => 'test3',
                 'mode' => 'edit'
             ]
         ];
 
         $_ENV['DEDALO_LAST_ERROR'] = null;
-        $response = dd_utils_api::{$rqo->action}($rqo);
+        $response = dd_core_api::{$rqo->action}($rqo);
 
+        // dd_core_api::get_element_context returns {result, msg, errors}; the element
+        // context payload is carried in `result` (an array), not top-level context/data.
         $this->assertIsObject($response, 'Response should be an object');
-        $this->assertTrue(property_exists($response, 'context'), 'Response should have context property');
-        $this->assertTrue(property_exists($response, 'data'), 'Response should have data property');
+        $this->assertTrue(property_exists($response, 'result'), 'Response should have result property');
+        $this->assertTrue(property_exists($response, 'msg'), 'Response should have msg property');
+        $this->assertIsArray($response->result, 'Result should be an array (element context)');
 
         $this->assertMatchesSnapshot(
             $response,
-            'dd_utils_api_get_element_context',
+            'dd_core_api_get_element_context',
             'get_element_context response structure should match contract'
         );
     }
@@ -265,7 +273,7 @@ final class ApiContractSnapshotTest extends BaseTestCase {
         // Build component instance
         $component = component_common::get_instance(
             'component_input_text',
-            'test80', // test tipo for component_input_text
+            'test52', // test tipo for component_input_text (test80 is component_portal)
             1,
             'edit',
             DEDALO_DATA_NOLAN,

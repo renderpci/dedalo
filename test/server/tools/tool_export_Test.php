@@ -1205,14 +1205,39 @@ final class tool_export_test extends BaseTestCase {
 		// tests rewrite the parent locator across runs), then bust the ts
 		// session term cache (earlier tests may have cached empty values)
 			$ar_parents = component_relation_parent::get_parents_recursive(1, 'test3');
+			if (empty($ar_parents)) {
+				// Robust fixture: other lifecycle tests can delete record 1's test71
+				// parent relation entirely. Seed one (pointing at a freshly created
+				// target record) so this test is order-independent.
+				$seed_target_id = section::get_instance('test3', 'edit', false)->create_record();
+				$seed_rel = component_common::get_instance('component_relation_parent', 'test71', '1', 'edit', DEDALO_DATA_NOLAN, 'test3', false);
+				$seed_loc = new locator();
+					$seed_loc->set_section_tipo('test3');
+					$seed_loc->set_section_id((string)$seed_target_id);
+					$seed_loc->set_type('dd47');
+					$seed_loc->set_from_component_tipo('test71');
+				$seed_rel->add_locator_to_data($seed_loc);
+				$seed_rel->save();
+				$ar_parents = component_relation_parent::get_parents_recursive(1, 'test3');
+			}
 			$this->assertNotEmpty($ar_parents, 'fixture guard: test3 record 1 must have parents (test71)');
 			foreach ($ar_parents as $parent_locator) {
+				$parent_sid = (int)$parent_locator->section_id;
+				// Ensure the chain target record exists: lifecycle tests can leave
+				// record 1's parent locator pointing at a deleted record, which makes
+				// the term Save() below return false. Create it (forced id) so the
+				// seed is deterministic and order-independent.
+				$parent_sr = section_record::get_instance('test3', $parent_sid);
+				if ($parent_sr->exists_in_the_database()===false) {
+					section::get_instance('test3', 'edit', false)
+						->create_record((object)['section_id' => $parent_sid]);
+				}
 				$term_component = component_common::get_instance(
-					'component_input_text', 'test52', (string)$parent_locator->section_id,
+					'component_input_text', 'test52', (string)$parent_sid,
 					'edit', DEDALO_DATA_LANG, 'test3', false
 				);
 				if (empty($term_component->get_data())) {
-					$term_component->set_data(['Parent term ' . $parent_locator->section_id]);
+					$term_component->set_data(['Parent term ' . $parent_sid]);
 					$this->assertNotFalse($term_component->Save(), 'fixture seed: failed saving the parent term');
 				}
 			}

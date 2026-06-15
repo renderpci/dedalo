@@ -93,6 +93,13 @@ class dd_error {
 	 * (!) This method does NOT call the default PHP error handler. Returning without
 	 * returning false suppresses PHP's built-in error output for the matched error levels.
 	 *
+	 * (!) Low-severity diagnostics (deprecations and notices) are logged but are NOT
+	 * written to $_ENV['DEDALO_LAST_ERROR']. That slot is read by API response
+	 * assemblers and by control-flow checks (e.g. dd_core_api detecting DB-connection
+	 * failures) as "the request's actionable error". A PHP deprecation emitted by a
+	 * third-party library (e.g. PHP 8.x nullable-parameter deprecations in vendored
+	 * guzzle/promises) is not a request failure and must not populate that slot.
+	 *
 	 * @param int    $number  - PHP error level constant (E_WARNING, E_NOTICE, etc.)
 	 * @param string $message - Human-readable error description
 	 * @param string $file    - Absolute path of the file that triggered the error
@@ -100,6 +107,22 @@ class dd_error {
 	 * @return void
 	 */
 	public static function captureError(int $number, string $message, string $file, int $line) : void {
+
+		// Respect explicit error suppression. A custom error handler is invoked for
+		// every level regardless of error_reporting(), so masked diagnostics must be
+		// skipped here. This honours both an explicit error_reporting() mask and the
+		// @ operator (PHP 8 narrows error_reporting() to a non-zero fatal-only bitmask
+		// while @ is active, so a suppressed warning/notice/deprecation is masked out).
+		//
+		// (!) The $er !== 0 guard is deliberate: initialize() sets error_reporting(0)
+		// in production (SHOW_DEBUG === false), yet captureError MUST keep populating
+		// $_ENV['DEDALO_LAST_ERROR'] there — json/index.php uses its presence as the
+		// "a server error occurred" signal to the client. Applying the mask only when
+		// it is non-zero preserves that production behaviour.
+		$er = error_reporting();
+		if ($er !== 0 && ($er & $number) === 0) {
+			return;
+		}
 
 		$error_data = [
 			'type'		=> $number,
@@ -115,10 +138,15 @@ class dd_error {
 			$error_data
 		);
 
-		// Store in environment for later retrieval
+		// Store in environment for later retrieval, but ONLY for actionable error levels.
 		// $_ENV['DEDALO_LAST_ERROR'] is a string slot readable by API response assemblers
-		// that want to include error context in the JSON response body.
-		$_ENV['DEDALO_LAST_ERROR'] = json_encode($error_data);
+		// and control-flow checks that treat a non-empty value as "the request errored".
+		// Deprecations and notices are non-actionable noise (often from third-party libs)
+		// and must not pollute that slot.
+		$non_actionable = E_DEPRECATED | E_USER_DEPRECATED | E_NOTICE | E_USER_NOTICE;
+		if (($number & $non_actionable) === 0) {
+			$_ENV['DEDALO_LAST_ERROR'] = json_encode($error_data);
+		}
 	}//end captureError
 
 

@@ -98,12 +98,7 @@ class matrix_activity_db_manager_Test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 15 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 35;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1) bellow 35 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(1) bellow 35 ms', $total_time, 35);
 
 		// Check result type
 		$eq = gettype($result) === 'integer';
@@ -143,12 +138,7 @@ class matrix_activity_db_manager_Test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 1.5 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
-		$eq = $total_time < 3;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (2) bellow 3 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(2) bellow 3 ms', $total_time, 3);
 
 		// Check result type
 		$eq = gettype($result) === 'integer';

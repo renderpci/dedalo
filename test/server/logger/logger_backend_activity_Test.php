@@ -81,9 +81,14 @@ final class logger_backend_activity_test extends BaseTestCase {
 			'expected LOG IN activity type'
 		);
 
-		// Test $enable_log
-		$this->assertNotEmpty(
-			logger_backend_activity::$enable_log,
+		// Test $enable_log declared default. Use the class default via reflection
+		// (not the live static): earlier suites/imports legitimately flip the
+		// runtime value to false (see logger_backend_activity::log_action), so
+		// asserting the live static would make this test order-dependent.
+		$declared_default = (new ReflectionClass('logger_backend_activity'))
+			->getDefaultProperties()['enable_log'];
+		$this->assertTrue(
+			$declared_default,
 			'expected $enable_log to be true by default'
 		);
 	}//end test_static_properties

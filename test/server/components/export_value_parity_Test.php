@@ -169,15 +169,41 @@ final class export_value_parity_test extends BaseTestCase {
 		// chain record that lacks one, so ts_object::get_term_by_locator can
 		// resolve it.
 			$ar_parents = component_relation_parent::get_parents_recursive(1, 'test3');
+			if (empty($ar_parents)) {
+				// Robust fixture: other lifecycle tests in the same suite can delete
+				// record 1's test71 parent relation entirely. Seed one (pointing at a
+				// freshly created target record) so this test is order-independent.
+				$seed_target_id = section::get_instance('test3', 'edit', false)->create_record();
+				$seed_rel = component_common::get_instance('component_relation_parent', 'test71', '1', 'edit', DEDALO_DATA_NOLAN, 'test3', false);
+				$seed_loc = new locator();
+					$seed_loc->set_section_tipo('test3');
+					$seed_loc->set_section_id((string)$seed_target_id);
+					$seed_loc->set_type('dd47');
+					$seed_loc->set_from_component_tipo('test71');
+				$seed_rel->add_locator_to_data($seed_loc);
+				$seed_rel->save();
+				$ar_parents = component_relation_parent::get_parents_recursive(1, 'test3');
+			}
 			$this->assertNotEmpty(
 				$ar_parents,
 				'fixture guard: test3 record 1 must have parents (component_relation_parent test71)'
 			);
 			foreach ($ar_parents as $parent_locator) {
+				$parent_sid = (int)$parent_locator->section_id;
+				// Ensure the chain target record exists. Lifecycle tests rewrite
+				// record 1's parent locator and can leave it pointing at a deleted
+				// record (dangling locator); saving a component on a non-existent
+				// record returns false. Create it (forced id, via the section API)
+				// so the seed below is deterministic and order-independent.
+				$parent_sr = section_record::get_instance('test3', $parent_sid);
+				if ($parent_sr->exists_in_the_database()===false) {
+					section::get_instance('test3', 'edit', false)
+						->create_record((object)['section_id' => $parent_sid]);
+				}
 				$term_component = component_common::get_instance(
 					'component_input_text', // string model
 					'test52', // string tipo (test3 thesaurus term)
-					(string)$parent_locator->section_id, // string section_id (chain record)
+					(string)$parent_sid, // string section_id (chain record)
 					'edit', // string mode
 					DEDALO_DATA_LANG, // string lang
 					'test3', // string section_tipo

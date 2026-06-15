@@ -97,6 +97,20 @@ final class grid_value_snapshot_test extends BaseTestCase {
 	*/
 	private function normalize_payload( $payload ) {
 
+		if (is_string($payload)) {
+			// Canonicalize environment-specific values so shape snapshots stay
+			// portable across installs. The media base URL embeds the entity name
+			// (e.g. '/v7/media/media_development' vs '/dedalo/media_monedaiberica')
+			// and the data lang varies per install (DEDALO_DATA_LANG, e.g. lg-eng
+			// vs lg-spa). Without this, the byte-exact comparison fails purely on
+			// environment, not on grid_value shape.
+			if (defined('DEDALO_MEDIA_URL') && DEDALO_MEDIA_URL!=='') {
+				$payload = str_replace(DEDALO_MEDIA_URL, '<MEDIA_URL>', $payload);
+			}
+			$payload = str_replace(DEDALO_DATA_LANG, '<DATA_LANG>', $payload);
+			return $payload;
+		}
+
 		if (!is_array($payload)) {
 			return $payload;
 		}

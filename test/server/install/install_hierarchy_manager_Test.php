@@ -17,8 +17,9 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 		$reflection = new ReflectionClass('install_hierarchy_manager');
 
-		// Should have no constructor
-		$this->assertNull($reflection->getConstructor());
+		// Should not be publicly instantiable: either no constructor or a non-public one
+		$constructor = $reflection->getConstructor();
+		$this->assertTrue($constructor===null || !$constructor->isPublic());
 
 		// Should have no instance properties
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
@@ -93,7 +94,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 			'get_hierarchy_typlologies',
 			'import_hierarchy_main_records',
 			'activate_hierarchy',
-			'install_hierarchy'
+			'install_hierarchies'
 		];
 
 		foreach ($expected_methods as $method) {
@@ -114,7 +115,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
 		$this->assertObjectHasProperty('msg', $response);
-		$this->assertIsBool($response->result);
+		$this->assertIsArray($response->result);
 		$this->assertIsString($response->msg);
 	}//end test_get_available_hierarchy_files_returns_object
 
@@ -181,13 +182,10 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	public function test_install_hierarchy_returns_object(): void {
 
 		$options = (object)[
-			'tld' => 'test',
-			'typology' => 1,
-			'label' => 'Test Hierarchy',
-			'active_in_thesaurus' => true
+			'selected_hierarchies' => []
 		];
 
-		$response = install_hierarchy_manager::install_hierarchy($options);
+		$response = install_hierarchy_manager::install_hierarchies($options);
 
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
@@ -208,7 +206,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
 		$this->assertStringContainsString('@subpackage Install', $content);
 	}//end test_class_has_docblock
 
@@ -262,6 +260,11 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 		$reflection = new ReflectionClass('install_hierarchy_manager');
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PRIVATE);
+
+		// The private constructor is allowed (static-only utility); no other private methods
+		$methods = array_filter($methods, function($method){
+			return $method->getName() !== '__construct';
+		});
 
 		$this->assertEquals(0, count($methods));
 	}//end test_no_private_methods
@@ -502,7 +505,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 		// Class should have comprehensive docblock
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
 		$this->assertStringContainsString('@subpackage Install', $content);
 
 		// Methods should have docblocks
@@ -520,9 +523,10 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 	*/
 	public function test_class_is_testable(): void {
 
-		// Class should be static-only (easy to test)
+		// Class should be static-only (easy to test): not publicly instantiable
 		$reflection = new ReflectionClass('install_hierarchy_manager');
-		$this->assertNull($reflection->getConstructor());
+		$constructor = $reflection->getConstructor();
+		$this->assertTrue($constructor===null || !$constructor->isPublic());
 
 		// Methods should be public and static
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
@@ -544,7 +548,7 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 		$this->assertIsObject($response);
 		$this->assertObjectHasProperty('result', $response);
 		$this->assertObjectHasProperty('msg', $response);
-		$this->assertIsBool($response->result);
+		$this->assertIsArray($response->result);
 		$this->assertIsString($response->msg);
 	}//end test_class_is_reliable
 
@@ -590,8 +594,9 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 
 		$reflection = new ReflectionClass('install_hierarchy_manager');
 
-		// No constructor
-		$this->assertNull($reflection->getConstructor());
+		// Not publicly instantiable: either no constructor or a non-public one
+		$constructor = $reflection->getConstructor();
+		$this->assertTrue($constructor===null || !$constructor->isPublic());
 
 		// No instance properties
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
@@ -620,7 +625,8 @@ final class install_hierarchy_manager_Test extends BaseTestCase {
 		$content = file_get_contents($file);
 
 		// Class docblock should describe single responsibility
-		$this->assertStringContainsString('Encapsulates hierarchy file discovery', $content);
+		$this->assertStringContainsString('Discovery, import, activation, and installation', $content);
+		$this->assertStringContainsString('thesaurus hierarchies', $content);
 		$this->assertStringContainsString('import', $content);
 		$this->assertStringContainsString('activation', $content);
 		$this->assertStringContainsString('installation', $content);
