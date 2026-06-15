@@ -31,9 +31,10 @@ final class search_cross_join_test extends BaseTestCase {
 	}
 
 	public function test_characterize_current_sql() {
+		// Smoke check: a two-clause same-path SQO produces a SQL string without throwing.
+		// The cross-record alias behavior is asserted in test_same_path_clauses_get_independent_joins.
 		$search = search::get_instance($this->two_same_path_sqo());
 		$sql    = $search->parse_sql_query();
-		fwrite(STDERR, "\n\n===CHARACTERIZE===\n" . $sql . "\n===END===\n\n");
 		$this->assertIsString($sql);
 	}
 
