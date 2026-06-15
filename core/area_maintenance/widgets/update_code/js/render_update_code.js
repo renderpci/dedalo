@@ -73,7 +73,7 @@ render_update_code.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// value
-		const value = await self.get_value() || {}
+		const value = self.value || {}
 
 	// short vars
 		const dedalo_source_version_local_dir	= value.dedalo_source_version_local_dir
