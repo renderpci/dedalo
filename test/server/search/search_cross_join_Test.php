@@ -36,4 +36,33 @@ final class search_cross_join_test extends BaseTestCase {
 		fwrite(STDERR, "\n\n===CHARACTERIZE===\n" . $sql . "\n===END===\n\n");
 		$this->assertIsString($sql);
 	}
+
+	public function test_same_path_clauses_get_independent_joins() {
+		$search = search::get_instance($this->two_same_path_sqo());
+		$sql    = $search->parse_sql_query();
+
+		// Extract every target-table alias emitted by build_sql_join:
+		//   "LEFT JOIN matrix_test AS <alias> ON"
+		preg_match_all('/LEFT JOIN\s+matrix_test\s+AS\s+(\S+)\s+ON/i', $sql, $m);
+		$aliases          = $m[1];
+		$distinct_aliases = array_values(array_unique($aliases));
+
+		// Two clauses with the same path must produce TWO DISTINCT joined-table aliases,
+		// so each clause traverses the relation independently (cross-record AND/OR).
+		$this->assertCount(
+			2,
+			$distinct_aliases,
+			"Expected 2 distinct join aliases (one per clause), got: "
+				. json_encode($aliases) . "\nSQL:\n{$sql}"
+		);
+
+		// And each clause's WHERE fragment must reference its OWN alias (no shared alias).
+		foreach ($distinct_aliases as $alias) {
+			$this->assertStringContainsString(
+				"{$alias}.relation @>",
+				$sql,
+				"Each distinct alias must own a WHERE fragment.\nSQL:\n{$sql}"
+			);
+		}
+	}
 }
