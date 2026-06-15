@@ -141,30 +141,36 @@ Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
 
 Append this method to `search_cross_join_test` (reuses `two_same_path_sqo()` from Task 1):
 
+> **Characterization result (Task 1, commit a5d217c6d):** the buggy SQL already emits the `test80` LATERAL join *twice*, but BOTH use the identical target alias `te3_te80_te3`, and both WHERE fragments reference it. So counting LATERAL joins is NOT a valid discriminator (it is already 2). The correct red/green signal is the number of **distinct** `LEFT JOIN matrix_test AS <alias>` target aliases: currently **1**, must become **2** after the fix.
+
 ```php
 	public function test_same_path_clauses_get_independent_joins() {
 		$search = search::get_instance($this->two_same_path_sqo());
 		$sql    = $search->parse_sql_query();
 
-		// Count distinct relation-join aliases emitted for the Movements-style hop.
-		// Each independent clause must produce its own "LEFT JOIN LATERAL jsonb_array_elements(... ->'test80')".
-		$lateral_count = preg_match_all(
-			"/LEFT JOIN LATERAL jsonb_array_elements\\([^)]*->'test80'\\)/",
-			$sql
-		);
-		$this->assertSame(
+		// Extract every target-table alias emitted by build_sql_join:
+		//   "LEFT JOIN matrix_test AS <alias> ON"
+		preg_match_all('/LEFT JOIN\s+matrix_test\s+AS\s+(\S+)\s+ON/i', $sql, $m);
+		$aliases          = $m[1];
+		$distinct_aliases = array_values(array_unique($aliases));
+
+		// Two clauses with the same path must produce TWO DISTINCT joined-table aliases,
+		// so each clause traverses the relation independently (cross-record AND/OR).
+		$this->assertCount(
 			2,
-			$lateral_count,
-			"Expected 2 independent LATERAL joins (one per clause), got {$lateral_count}.\nSQL:\n{$sql}"
+			$distinct_aliases,
+			"Expected 2 distinct join aliases (one per clause), got: "
+				. json_encode($aliases) . "\nSQL:\n{$sql}"
 		);
 
-		// The two clause sentences must reference DIFFERENT target aliases (no collision).
-		$prefixed = preg_match_all('/\bj\d+_/', $sql);
-		$this->assertGreaterThanOrEqual(
-			2,
-			$prefixed,
-			"Expected per-clause 'jN_' alias prefixes in SQL.\nSQL:\n{$sql}"
-		);
+		// And each clause's WHERE fragment must reference its OWN alias (no shared alias).
+		foreach ($distinct_aliases as $alias) {
+			$this->assertStringContainsString(
+				"{$alias}.relation @>",
+				$sql,
+				"Each distinct alias must own a WHERE fragment.\nSQL:\n{$sql}"
+			);
+		}
 	}
 ```
 
@@ -174,7 +180,7 @@ Run:
 ```bash
 vendor/bin/phpunit -c test/server/phpunit.xml --filter test_same_path_clauses_get_independent_joins test/server/search/search_cross_join_Test.php
 ```
-Expected: FAIL — `lateral_count` is `1` (single shared join) and there are no `jN_` prefixes yet.
+Expected: FAIL — there is only **1** distinct alias (`te3_te80_te3`) shared by both clauses, so `assertCount(2, ...)` fails.
 
 - [ ] **Step 3: Commit the failing test**
 
