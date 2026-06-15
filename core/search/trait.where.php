@@ -323,7 +323,7 @@ trait where {
 
 				$n_levels = count($search_object->path);
 				if ($n_levels>1) {
-					$this->build_sql_join($search_object->path);
+					$this->build_sql_join($search_object->path, $search_object->join_id ?? null);
 				}
 
 				$search_object_sql = $this->parse_search_object_sql($search_object);
@@ -406,25 +406,30 @@ trait where {
 	*                                        or null if the path was empty / all steps were skipped
 	* @throws Exception  When component_tipo fails the is_valid_tipo() security gate
 	*/
-	public function build_sql_join(array $path) : ?string {
+	public function build_sql_join(array $path, ?int $join_id=null) : ?string {
 
 		$ar_key_join	= [];
 		$base_key		= '';
 		$total_paths	= count($path);
+
+		// Per-clause discriminator prefix. Keeps two clauses with the same path from
+		// collapsing onto one joined row (see get_table_alias_from_path). Empty when
+		// join_id is null → legacy alias names unchanged.
+		$prefix			= ($join_id!==null) ? 'j'.$join_id.'_' : '';
 
 		$last_table_name = null;
 
 		foreach ($path as $key => $step_object) {
 
 			if ($key===0) {
-				$base_key		= $this->main_section_tipo_alias; //self::trim_tipo($step_object->section_tipo);
+				$base_key		= $this->main_section_tipo_alias;
 				$ar_key_join[]	= self::trim_tipo($step_object->section_tipo) .'_'. self::trim_tipo($step_object->component_tipo);
 				continue;
 			}
 
 			$current_key = ($key===1)
 				? $base_key
-				: implode('_', $ar_key_join);
+				: $prefix . implode('_', $ar_key_join);
 
 			$ar_key_join[] = ($key === $total_paths-1)
 				? self::trim_tipo($step_object->section_tipo)
@@ -441,47 +446,39 @@ trait where {
 				continue;
 			}
 
-			$t_name		= implode('_', $ar_key_join);
+			$t_name		= $prefix . implode('_', $ar_key_join);
 			$t_relation	= 'rel_' . $t_name;
 
-			// if (!isset($this->ar_sql_joins[$t_name])) {
+			$sql_join = '';
+			if(SHOW_DEBUG===true) {
+				$section_name = ontology_node::get_term_by_tipo($step_object->section_tipo, null, true, false);
+				$sql_join .= "-- JOIN GROUP $matrix_table - $t_name - $section_name";
+			}
 
-				// Note: joins must be 'LEFT JOIN' to do not exclude results on use ORDER clauses
+			// Security: $component_tipo is a client-supplied SQO path value interpolated
+			// verbatim as a JSONB relation key (it cannot be parameterized and must keep
+			// its exact form, so trim_tipo() is not usable here). Validate the tipo format
+			// and fail closed on anything that is not a well-formed ontology tipo.
+			$component_tipo = $path[$key-1]->component_tipo;
+			if (!self::is_valid_tipo((string)$component_tipo)) {
+				debug_log(__METHOD__
+					. " Rejected invalid component_tipo in join path (possible injection attempt) " . PHP_EOL
+					. ' component_tipo: ' . to_string($component_tipo)
+					, logger::ERROR
+				);
+				throw new Exception("Error: invalid component_tipo in search path", 1);
+			}
+			$sql_join .= PHP_EOL . "LEFT JOIN LATERAL jsonb_array_elements({$current_key}.relation->'{$component_tipo}') AS {$t_relation} on true";
 
-				$sql_join = '';
-				if(SHOW_DEBUG===true) {
-					$section_name = ontology_node::get_term_by_tipo($step_object->section_tipo, null, true, false);
-					$sql_join .= "-- JOIN GROUP $matrix_table - $t_name - $section_name";
-				}
+			$sql_join .= PHP_EOL . "LEFT JOIN {$matrix_table} AS {$t_name} ON" . PHP_EOL;
+			$sql_join .= " {$t_name}.section_id = NULLIF(({$t_relation}->>'section_id'), '')::bigint";
+			$sql_join .= " AND {$t_name}.section_tipo = ({$t_relation}->>'section_tipo')::text";
 
-				// join array_elements as relations
-				// Security: $component_tipo is a client-supplied SQO path value interpolated
-				// verbatim as a JSONB relation key (it cannot be parameterized and must keep
-				// its exact form, so trim_tipo() is not usable here). Validate the tipo format
-				// and fail closed on anything that is not a well-formed ontology tipo.
-				$component_tipo = $path[$key-1]->component_tipo;
-				if (!self::is_valid_tipo((string)$component_tipo)) {
-					debug_log(__METHOD__
-						. " Rejected invalid component_tipo in join path (possible injection attempt) " . PHP_EOL
-						. ' component_tipo: ' . to_string($component_tipo)
-						, logger::ERROR
-					);
-					throw new Exception("Error: invalid component_tipo in search path", 1);
-				}
-				$sql_join .= PHP_EOL . "LEFT JOIN LATERAL jsonb_array_elements({$current_key}.relation->'{$component_tipo}') AS {$t_relation} on true";
-
-				// join table by setion_tipo and section_id matches
-				$sql_join .= PHP_EOL . "LEFT JOIN {$matrix_table} AS {$t_name} ON" . PHP_EOL;
-				$sql_join .= " {$t_name}.section_id = NULLIF(({$t_relation}->>'section_id'), '')::bigint";
-				$sql_join .= " AND {$t_name}.section_tipo = ({$t_relation}->>'section_tipo')::text";
-
-				$this->sql_obj->join[] = $sql_join;
-			// }
+			$this->sql_obj->join[] = $sql_join;
 
 			// Override on every iteration
 			$last_table_name = $t_name;
 		}//end foreach ($path as $key => $step_object)
-
 
 		return $last_table_name;
 	}//end build_sql_join
