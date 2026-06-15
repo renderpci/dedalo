@@ -415,7 +415,7 @@ trait where {
 		// Per-clause discriminator prefix. Keeps two clauses with the same path from
 		// collapsing onto one joined row (see get_table_alias_from_path). Empty when
 		// join_id is null → legacy alias names unchanged.
-		$prefix			= ($join_id!==null) ? 'j'.$join_id.'_' : '';
+		$prefix			= $this->join_prefix($join_id);
 
 		$last_table_name = null;
 

@@ -29,6 +29,21 @@ trait utils {
 
 
 
+	/**
+	* JOIN_PREFIX
+	* Per-clause join-alias discriminator. Returns "j{join_id}_" when a join_id is set,
+	* or '' otherwise. Used by BOTH get_table_alias_from_path() (which bakes the alias into
+	* a clause's WHERE sentence during conform) and build_sql_join() (which emits the JOIN).
+	* These two MUST produce identical alias strings, so both obtain the prefix from here.
+	* @param ?int $join_id
+	* @return string
+	*/
+	public function join_prefix( ?int $join_id ) : string {
+		return ($join_id!==null) ? 'j' . $join_id . '_' : '';
+	}//end join_prefix
+
+
+
     /**
 	* GET_TABLE_ALIAS_FROM_PATH
 	* Derives the SQL table alias for the matrix JOIN that corresponds to a
@@ -78,8 +93,8 @@ trait utils {
 		// alias so two clauses sharing the same path get INDEPENDENT joins (each clause
 		// traverses the relation array on its own row). Single-step paths use the shared
 		// main table alias and must never be prefixed. join_id===null preserves legacy SQL.
-		if ($join_id!==null && $total>1) {
-			$table_alias = 'j' . $join_id . '_' . $table_alias;
+		if ($total>1) {
+			$table_alias = $this->join_prefix($join_id) . $table_alias;
 		}
 
 		return $table_alias;
