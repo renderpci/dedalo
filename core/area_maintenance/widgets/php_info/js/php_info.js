@@ -47,6 +47,13 @@ export const php_info = function() {
 	// // render
 	php_info.prototype.edit		= render_php_info.prototype.list
 	php_info.prototype.list		= render_php_info.prototype.list
+	// // load (defer heavy iframe load until widget is opened)
+	php_info.prototype.load = async function() {
+		if (typeof this.activate==='function') {
+			this.activate()
+		}
+		return true
+	}
 
 
 

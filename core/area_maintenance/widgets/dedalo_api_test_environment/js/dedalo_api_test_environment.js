@@ -47,6 +47,14 @@ export const dedalo_api_test_environment = function() {
 	// // render
 	dedalo_api_test_environment.prototype.edit		= render_dedalo_api_test_environment.prototype.list
 	dedalo_api_test_environment.prototype.list		= render_dedalo_api_test_environment.prototype.list
+	// // load (defer heavy JSON editor build until widget is opened)
+	dedalo_api_test_environment.prototype.load = async function() {
+		this._open = true
+		if (typeof this.activate==='function') {
+			this.activate()
+		}
+		return true
+	}
 
 
 

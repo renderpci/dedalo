@@ -7,7 +7,6 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
-	import {dd_request_idle_callback, when_in_viewport} from '../../../../common/js/events.js'
 	import {createJSONEditor} from '../../../../../lib/jsoneditor/dist/standalone.js'
 	import {print_response} from '../../../js/render_area_maintenance.js'
 
@@ -152,6 +151,8 @@ const get_content_data_edit = async function(self) {
 				// JSON editor
 					const load_editor = () => {
 
+						if (self.editor) { return } // already built
+
 						// localStorage
 						const sample_data	= '{"section_tipo":["rsc170"],"limit":5,"offset":0}'
 						const saved_value	= localStorage.getItem('json_editor_sqo')
@@ -182,8 +183,12 @@ const get_content_data_edit = async function(self) {
 						self.editor = editor
 					}
 
-					// observe in viewport
-					when_in_viewport(json_editor_api_container, load_editor)
+					// expose the loader so the host can trigger it when the widget is opened
+					self.activate = load_editor
+					// if the widget was opened before this container was ready, load now
+					if (self._open) {
+						load_editor()
+					}
 
 				// add at end body_response
 					const body_response = ui.create_dom_element({
