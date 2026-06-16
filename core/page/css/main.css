@@ -12630,6 +12630,100 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   overflow: auto;
 }
 /**
+* diffusion_server_control
+*
+* Included from area_maintenance.less file
+*/
+.wrapper_widget.diffusion_server_control .diffusion_server_control_content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.66rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_status {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.2rem 1rem;
+  align-items: baseline;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_row {
+  display: contents;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_label {
+  font-weight: 500;
+  white-space: nowrap;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_value {
+  word-break: break-word;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_value.state_running,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_value.check_ok {
+  color: var(--color_success);
+  font-weight: 600;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_value.state_degraded {
+  color: var(--color_warning);
+  font-weight: 600;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_value.state_stopped,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_value.check_fail {
+  color: var(--color_danger);
+  font-weight: 600;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_value.warning_text {
+  color: var(--color_danger);
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_lifecycle,
+.wrapper_widget.diffusion_server_control .diffusion_server_control_pending {
+  display: flex;
+  align-items: center;
+  gap: 0.66rem;
+  flex-wrap: wrap;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_processes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.33rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_process_list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.33rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_process {
+  display: flex;
+  align-items: center;
+  gap: 0.66rem;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_process_desc {
+  word-break: break-word;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_config {
+  display: flex;
+  flex-direction: column;
+  gap: 0.33rem;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_note {
+  opacity: 0.7;
+  font-size: 0.9em;
+  line-height: 1.2em;
+}
+.wrapper_widget.diffusion_server_control .diffusion_server_control_note.warning_text {
+  opacity: 1;
+  color: var(--color_danger);
+}
+.wrapper_widget.diffusion_server_control .body_response {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.wrapper_widget.diffusion_server_control .body_response:empty {
+  display: none;
+}
+/**
 * lock_components
 *
 * Included from area_maintenance.less file
@@ -16879,6 +16973,7 @@ body.inspector_resizing {
 .component_json.view_collapse {
   cursor: n-resize;
   line-height: 1.1rem;
+  position: relative;
 }
 .component_json.view_collapse:hover {
   background-color: var(--color_hilite_3);
@@ -16887,6 +16982,38 @@ body.inspector_resizing {
   cursor: s-resize;
   height: 2.5rem;
   overflow: hidden;
+}
+.component_json.view_collapse .activity_record_button {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+  display: inline-block;
+  width: 1.1rem;
+  height: 1.1rem;
+  background-color: var(--color_primary);
+  cursor: pointer;
+  opacity: 0.75;
+  -webkit-mask-image: url('../../themes/default/icons/arrow_link.svg');
+  mask-image: url('../../themes/default/icons/arrow_link.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+.component_json.view_collapse .activity_record_button:hover {
+  opacity: 1;
+}
+.component_json.view_collapse .activity_record_button:visited {
+  background-color: var(--color_grey_10);
+}
+.component_json.view_collapse .activity_record_button.visited {
+  background-color: var(--color_grey_10);
+  opacity: 0.4;
+}
+.component_json.view_collapse .activity_record_button.visited:hover {
+  opacity: 0.7;
 }
 :root[data-theme="dark"] .component_json .button_save {
   color: var(--fg_default);
