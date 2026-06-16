@@ -260,9 +260,9 @@ trait utils {
 
 		$sql = '';
 
-		// limit
+		// limit (LIMIT ALL do not have effect and is noise)
 		$limit_sql = self::sanitize_sql_limit($this->sqo->limit ?? null);
-		if ($limit_sql !== null) {
+		if ($limit_sql !== null && $limit_sql !== 'ALL') {
 			$sql .= PHP_EOL . 'LIMIT ' . $limit_sql;
 		}
 
