@@ -171,6 +171,17 @@ export const get_content_data = function(self) {
 			// set pointers
 			content_data[i] = input_element_edit
 			input_nodes.push(input_element_edit)
+			// dataframe (read-only path): get_content_value attaches the dataframe for
+			// writers; the read-only branch (permissions===1, e.g. Time Machine preview)
+			// is not handled there, so attach it here too. No-op without has_dataframe.
+			if (self.permissions===1) {
+				attach_item_dataframe({
+					self		: self,
+					item		: inputs_value[i],
+					container	: input_element_edit,
+					view		: self.view
+				})
+			}
 		}
 
 

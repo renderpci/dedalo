@@ -179,6 +179,17 @@ export const get_content_data = function(self) {
 			content_data.appendChild(content_value_node)
 			// set pointers
 			content_data[i] = content_value_node
+			// dataframe (read-only path): get_content_value attaches the dataframe for
+			// writers; the read-only branch (permissions===1, e.g. Time Machine preview)
+			// is not handled there, so attach it here too. No-op without has_dataframe.
+			if (self.permissions===1) {
+				attach_item_dataframe({
+					self		: self,
+					item		: entries[i],
+					container	: content_value_node,
+					view		: self.view
+				})
+			}
 		}
 
 
