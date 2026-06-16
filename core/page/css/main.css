@@ -874,6 +874,7 @@ html {
   color: var(--color_grey_4);
   background-color: var(--color_white);
   font-size: 0.8125rem;
+  -webkit-font-smoothing: antialiased;
 }
 @media screen and (max-width: 1024px) {
   html {
