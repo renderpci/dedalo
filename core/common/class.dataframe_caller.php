@@ -20,10 +20,10 @@
 * The match predicate applied by trait.dataframe_common::dataframe_entry_matches() is:
 *   (type=DEDALO_RELATION_TYPE_DATAFRAME, from_component_tipo, main_component_tipo, id_key)
 *
-* Legacy support: data written before the v7 unification uses `section_id_key`
-* (+ `section_tipo_key`) instead of `id_key`. from_legacy() normalizes any
-* legacy stdClass shape into this DTO; the deprecated aliases are kept in sync
-* on every instance so dual-read code still works until the migration has run.
+* The DTO carries id_key ONLY. from_legacy() normalizes an untyped stdClass caller
+* ({section_tipo, section_id?, id_key, main_component_tipo}) into this typed DTO.
+* The legacy section_id_key/section_tipo_key shapes are NOT read here — they survive
+* only in the old-CSV import and the v6→v7 update; all live data uses id_key.
 *
 * Loaded unconditionally at boot from core/base/class.loader.php. Extends
 * stdClass so that legacy code treating the DTO as a plain object continues to
@@ -69,27 +69,6 @@ class dataframe_caller extends stdClass {
 	*/
 	public int			$id_key;
 
-	/**
-	* Legacy alias for id_key, kept in sync by __construct and from_legacy
-	* so that pre-migration code filtering by section_id_key still works.
-	* After the dataframe_v7_migration update runs, all data uses id_key and
-	* this property becomes unused.
-	* @deprecated Use id_key instead.
-	* @var int $section_id_key
-	*/
-	public int			$section_id_key;
-
-	/**
-	* Legacy alias that formerly distinguished which section tipo held the frame
-	* pairing. Dropped by the id_key unification (the frame record's target
-	* section_tipo lives in the locator itself, not in the caller). Kept in sync
-	* with section_tipo unless a divergent value was explicitly set in legacy data
-	* (see from_legacy()).
-	* @deprecated Dropped by the id_key unification.
-	* @var string $section_tipo_key
-	*/
-	public string		$section_tipo_key;
-
 
 
 	/**
@@ -110,13 +89,6 @@ class dataframe_caller extends stdClass {
 		$this->main_component_tipo	= $main_component_tipo;
 		$this->id_key				= $id_key;
 
-		// legacy aliases kept in sync (dual-read transition)
-		// (!) Keep these assignments mirroring id_key and section_tipo so that
-		// pre-migration readers that filter by section_id_key / section_tipo_key
-		// still receive the correct values from a typed DTO instance.
-		$this->section_id_key		= $id_key;
-		$this->section_tipo_key		= $section_tipo;
-
 		$this->validate();
 	}//end __construct
 
@@ -124,17 +96,14 @@ class dataframe_caller extends stdClass {
 
 	/**
 	* FROM_LEGACY
-	* Normalizes any stdClass caller_dataframe shape — legacy or unified — into
-	* a typed dataframe_caller instance. Called at the set_caller_dataframe boundary
-	* in component_common and at every code path that may receive an untyped object
-	* from the JSON API or time-machine storage.
+	* Normalizes an untyped stdClass caller_dataframe into a typed dataframe_caller.
+	* Called at the set_caller_dataframe boundary in component_common and at every
+	* code path that may receive an untyped object from the JSON API or time-machine
+	* storage.
 	*
-	* Legacy shape: {section_tipo|section_tipo_key, section_id?, section_id_key, main_component_tipo}
-	* Unified shape: {section_tipo, section_id?, id_key, main_component_tipo}
-	*
-	* Resolution order for ambiguous keys:
-	*   id_key:       id_key (unified) → section_id_key (legacy)
-	*   section_tipo: section_tipo (unified) → section_tipo_key (legacy)
+	* Expected shape: {section_tipo, section_id?, id_key, main_component_tipo}.
+	* The legacy section_id_key/section_tipo_key keys are NOT read (removed in the v7
+	* cutover); they remain only in the old-CSV import and the v6→v7 update.
 	*
 	* Returns null — and logs logger::ERROR — when any of the three mandatory
 	* fields (id_key, section_tipo, main_component_tipo) is missing. Callers must
@@ -150,17 +119,11 @@ class dataframe_caller extends stdClass {
 			return $caller_dataframe;
 		}
 
-		// id_key resolution
-		// Prefer the unified id_key; fall back to legacy section_id_key.
-		$id_key = $caller_dataframe->id_key
-			?? $caller_dataframe->section_id_key
-			?? null;
+		// id_key (the main item id) — read directly; no legacy fallback.
+		$id_key = $caller_dataframe->id_key ?? null;
 
-		// section_tipo resolution
-		// Prefer the unified section_tipo; fall back to legacy section_tipo_key.
-		$section_tipo = $caller_dataframe->section_tipo
-			?? $caller_dataframe->section_tipo_key
-			?? null;
+		// section_tipo of the host record
+		$section_tipo = $caller_dataframe->section_tipo ?? null;
 		$main_component_tipo = $caller_dataframe->main_component_tipo ?? null;
 
 		// mandatory field guard
@@ -176,25 +139,12 @@ class dataframe_caller extends stdClass {
 			return null;
 		}
 
-		$dataframe_caller = new dataframe_caller(
+		return new dataframe_caller(
 			(string)$section_tipo,
 			$caller_dataframe->section_id ?? 0,
 			(string)$main_component_tipo,
 			(int)$id_key
 		);
-
-		// divergent legacy section_tipo_key override
-		// In most legacy data section_tipo_key === section_tipo, so __construct's
-		// sync is correct. A small set of pre-migration records carried a
-		// section_tipo_key that differed from section_tipo (the frame target
-		// section was recorded there, not the host section). Preserve that
-		// original value so the legacy consistency check in dataframe_entry_matches
-		// still passes for those entries.
-		if (isset($caller_dataframe->section_tipo_key)) {
-			$dataframe_caller->section_tipo_key = (string)$caller_dataframe->section_tipo_key;
-		}
-
-		return $dataframe_caller;
 	}//end from_legacy
 
 

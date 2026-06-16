@@ -543,8 +543,10 @@ abstract class component_common extends common {
 		// cache is true case. Get cache instance if it exists. Otherwise, create a new one
 			$cache_key = implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode, $is_temporal ? 'tmp' : '']);
 			if(isset($caller_dataframe)) {
-				// $cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->tipo_key.'_'.$caller_dataframe->section_id_key;
-				$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->main_component_tipo;
+				// unified pairing: key on id_key (the main item id) + host section + main tipo
+				$cache_key .= '_'.($caller_dataframe->section_tipo ?? '')
+					.'_'.($caller_dataframe->id_key ?? '')
+					.'_'.($caller_dataframe->main_component_tipo ?? '');
 			}
 
 		$instance = component_instances_cache::get($cache_key);
@@ -1181,27 +1183,30 @@ abstract class component_common extends common {
 						return is_object($el) && !self::is_dataframe_entry($el);
 					}));
 				}elseif($current_model!=='component_dataframe'){
-					// any other relation component: keep valid locator-shaped objects.
-					// (!) dataframe entries are intentionally NOT excluded here to
-					// preserve pre-migration behavior: relation components filter
-					// their own locators by from_component_tipo downstream
+					// any other relation component: keep its OWN locators, exclude dataframe
+					// frames (they are merged into the same TM row under the main tipo).
+					// Post-migration every frame carries the type=dd490 marker, so
+					// is_dataframe_entry detects them reliably — they no longer leak into
+					// the main component's TM render (the dataframe slot renders them itself).
 					$data_tm = array_values( array_filter( $data_tm, function($el) {
-						if(is_object($el)) {
-							// Note that TM data locators could or could not have the property "from_component_tipo."
-							// This point is only to allow verify if the object is valid or not
-							if(isset($el->section_tipo) && isset($el->section_id)) {
-								return true;
-							}else{
-								debug_log(__METHOD__
-								   .' IGNORED: Invalid locator object found in TM data' . PHP_EOL
-								   .' el: ' . to_string($el) . PHP_EOL
-								   .' component_tipo: ' . $this->tipo . PHP_EOL
-								   .' section_tipo: ' . $this->section_tipo . PHP_EOL
-								   .' matrix_id: ' . $this->matrix_id
-								   , logger::ERROR
-								);
-							}
+						if(!is_object($el)) {
+							return false;
 						}
+						// exclude dataframe frames — they belong to a dataframe slot, not this main
+						if(self::is_dataframe_entry($el)) {
+							return false;
+						}
+						if(isset($el->section_tipo) && isset($el->section_id)) {
+							return true;
+						}
+						debug_log(__METHOD__
+						   .' IGNORED: Invalid locator object found in TM data' . PHP_EOL
+						   .' el: ' . to_string($el) . PHP_EOL
+						   .' component_tipo: ' . $this->tipo . PHP_EOL
+						   .' section_tipo: ' . $this->section_tipo . PHP_EOL
+						   .' matrix_id: ' . $this->matrix_id
+						   , logger::ERROR
+						);
 						return false;
 					}));
 				}
@@ -1211,8 +1216,11 @@ abstract class component_common extends common {
 
 					$caller_dataframe = $this->caller_dataframe;
 
-					$data_tm = array_values( array_filter( $data_tm, function($el) use($caller_dataframe) {
-						return self::dataframe_entry_matches($el, $caller_dataframe);
+					$slot_tipo = $this->tipo;
+					$data_tm = array_values( array_filter( $data_tm, function($el) use($caller_dataframe, $slot_tipo) {
+						// pass the slot tipo so frames from a different dataframe slot that share
+						// the same main_component_tipo + id_key do not bleed across slots
+						return self::dataframe_entry_matches($el, $caller_dataframe, $slot_tipo);
 					}));
 				}
 			}
@@ -3071,9 +3079,9 @@ abstract class component_common extends common {
 
 	/**
 	* SET_CALLER_DATAFRAME
-	* Sets the dataframe pairing caller context, normalizing legacy stdClass
-	* shapes ({section_id_key, section_tipo_key, ...}) into the typed
-	* dataframe_caller DTO when possible. Overrides the magic set accessor.
+	* Sets the dataframe pairing caller context, normalizing an untyped stdClass
+	* ({section_tipo, id_key, main_component_tipo}) into the typed dataframe_caller
+	* DTO when possible. Overrides the magic set accessor.
 	* @param object $caller_dataframe
 	* @return void
 	*/
@@ -3149,64 +3157,31 @@ abstract class component_common extends common {
 
 	/**
 	* REMOVE_DATAFRAME_DATA
-	* Remove all information associate to the main component
-	* This method is called when the main component remove a row (@see update_data_value() in component_common)
-	* And it's possible that your dataframe contains data.
-	* Therefore, the dataframe needs to be delete as its own main caller dataframe.
-	* @param object $locator
-	* @return array | null $ar_dataframe_ddo
-	*
+	* Remove the frame data paired with the main component item identified by $locator.
+	* Called when the main component removes one of its rows (@see update_data_value()).
+	* Unified contract: pairs by the item id ($locator->id) and delegates to
+	* remove_dataframe_data_by_id(); the legacy target-keyed cascade is retired.
+	* @param object $locator - the removed main item locator; must carry ->id (the item id)
+	* @return bool
 	*/
 	public function remove_dataframe_data( object $locator ) : bool {
 
-		// get the component dataframe
-		$dataframe_ddo = $this->get_dataframe_ddo();
-		if( empty($dataframe_ddo) ){
-			return true;
+		// Unified contract: cascade by the MAIN DATA ITEM id only.
+		// Legacy target-keyed removal (section_id_key/section_tipo_key built from the
+		// locator's target section) has been retired — frames are paired exclusively
+		// by id_key, so the cascade delegates to remove_dataframe_data_by_id().
+		if (isset($locator->id)) {
+			return $this->remove_dataframe_data_by_id( (int)$locator->id );
 		}
 
-		$caller_dataframe = new stdClass();
-			$caller_dataframe->section_tipo			= $this->section_tipo;
-			$caller_dataframe->section_id			= $this->section_id;
-			$caller_dataframe->section_id_key		= $locator->section_id;
-			$caller_dataframe->section_tipo_key		= $locator->section_tipo;
-			$caller_dataframe->main_component_tipo	= $this->tipo;
-
-
-		// config_context. Get_config_context normalized
-			foreach ($dataframe_ddo as $ddo) {
-
-				$model = ontology_node::get_model_by_tipo( $ddo->tipo );
-				$dataframe_component = component_common::get_instance(
-					$model, // string model
-					$ddo->tipo, // string tipo
-					$this->section_id, // string section_id
-					'list', // string mode
-					DEDALO_DATA_NOLAN, // string lang
-					$this->section_tipo, // string section_tipo
-					true,
-					$caller_dataframe
-				);
-
-
-				// Section
-				// remove dataframe data is called by the main component
-				// when the main component remove his own data
-				// therefore, the dataframe associated to the row of the component
-				// has to be removed as well.
-				// but, the dataframe component has not to create time machine data
-				// because the main component will save all information in the tm row.
-				// at this point the component section will not save time machine for the component.
-				$section = $dataframe_component->get_my_section();
-				tm_record::$save_tm = false;
-
-				// remove the data from dataframe.
-				$dataframe_component->set_data( null );
-				$dataframe_component->save();
-
-				// back to set time machine to true for the next savings.
-				tm_record::$save_tm = true;
-			}
+		// Pre-migration locator without an item id: there is no id_key to pair on,
+		// so nothing can be cascaded under the unified contract. Warn and no-op
+		// (run dataframe_v7_migration to backfill ids).
+		debug_log(__METHOD__
+			. ' Skipped dataframe cascade: locator has no item id (pre-migration data). Run dataframe_v7_migration.' . PHP_EOL
+			. ' locator: ' . to_string($locator)
+			, logger::WARNING
+		);
 
 		return true;
 	}//end remove_dataframe_data
@@ -4340,11 +4315,9 @@ abstract class component_common extends common {
 						}
 					}else{
 
-						// relation main (legacy target-keyed semantics until the
-						// data migration runs): cascade keyed by the removed locator
-						$locator = array_find($data_lang, fn($locator) => is_object($locator) && isset($locator->id) && $locator->id === $id);
-						if( !empty($locator) ){
-							$this->remove_dataframe_data( $locator );
+						// relation main: cascade by the removed item id (unified pairing).
+						if( $id !== null ){
+							$this->remove_dataframe_data_by_id( (int)$id );
 						}
 					}
 				}
