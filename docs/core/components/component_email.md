@@ -136,7 +136,7 @@ Because the component is non-translatable, the instantiated `context` reports `"
 | Property | Values | Default | Effect |
 | --- | --- | --- | --- |
 | `mandatory` | `true` \| `false` | `false` | Read in `render_edit_component_email.js`. When `true` and the field is empty, the input is rendered with the `mandatory` CSS class to flag to the user that a value is required. |
-| `has_dataframe` | `true` \| `false` | `false` | Read in `component_email_json.php`. When `true` the controller builds the dataframe subdatum (uncertainty / qualifier frame records paired with each item via the shared dataframe contract) and ships the extra dataframe DDO context to the client. See [component_dataframe](component_dataframe.md). |
+| `has_dataframe` | `true` \| `false` | `false` | Read in `component_email_json.php`. When `true` the controller builds the dataframe subdatum (uncertainty / qualifier frame records paired with each item via the shared dataframe contract) and ships the extra dataframe DDO context to the client. Required for literal mains (relation mains activate from the slot ddo alone); the control also renders read-only (Time Machine previews). Full ontology setup incl. a coloured rating: [component_dataframe](component_dataframe.md) → "Worked example — uncertainty rating on a literal". |
 
 !!! warning "`multi_line` does not apply"
     Unlike [component_input_text](component_input_text.md), `component_email` does **not** read a `multi_line` property — there is no reference to it anywhere in the component. Multiple addresses are handled by adding rows (one item per address), not by switching to a textarea. For multi-line free text use [component_text_area](component_text_area.md).

@@ -189,6 +189,7 @@ All properties are optional and live in the ontology node `properties` JSON. Ver
 
 - **Values:** `true` | `false` (default `false`).
 - **Effect:** marks the component as paired with a [component_dataframe](component_dataframe.md). When set, the JSON controller adds the RQO to the context and builds the dataframe subdatum; the edit/list views attach the dataframe control per value item via the shared `attach_item_dataframe()` glue. See the *dedalo-dataframe* skill.
+- **Required for literals.** Unlike relation mains (which activate the dataframe from the slot ddo alone), a literal must carry this flag or the control never renders. The control also renders in **read-only** contexts — Time Machine previews and read-only users. For the full ontology setup (the slot node's target section + a coloured `role:"rating"` ddo) see [component_dataframe](component_dataframe.md) → "Worked example — uncertainty rating on a literal".
 
 ### multi_line *(deprecated)*
 

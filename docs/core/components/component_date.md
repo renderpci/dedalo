@@ -286,6 +286,8 @@ Options: `true` | `false`
 
 Enables a paired [dataframe](component_dataframe.md) subdatum for the component (read by the JSON controller via `build_dataframe_subdatum()`).
 
+Required for literal mains (relation mains activate the dataframe from the slot ddo alone). The control also renders in read-only contexts — Time Machine previews and read-only users. For the complete ontology setup including a coloured rating, see the [dataframe](component_dataframe.md) "Worked example — uncertainty rating on a literal".
+
 !!! note "Date input order is global, not a property"
     The day/month/year *display order* (`dmy` / `ymd` / `mdy`) is **not** a per-component property: it comes from the application setting `page_globals.dedalo_date_order` and from the optional CSV header suffix on import (e.g. `rsc85_dmy`). Verify any other custom keys in the ontology before relying on them.
 

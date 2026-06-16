@@ -247,7 +247,7 @@ Realistic `properties` block for the dataframe slot node — a portal `source` w
 
 **Wiring it into a main component.** Two things must be present:
 
-1. On the **main component instance**, the flag `has_dataframe: true` (read by the main component's own JSON controller and views via `trait.dataframe_common`).
+1. On the **main component instance**, the flag `has_dataframe: true`. **Required for literal mains** (input_text, text_area, date, number, email): the literal's JSON controller reads it (to add the RQO + build the subdatum) and its views call `attach_item_dataframe`, which no-ops without it. **Relation mains (portal, autocomplete, select…) ignore the flag** — they render each linked record as a `section_record`, so the slot ddo in `show.ddo_map` (step 2) is enough. A relation dataframe therefore works with no `has_dataframe`; a literal one does not — see *has_dataframe* below.
 2. The main instance's `request_config` `show.ddo_map` must include a ddo pointing at the dataframe slot, so the subdatum builder knows which frame slot to attach per value item:
 
 ```json
@@ -274,6 +274,7 @@ Dataframe configuration is split across two nodes: a flag on the **main componen
 
 - **Values:** `true` | `false` (default `false`).
 - **Effect:** activates dataframe handling in the *main* component's JSON controller and views. When set, the controller adds the RQO to the context, `trait.dataframe_common::build_dataframe_subdatum()` builds the per-item frame subdatum, and the edit/list views attach the dataframe control per value item. This is what makes the frame button appear next to each value. See the *dedalo-dataframe* skill.
+- **Literal vs relation (important).** The flag is **only consulted by literal mains**. A **relation main** (portal, autocomplete, select, check_box…) activates its dataframe purely from the `component_dataframe` ddo in `show.ddo_map` (rendered through the `section_record` path) and never reads `has_dataframe`. So a working relation dataframe with no flag is **not** a template for a literal — the literal needs the flag or its button never renders. Must be boolean `true` (`===true`); `"true"` / `1` will not pass the strict-typed controllers.
 
 ### dataframe.delete_policy *(on the dataframe slot node)*
 
@@ -300,6 +301,68 @@ Dataframe configuration is split across two nodes: a flag on the **main componen
 - **Values:** set `"role": "rating"` on a ddo inside the slot's `request_config.hide.ddo_map`, pointing at a [component_radio_button](component_radio_button.md) in the target section.
 - **Effect:** the client `get_rating()` resolves that component's value against its datalist and paints the frame button with the rating's colour (and contrast-aware text colour). Used to surface a confidence/quality rating directly on the frame button without opening the modal. The ddo lives in `hide` so the rating is fetched for display only.
 
+### Worked example — uncertainty rating on a literal
+
+Complete ontology config to add a coloured "uncertainty" rating to each value of a **literal** main.
+Tipos here are placeholders: literal main `lit5` in section `lit5_section`, dataframe slot `lit5_df`,
+frame target section `unc1` holding a `component_radio_button` `unc_rating` (with a colour datalist).
+
+**1. Main literal instance** (`lit5`) — the activation flag plus the slot ddo:
+
+```json
+{
+    "properties": {
+        "has_dataframe": true,
+        "source": {
+            "request_config": [{
+                "show": {
+                    "ddo_map": [
+                        {"tipo": "lit5_df", "model": "component_dataframe", "parent": "self", "view": "default", "section_tipo": "lit5_section"}
+                    ]
+                }
+            }]
+        }
+    }
+}
+```
+
+**2. Dataframe slot node** (`lit5_df`) — points its portal at the frame target section (`unc1`), and
+declares the rating ddo in `hide.ddo_map`:
+
+```json
+{
+    "model": "component_dataframe",
+    "parent": "lit5",
+    "properties": {
+        "source": {
+            "mode": "list",
+            "request_config": [{
+                "sqo": { "section_tipo": [{"tipo": "unc1"}] },
+                "show": {
+                    "ddo_map": [
+                        {"tipo": "unc_label", "model": "component_input_text", "parent": "self", "section_tipo": "self", "view": "text"}
+                    ],
+                    "fields_separator": ", "
+                },
+                "hide": {
+                    "ddo_map": [
+                        {"tipo": "unc_rating", "model": "component_radio_button", "role": "rating", "parent": "self", "section_tipo": "self"}
+                    ]
+                }
+            }]
+        }
+    }
+}
+```
+
+**3. Frame target section** (`unc1`) contains the `component_radio_button` `unc_rating` whose **datalist
+options carry the colours** (the option provides the hex that `get_rating()` paints onto the button).
+
+**4. Result** — open a `lit5_section` record in edit: each text value shows a round rating button; click
+it to create/open the `unc1` frame record and pick a rating; the button takes that colour. The same
+button also renders in **read-only** contexts — Time Machine previews and read-only users (the literal
+edit views attach the dataframe in both the writable and read-only render branches).
+
 !!! note "Standard context properties"
     Like every component, `component_dataframe` honours the generic ontology context blocks carried into the datum `context`: `css`, `request_config` (RQO) and `view`. Any other custom key seen in production should be verified in the ontology.
 
@@ -318,8 +381,8 @@ The dataframe surface is intentionally minimal: a small button per value item. V
 
 Modes:
 
-- **edit** — read/write through the main record. The button creates target records (`create_new_section`) and opens them in a modal (`open_target_section`); the modal footer offers a soft delete that calls `unlink_record()`.
-- **list / tm** — read-only; the same button renders, coloured by the rating ddo when present. In `tm` (Time Machine) the frames are read from the merged TM row.
+- **edit** — read/write through the main record. The button creates target records (`create_new_section`) and opens them in a modal (`open_target_section`); the modal footer offers a soft delete that calls `unlink_record()`. **Read-only edit render** (`permissions === 1`) still shows the (read-only) button: the literal edit views attach the dataframe in *both* the writable (`get_content_value`) and read-only (`get_content_value_read`) branches. The **Time Machine** tool uses exactly this path — it renders the main component in edit mode with `permissions = 1` (`render_tool_time_machine.js`), so the historical rating shows in the TM preview.
+- **list / tm** — read-only; the same button renders, coloured by the rating ddo when present. In `tm` (Time Machine) the frames are read from the merged TM row (the TM tool also drives the *edit*-mode read-only preview described above).
 - **search** — there is no dedicated search render view; the JSON controller tolerates `search` mode (it does not require a caller_dataframe there) but the component is not a primary search input. Search over frame *content* is done on the target section.
 
 DOM (list / default): `wrapper_component component_dataframe <tipo> <mode>` -> `content_data` -> `content_value` -> `span.button.activate` (+ optional `span.button.add.icon`).

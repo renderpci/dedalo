@@ -244,7 +244,10 @@ ontology** for a given node.
 options: `true | false` (default: `false`)
 
 Enables the [dataframe](component_dataframe.md) subdatum (per-item frame records:
-uncertainty, qualifiers, context) for this component.
+uncertainty, qualifiers, context) for this component. Required for literal mains (relation mains
+activate from the slot ddo alone); the control also renders in read-only contexts (Time Machine
+previews). Full ontology setup including a coloured rating: [component_dataframe](component_dataframe.md)
+→ "Worked example — uncertainty rating on a literal".
 
 ### Inline-tag families (transcription)
 

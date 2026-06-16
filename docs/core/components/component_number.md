@@ -160,7 +160,7 @@ The `section_tipo` / `parent` wiring places the component as a column inside its
 | --- | --- | --- | --- |
 | `type` | `"int"` \| `"float"` | `"float"` | Numeric type. `int` casts to integer; `float` enables decimal `precision`. |
 | `precision` | integer (number of decimals) | `2` | Decimals kept when `type` is `float`. Applied on read, save, and the input `step`. Ignored for `int`. |
-| `has_dataframe` | `true` \| `false` | `false` | Pairs each value item with a dataframe (uncertainty / qualifier / context) record. See [component_dataframe](component_dataframe.md). |
+| `has_dataframe` | `true` \| `false` | `false` | Pairs each value item with a dataframe (uncertainty / qualifier / context) record. Required for literal mains (relation mains activate from the slot ddo alone); the control also renders read-only (Time Machine previews). Full ontology setup incl. a coloured rating: [component_dataframe](component_dataframe.md) → "Worked example — uncertainty rating on a literal". |
 | `dato_default` | array of value items | (none) | Default value applied in `edit` mode for new records via `set_data_default()`. Inherited from `component_common`. |
 | `css` | object | (none) | Per-instance CSS injected into the datum `context`. Inherited from `component_common`. |
 
