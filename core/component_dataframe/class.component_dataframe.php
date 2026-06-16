@@ -29,11 +29,12 @@
 *   `relations` JSONB column through the standard component_portal → component_relation_common
 *   persistence path.
 *
-* Legacy dual-read
-* ----------------
-* Data written before the v7 unification uses `section_id_key` / `section_tipo_key`
-* instead of `type` + `id_key`.  All readers (match predicate, $test_equal_properties)
-* dual-read both shapes until the dataframe_v7_migration update rewrites matrix data.
+* Legacy data
+* -----------
+* Data written before the v7 unification used `section_id_key` / `section_tipo_key`
+* instead of `type` + `id_key`.  Dual-read has been removed: readers recognise only
+* `type` + `id_key`, so the dataframe_v7_migration update must rewrite matrix data.
+* Legacy shapes survive only in the old-CSV import and the v6→v7 update.
 *
 * Relationships
 * -------------
@@ -73,15 +74,12 @@ class component_dataframe extends component_portal {
 	*   - id_key            : the main component item id being extended (unified)
 	*   - main_component_tipo : the main component tipo
 	*
-	* Legacy fields (dual-read until dataframe_v7_migration has run):
-	*   - section_id_key    : legacy alias for id_key
-	*   - section_tipo_key  : legacy alias, formerly the host-section tipo
-	*
-	* The full eight-property set lets the dedup gate handle both pre- and
-	* post-migration locator shapes without false positives.
+	* Legacy section_id_key / section_tipo_key are no longer read here (dual-read
+	* removed); they survive only in the old-CSV import and the v6→v7 update.
+	* This property set lets the dedup gate match the unified locator shape.
 	* @var array $test_equal_properties
 	*/
-	public array $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','id_key','section_id_key','section_tipo_key','main_component_tipo'];
+	public array $test_equal_properties = ['type','section_id','section_tipo','from_component_tipo','id_key','main_component_tipo'];
 
 
 
@@ -97,8 +95,7 @@ class component_dataframe extends component_portal {
 	* constructed with a caller context in all non-search modes.
 	*
 	* The match predicate (trait.dataframe_common::dataframe_entry_matches) checks
-	* four fields: type, from_component_tipo, main_component_tipo, and id_key (or
-	* the legacy section_id_key), dual-reading both unified and pre-migration shapes.
+	* four fields: type, from_component_tipo, main_component_tipo, and id_key.
 	*
 	* @return ?array - array of frame pairing locators matching this caller, or
 	*                  the raw slot data when no caller_dataframe is set, or null
@@ -118,7 +115,7 @@ class component_dataframe extends component_portal {
 
 		// filtered data
 		// iterate relations filtering match values with the central predicate
-		// (dual-read: id_key unified contract / section_id_key legacy)
+		// (unified contract: id_key)
 		$filtered_data = [];
 		if (!empty($data)) {
 			foreach ($data as $locator) {
@@ -204,6 +201,19 @@ class component_dataframe extends component_portal {
 			$additions = array_values(array_filter($data ?? [], function($el) use ($others_signatures) {
 				return !in_array(json_encode($el), $others_signatures, true);
 			}));
+
+			// Stamp the caller's id_key onto incoming frames so every persisted frame
+			// carries the unified item-id pairing key. The additions all belong to this
+			// caller's item; siblings ($others) are left untouched.
+			$caller_id_key = $caller_dataframe->id_key ?? null;
+			if ($caller_id_key!==null) {
+				foreach ($additions as $el) {
+					if (is_object($el) && self::is_dataframe_entry($el)) {
+						$el->id_key = (int)$caller_id_key;
+						unset($el->section_id_key, $el->section_tipo_key);
+					}
+				}
+			}
 
 			$data = array_merge($others, $additions);
 			if (empty($data)) {
@@ -302,9 +312,8 @@ class component_dataframe extends component_portal {
 	* equality when deleting a locator from the slot's data.
 	*
 	* Overrides the parent portal implementation to return the dataframe-specific
-	* $test_equal_properties, which includes both the unified id_key and the legacy
-	* section_id_key / section_tipo_key so that pre-migration locator shapes are
-	* also matched for removal without requiring migration to have run first.
+	* $test_equal_properties, which matches the unified locator shape by id_key
+	* (legacy section_id_key / section_tipo_key are no longer part of the predicate).
 	*
 	* Called by the generic remove-locator plumbing in component_relation_common.
 	* @return array - the $test_equal_properties array for this class
@@ -543,10 +552,12 @@ class component_dataframe extends component_portal {
 	* (is_dataframe_entry) or main component data items, and writes each set to its
 	* respective component.
 	*
-	* Important: get_data() (not get_data_unfiltered) is used here so that the
-	* snapshot contains only the frames belonging to this caller's item — consistent
-	* with the TM row being tied to one item's statement.  The main component data
-	* is merged in its entirety since its full state is always saved.
+	* Important: get_data_unfiltered() (not the caller-filtered get_data()) is used
+	* so the snapshot contains EVERY item's frames in this slot, including the change
+	* being saved (which lives on $this). Using the caller-filtered view would capture
+	* only one item's frames and silently wipe sibling items' frames on restore (the
+	* restore path clears the slot and rewrites it from the captured subset). The main
+	* component data is merged in its entirety since its full state is always saved.
 	*
 	* When get_main_component_data() returns null (dataframe-root guard, unresolvable
 	* tipo) the frame data alone is returned, which is a safe partial snapshot.
@@ -556,13 +567,14 @@ class component_dataframe extends component_portal {
 	*/
 	public function get_time_machine_data_to_save() : ?array {
 
-		$dataframe_data = $this->get_data();
+		// all items' frames in this slot (not the caller-filtered subset)
+		$dataframe_data = $this->get_data_unfiltered() ?? [];
 
 		$main_component_data = $this->get_main_component_data();
 
 		$time_machine_data_to_save = is_array($main_component_data)
 			? array_merge($main_component_data, $dataframe_data)
-			: $dataframe_data;
+			: (empty($dataframe_data) ? null : $dataframe_data);
 
 
 		return $time_machine_data_to_save;

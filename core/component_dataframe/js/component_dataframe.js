@@ -82,8 +82,7 @@
 * @param {Object} options.data                    - Caller context data (pairing keys for the frame).
 * @param {string} options.data.section_id         - `section_id` of the main record (host section).
 * @param {string} options.data.section_tipo       - `section_tipo` of the main record.
-* @param {string|number} options.data.section_id_key   - Pairing key: the stable server-minted item id of the main component entry being framed.
-* @param {string} options.data.section_tipo_key   - `section_tipo` of the main component's host section (legacy key; preserved for dual-read compat).
+* @param {string|number} options.data.id_key       - Pairing key: the stable server-minted item id of the main component entry being framed.
 * @param {string} options.data.main_component_tipo - `tipo` of the main component being framed.
 * @param {Array|null} options.data.value          - Current locator value (unused here; reserved for callers that pass it for context).
 * @returns {Promise<Object|boolean>} The `api_response` from `change_value()` on success,
@@ -133,15 +132,13 @@ component_dataframe.prototype.create_new_section = async function(options) {
 		// that distinguishes this entry from ordinary portal relation locators in the
 		// same `relations` bag. `from_component_tipo` is the dataframe slot's own tipo
 		// (self.tipo); `main_component_tipo` is the component that owns the item being
-		// framed; `section_id_key` is the stable item id used as the pairing key.
-		// (!) `section_tipo_key` is the legacy alias carried alongside for dual-read
-		// compatibility until the 7.0.1 dataframe_v7_migration rewrite runs.
+		// framed; `id_key` is the stable main-item id used as the pairing key (unified
+		// contract — section_id_key/section_tipo_key are no longer written on new frames).
 		const locator = {
 			type				: DATAFRAME_TYPE,
 			section_tipo		: target_section_tipo,
 			section_id			: section_id,
-			section_id_key		: data.section_id_key,
-			section_tipo_key	: data.section_tipo_key,
+			id_key				: data.id_key,
 			main_component_tipo	: data.main_component_tipo,
 			from_component_tipo	: self.tipo
 		}

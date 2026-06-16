@@ -228,9 +228,12 @@ const render_content_value = function(options) {
 		if(entries.length >= 1) {
 
 			const rating_data = self.get_rating()
-			if(rating_data && rating_data.value){
+			// the selected rating locator lives in `entries` (the v7 data model);
+			// `value` kept as a fallback for any legacy datum shape.
+			const rating_entries = rating_data && (rating_data.entries ?? rating_data.value)
+			if(rating_entries){
 
-				const rating_value = rating_data.value[0]
+				const rating_value = rating_entries[0]
 				const rating = (rating_value)
 					? rating_data.datalist.find(el => el.section_id === rating_value.section_id )
 					: {

@@ -19,8 +19,8 @@
 *     search  → full unpaginated locator array (filter/autocomplete widgets)
 *     edit    → paginated slice (default, get_data_paginated with default pagination)
 * - Decorate the data-item with pagination metadata and the pairing keys
-*   (id_key / section_id_key / section_tipo_key / main_component_tipo) so the
-*   client can bind the frame button to the correct main-component data item.
+*   (id_key / main_component_tipo) so the client can bind the frame button to the
+*   correct main-component data item.
 * - In modes other than 'solved', expand subdatum for every frame locator in the
 *   current page so the client receives component data for linked frame records
 *   in a single round-trip.
@@ -79,8 +79,8 @@ if (!isset($this)) { http_response_code(404); exit; }
 	// frame locators that belong to the specific main-component data item being rendered.
 	// Without it, all frame locators for the entire slot would leak into the response,
 	// breaking the per-item isolation that is the whole point of the dataframe.
-	// pairing key dual-read: id_key (unified contract) or section_id_key (legacy)
-	if ( $mode!=='search' && ( empty($caller_dataframe) || ( !isset($caller_dataframe->id_key) && !isset($caller_dataframe->section_id_key) ) || !isset($caller_dataframe->main_component_tipo) ) ){
+	// unified pairing: id_key + main_component_tipo are mandatory (outside search mode)
+	if ( $mode!=='search' && ( empty($caller_dataframe) || !isset($caller_dataframe->id_key) || !isset($caller_dataframe->main_component_tipo) ) ){
 		$bt = debug_backtrace();
 		debug_log(__METHOD__
 			. " Mandatory caller_dataframe not found " . PHP_EOL
@@ -197,17 +197,13 @@ if (!isset($this)) { http_response_code(404); exit; }
 				// Inject the pairing keys onto the data-item so the client frame button
 				// knows which main-component data item (id_key) and which main component
 				// (main_component_tipo) this frame qualifies. Dual-read: prefer id_key
-				// (unified v7 contract); fall back to section_id_key (legacy shape, still
-				// present on unmigrated data — see dataframe_v7_migration).
-				// (!) section_tipo_key is deprecated (dropped from the unified contract);
-				// it is kept here for backward-compat client code that still reads it.
-				// pairing key dual-read: id_key (unified contract) + legacy aliases
+				// Unified contract: only id_key (the main item id) + main_component_tipo
+				// are written onto the data-item, so the client persists the clean
+				// id_key-only frame shape.
 				if ( !empty($caller_dataframe)
-					&& ( isset($caller_dataframe->id_key) || isset($caller_dataframe->section_id_key) )
+					&& isset($caller_dataframe->id_key)
 					&& isset($caller_dataframe->main_component_tipo)  ) {
-					$item->id_key				= $caller_dataframe->id_key ?? $caller_dataframe->section_id_key;
-					$item->section_id_key		= $caller_dataframe->id_key ?? $caller_dataframe->section_id_key;
-					$item->section_tipo_key		= $caller_dataframe->section_tipo_key ?? $this->get_section_tipo();
+					$item->id_key				= $caller_dataframe->id_key;
 					$item->main_component_tipo	= $caller_dataframe->main_component_tipo;
 				}
 
