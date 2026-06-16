@@ -407,6 +407,65 @@ table.list tbody tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent)
 .comp-explain b { color: var(--fg-default); }
 .comp-explain .scope { color: var(--accent-text); font-weight: 600; }
 
+/* ============================================================
+   SEARCH / FILTER builder
+   ============================================================ */
+.search-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: var(--space-4); }
+.search-toolbar .spacer { flex: 1; }
+.search-toolbar .showbtns { display: flex; align-items: center; gap: 6px; color: var(--fg-muted); font-size: 13px; cursor: pointer; }
+
+.search-body { display: flex; align-items: stretch; gap: 10px; }
+.rail-label {
+  writing-mode: vertical-rl; transform: rotate(180deg); text-align: center; padding: 10px 5px;
+  font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--fg-faint); font-weight: 600;
+  background: var(--bg-surface-2); border-radius: 8px; user-select: none; flex: none;
+}
+
+.fields-cols { display: flex; gap: 10px; flex: none; }
+.field-panel { width: 226px; background: var(--bg-surface); border-radius: 10px; overflow: hidden; display: flex; flex-direction: column; max-height: 540px; }
+.field-panel > header { display: flex; align-items: center; gap: 8px; padding: 10px 13px; font-weight: 600; font-size: 13.5px; border-bottom: 1px solid var(--hairline); }
+.field-panel > header .x { margin-left: auto; color: var(--fg-faint); cursor: pointer; }
+.field-panel > header .x:hover { color: var(--st-down); }
+.field-list { overflow: auto; }
+.field-group { padding: 8px 13px 5px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--fg-muted); font-weight: 600; background: var(--bg-surface-2); position: sticky; top: 0; }
+.field-row { display: flex; align-items: center; gap: 8px; padding: 8px 13px; font-size: 13px; cursor: pointer; border-bottom: 1px solid var(--bg-surface-2); }
+.field-row:hover { background: var(--bg-surface-2); }
+.field-row.sel { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+.field-row .nm { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.field-row .more { color: var(--fg-faint); font-size: 10px; }
+.field-row .grip { color: var(--fg-faint); font-size: 12px; cursor: grab; }
+.field-row.sel .grip, .field-row.sel .more { color: var(--accent-text); }
+
+/* boolean operator rail (AND / OR) */
+.rail-op { display: flex; flex-direction: column; align-items: center; gap: 5px; background: var(--accent-soft); border-radius: 8px; padding: 12px 7px; cursor: pointer; flex: none; user-select: none; }
+.rail-op .op { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: 700; color: var(--accent-text); letter-spacing: .12em; font-size: 12px; }
+.rail-op .n { font-size: 11px; color: var(--accent-text); font-variant-numeric: tabular-nums; opacity: .8; }
+
+/* criteria cards + controls */
+.criteria { flex: 1; display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.crit-card { width: 242px; background: var(--bg-surface); border-radius: 10px; overflow: hidden; }
+.crit-card > header { display: flex; align-items: center; gap: 7px; padding: 9px 12px; background: var(--accent-soft); color: var(--accent-text); font-size: 13px; font-weight: 600; }
+.crit-card > header .lead { opacity: .8; }
+.crit-card > header .tag { font-weight: 400; opacity: .75; font-size: 11.5px; }
+.crit-card > header .x, .crit-card > header .add { cursor: pointer; opacity: .7; }
+.crit-card > header .x { margin-left: auto; }
+.crit-card > header .x:hover, .crit-card > header .add:hover { opacity: 1; }
+.crit-card .cbody { padding: 12px; display: flex; flex-direction: column; gap: 9px; }
+.crit-card .cinput { background: var(--bg-sunken); border: 1px solid var(--hairline); border-radius: 8px; padding: 9px 11px; font-size: 14px; min-height: 38px; color: var(--fg-default); }
+.crit-card .cinput.filled { background: var(--bg-surface); border-color: var(--accent); }
+.crit-card .cfoot { display: flex; align-items: center; color: var(--fg-muted); }
+.crit-card .lang { cursor: pointer; font-size: 13px; }
+.crit-card .nav { margin-left: auto; display: flex; gap: 6px; color: var(--fg-faint); }
+
+.search-ctrls { display: flex; align-items: stretch; gap: 10px; }
+.maxbox { background: var(--bg-surface); border-radius: 10px; padding: 9px 16px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+.maxbox .l { font-size: 11px; color: var(--fg-muted); }
+.maxbox .v { font-size: 19px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.btn.circle { width: 42px; border-radius: 10px; background: var(--bg-surface); justify-content: center; color: var(--accent-text); font-size: 17px; }
+.btn.circle:hover { background: var(--accent-soft); }
+.btn.apply { background: var(--accent); color: #fff; padding: 0 22px; font-weight: 600; }
+.btn.apply:hover { background: var(--accent-hover); }
+
 .note { color: var(--fg-faint); font-size: 11.5px; text-align: center; padding: var(--space-5) 0 var(--space-2); }
 </style>
 </head>
@@ -471,6 +530,7 @@ table.list tbody tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent)
 <div class="viewswitch">
   <button class="active" data-screen="list">Lista de registros</button>
   <button data-screen="record">Ficha + Inspector</button>
+  <button data-screen="search">Búsqueda / Filtro</button>
   <span style="flex:1"></span>
   <button class="btn outline" data-modal-open style="border-radius:999px"><span class="ic">⤴</span> Ver modal de herramienta</button>
 </div>
@@ -697,6 +757,105 @@ table.list tbody tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent)
   </div>
 </section>
 
+<!-- ============ SEARCH / FILTER SCREEN ============ -->
+<section class="screen" id="search">
+  <div class="search-toolbar">
+    <button class="btn primary"><span class="ic">🔍</span> Buscar</button>
+    <button class="btn ghost">Mostrar todos</button>
+    <span class="spacer"></span>
+    <span class="showbtns">Mostrar botones <span>‹</span></span>
+  </div>
+
+  <div class="search-body">
+    <!-- FIELDS rail + source panels -->
+    <div class="rail-label">Campos</div>
+    <div class="fields-cols">
+      <div class="field-panel">
+        <header>Oral History</header>
+        <div class="field-list">
+          <div class="field-group">Identificación</div>
+          <div class="field-row"><span class="nm">Id</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Público</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Código</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Código anterior</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Calidad</span><span class="grip">⣿</span></div>
+          <div class="field-row sel"><span class="nm">Imagen identificativa</span><span class="grip">⣿</span><span class="more">▶</span></div>
+          <div class="field-row"><span class="nm">Estado de revisión</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Fondo</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Título</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Idioma</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Municipio entrevista</span><span class="grip">⣿</span><span class="more">▶</span></div>
+          <div class="field-row"><span class="nm">Resumen</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Proyecto</span><span class="grip">⣿</span><span class="more">▶</span></div>
+          <div class="field-group">Entrevista</div>
+          <div class="field-row"><span class="nm">Informantes</span><span class="grip">⣿</span><span class="more">▶</span></div>
+          <div class="field-row"><span class="nm">Rol</span><span class="grip">⣿</span><span class="more">▶</span></div>
+          <div class="field-row"><span class="nm">Audiovisual</span><span class="grip">⣿</span><span class="more">▶</span></div>
+          <div class="field-row"><span class="nm">Cuestionario</span><span class="grip">⣿</span><span class="more">▶</span></div>
+          <div class="field-group">Documentación asociada</div>
+          <div class="field-row"><span class="nm">Imágenes</span><span class="grip">⣿</span><span class="more">▶</span></div>
+        </div>
+      </div>
+
+      <div class="field-panel">
+        <header>Imagen <span class="x">✕</span></header>
+        <div class="field-list">
+          <div class="field-group">Identificación</div>
+          <div class="field-row"><span class="nm">Id</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Público</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Código</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Título</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Fecha de ingreso</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Datación</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Idioma original</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Tipología</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Colección / archivo</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Observaciones</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Proyecto</span><span class="grip">⣿</span><span class="more">▶</span></div>
+          <div class="field-row"><span class="nm">Descriptores</span><span class="grip">⣿</span><span class="more">▶</span></div>
+          <div class="field-group">Imagen</div>
+          <div class="field-row"><span class="nm">Descripción</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Pie de foto</span><span class="grip">⣿</span></div>
+          <div class="field-row"><span class="nm">Capas de dibujo</span><span class="grip">⣿</span><span class="more">▶</span></div>
+          <div class="field-group">Opciones de archivo</div>
+          <div class="field-row"><span class="nm">Directorio</span><span class="grip">⣿</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- boolean operator -->
+    <div class="rail-op" title="Cambiar AND / OR"><span class="op">AND</span><span class="n">[1]</span></div>
+
+    <!-- criteria cards + controls -->
+    <div class="criteria">
+      <div class="crit-card">
+        <header><span class="lead">›</span> Título <span class="tag">[Identificación]</span><span class="x">✕</span></header>
+        <div class="cbody">
+          <div class="cinput filled">Gato</div>
+          <div class="cfoot"><span class="lang" title="Idioma del valor">🗛</span><span class="nav">◀ ▶</span></div>
+        </div>
+      </div>
+
+      <div class="crit-card">
+        <header><span class="lead">›</span> Código <span class="tag">[Identificación]</span><span class="add" title="Añadir valor">＋</span><span class="x">✕</span></header>
+        <div class="cbody">
+          <div class="cinput">&nbsp;</div>
+          <div class="cfoot"><span class="lang">🗛</span><span class="nav">◀ ▶</span></div>
+        </div>
+      </div>
+
+      <div class="search-ctrls">
+        <div class="maxbox"><span class="l">Máx.</span><span class="v">10</span></div>
+        <button class="btn circle" title="Reiniciar filtro">↺</button>
+        <button class="btn outline">Mostrar todos</button>
+        <button class="btn apply">Aplicar</button>
+      </div>
+    </div>
+
+    <div class="rail-label">Preset</div>
+  </div>
+</section>
+
 <!-- ============ TOOL MODAL: Propagate component data ============ -->
 <div class="modal-backdrop" id="propModal">
   <div class="modal tool-danger" role="dialog" aria-modal="true">
@@ -771,8 +930,8 @@ table.list tbody tr.sel td:first-child { box-shadow: inset 3px 0 0 var(--accent)
     document.documentElement.dataset.accent = b.dataset.accent;
   });
   // view switch
-  document.querySelectorAll('.viewswitch button').forEach(b => b.onclick = () => {
-    document.querySelectorAll('.viewswitch button').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.viewswitch button[data-screen]').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.viewswitch button[data-screen]').forEach(x => x.classList.remove('active'));
     document.querySelectorAll('.screen').forEach(x => x.classList.remove('active'));
     b.classList.add('active');
     document.getElementById(b.dataset.screen).classList.add('active');
