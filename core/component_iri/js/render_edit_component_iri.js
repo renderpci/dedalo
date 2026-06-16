@@ -155,7 +155,7 @@ export const get_content_data = function(self) {
 *     .transliterate_value     (sibling-language value hint, appended if present)
 *
 * Dataframe pairing:
-*   Persisted rows carry a server-assigned `id` that is used as section_id_key
+*   Persisted rows carry a server-assigned `id` that is used as id_key
 *   when requesting the paired component_dataframe. New, unsaved rows lack an id,
 *   so a provisional key (self.data.counter + 1) is used as a render-context hint
 *   only — it is NEVER written into the entry value; real ids are minted server-side
@@ -220,8 +220,7 @@ const get_content_value = (i, current_value, self) => {
 		get_dataframe({
 			self				: self,
 			section_id			: self.section_id,
-			section_id_key		: dataframe_id_key,
-			section_tipo_key	: self.section_tipo,
+			id_key				: dataframe_id_key,
 			main_component_tipo	: self.tipo,
 			view				: 'line',
 			mode				: 'edit'
@@ -646,8 +645,7 @@ const get_content_value_read = (i, current_value, self) => {
 			? get_dataframe({
 				self				: self,
 				section_id			: self.section_id,
-				section_id_key		: current_value.id,
-				section_tipo_key	: self.section_tipo,
+				id_key				: current_value.id,
 				main_component_tipo	: self.tipo,
 				view				: 'line',
 				mode				: 'list'

@@ -393,9 +393,8 @@ class component_iri extends component_common {
 	*      follows; the TM guard is always re-enabled in the finally path (inline).
 	*   4. Calls $this->save() to persist the clean IRI data.
 	*
-	* (!) The locator also sets the legacy section_id_key / section_tipo_key
-	* fields alongside id_key for backward compatibility until the data migration
-	* removes them (see dataframe unified contract).
+	* (!) The locator carries the unified id_key only (no legacy section_id_key /
+	* section_tipo_key — see dataframe unified contract).
 	*
 	* @return bool - true on successful save of both dataframe and component data
 	*/
@@ -416,15 +415,12 @@ class component_iri extends component_common {
 				if( property_exists($value, 'label_id') ){
 
 					// create new dataframe locator to be set as new data
-					// type stamps the locator as a dataframe pairing entry (unified contract);
-					// legacy section_id_key/section_tipo_key are kept until the data migration runs
+					// unified contract: id_key only (no legacy section_id_key/section_tipo_key)
 					$locator = new locator();
 					$locator->set_type( DEDALO_RELATION_TYPE_DATAFRAME );
 					$locator->set_section_tipo( component_iri::$label_target_section_tipo );
 					$locator->set_section_id( $value->label_id );
 					$locator->set_id_key( (int)$value->id );
-					$locator->set_section_id_key( $value->id );
-					$locator->set_section_tipo_key( $this->section_tipo );
 					$locator->set_main_component_tipo( $this->tipo );
 
 					$label_dataframe_data[]	= $locator;
@@ -439,10 +435,9 @@ class component_iri extends component_common {
 
 		if( !empty($label_dataframe_data) ){
 
-			// component dataframe of the component iri
+			// component dataframe of the component iri (bulk label sync caller)
 			$caller_dataframe = new stdClass();
 				$caller_dataframe->main_component_tipo	= $this->tipo;
-				$caller_dataframe->section_tipo_key		= $this->section_tipo;
 				$caller_dataframe->section_tipo			= $this->section_tipo;
 
 			// Build the component
@@ -1475,7 +1470,7 @@ class component_iri extends component_common {
 	* 	section_tipo	: "rsc205",
 	*	section_id		: "1",
 	*	component_tipo	: "rsc217",
-	*	section_id_key	: 1,
+	*	id_key			: 1,
 	* 	target_section_id : "3"
 	* }
 	* @return bool
@@ -1487,13 +1482,14 @@ class component_iri extends component_common {
 		$section_tipo			= $options->section_tipo;
 		$section_id				= $options->section_id;
 		$component_tipo			= $options->component_tipo;
-		$section_id_key			= $options->section_id_key;
+		$id_key					= $options->id_key; // the IRI item id (the unified pairing key = main data item id)
 		$target_section_id		= $options->target_section_id;
 
 		// component dataframe of the component iri
+		// id_key is the MAIN DATA ITEM id (the IRI row id), never a section_id
 		$caller_dataframe = new stdClass();
-			$caller_dataframe->section_id_key		= $section_id_key;
-			$caller_dataframe->section_tipo_key		= $section_tipo;
+			$caller_dataframe->id_key				= $id_key;
+			$caller_dataframe->section_tipo			= $section_tipo;
 			$caller_dataframe->main_component_tipo	= $component_tipo;
 
 		// Build the component
@@ -1510,15 +1506,12 @@ class component_iri extends component_common {
 		);
 
 		// create new dataframe locator to be set as new data
-		// type stamps the locator as a dataframe pairing entry (unified contract);
-		// legacy section_id_key/section_tipo_key are kept until the data migration runs
+		// unified contract: id_key only (no legacy section_id_key/section_tipo_key)
 		$new_locator = new locator();
 			$new_locator->set_type( DEDALO_RELATION_TYPE_DATAFRAME );
 			$new_locator->set_section_tipo( component_iri::$label_target_section_tipo );
 			$new_locator->set_section_id( $target_section_id );
-			$new_locator->set_id_key( (int)$section_id_key );
-			$new_locator->set_section_id_key( $section_id_key );
-			$new_locator->set_section_tipo_key( $section_tipo );
+			$new_locator->set_id_key( (int)$id_key );
 			$new_locator->set_main_component_tipo( $component_tipo );
 
 		$component_dataframe_label->set_data( [$new_locator] );
