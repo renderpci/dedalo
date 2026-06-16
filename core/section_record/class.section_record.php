@@ -1681,7 +1681,7 @@ class section_record {
 	* Uses search_related::get_referenced_locators() with a minimal locator constructed
 	* from {section_tipo, section_id}.  Each returned locator descriptor identifies the
 	* component (from_component_tipo), section (from_section_tipo, from_section_id),
-	* and pairing key (id_key / section_id_key) that holds a reference to this record.
+	* and pairing key (id_key — the main data item id) that holds a reference to this record.
 	*
 	* Returns an empty array when section_id is 0 or empty (record not yet created).
 	*
@@ -1725,9 +1725,9 @@ class section_record {
 	* 'component_dataframe' model are supported.  Other model types are skipped with
 	* a WARNING log.
 	*
-	* For component_dataframe, both the unified 'id_key' and legacy 'section_id_key'
-	* fields are read from the inverse locator and forwarded as caller_dataframe so
-	* the correct row can be targeted within the dataframe's data array.
+	* For component_dataframe, the unified 'id_key' (the main data item id) is read
+	* from the inverse locator and forwarded as caller_dataframe so the correct row
+	* can be targeted within the dataframe's data array.
 	*
 	* Returns the list of successfully removed {removed_from, locator_to_remove} pairs
 	* for diagnostic logging.
@@ -1755,13 +1755,11 @@ class section_record {
 				continue;
 			}
 
-			// component dataframe
-			// pairing keys are dual-read: id_key (unified contract) or section_id_key (legacy)
+			// component dataframe — unified pairing caller (id_key + main_component_tipo).
+			// id_key is the MAIN DATA ITEM id, read only from the frame locator's id_key.
 			if($model_name==='component_dataframe'){
 				$caller_dataframe = new stdClass();
-					$caller_dataframe->id_key				= $current_locator->id_key ?? $current_locator->section_id_key ?? null;
-					$caller_dataframe->section_id_key		= $current_locator->id_key ?? $current_locator->section_id_key ?? null;
-					$caller_dataframe->section_tipo_key		= $current_locator->section_tipo_key ?? null;
+					$caller_dataframe->id_key				= $current_locator->id_key ?? null;
 					$caller_dataframe->main_component_tipo	= $current_locator->main_component_tipo ?? null;
 			}
 
@@ -2161,13 +2159,12 @@ class section_record {
 				if( $current_model==='component_dataframe' ){
 					// check if the data has main_component_tipo
 					// if data has not ask to the component to give its main_component_tipo.
-					// pairing keys are dual-read: id_key (unified contract) or section_id_key (legacy)
+					// unified pairing caller (id_key + main_component_tipo). id_key is the
+					// MAIN DATA ITEM id, read only from the frame locator's id_key.
 					$main_component_tipo = $component_data[0]->main_component_tipo ?? $component->get_main_component_tipo();
 					$caller_dataframe = new stdClass();
 						$caller_dataframe->main_component_tipo	= $main_component_tipo;
-						$caller_dataframe->id_key				= $component_data[0]->id_key ?? $component_data[0]->section_id_key ?? null;
-						$caller_dataframe->section_id_key		= $component_data[0]->id_key ?? $component_data[0]->section_id_key ?? null;
-						$caller_dataframe->section_tipo_key		= $component_data[0]->section_tipo_key ?? $section_tipo;
+						$caller_dataframe->id_key				= $component_data[0]->id_key ?? null;
 					$component->set_caller_dataframe( $caller_dataframe );
 				}
 

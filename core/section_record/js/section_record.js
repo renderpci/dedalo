@@ -269,7 +269,7 @@ section_record.prototype.init = async function(options) {
 *     to relocate rather than re-build already-rendered nodes.
 *   - For `component_dataframe` instances, an additional uniqueness suffix is
 *     appended that encodes the virtual sub-section row identity
-*     (`section_tipo_key`, `id_key`/`section_id_key`, `main_component_tipo`).
+*     (`id_key`, `main_component_tipo`).
 *   - For `section` children, `session_save` is forced to `false` to prevent
 *     a nested section from overwriting the top-level session position
 *     (critical for thesaurus panels that embed their own section).
@@ -347,10 +347,9 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			}
 
 		// dataframe — override id_variant to encode the virtual sub-section row identity
-		// Format: <base_id_variant>_<section_tipo_key>_<id_key|section_id_key>_<main_component_tipo>
-		// The dual-read (id_key ?? section_id_key) preserves backwards compatibility with the legacy field name
+		// Format: <base_id_variant>_<id_key>_<main_component_tipo>
 			instance_options.id_variant = (instance_options.model==='component_dataframe')
-				? `${section_record_id_variant}_${current_data.section_tipo_key}_${current_data.id_key ?? current_data.section_id_key}_${current_data.main_component_tipo}`
+				? `${section_record_id_variant}_${current_data.id_key}_${current_data.main_component_tipo}`
 				: instance_options.id_variant
 
 	// component / section group — get_instance either creates a fresh instance or reuses/moves an existing one
@@ -442,7 +441,13 @@ section_record.prototype.get_ar_instances_edit = async function() {
 					section_tipo	: current_context.section_tipo,
 					section_id		: (current_context.model==='component_dataframe')
 						? self.caller.section_id
-						: self.section_id
+						: self.section_id,
+					// dataframe pairing key = the MAIN item id (the portal entry id this
+					// record was built from, self.locator.id) — NOT the linked record's
+					// section_id. This is what makes the frame pair to the right item.
+					dataframe_id_key			: (current_context.model==='component_dataframe')
+						? (self.locator?.id ?? null)
+						: null
 				})
 
 				// build_instance
@@ -635,7 +640,11 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 									ddo				: current_ddo,
 									section_tipo	: section_tipo,
 									section_id		: section_id,
-									matrix_id		: matrix_id
+									matrix_id		: matrix_id,
+									// dataframe pairing key = the MAIN item id (portal entry id = self.locator.id)
+									dataframe_id_key			: (current_ddo.model==='component_dataframe')
+										? (self.locator?.id ?? null)
+										: null
 								})
 
 							// Normalise section_tipo as array to handle "virtual section" components
@@ -777,14 +786,15 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 * Dataframe pairing logic:
 *   For `component_dataframe` (virtual sub-section rows) a standard tipo+section match
 *   is insufficient because the same component_dataframe tipo can appear multiple times
-*   in datum.data — once per virtual row. The additional discriminators are:
-*     - `id_key` / `section_id_key` (dual-read for unified-contract / legacy compatibility)
-*       paired against `options.ddo.caller_dataframe.id_key|section_id_key`
-*     - `section_tipo_key` — optional; omitted when undefined to stay backward-compatible
+*   in datum.data — once per virtual row. The discriminators are:
+*     - `id_key` — the main item id, paired against the threaded `options.dataframe_id_key`
+*       (the portal entry's own `self.locator.id`) → `options.ddo.caller_dataframe.id_key`
+*       → `self.section_id` fallback.
 *     - `main_component_tipo` — the tipo of the parent component that hosts the dataframe
-*   These keys are sourced from `ddo.caller_dataframe` when the ddo carries one (built
-*   by `common.create_source`), otherwise they fall back to `self.section_id`,
-*   `self.section_tipo`, and `self.tipo`.
+*   In the normal section render the server does NOT attach `caller_dataframe` to the ddo;
+*   the client supplies the main-item id itself via `dataframe_id_key` (the portal entry
+*   id it already holds), so no server-side normalization is needed. (`ddo.caller_dataframe`
+*   is only populated by the Time Machine tool.)
 *
 * The `matrix_id` (time machine) match path is commented out in the current code;
 * the TM case is handled differently at a higher level.
@@ -800,9 +810,8 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 *   "fallback_value": [""]
 * }
 * ```
-* For component_dataframe the stub additionally carries `id_key`, `section_id_key`,
-* `section_tipo_key`, and `main_component_tipo` to satisfy dataframe pairing code
-* downstream.
+* For component_dataframe the stub additionally carries `id_key` and
+* `main_component_tipo` to satisfy dataframe pairing code downstream.
 *
 * @param {Object} options - Lookup options
 * @param {Object} options.ddo - The DDO descriptor for the component being looked up
@@ -822,16 +831,16 @@ section_record.prototype.get_component_data = function(options) {
 		const section_id	= options.section_id
 		const matrix_id		= options.matrix_id || null
 
-	// section_id_key — the row identifier used to pair a component_dataframe with its virtual row
-	// Dual-read: id_key is the unified contract (see dedalo-data memory); section_id_key is legacy
-		const section_id_key = (ddo.caller_dataframe)
-			? ddo.caller_dataframe.id_key ?? ddo.caller_dataframe.section_id_key
-			: self.section_id
+	// dataframe pairing key (explicit, threaded from the caller's portal entry) takes priority
+		const dataframe_id_key = options.dataframe_id_key ?? null
 
-	// section_tipo_key — the section_tipo of the virtual row's parent (discriminates dataframe rows across sections)
-		const section_tipo_key = (ddo.caller_dataframe)
-			? ddo.caller_dataframe.section_tipo_key
-			: self.section_tipo
+	// id_key — the MAIN item id used to pair a component_dataframe with its row.
+	// Priority: explicit pairing id (portal entry locator.id) > caller_dataframe > section_id (fallback).
+		const id_key = (dataframe_id_key!==null && dataframe_id_key!==undefined)
+			? dataframe_id_key
+			: (ddo.caller_dataframe)
+				? ddo.caller_dataframe.id_key
+				: self.section_id
 
 	// main_component_tipo — the tipo of the component that owns the dataframe; used as a row discriminator
 		const main_component_tipo = (ddo.caller_dataframe)
@@ -862,8 +871,7 @@ section_record.prototype.get_component_data = function(options) {
 
 				// 		return (
 				// 			parseInt(el.matrix_id)		=== parseInt(matrix_id)	&&
-				// 			el.section_tipo_key			=== section_tipo_key &&
-				// 			parseInt(el.section_id_key)	=== parseInt(section_id_key) &&
+				// 			parseInt(el.id_key)			=== parseInt(id_key) &&
 				// 			el.main_component_tipo		=== main_component_tipo
 				// 		)
 				// 	}
@@ -879,10 +887,8 @@ section_record.prototype.get_component_data = function(options) {
 
 				if (ddo.model==='component_dataframe') {
 
-					// pairing key dual-read: id_key (unified contract) or section_id_key (legacy)
-					const el_key = el.id_key ?? el.section_id_key
-					return parseInt(el_key)===parseInt(section_id_key)
-						&& (typeof el.section_tipo_key==='undefined' || el.section_tipo_key === section_tipo_key)
+					// pairing key: id_key (the main item id) + main_component_tipo
+					return parseInt(el.id_key)===parseInt(id_key)
 						&& el.main_component_tipo === main_component_tipo
 				}
 
@@ -906,11 +912,9 @@ section_record.prototype.get_component_data = function(options) {
 			}
 
 			if (ddo.model==='component_dataframe') {
-				// Dataframe stubs must carry the pairing keys so downstream dataframe
-				// render code can still determine which virtual row this stub represents
-				empty_data.id_key				= section_id_key
-				empty_data.section_id_key		= section_id_key
-				empty_data.section_tipo_key		= section_tipo_key
+				// Dataframe stubs carry the pairing keys (id_key + main_component_tipo)
+				// so downstream render/save code knows which main item this stub represents.
+				empty_data.id_key				= id_key
 				empty_data.main_component_tipo	= main_component_tipo
 
 			}
