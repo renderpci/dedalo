@@ -47,45 +47,70 @@ Loading the page with query params makes the server `start` action
 (`dd_core_api`, lines ~293-303) resolve a single record in edit mode:
 
 ```
-<page_path>?t=<tipo>&st=<tipo>&id=<section_id>&m=edit
+<page_path>?tipo=<tipo>&id=<section_id>&mode=edit&menu=false&session_save=false
 ```
 
-For a section, `section_tipo === tipo`, so `st` and `t` are the same value.
+- `section_tipo` is omitted — the server falls back to `section_tipo = tipo`, correct
+  for a section.
+- `menu=false` opens a clean standalone record view (no left menu).
+- `session_save=false` prevents the new tab from overwriting the main window's session
+  SQO for this section.
 
-The link href is built client-side as:
+The button href is built client-side as:
 
 ```js
 const href = window.location.pathname
-    + '?t='  + encodeURIComponent(tipo)
-    + '&st=' + encodeURIComponent(tipo)
-    + '&id=' + encodeURIComponent(section_id)
-    + '&m=edit'
+    + '?tipo=' + encodeURIComponent(tipo)
+    + '&id='   + encodeURIComponent(section_id)
+    + '&mode=edit'
+    + '&menu=false'
+    + '&session_save=false'
 ```
 
-Rendered as `<a href=… target="_blank" rel="noopener">`.
+Rendered as `<a href=… target="_blank" rel="noopener">` styled as a button.
 
 ## Components / files
 
-1. **New view module** — `core/component_json/js/view_record_link_json.js`
-   - Exports a `view_record_link_json.render(self, options)` returning a wrapper node.
-   - Reads the component value `{ id, msg, tipo }`.
-   - If `id` is a positive integer **and** `tipo` is a non-empty string → render:
-     - the human `msg` text (as today), plus
-     - a "Go to record" anchor: label e.g. `Go to <tipo> #<id> →`,
-       `target="_blank"`, `rel="noopener"`, href as above.
-   - Otherwise (older records with null/absent `id`, or non-activity shape) → fall back
-     to the existing text rendering so nothing regresses.
+> Refinement discovered during implementation: the Activity section already routes
+> `dd551` through the **`collapse` view** (`view_collapse_list_json`), which has a
+> dedicated `dd542` branch that renders the `{ id, msg, tipo }` value as `key: value`
+> lines and participates in row collapse/expand sync. Introducing a *new* view and
+> rerouting `dd551` away from `collapse` would **lose** that collapse-sync behavior — a
+> regression. The cleaner, still code-only and activity-scoped change is to enhance the
+> existing `dd542` branch of the collapse view. This resolves the open column-visibility
+> item too: `dd551` is confirmed a visible list column.
 
-2. **View router wiring** — `core/component_json/js/render_list_component_json.js`
-   - Route to `view_record_link_json` when the component is the activity DATA component
-     (component tipo `dd551`). Keep `default`/`mini`/`text`/`collapse` unchanged for all
-     other cases.
+1. **Enhance the collapse view** — `core/component_json/js/view_collapse_list_json.js`
+   - Add a pure helper `build_record_link(value)` that returns an `<a>` element (or
+     `null`):
+     - `null` when `value.id` is not a positive integer (older rows log null) or
+       `value.tipo` is not a non-empty string.
+     - otherwise an anchor with `href` = the deep-link URL above, `target="_blank"`,
+       `rel="noopener"`, class `activity_record_button`, **icon-only** (no visible
+       text), with the `Go to record` label exposed via `title` (tooltip) and
+       `aria-label`. Its own `click` handler calls `e.stopPropagation()` so pressing
+       the icon does not toggle the row collapse.
+   - In `render()`, for the `dd542` case only, read `self.data.entries?.[0]?.value`,
+     build the icon button, and append it to the wrapper when non-null.
+   - `get_value_string` is left unchanged (still renders the `key: value` summary), so
+     older/non-edit rows simply show no icon — no regression.
 
-3. **(Conditional) Column visibility** — to be confirmed against the running app:
-   whether `dd551` is already shown as a list column in the activity area. If yes, no
-   further change. If no, enable it via the lightest available config; if that proves to
-   require ontology edits, raise with the user before proceeding (this would cross into
-   Option 2 territory).
+2. **Minimal CSS** — `core/component_json/css/component_json.less`
+   - Style `.activity_record_button` as an **icon** (1.1rem square, CSS-mask of
+     `themes/default/icons/arrow_link.svg` tinted with `--color_primary`, hover raises
+     opacity), **absolutely positioned in the cell's right-hand zone**
+     (`position:absolute; top:0.5rem; right:0.6rem`), with the wrapper made
+     `position:relative`.
+   - It sits inside the always-visible 2.5rem band, so the icon stays visible whether
+     the activity row is collapsed or expanded. Icon-only keeps it unobtrusive.
+
+3. **Visited feedback** — so already-opened records are easy to spot in a long list:
+   - JS adds a `.visited` class on click (`view_collapse_list_json.js`) → immediate
+     feedback in the current list; CSS greys the icon (`@color_grey_10`) and dims it
+     (`opacity:0.4`, `0.7` on hover).
+   - CSS `:visited` greys the icon too — this persists across reloads via browser
+     history (each record has a unique deep-link URL). Per CSS privacy rules `:visited`
+     permits color only, which is exactly the "soften the color" intent.
 
 ## Edge cases
 
