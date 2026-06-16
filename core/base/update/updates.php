@@ -561,21 +561,6 @@ $updates->$v = new stdClass();
 				] // Note that only ONE argument encoded is sent
 			];
 
-
-
-$v=701; #####################################################################################
-$updates->$v = new stdClass();
-
-	// UPDATE TO
-	$updates->$v->version_major			= 7;
-	$updates->$v->version_medium		= 0;
-	$updates->$v->version_minor			= 1;
-
-	// MINIMUM UPDATE FROM
-	$updates->$v->update_from_major		= 7;
-	$updates->$v->update_from_medium	= 0;
-	$updates->$v->update_from_minor		= 0;
-
 	// Load class with update methods
 		require_once dirname(dirname(__FILE__)) .'/upgrade/class.dataframe_v7_migration.php';
 
