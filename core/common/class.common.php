@@ -2376,8 +2376,6 @@ abstract class common {
 
 				$section_id			= $current_locator->section_id;
 				$section_tipo		= $current_locator->section_tipo;
-				$section_id_key		= $current_locator->section_id;
-				$section_tipo_key	= $current_locator->section_tipo;
 
 				// // get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
 				// // but when the ddo is a component_dataframe (used as sub section as data frame of the locator) get include it.
@@ -2433,19 +2431,17 @@ abstract class common {
 								? reset($dd_object->section_tipo)
 								: $dd_object->section_tipo;
 
-							// unified pairing: the key is the main data item id.
-							// Relation mains carry it as locator->id; literal mains
-							// build pseudo-locators whose section_id IS the item id
-							$section_id_key		= $current_locator->id ?? $current_locator->section_id;
-							$section_tipo_key	= $this->get_section_tipo(); // host section (legacy alias, demoted to consistency check)
+							// unified pairing: the key is the MAIN DATA ITEM id (never a section_id).
+							// Relation mains carry it as locator->id; literal mains build a
+							// pseudo-locator whose section_id IS the item id.
+							$id_key				= $current_locator->id ?? $current_locator->section_id;
 							$section_id			= $this->get_section_id(); // the section that call to component, not the component
 
 						}else{
 							// standard use of the locator to get data of the ddo
 							$section_id			= $current_locator->section_id;
 							$section_tipo		= $current_locator->section_tipo;
-							$section_id_key		= $current_locator->section_id;
-							$section_tipo_key	= $current_locator->section_tipo;
+							$id_key				= null; // non-dataframe ddo: caller_dataframe is built but unused by the child
 						}
 
 						$current_section_tipo = $section_tipo;
@@ -2519,10 +2515,14 @@ abstract class common {
 								// source_model and is_component_caller are hoisted before the loops
 
 								// caller_dataframe cases
-								$caller_dataframe = (str_starts_with($source_model, 'component_'))
+								// unified pairing: id_key is the MAIN DATA ITEM id ($id_key holds it
+								// from the dataframe branch above — locator->id for relation mains,
+								// the pseudo-locator section_id for literal mains). Never a section_id_key.
+								// Built ONLY for dataframe ddos ($id_key!==null); non-dataframe children
+								// never consume it (and a null id_key would fail the from_legacy guard).
+								$caller_dataframe = ($id_key!==null && str_starts_with($source_model, 'component_'))
 									? (object)[
-										'section_id_key'		=> $section_id_key,
-										'section_tipo_key'		=> $section_tipo_key,
+										'id_key'				=> $id_key,
 										'section_tipo'			=> $this->get_section_tipo(),
 										'main_component_tipo'	=> $from_parent,
 									  ]

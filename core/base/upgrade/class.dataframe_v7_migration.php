@@ -452,6 +452,228 @@ class dataframe_v7_migration {
 
 
 	/**
+	* MIGRATE_ORDER_COMPONENTS
+	* Migrates the relation sibling-order values stored in the `number` JSONB column.
+	* Before the unified contract these inline values were parent-record-keyed
+	* ({value, section_tipo_key, section_id_key}); now each order value is a dataframe
+	* of the child's parent-link locator, paired by id_key (that locator's item id).
+	*
+	* Resolution is row-local: the child record's parent locators live in the SAME
+	* row's `relation` column. For each order value keyed by (section_tipo_key,
+	* section_id_key) = (parent_tipo, parent_id), the matching parent locator in
+	* `relation` (section_tipo==parent_tipo, section_id==parent_id, carrying an item
+	* id) is found and its id becomes the value's id_key; section_*_key are stripped.
+	*
+	* Idempotent (values already carrying id_key are skipped), batched via keyset
+	* pagination, dry-run capable ($save=false). The SQL LIKE '%section_id_key%'
+	* pre-filter skips already-migrated rows cheaply. Unresolvable values (no parent
+	* locator with an id) are left as-is and reported under 'unresolved'.
+	*
+	* (!) NOT yet wired into migrate_all — call explicitly (or add to migrate_all)
+	* once verified against a real database. See the v7 dataframe cutover notes.
+	*
+	* @param array|null $ar_tables [= null] - explicit tables; null = auto-discover (number jsonb)
+	* @param bool $save [= false] - false = dry-run (scan and report only, no writes)
+	* @return object $response - new_step_response() shape
+	*/
+	public static function migrate_order_components( ?array $ar_tables=null, bool $save=false ) : object {
+
+		$response = self::new_step_response('order_components');
+
+		$conn = DBi::_getConnection();
+		if ($conn===false) {
+			$response->result	= false;
+			$response->msg		= 'Error. DDBB connection failed';
+			return $response;
+		}
+
+		// tables. Discover matrix tables having a `number` jsonb column
+		if ($ar_tables===null) {
+			$ar_tables = [];
+			$result = pg_query($conn, "
+				SELECT table_name FROM information_schema.columns
+				WHERE column_name = 'number'
+				  AND data_type = 'jsonb'
+				  AND table_name LIKE 'matrix%'
+				  AND table_name NOT IN ('matrix_time_machine')
+				ORDER BY table_name
+			");
+			while ($result!==false && ($row = pg_fetch_assoc($result))) {
+				$ar_tables[] = $row['table_name'];
+			}
+		}
+
+		foreach ($ar_tables as $table) {
+
+			$last_id = 0;
+			while (true) {
+
+				$result = pg_query_params($conn,
+					'SELECT id, section_tipo, section_id, number::text AS number, relation::text AS relation
+					 FROM "'.$table.'"
+					 WHERE id > $1 AND number::text LIKE \'%section_id_key%\'
+					 ORDER BY id ASC LIMIT '.self::$batch_size,
+					[$last_id]
+				);
+				if ($result===false) {
+					$response->result = false;
+					$response->errors[] = 'Query failed on table: '.$table;
+					break;
+				}
+
+				$rows = pg_fetch_all($result);
+				if (empty($rows)) {
+					break;
+				}
+
+				foreach ($rows as $row) {
+
+					$last_id = (int)$row['id'];
+					$response->scanned++;
+
+					$number = json_decode($row['number']);
+					if (!is_object($number)) {
+						continue;
+					}
+					// the child's parent locators live in this same row's relation column
+					$relation = json_decode($row['relation'] ?? 'null');
+
+					$context_ref = $table.' '.$row['section_tipo'].'_'.$row['section_id'];
+					$row_changed = false;
+
+					foreach ($number as $component_tipo => $values) {
+						if (!is_array($values)) {
+							continue;
+						}
+						$slot_changed = self::transform_order_values($values, $relation, $response, $context_ref);
+						if ($slot_changed) {
+							$number->{$component_tipo} = $values;
+							$row_changed = true;
+						}
+					}
+
+					if ($row_changed) {
+						$response->rows_changed++;
+						if ($save) {
+							$update_result = pg_query_params($conn,
+								'UPDATE "'.$table.'" SET number = $1::jsonb WHERE id = $2',
+								[json_encode($number, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES), $row['id']]
+							);
+							if ($update_result===false) {
+								$response->result = false;
+								$response->errors[] = 'Update failed on '.$table.' id '.$row['id'];
+							}
+						}
+					}
+
+					if (running_in_cli()) {
+						self::print_cli_status('migrate_order_components', $table, $response);
+					}
+				}
+			}
+		}
+
+		return $response;
+	}//end migrate_order_components
+
+
+
+	/**
+	* TRANSFORM_ORDER_VALUES
+	* Transformation kernel for one order component's inline value array. Rewrites
+	* each legacy parent-keyed value ({value, section_tipo_key, section_id_key}) to
+	* the unified {value, id_key} shape, resolving id_key from the row's relation
+	* object via resolve_order_id_key(). Mutates the value objects in place and
+	* returns true when at least one value changed.
+	*
+	* @param array $values - inline value objects of one order component slot (by ref)
+	* @param mixed $relation - decoded row relation object (or null)
+	* @param object $response - shared stats/report accumulator
+	* @param string $context_ref - human-readable context label
+	* @return bool - true when any value was migrated
+	*/
+	private static function transform_order_values( array &$values, mixed $relation, object $response, string $context_ref ) : bool {
+
+		$changed = false;
+
+		foreach ($values as $item) {
+
+			if (!is_object($item)) {
+				continue;
+			}
+
+			// already migrated (idempotence)
+			if (isset($item->id_key)) {
+				$response->locators_already++;
+				continue;
+			}
+
+			// only legacy order values carry section_id_key
+			if (!isset($item->section_id_key)) {
+				continue;
+			}
+
+			$parent_tipo	= $item->section_tipo_key ?? null;
+			$parent_id		= (int)$item->section_id_key;
+
+			$id_key = self::resolve_order_id_key($relation, $parent_tipo, $parent_id);
+
+			if ($id_key<=0) {
+				self::report($response, 'unresolved', $context_ref
+					. ' | order value: unresolved parent-link id for parent '
+					. to_string($parent_tipo) . '_' . $parent_id);
+				continue;
+			}
+
+			$item->id_key = $id_key;
+			unset($item->section_id_key, $item->section_tipo_key);
+			$response->locators_migrated++;
+			$changed = true;
+		}
+
+		return $changed;
+	}//end transform_order_values
+
+
+
+	/**
+	* RESOLVE_ORDER_ID_KEY
+	* Find, in a row's decoded relation object, the parent-link locator pointing at
+	* (parent_tipo, parent_id) and return its item id (the order value's id_key).
+	* Scans every relation slot so the relation_parent component tipo need not be
+	* known; the first locator matching the parent coordinates and carrying an id wins.
+	*
+	* @param mixed $relation - decoded relation object (or null)
+	* @param string|null $parent_tipo - parent section tipo (section_tipo_key); null = match id only
+	* @param int $parent_id - parent section id (section_id_key)
+	* @return int - the parent-link locator id, or 0 when not resolvable
+	*/
+	private static function resolve_order_id_key( mixed $relation, ?string $parent_tipo, int $parent_id ) : int {
+
+		if (!is_object($relation)) {
+			return 0;
+		}
+
+		foreach ($relation as $entries) {
+			if (!is_array($entries)) {
+				continue;
+			}
+			foreach ($entries as $loc) {
+				if (is_object($loc)
+					&& isset($loc->id)
+					&& isset($loc->section_id) && (int)$loc->section_id === $parent_id
+					&& ($parent_tipo===null || (isset($loc->section_tipo) && $loc->section_tipo === $parent_tipo))) {
+					return (int)$loc->id;
+				}
+			}
+		}
+
+		return 0;
+	}//end resolve_order_id_key
+
+
+
+	/**
 	* INTEGRITY_CHECK
 	* Verifies dataframe pairing integrity across all matrix table rows: every
 	* frame locator's id_key must match an existing item id of its main component
@@ -841,7 +1063,7 @@ class dataframe_v7_migration {
 									'section_tipo'		=> $row['section_tipo'],
 									'section_id'		=> $row['section_id'],
 									'component_tipo'	=> $component_tipo,
-									'section_id_key'	=> (int)$item->id,
+									'id_key'			=> (int)$item->id, // main data item id
 									'target_section_id'=> $target_section_id
 								]);
 							}

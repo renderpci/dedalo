@@ -191,9 +191,12 @@ const render_content_value = function(options) {
 		if(entries.length >= 1) {
 
 			const rating_data = self.get_rating()
-			if(rating_data && rating_data.value){
+			// the selected rating locator lives in `entries` (the v7 data model);
+			// `value` kept as a fallback for any legacy datum shape.
+			const rating_entries = rating_data && (rating_data.entries ?? rating_data.value)
+			if(rating_entries){
 
-				const rating_value = rating_data.value[0]
+				const rating_value = rating_entries[0]
 				// Match the first entry's section_id against the radio_button datalist.
 				// When rating_value is falsy (value array is empty), synthesise a sentinel
 				// object that supplies the blue fallback colour as hide[0].literal.

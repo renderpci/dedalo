@@ -219,8 +219,16 @@ class tool_time_machine extends tool_common {
 								// get the dataframe data from data_time_machine, filtering by dataframe_tipo
 								if ( is_array($data_time_machine) ){
 
-									$dataframe_data = array_values( array_filter( $data_time_machine, function($el) use($dataframe_tipo) {
-										return isset($el->from_component_tipo) && $el->from_component_tipo===$dataframe_tipo;
+									$dataframe_data = array_values( array_filter( $data_time_machine, function($el) use($dataframe_tipo, $tipo) {
+										// keep only frame entries (dual-read: unified type marker OR legacy
+										// pairing-key shape). Unified frames carry from_component_tipo (the slot);
+										// pre-migration frames that lack it are claimed by main_component_tipo so
+										// they are not silently dropped on restore.
+										if (!component_common::is_dataframe_entry($el)) {
+											return false;
+										}
+										return (($el->from_component_tipo ?? null)===$dataframe_tipo)
+											|| (!isset($el->from_component_tipo) && ($el->main_component_tipo ?? null)===$tipo);
 									}));
 
 									// set time machine data, it save the data
@@ -243,9 +251,12 @@ class tool_time_machine extends tool_common {
 								return property_exists($el, 'iri');;
 							}));
 						}else{
-							// Main component and other components without dataframe
-							$data_time_machine = array_values( array_filter( $data_time_machine, function($el) use($tipo) {
-								return isset($el->from_component_tipo) && $el->from_component_tipo===$tipo;
+							// Main component: keep its own locators, exclude dataframe frames.
+							// Using is_dataframe_entry (dual-read) instead of a from_component_tipo
+							// match preserves legacy main locators that lack from_component_tipo and
+							// still strips every frame shape (unified or legacy) from the main data.
+							$data_time_machine = array_values( array_filter( $data_time_machine, function($el) {
+								return !component_common::is_dataframe_entry($el);
 							}));
 						}
 					}

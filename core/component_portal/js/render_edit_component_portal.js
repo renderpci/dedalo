@@ -724,8 +724,7 @@ export const render_column_remove = function(options) {
 									self				: self,
 									section_id			: self.section_id,
 									section_tipo		: self.section_tipo,
-									section_id_key		: options.locator.id,
-									section_tipo_key	: self.section_tipo,
+									id_key				: options.locator.id,
 									main_component_tipo	: self.tipo,
 								})
 

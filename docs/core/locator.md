@@ -159,8 +159,8 @@ A locator is sparse: a portal link may carry only `{section_tipo, section_id, ty
 | --- | --- | --- | --- | --- |
 | **id_key** | `int` | `set_id_key` (positive int) | The stable `id` of the main-component data item this dataframe locator extends — the unified pairing contract | `3` |
 | **main_component_tipo** | `string` | `set_main_component_tipo` | Used by a dataframe to identify its own parent component | `rsc85` |
-| **section_id_key** | `int` | `set_section_id_key` | **@deprecated** legacy dataframe pairing key (paired by parent section_id); kept only to hydrate pre-migration data | `1` |
-| **section_tipo_key** | `string` | `set_section_tipo_key` | **@deprecated** legacy pairing tipo, retired by the `id_key` unification | `rsc197` |
+| **section_id_key** | `int` | `set_section_id_key` | **@deprecated** legacy dataframe pairing key, retired by `id_key`; no longer read by live code — used only by the old-CSV import and v6→v7 update | `1` |
+| **section_tipo_key** | `string` | `set_section_tipo_key` | **@deprecated** legacy pairing tipo, retired by the `id_key` unification (old-CSV import / v6→v7 only) | `rsc197` |
 
 ### Deprecated hierarchical anchors (v6, being abandoned)
 
@@ -249,7 +249,7 @@ The inverse — "who points at me" — is **computed**, not stored:
 graph LR
     A["section_record::get_inverse_references()"] --> B["search_related::get_referenced_locators()"]
     B --> C["scan matrix tables"]
-    C --> D["descriptors: from_component_tipo, from_section_tipo, from_section_id, id_key/section_id_key"]
+    C --> D["descriptors: from_component_tipo, from_section_tipo, from_section_id, id_key"]
 ```
 
 This drives `remove_all_inverse_references()` on delete (referential integrity) and the inverse view of `relation_list`.
@@ -283,7 +283,7 @@ graph TD
 1. Read the target `matrix` row by `{section_tipo, section_id}`.
 2. If `component_tipo` is set, render that component (otherwise the whole record).
 3. `tag_id`/`tag_component_tipo` narrow further to a single inline annotation.
-4. For **dataframe** locators, `id_key` pairs the supplementary frame record to the exact main-component item (`section_id_key`/`section_tipo_key` are the read-only legacy fallback).
+4. For **dataframe** locators, `id_key` pairs the supplementary frame record to the exact main-component item (`section_id_key`/`section_tipo_key` are retired — read only by the old-CSV import and v6→v7 update).
 
 ### Helper methods
 

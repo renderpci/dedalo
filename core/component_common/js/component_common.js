@@ -851,7 +851,7 @@ component_common.prototype.set_value = function(value) {
 *
 * Data merge strategy (datum.data):
 *  - Existing items are matched by (tipo, section_tipo, section_id, mode) plus,
-*    for dataframe sub-entries, by (section_id_key, section_tipo_key, main_component_tipo).
+*    for dataframe sub-entries, by (id_key, main_component_tipo).
 *  - Matching items have their `entries` and `fallback_value` updated in place.
 *  - New items that have no match are appended to datum.data.
 *  - When new_datum.data is empty the matched item's entries are cleared to []
@@ -902,12 +902,14 @@ component_common.prototype.update_datum = async function(new_datum) {
 						&& parseInt(el.section_id) 	=== parseInt(self.section_id)
 						&& el.mode 					=== self.mode
 						){
-						// if the new data provides by dataframe it will has section_id_key, section_tipo_key and main_component_tipo
-						// in this case check the previous data in datum has correspondence with section_id_key, section_tipo_key and its main_component_tipo
-						const to_delete = ( el.section_id_key && el.section_tipo_key && el.main_component_tipo )
-							? parseInt(el.section_id_key)	=== parseInt(self.section_id_key)
-								&& el.section_tipo_key		=== self.section_tipo_key
-								&& el.main_component_tipo	=== self.main_component_tipo
+						// dataframe disambiguation: when the datum entry is a frame, clear ONLY the
+						// entry paired with THIS item (by id_key) so sibling items' frames are never
+						// wiped. Pairing identity comes from self.data.
+						const el_key   = el.id_key
+						const self_key = self.data?.id_key
+						const to_delete = ( (el_key!==undefined && el_key!==null) && el.main_component_tipo )
+							? parseInt(el_key)				=== parseInt(self_key)
+								&& el.main_component_tipo	=== self.data?.main_component_tipo
 							: true
 
 						if(to_delete){
@@ -930,12 +932,13 @@ component_common.prototype.update_datum = async function(new_datum) {
 							&& parseInt(el.section_id) 	=== parseInt(data_item.section_id)
 							&& el.mode 					=== data_item.mode
 							){
-							// if the new data provides by dataframe it will has section_id_key, section_tipo_key and main_component_tipo
-							// in this case check the previous data in datum has correspondence with section_id_key, section_tipo_key and its main_component_tipo
-							if( el.section_id_key && el.section_tipo_key && el.main_component_tipo ){
+							// dataframe disambiguation: match the frame entry by item id (id_key)
+							// so sibling items' frames are not overwritten.
+							const el_key = el.id_key
+							const di_key = data_item.id_key
+							if( (el_key!==undefined && el_key!==null) && el.main_component_tipo ){
 								return (
-									parseInt(el.section_id_key)	=== parseInt(data_item.section_id_key)
-									&& el.section_tipo_key		=== data_item.section_tipo_key
+									parseInt(el_key)			=== parseInt(di_key)
 									&& el.main_component_tipo	=== data_item.main_component_tipo
 								)
 							}
@@ -1891,7 +1894,7 @@ export const deactivate_components = function(e) {
 * component_common.js continue to work without changes.
 *
 * @see core/component_common/js/dataframe.js for full documentation and the
-*   pairing contract (id_key / section_id_key / main_component_tipo triad).
+*   pairing contract (id_key / main_component_tipo).
 */
 export { get_dataframe, delete_dataframe, attach_item_dataframe } from './dataframe.js'
 

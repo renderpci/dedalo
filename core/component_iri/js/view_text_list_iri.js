@@ -48,7 +48,7 @@ export const view_text_list_iri = function() {
 *
 * For each entry in `self.data.entries` the function:
 *  1. Calls `get_dataframe` to resolve the paired label dataframe instance using
-*     the entry's server-minted `id` as the pairing key (`section_id_key`).
+*     the entry's server-minted `id` as the pairing key (`id_key`).
 *     The dataframe is built in 'list'/'line' mode and appended to
 *     `self.ar_instances` so the parent component can destroy it on teardown.
 *  2. Extracts `dataframe_node.textContent` (strips any HTML the dataframe may
@@ -103,14 +103,13 @@ view_text_list_iri.render = async function(self, options) {
 
 			// dataframe
 			// Resolve the label dataframe paired to this entry via its server-minted id.
-			// `section_id_key` is the pairing key (the item's `id`), NOT the array index.
+			// `id_key` is the pairing key (the item's `id`), NOT the array index.
 			// (!) Using the array index `i` here would cause wrong frame resolution on any
 			// record where entries have been reordered or deleted on the server side.
 			const component_dataframe = await get_dataframe({
 				self				: self,
 				section_id			: self.section_id,
-				section_id_key		: entries[i].id,
-				section_tipo_key	: self.section_tipo,
+				id_key				: entries[i].id,
 				main_component_tipo	: self.tipo,
 				view				: 'line',
 				mode				: 'list'

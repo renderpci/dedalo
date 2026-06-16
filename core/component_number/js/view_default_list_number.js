@@ -107,7 +107,7 @@ view_default_list_number.render = async function(self, options) {
 
 	// component_dataframe (shared literal-view glue, no-op without has_dataframe)
 		// Iterate entries sequentially to preserve the ar_instances push order and
-		// the section_id_key counter alignment inside attach_item_dataframe.
+		// the id_key counter alignment inside attach_item_dataframe.
 		for (const entry of entries) {
 			await attach_item_dataframe({
 				self		: self,

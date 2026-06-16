@@ -63,7 +63,7 @@ Every thesaurus section declares which components play each role, read from the 
 
 - `term` may be an array of tipos (composed terms, e.g. name + surname).
 - `is_descriptor` / `is_indexable` are locators to the si/no section (`dd64`): first locator `section_id` `1` = yes, `2` = no.
-- `order` is a `component_number` holding per-parent-context items in the `number` container (a term keeps one order value per parent context).
+- `order` is a `component_number` whose items are **`id_key` dataframes** of each parent-link locator (`{value, id_key}` in the `number` container) — a term keeps one order value per parent, paired by the id of its `component_relation_parent` locator pointing at that parent. See [component_dataframe → Relation ordering](../components/component_dataframe.md#relation-ordering-the-order-is-a-dataframe).
 
 ### The tree row definition (`ddo_map`)
 

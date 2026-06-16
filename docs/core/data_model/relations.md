@@ -89,8 +89,8 @@ Richer items add destination and pairing fields (all optional, sparse):
   [`component_relation_related`](../components/component_relation_related.md).
 - `id_key` — dataframe pairing key (positive int); ties a dataframe locator to
   the exact main-component item it qualifies
-  (`section_id_key` / `section_tipo_key` are the **@deprecated** legacy
-  fallbacks).
+  (`section_id_key` / `section_tipo_key` are **@deprecated** and no longer read by
+  live code — only by the old-CSV import and v6→v7 update).
 
 For the complete, field-by-field reference — every property, its setter,
 validation rules and the flat string form — see **[Locator](../locator.md)**.
@@ -200,13 +200,12 @@ $inverse = $section_record->get_inverse_references();
 `search_related::get_referenced_locators()`
 (`core/search/class.search_related.php`) scans the matrix tables and returns
 descriptors carrying `from_component_tipo`, `from_section_tipo`,
-`from_section_id` and the pairing key (`id_key` / `section_id_key`). This drives:
+`from_section_id` and the pairing key (`id_key`). This drives:
 
 - **Referential integrity on delete** — `remove_all_inverse_references()` removes
   every forward locator that points at a record being deleted, so no stale
   references remain (only `component_relation_common` subclasses and
-  `component_dataframe` are handled; for dataframe both `id_key` and legacy
-  `section_id_key` are forwarded).
+  `component_dataframe` are handled; dataframe pairing uses `id_key` only).
 - **The inverse view** — [`relation_list`](../ontology/relation_list.md) renders
   the backlinks as a grouped, paginated grid ("who points at this record").
 
@@ -367,8 +366,8 @@ To turn a locator into a displayed value:
 2. If `component_tipo` is set, render that component; `tag_id` /
    `tag_component_tipo` narrow further to a single inline annotation.
 3. For dataframe locators, `id_key` pairs the supplementary frame record to the
-   exact main-component item (`section_id_key` / `section_tipo_key` are the
-   read-only legacy fallback).
+   exact main-component item (`section_id_key` / `section_tipo_key` are retired —
+   read only by the old-CSV import and v6→v7 update).
 
 Helpers on `locator` support resolution and dedup: `get_term_id_from_locator`
 (`{section_tipo}_{section_id}`, e.g. `es1_185`), `lang_to_locator`
@@ -388,8 +387,9 @@ Helpers on `locator` support resolution and dedup: `get_term_id_from_locator`
   storage view of that single bag.
 - **Unified dataframe pairing.** `id_key` is the single pairing contract for
   dataframe locators (and the `dd490` `DEDALO_RELATION_TYPE_DATAFRAME` positive
-  marker). The legacy `section_id_key` / `section_tipo_key` are **@deprecated**,
-  kept only to hydrate pre-migration data.
+  marker) — including the relation sibling-order, which is itself an `id_key`
+  dataframe. The legacy `section_id_key` / `section_tipo_key` are **@deprecated**,
+  read only by the old-CSV import and v6→v7 update.
 - **Source-side `from_*` over the v6 anchors.** `from_section_tipo` /
   `from_section_id` replace the deprecated `section_top_tipo` /
   `section_top_id` hierarchical anchors.

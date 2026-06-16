@@ -320,8 +320,10 @@ See [exporting data](../exporting_data.md).
   filter by descriptor vs non-descriptor using the section map's
   `thesaurus->is_descriptor` (a locator to the Si/No section `dd64`).
   `sort_children()` persists branch order by writing the section map's
-  `thesaurus->order` component (a [component_number](component_number.md), per
-  parent-context dataframe item) on each child — invoked by `dd_ts_api::save_order`.
+  `thesaurus->order` component (a [component_number](component_number.md)) on each
+  child, as an **`id_key` dataframe** of the child's parent-link locator (resolved
+  via `resolve_parent_link_id_key()`); the list ordering is precomputed in PHP by
+  `build_children_sqo()` (`array_position`). Invoked by `dd_ts_api::save_order`.
   `get_children_recursive()` / `get_children_recursive_batch()` walk the whole subtree
   with cycle detection (`get_children_recursive_batch` shares one visited set across
   roots to avoid re-expanding shared subtrees). See the *dedalo-ts-tree* skill.

@@ -232,8 +232,7 @@ const get_content_value = (i, current_value, self) => {
 							self				: self,
 							section_id			: self.section_id,
 							section_tipo		: self.section_tipo,
-							section_id_key		: current_entry.id,
-							section_tipo_key	: self.section_tipo,
+							id_key				: current_entry.id,
 							main_component_tipo	: self.tipo,
 							delete_instance		: true
 						})
@@ -256,8 +255,7 @@ const get_content_value = (i, current_value, self) => {
 								self				: self,
 								section_id			: self.section_id,
 								section_tipo		: self.section_tipo,
-								section_id_key		: value_item_id,
-								section_tipo_key	: self.section_tipo,
+								id_key				: value_item_id,
 								main_component_tipo	: self.tipo,
 								view				: 'default'
 							})
@@ -405,8 +403,7 @@ const get_content_value = (i, current_value, self) => {
 				self				: self,
 				section_id			: self.section_id,
 				section_tipo		: self.section_tipo,
-				section_id_key		: current_value.id,
-				section_tipo_key	: self.section_tipo,
+				id_key				: current_value.id,
 				main_component_tipo	: self.tipo,
 				view				: 'default'
 			}).then(async function(component_dataframe){

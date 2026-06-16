@@ -33,18 +33,17 @@
 * Pairing contract (match predicate applied by every reader in this file):
 *   type === DATAFRAME_TYPE && main_component_tipo && id_key === item.id
 *
-* Dual-read: pre-migration locators carry `section_id_key` / `section_tipo_key`
-* instead of `type` / `id_key` and are accepted by all readers here until the
-* 7.0.1 dataframe_v7_migration update block rewrites them to the unified shape.
+* id_key only. The legacy `section_id_key` / `section_tipo_key` shape is no longer
+* read here (dual-read removed); it survives only in the old-CSV import and the
+* v6→v7 update. Run the 7.0.1 dataframe_v7_migration to convert stored data.
 */
 
 
 
 // DATAFRAME_TYPE. Ontology tipo used as the `type` field on every dataframe
 // pairing locator. Must stay in sync with the PHP constant
-// DEDALO_RELATION_TYPE_DATAFRAME (core/base/dd_tipos.php). Readers test for
-// this marker first and fall back to the legacy key-shape check only when the
-// marker is absent (dual-read, see IS_DATAFRAME_ENTRY below).
+// DEDALO_RELATION_TYPE_DATAFRAME (core/base/dd_tipos.php). Readers detect a
+// dataframe entry by this marker only (see IS_DATAFRAME_ENTRY below).
 export const DATAFRAME_TYPE = 'dd490'
 
 
@@ -66,7 +65,7 @@ export const DATAFRAME_TYPE = 'dd490'
 * silently creating orphaned or mismatched frame locators.
 * @param {Object} self - main component instance (must have `section_tipo` and `tipo`)
 * @param {Object} item - data item of the main component; MUST carry a non-null `id`
-* @returns {Object} Pairing-key object: { section_id_key, section_tipo_key, main_component_tipo }
+* @returns {Object} Pairing-key object: { id_key, main_component_tipo }
 * @throws {Error} When item is falsy or has no id
 */
 export const get_dataframe_keys = function(self, item) {
@@ -76,8 +75,7 @@ export const get_dataframe_keys = function(self, item) {
 	}
 
 	return {
-		section_id_key		: item.id,
-		section_tipo_key	: self.section_tipo,
+		id_key				: item.id,
 		main_component_tipo	: self.tipo
 	}
 }//end get_dataframe_keys
@@ -89,11 +87,9 @@ export const get_dataframe_keys = function(self, item) {
 * Returns true when `el` is a dataframe pairing locator as opposed to any
 * other entry in a component's relations bag (e.g. a standard portal locator).
 *
-* Detection is type-first: the `type === DATAFRAME_TYPE` marker ('dd490') is
-* the unified contract. The legacy shape fallback — presence of either
-* `id_key` / `section_id_key` alongside `main_component_tipo` — handles data
-* written before the 7.0.1 migration. Both shapes are accepted until the
-* migration runs; after it all entries carry the type marker.
+* Detection is type-only: the `type === DATAFRAME_TYPE` marker ('dd490') is the
+* single source of truth (the legacy section_id_key shape is no longer detected).
+* Run the 7.0.1 dataframe_v7_migration so every stored entry carries the marker.
 * @param {*} el - candidate value from a relations array
 * @returns {boolean} true if el is a dataframe pairing locator
 */
@@ -102,13 +98,8 @@ export const is_dataframe_entry = function(el) {
 	if (!el || typeof el!=='object') {
 		return false
 	}
-	// unified contract: positive marker
-	if (el.type===DATAFRAME_TYPE) {
-		return true
-	}
-	// legacy shape fallback (pre-migration data)
-	return (typeof el.id_key!=='undefined' || typeof el.section_id_key!=='undefined')
-		&& typeof el.main_component_tipo!=='undefined'
+	// unified contract: the positive type marker (dd490) is the single source of truth
+	return el.type===DATAFRAME_TYPE
 }//end is_dataframe_entry
 
 
@@ -127,9 +118,9 @@ export const is_dataframe_entry = function(el) {
 *     instance cache can hold multiple frames for the same slot (one per item).
 *  4. Call get_instance() with the cloned options — this registers the instance
 *     but does NOT yet run build().
-*  5. Find the matching frame locator in self.datum.data using the dual-read
-*     match predicate (id_key ?? section_id_key). If none exists yet, synthesise
-*     a blank locator (no frame record attached but the pairing keys are set).
+*  5. Find the matching frame locator in self.datum.data using the id_key match
+*     predicate. If none exists yet, synthesise a blank locator (no frame record
+*     attached but the pairing keys are set).
 *  6. Find the context entry from self.datum.context, return null if absent.
 *  7. Resolve view/mode from options → ddo → hard-coded defaults ('default'/'edit').
 *  8. Inject datum, data, context, and caller reference onto the instance, then
@@ -141,9 +132,7 @@ export const is_dataframe_entry = function(el) {
 * @param {Object} options - build options
 * @param {Object} options.self - main component instance (must have datum, context, tipo, section_tipo, section_id)
 * @param {number|string|null} options.section_id - section_id to assign to the frame instance
-* @param {number|string} options.id_key - pairing key (unified name); the stable server-minted item id
-* @param {number|string} options.section_id_key - legacy alias for id_key; accepted via nullish-coalescing (id_key ?? section_id_key)
-* @param {string} options.section_tipo_key - the main component's section_tipo (legacy key; still required for match)
+* @param {number|string} options.id_key - pairing key; the stable server-minted main item id
 * @param {string} options.main_component_tipo - the main component's tipo
 * @param {string|null} [options.view] - render view; falls back to ddo.view then 'default'
 * @param {string|null} [options.mode] - render mode; falls back to ddo.mode then 'edit'
@@ -156,22 +145,18 @@ export const get_dataframe = async function(options) {
 	// options
 	const self					= options.self
 	const section_id			= options.section_id
-	// id_key is the unified name; section_id_key is the legacy alias — accept both
-	const section_id_key		= options.id_key ?? options.section_id_key
-	const section_tipo_key		= options.section_tipo_key
+	const id_key				= options.id_key
 	const main_component_tipo	= options.main_component_tipo
 	const view					= options.view
 	const mode					= options.mode
 	const lang					= options.lang
 
-	// pairing keys sanity. A dataframe without full pairing keys silently
-	// resolves the wrong (or no) data: fail loudly instead
-	if (typeof section_id_key==='undefined' || section_id_key===null
-		|| typeof section_tipo_key==='undefined'
+	// pairing key sanity. A dataframe without a pairing key silently resolves the
+	// wrong (or no) data: fail loudly instead
+	if (typeof id_key==='undefined' || id_key===null
 		|| typeof main_component_tipo==='undefined') {
-		console.error('get_dataframe: incomplete pairing keys. Expected section_id_key (item id), section_tipo_key, main_component_tipo. Received:', {
-			section_id_key		: section_id_key,
-			section_tipo_key	: section_tipo_key,
+		console.error('get_dataframe: incomplete pairing keys. Expected id_key (main item id) and main_component_tipo. Received:', {
+			id_key				: id_key,
 			main_component_tipo	: main_component_tipo,
 			caller_tipo			: self?.tipo
 		})
@@ -198,7 +183,7 @@ export const get_dataframe = async function(options) {
 	// of the same item co-exist (e.g. multiple list rows open at once).
 	const instance_options = clone(original_dataframe_ddo)
 	instance_options.section_id	= section_id
-	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_tipo_key}_${section_id_key}_${main_component_tipo}_${Math.random()}`
+	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${id_key}_${main_component_tipo}_${Math.random()}`
 	instance_options.standalone	= false
 
 	// matrix_id. When the caller is a time-machine view, propagate matrix_id
@@ -220,31 +205,26 @@ export const get_dataframe = async function(options) {
 	// a separate API request — mirrors how section_record.get_component_data()
 	// works for portals. Datum.data is the flat relations bag of the main record;
 	// we filter it to the entry whose (tipo, section_tipo, section_id, id_key,
-	// main_component_tipo, section_tipo_key) match the target frame slot and item.
-	// Dual-read helper: normalises both unified (id_key) and legacy (section_id_key)
-	const entry_key = (el) => el.id_key ?? el.section_id_key
+	// main_component_tipo) match the target frame slot and item.
 	const data = self.datum?.data?.find( function(el) {
 		if( el.tipo						=== component_dataframe.tipo
 			&& el.section_tipo			=== component_dataframe.section_tipo
 			&& parseInt(el.section_id)	=== parseInt(component_dataframe.section_id)
 			){
 				// time machine case. TM rows merge frames from multiple snapshots;
-				// the matrix_id filters to the right snapshot before applying the
-				// full pairing predicate.
+				// the matrix_id filters to the right snapshot before the pairing predicate.
 				if( el.matrix_id && self.matrix_id){
 					return (
-						parseInt(el.matrix_id)			=== parseInt(self.matrix_id)
-						&& parseInt(entry_key(el))		=== parseInt(section_id_key)
-						&& el.main_component_tipo		=== main_component_tipo
-						&& (typeof el.section_tipo_key==='undefined' || el.section_tipo_key===section_tipo_key)
+						parseInt(el.matrix_id)		=== parseInt(self.matrix_id)
+						&& parseInt(el.id_key)		=== parseInt(id_key)
+						&& el.main_component_tipo	=== main_component_tipo
 					)
 				}
 				// normal case
 				else{
 					return (
-						parseInt(entry_key(el))		=== parseInt(section_id_key)
+						parseInt(el.id_key)			=== parseInt(id_key)
 						&& el.main_component_tipo	=== main_component_tipo
-						&& (typeof el.section_tipo_key==='undefined' || el.section_tipo_key===section_tipo_key)
 					)
 				}
 			}
@@ -253,14 +233,12 @@ export const get_dataframe = async function(options) {
 
 	// dataframe_data. If no locator found (the item has no frame yet), synthesise
 	// a blank locator so the instance renders with a create-able frame button.
-	// Both id_key and section_id_key are set for dual-read compatibility.
+	// Unified contract: only id_key (the main data item id) is set.
 	const dataframe_data = data
 		? data
 		: {
 			type				: DATAFRAME_TYPE,
-			id_key				: section_id_key,
-			section_tipo_key	: section_tipo_key,
-			section_id_key		: section_id_key,
+			id_key				: id_key,
 			main_component_tipo	: main_component_tipo
 		}
 
@@ -412,18 +390,16 @@ export const attach_item_dataframe = async function(options) {
 
 	container.classList.add('has_dataframe')
 
-	// section_id_key. Pairing key is the data item stable `id`, never the
-	// array index. New blank rows use the next counter as provisional render
-	// context, matching the subdatum locator created by the JSON controller
-	// (build_dataframe_subdatum)
-	const section_id_key = item?.id ?? (self.data.counter + 1)
+	// id_key. Pairing key is the data item stable `id`, never the array index.
+	// New blank rows use the next counter as provisional render context, matching
+	// the subdatum locator created by the JSON controller (build_dataframe_subdatum)
+	const id_key = item?.id ?? (self.data.counter + 1)
 
 	const component_dataframe = await get_dataframe({
 		self				: self,
 		section_id			: self.section_id,
 		section_tipo		: self.section_tipo,
-		section_id_key		: section_id_key,
-		section_tipo_key	: self.section_tipo,
+		id_key				: id_key,
 		main_component_tipo	: self.tipo,
 		view				: options.view ?? self.view,
 		mode				: options.mode,
@@ -467,12 +443,12 @@ export const attach_item_dataframe = async function(options) {
 * 'delete_target' policy if configured on the slot node.
 *
 * Steps:
-*  1. Validate pairing keys (section_id_key, main_component_tipo); return false
+*  1. Validate pairing keys (id_key, main_component_tipo); return false
 *     on failure (logged as error).
 *  2. Find the component_dataframe ddo in self.request_config_object.show.ddo_map;
 *     return false if absent.
 *  3. Find the matching live instance in the global instance registry using the
-*     full pairing predicate (dual-read: id_key ?? section_id_key).
+*     id_key pairing predicate.
 *  4. Call instance.unlink_record() to remove the locator from the relation bag.
 *  5. If delete_instace===true, call instance.destroy() to remove it from the
 *     registry and DOM.
@@ -483,9 +459,7 @@ export const attach_item_dataframe = async function(options) {
 * @param {Object} options.self - main component instance (must have request_config_object)
 * @param {number|string} options.section_id - section_id of the frame record
 * @param {string} options.section_tipo - section_tipo of the frame record
-* @param {number|string} options.id_key - pairing key (unified name); the stable server-minted item id
-* @param {number|string} options.section_id_key - legacy alias for id_key; accepted via nullish-coalescing (id_key ?? section_id_key)
-* @param {string} options.section_tipo_key - main component's section_tipo (match predicate)
+* @param {number|string} options.id_key - pairing key; the stable server-minted main item id
 * @param {string} options.main_component_tipo - main component's tipo
 * @param {*} [options.paginated_key=false] - passed to unlink_record (pagination context)
 * @param {*} [options.row_key=false] - passed to unlink_record as both paginated_key and row_key
@@ -499,19 +473,17 @@ export const delete_dataframe = async function(options) {
 	// options
 		const section_id			= options.section_id
 		const section_tipo			= options.section_tipo
-		const section_id_key		= options.id_key ?? options.section_id_key
-		const section_tipo_key		= options.section_tipo_key
+		const id_key				= options.id_key
 		const main_component_tipo	= options.main_component_tipo
 		const paginated_key			= options.paginated_key || false
 		const row_key				= options.row_key || false
 		const delete_instace		= options.delete_instace || false
 
-	// pairing keys sanity
-	if (typeof section_id_key==='undefined' || section_id_key===null
+	// pairing key sanity
+	if (typeof id_key==='undefined' || id_key===null
 		|| typeof main_component_tipo==='undefined') {
-		console.error('delete_dataframe: incomplete pairing keys. Expected section_id_key (item id) and main_component_tipo. Received:', {
-			section_id_key		: section_id_key,
-			section_tipo_key	: section_tipo_key,
+		console.error('delete_dataframe: incomplete pairing keys. Expected id_key (main item id) and main_component_tipo. Received:', {
+			id_key				: id_key,
 			main_component_tipo	: main_component_tipo,
 			caller_tipo			: self?.tipo
 		})
@@ -527,9 +499,7 @@ export const delete_dataframe = async function(options) {
 			return false
 		}
 
-		// entry_key. Dual-read normaliser: id_key (unified) or section_id_key (legacy)
-		const entry_key = (el) => el.id_key ?? el.section_id_key
-		// Look up the live frame instance by full pairing predicate so we operate
+		// Look up the live frame instance by the pairing predicate so we operate
 		// on the exact instance that was registered during the current render,
 		// not a stale one from a previous render cycle.
 		const all_instances = get_all_instances()
@@ -538,9 +508,8 @@ export const delete_dataframe = async function(options) {
 			&& el.tipo							=== ddo_dataframe.tipo
 			&& el.section_tipo					=== ddo_dataframe.section_tipo
 			&& parseInt(el.section_id)			=== parseInt(section_id)
-			&& parseInt(entry_key(el.data))		=== parseInt(section_id_key)
+			&& parseInt(el.data.id_key)			=== parseInt(id_key)
 			&& el.data.main_component_tipo		=== main_component_tipo
-			&& (typeof el.data.section_tipo_key==='undefined' || el.data.section_tipo_key===section_tipo_key)
 		)
 
 	if(!component_dataframe){

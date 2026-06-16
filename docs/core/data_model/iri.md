@@ -235,8 +235,8 @@ The matching `meta` counter that minted those item `id`s (written by
     dataframe. `label_id` is an import-only carrier: the leading token of a
     flat string (a numeric section id, or a string label matched/created in the
     dataframe value list) becomes the `label_id`, which `import_save()` consumes
-    to build the dataframe locator (`set_id_key` / `set_section_id_key` by the
-    value `id`). `label_id` is then `unset` and **never stored** on the value.
+    to build the dataframe locator (`set_id_key` by the value `id`). `label_id`
+    is then `unset` and **never stored** on the value.
     The deprecated literal `title` is still accepted on import but ignored.
 
 For the full import grammar see [Importing data → URI](../importing_data.md#uri);

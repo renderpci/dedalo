@@ -242,11 +242,53 @@ class logger_backend_activity extends logger_backend {
 	*   updated automatically; logging saves to it would recurse.
 	* @var array<int,string> $excluded_section_tipos
 	*/
-	public static array $excluded_section_tipos = [
-		DEDALO_TEMP_PRESET_SECTION_TIPO, // dd655 - temporal search presets (automatic saved search configuration)
-		DEDALO_TIME_MACHINE_SECTION_TIPO, // dd15 - time machine section (internal virtual section)
-		USER_ACTIVITY_SECTION_TIPO, // dd1521 - User activity (automatic sumatory of user actions by day)
-	];
+	// (!) Populated lazily by get_excluded_section_tipos(): the dd_tipos constants
+	// below are NOT defined when this backend is registered from private/config.inc
+	// (that runs before dd_tipos.php loads). Resolving them in this property default
+	// would evaluate at class-load time and throw "Undefined constant".
+	public static array $excluded_section_tipos = [];
+
+	/**
+	* $excluded_section_tipos_loaded
+	* Lazy-init guard for $excluded_section_tipos. true once the dd_tipos
+	* constants have been resolved into the array (see get_excluded_section_tipos).
+	* @var bool
+	*/
+	private static bool $excluded_section_tipos_loaded = false;
+
+
+
+	/**
+	* GET_EXCLUDED_SECTION_TIPOS
+	* Resolves (and caches) the volatile/utility section tipos that must never
+	* generate activity log records. Resolved lazily so the dd_tipos constants
+	* are required only at log time, never at class-load/registration time
+	* (see the $excluded_section_tipos note above for the bootstrap ordering).
+	* @return array<int,string>
+	*/
+	private static function get_excluded_section_tipos() : array {
+
+		if (self::$excluded_section_tipos_loaded===true) {
+			return self::$excluded_section_tipos;
+		}
+
+		// Very early bootstrap (before dd_tipos.php loads): return the current
+		// value uncached so a later call can populate the full list.
+		if (!defined('DEDALO_TEMP_PRESET_SECTION_TIPO')
+			|| !defined('DEDALO_TIME_MACHINE_SECTION_TIPO')
+			|| !defined('USER_ACTIVITY_SECTION_TIPO')) {
+			return self::$excluded_section_tipos;
+		}
+
+		self::$excluded_section_tipos = [
+			DEDALO_TEMP_PRESET_SECTION_TIPO, // dd655 - temporal search presets (automatic saved search configuration)
+			DEDALO_TIME_MACHINE_SECTION_TIPO, // dd15 - time machine section (internal virtual section)
+			USER_ACTIVITY_SECTION_TIPO, // dd1521 - User activity (automatic sumatory of user actions by day)
+		];
+		self::$excluded_section_tipos_loaded = true;
+
+		return self::$excluded_section_tipos;
+	}//end get_excluded_section_tipos
 
 
 
@@ -560,7 +602,7 @@ class logger_backend_activity extends logger_backend {
 		}
 
 		// skip Activity for excluded section_tipos (volatile/utility sections)
-		if (in_array($tipo_where, self::$excluded_section_tipos, true)) {
+		if (in_array($tipo_where, self::get_excluded_section_tipos(), true)) {
 			return;
 		}
 

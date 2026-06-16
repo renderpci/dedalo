@@ -1,5 +1,61 @@
 # component_dataframe
 
+> **Canonical contract (id_key cutover, 2026-06).** A frame pairs to **exactly one data item** of a "main" component via that item's stable server-minted `id`, stored on the frame locator as **`id_key`**, with the positive marker **`type = 'dd490'`** (`DEDALO_RELATION_TYPE_DATAFRAME` / JS `DATAFRAME_TYPE`). Frames live in the **same section record** as the main component, in the `relation` JSONB column under the dataframe component's tipo.
+>
+> **`id_key` is the single pairing key.** The legacy pair `section_id_key` / `section_tipo_key` has been removed from all live dataframe code (`from_legacy` is now id_key-only). It survives ONLY in the **old-CSV import** (`import_dataframe_data`, which accepts a pre-v7 `section_id_key` then strips it) and the **v6→v7 update** (`transform_data` / `v6_to_v7` / `dataframe_v7_migration` and the physical `matrix_time_machine.section_id_key` column). The `dataframe_v7_migration` converts all stored frames to the `id_key` shape. **Even the relation sibling-order is now an id_key dataframe** (see *Relation ordering*).
+
+## The match predicate (single authority)
+
+`trait.dataframe_common::dataframe_entry_matches()` (PHP) and the find in `component_common/js/dataframe.js` (JS) are the ONLY pairing matchers. A frame matches a caller when:
+
+```
+el.type === 'dd490'
+AND el.from_component_tipo  === <slot tipo>        (when the caller supplies one)
+AND el.main_component_tipo  === caller.main_component_tipo
+AND el.id_key               === caller.id_key       (the main item id)
+```
+
+`is_dataframe_entry()` detects a frame purely by `type === 'dd490'`.
+
+## End-to-end data flow
+
+```
+ MAIN COMPONENT (e.g. portal numisdata32, item id = 1, links → material1/3)
+        │  the main item id (1) is the pairing key — never the target section_id (3)
+        ▼
+ CLIENT render
+   relation main:  section_record built per portal entry → self.locator.id (=1)
+                   section_record.js get_component_data(dataframe_id_key = self.locator.id)
+   literal main:   dataframe.js attach_item_dataframe(item.id)
+        │  → self.data.id_key = 1
+        ▼
+ CLIENT save   common.js create_source → source.caller_dataframe = { id_key:1, … }
+               component_dataframe.js create_new_section / link_record → value.id_key = 1
+        ▼
+ SERVER  dd_core_api → component_common::get_instance(caller_dataframe)
+                     → set_caller_dataframe → dataframe_caller DTO (id_key only)
+        ▼
+   get_data():  full slot → filter by dataframe_entry_matches(caller)         [id_key]
+   set_data():  caller-aware merge; stamp caller.id_key on additions; save     [id_key]
+        ▼
+ PERSISTED frame: { type:'dd490', section_tipo, section_id, id_key:1,
+                    from_component_tipo, main_component_tipo, id }
+```
+
+**Time machine:** the main component's save merges `[main items] + [ALL frames, all slots]` into one TM row under the **main** tipo (`get_time_machine_data_to_save`). Restore splits that row back by `is_dataframe_entry` / `from_component_tipo`, rewrites each slot (TM suppressed), then the main save re-captures. The `matrix_id` selects the snapshot.
+
+## `section_id_key` / `section_tipo_key` — where they remain (de-confusion)
+
+Both the dataframe pairing AND the relation sibling-ordering have moved to `id_key`. These property names now survive only at the edges — do not "clean them up" there:
+
+| Bucket | What it is | Status |
+|---|---|---|
+| **A. Dataframe pairing** | the legacy pre-v7 shape of this component | **Removed** → `id_key` |
+| **B. relation_parent ordering** | the per-parent sibling sort order on a `component_number` (`section_map → thesaurus → order`) | **Converted** → the order is now a dataframe of the child's **parent-link locator**, paired by `id_key` (see *Relation ordering* below) |
+| **Old-CSV import** | `import_dataframe_data` reading a pre-v7 export envelope | **Kept** — accepts `section_id_key` as the `id_key` source, then strips it on write |
+| **C. matrix_time_machine `section_id_key` column** | a physical DB column from the old split-storage TM | Drop after migration (`JSON_RecordObj_matrix.php` has a TODO) |
+| **D. v6 / transform / migration** | one-time upgrade code (incl. the migration's own dual-read) | Leave |
+
 ## Overview
 
 ```json
@@ -135,8 +191,8 @@ The edit view renders the frame button next to the second value; reordering or e
 
 The frame stays attached to portal row `id:1` even if that locator is later re-pointed to a different person record, and even when the same target person is linked twice.
 
-!!! warning "Legacy (pre-migration) shape"
-    Data written before the v7 unification uses `section_id_key` / `section_tipo_key` instead of `type` + `id_key`, and relation mains were keyed by the TARGET record's section_id. All readers **dual-read** both shapes (the match predicate and `$test_equal_properties` cover both); the `7.0.1` update (`dataframe_v7_migration`) rewrites matrix data, time machine and activity log to the unified contract. Until then, unmigrated entries keep working through dual-read.
+!!! warning "Legacy (pre-migration) shape — migration is mandatory"
+    Data written before the v7 unification uses `section_id_key` / `section_tipo_key` instead of `type` + `id_key`, and relation mains were keyed by the TARGET record's section_id. **Dual-read has been removed**: readers and the match predicate (`dataframe_entry_matches`, `is_dataframe_entry`, `$test_equal_properties`) recognise only the `type` + `id_key` shape. An unmigrated legacy frame therefore won't pair (it simply won't render) until the `7.0.1` update (`dataframe_v7_migration`) rewrites matrix data, time machine and activity log to the unified contract. Run the migration on every DB before relying on the cutover. The only remaining tolerance for a legacy *input* shape is the **old-CSV import** (`import_dataframe_data`), which accepts a pre-v7 export's `section_id_key` as the `id_key` source and strips the legacy keys on write. `dataframe_caller::from_legacy()` is **id_key-only** — it no longer reads `section_id_key`.
 
 ### Lifecycle
 
@@ -278,7 +334,18 @@ DOM (list / default): `wrapper_component component_dataframe <tipo> <mode>` -> `
 
 Explicit item ids round-trip, which is exactly what keeps `id_key` valid across an export/import cycle.
 
-**Import.** On import the dato is saved as usual, then `import_dataframe_data()` writes the frames, replacing the component's previous frames in each slot (frames of *other* components sharing the slot are preserved). A `{"dedalo_data":{"dataframe":[...]}}` envelope without `dato` writes only the frames. See [importing data](../importing_data.md) and [exporting data](../exporting_data.md), and the *dedalo-import-data* / *dedalo-export* skills.
+**Import.** On import the dato is saved as usual, then `import_dataframe_data()` writes the frames, replacing the component's previous frames in each slot (frames of *other* components sharing the slot are preserved). A `{"dedalo_data":{"dataframe":[...]}}` envelope without `dato` writes only the frames. This is the **one place that still accepts the legacy shape**: a pre-v7 export's `section_id_key` is read as the `id_key` source and the legacy keys are stripped on write. See [importing data](../importing_data.md) and [exporting data](../exporting_data.md), and the *dedalo-import-data* / *dedalo-export* skills.
+
+## Relation ordering (the order is a dataframe)
+
+The sibling sort order of `component_relation_parent` children is itself a dataframe, paired by `id_key` like everything else — there are no exceptions to the contract.
+
+- **What stores it.** A section that participates in ordered hierarchies declares an order component (`section_map → thesaurus → order`, a `component_number`). A child's position under one parent is a single value item of that order component.
+- **The pairing key.** The order value pairs by `id_key` = the **id of the child's parent-link locator** (the entry in the child's `component_relation_parent` that points at this parent). A different parent means a different parent-link locator, a different `id`, and therefore an independent order. Stored shape: `{ value, id_key }` (the old `{ value, section_tipo_key, section_id_key }` is retired).
+- **Inline helpers.** `trait.dataframe_common` exposes the id_key-keyed accessors `get_data_by_id_key()`, `add_value_by_id_key()`, `remove_by_id_key()`, `get_value_by_id_key()`, `update_value_by_id_key()` (formerly the `*_by_context()` methods).
+- **Writing.** `add_parent()` **pre-allocates** the parent locator's `id` (`set_data_item_counter()`) before `set_child_order()` so the order can pair before the save mints ids; `remove_parent()` resolves the id from the stored locator. `sort_children()` and `recalculate_sibling_orders_static()` resolve each child's parent-link id via `component_relation_children::resolve_parent_link_id_key()`.
+- **Reading (list order).** Because `id_key` differs per child, the order cannot be a single constant JSONB predicate. `build_children_sqo()` **precomputes** the order in PHP (`compute_ordered_child_ids()` resolves each child's `id_key` + order value) and emits an explicit `array_position(...)` ordering.
+- **Migration.** `dataframe_v7_migration::migrate_order_components()` converts stored order values to the `id_key` shape (see *Maintenance and migration*).
 
 ## Notes
 
@@ -286,7 +353,8 @@ Explicit item ids round-trip, which is exactly what keeps `id_key` valid across 
     - On the **main component's** diffusion ddo, `"fn": "get_diffusion_data_with_dataframe"` (in `trait.dataframe_common`) publishes the data items with their paired frame locators attached as a `dataframe` property, joined by item id.
     - A **`component_dataframe` ddo** in the diffusion map (with `parent` set to the main component tipo) calls `get_diffusion_data()`, which publishes the parent-scoped frame locators; the chain processor recursion follows them into the frame target section records. Published locators carry `id_key` as the join key. See the *dedalo-diffusion* skill.
 - **Maintenance and migration.**
-    - The `7.0.1` update block runs `dataframe_v7_migration` (`core/base/upgrade/class.dataframe_v7_migration.php`): re-keys legacy locators to the unified contract across matrix tables, time machine (resolved row-locally, since TM rows store main + frames merged) and activity log. Idempotent, batched, dry-run capable; ambiguous pairings attach to the first match and are reported; unresolvable entries stay legacy (dual-read) and are reported.
+    - The `7.0.1` update block runs `dataframe_v7_migration` (`core/base/upgrade/class.dataframe_v7_migration.php`): re-keys legacy locators to the unified contract across matrix tables, time machine (resolved row-locally, since TM rows store main + frames merged) and activity log. Idempotent, batched, dry-run capable; ambiguous pairings attach to the first match and are reported; unresolvable entries stay in their legacy shape and are reported (and — since dual-read is gone — will not render until resolved). Already run on `dedalo7_mib` (`legacy_unmigrated=0`); run it on every other DB before relying on the cutover.
+    - `migrate_order_components()` (same class) migrates the relation sibling-order values in the `number` column from the legacy `{value, section_tipo_key, section_id_key}` shape to `{value, id_key}`, resolving each `id_key` row-locally from the record's parent locators. **Not yet wired into `migrate_all`** — run it explicitly after verifying it on a real database.
     - The `dataframe_control` widget (`core/area_maintenance/widgets/dataframe_control/`) reports frame locators whose main item no longer exists (orphans) and frames pending migration, and can remove orphan locators (target records are never deleted there).
 - **Observers / observables.** Not used by the dataframe button itself; observer/observable wiring, when needed, is configured in the ontology `properties` like any other component (see the index page *Observers and observables* section).
 - **component_iri integration.** `component_iri` ships with a fixed label slot: each IRI row's `id` pairs with a label record in target section `dd1706` through slot `dd560`. `resolve_title()` reads the paired label and falls back to the deprecated literal `title` for unmigrated data.

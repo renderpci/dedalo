@@ -1181,8 +1181,7 @@ export const create_source = function (self, action) {
 					main_component_tipo	: self.caller?.tipo || null,
 					section_tipo		: self.section_tipo,
 					section_id			: self.section_id,
-					section_id_key		: self.data.section_id_key,
-					section_tipo_key	: self.data.section_tipo_key
+					id_key				: self.data.id_key
 				}
 		}
 
