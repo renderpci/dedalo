@@ -391,6 +391,54 @@ class area_maintenance extends area_common {
 
 
 	/**
+	 * GET_AR_WIDGET_IDS
+	 * Lightweight, side-effect-free list of the widget IDs enumerated by
+	 * get_ar_widgets(). Used by the API to validate a requested widget name
+	 * without building every widget — get_ar_widgets() probes diffusion
+	 * connections, reads definition files and runs DB sequence checks, which
+	 * is wasteful (and noisy) for a simple whitelist check on a polled request.
+	 *
+	 * Kept in sync with get_ar_widgets() by the drift guard in
+	 * test/server/area/area_maintenance_Test.php.
+	 * @return array Array of widget id strings.
+	 */
+	public function get_ar_widget_ids(): array {
+
+		return [
+			'make_backup',
+			'check_config',
+			'update_ontology',
+			'register_tools',
+			'move_tld',
+			'move_locator',
+			'move_to_portal',
+			'move_to_table',
+			'move_lang',
+			'build_database_version',
+			'update_data_version',
+			'update_code',
+			'export_hierarchy',
+			'publication_api',
+			'add_hierarchy',
+			'dedalo_api_test_environment',
+			'sqo_test_environment',
+			'lock_components',
+			'php_user',
+			'database_info',
+			'environment',
+			'unit_test',
+			'sequences_status',
+			'media_control',
+			'counters_status',
+			'dataframe_control',
+			'php_info',
+			'system_info'
+		];
+	}//end get_ar_widget_ids
+
+
+
+	/**
 	 * WIDGET_FACTORY
 	 * Unified way to create an area-development widget.
 	 * @param object $item

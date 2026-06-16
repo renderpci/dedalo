@@ -78,6 +78,40 @@ final class area_maintenance_test extends BaseTestCase {
 
 
 	/**
+	* TEST_GET_AR_WIDGET_IDS_MATCHES_GET_AR_WIDGETS
+	* The lightweight whitelist (get_ar_widget_ids) must stay in sync with the
+	* authoritative widget enumeration (get_ar_widgets). This drift guard lets
+	* the API validate widget names without building every widget — which would
+	* otherwise probe diffusion connections, run DB sequence checks, etc. on
+	* every polled request.
+	* @return void
+	*/
+	public function test_get_ar_widget_ids_matches_get_ar_widgets() {
+
+		$area = $this->build_instance();
+
+		$ids		= $area->get_ar_widget_ids();
+		$built_ids	= array_map(fn($widget) => $widget->id, $area->get_ar_widgets());
+
+		// non-empty list of string ids
+		$this->assertNotEmpty($ids, 'expected a non-empty widget id list');
+		foreach ($ids as $id) {
+			$this->assertIsString($id, 'widget id must be a string');
+		}
+
+		// same set, regardless of order
+		sort($ids);
+		sort($built_ids);
+		$this->assertSame(
+			$built_ids,
+			$ids,
+			'get_ar_widget_ids() is out of sync with get_ar_widgets()'
+		);
+	}//end test_get_ar_widget_ids_matches_get_ar_widgets
+
+
+
+	/**
 	* TEST_widget_factory
 	* @return void
 	*/
