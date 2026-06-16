@@ -770,7 +770,7 @@ final class dd_core_api {
 		// activity. Logging activity with Dédalo logger
 			self::log_activity((object)[
 				'rqo'			=> $rqo,
-				'section_id'	=> $response->result->data[0]->value[0]->section_id ?? null
+				'section_id'	=> $response->result->data[0]->entries[0]->section_id ?? null
 			]);
 
 		// debug
@@ -3401,7 +3401,7 @@ final class dd_core_api {
 	public static function get_matrix_ontology_locator( object $rqo ) : object {
 
 		// tipo
-		$source = $rqo->source ?? null;	
+		$source = $rqo->source ?? null;
 
 		$response = new stdClass();
 			$response->result	= false;
