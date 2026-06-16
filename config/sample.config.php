@@ -98,6 +98,15 @@
 		// (CLI/cron retry of pending deletions). Must match DIFFUSION_INTERNAL_TOKEN
 		// in diffusion/api/v1/.env. Leave empty to disable token auth.
 		define('DEDALO_DIFFUSION_INTERNAL_TOKEN', '');
+		// Supervisor command for the 'diffusion_server_control' maintenance widget to
+		// start/stop/restart the Bun diffusion server. '%action%' is replaced by a
+		// validated start|stop|restart keyword (no request data ever reaches the shell).
+		// Empty = lifecycle buttons disabled (status monitoring still works).
+		// Per-platform examples (pick one and adapt the unit/app name):
+		//   Linux (Ubuntu/RHEL, systemd) : 'systemctl --user %action% dedalo-diffusion'
+		//   macOS or any host with pm2   : 'pm2 %action% dedalo-diffusion'
+		//   Custom script                : '/path/to/dedalo-diffusion.sh %action%'
+		define('DEDALO_DIFFUSION_SERVICE_CMD', '');
 
 
 

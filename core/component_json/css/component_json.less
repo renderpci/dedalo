@@ -115,6 +115,8 @@
 	&.view_collapse {
 		cursor: n-resize;
 		line-height: 1.1rem;
+		// positioning context for the always-visible "Go to record" button
+		position: relative;
 
 		&:hover {
 			background-color: @color_hilite_3;
@@ -124,6 +126,53 @@
 			cursor: s-resize;
 			height: 2.5rem;
 			overflow: hidden;
+		}
+
+		// Activity (dd542) "Go to record" icon. Pinned to the cell's right-hand
+		// zone and kept inside the always-visible 2.5rem band so it stays
+		// accessible whether the row is collapsed or expanded. Icon-only (the
+		// "Go to record" text lives in title / aria-label); the shape is a CSS
+		// mask tinted via background-color.
+		.activity_record_button {
+			position: absolute;
+			top: 0.5rem;
+			right: 0.6rem;
+			display: inline-block;
+			width: 1.1rem;
+			height: 1.1rem;
+			background-color: var(--color_primary);
+			cursor: pointer;
+			opacity: 0.75;
+
+			-webkit-mask-image: url('../../themes/default/icons/arrow_link.svg');
+					mask-image: url('../../themes/default/icons/arrow_link.svg');
+			-webkit-mask-size: contain;
+					mask-size: contain;
+			-webkit-mask-repeat: no-repeat;
+					mask-repeat: no-repeat;
+			-webkit-mask-position: center;
+					mask-position: center;
+
+			&:hover {
+				opacity: 1;
+			}
+
+			// Visited state: soften so already-opened records are easy to spot
+			// when scanning a long activity list.
+			//  - `:visited` persists across reloads via browser history. Per CSS
+			//    privacy rules only color is allowed there, so it greys the icon.
+			//  - `.visited` is added on click (view_collapse_list_json.js) for
+			//    immediate feedback in the current list, and additionally dims it.
+			&:visited {
+				background-color: @color_grey_10;
+			}
+			&.visited {
+				background-color: @color_grey_10;
+				opacity: 0.4;
+			}
+			&.visited:hover {
+				opacity: 0.7;
+			}
 		}
 	}
 

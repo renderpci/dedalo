@@ -27,6 +27,7 @@
 *   - view_collapse_list_json        – view namespace / constructor stub
 *   - view_collapse_list_json.render – async factory that returns the wrapper node
 *   - get_value_string               – pure helper for computing the display string
+*   - build_record_link              – Activity (dd542) "Go to record" button builder
 */
 export const view_collapse_list_json = function() {
 
@@ -79,6 +80,21 @@ view_collapse_list_json.render = async function(self, options) {
 					}
 				}
 		})
+
+	// Activity (dd542): append a "Go to record" button that opens the visited
+	// record in edit mode in a new browser tab. Rendered as a real anchor with
+	// its own click handler so it neither toggles the row collapse nor relies on
+	// the value_string innerHTML; CSS pins it to the row's right-hand zone so it
+	// stays visible whether the row is collapsed or expanded. build_record_link
+	// returns null when the entry has no usable section_id / tipo (older rows
+	// logged before section_id was captured), in which case the row keeps the
+	// plain key:value summary with no button.
+		if (self.section_tipo==='dd542') {
+			const record_link = build_record_link( self.data.entries?.[0]?.value )
+			if (record_link) {
+				wrapper.appendChild(record_link)
+			}
+		}
 
 
 	return wrapper
@@ -152,6 +168,89 @@ export const get_value_string = function(self) {
 
 	return value_string
 }//end get_value_string
+
+
+
+/**
+* BUILD_RECORD_LINK
+* Build a "Go to record" icon button (an anchor rendered as an icon) that opens
+* the record referenced by an Activity (dd542) DATA entry in edit mode, in a new
+* browser tab. The "Go to record" text is exposed as the icon's title / aria-label.
+*
+* The activity DATA value has the shape `{ id, msg, tipo }`, where `id` is the
+* section_id of the record the user visited in edit mode and `tipo` is its
+* section_tipo (for a section, section_tipo === tipo). The button uses Dédalo's
+* deep-link URL scheme, resolved by the server `start` action on a fresh page
+* load:
+*
+*   <page_path>?tipo=<tipo>&id=<section_id>&mode=edit&menu=false&session_save=false
+*
+* `section_tipo` is omitted because the server falls back to `section_tipo = tipo`
+* (correct for a section). `menu=false` opens a clean standalone record view;
+* `session_save=false` prevents the new tab from overwriting the main window's
+* session SQO for this section.
+*
+* Returns null when the value lacks a usable section_id or tipo — e.g. older
+* activity rows logged before section_id capture, or non-edit events — so the
+* caller renders the plain key:value summary with no button (no regression).
+*
+* The returned anchor stops click propagation so that pressing the button does
+* not also toggle the row's collapse state.
+*
+* @param {Object} value - Stored activity DATA object `{ id, msg, tipo }`.
+* @returns {HTMLAnchorElement|null} Button anchor node, or null when not linkable.
+*/
+export const build_record_link = function(value) {
+
+	// section_id. Require a positive integer (older rows log null / absent)
+		const section_id = parseInt(value?.id, 10)
+		if (!Number.isInteger(section_id) || section_id < 1) {
+			return null
+		}
+
+	// tipo. Require a non-empty string (section_tipo of the visited record)
+		const tipo = value?.tipo
+		if (typeof tipo!=='string' || tipo==='') {
+			return null
+		}
+
+	// href. Deep-link to the record in edit mode. Resolved by the server
+	// `start` action when the new tab loads (reads these URL params).
+		const href = window.location.pathname
+			+ '?tipo='          + encodeURIComponent(tipo)
+			+ '&id='            + encodeURIComponent(section_id)
+			+ '&mode=edit'
+			+ '&menu=false'
+			+ '&session_save=false'
+
+	// icon button (anchor rendered as an icon via .activity_record_button; the
+	// icon shape is a CSS mask, see component_json.less). Icon-only to stay
+	// unobtrusive in the row; the label is exposed via title (tooltip) and
+	// aria-label only. Kept as an <a target="_blank"> so middle-click and
+	// modifier-click open new tabs natively.
+		const label = get_label.go_to_record || 'Go to record'
+		const anchor = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'activity_record_button'
+		})
+		anchor.href		= href
+		anchor.target	= '_blank'
+		anchor.rel		= 'noopener'
+		anchor.title	= label
+		anchor.setAttribute('aria-label', label)
+		anchor.addEventListener('click', (e) => {
+			// Do not toggle the row collapse when the button itself is clicked.
+			e.stopPropagation()
+			// Mark as visited for immediate feedback so already-opened records
+			// are easy to spot while scanning a long activity list. (The native
+			// :visited pseudo-class also softens the icon across reloads via
+			// browser history — see component_json.less.)
+			anchor.classList.add('visited')
+		})
+
+
+	return anchor
+}//end build_record_link
 
 
 

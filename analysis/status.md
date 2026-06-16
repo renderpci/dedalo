@@ -6,8 +6,7 @@ Information regarding project tasks and migration progress. NOT for agents.
 
 ### V6 to V7 Migration
 
-1. **Installation**: Refactor for clean installation and v6 migration compatibility.
-2. **Ontology Update**: Export from version 6 and import into master v7.
+1. **Installation**: Refactor for clean installation and v6 migration compatibility. It depends of the config refactor.
 OK - 3. **Time Machine**:
     * Fix broken section (dd15) and search functionality.
     * Review component history inspector and fix (error: matrix_db_manager::read Invalid table. This table is not allowed to load matrix data.)
