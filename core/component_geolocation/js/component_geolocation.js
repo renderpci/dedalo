@@ -41,8 +41,10 @@
 * ```
 *
 * Provider switch: controlled by `context.features.geo_provider` (OSM | GOOGLE |
-* ARCGIS | NUMISDATA | VARIOUS). Only OSM has automatic light/dark tile swapping
-* via a MutationObserver on `document.documentElement[data-theme]`.
+* ARCGIS | NUMISDATA | VARIOUS). For OSM, dark mode keeps the standard OSM tiles
+* and darkens them with a CSS filter on `.leaflet-layer` (see the dark mode block
+* in component_geolocation.less); a MutationObserver on
+* `document.documentElement[data-theme]` rebuilds the tile layer on theme changes.
 *
 * Main exports: `component_geolocation` constructor.
 */
@@ -59,19 +61,20 @@
 
 
 // OSM tile URLs per theme
-// To switch to MapTiler dark tiles once you have an API key, replace TILE_URLS.dark with:
-// 'https://api.maptiler.com/maps/streets-v4-dark/{z}/{x}/{y}.png?key=YOUR_KEY'
+// Dark mode keeps the standard OSM tiles; the visual darkening is done purely with
+// a CSS filter on `.leaflet-layer` (see the dark mode block in component_geolocation.less).
+// Both themes therefore point to the same OSM tile source.
 
 /** @type {Object} Leaflet tile URL templates indexed by UI theme name. */
 const TILE_URLS = {
 	light : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-	dark  : 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+	dark  : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 }
 
 /** @type {Object} Attribution HTML strings to display below the map per theme. */
 const TILE_ATTR = {
 	light : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-	dark  : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+	dark  : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 }
 
 /**

@@ -227,6 +227,13 @@
 	// --- DARK MODE ---
 	:root[data-theme="dark"] & {
 
+		// Darken the standard OSM tiles with a CSS filter (no dark tile provider).
+		// Applied only to the tile pane (.leaflet-layer); controls keep their
+		// variable-based dark styling below so they stay readable.
+		.leaflet-layer {
+			filter : brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3) brightness(0.6);
+		}
+
 		// coordinate overlay panel
 		.map_inputs {
 			color        : var(--fg_default);
@@ -257,11 +264,16 @@
 			color            : var(--fg_muted);
 		}
 
-		// Leaflet layers control (expanded panel)
+		// Leaflet layers control (collapsed container + expanded panel)
+		.leaflet-control-layers,
 		.leaflet-control-layers-expanded {
 			background-color : var(--bg_elevated);
 			color            : var(--fg_default);
 			border-color     : var(--border_default);
+		}
+		// layers toggle icon (dark by default → invert so it shows on dark bg)
+		.leaflet-control-layers-toggle {
+			filter : invert(1) hue-rotate(180deg);
 		}
 
 		// Leaflet popups
