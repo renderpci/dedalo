@@ -960,8 +960,8 @@ component_portal.prototype.build = async function(autoload=false) {
 *     new `total` against `total_before`.  If the server total did not increase, the
 *     locator already existed in the full (non-paginated) dataset.
 *
-* For `component_dataframe` models, pairing keys (`type`, `id_key`, `section_id_key`,
-* `section_tipo_key`, `main_component_tipo`) are copied from `self.data` into the
+* For `component_dataframe` models, the pairing keys (`type`, `id_key` — the main
+* data item id — and `main_component_tipo`) are copied from `self.data` into the
 * locator before the API call so the server can attach the correct dataframe stub.
 *
 * (!) `self.data.pagination.limit` is explicitly set before calling `change_value` so
@@ -1011,14 +1011,13 @@ component_portal.prototype.link_record = async function(value) {
 		value.from_component_tipo = self.tipo
 
 	// dataframe case
-	// pairing keys are copied from the instance data stub (built by get_dataframe):
-	// type + id_key are the unified contract; legacy keys are kept until the
-	// data migration runs
+	// Unified contract: the persisted frame carries only the unified pairing key
+	// id_key (the MAIN DATA ITEM id) plus the type marker and main_component_tipo.
+	// id_key is sourced exclusively from self.data.id_key (the item id threaded by
+	// section_record.js); it is NEVER derived from a section_id / section_id_key.
 		if(self.model === 'component_dataframe'){
 			value.type					= self.data.type ?? value.type
-			value.id_key				= self.data.id_key ?? self.data.section_id_key
-			value.section_id_key		= self.data.section_id_key
-			value.section_tipo_key		= self.data.section_tipo_key
+			value.id_key				= self.data.id_key
 			value.main_component_tipo	= self.data.main_component_tipo
 		}
 
