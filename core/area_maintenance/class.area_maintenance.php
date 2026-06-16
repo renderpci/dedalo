@@ -231,6 +231,16 @@ class area_maintenance extends area_common {
 		];
 		$ar_widgets[] = $this->widget_factory($item);
 
+		// diffusion_server_control *
+		$item = new stdClass();
+		$item->id = 'diffusion_server_control';
+		$item->category = 'diffusion';
+		$item->type = 'widget';
+		$item->background = true; // load at idle while collapsed to surface server-down status
+		$item->tipo = $this->tipo;
+		$item->label = label::get_label('diffusion_server_control') ?? 'Diffusion server control';
+		$ar_widgets[] = $this->widget_factory($item);
+
 		// add_hierarchy *
 		$item = new stdClass();
 		$item->id = 'add_hierarchy';
@@ -419,6 +429,7 @@ class area_maintenance extends area_common {
 			'update_code',
 			'export_hierarchy',
 			'publication_api',
+			'diffusion_server_control',
 			'add_hierarchy',
 			'dedalo_api_test_environment',
 			'sqo_test_environment',
