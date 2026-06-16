@@ -192,12 +192,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 15 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 35;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1) bellow 35 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(1) bellow 35 ms', $total_time, 35);
 
 		// Check result type
 		$eq = gettype($result) === 'integer';
@@ -226,12 +221,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 1.5 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
-		$eq = $total_time < 3;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (2) bellow 3 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(2) bellow 3 ms', $total_time, 3);
 
 		// Check result type
 		$eq = gettype($result) === 'integer';
@@ -292,12 +282,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 2 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 5;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1): bellow 5 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(1): bellow 5 ms', $total_time, 5);
 
 		// Check result type
 		$eq = gettype($result) === 'object';
@@ -319,12 +304,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.25 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (2: " . $total_time, logger::ERROR);
-		$eq = $total_time < 1;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1): bellow 1 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(1): bellow 1 ms', $total_time, 1);
 
 		// Check result type
 		$eq = gettype($result) === 'object';
@@ -346,12 +326,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.25 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (3: " . $total_time, logger::ERROR);
-		$eq = $total_time < 1;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1): bellow 1 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(1): bellow 1 ms', $total_time, 1);
 
 		// Reading non existing record
 		$result = matrix_db_manager::read(
@@ -416,12 +391,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.4 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 3;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1): bellow 3 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(1): bellow 3 ms', $total_time, 3);
 
 		// Check result type
 		$eq = gettype($result) === 'boolean';
@@ -462,12 +432,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 5 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
-		$eq = $total_time < 8;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1): bellow 8 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(1): bellow 8 ms', $total_time, 8);
 
 		// Read
 		$result = matrix_db_manager::read(
@@ -565,12 +530,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.4 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 5;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1): bellow 5 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(1): bellow 5 ms', $total_time, 5);
 
 		// Check result type
 		$eq = gettype($result) === 'boolean';
@@ -783,12 +743,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.4 ms
 		$total_time = exec_time_unit($start_time);
 		// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 5;
-		$this->assertTrue(
-			$eq,
-			'expected execution time  delete (1): bellow 5 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('delete (1): bellow 5 ms', $total_time, 5);
 
 		// Check result type
 		$eq = gettype($result) === 'boolean';
@@ -882,12 +837,7 @@ final class matrix_db_manager_test extends BaseTestCase {
 
 		// Check the time consuming. Expected value is around 2 ms
 		$total_time = exec_time_unit($start_time);
-		$eq = $total_time < 10;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1): bellow 10 ms' . PHP_EOL
-				. 'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('(1): bellow 10 ms', $total_time, 10);
 
 		// Check result type (should be PgSql\Result)
 		$eq = $result !== false;

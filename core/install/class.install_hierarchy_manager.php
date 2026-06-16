@@ -53,7 +53,14 @@
 * @package Dédalo
 * @subpackage Install
 */
-class install_hierarchy_manager {
+final class install_hierarchy_manager {
+
+	/**
+	* CONSTRUCTOR
+	* Static-only utility: instantiation is disallowed.
+	*/
+	private function __construct() {}
+
 
 	/**
 	* GET_AVAILABLE_HIERARCHY_FILES
@@ -328,11 +335,6 @@ class install_hierarchy_manager {
 	*      pointing to section_id '2' of '<tld>2' (root model node).  Written only
 	*      if the corresponding model .copy.gz file exists on disk.
 	*
-	* (!) DEDALO_HIERARCHY_LABEL_TIPO is referenced in step 3 but has no
-	*     corresponding define() in core/base/dd_tipos.php.  This will cause a
-	*     fatal PHP error if step 3 is reached on a standard installation.
-	*     The inline comment '// hierarchy7' indicates the intended constant value.
-	*
 	* @param object $options — descriptor for the hierarchy to activate. Expected keys:
 	*   - tld               string  e.g. 'fauna'
 	*   - typology          int     e.g. 1 (Thematic), 2 (Toponymy) — see hierarchies_typologies.json
@@ -442,12 +444,6 @@ class install_hierarchy_manager {
 					$component->Save();
 
 				// label
-					// (!) DEDALO_HIERARCHY_LABEL_TIPO is used here but is not defined
-					// in core/base/dd_tipos.php. The inline comment '// hierarchy7'
-					// indicates the intended ontology tipo. This will cause a fatal
-					// PHP "Use of undefined constant" error at runtime on a standard
-					// installation. Define the constant or replace the reference with
-					// the literal 'hierarchy7' to fix.
 					$label_tipo	= DEDALO_HIERARCHY_LABEL_TIPO; // hierarchy7
 					$model_name	= ontology_node::get_model_by_tipo($label_tipo, true);
 					$component	= component_common::get_instance(

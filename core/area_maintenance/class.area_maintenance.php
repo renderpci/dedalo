@@ -38,10 +38,8 @@ class area_maintenance extends area_common {
 	 * SEC-044: explicit allowlist of methods callable through
 	 * `dd_area_maintenance_api::class_request` (synchronous OR async).
 	 * Without this constant, `class_request` falls back to "any public-static
-	 * method on the class", exposing every helper on this class
-	 * (`get_file_constants`, `get_definitions_files`, `set_maintenance_mode`,
-	 * `set_recovery_mode`, `restore_dd_ontology_recovery_from_file`, …) to
-	 * invocation by anyone with maintenance-area write.
+	 * method on the class", exposing every helper on this class to invocation
+	 * by anyone with maintenance-area write.
 	 *
 	 * The list below is derived by grepping `dd_area_maintenance_api` and
 	 * `action: 'class_request'` under the area_maintenance widgets JS tree
@@ -55,7 +53,11 @@ class area_maintenance extends area_common {
 	public const array API_ACTIONS = [
 		'create_test_record',
 		'long_process_stream',
-		'rebuild_lang_files'
+		'rebuild_lang_files',
+		'restore_dd_ontology_recovery_from_file',
+		'set_maintenance_mode',
+		'set_notification',
+		'set_recovery_mode',
 	];
 
 
@@ -188,6 +190,7 @@ class area_maintenance extends area_common {
 		$item->category = 'data';
 		$item->class = 'success width_100';
 		$item->type = 'widget';
+		$item->background = true; // load at idle while collapsed to surface available-update status
 		$item->tipo = $this->tipo;
 		$item->label = label::get_label('update') . ' ' . label::get_label('data');
 		$ar_widgets[] = $this->widget_factory($item);
@@ -372,6 +375,7 @@ class area_maintenance extends area_common {
 		$item->id = 'system_info';
 		$item->category = 'system';
 		$item->type = 'widget';
+		$item->background = true; // load at idle while collapsed to surface server-issue status
 		$item->tipo = $this->tipo;
 		$item->label = 'SYSTEM INFO';
 		$item->class = 'width_100';
@@ -383,6 +387,54 @@ class area_maintenance extends area_common {
 
 		return $ar_widgets;
 	}//end get_ar_widgets
+
+
+
+	/**
+	 * GET_AR_WIDGET_IDS
+	 * Lightweight, side-effect-free list of the widget IDs enumerated by
+	 * get_ar_widgets(). Used by the API to validate a requested widget name
+	 * without building every widget — get_ar_widgets() probes diffusion
+	 * connections, reads definition files and runs DB sequence checks, which
+	 * is wasteful (and noisy) for a simple whitelist check on a polled request.
+	 *
+	 * Kept in sync with get_ar_widgets() by the drift guard in
+	 * test/server/area/area_maintenance_Test.php.
+	 * @return array Array of widget id strings.
+	 */
+	public function get_ar_widget_ids(): array {
+
+		return [
+			'make_backup',
+			'check_config',
+			'update_ontology',
+			'register_tools',
+			'move_tld',
+			'move_locator',
+			'move_to_portal',
+			'move_to_table',
+			'move_lang',
+			'build_database_version',
+			'update_data_version',
+			'update_code',
+			'export_hierarchy',
+			'publication_api',
+			'add_hierarchy',
+			'dedalo_api_test_environment',
+			'sqo_test_environment',
+			'lock_components',
+			'php_user',
+			'database_info',
+			'environment',
+			'unit_test',
+			'sequences_status',
+			'media_control',
+			'counters_status',
+			'dataframe_control',
+			'php_info',
+			'system_info'
+		];
+	}//end get_ar_widget_ids
 
 
 
@@ -407,6 +459,7 @@ class area_maintenance extends area_common {
 		$widget->run = $item->run ?? [];
 		$widget->trigger = $item->trigger ?? null;
 		$widget->value = $item->value ?? null;
+		$widget->background = $item->background ?? false;
 
 
 		return $widget;

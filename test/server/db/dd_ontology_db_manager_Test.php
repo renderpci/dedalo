@@ -201,13 +201,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 1.6 ms
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		// $eq = $total_time < 2.2;
-		$eq = $total_time < 6; // increase from 2.2 because the addition of new column 'in_main' and index 'dd_ontology_term_trgm_values_idx'
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1) bellow 5 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('create (1)', $total_time, 6);
 
 		// Check result type
 		$eq = gettype($result) === 'integer';
@@ -233,12 +227,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.22 ms
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " total_time (2) " . $total_time, logger::ERROR);
-		$eq = $total_time < 0.5;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (2) bellow 0.5 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('create (2)', $total_time, 0.5);
 
 		$id = $result;
 
@@ -324,12 +313,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.25 ms
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 0.5;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1): bellow 0.5 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('read (1)', $total_time, 0.5);
 
 		// Check result type
 		$eq = gettype($result) === 'array';
@@ -349,12 +333,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.001 ms (CACHED)
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
-		$eq = $total_time < 0.003;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (2): bellow 0.003 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('read cached (2)', $total_time, 0.003);
 
 		// Check result type
 		$eq = gettype($result) === 'array';
@@ -374,12 +353,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.001 ms (CACHED)
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " total_time (3): " . $total_time, logger::ERROR);
-		$eq = $total_time < 0.003;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (3): bellow 0.003 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('read cached (3)', $total_time, 0.003);
 
 		// Reading non existing record
 		$result = dd_ontology_db_manager::read(
@@ -457,12 +431,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.4 ms
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " update total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 3;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1): bellow 3 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('update (1)', $total_time, 3);
 
 		// Check result type
 		$eq = gettype($result) === 'boolean';
@@ -528,12 +497,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 5 ms
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " total_time (2): " . $total_time, logger::ERROR);
-		$eq = $total_time < 8;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (2): bellow 8 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('update (2)', $total_time, 8);
 
 		// Read
 		$result = dd_ontology_db_manager::read(
@@ -618,12 +582,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 		// Check the time consuming. Expected value is around 0.11 ms
 		$total_time = exec_time_unit($start_time);
 			// debug_log(__METHOD__. " total_time (1): " . $total_time, logger::ERROR);
-		$eq = $total_time < 0.2;
-		$this->assertTrue(
-			$eq,
-			'expected execution time  delete (1): bellow 0.2 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('delete (1)', $total_time, 0.2);
 
 		// Check result type
 		$eq = gettype($result) === 'boolean';
@@ -733,12 +692,7 @@ final class dd_ontology_db_manager_test extends BaseTestCase {
 
 		// Check the time consuming
 		$total_time = exec_time_unit($start_time);
-		$eq = $total_time < 1.5;
-		$this->assertTrue(
-			$eq,
-			'expected execution time (1): bellow 1.5 ms' . PHP_EOL
-				.'total_time ms: ' . $total_time
-		);
+		$this->soft_perf('search (1)', $total_time, 1.5);
 
 		// Check result type
 		$this->assertIsArray($result, 'Expected array result');

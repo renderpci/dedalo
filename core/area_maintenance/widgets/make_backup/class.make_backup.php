@@ -121,7 +121,7 @@ class make_backup {
 
 			// psql_backup_files
 				if ($psql_backup_files===true) {
-					$files = backup::get_backup_files(); // postgresql files
+					$files = backup::get_backup_files(); // PostgreSQL files
 					$result->psql_backup_files = array_slice($files, 0, $max_files); // first N items
 				}
 

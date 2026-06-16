@@ -1981,6 +1981,23 @@ component_text_area.prototype.focus_first_input = function() {
 
 	const self = this
 
+	// Bring the component on screen first, independent of editor readiness.
+	// The CKEditor is lazy-initialised on viewport entry, so relying on
+	// service.focus() to scroll deadlocks when the component is restored
+	// off-screen (restore_section_selection): the scroll would wait for the
+	// editor, but the editor only initialises once the component is scrolled
+	// into view. Scrolling the wrapper directly (like component_svg) breaks
+	// the cycle; block:'nearest' is a no-op when it is already visible (normal
+	// click case). Deferred one frame so the section layout has settled.
+	const wrapper = self.node
+	if (wrapper && typeof wrapper.scrollIntoView==='function') {
+		requestAnimationFrame(() => {
+			if (self.active) {
+				wrapper.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+			}
+		})
+	}
+
 	const service = self.text_editor[0]?.editor
 	if (service) {
 

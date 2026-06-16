@@ -194,7 +194,7 @@ final class install_data_seeder_Test extends BaseTestCase
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
 		$this->assertStringContainsString('@subpackage Install', $content);
 	}//end test_class_has_docblock
 
@@ -427,8 +427,14 @@ final class install_data_seeder_Test extends BaseTestCase
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
 
-		$this->assertStringContainsString('TRUNCATE "matrix_test"', $content);
-		$this->assertStringContainsString('RESTART WITH 1', $content);
+		// create_test_record() builds the SQL from a $table variable set to 'matrix_test',
+		// so the TRUNCATE/ALTER SEQUENCE statements reference the interpolated $table rather
+		// than the literal table name. Assert the real literals that prove truncate + reseed.
+		$this->assertStringContainsString("\$table\t\t\t\t= 'matrix_test';", $content);
+		$this->assertStringContainsString('TRUNCATE "\'.$table.\'"', $content);
+		$this->assertStringContainsString('ALTER SEQUENCE \'.$table.\'_id_seq RESTART WITH 1', $content);
+		$this->assertStringContainsString("\$section_tipo\t\t= 'test3';", $content);
+		$this->assertStringContainsString("(\"section_id\", \"section_tipo\", \"data\") VALUES (\\'1\\', \\''.\$section_tipo.'\\'", $content);
 	}//end test_create_test_record_truncates_matrix_test
 
 
@@ -525,7 +531,7 @@ final class install_data_seeder_Test extends BaseTestCase
 
 		// Class should have comprehensive docblock
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
 		$this->assertStringContainsString('@subpackage Install', $content);
 
 		// Methods should have docblocks
@@ -544,9 +550,10 @@ final class install_data_seeder_Test extends BaseTestCase
 	public function test_class_is_testable(): void
 	{
 
-		// Class should be static-only (easy to test)
+		// Class should be static-only (easy to test): no constructor, or a non-public one
 		$reflection = new ReflectionClass('install_data_seeder');
-		$this->assertNull($reflection->getConstructor());
+		$c = $reflection->getConstructor();
+		$this->assertTrue($c === null || !$c->isPublic());
 
 		// Methods should be public and static
 		$methods = $reflection->getMethods(ReflectionMethod::IS_PUBLIC);
@@ -648,12 +655,12 @@ final class install_data_seeder_Test extends BaseTestCase
 		$file = DEDALO_CORE_PATH . '/install/class.install_data_seeder.php';
 		$content = file_get_contents($file);
 
-		// Class docblock should describe single responsibility
-		$this->assertStringContainsString('Encapsulates seeding of default data', $content);
+		// Class docblock should describe single responsibility: seeding bootstrap data
+		$this->assertStringContainsString('Seeds the mandatory bootstrap rows', $content);
 		$this->assertStringContainsString('root user', $content);
-		$this->assertStringContainsString('main project', $content);
+		$this->assertStringContainsString('General project', $content);
 		$this->assertStringContainsString('profiles', $content);
-		$this->assertStringContainsString('test record', $content);
+		$this->assertStringContainsString('matrix_test', $content);
 
 		// All methods should be related to data seeding
 		$this->assertStringContainsString('create', $content);

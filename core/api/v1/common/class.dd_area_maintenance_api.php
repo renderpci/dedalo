@@ -278,9 +278,12 @@ final class dd_area_maintenance_api {
 			// renders; any model name not in that list is rejected before we touch
 			// the filesystem. This guards against sanitize_key_dir edge-cases and
 			// any future widget directories that should not be remotely callable.
+			// get_ar_widget_ids() returns just the IDs (kept in sync with
+			// get_ar_widgets() by a drift test) so a polled widget_request does not
+			// build every widget — which would probe diffusion connections, read
+			// definition files and run DB sequence checks on each call.
 			$area_maintenance		= area_common::get_instance('area_maintenance', DEDALO_AREA_MAINTENANCE_TIPO, 'list');
-			$ar_widgets				= $area_maintenance->get_ar_widgets();
-			$valid_widget_ids		= array_map(fn($widget) => $widget->id, $ar_widgets);
+			$valid_widget_ids		= $area_maintenance->get_ar_widget_ids();
 			if (!in_array($class_name, $valid_widget_ids)) {
 				$response->errors[] = 'Invalid widget name: ' . $class_name;
 				debug_log(__METHOD__ . ' Error: Widget not in whitelist: ' . $class_name, logger::ERROR);

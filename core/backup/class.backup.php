@@ -261,6 +261,13 @@ abstract class backup {
 				$process	= new process($command);
 				$pid		= $process->getPid();
 
+				// register the process so dd_utils_api::get_process_status can verify ownership
+				processes::add(
+					(int)$user_id,
+					$pid,
+					$pfile
+				);
+
 		}catch (Exception $e) {
 
 			$msg = "Error on backup_sequence. User: $username. - error: ".  $e->getMessage(). "\n";

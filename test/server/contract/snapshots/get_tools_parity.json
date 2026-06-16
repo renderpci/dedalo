@@ -6,12 +6,14 @@
         "tool_time_machine"
     ],
     "section_oh1": [
+        "tool_diffusion",
         "tool_export",
         "tool_import_dedalo_csv",
         "tool_time_machine",
         "tool_update_cache"
     ],
     "section_test3": [
+        "tool_diffusion",
         "tool_export",
         "tool_import_dedalo_csv",
         "tool_time_machine",

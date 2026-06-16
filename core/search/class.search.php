@@ -164,6 +164,13 @@ class search {
 	public string $main_section_tipo_alias;
 
 	/**
+	* Monotonic counter used to give each multi-step filter clause a unique join
+	* alias namespace, so same-path clauses get independent joins (cross-record AND/OR).
+	* @var int $join_counter
+	*/
+	public int $join_counter = 0;
+
+	/**
 	* Primary PostgreSQL matrix table name (e.g. 'matrix_default', 'matrix_list').
 	* Resolved in set_up() from the first resolvable entry in $ar_section_tipo via
 	* `common::get_matrix_table_from_tipo()`. search_tm fixes this to
@@ -309,6 +316,12 @@ class search {
 			$this->sql_obj->select			= [];
 			$this->sql_obj->from			= [];
 			$this->sql_obj->join			= [];
+			// Set of join aliases already emitted into ->join, keyed by alias name. Prevents
+			// the same table alias being joined twice (PostgreSQL "table name specified more
+			// than once"). This happens when the same (path, join_id) reaches build_sql_join
+			// more than once — e.g. add_relation_search() wraps a clause in {$or:[clause, clone]}
+			// and for the '=='/default operator the clone is identical to the original.
+			$this->sql_obj->joined_aliases	= [];
 			$this->sql_obj->main_where		= [];
 			$this->sql_obj->where			= [];
 			$this->sql_obj->order			= [];
@@ -729,6 +742,7 @@ class search {
 		if (!empty($this->sqo->filter)) {
 			// conform_filter. Conform recursively each filter object asking the components
 			foreach ($this->sqo->filter as $op => $filter_items) {
+				$this->join_counter = 0;
 				$new_sqo_filter = $this->conform_filter($op, $filter_items);
 				break; // Only expected one
 			}
@@ -876,7 +890,13 @@ class search {
 					throw new Exception("Error: invalid lang in search filter", 1);
 				}
 
-				$search_object->table_alias	= $this->get_table_alias_from_path( $path );
+				// Multi-step paths (value lives inside a related record reached through a
+				// relation/portal) get a unique join_id so each clause traverses the relation
+				// INDEPENDENTLY. This makes "value A AND value B" match across different linked
+				// records, not within a single one. Single-step paths keep join_id null (legacy).
+				$join_id = (count($path) > 1) ? ++$this->join_counter : null;
+				$search_object->join_id		= $join_id;
+				$search_object->table_alias	= $this->get_table_alias_from_path( $path, $join_id );
 				$search_object->table		= $this->matrix_table;
 
 				// Case object is a end search object
@@ -1076,6 +1096,13 @@ class search {
 			// Pre-parse search_query_object with components always before begins
 			$this->parse_sqo();
 		}
+
+		// Reset the join accumulator and its alias dedup set before (re)building. The
+		// assemblers below rebuild all joins from the conformed SQO, so a clean slate keeps
+		// repeated parses on a reused instance from accumulating duplicate joins and keeps
+		// joined_aliases consistent with ->join.
+		$this->sql_obj->join			= [];
+		$this->sql_obj->joined_aliases	= [];
 
 		$search_type = null;
 

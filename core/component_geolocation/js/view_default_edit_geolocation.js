@@ -5,7 +5,7 @@
 
 
 // imports
-	import {when_in_viewport,dd_request_idle_callback} from '../../common/js/events.js'
+	import {lazy_in_viewport, fade_in_on_reveal, dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -342,15 +342,19 @@ export const get_content_value = (i, current_value, self) =>{
 		})
 		// set pointers
 		content_value.map_container = map_container
+		// start invisible for a smooth fade-in once the map is ready (shared contract)
+		const reveal = fade_in_on_reveal(map_container)
 
 	// init the map with the wrapper when container node is in viewport
 		// Deferring map init until the element is visible avoids a known Leaflet issue where
 		// tiles are mis-sized when initialised inside a hidden/zero-height container.
-		when_in_viewport(
+		lazy_in_viewport(
 			map_container,
 			() => {
 				self.get_map(map_container, i)
 				.then(()=>{
+					// fade the map in now that Leaflet has initialised
+					reveal()
 					self.layers_loader({
 						load: 'full'
 					})
@@ -364,6 +368,7 @@ export const get_content_value = (i, current_value, self) =>{
 					resize_observer.observe( content_value )
 					self.resize_observers.push(resize_observer)
 				})
+				.catch(()=> reveal())
 			}
 		);
 
@@ -409,13 +414,17 @@ export const get_content_value_read = (i, current_value, self) =>{
 		})
 		// set pointers
 		content_value.map_container = map_container
+		// start invisible for a smooth fade-in once the map is ready (shared contract)
+		const reveal = fade_in_on_reveal(map_container)
 
 	// init the map with the wrapper when container node is in viewport
-		when_in_viewport(
+		lazy_in_viewport(
 			map_container,
 			() => {
 				self.get_map(map_container, i)
 				.then(()=>{
+					// fade the map in now that Leaflet has initialised
+					reveal()
 					self.layers_loader({
 						load: 'full'
 					})
@@ -429,6 +438,7 @@ export const get_content_value_read = (i, current_value, self) =>{
 					resize_observer.observe( content_value )
 					self.resize_observers.push(resize_observer)
 				})
+				.catch(()=> reveal())
 			}
 		);
 

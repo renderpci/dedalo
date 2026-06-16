@@ -54,6 +54,7 @@
 // imports
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {common} from '../../../common/js/common.js'
+	import {ui} from '../../../common/js/ui.js'
 
 
 
@@ -265,6 +266,74 @@ widget_common.prototype.build = async function(autoload=false) {
 
 	return true
 }//end build
+
+
+
+/**
+* LOAD
+* Unified lazy data loader for maintenance widgets. Fetches the widget value
+* exactly once (guarded), then repaints the body content by re-rendering at
+* render_level 'content' (common.render swaps node.content_data in place).
+*
+* The host (render_area_maintenance) calls this on widget "expose" (open) and,
+* for declared background widgets, at idle priority while still collapsed.
+* Widgets with no get_value (static, server-inlined value) are a no-op.
+* Widgets that load something other than a get_value payload (e.g. an iframe or
+* JSON editor) override this method.
+*
+* @return {Promise<boolean>} true when loaded / already loaded / not applicable
+*/
+widget_common.prototype.load = async function() {
+
+	const self = this
+
+	// guard: fetch only once per instance lifecycle
+		if (self._load_state==='loading' || self._load_state==='loaded') {
+			return true
+		}
+
+	// static widget (value inlined by server): nothing to fetch
+		if (typeof self.get_value!=='function') {
+			return true
+		}
+
+	self._load_state = 'loading'
+
+	// loading feedback inside the current content node
+		const content_node = self.node ? self.node.content_data : null
+		let spinner = null
+		if (content_node) {
+			spinner = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'spinner medium',
+				parent			: content_node
+			})
+		}
+
+	try {
+
+		self.error = null
+		self.value = await self.get_value()
+
+		// repaint content (spinner lives in the old content node, replaced here)
+		if (self.node) {
+			await self.render({ render_level : 'content' })
+		}
+
+		self._load_state = 'loaded'
+
+	} catch (error) {
+		self.error = error
+		self._load_state = null // allow retry on next open
+		if (spinner) {
+			spinner.remove()
+		}
+		console.error('[widget load] ' + self.id + ':', error)
+	}
+
+
+	return true
+}//end load
 
 
 

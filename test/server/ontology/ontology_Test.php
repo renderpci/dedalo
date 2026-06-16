@@ -1330,17 +1330,11 @@ final class ontology_test extends BaseTestCase {
 					. 'response: ' . to_string($response)
 			);
 
-		// create a new one again
-		// matrix_ontology_main
-			$file_item = (object)[
-				'tld'			=> 'tldtest',
-				'section_tipo'	=> $section_tipo,
-				'typology_id'	=> 15,
-				'name_data'		=> [
-					(object)['lang' => 'lg-spa', 'value' => 'TLD TEST']
-				]
-			];
-			$section_id = ontology::add_main_section($file_item);
+		// Note: previously this test re-created the 'tldtest' ontology here ("create
+		// a new one again") with NO assertion. That trailing create added no coverage
+		// and left a dangling tldtest0 main-section record across runs, contributing to
+		// the ontology-residue that intermittently broke the next run's setup. Removed:
+		// the test now ends clean after delete_ontology + its assertions.
 	}//end test_delete_ontology
 
 

@@ -693,7 +693,7 @@ const render_init_test_block = function(self) {
 		// PHP version
 		add_card(
 			'PHP Version',
-			server_info?.php_version || PHP_VERSION || '—',
+			server_info?.php_version || '—',
 			server_info?.php_version_supported !== false ? 'pass' : 'fail'
 		)
 

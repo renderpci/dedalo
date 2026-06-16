@@ -490,6 +490,10 @@ template {
   --media_min_width: 102px;
   --media_fade_speed: 0.3s;
   --media_viewer_height: calc(100vh - 3rem);
+  --text_area_min_height: 200px;
+  --geolocation_min_height: 495px;
+  --geolocation_player_height: 605px;
+  --geolocation_map_min_height: 320px;
   --view_text_height: 1.2rem;
   --view_line_height: 5rem;
   --column_id_width: 6rem;
@@ -870,6 +874,7 @@ html {
   color: var(--color_grey_4);
   background-color: var(--color_white);
   font-size: 0.8125rem;
+  -webkit-font-smoothing: antialiased;
 }
 @media screen and (max-width: 1024px) {
   html {
@@ -5684,11 +5689,11 @@ dd-modal .footer.distribute {
     height: var(--media_min_height);
   }
 }
-.media_fade {
+.lazy_fade {
   opacity: 0;
   transition: opacity var(--media_fade_speed) ease-in;
 }
-.media_fade.is_loaded {
+.lazy_fade.is_loaded {
   opacity: 1;
 }
 .media.view_text {
@@ -9145,6 +9150,13 @@ dd-modal .footer.distribute {
   background-color: var(--color_white);
   object-fit: contain;
 }
+.wrapper_dd_grid.view_indexation .content_data > .row > .caption.rsc170 > .row.line {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 5rem 8rem 2fr 1fr 1fr 1fr 7rem 2fr;
+  align-items: start;
+  border-bottom: 1px solid var(--color_grey_13);
+}
 /**
 *	dd_grid view_indexation_audiovisual
 *
@@ -11778,6 +11790,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .area_maintenance > .content_data .widget_container > .widget_label.icon_arrow:after {
   background-color: var(--color_white);
+  margin-right: 1rem;
 }
 .area_maintenance > .content_data .widget_container > .widget_label > * {
   pointer-events: none;
@@ -15803,7 +15816,7 @@ body.inspector_resizing {
   position: relative;
   width: 100%;
   height: 100%;
-  min-height: 320px;
+  min-height: var(--geolocation_map_min_height);
   margin: 0px;
   padding: 0px;
   padding-bottom: 5px;
@@ -15823,7 +15836,7 @@ body.inspector_resizing {
 }
 .component_geolocation.edit > .content_data {
   height: calc(100% - var(--component_label_height));
-  min-height: 495px;
+  min-height: var(--geolocation_min_height);
   flex-direction: column;
   z-index: 0;
 }
@@ -16019,7 +16032,7 @@ body.inspector_resizing {
   padding: 0px;
 }
 .component_geolocation.edit .leaflet_map_player .leaflet_map {
-  min-height: 605px;
+  min-height: var(--geolocation_player_height);
 }
 .component_geolocation.edit .leaflet-top,
 .component_geolocation.edit .leaflet-bottom {
@@ -18950,7 +18963,7 @@ body.inspector_resizing {
 }
 .component_text_area.edit > .content_data {
   display: block;
-  min-height: 200px;
+  min-height: var(--text_area_min_height);
   margin: 0px;
   padding: 0px;
   overflow: hidden;
@@ -19141,7 +19154,7 @@ body.inspector_resizing {
   padding-left: 0.5rem;
 }
 .component_text_area.edit.disabled_component .content_data.component {
-  pointer-events: unset !important;
+  pointer-events: initial !important;
 }
 .component_text_area.list {
   overflow: hidden;

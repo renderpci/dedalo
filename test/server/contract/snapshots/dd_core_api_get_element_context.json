@@ -1,0 +1,26 @@
+{
+    "result": [
+        {
+            "typo": {
+                "__type": "string",
+                "__nullable": false
+            },
+            "new_dataframe": {
+                "__type": "null",
+                "__nullable": true
+            },
+            "path": [],
+            "debug": {
+                "exec_time": {
+                    "__type": "string",
+                    "__nullable": false
+                }
+            }
+        }
+    ],
+    "msg": {
+        "__type": "string",
+        "__nullable": false
+    },
+    "errors": []
+}

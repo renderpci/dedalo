@@ -16,7 +16,7 @@
 
 		>.content_data {
 			display: block;
-			min-height: 200px;
+			min-height: var(--text_area_min_height);
 			margin: 0px;
 			padding: 0px;
 			overflow: hidden;
@@ -240,7 +240,7 @@
 		// disabled_component
 		&.disabled_component {
 			.content_data.component {
-				pointer-events: unset !important;
+				pointer-events: initial !important;
 			}
 		}
 	}//end .edit

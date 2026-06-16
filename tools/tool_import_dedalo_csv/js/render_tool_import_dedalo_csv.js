@@ -40,6 +40,14 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 	// content_data
 		const content_data = await get_content_data(self)
 		if (render_level==='content') {
+			// Content-level refresh: edit() returns before the service_upload block below,
+			// but refresh() already destroyed and rebuilt the service_upload dependency.
+			// Re-attach the fresh instance to its persistent container so the drop/select
+			// file zone keeps working after import or remove (otherwise it stays visible
+			// but dead, as its drag & drop listeners were torn down on destroy).
+			if (self.service_upload_container) {
+				render_service_upload(self)
+			}
 			return content_data
 		}
 
@@ -58,30 +66,59 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 			element_type	: 'div',
 			class_name		: 'service_upload_container'
 		})
-		// spinner
+		wrapper.tool_header.after(service_upload_container)
+		// store pointer to the persistent container so content-level refreshes can
+		// re-attach the rebuilt service_upload instance (see render_service_upload)
+		self.service_upload_container = service_upload_container
+		// service_upload. Build and render into its container
+		render_service_upload(self)
+
+
+	return wrapper
+}//end edit
+
+
+
+/**
+* RENDER_SERVICE_UPLOAD
+* Builds and renders the service_upload (drop/select file) component into the
+* persistent service_upload_container, replacing any previous node.
+* Used both on the initial full render and on content-level refresh: refresh()
+* destroys and rebuilds the service_upload dependency but edit() returns early
+* for 'content' renders, so without re-rendering here the drop zone would stay
+* visible yet dead (its drag & drop listeners removed on destroy).
+* @param object self
+* @return void
+*/
+const render_service_upload = function(self) {
+
+	const service_upload_container = self.service_upload_container
+	if (!service_upload_container) {
+		return
+	}
+
+	// clean previous node (refresh case)
+		while (service_upload_container.firstChild) {
+			service_upload_container.removeChild(service_upload_container.firstChild)
+		}
+
+	// spinner
 		const spinner = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'spinner',
 			parent			: service_upload_container
 		})
-		wrapper.tool_header.after(service_upload_container)
-		// service_upload. Build and render
+
+	// service_upload. Build and render
 		self.service_upload.build()
 		.then(function(){
 			self.service_upload.render()
 			.then(function(tool_upload_node){
-				// clean node
-				// while (service_upload_container.firstChild) {
-				// 	service_upload_container.removeChild(service_upload_container.firstChild);
-				// }
 				service_upload_container.appendChild(tool_upload_node)
 				spinner.remove()
 			})
 		})
-
-
-	return wrapper
-}//end edit
+}//end render_service_upload
 
 
 
@@ -541,7 +578,9 @@ const render_columns_mapper = async function(self, item) {
 		}
 
 	// check section_id column exists
-		const first_row				= item.data[0]
+		// TOOLS-07: the listing response no longer ships the full parsed 'data';
+		// the first row (header / column names) is file_info (server: (array)$ar_data[0]).
+		const first_row				= file_info
 		const columns_section_id	= first_row
 			? first_row.find(el => el==='section_id')
 			: null

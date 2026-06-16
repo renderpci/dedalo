@@ -17,6 +17,23 @@ final class dd_area_maintenance_api_test extends BaseTestCase {
 
 
 	/**
+	* TEST_AREA_MAINTENANCE_API_DISABLED
+	* Placeholder so PHPUnit does not warn "No tests found in class". Every real
+	* test below is intentionally parked (XXX_ prefix): they exercise destructive
+	* area_maintenance operations (make_backup, update_ontology, import_structure)
+	* that are unsafe to run against the shared test database. Re-enable
+	* individually (drop the XXX_ prefix) only with an isolated/throwaway database.
+	* @return void
+	*/
+	public function test_area_maintenance_api_disabled(): void {
+		$this->markTestSkipped(
+			'dd_area_maintenance_api tests are destructive and intentionally disabled (see XXX_ methods).'
+		);
+	}
+
+
+
+	/**
 	* TEST_MAKE_BACKUP
 	* @return void
 	*/

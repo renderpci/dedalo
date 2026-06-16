@@ -1,48 +1,15 @@
 {
-    "result": {
-        "component": {
-            "__type": "string",
-            "__nullable": false
-        },
-        "tipo": {
-            "__type": "string",
-            "__nullable": false
-        },
-        "section_tipo": {
-            "__type": "string",
-            "__nullable": false
-        },
-        "section_id": {
-            "__type": "string",
-            "__nullable": false
-        },
-        "mode": {
-            "__type": "string",
-            "__nullable": false
-        },
-        "lang": {
-            "__type": "string",
-            "__nullable": false
-        },
-        "properties": {
-            "__type": "object",
-            "__nullable": true
-        },
-        "tools": {
-            "__type": "array",
-            "__nullable": true
-        },
-        "request_config": {
-            "__type": "object",
-            "__nullable": true
+    "result": [
+        {
+            "typo": {
+                "__type": "string",
+                "__nullable": false
+            }
         }
-    },
+    ],
     "msg": {
         "__type": "string",
         "__nullable": false
     },
-    "errors": {
-        "__type": "array",
-        "__nullable": true
-    }
+    "errors": []
 }

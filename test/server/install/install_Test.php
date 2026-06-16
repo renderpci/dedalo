@@ -168,8 +168,8 @@ final class install_Test extends BaseTestCase {
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
-		$this->assertStringContainsString('@subpackage Install', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
+		$this->assertStringContainsString('@subpackage Core', $content);
 	}//end test_class_has_docblock
 
 
@@ -349,8 +349,8 @@ final class install_Test extends BaseTestCase {
 
 		// Class should have comprehensive docblock
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
-		$this->assertStringContainsString('@subpackage Install', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
+		$this->assertStringContainsString('@subpackage Core', $content);
 
 		// Should use strict types
 		$this->assertStringContainsString('declare(strict_types=1)', $content);
@@ -504,8 +504,8 @@ final class install_Test extends BaseTestCase {
 		$content = file_get_contents($file);
 
 		// Class docblock should describe purpose
-		$this->assertStringContainsString('Facade class', $content);
-		$this->assertStringContainsString('Delegates to specialized manager classes', $content);
+		$this->assertStringContainsString('Façade entry-point', $content);
+		$this->assertStringContainsString('Delegates every real operation to one of five specialised managers', $content);
 
 		// Should have method docblocks
 		$this->assertStringContainsString('/**', $content);
@@ -546,7 +546,8 @@ final class install_Test extends BaseTestCase {
 		$this->assertTrue(class_exists('install_hierarchy_manager'));
 		$this->assertTrue(class_exists('install_data_seeder'));
 
-		// Each manager should be static-only (testable)
+		// Each manager should be static-only (testable): a private constructor
+		// blocks instantiation while keeping the static interface usable.
 		$managers = [
 			'install_config_manager',
 			'install_database_manager',
@@ -557,7 +558,10 @@ final class install_Test extends BaseTestCase {
 
 		foreach ($managers as $manager) {
 			$reflection = new ReflectionClass($manager);
-			$this->assertNull($reflection->getConstructor());
+			$constructor = $reflection->getConstructor();
+			$this->assertNotNull($constructor, "$manager should declare a constructor");
+			$this->assertTrue($constructor->isPrivate(), "$manager constructor should be private");
+			$this->assertFalse($reflection->isInstantiable(), "$manager should not be instantiable");
 		}
 	}//end test_refactoring_improved_maintainability
 

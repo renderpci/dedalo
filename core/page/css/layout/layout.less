@@ -1273,11 +1273,11 @@
 	}
 }
 
-// shared smooth fade-in for lazy-loaded media containers (image, svg, ...)
-// The container starts invisible; JS (media_fade_in, component_media_common)
-// adds `.is_loaded` once the underlying media fires its load/error event, so
-// every media type reveals the same way and at the same speed.
-.media_fade {
+// shared smooth fade-in for lazily-initialised content (media, json/leaflet/
+// ckeditor editors, ...). The container starts invisible; JS (fade_in_on_reveal,
+// events.js) adds `.is_loaded` once the content fires its load/ready/error event,
+// so every lazy widget reveals the same way and at the same speed.
+.lazy_fade {
 	opacity: 0;
 	transition: opacity var(--media_fade_speed) ease-in;
 

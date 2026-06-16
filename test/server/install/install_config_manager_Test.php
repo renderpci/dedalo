@@ -1277,7 +1277,7 @@ final class install_config_manager_Test extends BaseTestCase {
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
 		$this->assertStringContainsString('@subpackage Install', $content);
 	}//end test_class_has_docblock
 

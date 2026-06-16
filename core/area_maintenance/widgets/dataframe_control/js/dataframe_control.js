@@ -69,7 +69,7 @@ dataframe_control.prototype.build = async function(autoload=false) {
 
 	try {
 
-		self.value = await self.get_value()
+		// data now loads on open via the unified widget load() (see render_area_maintenance)
 
 	} catch (error) {
 		self.error = error

@@ -73,13 +73,13 @@ render_update_code.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// value
-		const value = await self.get_value() || {}
+		const value = self.value || {}
 
 	// short vars
 		const dedalo_source_version_local_dir	= value.dedalo_source_version_local_dir
 		const is_a_code_server					= value.is_a_code_server
 		const local_db_id						= 'process_update_code'
-		const servers							= value.servers
+		const servers							= value.servers || []
 
 	// content_data
 		const content_data = ui.create_dom_element({

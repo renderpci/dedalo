@@ -26,11 +26,16 @@
 	--component_label_height: 1.5rem;
 	--content_data_min_height: 2.66rem; // +/- 47.8px
 	// media heights (3d,av,image,pdf,svg)
-	--media_min_height: 392px; // Min height for a component wrapper of media (av, image, pdf...) also component_text_area
+	--media_min_height: 392px; // Min height for a component wrapper of media (av, image, pdf, svg, json)
 	--media_max_height: inherit; // Max height for a component wrapper of media (av, image, pdf...)
 	--media_min_width: 102px;
-	--media_fade_speed: 0.3s; // Shared fade-in duration for lazy-loaded media (image, svg, ...)
+	--media_fade_speed: 0.3s; // Shared fade-in duration for lazily-initialised content (media, json, geolocation, ...)
 	--media_viewer_height: calc(100vh - 3rem); // Usable height for a media component in fullscreen viewer mode
+	// heights for non-media lazily-initialised widgets that share the same loading contract
+	--text_area_min_height: 200px; // Min height for the rich-text (ckeditor) editor wrapper
+	--geolocation_min_height: 495px; // Min height for the geolocation (leaflet) edit wrapper
+	--geolocation_player_height: 605px; // Min height for the geolocation player/transcription map
+	--geolocation_map_min_height: 320px; // Min height for the leaflet map surface itself
 	--view_text_height: 1.2rem;
 	--view_line_height: 5rem;
 	--column_id_width: 6rem; // Default id column width for list

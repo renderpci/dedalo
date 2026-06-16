@@ -10,7 +10,7 @@
                     "tipo": "test3",
                     "model": "section",
                     "permissions": 3,
-                    "label": "Unit Test Section (using matrix_test table)",
+                    "label": "Test Unit (data on matrix_test)",
                     "buttons": [
                         {
                             "model": "button_new",
@@ -82,6 +82,24 @@
                     "mode": "edit",
                     "model": "component_check_box",
                     "label": "check_box"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test218",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "edit",
+                    "model": "component_date",
+                    "label": "date_period"
+                },
+                {
+                    "typo": "ddo",
+                    "tipo": "test219",
+                    "section_tipo": "test3",
+                    "parent": "test3",
+                    "mode": "edit",
+                    "model": "component_date",
+                    "label": "date_range"
                 },
                 {
                     "typo": "ddo",
@@ -365,7 +383,7 @@
                     "parent": "test3",
                     "mode": "edit",
                     "model": "component_number",
-                    "label": "Orden"
+                    "label": "Order"
                 }
             ],
             "sqo_config": {

@@ -617,6 +617,11 @@ export const render_stream = function(options) {
 				on_stop()
 				return
 			}
+			// always clear local state so the user can exit a stuck loop even if
+			// the server-side stop fails (e.g. process was never registered in DB)
+			if (delete_local_db_data === true) {
+				data_manager.delete_local_db_data(id, 'status')
+			}
 			data_manager.request({
 				body : {
 					dd_api		: 'dd_utils_api',
@@ -790,10 +795,15 @@ export const render_stream = function(options) {
 		response.update_info_node = update_info_node
 
 	// done function
-	// Minimal teardown for cases where the caller ends the stream externally
-	// (e.g. abort) without receiving a final is_running===false chunk.
+	// Teardown for cases where the caller ends the stream externally
+	// (e.g. abort, auth failure) without receiving a final is_running===false chunk.
+	// Always clears the local DB entry so a dead/unregistered process cannot lock
+	// the widget in an infinite "Preparing data..." loop on the next page load.
 		const done = () => {
 			spinner.remove()
+			if (delete_local_db_data === true) {
+				data_manager.delete_local_db_data(id, 'status')
+			}
 		}
 		// set specific function
 		response.done = done

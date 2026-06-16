@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {dd_request_idle_callback, when_in_viewport} from '../../../../common/js/events.js'
 
 
 /**
@@ -75,11 +74,17 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'php_info_iframe'
 		})
 
-	// load event
-		// observe in viewport
-		when_in_viewport(content_data, () => {
+	// defer the heavy iframe load until the widget is opened (host calls load())
+		self._activated = false
+		self.activate = () => {
+			if (self._activated) { return }
+			self._activated = true
 			content_data.src = src
-		})
+		}
+		// if the widget is already open (e.g. after a refresh), load now
+		if (self._open) {
+			self.activate()
+		}
 
 
 	return content_data

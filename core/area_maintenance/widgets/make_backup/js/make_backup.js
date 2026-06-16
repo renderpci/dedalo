@@ -17,22 +17,55 @@
 */
 export const make_backup = function() {
 
-	this.id
+	this.id				= null
 
-	this.section_tipo
-	this.section_id
-	this.lang
-	this.mode
+	this.section_tipo	= null
+	this.section_id		= null
+	this.lang			= null
+	this.mode			= null
 
-	this.value
+	this.value			= null
 
-	this.node
+	this.node			= null
 
 	this.events_tokens	= []
 	this.ar_instances	= []
 
-	this.status
+	this.status			= null
 }//end make_backup
+
+
+
+/**
+* WIDGET_REQUEST
+* Shared helper for the widget's API worker calls.
+* @param string action
+* 	Backend action, e.g. 'make_psql_backup'
+* @param object options = {}
+* @param int timeout = 3600 * 1000
+* 	Per-attempt timeout in ms. Defaults to 1 hour for long backup operations;
+* 	pass a short value for polled/lightweight calls.
+* @return promise - api_response
+*/
+const widget_request = (action, options={}, timeout=3600*1000) => {
+
+	return data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api			: 'dd_area_maintenance_api',
+			action			: 'widget_request',
+			prevent_lock	: true,
+			source			: {
+				type	: 'widget',
+				model	: 'make_backup',
+				action	: action
+			},
+			options			: options
+		},
+		retries : 1, // one try only
+		timeout : timeout
+	})
+}//end widget_request
 
 
 
@@ -54,57 +87,14 @@ export const make_backup = function() {
 
 
 /**
-* BUILD
-* Custom build overwrites common widget method
-* @param bool autoload = false
-* @return bool
-*/
-make_backup.prototype.build = async function(autoload=false) {
-
-	const self = this
-
-	// call generic common tool build
-		const common_build = await widget_common.prototype.build.call(this, autoload);
-
-	try {
-
-		// specific actions.. like fix main_element for convenience
-		self.value = await self.get_value()
-
-	} catch (error) {
-		self.error = error
-		console.error(error)
-	}
-
-	return common_build
-}//end build_custom
-
-
-
-/**
 * MAKE_BACKUP
 * Creates a PostgreSQL database backup.
 * @return promise - api_response
 */
 make_backup.prototype.make_backup = async function() {
 
-	// API worker call
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'widget_request',
-			prevent_lock	: true,
-			source			: {
-				type	: 'widget',
-				model	: 'make_backup',
-				action  : 'make_psql_backup'
-			},
-			options		: {}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
+	// API worker call. 1 hour timeout for the long backup operation
+	const api_response = await widget_request('make_psql_backup')
 
 	return api_response
 }//end make_backup
@@ -118,23 +108,8 @@ make_backup.prototype.make_backup = async function() {
 */
 make_backup.prototype.make_mysql_backup = async function() {
 
-	// API worker call
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'widget_request',
-			prevent_lock	: true,
-			source			: {
-				type	: 'widget',
-				model	: 'make_backup',
-				action  : 'make_mysql_backup'
-			},
-			options		: {}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
+	// API worker call. 1 hour timeout for the long backup operation
+	const api_response = await widget_request('make_mysql_backup')
 
 	return api_response
 }//end make_mysql_backup
@@ -155,49 +130,15 @@ make_backup.prototype.get_backup_files = async function(options={}) {
 		mysql_backup_files = false
 	} = options
 
-	// API worker call
-	const api_response = await data_manager.request({
-		use_worker	: true,
-		body		: {
-			dd_api			: 'dd_area_maintenance_api',
-			action			: 'widget_request',
-			prevent_lock	: true,
-			source			: {
-				type	: 'widget',
-				model	: 'make_backup',
-				action  : 'get_dedalo_backup_files'
-			},
-			options		: {
-				max_files,
-				psql_backup_files,
-				mysql_backup_files
-			}
-		},
-		retries : 1, // one try only
-		timeout : 3600 * 1000 // 1 hour waiting response
-	})
+	// API worker call. 15 sec timeout; this endpoint is polled, keep it short
+	const api_response = await widget_request(
+		'get_dedalo_backup_files',
+		{ max_files, psql_backup_files, mysql_backup_files },
+		15 * 1000
+	)
 
 	return api_response
 }//end get_backup_files
-
-
-
-/**
-* GET_LAST_FILE_INFO
-* Gets information about the last backup file.
-* @return promise - api_response
-*/
-make_backup.prototype.get_last_file_info = async function() {
-
-	// API worker call
-	const api_response = await this.get_backup_files({
-		max_files			: 1,
-		psql_backup_files	: true,
-		mysql_backup_files	: false
-	})
-
-	return api_response
-}//end get_last_file_info
 
 
 

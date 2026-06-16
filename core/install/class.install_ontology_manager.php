@@ -42,7 +42,14 @@
 * @package Dédalo
 * @subpackage Install
 */
-class install_ontology_manager {
+final class install_ontology_manager {
+
+	/**
+	* CONSTRUCTOR
+	* Static-only utility: instantiation is disallowed.
+	*/
+	private function __construct() {}
+
 
 	/**
 	* CLEAN_ONTOLOGY

@@ -9,7 +9,7 @@
                     "tipo": "test3",
                     "model": "section",
                     "permissions": 3,
-                    "label": "Unit Test Section (using matrix_test table)",
+                    "label": "Test Unit (data on matrix_test)",
                     "buttons": [
                         {
                             "model": "button_new",

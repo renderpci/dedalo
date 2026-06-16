@@ -225,7 +225,7 @@ final class install_database_manager_Test extends BaseTestCase {
 		$content = file_get_contents($file);
 
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
 		$this->assertStringContainsString('@subpackage Install', $content);
 	}//end test_class_has_docblock
 
@@ -626,7 +626,7 @@ final class install_database_manager_Test extends BaseTestCase {
 
 		// Class should have comprehensive docblock
 		$this->assertStringContainsString('/**', $content);
-		$this->assertStringContainsString('@package Dedalo', $content);
+		$this->assertStringContainsString('@package Dédalo', $content);
 		$this->assertStringContainsString('@subpackage Install', $content);
 
 		// Methods should have docblocks
@@ -720,7 +720,9 @@ final class install_database_manager_Test extends BaseTestCase {
 		$this->assertStringContainsString('pg_last_error', $content);
 		$this->assertStringContainsString('logger::ERROR', $content);
 
-		$this->assertStringContainsString('ROLLBACK', $content);
+		// Should fail safely on SQL errors and tolerate transient failures
+		$this->assertStringContainsString('ON_ERROR_STOP=1', $content);
+		$this->assertStringContainsString('$max_retries', $content);
 
 		// Should be secure
 		$this->assertStringContainsString('escapeshellarg', $content);
@@ -737,8 +739,9 @@ final class install_database_manager_Test extends BaseTestCase {
 
 		$reflection = new ReflectionClass('install_database_manager');
 
-		// No constructor
-		$this->assertNull($reflection->getConstructor());
+		// No public constructor (private constructor prevents instantiation)
+		$c = $reflection->getConstructor();
+		$this->assertTrue($c===null || !$c->isPublic());
 
 		// No instance properties
 		$properties = $reflection->getProperties(ReflectionProperty::IS_PUBLIC | ReflectionProperty::IS_PROTECTED | ReflectionProperty::IS_PRIVATE);
@@ -767,10 +770,10 @@ final class install_database_manager_Test extends BaseTestCase {
 		$content = file_get_contents($file);
 
 		// Class docblock should describe single responsibility
-		$this->assertStringContainsString('Encapsulates database cloning', $content);
-		$this->assertStringContainsString('optimization', $content);
-		$this->assertStringContainsString('table cleaning', $content);
-		$this->assertStringContainsString('extension creation', $content);
+		$this->assertStringContainsString('Manages all PostgreSQL-level database operations', $content);
+		$this->assertStringContainsString('Clone the running production database', $content);
+		$this->assertStringContainsString('Clean data tables', $content);
+		$this->assertStringContainsString('Install mandatory PostgreSQL extensions', $content);
 
 		// All methods should be related to database operations
 		$this->assertStringContainsString('database', $content);
