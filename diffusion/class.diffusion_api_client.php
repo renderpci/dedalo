@@ -88,7 +88,7 @@ class diffusion_api_client {
 					);
 					return $response;
 				}
-				$curl_options->url = DEDALO_DIFFUSION_API_URL;
+				$curl_options->url = self::to_absolute_url(DEDALO_DIFFUSION_API_URL);
 			}
 
 		// request
@@ -128,6 +128,29 @@ class diffusion_api_client {
 
 		return $decoded;
 	}//end call
+
+
+
+	/**
+	* TO_ABSOLUTE_URL
+	* Promotes a browser-relative endpoint URL to an absolute one for server-side curl.
+	* DEDALO_DIFFUSION_API_URL is configured relative (e.g. "/v7/diffusion/api/v1/")
+	* because it is also published to JS clients, where the browser supplies the
+	* origin. curl, running server-side, rejects a host-less URL ("No host part in
+	* the URL"), so the scheme + host are prepended here. Already-absolute URLs
+	* (remote Bun installs) and empty values pass through unchanged.
+	*
+	* @param string $url
+	* @return string
+	*/
+	public static function to_absolute_url(string $url) : string {
+
+		if ($url!=='' && strpos($url, '://')===false) {
+			$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
+		}
+
+		return $url;
+	}//end to_absolute_url
 
 
 
