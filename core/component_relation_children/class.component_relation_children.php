@@ -721,6 +721,61 @@ class component_relation_children extends component_relation_common {
 
 
 	/**
+	* RESOLVE_PARENT_LINK_ID_KEY
+	* Resolve the item id (the order's unified id_key) of the locator in a child's
+	* component_relation_parent that points to the given parent. The sibling-order
+	* value is a dataframe of that parent-link locator, paired by this id.
+	*
+	* Loads the child's relation_parent component (tipo resolved via
+	* component_relation_parent::get_parent_tipo) and scans its locators for the one
+	* matching the parent's (section_tipo, section_id).
+	*
+	* @param string $child_section_tipo
+	* @param int|string $child_section_id
+	* @param string $parent_section_tipo
+	* @param int $parent_section_id
+	* @return int - the parent-link locator id, or 0 when it cannot be resolved
+	*/
+	public static function resolve_parent_link_id_key(
+		string $child_section_tipo,
+		int|string $child_section_id,
+		string $parent_section_tipo,
+		int $parent_section_id
+	) : int {
+
+		$parent_relation_tipo = component_relation_parent::get_parent_tipo($child_section_tipo);
+		if (empty($parent_relation_tipo)) {
+			return 0;
+		}
+
+		$relation_parent = component_common::get_instance(
+			'component_relation_parent',
+			$parent_relation_tipo,
+			$child_section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			$child_section_tipo
+		);
+		if ($relation_parent === null) {
+			return 0;
+		}
+
+		$data = $relation_parent->get_data() ?? [];
+		foreach ($data as $loc) {
+			if (is_object($loc)
+				&& isset($loc->id)
+				&& isset($loc->section_tipo) && $loc->section_tipo === $parent_section_tipo
+				&& isset($loc->section_id) && (int)$loc->section_id === (int)$parent_section_id) {
+				return (int)$loc->id;
+			}
+		}
+
+		return 0;
+	}//end resolve_parent_link_id_key
+
+
+
+	/**
 	* GET_CHILDREN_RECURSIVE
 	* Returns all descendants of the given section by recursively expanding children.
 	*
@@ -979,14 +1034,15 @@ class component_relation_children extends component_relation_common {
 	*
 	* The display order of children is stored in a dedicated order component (typically
 	* component_number) identified by section_map->thesaurus->order for the section.
-	* This component uses the dataframe pattern: each value is scoped to a parent
-	* context (parent_section_tipo + parent_section_id), so the same child record can
-	* have different positions under different parents.
+	* This component uses the dataframe pattern: each value is paired by id_key to
+	* the child's parent-link locator (its component_relation_parent entry pointing
+	* at this parent), so the same child can have different positions under different
+	* parents. The id_key is resolved per child via resolve_parent_link_id_key().
 	*
 	* The method iterates $locators in ascending order position (1, 2, 3 …) and:
-	*  1. Reads the current context-scoped value via get_value_by_context().
+	*  1. Reads the current paired value via get_value_by_id_key().
 	*  2. Skips the record if the order value is already correct.
-	*  3. Writes the new position via update_value_by_context() + save().
+	*  3. Writes the new position via update_value_by_id_key() + save().
 	*  4. Appends an entry to $changed so callers know which records were mutated.
 	*
 	* Returns false when section_map->thesaurus->order is not defined.
@@ -1035,22 +1091,36 @@ class component_relation_children extends component_relation_common {
 				$locator->section_tipo // string section_tipo
 			);
 
-			// Get current value for this parent context
-			$current_value = $component->get_value_by_context(
+			// Resolve this child's parent-link locator id (the order's id_key).
+			// The order value is a dataframe of that parent-link locator.
+			$id_key = self::resolve_parent_link_id_key(
+				$locator->section_tipo,
+				$locator->section_id,
 				$parent_section_tipo,
 				$parent_section_id
 			);
+			if ($id_key<=0) {
+				debug_log(__METHOD__
+					. ' Skipped child order: could not resolve parent-link id_key' . PHP_EOL
+					. ' child: ' . $locator->section_tipo . '_' . to_string($locator->section_id) . PHP_EOL
+					. ' parent: ' . $parent_section_tipo . '_' . $parent_section_id
+					, logger::WARNING
+				);
+				continue;
+			}
+
+			// Get current value for this parent link
+			$current_value = $component->get_value_by_id_key( $id_key );
 
 			// check if value changes (skip if same value)
 			if ((int)$current_value === $order) {
 				continue;
 			}
 
-			// Update value with parent context using dataframe method
-			$updated = $component->update_value_by_context(
+			// Update value paired to the parent-link locator by id_key
+			$updated = $component->update_value_by_id_key(
 				$order,
-				$parent_section_tipo,
-				$parent_section_id
+				$id_key
 			);
 
 			if ($updated === true) {
@@ -1189,21 +1259,26 @@ class component_relation_children extends component_relation_common {
 				$sqo->set_tables([$table]); // Search references only in current table
 
 		// order. It is defined in section 'section_map' item as {"order":"ontology41"}
+		// The sibling order is now a dataframe of each child's parent-link locator,
+		// paired by id_key (not a constant parent-coords key), so it cannot be filtered
+		// by a single JSONB predicate over the child row. Instead we precompute the order
+		// in PHP (compute_ordered_child_ids) and apply it as an explicit array_position().
 			if ($order === true) {
 				$section_map = section::get_section_map($section_tipo);
 				if (isset($section_map->thesaurus->order)) {
 					$order_component_tipo = $section_map->thesaurus->order;
 
-						// SEC-036 follow-up: defence-in-depth on the server-built SQL fragment.
-					// `$order_component_tipo`/`$section_tipo` originate from the section
-					// ontology map (server-internal) but `safe_tipo()` is applied anyway;
-					// `$section_id` is interpolated as plain integer. Field name is
-					// `column_sql` (not `column`) so `trait.order.php` recognises this
-					// as a trusted server-built fragment and skips the strict identifier
-					// regex; HTTP-supplied SQO must not carry `column_sql`.
+					$ordered_ids = self::compute_ordered_child_ids(
+						$section_id,
+						$section_tipo,
+						$order_component_tipo,
+						$filter_locators,
+						$filter_operator,
+						$table
+					);
+
 					$safe_order_tipo	= safe_tipo((string)$order_component_tipo);
 					$safe_section_tipo	= safe_tipo((string)$section_tipo);
-					$safe_section_id	= (int)$section_id;
 					if ($safe_order_tipo===false || $safe_section_tipo===false) {
 						debug_log(__METHOD__
 							." Ignored order build: invalid order/section tipo" . PHP_EOL
@@ -1211,14 +1286,19 @@ class component_relation_children extends component_relation_common {
 							.' section_tipo: ' . to_string($section_tipo)
 							, logger::ERROR
 						);
-					} else {
+					} else if (!empty($ordered_ids)) {
+						// Explicit precomputed ordering. `column_sql` (not `column`) marks this
+						// as a trusted server-built fragment (trait.order.php skips the identifier
+						// regex); $safe_ids is an int-sanitised list, so it is injection-safe.
+						// Children without an order value sort last (array_position -> NULL).
+						$safe_ids = implode(',', array_map('intval', $ordered_ids));
 						$path = [
 							(object)[
 								'component_tipo'	=> $safe_order_tipo,
 								'model'				=> SHOW_DEBUG===true ? ontology_node::get_model_by_tipo($safe_order_tipo,true) : $safe_order_tipo,
 								'name'				=> SHOW_DEBUG===true ? ontology_node::get_term_by_tipo($safe_order_tipo) : $safe_order_tipo,
 								'section_tipo'		=> $safe_section_tipo,
-								'column_sql'		=> '(jsonb_path_query_first(number, \'$.'.$safe_order_tipo.'[*] ? (@.section_tipo_key == "'.$safe_section_tipo.'" && @.section_id_key == '.$safe_section_id.').value\') #>> \'{}\')::integer'
+								'column_sql'		=> 'array_position(ARRAY['.$safe_ids.']::bigint[], section_id::bigint)'
 							]
 						];
 						$order_obj = (object)[
@@ -1232,6 +1312,103 @@ class component_relation_children extends component_relation_common {
 
 		return $sqo;
 	}//end build_children_sqo
+
+
+
+	/**
+	* COMPUTE_ORDERED_CHILD_IDS
+	* Precompute the sibling order (in PHP) for the children of a parent. Returns the
+	* child section_ids sorted by their stored order value (ascending; children with
+	* no order value sort last). This replaces the old constant parent-coords JSONB
+	* predicate: under the unified contract each order value is a dataframe paired by
+	* id_key to the child's parent-link locator, which differs per child, so the order
+	* cannot be expressed as a single JSONB filter and must be resolved per child.
+	*
+	* (!) Runs one preliminary unordered search of the parent's children plus, per
+	* child, a relation_parent read (id_key resolution) and an order-component read.
+	* Heavier than the old single-query path; callers that page large hierarchies
+	* should be aware of the cost.
+	*
+	* (!) Ordering is keyed by child section_id (array_position in the caller). If a
+	* parent can have children sharing a section_id across different section_tipos,
+	* the ordering would need a composite key — not handled here.
+	*
+	* @param int|string $section_id - the parent record id
+	* @param string $section_tipo - the parent section tipo
+	* @param string $order_component_tipo - the order component_number tipo (section_map->thesaurus->order)
+	* @param array $filter_locators - the same child filter used by build_children_sqo
+	* @param string|null $filter_operator
+	* @param string $table - matrix table
+	* @return array - child section_ids (int) ordered ascending by stored order value
+	*/
+	private static function compute_ordered_child_ids(
+		int|string $section_id,
+		string $section_tipo,
+		string $order_component_tipo,
+		array $filter_locators,
+		?string $filter_operator,
+		string $table
+	) : array {
+
+		// Preliminary unordered fetch of this parent's children. Built directly
+		// (NOT via build_children_sqo) so there is no recursion.
+		$prelim = new search_query_object();
+			$prelim->set_section_tipo(['all']);
+			$prelim->set_mode('related');
+			$prelim->set_full_count(false);
+			$prelim->set_filter_by_locators($filter_locators);
+			if (!empty($filter_operator)) {
+				$prelim->set_filter_by_locators_op($filter_operator);
+			}
+			$prelim->set_limit(0);
+			$prelim->set_offset(0);
+			$prelim->set_tables([$table]);
+
+		$search	= search::get_instance($prelim);
+		$rows	= $search->search();
+		if (empty($rows)) {
+			return [];
+		}
+
+		$order_model = ontology_node::get_model_by_tipo($order_component_tipo, true);
+
+		$items = [];
+		foreach ($rows as $row) {
+
+			// resolve this child's parent-link locator id (the order's id_key)
+			$id_key = self::resolve_parent_link_id_key(
+				$row->section_tipo,
+				$row->section_id,
+				$section_tipo,
+				(int)$section_id
+			);
+
+			$order_value = null;
+			if ($id_key>0) {
+				$order_component = component_common::get_instance(
+					$order_model,
+					$order_component_tipo,
+					$row->section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$row->section_tipo
+				);
+				if ($order_component!==null) {
+					$order_value = $order_component->get_value_by_id_key($id_key);
+				}
+			}
+
+			$items[] = (object)[
+				'section_id'	=> (int)$row->section_id,
+				'order'			=> ($order_value===null || $order_value==='') ? PHP_INT_MAX : (int)$order_value
+			];
+		}
+
+		// stable sort by order value (ascending); unordered children sink last
+		usort($items, fn($a, $b) => $a->order <=> $b->order);
+
+		return array_map(fn($it) => $it->section_id, $items);
+	}//end compute_ordered_child_ids
 
 
 

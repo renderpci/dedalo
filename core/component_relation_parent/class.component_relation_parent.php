@@ -34,9 +34,10 @@
 * Ordering
 * --------
 * Child order within a parent is stored in the child's own component_number whose
-* tipo comes from section_map->thesaurus->order.  Each order datum is context-keyed
-* (section_tipo_key + section_id_key) to the parent record so that a child with
-* multiple parents carries independent order values per parent.
+* tipo comes from section_map->thesaurus->order.  Each order value is a dataframe of
+* the child's parent-link locator, paired by id_key (that locator's item id), so a
+* child with multiple parents carries independent order values per parent — the same
+* unified id_key contract every other dataframe uses.
 *
 * Relationships
 * -------------
@@ -182,7 +183,14 @@ class component_relation_parent extends component_relation_common {
 			}
 
 		// Set order for new parent
-			$this->set_child_order($locator->section_tipo, (int)$locator->section_id);
+			// Pre-allocate this parent locator's item id so the sibling-order value
+			// can pair by id_key (the unified dataframe contract). Allocation is
+			// atomic / advisory-locked; the later save respects the existing id and
+			// will not re-mint it (see component_common::update_data_value $has_id).
+			if (!isset($locator->id) || $locator->id===null || $locator->id==='') {
+				$this->set_data_item_counter($locator);
+			}
+			$this->set_child_order($locator);
 
 		// Add current locator to component data
 			if (!$this->add_locator_to_data($locator)) {
@@ -215,7 +223,7 @@ class component_relation_parent extends component_relation_common {
 	public function remove_parent( locator $locator ) : bool {
 
 		// Remove order and recalculate siblings
-		$this->remove_child_order($locator->section_tipo, (int)$locator->section_id);
+		$this->remove_child_order($locator);
 
 		// remove current locator from component data
 		if (!$this->remove_locator_from_data($locator)) {
@@ -796,16 +804,18 @@ class component_relation_parent extends component_relation_common {
 
 	/**
 	* SET_CHILD_ORDER
-	* Assign an initial sibling-order position to the current record within a
-	* newly added parent context.
+	* Assign an initial sibling-order position to the current record under a
+	* newly added parent.
 	*
 	* Strategy: count the parent's existing children via
 	* component_relation_children::get_children_of_type() and use (count + 1) as
 	* the next order value.  The value is written into the current record's own
-	* component_number (the 'order' component from section_map) using
-	* add_value_with_context(), which attaches the parent context key
-	* ($parent_section_tipo, $parent_section_id) so that the order is scoped to
-	* this specific parent.
+	* component_number (the 'order' component from section_map) keyed by id_key —
+	* the parent-link locator's pre-allocated item id — so the order is a dataframe
+	* of the parent relation, scoped to this specific parent link (unified contract).
+	*
+	* (!) The parent locator MUST already carry its item id ($locator->id);
+	* add_parent pre-allocates it via set_data_item_counter() before calling here.
 	*
 	* (!) Race condition: the count-then-write pattern is not atomic.  Concurrent
 	* add_parent calls may produce colliding order values unless the caller holds
@@ -813,16 +823,23 @@ class component_relation_parent extends component_relation_common {
 	* matrix_db_manager::acquire_node_lock).  A warning is logged in debug mode
 	* when set_child_order is called outside a transaction.
 	*
-	* (!) add_value_with_context is marked @deprecated in trait.dataframe_common.php
-	* (superseded by the dataframe locator pairing contract).  This call site uses
-	* the legacy context-key mechanism intentionally for the pre-dataframe order
-	* subsystem and should be migrated when the order system is updated.
-	*
-	* @param string $parent_section_tipo - Section tipo of the parent receiving the new child.
-	* @param int $parent_section_id - Record ID of the parent receiving the new child.
+	* @param locator $locator - The parent locator; must have ->id (item id), ->section_tipo, ->section_id.
 	* @return bool - false when no order component exists or the save fails; true on success.
 	*/
-	protected function set_child_order(string $parent_section_tipo, int $parent_section_id) : bool {
+	protected function set_child_order(locator $locator) : bool {
+
+		$parent_section_tipo	= $locator->section_tipo;
+		$parent_section_id		= (int)$locator->section_id;
+		$id_key					= (int)($locator->id ?? 0); // parent-link item id (the dataframe pairing key)
+
+		if ($id_key<=0) {
+			debug_log(__METHOD__
+				. " No item id on the parent locator; cannot pair the order value by id_key" . PHP_EOL
+				. ' locator: ' . to_string($locator)
+				, logger::ERROR
+			);
+			return false;
+		}
 
 		// Count-then-write is only race-free when the caller holds the parent
 		// advisory lock inside a transaction (see matrix_db_manager::acquire_node_lock).
@@ -856,16 +873,16 @@ class component_relation_parent extends component_relation_common {
 
 		$next_order = count($children) + 1;
 
-		// Set this child's order in THEIR own order component
+		// Set this child's order in THEIR own order component, paired to the
+		// parent-link locator item by id_key (the unified dataframe contract).
 		$order_component = $this->get_order_dataframe();
 		if ($order_component === null) {
 			return false;
 		}
 
-		$add_result = $order_component->add_value_with_context(
+		$add_result = $order_component->update_value_by_id_key(
 			$next_order,
-			$parent_section_tipo,
-			$parent_section_id
+			$id_key
 		);
 
 		if($add_result===true){
@@ -881,43 +898,45 @@ class component_relation_parent extends component_relation_common {
 	* Delete the sibling-order datum for the current record within the given
 	* parent context, typically called just before remove_locator_from_data.
 	*
-	* Calls component_number::remove_by_context() to strip the context-keyed
-	* order entry (matching $parent_section_tipo + $parent_section_id) from the
-	* order component's dato, then saves the component.
+	* Calls component_number::remove_by_id_key() to strip the order value paired
+	* with the parent-link item id from the order component's dato, then saves it.
+	* The id_key is the removed parent locator's item id (resolved from the stored
+	* locator when the incoming locator does not carry it).
 	*
 	* Returns false early (without saving) when the section has no order
 	* component or when get_order_dataframe() returns null.
 	*
-	* (!) Note: when remove_by_context() returns false the method returns true
+	* (!) Note: when remove_by_id_key() returns false the method returns true
 	* unconditionally, which masks any removal failure.  This is existing
 	* behaviour; document-flag only.
 	*
-	* (!) remove_by_context is marked @deprecated in trait.dataframe_common.php.
-	* This call site uses the legacy context-key mechanism intentionally and
-	* should be migrated when the order system is updated.
-	*
-	* @param string $parent_section_tipo - Section tipo of the parent being unlinked.
-	* @param int $parent_section_id - Record ID of the parent being unlinked.
+	* @param locator $locator - The parent locator being unlinked (carries or resolves to ->id).
 	* @return bool - false when no order component exists; otherwise the result of save()
-	*   when removal succeeded, or true when remove_by_context() returned false.
+	*   when removal succeeded, or true when remove_by_id_key() returned false.
 	*/
-	protected function remove_child_order(string $parent_section_tipo, int $parent_section_id) : bool {
+	protected function remove_child_order(locator $locator) : bool {
 		$section_map = section::get_section_map($this->section_tipo);
 		$order_tipo = $section_map->thesaurus->order ?? null;
 		if (empty($order_tipo)) {
 			return false;
 		}
 
-		// Set this child's order in THEIR own order component
+		// Resolve the parent-link item id (the order's id_key). Prefer the
+		// locator's own id; otherwise match it against the stored parent locators.
+		$id_key = (isset($locator->id) && $locator->id!==null && $locator->id!=='')
+			? (int)$locator->id
+			: $this->resolve_parent_locator_id_key($locator);
+		if ($id_key<=0) {
+			// nothing paired (or unresolved): no order value to remove
+			return true;
+		}
+
 		$order_component = $this->get_order_dataframe();
 		if ($order_component === null) {
 			return false;
 		}
 
-		$remove_result = $order_component->remove_by_context(
-			$parent_section_tipo,
-			$parent_section_id
-		);
+		$remove_result = $order_component->remove_by_id_key($id_key);
 
 		if($remove_result===true){
 			return $order_component->save();
@@ -925,6 +944,28 @@ class component_relation_parent extends component_relation_common {
 
 		return true;
 	}//end remove_child_order
+
+
+	/**
+	* RESOLVE_PARENT_LOCATOR_ID_KEY
+	* Find the stored parent locator matching the given locator by section
+	* coordinates and return its item id (the order's id_key). Used when the
+	* incoming removal locator does not carry its own id.
+	* @param object $locator - locator with ->section_tipo and ->section_id
+	* @return int - the matched stored locator's id, or 0 when not found
+	*/
+	private function resolve_parent_locator_id_key(object $locator) : int {
+		$data = $this->get_data() ?? [];
+		foreach ($data as $stored) {
+			if (is_object($stored)
+				&& isset($stored->id)
+				&& isset($stored->section_tipo) && $stored->section_tipo === $locator->section_tipo
+				&& isset($stored->section_id) && (int)$stored->section_id === (int)$locator->section_id) {
+				return (int)$stored->id;
+			}
+		}
+		return 0;
+	}//end resolve_parent_locator_id_key
 
 
 
@@ -995,16 +1036,14 @@ class component_relation_parent extends component_relation_common {
 	*    component_relation_children::get_children_of_type() (type='descriptor').
 	*    The list is already sorted by stored order, so its iteration order is
 	*    the canonical desired order after renumbering.
-	* 3. For each child, instantiate its component_number in 'edit' mode and call
-	*    get_value_by_context() to read the existing value.  If the current value
-	*    already equals the target position the child is skipped (no save).
-	*    Otherwise update_value_by_context() + save() writes the new value.
+	* 3. For each child, resolve its parent-link locator id (the order's id_key) via
+	*    component_relation_children::resolve_parent_link_id_key(), instantiate its
+	*    component_number in 'edit' mode and call get_value_by_id_key() to read the
+	*    existing value.  If it already equals the target position the child is
+	*    skipped (no save). Otherwise update_value_by_id_key() + save() writes it.
 	*
 	* This method is typically called after a child is removed or reordered so
 	* that the remaining siblings form a gapless sequence starting at 1.
-	*
-	* (!) update_value_by_context is marked @deprecated in trait.dataframe_common.php.
-	* Used here intentionally as part of the legacy context-key order subsystem.
 	*
 	* @param string $section_tipo - Section tipo of the children being renumbered.
 	* @param string $parent_section_tipo - Section tipo of the parent.
@@ -1038,11 +1077,25 @@ class component_relation_parent extends component_relation_common {
 				$child_locator->section_tipo
 			);
 
-			// Get current value to skip unchanged
-			$current_value = $sibling_order_component->get_value_by_context(
+			// Resolve this child's parent-link locator id (the order's id_key)
+			$id_key = component_relation_children::resolve_parent_link_id_key(
+				$child_locator->section_tipo,
+				$child_locator->section_id,
 				$parent_section_tipo,
 				$parent_section_id
 			);
+			if ($id_key<=0) {
+				debug_log(__METHOD__
+					. ' Skipped sibling order: could not resolve parent-link id_key' . PHP_EOL
+					. ' child: ' . $child_locator->section_tipo . '_' . to_string($child_locator->section_id)
+					, logger::WARNING
+				);
+				$order++;
+				continue;
+			}
+
+			// Get current value to skip unchanged
+			$current_value = $sibling_order_component->get_value_by_id_key( $id_key );
 
 			// Skip if order already correct
 			if ((int)$current_value === $order) {
@@ -1050,10 +1103,9 @@ class component_relation_parent extends component_relation_common {
 				continue;
 			}
 
-			$order_result = $sibling_order_component->update_value_by_context(
+			$order_result = $sibling_order_component->update_value_by_id_key(
 				$order++,
-				$parent_section_tipo,
-				$parent_section_id
+				$id_key
 			);
 			if($order_result === true){
 				$sibling_order_component->save();
