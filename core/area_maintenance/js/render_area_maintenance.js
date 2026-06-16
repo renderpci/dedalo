@@ -247,7 +247,7 @@ const get_content_data = function(self) {
 				ui.load_item_with_spinner({
 					container			: container,
 					replace_container	: false,
-					label				: widget.label,
+					label				: (widget.label || '').replace(/<[^>]*>/g, ''),
 					callback			: async () => {
 						const node = await render_widget(widget, self)
 						setTimeout(()=>{
