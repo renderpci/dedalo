@@ -224,7 +224,7 @@ class section extends common {
 	* Singleton factory: returns a cached section instance or creates one on first call.
 	*
 	* Cache key format: "{tipo}_{mode}" for normal sections, extended with
-	* "_dataframe_{section_tipo_key}_{section_id_key}_{main_component_tipo}" when a
+	* "_dataframe_{section_tipo}_{id_key}_{main_component_tipo}" when a
 	* caller_dataframe is supplied (so dataframe-scoped views do not share the same
 	* object as the top-level section view).
 	*
@@ -302,7 +302,10 @@ class section extends common {
 			// find current instance in cache
 				$cache_key = implode('_', [$tipo, $mode]);
 				if(isset($caller_dataframe)){
-					$cache_key .= '_dataframe_'.$caller_dataframe->section_tipo_key.'_'.$caller_dataframe->section_id_key.'_'.$caller_dataframe->main_component_tipo;
+					// unified pairing: key on id_key (the main item id) + host section + main tipo
+					$cache_key .= '_dataframe_'.($caller_dataframe->section_tipo ?? '')
+						.'_'.($caller_dataframe->id_key ?? '')
+						.'_'.($caller_dataframe->main_component_tipo ?? '');
 
 				}
 				if ( !isset(self::$ar_section_instances[$cache_key]) ) {
@@ -1712,7 +1715,7 @@ class section extends common {
 	*
 	*   model === 'component_dataframe' AND $caller_dataframe is set:
 	*     Uses component_common::dataframe_entry_matches() to apply the unified
-	*     id_key / section_id_key dual-read contract (see memory: IRI id dataframe pairing).
+	*     id_key pairing contract (see memory: IRI id dataframe pairing).
 	*     This handles the case where a dataframe component built without a caller_dataframe
 	*     (e.g. import pipelines) stores whole-dato locators that must still be cleaned up
 	*     when the dataframe entry is deleted.
@@ -1727,10 +1730,10 @@ class section extends common {
 	*   - model               : ?string = null — component model name (drives predicate selection)
 	*   - caller_dataframe    : ?object = null — dataframe context (required for component_dataframe path)
 	*     {
-	*       section_tipo    : string — e.g. "numisdata4"
-	*       section_id      : string — e.g. "1"
-	*       section_id_key  : string — legacy key (e.g. "1")
-	*       tipo_key        : string — e.g. "numisdata161"
+	*       section_tipo        : string — e.g. "numisdata4"
+	*       section_id          : string — e.g. "1"
+	*       id_key              : int — the main item id (e.g. 1)
+	*       main_component_tipo : string — e.g. "numisdata161"
 	*     }
 	* @return array - the locators that were removed (empty when nothing matched)
 	*/
@@ -1755,7 +1758,7 @@ class section extends common {
 			// In those cases the component_dataframe manage its data as other components with whole data.
 			if($model === 'component_dataframe' && isset($caller_dataframe) ) {
 
-				// central match predicate (dual-read: id_key unified contract / section_id_key legacy)
+				// central match predicate (unified contract: id_key)
 				if ( component_common::dataframe_entry_matches($current_locator, $caller_dataframe, $component_tipo) ){
 						$ar_deleted_locators[] = $current_locator;
 
