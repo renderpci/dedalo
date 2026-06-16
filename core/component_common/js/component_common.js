@@ -1233,14 +1233,17 @@ component_common.prototype.change_value = async function(options) {
 			// function(){
 			// 		return confirm(get_label.sure)
 			// 	}
-			// the confirm will check the true and false option, don't check it in the function!
-			// to check the user result use the general response of this function (false or api_response)
+			// The confirm will check the true and false option, don't check it in the function!
+			// To check the user result use the general response of this function (false or api_response)
 			const remove_dialog = typeof custom_remove_dialog!=='undefined' && typeof custom_remove_dialog==='function'
 				? custom_remove_dialog
 				: function() {
+					const safe_label = label
+						? (':' + label)
+						: ('from component ' + self.label)
 					const msg = SHOW_DEBUG
-						? `Sure to remove value: ${label} ? \n\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
-						: `Sure to remove value: ${label} ?`
+						? `Sure to remove value ${safe_label} ? \n\nDEBUG:\nchanged_data:\n${JSON.stringify(changed_data, null, 2)}`
+						: `Sure to remove value ${safe_label} ?`
 					return confirm( msg )
 				  }
 
