@@ -128,16 +128,6 @@ class logger_backend_activity extends logger_backend {
 		'model_name'	=>'component_date'
 	];
 	/**
-	* Component descriptor for the PROJECTS field (dd550, component_filter).
-	* Reserved for future project-scoping of activity records; populated by
-	* callers that pass a projects filter in $log_data.
-	* @var array{tipo:string,model_name:string} $_COMPONENT_PROJECTS
-	*/
-	static array $_COMPONENT_PROJECTS	= [
-		'tipo'			=>'dd550',
-		'model_name'	=>'component_filter'
-	];
-	/**
 	* Component descriptor for the DATA field (dd551, component_json).
 	* Stores the caller-supplied $log_data array as a JSONB value.  The
 	* ontology registers this component as component_input_text (v5 legacy)
@@ -293,7 +283,6 @@ class logger_backend_activity extends logger_backend {
 			self::$_COMPONENT_WHAT['tipo'],
 			self::$_COMPONENT_WHERE['tipo'],
 			self::$_COMPONENT_WHEN['tipo'],
-			self::$_COMPONENT_PROJECTS['tipo'],
 			self::$_COMPONENT_DATA['tipo']
 		];
 
@@ -584,17 +573,15 @@ class logger_backend_activity extends logger_backend {
 			'user_id'		=> $user_id
 		];
 
-		// Add to queue
-		self::$log_queue[] = $options;
+		// Add to queue (count once: this path can fire thousands of times per request)
+		$queue_size = array_push(self::$log_queue, $options);
 
-		// Flush immediately if queue full (prevents memory issues)
-		if (count(self::$log_queue) >= self::MAX_QUEUE_SIZE) {
+		if ($queue_size >= self::MAX_QUEUE_SIZE) {
+			// Flush immediately if queue full (prevents memory issues)
 			self::flush_queue();
-		} else {
+		} elseif ($queue_size === 1) {
 			// Register single shutdown handler on first log only
-			if (count(self::$log_queue) === 1) {
-				register_shutdown_function([self::class, 'flush_queue']);
-			}
+			register_shutdown_function([self::class, 'flush_queue']);
 		}
 	}//end log_message
 
