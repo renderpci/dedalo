@@ -16,8 +16,9 @@
  * - Dataframe locators carry the positive marker type=DEDALO_RELATION_TYPE_DATAFRAME
  *   (constant value 'dd490', defined in core/base/dd_tipos.php).
  * - Match predicate: (type, from_component_tipo, main_component_tipo, id_key)
- * - Legacy (pre-migration) locators carry section_id_key/section_tipo_key and
- *   no type: they are dual-read until the dataframe_v7_migration update runs.
+ * - Legacy (pre-migration) locators carried section_id_key/section_tipo_key and
+ *   no type. Dual-read has been REMOVED: only the type+id_key shape is recognised,
+ *   so the dataframe_v7_migration update must run to convert legacy data.
  *
  * Methods grouped by responsibility:
  * - Detection / matching: is_dataframe_entry(), dataframe_entry_matches()
@@ -28,8 +29,9 @@
  * - JSON controller helper: build_dataframe_subdatum()
  * - Export/import: get_export_dataframe_data(), import_dataframe_data()
  * - Diffusion: get_diffusion_data_with_dataframe()
- * - Deprecated context-keyed methods: get_data_by_context(), add_value_with_context(),
- *   remove_by_context(), get_value_by_context(), update_value_by_context()
+ * - Inline id_key-paired values (e.g. relation sibling-order component_number):
+ *   get_data_by_id_key(), add_value_by_id_key(), remove_by_id_key(),
+ *   get_value_by_id_key(), update_value_by_id_key()
  *
  * @package Dédalo
  * @subpackage Core
@@ -56,30 +58,22 @@ trait dataframe_common {
 		if (!is_object($el)) {
 			return false;
 		}
-		// unified contract: positive marker
-		if (isset($el->type) && $el->type===DEDALO_RELATION_TYPE_DATAFRAME) {
-			return true;
-		}
-		// legacy shape fallback (pre-migration data): pairing keys present
-		return (isset($el->id_key) || isset($el->section_id_key))
-			&& isset($el->main_component_tipo);
+		// unified contract: the positive type marker (dd490) is the single source of
+		// truth. All frames carry it after dataframe_v7_migration; no legacy fallback.
+		return isset($el->type) && $el->type===DEDALO_RELATION_TYPE_DATAFRAME;
 	}//end is_dataframe_entry
 
 
 
 	/**
 	 * DATAFRAME_ENTRY_MATCHES
-	 * Central match predicate between a dataframe locator and a caller
-	 * context, dual-reading new (id_key) and legacy (section_id_key) shapes.
+	 * Central match predicate between a dataframe locator and a caller context.
 	 *
-	 * Enforces the four-part match contract:
-	 *   1. is_dataframe_entry() passes (positive marker or legacy shape).
+	 * Enforces the unified match contract (id_key only):
+	 *   1. is_dataframe_entry() passes (type === dd490 marker).
 	 *   2. from_component_tipo matches the slot, when the caller supplies one.
 	 *   3. main_component_tipo identifies the same main component as the caller.
-	 *   4. id_key (or legacy section_id_key) is the same item id (int comparison).
-	 * A fifth legacy-only consistency check on section_tipo_key is applied only
-	 * when both sides carry it (pre-migration data may store the frame target
-	 * section there instead of the host section).
+	 *   4. id_key is the same main-item id (int comparison).
 	 * @param mixed $el - candidate dataframe locator from a component's relations bag
 	 * @param object $caller_dataframe - dataframe_caller DTO or legacy stdClass
 	 * @param string|null $from_component_tipo = null - the component_dataframe slot tipo; skips slot check when null
@@ -104,16 +98,10 @@ trait dataframe_common {
 			return false;
 		}
 
-		// pairing key. id_key (unified contract) or section_id_key (legacy)
-		$caller_key	= $caller_dataframe->id_key ?? $caller_dataframe->section_id_key ?? null;
-		$el_key		= $el->id_key ?? $el->section_id_key ?? null;
+		// pairing key. id_key (the main item id) is the single source of truth
+		$caller_key	= $caller_dataframe->id_key ?? null;
+		$el_key		= $el->id_key ?? null;
 		if ($caller_key===null || $el_key===null || (int)$el_key !== (int)$caller_key) {
-			return false;
-		}
-
-		// section_tipo_key. Legacy consistency check, only when both sides carry it
-		if (isset($el->section_tipo_key) && isset($caller_dataframe->section_tipo_key)
-			&& $el->section_tipo_key !== $caller_dataframe->section_tipo_key) {
 			return false;
 		}
 
@@ -540,8 +528,9 @@ trait dataframe_common {
 	 *
 	 * Steps:
 	 *   1. Group incoming locators by slot (from_component_tipo).
-	 *   2. Normalize each entry to the unified contract (type + id_key; legacy
-	 *      aliases section_id_key/section_tipo_key kept in sync for dual-read).
+	 *   2. Normalize each entry to the unified contract (type + id_key). This is the
+	 *      old-CSV import boundary, so a legacy section_id_key (from a pre-v7 export)
+	 *      is accepted as the id_key source; the legacy aliases are then stripped.
 	 *   3. For each slot: load the full (uncached) slot data, keep entries
 	 *      belonging to other main components, merge in the imported frames,
 	 *      and save. Entries without a resolvable pairing key or slot are
@@ -567,6 +556,8 @@ trait dataframe_common {
 			}
 
 			$slot_tipo	= $frame->from_component_tipo ?? null;
+			// id_key is the main data item id. Old-CSV import boundary: a pre-v7 export
+			// carries the pairing key as section_id_key, so accept it as the id_key source.
 			$id_key		= $frame->id_key ?? $frame->section_id_key ?? null;
 
 			if (empty($slot_tipo) || $id_key===null) {
@@ -578,14 +569,12 @@ trait dataframe_common {
 				continue;
 			}
 
-			// normalize to the unified contract (+ legacy aliases)
+			// normalize to the unified contract (id_key-only, like the interactive
+			// write path). Strip any legacy aliases that arrived in the import payload.
 			$frame->type				= DEDALO_RELATION_TYPE_DATAFRAME;
 			$frame->id_key				= (int)$id_key;
-			$frame->section_id_key		= (int)$id_key;
 			$frame->main_component_tipo	= $frame->main_component_tipo ?? $this->tipo;
-			if (!isset($frame->section_tipo_key)) {
-				$frame->section_tipo_key = $this->section_tipo;
-			}
+			unset($frame->section_id_key, $frame->section_tipo_key);
 
 			$groups[$slot_tipo][] = $frame;
 		}
@@ -798,143 +787,107 @@ trait dataframe_common {
 
 
 	/**
-	 * GET_DATA_BY_CONTEXT
-	 * Filters this component's data items by the legacy embedded context keys
-	 * (section_tipo_key + section_id_key) and returns the matching subset.
+	 * GET_DATA_BY_ID_KEY
+	 * Filters this component's inline data items by the unified dataframe pairing
+	 * key (id_key = the main component item id) and returns the matching subset.
 	 *
-	 * This was the pre-dataframe mechanism for context-keyed values: instead of
-	 * pairing frame records via locators, values were stored inline inside the
-	 * main component's dato with context properties attached. It survives only
-	 * for backward-compatibility with unmigrated data; all new code should use
-	 * get_dataframe_instance() and the portal-locator mechanism instead.
-	 * @deprecated Superseded by the dataframe locator pairing contract.
-	 *   Use get_dataframe_instance() for item-scoped frame access.
-	 * @param string $section_tipo_key - legacy context tipo key
-	 * @param int $section_id_key - legacy context id key
+	 * This applies the dataframe contract to inline value items (e.g. the relation
+	 * sibling-order component_number): every value is paired with ONE item of its
+	 * main component by id_key — exactly like every other dataframe. There are no
+	 * parent-record context keys (the retired section_tipo_key/section_id_key).
+	 * @param int $id_key - the main component item id this value is paired with
 	 * @return array|null - filtered data items, or null when the component has no data or no match
 	 */
-	public function get_data_by_context(string $section_tipo_key, int $section_id_key) : ?array {
+	public function get_data_by_id_key(int $id_key) : ?array {
 		$data = $this->get_data();
 		if (empty($data)) {
 			return null;
 		}
 
-		$filtered = array_values(array_filter($data, function($item) use ($section_tipo_key, $section_id_key) {
-			return isset($item->section_tipo_key)
-				&& $item->section_tipo_key === $section_tipo_key
-				&& isset($item->section_id_key)
-				&& (int)$item->section_id_key === (int)$section_id_key;
+		$filtered = array_values(array_filter($data, function($item) use ($id_key) {
+			return isset($item->id_key)
+				&& (int)$item->id_key === (int)$id_key;
 		}));
 
 		return empty($filtered) ? null : $filtered;
-	}//end get_data_by_context
+	}//end get_data_by_id_key
 
 
 	/**
-	 * ADD_VALUE_WITH_CONTEXT
-	 * Appends a new data item carrying inline legacy context keys
-	 * (section_tipo_key + section_id_key) to this component's data array.
-	 *
-	 * Part of the pre-dataframe embedded-value mechanism. Retained for
-	 * backward-compatibility; do not use in new code.
-	 * @deprecated Superseded by the dataframe locator pairing contract.
-	 *   Use get_dataframe_instance() and the frame lifecycle instead.
-	 * @param mixed $value - the value payload to embed
-	 * @param string $section_tipo_key - legacy context tipo key
-	 * @param int $section_id_key - legacy context id key
+	 * ADD_VALUE_BY_ID_KEY
+	 * Appends a new inline data item carrying the unified pairing key id_key
+	 * (the main component item id) to this component's data array.
+	 * @param mixed $value - the value payload to store
+	 * @param int $id_key - the main component item id this value is paired with
 	 * @return bool - result of set_data()
 	 */
-	public function add_value_with_context($value, string $section_tipo_key, int $section_id_key) : bool {
+	public function add_value_by_id_key($value, int $id_key) : bool {
 		$data = $this->get_data() ?? [];
 
 		$new_item = new stdClass();
-			$new_item->value = $value;
-			$new_item->section_tipo_key = $section_tipo_key;
-			$new_item->section_id_key = $section_id_key;
+			$new_item->value	= $value;
+			$new_item->id_key	= $id_key;
 
 		$data[] = $new_item;
 
 		return $this->set_data($data);
-	}//end add_value_with_context
+	}//end add_value_by_id_key
 
 
 	/**
-	 * REMOVE_BY_CONTEXT
-	 * Removes all data items that carry the specified legacy context keys
-	 * (section_tipo_key + section_id_key) and saves the remaining data.
-	 *
-	 * Part of the pre-dataframe embedded-value mechanism. Retained for
-	 * backward-compatibility; do not use in new code.
-	 * @deprecated Superseded by the dataframe locator pairing contract.
-	 *   Use remove_dataframe_data_by_id() for item-scoped cascade removal.
-	 * @param string $section_tipo_key - legacy context tipo key to match
-	 * @param int $section_id_key - legacy context id key to match
+	 * REMOVE_BY_ID_KEY
+	 * Removes all inline data items paired with the given main item id (id_key)
+	 * and saves the remaining data.
+	 * @param int $id_key - the main component item id to match
 	 * @return bool - result of set_data() on the filtered array
 	 */
-	public function remove_by_context(string $section_tipo_key, int $section_id_key) : bool {
+	public function remove_by_id_key(int $id_key) : bool {
 		$data = $this->get_data() ?? [];
 
-		$filtered = array_values(array_filter($data, function($item) use ($section_tipo_key, $section_id_key) {
+		$filtered = array_values(array_filter($data, function($item) use ($id_key) {
 			return !(
-				isset($item->section_tipo_key)
-				&& $item->section_tipo_key === $section_tipo_key
-				&& isset($item->section_id_key)
-				&& (int)$item->section_id_key === (int)$section_id_key
+				isset($item->id_key)
+				&& (int)$item->id_key === (int)$id_key
 			);
 		}));
 
 		return $this->set_data($filtered);
-	}//end remove_by_context
+	}//end remove_by_id_key
 
 
 	/**
-	 * GET_VALUE_BY_CONTEXT
-	 * Returns the `value` property of the first data item matching the
-	 * specified legacy context keys (section_tipo_key + section_id_key),
-	 * or null when no matching item is found.
-	 *
-	 * Part of the pre-dataframe embedded-value mechanism. Retained for
-	 * backward-compatibility; do not use in new code.
-	 * @deprecated Superseded by the dataframe locator pairing contract.
-	 *   Use get_item_dataframe_data() for item-scoped frame reads.
-	 * @param string $section_tipo_key - legacy context tipo key
-	 * @param int $section_id_key - legacy context id key
-	 * @return mixed|null - the embedded value, or null when not found
+	 * GET_VALUE_BY_ID_KEY
+	 * Returns the `value` property of the first inline data item paired with the
+	 * given main item id (id_key), or null when no matching item is found.
+	 * @param int $id_key - the main component item id to match
+	 * @return mixed|null - the stored value, or null when not found
 	 */
-	public function get_value_by_context(string $section_tipo_key, int $section_id_key) {
-		$context_data = $this->get_data_by_context($section_tipo_key, $section_id_key);
+	public function get_value_by_id_key(int $id_key) {
+		$context_data = $this->get_data_by_id_key($id_key);
 		if (empty($context_data)) {
 			return null;
 		}
 
 		return $context_data[0]->value ?? null;
-	}//end get_value_by_context
+	}//end get_value_by_id_key
 
 
 	/**
-	 * UPDATE_VALUE_BY_CONTEXT
-	 * Updates the `value` property of the first data item matching the
-	 * specified legacy context keys in place; appends a new item if no
-	 * match is found (upsert behaviour via add_value_with_context()).
-	 *
-	 * Part of the pre-dataframe embedded-value mechanism. Retained for
-	 * backward-compatibility; do not use in new code.
-	 * @deprecated Superseded by the dataframe locator pairing contract.
-	 *   Use import_dataframe_data() for import-time frame writes.
+	 * UPDATE_VALUE_BY_ID_KEY
+	 * Updates the `value` of the first inline data item paired with the given
+	 * main item id (id_key) in place; appends a new item if none matches (upsert
+	 * via add_value_by_id_key()).
 	 * @param mixed $value - the new value to store
-	 * @param string $section_tipo_key - legacy context tipo key to match
-	 * @param int $section_id_key - legacy context id key to match
-	 * @return bool - result of set_data() or add_value_with_context()
+	 * @param int $id_key - the main component item id to match
+	 * @return bool - result of set_data() or add_value_by_id_key()
 	 */
-	public function update_value_by_context($value, string $section_tipo_key, int $section_id_key) : bool {
+	public function update_value_by_id_key($value, int $id_key) : bool {
 		$data = $this->get_data() ?? [];
 		$found = false;
 
 		foreach ($data as $item) {
-			if (isset($item->section_tipo_key)
-				&& $item->section_tipo_key === $section_tipo_key
-				&& isset($item->section_id_key)
-				&& (int)$item->section_id_key === (int)$section_id_key) {
+			if (isset($item->id_key)
+				&& (int)$item->id_key === (int)$id_key) {
 					$item->value = $value;
 					$found = true;
 				break;
@@ -942,9 +895,9 @@ trait dataframe_common {
 		}
 
 		if (!$found) {
-			return $this->add_value_with_context($value, $section_tipo_key, $section_id_key);
+			return $this->add_value_by_id_key($value, $id_key);
 		}
 
 		return $this->set_data($data);
-	}//end update_value_by_context
+	}//end update_value_by_id_key
 }
