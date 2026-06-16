@@ -93,7 +93,7 @@ class event_manager_class {
 		// Check for duplicates (only if debugging is enabled)
 		if (SHOW_DEBUG === true && callbacks.has(callback)) {
 			console.error(`)))) Found duplicated subscription: ${event_name}`);
-			alert(`Found duplicated subscription ${event_name}`);
+			// alert(`Found duplicated subscription ${event_name}`);
 		}
 
 		// Add callback and store token mapping
