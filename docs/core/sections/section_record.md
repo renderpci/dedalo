@@ -320,7 +320,7 @@ register `dd1324`, tools configuration `dd996`, profiles `dd234`).
 | `get_table() : string` | The resolved `matrix*` table (`section_record_temp` overrides this to `'temp'`). |
 | `jsonSerialize() : mixed` | `JsonSerializable` hook — returns the object's non-null vars (keeps the serialized payload small). *(There is no separate `json()` method; this is the serialization surface.)* |
 | `restore_deleted_section_media_files() : ?array` | Used when recovering a record from Time Machine: moves each media component's files back from the deleted folder. |
-| `remove_all_inverse_references() : array` | On delete, removes every locator that other records hold pointing at this one. Only relation-family components and `component_dataframe` are processed (dataframe pairing is dual-read: `id_key` unified contract or legacy `section_id_key`). |
+| `remove_all_inverse_references() : array` | On delete, removes every locator that other records hold pointing at this one. Only relation-family components and `component_dataframe` are processed (dataframe pairing uses `id_key` only — the unified contract). |
 | `remove_section_media_files() : ?array` *(protected)* | On delete, moves all of this record's media files (all qualities) to the deleted folder. |
 
 ---
