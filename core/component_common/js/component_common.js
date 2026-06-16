@@ -1221,7 +1221,7 @@ component_common.prototype.change_value = async function(options) {
 			throw `Exception: changed_data is not as expected (array). ` + typeof changed_data;
 		}
 
-	// remove dialog. Check the remove dialog (default or sent by caller )user confirmation prevents remove accidentally
+	// remove dialog. Check the remove dialog (default or sent by caller) user confirmation prevents remove accidentally
 		// UIUX-01: changed_data items are objects ({action, ...}), not strings.
 		// The old `changed_data[0]==='remove'` was always false, so the accidental-
 		// delete confirmation never fired. Detect a remove action anywhere in the batch.

@@ -11790,6 +11790,7 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .area_maintenance > .content_data .widget_container > .widget_label.icon_arrow:after {
   background-color: var(--color_white);
+  margin-right: 1rem;
 }
 .area_maintenance > .content_data .widget_container > .widget_label > * {
   pointer-events: none;
