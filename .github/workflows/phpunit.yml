@@ -41,10 +41,13 @@ jobs:
         run: |
           cp config/sample.config.php config/config.php
           cp config/sample.config_db.php config/config_db.php
-          sed -i "s/define('DEDALO_HOSTNAME_CONN', 'localhost')/define('DEDALO_HOSTNAME_CONN', '127.0.0.1')/" config/config_db.php
-          sed -i "s/define('DEDALO_DATABASE_CONN', 'dedalo_mydatabase')/define('DEDALO_DATABASE_CONN', 'dedalo_test')/" config/config_db.php
-          sed -i "s/define('DEDALO_USERNAME_CONN', 'myusername')/define('DEDALO_USERNAME_CONN', 'dedalo_test')/" config/config_db.php
-          sed -i "s/define('DEDALO_PASSWORD_CONN', 'mypassword')/define('DEDALO_PASSWORD_CONN', 'dedalo_test_pass')/" config/config_db.php
+          cp config/sample.config_core.php config/config_core.php
+          # sample.config_db.php separates name/value with tabs, so anchor each
+          # replacement on its define() line and swap only the quoted value.
+          sed -i "/define('DEDALO_HOSTNAME_CONN',/ s/'localhost'/'127.0.0.1'/" config/config_db.php
+          sed -i "/define('DEDALO_DATABASE_CONN',/ s/'dedalo_mydatabase'/'dedalo_test'/" config/config_db.php
+          sed -i "/define('DEDALO_USERNAME_CONN',/ s/'myusername'/'dedalo_test'/" config/config_db.php
+          sed -i "/define('DEDALO_PASSWORD_CONN',/ s/'mypassword'/'dedalo_test_pass'/" config/config_db.php
           sed -i "s/define('DEVELOPMENT_SERVER', false)/define('DEVELOPMENT_SERVER', true)/" config/config.php
 
       - name: Initialize database
