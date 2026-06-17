@@ -1,260 +1,318 @@
 {
-  "label": "Desarrollo de herramientas",
-  "relations": [
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd200"
-    },
-    {
-      "type": "dd675",
-      "section_id": "1",
-      "section_tipo": "dd153",
-      "from_component_tipo": "dd1337"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
-    },
-    {
-      "type": "dd151",
-      "section_id": "51",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1332"
-    },
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd197"
-    }
-  ],
-  "components": {
-    "dd199": {
-      "inf": "Fecha de creación [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 30,
-              "hour": 17,
-              "time": 65001980137,
-              "year": 2022,
-              "month": 5,
-              "minute": 35,
-              "second": 37
-            }
-          }
-        ]
+  "id": "3944",
+  "section_id": "24",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 24,
+    "created_date": "2026-06-17 13:27:57",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
       }
-    },
-    "dd201": {
-      "inf": "modified_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 22,
-              "hour": 14,
-              "time": 65057523818,
-              "year": 2024,
-              "month": 2,
-              "minute": 23,
-              "second": 38
-            }
-          }
-        ]
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
       }
-    },
-    "dd612": {
-      "inf": "Descripción [component_text_area]",
-      "dato": {
-        "lg-cat": [
-          "Genera una versió imprimible de la transcripció d'una entrevista. Utilitzat per personalitzar la sortida d'impressió, afegint o eliminant les etiquetes de codi de temps, indexació, persones, etc."
-        ],
-        "lg-deu": [
-          "<p>Erzeugt eine druckbare Version des Interviewprotokolls. Sie können den Ausdruck durch Hinzufügen oder Entfernen von Tags für Zeitcode, Indexierung, Personen usw. anpassen.</p>"
-        ],
-        "lg-ell": [
-          "<p>Δημιουργεί μια εκτυπώσιμη έκδοση του πρακτικού της συνέντευξης. Σας επιτρέπει να προσαρμόσετε την εκτύπωση προσθέτοντας ή αφαιρώντας ετικέτες για τον κώδικα ώρας, την ευρετηρίαση, τα άτομα κ.λπ.</p>"
-        ],
-        "lg-eng": [
-          "<p>Generates a printable version of the interview transcript. Allows you to customize the printout by adding or removing tags for time code, indexing, people, etc.</p>"
-        ],
-        "lg-fra": [
-          "Générez une version imprimable de la transcription de l'entretien. Utilisé pour personnaliser la sortie d'impression en ajoutant ou en supprimant des balises pour le code temporel, l'indexation, les personnes, etc."
-        ],
-        "lg-nep": [
-          "<p>अन्तर्वार्ता ट्रान्सक्रिप्टको मुद्रण योग्य संस्करण उत्पन्न गर्दछ। समय कोड, अनुक्रमणिका, व्यक्ति, इत्यादिका लागि ट्यागहरू थपेर वा हटाएर प्रिन्टआउटलाई अनुकूलन गर्न अनुमति दिन्छ।</p>"
-        ],
-        "lg-spa": [
-          "<p>Genera una versión imprimible de la transcripción de una entrevista. Utilizado para personalizar la salida de impresión, añadiendo o eliminando las etiquetas de código de tiempo, indexación, personas, etc.</p>"
-        ]
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "51",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
       }
-    },
-    "dd799": {
-      "inf": "Etiqueta [component_input_text]",
-      "dato": {
-        "lg-cat": [
-          "Impresió de transcripció"
-        ],
-        "lg-deu": [
-          "Transkription drucken"
-        ],
-        "lg-ell": [
-          "Εκτύπωση μεταγραφής"
-        ],
-        "lg-eng": [
-          "Print transcription"
-        ],
-        "lg-nep": [
-          "प्रिन्ट ट्रान्सक्रिप्शन"
-        ],
-        "lg-spa": [
-          "Impresión de transcripción"
-        ]
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
       }
-    },
-    "dd1326": {
-      "inf": "Nombre de la herramienta [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "tool_tr_print"
-        ]
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
       }
-    },
-    "dd1327": {
-      "inf": "Versión [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "1.0.2"
-        ]
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
       }
-    },
-    "dd1328": {
-      "inf": "Versión Dédalo mínima [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "6.0.0"
-        ]
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "<p>Genera una versió imprimible de la transcripció d'una entrevista. Utilitzat per personalitzar la sortida d'impressió, afegint o eliminant les etiquetes de codi de temps, indexació, persones, etc.</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "<p>Erzeugt eine druckbare Version des Interviewprotokolls. Sie können den Ausdruck durch Hinzufügen oder Entfernen von Tags für Zeitcode, Indexierung, Personen usw. anpassen.</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "<p>Δημιουργεί μια εκτυπώσιμη έκδοση του πρακτικού της συνέντευξης. Σας επιτρέπει να προσαρμόσετε την εκτύπωση προσθέτοντας ή αφαιρώντας ετικέτες για τον κώδικα ώρας, την ευρετηρίαση, τα άτομα κ.λπ.</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "<p>Generates a printable version of the interview transcript. Allows you to customize the printout by adding or removing tags for time code, indexing, people, etc.</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-fra",
+        "value": "<p>Générez une version imprimable de la transcription de l'entretien. Utilisé pour personnaliser la sortie d'impression en ajoutant ou en supprimant des balises pour le code temporel, l'indexation, les personnes, etc.</p>"
+      },
+      {
+        "id": 6,
+        "lang": "lg-nep",
+        "value": "<p>अन्तर्वार्ता ट्रान्सक्रिप्टको मुद्रण योग्य संस्करण उत्पन्न गर्दछ। समय कोड, अनुक्रमणिका, व्यक्ति, इत्यादिका लागि ट्यागहरू थपेर वा हटाएर प्रिन्टआउटलाई अनुकूलन गर्न अनुमति दिन्छ।</p>"
+      },
+      {
+        "id": 7,
+        "lang": "lg-spa",
+        "value": "<p>Genera una versión imprimible de la transcripción de una entrevista. Utilizado para personalizar la salida de impresión, añadiendo o eliminando las etiquetas de código de tiempo, indexación, personas, etc.</p>"
       }
-    },
-    "dd1335": {
-      "inf": "Propiedades [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "open_as": "window",
-            "windowFeatures": null
-          }
-        ]
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Impresió de transcripció"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Transkription drucken"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Εκτύπωση μεταγραφής"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Print transcription"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Transkripzioa inprimatzea"
+      },
+      {
+        "id": 6,
+        "lang": "lg-nep",
+        "value": "प्रिन्ट ट्रान्सक्रिप्शन"
+      },
+      {
+        "id": 7,
+        "lang": "lg-spa",
+        "value": "Impresión de transcripción"
       }
-    },
-    "dd1350": {
-      "inf": "Afecta a tipos: [component_json]",
-      "dato": {
-        "lg-nolan": [
-          [
-            "rsc36"
-          ]
-        ]
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_tr_print"
       }
-    },
-    "dd1353": {
-      "inf": "Simple tool object [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "name": "tool_tr_print",
-            "label": [
-              {
-                "lang": "lg-cat",
-                "value": "Impresió de transcripció"
-              },
-              {
-                "lang": "lg-eng",
-                "value": "Print transcription"
-              },
-              {
-                "lang": "lg-spa",
-                "value": "Impresión de transcripción"
-              }
-            ],
-            "labels": null,
-            "version": null,
-            "ontology": null,
-            "developer": [],
-            "dd_version": null,
-            "properties": {
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "1.0.2"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 30,
+          "hour": 17,
+          "time": 65001980137,
+          "year": 2022,
+          "month": 5,
+          "minute": 35,
+          "second": 37
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 17,
+          "hour": 13,
+          "time": 65132083678,
+          "year": 2026,
+          "month": 6,
+          "minute": 27,
+          "second": 58
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            {
               "open_as": "window",
               "windowFeatures": null
-            },
-            "section_id": 20,
-            "description": [
-              {
-                "lang": "lg-cat",
-                "value": [
-                  "Genera una versió imprimible de la transcripció d'una entrevista. Utilitzat per personalitzar la sortida d'impressió, afegint o eliminant les etiquetes de codi de temps, indexació, persones, etc."
-                ]
-              },
-              {
-                "lang": "lg-eng",
-                "value": [
-                  "Generate a printable version of the interview transcript. Used to customize the print output by adding or removing tags for timecode, indexing, people, etc."
-                ]
-              },
-              {
-                "lang": "lg-fra",
-                "value": [
-                  "Générez une version imprimable de la transcription de l'entretien. Utilisé pour personnaliser la sortie d'impression en ajoutant ou en supprimant des balises pour le code temporel, l'indexation, les personnes, etc."
-                ]
-              },
-              {
-                "lang": "lg-spa",
-                "value": [
-                  "Genera una versión imprimible de la transcripción de una entrevistita. Utilizado para personalizar la salida de impresión, añadiendo o eliminando las etiquetas de código de tiempo, indexación, personas, etc."
-                ]
-              }
-            ],
-            "section_tipo": "dd1324",
-            "always_active": false,
-            "affected_tipos": [
+            }
+          ]
+        }
+      }
+    ],
+    "dd1350": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            [
               "rsc36"
-            ],
-            "affected_models": [
-              "component_text_area"
-            ],
-            "show_in_component": true,
-            "show_in_inspector": false,
-            "requirement_translatable": false
-          }
-        ]
+            ]
+          ]
+        }
       }
-    },
-    "dd1644": {
-      "inf": "Desarollador [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "Dédalo team"
-        ]
-      }
-    }
+    ]
   },
-  "section_id": 24,
-  "created_date": "2023-11-02 19:36:20",
-  "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 14:23:38",
-  "diffusion_info": null,
-  "created_by_userID": -1,
-  "section_real_tipo": "dd73",
-  "modified_by_userID": -1
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 7
+      }
+    ],
+    "dd799": [
+      {
+        "count": 7
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1350": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
 }

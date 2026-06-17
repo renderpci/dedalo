@@ -429,52 +429,47 @@ section_record.prototype.get_ar_instances_edit = async function() {
 		const items_length	= items.length
 		for (let i = 0; i < items_length; i++) {
 
-			// parallel mode — wrap in Promise so Promise.all can collect all results
-			const current_promise = new Promise(function(resolve){
+			const current_context = items[i]
 
-				const current_context = items[i]
+			// For component_dataframe the section_id comes from the caller (the section that owns
+			// the dataframe row), not from this record's own section_id
+			const current_data = self.get_component_data({
+				ddo				: current_context,
+				section_tipo	: current_context.section_tipo,
+				section_id		: (current_context.model==='component_dataframe')
+					? self.caller.section_id
+					: self.section_id,
+				// dataframe pairing key = the MAIN item id (the portal entry id this
+				// record was built from, self.locator.id) — NOT the linked record's
+				// section_id. This is what makes the frame pair to the right item.
+				dataframe_id_key			: (current_context.model==='component_dataframe')
+					? (self.locator?.id ?? null)
+					: null
+			})
 
-				// For component_dataframe the section_id comes from the caller (the section that owns
-				// the dataframe row), not from this record's own section_id
-				const current_data = self.get_component_data({
-					ddo				: current_context,
-					section_tipo	: current_context.section_tipo,
-					section_id		: (current_context.model==='component_dataframe')
-						? self.caller.section_id
-						: self.section_id,
-					// dataframe pairing key = the MAIN item id (the portal entry id this
-					// record was built from, self.locator.id) — NOT the linked record's
-					// section_id. This is what makes the frame pair to the right item.
-					dataframe_id_key			: (current_context.model==='component_dataframe')
-						? (self.locator?.id ?? null)
-						: null
-				})
-
-				// build_instance
-				build_instance(
-					self,
-					current_context,
-					section_id,
-					current_data,
-					null, // column_id — null in edit mode; column alignment is not needed
-					false // autoload — data already in datum, no additional fetch needed
-				)
-				.then(function(current_instance){
-					resolve(current_instance)
-				})
-				.catch((errorMsg) => {
-					console.error('build_instance error: ', errorMsg);
-				})
+			// build_instance — push the promise directly. A failed build resolves to
+			// undefined (logged) instead of rejecting, so Promise.all never stalls.
+			// (!) The previous `new Promise` wrapper omitted resolve() in its catch,
+			// leaving the wrapper pending forever and hanging the whole edit render.
+			const current_promise = build_instance(
+				self,
+				current_context,
+				section_id,
+				current_data,
+				null, // column_id — null in edit mode; column alignment is not needed
+				false // autoload — data already in datum, no additional fetch needed
+			)
+			.catch((errorMsg) => {
+				console.error('build_instance error: ', errorMsg);
+				return undefined
 			})
 			ar_promises.push(current_promise)
 		}//end for (let i = 0; i < items_length; i++)
 
 	// instances — await all parallel builds, then store results
-		await Promise.all(ar_promises)
-		.then(function(ar_instances){
-			// set self.ar_instances
-			self.ar_instances = ar_instances
-		})
+	// filter out undefined entries (ignored or failed builds) so ar_instances has no holes
+		const ar_instances = await Promise.all(ar_promises)
+		self.ar_instances = ar_instances.filter(Boolean)
 
 
 	return self.ar_instances
@@ -555,10 +550,14 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 		}
 
 	self._instances_waiter = (async () => {
+	  // (!) try/finally guarantees the waiter is cleared even when a child build
+	  // throws. Without it a single rejected build left `_instances_waiter` set to
+	  // the rejected promise, so every later call short-circuited to that same
+	  // rejection and the record could never rebuild its columns.
+	  try {
 		// nested check to prevent race after waiter release
 		// (a concurrent caller may have finished just before this IIFE starts)
 		if (self.ar_instances && self.ar_instances.length>0) {
-			self._instances_waiter = null
 			return self.ar_instances
 		}
 
@@ -762,9 +761,12 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 				}//end for (let j = 0; j < request_config_length; j++)
 			}//end for (let i = 0; i < columns_map_length; i++)
 
-		// waiter — reset so post-completion calls fall through to the ar_instances early-exit
-		self._instances_waiter = null
 		return self.ar_instances
+	  } finally {
+		// waiter — always reset (success OR failure) so post-completion calls fall
+		// through to the ar_instances early-exit and failures can be retried
+		self._instances_waiter = null
+	  }
 	})()
 
 

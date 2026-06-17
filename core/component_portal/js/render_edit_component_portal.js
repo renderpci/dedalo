@@ -1277,16 +1277,30 @@ export const render_references = function(ar_references) {
 */
 export const add_wrapper_events = function(self, wrapper, options={}) {
 
+	// pre-warm the service_autocomplete module during idle time (once per page) so
+	// the first activation click does not pay the dynamic-import cost. This is the
+	// correct use of requestIdleCallback: genuine low-priority background work.
+		if (!add_wrapper_events._prewarmed) {
+			add_wrapper_events._prewarmed = true
+			dd_request_idle_callback(() => {
+				import('../../services/service_autocomplete/js/service_autocomplete.js').catch(() => {})
+			})
+		}
+
 	// click handler (autocomplete activation)
+	// Activation is a direct response to user intent, so it must NOT be deferred to
+	// browser idle time (requestIdleCallback could delay it up to its 1000 ms timeout
+	// on a busy main thread — the click moment is the least idle point). self.active
+	// is already set synchronously on the preceding 'mousedown' (ui.component.activate),
+	// so a microtask is enough to let the click finish propagating before we show the
+	// autocomplete, without the idle penalty.
 		const click_handler = (e) => {
 			e.stopPropagation()
-			dd_request_idle_callback(
-				() => {
-					if (self.active) {
-						activate_autocomplete(self, wrapper)
-					}
+			queueMicrotask(() => {
+				if (self.active) {
+					activate_autocomplete(self, wrapper)
 				}
-			)
+			})
 		}
 		wrapper.addEventListener('click', click_handler)
 

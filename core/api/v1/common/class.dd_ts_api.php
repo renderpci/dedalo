@@ -268,11 +268,17 @@ final class dd_ts_api {
 				]);
 			}//end if (empty($children))
 
-		// parse_child_data. Direct children list received case
+		// parse_child_data. Direct children list received case.
+		// Pass the parent (request section) so the order read is parent-aware
+		// (dataframe entry paired to this parent) instead of array index 0.
+			$parent_locator = (!empty($section_tipo) && !empty($section_id))
+				? (object)['section_tipo'=>$section_tipo, 'section_id'=>$section_id]
+				: null;
 			$ar_children_data = ts_object::parse_child_data(
 				$children,
 				$area_model,
-				$ts_object_options
+				$ts_object_options,
+				$parent_locator
 			);
 
 		// build children_data result object
@@ -809,6 +815,12 @@ final class dd_ts_api {
 	* means the section map does not define an order component; $response->msg
 	* carries the actionable hint in that case.
 	*
+	* After the transaction commits, ontology::sync_order_to_dd_ontology() mirrors
+	* the new per-parent order into the dd_ontology table so the navigation menu
+	* (which orders siblings by dd_ontology.order_number) stays consistent with the
+	* tree. This is a separate surface from the area_thesaurus tree itself, whose
+	* order is read live from the matrix order component (see ts_object::parse_child_data).
+	*
 	* Requires parent_section_tipo and parent_section_id in $rqo->source;
 	* the method returns an error early if they are absent.
 	*
@@ -894,6 +906,8 @@ final class dd_ts_api {
 		// cache invalidation. Sibling order under this parent changed
 			if ($result!==false) {
 				ts_object::invalidate_node($parent_section_tipo, $parent_section_id);
+				// sync dd_ontology.order_number so the ontology menu reflects the new order on reload
+				ontology::sync_order_to_dd_ontology($result, $parent_section_tipo, (int)$parent_section_id);
 			}
 
 		// response

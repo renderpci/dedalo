@@ -1,241 +1,400 @@
 {
-  "label": "Desarrollo de herramientas",
-  "relations": [
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd200"
-    },
-    {
-      "type": "dd675",
-      "section_id": "1",
-      "section_tipo": "dd153",
-      "from_component_tipo": "dd1337"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1331"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1332"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
-    },
-    {
-      "type": "dd151",
-      "section_id": "8",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "30",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "50",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "20",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "26",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "52",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd197"
-    }
-  ],
-  "components": {
-    "dd199": {
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 9,
-              "hour": 19,
-              "time": 64925178597,
-              "year": 2020,
-              "month": 1,
-              "minute": 49,
-              "second": 57
-            }
-          }
-        ]
-      }
-    },
-    "dd201": {
-      "inf": "modified_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 14,
-              "hour": 21,
-              "time": 65062213275,
-              "year": 2024,
-              "month": 4,
-              "minute": 1,
-              "second": 15
-            }
-          }
-        ]
-      }
-    },
-    "dd612": {
-      "dato": {
-        "lg-cat": [
-          "<p>Carregueu el fitxer seleccionat al servidor</p>"
-        ],
-        "lg-deu": [
-          "<p>Laden Sie die ausgewählte Datei auf den Server hoch</p>"
-        ],
-        "lg-ell": [
-          "<p>Μεταφορτώστε το επιλεγμένο αρχείο στον διακομιστή</p>"
-        ],
-        "lg-eng": [
-          "Upload selected file to the server"
-        ],
-        "lg-eus": [
-          "<p>Kargatu hautatutako fitxategia zerbitzarira</p>"
-        ],
-        "lg-fra": [
-          "<p>Télécharger le fichier sélectionné sur le serveur</p>"
-        ],
-        "lg-ita": [
-          "<p>Carica il file selezionato sul server</p>"
-        ],
-        "lg-nep": [
-          "<p>चयन गरिएको फाइल सर्भरमा अपलोड गर्नुहोस्</p>"
-        ],
-        "lg-por": [
-          "<p>Carregar o ficheiro selecionado para o servidor</p>"
-        ],
-        "lg-spa": [
-          "<p>Sube el archivo seleccionado al servidor</p>"
-        ]
-      }
-    },
-    "dd799": {
-      "dato": {
-        "lg-cat": [
-          "Càrrega de fitxers"
-        ],
-        "lg-deu": [
-          "Hochladen"
-        ],
-        "lg-ell": [
-          "Μεταφόρτωση"
-        ],
-        "lg-eng": [
-          "Upload"
-        ],
-        "lg-eus": [
-          "Fitxategiak kargatzea"
-        ],
-        "lg-fra": [
-          "Télécharger"
-        ],
-        "lg-ita": [
-          "Caricamento"
-        ],
-        "lg-nep": [
-          "अपलोड गर्नुहोस्"
-        ],
-        "lg-por": [
-          "Carregamento de arquivo"
-        ],
-        "lg-spa": [
-          "Carga de ficheros"
-        ]
-      }
-    },
-    "dd1326": {
-      "dato": {
-        "lg-nolan": [
-          "tool_upload"
-        ]
-      }
-    },
-    "dd1327": {
-      "dato": {
-        "lg-nolan": [
-          "2.0.3"
-        ]
-      }
-    },
-    "dd1328": {
-      "dato": {
-        "lg-nolan": [
-          "6.0.0"
-        ]
-      }
-    },
-    "dd1335": {
-      "dato": {
-        "lg-nolan": [
-          {
-            "open_as": "window",
-            "windowFeatures": {
-              "top": 0,
-              "left": "return screen.width -760",
-              "width": 760,
-              "height": 708
-            }
-          }
-        ]
-      }
-    },
-    "dd1372": {
-      "dato": {
-        "lg-nolan": [
-          {}
-        ]
-      }
-    },
-    "dd1644": {
-      "inf": "Desarollador [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "Dédalo team"
-        ]
-      }
-    }
-  },
-  "section_id": 3,
-  "created_date": "2020-01-09 19:49:57",
+  "id": "3923",
+  "section_id": "3",
   "section_tipo": "dd1340",
-  "modified_date": "2024-04-14 21:01:15",
-  "diffusion_info": null,
-  "created_by_userID": -1,
-  "section_real_tipo": "dd1324",
-  "modified_by_userID": 1
+  "data": {
+    "label": "Tools development",
+    "section_id": 3,
+    "created_date": "2026-06-17 13:27:56",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "8",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 2,
+        "type": "dd151",
+        "section_id": "30",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 3,
+        "type": "dd151",
+        "section_id": "50",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 4,
+        "type": "dd151",
+        "section_id": "20",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 5,
+        "type": "dd151",
+        "section_id": "26",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 6,
+        "type": "dd151",
+        "section_id": "52",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "<p>Carregueu el fitxer seleccionat al servidor</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "<p>Laden Sie die ausgewählte Datei auf den Server hoch</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "<p>Μεταφορτώστε το επιλεγμένο αρχείο στον διακομιστή</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "<p>Upload selected file to the server</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "<p>Kargatu hautatutako fitxategia zerbitzarira</p>"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "<p>Télécharger le fichier sélectionné sur le serveur</p>"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "<p>Carica il file selezionato sul server</p>"
+      },
+      {
+        "id": 8,
+        "lang": "lg-nep",
+        "value": "<p>चयन गरिएको फाइल सर्भरमा अपलोड गर्नुहोस्</p>"
+      },
+      {
+        "id": 9,
+        "lang": "lg-por",
+        "value": "<p>Carregar o ficheiro selecionado para o servidor</p>"
+      },
+      {
+        "id": 10,
+        "lang": "lg-spa",
+        "value": "<p>Sube el archivo seleccionado al servidor</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Càrrega de fitxers"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Hochladen"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Μεταφόρτωση"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Upload"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Fitxategien igoera"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "Télécharger"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "Caricamento"
+      },
+      {
+        "id": 8,
+        "lang": "lg-nep",
+        "value": "अपलोड गर्नुहोस्"
+      },
+      {
+        "id": 9,
+        "lang": "lg-por",
+        "value": "Carregamento de arquivo"
+      },
+      {
+        "id": 10,
+        "lang": "lg-spa",
+        "value": "Carga de ficheros"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_upload"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "2.0.3"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 9,
+          "hour": 19,
+          "time": 64925178597,
+          "year": 2020,
+          "month": 1,
+          "minute": 49,
+          "second": 57
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 17,
+          "hour": 13,
+          "time": 65132083676,
+          "year": 2026,
+          "month": 6,
+          "minute": 27,
+          "second": 56
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            {
+              "open_as": "window",
+              "windowFeatures": {
+                "top": 0,
+                "left": "return screen.width -760",
+                "width": 760,
+                "height": 708
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            {}
+          ]
+        }
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 10
+      }
+    ],
+    "dd799": [
+      {
+        "count": 10
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 6
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
 }

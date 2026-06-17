@@ -1,296 +1,458 @@
 {
-  "label": "Tools development",
-  "relations": [
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd200"
-    },
-    {
-      "type": "dd675",
-      "section_id": "1",
-      "section_tipo": "dd153",
-      "from_component_tipo": "dd1337"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1331"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1332"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1333"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1601"
-    },
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd197"
-    }
-  ],
-  "components": {
-    "dd199": {
-      "inf": "created_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 12,
-              "hour": 19,
-              "time": 65083462578,
-              "year": 2024,
-              "month": 12,
-              "minute": 36,
-              "second": 18
-            }
-          }
-        ]
-      }
-    },
-    "dd201": {
-      "inf": "modified_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 10,
-              "hour": 11,
-              "time": 65085937683,
-              "year": 2025,
-              "month": 1,
-              "minute": 8,
-              "second": 3
-            }
-          }
-        ]
-      }
-    },
-    "dd612": {
-      "inf": "Description [component_text_area]",
-      "dato": {
-        "lg-cat": [
-          "<p>Exportació de l'ontologia per la seva difusió entre instal·lacions</p>"
-        ],
-        "lg-deu": [
-          "<p>Export der Ontologie zur Weitergabe an andere Einrichtungen.</p>"
-        ],
-        "lg-ell": [
-          "<p>Εξαγωγή της οντολογίας για τη διάδοση μεταξύ των εγκαταστάσεων.</p>"
-        ],
-        "lg-eng": [
-          "<p>Export of the ontology for dissemination between installations.</p>"
-        ],
-        "lg-eus": [
-          "<p>Instalazioen artean zabaltzeko ontologia esportatzea.</p>"
-        ],
-        "lg-fra": [
-          "<p>Exportation de l'ontologie pour diffusion entre les installations.</p>"
-        ],
-        "lg-ita": [
-          "<p>Esportazione dell'ontologia per la diffusione tra installazioni.</p>"
-        ],
-        "lg-nep": [
-          "<p>स्थापनाहरू बीच प्रसारको लागि ओन्टोलोजीको निर्यात।</p>"
-        ],
-        "lg-por": [
-          "<p>Exportação da ontologia para disseminação entre instalações.</p>"
-        ],
-        "lg-spa": [
-          "<p>Exportación de la ontología para su difusión entre instalaciones.</p>"
-        ]
-      }
-    },
-    "dd799": {
-      "inf": "Label [component_input_text]",
-      "dato": {
-        "lg-cat": [
-          "Processador d'ontologia"
-        ],
-        "lg-deu": [
-          "Ontologieprozessor"
-        ],
-        "lg-ell": [
-          "Επεξεργαστής οντολογίας"
-        ],
-        "lg-eng": [
-          "Ontology parser"
-        ],
-        "lg-eus": [
-          "Analizatzaile ontologikoa"
-        ],
-        "lg-fra": [
-          "Processeur d'ontologie"
-        ],
-        "lg-ita": [
-          "Processore di ontologia"
-        ],
-        "lg-nep": [
-          "ओन्टोलजी पार्सर"
-        ],
-        "lg-por": [
-          "Analisador de ontologia"
-        ],
-        "lg-spa": [
-          "Procesador de ontología"
-        ]
-      }
-    },
-    "dd1326": {
-      "inf": "Tool name [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "tool_ontology_parser"
-        ]
-      }
-    },
-    "dd1327": {
-      "inf": "Version [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "1.0.1"
-        ]
-      }
-    },
-    "dd1328": {
-      "inf": "Dédalo version minimum [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "6.4.0"
-        ]
-      }
-    },
-    "dd1350": {
-      "inf": "Affected types: [component_json]",
-      "dato": {
-        "lg-nolan": [
-          [
-            "dd5"
-          ]
-        ]
-      }
-    },
-    "dd1372": {
-      "inf": "Labels [component_json]",
-      "dato": {
-        "lg-nolan": [
-          [
-            {
-              "lang": "lg-eng",
-              "name": "regenerate",
-              "value": "Regenerate"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "regenerate",
-              "value": "Regenerar"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "regenerate",
-              "value": "Regenerar"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "regenerate",
-              "value": "Αναγεννηθείς"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "regenerate",
-              "value": "Rigenerare"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "regenerate",
-              "value": "Regenerieren"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "regenerate",
-              "value": "Régénérer"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "export",
-              "value": "Export"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "export",
-              "value": "Exportar"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "export",
-              "value": "Exporta"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "export",
-              "value": "Exporter"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "export",
-              "value": "Esportare"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "export",
-              "value": "Εξαγωγή"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "export",
-              "value": "Export"
-            }
-          ]
-        ]
-      }
-    },
-    "dd1644": {
-      "inf": "Developer [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "Dédalo team"
-        ]
-      }
-    }
-  },
-  "section_id": 32,
-  "created_date": "2024-12-12 19:36:18",
+  "id": "3952",
+  "section_id": "32",
   "section_tipo": "dd1340",
-  "modified_date": "2025-01-10 11:08:03",
-  "diffusion_info": null,
-  "created_by_userID": -1,
-  "section_real_tipo": "dd73",
-  "modified_by_userID": -1
+  "data": {
+    "label": "Tools development",
+    "section_id": 32,
+    "created_date": "2026-06-17 13:27:59",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ],
+    "dd1601": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1601"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "<p>Exportació de l'ontologia per la seva difusió entre instal·lacions</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "<p>Export der Ontologie zur Weitergabe an andere Einrichtungen.</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "<p>Εξαγωγή της οντολογίας για τη διάδοση μεταξύ των εγκαταστάσεων.</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "<p>Export of the ontology for dissemination between installations.</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "<p>Instalazioen artean zabaltzeko ontologia esportatzea.</p>"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "<p>Exportation de l'ontologie pour diffusion entre les installations.</p>"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "<p>Esportazione dell'ontologia per la diffusione tra installazioni.</p>"
+      },
+      {
+        "id": 8,
+        "lang": "lg-nep",
+        "value": "<p>स्थापनाहरू बीच प्रसारको लागि ओन्टोलोजीको निर्यात।</p>"
+      },
+      {
+        "id": 9,
+        "lang": "lg-por",
+        "value": "<p>Exportação da ontologia para disseminação entre instalações.</p>"
+      },
+      {
+        "id": 10,
+        "lang": "lg-spa",
+        "value": "<p>Exportación de la ontología para su difusión entre instalaciones.</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Processador d'ontologia"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Ontologieprozessor"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Επεξεργαστής οντολογίας"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Ontology parser"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Analizatzaile ontologikoa"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "Processeur d'ontologie"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "Processore di ontologia"
+      },
+      {
+        "id": 8,
+        "lang": "lg-nep",
+        "value": "ओन्टोलजी पार्सर"
+      },
+      {
+        "id": 9,
+        "lang": "lg-por",
+        "value": "Analisador de ontologia"
+      },
+      {
+        "id": 10,
+        "lang": "lg-spa",
+        "value": "Procesador de ontología"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_ontology_parser"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "1.0.1"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.4.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 12,
+          "hour": 19,
+          "time": 65083462578,
+          "year": 2024,
+          "month": 12,
+          "minute": 36,
+          "second": 18
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 17,
+          "hour": 13,
+          "time": 65132083679,
+          "year": 2026,
+          "month": 6,
+          "minute": 27,
+          "second": 59
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1350": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            [
+              "dd5"
+            ]
+          ]
+        }
+      }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            [
+              {
+                "lang": "lg-eng",
+                "name": "regenerate",
+                "value": "Regenerate"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "regenerate",
+                "value": "Regenerar"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "regenerate",
+                "value": "Regenerar"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "regenerate",
+                "value": "Αναγεννηθείς"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "regenerate",
+                "value": "Rigenerare"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "regenerate",
+                "value": "Regenerieren"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "regenerate",
+                "value": "Régénérer"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "export",
+                "value": "Export"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "export",
+                "value": "Exportar"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "export",
+                "value": "Exporta"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "export",
+                "value": "Exporter"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "export",
+                "value": "Esportare"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "export",
+                "value": "Εξαγωγή"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "export",
+                "value": "Export"
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 10
+      }
+    ],
+    "dd799": [
+      {
+        "count": 10
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1350": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1601": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
 }

@@ -10,7 +10,9 @@
 *
 * This repository replaces those per-node component loads with one SQL query
 * per section_tipo group, resolving the SAME raw values the components read:
-* - order:        number  -> {order_tipo}        -> first item -> value
+* - order:        number  -> {order_tipo}        -> value of the entry paired to the
+*                  current parent (see pick_order_value_for_parent). Without a parent
+*                  locator it falls back to the first item, matching the legacy read.
 * - is_indexable: relation -> {is_indexable_tipo} -> first locator -> section_id == 1
 * - is_descriptor: relation -> {is_descriptor_tipo} -> first locator -> section_id (1|2)
 *
@@ -44,18 +46,28 @@ class ts_node_repository {
 	* resolvable model, and sections with no is_indexable tipo in their section_map
 	* are always false.
 	*
+	* Order resolution is parent-aware: the order component is a dataframe holding
+	* one value per parent. When $parent_locator is supplied the value paired to THAT
+	* parent (by id_key, then section coords) is selected via pick_order_value_for_parent;
+	* otherwise the first array item is read (the legacy single-parent behaviour). Reading
+	* the first item unconditionally returns a stale value once a node is reordered under
+	* the dataframe write path — that was the reorder-does-not-persist bug.
+	*
 	* Nodes that have no matrix row (e.g. never saved) are filled in with
 	* { order: null, is_indexable: false }, matching what the legacy component
 	* path returns for empty data.
 	*
 	* @param array $locators
 	* 	Array of objects with section_tipo and section_id properties
+	* @param object|null $parent_locator
+	* 	Parent node {section_tipo, section_id}. When set, order is read as the dataframe
+	* 	entry paired to this parent. When null, the first order item is used (legacy).
 	* @return array|null $info
 	* 	Map keyed by "{section_tipo}_{section_id}" of objects:
 	* 	{ order: int|float|string|null, is_indexable: bool }
 	* 	null when resolution failed (caller must fall back to the legacy path)
 	*/
-	public static function fetch_node_info( array $locators ) : ?array {
+	public static function fetch_node_info( array $locators, ?object $parent_locator=null ) : ?array {
 
 		$groups = self::group_locators($locators);
 		if ($groups===null) {
@@ -120,16 +132,35 @@ class ts_node_repository {
 			// the ->>'key' operator. NULL is projected when the tipo key is absent.
 			// The ANY($2::int[]) predicate lets us pass the full id list as a single
 			// PostgreSQL array parameter, avoiding one round-trip per node.
-				$order_select = $safe_order_tipo!==null
-					? "number->'".$safe_order_tipo."'->0->>'value'"
-					: 'NULL';
+				// parent-aware order. When a parent locator is supplied the order is a
+				// dataframe entry paired to THIS parent (by id_key or section coords),
+				// not array index 0 — reading ->0 returns a stale pre-dataframe value
+				// and is the reorder-does-not-persist bug. Resolved in PHP per row via
+				// pick_order_value_for_parent from the full order + parent-relation arrays.
+				$parent_aware = $parent_locator!==null && $safe_order_tipo!==null;
+				$safe_parent_rel_tipo = null;
+				if ($parent_aware) {
+					$parent_rel_tipo		= component_relation_parent::get_parent_tipo($section_tipo);
+					$safe_parent_rel_tipo	= !empty($parent_rel_tipo) ? safe_tipo((string)$parent_rel_tipo) : false;
+					if ($safe_parent_rel_tipo===false) {
+						$parent_aware = false; // cannot resolve the parent link safely; fall back to index 0
+					}
+				}
+
+				if ($parent_aware) {
+					$order_select = "number->'".$safe_order_tipo."' AS order_arr,\n\t\t\t\t\t\trelation->'".$safe_parent_rel_tipo."' AS parent_arr";
+				} else {
+					$order_select = ($safe_order_tipo!==null
+						? "number->'".$safe_order_tipo."'->0->>'value'"
+						: 'NULL') . ' AS order_value';
+				}
 				$indexable_select = $safe_indexable_tipo!==null
 					? "relation->'".$safe_indexable_tipo."'->0->>'section_id'"
 					: 'NULL';
 
 				$sql = '
 					SELECT section_id,
-						'.$order_select.' AS order_value,
+						'.$order_select.',
 						'.$indexable_select.' AS indexable_value
 					FROM "'.$table.'"
 					WHERE section_tipo = $1
@@ -155,7 +186,19 @@ class ts_node_repository {
 					// which component_number formats; apply the same formatting.
 					// pg_fetch_assoc always returns strings; cast to native numeric
 					// before formatting so round() receives the right type.
-					$order_value = $row['order_value'];
+					if ($parent_aware) {
+						// resolve the dataframe entry paired to this parent
+						$order_items	= !empty($row['order_arr'])  ? json_decode($row['order_arr'])  : [];
+						$parent_items	= !empty($row['parent_arr']) ? json_decode($row['parent_arr']) : [];
+						$order_value	= self::pick_order_value_for_parent(
+							is_array($order_items)  ? $order_items  : [],
+							is_array($parent_items) ? $parent_items : [],
+							(string)$parent_locator->section_tipo,
+							(int)$parent_locator->section_id
+						);
+					} else {
+						$order_value = $row['order_value'];
+					}
 					if ($order_value!==null && is_numeric($order_value)) {
 						$order_value = $order_value + 0; // restore native int|float
 					}
@@ -392,6 +435,81 @@ class ts_node_repository {
 
 		return $groups;
 	}//end group_locators
+
+
+
+	/**
+	* PICK_ORDER_VALUE_FOR_PARENT
+	* Selects the order value of a child under a specific parent from the child's
+	* order dataframe.
+	*
+	* The order component is a dataframe: each entry is paired to ONE of the child's
+	* parents so a multiparent node can hold a distinct order per parent. Three entry
+	* generations may coexist in real data and are tried in priority order:
+	*   1. id_key entry        — paired to the parent-link locator id (current write
+	*                            path: component_relation_parent::set_child_order /
+	*                            component_relation_children::sort_children).
+	*   2. section-coords entry — paired to (section_tipo_key, section_id_key); an
+	*                            intermediate scheme kept for not-yet-remigrated rows.
+	*   3. legacy unkeyed entry — a single pre-dataframe value (single-parent nodes).
+	*
+	* Reading index 0 blindly (the historical behaviour) returns a stale value when a
+	* keyed entry exists at a later index, which is the reorder-does-not-persist bug.
+	*
+	* @param array $order_items   Decoded order component data (array of objects with value[, id_key|section_*_key]).
+	* @param array $parent_items  Decoded parent-relation data (array of locator objects with id, section_tipo, section_id).
+	* @param string $parent_tipo  Parent node section_tipo.
+	* @param int $parent_id       Parent node section_id.
+	* @return mixed The matched raw value, or null when none resolves.
+	* @test true
+	*/
+	public static function pick_order_value_for_parent( array $order_items, array $parent_items, string $parent_tipo, int $parent_id ) {
+
+		if (empty($order_items)) {
+			return null;
+		}
+
+		// Resolve the parent-link locator id (the dataframe id_key) for this parent.
+		$link_id = 0;
+		foreach ($parent_items as $loc) {
+			if (is_object($loc)
+				&& isset($loc->section_tipo) && $loc->section_tipo===$parent_tipo
+				&& isset($loc->section_id) && (int)$loc->section_id===$parent_id
+				&& isset($loc->id)) {
+				$link_id = (int)$loc->id;
+				break;
+			}
+		}
+
+		// 1. id_key entry (authoritative)
+		if ($link_id>0) {
+			foreach ($order_items as $item) {
+				if (is_object($item) && isset($item->id_key) && (int)$item->id_key===$link_id) {
+					return $item->value ?? null;
+				}
+			}
+		}
+
+		// 2. section-coords entry
+		foreach ($order_items as $item) {
+			if (is_object($item)
+				&& isset($item->section_tipo_key) && $item->section_tipo_key===$parent_tipo
+				&& isset($item->section_id_key) && (int)$item->section_id_key===$parent_id) {
+				return $item->value ?? null;
+			}
+		}
+
+		// 3. legacy unkeyed entry (single pre-dataframe value)
+		foreach ($order_items as $item) {
+			if (is_object($item) && !isset($item->id_key) && !isset($item->section_id_key)) {
+				return $item->value ?? null;
+			}
+		}
+
+		// fallback: first entry
+		$first = $order_items[0] ?? null;
+		return is_object($first) ? ($first->value ?? null) : null;
+	}//end pick_order_value_for_parent
 
 
 

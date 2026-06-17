@@ -77,6 +77,11 @@ final class ts_node_repository_test extends BaseTestCase {
 	* TEST_FETCH_NODE_INFO_PARITY
 	* order + is_indexable from the batched query must equal the legacy
 	* component based resolution for every sampled node.
+	*
+	* This exercises the parent-less call (no $parent_locator), whose order contract
+	* is the first order item — identical to the legacy $data[0]->value read. The
+	* parent-aware order resolution (one value per parent, by id_key) is covered
+	* separately by ts_node_repository_order_Test.
 	* @return void
 	*/
 	public function test_fetch_node_info_parity() : void {

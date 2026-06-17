@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL*/
+/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_CORE_URL*/
 /*eslint no-undef: "error"*/
 
 
@@ -163,7 +163,8 @@ tool_lang_multi.prototype.get_component = async function(lang) {
 
 	const self = this
 
-	// to_delete_instances. Select instances with different lang to main_element
+	// to_delete_instances. Keep every lang instance alive (one component per
+	// language is rendered), so nothing is scheduled for deletion here.
 		const to_delete_instances = null
 
 	// instance_options (clone context and edit)
@@ -241,7 +242,9 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 
 		// reload target lang
 			const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
-			target_component.refresh()
+			if (target_component) {
+				target_component.refresh()
+			}
 			if(SHOW_DEVELOPER===true) {
 				dd_console('target_component', 'DEBUG', target_component)
 			}
@@ -288,6 +291,71 @@ tool_lang_multi.prototype.set_source_lang = function(lang) {
 
 
 /**
+* RESOLVE_ENGINE
+* Resolve the currently selected translator engine and the runtime options
+* derived from the UI (engine type and compute device). Shared by
+* translate_target and automatic_translation_all to keep them from drifting.
+* @param array translator_engine (optional, tool config engines)
+* @return object { translator_name, engine, is_browser, device }
+*/
+tool_lang_multi.prototype.resolve_engine = function(translator_engine) {
+
+	const self = this
+
+	const engines			= translator_engine || self.context?.config?.translator_engine?.value || []
+	const translator_name	= self.translator_engine_select ? self.translator_engine_select.value : null
+	const engine			= engines.find(el => el.name===translator_name)
+	const is_browser		= !!(engine && engine.type==='browser')
+	const device			= (self.translator_device_checkbox && self.translator_device_checkbox.checked)
+		? 'wasm'
+		: 'webgpu'
+
+	return { translator_name, engine, is_browser, device }
+}//end resolve_engine
+
+
+
+/**
+* RUN_BROWSER_TRANSLATION
+* Translate one component client-side (browser engine), lazy-loading the
+* json_langs map once and reusing it for subsequent calls.
+* @param object options
+* {
+* 	source_component	: object component instance
+* 	target_component	: object component instance
+* 	source_lang			: string
+* 	target_lang			: string
+* 	device				: string ('wasm' | 'webgpu')
+* 	container			: HTMLElement (optional, holds the streaming overlay)
+* }
+* @return promise
+*/
+tool_lang_multi.prototype.run_browser_translation = async function(options) {
+
+	const self		= this
+	const container	= options.container || null
+
+	if (!self.json_langs) {
+		self.json_langs = await get_json_langs() || []
+	}
+
+	return translate_component_browser({
+		source_component			: options.source_component,
+		target_component			: options.target_component,
+		source_lang					: options.source_lang,
+		target_lang					: options.target_lang,
+		device						: options.device,
+		status_container			: self.status_container,
+		streaming_overlay			: container ? container.streaming_overlay : null,
+		streaming_overlay_content	: container ? container.streaming_overlay_content : null,
+		json_langs					: self.json_langs,
+		get_label					: (key) => self.get_tool_label(key)
+	})
+}//end run_browser_translation
+
+
+
+/**
 * TRANSLATE_TARGET
 * Translate the current source component into one target language using the
 * selected engine (browser = client-side AI, or server = babel/google).
@@ -310,16 +378,13 @@ tool_lang_multi.prototype.translate_target = async function(options) {
 		const target_component	= options.target_component
 		const container			= options.container || null
 		const source_lang		= options.source_lang || self.source_lang || self.lang
-		const translator_engine	= options.translator_engine || (self.context.config
-			? self.context.config.translator_engine.value
-			: [])
+		const translator_engine	= options.translator_engine || (self.context?.config?.translator_engine?.value ?? [])
 
 	// resolve selected engine
-		const translator_name	= self.translator_engine_select ? self.translator_engine_select.value : null
-		const engine			= translator_engine.find(el => el.name===translator_name)
+		const { translator_name, is_browser, device } = self.resolve_engine(translator_engine)
 
 	// browser engine (client-side AI)
-		if (engine && engine.type==='browser') {
+		if (is_browser) {
 
 			const source_component = self.lang_components ? self.lang_components[source_lang] : null
 			if (!source_component) {
@@ -327,25 +392,13 @@ tool_lang_multi.prototype.translate_target = async function(options) {
 				return Promise.reject('Source component not available')
 			}
 
-			const device = (self.translator_device_checkbox && self.translator_device_checkbox.checked)
-				? 'wasm'
-				: 'webgpu'
-
-			if (!self.json_langs) {
-				self.json_langs = await get_json_langs() || []
-			}
-
-			return translate_component_browser({
-				source_component			: source_component,
-				target_component			: target_component,
-				source_lang					: source_lang,
-				target_lang					: target_lang,
-				device						: device,
-				status_container			: self.status_container,
-				streaming_overlay			: container ? container.streaming_overlay : null,
-				streaming_overlay_content	: container ? container.streaming_overlay_content : null,
-				json_langs					: self.json_langs,
-				get_label					: (key) => self.get_tool_label(key)
+			return self.run_browser_translation({
+				source_component	: source_component,
+				target_component	: target_component,
+				source_lang			: source_lang,
+				target_lang			: target_lang,
+				device				: device,
+				container			: container
 			})
 		}
 
@@ -371,11 +424,31 @@ tool_lang_multi.prototype.automatic_translation_all = async function(options={})
 	const self		= this
 	const event		= options.event || null
 
+	// show_status. Reveal the status container (it starts hidden, and CSS
+	// `display:none` would otherwise swallow the message) and render a banner
+	// into it. Any pending auto-hide from a previous run is cancelled.
+		const show_status = (message, msg_type) => {
+			if (!self.status_container) {
+				return
+			}
+			clearTimeout(self.status_hide_timeout)
+			self.status_container.classList.remove('hide')
+			ui.show_message(self.status_container, message, msg_type)
+		}
+
 	// engines from tool config
-		const translator_engine = self.context.config
-			? self.context.config.translator_engine.value
-			: []
+		const translator_engine = self.context?.config?.translator_engine?.value ?? []
 		if (!translator_engine || translator_engine.length<1) {
+			return false
+		}
+
+	// components readiness. Target components load asynchronously (see
+	// create_target_component). Bail out with a clear message if they are not
+	// all available yet, instead of misreporting an empty source or silently
+	// skipping not-yet-loaded targets.
+		const loaded_count = self.lang_components ? Object.keys(self.lang_components).length : 0
+		if (loaded_count < self.langs.length) {
+			show_status(self.get_tool_label('loading') || 'Components are still loading, please wait', 'error')
 			return false
 		}
 
@@ -383,7 +456,7 @@ tool_lang_multi.prototype.automatic_translation_all = async function(options={})
 		const source_lang		= self.source_lang || self.lang
 		const source_component	= self.lang_components ? self.lang_components[source_lang] : null
 		if (!source_component || is_component_empty(source_component)) {
-			ui.show_message(self.status_container, self.get_tool_label('empty_source') || 'Source text is empty', 'error')
+			show_status(self.get_tool_label('empty_source') || 'Source text is empty', 'error')
 			return false
 		}
 
@@ -402,75 +475,95 @@ tool_lang_multi.prototype.automatic_translation_all = async function(options={})
 		const targets = self.langs.filter(item => item.value!==source_lang)
 
 	// resolve engine type once
-		const translator_name	= self.translator_engine_select ? self.translator_engine_select.value : null
-		const engine			= translator_engine.find(el => el.name===translator_name)
-		const is_browser		= !!(engine && engine.type==='browser')
-		const device			= (self.translator_device_checkbox && self.translator_device_checkbox.checked)
-			? 'wasm'
-			: 'webgpu'
-		if (is_browser && !self.json_langs) {
-			self.json_langs = await get_json_langs() || []
-		}
+		const { translator_name, is_browser, device } = self.resolve_engine(translator_engine)
 
-	// status
+	// status. Reveal the (initially hidden) progress area for the run.
 		if (self.status_container) {
+			clearTimeout(self.status_hide_timeout)
 			self.status_container.classList.remove('hide')
 		}
 
-	// translate sequentially (single GPU/worker reused across langs)
-		const results = []
-		for (let i = 0; i < targets.length; i++) {
+	// translate_one. Translate a single target lang and return its result, or
+	// null when the target is missing or skipped (mode==='skip' on non-empty).
+		const translate_one = async (lang) => {
 
-			const lang				= targets[i]
 			const target_component	= self.lang_components ? self.lang_components[lang.value] : null
 			const container			= self.lang_containers ? self.lang_containers[lang.value] : null
 
 			if (!target_component) {
-				continue
+				return null
 			}
 
 			// skip non-empty targets when mode is 'skip'
 				if (mode==='skip' && is_component_empty(target_component)===false) {
-					continue
+					return null
 				}
 
 			if (container) {
 				container.classList.add('loading')
 			}
 
+			let ok = true
 			try {
 				if (is_browser) {
-					await translate_component_browser({
-						source_component			: source_component,
-						target_component			: target_component,
-						source_lang					: source_lang,
-						target_lang					: lang.value,
-						device						: device,
-						status_container			: self.status_container,
-						streaming_overlay			: container ? container.streaming_overlay : null,
-						streaming_overlay_content	: container ? container.streaming_overlay_content : null,
-						json_langs					: self.json_langs,
-						get_label					: (key) => self.get_tool_label(key)
+					await self.run_browser_translation({
+						source_component	: source_component,
+						target_component	: target_component,
+						source_lang			: source_lang,
+						target_lang			: lang.value,
+						device				: device,
+						container			: container
 					})
 				}else{
 					await self.automatic_translation(translator_name, source_lang, lang.value, container)
 				}
-				results.push({ lang: lang.value, ok: true })
 			} catch (error) {
 				console.error('automatic_translation_all error for', lang.value, error)
-				results.push({ lang: lang.value, ok: false })
+				ok = false
 			}
 
 			if (container) {
 				container.classList.remove('loading')
 			}
+
+			return { lang: lang.value, ok: ok }
+		}//end translate_one
+
+	// schedule. The browser engine reuses a single GPU/worker, so it must run
+	// one lang at a time. The server engine (babel/google) fires independent
+	// network requests, so we run them in bounded-concurrency batches to avoid
+	// N× sequential latency without overwhelming the external service.
+		const results = []
+		if (is_browser) {
+			for (let i = 0; i < targets.length; i++) {
+				const result = await translate_one(targets[i])
+				if (result) {
+					results.push(result)
+				}
+			}
+		}else{
+			const SERVER_CONCURRENCY = 4
+			for (let i = 0; i < targets.length; i += SERVER_CONCURRENCY) {
+				const batch		= targets.slice(i, i + SERVER_CONCURRENCY)
+				const settled	= await Promise.all(batch.map(translate_one))
+				for (let j = 0; j < settled.length; j++) {
+					if (settled[j]) {
+						results.push(settled[j])
+					}
+				}
+			}
 		}
 
-	// summary message
+	// summary message. The 'ok' banner auto-dismisses (~10s, handled by
+	// ui.show_message); re-hide the now-empty status area shortly after so it
+	// does not leave a lingering blank row.
 		const ok_count			= results.filter(r => r.ok).length
 		const completed_label	= self.get_tool_label('translation_completed') || 'Translation completed'
 		if (self.status_container) {
 			ui.show_message(self.status_container, `${completed_label} (${ok_count}/${results.length})`, 'ok')
+			self.status_hide_timeout = setTimeout(() => {
+				self.status_container.classList.add('hide')
+			}, 10500)
 		}
 
 	return results

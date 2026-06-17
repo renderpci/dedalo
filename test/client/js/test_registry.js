@@ -30,7 +30,9 @@ export const generic_suites = [
 	'test_ts_object',
 	'test_ts_object_extended',
 	'test_component_common_changed_data',
-	'test_additional_text_area'
+	'test_additional_text_area',
+	'test_section_record',
+	'test_service_autocomplete'
 ]
 
 /** Per-component lifecycle suites (one Mocha file per component type) */

@@ -551,41 +551,14 @@ const render_search_input = function(self) {
 						const my_seq = ++self._search_seq
 
 						try {
-							// api_response. Get from cache if exists
-								const api_response = q.length && self.search_cache[q]
-									? { result : self.search_cache[q] }
-									: await self.autocomplete_search()
-
-							// a newer search superseded this one: drop the stale response
-								if (my_seq !== self._search_seq) {
-									return
-								}
-
-							// no result from API case
-								if (api_response.result===false) {
-									// loading_label
-									loading_label.remove()
-									return
-								}
-
-							// cache result. Add if not already exists
-								if (!self.search_cache[q]) {
-									self.search_cache[q] = api_response.result
-								}
-
-							// render datalist (call API and render the response result)
-								await render_datalist(self, api_response.result)
-
+							await execute_search_render(self, {
+								q				: q,
+								my_seq			: my_seq,
+								loading_label	: loading_label,
+								spinner			: spinner,
+								search_input	: search_input
+							})
 						} finally {
-							// always release lock + loading UI, even on error/stale/no-result,
-							// so a thrown search can never permanently jam the input.
-							// only clear the visible loading UI if still the latest request.
-							if (my_seq === self._search_seq) {
-								search_input.classList.remove('searching')
-								if (spinner) {
-									spinner.remove()
-								}
-							}
 							is_searching = false
 						}
 					}, ms)
@@ -600,6 +573,72 @@ const render_search_input = function(self) {
 
 	return search_input
 }//end render_search_input
+
+
+
+/**
+* EXECUTE_SEARCH_RENDER
+* Runs one autocomplete search (cache-aware) and renders the result into the
+* datalist, then clears the per-request loading UI for the latest request.
+*
+* Extracted from render_search_input so the search→render→cleanup contract can
+* be exercised in isolation. The request-sequence token (my_seq) guards against
+* out-of-order responses: a slower older request must not overwrite a newer one.
+*
+* @param {Object} self    - The service_autocomplete instance
+* @param {Object} options - { q, my_seq, loading_label, spinner, search_input }
+* @returns {Promise<void>}
+*/
+export const execute_search_render = async function(self, options) {
+
+	const q				= options.q
+	const my_seq		= options.my_seq
+	const loading_label	= options.loading_label
+	const spinner		= options.spinner
+	const search_input	= options.search_input
+
+	try {
+		// api_response. Get from cache if exists
+			const api_response = q.length && self.search_cache[q]
+				? { result : self.search_cache[q] }
+				: await self.autocomplete_search()
+
+		// a newer search superseded this one: drop the stale response
+			if (my_seq !== self._search_seq) {
+				return
+			}
+
+		// no result from API case
+			if (!api_response || api_response.result===false) {
+				return
+			}
+
+		// cache result. Add if not already exists
+			if (!self.search_cache[q]) {
+				self.search_cache[q] = api_response.result
+			}
+
+		// render datalist (call API and render the response result)
+			await render_datalist(self, api_response.result)
+
+	} catch (error) {
+		// a failed search must not jam the widget or raise an unhandled promise
+		// rejection; log and fall through to the cleanup in finally.
+		console.error('[service_autocomplete] autocomplete search failed:', error)
+	} finally {
+		// always clear the loading UI for the latest request — even on error / no
+		// result / stale — so a thrown search can never leave a stuck "Searching..".
+		if (my_seq === self._search_seq) {
+			if (loading_label && loading_label.parentNode) {
+				loading_label.remove()
+			}
+			search_input.classList.remove('searching')
+			if (spinner) {
+				spinner.remove()
+			}
+		}
+	}
+}//end execute_search_render
 
 
 
@@ -1272,7 +1311,7 @@ const render_operator_selector = function(self) {
 * @param {Object} result - The api_response.result object from autocomplete_search
 * @returns {Promise<HTMLElement>} The populated (or cleared) datalist `<ul>`
 */
-const render_datalist = async function(self, result) {
+export const render_datalist = async function(self, result) {
 
 	// datalist container node
 		const datalist = self.datalist
@@ -1280,6 +1319,25 @@ const render_datalist = async function(self, result) {
 	// clean the last list
 		while (datalist.firstChild) {
 			datalist.removeChild(datalist.firstChild)
+		}
+
+	// destroy the previous batch of section_record instances before building a new
+	// list. render_datalist runs on every keystroke / option change with a fresh
+	// timestamp-based id_variant, so these instances are never reused; without an
+	// explicit destroy they accumulate forever in the global instances registry
+	// (a memory + DOM leak that grows with each search). Done before the early
+	// returns so an empty result also releases the prior batch.
+		const previous_instances = Array.isArray(self.ar_instances) ? self.ar_instances : []
+		self.ar_instances = []
+		if (previous_instances.length>0) {
+			const ar_destroy = []
+			for (let i = 0; i < previous_instances.length; i++) {
+				const instance = previous_instances[i]
+				if (instance && typeof instance.destroy==='function') {
+					ar_destroy.push(instance.destroy(true, true, true))
+				}
+			}
+			await Promise.all(ar_destroy)
 		}
 
 	// empty or falsy result case
@@ -1336,8 +1394,8 @@ const render_datalist = async function(self, result) {
 		// const data_locator	= data.find((item)=> item.tipo === rqo_search.source.tipo && item.typo === 'sections');
 		// const ar_locator	= (data_locator) ? data_locator.value : []
 
-	// reset ar_instances
-		self.ar_instances = []
+	// ar_instances was already reset (and the previous batch destroyed) at the top
+	// of this function, before the early returns.
 
 	// id_variant. Don't allow cache instances here because interact with page instances.
 	// Use always a custom id_variant to prevent it
