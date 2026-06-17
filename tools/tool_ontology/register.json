@@ -1,15 +1,14 @@
 {
-  "id": "3121",
+  "id": "3951",
   "section_id": "31",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 31,
-    "created_date": "2024-11-24 21:14:25",
+    "created_date": "2026-06-17 13:27:59",
     "section_tipo": "dd1340",
-    "modified_date": "2025-01-15 19:34:23",
-    "created_by_user_id": -1,
-    "modified_by_userID": -1
+    "diffusion_info": null,
+    "created_by_user_id": -1
   },
   "relation": {
     "dd197": [
@@ -37,13 +36,6 @@
         "section_id": "2",
         "section_tipo": "dd1342",
         "from_component_tipo": "dd1330"
-      },
-      {
-        "id": 2,
-        "type": "dd151",
-        "section_id": "26",
-        "section_tipo": "dd1342",
-        "from_component_tipo": "dd1330"
       }
     ],
     "dd1331": [
@@ -59,7 +51,7 @@
       {
         "id": 1,
         "type": "dd151",
-        "section_id": "1",
+        "section_id": "2",
         "section_tipo": "dd64",
         "from_component_tipo": "dd1332"
       }
@@ -109,47 +101,47 @@
         "value": "<p>Gestiona la transformació de l'ontologia en registres jer_dd</p>"
       },
       {
-        "id": 1,
+        "id": 2,
         "lang": "lg-deu",
         "value": "<p>Verwaltet die Umwandlung der Ontologie in hier_dd-Datensätze.</p>"
       },
       {
-        "id": 1,
+        "id": 3,
         "lang": "lg-ell",
         "value": "<p>Διαχειρίζεται τον μετασχηματισμό της οντολογίας σε εγγραφές hier_dd.</p>"
       },
       {
-        "id": 1,
+        "id": 4,
         "lang": "lg-eng",
         "value": "<p>Handles Ontology transformation to 'jer_dd' records</p>"
       },
       {
-        "id": 1,
+        "id": 5,
         "lang": "lg-eus",
         "value": "<p>Ontologiaren eraldaketa kudeatzen du 'jer_dd' erregistroetara</p>"
       },
       {
-        "id": 1,
+        "id": 6,
         "lang": "lg-fra",
         "value": "<p>Gère la transformation de l'ontologie en enregistrements hier_dd.</p>"
       },
       {
-        "id": 1,
+        "id": 7,
         "lang": "lg-ita",
         "value": "<p>Gestisce la trasformazione dell'ontologia nei record 'jer_dd'</p>"
       },
       {
-        "id": 1,
+        "id": 8,
         "lang": "lg-nep",
         "value": "<p>'jer_dd' रेकर्डहरूमा ओन्टोलोजी रूपान्तरण ह्यान्डल गर्दछ</p>"
       },
       {
-        "id": 1,
+        "id": 9,
         "lang": "lg-por",
         "value": "<p>Lida com a transformação da ontologia para registos 'jer_dd'</p>"
       },
       {
-        "id": 1,
+        "id": 10,
         "lang": "lg-spa",
         "value": "<p>Gestiona la transformación de la ontología en registros jer_dd</p>"
       }
@@ -161,47 +153,47 @@
         "value": "Ontologia"
       },
       {
-        "id": 1,
+        "id": 2,
         "lang": "lg-deu",
         "value": "Ontologie"
       },
       {
-        "id": 1,
+        "id": 3,
         "lang": "lg-ell",
         "value": "Οντολογία"
       },
       {
-        "id": 1,
+        "id": 4,
         "lang": "lg-eng",
         "value": "Ontology"
       },
       {
-        "id": 1,
+        "id": 5,
         "lang": "lg-eus",
         "value": "Ontologia"
       },
       {
-        "id": 1,
+        "id": 6,
         "lang": "lg-fra",
         "value": "Ontologie"
       },
       {
-        "id": 1,
+        "id": 7,
         "lang": "lg-ita",
         "value": "Ontologici"
       },
       {
-        "id": 1,
+        "id": 8,
         "lang": "lg-nep",
         "value": "ओन्टोलजी"
       },
       {
-        "id": 1,
+        "id": 9,
         "lang": "lg-por",
         "value": "Ontologia"
       },
       {
-        "id": 1,
+        "id": 10,
         "lang": "lg-spa",
         "value": "Ontología"
       }
@@ -224,7 +216,7 @@
       {
         "id": 1,
         "lang": "lg-nolan",
-        "value": "7.0.0"
+        "value": "6.4.0"
       }
     ],
     "dd1644": [
@@ -255,13 +247,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 19,
-          "hour": 9,
-          "time": 65129564402,
+          "day": 17,
+          "hour": 13,
+          "time": 65132083679,
           "year": 2026,
-          "month": 5,
-          "minute": 40,
-          "second": 2
+          "month": 6,
+          "minute": 27,
+          "second": 59
         }
       }
     ]
@@ -275,147 +267,155 @@
       {
         "id": 1,
         "value": {
-          "events": [
+          "lg-nolan": [
             {
-              "type": "keyup",
-              "action": "click",
-              "validate": [
+              "events": [
                 {
-                  "key": "ctrlKey",
-                  "value": true
-                },
-                {
-                  "key": "key",
-                  "value": "s"
+                  "type": "keyup",
+                  "action": "click",
+                  "validate": [
+                    {
+                      "key": "ctrlKey",
+                      "value": true
+                    },
+                    {
+                      "key": "key",
+                      "value": "s"
+                    }
+                  ]
                 }
-              ]
+              ],
+              "open_as": "modal",
+              "windowFeatures": {
+                "width": "40rem"
+              }
             }
-          ],
-          "open_as": "modal",
-          "windowFeatures": {
-            "width": "40rem"
-          }
+          ]
         }
       }
     ],
     "dd1350": [
       {
         "id": 1,
-        "value": [
-          "ontology16",
-          "ontology17",
-          "ontology18",
-          "ontology19",
-          "ontology35",
-          "/^[a-z]+0$/"
-        ]
+        "value": {
+          "lg-nolan": [
+            [
+              "ontology35",
+              "/^(?!localontology0)[a-z]+0$/"
+            ]
+          ]
+        }
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": [
-          {
-            "lang": "lg-eng",
-            "name": "process",
-            "value": "Process"
-          },
-          {
-            "lang": "lg-spa",
-            "name": "process",
-            "value": "Procesar"
-          },
-          {
-            "lang": "lg-cat",
-            "name": "process",
-            "value": "Procesar"
-          },
-          {
-            "lang": "lg-fra",
-            "name": "process",
-            "value": "Procédé"
-          },
-          {
-            "lang": "lg-ita",
-            "name": "process",
-            "value": "Processo"
-          },
-          {
-            "lang": "lg-ell",
-            "name": "process",
-            "value": "Διαδικασία"
-          },
-          {
-            "lang": "lg-deu",
-            "name": "process",
-            "value": "Prozess"
-          },
-          {
-            "lang": "lg-eng",
-            "name": "export_to_jer_dd",
-            "value": "Export to jer_dd"
-          },
-          {
-            "lang": "lg-spa",
-            "name": "export_to_jer_dd",
-            "value": "Exportar a jer_dd"
-          },
-          {
-            "lang": "lg-cat",
-            "name": "export_to_jer_dd",
-            "value": "Exporta a jer_dd"
-          },
-          {
-            "lang": "lg-fra",
-            "name": "export_to_jer_dd",
-            "value": "Exporter vers jer_dd"
-          },
-          {
-            "lang": "lg-por",
-            "name": "export_to_jer_dd",
-            "value": "Exportar para jer_dd"
-          },
-          {
-            "lang": "lg-eus",
-            "name": "export_to_jer_dd",
-            "value": "Esportatu jer_dd-era"
-          },
-          {
-            "lang": "lg-ita",
-            "name": "export_to_jer_dd",
-            "value": "Esporta in jer_dd"
-          },
-          {
-            "lang": "lg-ell",
-            "name": "export_to_jer_dd",
-            "value": "Εξαγωγή σε jer_dd"
-          },
-          {
-            "lang": "lg-nep",
-            "name": "export_to_jer_dd",
-            "value": "jer_dd मा निर्यात गर्नुहोस्"
-          },
-          {
-            "lang": "lg-deu",
-            "name": "export_to_jer_dd",
-            "value": "Exportieren nach jer_dd"
-          },
-          {
-            "lang": "lg-nep",
-            "name": "process",
-            "value": "प्रक्रिया"
-          },
-          {
-            "lang": "lg-eus",
-            "name": "process",
-            "value": "Prozesua"
-          },
-          {
-            "lang": "lg-por",
-            "name": "process",
-            "value": "प्रक्रिया"
-          }
-        ]
+        "value": {
+          "lg-nolan": [
+            [
+              {
+                "lang": "lg-eng",
+                "name": "process",
+                "value": "Process"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "process",
+                "value": "Procesar"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "process",
+                "value": "Procesar"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "process",
+                "value": "Procédé"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "process",
+                "value": "Processo"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "process",
+                "value": "Διαδικασία"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "process",
+                "value": "Prozess"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "export_to_jer_dd",
+                "value": "Export to jer_dd"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "export_to_jer_dd",
+                "value": "Exportar a jer_dd"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "export_to_jer_dd",
+                "value": "Exporta a jer_dd"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "export_to_jer_dd",
+                "value": "Exporter vers jer_dd"
+              },
+              {
+                "lang": "lg-por",
+                "name": "export_to_jer_dd",
+                "value": "Exportar para jer_dd"
+              },
+              {
+                "lang": "lg-eus",
+                "name": "export_to_jer_dd",
+                "value": "Esportatu jer_dd-era"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "export_to_jer_dd",
+                "value": "Esporta in jer_dd"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "export_to_jer_dd",
+                "value": "Εξαγωγή σε jer_dd"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "export_to_jer_dd",
+                "value": "jer_dd मा निर्यात गर्नुहोस्"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "export_to_jer_dd",
+                "value": "Exportieren nach jer_dd"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "process",
+                "value": "प्रक्रिया"
+              },
+              {
+                "lang": "lg-eus",
+                "name": "process",
+                "value": "Prozesua"
+              },
+              {
+                "lang": "lg-por",
+                "name": "process",
+                "value": "प्रक्रिया"
+              }
+            ]
+          ]
+        }
       }
     ]
   },
@@ -443,12 +443,12 @@
     ],
     "dd612": [
       {
-        "count": 1
+        "count": 10
       }
     ],
     "dd799": [
       {
-        "count": 1
+        "count": 10
       }
     ],
     "dd1326": [
@@ -468,7 +468,7 @@
     ],
     "dd1330": [
       {
-        "count": 2
+        "count": 1
       }
     ],
     "dd1331": [

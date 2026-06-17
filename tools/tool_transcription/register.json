@@ -1,1303 +1,1451 @@
 {
-  "label": "Desarrollo de herramientas",
-  "relations": [
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd200"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
-    },
-    {
-      "type": "dd675",
-      "section_id": "1",
-      "section_tipo": "dd153",
-      "from_component_tipo": "dd1337"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1331"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1332"
-    },
-    {
-      "type": "dd151",
-      "section_id": "8",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "20",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "30",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd197"
-    }
-  ],
-  "components": {
-    "dd201": {
-      "inf": "modified_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 21,
-              "hour": 21,
-              "time": 65102996325,
-              "year": 2025,
-              "month": 7,
-              "minute": 38,
-              "second": 45
-            }
-          }
-        ]
+  "id": "3948",
+  "section_id": "28",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 28,
+    "created_date": "2026-06-17 13:27:58",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
       }
-    },
-    "dd612": {
-      "inf": "Descripción [component_text_area]",
-      "dato": {
-        "lg-cat": [
-          "<p>Transcribir qualsevol tipus de media a text.</p>"
-        ],
-        "lg-deu": [
-          "<p>Transkribieren Sie jede Art von Medien in Text</p>"
-        ],
-        "lg-ell": [
-          "<p>Μεταγράψτε οποιοδήποτε είδος μέσων σε κείμενο</p>"
-        ],
-        "lg-eng": [
-          "<p>Transcribe any kind of media to text.</p>"
-        ],
-        "lg-ita": [
-          "<p>Trascrivi qualsiasi tipo di media in testo</p>"
-        ],
-        "lg-nep": [
-          "<p>पाठमा कुनै पनि प्रकारको मिडिया ट्रान्सक्राइब गर्नुहोस्।</p>"
-        ],
-        "lg-spa": [
-          "<p>Transcribir cualquier tipo de media a texto.</p>"
-        ]
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
       }
-    },
-    "dd799": {
-      "inf": "Etiqueta [component_input_text]",
-      "dato": {
-        "lg-cat": [
-          "Transcripció"
-        ],
-        "lg-deu": [
-          "Transkription"
-        ],
-        "lg-ell": [
-          "Μεταγραφή"
-        ],
-        "lg-eng": [
-          "Transcription"
-        ],
-        "lg-eus": [
-          "Transkripzioa"
-        ],
-        "lg-fra": [
-          "Transcription"
-        ],
-        "lg-ita": [
-          "Trascrizione"
-        ],
-        "lg-nep": [
-          "ट्रान्सक्रिप्शन"
-        ],
-        "lg-por": [
-          "Transcrição"
-        ],
-        "lg-spa": [
-          "Transcripción"
-        ]
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "8",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 2,
+        "type": "dd151",
+        "section_id": "20",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      },
+      {
+        "id": 3,
+        "type": "dd151",
+        "section_id": "30",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
       }
-    },
-    "dd1326": {
-      "inf": "Nombre de la herramienta [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "tool_transcription"
-        ]
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
       }
-    },
-    "dd1327": {
-      "inf": "Versión [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "3.0.3"
-        ]
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
       }
-    },
-    "dd1328": {
-      "inf": "Versión Dédalo mínima [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "6.6.0"
-        ]
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
       }
-    },
-    "dd1335": {
-      "inf": "Propiedades [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "open_as": "window",
-            "windowFeatures": null
-          }
-        ]
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
       }
-    },
-    "dd1372": {
-      "inf": "Etiquetas [component_json]",
-      "dato": {
-        "lg-nolan": [
-          [
-            {
-              "lang": "lg-spa",
-              "name": "large",
-              "value": "Alta"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "large",
-              "value": "Alta"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "large",
-              "value": "Alta"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "auto_rewind",
-              "value": "Auto rebobinat"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "auto_rewind",
-              "value": "Auto reboninado"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "auto_rewind",
-              "value": "Auto rewind"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "automatic_transcription",
-              "value": "Automatic transcription"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "automatic_transcription",
-              "value": "Automatische Transkription"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "auto_rewind",
-              "value": "Automatisches Zurückspulen"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "babel_transcriber",
-              "value": "Babel"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "babel_transcriber",
-              "value": "Babel"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "babel_transcriber",
-              "value": "Babel"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "babel_transcriber",
-              "value": "Babel"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "babel_transcriber",
-              "value": "Babel"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "babel_transcriber",
-              "value": "Babel"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "small",
-              "value": "Baixa"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "tiny",
-              "value": "Baixa, més ràpid"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "base",
-              "value": "Baixa, ràpid"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "small",
-              "value": "Baja"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "tiny",
-              "value": "Baja, más rápido"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "base",
-              "value": "Baja, rápido"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "small",
-              "value": "Bassa"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "tiny",
-              "value": "Bassa, più veloce"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "base",
-              "value": "Bassa, veloce"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "build_subtitles",
-              "value": "Build subtitles"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "quality",
-              "value": "Calidad"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "quality",
-              "value": "Qualitat"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "chars_per_line",
-              "value": "Caracteres por línea"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "chars_per_line",
-              "value": "Caratteri per riga"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "chars_per_line",
-              "value": "Caràcters per línia"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "chars_per_line",
-              "value": "Characters per line"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "build_subtitles",
-              "value": "Crear subtítols"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "build_subtitles",
-              "value": "Crear subtítulos"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "build_subtitles",
-              "value": "Creare sottotitoli"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "large",
-              "value": "Gute"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "large",
-              "value": "High"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "insert_tag",
-              "value": "Inserir etiqueta"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "insert_tag",
-              "value": "Inserisci tag"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "insert_tag",
-              "value": "Insert tag"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "insert_tag",
-              "value": "Insertar etiqueta"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "small",
-              "value": "Low"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "base",
-              "value": "Low, fast"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "tiny",
-              "value": "Low, fastest"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "medium",
-              "value": "Media"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "medium",
-              "value": "Media"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "medium",
-              "value": "Media"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "medium",
-              "value": "Medium"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "medium",
-              "value": "Mittel"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "small",
-              "value": "Niedrige"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "tiny",
-              "value": "Niedrige, gefastet"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "base",
-              "value": "Niedrige, schnell"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "play_pause",
-              "value": "Play / pause key"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "play_speed",
-              "value": "Play speed"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "play_pause",
-              "value": "Play/Pause-Taste"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "quality",
-              "value": "Quality"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "quality",
-              "value": "Qualità"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "quality",
-              "value": "Qualität"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "auto_rewind",
-              "value": "Riavvolgimento automatico"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "seconds_abbr",
-              "value": "Sec."
-            },
-            {
-              "lang": "lg-ita",
-              "name": "seconds_abbr",
-              "value": "Sec."
-            },
-            {
-              "lang": "lg-spa",
-              "name": "seconds_abbr",
-              "value": "Seg."
-            },
-            {
-              "lang": "lg-cat",
-              "name": "seconds_abbr",
-              "value": "Seg."
-            },
-            {
-              "lang": "lg-deu",
-              "name": "seconds_abbr",
-              "value": "Sek."
-            },
-            {
-              "lang": "lg-cat",
-              "name": "engine",
-              "value": "Servei"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "engine",
-              "value": "Service"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "engine",
-              "value": "Service"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "engine",
-              "value": "Servicio"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "engine",
-              "value": "Servizio"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "play_speed",
-              "value": "Spielgeschwindigkeit"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "insert_tag",
-              "value": "Tag einfügen"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "play_pause",
-              "value": "Tasto play/pausa"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "play_pause",
-              "value": "Tecla de reproducció/pausa"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "play_pause",
-              "value": "Tecla reproducir/pausar"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "automatic_transcription",
-              "value": "Transcripció automàtica"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "automatic_transcription",
-              "value": "Transcripción automàtica"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "automatic_transcription",
-              "value": "Trascrizione automatica"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "build_subtitles",
-              "value": "Untertitel erstellen"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "play_speed",
-              "value": "Velocidad de reproducción"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "play_speed",
-              "value": "Velocitat de reproducció"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "play_speed",
-              "value": "Velocità di riproduzione"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "chars_per_line",
-              "value": "Zeichen pro Zeile"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "auto_rewind",
-              "value": "Αυτόματη επανατύλιξη"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "automatic_transcription",
-              "value": "Αυτόματη μεταγραφή"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "babel_transcriber",
-              "value": "Βαβυλωνία"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "seconds_abbr",
-              "value": "Δεύτερος"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "build_subtitles",
-              "value": "Δημιουργία υπότιτλων"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "insert_tag",
-              "value": "Εισαγωγή ετικέτας"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "medium",
-              "value": "Μεσαίο"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "play_pause",
-              "value": "Πλήκτρο αναπαραγωγής/παύσης"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "quality",
-              "value": "Ποιότητα"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "play_speed",
-              "value": "Ταχύτητα αναπαραγωγής"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "engine",
-              "value": "Υπηρεσία"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "small",
-              "value": "Χαμηλό"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "base",
-              "value": "Χαμηλό, γρήγορο"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "tiny",
-              "value": "Χαμηλό, πιο γρήγορο"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "chars_per_line",
-              "value": "Χαρακτήρες ανά γραμμή"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "large",
-              "value": "υψηλή"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "large",
-              "value": "उच्च"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "build_subtitles",
-              "value": "उपशीर्षकहरू बनाउनुहोस्"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "small",
-              "value": "कम"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "tiny",
-              "value": "कम, छिटो"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "base",
-              "value": "कम, छिटो"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "play_speed",
-              "value": "गति खेल्नुहोस्"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "quality",
-              "value": "गुणस्तर"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "insert_tag",
-              "value": "ट्याग घुसाउनुहोस्"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "chars_per_line",
-              "value": "प्रति रेखा वर्णहरू"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "play_pause",
-              "value": "प्ले / पज कुञ्जी"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "medium",
-              "value": "मध्यम"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "seconds_abbr",
-              "value": "सेकेन्ड"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "engine",
-              "value": "सेवा"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "automatic_transcription",
-              "value": "स्वचालित ट्रान्सक्रिप्शन"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "auto_rewind",
-              "value": "स्वत: रिवाइन्ड"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "initializing",
-              "value": "Initializing"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "initializing",
-              "value": "Inicializando"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "initializing",
-              "value": "Inicialitzant"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "initializing",
-              "value": "Initialisierung"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "initializing",
-              "value": "Αρχικοποίηση"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "initializing",
-              "value": "Inizializzazione"
-            },
-            {
-              "lang": "lg-por",
-              "name": "initializing",
-              "value": "Inicializando"
-            },
-            {
-              "lang": "lg-por",
-              "name": "engine",
-              "value": "Serviço"
-            },
-            {
-              "lang": "lg-por",
-              "name": "seconds_abbr",
-              "value": "Seg."
-            },
-            {
-              "lang": "lg-por",
-              "name": "play_speed",
-              "value": "Velocidade de reprodução"
-            },
-            {
-              "lang": "lg-por",
-              "name": "play_pause",
-              "value": "Tecla de reprodução / pausa"
-            },
-            {
-              "lang": "lg-por",
-              "name": "medium",
-              "value": "Media"
-            },
-            {
-              "lang": "lg-por",
-              "name": "insert_tag",
-              "value": "Inserir etiqueta"
-            },
-            {
-              "lang": "lg-por",
-              "name": "chars_per_line",
-              "value": "Caracteres por linha"
-            },
-            {
-              "lang": "lg-por",
-              "name": "quality",
-              "value": "Qualidade"
-            },
-            {
-              "lang": "lg-por",
-              "name": "build_subtitles",
-              "value": "Construir subtítulos"
-            },
-            {
-              "lang": "lg-por",
-              "name": "base",
-              "value": "Baixo, rápido"
-            },
-            {
-              "lang": "lg-por",
-              "name": "tiny",
-              "value": "Baixa, mais rápida"
-            },
-            {
-              "lang": "lg-por",
-              "name": "small",
-              "value": "Baixa"
-            },
-            {
-              "lang": "lg-por",
-              "name": "babel_transcriber",
-              "value": "Babel"
-            },
-            {
-              "lang": "lg-por",
-              "name": "automatic_transcription",
-              "value": "Transcrição automática"
-            },
-            {
-              "lang": "lg-por",
-              "name": "auto_rewind",
-              "value": "Rebobinagem automática"
-            },
-            {
-              "lang": "lg-por",
-              "name": "large",
-              "value": "Alta"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "setting_up",
-              "value": "Setting up the neural network"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "setting_up",
-              "value": "Preparando la red neuronal"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "setting_up",
-              "value": "Preparant la xarxa neuronal"
-            },
-            {
-              "lang": "lg-por",
-              "name": "setting_up",
-              "value": "Configurando a rede neural"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "setting_up",
-              "value": "Configurazione della rete neurale"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "setting_up",
-              "value": "Einrichten des neuronalen Netzwerks"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "setting_up",
-              "value": "Ρύθμιση του νευρωνικού δικτύου "
-            },
-            {
-              "lang": "lg-nep",
-              "name": "setting_up",
-              "value": "तंत्रिका सञ्जालको तयारी गर्दै"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "initializing",
-              "value": "सुरु गर्दै"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "initializing",
-              "value": "Initialisation"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "setting_up",
-              "value": "Préparation du réseau neuronal"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "engine",
-              "value": "Service"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "seconds_abbr",
-              "value": "Sec."
-            },
-            {
-              "lang": "lg-fra",
-              "name": "play_speed",
-              "value": "Vitesse de lecture"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "play_pause",
-              "value": "Touche lecture/pause"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "medium",
-              "value": "Moyen"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "insert_tag",
-              "value": "Insérer l'étiquette"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "chars_per_line",
-              "value": "Caractères par ligne"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "quality",
-              "value": "Qualité"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "build_subtitles",
-              "value": "Créer des sous-titres"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "base",
-              "value": "Basse, rapide"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "tiny",
-              "value": "Basse, plus rapide"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "small",
-              "value": "Basse"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "babel_transcriber",
-              "value": "Babel"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "automatic_transcription",
-              "value": "Transcription automatique"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "auto_rewind",
-              "value": "Rembobinage automatique"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "large",
-              "value": "Haut"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "processing_audio",
-              "value": "Processing audio... "
-            },
-            {
-              "lang": "lg-spa",
-              "name": "processing_audio",
-              "value": "Procesando audio..."
-            },
-            {
-              "lang": "lg-cat",
-              "name": "processing_audio",
-              "value": "Processant l'àudio... "
-            },
-            {
-              "lang": "lg-fra",
-              "name": "processing_audio",
-              "value": "Traitement audio en cours..."
-            },
-            {
-              "lang": "lg-ell",
-              "name": "processing_audio",
-              "value": "Επεξεργασία ήχου..."
-            },
-            {
-              "lang": "lg-deu",
-              "name": "processing_audio",
-              "value": "Audio wird verarbeitet..."
-            },
-            {
-              "lang": "lg-ita",
-              "name": "processing_audio",
-              "value": "Elaborazione audio in corso... "
-            },
-            {
-              "lang": "lg-por",
-              "name": "processing_audio",
-              "value": "Processamento de áudio... "
-            },
-            {
-              "lang": "lg-nep",
-              "name": "processing_audio",
-              "value": "अडियो प्रशोधन गर्दै..."
-            },
-            {
-              "lang": "lg-spa",
-              "name": "transcription_completed",
-              "value": "Transcripción finalizada."
-            },
-            {
-              "lang": "lg-eng",
-              "name": "transcription_completed",
-              "value": "Transcription completed."
-            },
-            {
-              "lang": "lg-nep",
-              "name": "transcription_completed",
-              "value": "ट्रान्सक्रिप्शन पूरा भयो।"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "transcription_completed",
-              "value": "Transcripció finalitzada."
-            },
-            {
-              "lang": "lg-deu",
-              "name": "transcription_completed",
-              "value": "Transkription abgeschlossen."
-            },
-            {
-              "lang": "lg-ell",
-              "name": "transcription_completed",
-              "value": "Η μεταγραφή ολοκληρώθηκε."
-            },
-            {
-              "lang": "lg-fra",
-              "name": "transcription_completed",
-              "value": "Transcription terminée."
-            },
-            {
-              "lang": "lg-por",
-              "name": "transcription_completed",
-              "value": "Transcrição concluída."
-            },
-            {
-              "lang": "lg-ita",
-              "name": "transcription_completed",
-              "value": "Trascrizione completata."
-            },
-            {
-              "lang": "lg-eng",
-              "name": "cpu_device",
-              "value": "More compatible, slower."
-            },
-            {
-              "lang": "lg-spa",
-              "name": "cpu_device",
-              "value": "Más compatible, más lento."
-            },
-            {
-              "lang": "lg-cat",
-              "name": "cpu_device",
-              "value": "Més compatible, més lent."
-            },
-            {
-              "lang": "lg-deu",
-              "name": "cpu_device",
-              "value": "Kompatibler, langsamer."
-            },
-            {
-              "lang": "lg-ell",
-              "name": "cpu_device",
-              "value": "Πιο συμβατό, πιο αργό."
-            },
-            {
-              "lang": "lg-fra",
-              "name": "cpu_device",
-              "value": "Plus compatible, mais plus lent."
-            },
-            {
-              "lang": "lg-ita",
-              "name": "cpu_device",
-              "value": "Più compatibile, più lento."
-            },
-            {
-              "lang": "lg-por",
-              "name": "cpu_device",
-              "value": "Mais compatível, mais lento."
-            },
-            {
-              "lang": "lg-nep",
-              "name": "cpu_device",
-              "value": "अझ मिल्दो, ढिलो।"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "procesing",
-              "value": "Processing... wait."
-            },
-            {
-              "lang": "lg-spa",
-              "name": "procesing",
-              "value": "Procesando... espere."
-            },
-            {
-              "lang": "lg-cat",
-              "name": "procesing",
-              "value": "Processant... espereu."
-            },
-            {
-              "lang": "lg-deu",
-              "name": "procesing",
-              "value": "Wird verarbeitet... warten."
-            },
-            {
-              "lang": "lg-ell",
-              "name": "procesing",
-              "value": "Επεξεργασία... περιμένετε."
-            },
-            {
-              "lang": "lg-fra",
-              "name": "procesing",
-              "value": "Traitement en cours... veuillez patienter."
-            },
-            {
-              "lang": "lg-ita",
-              "name": "procesing",
-              "value": "Elaborazione... attendere."
-            },
-            {
-              "lang": "lg-por",
-              "name": "procesing",
-              "value": "Processando... aguarde."
-            },
-            {
-              "lang": "lg-nep",
-              "name": "procesing",
-              "value": "प्रशोधन गर्दै... पर्खनुहोस्।"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "large_turbo",
-              "value": "High, fast"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "large_turbo",
-              "value": "Alta, rápido"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "large_turbo",
-              "value": "Alt, ràpid"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "large_turbo",
-              "value": "उच्च, छिटो"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "large_turbo",
-              "value": "Hoch, schnell"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "large_turbo",
-              "value": "Ψηλά, γρήγορα"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "large_turbo",
-              "value": "Haut, rapide"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "large_turbo",
-              "value": "Alta, veloce"
-            },
-            {
-              "lang": "lg-por",
-              "name": "large_turbo",
-              "value": "Alta, rápido"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "setting_up",
-              "value": "Sare neuronala konfiguratzen"
-            },
-            {
-              "lang": "lg-ara",
-              "name": "setting_up",
-              "value": "جاري إعداد الشبكة العصبية"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "cpu_device",
-              "value": "Bateragarriagoa, motelagoa."
-            },
-            {
-              "lang": "lg-ara",
-              "name": "cpu_device",
-              "value": "أكثر توافقًا، أبطأ."
-            },
-            {
-              "lang": "lg-eus",
-              "name": "procesing",
-              "value": "Prozesatzen... itxaron."
-            },
-            {
-              "lang": "lg-ara",
-              "name": "procesing",
-              "value": "جاري المعالجة... انتظر."
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "<p>Transcribir qualsevol tipus de media a text.</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "<p>Transkribieren Sie jede Art von Medien in Text</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "<p>Μεταγράψτε οποιοδήποτε είδος μέσων σε κείμενο</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "<p>Transcribe any kind of media to text.</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-ita",
+        "value": "<p>Trascrivi qualsiasi tipo di media in testo</p>"
+      },
+      {
+        "id": 6,
+        "lang": "lg-nep",
+        "value": "<p>पाठमा कुनै पनि प्रकारको मिडिया ट्रान्सक्राइब गर्नुहोस्।</p>"
+      },
+      {
+        "id": 7,
+        "lang": "lg-spa",
+        "value": "<p>Transcribir cualquier tipo de media a texto.</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Transcripció"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Transkription"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Μεταγραφή"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Transcription"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Transkripzioa"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "Transcription"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "Trascrizione"
+      },
+      {
+        "id": 8,
+        "lang": "lg-nep",
+        "value": "ट्रान्सक्रिप्शन"
+      },
+      {
+        "id": 9,
+        "lang": "lg-por",
+        "value": "Transcrição"
+      },
+      {
+        "id": 10,
+        "lang": "lg-spa",
+        "value": "Transcripción"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_transcription"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "3.0.3"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.6.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 17,
+          "hour": 13,
+          "time": 65132083678,
+          "year": 2026,
+          "month": 6,
+          "minute": 27,
+          "second": 58
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            {
+              "open_as": "window",
+              "windowFeatures": null
             }
           ]
-        ]
+        }
       }
-    },
-    "dd1633": {
-      "inf": "Default configuration [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "transcriber_engine": {
-              "value": [
-                {
-                  "name": "local",
-                  "type": "browser",
-                  "label": "Local transcriber"
-                }
-              ],
-              "client": true
-            },
-            "transcriber_quality": {
-              "type": "array",
-              "value": [
-                {
-                  "name": "Xenova/whisper-small",
-                  "label": "small"
-                },
-                {
-                  "name": "onnx-community/whisper-large-v3-ONNX",
-                  "label": "large"
-                },
-                {
-                  "name": "onnx-community/whisper-large-v3-turbo",
-                  "label": "large_turbo"
-                }
-              ],
-              "client": true,
-              "default": "large"
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            [
+              {
+                "lang": "lg-spa",
+                "name": "large",
+                "value": "Alta"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "large",
+                "value": "Alta"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "large",
+                "value": "Alta"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "auto_rewind",
+                "value": "Auto rebobinat"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "auto_rewind",
+                "value": "Auto reboninado"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "auto_rewind",
+                "value": "Auto rewind"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "automatic_transcription",
+                "value": "Automatic transcription"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "automatic_transcription",
+                "value": "Automatische Transkription"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "auto_rewind",
+                "value": "Automatisches Zurückspulen"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "babel_transcriber",
+                "value": "Babel"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "babel_transcriber",
+                "value": "Babel"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "babel_transcriber",
+                "value": "Babel"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "babel_transcriber",
+                "value": "Babel"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "babel_transcriber",
+                "value": "Babel"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "babel_transcriber",
+                "value": "Babel"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "small",
+                "value": "Baixa"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "tiny",
+                "value": "Baixa, més ràpid"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "base",
+                "value": "Baixa, ràpid"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "small",
+                "value": "Baja"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "tiny",
+                "value": "Baja, más rápido"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "base",
+                "value": "Baja, rápido"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "small",
+                "value": "Bassa"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "tiny",
+                "value": "Bassa, più veloce"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "base",
+                "value": "Bassa, veloce"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "build_subtitles",
+                "value": "Build subtitles"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "quality",
+                "value": "Calidad"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "quality",
+                "value": "Qualitat"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "chars_per_line",
+                "value": "Caracteres por línea"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "chars_per_line",
+                "value": "Caratteri per riga"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "chars_per_line",
+                "value": "Caràcters per línia"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "chars_per_line",
+                "value": "Characters per line"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "build_subtitles",
+                "value": "Crear subtítols"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "build_subtitles",
+                "value": "Crear subtítulos"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "build_subtitles",
+                "value": "Creare sottotitoli"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "large",
+                "value": "Gute"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "large",
+                "value": "High"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "insert_tag",
+                "value": "Inserir etiqueta"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "insert_tag",
+                "value": "Inserisci tag"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "insert_tag",
+                "value": "Insert tag"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "insert_tag",
+                "value": "Insertar etiqueta"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "small",
+                "value": "Low"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "base",
+                "value": "Low, fast"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "tiny",
+                "value": "Low, fastest"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "medium",
+                "value": "Media"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "medium",
+                "value": "Media"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "medium",
+                "value": "Media"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "medium",
+                "value": "Medium"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "medium",
+                "value": "Mittel"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "small",
+                "value": "Niedrige"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "tiny",
+                "value": "Niedrige, gefastet"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "base",
+                "value": "Niedrige, schnell"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "play_pause",
+                "value": "Play / pause key"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "play_speed",
+                "value": "Play speed"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "play_pause",
+                "value": "Play/Pause-Taste"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "quality",
+                "value": "Quality"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "quality",
+                "value": "Qualità"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "quality",
+                "value": "Qualität"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "auto_rewind",
+                "value": "Riavvolgimento automatico"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "seconds_abbr",
+                "value": "Sec."
+              },
+              {
+                "lang": "lg-ita",
+                "name": "seconds_abbr",
+                "value": "Sec."
+              },
+              {
+                "lang": "lg-spa",
+                "name": "seconds_abbr",
+                "value": "Seg."
+              },
+              {
+                "lang": "lg-cat",
+                "name": "seconds_abbr",
+                "value": "Seg."
+              },
+              {
+                "lang": "lg-deu",
+                "name": "seconds_abbr",
+                "value": "Sek."
+              },
+              {
+                "lang": "lg-cat",
+                "name": "engine",
+                "value": "Servei"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "engine",
+                "value": "Service"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "engine",
+                "value": "Service"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "engine",
+                "value": "Servicio"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "engine",
+                "value": "Servizio"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "play_speed",
+                "value": "Spielgeschwindigkeit"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "insert_tag",
+                "value": "Tag einfügen"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "play_pause",
+                "value": "Tasto play/pausa"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "play_pause",
+                "value": "Tecla de reproducció/pausa"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "play_pause",
+                "value": "Tecla reproducir/pausar"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "automatic_transcription",
+                "value": "Transcripció automàtica"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "automatic_transcription",
+                "value": "Transcripción automàtica"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "automatic_transcription",
+                "value": "Trascrizione automatica"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "build_subtitles",
+                "value": "Untertitel erstellen"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "play_speed",
+                "value": "Velocidad de reproducción"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "play_speed",
+                "value": "Velocitat de reproducció"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "play_speed",
+                "value": "Velocità di riproduzione"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "chars_per_line",
+                "value": "Zeichen pro Zeile"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "auto_rewind",
+                "value": "Αυτόματη επανατύλιξη"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "automatic_transcription",
+                "value": "Αυτόματη μεταγραφή"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "babel_transcriber",
+                "value": "Βαβυλωνία"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "seconds_abbr",
+                "value": "Δεύτερος"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "build_subtitles",
+                "value": "Δημιουργία υπότιτλων"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "insert_tag",
+                "value": "Εισαγωγή ετικέτας"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "medium",
+                "value": "Μεσαίο"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "play_pause",
+                "value": "Πλήκτρο αναπαραγωγής/παύσης"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "quality",
+                "value": "Ποιότητα"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "play_speed",
+                "value": "Ταχύτητα αναπαραγωγής"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "engine",
+                "value": "Υπηρεσία"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "small",
+                "value": "Χαμηλό"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "base",
+                "value": "Χαμηλό, γρήγορο"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "tiny",
+                "value": "Χαμηλό, πιο γρήγορο"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "chars_per_line",
+                "value": "Χαρακτήρες ανά γραμμή"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "large",
+                "value": "υψηλή"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "large",
+                "value": "उच्च"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "build_subtitles",
+                "value": "उपशीर्षकहरू बनाउनुहोस्"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "small",
+                "value": "कम"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "tiny",
+                "value": "कम, छिटो"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "base",
+                "value": "कम, छिटो"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "play_speed",
+                "value": "गति खेल्नुहोस्"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "quality",
+                "value": "गुणस्तर"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "insert_tag",
+                "value": "ट्याग घुसाउनुहोस्"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "chars_per_line",
+                "value": "प्रति रेखा वर्णहरू"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "play_pause",
+                "value": "प्ले / पज कुञ्जी"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "medium",
+                "value": "मध्यम"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "seconds_abbr",
+                "value": "सेकेन्ड"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "engine",
+                "value": "सेवा"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "automatic_transcription",
+                "value": "स्वचालित ट्रान्सक्रिप्शन"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "auto_rewind",
+                "value": "स्वत: रिवाइन्ड"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "initializing",
+                "value": "Initializing"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "initializing",
+                "value": "Inicializando"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "initializing",
+                "value": "Inicialitzant"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "initializing",
+                "value": "Initialisierung"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "initializing",
+                "value": "Αρχικοποίηση"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "initializing",
+                "value": "Inizializzazione"
+              },
+              {
+                "lang": "lg-por",
+                "name": "initializing",
+                "value": "Inicializando"
+              },
+              {
+                "lang": "lg-por",
+                "name": "engine",
+                "value": "Serviço"
+              },
+              {
+                "lang": "lg-por",
+                "name": "seconds_abbr",
+                "value": "Seg."
+              },
+              {
+                "lang": "lg-por",
+                "name": "play_speed",
+                "value": "Velocidade de reprodução"
+              },
+              {
+                "lang": "lg-por",
+                "name": "play_pause",
+                "value": "Tecla de reprodução / pausa"
+              },
+              {
+                "lang": "lg-por",
+                "name": "medium",
+                "value": "Media"
+              },
+              {
+                "lang": "lg-por",
+                "name": "insert_tag",
+                "value": "Inserir etiqueta"
+              },
+              {
+                "lang": "lg-por",
+                "name": "chars_per_line",
+                "value": "Caracteres por linha"
+              },
+              {
+                "lang": "lg-por",
+                "name": "quality",
+                "value": "Qualidade"
+              },
+              {
+                "lang": "lg-por",
+                "name": "build_subtitles",
+                "value": "Construir subtítulos"
+              },
+              {
+                "lang": "lg-por",
+                "name": "base",
+                "value": "Baixo, rápido"
+              },
+              {
+                "lang": "lg-por",
+                "name": "tiny",
+                "value": "Baixa, mais rápida"
+              },
+              {
+                "lang": "lg-por",
+                "name": "small",
+                "value": "Baixa"
+              },
+              {
+                "lang": "lg-por",
+                "name": "babel_transcriber",
+                "value": "Babel"
+              },
+              {
+                "lang": "lg-por",
+                "name": "automatic_transcription",
+                "value": "Transcrição automática"
+              },
+              {
+                "lang": "lg-por",
+                "name": "auto_rewind",
+                "value": "Rebobinagem automática"
+              },
+              {
+                "lang": "lg-por",
+                "name": "large",
+                "value": "Alta"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "setting_up",
+                "value": "Setting up the neural network"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "setting_up",
+                "value": "Preparando la red neuronal"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "setting_up",
+                "value": "Preparant la xarxa neuronal"
+              },
+              {
+                "lang": "lg-por",
+                "name": "setting_up",
+                "value": "Configurando a rede neural"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "setting_up",
+                "value": "Configurazione della rete neurale"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "setting_up",
+                "value": "Einrichten des neuronalen Netzwerks"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "setting_up",
+                "value": "Ρύθμιση του νευρωνικού δικτύου "
+              },
+              {
+                "lang": "lg-nep",
+                "name": "setting_up",
+                "value": "तंत्रिका सञ्जालको तयारी गर्दै"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "initializing",
+                "value": "सुरु गर्दै"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "initializing",
+                "value": "Initialisation"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "setting_up",
+                "value": "Préparation du réseau neuronal"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "engine",
+                "value": "Service"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "seconds_abbr",
+                "value": "Sec."
+              },
+              {
+                "lang": "lg-fra",
+                "name": "play_speed",
+                "value": "Vitesse de lecture"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "play_pause",
+                "value": "Touche lecture/pause"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "medium",
+                "value": "Moyen"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "insert_tag",
+                "value": "Insérer l'étiquette"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "chars_per_line",
+                "value": "Caractères par ligne"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "quality",
+                "value": "Qualité"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "build_subtitles",
+                "value": "Créer des sous-titres"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "base",
+                "value": "Basse, rapide"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "tiny",
+                "value": "Basse, plus rapide"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "small",
+                "value": "Basse"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "babel_transcriber",
+                "value": "Babel"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "automatic_transcription",
+                "value": "Transcription automatique"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "auto_rewind",
+                "value": "Rembobinage automatique"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "large",
+                "value": "Haut"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "processing_audio",
+                "value": "Processing audio... "
+              },
+              {
+                "lang": "lg-spa",
+                "name": "processing_audio",
+                "value": "Procesando audio..."
+              },
+              {
+                "lang": "lg-cat",
+                "name": "processing_audio",
+                "value": "Processant l'àudio... "
+              },
+              {
+                "lang": "lg-fra",
+                "name": "processing_audio",
+                "value": "Traitement audio en cours..."
+              },
+              {
+                "lang": "lg-ell",
+                "name": "processing_audio",
+                "value": "Επεξεργασία ήχου..."
+              },
+              {
+                "lang": "lg-deu",
+                "name": "processing_audio",
+                "value": "Audio wird verarbeitet..."
+              },
+              {
+                "lang": "lg-ita",
+                "name": "processing_audio",
+                "value": "Elaborazione audio in corso... "
+              },
+              {
+                "lang": "lg-por",
+                "name": "processing_audio",
+                "value": "Processamento de áudio... "
+              },
+              {
+                "lang": "lg-nep",
+                "name": "processing_audio",
+                "value": "अडियो प्रशोधन गर्दै..."
+              },
+              {
+                "lang": "lg-spa",
+                "name": "transcription_completed",
+                "value": "Transcripción finalizada."
+              },
+              {
+                "lang": "lg-eng",
+                "name": "transcription_completed",
+                "value": "Transcription completed."
+              },
+              {
+                "lang": "lg-nep",
+                "name": "transcription_completed",
+                "value": "ट्रान्सक्रिप्शन पूरा भयो।"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "transcription_completed",
+                "value": "Transcripció finalitzada."
+              },
+              {
+                "lang": "lg-deu",
+                "name": "transcription_completed",
+                "value": "Transkription abgeschlossen."
+              },
+              {
+                "lang": "lg-ell",
+                "name": "transcription_completed",
+                "value": "Η μεταγραφή ολοκληρώθηκε."
+              },
+              {
+                "lang": "lg-fra",
+                "name": "transcription_completed",
+                "value": "Transcription terminée."
+              },
+              {
+                "lang": "lg-por",
+                "name": "transcription_completed",
+                "value": "Transcrição concluída."
+              },
+              {
+                "lang": "lg-ita",
+                "name": "transcription_completed",
+                "value": "Trascrizione completata."
+              },
+              {
+                "lang": "lg-eng",
+                "name": "cpu_device",
+                "value": "More compatible, slower."
+              },
+              {
+                "lang": "lg-spa",
+                "name": "cpu_device",
+                "value": "Más compatible, más lento."
+              },
+              {
+                "lang": "lg-cat",
+                "name": "cpu_device",
+                "value": "Més compatible, més lent."
+              },
+              {
+                "lang": "lg-deu",
+                "name": "cpu_device",
+                "value": "Kompatibler, langsamer."
+              },
+              {
+                "lang": "lg-ell",
+                "name": "cpu_device",
+                "value": "Πιο συμβατό, πιο αργό."
+              },
+              {
+                "lang": "lg-fra",
+                "name": "cpu_device",
+                "value": "Plus compatible, mais plus lent."
+              },
+              {
+                "lang": "lg-ita",
+                "name": "cpu_device",
+                "value": "Più compatibile, più lento."
+              },
+              {
+                "lang": "lg-por",
+                "name": "cpu_device",
+                "value": "Mais compatível, mais lento."
+              },
+              {
+                "lang": "lg-nep",
+                "name": "cpu_device",
+                "value": "अझ मिल्दो, ढिलो।"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "procesing",
+                "value": "Processing... wait."
+              },
+              {
+                "lang": "lg-spa",
+                "name": "procesing",
+                "value": "Procesando... espere."
+              },
+              {
+                "lang": "lg-cat",
+                "name": "procesing",
+                "value": "Processant... espereu."
+              },
+              {
+                "lang": "lg-deu",
+                "name": "procesing",
+                "value": "Wird verarbeitet... warten."
+              },
+              {
+                "lang": "lg-ell",
+                "name": "procesing",
+                "value": "Επεξεργασία... περιμένετε."
+              },
+              {
+                "lang": "lg-fra",
+                "name": "procesing",
+                "value": "Traitement en cours... veuillez patienter."
+              },
+              {
+                "lang": "lg-ita",
+                "name": "procesing",
+                "value": "Elaborazione... attendere."
+              },
+              {
+                "lang": "lg-por",
+                "name": "procesing",
+                "value": "Processando... aguarde."
+              },
+              {
+                "lang": "lg-nep",
+                "name": "procesing",
+                "value": "प्रशोधन गर्दै... पर्खनुहोस्।"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "large_turbo",
+                "value": "High, fast"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "large_turbo",
+                "value": "Alta, rápido"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "large_turbo",
+                "value": "Alt, ràpid"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "large_turbo",
+                "value": "उच्च, छिटो"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "large_turbo",
+                "value": "Hoch, schnell"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "large_turbo",
+                "value": "Ψηλά, γρήγορα"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "large_turbo",
+                "value": "Haut, rapide"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "large_turbo",
+                "value": "Alta, veloce"
+              },
+              {
+                "lang": "lg-por",
+                "name": "large_turbo",
+                "value": "Alta, rápido"
+              },
+              {
+                "lang": "lg-eus",
+                "name": "setting_up",
+                "value": "Sare neuronala konfiguratzen"
+              },
+              {
+                "lang": "lg-ara",
+                "name": "setting_up",
+                "value": "جاري إعداد الشبكة العصبية"
+              },
+              {
+                "lang": "lg-eus",
+                "name": "cpu_device",
+                "value": "Bateragarriagoa, motelagoa."
+              },
+              {
+                "lang": "lg-ara",
+                "name": "cpu_device",
+                "value": "أكثر توافقًا، أبطأ."
+              },
+              {
+                "lang": "lg-eus",
+                "name": "procesing",
+                "value": "Prozesatzen... itxaron."
+              },
+              {
+                "lang": "lg-ara",
+                "name": "procesing",
+                "value": "جاري المعالجة... انتظر."
+              }
+            ]
+          ]
+        }
+      }
+    ],
+    "dd1633": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            {
+              "transcriber_engine": {
+                "value": [
+                  {
+                    "name": "local",
+                    "type": "browser",
+                    "label": "Local transcriber"
+                  }
+                ],
+                "client": true
+              },
+              "transcriber_quality": {
+                "type": "array",
+                "value": [
+                  {
+                    "name": "Xenova/whisper-small",
+                    "label": "small"
+                  },
+                  {
+                    "name": "onnx-community/whisper-large-v3-ONNX",
+                    "label": "large"
+                  },
+                  {
+                    "name": "onnx-community/whisper-large-v3-turbo",
+                    "label": "large_turbo"
+                  }
+                ],
+                "client": true,
+                "default": "large"
+              }
             }
-          }
-        ]
+          ]
+        }
       }
-    },
-    "dd1644": {
-      "inf": "Desarollador [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "Dédalo team"
-        ]
-      }
-    }
+    ]
   },
-  "section_id": 28,
-  "created_date": "2025-01-27 13:51:03",
-  "section_tipo": "dd1340",
-  "modified_date": "2025-07-21 21:38:45",
-  "diffusion_info": null,
-  "created_by_userID": -1,
-  "section_real_tipo": "dd73",
-  "modified_by_userID": 1
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 7
+      }
+    ],
+    "dd799": [
+      {
+        "count": 10
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 3
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1633": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
 }

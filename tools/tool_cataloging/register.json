@@ -1,196 +1,328 @@
 {
-  "label": "Desarrollo de herramientas",
-  "relations": [
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd200"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
-    },
-    {
-      "type": "dd675",
-      "section_id": "1",
-      "section_tipo": "dd153",
-      "from_component_tipo": "dd1337"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1331"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1332"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1333"
-    },
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd197"
-    }
-  ],
-  "components": {
-    "dd199": {
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 12,
-              "hour": 18,
-              "time": 65021854469,
-              "year": 2023,
-              "month": 1,
-              "minute": 14,
-              "second": 29
-            }
-          }
-        ]
-      }
-    },
-    "dd201": {
-      "inf": "modified_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 8,
-              "hour": 9,
-              "time": 65104509584,
-              "year": 2025,
-              "month": 8,
-              "minute": 59,
-              "second": 44
-            }
-          }
-        ]
-      }
-    },
-    "dd612": {
-      "inf": "Descripción [component_text_area]",
-      "dato": {
-        "lg-cat": [
-          "<p>Agrupació i jerarquització de béns culturals.</p>"
-        ],
-        "lg-deu": [
-          "<p>Gruppierung und Hierarchie von Kulturgütern.</p>"
-        ],
-        "lg-ell": [
-          "<p>Ομαδοποίηση και ιεράρχηση πολιτιστικών αγαθών.</p>"
-        ],
-        "lg-eng": [
-          "<p>Grouping and hierarchization of cultural assets.</p>"
-        ],
-        "lg-fra": [
-          "<p>Groupement et hiérarchisation de biens culturels.</p>"
-        ],
-        "lg-spa": [
-          "<p>Agrupación y jerarquización de bienes culturales.</p>"
-        ]
-      }
-    },
-    "dd799": {
-      "inf": "Etiqueta [component_input_text]",
-      "dato": {
-        "lg-cat": [
-          "Catalogació de bens culturals"
-        ],
-        "lg-deu": [
-          "Katalogisierung von Kulturgütern"
-        ],
-        "lg-ell": [
-          "Καταλογογράφηση πολιτιστικών αγαθών"
-        ],
-        "lg-eng": [
-          "Cataloging of cultural properties"
-        ],
-        "lg-eus": [
-          "Ondasunen katalogazioa"
-        ],
-        "lg-fra": [
-          "Catalogage des biens culturels"
-        ],
-        "lg-ita": [
-          "Catalogazione dei beni culturali"
-        ],
-        "lg-spa": [
-          "Catalogación de bienes"
-        ]
-      }
-    },
-    "dd1326": {
-      "inf": "Nombre de la herramienta [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "tool_cataloging"
-        ]
-      }
-    },
-    "dd1327": {
-      "inf": "Versión [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "2.0.2"
-        ]
-      }
-    },
-    "dd1328": {
-      "inf": "Versión Dédalo mínima [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "6.0.0"
-        ]
-      }
-    },
-    "dd1335": {
-      "inf": "Propiedades [component_json]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "view": "tool_cataloging_mosaic",
-            "open_as": "window",
-            "windowFeatures": null
-          }
-        ]
-      }
-    },
-    "dd1362": {
-      "inf": "Implementación [component_text_area]",
-      "dato": {
-        "lg-nolan": [
-          "<p>Use this tool to create a thesaurus with different data from different sections, as types or mints to create a tree catalog, ex: types inside mints.</p><p>Define the tool config and assign with the 2 ddo list to view in the right and left.</p><p>for the right panel: define a ddo of the main section with the &nbsp;components to show.</p><p>the role property need to be: \"section_to_cataloging\"</p><p>for the left pane: define the ddo with the area_thesarurs (filtered by hierarche_types or other concept):</p><p>the role property need to be: \"area_thesaurus\",</p><p>{</p><p>&nbsp; &nbsp; \"mode\": \"relation\",</p><p>&nbsp; &nbsp; \"role\": \"area_thesaurus\",</p><p>&nbsp; &nbsp; \"tipo\": \"dd100\",</p><p>&nbsp; &nbsp; \"properties\": {</p><p>&nbsp; &nbsp; &nbsp; \"hierarchy_types\": [8]</p><p>&nbsp; &nbsp; },</p><p>&nbsp; &nbsp; \"section_id\": null,</p><p>&nbsp; &nbsp; \"section_tipo\": \"dd100\"</p><p>}</p><p></p><p>The catalog tool create new section when the user drag any record from section to the thesaurus and it's necessary define where will be storage the locator drag as:</p><p>\"set_new_thesaurus_value\": {</p><p>&nbsp; &nbsp; \"tipo\": \"numisdata656\",</p><p>&nbsp; &nbsp; \"section_tipo\": \"numisdata665\"</p><p>}</p>"
-        ]
-      }
-    },
-    "dd1644": {
-      "inf": "Desarollador [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "Dédalo team"
-        ]
-      }
-    }
-  },
-  "section_id": 22,
-  "created_date": "2023-11-02 18:55:50",
+  "id": "3942",
+  "section_id": "22",
   "section_tipo": "dd1340",
-  "modified_date": "2025-08-08 09:59:44",
-  "diffusion_info": null,
-  "created_by_userID": -1,
-  "section_real_tipo": "dd73",
-  "modified_by_userID": -1
+  "data": {
+    "label": "Tools development",
+    "section_id": 22,
+    "created_date": "2026-06-17 13:27:57",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "<p>Agrupació i jerarquització de béns culturals.</p>"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "<p>Gruppierung und Hierarchie von Kulturgütern.</p>"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "<p>Ομαδοποίηση και ιεράρχηση πολιτιστικών αγαθών.</p>"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "<p>Grouping and hierarchization of cultural assets.</p>"
+      },
+      {
+        "id": 5,
+        "lang": "lg-fra",
+        "value": "<p>Groupement et hiérarchisation de biens culturels.</p>"
+      },
+      {
+        "id": 6,
+        "lang": "lg-spa",
+        "value": "<p>Agrupación y jerarquización de bienes culturales.</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Catalogació de bens culturals"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Katalogisierung von Kulturgütern"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Καταλογογράφηση πολιτιστικών αγαθών"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Cataloging of cultural properties"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Ondasunen katalogazioa"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "Catalogage des biens culturels"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "Catalogazione dei beni culturali"
+      },
+      {
+        "id": 8,
+        "lang": "lg-spa",
+        "value": "Catalogación de bienes"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_cataloging"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "2.0.2"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1362": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "<p>Use this tool to create a thesaurus with different data from different sections, as types or mints to create a tree catalog, ex: types inside mints.</p><p>Define the tool config and assign with the 2 ddo list to view in the right and left.</p><p>for the right panel: define a ddo of the main section with the &nbsp;components to show.</p><p>the role property need to be: \"section_to_cataloging\"</p><p>for the left pane: define the ddo with the area_thesarurs (filtered by hierarche_types or other concept):</p><p>the role property need to be: \"area_thesaurus\",</p><p>{</p><p>&nbsp; &nbsp; \"mode\": \"relation\",</p><p>&nbsp; &nbsp; \"role\": \"area_thesaurus\",</p><p>&nbsp; &nbsp; \"tipo\": \"dd100\",</p><p>&nbsp; &nbsp; \"properties\": {</p><p>&nbsp; &nbsp; &nbsp; \"hierarchy_types\": [8]</p><p>&nbsp; &nbsp; },</p><p>&nbsp; &nbsp; \"section_id\": null,</p><p>&nbsp; &nbsp; \"section_tipo\": \"dd100\"</p><p>}</p><p></p><p>The catalog tool create new section when the user drag any record from section to the thesaurus and it's necessary define where will be storage the locator drag as:</p><p>\"set_new_thesaurus_value\": {</p><p>&nbsp; &nbsp; \"tipo\": \"numisdata656\",</p><p>&nbsp; &nbsp; \"section_tipo\": \"numisdata665\"</p><p>}</p>"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 12,
+          "hour": 18,
+          "time": 65021854469,
+          "year": 2023,
+          "month": 1,
+          "minute": 14,
+          "second": 29
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 17,
+          "hour": 13,
+          "time": 65132083677,
+          "year": 2026,
+          "month": 6,
+          "minute": 27,
+          "second": 57
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            {
+              "view": "tool_cataloging_mosaic",
+              "open_as": "window",
+              "windowFeatures": null
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 6
+      }
+    ],
+    "dd799": [
+      {
+        "count": 8
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1362": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
 }

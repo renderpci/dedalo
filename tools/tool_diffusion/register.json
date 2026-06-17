@@ -1,863 +1,532 @@
 {
-  "label": "Desarrollo de herramientas",
-  "relations": [
-    {
-      "type": "dd151",
-      "section_id": "-1",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd200"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
-    },
-    {
-      "type": "dd675",
-      "section_id": "1",
-      "section_tipo": "dd153",
-      "from_component_tipo": "dd1337"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1331"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1332"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1333"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
-    },
-    {
-      "type": "dd151",
-      "section_id": "2",
-      "section_tipo": "dd128",
-      "from_component_tipo": "dd197"
-    }
-  ],
-  "components": {
-    "dd199": {
-      "inf": "created_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 1,
-              "hour": 20,
-              "time": 64994128647,
-              "year": 2022,
-              "month": 3,
-              "minute": 37,
-              "second": 27
-            }
-          }
-        ]
-      }
-    },
-    "dd201": {
-      "inf": "modified_date [component_date]",
-      "dato": {
-        "lg-nolan": [
-          {
-            "start": {
-              "day": 11,
-              "hour": 13,
-              "time": 65102102893,
-              "year": 2025,
-              "month": 7,
-              "minute": 28,
-              "second": 13
-            }
-          }
-        ]
-      }
-    },
-    "dd612": {
-      "inf": "Descripción [component_text_area]",
-      "dato": {
-        "lg-eng": [
-          "<p>Manages diffusion features, publishing selected records to diffusion domain (MySQL, RDF, etc.)</p>"
-        ]
-      }
-    },
-    "dd799": {
-      "inf": "Etiqueta [component_input_text]",
-      "dato": {
-        "lg-cat": [
-          "Difusió"
-        ],
-        "lg-deu": [
-          "Diffusion"
-        ],
-        "lg-ell": [
-          "Διάχυση"
-        ],
-        "lg-eng": [
-          "Diffusion"
-        ],
-        "lg-eus": [
-          "Difusioa"
-        ],
-        "lg-fra": [
-          "La diffusion"
-        ],
-        "lg-ita": [
-          "Diffusione"
-        ],
-        "lg-nep": [
-          "प्रसार"
-        ],
-        "lg-por": [
-          "Difusão"
-        ],
-        "lg-spa": [
-          "Difusión"
-        ]
-      }
-    },
-    "dd1326": {
-      "inf": "Nombre de la herramienta [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "tool_diffusion"
-        ]
-      }
-    },
-    "dd1327": {
-      "inf": "Versión [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "2.0.5"
-        ]
-      }
-    },
-    "dd1328": {
-      "inf": "Versión Dédalo mínima [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "6.0.0"
-        ]
-      }
-    },
-    "dd1372": {
-      "inf": "Etiquetas [component_json]",
-      "dato": {
-        "lg-nolan": [
-          [
-            {
-              "lang": "lg-eng",
-              "name": "depth_levels",
-              "value": "Depth levels to solve"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "depth_levels",
-              "value": "Livelli di profondità da risolvere"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "depth_levels",
-              "value": "Niveaux profonds à résoudre"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "depth_levels",
-              "value": "Niveles de profundidad para resolver"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "depth_levels",
-              "value": "Nivells de profunditat per resoldre"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "depth_levels",
-              "value": "Zu lösende Tiefenstufen"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "depth_levels",
-              "value": "βαθιά επίπεδα προς επίλυση"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "depth_levels",
-              "value": "समाधान गर्न गहिराइ स्तर"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "levels_note",
-              "value": "Note about publishing levels.\nOne level publishes the fields in that section. \nTwo levels publish in addition, those of the sections directly related to this one through portals, and so on for more levels.\nNote that the number of records to publish (and the time to process them) increases exponentially with the number of levels.\nTry to use the fewest number of levels for fast publishing."
-            },
-            {
-              "lang": "lg-spa",
-              "name": "levels_note",
-              "value": "Nota sobre los niveles de publicación.\nUn nivel, publica los campos de esta sección. \nDos niveles publica, además, los de las secciones directamente relacionadas a esta a través de portales, y así sucesivamente para más niveles.\nTenga en cuenta que el aumento de registros a publicar (y el tiempo de procesarlos) aumenta exponencialmente con el aumento de niveles.\nIntente utilizar el menor número de niveles para una rápida publicación."
-            },
-            {
-              "lang": "lg-por",
-              "name": "levels_note",
-              "value": "Nota sobre os níveis de publicação.\nUm nível publica os campos dessa secção. \nDois níveis publicam, além disso, os das secções diretamente relacionadas com esta através de portais, e assim por diante para mais níveis.\nNote que o número de registos a publicar (e o tempo para os processar) aumenta exponencialmente com o número de níveis.\nTente usar o menor número de níveis para uma publicação rápida."
-            },
-            {
-              "lang": "lg-fra",
-              "name": "levels_note",
-              "value": "Remarque concernant les niveaux de publication.\nUn niveau publie les champs de cette section. \nDeux niveaux publient en plus les champs des sections directement liées à celle-ci par des portails, et ainsi de suite pour plus de niveaux.\nNotez que le nombre d'enregistrements à publier (et le temps nécessaire pour les traiter) augmente de manière exponentielle avec le nombre de niveaux.\nEssayez d'utiliser le plus petit nombre de niveaux possible pour une publication rapide."
-            },
-            {
-              "lang": "lg-ita",
-              "name": "levels_note",
-              "value": "Nota sui livelli di pubblicazione.\nUn livello pubblica i campi di quella sezione. \nDue livelli pubblicano in aggiunta quelli delle sezioni direttamente collegate a questa attraverso i portali, e così via per più livelli.\nSi noti che il numero di record da pubblicare (e il tempo per elaborarli) aumenta esponenzialmente con il numero di livelli.\nCercare di utilizzare il minor numero di livelli per una pubblicazione veloce."
-            },
-            {
-              "lang": "lg-deu",
-              "name": "levels_note",
-              "value": "Hinweis zu den Veröffentlichungsebenen.\nAuf einer Ebene werden die Felder in diesem Abschnitt veröffentlicht. \nAuf zwei Ebenen werden zusätzlich die Felder der Abschnitte veröffentlicht, die über Portale direkt mit diesem Abschnitt verbunden sind, und so weiter für weitere Ebenen.\nBeachten Sie, dass die Anzahl der zu veröffentlichenden Datensätze (und die Zeit für deren Verarbeitung) exponentiell mit der Anzahl der Ebenen ansteigt.\nVersuchen Sie, so wenig Ebenen wie möglich zu verwenden, um eine schnelle Veröffentlichung zu erreichen."
-            },
-            {
-              "lang": "lg-ell",
-              "name": "levels_note",
-              "value": "Σημείωση σχετικά με τα επίπεδα δημοσίευσης.\nΈνα επίπεδο δημοσιεύει τα πεδία του συγκεκριμένου τμήματος. \nΔύο επίπεδα δημοσιεύουν επιπλέον, εκείνα των τμημάτων που σχετίζονται άμεσα με αυτό μέσω πυλών, και ούτω καθεξής για περισσότερα επίπεδα.\nΣημειώστε ότι ο αριθμός των εγγραφών προς δημοσίευση (και ο χρόνος επεξεργασίας τους) αυξάνεται εκθετικά με τον αριθμό των επιπέδων.\nΠροσπαθήστε να χρησιμοποιείτε τον μικρότερο δυνατό αριθμό επιπέδων για γρήγορη δημοσίευση."
-            },
-            {
-              "lang": "lg-cat",
-              "name": "levels_note",
-              "value": "Nota sobre els nivells de publicació.\nUn nivell publica els camps d'aquesta secció.\nDos nivells publica, a més, els de les seccions directament relacionades a aquesta a través de portals, i així successivament per a més nivells.\nTingueu en compte que l'augment de registres a publicar (i el temps de processar-los) augmenta exponencialment amb l'augment de nivells.\nIntenteu utilitzar el menor nombre de nivells per a una ràpida publicació."
-            },
-            {
-              "lang": "lg-eus",
-              "name": "levels_note",
-              "value": "Argitalpen mailei buruzko oharra.\nMaila batek atal horretako eremuak argitaratzen ditu.\nHorrez gain, bi mailak argitaratzen dituzte, atari bidez honekin zuzenean lotutako ataletakoak, eta abar maila gehiagorako.\nKontuan izan argitaratzeko erregistro-kopurua (eta horiek prozesatzeko denbora) esponentzialki handitzen dela maila kopuruarekin.\nSaiatu maila kopuru gutxien erabiltzen argitalpen azkarrerako."
-            },
-            {
-              "lang": "lg-nep",
-              "name": "levels_note",
-              "value": "प्रकाशन स्तरहरूको बारेमा नोट गर्नुहोस्।\nएक स्तरले त्यो खण्डमा रहेका क्षेत्रहरू प्रकाशित गर्दछ।\n\n\nथप दुई स्तरहरू प्रकाशित गर्दछन्, पोर्टलहरू मार्फत यससँग प्रत्यक्ष रूपमा सम्बन्धित खण्डहरू, र यस्तै थप स्तरहरूको लागि।\nध्यान दिनुहोस् कि प्रकाशित गर्नुपर्ने रेकर्डहरूको संख्या (र तिनीहरूलाई प्रशोधन गर्ने समय) स्तरहरूको संख्यासँगै घातीय रूपमा बढ्छ।\nछिटो प्रकाशनको लागि स्तरहरूको सबैभन्दा कम संख्या प्रयोग गर्ने प्रयास गर्नुहोस्।"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "publish_selected_records",
-              "value": "Pubblica i {0} record selezionati"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "publish_selected_records",
-              "value": "Publica els {0} registres seleccionats"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "publish_selected_records",
-              "value": "Publica los {0} registros seleccionados"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "publish_selected_records",
-              "value": "Publier les {0} enregistrements sélectionnés"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "publish_selected_records",
-              "value": "Publish the {0} selected records"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "publish_selected_records",
-              "value": "Veröffentlichen Sie die {0} ausgewählten Datensätze"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "publish_selected_records",
-              "value": "{0} चयन गरिएका रेकर्डहरू प्रकाशित गर्नुहोस्"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "publish_selected_records",
-              "value": "Δημοσίευση των {0} επιλεγμένων εγγραφών"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "skip_publication_state_check",
-              "value": "Ignorar temporalment l'estat de publicació en publicar"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "skip_publication_state_check",
-              "value": "Ignorar temporalmente el estado de publicación al publicar"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "skip_publication_state_check",
-              "value": "Ignorare temporaneamente lo stato di pubblicazione nel pubblicare"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "skip_publication_state_check",
-              "value": "Ignore temporarily the publication status when publishing"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "skip_publication_state_check",
-              "value": "Ignorer temporairement le statut de publication lors de la publication"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "skip_publication_state_check",
-              "value": "Publikationsstatus bei der Veröffentlichung temporär ignorieren"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "skip_publication_state_check",
-              "value": "Αγνοήστε προσωρινά την κατάσταση δημοσίευσης κατά τη δημοσίευση"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "skip_publication_state_check",
-              "value": "प्रकाशन गर्दा अस्थायी रूपमा प्रकाशन स्थितिलाई बेवास्ता गर्नुहोस्"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "combine_xml_files",
-              "value": "Combine XML files"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "combine_xml_files",
-              "value": "Combinar archivos XML"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "combine_xml_files",
-              "value": "Combinar fitxers XML"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "combine_xml_files",
-              "value": "XML fitxategiak konbinatu"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "combine_xml_files",
-              "value": "XML-Dateien kombinieren"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "combine_xml_files",
-              "value": "Συνδυάστε αρχεία XML"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "combine_xml_files",
-              "value": "Combiner des fichiers XML"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "combine_xml_files",
-              "value": "Combinare i file XML"
-            },
-            {
-              "lang": "lg-por",
-              "name": "combine_xml_files",
-              "value": "Combinar ficheiros XML"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "combine_xml_files",
-              "value": "XML फाइलहरू संयोजन गर्नुहोस्"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "diffusion_result",
-              "value": "Diffusion result"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "diffusion_result",
-              "value": "Resultado de difusión"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "diffusion_result",
-              "value": "Resultat de difusió"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "diffusion_result",
-              "value": "Résultat de diffusion"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "diffusion_result",
-              "value": "Risultato della diffusione"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "diffusion_result",
-              "value": "Diffusionsergebnis"
-            },
-            {
-              "lang": "lg-por",
-              "name": "diffusion_result",
-              "value": "Resultado da difusão"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "diffusion_result",
-              "value": "Difusioaren emaitza"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "diffusion_result",
-              "value": "Αποτέλεσμα διάχυσης"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "diffusion_result",
-              "value": "प्रसार परिणाम"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "table_name",
-              "value": "Table"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "table_name",
-              "value": "Tabla"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "table_name",
-              "value": "Taula"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "table_name",
-              "value": "Table"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "table_name",
-              "value": "Tabella"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "table_name",
-              "value": "Tabelle"
-            },
-            {
-              "lang": "lg-por",
-              "name": "table_name",
-              "value": "Tabela"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "table_name",
-              "value": "Taula"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "table_name",
-              "value": "Πίνακας"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "table_name",
-              "value": "तालिका"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "records_affected",
-              "value": "Records"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "records_affected",
-              "value": "Registros"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "records_affected",
-              "value": "Registres"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "records_affected",
-              "value": "Enregistrements"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "records_affected",
-              "value": "Record"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "records_affected",
-              "value": "Datensätze"
-            },
-            {
-              "lang": "lg-por",
-              "name": "records_affected",
-              "value": "Registros"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "records_affected",
-              "value": "Erregistroak"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "records_affected",
-              "value": "Εγγραφές"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "records_affected",
-              "value": "रेकोर्डहरू"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "total_time",
-              "value": "Total time"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "total_time",
-              "value": "Tiempo total"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "total_time",
-              "value": "Temps total"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "total_time",
-              "value": "Temps total"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "total_time",
-              "value": "Tempo totale"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "total_time",
-              "value": "Gesamtzeit"
-            },
-            {
-              "lang": "lg-por",
-              "name": "total_time",
-              "value": "Tempo total"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "total_time",
-              "value": "Denbora osoa"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "total_time",
-              "value": "Συνολικός χρόνος"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "total_time",
-              "value": "कुल समय"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "success",
-              "value": "Success"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "success",
-              "value": "Éxito"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "success",
-              "value": "Èxit"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "success",
-              "value": "Succès"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "success",
-              "value": "Successo"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "success",
-              "value": "Erfolg"
-            },
-            {
-              "lang": "lg-por",
-              "name": "success",
-              "value": "Sucesso"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "success",
-              "value": "Arrakasta"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "success",
-              "value": "Επιτυχία"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "success",
-              "value": "सफलता"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "partial_success",
-              "value": "Partial success"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "partial_success",
-              "value": "Éxito parcial"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "partial_success",
-              "value": "Èxit parcial"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "partial_success",
-              "value": "Succès partiel"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "partial_success",
-              "value": "Successo parziale"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "partial_success",
-              "value": "Teilerfolg"
-            },
-            {
-              "lang": "lg-por",
-              "name": "partial_success",
-              "value": "Sucesso parcial"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "partial_success",
-              "value": "Arrakasta partziala"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "partial_success",
-              "value": "Μερική επιτυχία"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "partial_success",
-              "value": "आंशिक सफलता"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "fail",
-              "value": "Fail"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "fail",
-              "value": "Fallo"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "fail",
-              "value": "Error"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "fail",
-              "value": "Échec"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "fail",
-              "value": "Fallimento"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "fail",
-              "value": "Fehlschlag"
-            },
-            {
-              "lang": "lg-por",
-              "name": "fail",
-              "value": "Falha"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "fail",
-              "value": "Huts"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "fail",
-              "value": "Αποτυχία"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "fail",
-              "value": "असफलता"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "rows_total",
-              "value": "Rows"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "rows_total",
-              "value": "Filas"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "rows_total",
-              "value": "Files"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "rows_total",
-              "value": "Lignes"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "rows_total",
-              "value": "Righe"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "rows_total",
-              "value": "Zeilen"
-            },
-            {
-              "lang": "lg-por",
-              "name": "rows_total",
-              "value": "Linhas"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "rows_total",
-              "value": "Errenkadak"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "rows_total",
-              "value": "Γραμμές"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "rows_total",
-              "value": "पङ्क्तिहरू"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "pending_deletions",
-              "value": "Pending deletions"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "pending_deletions",
-              "value": "Eliminaciones pendientes"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "pending_deletions",
-              "value": "Eliminacions pendents"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "pending_deletions",
-              "value": "Suppressions en attente"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "pending_deletions",
-              "value": "Eliminazioni in sospeso"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "pending_deletions",
-              "value": "Ausstehende Löschungen"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "retry",
-              "value": "Retry"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "retry",
-              "value": "Reintentar"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "retry",
-              "value": "Reintentar"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "retry",
-              "value": "Réessayer"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "retry",
-              "value": "Riprova"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "retry",
-              "value": "Erneut versuchen"
-            }
-          ]
-        ]
-      }
-    },
-    "dd1644": {
-      "inf": "Desarollador [component_input_text]",
-      "dato": {
-        "lg-nolan": [
-          "Dédalo team"
-        ]
-      }
-    }
-  },
-  "section_id": 12,
-  "created_date": "2022-03-01 20:37:27",
+  "id": "3932",
+  "section_id": "12",
   "section_tipo": "dd1340",
-  "modified_date": "2025-07-11 13:28:13",
-  "diffusion_info": null,
-  "created_by_userID": -1,
-  "section_real_tipo": "dd73",
-  "modified_by_userID": 2
+  "data": {
+    "label": "Tools development",
+    "section_id": 12,
+    "created_date": "2026-06-17 13:27:56",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1333": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1333"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "<p>Manages diffusion features, publishing selected records to diffusion domain (MySQL, RDF, etc.)</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-cat",
+        "value": "Difusió"
+      },
+      {
+        "id": 2,
+        "lang": "lg-deu",
+        "value": "Diffusion"
+      },
+      {
+        "id": 3,
+        "lang": "lg-ell",
+        "value": "Διάχυση"
+      },
+      {
+        "id": 4,
+        "lang": "lg-eng",
+        "value": "Diffusion"
+      },
+      {
+        "id": 5,
+        "lang": "lg-eus",
+        "value": "Difusioa"
+      },
+      {
+        "id": 6,
+        "lang": "lg-fra",
+        "value": "La diffusion"
+      },
+      {
+        "id": 7,
+        "lang": "lg-ita",
+        "value": "Diffusione"
+      },
+      {
+        "id": 8,
+        "lang": "lg-nep",
+        "value": "प्रसार"
+      },
+      {
+        "id": 9,
+        "lang": "lg-por",
+        "value": "Difusão"
+      },
+      {
+        "id": 10,
+        "lang": "lg-spa",
+        "value": "Difusión"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_diffusion"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "2.0.5"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 1,
+          "hour": 20,
+          "time": 64994128647,
+          "year": 2022,
+          "month": 3,
+          "minute": 37,
+          "second": 27
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 17,
+          "hour": 13,
+          "time": 65132083676,
+          "year": 2026,
+          "month": 6,
+          "minute": 27,
+          "second": 56
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1372": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            [
+              {
+                "lang": "lg-eng",
+                "name": "depth_levels",
+                "value": "Depth levels to solve"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "depth_levels",
+                "value": "Livelli di profondità da risolvere"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "depth_levels",
+                "value": "Niveaux profonds à résoudre"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "depth_levels",
+                "value": "Niveles de profundidad para resolver"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "depth_levels",
+                "value": "Nivells de profunditat per resoldre"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "depth_levels",
+                "value": "Zu lösende Tiefenstufen"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "depth_levels",
+                "value": "βαθιά επίπεδα προς επίλυση"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "depth_levels",
+                "value": "समाधान गर्न गहिराइ स्तर"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "levels_note",
+                "value": "Note about publishing levels.\nOne level publishes the fields in that section. \nTwo levels publish in addition, those of the sections directly related to this one through portals, and so on for more levels.\nNote that the number of records to publish (and the time to process them) increases exponentially with the number of levels.\nTry to use the fewest number of levels for fast publishing."
+              },
+              {
+                "lang": "lg-spa",
+                "name": "levels_note",
+                "value": "Nota sobre los niveles de publicación.\nUn nivel, publica los campos de esta sección. \nDos niveles publica, además, los de las secciones directamente relacionadas a esta a través de portales, y así sucesivamente para más niveles.\nTenga en cuenta que el aumento de registros a publicar (y el tiempo de procesarlos) aumenta exponencialmente con el aumento de niveles.\nIntente utilizar el menor número de niveles para una rápida publicación."
+              },
+              {
+                "lang": "lg-por",
+                "name": "levels_note",
+                "value": "Nota sobre os níveis de publicação.\nUm nível publica os campos dessa secção. \nDois níveis publicam, além disso, os das secções diretamente relacionadas com esta através de portais, e assim por diante para mais níveis.\nNote que o número de registos a publicar (e o tempo para os processar) aumenta exponencialmente com o número de níveis.\nTente usar o menor número de níveis para uma publicação rápida."
+              },
+              {
+                "lang": "lg-fra",
+                "name": "levels_note",
+                "value": "Remarque concernant les niveaux de publication.\nUn niveau publie les champs de cette section. \nDeux niveaux publient en plus les champs des sections directement liées à celle-ci par des portails, et ainsi de suite pour plus de niveaux.\nNotez que le nombre d'enregistrements à publier (et le temps nécessaire pour les traiter) augmente de manière exponentielle avec le nombre de niveaux.\nEssayez d'utiliser le plus petit nombre de niveaux possible pour une publication rapide."
+              },
+              {
+                "lang": "lg-ita",
+                "name": "levels_note",
+                "value": "Nota sui livelli di pubblicazione.\nUn livello pubblica i campi di quella sezione. \nDue livelli pubblicano in aggiunta quelli delle sezioni direttamente collegate a questa attraverso i portali, e così via per più livelli.\nSi noti che il numero di record da pubblicare (e il tempo per elaborarli) aumenta esponenzialmente con il numero di livelli.\nCercare di utilizzare il minor numero di livelli per una pubblicazione veloce."
+              },
+              {
+                "lang": "lg-deu",
+                "name": "levels_note",
+                "value": "Hinweis zu den Veröffentlichungsebenen.\nAuf einer Ebene werden die Felder in diesem Abschnitt veröffentlicht. \nAuf zwei Ebenen werden zusätzlich die Felder der Abschnitte veröffentlicht, die über Portale direkt mit diesem Abschnitt verbunden sind, und so weiter für weitere Ebenen.\nBeachten Sie, dass die Anzahl der zu veröffentlichenden Datensätze (und die Zeit für deren Verarbeitung) exponentiell mit der Anzahl der Ebenen ansteigt.\nVersuchen Sie, so wenig Ebenen wie möglich zu verwenden, um eine schnelle Veröffentlichung zu erreichen."
+              },
+              {
+                "lang": "lg-ell",
+                "name": "levels_note",
+                "value": "Σημείωση σχετικά με τα επίπεδα δημοσίευσης.\nΈνα επίπεδο δημοσιεύει τα πεδία του συγκεκριμένου τμήματος. \nΔύο επίπεδα δημοσιεύουν επιπλέον, εκείνα των τμημάτων που σχετίζονται άμεσα με αυτό μέσω πυλών, και ούτω καθεξής για περισσότερα επίπεδα.\nΣημειώστε ότι ο αριθμός των εγγραφών προς δημοσίευση (και ο χρόνος επεξεργασίας τους) αυξάνεται εκθετικά με τον αριθμό των επιπέδων.\nΠροσπαθήστε να χρησιμοποιείτε τον μικρότερο δυνατό αριθμό επιπέδων για γρήγορη δημοσίευση."
+              },
+              {
+                "lang": "lg-cat",
+                "name": "levels_note",
+                "value": "Nota sobre els nivells de publicació.\nUn nivell publica els camps d'aquesta secció.\nDos nivells publica, a més, els de les seccions directament relacionades a aquesta a través de portals, i així successivament per a més nivells.\nTingueu en compte que l'augment de registres a publicar (i el temps de processar-los) augmenta exponencialment amb l'augment de nivells.\nIntenteu utilitzar el menor nombre de nivells per a una ràpida publicació."
+              },
+              {
+                "lang": "lg-eus",
+                "name": "levels_note",
+                "value": "Argitalpen mailei buruzko oharra.\nMaila batek atal horretako eremuak argitaratzen ditu.\nHorrez gain, bi mailak argitaratzen dituzte, atari bidez honekin zuzenean lotutako ataletakoak, eta abar maila gehiagorako.\nKontuan izan argitaratzeko erregistro-kopurua (eta horiek prozesatzeko denbora) esponentzialki handitzen dela maila kopuruarekin.\nSaiatu maila kopuru gutxien erabiltzen argitalpen azkarrerako."
+              },
+              {
+                "lang": "lg-nep",
+                "name": "levels_note",
+                "value": "प्रकाशन स्तरहरूको बारेमा नोट गर्नुहोस्।\nएक स्तरले त्यो खण्डमा रहेका क्षेत्रहरू प्रकाशित गर्दछ।\n\n\nथप दुई स्तरहरू प्रकाशित गर्दछन्, पोर्टलहरू मार्फत यससँग प्रत्यक्ष रूपमा सम्बन्धित खण्डहरू, र यस्तै थप स्तरहरूको लागि।\nध्यान दिनुहोस् कि प्रकाशित गर्नुपर्ने रेकर्डहरूको संख्या (र तिनीहरूलाई प्रशोधन गर्ने समय) स्तरहरूको संख्यासँगै घातीय रूपमा बढ्छ।\nछिटो प्रकाशनको लागि स्तरहरूको सबैभन्दा कम संख्या प्रयोग गर्ने प्रयास गर्नुहोस्।"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "publish_selected_records",
+                "value": "Pubblica i {0} record selezionati"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "publish_selected_records",
+                "value": "Publica els {0} registres seleccionats"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "publish_selected_records",
+                "value": "Publica los {0} registros seleccionados"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "publish_selected_records",
+                "value": "Publier les {0} enregistrements sélectionnés"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "publish_selected_records",
+                "value": "Publish the {0} selected records"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "publish_selected_records",
+                "value": "Veröffentlichen Sie die {0} ausgewählten Datensätze"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "publish_selected_records",
+                "value": "{0} चयन गरिएका रेकर्डहरू प्रकाशित गर्नुहोस्"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "publish_selected_records",
+                "value": "Δημοσίευση των {0} επιλεγμένων εγγραφών"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "skip_publication_state_check",
+                "value": "Ignorar temporalment l'estat de publicació en publicar"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "skip_publication_state_check",
+                "value": "Ignorar temporalmente el estado de publicación al publicar"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "skip_publication_state_check",
+                "value": "Ignorare temporaneamente lo stato di pubblicazione nel pubblicare"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "skip_publication_state_check",
+                "value": "Ignore temporarily the publication status when publishing"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "skip_publication_state_check",
+                "value": "Ignorer temporairement le statut de publication lors de la publication"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "skip_publication_state_check",
+                "value": "Publikationsstatus bei der Veröffentlichung temporär ignorieren"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "skip_publication_state_check",
+                "value": "Αγνοήστε προσωρινά την κατάσταση δημοσίευσης κατά τη δημοσίευση"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "skip_publication_state_check",
+                "value": "प्रकाशन गर्दा अस्थायी रूपमा प्रकाशन स्थितिलाई बेवास्ता गर्नुहोस्"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "combine_xml_files",
+                "value": "Combine XML files"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "combine_xml_files",
+                "value": "Combinar archivos XML"
+              },
+              {
+                "lang": "lg-cat",
+                "name": "combine_xml_files",
+                "value": "Combinar fitxers XML"
+              },
+              {
+                "lang": "lg-eus",
+                "name": "combine_xml_files",
+                "value": "XML fitxategiak konbinatu"
+              },
+              {
+                "lang": "lg-deu",
+                "name": "combine_xml_files",
+                "value": "XML-Dateien kombinieren"
+              },
+              {
+                "lang": "lg-ell",
+                "name": "combine_xml_files",
+                "value": "Συνδυάστε αρχεία XML"
+              },
+              {
+                "lang": "lg-fra",
+                "name": "combine_xml_files",
+                "value": "Combiner des fichiers XML"
+              },
+              {
+                "lang": "lg-ita",
+                "name": "combine_xml_files",
+                "value": "Combinare i file XML"
+              },
+              {
+                "lang": "lg-por",
+                "name": "combine_xml_files",
+                "value": "Combinar ficheiros XML"
+              },
+              {
+                "lang": "lg-nep",
+                "name": "combine_xml_files",
+                "value": "XML फाइलहरू संयोजन गर्नुहोस्"
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 1
+      }
+    ],
+    "dd799": [
+      {
+        "count": 10
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1333": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
 }

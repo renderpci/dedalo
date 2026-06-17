@@ -1,35 +1,305 @@
 {
-	"$schema": "../tool_common/register.schema.json",
-	"name": "tool_dev_template",
-	"version": "2.0.0",
-	"label": {
-		"lg-eng": "Tool Development Template",
-		"lg-spa": "Plantilla de desarrollo de herramientas"
-	},
-	"description": {
-		"lg-eng": "<p>Production-shaped sample of a Dédalo tool.</p><p>Use it as the starting point to create new tools: copy and rename it, or scaffold a new tool with tools/tool_common/cli/create_tool.php.</p>",
-		"lg-spa": "<p>Ejemplo de herramienta Dédalo con forma de producción.</p><p>Úsala como punto de partida para crear nuevas herramientas: cópiala y renómbrala, o genera una nueva con tools/tool_common/cli/create_tool.php.</p>"
-	},
-	"developer": "Dédalo team",
-	"dedalo_version_min": "7.0.0",
-	"affected_models": ["component_geolocation"],
-	"show_in_component": true,
-	"show_in_inspector": false,
-	"require_translatable": false,
-	"always_active": false,
-	"active": true,
-	"properties": {
-		"open_as": "window",
-		"windowFeatures": null
-	},
-	"labels": [
-		{ "lang": "lg-eng", "name": "my_first_label",    "value": "My first label" },
-		{ "lang": "lg-spa", "name": "my_first_label",    "value": "Mi primera etiqueta" },
-		{ "lang": "lg-eng", "name": "my_second_label",   "value": "My second label" },
-		{ "lang": "lg-spa", "name": "my_second_label",   "value": "Mi segunda etiqueta" },
-		{ "lang": "lg-eng", "name": "upload_file",       "value": "Upload generic file" },
-		{ "lang": "lg-spa", "name": "upload_file",       "value": "Subir archivo genérico" },
-		{ "lang": "lg-eng", "name": "upload_image_file", "value": "Upload image file" },
-		{ "lang": "lg-spa", "name": "upload_image_file", "value": "Subir archivo de imagen" }
-	]
+  "id": "3938",
+  "section_id": "18",
+  "section_tipo": "dd1340",
+  "data": {
+    "label": "Tools development",
+    "section_id": 18,
+    "created_date": "2026-06-17 13:27:57",
+    "section_tipo": "dd1340",
+    "diffusion_info": null,
+    "created_by_user_id": -1
+  },
+  "relation": {
+    "dd197": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd197"
+      }
+    ],
+    "dd200": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "-1",
+        "section_tipo": "dd128",
+        "from_component_tipo": "dd200"
+      }
+    ],
+    "dd1330": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "17",
+        "section_tipo": "dd1342",
+        "from_component_tipo": "dd1330"
+      }
+    ],
+    "dd1331": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1331"
+      }
+    ],
+    "dd1332": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1332"
+      }
+    ],
+    "dd1337": [
+      {
+        "id": 1,
+        "type": "dd675",
+        "section_id": "1",
+        "section_tipo": "dd153",
+        "from_component_tipo": "dd1337"
+      }
+    ],
+    "dd1354": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "1",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1354"
+      }
+    ],
+    "dd1601": [
+      {
+        "id": 1,
+        "type": "dd151",
+        "section_id": "2",
+        "section_tipo": "dd64",
+        "from_component_tipo": "dd1601"
+      }
+    ]
+  },
+  "string": {
+    "dd612": [
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "<p>This a sample of Dédalo tool.</p><p>You can use it as start point to create new tools and maybe, to contribute to the community with your work.</p>"
+      }
+    ],
+    "dd799": [
+      {
+        "id": 1,
+        "lang": "lg-eng",
+        "value": "Development Template"
+      }
+    ],
+    "dd1326": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "tool_dev_template"
+      }
+    ],
+    "dd1327": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "1.0.1"
+      }
+    ],
+    "dd1328": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "6.0.0"
+      }
+    ],
+    "dd1644": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "value": "Dédalo team"
+      }
+    ]
+  },
+  "date": {
+    "dd199": [
+      {
+        "id": 1,
+        "start": {
+          "day": 9,
+          "hour": 19,
+          "time": 65045705861,
+          "year": 2023,
+          "month": 10,
+          "minute": 37,
+          "second": 41
+        }
+      }
+    ],
+    "dd201": [
+      {
+        "id": 1,
+        "lang": "lg-nolan",
+        "start": {
+          "day": 17,
+          "hour": 13,
+          "time": 65132083677,
+          "year": 2026,
+          "month": 6,
+          "minute": 27,
+          "second": 57
+        }
+      }
+    ]
+  },
+  "iri": null,
+  "geo": null,
+  "number": null,
+  "media": null,
+  "misc": {
+    "dd1335": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            {
+              "open_as": "window",
+              "windowFeatures": null
+            }
+          ]
+        }
+      }
+    ],
+    "dd1372": [
+      {
+        "id": 1,
+        "value": {
+          "lg-nolan": [
+            [
+              {
+                "lang": "lg-spa",
+                "name": "my_first_label",
+                "value": "Mi primera etiqueta"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "my_first_label",
+                "value": "My first label"
+              },
+              {
+                "lang": "lg-spa",
+                "name": "my_second_label",
+                "value": "Mi segunda etiqueta"
+              },
+              {
+                "lang": "lg-eng",
+                "name": "my_second_label",
+                "value": "My second label"
+              }
+            ]
+          ]
+        }
+      }
+    ]
+  },
+  "relation_search": null,
+  "meta": {
+    "dd197": [
+      {
+        "count": 1
+      }
+    ],
+    "dd199": [
+      {
+        "count": 1
+      }
+    ],
+    "dd200": [
+      {
+        "count": 1
+      }
+    ],
+    "dd201": [
+      {
+        "count": 1
+      }
+    ],
+    "dd612": [
+      {
+        "count": 1
+      }
+    ],
+    "dd799": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1326": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1327": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1328": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1330": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1331": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1332": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1335": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1337": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1354": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1372": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1601": [
+      {
+        "count": 1
+      }
+    ],
+    "dd1644": [
+      {
+        "count": 1
+      }
+    ]
+  }
 }
