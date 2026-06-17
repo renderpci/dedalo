@@ -230,11 +230,18 @@ class dd_diffusion_api {
 
 			// Dispatch by diffusion type
 			// properties->diffusion->type drives which renderer handles the records:
-			//   'rdf'     → diffuse_rdf()  — writes per-record .rdf files via diffusion_rdf
-			//   'xml'     → diffuse_xml()  — writes per-record .xml files via diffusion_xml
-			//   'sql'     → default path below — chain-processor → Bun SQL upsert
-			//   'socrata' → same default path with Socrata-specific column shapes
-			$diffusion_elem_props = ontology_node::get_instance($diffusion_element_tipo)->get_properties(true);
+			//   'rdf'      → diffuse_rdf()  — writes per-record .rdf files via diffusion_rdf
+			//   'xml'      → diffuse_xml()  — writes per-record .xml files via diffusion_xml
+			//   'markdown' → default path below, then render_markdown_response() — writes
+			//                per-record .md files via diffusion_markdown (reuses the datum path)
+			//   'sql'      → default path below — chain-processor → Bun SQL upsert
+			//   'socrata'  → same default path with Socrata-specific column shapes
+			// Alias-aware: the element may be a diffusion_element_alias (e.g. a node
+			// surfaced into another domain). resolve_node_with_alias yields the real
+			// diffusion properties (type, service_name); raw get_properties() on an
+			// alias node does NOT carry them, which would null the type and skip the
+			// file-format dispatch (markdown/rdf/xml) — falling through to the SQL path.
+			$diffusion_elem_props = diffusion_utils::resolve_node_with_alias($diffusion_element_tipo)->properties ?? null;
 			$diffusion_type = $diffusion_elem_props->diffusion->type ?? null;
 
 			if ($diffusion_type === 'rdf' || $diffusion_type === 'xml') {
@@ -296,6 +303,16 @@ class dd_diffusion_api {
 				);
 
 				self::process_datum($diffusion_tipo, $unique_locators, $current_level, $options);
+			}
+
+			// Markdown post-processing: the records (primary + cross-section
+			// relations resolved through the levels budget) are now in self::$datum.
+			// Render each datum record to one .md file per record and return the
+			// file-based response shape (Bun zips the produced files). Done here
+			// rather than as an early dispatch so markdown reuses the curated
+			// ddo_map, alias handling, publication gate and levels recursion.
+			if ($diffusion_type === 'markdown') {
+				return self::render_markdown_response($diffusion_element_tipo, $main_section_tipo, $langs, $main, $options);
 			}
 
 			// 6. Final response
@@ -386,7 +403,7 @@ class dd_diffusion_api {
 	*
 	* Per-element checks (each becomes a 'checks' entry in the response):
 	*  - element_resolvable: tipo resolves to diffusion_element or diffusion_element_alias
-	*  - diffusion_type: properties->diffusion->type is in ['sql','rdf','xml','socrata']
+	*  - diffusion_type: properties->diffusion->type is in ['sql','rdf','xml','socrata','markdown']
 	*  - target_sections: at least one section is targeted by this element in the tree
 	*  - database (sql/socrata only): database name is resolvable from the virtual tree
 	*  - service_name (rdf/xml only): properties->diffusion->service_name is non-empty
@@ -420,7 +437,7 @@ class dd_diffusion_api {
 			return $response;
 		}
 
-		$known_types = ['sql','rdf','xml','socrata'];
+		$known_types = ['sql','rdf','xml','socrata','markdown'];
 
 		// Scope: a single named element or every element in the diffusion domain map.
 		// When validating all elements, get_ar_diffusion_map_elements() walks the
@@ -484,7 +501,7 @@ class dd_diffusion_api {
 					: 'Unable to resolve database name (define a database or database_alias child)'
 				);
 			}
-			if ($type==='rdf' || $type==='xml') {
+			if ($type==='rdf' || $type==='xml' || $type==='markdown') {
 				$service_name = $resolved->properties->diffusion->service_name ?? null;
 				$add_check('service_name', !empty($service_name), !empty($service_name)
 					? "Service name: '$service_name'"
@@ -1553,4 +1570,140 @@ class dd_diffusion_api {
 
 		return $response;
 	}//end diffuse_xml
+
+
+
+	/**
+	* RENDER_MARKDOWN_RESPONSE
+	* Handles diffusion for elements with properties->diffusion->type = 'markdown'.
+	* Called after the standard datum path (process_datum + cross-section levels
+	* drain) has populated self::$datum, so it reuses the curated ddo_map, alias
+	* handling, publication gate and relation resolution.
+	*
+	* For each resolved datum record it renders a human/AI-readable Markdown
+	* document (via diffusion_markdown::render_record) and writes ONE deterministic
+	* file per record under DEDALO_MEDIA_PATH/markdown/{service_name}/. Records
+	* flagged as 'delete' (unpublishable) get their .md file removed. Relation
+	* fields link to the related records' .md files, which are themselves published
+	* because the cross-section levels drain added them to self::$datum.
+	*
+	* The returned datum carries only the file_url per record (output_format
+	* 'markdown'), in the file-format shape consumed by the Bun engine (which zips
+	* the produced files; no merge step for self-contained markdown).
+	*
+	* @param string $diffusion_element_tipo - the markdown diffusion_element ontology node
+	* @param string $main_section_tipo - the primary Dédalo section being published
+	* @param array $langs - the langs map built by build_langs()
+	* @param array $main - the hierarchy array built by build_main_hierarchy()
+	* @param object $options - the original rqo->options
+	* @return object $response - full diffuse() response shape with datum=[diffusion_datum]
+	*/
+	private static function render_markdown_response(string $diffusion_element_tipo, string $main_section_tipo, array $langs, array $main, object $options): object {
+
+		$response = new stdClass();
+			$response->result = false;
+			$response->msg    = 'Error. Markdown diffusion failed';
+			$response->errors = [];
+
+		try {
+			include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_markdown.php';
+
+			diffusion_markdown::reset_cache();
+
+			$resolved		= diffusion_utils::resolve_node_with_alias($diffusion_element_tipo);
+			$service_name	= $resolved->properties->diffusion->service_name ?? '';
+			$sub_path		= '/markdown/' . $service_name . '/';
+
+			// Render every resolved datum record (primary + related sections) to a file.
+			$datum_data = [];
+			foreach (self::$datum as $datum_object) {
+
+				$section_tipo	= $datum_object->get_section_tipo();
+				$context		= $datum_object->get_context() ?? [];
+
+				foreach ($datum_object->get_data() ?? [] as $record) {
+
+					$section_id = $record->section_id;
+
+					// Unpublishable record: remove its published .md file.
+					if (($record->fields ?? null) === 'delete') {
+						diffusion_markdown::delete_record_file($diffusion_element_tipo, $section_tipo, $section_id);
+						continue;
+					}
+
+					$markdown = diffusion_markdown::render_record((object)[
+						'section_tipo'			 => $section_tipo,
+						'section_id'			 => $section_id,
+						'context'				 => $context,
+						'fields'				 => $record->fields,
+						'diffusion_element_tipo' => $diffusion_element_tipo
+					]);
+
+					$save = diffusion_markdown::save_record($diffusion_element_tipo, $section_tipo, $section_id, $markdown);
+					if (!empty($save->errors)) {
+						$response->errors = array_merge($response->errors, $save->errors);
+					}
+
+					// File-format datum record: carry the file_url only (entry->value
+					// left null so the Bun layer does not treat it as document content).
+					$entry = new stdClass();
+						$entry->value		= null;
+						$entry->file_url	= $save->file_url ?? null;
+					$field_group = (object)[
+						'tipo'		=> $diffusion_element_tipo,
+						'lang'		=> null,
+						'entries'	=> [$entry],
+						'id'		=> null
+					];
+					$fields = new stdClass();
+					$fields->{$diffusion_element_tipo} = [$field_group];
+
+					$datum_data[] = (object)[
+						'section_id'	=> $section_id,
+						'fields'		=> $fields
+					];
+				}
+			}
+
+			// Build the markdown datum (canonical file-format datum semantics).
+			$parent			= ontology_node::get_instance($diffusion_element_tipo)->get_parent();
+			$markdown_term	= ontology_node::get_term_by_tipo($diffusion_element_tipo, DEDALO_STRUCTURE_LANG);
+
+			$datum = new diffusion_datum();
+				$datum->set_diffusion_tipo($diffusion_element_tipo);
+				$datum->set_section_tipo($main_section_tipo);
+				$datum->set_term($markdown_term);
+				$datum->set_model('diffusion_element');
+				$datum->set_parent($parent);
+				$datum->set_context([
+					(object)[
+						'term'			=> $markdown_term,
+						'tipo'			=> $diffusion_element_tipo,
+						'model'			=> 'diffusion_element',
+						'parent'		=> $parent,
+						'parser'		=> new stdClass(),
+						'output_format'	=> 'markdown',
+						'columns'		=> []
+					]
+				]);
+				$datum->set_data($datum_data);
+
+			$response->result				= true;
+			$response->msg					= 'OK. Markdown diffusion done';
+			$response->langs				= $langs;
+			$response->main_lang			= DEDALO_DATA_LANG_DEFAULT;
+			$response->main					= $main;
+			$response->DEDALO_MEDIA_PATH	= DEDALO_MEDIA_PATH;
+			$response->DEDALO_MEDIA_URL		= DEDALO_MEDIA_URL;
+			$response->sub_path				= $sub_path;
+			$response->datum				= [$datum];
+
+		} catch (\Throwable $e) { // DIFFU-03: catch Throwable — engine faults are Error/TypeError, not Exception
+			$response->msg	= 'Error: ' . $e->getMessage();
+			$response->errors[]	= $e->getMessage();
+			debug_log(__METHOD__ . " Exception: " . $e->getMessage(), logger::ERROR);
+		}
+
+		return $response;
+	}//end render_markdown_response
 }//end class dd_diffusion_api

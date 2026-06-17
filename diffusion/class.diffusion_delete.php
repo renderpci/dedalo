@@ -10,9 +10,9 @@ require_once(DEDALO_DIFFUSION_PATH . '/class.diffusion_activity_logger.php');
 * Targets are resolved by walking the diffusion ontology (the published
 * copy is always the single current one, so no registry is needed) and
 * dispatched per diffusion type:
-*  - sql / socrata : one call to the Bun engine (delete_record action)
-*  - rdf / xml     : unlink the published file (deterministic name)
-*  - others        : not supported yet (extension point)
+*  - sql / socrata     : one call to the Bun engine (delete_record action)
+*  - rdf / xml / markdown : unlink the published file (deterministic name)
+*  - others            : not supported yet (extension point)
 *
 * Hybrid model: propagation is attempted immediately; per-element failures
 * are persisted as dd1758 activity rows with action = unpublish_pending,
@@ -138,6 +138,7 @@ class diffusion_delete {
 
 					case 'rdf':
 					case 'xml':
+					case 'markdown':
 						// handled per element below (file path resolved from element + locator)
 						break;
 
@@ -230,6 +231,15 @@ class diffusion_delete {
 						$info->file_path = $xml_result->file_path ?? null;
 						if (!$success && !empty($xml_result->msg)) {
 							$response->errors[] = $xml_result->msg;
+						}
+						break;
+
+					case 'markdown':
+						$markdown_result = self::delete_markdown($element_tipo, $section_tipo, $section_id);
+						$success	= $markdown_result->result;
+						$info->file_path = $markdown_result->file_path ?? null;
+						if (!$success && !empty($markdown_result->msg)) {
+							$response->errors[] = $markdown_result->msg;
 						}
 						break;
 
@@ -546,6 +556,27 @@ class diffusion_delete {
 
 		return diffusion_xml::delete_record_file($diffusion_element_tipo, $section_tipo, $section_id);
 	}//end delete_xml
+
+
+
+	/**
+	* DELETE_MARKDOWN
+	* Removes the published Markdown file of a record (deterministic name) and any
+	* legacy variants. Missing file = idempotent success. Delegates to
+	* diffusion_markdown::delete_record_file (single source of truth for the
+	* published file path, shared with the publish flow).
+	*
+	* @param string $diffusion_element_tipo
+	* @param string $section_tipo
+	* @param string|int $section_id
+	* @return object {result: bool, msg: string, file_path: string|null, deleted_files: array}
+	*/
+	private static function delete_markdown(string $diffusion_element_tipo, string $section_tipo, string|int $section_id) : object {
+
+		include_once DEDALO_DIFFUSION_PATH . '/class.diffusion_markdown.php';
+
+		return diffusion_markdown::delete_record_file($diffusion_element_tipo, $section_tipo, $section_id);
+	}//end delete_markdown
 
 
 
