@@ -144,7 +144,10 @@ export const common_render = async function(self, options) {
 		const ar_section_record	= await get_section_records({
 			caller : self,
 			mode : 'tm',
-			view : 'line'
+			view : 'line',
+			// namespace child instances by view so concurrent TM lists of the same
+			// record (e.g. inspector 'mini' + 'history') don't collide in the registry
+			id_variant : (self.id_variant || self.model) + '_' + self.view
 		})
 		// store to allow destroy later. Clear first to avoid duplication on refresh
 		self.ar_instances = []
