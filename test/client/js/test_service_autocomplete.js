@@ -9,7 +9,10 @@ import {
 	lang
 } from './elements.js'
 import {get_instance, get_instance_by_id} from '../../../core/common/js/instances.js'
-import {service_autocomplete} from '../../../core/services/service_autocomplete/js/service_autocomplete.js'
+import {
+	service_autocomplete,
+	is_full_list_selection
+} from '../../../core/services/service_autocomplete/js/service_autocomplete.js'
 import {
 	render_datalist,
 	execute_search_render
@@ -185,6 +188,101 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 			assert.equal(search_input.classList.contains('searching'), false, 'searching class must be cleared')
 		})
 	})//end describe execute_search_render rejection
+
+
+
+	// ───────────────────────────────────────────────────────────
+	// MEDIUM #5 — rebuild_search_query_object must not lose filter groups
+	// When self.operator is set, multiple filter_free operator groups collapse
+	// onto the same operator key; the merge must keep ALL terms (not clobber
+	// earlier groups), and only return null when nothing has a value.
+	// ───────────────────────────────────────────────────────────
+
+	describe("rebuild_search_query_object merges multiple operator groups", function() {
+
+		it("keeps terms from every group when self.operator forces one operator", async function() {
+
+			const self = new service_autocomplete()
+			self.operator	= '$and'
+			self.limit		= 10
+
+			const rqo_search = {
+				sqo			: {},
+				sqo_options	: {
+					fixed_filter	: false,
+					filter_free		: {
+						$or		: [ { q: 'alpha', path: [] } ],
+						$and	: [ { q: 'beta',  path: [] } ]
+					}
+				}
+			}
+
+			const result = await self.rebuild_search_query_object({
+				rqo_search		: rqo_search,
+				search_sections	: ['sec1'],
+				filter_by_list	: null
+			})
+
+			assert.notEqual(result, null, 'result must not be null when terms exist')
+			const parse = result.sqo.filter.$and[0]
+			assert.ok(parse && Array.isArray(parse.$and), 'terms must be merged under the forced $and operator')
+			const qs = parse.$and.map(it => it.q)
+			assert.ok(qs.includes('alpha'), 'first group term (alpha) must be preserved')
+			assert.ok(qs.includes('beta'), 'second group term (beta) must be preserved')
+		})
+
+		it("returns null only when no group has a value", async function() {
+
+			const self = new service_autocomplete()
+			self.operator	= '$and'
+			self.limit		= 10
+
+			const rqo_search = {
+				sqo			: {},
+				sqo_options	: {
+					fixed_filter	: false,
+					filter_free		: {
+						$or		: [ { q: '',    path: [] } ],
+						$and	: [ { q: 'beta', path: [] } ]
+					}
+				}
+			}
+
+			const result = await self.rebuild_search_query_object({
+				rqo_search		: rqo_search,
+				search_sections	: ['sec1'],
+				filter_by_list	: null
+			})
+
+			assert.notEqual(result, null, 'a non-empty group must not be discarded because another group is empty')
+			const parse = result.sqo.filter.$and[0]
+			const qs = parse.$and.map(it => it.q)
+			assert.ok(qs.includes('beta'), 'the non-empty term must survive')
+		})
+	})//end describe rebuild_search_query_object merge
+
+
+
+	// ───────────────────────────────────────────────────────────
+	// MEDIUM #4 — "all selected" optimization must span every filter_by_list group
+	// (dropping the list filter only when the selection covers the WHOLE list).
+	// ───────────────────────────────────────────────────────────
+
+	describe("is_full_list_selection spans all filter_by_list groups", function() {
+
+		it("is true only when the selection count equals the total across groups", async function() {
+
+			// single group, all selected
+			assert.equal(is_full_list_selection([{ datalist: [1, 2, 3] }], 3), true)
+			// two groups: total 5, only 3 selected — must NOT be treated as full
+			// (the old single-group comparison wrongly returned true here)
+			assert.equal(is_full_list_selection([{ datalist: [1, 2, 3] }, { datalist: [4, 5] }], 3), false)
+			// two groups: all 5 selected
+			assert.equal(is_full_list_selection([{ datalist: [1, 2, 3] }, { datalist: [4, 5] }], 5), true)
+			// no groups / empty
+			assert.equal(is_full_list_selection([], 0), false)
+		})
+	})//end describe is_full_list_selection
 
 })//end describe SERVICE_AUTOCOMPLETE
 

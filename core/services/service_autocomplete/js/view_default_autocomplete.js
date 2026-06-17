@@ -254,14 +254,23 @@ const get_content_data = function(self) {
 			self.service_autocomplete_keys(e)
 		}
 		// remove the event when the caller is deactivate to avoid conflicts between events
+		// remove any previous subscription first: get_content_data re-runs on every
+		// source-selector change, so without this each pass would leave an orphaned
+		// 'deactivate_component' subscription firing for the page lifetime.
+		if (self._deactivate_token) {
+			event_manager.unsubscribe(self._deactivate_token)
+			const prev_index = self.events_tokens.indexOf(self._deactivate_token)
+			if (prev_index!==-1) {
+				self.events_tokens.splice(prev_index, 1)
+			}
+		}
 		const deactivate_component_handler = (component) => {
 			if (component.id===self.caller.id) {
 				document.removeEventListener('keydown', fn_service_autocomplete_keys, false)
 			}
 		}
-		self.events_tokens.push(
-			event_manager.subscribe('deactivate_component', deactivate_component_handler)
-		)
+		self._deactivate_token = event_manager.subscribe('deactivate_component', deactivate_component_handler)
+		self.events_tokens.push(self._deactivate_token)
 
 	// store handler reference for cleanup on destroy
 		self._fn_keydown = fn_service_autocomplete_keys
@@ -1100,6 +1109,8 @@ const render_inputs_list = function(self) {
 
 			// change event
 			const change_handler = async () => {
+				// reset search cache (a per-field input changes the query, like every other control)
+				self.search_cache = {}
 				// update filter_item q value from input
 				filter_item.q = component_input.value
 				// force search
@@ -1791,6 +1802,13 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 					target.classList.remove('dragging');
 				}
 				target = null;
+			}
+			// remove any drag listeners left over from a previous open of the reused
+			// #choose_container, so repeated opens don't leak document listeners.
+			if (grid_choose_container._drag_listeners) {
+				const prev_listeners = grid_choose_container._drag_listeners
+				if (prev_listeners.mouseup) document.removeEventListener('mouseup', prev_listeners.mouseup)
+				if (prev_listeners.mousemove) document.removeEventListener('mousemove', prev_listeners.mousemove)
 			}
 			document.addEventListener('mouseup', mouseup_handler)
 

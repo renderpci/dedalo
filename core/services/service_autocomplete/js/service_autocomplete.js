@@ -545,8 +545,13 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 			for (let operator in filter_free) {
 
 				// set the operator with the user selection or the default operator defined in the config_sqo (it comes in the config_rqo)
-				const new_operator				= self.operator || operator
-				filter_free_parse[new_operator]	= []
+				const new_operator = self.operator || operator
+				// initialize once. When self.operator forces a single operator, several
+				// source groups collapse onto the same key — do NOT reset it here or the
+				// terms accumulated from a previous group would be lost.
+				if (!filter_free_parse[new_operator]) {
+					filter_free_parse[new_operator] = []
+				}
 
 				// get the array of the filters objects, they have the default operator
 				const current_filter		= filter_free[operator]
@@ -568,10 +573,18 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 					filter_free_parse[new_operator].push(filter_item)
 				}
 
-				const filter_empty = filter_free_parse[new_operator].length === 0
-				if(filter_empty) {
-					return null
+			}
+
+			// drop operator groups that ended up empty, and treat "everything empty"
+			// as nothing-to-search (return null) — only after ALL groups are merged,
+			// so a non-empty group is never discarded because another group is empty.
+			for (const op of Object.keys(filter_free_parse)) {
+				if (filter_free_parse[op].length === 0) {
+					delete filter_free_parse[op]
 				}
+			}
+			if (Object.keys(filter_free_parse).length === 0) {
+				return null
 			}
 
 			sqo.filter.$and.push(filter_free_parse)
@@ -653,10 +666,8 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 		const filter_by_list = self.ar_filter_by_list.map(item => item.value)
 		// filter_by_list optimized version.
 		// A full selection of the list is equivalent to none. Remove useless list from search in these cases
-		const datalist = self.rqo_search.sqo_options.filter_by_list && self.rqo_search.sqo_options.filter_by_list[0]
-			? self.rqo_search.sqo_options.filter_by_list[0].datalist
-			: []
-		const filter_by_list_fast = filter_by_list.length === datalist.length
+		// (!) The selection must cover EVERY filter_by_list group, not just the first one.
+		const filter_by_list_fast = is_full_list_selection(self.rqo_search.sqo_options.filter_by_list, filter_by_list.length)
 			? []
 			: filter_by_list
 
@@ -1113,6 +1124,37 @@ service_autocomplete.prototype.get_total = function() {
 
 	return total
 }//end get_total
+
+
+
+/**
+* IS_FULL_LIST_SELECTION
+* Decide whether the user's filter_by_list selection covers the ENTIRE available
+* list (across all groups), in which case the list filter is redundant and can be
+* dropped for a simpler, faster query.
+*
+* (!) The total must sum the datalist length of every filter_by_list group; an
+* earlier version compared only against the first group's length, which produced
+* a wrong "full selection" verdict whenever more than one group was present.
+*
+* @param {Array} filter_by_list_groups - self.rqo_search.sqo_options.filter_by_list (or falsy)
+* @param {number} selected_count - number of currently selected list values
+* @returns {boolean} true when selected_count equals the total list size (>0)
+*/
+export const is_full_list_selection = function(filter_by_list_groups, selected_count) {
+
+	const groups = Array.isArray(filter_by_list_groups) ? filter_by_list_groups : []
+
+	let total = 0
+	for (let i = 0; i < groups.length; i++) {
+		const group_datalist = groups[i] && groups[i].datalist
+		if (Array.isArray(group_datalist)) {
+			total += group_datalist.length
+		}
+	}
+
+	return total > 0 && selected_count === total
+}//end is_full_list_selection
 
 
 
