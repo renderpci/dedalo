@@ -7,7 +7,6 @@
 // imports
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {translate_component_browser} from '../../tool_lang/js/browser_translation.js'
 
 
 
@@ -73,9 +72,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// translator_engine config (from tool config section)
-		const translator_engine = (self.context.config)
-			? self.context.config.translator_engine.value
-			: false
+		const translator_engine = self.context?.config?.translator_engine?.value ?? false
 
 	// automatic_translation
 		// icon
@@ -212,9 +209,7 @@ export const create_target_component = (lang, self) => {
 					target_component_container.streaming_overlay_content	= streaming_overlay_content
 
 				// translator_engine. Append translation button if exists
-					const translator_engine = (self.context.config)
-						? self.context.config.translator_engine.value
-						: false
+					const translator_engine = self.context?.config?.translator_engine?.value ?? false
 					if (translator_engine) {
 						const buttons_fold = node.querySelector('.buttons_fold')
 						if (buttons_fold) {
@@ -280,12 +275,13 @@ export const is_component_empty = (component) => {
 		return true
 	}
 
-	const first = value[0]
-	const text = (typeof first==='string')
-		? first
-		: (first?.value || '')
-
-	return !text || text.trim()===''
+	// empty only when no element holds meaningful text (supports multi-value)
+		return !value.some(item => {
+			const text = (typeof item==='string')
+				? item
+				: (item?.value || '')
+			return text && text.trim()!==''
+		})
 }//end is_component_empty
 
 
