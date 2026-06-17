@@ -304,6 +304,13 @@ class ts_object {
 	*   for all locators in a single SQL query per section_tipo group.
 	* - Falls back to per-child component_common::get_instance() when the batch fails.
 	*
+	* Order is parent-aware: the order component is a dataframe with one value per
+	* parent, so the value paired to $parent_locator is selected (both the batched and
+	* the per-child fallback paths honour it). Without a parent locator the first order
+	* item is read — the legacy single-parent behaviour. The client sorts children by
+	* this order value, so reading the wrong (parent-blind) value makes reorders appear
+	* to revert on reload.
+	*
 	* Each locator must be an object with at least section_tipo and section_id. Invalid
 	* or unresolvable locators are logged and skipped.
 	*
@@ -313,9 +320,13 @@ class ts_object {
 	* @param ?object $ts_object_options = null
 	*                                  - Config bag forwarded to each ts_object; cloned per child
 	*                                    to prevent cross-child mutation
+	* @param ?object $parent_locator = null
+	*                                  - Parent node {section_tipo, section_id} these locators hang
+	*                                    under; makes the per-child order read parent-aware. Null
+	*                                    falls back to the first order item (legacy).
 	* @return array $child_data        - Array of stdClass objects as returned by ts_object::get_data()
 	*/
-	public static function parse_child_data( array $locators, string $area_model='area_thesaurus', ?object $ts_object_options=null ) : array {
+	public static function parse_child_data( array $locators, string $area_model='area_thesaurus', ?object $ts_object_options=null, ?object $parent_locator=null ) : array {
 
 		$children_data = [];
 
@@ -355,7 +366,9 @@ class ts_object {
 		// Prefetch. Batched order + is_indexable resolution for all locators
 		// (one query per section_tipo group) replacing the per-child component
 		// instantiations below. On failure (null) the legacy path runs unchanged.
-		$prefetched_info = ts_node_repository::fetch_node_info($locators);
+		// $parent_locator makes the order read parent-aware (dataframe entry paired
+		// to this parent) instead of array index 0.
+		$prefetched_info = ts_node_repository::fetch_node_info($locators, $parent_locator);
 
 		foreach ($locators as $key => $locator) {
 
@@ -400,9 +413,31 @@ class ts_object {
 					DEDALO_DATA_NOLAN,
 					$locator->section_tipo
 				);
-				$data = $component->get_data() ?? [];
-				$order = $data[0]->value ?? null;
-				$ts_options->order = $order;
+				if ($parent_locator!==null) {
+					// parent-aware: resolve the dataframe entry paired to this parent
+					$parent_rel_tipo	= component_relation_parent::get_parent_tipo($section_tipo);
+					$parent_items		= [];
+					if (!empty($parent_rel_tipo)) {
+						$parent_component = component_common::get_instance(
+							'component_relation_parent',
+							$parent_rel_tipo,
+							$section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tipo
+						);
+						$parent_items = $parent_component ? ($parent_component->get_data() ?? []) : [];
+					}
+					$ts_options->order = ts_node_repository::pick_order_value_for_parent(
+						$component->get_data() ?? [],
+						$parent_items,
+						(string)$parent_locator->section_tipo,
+						(int)$parent_locator->section_id
+					);
+				} else {
+					$data = $component->get_data() ?? [];
+					$ts_options->order = $data[0]->value ?? null;
+				}
 			} else {
 				// No order component available
 				$ts_options->order = null;
@@ -538,7 +573,9 @@ class ts_object {
 	*    (component_relation_children::count_children) before falling back to a full load.
 	* 3. Applies pagination: fetches all children when total <= limit, otherwise calls
 	*    get_data_paginated() for the requested slice.
-	* 4. Calls ts_object::parse_child_data() to build the node-data array.
+	* 4. Calls ts_object::parse_child_data() to build the node-data array, passing $this
+	*    as the parent so each child's order is read from the dataframe entry paired to
+	*    this parent (multiparent-correct) rather than array index 0.
 	*
 	* (!) $options->children_tipo MUST belong to a component with model
 	*     'component_relation_children'; an incorrect model causes an early error return.
@@ -620,11 +657,16 @@ class ts_object {
 				? $component_relation_children->get_data_paginated()
 				: ($component_relation_children->get_data() ?? []);
 
-		// parse_child_data
+		// parse_child_data. $this is the parent: pass it so the order read selects the
+		// dataframe entry paired to this parent (multiparent-correct) instead of index 0.
 			$ar_children_data = ts_object::parse_child_data(
 				$children,
 				$area_model,
-				$ts_object_options
+				$ts_object_options,
+				(object)[
+					'section_tipo'	=> $this->section_tipo,
+					'section_id'	=> $this->section_id
+				]
 			);
 
 		// build children_data result object

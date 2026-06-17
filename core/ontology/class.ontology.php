@@ -2390,6 +2390,88 @@ class ontology {
 
 
 	/**
+	* SYNC_ORDER_TO_DD_ONTOLOGY
+	* Pushes the new per-parent order_number values into dd_ontology after a tree reorder.
+	*
+	* The ontology menu builds sibling order from dd_ontology.order_number
+	* (ontology_node::get_ar_children_of_this → dd_ontology_db_manager::search ORDER BY
+	* order_number ASC). dd_ts_api::save_order only writes the order component in the matrix;
+	* calling this method after sort_children() keeps dd_ontology in sync.
+	*
+	* Only updates rows whose dd_ontology 'parent' column matches the reordered parent
+	* — a child registered under a different parent in dd_ontology is left untouched.
+	*
+	* @param array  $changed              Result of component_relation_children::sort_children().
+	*                                     Each item: {value: int, locator: {section_tipo, section_id}}.
+	* @param string $parent_section_tipo  section_tipo of the reordered parent node.
+	* @param int    $parent_section_id    section_id of the reordered parent node.
+	* @return int   Number of dd_ontology rows actually updated.
+	* @test true
+	*/
+	public static function sync_order_to_dd_ontology(
+		array  $changed,
+		string $parent_section_tipo,
+		int    $parent_section_id
+	) : int {
+
+		if (empty($changed)) {
+			return 0;
+		}
+
+		// Resolve parent term_id (e.g. section_tipo='dd1', section_id=5 → 'dd5')
+		$parent_locator = new locator();
+		$parent_locator->set_section_tipo($parent_section_tipo);
+		$parent_locator->set_section_id($parent_section_id);
+
+		$parent_term_id = self::get_term_id_from_locator($parent_locator);
+		if (empty($parent_term_id)) {
+			debug_log(__METHOD__
+				. " Unable to resolve parent term_id — skipping dd_ontology sync" . PHP_EOL
+				. ' parent: ' . $parent_section_tipo . '_' . $parent_section_id
+				, logger::WARNING
+			);
+			return 0;
+		}
+
+		$updated = 0;
+
+		foreach ($changed as $item) {
+
+			$child_term_id = self::get_term_id_from_locator($item->locator);
+			if (empty($child_term_id)) {
+				continue;
+			}
+
+			$row = dd_ontology_db_manager::read($child_term_id);
+			if (empty($row)) {
+				// Not an ontology node — nothing to sync
+				continue;
+			}
+
+			// Guard: only update when dd_ontology parent matches the reordered parent
+			if (($row['parent'] ?? null) !== $parent_term_id) {
+				continue;
+			}
+
+			// Skip unchanged values
+			if ((int)($row['order_number'] ?? 0) === (int)$item->value) {
+				continue;
+			}
+
+			$values = new stdClass();
+			$values->order_number = (int)$item->value;
+
+			if (dd_ontology_db_manager::update($child_term_id, $values)) {
+				$updated++;
+			}
+		}
+
+		return $updated;
+	}//end sync_order_to_dd_ontology
+
+
+
+	/**
 	* SET_RECORDS_IN_DD_ONTOLOGY
 	* Synchronises a set of matrix_ontology records into 'dd_ontology' using a SQO.
 	*
