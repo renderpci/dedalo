@@ -45,14 +45,6 @@ render_tool_numisdata_epigraphy.prototype.edit = async function(options={render_
 			content_data : content_data
 		})
 
-	// // transcription_options are the buttons to get access to other tools (buttons in the header)
-	// 	const tanscription_options = await render_header_options(self, content_data)
-	// 	wrapper.tool_buttons_container.appendChild(tanscription_options)
-
-	// // status, render the status components for users and admins to control the process of the tool
-	// 	const status_container = await render_status(self)
-	// 	wrapper.tool_buttons_container.appendChild(status_container)
-
 	// render_activity_info are the information of the activity as "Save"
 		const activity_info = render_activity_info(self)
 		wrapper.activity_info_container.appendChild(activity_info)
@@ -79,8 +71,10 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// component_epigraphy. render another node of component caller and append to container
-		const epigraphy_node = await self.epigraphy.render()
-		left_container.appendChild(epigraphy_node)
+		if (self.epigraphy) {
+			const epigraphy_node = await self.epigraphy.render()
+			left_container.appendChild(epigraphy_node)
+		}
 
 	// common update nodes function, use for autocompletes to generate the target text_areas
 		const update_text_nodes = async function (options){
@@ -140,8 +134,10 @@ const get_content_data_edit = async function(self) {
 			})
 
 			// await self.coins.build(true)
-			const coins_node = await self.coins.render()
-			coins_container.appendChild(coins_node)
+			if (self.coins) {
+				const coins_node = await self.coins.render()
+				coins_container.appendChild(coins_node)
+			}
 
 		// legends nodes
 			const legends_container = ui.create_dom_element({
@@ -150,11 +146,13 @@ const get_content_data_edit = async function(self) {
 				parent 			: right_container
 			})
 
-				const obverse_legend_node = await self.obverse_legend.render()
-				legends_container.appendChild(obverse_legend_node)
-				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.obverse_legend.id_base, update_obverse_legend)
-				)
+				if (self.obverse_legend) {
+					const obverse_legend_node = await self.obverse_legend.render()
+					legends_container.appendChild(obverse_legend_node)
+					self.events_tokens.push(
+						event_manager.subscribe('save_'+ self.obverse_legend.id_base, update_obverse_legend)
+					)
+				}
 				function update_obverse_legend(options) {
 					update_text_nodes({
 						caller		: self.obverse_legend,
@@ -164,11 +162,13 @@ const get_content_data_edit = async function(self) {
 					})
 				}
 
-				const reverse_legend_node = await self.reverse_legend.render()
-				legends_container.appendChild(reverse_legend_node)
-				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.reverse_legend.id_base, update_reverse_legend)
-				)
+				if (self.reverse_legend) {
+					const reverse_legend_node = await self.reverse_legend.render()
+					legends_container.appendChild(reverse_legend_node)
+					self.events_tokens.push(
+						event_manager.subscribe('save_'+ self.reverse_legend.id_base, update_reverse_legend)
+					)
+				}
 				function update_reverse_legend(options) {
 					update_text_nodes({
 						caller	: self.reverse_legend,
@@ -195,8 +195,8 @@ const get_content_data_edit = async function(self) {
 					})
 
 				// first load of the text data
-					update_obverse_legend()
-					update_reverse_legend()
+					if (self.obverse_legend) update_obverse_legend()
+					if (self.reverse_legend) update_reverse_legend()
 
 		// Designs nodes
 			const desings_container = ui.create_dom_element({
@@ -205,11 +205,13 @@ const get_content_data_edit = async function(self) {
 				parent 			: right_container
 			})
 
-				const obverse_desing_node = await self.obverse_desing.render()
-				desings_container.appendChild(obverse_desing_node)
-				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.obverse_desing.id_base, update_obverse_desing)
-				)
+				if (self.obverse_desing) {
+					const obverse_desing_node = await self.obverse_desing.render()
+					desings_container.appendChild(obverse_desing_node)
+					self.events_tokens.push(
+						event_manager.subscribe('save_'+ self.obverse_desing.id_base, update_obverse_desing)
+					)
+				}
 				function update_obverse_desing(options) {
 					update_text_nodes({
 						caller	: self.obverse_desing,
@@ -219,11 +221,13 @@ const get_content_data_edit = async function(self) {
 					})
 				}
 
-				const reverse_desing_node = await self.reverse_desing.render()
-				desings_container.appendChild(reverse_desing_node)
-				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.reverse_desing.id_base, update_reverse_desing)
-				)
+				if (self.reverse_desing) {
+					const reverse_desing_node = await self.reverse_desing.render()
+					desings_container.appendChild(reverse_desing_node)
+					self.events_tokens.push(
+						event_manager.subscribe('save_'+ self.reverse_desing.id_base, update_reverse_desing)
+					)
+				}
 				function update_reverse_desing(options) {
 					update_text_nodes({
 						caller	: self.reverse_desing,
@@ -248,8 +252,8 @@ const get_content_data_edit = async function(self) {
 						parent 			: desings_text_container
 					})
 				// first load of the text data
-					update_obverse_desing()
-					update_reverse_desing()
+					if (self.obverse_desing) update_obverse_desing()
+					if (self.reverse_desing) update_reverse_desing()
 
 		// symbols nodes
 			const symbols_container = ui.create_dom_element({
@@ -258,11 +262,13 @@ const get_content_data_edit = async function(self) {
 				parent 			: right_container
 			})
 
-				const obverse_symbol_node = await self.obverse_symbol.render()
-				symbols_container.appendChild(obverse_symbol_node)
-				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.obverse_symbol.id_base, update_obverse_symbol)
-				)
+				if (self.obverse_symbol) {
+					const obverse_symbol_node = await self.obverse_symbol.render()
+					symbols_container.appendChild(obverse_symbol_node)
+					self.events_tokens.push(
+						event_manager.subscribe('save_'+ self.obverse_symbol.id_base, update_obverse_symbol)
+					)
+				}
 				function update_obverse_symbol(options) {
 					update_text_nodes({
 						caller	: self.obverse_symbol,
@@ -272,11 +278,13 @@ const get_content_data_edit = async function(self) {
 					})
 				}
 
-				const reverse_symbol_node = await self.reverse_symbol.render()
-				symbols_container.appendChild(reverse_symbol_node)
-				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.reverse_symbol.id_base, update_reverse_symbol)
-				)
+				if (self.reverse_symbol) {
+					const reverse_symbol_node = await self.reverse_symbol.render()
+					symbols_container.appendChild(reverse_symbol_node)
+					self.events_tokens.push(
+						event_manager.subscribe('save_'+ self.reverse_symbol.id_base, update_reverse_symbol)
+					)
+				}
 				function update_reverse_symbol(options) {
 					update_text_nodes({
 						caller	: self.reverse_symbol,
@@ -287,7 +295,7 @@ const get_content_data_edit = async function(self) {
 				}
 				const symbols_text_container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'portal_container desings_container',
+					class_name 		: 'portal_container symbols_container',
 					parent 			: right_container
 				})
 					const obverse_symbol_text_container = ui.create_dom_element({
@@ -301,8 +309,8 @@ const get_content_data_edit = async function(self) {
 						parent 			: symbols_text_container
 					})
 				// first load of the text data
-					update_obverse_symbol()
-					update_reverse_symbol()
+					if (self.obverse_symbol) update_obverse_symbol()
+					if (self.reverse_symbol) update_reverse_symbol()
 
 		// marks nodes
 			const marks_container = ui.create_dom_element({
@@ -311,11 +319,13 @@ const get_content_data_edit = async function(self) {
 				parent 			: right_container
 			})
 
-				const obverse_mark_node = await self.obverse_mark.render()
-				marks_container.appendChild(obverse_mark_node)
-				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.obverse_mark.id_base, update_obverse_mark)
-				)
+				if (self.obverse_mark) {
+					const obverse_mark_node = await self.obverse_mark.render()
+					marks_container.appendChild(obverse_mark_node)
+					self.events_tokens.push(
+						event_manager.subscribe('save_'+ self.obverse_mark.id_base, update_obverse_mark)
+					)
+				}
 				function update_obverse_mark(options) {
 					update_text_nodes({
 						caller	: self.obverse_mark,
@@ -325,11 +335,13 @@ const get_content_data_edit = async function(self) {
 					})
 				}
 
-				const reverse_mark_node = await self.reverse_mark.render()
-				marks_container.appendChild(reverse_mark_node)
-				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.reverse_mark.id_base, update_reverse_mark)
-				)
+				if (self.reverse_mark) {
+					const reverse_mark_node = await self.reverse_mark.render()
+					marks_container.appendChild(reverse_mark_node)
+					self.events_tokens.push(
+						event_manager.subscribe('save_'+ self.reverse_mark.id_base, update_reverse_mark)
+					)
+				}
 				function update_reverse_mark(options) {
 					update_text_nodes({
 						caller	: self.reverse_mark,
@@ -340,7 +352,7 @@ const get_content_data_edit = async function(self) {
 				}
 				const marks_text_container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name 		: 'portal_container desings_container',
+					class_name 		: 'portal_container marks_container',
 					parent 			: right_container
 				})
 					const obverse_mark_text_container = ui.create_dom_element({
@@ -354,8 +366,8 @@ const get_content_data_edit = async function(self) {
 						parent 			: marks_text_container
 					})
 				// first load of the text data
-					update_obverse_mark()
-					update_reverse_mark()
+					if (self.obverse_mark) update_obverse_mark()
+					if (self.reverse_mark) update_reverse_mark()
 
  		// edges nodes
 			const edges_container = ui.create_dom_element({
@@ -364,11 +376,13 @@ const get_content_data_edit = async function(self) {
 				parent 			: right_container
 			})
 
-				const edge_desing_node = await self.edge_desing.render()
-				edges_container.appendChild(edge_desing_node)
-				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.edge_desing.id_base, update_obverse_edge)
-				)
+				if (self.edge_desing) {
+					const edge_desing_node = await self.edge_desing.render()
+					edges_container.appendChild(edge_desing_node)
+					self.events_tokens.push(
+						event_manager.subscribe('save_'+ self.edge_desing.id_base, update_obverse_edge)
+					)
+				}
 				function update_obverse_edge() {
 					update_text_nodes({
 						caller	: self.edge_desing,
@@ -378,11 +392,13 @@ const get_content_data_edit = async function(self) {
 					})
 				}
 
-				const edge_legend_node = await self.edge_legend.render()
-				edges_container.appendChild(edge_legend_node)
-				self.events_tokens.push(
-					event_manager.subscribe('save_'+ self.edge_legend.id_base, update_reverse_edge)
-				)
+				if (self.edge_legend) {
+					const edge_legend_node = await self.edge_legend.render()
+					edges_container.appendChild(edge_legend_node)
+					self.events_tokens.push(
+						event_manager.subscribe('save_'+ self.edge_legend.id_base, update_reverse_edge)
+					)
+				}
 				function update_reverse_edge() {
 					update_text_nodes({
 						caller	: self.edge_legend,
@@ -406,8 +422,8 @@ const get_content_data_edit = async function(self) {
 						class_name 		: 'text_container edge_legend_text_container',
 						parent 			: edges_text_container
 					})
-					update_obverse_edge()
-					update_reverse_edge()
+					if (self.edge_desing) update_obverse_edge()
+					if (self.edge_legend) update_reverse_edge()
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -419,165 +435,6 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
-
-
-
-/**
-* RENDER_RELATED_LIST
-* This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
-*/
-const render_related_list = function(self){
-
-	const datum		= self.relation_list
-	const context	= datum.context
-	const data		= datum.data
-
-	const fragment = new DocumentFragment();
-
-	// related list
-		const related_list_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'related_list_container',
-			parent			: fragment
-		})
-		const select = ui.create_dom_element({
-			element_type	: 'select',
-			parent			: related_list_container
-		})
-
-	// select -> options
-		const sections		= data.find(el => el.typo==='sections')
-		//if the section is not called by other sections (related sections) return empty node
-		if(!sections){
-			return fragment
-		}
-		const value			= sections.value
-		const value_length	= value.length
-		for (let i = 0; i < value_length; i++) {
-
-			const current_locator = {
-				section_top_tipo	: value[i].section_tipo,
-				section_top_id		: value[i].section_id
-			}
-			// fix the first locator when tool is loaded (without user interaction)
-				if(i===0){
-					self.top_locator = current_locator
-				}
-
-			const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
-			const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
-
-			// ar_component_value
-				const ar_component_value = []
-				for (let j = 0; j < ar_component_data.length; j++) {
-					const current_value = ar_component_data[j].value // toString(ar_component_data[j].value)
-					ar_component_value.push(current_value)
-				}
-
-			// label
-				const label = 	section_label + ' | ' +
-								current_locator.section_top_id +' | ' +
-								ar_component_value.join(' | ')
-
-			// option DOM element
-				const option = ui.create_dom_element({
-					element_type	: 'option',
-					inner_html		: label,
-					parent			: select
-				})
-				option.locator = current_locator
-
-		}//end for
-
-	// event . Change
-		select.addEventListener("change", async function(e){
-			self.top_locator = this.options[this.selectedIndex].locator
-		})
-
-	return fragment
-}//end render_related_list
-
-
-
-/**
-* RENDER_HEADER_OPTIONS
-* This is used to build a optional buttons inside the header
-* @return HTMLElement fragment
-*/
-const render_header_options = async function(self, content_data) {
-
-	const fragment = new DocumentFragment()
-
-	// lang selector
-		const lang_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'lang_selector',
-			parent			: fragment
-		})
-		const lang_label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name 		: 'lang_label',
-			inner_html 		: get_label.language || 'Language',
-			parent 			: lang_container
-		})
-		// the lang selector use the content_data pointer .left_container to remove the transcription text_area and rebuild the new node
-		const lang_selector = ui.build_select_lang({
-			selected	: self.lang,
-			class_name	: 'dd_input selector',
-			action		: async function(e){
-				// create new one
-				const component = await self.get_component(e.target.value)
-				self.lang = e.target.value
-				component.render().then(function(node){
-					// remove previous nodes
-					while (content_data.left_container.lastChild) {//} && content_data.left_container.lastChild.id!==lang_selector.id) {
-						content_data.left_container.removeChild(content_data.left_container.lastChild)
-					}
-					// add the new one
-					content_data.left_container.appendChild(node)
-				})
-			}
-		})
-		lang_container.appendChild(lang_selector)
-
-	return fragment
-}//end render_header_options
-
-
-
-/**
-* RENDER_STATUS
-* Render the status components to get control of the process of the tool
-* the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
-* @param object self
-* 	instance of current tool
-* @return HTMLElement fragment
-*/
-const render_status = async function(self) {
-
-	const fragment = new DocumentFragment()
-
-	// status_user_component
-		if (self.status_user_component) {
-			self.status_user_component.context.view	= 'mini'
-			self.status_user_component.show_interface.tools = false
-			self.status_user_component.show_interface.save_animation = false
-			const status_user_node = await self.status_user_component.render()
-			fragment.appendChild(status_user_node)
-		}
-
-	// status_admin_component
-		if (self.status_admin_component) {
-			self.status_admin_component.context.view = 'mini'
-			self.status_admin_component.show_interface.tools = false
-			self.status_admin_component.show_interface.save_animation = false
-			const status_admin_node	= await self.status_admin_component.render()
-			fragment.appendChild(status_admin_node)
-		}
-
-
-	return fragment
-}//end render_status
 
 
 

@@ -90,7 +90,7 @@ tool_numisdata_epigraphy.prototype.init = async function(options) {
 tool_numisdata_epigraphy.prototype.build = async function(autoload=false) {
 
 	const self = this
-	console.log("self.tool_config:",self.tool_config);
+
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
@@ -121,11 +121,6 @@ tool_numisdata_epigraphy.prototype.build = async function(autoload=false) {
 			}
 			self[role] = self.ar_instances.find(el => el.tipo===ddo.tipo)
 		}
-
-		// relation_list. load_relation_list. Get the relation list.
-			// This is used to build a select element to allow
-			// user select the top_section_tipo and top_section_id of current transcription
-			// self.relation_list = await self.load_relation_list()
 
 	} catch (error) {
 		self.error = error
@@ -187,7 +182,7 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 
 
 /**
-* LOAD_RELATion_LIST
+* GET_RELATIONS
 * Get the list of related sections with the actual resource
 * @return object datum
 */
@@ -198,7 +193,7 @@ tool_numisdata_epigraphy.prototype.get_relations = async function(options) {
 	const data	= options.data
 	const role	= options.role
 	const name	= options.name
-	const count = options.count || true
+	const count = options.count ?? true
 
 	// const ddo	= self.tool_config.ddo_map.find(el => el.role===role)
 
@@ -240,7 +235,7 @@ tool_numisdata_epigraphy.prototype.get_relations = async function(options) {
 
 
 	return datum
-}//end load_relation_list
+}//end get_relations
 
 
 
@@ -251,6 +246,8 @@ tool_numisdata_epigraphy.prototype.get_relations = async function(options) {
 * @return Promise with array of the tool_simple_context of the tools requested if the user has access to it.
 */
 tool_numisdata_epigraphy.prototype.get_user_tools = async function(ar_requested_tools) {
+
+	const self = this
 
 	// source. Note that second argument is the name of the function is the action that not has utility here
 		const source = create_source(self, 'user_tools')
