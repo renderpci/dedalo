@@ -622,8 +622,9 @@ export const execute_search_render = async function(self, options) {
 				return
 			}
 
-		// cache result. Add if not already exists
-			if (!self.search_cache[q]) {
+		// cache result. Add if not already exists (bounded to avoid unbounded growth
+		// over a long typing session; once full, new queries simply skip the cache)
+			if (!self.search_cache[q] && Object.keys(self.search_cache).length < 100) {
 				self.search_cache[q] = api_response.result
 			}
 

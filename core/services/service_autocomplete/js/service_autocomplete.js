@@ -667,7 +667,7 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 		// filter_by_list optimized version.
 		// A full selection of the list is equivalent to none. Remove useless list from search in these cases
 		// (!) The selection must cover EVERY filter_by_list group, not just the first one.
-		const filter_by_list_fast = is_full_list_selection(self.rqo_search.sqo_options.filter_by_list, filter_by_list.length)
+		const filter_by_list_fast = is_full_list_selection(self.rqo_search.sqo_options?.filter_by_list, filter_by_list.length)
 			? []
 			: filter_by_list
 
@@ -733,6 +733,7 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 		// section will now be denied. The flag is preserved here for forward-compat with
 		// a future server-side autocomplete dispatcher that sets security::$read_only_scope.
 		source.config = {
+			...source.config,
 			read_only : true
 		}
 
