@@ -396,7 +396,7 @@ async function run_background_rdf_diffusion(
 	csrf_token:     string | null,
 	start_time:     number,
 	estimated_total: number,
-	diffusion_type: 'rdf' | 'xml'
+	diffusion_type: 'rdf' | 'xml' | 'markdown'
 ): Promise<void> {
 
 	try {
@@ -527,7 +527,9 @@ async function run_background_rdf_diffusion(
 		});
 
 		const date_tag    = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-		const type_label  = diffusion_type === 'xml' ? 'xml' : 'rdf';
+		const type_label  = diffusion_type === 'xml' ? 'xml'
+			: diffusion_type === 'markdown' ? 'md'
+			: 'rdf';
 		const merged_name = `diffusion_${type_label}_merged_${date_tag}.${type_label}`;
 		const zip_name    = `diffusion_${type_label}_${date_tag}.zip`;
 		const merged_path = path.join(DEDALO_MEDIA_PATH + sub_path, merged_name);
@@ -535,19 +537,29 @@ async function run_background_rdf_diffusion(
 		const merged_url  = DEDALO_MEDIA_URL + sub_path + merged_name;
 		const zip_url     = DEDALO_MEDIA_URL + sub_path + zip_name;
 
-		let consolidated_files: { merged_url: string; zip_url: string } | undefined;
+		let consolidated_files: { merged_url?: string; zip_url: string } | undefined;
 
 		try {
-			// Merge all raw parts into one consolidated document (type-aware)
+			// Merge all raw parts into one consolidated document (type-aware).
+			// Markdown files are self-contained per record: no consolidated document.
 			const merged_content = diffusion_type === 'xml'
 				? merge_xml_parts(raw_xml_parts)
-				: merge_rdf_parts(raw_xml_parts);
+				: diffusion_type === 'markdown'
+					? null
+					: merge_rdf_parts(raw_xml_parts);
+
+			// Build the ZIP from the per-record files, appending the merged
+			// document when one was produced. Always zip when there are files.
+			const zip_sources = [...all_file_urls];
 			if (merged_content) {
 				writeFileSync(merged_path, merged_content, 'utf8');
-				// Include the merged file itself in the zip
-				const zip_sources = [...all_file_urls, merged_path];
+				zip_sources.push(merged_path);
+			}
+			if (zip_sources.length > 0) {
 				await create_zip(zip_sources, zip_path);
-				consolidated_files = { merged_url, zip_url };
+				consolidated_files = merged_content
+					? { merged_url, zip_url }
+					: { zip_url };
 			}
 		} catch (file_err) {
 			const err_msg = file_err instanceof Error ? file_err.message : String(file_err);
@@ -556,7 +568,9 @@ async function run_background_rdf_diffusion(
 		}
 
 		// 6. FINISH
-		const diffusion_class = diffusion_type === 'xml' ? 'diffusion_xml' : 'diffusion_rdf';
+		const diffusion_class = diffusion_type === 'xml' ? 'diffusion_xml'
+			: diffusion_type === 'markdown' ? 'diffusion_markdown'
+			: 'diffusion_rdf';
 		const final_result: engine_response = Object.assign(
 			{
 				result:         errors.length === 0,
@@ -595,7 +609,7 @@ function handle_diffuse_rdf_stream(
 	request_rqo:    rqo,
 	cookie_header:  string | null,
 	csrf_token:     string | null,
-	diffusion_type: 'rdf' | 'xml'
+	diffusion_type: 'rdf' | 'xml' | 'markdown'
 ): Response {
 
 	const start_time      = Date.now();
@@ -890,15 +904,17 @@ export async function handle_request(request: Request): Promise<Response> {
 
 					switch (diffusion_type) {
 						case 'rdf':
-						case 'xml': {
+						case 'xml':
+						case 'markdown': {
 							// Background SSE — same pattern as SQL diffusion.
 							// run_background_rdf_diffusion paginates PHP calls, streams
-							// per-chunk progress, then merges all files and creates a ZIP.
+							// per-chunk progress, then (rdf/xml) merges all files and
+							// creates a ZIP. Markdown skips the merge (self-contained files).
 							return handle_diffuse_rdf_stream(
 								body,
 								cookie_header,
 								csrf_token,
-								diffusion_type as 'rdf' | 'xml'
+								diffusion_type as 'rdf' | 'xml' | 'markdown'
 							);
 						}
 

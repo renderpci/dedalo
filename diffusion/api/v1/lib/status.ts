@@ -175,9 +175,9 @@ export async function check_bun_health(cookie_header?: string): Promise<bun_heal
 /**
  * CHECK_DIFFUSION_ELEMENT_READINESS
  * Checks readiness for one diffusion_element based on its type.
- *   sql / socrata  → PHP session + target SQL database
- *   rdf / xml      → PHP session only (no SQL write needed)
- *   others         → unchecked, marked ready with a note
+ *   sql / socrata         → PHP session + target SQL database
+ *   rdf / xml / markdown  → PHP session only (no SQL write needed)
+ *   others                → unchecked, marked ready with a note
  */
 async function check_diffusion_element_readiness(
 	element_tipo:   string,
@@ -206,7 +206,8 @@ async function check_diffusion_element_readiness(
 		}
 
 		case 'rdf':
-		case 'xml': {
+		case 'xml':
+		case 'markdown': {
 			const php = await check_php_session(cookie_header);
 			checks.php_api = php;
 			if (!php.result) { result = false; msgs.push(php.msg); }

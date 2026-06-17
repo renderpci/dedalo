@@ -37,7 +37,7 @@ export interface rqo_options {
 	process_id?:    string;
 	diffusion_element_tipo?: string;
 	diffusion_tipo?:         string;
-	type?:          'sql' | 'rdf' | 'xml' | 'socrata';
+	type?:          'sql' | 'rdf' | 'xml' | 'socrata' | 'markdown';
 }
 
 
@@ -171,7 +171,7 @@ export interface processed_record {
 // =====================================================
 
 export interface consolidated_files {
-	merged_url: string;
+	merged_url?: string; // absent for self-contained formats (markdown): zip only, no merged document
 	zip_url:    string;
 }
 
