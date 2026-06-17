@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global page_globals, SHOW_DEVELOPER */
+/*global page_globals, SHOW_DEBUG */
 /*eslint no-undef: "error"*/
 
 
@@ -248,12 +248,10 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// This change is important because the components could be configured in edit mode
 			// if the component is loaded in edit mode it will fire the default data and save the section
 			// (!) IT'S A VERY BAD SITUATION, BECAUSE THE SECTION IS SAVED WITH THE TM DATA (OLD DATA)
-				self.rqo.show.ddo_map.map(ddo => {
+				self.rqo.show.ddo_map.forEach(ddo => {
 					// change ddo properties to safe mode and permissions
 					ddo.mode		= 'tm'
 					ddo.permissions	= 1
-
-					return ddo
 				})
 
 			// add component info. For API navigation track info only
@@ -441,7 +439,7 @@ service_time_machine.prototype.build_request_config = function() {
 					// section case. Usually from Tool Time machine listing deleted sections
 
 					// sqo. filter
-					sqo.parsed = false,
+					sqo.parsed = false
 					sqo.filter = {
 						$and : [
 							{
