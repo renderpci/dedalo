@@ -15,7 +15,8 @@ import {
 } from '../../../core/services/service_autocomplete/js/service_autocomplete.js'
 import {
 	render_datalist,
-	execute_search_render
+	execute_search_render,
+	run_search
 } from '../../../core/services/service_autocomplete/js/view_default_autocomplete.js'
 
 
@@ -283,6 +284,61 @@ describe("SERVICE_AUTOCOMPLETE", function() {
 			assert.equal(is_full_list_selection([], 0), false)
 		})
 	})//end describe is_full_list_selection
+
+
+
+	// ───────────────────────────────────────────────────────────
+	// MEDIUM #7 — out-of-order guard for non-main controls
+	// All controls (operator, limit, checkboxes, per-field inputs) route through
+	// run_search, which uses the shared self._search_seq token so a slower older
+	// request can't overwrite a newer one.
+	// ───────────────────────────────────────────────────────────
+
+	describe("run_search drops out-of-order (stale) responses", function() {
+
+		it("does not render a response that a newer search superseded", async function() {
+
+			const datalist = document.createElement('ul')
+			const sentinel = document.createElement('li')
+			datalist.appendChild(sentinel)
+
+			const self = {
+				_search_seq	: 5,
+				ar_instances: [],
+				datalist	: datalist,
+				autocomplete_search : async function() {
+					// a newer search starts and bumps the token before this resolves
+					self._search_seq = 99
+					return { result: { data: [] } }
+				}
+			}
+
+			await run_search(self)
+
+			assert.equal(datalist.childNodes.length, 1, 'stale response must not touch the datalist')
+			assert.equal(datalist.firstChild, sentinel, 'datalist must be left untouched on a stale response')
+		})
+
+		it("renders when its response is the latest", async function() {
+
+			const datalist = document.createElement('ul')
+			datalist.appendChild(document.createElement('li')) // stale row that must be cleared
+
+			const self = {
+				_search_seq	: 0,
+				ar_instances: [],
+				datalist	: datalist,
+				autocomplete_search : async function() {
+					// empty result ⇒ render_datalist clears and returns (no get_section_records)
+					return { result: { data: [] } }
+				}
+			}
+
+			await run_search(self)
+
+			assert.equal(datalist.childNodes.length, 0, 'latest (empty) response clears the datalist')
+		})
+	})//end describe run_search stale guard
 
 })//end describe SERVICE_AUTOCOMPLETE
 

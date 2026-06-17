@@ -652,6 +652,49 @@ export const execute_search_render = async function(self, options) {
 
 
 /**
+* RUN_SEARCH
+* Fire an autocomplete search and render its result. Used by the option controls
+* (sections / filter_by_list checkboxes, operator, limit, per-field inputs); the
+* main search input uses execute_search_render. Both share self._search_seq so a
+* slower older request can never overwrite a newer one, regardless of which
+* control triggered it.
+*
+* @param {Object} self - The service_autocomplete instance
+* @returns {Promise<void>}
+*/
+export const run_search = async function(self) {
+
+	// request sequence token (shared with execute_search_render). A slower older
+	// request must not overwrite the results of a newer one from any control.
+	const my_seq = (typeof self._search_seq==='number' ? self._search_seq : 0) + 1
+	self._search_seq = my_seq
+
+	try {
+		const api_response = await self.autocomplete_search()
+
+		// a newer search superseded this one: drop the stale response
+		if (my_seq !== self._search_seq) {
+			return
+		}
+
+		const result = (api_response && api_response.result !== false)
+			? api_response.result
+			: null
+
+		await render_datalist(self, result)
+
+	} catch (error) {
+		// a failed search must not raise an unhandled rejection; clear the list.
+		console.error('[service_autocomplete] autocomplete search failed:', error)
+		if (my_seq === self._search_seq) {
+			await render_datalist(self, null)
+		}
+	}
+}//end run_search
+
+
+
+/**
 * RENDER_FILTERS_SELECTOR
 * Build the filter panel that contains one or more checkbox groups:
 *
@@ -996,9 +1039,8 @@ const render_option_checkbox = function(self, datalist_item) {
 
 				update_local_storage_ar_id(this)
 
-				// force re-search with new options
-					const api_response	= await self.autocomplete_search()
-					render_datalist(self, api_response.result)
+				// force re-search with new options (sequenced to avoid out-of-order renders)
+					await run_search(self)
 			}
 			input_checkbox.addEventListener('change', change_handler);
 
@@ -1113,10 +1155,8 @@ const render_inputs_list = function(self) {
 				self.search_cache = {}
 				// update filter_item q value from input
 				filter_item.q = component_input.value
-				// force search
-				const api_response = await self.autocomplete_search()
-				// refresh datalist
-				render_datalist(self, api_response.result)
+				// force search (sequenced to avoid out-of-order renders)
+				await run_search(self)
 			}
 			component_input.addEventListener('change', change_handler)
 
@@ -1202,9 +1242,8 @@ const render_operator_selector = function(self) {
 			// set the new operator selected
 			self.operator	= e.target.value
 
-			// launch search again
-			const api_response	= await self.autocomplete_search()
-			await render_datalist(self, api_response.result)
+			// launch search again (sequenced to avoid out-of-order renders)
+			await run_search(self)
 		})
 		const option_or = ui.create_dom_element({
 			element_type	: 'option',
@@ -1259,9 +1298,8 @@ const render_operator_selector = function(self) {
 			// update self limit
 			self.limit = value
 
-			// launch search again
-			const api_response	= await self.autocomplete_search()
-			await render_datalist(self, api_response.result)
+			// launch search again (sequenced to avoid out-of-order renders)
+			await run_search(self)
 
 			// update localStorage limit value
 			localStorage.setItem('service_autocomplete_limit', self.limit )
