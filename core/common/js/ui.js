@@ -239,7 +239,7 @@ export const ui = {
 					if (add_styles) ar_css.push(...add_styles)
 					if (mode === 'search') ar_css.push('tooltip_toggle')
 
-					wrapper.classList.add(...ar_css)
+					wrapper.className = ar_css.join(' ')
 
 					// Apply ontology CSS if available
 					if (ontology_css) {
@@ -382,7 +382,7 @@ export const ui = {
 			]
 
 			// Add classes to the content_data element.
-			content_data.classList.add(...css_classes_to_add)
+			content_data.className = css_classes_to_add.join(' ')
 
 
 			return content_data
@@ -504,7 +504,7 @@ export const ui = {
 			    if (add_styles && Array.isArray(add_styles)) {
 			        classes_to_add.push(...add_styles);
 			    }
-				wrapper.classList.add(...classes_to_add)
+				wrapper.className = classes_to_add.join(' ')
 
 				// Ontology CSS definition
 				// Get the ontology CSS defined into the ontology properties.
@@ -573,7 +573,7 @@ export const ui = {
 						'mini',
 						instance.model + '_mini' // add suffix '_mini'
 					]
-					wrapper.classList.add(...ar_css)
+					wrapper.className = ar_css.join(' ')
 
 			// value_string
 				if (value_string) {
@@ -661,7 +661,7 @@ export const ui = {
 					// css
 						const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
 						const ar_css = ['label', ...label_structure_css]
-						component_label.classList.add(...ar_css)
+						component_label.className = ar_css.join(' ')
 				}
 
 			// content_data
@@ -697,7 +697,7 @@ export const ui = {
 					if (mode==='search') {
 						ar_css.push('tooltip_toggle')
 					}
-					wrapper.classList.add(...ar_css)
+					wrapper.className = ar_css.join(' ')
 
 				// event click . Activate component on event
 					wrapper.addEventListener('click', e => {
@@ -1359,7 +1359,7 @@ export const ui = {
 						mode
 					]
 					if (view) {ar_css.push('view_'+view)}
-					wrapper.classList.add(...ar_css)
+					wrapper.className = ar_css.join(' ')
 
 				// context css new way v6
 					if (instance.context && instance.context.css) {
@@ -1450,7 +1450,7 @@ export const ui = {
 						mode
 					]
 					if (view) {ar_css.push('view_'+view)}
-					wrapper.classList.add(...ar_css)
+					wrapper.className = ar_css.join(' ')
 
 			// fragment
 				const fragment = new DocumentFragment()
@@ -1585,7 +1585,7 @@ export const ui = {
 				const content_data = document.createElement('div')
 
 			// css
-				content_data.classList.add('content_data', type, mode)
+				content_data.className = 'content_data ' + type + ' ' + mode
 
 
 			return content_data
@@ -1747,7 +1747,7 @@ export const ui = {
 						name,
 						mode
 					]
-					wrapper.classList.add(...ar_css)
+					wrapper.className = ar_css.join(' ')
 				// append fragment
 				wrapper.appendChild(fragment)
 
@@ -2788,10 +2788,7 @@ export const ui = {
 
 			// label
 				const label = []
-				const current_label = SHOW_DEBUG
-					? column.label
-					: column.label
-				label.push(current_label)
+				label.push(column.label)
 
 			// node header_item
 				const id			= column.id
@@ -2883,7 +2880,7 @@ export const ui = {
 			header_wrapper.sort_nodes = sort_nodes
 
 		// header_wrapper
-			const searchParams = new URLSearchParams(window.location.href);
+			const searchParams = new URLSearchParams(window.location.search);
 			const initiator = searchParams.has('initiator')
 				? searchParams.get('initiator')
 				: false
@@ -3214,7 +3211,7 @@ export const ui = {
 				}else{
 					// non defined width cases, uses default grid measure like '1fr'
 					const unit = (item.columns_map && item.columns_map.length>0)
-						? ui.flat_column_items(item.columns_map, level_max, type, level++).length || 1
+						? ui.flat_column_items(item.columns_map, level_max, type, level + 1).length || 1
 						: 1
 					ar_elements.push(unit+type) // like '1fr'
 				}
@@ -3306,8 +3303,10 @@ export const ui = {
 
 		// first pixel way
 			const canvas	= document.createElement('canvas');
-			canvas.width	= image.width;
-			canvas.height	= image.height;
+			// Only the image's top-left pixel is sampled below, so a 1x1 canvas is
+			// enough. Avoids allocating a full-resolution canvas per image.
+			canvas.width	= 1;
+			canvas.height	= 1;
 
 			function correction(value) {
 
@@ -3322,10 +3321,11 @@ export const ui = {
 
 			try {
 				// canvas context 2d
-					const ctx = canvas.getContext("2d");
+					const ctx = canvas.getContext("2d", { willReadFrequently : true });
 
 				// draw image into canvas
-					ctx.drawImage(image, 0, 0, image.width, image.height);
+					// blit just the image's top-left source pixel into the 1x1 canvas
+					ctx.drawImage(image, 0, 0, 1, 1, 0, 0, 1, 1);
 
 				// get RGB data from canvas
 					const rgb = ctx.getImageData(0, 0, 1, 1).data;
