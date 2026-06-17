@@ -20,7 +20,7 @@ if (php_sapi_name()!=='cli') {
 
 require_once __DIR__ . '/../../config/config.php';
 
-$dry_run = in_array('--dry-run', $argv);
+$dry_run = in_array('--dry-run', (array)($_SERVER['argv'] ?? []));
 
 if (!defined('DEDALO_MEDIA_PATH') || !is_dir(DEDALO_MEDIA_PATH . '/rdf')) {
 	echo 'Nothing to do: '. (defined('DEDALO_MEDIA_PATH') ? DEDALO_MEDIA_PATH : '?') .'/rdf does not exist'.PHP_EOL;

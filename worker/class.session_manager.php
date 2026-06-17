@@ -58,7 +58,7 @@ final class session_manager {
 		$dedalo_session_name = str_replace([',', '.'], '_', $dedalo_session_name);
 
 		// AUTH-05: log cookie names only, never their values (one is the session id).
-		worker_bootstrap::debug_log('RR Worker: Incoming Cookie names: ' . implode(',', array_keys($_COOKIE ?? [])));
+		worker_bootstrap::debug_log('RR Worker: Incoming Cookie names: ' . implode(',', array_keys($_COOKIE)));
 		worker_bootstrap::debug_log('RR Worker: Target Session Name: ' . $dedalo_session_name);
 
 		$cookies = $request->getCookieParams();

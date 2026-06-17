@@ -21,4 +21,7 @@ define('DEDALO_TOOLS_PATH', __DIR__ . '/tools');
 define('DEDALO_TOOLS_URL', '/tools');
 define('DEDALO_LIB_PATH', __DIR__ . '/lib');
 
+// Runtime threshold constant defined in config/config_db.php (not loaded by PHPStan).
+define('SLOW_QUERY_MS', 100);
+
 require_once DEDALO_CORE_PATH . '/base/class.loader.php';

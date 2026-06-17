@@ -56,8 +56,8 @@ parameters:
 			path: core/db/class.dd_ontology_db_manager.php
 
 		-
-			message: "#^Constant SLOW_QUERY_MS not found\\.$#"
-			count: 2
+			message: "#^Undefined variable\\: \\$metric_base$#"
+			count: 6
 			path: core/db/class.matrix_db_manager.php
 
 		-
@@ -126,24 +126,9 @@ parameters:
 			path: diffusion/migration/migrate_diffusion_properties.php
 
 		-
-			message: "#^Variable \\$argv might not be defined\\.$#"
-			count: 1
-			path: diffusion/migration/migrate_rdf_filenames.php
-
-		-
-			message: "#^Variable \\$argv might not be defined\\.$#"
-			count: 1
-			path: diffusion/migration/migrate_xml_filenames.php
-
-		-
 			message: "#^Call to an undefined static method section\\:\\:get_ar_all_section_tipos\\(\\)\\.$#"
 			count: 1
 			path: shared/agent/class.agent_view_builder.php
-
-		-
-			message: "#^Call to an undefined static method metrics\\:\\:reset\\(\\)\\.$#"
-			count: 1
-			path: worker/class.cache_manager.php
 
 		-
 			message: "#^Instantiated class Nyholm\\\\Psr7\\\\Response not found\\.$#"
