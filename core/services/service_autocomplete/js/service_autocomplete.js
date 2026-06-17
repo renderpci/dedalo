@@ -1026,15 +1026,19 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 			lng			: "de"
 		};
 
+		// percent-encode every value (the user query 'lookfor' in particular) so
+		// special characters (&, =, %, spaces, …) cannot corrupt the query string.
+		// Keys are fixed ASCII identifiers, and the 'field[]' literal must stay
+		// verbatim for the Zenon (VuFind) API, so only values are encoded.
 		const pairs = []
 		for (let key in trigger_vars) {
-			pairs.push( key+'='+trigger_vars[key] )
+			pairs.push( key + '=' + encodeURIComponent(trigger_vars[key]) )
 		}
 		let url_arguments =  pairs.join("&")
 		// const fields   = ["id","authors","title","urls","publicationDates"]
 		for (let i = 0; i < fields_length; i++) {
 			const field_map_remote = fields[i].fields_map[0].remote
-			url_arguments += "&field[]=" + field_map_remote
+			url_arguments += "&field[]=" + encodeURIComponent(field_map_remote)
 		}
 
 
