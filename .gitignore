@@ -180,3 +180,4 @@ mcp/dedalo-work-mcp/.env
 mcp/.env
 .opencode
 analysis
+.claude
