@@ -259,3 +259,27 @@ describe('action input validation', () => {
 		expect(data.msg).toContain('database_name');
 	});
 });
+
+// -----------------------------------------------------
+// diffuse type dispatch (sql vs file-based rdf/xml/markdown)
+// -----------------------------------------------------
+describe('diffuse type dispatch', () => {
+
+	// File-based formats stream over SSE via handle_diffuse_rdf_stream.
+	// Markdown joins rdf/xml on that path (self-contained per-record files).
+	for (const type of ['rdf', 'xml', 'markdown']) {
+		test(`diffuse type '${type}' returns an SSE stream`, async () => {
+			mock_php_auth(true);
+			const res = await handle_request(post_authed({
+				action:  'diffuse',
+				source:  {},
+				sqo:     { section_tipo: 'oh1' },
+				options: { type, diffusion_element_tipo: 'dd1', diffusion_tipo: 'dd1', total: 0 },
+			}));
+			expect(res.status).toBe(200);
+			expect(res.headers.get('Content-Type')).toContain('text/event-stream');
+			// release the stream so the test does not leak the reader
+			await res.body?.cancel();
+		});
+	}
+});
