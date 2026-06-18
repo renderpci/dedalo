@@ -38,7 +38,8 @@
 		remove_row,
 		select_cell,
 		find_row,
-		find_cell
+		find_cell,
+		reseat_ids
 	} from './canvas_tool_print.js'
 	import {make_print_ctx, layout_flow} from './flow_engine.js'
 	import {render_box_content, render_component_value, is_relation_model, full_value_mode, column_key, load_all_entries} from './render_box_tool_print.js'
@@ -138,6 +139,7 @@ const get_content_data_edit = async function(self) {
 			inner_html		: (get_label.components || 'Components'),
 			parent			: palette_panel
 		})
+		add_collapse_toggle(palette_panel, content_data, 'palette')
 		self.palette_breadcrumb = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'palette_breadcrumb hide',
@@ -183,6 +185,7 @@ const get_content_data_edit = async function(self) {
 			parent			: content_data
 		})
 		render_inspector(self, inspector_panel)
+		add_collapse_toggle(inspector_panel, content_data, 'inspector')
 
 	// try to auto-load the default / first template for this section
 		refresh_template_picker(self).then(() => {
@@ -307,12 +310,22 @@ const render_toolbar = async function(self, container) {
 
 	const L = (name, fallback) => (self.get_tool_label?.(name)) || fallback
 
+	const add_group_label = (parent, text) => {
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'toolbar_group_label',
+			inner_html		: text,
+			parent			: parent
+		})
+	}
+
 	// template picker
 		const picker_wrap = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'toolbar_group template_picker_group',
 			parent			: container
 		})
+		add_group_label(picker_wrap, L('templates','Templates'))
 		const picker = ui.create_dom_element({
 			element_type	: 'select',
 			class_name		: 'template_picker',
@@ -344,6 +357,7 @@ const render_toolbar = async function(self, container) {
 			class_name		: 'toolbar_group actions_group',
 			parent			: container
 		})
+		add_group_label(actions, L('actions','Actions'))
 		make_button(actions, L('new_template','New'), 'btn_new', () => do_new(self))
 		self.button_save = make_button(actions, L('save_template','Save'), 'btn_save', () => do_save(self))
 		make_button(actions, L('save_as_template','Save as…'), 'btn_save_as', () => do_save_as(self))
@@ -355,6 +369,7 @@ const render_toolbar = async function(self, container) {
 			class_name		: 'toolbar_group view_group',
 			parent			: container
 		})
+		add_group_label(view_group, L('layout','Layout'))
 		make_button(view_group, L('add_row','Add row'), 'btn_add_row', () => add_row(self))
 		make_button(view_group, L('add_text','Add text'), 'btn_add_text', () => add_row(self, { type:'static_text', static:{ text:'Text…' }, style:{} }))
 		make_button(view_group, L('add_spacer','Add spacer'), 'btn_add_spacer', () => add_spacer(self))
@@ -410,6 +425,7 @@ const render_toolbar = async function(self, container) {
 			class_name		: 'toolbar_group print_group',
 			parent			: container
 		})
+		add_group_label(print_group, L('print','Print'))
 		make_button(print_group, L('print','Print'), 'btn_print', () => do_print(self))
 }//end render_toolbar
 
@@ -433,6 +449,40 @@ const make_button = function(parent, label, extra_class, on_click) {
 	btn.addEventListener('click', (e) => { e.preventDefault(); on_click() })
 	return btn
 }//end make_button
+
+
+
+/**
+* ADD_COLLAPSE_TOGGLE
+* Adds a collapse/expand chevron button to a panel header.
+* @param HTMLElement panel
+* @param HTMLElement container
+* @param string side - 'palette' or 'inspector'
+*/
+const add_collapse_toggle = function(panel, container, side) {
+	const header_row = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'panel_header_row',
+		parent			: panel
+	})
+	// move the panel title into the header row
+	const title = panel.querySelector(':scope > .panel_title')
+	if (title) header_row.appendChild(title)
+	const toggle = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'panel_collapse_toggle',
+		inner_html		: side==='palette' ? '◀' : '▶',
+		parent			: header_row
+	})
+	toggle.addEventListener('click', () => {
+		const cls = side + '_collapsed'
+		container.classList.toggle(cls)
+		toggle.innerHTML = container.classList.contains(cls)
+			? (side==='palette' ? '▶' : '◀')
+			: (side==='palette' ? '◀' : '▶')
+	})
+	return header_row
+}//end add_collapse_toggle
 
 
 
@@ -468,13 +518,26 @@ const render_inspector = function(self, container) {
 		})
 		self.inspector_box_fields = box_fields
 
+		// --- Layout section ---
+		const layout_section = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'inspector_section',
+			parent			: box_fields
+		})
+		ui.create_dom_element({
+			element_type	: 'h3',
+			class_name		: 'panel_subtitle',
+			inner_html		: (get_label.layout || 'Layout'),
+			parent			: layout_section
+		})
+
 		self.inspector_inputs = {}
 		const num = (key, label) => {
 			const row = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'inspector_row',
 				inner_html		: '<span>' + label + '</span>',
-				parent			: box_fields
+				parent			: layout_section
 			})
 			const input = ui.create_dom_element({ element_type:'input', parent:row })
 			input.type = 'number'
@@ -491,7 +554,7 @@ const render_inspector = function(self, container) {
 		const row_actions = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'inspector_row row_actions',
-			parent			: box_fields
+			parent			: layout_section
 		})
 		ui.create_dom_element({ element_type:'button', class_name:'tool_button', inner_html:'+ cell', parent: row_actions })
 			.addEventListener('click', () => { if (self.sel) add_cell(self, self.sel.row_id) })
@@ -500,12 +563,25 @@ const render_inspector = function(self, container) {
 		ui.create_dom_element({ element_type:'button', class_name:'tool_button btn_delete', inner_html:'Remove row', parent: row_actions })
 			.addEventListener('click', () => { if (self.sel) remove_row(self, self.sel.row_id) })
 
+		// --- Style section ---
+		const style_section = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'inspector_section',
+			parent			: box_fields
+		})
+		ui.create_dom_element({
+			element_type	: 'h3',
+			class_name		: 'panel_subtitle',
+			inner_html		: (get_label.style || 'Style'),
+			parent			: style_section
+		})
+
 		// font size
 		const fs_row = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'inspector_row',
 			inner_html		: '<span>Font (pt)</span>',
-			parent			: box_fields
+			parent			: style_section
 		})
 		const fs_input = ui.create_dom_element({ element_type:'input', parent:fs_row })
 		fs_input.type = 'number'; fs_input.min = '4'
@@ -517,7 +593,7 @@ const render_inspector = function(self, container) {
 			element_type	: 'label',
 			class_name		: 'inspector_row',
 			inner_html		: '<span>Align</span>',
-			parent			: box_fields
+			parent			: style_section
 		})
 		const align_sel = ui.create_dom_element({ element_type:'select', parent:align_row })
 		;['left','center','right','justify'].forEach(v => ui.create_dom_element({ element_type:'option', value:v, inner_html:v, parent:align_sel }))
@@ -529,7 +605,7 @@ const render_inspector = function(self, container) {
 			element_type	: 'label',
 			class_name		: 'inspector_row',
 			inner_html		: '<span>Font</span>',
-			parent			: box_fields
+			parent			: style_section
 		})
 		const ff_sel = ui.create_dom_element({ element_type:'select', parent:ff_row })
 		;[['sans','Sans-serif'],['serif','Serif'],['mono','Monospace']].forEach(([v,t]) =>
@@ -542,7 +618,7 @@ const render_inspector = function(self, container) {
 			element_type	: 'label',
 			class_name		: 'inspector_row',
 			inner_html		: '<span>Text color</span>',
-			parent			: box_fields
+			parent			: style_section
 		})
 		const tc_input = ui.create_dom_element({ element_type:'input', class_name:'inspector_color', parent:tc_row })
 		tc_input.type = 'color'
@@ -554,7 +630,7 @@ const render_inspector = function(self, container) {
 			element_type	: 'label',
 			class_name		: 'inspector_row inspector_check_row',
 			inner_html		: '<span>Border</span>',
-			parent			: box_fields
+			parent			: style_section
 		})
 		const bd_check = ui.create_dom_element({ element_type:'input', parent:bd_row })
 		bd_check.type = 'checkbox'
@@ -566,7 +642,7 @@ const render_inspector = function(self, container) {
 			element_type	: 'label',
 			class_name		: 'inspector_row',
 			inner_html		: '<span>Border color</span>',
-			parent			: box_fields
+			parent			: style_section
 		})
 		const bc_input = ui.create_dom_element({ element_type:'input', class_name:'inspector_color', parent:bc_row })
 		bc_input.type = 'color'
@@ -578,7 +654,7 @@ const render_inspector = function(self, container) {
 			element_type	: 'label',
 			class_name		: 'inspector_row inspector_check_row show_label_row',
 			inner_html		: '<span>Show label</span>',
-			parent			: box_fields
+			parent			: style_section
 		})
 		const lbl_check = ui.create_dom_element({ element_type:'input', parent:lbl_row })
 		lbl_check.type = 'checkbox'
@@ -590,7 +666,7 @@ const render_inspector = function(self, container) {
 			element_type	: 'label',
 			class_name		: 'inspector_row inspector_check_row table_header_row hide',
 			inner_html		: '<span>Show table header</span>',
-			parent			: box_fields
+			parent			: style_section
 		})
 		const th_check = ui.create_dom_element({ element_type:'input', parent:th_row })
 		th_check.type = 'checkbox'
@@ -601,7 +677,7 @@ const render_inspector = function(self, container) {
 		self.inspector_columns = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'inspector_columns hide',
-			parent			: box_fields
+			parent			: style_section
 		})
 
 	// empty hint
@@ -613,16 +689,21 @@ const render_inspector = function(self, container) {
 		})
 
 	// page settings
+		const page_section = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'inspector_section',
+			parent			: body
+		})
 		ui.create_dom_element({
 			element_type	: 'h3',
 			class_name		: 'panel_subtitle',
 			inner_html		: (get_label.page || 'Page'),
-			parent			: body
+			parent			: page_section
 		})
 		const page_settings = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'inspector_page_settings',
-			parent			: body
+			parent			: page_section
 		})
 		// format
 		const fmt_row = ui.create_dom_element({
@@ -1043,6 +1124,10 @@ const load_template = async function(self, section_id) {
 
 	// normalize to v2 (v1 blobs become an empty flow — not migrated)
 		self.layout = normalize_blob(self, blob)
+		// re-assign unique row/cell ids: a saved template carries ids from another
+		// session that would collide with this session's counter (duplicate ids →
+		// select_cell picks the wrong row). Reseat de-duplicates and seeds the counter.
+		reseat_ids(self)
 		self.current_template_id = section_id
 		self.sel = null
 		self.dirty = false
