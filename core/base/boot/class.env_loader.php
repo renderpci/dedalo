@@ -93,6 +93,95 @@ final class env_loader {
 	}//end parse_value
 
 	/**
+	* LOAD
+	* Loads a .env file into the private store, merged UNDER real process env.
+	* Refuses a group/world-writable file. Idempotent across keys.
+	* @param string $path absolute path to the .env file
+	* @param bool $require when true, a missing/unreadable/over-permissive file throws
+	* @return void
+	*/
+	public static function load(string $path, bool $require = false) : void {
+
+		if (is_file($path) === false || is_readable($path) === false) {
+			if ($require === true) {
+				throw new \RuntimeException('env_loader: required env file not readable: ' . $path);
+			}
+			return;
+		}
+
+		// refuse group/other WRITABLE files (0o022). 640/600 are fine.
+		if ((fileperms($path) & 0o022) !== 0) {
+			@error_log('env_loader: refusing writable-by-group/other env file: ' . $path);
+			if ($require === true) {
+				throw new \RuntimeException('env_loader: env file permissions too open: ' . $path);
+			}
+			return;
+		}
+
+		$content = file_get_contents($path);
+		if ($content === false) {
+			if ($require === true) {
+				throw new \RuntimeException('env_loader: failed reading env file: ' . $path);
+			}
+			return;
+		}
+
+		foreach (self::parse($content) as $k => $v) {
+			// real process env wins: never store over a real env value
+			if (getenv($k) !== false) {
+				continue;
+			}
+			self::$values[$k] = $v;
+		}
+		self::$loaded = true;
+	}//end load
+
+	/**
+	* GET
+	* Real process env wins, then the loaded .env store, then $default.
+	* @param string $key
+	* @param string|null $default
+	* @return string|null
+	*/
+	public static function get(string $key, ?string $default = null) : ?string {
+		$env = getenv($key);
+		if ($env !== false) {
+			return $env;
+		}
+		return self::$values[$key] ?? $default;
+	}//end get
+
+	public static function has(string $key) : bool {
+		return getenv($key) !== false || array_key_exists($key, self::$values);
+	}//end has
+
+	public static function get_int(string $key, ?int $default = null) : ?int {
+		$v = self::get($key);
+		return $v === null ? $default : (int)$v;
+	}//end get_int
+
+	public static function get_bool(string $key, ?bool $default = null) : ?bool {
+		$v = self::get($key);
+		if ($v === null) {
+			return $default;
+		}
+		return in_array(strtolower(trim($v)), ['1', 'true', 'yes', 'on'], true);
+	}//end get_bool
+
+	public static function get_json(string $key, mixed $default = null) : mixed {
+		$v = self::get($key);
+		if ($v === null) {
+			return $default;
+		}
+		try {
+			return json_decode($v, true, 64, JSON_THROW_ON_ERROR);
+		} catch (\JsonException $e) {
+			@error_log('env_loader: invalid JSON for ' . $key);
+			return $default;
+		}
+	}//end get_json
+
+	/**
 	* RESET
 	* Test-only seam: clears the private store.
 	* @return void
