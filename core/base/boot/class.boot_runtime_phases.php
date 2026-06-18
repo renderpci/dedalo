@@ -27,4 +27,15 @@ final class boot_runtime_phases {
 			setlocale(LC_ALL, config('identity.locale'));
 		});
 	}//end apply_locale_phase
+
+	/**
+	* ENV_LOAD_PHASE
+	* Loads the .env file (secrets) via the zero-dependency env_loader.
+	* @param string $env_path absolute path to the .env file
+	*/
+	public static function env_load_phase(string $env_path) : boot_phase {
+		return new boot_phase('env_load', static function () use ($env_path) : void {
+			env_loader::load($env_path);
+		});
+	}//end env_load_phase
 }
