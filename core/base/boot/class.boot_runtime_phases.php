@@ -38,4 +38,30 @@ final class boot_runtime_phases {
 			env_loader::load($env_path);
 		});
 	}//end env_load_phase
+
+	/**
+	* FOR
+	* The ordered hermetic runtime pipeline:
+	* [env_load? -> config_build -> compat_shim -> apply_locale].
+	* $base_overrides (e.g. boot_paths::resolve()) is the compiler layer override
+	* that resolves the path family to real install values.
+	* @param config_key[] $catalog
+	* @param array<int,array<string,mixed>> $base_overrides ordered low->high
+	* @param string|null $env_path  if given, env_load runs first
+	* @param callable|null $definer  passed to compat_shim
+	* @return boot_phase[]
+	*/
+	public static function for(array $catalog, array $base_overrides = [], ?string $env_path = null, ?callable $definer = null) : array {
+
+		$phases = [];
+		if ($env_path !== null) {
+			$phases[] = self::env_load_phase($env_path);
+		}
+		foreach (boot_config_phases::phases($catalog, $base_overrides, $definer) as $phase) {
+			$phases[] = $phase;
+		}
+		$phases[] = self::apply_locale_phase();
+
+		return $phases;
+	}//end for
 }
