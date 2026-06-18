@@ -47,4 +47,22 @@ final class config_Test extends TestCase {
 		$this->expectException(\RuntimeException::class);
 		config::i();
 	}
+
+	public function test_get_explicit_null_default_returns_null() : void {
+		config::boot([]);
+		$this->assertNull(config::i()->get('nope.missing', null));
+		$this->assertNull(config('nope.missing', null));
+	}
+
+	public function test_typed_accessor_throws_on_missing_without_default() : void {
+		config::boot([]);
+		$this->expectException(\RuntimeException::class);
+		config::i()->int('nope.missing');
+	}
+
+	public function test_global_config_throws_on_missing_without_default() : void {
+		config::boot([]);
+		$this->expectException(\RuntimeException::class);
+		config('nope.missing');
+	}
 }

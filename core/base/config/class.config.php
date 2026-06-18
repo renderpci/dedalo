@@ -46,12 +46,11 @@ final class config {
 		return array_key_exists($key, $this->values);
 	}
 
-	public function int(string $key, ?int $default = null) : int {
-		$v = $this->get($key, $default);
-		return (int) $v;
+	public function int(string $key, mixed $default = self::UNSET) : int {
+		return (int) $this->get($key, $default);
 	}
 
-	public function bool(string $key, ?bool $default = null) : bool {
+	public function bool(string $key, mixed $default = self::UNSET) : bool {
 		$v = $this->get($key, $default);
 		if (is_bool($v)) {
 			return $v;
@@ -59,7 +58,7 @@ final class config {
 		return in_array(strtolower(trim((string) $v)), ['1', 'true', 'yes', 'on'], true);
 	}
 
-	public function str(string $key, ?string $default = null) : string {
+	public function str(string $key, mixed $default = self::UNSET) : string {
 		return (string) $this->get($key, $default);
 	}
 
@@ -77,7 +76,7 @@ if (!function_exists('config')) {
 	* @param mixed $default returned when the key is absent
 	* @return mixed
 	*/
-	function config(string $key, mixed $default = null) : mixed {
+	function config(string $key, mixed $default = config::UNSET) : mixed {
 		return config::i()->get($key, $default);
 	}
 }
