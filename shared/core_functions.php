@@ -1186,48 +1186,51 @@ function dedalo_assert_secrets_initialised() : array {
 		return [];
 	}
 
-	// Map: constant_name => callable(string $value) : bool that returns true
-	// when the value still looks like the sample default.
-	$sentinels = [
-		'DEDALO_INFORMATION'			=> static fn(string $v) : bool => $v === 'Dédalo install version',
-		'DEDALO_USERNAME_CONN'			=> static fn(string $v) : bool => $v === 'myusername',
-		'DEDALO_PASSWORD_CONN'			=> static fn(string $v) : bool => $v === 'mypassword',
-		'DEDALO_SALT_STRING'			=> static fn(string $v) : bool => $v === 'dedalo_six',
-		// publication-side config (sample.server_config_api.php)
-		'API_WEB_USER_CODE'				=> static fn(string $v) : bool => preg_match('/^X{10,}$/', $v) === 1,
-		'MYSQL_DEDALO_PASSWORD_CONN'	=> static fn(string $v) : bool => preg_match('/^X+\.\.$/', $v) === 1,
-	];
+	// pure evaluator (zero-dependency boot class, require'd not autoloaded)
+	require_once (defined('DEDALO_CORE_PATH') ? DEDALO_CORE_PATH : dirname(__DIR__) . '/core')
+		. '/base/boot/class.secret_sentinels.php';
 
-	$violations = [];
-	foreach ($sentinels as $constant_name => $is_default) {
-		if (!defined($constant_name)) {
-			continue;
-		}
-		$value = (string)constant($constant_name);
-		if ($is_default($value) === true) {
-			$violations[] = $constant_name;
+	// production = NOT an explicit development server
+	$is_production = !(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER === true);
+	// install carve-out: the installer legitimately runs before secrets exist
+	$is_installing = defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS === false;
+
+	// collect the values the sentinels care about (only those that are defined)
+	$names = [
+		'DEDALO_INFORMATION', 'DEDALO_USERNAME_CONN', 'DEDALO_PASSWORD_CONN',
+		'DEDALO_SALT_STRING', 'API_WEB_USER_CODE', 'MYSQL_DEDALO_PASSWORD_CONN',
+		'DEDALO_INFO_KEY', 'DEDALO_ENTITY', 'DEDALO_DIFFUSION_INTERNAL_TOKEN',
+	];
+	$values = [];
+	foreach ($names as $n) {
+		if (defined($n)) {
+			$values[$n] = (string)constant($n);
 		}
 	}
+
+	$violations = array_merge(
+		secret_sentinels::evaluate($values),
+		secret_sentinels::evaluate_context($values, $is_production)
+	);
 
 	if (empty($violations)) {
 		return [];
 	}
 
-	$msg = 'SEC-094: configuration secrets still match sample defaults: '
+	$msg = 'SEC-094: configuration secrets still match sample defaults or are weak: '
 		. implode(', ', $violations)
-		. '. Edit your config/*.php files and replace these with strong unique values.';
+		. '. Set strong unique values in your .env / config before serving production.';
 
-	// Always log loudly so deployers see the warning regardless of debug
-	// settings (error_log goes through the SAPI logger and survives even
-	// when SHOW_DEBUG is false).
 	@error_log($msg);
 	if (function_exists('debug_log') && class_exists('logger')) {
 		debug_log(__FUNCTION__ . ' ' . $msg, logger::ERROR);
 	}
 
-	if (defined('DEDALO_ENFORCE_SECRET_SENTINELS') && DEDALO_ENFORCE_SECRET_SENTINELS === true) {
-		// Hard-stop only when the operator explicitly opts in. We do this
-		// after logging so the sysadmin has a record of what failed.
+	$explicit = defined('DEDALO_ENFORCE_SECRET_SENTINELS')
+		? (bool)DEDALO_ENFORCE_SECRET_SENTINELS
+		: null;
+
+	if (secret_sentinels::should_enforce($violations, $is_production, $is_installing, $explicit) === true) {
 		http_response_code(503);
 		header('Content-Type: text/plain; charset=utf-8');
 		die('Service unavailable: insecure default secrets detected (SEC-094). See server log.');
