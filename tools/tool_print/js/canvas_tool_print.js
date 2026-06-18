@@ -20,6 +20,7 @@
 
 	import {ui} from '../../../core/common/js/ui.js'
 	import {render_box_content, is_relation_model, column_key} from './render_box_tool_print.js'
+	import {make_editor_ctx, layout_flow} from './flow_engine.js'
 
 
 
@@ -254,10 +255,8 @@ const gen_id = function(self, prefix) {
 export const render_canvas = function(self, container) {
 
 	// reset
+		self.canvas_container = container
 		container.replaceChildren()
-
-	// hook used by render_box_content to paginate a flow-table after it renders
-		self._paginate_flow = (box) => paginate_flow_box(self, box)
 
 	const print_root = ui.create_dom_element({
 		element_type	: 'div',
@@ -266,11 +265,13 @@ export const render_canvas = function(self, container) {
 	})
 	self.print_root = print_root
 
-	const pages = self.layout.pages
-	for (let i = 0; i < pages.length; i++) {
-		pages[i].index = i
-		render_page(self, pages[i], print_root)
-	}
+	// v2 document-flow render (async): generates pages from layout.flow.rows and
+	// paginates, then decorates with editor chrome. Callers don't await.
+	const ctx = make_editor_ctx(self, print_root)
+	self._flow_ctx = ctx
+	layout_flow(self, ctx)
+		.then(() => decorate_editor(self))
+		.catch(e => console.error('tool_print render_canvas flow error', e))
 
 
 	return print_root
