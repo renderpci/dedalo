@@ -1,0 +1,14 @@
+[Unit]
+Description=Dedalo diffusion engine (Bun)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=__APP_DIR__
+Environment=SOCKET_PATH=__SOCKET_PATH__
+ExecStart=__BUN_BIN__ run index.ts
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
