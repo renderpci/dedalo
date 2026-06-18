@@ -101,4 +101,22 @@ final class legacy_surface_Test extends TestCase {
 		$out = legacy_surface::extract([$f]);
 		$this->assertSame($f, $out['ONLY']['file']);
 	}
+
+	public function test_recognizes_fully_qualified_define() : void {
+		$f = $this->write('ls_fq.php', <<<'PHP'
+		<?php
+		\define('FQ_CONST', 9);
+		\define('FQ_STR', 'q');
+		other_ns\define('NS_CONST', 10);
+		PHP);
+
+		$out = legacy_surface::extract([$f]);
+
+		// a leading-backslash \define(...) is the global define — recognized
+		$this->assertArrayHasKey('FQ_CONST', $out);
+		$this->assertSame(9, $out['FQ_CONST']['value']);
+		$this->assertSame('q', $out['FQ_STR']['value']);
+		// a namespaced define() call (no leading backslash) is NOT the global define — ignored
+		$this->assertArrayNotHasKey('NS_CONST', $out);
+	}
 }

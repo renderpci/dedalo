@@ -48,7 +48,7 @@ final class legacy_surface {
 
 		for ($i = 0; $i < $n; $i++) {
 			$t = $tokens[$i];
-			if (!is_array($t) || $t[0] !== T_STRING || strtolower($t[1]) !== 'define') {
+			if (!is_array($t) || !self::is_define_token($t)) {
 				continue;
 			}
 			// reject method/static calls and function declarations: $o->define(), C::define(), function define()
@@ -79,6 +79,23 @@ final class legacy_surface {
 		}
 		return $found;
 	}//end scan
+
+	/**
+	* IS_DEFINE_TOKEN — true for a call to the GLOBAL define(): either bare `define`
+	* (T_STRING) or the fully-qualified `\define` (T_NAME_FULLY_QUALIFIED, PHP 8.0+).
+	* A namespaced `Ns\define` (T_NAME_QUALIFIED, no leading backslash) is a DIFFERENT
+	* function and is deliberately NOT matched.
+	* @param array{0:int,1:string} $token a token_get_all array token
+	*/
+	private static function is_define_token(array $token) : bool {
+		if ($token[0] === T_STRING) {
+			return strtolower($token[1]) === 'define';
+		}
+		if ($token[0] === T_NAME_FULLY_QUALIFIED) {
+			return strtolower($token[1]) === '\\define';
+		}
+		return false;
+	}//end is_define_token
 
 	/**
 	* COLLECT_VALUE — gather the tokens of the value argument up to define()'s closing ')'.

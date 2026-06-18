@@ -142,26 +142,29 @@ final class boot_diff_gate_Test extends TestCase {
 	}
 
 	public function test_request_and_user_scoped_constants_are_never_emitted() : void {
-		$scopes  = $this->const_scopes();
 		$emitted = $this->emitted();
-		foreach ($scopes as $const => $scope) {
-			if ($scope === config_scope::REQUEST || $scope === config_scope::USER) {
-				$this->assertArrayNotHasKey($const, $emitted,
-					"{$const} is accessor-only (REQUEST/USER) and must never be a process constant (worker cross-user leak)");
-			}
+		$targets = array_filter($this->const_scopes(), static fn(config_scope $s) : bool =>
+			$s === config_scope::REQUEST || $s === config_scope::USER);
+		// guard: a future catalog refactor that emptied these scopes would make the loop
+		// below assert nothing — fail loudly instead of passing vacuously.
+		$this->assertNotEmpty($targets,
+			'no REQUEST/USER consts in the catalog — this exclusion check would be vacuous; update the gate');
+		foreach ($targets as $const => $scope) {
+			$this->assertArrayNotHasKey($const, $emitted,
+				"{$const} is accessor-only (REQUEST/USER) and must never be a process constant (worker cross-user leak)");
 		}
 	}
 
 	public function test_secret_state_and_derived_request_constants_are_not_in_the_hermetic_compile() : void {
-		$scopes  = $this->const_scopes();
 		$emitted = $this->emitted();
-		foreach ($scopes as $const => $scope) {
-			if ($scope === config_scope::SECRET
-				|| $scope === config_scope::STATE
-				|| $scope === config_scope::DERIVED_REQUEST) {
-				$this->assertArrayNotHasKey($const, $emitted,
-					"{$const} is live-sourced ({$scope->value}); it must come from env/state/\$_SERVER at cutover, never the compiled artifact");
-			}
+		$targets = array_filter($this->const_scopes(), static fn(config_scope $s) : bool =>
+			$s === config_scope::SECRET || $s === config_scope::STATE || $s === config_scope::DERIVED_REQUEST);
+		// guard: never let this exclusion check pass vacuously (see note above).
+		$this->assertNotEmpty($targets,
+			'no SECRET/STATE/DERIVED_REQUEST consts in the catalog — this exclusion check would be vacuous; update the gate');
+		foreach ($targets as $const => $scope) {
+			$this->assertArrayNotHasKey($const, $emitted,
+				"{$const} is live-sourced ({$scope->value}); it must come from env/state/\$_SERVER at cutover, never the compiled artifact");
 		}
 	}
 
