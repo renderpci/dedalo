@@ -739,14 +739,15 @@
 
 
 // LOCK COMPONENTS
-// Pessimistic-locking garbage collection: removes stale lock records left behind by
-// PHP processes that crashed or timed out without releasing their component locks.
-// Only performed when the system is fully installed (not during initial setup) and only
-// when the locking feature is enabled. Running this during install would reference DB
-// tables that may not yet exist.
+// Stale-lock garbage collection is no longer run on every bootstrap. The hot path now
+// self-heals: lock_components::update_lock_components_state() prunes expired entries
+// (drop_expired) inside the row-locked transaction on every focus/blur, and the short
+// LOCK_TTL_SECONDS bounds how long an abandoned lock can survive. The explicit sweep
+// lock_components::clean_locks_garbage() remains available for the maintenance area.
+// (Guard site kept intentionally for reviewability; it deliberately does nothing here.)
 	if(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
 		if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {
-			lock_components::clean_locks_garbage();
+			// no-op: lazy GC handles stale locks on each registry mutation
 		}
 	}
 

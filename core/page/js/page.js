@@ -260,11 +260,53 @@ page.prototype.init = async function(options) {
 										})
 
 									// show warning
-										ui.attach_to_modal({
+										const lock_modal = ui.attach_to_modal({
 											header	: get_label.warning || 'Warning',
 											body	: api_response.msg,
 											size	: 'small'
 										})
+
+									// notify-on-release poll. Watch the locked component until the
+									// holder releases it (or their lock expires server-side), then
+									// dismiss the warning and return focus to the now-free field.
+									// Bounded to ~60s so an abandoned attempt stops polling.
+										if (self.lock_release_poll_interval) {
+											clearInterval(self.lock_release_poll_interval)
+										}
+										let lock_poll_attempts = 0
+										self.lock_release_poll_interval = setInterval(
+											() => {
+												if (++lock_poll_attempts > 20) { // ~60s ceiling (20 × 3s)
+													clearInterval(self.lock_release_poll_interval)
+													self.lock_release_poll_interval = null
+													return
+												}
+												data_manager.request({
+													use_worker	: true,
+													body		: {
+														dd_api			: 'dd_utils_api',
+														action			: 'get_lock_status',
+														prevent_lock	: true,
+														options			: {
+															component_tipo	: component_instance.tipo,
+															section_tipo	: component_instance.section_tipo,
+															section_id		: component_instance.section_id
+														}
+													}
+												})
+												.then((status_response) => {
+													if (status_response && status_response.in_use===false) {
+														clearInterval(self.lock_release_poll_interval)
+														self.lock_release_poll_interval = null
+														if (lock_modal && typeof lock_modal.on_close==='function') {
+															lock_modal.on_close()
+														}
+														ui.component.activate(component_instance)
+													}
+												})
+											},
+											3000 // poll every 3s
+										)
 								}
 
 								// dedalo_notification from config file
@@ -866,6 +908,16 @@ page.prototype.destroy = async function(delete_self=true, delete_dependencies=fa
 
 	const self = this
 
+	// stop lock_components timers (heartbeat + any pending notify-on-release poll)
+		if (self.lock_heartbeat_interval) {
+			clearInterval(self.lock_heartbeat_interval)
+			self.lock_heartbeat_interval = null
+		}
+		if (self.lock_release_poll_interval) {
+			clearInterval(self.lock_release_poll_interval)
+			self.lock_release_poll_interval = null
+		}
+
 	// remove window/document events
 		if (self.popstate_handler) {
 			window.removeEventListener('popstate', self.popstate_handler)
@@ -933,9 +985,73 @@ page.prototype.add_events = function() {
 		}
 		window.addEventListener('popstate', self.popstate_handler)
 
+	// lock_components heartbeat
+		// Periodically refresh the focus lock on the currently active component so a
+		// crashed/closed/disconnected browser releases it within LOCK_TTL_SECONDS instead
+		// of lingering. Driven by page_globals.component_active, so it follows focus/blur
+		// with no extra bookkeeping (no active component → the tick is a no-op).
+		// (!) The DEDALO_LOCK_COMPONENTS const is emitted by environment.js, which may not
+		// have evaluated yet when add_events() runs at init — reading it synchronously here
+		// throws a ReferenceError. So the guard lives INSIDE the (deferred) tick, where the
+		// const is always defined; if the feature is off the first tick stops the timer.
+		self.lock_heartbeat_interval = setInterval(
+			() => {
+				if (typeof DEDALO_LOCK_COMPONENTS==='undefined' || DEDALO_LOCK_COMPONENTS!==true) {
+					clearInterval(self.lock_heartbeat_interval)
+					self.lock_heartbeat_interval = null
+					return
+				}
+				const ca = page_globals.component_active
+				if (!ca || ca.mode!=='edit') {
+					return
+				}
+				data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api			: 'dd_utils_api',
+						action			: 'update_lock_components_state',
+						prevent_lock	: true,
+						options			: {
+							component_tipo	: ca.tipo,
+							section_tipo	: ca.section_tipo,
+							section_id		: ca.section_id,
+							action			: 'focus' // a focus re-send refreshes the lock timestamp
+						}
+					}
+				})
+			},
+			45000 // 45s, comfortably under the server LOCK_TTL_SECONDS (150s)
+		)
+
 	// beforeunload (event)
 		self.beforeunload_handler = function(event) {
 			// event.preventDefault();
+
+			// best-effort lock release on tab close. The short TTL is the guarantee; this
+			// just frees the lock immediately when the browser allows a final beacon.
+			// sendBeacon cannot set headers, so the CSRF token travels in the body (the
+			// API accepts rqo->csrf_token); text/plain avoids a CORS preflight on unload.
+				if (DEDALO_LOCK_COMPONENTS===true && page_globals.component_active && typeof navigator!=='undefined' && navigator.sendBeacon) {
+					try {
+						const ca		= page_globals.component_active
+						const api_url	= (typeof DEDALO_API_URL!=='undefined') ? DEDALO_API_URL : '../api/v1/json/'
+						const payload	= JSON.stringify({
+							dd_api			: 'dd_utils_api',
+							action			: 'update_lock_components_state',
+							prevent_lock	: true,
+							csrf_token		: (page_globals.csrf_token || null),
+							options			: {
+								component_tipo	: null,
+								section_tipo	: ca.section_tipo,
+								section_id		: null,
+								action			: 'delete_user_section_locks'
+							}
+						})
+						navigator.sendBeacon(api_url, new Blob([payload], {type:'text/plain'}))
+					} catch (e) {
+						// ignore: the lock will expire via LOCK_TTL_SECONDS anyway
+					}
+				}
 
 			const unsaved_data = typeof window.unsaved_data!=='undefined'
 				? window.unsaved_data

@@ -664,6 +664,52 @@ final class dd_utils_api_Test extends BaseTestCase
 
 
 	/**
+	 * TEST_GET_LOCK_STATUS
+	 * Guards that 'get_lock_status' is registered in API_ACTIONS (SEC-024) and routable.
+	 * @return void
+	 */
+	public function test_get_lock_status(): void
+	{
+
+		$this->user_login();
+
+		$rqo = json_handler::decode('
+			{
+				"dd_api": "dd_utils_api",
+			    "action": "get_lock_status",
+			    "options": {
+			        "component_tipo": "test94",
+			        "section_tipo": "test3",
+			        "section_id": "1"
+			    }
+			}
+		');
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors' . PHP_EOL
+			. 'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
+		);
+
+		$this->assertTrue(
+			gettype($response->in_use) === 'boolean',
+			'expected in_use type is boolean'
+		);
+
+		// SEC-024: the action must be in the API_ACTIONS allowlist or dd_manager
+		// rejects it as "unauthorized method" before it ever reaches the method.
+		$this->assertContains(
+			'get_lock_status',
+			dd_utils_api::API_ACTIONS,
+			'expected get_lock_status registered in dd_utils_api::API_ACTIONS'
+		);
+	}//end test_get_lock_status
+
+
+
+	/**
 	 * TEST_get_dedalo_files
 	 * @return void
 	 */

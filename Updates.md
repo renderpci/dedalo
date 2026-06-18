@@ -1,5 +1,25 @@
 **UPDATES AND CHANGES**
 
+18-06-2026
+Component-lock hardening (collaborative edit locks, DEDALO_LOCK_COMPONENTS).
+Improves the per-field locking that prevents two users editing the same component
+of the same record at once:
+- Race-safety: every lock-registry mutation (focus / blur / delete_user_section_locks /
+  force_unlock / garbage collection) now runs inside a DB transaction holding a row lock
+  (SELECT ... FOR UPDATE) on the single registry row in matrix_notifications. This closes
+  a read-modify-write race that could lose a lock or let two users acquire the same field.
+- Stale-lock window cut from 5 hours to LOCK_TTL_SECONDS (150s). The browser refreshes its
+  lock with a ~45s heartbeat (a focus re-send) and best-effort releases on tab close via
+  navigator.sendBeacon, so a crashed/closed/disconnected session frees its field in minutes.
+- Garbage collection moved off the per-request bootstrap: stale entries are pruned lazily
+  inside the same locked transaction on every mutation (clean_locks_garbage() remains for the
+  maintenance area). dd_init_test no longer sweeps on every page load.
+- Conflict UX: a blocked user is told when the field frees. A new read-only API action
+  dd_utils_api::get_lock_status (added to API_ACTIONS) drives a bounded client poll that
+  dismisses the warning and re-offers the field once the holder releases it.
+Note: the lock is per-user — a user is never blocked from their own field; only a DIFFERENT
+user editing the exact same (section_id, section_tipo, component_tipo) is blocked.
+
 12-06-2026
 Media file access control (work system + publication).
 New web-server-enforced media protection replacing/extending the legacy
