@@ -25,6 +25,8 @@ final class entrypoint_profile_Test extends TestCase {
 		$this->assertTrue(entrypoint_profile::WEB->resolves_request_state());
 		$this->assertFalse(entrypoint_profile::CLI->resolves_request_state());
 		$this->assertFalse(entrypoint_profile::WORKER_INIT->resolves_request_state());
+		$this->assertFalse(entrypoint_profile::CRON->resolves_request_state());
+		$this->assertFalse(entrypoint_profile::TEST->resolves_request_state());
 	}
 
 	public function test_boot_state_cases() : void {
