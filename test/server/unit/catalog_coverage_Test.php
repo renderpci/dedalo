@@ -5,6 +5,7 @@ use PHPUnit\Framework\TestCase;
 require_once dirname(__DIR__, 3) . '/core/base/config/class.config_scope.php';
 require_once dirname(__DIR__, 3) . '/core/base/config/class.config_merge.php';
 require_once dirname(__DIR__, 3) . '/core/base/config/class.config_key.php';
+require_once dirname(__DIR__, 3) . '/core/base/config/class.config_compiler.php';
 
 final class catalog_coverage_Test extends TestCase {
 
@@ -87,6 +88,8 @@ final class catalog_coverage_Test extends TestCase {
 		$this->assertSame(config_scope::REQUEST, $by['lang.application_lang']->scope);
 		$this->assertSame(config_scope::SECRET, $by['db.password']->scope);
 		$this->assertSame(config_scope::DERIVED, $by['media.image.file_url']->scope);
-		$this->assertSame('/dedalo/core', $by['paths.core_url']->default);
+		$this->assertSame(config_scope::DERIVED, $by['paths.core_url']->scope);
+		$resolved = config_compiler::resolve($this->catalog(), []);
+		$this->assertSame('/dedalo/core', $resolved['paths.core_url']);  // default bases → v6-equivalent
 	}
 }

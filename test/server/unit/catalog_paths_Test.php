@@ -50,7 +50,7 @@ final class catalog_paths_Test extends TestCase {
 		$this->assertSame('/srv/dedalo/core', $r['paths.core_path']);
 		$this->assertSame('/dedalo/core', $r['paths.core_url']);
 		$this->assertSame('/srv/dedalo/media', $r['paths.media_path']);
-		$this->assertSame('/srv/sessions', $r['paths.sessions_path']);           // dirname(root,2).'/sessions'
+		$this->assertSame('//sessions', $r['paths.sessions_path']);              // dirname('/srv/dedalo',2)='/'.'/sessions'
 		$this->assertSame('/dedalo/core/api/v1/json/', $r['paths.api_url']);      // core_url.'/api/v1/json/'
 		$this->assertSame('/srv/dedalo/core/widgets', $r['paths.widgets_path']);  // core_path.'/widgets'
 		$this->assertSame('/srv/dedalo/media//av/watermark/watermark.png', $r['paths.av_watermark_file']); // media_path.'/'.av.folder.'/watermark/watermark.png' (av.folder='/av')

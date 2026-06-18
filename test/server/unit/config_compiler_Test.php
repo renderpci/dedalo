@@ -42,8 +42,10 @@ final class config_compiler_Test extends TestCase {
 	}
 
 	public function test_derived_recomputed_after_override() : void {
-		$r = config_compiler::resolve($this->catalog(), [['paths.core_url' => '/srv/core']]);
-		$this->assertSame('/srv/core/media_engine/img.php', $r['media.image.file_url']);
+		$catalog = require dirname(__DIR__, 3) . '/core/base/config/catalog/catalog.php';
+		$r = config_compiler::resolve($catalog, [['paths.root_web' => '/srv/core-root']]);
+		$this->assertSame('/srv/core-root/core', $r['paths.core_url']);
+		$this->assertSame('/srv/core-root/core/media_engine/img.php', $r['media.image.file_url']);
 	}
 
 	public function test_higher_layer_wins() : void {
