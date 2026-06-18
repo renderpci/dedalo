@@ -1139,6 +1139,16 @@ export async function handle_request(request: Request): Promise<Response> {
 
 if (import.meta.main) {
 
+	// Remove a stale socket file left by a previous crash or SIGKILL so that
+	// launchd / systemd KeepAlive restarts succeed without EADDRINUSE.
+	try {
+		const fs_sync = await import('fs');
+		if (fs_sync.existsSync(SOCKET_PATH)) {
+			fs_sync.unlinkSync(SOCKET_PATH);
+			console.log(`[diffusion] Removed stale socket: ${SOCKET_PATH}`);
+		}
+	} catch { /* non-fatal */ }
+
 	const server = Bun.serve({
 		unix:        SOCKET_PATH,
 		idleTimeout: 120, // 2 minutes (matches PHP_CLIENT timeout)
