@@ -30,7 +30,10 @@ if (!is_array($new)) {
 }
 
 // --- subprocess: OLD config.php surface (runs the full v6 chain; needs the live DB) ---
-$old_php = 'include ' . var_export($root . '/config/config.php', true) . '; echo json_encode(get_defined_constants(true)["user"]);';
+// JSON_INVALID_UTF8_SUBSTITUTE: a salt/password with non-UTF-8 bytes must not make
+// json_encode return false and spuriously fail the capture (values are redacted in the
+// report regardless; only the constant NAMES drive the classification).
+$old_php = 'include ' . var_export($root . '/config/config.php', true) . '; echo json_encode(get_defined_constants(true)["user"], JSON_INVALID_UTF8_SUBSTITUTE);';
 $old_cmd = escapeshellarg(PHP_BINARY) . ' -d error_reporting=0 -d display_errors=0 -r ' . escapeshellarg($old_php) . ' 2>/dev/null';
 $old = json_decode((string) shell_exec($old_cmd), true);
 if (!is_array($old)) {
