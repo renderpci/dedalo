@@ -71,4 +71,22 @@ final class migration_committer_Test extends TestCase {
 		$this->assertSame('skipped-empty', $report['passthrough']);
 		$this->assertFileDoesNotExist($target);
 	}
+
+	public function test_writes_populated_var_export_long_array_and_skips_empty_one() : void {
+		// config_writer/state_writer emit var_export() LONG-array syntax — must be written, not skipped
+		$populated = "<?php declare(strict_types=1);\n\nreturn array (\n  'db.host' => 'pg.acme.org',\n  'identity.entity' => 'acme',\n);\n";
+		$empty     = "<?php declare(strict_types=1);\n\nreturn array (\n);\n";
+
+		$report = migration_committer::commit(
+			['config' => $populated, 'state' => $empty],
+			['config' => $this->sandbox . '/config/local/config.php', 'state' => $this->sandbox . '/config/state.php'],
+			$this->sandbox . '/backup'
+		);
+
+		$this->assertSame('written', $report['config'], 'a populated var_export long-array must be written');
+		$this->assertSame('skipped-empty', $report['state'], 'an empty var_export long-array must be skipped');
+		$this->assertFileExists($this->sandbox . '/config/local/config.php');
+		$this->assertStringContainsString("'db.host' => 'pg.acme.org'", file_get_contents($this->sandbox . '/config/local/config.php'));
+		$this->assertFileDoesNotExist($this->sandbox . '/config/state.php');
+	}
 }

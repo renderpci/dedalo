@@ -62,8 +62,10 @@ final class migration_committer {
 					continue;
 				}
 				if ($t[0] === T_RETURN) {
-					// a `return [...]` with entries is non-empty; `return []` is empty
-					return !preg_match('/return\s*\[\s*[\'"]/', $content);
+					// Empty ONLY when the returned array has no entries. Handle BOTH var_export
+					// long-array `array ( )` (what config_writer/state_writer emit) and short `[ ]`.
+					// Anything with entries (either syntax) is non-empty and must be written.
+					return (bool) preg_match('/return\s*(?:array\s*\(\s*\)|\[\s*\])\s*;/', $content);
 				}
 				return false; // any other real token (e.g. T_IF for a define guard) => non-empty
 			}
