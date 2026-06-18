@@ -62,6 +62,49 @@ final class config_compiler {
 	}//end resolve
 
 	/**
+	* SIGNATURE
+	* Deterministic content signature for cache invalidation. Pass the inputs
+	* that should invalidate the compiled artifact (catalog mtimes, env/local
+	* content hashes, DEDALO_VERSION, active env name) — NOT secrets.
+	* @param array<string,mixed> $parts
+	* @return string 40-char sha1
+	*/
+	public static function signature(array $parts) : string {
+		return sha1(json_encode($parts, JSON_THROW_ON_ERROR));
+	}//end signature
+
+	/**
+	* CACHE_PATH
+	* Artifact path keyed by host AND entity (one physical checkout may serve
+	* multiple entities; sharing a compiled file across entities would leak
+	* per-entity values).
+	*/
+	public static function cache_path(string $base_dir, string $host, string $entity) : string {
+		return rtrim($base_dir, '/') . '/config.' . $host . '.' . $entity . '.php';
+	}//end cache_path
+
+	/**
+	* WRITE_COMPILED
+	* Atomically writes the resolved flat map as a PHP array literal: write to a
+	* unique temp file on the SAME directory, then rename() over the target
+	* (atomic on local POSIX fs) so concurrent FPM workers never read a torn file.
+	* @param string $path
+	* @param array<string,mixed> $flat
+	* @return void
+	*/
+	public static function write_compiled(string $path, array $flat) : void {
+		$code = "<?php declare(strict_types=1);\nreturn " . var_export($flat, true) . ";\n";
+		$tmp  = $path . '.tmp.' . getmypid() . '.' . bin2hex(random_bytes(4));
+		if (file_put_contents($tmp, $code, LOCK_EX) === false) {
+			throw new \RuntimeException('config_compiler: failed writing temp artifact: ' . $tmp);
+		}
+		if (rename($tmp, $path) === false) {
+			@unlink($tmp);
+			throw new \RuntimeException('config_compiler: failed renaming artifact into place: ' . $path);
+		}
+	}//end write_compiled
+
+	/**
 	* DEEP_MERGE
 	* Recursive associative merge; $b wins on scalar collisions, assoc subarrays recurse.
 	* @param array<mixed> $a

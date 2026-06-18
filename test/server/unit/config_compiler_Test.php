@@ -77,4 +77,52 @@ final class config_compiler_Test extends TestCase {
 		$this->assertSame($base, $with);                       // all ignored
 		$this->assertArrayNotHasKey('db.password', $with);
 	}
+
+	public function test_signature_is_deterministic_and_sensitive() : void {
+		$a = config_compiler::signature(['v' => '7.0', 'env' => 'pro', 'hash' => 'abc']);
+		$b = config_compiler::signature(['v' => '7.0', 'env' => 'pro', 'hash' => 'abc']);
+		$c = config_compiler::signature(['v' => '7.0', 'env' => 'pro', 'hash' => 'XYZ']);
+		$this->assertSame($a, $b);
+		$this->assertNotSame($a, $c);
+		$this->assertMatchesRegularExpression('/^[0-9a-f]{40}$/', $a);
+	}
+
+	public function test_cache_path_keyed_by_host_and_entity() : void {
+		$this->assertSame(
+			'/cache/config/config.example.org.museo_x.php',
+			config_compiler::cache_path('/cache/config', 'example.org', 'museo_x')
+		);
+	}
+
+	public function test_write_compiled_is_loadable_and_roundtrips() : void {
+		$dir = sys_get_temp_dir() . '/dedalo_cc_' . getmypid() . '_' . uniqid();
+		mkdir($dir, 0750, true);
+		$path = $dir . '/config.host.entity.php';
+		$flat = ['media.image.thumb_width' => 222, 'media.magick_config' => ['remove_layer_0' => false, 'is_opaque' => null], 'paths.core_url' => '/dedalo/core'];
+
+		config_compiler::write_compiled($path, $flat);
+
+		$this->assertFileExists($path);
+		$loaded = require $path;          // opcache-friendly PHP array literal
+		$this->assertSame($flat, $loaded);
+		// no leftover temp files in the dir
+		$this->assertSame([], glob($dir . '/*.tmp.*'));
+
+		array_map('unlink', glob($dir . '/*'));
+		rmdir($dir);
+	}
+
+	public function test_resolve_then_compile_end_to_end() : void {
+		$dir = sys_get_temp_dir() . '/dedalo_cc_' . getmypid() . '_' . uniqid();
+		mkdir($dir, 0750, true);
+		$flat = config_compiler::resolve($this->catalog(), [['media.image.thumb_width' => 333]]);
+		$path = config_compiler::cache_path($dir, 'h', 'e');
+		config_compiler::write_compiled($path, $flat);
+		$loaded = require $path;
+		$this->assertSame(333, $loaded['media.image.thumb_width']);
+		$this->assertSame('/dedalo/core/media_engine/img.php', $loaded['media.image.file_url']);
+
+		array_map('unlink', glob($dir . '/*'));
+		rmdir($dir);
+	}
 }
