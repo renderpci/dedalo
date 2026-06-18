@@ -31,7 +31,11 @@ final class boot_paths {
 			$host     = (string)($server['HTTP_HOST'] ?? '');
 		}
 
-		$protocol = (isset($server['HTTPS']) && $server['HTTPS'] === 'on') ? 'https://' : 'http://';
+		// Honor a reverse proxy's X-Forwarded-Proto in addition to the direct HTTPS flag.
+		$protocol = (
+			(isset($server['HTTPS']) && $server['HTTPS'] === 'on')
+			|| (isset($server['HTTP_X_FORWARDED_PROTO']) && strtolower((string) $server['HTTP_X_FORWARDED_PROTO']) === 'https')
+		) ? 'https://' : 'http://';
 
 		return [
 			'paths.root'      => $root,
