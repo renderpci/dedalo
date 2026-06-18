@@ -30,4 +30,14 @@ final class env_sync_Test extends TestCase {
 		$this->assertCount(1, $drift);
 		$this->assertNull($drift[0]['bun_val']);
 	}
+
+	public function test_compare_treats_empty_string_as_unset_on_php_side() : void {
+		// KEY= parses to '' on the PHP side, absent on the Bun side → not drift
+		$this->assertSame([], env_sync::compare(['DEDALO_MEDIA_PATH' => ''], []));
+	}
+
+	public function test_compare_treats_empty_string_as_unset_on_bun_side() : void {
+		// absent on PHP side, KEY= parses to '' on Bun side → not drift
+		$this->assertSame([], env_sync::compare([], ['DEDALO_MEDIA_PATH' => '']));
+	}
 }

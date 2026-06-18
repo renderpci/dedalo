@@ -9,7 +9,7 @@
 */
 if (php_sapi_name() !== 'cli') {
 	http_response_code(404);
-	exit;
+	exit(2);
 }
 
 require_once dirname(__DIR__) . '/core/base/boot/class.env_loader.php';
