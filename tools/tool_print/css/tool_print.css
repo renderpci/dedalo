@@ -212,7 +212,7 @@
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor {
   display: grid;
-  grid-template-columns: 220px minmax(20rem, 1fr) 250px;
+  grid-template-columns: 240px minmax(20rem, 1fr) 270px;
   grid-template-rows: auto 1fr;
   grid-template-areas: "toolbar toolbar toolbar" "palette canvas  inspector";
   width: 100%;
@@ -312,14 +312,68 @@
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel {
   grid-area: palette;
   border-right: 1px solid var(--border_default);
-  overflow: auto;
   padding: 0.5rem;
   color: var(--fg_default);
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .panel_title {
+  flex: 0 0 auto;
   font-size: 0.9rem;
   margin: 0 0 0.5rem;
   color: var(--fg_default);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.4rem;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border_default);
+  font-size: 0.75rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_back {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--fg_default);
+  background: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 3px;
+  padding: 0.1rem 0.4rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_back:hover {
+  border-color: var(--tool_print);
+  color: var(--tool_print);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_crumbs {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  color: var(--fg_muted);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_crumbs .crumb.clickable {
+  cursor: pointer;
+  color: var(--tool_print);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_crumbs .crumb.clickable:hover {
+  text-decoration: underline;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_crumbs .crumb_sep {
+  opacity: 0.5;
+  padding: 0 0.1rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .components_list_container {
   display: block;
@@ -337,12 +391,7 @@
   width: 100%;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .components_list_container .target_list_container {
-  display: block;
-  border-left: none;
-  border-top: 1px solid var(--border_default);
-  margin-top: 0.35rem;
-  padding-top: 0.35rem;
-  padding-left: 0.5rem;
+  display: none;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .components_list_container .section_bar_label {
   background: var(--bg_surface_alt);
@@ -357,10 +406,6 @@
   font-size: 0.78rem;
   margin-top: 0.35rem;
 }
-.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .components_list_container li.active {
-  background: var(--tool_print_lighten_40);
-  border-radius: 3px;
-}
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .component_label.element_draggable {
   cursor: grab;
   padding: 0.15rem 0.3rem;
@@ -372,6 +417,10 @@
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel {
   grid-area: inspector;
   border-left: 1px solid var(--border_default);
+  position: sticky;
+  top: 0;
+  align-self: start;
+  max-height: 100vh;
   overflow: auto;
   padding: 0.5rem;
   color: var(--fg_default);
@@ -799,6 +848,7 @@
   .wrapper_tool.tool_print > .content_data.print_layout_editor {
     display: block;
     min-height: 0;
+    overflow: visible !important;
   }
   .wrapper_tool.tool_print .pages_viewport {
     overflow: visible !important;

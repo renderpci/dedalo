@@ -119,7 +119,9 @@ const get_content_data_edit = async function(self) {
 		})
 		await render_toolbar(self, toolbar)
 
-	// palette (left, chrome)
+	// palette (left, chrome). Single-column drill-down: clicking a relation
+	// REPLACES the list with that related section's components and pushes a
+	// breadcrumb (with back), instead of the core side-by-side Miller columns.
 		const palette_panel = ui.create_dom_element({
 			element_type	: 'aside',
 			class_name		: 'palette_panel no_print',
@@ -131,19 +133,34 @@ const get_content_data_edit = async function(self) {
 			inner_html		: (get_label.components || 'Components'),
 			parent			: palette_panel
 		})
-		const components_list_container = ui.create_dom_element({
+		self.palette_breadcrumb = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'components_list_container',
+			class_name		: 'palette_breadcrumb hide',
 			parent			: palette_panel
 		})
-		render_components_list({
-			self					: self,
-			section_tipo			: self.target_section_tipo,
-			target_div				: components_list_container,
-			path					: [],
-			section_elements		: self.section_elements,
-			ar_components_exclude	: self.section_elements_components_exclude
+		self.palette_scroll = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'palette_scroll',
+			parent			: palette_panel
 		})
+		self.palette_stack = []
+		// intercept relation (has_subquery) clicks in CAPTURE so the core
+		// side-by-side handler never runs; drill down by replacing the list.
+		self.palette_scroll.addEventListener('click', (e) => {
+			const item = e.target.closest('.component_label.has_subquery')
+			if (!item || !self.palette_scroll.contains(item)) return
+			e.stopPropagation()
+			e.preventDefault()
+			const ddo = item.ddo
+			if (!ddo || !ddo.target_section_tipo) return
+			self.palette_stack.push({
+				section_tipo	: Array.isArray(ddo.target_section_tipo) ? ddo.target_section_tipo[0] : ddo.target_section_tipo,
+				path			: item.path,
+				label			: ddo.label || ddo.tipo
+			})
+			render_palette(self)
+		}, true)
+		render_palette(self)
 
 	// canvas (centre, PRINTABLE — not .no_print)
 		const pages_viewport = ui.create_dom_element({
@@ -172,6 +189,105 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* RENDER_PALETTE
+* Renders the current drill-down level into the palette scroll area, replacing
+* whatever was there. Level 0 = the target section; deeper levels = related
+* sections pushed onto self.palette_stack by clicking a relation component.
+* @param object self
+*/
+const render_palette = async function(self) {
+
+	const scroll = self.palette_scroll
+	if (!scroll) return
+
+	render_palette_breadcrumb(self)
+
+	const stack	= self.palette_stack
+	const level	= stack.length
+		? stack[stack.length-1]
+		: { section_tipo: self.target_section_tipo, path: [], label: null }
+
+	const container = ui.create_dom_element({ element_type:'div', class_name:'components_list_container' })
+
+	// section elements for this level (root reuses the prebuilt set)
+	let section_elements
+	if (stack.length===0) {
+		section_elements = self.section_elements
+	} else {
+		try {
+			section_elements = await self.get_section_elements_context({
+				section_tipo			: level.section_tipo,
+				ar_components_exclude	: self.section_elements_components_exclude
+			})
+		} catch (e) {
+			console.error('render_palette: get_section_elements_context failed', e)
+			section_elements = []
+		}
+	}
+
+	render_components_list({
+		self					: self,
+		section_tipo			: level.section_tipo,
+		target_div				: container,
+		path					: level.path,
+		section_elements		: section_elements,
+		ar_components_exclude	: self.section_elements_components_exclude
+	})
+
+	// swap in only after the (async) build so the panel never flashes empty mid-load
+	scroll.replaceChildren(container)
+}//end render_palette
+
+
+
+/**
+* RENDER_PALETTE_BREADCRUMB
+* Back button + clickable crumb trail for the relation drill-down. Hidden at the
+* root level. Clicking a crumb truncates the stack to that depth.
+* @param object self
+*/
+const render_palette_breadcrumb = function(self) {
+
+	const bc = self.palette_breadcrumb
+	if (!bc) return
+	bc.replaceChildren()
+
+	const stack = self.palette_stack
+	if (!stack.length) { bc.classList.add('hide'); return }
+	bc.classList.remove('hide')
+
+	// back one level
+	const back = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'palette_back',
+		inner_html		: '‹ ' + (get_label.back || 'Back'),
+		parent			: bc
+	})
+	back.addEventListener('click', () => { self.palette_stack.pop(); render_palette(self) })
+
+	// crumb trail (root + each pushed level)
+	const trail = ui.create_dom_element({ element_type:'span', class_name:'palette_crumbs', parent:bc })
+	const root_label = (Array.isArray(self.section_elements)
+		? (self.section_elements.find(e => e && e.model==='section')?.label)
+		: null) || (get_label.components || 'Components')
+
+	const make_crumb = (label, depth) => {
+		const c = ui.create_dom_element({ element_type:'span', class_name:'crumb', inner_html:(label || '…'), parent:trail })
+		if (depth < stack.length) {
+			c.classList.add('clickable')
+			c.addEventListener('click', () => { self.palette_stack.length = depth; render_palette(self) })
+		}
+	}
+	make_crumb(root_label, 0)
+	for (let i = 0; i < stack.length; i++) {
+		ui.create_dom_element({ element_type:'span', class_name:'crumb_sep', inner_html:'›', parent:trail })
+		make_crumb(stack[i].label, i+1)
+	}
+}//end render_palette_breadcrumb
 
 
 
