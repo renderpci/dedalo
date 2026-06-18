@@ -1279,6 +1279,413 @@ export const add_default_column = function(self, box, key) {
 
 
 
+// ============================================================================
+// v2 DOCUMENT-FLOW EDITOR — model mutations, selection, drop, decorate
+// ============================================================================
+
+const flow_rows = (self) => (self.layout.flow && Array.isArray(self.layout.flow.rows)) ? self.layout.flow.rows : []
+
+export const find_row = function(self, row_id) { return flow_rows(self).find(r => r.id===row_id) || null }
+export const find_cell = function(self, row_id, cell_id) {
+	const row = find_row(self, row_id)
+	return (row && Array.isArray(row.cells)) ? (row.cells.find(c => c.id===cell_id) || null) : null
+}//end find_cell
+
+const equalize_widths = function(row) {
+	const n = row.cells.length || 1
+	row.cells.forEach(c => { c.width = 1 / n })
+}//end equalize_widths
+
+const rerender = function(self) {
+	self.mark_dirty?.()
+	render_canvas(self, self.canvas_container)
+}//end rerender
+
+
+
+/**
+* SELECT_CELL
+* Selects a cell (or a whole row when cell_id is null), highlights it and syncs
+* the inspector with { row, cell }.
+*/
+export const select_cell = function(self, row_id, cell_id) {
+	self.sel = row_id ? { row_id, cell_id: cell_id || null } : null
+	highlight_selection(self)
+	if (typeof self.sync_inspector==='function') {
+		const row	= row_id ? find_row(self, row_id) : null
+		const cell	= cell_id ? find_cell(self, row_id, cell_id) : null
+		self.sync_inspector(row ? { row, cell } : null)
+	}
+}//end select_cell
+
+const highlight_selection = function(self) {
+	if (!self.print_root) return
+	self.print_root.querySelectorAll('.flow_row.selected, .flow_cell.selected').forEach(n => n.classList.remove('selected'))
+	const sel = self.sel
+	if (!sel) return
+	if (sel.cell_id) {
+		const c = self.print_root.querySelector('.flow_cell[data-cell-id="' + sel.cell_id + '"]')
+		if (c) c.classList.add('selected')
+	} else if (sel.row_id) {
+		self.print_root.querySelectorAll('.flow_row[data-row-id="' + sel.row_id + '"]').forEach(r => r.classList.add('selected'))
+	}
+}//end highlight_selection
+
+
+
+// --- row / cell mutations ---------------------------------------------------
+
+export const add_row = function(self, block) {
+	const row = new_row(self, block ? [ new_cell(self, block, 1) ] : undefined)
+	flow_rows(self).push(row)
+	rerender(self)
+	requestAnimationFrame(() => select_cell(self, row.id, row.cells[0].id))
+	return row
+}//end add_row
+
+export const add_spacer = function(self) {
+	flow_rows(self).push(new_spacer_row(self, 8))
+	rerender(self)
+}//end add_spacer
+
+export const remove_row = function(self, row_id) {
+	const rows = flow_rows(self)
+	const i = rows.findIndex(r => r.id===row_id)
+	if (i<0) return
+	rows.splice(i, 1)
+	if (self.sel && self.sel.row_id===row_id) self.sel = null
+	rerender(self)
+	self.sync_inspector?.(null)
+}//end remove_row
+
+export const move_row = function(self, from_id, to_id) {
+	const rows = flow_rows(self)
+	const fi = rows.findIndex(r => r.id===from_id)
+	const ti = rows.findIndex(r => r.id===to_id)
+	if (fi<0 || ti<0 || fi===ti) return
+	const [m] = rows.splice(fi, 1)
+	rows.splice(ti, 0, m)
+	rerender(self)
+}//end move_row
+
+export const move_row_dir = function(self, row_id, dir) {
+	const rows = flow_rows(self)
+	const i = rows.findIndex(r => r.id===row_id)
+	const ni = i + dir
+	if (i<0 || ni<0 || ni>=rows.length) return
+	const [m] = rows.splice(i, 1)
+	rows.splice(ni, 0, m)
+	rerender(self)
+}//end move_row_dir
+
+export const insert_row_after = function(self, row_id, block) {
+	const rows = flow_rows(self)
+	const i = rows.findIndex(r => r.id===row_id)
+	const row = new_row(self, block ? [ new_cell(self, block, 1) ] : undefined)
+	rows.splice(i<0 ? rows.length : i+1, 0, row)
+	rerender(self)
+	requestAnimationFrame(() => select_cell(self, row.id, row.cells[0].id))
+	return row
+}//end insert_row_after
+
+export const insert_spacer_after = function(self, row_id) {
+	const rows = flow_rows(self)
+	const i = rows.findIndex(r => r.id===row_id)
+	rows.splice(i<0 ? rows.length : i+1, 0, new_spacer_row(self, 8))
+	rerender(self)
+}//end insert_spacer_after
+
+/**
+* DELETE_SELECTION
+* Removes the selected cell (or the whole row if no cell / last cell). Wired to
+* the Delete key.
+*/
+export const delete_selection = function(self) {
+	const sel = self.sel
+	if (!sel) return
+	if (sel.cell_id) { remove_cell(self, sel.row_id, sel.cell_id) }
+	else { remove_row(self, sel.row_id) }
+}//end delete_selection
+
+/**
+* RESIZE_CELLS
+* Adjusts two adjacent cells' widths by a fraction delta (from a divider drag),
+* keeping the row's total width constant. Re-renders.
+*/
+export const resize_cells = function(self, row_id, left_cell_id, delta_frac) {
+	const row = find_row(self, row_id)
+	if (!row || !Array.isArray(row.cells)) return
+	const i = row.cells.findIndex(c => c.id===left_cell_id)
+	if (i<0 || i>=row.cells.length-1) return
+	const a = row.cells[i], b = row.cells[i+1]
+	const min = 0.05
+	let aw = (a.width||0) + delta_frac
+	let bw = (b.width||0) - delta_frac
+	if (aw<min) { bw -= (min-aw); aw = min }
+	if (bw<min) { aw -= (min-bw); bw = min }
+	a.width = aw; b.width = bw
+	self.mark_dirty?.()
+	render_canvas(self, self.canvas_container)
+	requestAnimationFrame(() => { if (self.sel) select_cell(self, self.sel.row_id, self.sel.cell_id) })
+}//end resize_cells
+
+export const add_cell = function(self, row_id) {
+	const row = find_row(self, row_id)
+	if (!row || row.kind!=='row') return
+	row.cells.push(new_cell(self))
+	equalize_widths(row)
+	rerender(self)
+}//end add_cell
+
+export const remove_cell = function(self, row_id, cell_id) {
+	const row = find_row(self, row_id)
+	if (!row || !Array.isArray(row.cells)) return
+	if (row.cells.length<=1) { remove_row(self, row_id); return }
+	const i = row.cells.findIndex(c => c.id===cell_id)
+	if (i<0) return
+	row.cells.splice(i, 1)
+	equalize_widths(row)
+	rerender(self)
+}//end remove_cell
+
+export const set_cell_width = function(self, row_id, cell_id, frac) {
+	const cell = find_cell(self, row_id, cell_id)
+	if (!cell) return
+	cell.width = Math.max(0.05, Math.min(1, frac))
+	rerender(self)
+}//end set_cell_width
+
+export const set_cell_block = function(self, row_id, cell_id, block) {
+	const cell = find_cell(self, row_id, cell_id)
+	if (!cell) return
+	cell.block = block
+	rerender(self)
+	requestAnimationFrame(() => select_cell(self, row_id, cell_id))
+}//end set_cell_block
+
+export const set_row_space_after = function(self, row_id, mm) {
+	const row = find_row(self, row_id)
+	if (!row) return
+	row.space_after_mm = Math.max(0, mm || 0)
+	rerender(self)
+}//end set_row_space_after
+
+
+
+// --- decorate the rendered flow with editor chrome + listeners --------------
+
+/**
+* DECORATE_EDITOR
+* Adds selection / drag-reorder / drop chrome to the rendered flow rows + cells.
+* Run after layout_flow resolves (continuation segments are left read-only).
+* @param object self
+*/
+export const decorate_editor = function(self) {
+	if (!self.print_root) return
+	self.print_root.classList.add('editor')
+	wire_flow_keys(self)
+
+	const mk = (cls, html, title, parent, onclick) => {
+		const b = ui.create_dom_element({ element_type:'span', class_name:'rc_btn no_print ' + cls, inner_html:html, parent })
+		if (title) b.title = title
+		if (onclick) b.addEventListener('click', (e) => { e.stopPropagation(); onclick(e) })
+		return b
+	}
+
+	// rows (master segments only) ------------------------------------------------
+	self.print_root.querySelectorAll('.flow_row[data-row-id]:not(.flow_continued)').forEach(row_node => {
+		const row_id	= row_node.dataset.rowId
+		const row		= find_row(self, row_id)
+		const is_spacer	= row && row.kind==='spacer'
+
+		if (!row_node.querySelector('.row_chrome')) {
+			// left chrome: drag handle + up/down reorder
+			const left = ui.create_dom_element({ element_type:'div', class_name:'row_chrome row_chrome_left no_print', parent: row_node })
+			const handle = mk('rc_grip', '⋮⋮', 'Drag to reorder · click to select row', left, () => select_cell(self, row_id, null))
+			handle.draggable = true
+			handle.addEventListener('dragstart', (e) => { e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain','row:'+row_id); row_node.classList.add('dragging') })
+			handle.addEventListener('dragend', () => row_node.classList.remove('dragging'))
+			mk('rc_up', '▲', 'Move up', left, () => move_row_dir(self, row_id, -1))
+			mk('rc_down', '▼', 'Move down', left, () => move_row_dir(self, row_id, +1))
+
+			// right chrome: +cell (rows only) + remove row
+			const right = ui.create_dom_element({ element_type:'div', class_name:'row_chrome row_chrome_right no_print', parent: row_node })
+			if (!is_spacer) mk('rc_addcell', '＋', 'Add cell', right, () => add_cell(self, row_id))
+			mk('rc_remove', '✕', 'Remove row', right, () => remove_row(self, row_id))
+
+			// below-row insert bar: + row / + spacer
+			const below = ui.create_dom_element({ element_type:'div', class_name:'row_insert no_print', parent: row_node })
+			mk('ri_row', '＋ row', 'Insert row below', below, () => insert_row_after(self, row_id))
+			mk('ri_spacer', '＋ spacer', 'Insert spacer below', below, () => insert_spacer_after(self, row_id))
+		}
+
+		// spacer rows: bottom drag handle to set the height
+		if (is_spacer && !row_node.querySelector('.spacer_resize')) {
+			const sr = ui.create_dom_element({ element_type:'div', class_name:'spacer_resize no_print', parent: row_node })
+			sr.title = 'Drag to resize spacer height'
+			sr.addEventListener('mousedown', (e) => start_spacer_drag(self, e, row_node, row_id))
+		}
+
+		// row-level drop = reorder (only acts on a 'row:' payload)
+		row_node.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; row_node.classList.add('row_drop') })
+		row_node.addEventListener('dragleave', (e) => { if (e.target===row_node) row_node.classList.remove('row_drop') })
+		row_node.addEventListener('drop', (e) => {
+			row_node.classList.remove('row_drop')
+			const raw = e.dataTransfer.getData('text/plain') || ''
+			if (!raw.startsWith('row:')) return
+			e.preventDefault(); e.stopPropagation()
+			move_row(self, raw.slice(4), row_id)
+		})
+
+		// cell dividers (drag to resize) — between each adjacent cell pair
+		const cells = [...row_node.querySelectorAll(':scope > .flow_cell')]
+		for (let i = 0; i < cells.length - 1; i++) {
+			const left_id = cells[i].dataset.cellId
+			const divider = ui.create_dom_element({ element_type:'div', class_name:'cell_divider no_print', parent: cells[i] })
+			divider.title = 'Drag to resize cells'
+			divider.addEventListener('mousedown', (e) => start_divider_drag(self, e, row_node, cells[i], cells[i+1], row_id, left_id))
+		}
+	})
+
+	// cells: click to select, drop a palette component to fill, remove icon ------
+	self.print_root.querySelectorAll('.flow_cell[data-cell-id]').forEach(cell_node => {
+		if (cell_node.closest('.flow_continued')) return
+		const row_id	= cell_node.dataset.rowId
+		const cell_id	= cell_node.dataset.cellId
+		cell_node.addEventListener('click', (e) => { e.stopPropagation(); select_cell(self, row_id, cell_id) })
+		cell_node.addEventListener('dragenter', (e) => e.preventDefault())
+		cell_node.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); e.dataTransfer.dropEffect = 'move'; cell_node.classList.add('cell_drop') })
+		cell_node.addEventListener('dragleave', (e) => { if (e.target===cell_node) cell_node.classList.remove('cell_drop') })
+		cell_node.addEventListener('drop', (e) => {
+			cell_node.classList.remove('cell_drop')
+			const raw = e.dataTransfer.getData('text/plain') || ''
+			if (raw.startsWith('row:')) return
+			e.preventDefault(); e.stopPropagation()
+			const parsed = parse_drop_data(e)
+			if (!parsed) return
+			// drop INTO a table cell: a field of the table's related section is added
+			// as a COLUMN; anything else naturally replaces the cell (add_table_column
+			// returns false for a non-matching section → fall through to replace).
+			const cell	= find_cell(self, row_id, cell_id)
+			const b		= cell && cell.block
+			const is_table = !!(b && b.type==='component' && b.component_ref && is_relation_model(b.component_ref.model))
+			if (is_table && add_table_column(self, b, parsed.ddo)) return
+			set_cell_block(self, row_id, cell_id, component_block(parsed))
+		})
+		if (!cell_node.querySelector('.cell_remove')) {
+			mk('cell_remove', '✕', 'Remove cell', cell_node, () => remove_cell(self, row_id, cell_id))
+		}
+	})
+
+	// each generated page is a drop target → append a row at the bottom of the flow
+	self.print_root.querySelectorAll('.flow_column').forEach(col => {
+		col.addEventListener('dragover', (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; col.classList.add('col_drop') })
+		col.addEventListener('dragleave', (e) => { if (e.target===col) col.classList.remove('col_drop') })
+		col.addEventListener('drop', (e) => {
+			col.classList.remove('col_drop')
+			if (e.target.closest('.flow_cell')) return   // a cell handled it
+			const raw = e.dataTransfer.getData('text/plain') || ''
+			if (raw.startsWith('row:')) return
+			e.preventDefault()
+			const parsed = parse_drop_data(e)
+			if (parsed) add_row(self, component_block(parsed))
+		})
+	})
+
+	highlight_selection(self)
+}//end decorate_editor
+
+
+
+/**
+* START_DIVIDER_DRAG
+* Live cell-resize drag: previews widths during the drag, commits on mouseup.
+*/
+const start_divider_drag = function(self, e, row_node, a_node, b_node, row_id, left_cell_id) {
+	e.preventDefault(); e.stopPropagation()
+	const row_w		= row_node.getBoundingClientRect().width
+	const start_x	= e.clientX
+	const aw0		= a_node.getBoundingClientRect().width
+	const bw0		= b_node.getBoundingClientRect().width
+	const min		= 0.05 * row_w
+	document.body.classList.add('tp_col_resizing')
+
+	const on_move = (me) => {
+		let aw = aw0 + (me.clientX - start_x)
+		let bw = bw0 - (me.clientX - start_x)
+		if (aw<min) { bw -= (min-aw); aw = min }
+		if (bw<min) { aw -= (min-bw); bw = min }
+		a_node.style.flex = '0 0 ' + aw + 'px'; a_node.style.maxWidth = aw + 'px'
+		b_node.style.flex = '0 0 ' + bw + 'px'; b_node.style.maxWidth = bw + 'px'
+	}
+	const on_up = () => {
+		document.removeEventListener('mousemove', on_move)
+		document.removeEventListener('mouseup', on_up)
+		document.body.classList.remove('tp_col_resizing')
+		const delta_frac = (a_node.getBoundingClientRect().width - aw0) / row_w
+		resize_cells(self, row_id, left_cell_id, delta_frac)
+	}
+	document.addEventListener('mousemove', on_move)
+	document.addEventListener('mouseup', on_up)
+}//end start_divider_drag
+
+
+
+/**
+* START_SPACER_DRAG
+* Live spacer-height drag: previews on mousemove, commits row.height_mm on mouseup.
+*/
+const start_spacer_drag = function(self, e, row_node, row_id) {
+	e.preventDefault(); e.stopPropagation()
+	const ctx		= self._flow_ctx
+	const px_per_mm	= (ctx && typeof ctx.to_px==='function') ? ctx.to_px(1) : (96 / 25.4)
+	const start_y	= e.clientY
+	const start_h	= row_node.getBoundingClientRect().height
+	document.body.classList.add('tp_row_resizing')
+
+	const on_move = (me) => {
+		const h = Math.max(px_per_mm, start_h + (me.clientY - start_y))
+		row_node.style.height = h + 'px'
+	}
+	const on_up = () => {
+		document.removeEventListener('mousemove', on_move)
+		document.removeEventListener('mouseup', on_up)
+		document.body.classList.remove('tp_row_resizing')
+		const row = find_row(self, row_id)
+		if (row) {
+			const mm = row_node.getBoundingClientRect().height / px_per_mm
+			row.height_mm = Math.max(1, Math.round(mm * 10) / 10)
+			self.mark_dirty?.()
+			render_canvas(self, self.canvas_container)
+			requestAnimationFrame(() => select_cell(self, row_id, null))
+		}
+	}
+	document.addEventListener('mousemove', on_move)
+	document.addEventListener('mouseup', on_up)
+}//end start_spacer_drag
+
+
+
+/**
+* WIRE_FLOW_KEYS
+* Global keydown: Delete/Backspace removes the selected cell/row (unless typing
+* in a field). Wired once.
+*/
+const wire_flow_keys = function(self) {
+	if (self._flow_keys_wired) return
+	self._flow_keys_wired = true
+	document.addEventListener('keydown', (e) => {
+		if (e.key!=='Delete' && e.key!=='Backspace') return
+		const t = e.target
+		if (t && (t.tagName==='INPUT' || t.tagName==='TEXTAREA' || t.tagName==='SELECT' || t.isContentEditable)) return
+		if (!self.sel) return
+		e.preventDefault()
+		delete_selection(self)
+	})
+}//end wire_flow_keys
+
+
+
 /**
 * SERIALIZE_LAYOUT
 * Produces a clean, DOM-free copy of the layout blob for persistence.
