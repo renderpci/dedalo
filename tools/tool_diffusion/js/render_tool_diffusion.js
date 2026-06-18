@@ -65,6 +65,13 @@ const get_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
+	// engine advisory gate: when the engine is not ok, show the advisory and stop
+		const advisory = self.engine_advisory || { state:'ok' }
+		if (advisory.state !== 'ok') {
+			render_engine_advisory(self, advisory, fragment)
+			return fragment
+		}
+
 	// short vars
 		const diffusion_info = self.diffusion_info
 
@@ -1269,6 +1276,88 @@ const render_process_report = function(options) {
 
 	return true
 }//end render_process_report
+
+
+
+/**
+* RENDER_ENGINE_ADVISORY
+* Calm, role-tailored banner shown when the diffusion engine is unreachable or
+* unhealthy. Admins get cause + steps + actions (Retry / Restart engine / Show log);
+* regular users get a reassuring notice. Data comes from PHP get_engine_advisory.
+* @param instance self @param object advisory @param HTMLElement parent
+*/
+const render_engine_advisory = function(self, advisory, parent) {
+
+	const state_class = advisory.state === 'unhealthy' ? 'unhealthy' : 'unreachable'
+	const banner = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'diffusion_engine_advisory ' + state_class,
+		parent			: parent
+	})
+
+	ui.create_dom_element({
+		element_type	: 'h3',
+		class_name		: 'advisory_title',
+		text_content	: advisory.title || (get_label.diffusion_unavailable || 'Diffusion is temporarily unavailable'),
+		parent			: banner
+	})
+
+	if (advisory.cause) {
+		ui.create_dom_element({
+			element_type	: 'p',
+			class_name		: 'advisory_cause',
+			text_content	: advisory.cause,
+			parent			: banner
+		})
+	}
+
+	if (Array.isArray(advisory.steps) && advisory.steps.length) {
+		const list = ui.create_dom_element({ element_type:'ul', class_name:'advisory_steps', parent:banner })
+		advisory.steps.forEach(step => ui.create_dom_element({
+			element_type:'li', text_content:step, parent:list
+		}))
+	}
+
+	// actions
+	const actions = Array.isArray(advisory.actions) ? advisory.actions : ['retry']
+	const bar = ui.create_dom_element({ element_type:'div', class_name:'advisory_actions', parent:banner })
+
+	const reload = async (opts) => {
+		const fresh = await self.get_engine_advisory(opts || {})
+		self.engine_advisory = fresh
+		self.bun_status = {
+			result : fresh.state === 'ok',
+			msg    : fresh.state === 'ok' ? 'Ready' : (fresh.title || 'Unavailable'),
+			checks : fresh.checks || null
+		}
+		if (fresh.state === 'ok') {
+			// engine recovered: rebuild the full tool body
+			self.refresh()
+		} else {
+			// still down: re-render just this banner in place — no full rebuild,
+			// so the clicked button's auto_recover intent is the authoritative call
+			const frag = new DocumentFragment()
+			render_engine_advisory(self, fresh, frag)
+			banner.replaceWith(frag)
+		}
+	}
+
+	if (actions.includes('retry')) {
+		const btn = ui.create_dom_element({ element_type:'button', class_name:'button retry', text_content:get_label.retry || 'Retry', parent:bar })
+		btn.addEventListener('click', () => reload({ auto_recover:false }))
+	}
+	if (actions.includes('restart_engine')) {
+		const btn = ui.create_dom_element({ element_type:'button', class_name:'button warning restart_engine', text_content:get_label.restart_engine || 'Restart engine', parent:bar })
+		btn.addEventListener('click', () => reload({ auto_recover:true }))
+	}
+	if (actions.includes('show_log') && advisory.log_tail) {
+		const btn = ui.create_dom_element({ element_type:'button', class_name:'button show_log', text_content:get_label.show_log || 'Show log', parent:bar })
+		const pre = ui.create_dom_element({ element_type:'pre', class_name:'advisory_log hide', text_content:advisory.log_tail, parent:banner })
+		btn.addEventListener('click', () => pre.classList.toggle('hide'))
+	}
+
+	return banner
+}//end render_engine_advisory
 
 
 
