@@ -272,6 +272,10 @@ const split_long_row = function(self, ctx, row_node, used, usable_px, info) {
 	const units		= [...info.container.children]
 	if (units.length < 2) return used + ctx.measure(row_node)
 
+	// identify the master cell so continuation segments can re-select it on click
+	const master_cell	= row_node.querySelector('.flow_cell[data-cell-id]')
+	const master_ids	= { row: row_node.dataset.rowId || '', cell: master_cell ? master_cell.dataset.cellId : '' }
+
 	// height consumed above the units within the cell content
 	const c_top		= content.getBoundingClientRect().top
 	const head_h	= Math.max(0, info.container.getBoundingClientRect().top - c_top)
@@ -307,6 +311,9 @@ const split_long_row = function(self, ctx, row_node, used, usable_px, info) {
 		const cont_row = (info.kind==='table')
 			? build_continuation_table_node(info.table, seg, ctx)
 			: build_continuation_text_node(content, info.container, seg, ctx)
+		// link the continuation back to the master cell (editor selection)
+		cont_row.dataset.masterRowId	= master_ids.row
+		cont_row.dataset.masterCellId	= master_ids.cell
 		ctx.current_page.column.appendChild(cont_row)
 		used = cont_head + v
 	}

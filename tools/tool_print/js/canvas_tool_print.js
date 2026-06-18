@@ -197,6 +197,39 @@ const gen_id = function(self, prefix) {
 
 
 
+/**
+* RESEAT_IDS
+* Re-assigns globally-unique ids to every row and cell of the current layout and
+* seeds self.id_counter past them. A loaded template carries ids minted in another
+* session (e.g. row_8/cell_9); without reseating, the session counter starts low
+* and gen_id() collides with them, so two rows share an id and select_cell() picks
+* the wrong (first-matching) one. Run on load to de-duplicate and keep new ids unique.
+* @param object self
+* @return void
+*/
+export const reseat_ids = function(self) {
+	const rows = self && self.layout && self.layout.flow && self.layout.flow.rows
+	if (!Array.isArray(rows)) return
+	let n = 0
+	const sel = self.sel
+	for (const row of rows) {
+		const old_row = row.id
+		row.id = 'row_' + (++n)
+		if (Array.isArray(row.cells)) {
+			for (const cell of row.cells) {
+				const old_cell = cell.id
+				cell.id = 'cell_' + (++n)
+				// preserve the current selection across the re-id
+				if (sel && sel.row_id===old_row && sel.cell_id===old_cell) self.sel = { row_id: row.id, cell_id: cell.id }
+			}
+		}
+		if (sel && sel.row_id===old_row && !sel.cell_id) self.sel = { row_id: row.id, cell_id: null }
+	}
+	self.id_counter = n
+}//end reseat_ids
+
+
+
 // geometry helpers ----------------------------------------------------------
 
 	/**
@@ -1320,12 +1353,14 @@ export const select_cell = function(self, row_id, cell_id) {
 
 const highlight_selection = function(self) {
 	if (!self.print_root) return
-	self.print_root.querySelectorAll('.flow_row.selected, .flow_cell.selected').forEach(n => n.classList.remove('selected'))
+	self.print_root.querySelectorAll('.flow_row.selected, .flow_cell.selected, .flow_continued.selected').forEach(n => n.classList.remove('selected'))
 	const sel = self.sel
 	if (!sel) return
 	if (sel.cell_id) {
 		const c = self.print_root.querySelector('.flow_cell[data-cell-id="' + sel.cell_id + '"]')
 		if (c) c.classList.add('selected')
+		// also mark the split-block continuation segments of the selected cell
+		self.print_root.querySelectorAll('.flow_continued[data-master-cell-id="' + sel.cell_id + '"]').forEach(cont => cont.classList.add('selected'))
 	} else if (sel.row_id) {
 		self.print_root.querySelectorAll('.flow_row[data-row-id="' + sel.row_id + '"]').forEach(r => r.classList.add('selected'))
 	}
@@ -1589,6 +1624,20 @@ export const decorate_editor = function(self) {
 			e.preventDefault()
 			const parsed = parse_drop_data(e)
 			if (parsed) add_row(self, component_block(parsed))
+		})
+	})
+
+	// continuation segments (a split table/text on later pages) select their
+	// master cell on click, so a table whose bulk paginated away is still editable
+	self.print_root.querySelectorAll('.flow_continued[data-master-cell-id]').forEach(cont => {
+		cont.classList.add('continued_selectable')
+		cont.style.cursor = 'pointer'
+		cont.title = 'Part of a split block — click to edit its properties'
+		cont.addEventListener('click', (e) => {
+			e.stopPropagation()
+			select_cell(self, cont.dataset.masterRowId, cont.dataset.masterCellId)
+			const master = self.print_root.querySelector('.flow_row[data-row-id="' + cont.dataset.masterRowId + '"]:not(.flow_continued)')
+			master?.scrollIntoView({ block:'nearest', behavior:'smooth' })
 		})
 	})
 
