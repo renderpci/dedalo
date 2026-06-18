@@ -14,8 +14,16 @@ final class migration_committer_Test extends TestCase {
 		@mkdir($this->sandbox, 0755, true);
 	}
 	protected function tearDown() : void {
-		array_map('unlink', glob($this->sandbox . '/**/*') ?: []);
-		// best-effort cleanup; temp dir
+		if (is_dir($this->sandbox)) {
+			$it = new RecursiveIteratorIterator(
+				new RecursiveDirectoryIterator($this->sandbox, FilesystemIterator::SKIP_DOTS),
+				RecursiveIteratorIterator::CHILD_FIRST
+			);
+			foreach ($it as $f) {
+				$f->isDir() ? @rmdir($f->getPathname()) : @unlink($f->getPathname());
+			}
+			@rmdir($this->sandbox);
+		}
 	}
 
 	public function test_writes_new_files_atomically_and_chmods_env() : void {
