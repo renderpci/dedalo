@@ -61,12 +61,21 @@ final class boot_Test extends TestCase {
 		boot::run(entrypoint_profile::TEST, []); // FAILED state rejects re-run
 	}
 
-	public function test_reentrancy_during_in_progress_throws() : void {
-		$this->expectException(\RuntimeException::class);
-		boot::run(entrypoint_profile::TEST, [
-			new boot_phase('reenter', static function () : void {
-				boot::run(entrypoint_profile::TEST, []); // re-enter while IN_PROGRESS
-			}),
-		]);
+	public function test_reentrancy_during_in_progress_throws_and_lands_failed() : void {
+		try {
+			boot::run(entrypoint_profile::TEST, [
+				new boot_phase('reenter', static function () : void {
+					boot::run(entrypoint_profile::TEST, []); // illegal re-entry while IN_PROGRESS
+				}),
+			]);
+			$this->fail('expected RuntimeException on re-entrancy');
+		} catch (\RuntimeException $e) {
+			// re-entrancy is surfaced loudly; the detail is preserved in the message/chain
+			$chain = $e->getMessage() . ' ' . ($e->getPrevious()?->getMessage() ?? '');
+			$this->assertStringContainsString('re-entrancy', $chain);
+		}
+		// the offending phase is recorded; the machine lands in a terminal FAILED state
+		$this->assertSame(boot_state::FAILED, boot::state());
+		$this->assertSame('reenter', boot::failed_phase());
 	}
 }
