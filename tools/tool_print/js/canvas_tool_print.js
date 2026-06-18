@@ -1046,6 +1046,16 @@ const build_continuation_page = function(self, page, box, table, seg_rows) {
 	cont_page.dataset.wmm	= dims.width_mm
 	cont_page.dataset.hmm	= dims.height_mm
 
+	// editor marker: this is a transient, auto-generated page (NOT a real page) —
+	// purely the visual overflow of the flow table; it is not editable.
+	const badge = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'flow_continuation_badge no_print',
+		inner_html		: '↳ auto',
+		parent			: cont_page
+	})
+	badge.title = 'Auto-generated continuation of the flow table above — not a separate, editable page.'
+
 	const cbox = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'box flow_continuation_box',
@@ -1112,6 +1122,13 @@ const current_columns = function(box) {
 const apply_columns = function(self, box, cols) {
 	box.table_columns = cols
 	self.mark_dirty?.()
+	// v2 document-flow: a column change can alter pagination → full re-render,
+	// then reselect the edited cell so the inspector stays on it.
+	if (self.layout && self.layout.flow) {
+		render_canvas(self, self.canvas_container)
+		if (self.sel) requestAnimationFrame(() => select_cell(self, self.sel.row_id, self.sel.cell_id))
+		return
+	}
 	render_box_content(self, box)
 	if (self.selected_box_id===box.id && typeof self.sync_inspector==='function') {
 		self.sync_inspector(box)
