@@ -2365,6 +2365,19 @@ function get_tld_from_tipo( string $tipo ) : string|false {
 function tipo_in_array( string $tipo, array $array ) : bool {
 
 	foreach ($array as $current_value) {
+
+		// Defensive: wildcard/regex checks below require a string haystack.
+		// Skip non-string elements (e.g. nested arrays) to avoid
+		// "strpos(): Argument #1 must be of type string, array given".
+		if( !is_string($current_value) ){
+			debug_log(__METHOD__
+				." Ignored non-string value in array. Expected string element. " . PHP_EOL
+				.' current_value: ' . to_string($current_value)
+				, logger::WARNING
+			);
+			continue;
+		}
+
 		if( strpos($current_value, '*') !== false ){
 
 			$tipo_tld			= get_tld_from_tipo( $tipo );
