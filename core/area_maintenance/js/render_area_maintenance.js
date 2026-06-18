@@ -37,7 +37,7 @@ render_area_maintenance.prototype.edit = async function(options) {
 	const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = get_content_data(self)
+		const content_data = await get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -100,7 +100,7 @@ const get_category_defs = function() {
 * @param object self
 * @return HTMLElement content_data
 */
-const get_content_data = function(self) {
+const get_content_data = async function(self) {
 
 	const widgets = self.widgets || []
 
@@ -121,9 +121,23 @@ const get_content_data = function(self) {
 			class_name		: 'content_data maintenance_v2 ' + (self.type || '')
 		})
 
-	// filter state
+	// persistence key for the last selected group chip (IndexedDB 'status' table)
+		const persist_key = 'maintenance_active_category_' + (self.tipo || 'area_maintenance')
+
+	// filter state. active_category is restored from local persistence BEFORE building
+	// the DOM so the first paint is already filtered (no flash of all groups on load).
 		let active_category	= '' // '' === all
 		let search_term		= ''
+		try {
+			const saved = await data_manager.get_local_db_data(persist_key, 'status', true)
+			// restore only if the saved category still has widgets (stale-value guard);
+			// covers no-record (undefined), blocked IndexedDB (false) and default ('')
+			if (saved && saved.value!=='' && buckets[saved.value] && buckets[saved.value].length) {
+				active_category = saved.value
+			}
+		} catch (err) {
+			console.warn('[area_maintenance] could not restore filter selection', err)
+		}
 
 	// toolbar (sticky)
 		const toolbar = ui.create_dom_element({
@@ -161,7 +175,7 @@ const get_content_data = function(self) {
 		const make_chip = (key, label) => {
 			const chip = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'maintenance_chip' + (key==='' ? ' active' : ''),
+				class_name		: 'maintenance_chip' + (key===active_category ? ' active' : ''),
 				inner_html		: label,
 				dataset			: { category: key },
 				parent			: filters
@@ -171,6 +185,16 @@ const get_content_data = function(self) {
 				active_category = key
 				chips.forEach(c => c.classList.toggle('active', c===chip))
 				apply_filters()
+				// persist selection (fire-and-forget; default 'All' stores no record)
+				try {
+					if (key==='') {
+						data_manager.delete_local_db_data(persist_key, 'status')
+					} else {
+						data_manager.set_local_db_data({ id: persist_key, value: key }, 'status')
+					}
+				} catch (err) {
+					console.warn('[area_maintenance] could not persist filter selection', err)
+				}
 			})
 			chips.push(chip)
 		}
@@ -304,6 +328,12 @@ const get_content_data = function(self) {
 				apply_filters()
 			})
 		})
+
+	// initial filter pass when a group was restored, so the first paint shows only the
+	// saved category (active_category was already set before the DOM was built)
+		if (active_category!=='') {
+			apply_filters()
+		}
 
 
 	return content_data
