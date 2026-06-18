@@ -91,18 +91,28 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 
 	try {
 
-		// specific actions.. like fix main_element for convenience
-			;[self.diffusion_info, self.bun_status, self.active_processes] = await Promise.all([
+		// engine advisory gate (auto-recovers for admins; clean JSON even when engine down)
+			const advisory = await self.get_engine_advisory({})
+			self.engine_advisory = advisory
+			self.bun_status = {
+				result : advisory.state === 'ok',
+				msg    : advisory.state === 'ok' ? 'Ready' : (advisory.title || 'Unavailable'),
+				checks : advisory.checks || null
+			}
+
+		if (advisory.state === 'ok') {
+			// engine healthy: load the diffusion body as before
+			;[self.diffusion_info, self.active_processes] = await Promise.all([
 				self.get_diffusion_info(),
-				self.get_diffusion_status({}),
 				self.get_active_processes(),
 			])
-
-		 // fix value
-			self.resolve_levels = self.diffusion_info.resolve_levels ?? 1
-
-		// fix skip_publication_state_check value
+			self.resolve_levels               = self.diffusion_info.resolve_levels ?? 1
 			self.skip_publication_state_check = self.diffusion_info.skip_publication_state_check ?? 1
+		} else {
+			// engine down/unhealthy: render() will show the advisory banner and skip the body
+			self.diffusion_info  = self.diffusion_info  || {}
+			self.active_processes = self.active_processes || []
+		}
 
 	} catch (error) {
 		self.error = error
@@ -294,48 +304,45 @@ tool_diffusion.prototype.on_close_actions = async function(open_as) {
 
 
 /**
-* GET_DIFFUSION_STATUS
-* Get Bun engine health/stability (is Bun running, configured, PHP bridge reachable, etc.)
-* Resolved entirely by Bun - not PHP.
-* @param object options
-* @return promise
+* GET_ENGINE_ADVISORY
+* Server-side engine health + (admin) auto-recover + role-tailored advisory.
+* Dispatched by PHP dd_diffusion_api (NOT Bun) so it answers even when the engine
+* is down — returns clean JSON, never a 404. @param object options {auto_recover?}
+* @return promise<object> advisory
 */
-tool_diffusion.prototype.get_diffusion_status = function(options) {
+tool_diffusion.prototype.get_engine_advisory = function(options={}) {
 
 	const self = this
 
-	// source
-		const source = create_source(self, 'get_diffusion_status')
+	const source = create_source(self, 'get_engine_advisory')
 
-	// rqo
-		const rqo = {
-			dd_api	: 'dd_diffusion_api',
-			action	: 'get_diffusion_status',
-			source	: source,
-			options : {}
-		}
+	const rqo = {
+		dd_api	: 'dd_diffusion_api',
+		action	: 'get_engine_advisory',
+		source	: source,
+		options : { auto_recover : options.auto_recover !== false }
+	}
 
-	// call to Bun API (same URL as get_diffusion_info)
-		return new Promise(function(resolve){
-			data_manager.request({
-				url		: typeof DEDALO_DIFFUSION_API_URL !== 'undefined' ? DEDALO_DIFFUSION_API_URL : data_manager.url,
-				body : rqo
-			})
-			.then(function(response){
-				if(SHOW_DEBUG===true) {
-					console.log('-> get_diffusion_status API response:', response);
-				}
-
-				const result = response.data || response.result || {}
-
-				resolve(result)
-			})
-			.catch(function(err){
-				console.error('get_diffusion_status error:', err)
-				resolve({ result: false, msg: err.message || 'Bun unreachable' })
-			})
+	// PHP endpoint (data_manager.url) — dd_manager dispatches this action, not Bun
+	return new Promise(function(resolve){
+		data_manager.request({
+			url		: data_manager.url,
+			body	: rqo
 		})
-}//end get_diffusion_status
+		.then(function(response){
+			if(SHOW_DEBUG===true) {
+				console.log('-> get_engine_advisory response:', response);
+			}
+			resolve(response)
+		})
+		.catch(function(err){
+			console.error('get_engine_advisory error:', err)
+			resolve({ result:false, state:'unreachable', is_admin:false, recovered:false,
+				title:'Diffusion is temporarily unavailable', cause:'', steps:[], actions:['retry'],
+				checks:null, service_cmd_configured:false, log_tail:null })
+		})
+	})
+}//end get_engine_advisory
 
 
 
