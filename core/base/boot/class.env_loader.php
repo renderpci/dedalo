@@ -62,6 +62,11 @@ final class env_loader {
 
 		$q = $val[0];
 		if ($q === '"' || $q === "'") {
+			// Single-line values only. The LAST occurrence of the opening quote
+			// char is treated as the structural closing quote. An escaped closing
+			// quote mid-value (e.g. "a\"") is out of scope for this minimal .env
+			// subset — use single quotes for values that contain literal double
+			// quotes.
 			$last = strrpos($val, $q);
 			if ($last !== false && $last > 0) {
 				$inner = substr($val, 1, $last - 1);
