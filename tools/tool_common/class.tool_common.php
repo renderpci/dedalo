@@ -331,6 +331,13 @@ class tool_common {
 				// add label with lang fallback
 				foreach ($tool_object->labels as $current_label_value) {
 
+					// Defensive: skip malformed/stale entries that are not label
+					// objects (e.g. a lang-wrapped value from an outdated cache).
+					// The canonical shape is a flat list of {lang,name,value}.
+					if (!is_object($current_label_value) || !isset($current_label_value->name)) {
+						continue;
+					}
+
 					$label_name = $current_label_value->name;
 					if(!isset($labels[$label_name])) {
 
