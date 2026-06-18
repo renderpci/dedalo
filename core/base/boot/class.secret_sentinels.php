@@ -48,8 +48,9 @@ final class secret_sentinels {
 
 		$violations = [];
 
-		if (isset($values['DEDALO_INFO_KEY'], $values['DEDALO_ENTITY'])
-			&& $values['DEDALO_INFO_KEY'] === $values['DEDALO_ENTITY']) {
+		if (array_key_exists('DEDALO_INFO_KEY', $values)
+			&& array_key_exists('DEDALO_ENTITY', $values)
+			&& (string)$values['DEDALO_INFO_KEY'] === (string)$values['DEDALO_ENTITY']) {
 			$violations[] = 'DEDALO_INFO_KEY';
 		}
 
