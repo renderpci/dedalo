@@ -54,6 +54,7 @@ final class migration_runner {
 	public static function dry_run_report(array $plan) : string {
 		$lines = [];
 		$lines[] = '=== migration dry-run (schema_version ' . self::SCHEMA_VERSION . ') ===';
+		// The install identifier (non-secret; the backup keying handle). Shown intentionally — constant VALUES (secrets/config) are never printed.
 		$lines[] = 'entity: ' . ($plan['entity'] ?? '(unresolved)');
 		$lines[] = '';
 		foreach ($plan['summary'] as $destination => $names) {

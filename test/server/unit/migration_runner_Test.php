@@ -64,6 +64,7 @@ final class migration_runner_Test extends TestCase {
 
 		$this->assertStringContainsString('DEDALO_PASSWORD_CONN', $report); // name shown
 		$this->assertStringNotContainsString('sup3rsecret', $report);       // value hidden
+		$this->assertStringContainsString('entity: acme', $report); // the non-secret install identifier is shown by design
 		$this->assertStringContainsString('DEDALO_PATATA', $report);
 		$this->assertStringContainsString('schema_version', $report);
 	}
