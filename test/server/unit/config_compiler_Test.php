@@ -125,4 +125,28 @@ final class config_compiler_Test extends TestCase {
 		array_map('unlink', glob($dir . '/*'));
 		rmdir($dir);
 	}
+
+	public function test_cache_path_rejects_traversal_in_host() : void {
+		$this->expectException(\InvalidArgumentException::class);
+		config_compiler::cache_path('/cache/config', '../../evil', 'e');
+	}
+
+	public function test_cache_path_rejects_slash_in_entity() : void {
+		$this->expectException(\InvalidArgumentException::class);
+		config_compiler::cache_path('/cache/config', 'host', 'a/b');
+	}
+
+	public function test_cache_path_allows_host_with_port() : void {
+		$this->assertSame(
+			'/c/config.localhost:8080.museo_x.php',
+			config_compiler::cache_path('/c', 'localhost:8080', 'museo_x')
+		);
+	}
+
+	public function test_signature_is_order_independent() : void {
+		$this->assertSame(
+			config_compiler::signature(['a' => 1, 'b' => 2]),
+			config_compiler::signature(['b' => 2, 'a' => 1])
+		);
+	}
 }

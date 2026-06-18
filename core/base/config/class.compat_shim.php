@@ -35,6 +35,10 @@ final class compat_shim {
 			if ($key->const === null) {
 				continue; // new-world-only key, no legacy constant
 			}
+			// Only REQUEST/USER are scope-excluded (accessor-only — never process
+			// constants). SECRET/STATE keys ARE emittable as constants, but are
+			// simply absent from the compiled $flat here; Phase 3 sources their
+			// live values (env/state) and emits them via this same path.
 			if ($key->scope === config_scope::REQUEST || $key->scope === config_scope::USER) {
 				continue; // accessor-only — never a process-global constant
 			}

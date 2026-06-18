@@ -65,4 +65,16 @@ final class config_Test extends TestCase {
 		$this->expectException(\RuntimeException::class);
 		config('nope.missing');
 	}
+
+	public function test_str_throws_on_missing_without_default() : void {
+		config::boot([]);
+		$this->expectException(\RuntimeException::class);
+		config::i()->str('nope.missing');
+	}
+
+	public function test_bool_throws_on_missing_without_default() : void {
+		config::boot([]);
+		$this->expectException(\RuntimeException::class);
+		config::i()->bool('nope.missing');
+	}
 }

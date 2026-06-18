@@ -70,6 +70,7 @@ final class config_compiler {
 	* @return string 40-char sha1
 	*/
 	public static function signature(array $parts) : string {
+		ksort($parts);
 		return sha1(json_encode($parts, JSON_THROW_ON_ERROR));
 	}//end signature
 
@@ -78,8 +79,17 @@ final class config_compiler {
 	* Artifact path keyed by host AND entity (one physical checkout may serve
 	* multiple entities; sharing a compiled file across entities would leak
 	* per-entity values).
+	* Callers MUST pass filesystem-safe host/entity (e.g. a normalized DEDALO_HOST/DEDALO_ENTITY);
+	* a raw request Host header must be validated/normalized first.
 	*/
 	public static function cache_path(string $base_dir, string $host, string $entity) : string {
+		foreach (['host' => $host, 'entity' => $entity] as $label => $part) {
+			if (preg_match('/^[A-Za-z0-9_.:-]+$/', $part) !== 1 || str_contains($part, '..')) {
+				throw new \InvalidArgumentException(
+					"config_compiler::cache_path: unsafe {$label} (path-traversal/charset): {$part}"
+				);
+			}
+		}
 		return rtrim($base_dir, '/') . '/config.' . $host . '.' . $entity . '.php';
 	}//end cache_path
 
