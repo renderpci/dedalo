@@ -50,6 +50,7 @@ Section-level tools surface on the section itself. The tool's own `is_available(
 | Tool | Purpose | Reference |
 | --- | --- | --- |
 | `tool_export` | Atoms-based data export of section records to a flat table (CSV/TSV/preview) via the export_tabulator NDJSON protocol, with value/grid_value/dedalo_raw formats and breakdown modes | [reference](tool_export.md) |
+| `tool_print` | Visual print-layout / report designer: arranges a section's components into a paginated document-flow grid (rows of cells) that reflows and splits long tables/text across pages; reusable per-section templates saved in dd25/dd625; browser print (server PDF planned) | [reference](tool_print.md) |
 | `tool_diffusion` | Inspects/resolves diffusion configurations and section→target mappings from the ontology; UI-only, available only on sections with a diffusion definition | [reference](tool_diffusion.md) |
 | `tool_pdf_extractor` | Extracts text from PDF files via an external `pdftotext` daemon (optional page numbering) for indexing and publication search | — |
 

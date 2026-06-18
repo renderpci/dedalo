@@ -41,6 +41,12 @@
 	// grid of related records); literals render in list mode (flat value).
 	export const is_relation_model = (model) => RELATION_MODELS.has(model)
 
+	// list mode TRUNCATES long text server-side (component_text_area ~220 chars);
+	// these literals must render in edit mode to get the full, untruncated value
+	// (flatten_print_node extracts the complete textarea/contenteditable text).
+	const FULL_VALUE_MODELS = new Set(['component_text_area'])
+	export const full_value_mode = (model) => FULL_VALUE_MODELS.has(model) ? 'edit' : 'list'
+
 
 
 // chrome stripped by the flat "print view": field labels, action buttons,
@@ -57,7 +63,11 @@
 		'.grid_head',
 		'.list_head',
 		'.column_head',
-		'.ui-sortable-handle'
+		'.ui-sortable-handle',
+		// edit-mode field label + lang note ("Título [lg-spa]") — the box shows its
+		// own print_label, so this would be a duplicate
+		'.wrapper_component > .label',
+		'.label > .note'
 	].join(',')
 
 
@@ -598,14 +608,17 @@ export const render_box_content = async function(self, box) {
 
 			} else {
 
-				// LITERAL → flat value (list mode), built fresh, cloned inert.
+				// LITERAL → flat value, built fresh, cloned inert. Text areas are
+				// TRUNCATED (~220 chars) server-side in list mode, so render them in
+				// edit mode (full untruncated value); flatten_print_node then pulls
+				// the complete textarea/contenteditable text. Other literals: list.
 				const component = await get_instance({
 					model			: ref.model,
 					tipo			: ref.tipo,
 					section_tipo	: ref.section_tipo,
 					section_id		: preview_id,
 					lang			: lang,
-					mode			: 'list',
+					mode			: full_value_mode(ref.model),
 					permissions		: 1,
 					view			: ref.view || 'default',
 					id_variant		: 'tool_print_' + box.id,

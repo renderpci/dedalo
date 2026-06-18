@@ -212,7 +212,7 @@
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor {
   display: grid;
-  grid-template-columns: 220px minmax(20rem, 1fr) 250px;
+  grid-template-columns: 240px minmax(20rem, 1fr) 270px;
   grid-template-rows: auto 1fr;
   grid-template-areas: "toolbar toolbar toolbar" "palette canvas  inspector";
   width: 100%;
@@ -221,15 +221,39 @@
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar {
   grid-area: toolbar;
+  position: sticky;
+  top: 0;
+  z-index: 20;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
   align-items: center;
   gap: 0.4rem 0.75rem;
   padding: 0.45rem 0.8rem;
-  background: var(--bg_header);
+  background: var(--bg_surface_alt);
   border-bottom: 1px solid var(--border_default);
   color: var(--fg_default);
   font-size: 0.8rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .template_name_input {
+  height: 1.9rem;
+  min-width: 9rem;
+  padding: 0 0.4rem;
+  font-size: 0.8rem;
+  background: var(--bg_input);
+  color: var(--fg_default);
+  border: 1px solid var(--border_default);
+  border-radius: 4px;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.flash_ok {
+  background: var(--color_green_success);
+  color: #fff;
+  border-color: var(--color_green_success);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .tool_button.flash_error {
+  background: var(--color_danger);
+  color: #fff;
+  border-color: var(--color_danger);
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .print_toolbar .toolbar_group {
   display: flex;
@@ -312,14 +336,68 @@
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel {
   grid-area: palette;
   border-right: 1px solid var(--border_default);
-  overflow: auto;
   padding: 0.5rem;
   color: var(--fg_default);
+  position: sticky;
+  top: 2.9rem;
+  align-self: start;
+  max-height: calc(100vh - 2.9rem);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .panel_title {
+  flex: 0 0 auto;
   font-size: 0.9rem;
   margin: 0 0 0.5rem;
   color: var(--fg_default);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.4rem;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border_default);
+  font-size: 0.75rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_back {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--fg_default);
+  background: var(--bg_surface_alt);
+  border: 1px solid var(--border_default);
+  border-radius: 3px;
+  padding: 0.1rem 0.4rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_back:hover {
+  border-color: var(--tool_print);
+  color: var(--tool_print);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_crumbs {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.15rem;
+  color: var(--fg_muted);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_crumbs .crumb.clickable {
+  cursor: pointer;
+  color: var(--tool_print);
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_crumbs .crumb.clickable:hover {
+  text-decoration: underline;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_breadcrumb .palette_crumbs .crumb_sep {
+  opacity: 0.5;
+  padding: 0 0.1rem;
+}
+.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .palette_scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .components_list_container {
   display: block;
@@ -337,12 +415,7 @@
   width: 100%;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .components_list_container .target_list_container {
-  display: block;
-  border-left: none;
-  border-top: 1px solid var(--border_default);
-  margin-top: 0.35rem;
-  padding-top: 0.35rem;
-  padding-left: 0.5rem;
+  display: none;
 }
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .components_list_container .section_bar_label {
   background: var(--bg_surface_alt);
@@ -357,10 +430,6 @@
   font-size: 0.78rem;
   margin-top: 0.35rem;
 }
-.wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .components_list_container li.active {
-  background: var(--tool_print_lighten_40);
-  border-radius: 3px;
-}
 .wrapper_tool.tool_print > .content_data.print_layout_editor .palette_panel .component_label.element_draggable {
   cursor: grab;
   padding: 0.15rem 0.3rem;
@@ -372,6 +441,10 @@
 .wrapper_tool.tool_print > .content_data.print_layout_editor .inspector_panel {
   grid-area: inspector;
   border-left: 1px solid var(--border_default);
+  position: sticky;
+  top: 2.9rem;
+  align-self: start;
+  max-height: calc(100vh - 2.9rem);
   overflow: auto;
   padding: 0.5rem;
   color: var(--fg_default);
@@ -532,6 +605,9 @@
   flex-direction: column;
   align-items: center;
 }
+:root[data-theme="dark"] .wrapper_tool.tool_print > .content_data.print_layout_editor .pages_viewport {
+  background: #2a2d31;
+}
 .wrapper_tool.tool_print .print_root {
   display: flex;
   flex-direction: column;
@@ -546,6 +622,26 @@
 .wrapper_tool.tool_print .print_root .print_page.flow_continuation .flow_continuation_box:hover {
   border: none !important;
   box-shadow: none !important;
+}
+.wrapper_tool.tool_print .print_root .print_page.flow_continuation {
+  box-shadow: none !important;
+  border: 2px dashed var(--border_strong);
+}
+.wrapper_tool.tool_print .print_root .print_page.flow_continuation .flow_continuation_badge {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  z-index: 3;
+  padding: 1px 6px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--fg_inverse);
+  background: var(--border_strong);
+  border-radius: 3px;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 0.85;
 }
 .wrapper_tool.tool_print .print_root .print_page {
   position: relative;
@@ -567,6 +663,25 @@
 }
 .wrapper_tool.tool_print .print_root .print_page .print_page_header .remove_page_btn {
   cursor: pointer;
+}
+.wrapper_tool.tool_print .print_root .print_page .flow_column {
+  display: block;
+}
+.wrapper_tool.tool_print .print_root .print_page .flow_row {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+}
+.wrapper_tool.tool_print .print_root .print_page .flow_cell {
+  box-sizing: border-box;
+  min-width: 0;
+}
+.wrapper_tool.tool_print .print_root .print_page .flow_cell .cell_content {
+  width: 100%;
+  height: auto;
+}
+.wrapper_tool.tool_print .print_root .print_page .flow_spacer {
+  width: 100%;
 }
 .wrapper_tool.tool_print .print_root .print_page .box {
   position: absolute;
@@ -799,6 +914,7 @@
   .wrapper_tool.tool_print > .content_data.print_layout_editor {
     display: block;
     min-height: 0;
+    overflow: visible !important;
   }
   .wrapper_tool.tool_print .pages_viewport {
     overflow: visible !important;
@@ -820,6 +936,10 @@
     break-after: auto;
     page-break-after: auto;
   }
+  .wrapper_tool.tool_print .print_page.flow_continuation {
+    border: none !important;
+    outline: none !important;
+  }
   .wrapper_tool.tool_print .print_page .box {
     border: none !important;
     background: none !important;
@@ -828,4 +948,201 @@
   .wrapper_tool.tool_print .print_page .box .box_content {
     overflow: hidden;
   }
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row {
+  position: relative;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row .rc_btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.15rem;
+  font-size: 0.62rem;
+  line-height: 1;
+  cursor: pointer;
+  color: #5a5f66;
+  border-radius: 2px;
+  user-select: none;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row .rc_btn:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1a1a1a;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row .rc_grip {
+  cursor: grab;
+  letter-spacing: -2px;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row .rc_remove:hover {
+  color: #c0392b;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row .row_chrome {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  z-index: 4;
+  background: #f7f8f9;
+  border: 1px solid #cfd3d7;
+  border-radius: 3px;
+  padding: 1px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row .row_chrome_left {
+  left: -1.5rem;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row .row_chrome_right {
+  right: -1.5rem;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row .row_insert {
+  position: absolute;
+  left: 50%;
+  bottom: -0.7rem;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.3rem;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+  z-index: 5;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row .row_insert .rc_btn {
+  min-width: auto;
+  padding: 0 0.35rem;
+  font-size: 0.62rem;
+  background: #ffffff;
+  border: 1px solid #cfd3d7;
+  color: #5a5f66;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row .row_insert .rc_btn:hover {
+  border-color: var(--tool_print);
+  color: var(--tool_print);
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row:hover .row_chrome,
+.wrapper_tool.tool_print .print_root.editor .flow_row:hover .row_insert,
+.wrapper_tool.tool_print .print_root.editor .flow_row.selected .row_chrome {
+  opacity: 1;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row.selected {
+  outline: 1px solid var(--tool_print);
+  outline-offset: 1px;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row.dragging {
+  opacity: 0.4;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_row.row_drop {
+  outline: 2px dashed var(--tool_print);
+}
+.wrapper_tool.tool_print .print_root.editor .flow_cell {
+  cursor: pointer;
+  position: relative;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_cell:hover {
+  outline: 1px dashed rgba(42, 125, 111, 0.5);
+  outline-offset: -1px;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_cell.selected {
+  outline: 2px solid var(--tool_print);
+  outline-offset: -2px;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_cell.cell_drop {
+  outline: 2px dashed var(--tool_print);
+  background: rgba(42, 125, 111, 0.06);
+}
+.wrapper_tool.tool_print .print_root.editor .flow_cell .cell_remove {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  z-index: 3;
+  opacity: 0;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_cell:hover .cell_remove,
+.wrapper_tool.tool_print .print_root.editor .flow_cell.selected .cell_remove {
+  opacity: 0.9;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_cell .cell_divider {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 6;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_cell .cell_divider:hover {
+  background: rgba(42, 125, 111, 0.3);
+}
+.wrapper_tool.tool_print .print_root.editor .flow_cell_empty {
+  min-height: 1.6rem;
+  outline: 1px dashed #cfd3d7;
+  outline-offset: -1px;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_cell_empty::after {
+  content: 'empty cell — drop a component';
+  color: #9a9a9a;
+  font-size: 0.7rem;
+  opacity: 0.8;
+  padding: 2px 4px;
+  display: inline-block;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_column.col_drop {
+  outline: 2px dashed rgba(42, 125, 111, 0.6);
+  outline-offset: -3px;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_spacer {
+  outline: 1px dashed #cfd3d7;
+  outline-offset: -1px;
+  background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(136, 136, 136, 0.12) 5px, rgba(136, 136, 136, 0.12) 6px);
+}
+.wrapper_tool.tool_print .print_root.editor .flow_spacer::after {
+  content: 'spacer';
+  position: absolute;
+  left: 0.3rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.62rem;
+  color: #8a8a8a;
+  opacity: 0.9;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_spacer .spacer_resize {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3px;
+  height: 7px;
+  cursor: ns-resize;
+  z-index: 6;
+}
+.wrapper_tool.tool_print .print_root.editor .flow_spacer .spacer_resize:hover {
+  background: rgba(42, 125, 111, 0.3);
+}
+body.tp_row_resizing,
+body.tp_row_resizing * {
+  cursor: ns-resize !important;
+  user-select: none !important;
+}
+body.tp_col_resizing,
+body.tp_col_resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content * {
+  color: inherit !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content .wrapper_component {
+  display: block !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content .wrapper_component,
+.wrapper_tool.tool_print .print_root .cell_content .wrapper_component *,
+.wrapper_tool.tool_print .print_root .cell_content .value_container,
+.wrapper_tool.tool_print .print_root .cell_content .editor_container,
+.wrapper_tool.tool_print .print_root .cell_content [class*="ck-"] {
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
 }

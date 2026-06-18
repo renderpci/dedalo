@@ -71,9 +71,12 @@ class diffusion_server_control {
 			$response->errors	= [];
 
 		// server health (get_diffusion_status → {result,msg,data:{checks:{server,php_api,sql}}})
+		// quiet=true: a stopped/unreachable engine is an expected, displayed state
+		// here, so its failure is logged at DEBUG instead of spamming the error log
+		// on every widget poll (e.g. right after a deliberate Stop).
 			$status_response = diffusion_api_client::call((object)[
 				'action' => 'get_diffusion_status'
-			], 5);
+			], 5, true);
 			$reachable	= ($status_response->result ?? false)===true;
 			$server		= (object)[
 				'reachable'	=> $reachable,

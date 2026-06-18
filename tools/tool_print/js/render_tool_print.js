@@ -20,11 +20,7 @@
 	import {
 		new_layout,
 		render_canvas,
-		add_page,
-		add_text_box,
 		set_zoom,
-		find_box,
-		apply_box_geometry,
 		apply_box_style,
 		serialize_layout,
 		page_dims,
@@ -34,9 +30,18 @@
 		add_default_column,
 		reorder_table_column,
 		set_column_width,
-		set_column_header
+		set_column_header,
+		add_row,
+		add_spacer,
+		add_cell,
+		remove_cell,
+		remove_row,
+		select_cell,
+		find_row,
+		find_cell
 	} from './canvas_tool_print.js'
-	import {render_box_content, render_component_value, is_relation_model, column_key, load_all_entries} from './render_box_tool_print.js'
+	import {make_print_ctx, layout_flow} from './flow_engine.js'
+	import {render_box_content, render_component_value, is_relation_model, full_value_mode, column_key, load_all_entries} from './render_box_tool_print.js'
 	import {
 		query_layouts,
 		load_layout,
@@ -119,7 +124,9 @@ const get_content_data_edit = async function(self) {
 		})
 		await render_toolbar(self, toolbar)
 
-	// palette (left, chrome)
+	// palette (left, chrome). Single-column drill-down: clicking a relation
+	// REPLACES the list with that related section's components and pushes a
+	// breadcrumb (with back), instead of the core side-by-side Miller columns.
 		const palette_panel = ui.create_dom_element({
 			element_type	: 'aside',
 			class_name		: 'palette_panel no_print',
@@ -131,19 +138,34 @@ const get_content_data_edit = async function(self) {
 			inner_html		: (get_label.components || 'Components'),
 			parent			: palette_panel
 		})
-		const components_list_container = ui.create_dom_element({
+		self.palette_breadcrumb = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'components_list_container',
+			class_name		: 'palette_breadcrumb hide',
 			parent			: palette_panel
 		})
-		render_components_list({
-			self					: self,
-			section_tipo			: self.target_section_tipo,
-			target_div				: components_list_container,
-			path					: [],
-			section_elements		: self.section_elements,
-			ar_components_exclude	: self.section_elements_components_exclude
+		self.palette_scroll = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'palette_scroll',
+			parent			: palette_panel
 		})
+		self.palette_stack = []
+		// intercept relation (has_subquery) clicks in CAPTURE so the core
+		// side-by-side handler never runs; drill down by replacing the list.
+		self.palette_scroll.addEventListener('click', (e) => {
+			const item = e.target.closest('.component_label.has_subquery')
+			if (!item || !self.palette_scroll.contains(item)) return
+			e.stopPropagation()
+			e.preventDefault()
+			const ddo = item.ddo
+			if (!ddo || !ddo.target_section_tipo) return
+			self.palette_stack.push({
+				section_tipo	: Array.isArray(ddo.target_section_tipo) ? ddo.target_section_tipo[0] : ddo.target_section_tipo,
+				path			: item.path,
+				label			: ddo.label || ddo.tipo
+			})
+			render_palette(self)
+		}, true)
+		render_palette(self)
 
 	// canvas (centre, PRINTABLE — not .no_print)
 		const pages_viewport = ui.create_dom_element({
@@ -176,6 +198,105 @@ const get_content_data_edit = async function(self) {
 
 
 /**
+* RENDER_PALETTE
+* Renders the current drill-down level into the palette scroll area, replacing
+* whatever was there. Level 0 = the target section; deeper levels = related
+* sections pushed onto self.palette_stack by clicking a relation component.
+* @param object self
+*/
+const render_palette = async function(self) {
+
+	const scroll = self.palette_scroll
+	if (!scroll) return
+
+	render_palette_breadcrumb(self)
+
+	const stack	= self.palette_stack
+	const level	= stack.length
+		? stack[stack.length-1]
+		: { section_tipo: self.target_section_tipo, path: [], label: null }
+
+	const container = ui.create_dom_element({ element_type:'div', class_name:'components_list_container' })
+
+	// section elements for this level (root reuses the prebuilt set)
+	let section_elements
+	if (stack.length===0) {
+		section_elements = self.section_elements
+	} else {
+		try {
+			section_elements = await self.get_section_elements_context({
+				section_tipo			: level.section_tipo,
+				ar_components_exclude	: self.section_elements_components_exclude
+			})
+		} catch (e) {
+			console.error('render_palette: get_section_elements_context failed', e)
+			section_elements = []
+		}
+	}
+
+	render_components_list({
+		self					: self,
+		section_tipo			: level.section_tipo,
+		target_div				: container,
+		path					: level.path,
+		section_elements		: section_elements,
+		ar_components_exclude	: self.section_elements_components_exclude
+	})
+
+	// swap in only after the (async) build so the panel never flashes empty mid-load
+	scroll.replaceChildren(container)
+}//end render_palette
+
+
+
+/**
+* RENDER_PALETTE_BREADCRUMB
+* Back button + clickable crumb trail for the relation drill-down. Hidden at the
+* root level. Clicking a crumb truncates the stack to that depth.
+* @param object self
+*/
+const render_palette_breadcrumb = function(self) {
+
+	const bc = self.palette_breadcrumb
+	if (!bc) return
+	bc.replaceChildren()
+
+	const stack = self.palette_stack
+	if (!stack.length) { bc.classList.add('hide'); return }
+	bc.classList.remove('hide')
+
+	// back one level
+	const back = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'palette_back',
+		inner_html		: '‹ ' + (get_label.back || 'Back'),
+		parent			: bc
+	})
+	back.addEventListener('click', () => { self.palette_stack.pop(); render_palette(self) })
+
+	// crumb trail (root + each pushed level)
+	const trail = ui.create_dom_element({ element_type:'span', class_name:'palette_crumbs', parent:bc })
+	const root_label = (Array.isArray(self.section_elements)
+		? (self.section_elements.find(e => e && e.model==='section')?.label)
+		: null) || (get_label.components || 'Components')
+
+	const make_crumb = (label, depth) => {
+		const c = ui.create_dom_element({ element_type:'span', class_name:'crumb', inner_html:(label || '…'), parent:trail })
+		if (depth < stack.length) {
+			c.classList.add('clickable')
+			c.addEventListener('click', () => { self.palette_stack.length = depth; render_palette(self) })
+		}
+	}
+	make_crumb(root_label, 0)
+	for (let i = 0; i < stack.length; i++) {
+		ui.create_dom_element({ element_type:'span', class_name:'crumb_sep', inner_html:'›', parent:trail })
+		make_crumb(stack[i].label, i+1)
+	}
+}//end render_palette_breadcrumb
+
+
+
+/**
 * RENDER_TOOLBAR
 * Template picker + New/Save/Save as/Delete + page/zoom/snap/fill/print controls.
 * @param object self
@@ -202,6 +323,20 @@ const render_toolbar = async function(self, container) {
 			const id = picker.value
 			if (id) load_template(self, id)
 		})
+		// inline template-name field (replaces the native prompt on save)
+		const name_input = ui.create_dom_element({
+			element_type	: 'input',
+			class_name		: 'template_name_input',
+			parent			: picker_wrap
+		})
+		name_input.type = 'text'
+		name_input.placeholder = L('template_name','Template name')
+		name_input.value = self.layout.name && self.layout.name!=='Untitled' ? self.layout.name : ''
+		name_input.addEventListener('change', () => {
+			self.layout.name = name_input.value.trim() || 'Untitled'
+			self.mark_dirty?.()
+		})
+		self.name_input = name_input
 
 	// actions group
 		const actions = ui.create_dom_element({
@@ -220,8 +355,9 @@ const render_toolbar = async function(self, container) {
 			class_name		: 'toolbar_group view_group',
 			parent			: container
 		})
-		make_button(view_group, L('add_page','Add page'), 'btn_add_page', () => add_page(self))
-		make_button(view_group, L('add_text','Add text'), 'btn_add_text', () => add_text_box(self))
+		make_button(view_group, L('add_row','Add row'), 'btn_add_row', () => add_row(self))
+		make_button(view_group, L('add_text','Add text'), 'btn_add_text', () => add_row(self, { type:'static_text', static:{ text:'Text…' }, style:{} }))
+		make_button(view_group, L('add_spacer','Add spacer'), 'btn_add_spacer', () => add_spacer(self))
 
 		// snap toggle
 		const snap_label = ui.create_dom_element({
@@ -347,11 +483,22 @@ const render_inspector = function(self, container) {
 			self.inspector_inputs[key] = input
 			return input
 		}
-		num('x', 'X (mm)')
-		num('y', 'Y (mm)')
-		num('w', 'W (mm)')
-		num('h', 'H (mm)')
-		num('z', 'Z')
+		// cell width (% of the row) + row gap below
+		num('cell_width', 'Cell width (%)')
+		num('space_after', 'Row gap (mm)')
+
+		// row / cell structure actions
+		const row_actions = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'inspector_row row_actions',
+			parent			: box_fields
+		})
+		ui.create_dom_element({ element_type:'button', class_name:'tool_button', inner_html:'+ cell', parent: row_actions })
+			.addEventListener('click', () => { if (self.sel) add_cell(self, self.sel.row_id) })
+		ui.create_dom_element({ element_type:'button', class_name:'tool_button', inner_html:'− cell', parent: row_actions })
+			.addEventListener('click', () => { if (self.sel && self.sel.cell_id) remove_cell(self, self.sel.row_id, self.sel.cell_id) })
+		ui.create_dom_element({ element_type:'button', class_name:'tool_button btn_delete', inner_html:'Remove row', parent: row_actions })
+			.addEventListener('click', () => { if (self.sel) remove_row(self, self.sel.row_id) })
 
 		// font size
 		const fs_row = ui.create_dom_element({
@@ -425,30 +572,6 @@ const render_inspector = function(self, container) {
 		bc_input.type = 'color'
 		bc_input.addEventListener('change', () => on_inspector_change(self))
 		self.inspector_inputs.border_color = bc_input
-
-		// overflow
-		const ov_row = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'inspector_row',
-			inner_html		: '<span>Overflow</span>',
-			parent			: box_fields
-		})
-		const ov_sel = ui.create_dom_element({ element_type:'select', parent:ov_row })
-		;['clip','grow','flow'].forEach(v => ui.create_dom_element({ element_type:'option', value:v, inner_html:v, parent:ov_sel }))
-		ov_sel.addEventListener('change', () => on_inspector_change(self))
-		self.inspector_inputs.overflow = ov_sel
-
-		// repeat header on continuation pages (flow tables)
-		const rh_row = ui.create_dom_element({
-			element_type	: 'label',
-			class_name		: 'inspector_row inspector_check_row repeat_header_row hide',
-			inner_html		: '<span>Repeat header</span>',
-			parent			: box_fields
-		})
-		const rh_check = ui.create_dom_element({ element_type:'input', parent:rh_row })
-		rh_check.type = 'checkbox'
-		rh_check.addEventListener('change', () => on_inspector_change(self))
-		self.inspector_inputs.repeat_header = rh_check
 
 		// show label (component boxes only)
 		const lbl_row = ui.create_dom_element({
@@ -544,13 +667,16 @@ const render_inspector = function(self, container) {
 * @param object self
 * @param object|null box
 */
-const sync_inspector = function(self, box) {
+const sync_inspector = function(self, sel) {
 
 	const fields = self.inspector_box_fields
 	const hint	= self.inspector_hint
 	if (!fields) return
 
-	if (!box) {
+	// sel = { row, cell } | null
+	const row	= sel && sel.row
+	const cell	= sel && sel.cell
+	if (!row) {
 		fields.classList.add('hide')
 		if (hint) hint.classList.remove('hide')
 		return
@@ -559,40 +685,41 @@ const sync_inspector = function(self, box) {
 	fields.classList.remove('hide')
 	if (hint) hint.classList.add('hide')
 
-	const I = self.inspector_inputs
-	I.x.value = round1(box.rect.x)
-	I.y.value = round1(box.rect.y)
-	I.w.value = round1(box.rect.w)
-	I.h.value = round1(box.rect.h)
-	I.z.value = box.z || 1
-	I.font_size_pt.value = (box.style && box.style.font_size_pt) || (self.layout.style_defaults.font_size_pt || 11)
-	I.align.value = (box.style && box.style.align) || (self.layout.style_defaults.align || 'left')
-	I.overflow.value = (box.overflow && box.overflow.mode) || 'clip'
+	const I		= self.inspector_inputs
+	const defs	= self.layout.style_defaults || {}
+	const block	= (cell && cell.block) ? cell.block : null
+	const is_component	= !!(block && block.type==='component')
+	const is_table		= !!(is_component && block.component_ref && is_relation_model(block.component_ref.model))
 
-	// repeat-header control: only for flow tables
-	const is_flow = box.overflow && box.overflow.mode==='flow'
-	I.repeat_header.checked = box.repeat_header!==false
-	self.inspector_box_fields.querySelector('.repeat_header_row')?.classList.toggle('hide', !is_flow)
+	// cell width (%) + row gap (or spacer height for a spacer row)
+	const is_spacer = row.kind==='spacer'
+	I.cell_width.value		= cell ? Math.round((cell.width || 1) * 100) : ''
+	I.cell_width.disabled	= !cell
+	I.space_after.value		= round1(is_spacer ? (row.height_mm || 8) : (row.space_after_mm || 0))
+	I.space_after.closest('.inspector_row')?.querySelector('span')?.replaceChildren(document.createTextNode(is_spacer ? 'Spacer height (mm)' : 'Row gap (mm)'))
 
-	// show-label control: only meaningful for component boxes
-	const is_component = box.type==='component'
-	I.show_label.checked = box.show_label!==false
+	// component typography/border (target the selected cell's block)
+	const st = (block && block.style) ? block.style : {}
+	I.font_size_pt.value	= st.font_size_pt || defs.font_size_pt || 11
+	I.align.value			= st.align || defs.align || 'left'
+	I.font_family.value		= st.font_family || defs.font_family || 'sans'
+	I.text_color.value		= st.text_color || defs.text_color || '#111111'
+	I.border_show.checked	= (st.border_show!==undefined) ? st.border_show : (defs.border_show!==false)
+	I.border_color.value	= st.border_color || defs.border_color || '#cccccc'
+
+	// show label / show table header — only for component cells
+	I.show_label.checked = block ? block.show_label!==false : true
 	self.inspector_box_fields.querySelector('.show_label_row')?.classList.toggle('hide', !is_component)
-
-	// typography + border
-	const defs = self.layout.style_defaults || {}
-	I.font_family.value	= (box.style && box.style.font_family) || defs.font_family || 'sans'
-	I.text_color.value	= (box.style && box.style.text_color) || defs.text_color || '#111111'
-	I.border_show.checked	= (box.style && box.style.border_show!==undefined) ? box.style.border_show : (defs.border_show!==false)
-	I.border_color.value	= (box.style && box.style.border_color) || defs.border_color || '#cccccc'
-
-	// table header control: only for relation/portal boxes
-	const is_table = (box.type==='component') && box.component_ref && is_relation_model(box.component_ref.model)
-	I.show_table_header.checked = box.show_table_header!==false
+	I.show_table_header.checked = block ? block.show_table_header!==false : true
 	self.inspector_box_fields.querySelector('.table_header_row')?.classList.toggle('hide', !is_table)
 
-	// table column manager (portal/relation boxes)
-	render_table_columns_ui(self, box)
+	// table column manager (relation cells only); the block acts as the "box"
+	if (is_table) {
+		render_table_columns_ui(self, block)
+	} else if (self.inspector_columns) {
+		self.inspector_columns.classList.add('hide')
+		self.inspector_columns.replaceChildren()
+	}
 }//end sync_inspector
 
 
@@ -734,46 +861,42 @@ const render_table_columns_ui = function(self, box) {
 */
 const on_inspector_change = function(self) {
 
-	const box = find_box(self, self.selected_box_id)
-	if (!box) return
-
-	const prev_mode		= box.overflow ? box.overflow.mode : undefined
-	const prev_repeat	= box.repeat_header
-		const prev_header	= box.show_table_header
+	const sel = self.sel
+	if (!sel) return
+	const row	= find_row(self, sel.row_id)
+	if (!row) return
+	const cell	= sel.cell_id ? find_cell(self, sel.row_id, sel.cell_id) : null
+	const block	= (cell && cell.block) ? cell.block : null
 
 	const I = self.inspector_inputs
-	box.rect.x = to_num(I.x.value, box.rect.x)
-	box.rect.y = to_num(I.y.value, box.rect.y)
-	box.rect.w = Math.max(1, to_num(I.w.value, box.rect.w))
-	box.rect.h = Math.max(1, to_num(I.h.value, box.rect.h))
-	box.z = Math.round(to_num(I.z.value, box.z || 1))
 
-	box.style = box.style || {}
-	box.style.font_size_pt = to_num(I.font_size_pt.value, box.style.font_size_pt)
-	box.style.align = I.align.value
-		box.style.font_family = I.font_family.value
-		box.style.text_color = I.text_color.value
-		box.style.border_show = I.border_show.checked
-		box.style.border_color = I.border_color.value
-	box.overflow = box.overflow || {}
-	box.overflow.mode = I.overflow.value
-	box.repeat_header = I.repeat_header.checked
-	box.show_label = I.show_label.checked
-		box.show_table_header = I.show_table_header.checked
-
-	apply_box_geometry(self, box)
-	apply_box_style(self, box)
-	self.mark_dirty()
-
-	// overflow mode change → rebuild canvas (clears stale flow continuations and
-	// re-renders); repeat-header change on a flow box → re-render that box
-	if (box.overflow.mode !== prev_mode) {
-		render_canvas(self, self.canvas_container)
-	} else if (box.repeat_header !== prev_repeat && box.overflow.mode==='flow') {
-		render_box_content(self, box)
-		} else if (box.show_table_header !== prev_header) {
-			render_box_content(self, box)
+	// cell width (% → fraction); the mm field = spacer height for a spacer, else row gap
+	if (cell) {
+		const pct = to_num(I.cell_width.value, (cell.width || 1) * 100)
+		cell.width = Math.max(0.05, Math.min(1, pct / 100))
 	}
+	if (row.kind==='spacer') {
+		row.height_mm = Math.max(1, to_num(I.space_after.value, row.height_mm || 8))
+	} else {
+		row.space_after_mm = Math.max(0, to_num(I.space_after.value, row.space_after_mm || 0))
+	}
+
+	// component style/flags (target the selected cell's block)
+	if (block) {
+		block.style = block.style || {}
+		block.style.font_size_pt	= to_num(I.font_size_pt.value, block.style.font_size_pt)
+		block.style.align			= I.align.value
+		block.style.font_family		= I.font_family.value
+		block.style.text_color		= I.text_color.value
+		block.style.border_show		= I.border_show.checked
+		block.style.border_color	= I.border_color.value
+		block.show_label			= I.show_label.checked
+		block.show_table_header		= I.show_table_header.checked
+	}
+
+	self.mark_dirty?.()
+	render_canvas(self, self.canvas_container)
+	requestAnimationFrame(() => select_cell(self, sel.row_id, sel.cell_id))
 }//end on_inspector_change
 
 
@@ -789,8 +912,10 @@ const do_new = function(self) {
 	if (self.dirty && !confirm(get_label.sure || 'Discard unsaved changes?')) return
 	self.layout = new_layout(self)
 	self.current_template_id = null
+	self.sel = null
 	self.dirty = false
 	if (self.template_picker) self.template_picker.value = ''
+	if (self.name_input) self.name_input.value = ''
 	render_canvas(self, self.canvas_container)
 	sync_inspector(self, null)
 }//end do_new
@@ -803,17 +928,29 @@ const do_new = function(self) {
 * @param object self
 */
 const do_save = async function(self) {
-	if (!self.current_template_id) {
-		return do_save_as(self)
+
+	// name comes from the inline field (no blocking native prompt)
+	self.layout.name = (self.name_input && self.name_input.value.trim()) || self.layout.name || 'Untitled'
+
+	let ok = false
+	if (self.current_template_id) {
+		const res = await save_layout({ section_id: self.current_template_id, layout: serialize_layout(self) })
+		ok = !!(res && (res.result || res.errors===undefined || (res.errors && !res.errors.length)))
+	} else {
+		const new_id = await create_new_layout({ self, name: self.layout.name, layout: serialize_layout(self) })
+		if (new_id) {
+			self.current_template_id = new_id
+			await refresh_template_picker(self)
+			if (self.template_picker) self.template_picker.value = '' + new_id
+			ok = true
+		}
 	}
-	self.layout.name = self.layout.name || 'Untitled'
-	const res = await save_layout({
-		section_id	: self.current_template_id,
-		layout		: serialize_layout(self)
-	})
-	if (res) {
+
+	if (ok) {
 		self.dirty = false
-		ui.notify?.(get_label.saved || 'Saved')
+		flash_saved(self)
+	} else {
+		flash_saved(self, true)
 	}
 }//end do_save
 
@@ -821,25 +958,45 @@ const do_save = async function(self) {
 
 /**
 * DO_SAVE_AS
-* Creates a new template record (forks the current canvas into a new variant).
+* Forks the current layout into a NEW template record (new name, no prompt).
 * @param object self
 */
 const do_save_as = async function(self) {
-	const name = prompt(get_label.name || 'Template name:', self.layout.name || 'Untitled')
-	if (name===null) return
-	self.layout.name = name || 'Untitled'
-	const new_id = await create_new_layout({
-		self	: self,
-		name	: self.layout.name,
-		layout	: serialize_layout(self)
-	})
+	const base = (self.name_input && self.name_input.value.trim()) || self.layout.name || 'Untitled'
+	self.layout.name = base + ' copy'
+	if (self.name_input) self.name_input.value = self.layout.name
+	const new_id = await create_new_layout({ self, name: self.layout.name, layout: serialize_layout(self) })
 	if (new_id) {
 		self.current_template_id = new_id
 		self.dirty = false
 		await refresh_template_picker(self)
 		if (self.template_picker) self.template_picker.value = '' + new_id
+		flash_saved(self)
+	} else {
+		flash_saved(self, true)
 	}
 }//end do_save_as
+
+
+
+/**
+* FLASH_SAVED
+* Brief visible feedback on the Save button (ui.notify is unavailable).
+* @param object self
+* @param bool failed
+*/
+const flash_saved = function(self, failed) {
+	const btn = self.button_save
+	if (!btn) return
+	const prev = btn.textContent
+	btn.textContent = failed ? '✕ Error' : '✓ Saved'
+	btn.classList.toggle('flash_error', !!failed)
+	btn.classList.toggle('flash_ok', !failed)
+	setTimeout(() => {
+		btn.textContent = prev
+		btn.classList.remove('flash_ok', 'flash_error')
+	}, 1400)
+}//end flash_saved
 
 
 
@@ -879,15 +1036,17 @@ const load_template = async function(self, section_id) {
 	}
 
 	const blob = await load_layout({ section_id })
-	if (!blob || !Array.isArray(blob.pages)) {
+	if (!blob) {
 		console.warn('tool_print: empty/invalid layout blob for', section_id, blob)
 		return
 	}
 
-	// merge with defaults to tolerate older/partial blobs
+	// normalize to v2 (v1 blobs become an empty flow — not migrated)
 		self.layout = normalize_blob(self, blob)
 		self.current_template_id = section_id
+		self.sel = null
 		self.dirty = false
+		if (self.name_input) self.name_input.value = (self.layout.name && self.layout.name!=='Untitled') ? self.layout.name : ''
 
 	render_canvas(self, self.canvas_container)
 	sync_inspector(self, null)
@@ -910,14 +1069,17 @@ const load_template = async function(self, section_id) {
 */
 const normalize_blob = function(self, blob) {
 	const def = new_layout(self)
+	// v2 document-flow only. v1 blobs (absolute pages/boxes — test data) are not
+	// migrated: start from an empty flow so the editor never sees the old shape.
+	const is_v2 = blob && blob.schema_version===2 && blob.flow && Array.isArray(blob.flow.rows)
 	return {
 		...def,
 		...blob,
+		schema_version	: 2,
 		page_defaults	: { ...def.page_defaults, ...(blob.page_defaults || {}) },
 		grid			: { ...def.grid, ...(blob.grid || {}) },
 		style_defaults	: { ...def.style_defaults, ...(blob.style_defaults || {}) },
-		pages			: (blob.pages && blob.pages.length) ? blob.pages : def.pages,
-		flows			: blob.flows || []
+		flow			: is_v2 ? { rows: blob.flow.rows } : def.flow
 	}
 }//end normalize_blob
 
@@ -1046,13 +1208,9 @@ const do_print = async function(self) {
 	// @page size from the first page
 		set_page_style(self)
 
-	// attach the document (laid out in mm at 96dpi → measurable) and hide editor
+	// attach the document (already paginated by the flow engine, in mm) + hide editor
 		if (self.print_root) self.print_root.style.display = 'none'
 		self.canvas_container.appendChild(doc)
-
-	// paginate flow tables in physical units (exact page breaks)
-		const margins = (self.layout.page_defaults && self.layout.page_defaults.margins_mm) || { top:15, right:15, bottom:15, left:15 }
-		paginate_print_document_flow(self, doc, margins)
 
 	window.print()
 
@@ -1082,7 +1240,7 @@ const do_print = async function(self) {
 * @param object self
 */
 const set_page_style = function(self) {
-	const dims = page_dims(self, self.layout.pages[0])
+	const dims = page_dims(self, null)
 	let style_el = document.getElementById('tool_print_page_style')
 	if (!style_el) {
 		style_el = document.createElement('style')
@@ -1231,77 +1389,28 @@ const build_doc_continuation_page = function(table, seg_rows, o) {
 */
 export const render_print_document = async function(self, record_ids, out_instances) {
 
-	const blob = serialize_layout(self)
-	const defs = blob.style_defaults || {}
-
 	const root = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'print_root print_document'
 	})
 
+	// v2: run the SAME flow engine as the editor, but in physical mm (zoom-
+	// independent). One pass per record; cells render that record's data
+	// (render_box_content reads self.preview_section_id; the per-block table
+	// cache auto-invalidates because its key includes the record id). A page
+	// break between records is handled by the .print_page CSS.
+	const saved_preview	= self.preview_section_id
+	const saved_fill	= self.fill_mode
+	self.fill_mode = true
+
 	for (let r = 0; r < record_ids.length; r++) {
-		const rid = record_ids[r]
-
-		for (let p = 0; p < blob.pages.length; p++) {
-			const page = blob.pages[p]
-			const dims = page_dims(self, page)
-
-			const page_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'print_page',
-				parent			: root
-			})
-			page_node.style.position	= 'relative'
-			page_node.style.width		= dims.width_mm + 'mm'
-			page_node.style.height		= dims.height_mm + 'mm'
-			page_node.dataset.wmm		= dims.width_mm
-			page_node.dataset.hmm		= dims.height_mm
-
-			for (let b = 0; b < page.boxes.length; b++) {
-				const box	= page.boxes[b]
-				const mode	= (box.overflow && box.overflow.mode) || 'clip'
-				const auto_h= (mode==='grow' || mode==='flow')
-
-				const box_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'box',
-					parent			: page_node
-				})
-				box_node.style.position	= 'absolute'
-				box_node.style.left		= box.rect.x + 'mm'
-				box_node.style.top		= box.rect.y + 'mm'
-				box_node.style.width	= box.rect.w + 'mm'
-				box_node.style.zIndex	= box.z || 1
-				if (auto_h) {
-					box_node.style.height		= 'auto'
-					box_node.style.minHeight	= box.rect.h + 'mm'
-				} else {
-					box_node.style.height		= box.rect.h + 'mm'
-				}
-				if (mode==='flow') {
-					box_node.classList.add('flow_master')
-					box_node.dataset.xmm			= box.rect.x
-					box_node.dataset.ymm			= box.rect.y
-					box_node.dataset.wmm			= box.rect.w
-					box_node.dataset.font_pt		= (box.style && box.style.font_size_pt) || defs.font_size_pt || 11
-					box_node.dataset.repeat_header	= (box.repeat_header===false) ? '0' : '1'
-				}
-
-				const content = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'box_content',
-					parent			: box_node
-				})
-				const st = box.style || {}
-				content.style.fontSize	= ((st.font_size_pt) || (defs.font_size_pt || 11)) + 'pt'
-				content.style.textAlign	= st.align || defs.align || 'left'
-				content.style.overflow	= (mode==='clip') ? 'hidden' : 'visible'
-				content.style.height	= auto_h ? 'auto' : '100%'
-
-				await fill_print_box(self, content, box, rid, out_instances)
-			}
-		}
+		self.preview_section_id = record_ids[r]
+		const ctx = make_print_ctx(self, root)
+		await layout_flow(self, ctx)
 	}
+
+	self.preview_section_id	= saved_preview
+	self.fill_mode			= saved_fill
 
 
 	return root
@@ -1350,7 +1459,7 @@ const fill_print_box = async function(self, content, box, record_id, out_instanc
 			section_tipo	: ref.section_tipo,
 			section_id		: record_id,
 			lang			: lang,
-			mode			: is_relation_model(ref.model) ? 'edit' : 'list',
+			mode			: is_relation_model(ref.model) ? 'edit' : full_value_mode(ref.model),
 			permissions		: 1,
 			view			: ref.view || 'default',
 			id_variant		: 'tp_doc_' + box.id + '_' + record_id, // unique per box+record

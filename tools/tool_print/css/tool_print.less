@@ -26,26 +26,48 @@
 
 	> .content_data.print_layout_editor {
 		display: grid;
-		grid-template-columns: 220px minmax(20rem, 1fr) 250px;
+		grid-template-columns: 240px minmax(20rem, 1fr) 270px;
 		grid-template-rows: auto 1fr;
 		grid-template-areas:
 			"toolbar toolbar toolbar"
 			"palette canvas  inspector";
 		width: 100%;
+		// the page (body) scrolls; palette + inspector are sticky (see below) so
+		// they stay visible while the canvas pages scroll past
 		min-height: 90vh;
 		gap: 0;
 
 		.print_toolbar {
 			grid-area: toolbar;
+			// sticky: the options stay visible while the canvas scrolls
+			position: sticky;
+			top: 0;
+			z-index: 20;
 			display: flex;
-			flex-wrap: wrap;
+			flex-wrap: nowrap;
+			overflow-x: auto;
 			align-items: center;
 			gap: .4rem .75rem;
 			padding: .45rem .8rem;
-			background: var(--bg_header);
+			// --bg_header is a dark gray in BOTH themes; use a theme surface so the
+			// toolbar is light in light mode (dark text was unreadable on dark gray)
+			background: var(--bg_surface_alt);
 			border-bottom: 1px solid var(--border_default);
 			color: var(--fg_default);
 			font-size: .8rem;
+
+			.template_name_input {
+				height: 1.9rem;
+				min-width: 9rem;
+				padding: 0 .4rem;
+				font-size: .8rem;
+				background: var(--bg_input);
+				color: var(--fg_default);
+				border: 1px solid var(--border_default);
+				border-radius: 4px;
+			}
+			.tool_button.flash_ok { background: var(--color_green_success); color:#fff; border-color: var(--color_green_success); }
+			.tool_button.flash_error { background: var(--color_danger); color:#fff; border-color: var(--color_danger); }
 
 			.toolbar_group {
 				display: flex;
@@ -124,17 +146,63 @@
 		.palette_panel {
 			grid-area: palette;
 			border-right: 1px solid var(--border_default);
-			overflow: auto;
 			padding: .5rem;
 			color: var(--fg_default);
+			// sticky sidebar: stays in view while the canvas pages scroll past;
+			// the component list scrolls INSIDE it (palette_scroll)
+			position: sticky;
+			top: 2.9rem;
+			align-self: start;
+			max-height: calc(100vh - 2.9rem);
+			overflow: hidden;
+			// flex column: title + breadcrumb stay put, the list scrolls on its own
+			display: flex;
+			flex-direction: column;
 
-			.panel_title { font-size: .9rem; margin: 0 0 .5rem; color: var(--fg_default); }
+			.panel_title { flex: 0 0 auto; font-size: .9rem; margin: 0 0 .5rem; color: var(--fg_default); }
 
-			// component navigation: the core render_components_list builds side-by-side
-			// Miller columns (list_container | target_list_container) with width:fit-content,
-			// which overflows this narrow fixed-width palette and slides the relation
-			// drill-down behind the canvas. Re-flow it as a single vertical column so
-			// relation children stack BELOW their parent and scroll with the panel.
+			// breadcrumb / back for the relation drill-down (replace navigation)
+			.palette_breadcrumb {
+				flex: 0 0 auto;
+				display: flex;
+				align-items: center;
+				flex-wrap: wrap;
+				gap: .25rem .4rem;
+				margin-bottom: .4rem;
+				padding-bottom: .35rem;
+				border-bottom: 1px solid var(--border_default);
+				font-size: .75rem;
+
+				.palette_back {
+					cursor: pointer;
+					font-weight: 600;
+					color: var(--fg_default);
+					background: var(--bg_surface_alt);
+					border: 1px solid var(--border_default);
+					border-radius: 3px;
+					padding: .1rem .4rem;
+					&:hover { border-color: @tool_color; color: @tool_color; }
+				}
+				.palette_crumbs {
+					display: inline-flex;
+					align-items: center;
+					flex-wrap: wrap;
+					gap: .15rem;
+					color: var(--fg_muted);
+
+					.crumb.clickable { cursor: pointer; color: @tool_color; &:hover { text-decoration: underline; } }
+					.crumb_sep { opacity: .5; padding: 0 .1rem; }
+				}
+			}
+
+			// the scrolling component list (independent of canvas/inspector)
+			.palette_scroll {
+				flex: 1 1 auto;
+				min-height: 0;
+				overflow: auto;
+			}
+
+			// single-column list (no core side-by-side Miller columns)
 			.components_list_container {
 				display: block;
 				width: 100%;
@@ -143,20 +211,10 @@
 				font-size: inherit;
 
 				> ul { max-height: none; overflow: visible; }
-				ul {
-					display: block;
-					width: 100%;
-				}
-				// the relation drill-down: render beneath, indented, with a separator
-				.target_list_container {
-					display: block;
-					border-left: none;
-					border-top: 1px solid var(--border_default);
-					margin-top: .35rem;
-					padding-top: .35rem;
-					padding-left: .5rem;
-				}
-				// section bar acts as a breadcrumb/back for the opened relation
+				ul { display: block; width: 100%; }
+				// drill-down is handled by the replace navigation, so the core
+				// secondary column is never populated — keep it out of the flow
+				.target_list_container { display: none; }
 				.section_bar_label {
 					background: var(--bg_surface_alt);
 					color: var(--fg_muted);
@@ -169,10 +227,6 @@
 					color: var(--fg_muted);
 					font-size: .78rem;
 					margin-top: .35rem;
-				}
-				li.active {
-					background: var(--tool_print_lighten_40);
-					border-radius: 3px;
 				}
 			}
 
@@ -187,6 +241,12 @@
 		.inspector_panel {
 			grid-area: inspector;
 			border-left: 1px solid var(--border_default);
+			// sticky sidebar: stays in view (and scrolls internally) while the
+			// canvas pages scroll, so box/page controls are always reachable
+			position: sticky;
+			top: 2.9rem;
+			align-self: start;
+			max-height: calc(100vh - 2.9rem);
 			overflow: auto;
 			padding: .5rem;
 			color: var(--fg_default);
@@ -291,6 +351,12 @@
 			display: flex;
 			flex-direction: column;
 			align-items: center;
+
+			// dark mode: a darker "desk" behind the white pages, coherent with the
+			// dark toolbar/palette/inspector (the pages themselves stay white paper)
+			:root[data-theme="dark"] & {
+				background: #2a2d31;
+			}
 		}
 	}
 
@@ -307,6 +373,30 @@
 			border: none !important;
 			background: none !important;
 			&:hover { border: none !important; box-shadow: none !important; }
+		}
+
+		// continuation pages are auto-generated, NOT real editable pages — mark
+		// them visibly so the dashed border + badge distinguish them from real pages
+		.print_page.flow_continuation {
+			box-shadow: none !important;
+			border: 2px dashed var(--border_strong);
+
+			.flow_continuation_badge {
+				position: absolute;
+				top: 4px;
+				left: 4px;
+				z-index: 3;
+				padding: 1px 6px;
+				font-size: .65rem;
+				font-weight: 600;
+				line-height: 1.4;
+				color: var(--fg_inverse);
+				background: var(--border_strong);
+				border-radius: 3px;
+				pointer-events: none;
+				white-space: nowrap;
+				opacity: .85;
+			}
 		}
 
 		.print_page {
@@ -328,6 +418,13 @@
 				color: #555;
 				.remove_page_btn { cursor: pointer; }
 			}
+
+			// v2 document-flow: content column + rows of cells
+			.flow_column { display: block; }
+			.flow_row { display: flex; align-items: flex-start; width: 100%; }
+			.flow_cell { box-sizing: border-box; min-width: 0; }
+			.flow_cell .cell_content { width: 100%; height: auto; }
+			.flow_spacer { width: 100%; }
 
 			.box {
 				position: absolute;
@@ -523,6 +620,7 @@
 		> .content_data.print_layout_editor {
 			display: block;
 			min-height: 0;
+			overflow: visible !important;
 		}
 		.pages_viewport {
 			overflow: visible !important;
@@ -544,6 +642,11 @@
 			break-after: auto;
 			page-break-after: auto;
 		}
+		// continuation pages print as clean pages (editor marker removed)
+		.print_page.flow_continuation {
+			border: none !important;
+			outline: none !important;
+		}
 		.print_page .box {
 			border: none !important;
 			background: none !important;
@@ -551,4 +654,194 @@
 		}
 		.print_page .box .box_content { overflow: hidden; }
 	}
+}
+
+
+// v2 document-flow editor chrome (selection, drag-reorder, drop zones) ---------
+.wrapper_tool.tool_print {
+
+	.print_root.editor {
+
+		.flow_row {
+			position: relative;
+
+			// NOTE: this chrome sits on the always-WHITE page, so it uses FIXED
+			// page-appropriate colors (never theme tokens — those flip to light
+			// gray in dark mode and vanish on white paper).
+			// small chrome buttons (grip / ▲▼ / +cell / ✕ / insert)
+			.rc_btn {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				min-width: 1rem;
+				height: 1rem;
+				padding: 0 .15rem;
+				font-size: .62rem;
+				line-height: 1;
+				cursor: pointer;
+				color: #5a5f66;
+				border-radius: 2px;
+				user-select: none;
+				&:hover { background: rgba(0,0,0,.08); color: #1a1a1a; }
+			}
+			.rc_grip { cursor: grab; letter-spacing: -2px; }
+			.rc_remove:hover { color: #c0392b; }
+
+			.row_chrome {
+				position: absolute;
+				top: 0;
+				display: flex;
+				flex-direction: column;
+				gap: 1px;
+				opacity: 0;
+				transition: opacity .1s ease;
+				z-index: 4;
+				background: #f7f8f9;
+				border: 1px solid #cfd3d7;
+				border-radius: 3px;
+				padding: 1px;
+				box-shadow: 0 1px 3px rgba(0,0,0,.15);
+			}
+			.row_chrome_left  { left: -1.5rem; }
+			.row_chrome_right { right: -1.5rem; }
+
+			.row_insert {
+				position: absolute;
+				left: 50%;
+				bottom: -.7rem;
+				transform: translateX(-50%);
+				display: flex;
+				gap: .3rem;
+				opacity: 0;
+				transition: opacity .1s ease;
+				z-index: 5;
+				.rc_btn {
+					min-width: auto;
+					padding: 0 .35rem;
+					font-size: .62rem;
+					background: #ffffff;
+					border: 1px solid #cfd3d7;
+					color: #5a5f66;
+					box-shadow: 0 1px 3px rgba(0,0,0,.15);
+					&:hover { border-color: @tool_color; color: @tool_color; }
+				}
+			}
+			&:hover .row_chrome,
+			&:hover .row_insert,
+			&.selected .row_chrome { opacity: 1; }
+
+			&.selected { outline: 1px solid @tool_color; outline-offset: 1px; }
+			&.dragging { opacity: .4; }
+			&.row_drop { outline: 2px dashed @tool_color; }
+		}
+
+		.flow_cell {
+			cursor: pointer;
+			position: relative;
+			&:hover { outline: 1px dashed fade(#2a7d6f, 50%); outline-offset: -1px; }
+			&.selected { outline: 2px solid @tool_color; outline-offset: -2px; }
+			&.cell_drop { outline: 2px dashed @tool_color; background: fade(#2a7d6f, 6%); }
+
+			.cell_remove {
+				position: absolute;
+				top: 1px;
+				right: 1px;
+				z-index: 3;
+				opacity: 0;
+			}
+			&:hover .cell_remove,
+			&.selected .cell_remove { opacity: .9; }
+
+			// drag-to-resize divider on the cell's right edge
+			.cell_divider {
+				position: absolute;
+				top: 0;
+				right: -3px;
+				width: 6px;
+				height: 100%;
+				cursor: col-resize;
+				z-index: 6;
+				&:hover { background: fade(#2a7d6f, 30%); }
+			}
+		}
+		.flow_cell_empty {
+			min-height: 1.6rem;
+			outline: 1px dashed #cfd3d7;
+			outline-offset: -1px;
+			&::after {
+				content: 'empty cell — drop a component';
+				color: #9a9a9a;
+				font-size: .7rem;
+				opacity: .8;
+				padding: 2px 4px;
+				display: inline-block;
+			}
+		}
+
+		.flow_column.col_drop { outline: 2px dashed fade(#2a7d6f, 60%); outline-offset: -3px; }
+
+		// spacer rows: show a faint band + label so they're discoverable + removable
+		.flow_spacer {
+			outline: 1px dashed #cfd3d7;
+			outline-offset: -1px;
+			background: repeating-linear-gradient(45deg, transparent, transparent 5px, fade(#888, 12%) 5px, fade(#888, 12%) 6px);
+			&::after {
+				content: 'spacer';
+				position: absolute;
+				left: .3rem;
+				top: 50%;
+				transform: translateY(-50%);
+				font-size: .62rem;
+				color: #8a8a8a;
+				opacity: .9;
+			}
+			// bottom drag handle to set the spacer height
+			.spacer_resize {
+				position: absolute;
+				left: 0;
+				right: 0;
+				bottom: -3px;
+				height: 7px;
+				cursor: ns-resize;
+				z-index: 6;
+				&:hover { background: fade(#2a7d6f, 30%); }
+			}
+		}
+	}
+}
+
+body.tp_row_resizing,
+body.tp_row_resizing * { cursor: ns-resize !important; user-select: none !important; }
+
+body.tp_col_resizing,
+body.tp_col_resizing * { cursor: col-resize !important; user-select: none !important; }
+
+
+// Page content text ALWAYS follows the box's text color (set by apply_box_style /
+// the inspector Text color). Dédalo's core component CSS colors .wrapper_component
+// with --fg_default, which is light gray in dark mode and otherwise ignores the
+// box color — so force every value (table columns, text_area, any component) to
+// inherit. The page is white paper, so this is safe in both themes.
+// only DESCENDANTS — the .cell_content node itself carries the box text color
+// (inline, via apply_box_style); overriding it would erase the source.
+.wrapper_tool.tool_print .print_root .cell_content * { color: inherit !important; }
+
+
+// Component values on the page must grow to their natural height. The app's edit
+// views impose fixed heights / internal scroll (a text_area renders as a CKEditor
+// with a ~180px scrollable .value_container, and .wrapper_component is a grid),
+// which clips the row. On paper everything flows: force natural height + visible
+// overflow, and flatten the grid wrapper to block so it grows with its content.
+.wrapper_tool.tool_print .print_root .cell_content .wrapper_component {
+	display: block !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content .wrapper_component,
+.wrapper_tool.tool_print .print_root .cell_content .wrapper_component *,
+.wrapper_tool.tool_print .print_root .cell_content .value_container,
+.wrapper_tool.tool_print .print_root .cell_content .editor_container,
+.wrapper_tool.tool_print .print_root .cell_content [class*="ck-"] {
+	height: auto !important;
+	min-height: 0 !important;
+	max-height: none !important;
+	overflow: visible !important;
 }
