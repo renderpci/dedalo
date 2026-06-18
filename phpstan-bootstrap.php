@@ -22,3 +22,4 @@ define('DEDALO_TOOLS_URL', '/tools');
 define('DEDALO_LIB_PATH', __DIR__ . '/lib');
 
 require_once DEDALO_CORE_PATH . '/base/class.loader.php';
+require_once DEDALO_CORE_PATH . '/base/boot/class.secret_sentinels.php';
