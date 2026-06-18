@@ -104,6 +104,16 @@ final class catalog_media_av_Test extends TestCase {
 	}
 
 	// -----------------------------------------------------------------------
+	// streamer is an optional string (type='string', default=null)
+	// -----------------------------------------------------------------------
+
+	public function test_streamer_is_optional_string() : void {
+		$by = $this->load();
+		$this->assertSame('string', $by['media.av.streamer']->type, 'streamer is an optional string');
+		$this->assertNull($by['media.av.streamer']->default, 'streamer default is null (unset)');
+	}
+
+	// -----------------------------------------------------------------------
 	// List defaults (REPLACE merge) — verbatim from sample.config.php
 	// -----------------------------------------------------------------------
 
