@@ -696,33 +696,69 @@ const on_drop_component = function(self, page, page_node, event) {
 	event.preventDefault()
 	event.stopPropagation()
 
+	const parsed = parse_drop_data(event)
+	if (!parsed) return
+
+	// drop point in page-local mm
+	const page_rect = page_node.getBoundingClientRect()
+	const x_mm = snap_mm(self, px_to_mm(self, event.clientX - page_rect.left))
+	const y_mm = snap_mm(self, px_to_mm(self, event.clientY - page_rect.top))
+
+	const box = create_dropped_box(self, page, x_mm, y_mm, parsed)
+	page.boxes.push(box)
+	make_box_node(self, box, page)
+	select_box(self, box.id)
+	self.mark_dirty?.()
+}//end on_drop_component
+
+
+
+/**
+* PARSE_DROP_DATA
+* Reads + validates the palette drag payload from a drop event.
+* @param event event
+* @return object|null parsed payload ({drag_type:'add', ddo, path?}) or null
+*/
+const parse_drop_data = function(event) {
 	let parsed
 	try {
 		parsed = JSON.parse(event.dataTransfer.getData('text/plain'))
 	} catch (e) {
 		console.error('tool_print on_drop: invalid drag data', e)
-		return
+		return null
 	}
-	if (!parsed || parsed.drag_type!=='add' || !parsed.ddo) return
+	if (!parsed || parsed.drag_type!=='add' || !parsed.ddo) return null
+	return parsed
+}//end parse_drop_data
+
+
+
+/**
+* CREATE_DROPPED_BOX
+* Builds a component box object for a palette drop at (x_mm, y_mm) on a page,
+* with a default size clamped to the page. Shared by page drops and continuation
+* re-homed drops.
+* @param object self
+* @param object page - the (real) page the box will live on
+* @param number x_mm
+* @param number y_mm
+* @param object parsed - validated drop payload ({ddo, path})
+* @return object box
+*/
+const create_dropped_box = function(self, page, x_mm, y_mm, parsed) {
 
 	const ddo	= parsed.ddo
 	const path	= parsed.path || null
 	const dims	= page_dims(self, page)
 
-	// drop point in page-local mm
-	const page_rect = page_node.getBoundingClientRect()
-	let x_mm = snap_mm(self, px_to_mm(self, event.clientX - page_rect.left))
-	let y_mm = snap_mm(self, px_to_mm(self, event.clientY - page_rect.top))
-
-	// default size, clamped to page
 	const def_w = Math.min(80, dims.width_mm  - self.layout.page_defaults.margins_mm.left)
 	const def_h = 20
-	x_mm = Math.max(0, Math.min(x_mm, dims.width_mm  - def_w))
-	y_mm = Math.max(0, Math.min(y_mm, dims.height_mm - def_h))
+	const cx_mm = Math.max(0, Math.min(x_mm, dims.width_mm  - def_w))
+	const cy_mm = Math.max(0, Math.min(y_mm, dims.height_mm - def_h))
 
 	const max_z = page.boxes.reduce((m, b) => Math.max(m, b.z || 1), 0)
 
-	const box = {
+	return {
 		id				: gen_id(self, 'box'),
 		type			: 'component',
 		component_ref	: {
@@ -739,18 +775,13 @@ const on_drop_component = function(self, page, page_node, event) {
 			lang		: 'inherit',
 			multivalue	: { mode: 'list' }
 		},
-		rect			: { x: x_mm, y: y_mm, w: def_w, h: def_h },
+		rect			: { x: cx_mm, y: cy_mm, w: def_w, h: def_h },
 		z				: max_z + 1,
 		// relation/portal boxes render a table that can have many rows → grow to fit
 		overflow		: { mode: is_relation_model(ddo.model) ? 'grow' : 'clip' },
 		style			: {}
 	}
-
-	page.boxes.push(box)
-	make_box_node(self, box, page)
-	select_box(self, box.id)
-	self.mark_dirty?.()
-}//end on_drop_component
+}//end create_dropped_box
 
 
 
