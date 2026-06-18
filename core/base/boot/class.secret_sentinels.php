@@ -22,7 +22,7 @@ final class secret_sentinels {
 			'DEDALO_INFORMATION'			=> static fn(string $v) : bool => $v === 'Dédalo install version',
 			'DEDALO_USERNAME_CONN'			=> static fn(string $v) : bool => $v === 'myusername',
 			'DEDALO_PASSWORD_CONN'			=> static fn(string $v) : bool => $v === 'mypassword',
-			'DEDALO_SALT_STRING'			=> static fn(string $v) : bool => $v === 'dedalo_six' || strlen($v) < 16,
+			'DEDALO_SALT_STRING'			=> static fn(string $v) : bool => $v === 'dedalo_six',
 			'API_WEB_USER_CODE'				=> static fn(string $v) : bool => preg_match('/^X{10,}$/', $v) === 1,
 			'MYSQL_DEDALO_PASSWORD_CONN'	=> static fn(string $v) : bool => preg_match('/^X+\.\.$/', $v) === 1,
 		];
@@ -36,6 +36,29 @@ final class secret_sentinels {
 
 		return $violations;
 	}//end evaluate
+
+	/**
+	* EVALUATE_WARNINGS
+	* Warn-only checks: conditions an operator should know about but that must
+	* NEVER block boot, because remediation would break data. Currently: a salt
+	* shorter than 16 chars that is not the v6 sample default — rotating the
+	* salt would break ALL stored ciphertext, so it can never be a hard failure.
+	* @param array<string,string> $values
+	* @return string[] names of values that warrant a warning (not enforcement)
+	*/
+	public static function evaluate_warnings(array $values) : array {
+
+		$warnings = [];
+
+		if (array_key_exists('DEDALO_SALT_STRING', $values)) {
+			$salt = (string)$values['DEDALO_SALT_STRING'];
+			if ($salt !== '' && $salt !== 'dedalo_six' && strlen($salt) < 16) {
+				$warnings[] = 'DEDALO_SALT_STRING';
+			}
+		}
+
+		return $warnings;
+	}//end evaluate_warnings
 
 	/**
 	* EVALUATE_CONTEXT
@@ -79,11 +102,36 @@ final class secret_sentinels {
 			return false;
 		}
 		if ($explicit === true) {
-			return true;  // force even in dev
+			return true;  // operator opt-in: force 503 even in dev
 		}
-		if ($explicit === false) {
-			return false; // explicit escape hatch, even in prod (supervised migration)
-		}
-		return $is_production === true && $is_installing === false;
+		// PHASE-1 ROLLOUT: warn by default (v6 semantics). The production
+		// default-on 503 is intentionally DEFERRED to Phase 4, after the .env
+		// migration can detect and remediate the INFO_KEY/salt conditions
+		// first. $is_production / $is_installing are retained in the signature
+		// for the Phase-4 reinstatement of the production-default-on branch.
+		return false;
 	}//end should_enforce
+
+	/**
+	* NORMALIZE_BOOL
+	* Intent-preserving bool coercion for config flags. A native bool passes
+	* through; common stringy falses ('false','0','','no','off') map to false;
+	* only the truthy set ('1','true','yes','on', case-insensitive) is true.
+	* Prevents the `(bool)'false' === true` foot-gun on string-valued constants.
+	* @param mixed $value
+	* @return bool
+	*/
+	public static function normalize_bool(mixed $value) : bool {
+
+		if (is_bool($value)) {
+			return $value;
+		}
+		if (is_int($value) || is_float($value)) {
+			return $value != 0;
+		}
+		if (is_string($value)) {
+			return in_array(strtolower(trim($value)), ['1', 'true', 'yes', 'on'], true);
+		}
+		return (bool)$value;
+	}//end normalize_bool
 }

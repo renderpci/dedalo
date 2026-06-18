@@ -40,4 +40,11 @@ final class env_sync_Test extends TestCase {
 		// absent on PHP side, KEY= parses to '' on Bun side → not drift
 		$this->assertSame([], env_sync::compare([], ['DEDALO_MEDIA_PATH' => '']));
 	}
+
+	public function test_compare_flags_empty_vs_nonempty_as_drift() : void {
+		// empty on PHP side, configured on Bun side -> drift
+		$this->assertCount(1, env_sync::compare(['DEDALO_MEDIA_PATH' => ''], ['DEDALO_MEDIA_PATH' => '/srv/x']));
+		// configured on PHP side, empty on Bun side -> drift
+		$this->assertCount(1, env_sync::compare(['DEDALO_MEDIA_PATH' => '/srv/x'], ['DEDALO_MEDIA_PATH' => '']));
+	}
 }

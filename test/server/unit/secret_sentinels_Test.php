@@ -16,9 +16,11 @@ final class secret_sentinels_Test extends TestCase {
 		$this->assertSame(['DEDALO_PASSWORD_CONN', 'DEDALO_SALT_STRING'], $v);
 	}
 
-	public function test_evaluate_flags_short_salt() : void {
-		$v = secret_sentinels::evaluate(['DEDALO_SALT_STRING' => 'short']);
-		$this->assertSame(['DEDALO_SALT_STRING'], $v);
+	public function test_short_salt_is_warning_not_violation() : void {
+		// a short, non-default salt must NOT be an enforceable violation...
+		$this->assertSame([], secret_sentinels::evaluate(['DEDALO_SALT_STRING' => 'short']));
+		// ...but it IS surfaced as a warning
+		$this->assertSame(['DEDALO_SALT_STRING'], secret_sentinels::evaluate_warnings(['DEDALO_SALT_STRING' => 'short']));
 	}
 
 	public function test_evaluate_passes_strong_values() : void {
@@ -44,8 +46,9 @@ final class secret_sentinels_Test extends TestCase {
 		$this->assertSame([], $dev);
 	}
 
-	public function test_should_enforce_production_default_fails_closed() : void {
-		$this->assertTrue(secret_sentinels::should_enforce(['X'], true, false, null));
+	public function test_should_enforce_production_default_warns_in_phase1() : void {
+		// Phase 1: production default does NOT enforce (warn only). 503 requires explicit opt-in.
+		$this->assertFalse(secret_sentinels::should_enforce(['X'], true, false, null));
 	}
 
 	public function test_should_enforce_dev_only_warns() : void {
@@ -63,5 +66,33 @@ final class secret_sentinels_Test extends TestCase {
 
 	public function test_should_enforce_no_violations_never_enforces() : void {
 		$this->assertFalse(secret_sentinels::should_enforce([], true, false, true));
+	}
+
+	public function test_evaluate_warnings_ignores_default_and_long_salt() : void {
+		// dedalo_six is an enforceable violation, NOT a warning
+		$this->assertSame([], secret_sentinels::evaluate_warnings(['DEDALO_SALT_STRING' => 'dedalo_six']));
+		// a >=16 char salt is clean
+		$this->assertSame([], secret_sentinels::evaluate_warnings(['DEDALO_SALT_STRING' => 'a-16-char-salt!!']));
+	}
+
+	public function test_salt_length_boundary() : void {
+		$fifteen = str_repeat('a', 15);
+		$sixteen = str_repeat('a', 16);
+		$this->assertSame(['DEDALO_SALT_STRING'], secret_sentinels::evaluate_warnings(['DEDALO_SALT_STRING' => $fifteen]));
+		$this->assertSame([], secret_sentinels::evaluate_warnings(['DEDALO_SALT_STRING' => $sixteen]));
+	}
+
+	public function test_normalize_bool_coercion() : void {
+		$this->assertTrue(secret_sentinels::normalize_bool(true));
+		$this->assertTrue(secret_sentinels::normalize_bool('true'));
+		$this->assertTrue(secret_sentinels::normalize_bool('1'));
+		$this->assertTrue(secret_sentinels::normalize_bool('YES'));
+		$this->assertTrue(secret_sentinels::normalize_bool('on'));
+		$this->assertFalse(secret_sentinels::normalize_bool(false));
+		$this->assertFalse(secret_sentinels::normalize_bool('false'));   // the bug this fixes
+		$this->assertFalse(secret_sentinels::normalize_bool('0'));
+		$this->assertFalse(secret_sentinels::normalize_bool(''));
+		$this->assertFalse(secret_sentinels::normalize_bool('no'));
+		$this->assertFalse(secret_sentinels::normalize_bool('off'));
 	}
 }

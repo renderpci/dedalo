@@ -1213,13 +1213,18 @@ function dedalo_assert_secrets_initialised() : array {
 		secret_sentinels::evaluate_context($values, $is_production)
 	);
 
-	if (empty($violations)) {
+	$warnings = secret_sentinels::evaluate_warnings($values);
+
+	if (empty($violations) && empty($warnings)) {
 		return [];
 	}
 
-	$msg = 'SEC-094: configuration secrets still match sample defaults or are weak: '
-		. implode(', ', $violations)
-		. '. Set strong unique values in your .env / config before serving production.';
+	$flagged = array_values(array_unique(array_merge($violations, $warnings)));
+	$msg = 'SEC-094: configuration secrets need attention: '
+		. implode(', ', $flagged)
+		. '. Set strong unique values in your .env / config'
+		. (empty($warnings) ? '' : ' (note: a short DEDALO_SALT_STRING is reported but must be PRESERVED, not rotated)')
+		. '.';
 
 	@error_log($msg);
 	if (function_exists('debug_log') && class_exists('logger')) {
@@ -1227,7 +1232,7 @@ function dedalo_assert_secrets_initialised() : array {
 	}
 
 	$explicit = defined('DEDALO_ENFORCE_SECRET_SENTINELS')
-		? (bool)DEDALO_ENFORCE_SECRET_SENTINELS
+		? secret_sentinels::normalize_bool(DEDALO_ENFORCE_SECRET_SENTINELS)
 		: null;
 
 	if (secret_sentinels::should_enforce($violations, $is_production, $is_installing, $explicit) === true) {
@@ -1236,7 +1241,7 @@ function dedalo_assert_secrets_initialised() : array {
 		die('Service unavailable: insecure default secrets detected (SEC-094). See server log.');
 	}
 
-	return $violations;
+	return $flagged;
 }//end dedalo_assert_secrets_initialised
 
 
