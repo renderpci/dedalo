@@ -76,8 +76,8 @@ final class catalog_coverage_Test extends TestCase {
 	}
 
 	public function test_minimum_catalog_size() : void {
-		// full config-settings catalog (paths deferred to 3b) — sanity floor
-		$this->assertGreaterThanOrEqual(145, count($this->catalog()), 'catalog smaller than expected');
+		// full config-settings catalog including paths domain (catalog ~192) — sanity floor
+		$this->assertGreaterThanOrEqual(190, count($this->catalog()), 'catalog smaller than expected');
 	}
 
 	public function test_slice_continuity_preserved() : void {
