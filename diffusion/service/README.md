@@ -17,9 +17,12 @@ drive it through `service-ctl.sh`.
 4. Verify: `ls -l /tmp/diffusion.sock` (appears within ~1s).
 
 ## Linux (systemd, user scope)
+User scope is required so the web user (php-fpm) can start/stop the engine for
+the tool's auto-recover without root.
 1. Fill placeholders in `dedalo-diffusion.service`.
 2. `cp dedalo-diffusion.service ~/.config/systemd/user/`
 3. `systemctl --user daemon-reload && systemctl --user enable --now dedalo-diffusion`
+4. Boot-start without an interactive login (servers): `sudo loginctl enable-linger <web-user>`.
 
 ## Wire it to Dedalo
 In `config.php`:

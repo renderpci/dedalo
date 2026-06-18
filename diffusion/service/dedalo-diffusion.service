@@ -11,4 +11,7 @@ Restart=always
 RestartSec=2
 
 [Install]
-WantedBy=multi-user.target
+# user-scope unit (systemctl --user): default.target is the user manager's
+# boot target. The web user must control this without root, so it runs in the
+# user manager, not system scope (which would need root/polkit for start/stop).
+WantedBy=default.target
