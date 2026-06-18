@@ -22,7 +22,7 @@ final class boot_config_phases {
 	*/
 	public static function phases(array $catalog, array $layer_overrides, ?callable $definer = null) : array {
 
-		$flat = [];
+		$flat = []; // populated by config_build; compat_shim must run after it (boot::run enforces order)
 
 		$build = new boot_phase('config_build', function () use (&$flat, $catalog, $layer_overrides) : void {
 			$flat = config_compiler::resolve($catalog, $layer_overrides);

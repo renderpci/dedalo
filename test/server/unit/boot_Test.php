@@ -5,6 +5,7 @@ use PHPUnit\Framework\TestCase;
 require_once dirname(__DIR__, 3) . '/core/base/boot/class.entrypoint_profile.php';
 require_once dirname(__DIR__, 3) . '/core/base/boot/class.boot_state.php';
 require_once dirname(__DIR__, 3) . '/core/base/boot/class.boot_phase.php';
+require_once dirname(__DIR__, 3) . '/core/base/boot/class.boot_reentrancy_exception.php';
 require_once dirname(__DIR__, 3) . '/core/base/boot/class.boot.php';
 
 final class boot_Test extends TestCase {
@@ -61,21 +62,30 @@ final class boot_Test extends TestCase {
 		boot::run(entrypoint_profile::TEST, []); // FAILED state rejects re-run
 	}
 
-	public function test_reentrancy_during_in_progress_throws_and_lands_failed() : void {
+	public function test_reentrancy_during_in_progress_throws_typed_and_lands_failed() : void {
 		try {
 			boot::run(entrypoint_profile::TEST, [
 				new boot_phase('reenter', static function () : void {
 					boot::run(entrypoint_profile::TEST, []); // illegal re-entry while IN_PROGRESS
 				}),
 			]);
-			$this->fail('expected RuntimeException on re-entrancy');
-		} catch (\RuntimeException $e) {
-			// re-entrancy is surfaced loudly; the detail is preserved in the message/chain
-			$chain = $e->getMessage() . ' ' . ($e->getPrevious()?->getMessage() ?? '');
-			$this->assertStringContainsString('re-entrancy', $chain);
+			$this->fail('expected boot_reentrancy_exception on re-entrancy');
+		} catch (boot_reentrancy_exception $e) {
+			$this->assertStringContainsString('re-entrancy', $e->getMessage());
 		}
-		// the offending phase is recorded; the machine lands in a terminal FAILED state
+		// distinct type propagates unwrapped; offending phase is still recorded; terminal FAILED
 		$this->assertSame(boot_state::FAILED, boot::state());
 		$this->assertSame('reenter', boot::failed_phase());
+	}
+
+	public function test_mixed_profile_skips_middle_phase_and_reaches_ready() : void {
+		$order = [];
+		boot::run(entrypoint_profile::CLI, [
+			new boot_phase('a', function () use (&$order) : void { $order[] = 'a'; }),
+			new boot_phase('session', function () use (&$order) : void { $order[] = 'session'; }, skip_in: ['cli']),
+			new boot_phase('b', function () use (&$order) : void { $order[] = 'b'; }),
+		]);
+		$this->assertSame(['a', 'b'], $order);   // middle phase skipped, others in order
+		$this->assertSame(boot_state::READY, boot::state());
 	}
 }

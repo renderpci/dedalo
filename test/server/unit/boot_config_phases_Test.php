@@ -42,6 +42,8 @@ final class boot_config_phases_Test extends TestCase {
 		$this->assertSame(222, config('media.image.thumb_width'));
 		// compat shim emitted the static/derived constants (via the recorder, not real define())
 		$this->assertSame(222, $recorded['DEDALO_IMAGE_THUMB_WIDTH']);
+		// config() and the emitted constant agree (the real contract, beyond the literal)
+		$this->assertSame(config('media.image.thumb_width'), $recorded['DEDALO_IMAGE_THUMB_WIDTH']);
 		$this->assertSame('/dedalo/core/media_engine/img.php', $recorded['DEDALO_IMAGE_FILE_URL']);
 		// request-scoped key never emitted
 		$this->assertArrayNotHasKey('DEDALO_APPLICATION_LANG', $recorded);
