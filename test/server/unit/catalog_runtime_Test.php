@@ -36,7 +36,14 @@ final class catalog_runtime_Test extends TestCase {
 	public function test_cache_manager_is_deep_merge_map() : void {
 		$by = $this->load();
 		$this->assertSame(config_merge::DEEP, $by['runtime.cache_manager']->merge);
-		$this->assertIsArray($by['runtime.cache_manager']->default);
+		$this->assertSame(['manager' => 'files', 'files_path' => ''], $by['runtime.cache_manager']->default);
+	}
+
+	public function test_user_keys_have_no_default() : void {
+		$by = $this->load();
+		foreach (['runtime.show_debug', 'runtime.show_developer', 'runtime.logger_level'] as $p) {
+			$this->assertNull($by[$p]->default, "USER key $p must have no default");
+		}
 	}
 
 	public function test_backup_defaults() : void {
