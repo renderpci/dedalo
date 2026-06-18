@@ -183,6 +183,13 @@ final class catalog_features_misc_Test extends TestCase {
 		$this->assertSame('/usr/bin/',  $by['db.bin_path']->default);
 		$this->assertSame(3306,         $by['db.mysql.port']->default);
 		$this->assertNull($by['db.mysql.socket']->default);
+		$this->assertSame('dedalo_mydatabase', $by['db.database']->default);
+		$this->assertSame('myusername',        $by['db.username']->default);
+		$this->assertSame('/usr/bin/php',      $by['db.php_bin_path']->default);
+		$this->assertSame('localhost',         $by['db.mysql.hostname']->default);
+		$this->assertSame('username',          $by['db.mysql.username']->default);
+		$this->assertSame('web_dedalo',        $by['db.mysql.database']->default);
+		$this->assertSame('/usr/bin/',         $by['db.mysql.bin_path']->default);
 	}
 
 	public function test_db_secret_keys_have_no_default() : void {
@@ -216,6 +223,7 @@ final class catalog_features_misc_Test extends TestCase {
 		$this->assertContains('dd137',      $deny, 'areas.deny must contain dd137');
 		$this->assertContains('rsc1',       $deny, 'areas.deny must contain rsc1');
 		$this->assertContains('hierarchy20', $deny, 'areas.deny must contain hierarchy20');
+		$this->assertCount(3, $by['areas.deny']->default, 'areas.deny must have exactly 3 entries');
 		$this->assertSame([], $by['areas.allow']->default);
 	}
 
