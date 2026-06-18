@@ -1559,6 +1559,9 @@ class dd_diffusion_api {
 	public static int $recover_poll_attempts   = 5;
 	public static int $recover_poll_interval_us = 500000; // 0.5s
 
+	/** Test-observable: number of probe_engine() calls (asserts the recover loop is bounded). */
+	public static int $probe_count = 0;
+
 	/**
 	* GET_ENGINE_ADVISORY
 	* Probe the diffusion engine socket-first; for global-admins auto-recover an
@@ -1604,6 +1607,8 @@ class dd_diffusion_api {
 	* unreachable = no usable answer (connection failure / missing endpoint).
 	*/
 	public static function probe_engine() : object {
+
+		self::$probe_count++;
 
 		$res = diffusion_api_client::call((object)['action'=>'get_diffusion_status'], 5);
 

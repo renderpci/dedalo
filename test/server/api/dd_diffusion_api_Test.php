@@ -205,14 +205,16 @@ final class dd_diffusion_api_Test extends BaseTestCase {
 		if (security::is_global_admin(logged_user_id())!==true) {
 			$this->markTestSkipped('logged test user is not a global admin');
 		}
-		// service cmd that "succeeds" but leaves the engine down → recovered must stay false,
-		// and the poll must be bounded (fast: 1 attempt, 1µs).
+		// service cmd that "succeeds" but leaves the engine down → recovered stays false.
+		// Prove the poll is BOUNDED: with N attempts the engine is probed exactly
+		// 1 (initial) + N (recover polls) times and then stops — it does not loop.
 		diffusion_api_client::$endpoint_override   = '/tmp/dd_no_such_engine.sock';
 		diffusion_server_control::$service_cmd_override = 'true %action%';
 		$prev_attempts = dd_diffusion_api::$recover_poll_attempts;
 		$prev_interval = dd_diffusion_api::$recover_poll_interval_us;
-		dd_diffusion_api::$recover_poll_attempts   = 1;
+		dd_diffusion_api::$recover_poll_attempts   = 3;
 		dd_diffusion_api::$recover_poll_interval_us = 1;
+		dd_diffusion_api::$probe_count             = 0;
 		try {
 			$adv = dd_diffusion_api::get_engine_advisory((object)['action'=>'get_engine_advisory']);
 		} finally {
@@ -224,6 +226,8 @@ final class dd_diffusion_api_Test extends BaseTestCase {
 		$this->assertSame('unreachable', $adv->state);
 		$this->assertFalse($adv->recovered);
 		$this->assertContains('restart_engine', $adv->actions);
+		// 1 initial probe + exactly 3 bounded recover polls = 4 (loop is bounded, not infinite)
+		$this->assertSame(4, dd_diffusion_api::$probe_count);
 	}
 
 
