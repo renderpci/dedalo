@@ -1696,9 +1696,10 @@ const wire_flow_keys = function(self) {
 export const serialize_layout = function(self) {
 
 	const l = self.layout
+	const rows = (l.flow && Array.isArray(l.flow.rows)) ? l.flow.rows : []
 
 	return {
-		schema_version		: l.schema_version || 1,
+		schema_version		: SCHEMA_VERSION,
 		kind				: 'tool_print_layout',
 		uid					: l.uid || l.id || null,
 		name				: l.name,
@@ -1709,41 +1710,70 @@ export const serialize_layout = function(self) {
 		page_defaults		: l.page_defaults,
 		grid				: l.grid,
 		style_defaults		: l.style_defaults,
-		pages				: l.pages.map((p, i) => ({
-			id				: p.id,
-			index			: i,
-			page_overrides	: p.page_overrides || null,
-			boxes			: p.boxes.map(serialize_box)
-		})),
-		flows				: l.flows || []
+		flow				: { rows: rows.map(serialize_row) }
 	}
 }//end serialize_layout
 
 
 
 /**
-* SERIALIZE_BOX
-* @param object box
-* @return object plain box
+* SERIALIZE_ROW
+* @param object row
+* @return object plain row (DOM-free)
 */
-const serialize_box = function(box) {
-	return {
-		id				: box.id,
-		type			: box.type,
-		component_ref	: box.component_ref || null,
-		path			: box.path || null,
-		show_label			: box.show_label!==false,
-		repeat_header		: box.repeat_header!==false,
-		show_table_header	: box.show_table_header!==false,
-		table_columns		: Array.isArray(box.table_columns) ? box.table_columns : null,
-		static			: box.static || null,
-		render			: box.render || null,
-		rect			: { x: box.rect.x, y: box.rect.y, w: box.rect.w, h: box.rect.h },
-		z				: box.z || 1,
-		overflow		: box.overflow || { mode: 'clip' },
-		style			: box.style || {}
+const serialize_row = function(row) {
+	if (row.kind==='spacer') {
+		return { id: row.id, kind: 'spacer', height_mm: row.height_mm || 8 }
 	}
-}//end serialize_box
+	return {
+		id				: row.id,
+		kind			: 'row',
+		space_after_mm	: row.space_after_mm || 0,
+		style			: row.style || {},
+		cells			: (Array.isArray(row.cells) ? row.cells : []).map(serialize_cell)
+	}
+}//end serialize_row
+
+
+
+/**
+* SERIALIZE_CELL
+* @param object cell
+* @return object plain cell (DOM-free)
+*/
+const serialize_cell = function(cell) {
+	return {
+		id		: cell.id,
+		width	: (typeof cell.width==='number') ? cell.width : 1,
+		block	: serialize_block(cell.block || { type: 'empty' })
+	}
+}//end serialize_cell
+
+
+
+/**
+* SERIALIZE_BLOCK
+* A cell's content (component / static text / empty). Strips transient render
+* state (the _table_render cache, node pointers).
+* @param object block
+* @return object plain block
+*/
+const serialize_block = function(block) {
+	if (!block || block.type==='empty') return { type: 'empty' }
+	if (block.type==='static_text') {
+		return { type: 'static_text', static: block.static || { text: '' }, style: block.style || {} }
+	}
+	return {
+		type				: 'component',
+		component_ref		: block.component_ref || null,
+		path				: block.path || null,
+		show_label			: block.show_label!==false,
+		show_table_header	: block.show_table_header!==false,
+		table_columns		: Array.isArray(block.table_columns) ? block.table_columns : null,
+		render				: block.render || null,
+		style				: block.style || {}
+	}
+}//end serialize_block
 
 
 
