@@ -6,6 +6,11 @@ require_once dirname(__DIR__, 3) . '/core/base/boot/class.env_loader.php';
 
 final class env_loader_Test extends TestCase {
 
+	protected function setUp() : void {
+		parent::setUp();
+		env_loader::reset();
+	}
+
 	protected function tearDown() : void {
 		env_loader::reset();
 	}
@@ -86,6 +91,7 @@ final class env_loader_Test extends TestCase {
 		$path = $this->write_env('SECRET=should_not_load', 0666);
 		env_loader::load($path);
 		$this->assertNull(env_loader::get('SECRET')); // refused, nothing loaded
+		$this->assertFalse(env_loader::has('SECRET'), 'over-permissive .env file must not be loaded');
 		unlink($path);
 	}
 
