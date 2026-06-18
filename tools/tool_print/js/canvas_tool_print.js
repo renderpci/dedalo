@@ -119,8 +119,66 @@ export const new_row = function(self, cells) {
 }//end new_row
 
 
+
+/**
+* NEW_CELL
+* One cell of a flow row. width = fraction of the content column. block = the
+* cell's content (a component, free text, or empty).
+* @param object self
+* @param object block - optional block (defaults to empty)
+* @param number width - optional fraction (default 1)
+* @return object cell
+*/
+export const new_cell = function(self, block, width) {
+	return {
+		id		: gen_id(self, 'cell'),
+		width	: (typeof width==='number') ? width : 1,
+		block	: block || { type: 'empty' }
 	}
-}//end new_page
+}//end new_cell
+
+
+
+/**
+* NEW_SPACER_ROW
+* A whitespace row of fixed mm height (no cells).
+* @param object self
+* @param number height_mm
+* @return object spacer row
+*/
+export const new_spacer_row = function(self, height_mm) {
+	return {
+		id			: gen_id(self, 'row'),
+		kind		: 'spacer',
+		height_mm	: (typeof height_mm==='number') ? height_mm : 8
+	}
+}//end new_spacer_row
+
+
+
+/**
+* COMPONENT_BLOCK
+* Builds a cell block for a component (from a palette ddo drop payload).
+* @param object parsed - { ddo, path } drop payload
+* @return object block
+*/
+export const component_block = function(parsed) {
+	const ddo = parsed.ddo
+	return {
+		type			: 'component',
+		component_ref	: {
+			tipo			: ddo.tipo,
+			section_tipo	: ddo.section_tipo,
+			model			: ddo.model,
+			view			: ddo.view || 'default',
+			label_snapshot	: ddo.label || ddo.tipo
+		},
+		path			: parsed.path || null,
+		show_label		: true,
+		render			: { value_view: 'default', lang: 'inherit', multivalue: { mode: 'list' } },
+		style			: {}
+	}
+}//end component_block
 
 
 
