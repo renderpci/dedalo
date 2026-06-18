@@ -1,11 +1,11 @@
 {
-  "id": "3933",
+  "id": "3968",
   "section_id": "13",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 13,
-    "created_date": "2026-06-17 13:27:56",
+    "created_date": "2026-06-18 11:43:40",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -205,13 +205,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083676,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163820,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 56
+          "minute": 43,
+          "second": 40
         }
       }
     ]
@@ -224,114 +224,106 @@
     "dd1350": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              "rsc36"
-            ]
-          ]
-        }
+        "value": [
+          "rsc36"
+        ]
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-spa",
-                "name": "offset_in_seconds",
-                "value": "Offset en segundos"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "offset_in_seconds",
-                "value": "Offset en segons"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "offset_in_seconds",
-                "value": "Μετατόπιση σε δευτερόλεπτα"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "offset_in_seconds",
-                "value": "Offset in seconds"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "apply",
-                "value": "Aplicar"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "apply",
-                "value": "Apply"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "apply",
-                "value": "Ισχύουν"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "apply",
-                "value": "Aplicar"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "empty_offset_value",
-                "value": "Error. Empty offset value"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "empty_offset_value",
-                "value": "Error. Valor de offset buit"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "empty_offset_value",
-                "value": "Error. Valor de offset vacío"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "empty_offset_value",
-                "value": "Λάθος. Κενή τιμή μετατόπισης"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "offset_in_seconds",
-                "value": "सेकेन्डमा अफसेट"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "apply",
-                "value": "निवेदन गर्नु"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "empty_offset_value",
-                "value": "त्रुटि। खाली अफसेट मान"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "empty_offset_value",
-                "value": "Fehler. Leerer Offsetwert"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "apply",
-                "value": "Anwenden"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "offset_in_seconds",
-                "value": "Offset in Sekunden"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-spa",
+            "name": "offset_in_seconds",
+            "value": "Offset en segundos"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "offset_in_seconds",
+            "value": "Offset en segons"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "offset_in_seconds",
+            "value": "Μετατόπιση σε δευτερόλεπτα"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "offset_in_seconds",
+            "value": "Offset in seconds"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "apply",
+            "value": "Aplicar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "apply",
+            "value": "Apply"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "apply",
+            "value": "Ισχύουν"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "apply",
+            "value": "Aplicar"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "empty_offset_value",
+            "value": "Error. Empty offset value"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "empty_offset_value",
+            "value": "Error. Valor de offset buit"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "empty_offset_value",
+            "value": "Error. Valor de offset vacío"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "empty_offset_value",
+            "value": "Λάθος. Κενή τιμή μετατόπισης"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "offset_in_seconds",
+            "value": "सेकेन्डमा अफसेट"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "apply",
+            "value": "निवेदन गर्नु"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "empty_offset_value",
+            "value": "त्रुटि। खाली अफसेट मान"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "empty_offset_value",
+            "value": "Fehler. Leerer Offsetwert"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "apply",
+            "value": "Anwenden"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "offset_in_seconds",
+            "value": "Offset in Sekunden"
+          }
+        ]
       }
     ]
   },

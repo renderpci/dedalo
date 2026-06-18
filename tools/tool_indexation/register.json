@@ -1,11 +1,11 @@
 {
-  "id": "3925",
+  "id": "3960",
   "section_id": "5",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 5,
-    "created_date": "2026-06-17 13:27:56",
+    "created_date": "2026-06-18 11:43:39",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -199,13 +199,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083676,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163819,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 56
+          "minute": 43,
+          "second": 39
         }
       }
     ]
@@ -219,181 +219,169 @@
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
-            {
-              "open_as": "window",
-              "windowFeatures": null
-            }
-          ]
+          "open_as": "window",
+          "windowFeatures": null
         }
       }
     ],
     "dd1350": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              "rsc36"
-            ]
-          ]
-        }
+        "value": [
+          "rsc36"
+        ]
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-vlca",
-                "name": "delete_tag",
-                "value": "Esborrar l'etiqueta?"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "delete_tag",
-                "value": "¿Borrar la etiqueta?"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "error_delete_locator",
-                "value": "Error al borrar localizador"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "error_delete_tag",
-                "value": "Error al borrar etiqueta"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "warning_delete_tag",
-                "value": "Eliminará la etiqueta seleccionada en todos los idiomas y todas las relaciones e indexación asociadas a ella"
-              },
-              {
-                "lang": "lg-por",
-                "name": "delete_tag",
-                "value": "Excluir rótulo?"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "delete_tag",
-                "value": "लेबल मेट्ने हो?"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "error_delete_locator",
-                "value": "लोकेटर मेटाउँदा त्रुटि भयो"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "error_delete_tag",
-                "value": "ट्याग मेटाउन असफल भयो"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "warning_delete_tag",
-                "value": "यसले सबै भाषाहरूमा चयन गरिएको ट्याग र यससँग सम्बन्धित सबै सम्बन्ध र अनुक्रमणिकाहरू मेटाउनेछ"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "delete_tag",
-                "value": "Eliminare l'etichetta?"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "delete_tag",
-                "value": "Supprimer l'étiquette ?"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "delete_tag",
-                "value": "Etiketa ezabatu?"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "delete_tag",
-                "value": "Delete label?"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "error_delete_locator",
-                "value": "Error deleting locator"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "error_delete_tag",
-                "value": "Failed to delete tag"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "warning_delete_tag",
-                "value": "It will delete the selected tag in all languages and all the relationships and indexing associated with it"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "delete_tag",
-                "value": "Διαγραφή ετικέτας;"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "error_delete_locator",
-                "value": "Σφάλμα κατά τη διαγραφή του εντοπιστή"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "error_delete_tag",
-                "value": "Σφάλμα εθιμοτυπίας"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "warning_delete_tag",
-                "value": "Θα διαγράψει την επιλεγμένη ετικέτα σε όλες τις γλώσσες και όλες τις σχέσεις και την ευρετηρίαση που σχετίζονται με αυτήν"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "delete_tag",
-                "value": "Label löschen?"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "error_delete_locator",
-                "value": "Fehler beim Löschen des Locators"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "error_delete_tag",
-                "value": "Tag konnte nicht gelöscht werden"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "warning_delete_tag",
-                "value": "Dadurch wird das ausgewählte Tag in allen Sprachen sowie alle damit verbundenen Beziehungen und Indizierungen gelöscht"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "delete_tag",
-                "value": "Esborrar l'etiqueta?"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "error_delete_locator",
-                "value": "Error en esborrar locator"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "error_delete_tag",
-                "value": "Error al borrar etiqueta"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "warning_delete_tag",
-                "value": "Esborrarà l'etiqueta seleccionada en tots els idiomes i totes les relacions i indexació associades a ella"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-vlca",
+            "name": "delete_tag",
+            "value": "Esborrar l'etiqueta?"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "delete_tag",
+            "value": "¿Borrar la etiqueta?"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_delete_locator",
+            "value": "Error al borrar localizador"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "error_delete_tag",
+            "value": "Error al borrar etiqueta"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "warning_delete_tag",
+            "value": "Eliminará la etiqueta seleccionada en todos los idiomas y todas las relaciones e indexación asociadas a ella"
+          },
+          {
+            "lang": "lg-por",
+            "name": "delete_tag",
+            "value": "Excluir rótulo?"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "delete_tag",
+            "value": "लेबल मेट्ने हो?"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_delete_locator",
+            "value": "लोकेटर मेटाउँदा त्रुटि भयो"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "error_delete_tag",
+            "value": "ट्याग मेटाउन असफल भयो"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "warning_delete_tag",
+            "value": "यसले सबै भाषाहरूमा चयन गरिएको ट्याग र यससँग सम्बन्धित सबै सम्बन्ध र अनुक्रमणिकाहरू मेटाउनेछ"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "delete_tag",
+            "value": "Eliminare l'etichetta?"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "delete_tag",
+            "value": "Supprimer l'étiquette ?"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "delete_tag",
+            "value": "Etiketa ezabatu?"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "delete_tag",
+            "value": "Delete label?"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "error_delete_locator",
+            "value": "Error deleting locator"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "error_delete_tag",
+            "value": "Failed to delete tag"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "warning_delete_tag",
+            "value": "It will delete the selected tag in all languages and all the relationships and indexing associated with it"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "delete_tag",
+            "value": "Διαγραφή ετικέτας;"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_delete_locator",
+            "value": "Σφάλμα κατά τη διαγραφή του εντοπιστή"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "error_delete_tag",
+            "value": "Σφάλμα εθιμοτυπίας"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "warning_delete_tag",
+            "value": "Θα διαγράψει την επιλεγμένη ετικέτα σε όλες τις γλώσσες και όλες τις σχέσεις και την ευρετηρίαση που σχετίζονται με αυτήν"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "delete_tag",
+            "value": "Label löschen?"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_delete_locator",
+            "value": "Fehler beim Löschen des Locators"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "error_delete_tag",
+            "value": "Tag konnte nicht gelöscht werden"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "warning_delete_tag",
+            "value": "Dadurch wird das ausgewählte Tag in allen Sprachen sowie alle damit verbundenen Beziehungen und Indizierungen gelöscht"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "delete_tag",
+            "value": "Esborrar l'etiqueta?"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_delete_locator",
+            "value": "Error en esborrar locator"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "error_delete_tag",
+            "value": "Error al borrar etiqueta"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "warning_delete_tag",
+            "value": "Esborrarà l'etiqueta seleccionada en tots els idiomes i totes les relacions i indexació associades a ella"
+          }
+        ]
       }
     ]
   },

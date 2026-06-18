@@ -1,11 +1,11 @@
 {
-  "id": "3930",
+  "id": "3965",
   "section_id": "10",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 10,
-    "created_date": "2026-06-17 13:27:56",
+    "created_date": "2026-06-18 11:43:39",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -193,13 +193,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083676,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163819,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 56
+          "minute": 43,
+          "second": 39
         }
       }
     ]
@@ -213,304 +213,292 @@
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
-            {
-              "hilite_tipos": {
-                "info": "Sets a list of items to highlight for easy location in the list.",
-                "value": [
-                  "rsc201",
-                  "rsc35",
-                  "rsc29",
-                  "rsc37",
-                  "rsc855"
-                ],
-                "client": true
-              }
-            }
-          ]
+          "hilite_tipos": {
+            "info": "Sets a list of items to highlight for easy location in the list.",
+            "value": [
+              "rsc201",
+              "rsc35",
+              "rsc29",
+              "rsc37",
+              "rsc855"
+            ],
+            "client": true
+          }
         }
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-eng",
-                "name": "updated",
-                "value": "Updated"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "updated",
-                "value": "Actualizado"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "updated",
-                "value": "Actualitzat"
-              },
-              {
-                "lang": "lg-por",
-                "name": "updated",
-                "value": "Atualizado"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "updated",
-                "value": "Mise à jour"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "updated",
-                "value": "Aggiornato"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "updated",
-                "value": "Ενημερωμένο"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "updated",
-                "value": "Aktualisiert"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "updated",
-                "value": "अद्यावधिक गरियो"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "components",
-                "value": "Components"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "components",
-                "value": "Komponenten"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "components",
-                "value": "Componentes"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "components",
-                "value": "Components"
-              },
-              {
-                "lang": "lg-por",
-                "name": "components",
-                "value": "Componentes"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "components",
-                "value": "Composants"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "components",
-                "value": "Componenti"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "components",
-                "value": "Εξαρτήματα"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "components",
-                "value": "अवयवहरू"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "delete_normalized_files",
-                "value": "Delete normalised files"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "delete_normalized_files",
-                "value": "Borrar archivos normalizados"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "delete_normalized_files",
-                "value": "Elimina els fitxers normalitzats"
-              },
-              {
-                "lang": "lg-por",
-                "name": "delete_normalized_files",
-                "value": "Eliminar ficheiros normalizados"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "delete_normalized_files",
-                "value": "Supprimer les fichiers normalisés"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "delete_normalized_files",
-                "value": "Eliminare i file normalizzati"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "delete_normalized_files",
-                "value": "Διαγραφή κανονικοποιημένων αρχείων"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "delete_normalized_files",
-                "value": "Normalisierte Dateien löschen"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "delete_normalized_files",
-                "value": "सामान्य फाइलहरू मेटाउनुहोस्"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "delete_normalized_files",
-                "value": "Ezabatu normalizatutako fitxategiak"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "updated",
-                "value": "Eguneratua"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "components",
-                "value": "Osagaiak"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "regenerate_options",
-                "value": "Regeneration options"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "regenerate_options",
-                "value": "Opciones de regeneración"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "regenerate_options",
-                "value": "Opcions de regeneració"
-              },
-              {
-                "lang": "lg-por",
-                "name": "regenerate_options",
-                "value": "Opções de regeneração"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "regenerate_options",
-                "value": "Options de régénération"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "regenerate_options",
-                "value": "Opzioni di rigenerazione"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "regenerate_options",
-                "value": "Επιλογές ανάπλασης"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "regenerate_options",
-                "value": "Optionen für die Regeneration"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "regenerate_options",
-                "value": "पुनर्जन्म विकल्प"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "regenerate_options",
-                "value": "Birsortzeko aukerak"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "info",
-                "value": "Info"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "info",
-                "value": "Info"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "info",
-                "value": "जानकारी"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "info",
-                "value": "Info"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "info",
-                "value": "Πληροφορίες"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "info",
-                "value": "Info"
-              },
-              {
-                "lang": "lg-eus",
-                "name": "info",
-                "value": "Info"
-              },
-              {
-                "lang": "lg-por",
-                "name": "info",
-                "value": "Informação"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "info",
-                "value": "Informations"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "info",
-                "value": "Informazioni"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "updated",
+            "value": "Updated"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "updated",
+            "value": "Actualizado"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "updated",
+            "value": "Actualitzat"
+          },
+          {
+            "lang": "lg-por",
+            "name": "updated",
+            "value": "Atualizado"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "updated",
+            "value": "Mise à jour"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "updated",
+            "value": "Aggiornato"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "updated",
+            "value": "Ενημερωμένο"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "updated",
+            "value": "Aktualisiert"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "updated",
+            "value": "अद्यावधिक गरियो"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "components",
+            "value": "Components"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "components",
+            "value": "Komponenten"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "components",
+            "value": "Componentes"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "components",
+            "value": "Components"
+          },
+          {
+            "lang": "lg-por",
+            "name": "components",
+            "value": "Componentes"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "components",
+            "value": "Composants"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "components",
+            "value": "Componenti"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "components",
+            "value": "Εξαρτήματα"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "components",
+            "value": "अवयवहरू"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "delete_normalized_files",
+            "value": "Delete normalised files"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "delete_normalized_files",
+            "value": "Borrar archivos normalizados"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "delete_normalized_files",
+            "value": "Elimina els fitxers normalitzats"
+          },
+          {
+            "lang": "lg-por",
+            "name": "delete_normalized_files",
+            "value": "Eliminar ficheiros normalizados"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "delete_normalized_files",
+            "value": "Supprimer les fichiers normalisés"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "delete_normalized_files",
+            "value": "Eliminare i file normalizzati"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "delete_normalized_files",
+            "value": "Διαγραφή κανονικοποιημένων αρχείων"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "delete_normalized_files",
+            "value": "Normalisierte Dateien löschen"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "delete_normalized_files",
+            "value": "सामान्य फाइलहरू मेटाउनुहोस्"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "delete_normalized_files",
+            "value": "Ezabatu normalizatutako fitxategiak"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "updated",
+            "value": "Eguneratua"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "components",
+            "value": "Osagaiak"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "regenerate_options",
+            "value": "Regeneration options"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "regenerate_options",
+            "value": "Opciones de regeneración"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "regenerate_options",
+            "value": "Opcions de regeneració"
+          },
+          {
+            "lang": "lg-por",
+            "name": "regenerate_options",
+            "value": "Opções de regeneração"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "regenerate_options",
+            "value": "Options de régénération"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "regenerate_options",
+            "value": "Opzioni di rigenerazione"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "regenerate_options",
+            "value": "Επιλογές ανάπλασης"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "regenerate_options",
+            "value": "Optionen für die Regeneration"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "regenerate_options",
+            "value": "पुनर्जन्म विकल्प"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "regenerate_options",
+            "value": "Birsortzeko aukerak"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "info",
+            "value": "Info"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "info",
+            "value": "Info"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "info",
+            "value": "जानकारी"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "info",
+            "value": "Info"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "info",
+            "value": "Πληροφορίες"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "info",
+            "value": "Info"
+          },
+          {
+            "lang": "lg-eus",
+            "name": "info",
+            "value": "Info"
+          },
+          {
+            "lang": "lg-por",
+            "name": "info",
+            "value": "Informação"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "info",
+            "value": "Informations"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "info",
+            "value": "Informazioni"
+          }
+        ]
       }
     ],
     "dd1633": [
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
-            {
-              "hilite_tipos": {
-                "info": "Sets a list of items to highlight for easy location in the list.",
-                "value": [
-                  "rsc201",
-                  "rsc35",
-                  "rsc29",
-                  "rsc37",
-                  "rsc855"
-                ],
-                "client": true
-              }
-            }
-          ]
+          "hilite_tipos": {
+            "info": "Sets a list of items to highlight for easy location in the list.",
+            "value": [
+              "rsc201",
+              "rsc35",
+              "rsc29",
+              "rsc37",
+              "rsc855"
+            ],
+            "client": true
+          }
         }
       }
     ]

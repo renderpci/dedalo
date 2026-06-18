@@ -1,11 +1,11 @@
 {
-  "id": "3936",
+  "id": "3971",
   "section_id": "16",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 16,
-    "created_date": "2026-06-17 13:27:57",
+    "created_date": "2026-06-18 11:43:40",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -213,13 +213,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083677,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163820,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 57
+          "minute": 43,
+          "second": 40
         }
       }
     ]
@@ -233,104 +233,96 @@
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
-            {
-              "open_as": "window",
-              "windowFeatures": null
-            }
-          ]
+          "open_as": "window",
+          "windowFeatures": null
         }
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-eng",
-                "name": "fill_the_gaps",
-                "value": "Fill the gaps"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "fill_the_gaps",
-                "value": "Rellenar los huecos"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "fill_the_gaps",
-                "value": "Ampler els vuits"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "fill_the_gaps",
-                "value": "Combler les lacunes"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "fill_the_gaps",
-                "value": "Colmare le lacune"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "fill_the_gaps",
-                "value": "Συμπληρώστε τα κενά"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "fill_the_gaps",
-                "value": "Füllen Sie die Lücken"
-              },
-              {
-                "lang": "lg-por",
-                "name": "fill_the_gaps",
-                "value": "Preencher as lacunas"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "show_tipo_in_label",
-                "value": "Show ontology tipo"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "show_tipo_in_label",
-                "value": "Mostrar el tipo de la ontología"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "show_tipo_in_label",
-                "value": "Mostar el tipo de l'ontologia"
-              },
-              {
-                "lang": "lg-por",
-                "name": "show_tipo_in_label",
-                "value": "Mostrar tipo de ontologia"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "show_tipo_in_label",
-                "value": "Montrer l'ontologie tipo"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "show_tipo_in_label",
-                "value": "Mostra il tipo di ontologia"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "show_tipo_in_label",
-                "value": "Εμφάνιση οντολογίας tipo"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "show_tipo_in_label",
-                "value": "Ontologie anzeigen tipo"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-eng",
+            "name": "fill_the_gaps",
+            "value": "Fill the gaps"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "fill_the_gaps",
+            "value": "Rellenar los huecos"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "fill_the_gaps",
+            "value": "Ampler els vuits"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "fill_the_gaps",
+            "value": "Combler les lacunes"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "fill_the_gaps",
+            "value": "Colmare le lacune"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "fill_the_gaps",
+            "value": "Συμπληρώστε τα κενά"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "fill_the_gaps",
+            "value": "Füllen Sie die Lücken"
+          },
+          {
+            "lang": "lg-por",
+            "name": "fill_the_gaps",
+            "value": "Preencher as lacunas"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "show_tipo_in_label",
+            "value": "Show ontology tipo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "show_tipo_in_label",
+            "value": "Mostrar el tipo de la ontología"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "show_tipo_in_label",
+            "value": "Mostar el tipo de l'ontologia"
+          },
+          {
+            "lang": "lg-por",
+            "name": "show_tipo_in_label",
+            "value": "Mostrar tipo de ontologia"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "show_tipo_in_label",
+            "value": "Montrer l'ontologie tipo"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "show_tipo_in_label",
+            "value": "Mostra il tipo di ontologia"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "show_tipo_in_label",
+            "value": "Εμφάνιση οντολογίας tipo"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "show_tipo_in_label",
+            "value": "Ontologie anzeigen tipo"
+          }
+        ]
       }
     ]
   },

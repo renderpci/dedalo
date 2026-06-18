@@ -1,11 +1,11 @@
 {
-  "id": "3940",
+  "id": "3975",
   "section_id": "20",
   "section_tipo": "dd1340",
   "data": {
     "label": "Tools development",
     "section_id": 20,
-    "created_date": "2026-06-17 13:27:57",
+    "created_date": "2026-06-18 11:43:40",
     "section_tipo": "dd1340",
     "diffusion_info": null,
     "created_by_user_id": -1
@@ -224,13 +224,13 @@
         "id": 1,
         "lang": "lg-nolan",
         "start": {
-          "day": 17,
-          "hour": 13,
-          "time": 65132083677,
+          "day": 18,
+          "hour": 11,
+          "time": 65132163821,
           "year": 2026,
           "month": 6,
-          "minute": 27,
-          "second": 57
+          "minute": 43,
+          "second": 41
         }
       }
     ]
@@ -244,314 +244,306 @@
       {
         "id": 1,
         "value": {
-          "lg-nolan": [
-            {
-              "open_as": "window",
-              "windowFeatures": null
-            }
-          ]
+          "open_as": "window",
+          "windowFeatures": null
         }
       }
     ],
     "dd1372": [
       {
         "id": 1,
-        "value": {
-          "lg-nolan": [
-            [
-              {
-                "lang": "lg-por",
-                "name": "copy",
-                "value": "A cópia"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "snap",
-                "value": "Affrettato"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "snap",
-                "value": "Bloquear"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "snap",
-                "value": "Bloquear"
-              },
-              {
-                "lang": "lg-por",
-                "name": "snap",
-                "value": "Bloquear"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "order_by",
-                "value": "Commandé par:"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "copy",
-                "value": "Copia"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "copy",
-                "value": "Copia"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "copy",
-                "value": "Copia"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "copy",
-                "value": "Copie"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "copy",
-                "value": "Copy"
-              },
-              {
-                "lang": "lg-por",
-                "name": "original_copy",
-                "value": "Definir original/cópia"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "diameter",
-                "value": "Diameter"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "diameter",
-                "value": "Diameter"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "diameter",
-                "value": "Diametro"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "diameter",
-                "value": "Diamètre"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "diameter",
-                "value": "Diámetro"
-              },
-              {
-                "lang": "lg-por",
-                "name": "diameter",
-                "value": "Diâmetro"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "diameter",
-                "value": "Durchmesser"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "original_copy",
-                "value": "Définir l'original/la copie"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "original_copy",
-                "value": "Establecer original /copia"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "original_copy",
-                "value": "Establir original/còpia"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "weight",
-                "value": "Gewicht"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "original_copy",
-                "value": "Imposta originale/copia"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "copy",
-                "value": "Kopieren"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "weight",
-                "value": "Masse"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "order_by",
-                "value": "Ordenar per:"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "order_by",
-                "value": "Ordenar por:"
-              },
-              {
-                "lang": "lg-por",
-                "name": "order_by",
-                "value": "Ordenar por:"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "order_by",
-                "value": "Order by:"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "order_by",
-                "value": "Ordinato da:"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "original",
-                "value": "Original"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "original",
-                "value": "Original"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "original",
-                "value": "Original"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "original",
-                "value": "Original"
-              },
-              {
-                "lang": "lg-por",
-                "name": "original",
-                "value": "Original"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "original_copy",
-                "value": "Original/Kopie einlegen"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "original",
-                "value": "Originale"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "original",
-                "value": "Originale"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "weight",
-                "value": "Pes"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "weight",
-                "value": "Peso"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "weight",
-                "value": "Peso"
-              },
-              {
-                "lang": "lg-por",
-                "name": "weight",
-                "value": "Peso"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "snap",
-                "value": "Schnapp"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "snap",
-                "value": "Se casser"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "original_copy",
-                "value": "Set Original / Copy"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "snap",
-                "value": "Snap"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "order_by",
-                "value": "Sortieren nach:"
-              },
-              {
-                "lang": "lg-ita",
-                "name": "types",
-                "value": "Tipo"
-              },
-              {
-                "lang": "lg-spa",
-                "name": "types",
-                "value": "Tipos"
-              },
-              {
-                "lang": "lg-por",
-                "name": "types",
-                "value": "Tipos"
-              },
-              {
-                "lang": "lg-cat",
-                "name": "types",
-                "value": "Tipus"
-              },
-              {
-                "lang": "lg-deu",
-                "name": "types",
-                "value": "Typen"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "types",
-                "value": "Types"
-              },
-              {
-                "lang": "lg-fra",
-                "name": "types",
-                "value": "Types"
-              },
-              {
-                "lang": "lg-eng",
-                "name": "weight",
-                "value": "Weight"
-              },
-              {
-                "lang": "lg-ell",
-                "name": "snap",
-                "value": "Θραύση"
-              },
-              {
-                "lang": "lg-nep",
-                "name": "snap",
-                "value": "स्न्याप"
-              }
-            ]
-          ]
-        }
+        "value": [
+          {
+            "lang": "lg-por",
+            "name": "copy",
+            "value": "A cópia"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "snap",
+            "value": "Affrettato"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "snap",
+            "value": "Bloquear"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "snap",
+            "value": "Bloquear"
+          },
+          {
+            "lang": "lg-por",
+            "name": "snap",
+            "value": "Bloquear"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "order_by",
+            "value": "Commandé par:"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "copy",
+            "value": "Copia"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "copy",
+            "value": "Copia"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "copy",
+            "value": "Copia"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "copy",
+            "value": "Copie"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "copy",
+            "value": "Copy"
+          },
+          {
+            "lang": "lg-por",
+            "name": "original_copy",
+            "value": "Definir original/cópia"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "diameter",
+            "value": "Diameter"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "diameter",
+            "value": "Diameter"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "diameter",
+            "value": "Diametro"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "diameter",
+            "value": "Diamètre"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "diameter",
+            "value": "Diámetro"
+          },
+          {
+            "lang": "lg-por",
+            "name": "diameter",
+            "value": "Diâmetro"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "diameter",
+            "value": "Durchmesser"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "original_copy",
+            "value": "Définir l'original/la copie"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "original_copy",
+            "value": "Establecer original /copia"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "original_copy",
+            "value": "Establir original/còpia"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "weight",
+            "value": "Gewicht"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "original_copy",
+            "value": "Imposta originale/copia"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "copy",
+            "value": "Kopieren"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "weight",
+            "value": "Masse"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "order_by",
+            "value": "Ordenar per:"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "order_by",
+            "value": "Ordenar por:"
+          },
+          {
+            "lang": "lg-por",
+            "name": "order_by",
+            "value": "Ordenar por:"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "order_by",
+            "value": "Order by:"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "order_by",
+            "value": "Ordinato da:"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "original",
+            "value": "Original"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "original",
+            "value": "Original"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "original",
+            "value": "Original"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "original",
+            "value": "Original"
+          },
+          {
+            "lang": "lg-por",
+            "name": "original",
+            "value": "Original"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "original_copy",
+            "value": "Original/Kopie einlegen"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "original",
+            "value": "Originale"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "original",
+            "value": "Originale"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "weight",
+            "value": "Pes"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "weight",
+            "value": "Peso"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "weight",
+            "value": "Peso"
+          },
+          {
+            "lang": "lg-por",
+            "name": "weight",
+            "value": "Peso"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "snap",
+            "value": "Schnapp"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "snap",
+            "value": "Se casser"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "original_copy",
+            "value": "Set Original / Copy"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "snap",
+            "value": "Snap"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "order_by",
+            "value": "Sortieren nach:"
+          },
+          {
+            "lang": "lg-ita",
+            "name": "types",
+            "value": "Tipo"
+          },
+          {
+            "lang": "lg-spa",
+            "name": "types",
+            "value": "Tipos"
+          },
+          {
+            "lang": "lg-por",
+            "name": "types",
+            "value": "Tipos"
+          },
+          {
+            "lang": "lg-cat",
+            "name": "types",
+            "value": "Tipus"
+          },
+          {
+            "lang": "lg-deu",
+            "name": "types",
+            "value": "Typen"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "types",
+            "value": "Types"
+          },
+          {
+            "lang": "lg-fra",
+            "name": "types",
+            "value": "Types"
+          },
+          {
+            "lang": "lg-eng",
+            "name": "weight",
+            "value": "Weight"
+          },
+          {
+            "lang": "lg-ell",
+            "name": "snap",
+            "value": "Θραύση"
+          },
+          {
+            "lang": "lg-nep",
+            "name": "snap",
+            "value": "स्न्याप"
+          }
+        ]
       }
     ]
   },
