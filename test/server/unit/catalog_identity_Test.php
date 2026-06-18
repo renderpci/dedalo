@@ -43,6 +43,9 @@ final class catalog_identity_Test extends TestCase {
 		$this->assertSame('dmy', $by['identity.date_order']->default);
 		$this->assertFalse($by['identity.development_server']->default);
 		$this->assertSame(0, $by['identity.entity_id']->default);
+		$this->assertSame('es-ES',          $by['identity.locale']->default);
+		$this->assertSame('my_entity_name', $by['identity.entity']->default);
+		$this->assertSame('openssl',        $by['identity.encryption_mode']->default);
 	}
 
 	public function test_entity_label_derives_from_entity() : void {
