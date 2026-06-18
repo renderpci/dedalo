@@ -70,7 +70,9 @@ final class config_compiler {
 	*/
 	private static function deep_merge(array $a, array $b) : array {
 		foreach ($b as $k => $v) {
-			if (is_array($v) && isset($a[$k]) && is_array($a[$k])) {
+			// recurse only into associative maps; list-valued sub-keys REPLACE wholesale
+			if (is_array($v) && isset($a[$k]) && is_array($a[$k])
+				&& !array_is_list($v) && !array_is_list($a[$k])) {
 				$a[$k] = self::deep_merge($a[$k], $v);
 			} else {
 				$a[$k] = $v;

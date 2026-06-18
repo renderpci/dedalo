@@ -53,4 +53,28 @@ final class config_compiler_Test extends TestCase {
 		]);
 		$this->assertSame(400, $r['media.image.thumb_width']);
 	}
+
+	public function test_deep_merge_replaces_list_subkeys_not_hybrid() : void {
+		$catalog = [
+			new config_key(
+				path: 'm', const: 'M', type: 'map',
+				default: ['formats' => ['png', 'jpg'], 'flag' => true],
+				scope: config_scope::STATIC, merge: config_merge::DEEP
+			),
+		];
+		$r = config_compiler::resolve($catalog, [['m' => ['formats' => ['gif']]]]);
+		$this->assertSame(['gif'], $r['m']['formats']);  // list REPLACED, not merged
+		$this->assertTrue($r['m']['flag']);              // sibling scalar retained (deep)
+	}
+
+	public function test_unknown_and_non_static_overrides_ignored() : void {
+		$base = config_compiler::resolve($this->catalog(), []);
+		$with = config_compiler::resolve($this->catalog(), [[
+			'nonexistent.key'       => 'x',      // unknown key
+			'db.password'           => 'hacked', // SECRET (non-STATIC)
+			'lang.application_lang' => 'lg-x',   // REQUEST (non-STATIC)
+		]]);
+		$this->assertSame($base, $with);                       // all ignored
+		$this->assertArrayNotHasKey('db.password', $with);
+	}
 }
