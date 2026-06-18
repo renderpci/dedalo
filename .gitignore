@@ -17,6 +17,7 @@ config/*
 !config/sample.config_db.php
 !config/sample.config_areas.php
 !config/sample.config_core.php
+!config/sample.env
 !config/dd_tipos.php
 !config/version.inc
 !/core/ontology/v5/config/config_ontology.php
