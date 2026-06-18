@@ -56,9 +56,27 @@ final class catalog_coverage_Test extends TestCase {
 		}
 	}
 
+	public function test_no_compiled_key_looks_like_a_secret() : void {
+		$compiled = [config_scope::STATIC, config_scope::DERIVED, config_scope::DERIVED_REQUEST, config_scope::PASSTHROUGH];
+		foreach ($this->catalog() as $k) {
+			if ($k->const !== null && in_array($k->scope, $compiled, true)) {
+				$this->assertSame(0, preg_match('/PASS|SECRET|TOKEN|SALT|_KEY$|CODE$/i', $k->const),
+					"compiled-scope key {$k->const} looks like a secret — should it be scope SECRET?");
+			}
+		}
+	}
+
+	public function test_derived_keys_have_a_closure() : void {
+		foreach ($this->catalog() as $k) {
+			if ($k->scope === config_scope::DERIVED) {
+				$this->assertInstanceOf(\Closure::class, $k->derived, "DERIVED key {$k->path} must have a derived closure");
+			}
+		}
+	}
+
 	public function test_minimum_catalog_size() : void {
 		// full config-settings catalog (paths deferred to 3b) — sanity floor
-		$this->assertGreaterThanOrEqual(110, count($this->catalog()), 'catalog smaller than expected');
+		$this->assertGreaterThanOrEqual(145, count($this->catalog()), 'catalog smaller than expected');
 	}
 
 	public function test_slice_continuity_preserved() : void {
