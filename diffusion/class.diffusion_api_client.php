@@ -37,10 +37,15 @@ class diffusion_api_client {
 	* @param int $timeout = 10
 	* 	Seconds. Keep short: callers run inside user-facing flows
 	* 	like section_record::delete and must not hang.
+	* @param bool $quiet = false
+	* 	When true, connection/HTTP failures are logged at DEBUG instead of
+	* 	ERROR. Used by read-only health probes (e.g. the diffusion_server_control
+	* 	widget status check) where an unreachable engine is an expected, displayed
+	* 	state — not an error worth polluting the error log on every poll.
 	* @return object $response
 	* 	Decoded JSON from Bun, or {result: false, msg, errors} on failure
 	*/
-	public static function call(object $body, int $timeout=10) : object {
+	public static function call(object $body, int $timeout=10, bool $quiet=false) : object {
 
 		// response default
 			$response = new stdClass();
@@ -67,6 +72,7 @@ class diffusion_api_client {
 				$curl_options->header			= false; // body only (no response headers)
 				$curl_options->followlocation	= false;
 				$curl_options->timeout			= $timeout;
+				$curl_options->quiet			= $quiet; // expected-failure callers log at DEBUG
 
 		// endpoint resolution: unix socket preferred, HTTP URL fallback
 			// test hook: when $endpoint_override is set, force the socket path
@@ -107,7 +113,7 @@ class diffusion_api_client {
 					. ' ' . $response->msg . PHP_EOL
 					. ' url: ' . $curl_options->url . PHP_EOL
 					. ' error_info: ' . to_string($curl_response->error_info ?? null)
-					, logger::ERROR
+					, $quiet ? logger::DEBUG : logger::ERROR
 				);
 				return $response;
 			}
