@@ -102,16 +102,23 @@ export const new_layout = function(self, opts={}) {
 
 
 /**
-* NEW_PAGE
+* NEW_ROW
+* A flow row: a horizontal grid of cells (1..N, fractional widths summing ~1).
 * @param object self
-* @param int index
-* @return object page
+* @param object[] cells - optional initial cells (defaults to one empty cell)
+* @return object row
 */
-export const new_page = function(self, index) {
+export const new_row = function(self, cells) {
 	return {
-		id		: gen_id(self, 'page'),
-		index	: index,
-		boxes	: []
+		id				: gen_id(self, 'row'),
+		kind			: 'row',
+		space_after_mm	: 0,
+		style			: {},
+		cells			: (Array.isArray(cells) && cells.length) ? cells : [ new_cell(self) ]
+	}
+}//end new_row
+
+
 	}
 }//end new_page
 
