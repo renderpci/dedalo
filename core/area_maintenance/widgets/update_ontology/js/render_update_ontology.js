@@ -875,11 +875,6 @@ const render_rebuild_lang_files = function () {
 * this was a copy-paste error from the sibling `render_rebuild_lang_files` function.
 * The actual return is `export_to_translate_container`.
 *
-* (!) The data URI on the download link (line ~819) contains a literal TAB character
-* between `data` and `:text/csv`, producing a malformed URI scheme `"data\t:text/csv"`.
-* This may silently fail in some browsers or cause the download to open as a blank page.
-* Do not fix (doc-only flag).
-*
 * @param {Object} self          - The `update_ontology` widget instance (needs `self.caller.init_form`)
 * @param {Array}  prefix_tipos  - Default TLD list from `class.update_ontology::get_value()`
 * @returns {HTMLElement} The assembled `export_to_translate_container` node
@@ -1076,14 +1071,12 @@ const render_export_to_translate = function (self, prefix_tipos) {
 						const csv_string = ar_row_csv.join("\n")
 
 					// Download it: create a temporary <a> with a data URI, click it, then remove it.
-					// (!) The href value contains a literal TAB character between "data" and ":text/csv"
-					// which produces a malformed data URI. This is a pre-existing bug — do not fix here.
 						const filename = 'ontology_translations'
 						const file	= filename + '.csv';
 						const link	= document.createElement('a');
 						link.style.display = 'none';
 						link.setAttribute('target', '_blank');
-						link.setAttribute('href', 'data	:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
+						link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
 						link.setAttribute('download', file);
 						document.body.appendChild(link);
 						link.click();
