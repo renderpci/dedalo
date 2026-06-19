@@ -9,6 +9,7 @@
 	import {update_process_status} from '../../../../common/js/common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 	import {dd_request_idle_callback} from '../../../../common/js/events.js'
+	import {event_manager} from '../../../../common/js/event_manager.js'
 	import {login} from '../../../../login/js/login.js'
 	import {render_servers_list} from '../../update_ontology/js/render_update_ontology.js'
 
@@ -352,10 +353,8 @@ const force_quit = async function () {
 * 'build_code_done' event so the data-version widget (update_data_version)
 * can refresh automatically.
 *
-* (!) FLAG: `event_manager` is used on line 281 but is NOT imported in this
-* file. This call will throw a ReferenceError at runtime unless `event_manager`
-* is available as a global. The import is present in render_update_ontology.js
-* but not here. Do not fix here — document only.
+* `event_manager` is imported at the top of this file (mirroring
+* render_update_ontology.js) so the `build_code_done` publish below resolves.
 *
 * @see login.run_service_worker, login.run_worker_cache
 * @param {Object} self - update_code widget instance
@@ -794,6 +793,15 @@ const render_info_modal = function( self, versions_info ) {
 						return
 					}
 
+					if (page_globals.dedalo_entity==='development') {
+						// message development
+						// (!) Safety guard: 'development' installations must never be
+						// auto-updated to prevent accidental code overwrites during dev work.
+						// Checked before mutating the UI so the button/mode stay visible.
+						alert('To avoid accidental overwrites, the development installation does not allow updating the code.');
+						return
+					}
+
 					button_update.classList.add('hide')
 					update_mode_container.classList.add('hide')
 					body.classList.add('loading')
@@ -807,14 +815,6 @@ const render_info_modal = function( self, versions_info ) {
 
 					// SEC-XSS-009: static text; textContent avoids unnecessary HTML parsing.
 					response.textContent = 'Updating. Please wait'
-
-					if (page_globals.dedalo_entity==='development') {
-						// message development
-						// (!) Safety guard: 'development' installations must never be
-						// auto-updated to prevent accidental code overwrites during dev work.
-						alert('To avoid accidental overwrites, the development installation does not allow updating the code.');
-						return
-					}
 
 					// update_code
 					// Delegates to update_code.prototype.update_code (update_code.js)
