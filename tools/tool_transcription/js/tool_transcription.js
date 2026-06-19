@@ -372,15 +372,12 @@ tool_transcription.prototype.load_relation_list = async function() {
 * to generate a source descriptor; the action string itself has no routing significance
 * here — only `dd_api: 'dd_tools_api'` and `action: 'user_tools'` in the rqo matter.
 *
-* (!) Note: `self` in the body of this function refers to the outer window `self`
-* (the global WorkerGlobalScope / Window), NOT the tool instance, because this method
-* does not capture `const self = this`. This is a pre-existing code pattern that works
-* because `create_source` extracts the needed properties from whatever object is passed.
-*
 * @param {Array} ar_requested_tools - Names of tools to check, e.g. ['tool_time_machine']
 * @returns {Promise<Array>} Array of tool_simple_context objects for each accessible tool.
 */
 tool_transcription.prototype.get_user_tools = async function(ar_requested_tools) {
+
+	const self = this
 
 	// source. Note that second argument is the name of the function is the action that not has utility here
 		const source = create_source(self, 'user_tools')
