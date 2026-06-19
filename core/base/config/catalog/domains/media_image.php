@@ -208,14 +208,15 @@ return [
 	),
 
 	// ------------------------------------------------------------------
-	// magick — binary path (STATIC)
+	// magick — binary path (derived from paths.binary_base)
 	// ------------------------------------------------------------------
 
 	new config_key(
 		path:    'media.magick_path',
 		const:   'MAGICK_PATH',
 		type:    'string',
-		default: '/usr/bin/',
-		doc:     'Filesystem path to the ImageMagick binary directory.',
+		scope:   config_scope::DERIVED,
+		derived: static fn(array $r): string => $r['paths.binary_base'] . '/',
+		doc:     'Filesystem path to the ImageMagick binary directory (derived from paths.binary_base).',
 	),
 ];

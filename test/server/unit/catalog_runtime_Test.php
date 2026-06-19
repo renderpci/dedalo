@@ -19,7 +19,7 @@ final class catalog_runtime_Test extends TestCase {
 		$by = $this->load();
 		$expect = [
 			'runtime.session_handler'  => [config_scope::STATIC, 'DEDALO_SESSION_HANDLER'],
-			'runtime.cache_manager'    => [config_scope::STATIC, 'DEDALO_CACHE_MANAGER'],
+			'runtime.cache_manager'    => [config_scope::DERIVED, 'DEDALO_CACHE_MANAGER'],
 			'runtime.show_debug'       => [config_scope::USER,   'SHOW_DEBUG'],
 			'runtime.show_developer'   => [config_scope::USER,   'SHOW_DEVELOPER'],
 			'runtime.logger_level'     => [config_scope::USER,   'LOGGER_LEVEL'],
@@ -33,10 +33,15 @@ final class catalog_runtime_Test extends TestCase {
 		}
 	}
 
-	public function test_cache_manager_is_deep_merge_map() : void {
-		$by = $this->load();
-		$this->assertSame(config_merge::DEEP, $by['runtime.cache_manager']->merge);
-		$this->assertSame(['manager' => 'files', 'files_path' => ''], $by['runtime.cache_manager']->default);
+	public function test_cache_manager_derives_files_path_from_sessions() : void {
+		$by  = $this->load();
+		$key = $by['runtime.cache_manager'];
+		$this->assertSame(config_scope::DERIVED, $key->scope);
+		$this->assertInstanceOf(\Closure::class, $key->derived);
+		$this->assertSame(
+			['manager' => 'files', 'files_path' => '/srv/sessions'],
+			($key->derived)(['paths.sessions_path' => '/srv/sessions'])
+		);
 	}
 
 	public function test_user_keys_have_no_default() : void {

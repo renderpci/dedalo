@@ -36,7 +36,8 @@ final class catalog_media_docs_Test extends TestCase {
 			'media.pdf.quality_original'            => [config_scope::STATIC, 'DEDALO_PDF_QUALITY_ORIGINAL'],
 			'media.pdf.quality_default'             => [config_scope::STATIC, 'DEDALO_PDF_QUALITY_DEFAULT'],
 			'media.pdf.ar_quality'                  => [config_scope::STATIC, 'DEDALO_PDF_AR_QUALITY'],
-			'media.pdf.transcription_engine'        => [config_scope::STATIC, 'PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'],
+			'media.pdf.transcription_engine'        => [config_scope::DERIVED, 'PDF_AUTOMATIC_TRANSCRIPTION_ENGINE'],
+			'media.pdf.ocr_engine'                  => [config_scope::DERIVED, 'PDF_OCR_ENGINE'],
 			// 3D
 			'media.3d.folder'                       => [config_scope::STATIC, 'DEDALO_3D_FOLDER'],
 			'media.3d.extension'                    => [config_scope::STATIC, 'DEDALO_3D_EXTENSION'],
@@ -84,7 +85,9 @@ final class catalog_media_docs_Test extends TestCase {
 		$this->assertSame('pdf',               $by['media.pdf.type']->default,             'DEDALO_PDF_TYPE');
 		$this->assertSame('original',          $by['media.pdf.quality_original']->default, 'DEDALO_PDF_QUALITY_ORIGINAL');
 		$this->assertSame('web',               $by['media.pdf.quality_default']->default,  'DEDALO_PDF_QUALITY_DEFAULT');
-		$this->assertSame('/usr/bin/pdftotext',$by['media.pdf.transcription_engine']->default, 'PDF_AUTOMATIC_TRANSCRIPTION_ENGINE');
+		// transcription_engine + ocr_engine are DERIVED from paths.binary_base (platform-aware) — no static default
+		$this->assertInstanceOf(\Closure::class, $by['media.pdf.transcription_engine']->derived, 'PDF_AUTOMATIC_TRANSCRIPTION_ENGINE derived');
+		$this->assertInstanceOf(\Closure::class, $by['media.pdf.ocr_engine']->derived,           'PDF_OCR_ENGINE derived');
 	}
 
 	public function test_3d_scalar_defaults_verbatim() : void {
@@ -229,10 +232,12 @@ final class catalog_media_docs_Test extends TestCase {
 	// All keys are STATIC scope
 	// -----------------------------------------------------------------------
 
-	public function test_all_keys_are_static_scope() : void {
+	public function test_all_keys_are_static_scope_except_derived_binaries() : void {
 		$by = $this->load();
+		$derived = ['media.pdf.transcription_engine', 'media.pdf.ocr_engine']; // platform binary paths
 		foreach ($by as $path => $key) {
-			$this->assertSame(config_scope::STATIC, $key->scope, "key $path must be STATIC");
+			$expected = in_array($path, $derived, true) ? config_scope::DERIVED : config_scope::STATIC;
+			$this->assertSame($expected, $key->scope, "key $path scope");
 		}
 	}
 }

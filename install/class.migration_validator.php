@@ -26,6 +26,13 @@ final class migration_validator {
 			}
 		}
 
+		// DEDALO_ROOT_WEB is request-derived (boot_paths resolves it from REQUEST_URI; in CLI both
+		// sides fall back to install-specific defaults). Any constant whose ONLY difference is that
+		// web-mount prefix is faithful in a real request — non-fatal here, verified at the live check.
+		$old_web = (string) ($old['DEDALO_ROOT_WEB'] ?? '');
+		$mig_web = (string) ($migrated['DEDALO_ROOT_WEB'] ?? '');
+		$web_differs = ($old_web !== '' && $mig_web !== '' && $old_web !== $mig_web);
+
 		$missing = $mismatch = $excluded = $derived_req = [];
 		foreach ($old as $name => $old_value) {
 			$scope = $scope_of[$name] ?? null;
@@ -40,8 +47,11 @@ final class migration_validator {
 				continue;
 			}
 			if ($migrated[$name] !== $old_value) {
-				if ($scope === config_scope::DERIVED_REQUEST) {
-					$derived_req[] = $name; // reported, non-fatal
+				$web_mount_only = $web_differs
+					&& is_string($old_value) && is_string($migrated[$name])
+					&& str_replace($mig_web, $old_web, $migrated[$name]) === $old_value;
+				if ($scope === config_scope::DERIVED_REQUEST || $web_mount_only) {
+					$derived_req[] = $name; // request-derived (web mount) — non-fatal, verified live
 				} else {
 					$mismatch[] = $name;
 				}

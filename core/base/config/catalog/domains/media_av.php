@@ -122,24 +122,27 @@ return [
 		path:    'media.av.ffmpeg_path',
 		const:   'DEDALO_AV_FFMPEG_PATH',
 		type:    'string',
-		default: '/usr/bin/ffmpeg',
-		doc:     'Filesystem path to the ffmpeg binary.',
+		scope:   config_scope::DERIVED,
+		derived: static fn(array $r): string => $r['paths.binary_base'] . '/ffmpeg',
+		doc:     'Filesystem path to the ffmpeg binary (derived from paths.binary_base).',
 	),
 
 	new config_key(
 		path:    'media.av.faststart_path',
 		const:   'DEDALO_AV_FASTSTART_PATH',
 		type:    'string',
-		default: '/usr/bin/qt-faststart',
-		doc:     'Filesystem path to the qt-faststart binary.',
+		scope:   config_scope::DERIVED,
+		derived: static fn(array $r): string => $r['paths.binary_base'] . '/qt-faststart',
+		doc:     'Filesystem path to the qt-faststart binary (derived from paths.binary_base).',
 	),
 
 	new config_key(
 		path:    'media.av.ffprobe_path',
 		const:   'DEDALO_AV_FFPROBE_PATH',
 		type:    'string',
-		default: '/usr/bin/ffprobe',
-		doc:     'Filesystem path to the ffprobe binary.',
+		scope:   config_scope::DERIVED,
+		derived: static fn(array $r): string => $r['paths.binary_base'] . '/ffprobe',
+		doc:     'Filesystem path to the ffprobe binary (derived from paths.binary_base).',
 	),
 
 	// ------------------------------------------------------------------

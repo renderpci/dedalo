@@ -44,7 +44,7 @@ final class catalog_media_image_Test extends TestCase {
 			'media.image.file_url'               => [config_scope::DERIVED, 'DEDALO_IMAGE_FILE_URL'],
 			'media.image.web_folder'             => [config_scope::STATIC,  'DEDALO_IMAGE_WEB_FOLDER'],
 			'media.magick_config'                => [config_scope::STATIC,  'MAGICK_CONFIG'],
-			'media.magick_path'                  => [config_scope::STATIC,  'MAGICK_PATH'],
+			'media.magick_path'                  => [config_scope::DERIVED, 'MAGICK_PATH'],
 		];
 
 		foreach ($expect as $path => [$scope, $const]) {
@@ -75,7 +75,8 @@ final class catalog_media_image_Test extends TestCase {
 		$this->assertSame('1.5MB',       $by['media.image.quality_default']->default,  'DEDALO_IMAGE_QUALITY_DEFAULT');
 		$this->assertSame(150,           $by['media.image.print_dpi']->default,        'DEDALO_IMAGE_PRINT_DPI');
 		$this->assertSame('/web',        $by['media.image.web_folder']->default,       'DEDALO_IMAGE_WEB_FOLDER');
-		$this->assertSame('/usr/bin/',   $by['media.magick_path']->default,            'MAGICK_PATH');
+		// MAGICK_PATH is DERIVED from paths.binary_base (platform-aware) — no static default
+		$this->assertInstanceOf(\Closure::class, $by['media.magick_path']->derived,    'MAGICK_PATH derived');
 	}
 
 	// -----------------------------------------------------------------------

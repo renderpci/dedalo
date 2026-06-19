@@ -202,6 +202,15 @@ return [
 	),
 
 	new config_key(
+		path:    'paths.binary_base',
+		const:   null, // internal: media tool-binary base; the *_PATH consts derive from it
+		type:    'string',
+		scope:   config_scope::DERIVED,
+		derived: static fn(array $r): string => PHP_OS === 'Darwin' ? '/opt/homebrew/bin' : '/usr/bin',
+		doc:     'Platform base dir for media tool binaries (mirrors v6 get_base_binary_path()).',
+	),
+
+	new config_key(
 		path:    'paths.backup_path',
 		const:   'DEDALO_BACKUP_PATH',
 		type:    'string',

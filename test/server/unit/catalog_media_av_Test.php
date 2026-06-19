@@ -35,9 +35,9 @@ final class catalog_media_av_Test extends TestCase {
 			'media.av.quality_default'       => [config_scope::STATIC, 'DEDALO_AV_QUALITY_DEFAULT'],
 			'media.av.ar_quality'            => [config_scope::STATIC, 'DEDALO_AV_AR_QUALITY'],
 			'media.av.posterframe_extension' => [config_scope::STATIC, 'DEDALO_AV_POSTERFRAME_EXTENSION'],
-			'media.av.ffmpeg_path'           => [config_scope::STATIC, 'DEDALO_AV_FFMPEG_PATH'],
-			'media.av.faststart_path'        => [config_scope::STATIC, 'DEDALO_AV_FASTSTART_PATH'],
-			'media.av.ffprobe_path'          => [config_scope::STATIC, 'DEDALO_AV_FFPROBE_PATH'],
+			'media.av.ffmpeg_path'           => [config_scope::DERIVED, 'DEDALO_AV_FFMPEG_PATH'],
+			'media.av.faststart_path'        => [config_scope::DERIVED, 'DEDALO_AV_FASTSTART_PATH'],
+			'media.av.ffprobe_path'          => [config_scope::DERIVED, 'DEDALO_AV_FFPROBE_PATH'],
 			'media.av.streamer'              => [config_scope::STATIC, 'DEDALO_AV_STREAMER'],
 			'media.av.subtitles_folder'      => [config_scope::STATIC, 'DEDALO_SUBTITLES_FOLDER'],
 			'media.av.subtitles_extension'   => [config_scope::STATIC, 'DEDALO_AV_SUBTITLES_EXTENSION'],
@@ -75,9 +75,10 @@ final class catalog_media_av_Test extends TestCase {
 		$this->assertSame('original',          $by['media.av.quality_original']->default,      'DEDALO_AV_QUALITY_ORIGINAL');
 		$this->assertSame('404',               $by['media.av.quality_default']->default,       'DEDALO_AV_QUALITY_DEFAULT');
 		$this->assertSame('jpg',               $by['media.av.posterframe_extension']->default, 'DEDALO_AV_POSTERFRAME_EXTENSION');
-		$this->assertSame('/usr/bin/ffmpeg',   $by['media.av.ffmpeg_path']->default,           'DEDALO_AV_FFMPEG_PATH');
-		$this->assertSame('/usr/bin/qt-faststart', $by['media.av.faststart_path']->default,    'DEDALO_AV_FASTSTART_PATH');
-		$this->assertSame('/usr/bin/ffprobe',  $by['media.av.ffprobe_path']->default,          'DEDALO_AV_FFPROBE_PATH');
+		// ffmpeg/faststart/ffprobe are DERIVED from paths.binary_base (platform-aware) — no static default
+		$this->assertInstanceOf(\Closure::class, $by['media.av.ffmpeg_path']->derived,    'DEDALO_AV_FFMPEG_PATH derived');
+		$this->assertInstanceOf(\Closure::class, $by['media.av.faststart_path']->derived, 'DEDALO_AV_FASTSTART_PATH derived');
+		$this->assertInstanceOf(\Closure::class, $by['media.av.ffprobe_path']->derived,   'DEDALO_AV_FFPROBE_PATH derived');
 		$this->assertNull($by['media.av.streamer']->default,                                    'DEDALO_AV_STREAMER must be null');
 		$this->assertSame('/subtitles',        $by['media.av.subtitles_folder']->default,      'DEDALO_SUBTITLES_FOLDER');
 		$this->assertSame('vtt',               $by['media.av.subtitles_extension']->default,   'DEDALO_AV_SUBTITLES_EXTENSION');

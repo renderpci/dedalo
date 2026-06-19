@@ -99,8 +99,18 @@ return [
 		path:    'media.pdf.transcription_engine',
 		const:   'PDF_AUTOMATIC_TRANSCRIPTION_ENGINE',
 		type:    'string',
-		default: '/usr/bin/pdftotext',
-		doc:     'Path to the daemon that generates text files from PDF (XPDF/pdftotext).',
+		scope:   config_scope::DERIVED,
+		derived: static fn(array $r): string => $r['paths.binary_base'] . '/pdftotext',
+		doc:     'Path to the daemon that generates text files from PDF (derived from paths.binary_base).',
+	),
+
+	new config_key(
+		path:    'media.pdf.ocr_engine',
+		const:   'PDF_OCR_ENGINE',
+		type:    'string',
+		scope:   config_scope::DERIVED,
+		derived: static fn(array $r): string => $r['paths.binary_base'] . '/ocrmypdf',
+		doc:     'Path to the ocrmypdf binary (derived from paths.binary_base).',
 	),
 
 	// ------------------------------------------------------------------
