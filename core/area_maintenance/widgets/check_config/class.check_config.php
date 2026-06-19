@@ -74,7 +74,6 @@ class check_config {
 	*   ],
 	*   msg:    string,
 	*   errors: string[],
-	*   sample_config_constants_list: string[]  // (!) last-iterated value; see flag below
 	* }
 	*
 	* If a sample or live config file is missing or unreadable the iteration skips
@@ -195,7 +194,6 @@ class check_config {
 			$response->msg		= empty($response->errors)
 				? 'OK. Request done successfully'
 				: 'Warning. Request done with errors';
-			$response->sample_config_constants_list	= $sample_config_constants_list;
 
 
 		return $response;
