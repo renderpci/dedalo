@@ -49,7 +49,10 @@ $env = $staging . '/private/.env';
 if (is_file($env)) {
 	$phases[] = boot_runtime_phases::env_load_phase($env);
 }
-$paths_override = boot_paths::resolve($staging . '/config', $_SERVER, php_sapi_name());
+// Paths resolve from the real install root (where core/, config/ live), NOT the staging
+// dir (which only holds the migrated VALUE files). This is how the post-flip boot computes
+// them, so the surfaces line up.
+$paths_override = boot_paths::resolve($repo . '/config', $_SERVER, php_sapi_name());
 $local_cfg = $staging . '/config/local/config.php';
 $local_override = is_file($local_cfg) ? (require $local_cfg) : [];
 if (!is_array($local_override)) {

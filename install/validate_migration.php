@@ -51,7 +51,7 @@ $targets = [
 migration_committer::commit($plan['artifacts'], $targets, $staging . '/backup');
 
 // MIGRATED surface — boot the migrated-config-consuming pipeline against staging
-$mig_cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($repo . '/install/boot_diff_migrated_surface.php')
+$mig_cmd = escapeshellarg(PHP_BINARY) . ' -d error_reporting=0 -d display_errors=0 ' . escapeshellarg($repo . '/install/boot_diff_migrated_surface.php')
 	. ' ' . escapeshellarg('--staging=' . $staging)
 	. ' ' . escapeshellarg('--catalog=' . $repo . '/core/base/config/catalog/catalog.php')
 	. ' ' . escapeshellarg('--subsystem=' . $repo . '/core/base/version.inc')
