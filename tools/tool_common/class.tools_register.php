@@ -184,7 +184,7 @@ class tools_register {
 	 * Main entry point for tool synchronization.
 	 * 1. Scans the filesystem for tool directories.
 	 * 2. Processes each tool's register.json.
-	 * 3. Updates the database ontologies and registry records.
+	 * 3. Updates the database registry records.
 	 * 4. Cleans up stale registry records.
 	 * 5. Invalidates caches.
 	 *
@@ -193,7 +193,6 @@ class tools_register {
 	public static function import_tools() : array {
 
 		$info_file_processed 	= [];
-		$ar_ontologies 			= [];
 		$info_objects_parsed 	= [];
 		$counter 				= 0;
 
@@ -219,10 +218,6 @@ class tools_register {
 				continue;
 			}
 
-			if ($result->ontology_data) {
-				$ar_ontologies[] = $result->ontology_data;
-			}
-
 			if ($result->info_object) {
 				$info_objects_parsed[$basename] = $result->info_object;
 			}
@@ -232,20 +227,15 @@ class tools_register {
 			}
 		}
 
-		// 3. Update database structures (Ontology)
-		if (!empty($ar_ontologies)) {
-			self::update_ontology_structure($ar_ontologies);
-		}
-
-		// 4. Update Registry records in database
+		// 3. Update Registry records in database
 		if (!empty($info_objects_parsed)) {
 			self::update_tool_registry_sections($info_objects_parsed, $info_file_processed);
 		}
 
-		// 5. Cleanup records for tools that were removed from disk
+		// 4. Cleanup records for tools that were removed from disk
 		self::cleanup_removed_tools($info_file_processed);
 
-		// 6. Invalidate caches to reflect changes
+		// 5. Invalidate caches to reflect changes
 		if (!self::clean_cache()) {
 			debug_log(__METHOD__ . " Error deleting tools cache", logger::ERROR);
 		}
@@ -360,7 +350,6 @@ class tools_register {
 
 		$result = (object)[
 			'skipped' 		=> false,
-			'ontology_data' => null,
 			'info_object' 	=> null,
 			'file_info' 	=> null
 		];
@@ -518,8 +507,6 @@ class tools_register {
 					}
 				}
 
-			$result->ontology_data 	= $new_ontology_value;
-
 			// Inject renumerated ontology back into the object for saving
 			$model_ontology  = ontology_node::get_model_by_tipo($tipo_ontology, true);
 			$column_ontology = section_record_data::get_column_name($model_ontology);
@@ -540,24 +527,6 @@ class tools_register {
 		];
 
 		return $result;
-	}
-
-
-	/**
-	 * UPDATE_ONTOLOGY_STRUCTURE
-	 *
-	 * (Note: Implementation placeholder) Updates the tool-related ontology terms in database.
-	 *
-	 * @param array $ar_ontologies List of renumerated ontology structures.
-	 * @return void
-	 */
-	private static function update_ontology_structure(array $ar_ontologies) : void {
-		// Remove existing tool structure nodes
-		ontology_utils::delete_tld_nodes('tool');
-
-		foreach ($ar_ontologies as $current_ontology_data) {
-			// @TODO: Implementation for inserting new ontology nodes
-		}
 	}
 
 
