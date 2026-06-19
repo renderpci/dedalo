@@ -19,7 +19,7 @@
 */
 
 	import {ui} from '../../../core/common/js/ui.js'
-	import {render_box_content, is_relation_model, column_key} from './render_box_tool_print.js'
+	import {is_relation_model, column_key} from './render_box_tool_print.js'
 	import {make_editor_ctx, layout_flow} from './flow_engine.js'
 
 
