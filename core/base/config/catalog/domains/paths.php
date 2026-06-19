@@ -179,8 +179,8 @@ return [
 		const:   'DEDALO_MEDIA_PATH',
 		type:    'string',
 		scope:   config_scope::DERIVED,
-		derived: static fn(array $r): string => $r['paths.root'] . '/media',
-		doc:     'media/ directory.',
+		derived: static fn(array $r): string => $r['paths.root'] . '/media/media_' . $r['identity.entity'],
+		doc:     'media/ directory (per-entity subfolder: media/media_<entity>).',
 	),
 
 	new config_key(
@@ -188,8 +188,8 @@ return [
 		const:   'DEDALO_MEDIA_URL',
 		type:    'string',
 		scope:   config_scope::DERIVED,
-		derived: static fn(array $r): string => $r['paths.root_web'] . '/media',
-		doc:     'media/ web URL.',
+		derived: static fn(array $r): string => $r['paths.root_web'] . '/media/media_' . $r['identity.entity'],
+		doc:     'media/ web URL (per-entity subfolder: media/media_<entity>).',
 	),
 
 	new config_key(
@@ -197,8 +197,8 @@ return [
 		const:   'DEDALO_SESSIONS_PATH',
 		type:    'string',
 		scope:   config_scope::DERIVED,
-		derived: static fn(array $r): string => dirname($r['paths.root'], 2) . '/sessions',
-		doc:     'sessions/ directory (outside httpdocs).',
+		derived: static fn(array $r): string => dirname($r['paths.root'], 1) . '/sessions',
+		doc:     'sessions/ directory (one level above the install root, outside httpdocs).',
 	),
 
 	new config_key(
