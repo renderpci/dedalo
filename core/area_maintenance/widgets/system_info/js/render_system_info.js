@@ -231,7 +231,7 @@ const render_datalist = (self, datalist_container) => {
 			parent			: fragment
 		})
 		health_list_container.appendChild(
-			render_health_list(self)
+			render_health_list(self, datalist_container)
 		)
 
 	// Dédalo requeriments_list
@@ -287,24 +287,18 @@ const render_datalist = (self, datalist_container) => {
 * dispatched, so the elapsed time includes only the network round-trip and
 * micro-task scheduling overhead, not DOM creation time.
 *
-* (!) `datalist_container` is referenced on line 368 inside the failed_list guard
-*     at the bottom of this function but is NOT a parameter here; the variable is
-*     not in scope (it is a local variable of `render_content_data` / `render_datalist`).
-*     This means `set_widget_label_style` would throw a ReferenceError at runtime
-*     if any health check fails.  The `render_requeriments_list` sibling receives
-*     `datalist_container` as an explicit parameter and handles the same case
-*     correctly; the same fix should be applied here.
-*
 * (!) The `checks_list` array repeats `'check_server_health'` five times.  This
 *     is intentional: it measures API round-trip variance across multiple
 *     independent fetches rather than caching the first result.
 *
 * @param {Object} self - The `system_info` widget instance (used for
 *     `set_widget_label_style` calls via the failed_list guard).
+* @param {HTMLElement} datalist_container - The container node used as the
+*     positional anchor for `set_widget_label_style`.
 * @returns {DocumentFragment} Fragment containing the header row and one row per
 *     health probe; rows complete asynchronously after the fragment is returned.
 */
-const render_health_list = function (self) {
+const render_health_list = function (self, datalist_container) {
 
 	const fragment = new DocumentFragment()
 
@@ -483,15 +477,10 @@ const render_health_list = function (self) {
 	}//end for (let i = 0; i < total_tries; i++)
 
 	// failed list
-	// (!) `datalist_container` is referenced here but is NOT in scope — it is a
-	//     local of `render_content_data` / `render_datalist`, never passed to
-	//     this function.  This block would throw a ReferenceError at runtime
-	//     whenever failed_list is non-empty.  The `.then()` callbacks above are
-	//     async, so by the time they resolve `failed_list` may already be populated,
-	//     but this synchronous guard runs before the callbacks settle; in practice
-	//     `failed_list` is always empty here, masking the bug.  The intended
-	//     pattern is shown correctly in `render_requeriments_list`, which accepts
-	//     `datalist_container` as an explicit parameter.
+	// `datalist_container` is received as a parameter (mirroring
+	// `render_requeriments_list`) so this guard can apply the danger style.
+	// Note: the health probes above resolve asynchronously, so this synchronous
+	// guard runs before they settle; failed_list is typically empty at this point.
 	if (failed_list.length>0) {
 		dd_request_idle_callback(
 			() => {

@@ -416,6 +416,9 @@ class system_info {
 		// The hit_rate is rounded to 2 decimal places for display; memory values are
 		// expressed in MB (bytes ÷ 1024 ÷ 1024), rounded to 1 decimal place.
 			$s = opcache_get_status();
+			if (!is_array($s)) {
+				throw new Exception('OPcache is not enabled (opcache_get_status returned false)');
+			}
 			$system_list[] = (object)[
 				'name'	=> 'opcache_hit_rate',
 				'value'	=> round($s['opcache_statistics']['opcache_hit_rate'], 2) . "%"
