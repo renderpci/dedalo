@@ -309,7 +309,7 @@ const split_long_row = function(self, ctx, row_node, used, usable_px, info) {
 		const seg = overflow.slice(idx, m)
 		idx = m
 		const cont_row = (info.kind==='table')
-			? build_continuation_table_node(info.table, seg, ctx)
+			? build_continuation_table_node(info.table, seg, ctx, content)
 			: build_continuation_text_node(content, info.container, seg, ctx)
 		// link the continuation back to the master cell (editor selection)
 		cont_row.dataset.masterRowId	= master_ids.row
@@ -346,18 +346,21 @@ const build_continuation_text_node = function(master_content, master_container, 
 /**
 * BUILD_CONTINUATION_TABLE_NODE
 * A full-width flow row holding a table segment (cloned colgroup + header +
-* the given moved <tr>), for a continuation page.
+* the given moved <tr>), for a continuation page. Copies the master cell
+* content's inline style (color/font/align) so the segment matches the master.
 * @param HTMLElement table - the master table (colgroup/header source)
 * @param HTMLElement[] seg_rows - <tr> nodes to place (moved)
 * @param object ctx
+* @param HTMLElement master_content - the master .cell_content (style source)
 * @return HTMLElement row node
 */
-const build_continuation_table_node = function(table, seg_rows, ctx) {
+const build_continuation_table_node = function(table, seg_rows, ctx, master_content) {
 
 	const row_node	= ui.create_dom_element({ element_type:'div', class_name:'flow_row flow_continued' })
 	const cell_node	= ui.create_dom_element({ element_type:'div', class_name:'flow_cell', parent: row_node })
 	cell_node.style.flex = '0 0 100%'
 	const content	= ui.create_dom_element({ element_type:'div', class_name:'box_content cell_content', parent: cell_node })
+	if (master_content) content.style.cssText = master_content.style.cssText   // color / font / align
 
 	const t2 = document.createElement('table')
 	t2.className = 'portal_table'
