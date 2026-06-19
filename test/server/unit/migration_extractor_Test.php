@@ -64,12 +64,14 @@ final class migration_extractor_Test extends TestCase {
 		define('M_UNRESOLVED', SOME_UNKNOWN_CONST);
 		PHP);
 		$out = migration_extractor::extract([$f]);
-		foreach (['M_HOST', 'M_ROOT', 'M_LANG', 'M_ARR', 'M_UNRESOLVED'] as $name) {
+		foreach (['M_HOST', 'M_ROOT', 'M_LANG', 'M_UNRESOLVED'] as $name) {
 			$this->assertSame('runtime', $out[$name]['kind'], "$name should be runtime");
 			$this->assertNull($out[$name]['value'], "$name value must be null");
 		}
-		// verbatim source preserved for passthrough
-		$this->assertSame("['a', 'b']", $out['M_ARR']['raw']);
+		// a pure-literal array resolves to its value (so list/map secrets carry a value)
+		$this->assertSame('literal', $out['M_ARR']['kind']);
+		$this->assertSame(['a', 'b'], $out['M_ARR']['value']);
+		// verbatim source still preserved for runtime values
 		$this->assertSame('dirname(__FILE__, 2)', $out['M_ROOT']['raw']);
 	}
 

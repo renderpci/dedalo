@@ -95,6 +95,16 @@ final class migration_extractor {
 		if (count($mean) === 1) {
 			return self::scalar_token($mean[0], $symbols);
 		}
+		// array literal of pure scalars (['code'=>'x'] / array(...)) — resolve via a guarded
+		// eval (literals + array syntax only; no vars/calls/const-refs) so list/map secrets
+		// carry a real value that downstream JSON-encodes into the .env.
+		$opens_array = ($mean[0] === '[') || (is_array($mean[0]) && $mean[0][0] === T_ARRAY);
+		if ($opens_array && self::is_safe_array($mean)) {
+			$value = self::eval_literal(self::raw_text($value_tokens));
+			if (is_array($value)) {
+				return ['literal', $value];
+			}
+		}
 		// concatenation: operand ('.' operand)*  — operands at even indices, '.' at odd
 		$parts = [];
 		foreach ($mean as $idx => $tok) {
@@ -145,6 +155,34 @@ final class migration_extractor {
 		}
 		return $s;
 	}//end raw_text
+
+	/** true when value tokens are only array syntax + scalar literals (no vars/calls/refs) — safe to eval. */
+	private static function is_safe_array(array $mean) : bool {
+		foreach ($mean as $t) {
+			if (is_array($t)) {
+				if (in_array($t[0], [T_ARRAY, T_CONSTANT_ENCAPSED_STRING, T_LNUMBER, T_DNUMBER, T_DOUBLE_ARROW, T_WHITESPACE], true)) {
+					continue;
+				}
+				if ($t[0] === T_STRING && in_array(strtolower($t[1]), ['true', 'false', 'null'], true)) {
+					continue;
+				}
+				return false; // T_VARIABLE, a function/const name, ->, etc. — not a pure literal
+			}
+			if (!in_array($t, ['[', ']', '(', ')', ',', '-', '+'], true)) {
+				return false;
+			}
+		}
+		return true;
+	}//end is_safe_array
+
+	/** eval a caller-verified pure-literal expression to its value; null on any error. */
+	private static function eval_literal(string $raw) : mixed {
+		try {
+			return eval('return ' . $raw . ';');
+		} catch (\Throwable $e) {
+			return null;
+		}
+	}//end eval_literal
 
 	private static function is_define(array $token) : bool {
 		if ($token[0] === T_STRING) {

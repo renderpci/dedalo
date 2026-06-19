@@ -10,7 +10,8 @@ require_once dirname(__DIR__, 3) . '/install/class.env_writer.php';
 final class env_writer_Test extends TestCase {
 
 	private function entry(migration_destination $d, mixed $value, string $kind = 'literal') : array {
-		return ['destination' => $d, 'record' => ['value' => $value, 'raw' => (string) $value, 'kind' => $kind, 'file' => 'f', 'line' => 1], 'scope' => null];
+		$raw = is_array($value) ? (string) json_encode($value) : (string) $value;
+		return ['destination' => $d, 'record' => ['value' => $value, 'raw' => $raw, 'kind' => $kind, 'file' => 'f', 'line' => 1], 'scope' => null];
 	}
 
 	public function test_env_round_trips_through_env_loader_including_salt_and_specials() : void {
@@ -51,5 +52,15 @@ final class env_writer_Test extends TestCase {
 		$classification = ['WEIRD_SECRET' => $this->entry(migration_destination::ENV, null, 'runtime')];
 		$parsed = env_loader::parse(env_writer::render_php($classification));
 		$this->assertArrayNotHasKey('WEIRD_SECRET', $parsed);
+	}
+
+	public function test_array_secret_is_json_encoded_and_round_trips() : void {
+		// list/map secrets (API_WEB_USER_CODE_MULTIPLE, etc.) go to .env as JSON text
+		$classification = [
+			'API_WEB_USER_CODE_MULTIPLE' => $this->entry(migration_destination::ENV, ['srv' => 'tok123', 'srv2' => 'tok456']),
+		];
+		$parsed = env_loader::parse(env_writer::render_php($classification));
+		$this->assertArrayHasKey('API_WEB_USER_CODE_MULTIPLE', $parsed);
+		$this->assertSame(['srv' => 'tok123', 'srv2' => 'tok456'], json_decode($parsed['API_WEB_USER_CODE_MULTIPLE'], true));
 	}
 }

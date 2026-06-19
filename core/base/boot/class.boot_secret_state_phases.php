@@ -37,7 +37,7 @@ final class boot_secret_state_phases {
 				if ($key->scope === config_scope::SECRET) {
 					$v = env_loader::get($key->const); // .env key == constant name (env_writer convention)
 					if ($v !== null) {
-						$definer($key->const, $v);
+						$definer($key->const, self::cast_value($v, $key->type)); // .env is text → cast to the catalog type
 					}
 				} elseif ($key->scope === config_scope::STATE) {
 					if (array_key_exists($key->path, $state)) {
@@ -47,4 +47,14 @@ final class boot_secret_state_phases {
 			}
 		});
 	}//end emit_phase
+
+	/** Cast a .env STRING value back to the catalog's declared type (.env is text-only). */
+	private static function cast_value(string $value, string $type) : mixed {
+		return match ($type) {
+			'int'         => (int) $value,
+			'bool'        => in_array(strtolower($value), ['1', 'true', 'yes', 'on'], true),
+			'list', 'map' => is_array($decoded = json_decode($value, true)) ? $decoded : [],
+			default       => $value, // string
+		};
+	}//end cast_value
 }

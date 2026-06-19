@@ -60,4 +60,20 @@ final class boot_secret_state_phases_Test extends TestCase {
 		boot::run(entrypoint_profile::CLI, [boot_secret_state_phases::emit_phase($this->catalog(), null, $spy)]);
 		$this->assertSame([], $recorded);
 	}
+
+	public function test_list_secret_is_json_decoded_by_catalog_type() : void {
+		$env = $this->dir . '/ss_list.env';
+		file_put_contents($env, 'DD_T1_LIST={"srv":"tok"}' . "\n");
+		chmod($env, 0600);
+		env_loader::load($env);
+
+		$catalog = [ new config_key('a.list', 'DD_T1_LIST', 'list', null, config_scope::SECRET) ];
+		$recorded = [];
+		$spy = static function (string $name, mixed $value) use (&$recorded) : void { $recorded[$name] = $value; };
+
+		boot::run(entrypoint_profile::CLI, [boot_secret_state_phases::emit_phase($catalog, null, $spy)]);
+
+		// a list-typed secret stored as JSON text in .env is decoded back to an array
+		$this->assertSame(['srv' => 'tok'], $recorded['DD_T1_LIST']);
+	}
 }

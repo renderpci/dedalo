@@ -44,10 +44,13 @@ final class env_writer {
 		return implode("\n", $lines) . "\n";
 	}//end render_bun
 
-	/** scalar → string for an env value (bools become 1/'' ; null handled by caller skip) */
+	/** value → string for an env line: bools as 1/'' ; list/map as JSON; scalars as-is. */
 	private static function stringify(mixed $value) : string {
 		if (is_bool($value)) {
 			return $value ? '1' : '';
+		}
+		if (is_array($value)) {
+			return (string) json_encode($value); // list/map secrets — decoded back at boot by catalog type
 		}
 		return (string) $value;
 	}//end stringify
