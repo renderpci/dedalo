@@ -181,12 +181,12 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 		// fix value
 		// resolve_levels controls how many linked-section levels the PHP engine resolves
 		// and writes during a diffuse call. Defaults to 1 (direct relations only).
-			self.resolve_levels = self.diffusion_info.resolve_levels ?? 1
+			self.resolve_levels = self.diffusion_info?.resolve_levels ?? 1
 
 		// fix skip_publication_state_check value
 		// When truthy, the PHP diffuse() skips the publication-state guard that normally
 		// prevents unpublished records from being sent to diffusion targets.
-			self.skip_publication_state_check = self.diffusion_info.skip_publication_state_check ?? 1
+			self.skip_publication_state_check = self.diffusion_info?.skip_publication_state_check ?? 1
 
 	} catch (error) {
 		self.error = error
