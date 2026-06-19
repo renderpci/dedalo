@@ -464,7 +464,10 @@ const render_components_list = function(self) {
 					const li_container	= ui.create_dom_element({
 						element_type	: 'li',
 						class_name		: 'li_line li_container',
-						parent			: section_group
+						// Fall back to list_container when no section_group/section_tab
+						// has been encountered yet, so component rows appearing before
+						// any group header are still appended instead of throwing.
+						parent			: section_group || list_container
 					})
 
 				// component_label
@@ -665,7 +668,11 @@ const render_regenerate_options = function(self, item) {
 					// boolean option per component is effectively tracked. (!)
 					const change_handler = () => {
 						// set tool var regenerate_options item value
+						// Merge into the existing per-tipo object so sibling boolean
+						// options on the same component are preserved instead of being
+						// overwritten on each toggle.
 						self.regenerate_options[tipo] = {
+							...self.regenerate_options[tipo],
 							[regenerate_item.name] : input_checkbox.checked
 						}
 						if(SHOW_DEBUG===true) {
