@@ -712,7 +712,8 @@ class area_common extends common  {
 
 		// stable hue 0-359 from tipo
 		$hash	= crc32($tipo);
-		$hue	= $hash % 360;
+		// crc32() can return a negative int on 32-bit PHP; abs() keeps the hue in 0-359.
+		$hue	= abs($hash % 360);
 		$sat	= 65;	// %
 		$light	= 52;	// %
 
