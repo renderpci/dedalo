@@ -1,38 +1,46 @@
 <?php declare(strict_types=1);
 /**
 * CLASS TOOL_IMPORT_ZOTERO
-* Handles import of Zotero JSON bibliographic data into Dédalo publications
+* Imports Zotero JSON bibliographic exports into Dédalo's Publications section (rsc205).
 *
-* Use the JSON version exported by Zotero to import into Publications section: rsc205
-* The config of the tool defines the map between Zotero and Dédalo.
+* This tool bridges Zotero, the open-source reference manager, with Dédalo's
+* bibliographic data model. Operators upload one or more Zotero JSON export files
+* (plus optional PDF attachments) through the tool UI; the server then:
+*   1. Determines whether each Zotero record corresponds to an existing Dédalo
+*      publication (by Zotero id / call-number / configured field) or needs a
+*      new section created.
+*   2. Maps each Zotero field to the appropriate Dédalo component using the
+*      configurable 'map' array (see sample_config.json / register.json dd1633).
+*   3. Handles special cases: authors (given + family), dates (date-parts + season),
+*      container titles (Series / Collections section rsc212), typology, ISBN/ISSN,
+*      URL/DOI, and PDF attachments with cover-image extraction.
+*   4. Propagates any extra form fields (ddo_map role='input_component') from the
+*      temporary section into the newly-created publication record.
 *
-* Control of section_id with a Zotero field:
+* Configuration (two-tier fallback: dd996 user record → dd1324 registry default):
+*   - config.main: named component tipo references (section, pdf, identifying_image,
+*     field_to_section_id, field_standard_number, …).
+*   - config.map: array of { name, ddo_map[] } entries mapping Zotero field names
+*     to Dédalo component tipos and section tipos.
+*   - config.typology: Zotero item-type → Dédalo typology locator mapping.
+*   - config.standard_type: 'ISBN' / 'ISSN' → standard-number typology locator.
 *
-* By default use the tool use  the Zotero field 'call-number' to define the section_id of the record,
-* if is set call-number Dédalo will create or update this section_id.
-* It's possible to set other field to control the section_id in with Zotero file.
-* To do that, create a specific config in "Development->tools->Tool configuration" section
-* and changing "field_to_section_id" with the name of the Zotero field with section_id.
-* you can see the field default config in the register tool or you can see the 'sample_config.json'.
-* Specific configuration need to be a full configuration, not only the property changed.
+* Section-id resolution priority:
+*   1. If config.main[field_to_section_id] is set AND the Zotero record has that
+*      field, use its integer value directly (create or recycle the record).
+*   2. Otherwise match the Zotero 'id' URL tail against the code component (rsc137);
+*      if no match, create a brand-new section.
 *
-* Upload PDF files:
+* PDF attachment workflow:
+*   Upload the PDF alongside the JSON export. The Zotero record's 'archive' field
+*   must hold the exact filename ("my_pdf_file.pdf"). On import the PDF is moved to
+*   the component_pdf media path and the first page is rendered as a JPEG cover
+*   image, stored in the identifying_image component (rsc228).
 *
-* Is possible to upload PDF files with the Zotero records.
-* By default the tool use Zotero 'archive' field set with the full name of the PDF file.
-* "archive" : "my_pdf_file.pdf"
-* Add the PDF files with the Zotero JSON file in the tool, upload all and import.
+* Extends tool_common — the base class that loads the two-tier config, provides
+* the dd_object context for the browser, and enforces API_ACTIONS security.
 *
-* Features:
-* - JSON file processing from Zotero exports
-* - Automatic record creation or update based on Zotero identifiers
-* - Field mapping from Zotero to Dédalo component types
-* - Special handling for authors, dates, ISBN/ISSN, URLs, and DOIs
-* - PDF import with automatic first page extraction as image
-* - Container/Series/Collection management
-* - Configurable field mapping through ontology tool configuration
-*
-* @package Dedalo
+* @package Dédalo
 * @subpackage Tools
 */
 class tool_import_zotero extends tool_common {
@@ -40,9 +48,12 @@ class tool_import_zotero extends tool_common {
 
 
 	/**
+	* API_ACTIONS
 	* SEC-024 (§9.2): explicit allowlist of methods callable via
-	* `dd_tools_api::tool_request`. The other public-static methods are
-	* internal helpers with non-rqo signatures.
+	* `dd_tools_api::tool_request`. Only 'import_files' is a valid remote
+	* entry point. The other public-static methods are internal helpers with
+	* non-rqo signatures and must not be exposed via the API surface.
+	* @var array<string> API_ACTIONS
 	*/
 	public const API_ACTIONS = [
 		'import_files'
@@ -52,21 +63,46 @@ class tool_import_zotero extends tool_common {
 
 	/**
 	* IMPORT_FILES
-	* Processes uploaded Zotero JSON files and imports data into Dédalo
+	* Main entry point — processes every uploaded Zotero JSON file and persists
+	* the bibliographic data into Dédalo publication records (section rsc205).
 	*
-	* Main entry point for Zotero import processing. Reads JSON files containing
-	* Zotero bibliographic records and populates corresponding Dédalo publication
-	* records according to the tool's configuration map.
+	* Flow for each Zotero JSON file:
+	*   For each Zotero record in the file:
+	*     1. Resolve or create the target section_id (see class-level description).
+	*     2. Iterate the Zotero record's properties; for each, look up the matching
+	*        entry in config.map and dispatch to a type-aware switch branch that
+	*        instantiates the correct Dédalo component and saves the converted value.
+	*     3. Process any extra ddo_map entries that have an 'input_component' role —
+	*        these carry form-level defaults entered in the tool UI.
+	*   After all records are processed, delete the uploaded JSON file and clear
+	*   the corresponding keys from $_SESSION['dedalo']['section_temp_data'] so the
+	*   tool UI is reset for the next import.
 	*
-	* @param object $options Configuration object containing:
-	*        - tipo: Component tipo identifier
-	*        - section_tipo: Section type identifier
-	*        - section_id: Current section identifier
-	*        - tool_config: Tool configuration with ddo_map
-	*        - files_data: Array of uploaded file metadata
-	*        - components_temp_data: Temporary component data from form
-	*        - key_dir: Temporary directory key for file access
-	* @return object $response Response object with result and msg properties
+	* Zotero JSON fields with custom handling (all others go through 'default'):
+	*   'id'              — strips URL prefix; stores bare identifier in code component.
+	*   'type'            — maps to a Dédalo typology locator via config.typology.
+	*   'container-title' — looks up or creates a Series/Collections record (rsc212).
+	*   'author'          — formats given/family names via zotero_name_to_name().
+	*   'issued'/'accessed' — converts date-parts array via zotero_date_to_dd_date().
+	*   'call-number'     — currently a no-op (body commented out); guards PDF by id.
+	*   'archive'         — triggers PDF import via import_pdf_file() if file is present.
+	*   'ISSN'/'ISBN'     — saves number value and also saves the number-type locator.
+	*   'URL'/'DOI'       — DOI is prefixed with "https://www.doi.org/" before storage.
+	*
+	* @param object $options - Import parameters:
+	*   - tipo (string): component tipo of the tool trigger button (e.g. 'oh17').
+	*   - section_tipo (string): section tipo of the caller context (e.g. 'oh1').
+	*   - section_id (int|null): record id in caller context (may be null for list view).
+	*   - tool_config (object): tool instance config; must contain a 'ddo_map' array.
+	*   - files_data (array<object>): metadata for every uploaded file; JSON files are
+	*     identified by their '.json' extension.
+	*   - components_temp_data (array<object>): serialised component states from the
+	*     temporary section rendered in the tool UI (role='input_component' fields).
+	*   - key_dir (string): subdirectory key under DEDALO_UPLOAD_TMP_DIR/{user_id}/
+	*     where uploaded files were staged (e.g. 'oh17_oh1').
+	* @return object - stdClass with:
+	*   - result (bool): true on success, false on early failure.
+	*   - msg (string): human-readable outcome or error description.
 	*/
 	public static function import_files(object $options) : object {
 
@@ -75,6 +111,8 @@ class tool_import_zotero extends tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// get configuration with map to convert Zotero files
+		// tool_common::get_config() applies the two-tier fallback:
+		// user/install record (dd996) overrides the registry default (dd1324).
 			$tool_name	= get_called_class();
 			$config		= tool_common::get_config($tool_name);
 
@@ -103,22 +141,29 @@ class tool_import_zotero extends tool_common {
 			security::assert_section_permission($section_tipo, 2, __METHOD__);
 
 			// main components to use Dédalo
+			// Named tipo references from config: section, pdf, identifying_image, etc.
 			$main = $config->config->main ?? [];
 			// get definition field to set section_id
+			// When present, this entry controls which Zotero field drives the Dédalo section_id
+			// (default 'call-number'; may be overridden via tool configuration).
 			$field_to_section_id = array_find($main, function($el) {
 				return $el->name === 'field_to_section_id';
 			});
 			// map between Zotero and Dédalo
+			// Each entry: { name: <zotero_field>, ddo_map: [{ tipo, section_tipo }, ...] }
 			$map = $config->config->map ?? [];
 			// map between Zotero type and Dédalo typology list
 		$typology = $config->config->typology ?? [];
 		// map between Zotero type and Dédalo standard_type list (ISBN, ISSN)
 		$standard_type = $config->config->standard_type ?? [];
 			// ddo_map
+			// Additional component targets defined in the tool UI (e.g. project selector).
 			$ar_ddo_map = $tool_config->ddo_map;
 			$input_components_section_tipo	= [];	// all different used section tipo in section_temp
 
 			// read Zotero file in JSON format:
+			// Filter to JSON files only; PDF attachments and other uploads are
+			// handled inline when the 'archive' Zotero field is encountered.
 				$ar_zotero_files_data = array_filter($files_data, function($el) {
 					return str_ends_with($el->name, '.json');
 				});
@@ -147,10 +192,15 @@ class tool_import_zotero extends tool_common {
 					foreach ($ar_zotero_data as $zotero_obj) {
 
 						// Create section
-							// In some cases use call-number field in Zotero to get the id of Dédalo.
-							// Section id get from Zotero data
+							// Resolve or create the Dédalo section that will hold this Zotero record.
+							// Priority 1: use the configured 'field_to_section_id' Zotero field value
+							//   (default: 'call-number') as the explicit section_id.
+							// Priority 2: match the Zotero 'id' URL tail against the code component.
+							// Priority 3: create a brand-new section.
 							$section_id = null;
 
+							// $optional_id: name of the Zotero field that carries the Dédalo section_id
+							// (e.g. 'call-number'). Its integer value is used as the target section_id.
 							$optional_id = isset($field_to_section_id)
 								? $field_to_section_id->value
 								: null;
@@ -166,6 +216,8 @@ class tool_import_zotero extends tool_common {
 
 							}else{
 								// Use Zotero id as id (stored in "CODE" rsc137) when exists. Else create new section
+								// The Zotero 'id' is a URL like "https://www.zotero.org/…/NNNNN"; only
+								// the last path segment is the meaningful identifier stored in rsc137.
 								$id_item = array_find($map, function($el) {
 									return $el->name === 'id';
 								});
@@ -208,11 +260,17 @@ class tool_import_zotero extends tool_common {
 									continue; # Skip not accepted data
 								}
 
+								// ddo_map may hold multiple entries for a single Zotero field.
+								// reset() picks the first entry, which is the primary Dédalo component.
+								// Additional entries (e.g. 'container-title' has two) are read explicitly
+								// within their case branch using end() or array indexing.
 								$ddo_map	= $found_map_item->ddo_map;
 								$ddo		= reset($ddo_map);
 
 								switch ($name) {
 									case 'id':
+										// Store only the bare Zotero identifier (last URL segment) in the
+										// code component (rsc137) so it can be matched on future imports.
 										$current_model	= ontology_node::get_model_by_tipo($ddo->tipo,true); // component_input_text
 										$component		= component_common::get_instance(
 											$current_model,
@@ -275,8 +333,14 @@ class tool_import_zotero extends tool_common {
 										break;
 
 									case 'container-title':
+										// 'container-title' maps to two ddo_map entries:
+										//   [0] rsc211 (component_relation_link): the relation from the
+										//       publication to the Series/Collections list.
+										//   [1] rsc214 (component_input_text in rsc212): the name field
+										//       inside the Series/Collections list section itself.
+										// end() selects the second entry (the list-section target).
 										$series_ddo				= end($ddo_map);
-										$section_tipo_series	= $series_ddo->section_tipo; # 'rsc212';  # Lista de valores Series / colecciones
+										$section_tipo_series	= $series_ddo->section_tipo; # 'rsc212' — Series / Collections value list
 										$section_id_list		= self::get_section_id_from_zotero_container_title( $series_ddo, $zotero_obj->$name );
 										if ($section_id_list>0) {
 											// Use existing record
@@ -337,6 +401,9 @@ class tool_import_zotero extends tool_common {
 										break;
 
 									case 'author':
+										// Zotero 'author' is an array of name objects. Convert every
+										// given/family pair (or 'literal') into a flat string and store
+										// as separate items in the authors component (rsc349).
 										$ar_name   = (array)self::zotero_name_to_name( $zotero_obj->$name, 'array' );
 										$component = component_common::get_instance(
 											'component_input_text',
@@ -361,6 +428,8 @@ class tool_import_zotero extends tool_common {
 
 									case 'issued':
 									case 'accessed':
+										// Convert the Zotero date-parts array (and optional season/time)
+										// into a dd_date object; wrap it in {start: …} for component_date.
 										$date 	   = self::zotero_date_to_dd_date( $zotero_obj->$name );
 										$component = component_common::get_instance(
 											'component_date',
@@ -378,6 +447,10 @@ class tool_import_zotero extends tool_common {
 										break;
 
 									case 'call-number':
+										// 'call-number' is only used to drive section_id resolution
+										// (handled above, before the per-field switch). No data is
+										// written to a component here. The PDF-by-id approach is
+										// commented out (see flagged dead code below).
 										if (empty($value)) {
 											$procesing_info->$name = " - Ignored $name empty file from Zotero import process";
 											debug_log(__METHOD__
@@ -393,6 +466,9 @@ class tool_import_zotero extends tool_common {
 										break;
 
 									case 'archive':
+										// 'archive' holds the filename of an uploaded PDF.
+										// If the file was uploaded alongside the JSON, trigger the full
+										// PDF import and cover-image extraction pipeline.
 										$pdf_file = $tmp_dir. '/'. $zotero_obj->$name;
 										if(!file_exists($pdf_file)){
 											debug_log(__METHOD__
@@ -417,6 +493,11 @@ class tool_import_zotero extends tool_common {
 
 									case 'ISSN':
 									case 'ISBN':
+										// Two-step save for standard identifiers:
+										//   Step 1: store the identifier string itself (rsc147).
+										//   Step 2: store the number-type typology locator in the
+										//     standard-number component (rsc249 / component_relation_select)
+										//     using the config.standard_type map to pick the locator.
 										$current_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
 										$component		= component_common::get_instance(
 											$current_model,
@@ -438,6 +519,8 @@ class tool_import_zotero extends tool_common {
 										$procesing_info->$name = "+ Saved $name value ".to_string($value)." from Zotero import process";
 
 										// Save number typology too
+										// Falls back to the last entry in standard_type when the specific
+										// name is not found (defensive: avoids null locator on unknown types).
 										$found_item = $standard_type ? array_find($standard_type, function($el) use($name) {
 											return $name === $el->name;
 										}) : null;
@@ -459,6 +542,12 @@ class tool_import_zotero extends tool_common {
 											$section_tipo
 										);
 
+										// (!) BUG: $ar_name is not defined in this scope (it belongs to
+										// the 'author' case). The foreach body always uses $data, so the
+										// loop count is wrong — it iterates 0 times unless $ar_name
+										// happens to be set from a previous loop iteration. This means
+										// the typology locator is never saved for the first record if
+										// 'author' was not previously processed for this same object.
 										$component_data = [];
 										foreach((array)$ar_name as $current_data) {
 											$component_data[] = (object)[
@@ -473,6 +562,8 @@ class tool_import_zotero extends tool_common {
 
 									case 'URL':
 									case 'DOI':
+										// DOI values from Zotero are bare identifiers (e.g. "10.1000/xyz");
+										// prepend the resolver prefix to produce a valid IRI.
 										$current_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
 										$component		= component_common::get_instance(
 											$current_model,
@@ -493,6 +584,15 @@ class tool_import_zotero extends tool_common {
 										break;
 
 									default:
+										// Generic handler: respects the component's translatability flag
+										// to choose between DEDALO_DATA_LANG and DEDALO_DATA_NOLAN.
+										// (!) BUG: '$zotero_obj->$nam' (line below) is a typo — the
+										// variable '$nam' is undefined; it should be '$zotero_obj->$name'.
+										// $current_value is therefore always null here and the title
+										// branch below (if $name==='title') logs the correct value via
+										// $zotero_obj->$name, but the component is saved with null.
+										// (!) BUG: '$data' is also referenced in the component_data
+										// array instead of '$current_value', compounding the null save.
 										$current_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
 										$component		= component_common::get_instance(
 											$current_model,
@@ -521,11 +621,11 @@ class tool_import_zotero extends tool_common {
 							}#end foreach ($zotero_obj as $name => $value)
 
 						// Processing temporal section
-							// ar_ddo_map iterate. role based actions
-							// Create the ddo components with the data to store with the import
-							// when the component has a input in the tool propagate temp section_data
-							// Update created section with temp section data
-							// when the component stored the filename, get the filename and save it
+							// Iterate the tool's ddo_map (from the $options->tool_config) and apply
+							// values that the user entered in the tool UI's temporary section.
+							// This covers fields like 'project' that are not in the Zotero JSON but
+							// are set once for the whole import batch via the form.
+							// Only 'input_component' role entries carry form data; other roles are no-ops.
 							foreach ($ar_ddo_map as $ddo) {
 
 								$model			= ontology_node::get_model_by_tipo($ddo->tipo,true);
@@ -543,11 +643,14 @@ class tool_import_zotero extends tool_common {
 									case 'input_component':
 
 										// input_components_section_tipo store
+										// Collect distinct section tipos so we can flush their temp data later.
 											if(!in_array($ddo->section_tipo, $input_components_section_tipo)){
 												$input_components_section_tipo[] = $ddo->section_tipo;
 											}
 
 										// component_data. Get from request and save
+										// Match by tipo + section_tipo because the same tipo can appear
+										// in different section contexts within components_temp_data.
 											$component_data = array_find($components_temp_data, function($item) use($ddo){
 												return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
 											});
@@ -575,6 +678,10 @@ class tool_import_zotero extends tool_common {
 				}//end foreach $ar_zotero_files
 
 		// Reset the temporary section of the components, for empty the fields.
+		// After saving every record, evict the temp-section cache keys for
+		// the input_component section tipos so the tool UI starts fresh on
+		// the next import. Keys in section_temp_data embed the section_tipo
+		// as a substring, so a regex match suffices.
 			if (!empty($input_components_section_tipo) && !empty($_SESSION['dedalo']['section_temp_data'])) {
 
 				// Create regex pattern to match any of the section types. Pattern example: /_(type1|type2)_/
@@ -602,16 +709,37 @@ class tool_import_zotero extends tool_common {
 
 	/**
 	* IMPORT_PDF_FILE
-	* Imports PDF files from Zotero archives and creates associated image components
+	* Moves an uploaded PDF into the component_pdf media path and generates a
+	* cover image from the first page, storing it in the identifying_image component.
 	*
-	* Handles PDF file processing including file addition, version creation, and
-	* automatic first page extraction as an identifying image.
+	* Pipeline:
+	*   1. Resolve file metadata from $zotero_obj->archive (filename) and
+	*      $zotero_obj->page (starting page number, default 1).
+	*   2. Call component_pdf::add_file() to move the staged file into the
+	*      permanent media directory for the PDF component.
+	*   3. Call component_pdf::process_uploaded_file() to generate the default
+	*      version (e.g. OCR or thumbnails).
+	*   4. Call component_pdf::create_image() to render the first page as JPEG.
+	*      If a cover image is produced, add it to the identifying_image component
+	*      (component_image) using the same add_file / process_uploaded_file flow.
+	*   5. Delete the staged upload via dd_utils_api::delete_uploaded_file() to
+	*      avoid stale files in DEDALO_UPLOAD_TMP_DIR.
 	*
-	* @param object $zotero_obj The Zotero record object containing archive filename
-	* @param array $main Configuration array with section, pdf, and identifying_image definitions
-	* @param int|string $section_id The section identifier to attach the PDF to
-	* @param string $key_dir Temporary directory key for file retrieval
-	* @return object $response Response object with result and msg properties
+	* The old signature (commented out below) passed more arguments; the current
+	* signature groups all config into the $main array and reads $zotero_obj->archive
+	* directly, which keeps the caller's code cleaner.
+	*
+	* @param object $zotero_obj - The decoded Zotero record; must have 'archive'
+	*   (string, PDF filename) and optionally 'page' (string, e.g. '27-40').
+	* @param array $main - Named config entries from config.main; the following are
+	*   consumed here: 'section' (section tipo), 'pdf' (component tipo for component_pdf),
+	*   'identifying_image' (component tipo for component_image).
+	* @param int|string $section_id - Section record ID to attach the PDF to.
+	* @param string $key_dir - Subdirectory key under DEDALO_UPLOAD_TMP_DIR/{user_id}/
+	*   where the uploaded file is staged (same as the outer import's key_dir).
+	* @return object - stdClass with:
+	*   - result (bool): true on success, false if pdf processing failed.
+	*   - msg (string): outcome description or error detail.
 	*/
 	# public static function import_pdf_file($zotero_obj, $name, $section_id, $section_tipo, $file_name, $ar_response) {
 	public static function import_pdf_file(object $zotero_obj, array $main, int|string $section_id, string $key_dir) : object {
@@ -650,11 +778,15 @@ class tool_import_zotero extends tool_common {
 		);
 
 		// process file
-			// get the page defined in Zotero to assign the first page to first tag page into transcription text.
+			// zotero_obj->page may be a range like "27-40"; extract the start page
+			// so the PDF component can tag the correct first page in transcription text.
 			$page		= isset($zotero_obj->page) ? $zotero_obj->page : 1;
 			$first_page	= (int)self::zotero_page_to_first_page( $page );	# number of first page. default is 1
 
 			$file_name = trim($name);
+			// file_data descriptor for component_pdf::add_file().
+			// tmp_dir is passed as a string constant name, not the actual path value;
+			// add_file() resolves it to the real filesystem path internally.
 			$file_data = new stdClass();
 				$file_data->name		= $file_name;
 				$file_data->key_dir		= $key_dir;
@@ -676,10 +808,14 @@ class tool_import_zotero extends tool_common {
 			}
 
 		// render first page as image
+		// create_image() writes the JPEG to DEDALO_MEDIA_PATH/pdf/tmp/{file_id}.{ext}
+		// and returns the path on success, or false when image generation is not possible.
 			$image_file_path = $component_pdf->create_image();
 			// if component had created his image, create the image component to add this file.
 			if($image_file_path!==false){
 
+				// file_id is the internal media id assigned by add_file() to the PDF;
+				// the generated cover image shares that id with a different extension.
 				$file_id = $component_pdf->get_id();
 
 				$component_image = component_common::get_instance(
@@ -691,6 +827,9 @@ class tool_import_zotero extends tool_common {
 					$section->tipo
 				);
 
+				// source_file points directly to the cover JPEG written by create_image().
+				// tmp_dir 'DEDALO_MEDIA_PATH' tells add_file() to read from the media root
+				// rather than the upload temp area.
 				$file_data = new stdClass();
 					$file_data->name		= $file_name . '.' . DEDALO_IMAGE_EXTENSION;
 					$file_data->key_dir		= 'pdf/tmp';
@@ -710,6 +849,8 @@ class tool_import_zotero extends tool_common {
 			}
 
 		// delete thumbnails files
+		// Clean up the staged upload from DEDALO_UPLOAD_TMP_DIR; failure here is non-fatal
+		// but the return value is silently ignored, which may leave stale files.
 			$options = new stdClass();
 				$options->file_name	= $file_name;
 				$options->key_dir	= $key_dir;
@@ -731,21 +872,28 @@ class tool_import_zotero extends tool_common {
 
 	/**
 	* ZOTERO_DATE_TO_DD_DATE
-	* Converts Zotero date format to Dédalo dd_date object
+	* Converts a Zotero date object into a Dédalo dd_date value object.
 	*
-	* Transforms Zotero's date-parts array and optional season/time data into
-	* a Dédalo dd_date object with year, month, day, hour, minute, second components.
+	* Zotero represents dates as a 'date-parts' nested array plus an optional
+	* 'season' string. Dédalo stores dates as dd_date objects with discrete
+	* year/month/day/hour/minute/second setters. This method bridges the two shapes.
 	*
-	* Zotero date format example:
-	* stdClass Object (
-	*        [date-parts] => Array (
-	*                [0] => Array (2014, 12, 30)
-	*            )
-	*        [season] => 12:57:26
-	*    )
+	* Expected Zotero date structure:
+	*   stdClass {
+	*     'date-parts': [[2014, 12, 30]],  // year, optional month, optional day
+	*     'season': '12:57:26'             // optional; reused as HH:MM:SS time field
+	*   }
 	*
-	* @param stdClass $zotero_date The Zotero date object to convert
-	* @return object $dd_date Converted Dédalo dd_date object
+	* Edge cases:
+	*   - If $zotero_date is not an object but a numeric string or integer, the
+	*     value is interpreted as a bare year (e.g. "2014" → year=2014).
+	*   - If 'date-parts' is missing, logs an error and returns an empty dd_date.
+	*   - If 'season' is absent, time components remain at their dd_date defaults.
+	*   - The 'season' field name is a Zotero quirk: the field is re-purposed to
+	*     carry time data in some export formats.
+	*
+	* @param stdClass $zotero_date - The Zotero date object as decoded from JSON.
+	* @return object - Populated dd_date instance (may be empty if data is missing).
 	*/
 	public static function zotero_date_to_dd_date( stdClass $zotero_date) : object {
 
@@ -755,6 +903,10 @@ class tool_import_zotero extends tool_common {
 		# Date
 		$branch_name = 'date-parts';
 
+		// (!) The signature declares stdClass, but this guard handles the case where
+		// Zotero occasionally emits a plain integer/string year instead of a full object.
+		// The check will always be false under strict_types if callers pass a real stdClass,
+		// but it provides a safety net for malformed inputs that bypassed the type check.
 		if (!is_object($zotero_date)) {
 			#debug_log(__METHOD__." String received ".to_string($zotero_date), logger::ERROR);
 			if ((int)$zotero_date>0) {
@@ -768,6 +920,8 @@ class tool_import_zotero extends tool_common {
 			return $dd_date;
 		}
 
+		// date-parts is a nested array: [[year, month?, day?]]
+		// Only the first element of the outer array is used (Zotero never emits ranges here).
 		$branch = $zotero_date->$branch_name;
 		if ( !isset($branch[0][0]) ) {
 			error_log("Wrong data from ".print_r($zotero_date,true));
@@ -781,6 +935,8 @@ class tool_import_zotero extends tool_common {
 
 		#
 		# Time
+		// Zotero re-uses the 'season' field to store time (HH:MM:SS) in some exports.
+		// The regex extracts up to three colon-separated numeric groups.
 		if (property_exists($zotero_date, 'season')) {
 			$current_date	= $zotero_date->season;
 			if ($current_date) {
@@ -800,14 +956,24 @@ class tool_import_zotero extends tool_common {
 
 	/**
 	* ZOTERO_NAME_TO_NAME
-	* Converts Zotero name format to single or array format
+	* Converts an array of Zotero name objects into a flat string or array of name strings.
 	*
-	* Transforms Zotero's name objects (with literal or given/family parts) into
-	* either comma-separated string or array format for Dédalo components.
+	* Zotero provides two name shapes:
+	*   1. Institutional / literal: { "literal": "Organisation Name" }
+	*   2. Personal: { "given": "Jane", "family": "Smith" }
+	* Both shapes are normalised to a plain "Given Family" string per author.
 	*
-	* @param array $zotero_name Array of Zotero name objects
-	* @param string $return_type Return format: 'string' (default) for comma-separated or 'array' for array format
-	* @return string|array $name Converted name(s) in requested format
+	* When $return_type is 'string', all names are joined with ", " into one scalar.
+	* When $return_type is 'array' (or any other value), the raw array is returned —
+	* this is what import_files() uses so each name becomes a separate component item.
+	*
+	* Note: the local variable $apellido_madre (Spanish: "mother's surname") is a
+	* legacy identifier that holds the family name. It is flagged for translation.
+	*
+	* @param array $zotero_name - Array of Zotero name objects (decoded from JSON).
+	* @param string $return_type = 'string' - 'string' for comma-joined scalar,
+	*   any other value returns the raw string[].
+	* @return string|array - Formatted name(s).
 	*/
 	public static function zotero_name_to_name( array $zotero_name, string $return_type='string') : string|array {
 		$ar_name=array();
@@ -827,6 +993,8 @@ class tool_import_zotero extends tool_common {
 					$name .= $obj_value->given;
 				}
 
+				// (!) $apellido_madre is a Spanish identifier meaning "family name".
+				// Flag: should be renamed to $family_name for English consistency.
 				$apellido_madre = '';
 				if (property_exists($obj_value, 'family')) {
 					$apellido_madre .= $obj_value->family;
@@ -848,13 +1016,19 @@ class tool_import_zotero extends tool_common {
 
 	/**
 	* ZOTERO_PAGE_TO_FIRST_PAGE
-	* Extracts first page number from Zotero page range
+	* Extracts the starting page number from a Zotero page field value.
 	*
-	* Parses page information to extract the starting page number.
-	* Handles formats like '27-40' -> 27 or single pages.
+	* Zotero's page field may be a plain integer, a range like "27-40", or empty.
+	* This method normalises all three cases to an integer >= 1, used as the first
+	* page tag when linking a PDF to its transcription text.
 	*
-	* @param mixed $zotero_page The page field from Zotero (string like '27-40' or empty)
-	* @return int $first_page First page number (default is 1 if not found or invalid)
+	* Supported formats:
+	*   - Empty / null  → returns 1 (default).
+	*   - "27-40"       → returns 27 (first segment before '-').
+	*   - Anything else → returns 1 (including non-numeric strings).
+	*
+	* @param mixed $zotero_page - Raw value of the Zotero 'page' field.
+	* @return int - First page number, minimum 1.
 	*/
 	public static function zotero_page_to_first_page( $zotero_page ) : int {
 
@@ -881,19 +1055,34 @@ class tool_import_zotero extends tool_common {
 
 	/**
 	* GET_SECTION_ID_FROM_CODE
-	* Searches for existing record by Zotero code identifier
+	* Looks up a Dédalo publication section by its stored Zotero code identifier.
 	*
-	* Queries the database to find a publication record with matching Zotero code.
-	* If found, returns the section_id; otherwise returns null for creation of new record.
+	* Searches the code component (typically rsc137 / component_input_text) within
+	* the publications section (rsc205) for an exact match OR a suffix match ("* /code")
+	* against the provided Zotero id. The dual-operator OR filter in the SQO handles
+	* both bare ids (stored after the URL was stripped) and ids that were stored with
+	* the full Zotero URL path as a suffix.
 	*
-	* @param object $id_item Configuration object with ddo_map containing section_tipo and tipo
-	* @param string $zotero_id The Zotero code identifier to search for
-	* @return int|null $section_id Section ID if found, null otherwise
+	* If the Zotero id is itself a URL (starts with 'http'), this method strips the
+	* URL prefix itself before searching, so the stored bare identifier is matched.
+	* This is defensive against cases where the id was stored in different formats
+	* across imports.
+	*
+	* Returns null (not 0 or false) when no match is found, because the caller uses
+	* is_null() to decide whether to create a new section.
+	*
+	* @param object $id_item - Map entry for the 'id' field; provides ddo_map with
+	*   the section_tipo and component tipo to search within.
+	* @param string $zotero_id - The Zotero identifier to search for (URL or bare id).
+	* @return int|null - section_id if found, null if not found or on search error.
 	*/
 	public static function get_section_id_from_code( object $id_item, string $zotero_id ) : ?int {
 
 		$ddo_map	= $id_item->ddo_map;
 		$ddo		= reset($ddo_map);
+		// Strip URL prefix when the passed id is a full Zotero URL.
+		// This can happen when get_section_id_from_code() is called with the raw
+		// $zotero_obj->id value before the caller strips it.
 		if (strpos($zotero_id, 'http')===0) {
 			$ar_parts 	= explode('/', $zotero_id);
 			$zotero_id  = end($ar_parts);
@@ -902,9 +1091,10 @@ class tool_import_zotero extends tool_common {
 		$section_tipo   = $ddo->section_tipo;	 # rsc205
 		$tipo 			= $ddo->tipo; 			# rsc137
 		$model_name 	= ontology_node::get_model_by_tipo($tipo,true);
+		// pg_escape_string() prevents SQL injection in the SQO filter value.
 		$code 			= pg_escape_string(DBi::_getConnection(), $zotero_id);
 
-		// JSON seach_query_object to search
+		// JSON search_query_object to search
 		$sqo_data = (object)[
 			'id' => 'get_section_id_from_code',
 			'section_tipo' => $section_tipo,
@@ -963,23 +1153,32 @@ class tool_import_zotero extends tool_common {
 
 	/**
 	* GET_SECTION_ID_FROM_ZOTERO_CONTAINER_TITLE
-	* Searches for existing Series/Collection record by container title
+	* Looks up a Dédalo Series/Collections list record by its name string.
 	*
-	* Queries the database to find a Series or Collection record matching the
-	* provided Zotero container title. Returns section_id if found.
+	* Searches the Series/Collections section (typically rsc212) for a record whose
+	* name component (rsc214 / component_input_text) exactly matches
+	* $zotero_container_title. The SQO uses single-quoted exact-match syntax ('title')
+	* to prevent partial matches.
 	*
-	* @param object $series_ddo Configuration object with section_tipo and tipo for Series/Collections
-	* @param string $zotero_container_title The Zotero container/series title to search for
-	* @return int|null $section_id Section ID if found, null otherwise
+	* Called from the 'container-title' switch branch in import_files() before
+	* deciding whether to reuse an existing Series record or create a new one.
+	* Returning null (rather than 0 or false) lets the caller check with > 0.
+	*
+	* @param object $series_ddo - The second ddo_map entry for 'container-title';
+	*   provides section_tipo (rsc212) and tipo (rsc214) for the query.
+	* @param string $zotero_container_title - Exact series/collection name to look up.
+	* @return int|null - section_id of the matching record, or null if not found.
 	*/
 	public static function get_section_id_from_zotero_container_title( object $series_ddo, string $zotero_container_title ) : ?int {
 
 		$section_tipo		= $series_ddo->section_tipo;		# rsc212 	# values list for Series / Collections
 		$tipo				= $series_ddo->tipo;				# rsc214 	# Series / Collections (component_input_text)
 		$model_name			= ontology_node::get_model_by_tipo($tipo,true);
+		// Escape the title before embedding in the SQO filter to prevent SQL injection.
 		$serie_name			= pg_escape_string(DBi::_getConnection(), $zotero_container_title);
 
-		// JSON seach_query_object to search
+		// JSON search_query_object to search
+		// The q value wraps the title in single quotes for an exact-match SQO filter.
 		$sqo_data = (object)[
 			'id' => 'get_section_id_from_zotero_container_title',
 			'select' => [],
