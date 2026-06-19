@@ -14,6 +14,35 @@
 
 
 
+/**
+ * AI_ASSISTANT
+ * Orchestrates the full conversational AI loop for the Dédalo assistant tool:
+ * browser-side LLM (via model_engine / Transformers.js) or server-side API
+ * (OpenAI-compatible streaming endpoint) ↔ MCP proxy tools ↔ client-side
+ * instant tools ↔ chat UI (chat_render).
+ *
+ * Responsibilities:
+ * - Boot sequence: MCP handshake + model load, with progress feedback.
+ * - Conversation state: push/pop messages in OpenAI chat format, persist to
+ *   conversation_store (localStorage), replay on reload.
+ * - Agentic loop: iterate generate → parse tool calls → dispatch → repeat
+ *   up to MAX_TOOL_TURNS turns, then force an answer-only turn.
+ * - Tool routing: client_ prefix → CLIENT_TOOLS (synchronous, no network);
+ *   all other names → MCP proxy via mcp_client.tools_call().
+ * - Schema normalization: _sanitize_schema + _minimize_schema ensure tool
+ *   declarations are safe for both Qwen and Gemma Jinja chat templates.
+ * - Ontology pre-resolution: _build_ontology_context_for_message() scans
+ *   the user's text, matches section names from the glossary, and injects
+ *   section_tipo mappings into the system prompt before the first turn.
+ * - Bulk pipelines: run_bulk_image_transcribe() for batch vision→text workflows.
+ *
+ * Main export: the `ai_assistant` ES6 class. Instantiated once per tool mount
+ * by render_tool_assistant.js.
+ */
+
+
+
+// localStorage key for user model/device preferences persisted across sessions.
 const PREFS_KEY = 'dedalo_assistant_pref_v1'
 
 // Allow tool-calling on up to this many turns before forcing an answer-only
@@ -35,7 +64,14 @@ const PRIMITIVE_WRITE_ALLOWLIST = ['dedalo_create_record']
 const DESTRUCTIVE_TOOLS = ['dedalo_delete_record']
 
 /**
+ * T
  * Localized label helper.
+ * Reads from the global get_label map (populated by Dédalo's PHP label
+ * injection mechanism). Falls back to the supplied English string when the
+ * key is absent or the global is unavailable (e.g. during unit tests).
+ * @param {string} key - label key matching a get_label entry
+ * @param {string} fallback - English fallback string
+ * @returns {string} translated or fallback label
  */
 const t = function(key, fallback) {
 	if (typeof get_label !== 'undefined' && get_label && get_label[key]) {
@@ -49,13 +85,26 @@ const t = function(key, fallback) {
 /**
  * AI_ASSISTANT
  * Orchestrates the conversation loop: local model ↔ MCP tools ↔ chat UI.
+ * See module header above for the full contract.
  */
 export const ai_assistant = class ai_assistant {
 
 
+	/**
+	 * AI_ASSISTANT constructor
+	 * Initializes all sub-system instances and merges user preferences from
+	 * localStorage over the tool_config values supplied by the PHP layer.
+	 * Does NOT load the model or connect to MCP — that is deferred to
+	 * build_chat_ui() so progress can be surfaced in the UI.
+	 * @param {Object} options - mount options passed from render_tool_assistant.js
+	 * @param {Object} [options.tool_config] - model/API/MCP config from register.json
+	 * @param {Object} [options.tool_self] - reference to the parent tool instance
+	 */
 	constructor(options={}) {
 
 		this._config			= Object.assign({}, options.tool_config || {})
+		// Reference to the parent tool instance (tool_assistant class).
+		// Used when the assistant needs to interact with tool-level APIs.
 		this._tool_self			= options.tool_self || null
 
 		// merge user prefs (from localStorage) over tool defaults
@@ -63,29 +112,60 @@ export const ai_assistant = class ai_assistant {
 		if (prefs.model_id) this._config.model_id = prefs.model_id
 		if (prefs.device) this._config.device = prefs.device
 
+		/** @type {client_context} Tracks the active section/record/component in the Dédalo UI. */
 		this._client_context	= new client_context()
+		/** @type {Array} Registry of client-side tool definitions ({name, description, run()}). */
 		this._client_tools		= CLIENT_TOOLS
+		/** @type {mcp_client} HTTP proxy client for Dédalo MCP server tools. */
 		this._mcp_client		= new mcp_client()
+		/** @type {model_engine} Local LLM inference wrapper (Transformers.js / WebGPU). */
 		this._model_engine		= new model_engine(this._config)
+		/** @type {chat_render} DOM manager for the chat UI. */
 		this._chat_render		= new chat_render()
+		/** @type {conversation_store} localStorage-backed multi-thread persistence. */
 		this._store				= new conversation_store()
+		/** @type {Array} Current conversation in OpenAI message format: {role, content, tool_calls?}. */
 		this._conversation		= []
+		/** @type {Array} Tool declarations fetched from the MCP server via tools/list. */
 		this._mcp_tools			= []
+		/** @type {boolean} True after the MCP handshake has completed successfully. */
 		this._mcp_initialized	= false
+		/** @type {boolean} True while the model weights are being downloaded/initialized. */
 		this._model_loading		= false
+		/** @type {AbortController|null} Controller for the current generation or model load. */
 		this._abort_controller	= null
+		/** @type {boolean} True while the agentic loop is running (prevents re-entrancy). */
 		this._is_generating		= false
+		/** @type {Object} Reserved for additional context metadata (currently unused). */
 		this._context			= {}
+		/** @type {Array|null} Cached ontology glossary array from dedalo_ontology_glossary. */
 		this._ontology_glossary	= null
+		/** @type {Map|null} Inverted index: normalized label → [{section_tipo, label}]. */
 		this._ontology_index		= null
+		/** @type {Promise|null} In-flight glossary fetch; prevents duplicate requests. */
 		this._ontology_loading	= null
+		/** @type {string|null} Active thread ID in the conversation_store. */
 		this._thread_id			= null
 
+		// Subscribe to Dédalo UI events so context stays current as the user navigates.
 		this._client_context.update_from_events()
 	}//end constructor
 
 
 
+	/**
+	 * BUILD_CHAT_UI
+	 * Constructs the chat UI DOM, wires event callbacks, restores the last
+	 * active thread from localStorage, and asynchronously completes the MCP
+	 * handshake and model load (with progress feedback in the chat).
+	 *
+	 * Call order: build() → restore thread → MCP initialize → model load.
+	 * The method resolves once the DOM is mounted and model load has settled
+	 * (either ready or failed). The caller can render the returned node tree
+	 * immediately; status messages appear inline in the chat.
+	 *
+	 * @returns {Promise<HTMLElement>} The root DOM node of the chat UI
+	 */
 	async build_chat_ui() {
 
 		const self = this
@@ -159,6 +239,16 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _REPLAY_CONVERSATION
+	 * Re-renders the current this._conversation array into the chat UI after
+	 * a thread is loaded or the page is reloaded.
+	 * Only user text and assistant messages (including tool-call indicators)
+	 * are rendered; `tool` role messages (server results) are intentionally
+	 * skipped because they are already captured in the preceding tool_call
+	 * indicator and repeating them would clutter the UI.
+	 * @returns {void}
+	 */
 	_replay_conversation() {
 
 		const self = this
@@ -186,6 +276,17 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _COLLECT_MODELS
+	 * Returns the list of model configs available for the settings panel.
+	 * Each entry is a self-contained object:
+	 *   { model_id, label, dtype, device, fallback_device,
+	 *     max_new_tokens, thinking, thinking_options }
+	 * When the tool register.json provides an explicit `models` array, that
+	 * is returned verbatim. Otherwise a single synthetic entry is built from
+	 * the active config so the settings UI always has at least one option.
+	 * @returns {Array} array of model config objects
+	 */
 	_collect_models() {
 		// each entry is a self-contained model config: { model_id, label, dtype,
 		// device, fallback_device, max_new_tokens, thinking, thinking_options }.
@@ -207,6 +308,23 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _APPLY_SETTINGS
+	 * Applies a settings change from the UI panel. Handles three kinds of change:
+	 *   1. Model change — pulls the full config for the new model from `models[]`
+	 *      and rebuilds the model_engine (requires reload).
+	 *   2. Device change — same model, different backend (webgpu ↔ wasm).
+	 *      Also requires a model_engine rebuild.
+	 *   3. Thinking mode change — updates _config.thinking in-place;
+	 *      the engine picks it up on the next generate() call. No reload needed.
+	 *
+	 * Guards against concurrent changes while busy (loading or generating).
+	 * Persists the new model_id + device + thinking to localStorage via _write_prefs
+	 * so selections survive page reload.
+	 *
+	 * @param {Object} new_settings - object with any of: model_id, device, dtype, thinking
+	 * @returns {Promise<void>}
+	 */
 	async _apply_settings(new_settings) {
 
 		const self = this
@@ -282,11 +400,29 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _INITIALIZE_MCP
+	 * Performs the MCP initialization handshake and populates this._mcp_tools.
+	 * Idempotent: returns immediately if already initialized.
+	 *
+	 * Protocol sequence (skipped if tools/list succeeds on the first attempt):
+	 *   1. POST initialize → receive capabilities
+	 *   2. POST notifications/initialized (fire-and-forget)
+	 *   3. POST tools/list → populate this._mcp_tools
+	 *
+	 * Some MCP server deployments accept tools/list without a prior handshake;
+	 * the shortcut on the first try avoids a redundant round-trip.
+	 *
+	 * @returns {Promise<void>}
+	 * @throws {Error} if the MCP initialize call fails (network error or non-2xx)
+	 */
 	async _initialize_mcp() {
 
 		if (this._mcp_initialized) return
 
 		// try tools/list first
+		// (!) `var` is intentional: function-scoped so the bare reassignment
+		//     at the second tools_list() call below (outside this try block) stays in scope.
 			try {
 				var tools_result = await this._mcp_client.tools_list()
 				if (tools_result && tools_result.data && tools_result.data.result && tools_result.data.result.tools) {
@@ -330,6 +466,27 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _BUILD_SYSTEM_PROMPT
+	 * Builds the system prompt for the current generation turn.
+	 *
+	 * The prompt has two parts:
+	 *   1. Context block — the active section/record/component from client_context.
+	 *      Uses the rich multi-line summary when tools are enabled (more expensive
+	 *      but gives the model portal field labels). Falls back to a single compact
+	 *      line when tools are disabled (answer-only turns).
+	 *   2. Tool guidance block — only emitted when tools_enabled is true. Lists
+	 *      client tools and MCP tools with their usage rules and the full Dédalo
+	 *      portal workflow (how to follow locators, how to write back, etc.).
+	 *      On answer-only turns this is replaced with a strict no-tool instruction
+	 *      to prevent the model from hallucinating tool calls.
+	 *
+	 * (!) The full portal system guidance is intentionally verbose: small LLMs
+	 * reliably confuse portal tipos with section media tipos without it.
+	 *
+	 * @param {boolean} tools_enabled - true on tool-calling turns, false on answer-only turns
+	 * @returns {string} the complete system prompt text
+	 */
 	_build_system_prompt(tools_enabled) {
 
 		const ctx		= this._client_context.get_context()
@@ -458,6 +615,26 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _BUILD_TOOLS_FOR_MODEL
+	 * Assembles the list of tool declarations to pass to the LLM for a given
+	 * turn. Tool declarations follow OpenAI function-calling format:
+	 *   { type: 'function', function: { name, description, parameters } }
+	 *
+	 * Returns two categories merged:
+	 *   1. Client tools (CLIENT_TOOLS array) — always included; run in the
+	 *      browser with no server call.
+	 *   2. MCP tools (this._mcp_tools) — filtered to agent-tier
+	 *      (annotations.tier === 'agent') plus the discovery fallback set
+	 *      (PRIMITIVE_DISCOVERY_FALLBACK) and write allowlist
+	 *      (PRIMITIVE_WRITE_ALLOWLIST). Full primitive-tier tools are excluded
+	 *      to keep the token budget manageable.
+	 *
+	 * Every schema passes through _sanitize_schema → _minimize_schema to ensure
+	 * Gemma 4 Jinja compatibility (no undefined `type` nodes).
+	 *
+	 * @returns {Array} array of OpenAI-format tool declaration objects
+	 */
 	_build_tools_for_model() {
 
 		const toFunctionDecl = function(tool) {
@@ -510,6 +687,15 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _TOOL_DESCRIPTION
+	 * Returns the tool description capped at 400 characters.
+	 * This preserves the most important portal and relation guidance while
+	 * keeping the aggregate tool-declaration token count manageable for
+	 * small local LLMs (< 2B params).
+	 * @param {Object} tool - MCP or client tool definition with optional `description` field
+	 * @returns {string} description string, truncated to 400 chars if necessary
+	 */
 	static _tool_description(tool) {
 
 		const description = tool.description || ''
@@ -524,10 +710,19 @@ export const ai_assistant = class ai_assistant {
 	 * Routes a single tool call to either a client-side handler (no server
 	 * round-trip) or the MCP proxy. Returns the conversation `tool` message
 	 * to push, and updates the chat indicator.
-	 * @param object tool_call { id, function:{ name, arguments } }
-	 * @param object args_obj  Parsed and normalized arguments
-	 * @param object indicator Chat render indicator handle
-	 * @return object { role:'tool', tool_call_id, content }
+	 *
+	 * Routing rule: if tool_call.function.name starts with 'client_', look it
+	 * up in CLIENT_TOOLS and invoke its run() method synchronously (no network).
+	 * Otherwise forward to mcp_client.tools_call() via the PHP MCP proxy.
+	 *
+	 * Both paths return the same shape so the caller can push the result
+	 * directly into this._conversation:
+	 *   { role: 'tool', tool_call_id: string, content: string }
+	 *
+	 * @param {Object} tool_call - parsed tool call: { id, function: { name, arguments } }
+	 * @param {Object} args_obj - already-parsed (object) arguments for the tool
+	 * @param {Object} indicator - chat_render indicator handle, updated to 'done'/'error'
+	 * @returns {Promise<Object>} OpenAI `tool` role message: { role, tool_call_id, content }
 	 */
 	async _dispatch_tool(tool_call, args_obj, indicator) {
 
@@ -567,10 +762,14 @@ export const ai_assistant = class ai_assistant {
 
 	/**
 	 * _STRINGIFY_TOOL_RESULT
-	 * Coerce any client-tool result into a model-friendly string and cap its
-	 * size so a single tool call cannot blow the KV cache.
-	 * @param any value
-	 * @return string
+	 * Coerces any client-tool result value into a model-friendly string and
+	 * caps its byte length at MAX_TOOL_RESULT_BYTES so a single tool result
+	 * cannot consume the entire KV cache budget.
+	 * null/undefined → '(not found)'
+	 * string         → used as-is
+	 * anything else  → JSON.stringify(); if that fails, String()
+	 * @param {*} value - raw return value from a client tool's run() method
+	 * @returns {string} UTF-16 string no longer than MAX_TOOL_RESULT_BYTES chars
 	 */
 	static _stringify_tool_result(value) {
 
@@ -591,14 +790,32 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
-	* _EXTRACT_TOOL_RESULT
-	* MCP proxy responses wrap the real payload in {result:{content:[{type:'text',text:'...'}]}}.
-	* This extracts the inner text, strips noisy wrapper fields, and produces
-	* tool-specific compact summaries that stay under the token budget.
-	* @param object tool_result Raw MCP tool result
-	* @param string tool_name Tool name (e.g. 'dedalo_describe_section')
-	* @return string
-	*/
+	 * _EXTRACT_TOOL_RESULT
+	 * Unwraps the MCP proxy response envelope, strips noisy fields, and
+	 * produces a compact, tool-specific summary string for injection into
+	 * the conversation history.
+	 *
+	 * Two response formats are handled:
+	 *   Format 1 (direct MCP):
+	 *     { result: { content: [{ type:'text', text:'...' }] } }
+	 *   Format 2 (PHP proxy wrapper):
+	 *     { result:true, data: { result: { content: [...] } } }
+	 *
+	 * After unwrapping, tool-specific summarizers run to fit within the token
+	 * budget without mid-JSON truncation:
+	 *   describe_section → "Section: X. Fields: a (text), b (portal→Y), …"
+	 *   get_record       → "#id — field1: val1 | field2: val2 | …"
+	 *   search_records_view → "Found N records. #1: … | #2: … | …"
+	 *   count_records    → "Total: N records in section."
+	 *   set_field        → "Updated. {…}"
+	 *   get_media_url    → "url=… | file_exist=false …"
+	 *
+	 * Falls back to compact JSON (≤1500 chars) or a key-list summary.
+	 *
+	 * @param {Object} tool_result - raw response from mcp_client.tools_call()
+	 * @param {string} tool_name - MCP tool name used to select the summarizer
+	 * @returns {string} compact summary string ready for the conversation history
+	 */
 	static _extract_tool_result(tool_result, tool_name) {
 
 		if (!tool_result || typeof tool_result !== 'object') {
@@ -732,13 +949,18 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
-	* _EXTRACT_TOOL_INNER
-	* Same unwrapping logic as _extract_tool_result but returns the raw inner
-	* object (parsed JSON) instead of a compact string. Useful for batch
-	* pipelines that need to iterate over records or inspect fields.
-	* @param object tool_result Raw MCP tool result
-	* @return object|null
-	*/
+	 * _EXTRACT_TOOL_INNER
+	 * Same envelope-unwrapping logic as _extract_tool_result but returns the
+	 * raw inner object (parsed JSON) instead of a compact summary string.
+	 * Used by batch pipelines (run_bulk_image_transcribe) and the ontology
+	 * pre-resolver that need to iterate over records or inspect field arrays.
+	 *
+	 * Returns null (never throws) when the result cannot be unwrapped or the
+	 * inner value is not an object.
+	 *
+	 * @param {Object} tool_result - raw response from mcp_client.tools_call()
+	 * @returns {Object|null} unwrapped inner object, or null on failure
+	 */
 	static _extract_tool_inner(tool_result) {
 
 		if (!tool_result || typeof tool_result !== 'object') {
@@ -787,13 +1009,23 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
-	* _NORMALIZE_TOOL_ARGS
-	* Fix common LLM output mismatches before sending to MCP.
-	* Maps ISO-style language codes (e.g. "en", "es") to Dédalo lg-xxx form.
-	* @param string tool_name
-	* @param object args
-	* @return object
-	*/
+	 * _NORMALIZE_TOOL_ARGS
+	 * Fixes common LLM output mismatches in tool arguments before they are
+	 * forwarded to the MCP proxy.
+	 *
+	 * Current normalizations:
+	 *   - `lang` field: maps ISO 639-1 two-letter codes (e.g. "en", "es") to
+	 *     the Dédalo internal form "lg-<iso639-2>" (e.g. "lg-eng", "lg-spa").
+	 *     Codes not in the map are passed through with the "lg-" prefix added.
+	 *     Already-prefixed values ("lg-…") are left unchanged.
+	 *
+	 * Returns the args object unchanged (by identity) if no normalization
+	 * is applicable, or a shallow copy with patched values.
+	 *
+	 * @param {string} tool_name - MCP tool name (currently unused; reserved for per-tool rules)
+	 * @param {Object} args - parsed argument object from the LLM
+	 * @returns {Object} normalized argument object (shallow copy if mutated)
+	 */
 	static _normalize_tool_args(tool_name, args) {
 		if (!args || typeof args !== 'object') return args
 		const out = Object.assign({}, args)
@@ -816,29 +1048,23 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
-	* _SANITIZE_SCHEMA
-	* Produces a "lowest-common-denominator" JSON schema that BOTH the Qwen and
-	* Gemma chat templates can consume. Gemma 4's template applies the Jinja
-	* filter `upper` to every property's `type` without a guard, so any
-	* missing/non-string `type` raises
-	* "Cannot apply filter 'upper' to UndefinedValue".
-	* Strategy: whitelist only the fields Gemma understands (`type`, `description`,
-	* `properties`, `required`, `items`, `enum`, `nullable`) and ensure every node
-	* recursively has a valid string `type`. Untyped / `anyOf` / `$ref` / `unknown`
-	* leaves are coerced to `{ type: 'string' }`.
-	* @param object schema
-	* @return object
-	/**
-	* _MINIMIZE_SCHEMA
-	* Shrinks a JSON schema for tool declarations.
-	* Keeps parameter names, types, and required at the top level.
-	* Nested objects also preserve their property names + types so the
-	* LLM can construct valid filters and sub-objects.
-	* Descriptions, enums, and item schemas beyond one nesting level are dropped.
-	* @param object schema
-	* @param number depth current nesting depth (0 = top level)
-	* @return object
-	*/
+	 * _MINIMIZE_SCHEMA
+	 * Shrinks a JSON schema for tool declarations, keeping only what a small
+	 * LLM actually needs to construct valid tool arguments:
+	 *   - `type` (always present)
+	 *   - `required` (top level only)
+	 *   - `properties` (objects, up to max_depth=2 levels deep)
+	 *   - `items` (arrays, up to max_depth=2 levels deep)
+	 * Descriptions, enums, and $ref chains are dropped to save tokens.
+	 * Applied AFTER _sanitize_schema so input is already well-typed.
+	 *
+	 * (!) Call _sanitize_schema first — _minimize_schema assumes every node
+	 * already has a valid string `type` field.
+	 *
+	 * @param {Object} schema - already-sanitized JSON schema node
+	 * @param {number} depth - current recursion depth (0 = top-level parameters object)
+	 * @returns {Object} minimized schema node
+	 */
 	static _minimize_schema(schema, depth) {
 
 		if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
@@ -873,6 +1099,30 @@ export const ai_assistant = class ai_assistant {
 	}//end _minimize_schema
 
 
+	/**
+	 * _SANITIZE_SCHEMA
+	 * Produces a "lowest-common-denominator" JSON schema that BOTH the Qwen
+	 * and Gemma chat templates can consume.
+	 *
+	 * Gemma 4's Jinja template applies the `upper` filter to every property's
+	 * `type` field without a null guard. A missing or non-string `type` therefore
+	 * raises "Cannot apply filter 'upper' to UndefinedValue" and aborts the
+	 * entire tool-calling turn.
+	 *
+	 * Strategy:
+	 *   - Whitelist only the fields Gemma understands:
+	 *     `type`, `description`, `properties`, `required`, `items`, `enum`, `nullable`
+	 *   - Ensure every node — including nested property nodes — has a valid
+	 *     string `type` (recursively).
+	 *   - Coerce untyped / `anyOf` / `$ref` / union leaves to `{ type:'string' }`.
+	 *   - When `schema.type` is an array (JSON Schema draft-7 style), pick the
+	 *     first non-null entry.
+	 *
+	 * Always call this before _minimize_schema.
+	 *
+	 * @param {Object} schema - raw JSON schema node (from MCP inputSchema or CLIENT_TOOLS)
+	 * @returns {Object} sanitized schema node with guaranteed string `type`
+	 */
 	static _sanitize_schema(schema) {
 
 		// non-mapping → safe default
@@ -946,14 +1196,18 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
-	* _NORMALIZE_MESSAGES_FOR_MODEL
-	* Converts tool_call function arguments from JSON strings to objects.
-	* The Qwen3.5 chat template applies |items to tool_call.arguments,
-	* expecting a dict — a JSON string causes "Unknown StringValue filter: items".
-	* This must be called before passing messages to apply_chat_template.
-	* @param array messages
-	* @return array Normalized messages (shallow copy where needed)
-	*/
+	 * _NORMALIZE_MESSAGES_FOR_MODEL
+	 * Converts tool_call function arguments from JSON strings to parsed objects.
+	 *
+	 * The Qwen3.5 Jinja chat template applies `|items` to tool_call.arguments,
+	 * which expects a dict (object). Passing a JSON string raises:
+	 *   "Unknown StringValue filter: items"
+	 * This must be called before passing messages to apply_chat_template.
+	 * Only messages with tool_calls are touched; all others pass through unchanged.
+	 *
+	 * @param {Array} messages - conversation array in OpenAI message format
+	 * @returns {Array} new array with assistant messages' tool_call arguments parsed
+	 */
 	static _normalize_messages_for_model(messages) {
 
 		return messages.map(function(msg) {
@@ -981,19 +1235,27 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
-	* _GENERATE_WITH_API
-	* Streams generation through a generic OpenAI-compatible HTTP API.
-	* Works with any endpoint that follows the /v1/chat/completions streaming
-	* protocol: Ollama, OpenAI, vLLM, localAI, etc.
-	*
-	* @param array messages OpenAI-format message list
-	* @param array tools Tool declarations in OpenAI format
-	* @param number max_new_tokens
-	* @param function on_token Stream callback for text tokens
-	* @param function on_think_token Stream callback for thinking tokens (delta.reasoning / delta.reasoning_content)
-	* @param AbortSignal signal
-	* @return object {full_text, streamed_text, raw_result}
-	*/
+	 * _GENERATE_WITH_API
+	 * Streams generation through a generic OpenAI-compatible HTTP API.
+	 * Works with any endpoint that follows the /v1/chat/completions SSE streaming
+	 * protocol: Ollama, OpenAI, vLLM, localAI, etc.
+	 *
+	 * Tool calls are accumulated across SSE delta chunks (each chunk may carry
+	 * partial name + arguments strings) and assembled into the standard OpenAI
+	 * tool_call shape before returning.
+	 *
+	 * The returned `raw_result` is shaped to be compatible with
+	 * model_engine.parse_tool_calls() so the main loop can use a single
+	 * code path regardless of whether the API or local engine was used.
+	 *
+	 * @param {Array} messages - OpenAI-format message list
+	 * @param {Array} tools - tool declarations in OpenAI function-calling format
+	 * @param {number} max_new_tokens - max tokens to generate
+	 * @param {Function} on_token - stream callback called for each text delta
+	 * @param {Function} on_think_token - stream callback for reasoning/thinking deltas
+	 * @param {AbortSignal} signal - abort signal from the current AbortController
+	 * @returns {Promise<Object>} { full_text, streamed_text, raw_result }
+	 */
 	async _generate_with_api(messages, tools, max_new_tokens, on_token, on_think_token, signal) {
 
 		const url = this._config.api_url
@@ -1142,13 +1404,25 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
-	* ANALYZE_IMAGE_URL
-	* Sends a single-turn multimodal request to the configured vision API.
-	* Works with any OpenAI-compatible endpoint that supports image_url content.
-	* @param string url     Public image URL
-	* @param string prompt  Instruction for the vision model
-	* @return string
-	*/
+	 * ANALYZE_IMAGE_URL
+	 * Sends a single-turn multimodal request to the configured vision API
+	 * (this._config.api_url) and returns the model's text response.
+	 * Works with any OpenAI-compatible endpoint that accepts image_url content.
+	 *
+	 * The image is fetched server-side by the browser, converted to a base64
+	 * data-URL via FileReader, and sent as an `image_url` content part rather
+	 * than a raw URL. This avoids CORS issues with endpoints that cannot
+	 * re-fetch from arbitrary origins.
+	 *
+	 * Used by:
+	 *   - client_tools `client_analyze_image_url` (single-record vision)
+	 *   - run_bulk_image_transcribe (batch vision pipeline)
+	 *
+	 * @param {string} url - public image URL (http/https or data-URL)
+	 * @param {string} prompt - instruction text sent to the vision model
+	 * @returns {Promise<string>} model's text response (may be empty string on failure)
+	 * @throws {Error} if api_url is not configured or the image fetch fails
+	 */
 	async analyze_image_url(url, prompt) {
 
 		if (!url || typeof url !== 'string') {
@@ -1199,14 +1473,22 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
-	* _RESOLVE_FIELD_TIPO_BY_LABEL
-	* Matches a human-written field label against the array returned by
-	* dedalo_describe_section. Uses the same normalization as ontology
-	* resolution so "Stamp" matches "stamp" or "estampa".
-	* @param array fields  Array of { tipo, label, type } from describe_section
-	* @param string label  Human label to match
-	* @return string|null
-	*/
+	 * _RESOLVE_FIELD_TIPO_BY_LABEL
+	 * Matches a human-written field label against the field descriptor array
+	 * returned by dedalo_describe_section, resolving to the Dédalo component
+	 * tipo (e.g. "rsc85").
+	 *
+	 * Matching is two-phase:
+	 *   1. Exact match after _normalize_label (accent-stripped, lowercased).
+	 *   2. Partial/substring match as fallback.
+	 *
+	 * Uses _extract_term_labels to handle multilingual term objects
+	 * (a field label may be an object keyed by language code).
+	 *
+	 * @param {Array} fields - field descriptors: [{ tipo, label, type }, …]
+	 * @param {string} label - human-readable field name to resolve
+	 * @returns {string|null} component tipo string, or null if not found
+	 */
 	_resolve_field_tipo_by_label(fields, label) {
 
 		if (!Array.isArray(fields) || !label || typeof label !== 'string') {
@@ -1246,15 +1528,34 @@ export const ai_assistant = class ai_assistant {
 
 
 	/**
-	* RUN_BULK_IMAGE_TRANSCRIBE
-	* Batch pipeline: enumerate records from the active SQO, read each image,
-	* call the vision model, and write the result into a target text field.
-	* Asks for ONE batch confirmation before any writes. Emits progress
-	* messages in the chat UI.
-	* @param object ctx   client_context instance
-	* @param object args  { prompt, image_field, target_field, max_records, page_size }
-	* @return string
-	*/
+	 * RUN_BULK_IMAGE_TRANSCRIBE
+	 * Batch pipeline that iterates records from the active section SQO,
+	 * calls the vision model on each image, and writes the result to a target
+	 * text field. Designed for large-scale transcription or captioning tasks.
+	 *
+	 * Execution steps:
+	 *   1. Read the active SQO from client_context (section_tipo + filter + total).
+	 *   2. Call dedalo_describe_section to resolve image_field and target_field
+	 *      human labels to component tipos.
+	 *   3. Enforce a safety cap (≤ 500 records, ≤ specified max_records).
+	 *   4. Ask for ONE batch confirmation via chat_render.confirm_action().
+	 *   5. Set this._bulk_approval to suppress per-record confirm prompts
+	 *      for dedalo_set_field writes to the target tipo.
+	 *   6. Paginate search_records_view (page_size records at a time), then for
+	 *      each record: get_media_url → analyze_image_url → dedalo_set_field.
+	 *   7. Emit progress messages every 5 records. Clear _bulk_approval in finally.
+	 *
+	 * Called by the `client_bulk_image_transcribe` client tool.
+	 *
+	 * @param {Object} ctx - client_context instance with get_active_sqo()
+	 * @param {Object} args - pipeline parameters
+	 * @param {string} args.prompt - instruction text for the vision model
+	 * @param {string} args.image_field - human label of the image/media component
+	 * @param {string} args.target_field - human label of the text component to write
+	 * @param {number} [args.max_records] - hard cap on records to process (default: all)
+	 * @param {number} [args.page_size=25] - records per search page (max 50)
+	 * @returns {Promise<string>} summary string ("N of M records updated")
+	 */
 	async run_bulk_image_transcribe(ctx, args) {
 
 		const prompt		= args.prompt
@@ -1453,6 +1754,35 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _HANDLE_USER_MESSAGE
+	 * Main agentic loop entry point. Called by chat_render when the user submits
+	 * a message. Runs the generate → tool-dispatch → generate cycle until the
+	 * model produces a final text response with no tool calls.
+	 *
+	 * Loop invariants:
+	 *   - Iteration 1 … MAX_TOOL_TURNS: tool declarations passed to the model.
+	 *   - Iteration MAX_TOOL_TURNS+1 … max_iterations: answer-only mode (no tools),
+	 *     with an injected user message instructing the model to answer from context.
+	 *   - max_iterations is a hard safety cap; an infinite tool-calling loop
+	 *     will terminate here.
+	 *
+	 * Per-turn flow:
+	 *   1. Build system prompt (with/without tool guidance based on turn index).
+	 *   2. Trim conversation to last 50 messages to bound KV cache growth.
+	 *   3. Generate (local model_engine or remote _generate_with_api).
+	 *   4. Parse tool calls from the generation result.
+	 *   5a. If tool calls present: dispatch each, push tool messages, continue loop.
+	 *   5b. If no tool calls: push assistant message, break loop.
+	 *   6. Persist conversation to conversation_store after each tool iteration.
+	 *
+	 * Destructive tools (DESTRUCTIVE_TOOLS list) require explicit user confirmation
+	 * via chat_render.confirm_action(), unless this._bulk_approval grants pre-approval
+	 * (set by run_bulk_image_transcribe).
+	 *
+	 * @param {string} message - raw text submitted by the user
+	 * @returns {Promise<void>}
+	 */
 	async _handle_user_message(message) {
 
 		const self = this
@@ -1650,6 +1980,28 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _BUILD_ONTOLOGY_CONTEXT_FOR_MESSAGE
+	 * Scans the user's message for known Dédalo section names (from the
+	 * dedalo_ontology_glossary) and injects a compact resolution hint block
+	 * into the system prompt before the first generation turn.
+	 *
+	 * For each matched term it either:
+	 *   - Emits "Resolved: 'term' => section_tipo 'X' (Label)" for unique matches.
+	 *   - Emits "Ambiguous: 'term': LabelA => X; LabelB => Y" for multi-matches.
+	 *
+	 * Additionally fetches field-level structure (via dedalo_describe_section)
+	 * for up to 2 uniquely resolved sections, exposing portal targets and field
+	 * labels so the model can construct correct get_record + set_field calls
+	 * without an extra describe_section round-trip.
+	 *
+	 * Returns null (no context block) when no ontology mentions are found or
+	 * the glossary is empty. Never throws — errors are caught and converted to
+	 * an advisory string instructing the model to call dedalo_ontology_glossary.
+	 *
+	 * @param {string} message - raw user message text
+	 * @returns {Promise<string|null>} ontology context block or null
+	 */
 	async _build_ontology_context_for_message(message) {
 
 		try {
@@ -1721,6 +2073,26 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _RESOLVE_ONTOLOGY_MENTIONS
+	 * Scans normalized message text for ontology term labels and returns a
+	 * list of match objects, each with the matched label and its candidate
+	 * section_tipo entries.
+	 *
+	 * Algorithm:
+	 *   - Build (or reuse) this._ontology_index for the current glossary.
+	 *   - Normalize message text (accent-stripped, lowercased).
+	 *   - Sort index labels by length descending so longer/more-specific
+	 *     terms are matched first (greedy longest-match wins).
+	 *   - Skip labels shorter than 3 chars to avoid false positives on
+	 *     common abbreviations.
+	 *   - Track occupied character ranges to avoid overlapping matches.
+	 *   - Cap at 8 mentions to limit system-prompt bloat.
+	 *
+	 * @param {string} message - raw user message text
+	 * @param {Array} glossary - glossary array from _get_ontology_glossary()
+	 * @returns {Array} array of { label: string, matches: [{section_tipo, label}] }
+	 */
 	_resolve_ontology_mentions(message, glossary) {
 
 		if (!message || typeof message !== 'string') return []
@@ -1774,6 +2146,21 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _FIND_LABEL_IN_TEXT
+	 * Searches for `label` as a whole word within `text` (both already
+	 * normalized via _normalize_label). Returns the start index of the
+	 * first word-boundary match, or -1 if not found.
+	 *
+	 * Word boundary definition: the character before and after the match
+	 * must NOT be an ASCII letter or digit [a-z0-9]. This is used instead
+	 * of regex word boundaries because the text has already been lowercased
+	 * and accent-stripped (no Unicode chars remain).
+	 *
+	 * @param {string} text - normalized search text (output of _normalize_label)
+	 * @param {string} label - normalized label to locate (output of _normalize_label)
+	 * @returns {number} index of first whole-word match, or -1
+	 */
 	static _find_label_in_text(text, label) {
 
 		let index = text.indexOf(label)
@@ -1795,6 +2182,24 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _GET_ONTOLOGY_GLOSSARY
+	 * Fetches and caches the Dédalo section name glossary from the MCP server.
+	 * Calls `dedalo_ontology_glossary` with mode='sections' once per session;
+	 * subsequent calls return the cached array immediately.
+	 *
+	 * Uses a promise-based in-flight dedup (_ontology_loading) to ensure that
+	 * concurrent callers (e.g. rapid message submissions) share a single request
+	 * rather than firing parallel fetches.
+	 *
+	 * On success:
+	 *   - Populates this._ontology_glossary (Array of section descriptor objects).
+	 *   - Builds this._ontology_index (Map of normalized label → matches).
+	 *   - Clears this._ontology_loading.
+	 *
+	 * @returns {Promise<Array>} array of section glossary entries
+	 * @throws {Error} if the MCP call fails (propagated from mcp_client)
+	 */
 	async _get_ontology_glossary() {
 
 		if (this._ontology_glossary) return this._ontology_glossary
@@ -1820,6 +2225,22 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _EXTRACT_TOOL_STRUCTURED_CONTENT
+	 * Extracts the MCP `structuredContent` field (or falls back to parsing the
+	 * text content) from a raw MCP PHP-proxy response.
+	 * Used by _get_ontology_glossary to obtain the pre-parsed JSON array from
+	 * the dedalo_ontology_glossary result, which returns a structuredContent
+	 * block alongside the human-readable text content.
+	 *
+	 * Priority:
+	 *   1. result.structuredContent (MCP 2025-03 spec)
+	 *   2. JSON.parse(result.content[0].text) (text-only MCP responses)
+	 *   3. null
+	 *
+	 * @param {Object} tool_result - raw response from mcp_client.tools_call()
+	 * @returns {Object|null} parsed structured content object, or null
+	 */
 	_extract_tool_structured_content(tool_result) {
 
 		const result = tool_result
@@ -1847,6 +2268,19 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _BUILD_ONTOLOGY_INDEX
+	 * Builds an inverted index from the glossary array for O(1) label lookups.
+	 * Each section's `term` value (string, array, or lang-keyed object) is
+	 * decomposed into candidate label strings via _extract_term_labels, then
+	 * stored under its normalized form as the key.
+	 *
+	 * The resulting Map is stored in this._ontology_index and shared between
+	 * _resolve_ontology_mentions and _match_section_label.
+	 *
+	 * @param {Array} glossary - array of { section_tipo, term } objects
+	 * @returns {Map} normalized-label → [{section_tipo, label}] map
+	 */
 	_build_ontology_index(glossary) {
 
 		const index = new Map()
@@ -1870,6 +2304,23 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _MATCH_SECTION_LABEL
+	 * Looks up a human section label against the ontology index and returns
+	 * all candidate section_tipo matches (unique by section_tipo).
+	 *
+	 * Matching priority:
+	 *   1. Exact normalized match.
+	 *   2. Singular form (strips trailing 's') — handles plurals like
+	 *      "Persons" → matches "Person".
+	 *   3. Substring match (label contains index key, or index key contains label).
+	 *
+	 * Builds the index on first call if not already populated.
+	 *
+	 * @param {string} label - human label to look up
+	 * @param {Array} glossary - glossary array (used to build index if needed)
+	 * @returns {Array} unique matches: [{section_tipo, label}, …]
+	 */
 	_match_section_label(label, glossary) {
 
 		if (!this._ontology_index) {
@@ -1900,6 +2351,14 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _UNIQUE_MATCHES
+	 * Deduplicates a flat array of { section_tipo, label } match objects,
+	 * keeping only the first occurrence of each section_tipo. Preserves
+	 * input order (first-seen wins).
+	 * @param {Array} matches - raw match array, may contain duplicates
+	 * @returns {Array} deduplicated array of { section_tipo, label } objects
+	 */
 	_unique_matches(matches) {
 
 		const seen = new Set()
@@ -1916,6 +2375,20 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _EXTRACT_TERM_LABELS
+	 * Recursively extracts all non-empty string leaf values from a term value
+	 * that may be:
+	 *   - A plain string (single label).
+	 *   - An Array of strings or nested term values.
+	 *   - An Object keyed by language code (e.g. { "lg-eng": "Person", "lg-spa": "Persona" }).
+	 *
+	 * Used by _build_ontology_index to index every language variant of a section
+	 * name so that both English and Spanish mentions are resolved.
+	 *
+	 * @param {string|Array|Object} term - term value from a glossary entry
+	 * @returns {Array} flat array of non-empty string labels
+	 */
 	static _extract_term_labels(term) {
 
 		const labels = []
@@ -1940,6 +2413,22 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _NORMALIZE_LABEL
+	 * Normalizes a label string to a canonical form for fuzzy comparison:
+	 *   1. Unicode NFD decomposition (separates base char from diacritics).
+	 *   2. Strip combining diacritical marks (U+0300–U+036F) → accent removal.
+	 *   3. Lowercase.
+	 *   4. Replace underscores and hyphens with spaces.
+	 *   5. Remove any character that is not [a-z0-9 ].
+	 *   6. Collapse multiple spaces, trim.
+	 *
+	 * Used throughout the ontology matching pipeline so that "Topónimos",
+	 * "toponimos", and "Toponimy" all normalize to comparable forms.
+	 *
+	 * @param {string} label - raw label string (any language)
+	 * @returns {string} normalized lowercase ASCII label
+	 */
 	static _normalize_label(label) {
 
 		return String(label || '')
@@ -1954,6 +2443,14 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _PERSIST
+	 * Saves the current conversation array to the conversation_store for the
+	 * active thread. No-op when no thread is active (during initialization).
+	 * Called after every iteration of the agentic loop so that partial
+	 * multi-step conversations survive page reload.
+	 * @returns {void}
+	 */
 	_persist() {
 		if (!this._thread_id) return
 		this._store.save(this._thread_id, this._conversation)
@@ -1961,6 +2458,13 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _NEW_CONVERSATION
+	 * Resets the conversation state and opens a fresh thread in the store.
+	 * If a generation is in progress, aborts it first.
+	 * Called by chat_render's "New conversation" button.
+	 * @returns {void}
+	 */
 	_new_conversation() {
 		if (this._is_generating) {
 			this._abort_generation()
@@ -1973,6 +2477,14 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _LOAD_THREAD
+	 * Switches the active conversation to an existing thread by ID.
+	 * Guards against switching while busy. Calls set_active on the store so
+	 * the next page load will restore this thread automatically.
+	 * @param {string} id - thread ID from conversation_store.list()
+	 * @returns {void}
+	 */
 	_load_thread(id) {
 		if (this._is_generating || this._model_loading) return
 		const thread = this._store.get(id)
@@ -1985,6 +2497,14 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _DELETE_THREAD
+	 * Removes a thread from the conversation_store.
+	 * If the deleted thread is the currently active one, falls back to
+	 * the most recent remaining thread or starts a new conversation.
+	 * @param {string} id - thread ID to delete
+	 * @returns {void}
+	 */
 	_delete_thread(id) {
 		this._store.delete(id)
 		if (id === this._thread_id) {
@@ -2000,6 +2520,13 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _ABORT_GENERATION
+	 * Signals the current AbortController to cancel an in-progress generation.
+	 * The agentic loop detects the abort via AbortError and terminates cleanly.
+	 * Also used to cancel in-flight fetch calls in _generate_with_api.
+	 * @returns {void}
+	 */
 	_abort_generation() {
 		if (this._abort_controller) {
 			this._abort_controller.abort()
@@ -2008,12 +2535,24 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * IS_MODEL_LOADING
+	 * Returns true while model weights are being downloaded or initialized.
+	 * Used by external callers (e.g. render_tool_assistant) to guard UI actions.
+	 * @returns {boolean}
+	 */
 	is_model_loading() {
 		return this._model_loading
 	}//end is_model_loading
 
 
 
+	/**
+	 * ABORT_MODEL_LOAD
+	 * Cancels an in-progress model load and resets the loading flag.
+	 * Called from the UI when the user selects a different model mid-load.
+	 * @returns {void}
+	 */
 	abort_model_load() {
 		if (this._abort_controller) {
 			this._abort_controller.abort()
@@ -2023,6 +2562,13 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * DESTROY
+	 * Teardown method called when the assistant tool is unmounted.
+	 * Unsubscribes client_context DOM event listeners and releases the model
+	 * engine (which frees WebGPU / WASM memory).
+	 * @returns {void}
+	 */
 	destroy() {
 		this._client_context.destroy()
 		if (this._model_engine) {
@@ -2032,6 +2578,13 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _READ_PREFS
+	 * Reads persisted user preferences (model_id, device, thinking) from
+	 * localStorage. Returns an empty object on parse failure or when no
+	 * prefs exist yet, so callers can always safely do `prefs.model_id`.
+	 * @returns {Object} prefs object (may be empty)
+	 */
 	static _read_prefs() {
 		try {
 			const raw = window.localStorage.getItem(PREFS_KEY)
@@ -2042,6 +2595,13 @@ export const ai_assistant = class ai_assistant {
 
 
 
+	/**
+	 * _WRITE_PREFS
+	 * Persists user preferences to localStorage under PREFS_KEY.
+	 * Silently swallows storage errors (quota exceeded, private browsing).
+	 * @param {Object} prefs - object with model_id, device, and/or thinking fields
+	 * @returns {void}
+	 */
 	static _write_prefs(prefs) {
 		try {
 			window.localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
