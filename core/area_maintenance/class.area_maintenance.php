@@ -1453,10 +1453,9 @@ class area_maintenance extends area_common {
 	* Only DEDALO_SUPERUSER can set notifications (enforced inside `set_config_core()`
 	* for the `DEDALO_NOTIFICATION_CUSTOM` case).
 	*
-	* (!) The response object is always rebuilt as `result: true` after calling
-	* `set_config_core()`, regardless of whether set_config_core returned an error.
-	* This means a file-write failure is silently swallowed. Flagged as a
-	* pre-existing behaviour — do not fix here.
+	* The response mirrors the result of `set_config_core()`: on success `result`
+	* is true; on failure (e.g. a file-write error) `result` is false and the
+	* underlying error message is propagated.
 	*
 	* Listed in `API_ACTIONS`; called from the `set_notification` action via
 	* `dd_area_maintenance_api::class_request`.
@@ -1479,15 +1478,17 @@ class area_maintenance extends area_common {
 		}
 
 		// set config_core constant value
-		area_maintenance::set_config_core((object) [
+		$config_response = area_maintenance::set_config_core((object) [
 			'name' => 'DEDALO_NOTIFICATION_CUSTOM',
 			'value' => $value
 		]);
 
 		$response = new stdClass();
-		$response->result = true;
-		$response->msg = 'OK. Request done successfully';
-		$response->errors = [];
+		$response->result = $config_response->result;
+		$response->msg = $config_response->result
+			? 'OK. Request done successfully'
+			: $config_response->msg;
+		$response->errors = $config_response->errors ?? [];
 
 
 		return $response;
