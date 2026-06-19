@@ -85,7 +85,7 @@ export const tool_tc = function () {
 	//this.target_lang
 	this.langs			= null
 	this.caller			= null
-}//end page
+}//end tool_tc
 
 
 

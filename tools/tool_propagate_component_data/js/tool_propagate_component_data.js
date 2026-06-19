@@ -410,9 +410,6 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 * When `open_as === 'modal'`:
 *   1. Calls `self.caller.refresh()` to trigger a re-render of the originating
 *      component, ensuring any propagated changes become visible in the UI.
-*      (!) The inline comment "never refresh caller (component_json)" appears to be
-*      an obsolete note from an earlier version — the code unconditionally calls
-*      refresh(), which contradicts the comment. Do not change either.
 *   2. Calls `self.destroy(true, true, true)` to unmount the tool DOM, clear event
 *      subscriptions, and remove the instance from the registry.
 *
@@ -427,7 +424,7 @@ tool_propagate_component_data.prototype.on_close_actions = async function(open_a
 	const self = this
 
 	if (open_as==='modal') {
-		self.caller.refresh() // never refresh caller (component_json)
+		self.caller.refresh() // refresh caller so propagated changes become visible
 		self.destroy(true, true, true)
 	}
 

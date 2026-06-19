@@ -75,7 +75,7 @@ export const tool_numisdata_order_coins = function () {
 	this.relation_list				= null // datum of relation_list (to obtaim list of top_section_tipo/id)
 
 	return true
-}//end page
+}//end tool_numisdata_order_coins
 
 
 
@@ -223,7 +223,7 @@ tool_numisdata_order_coins.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-}//end build_custom
+}//end build
 
 
 

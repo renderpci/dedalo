@@ -9,9 +9,9 @@
 *
 * Page/canvas model and box editing for tool_print.
 * Geometry is canonical in millimetres; on-screen pixels are always derived
-* (mm * PX_PER_MM * zoom). The same .print_root / .print_page / .box DOM is
-* reused for editing and for printing (see tool_print.less @media print and the
-* beforeprint hook in render_tool_print.js).
+* (mm * PX_PER_MM * zoom). The same .print_root / .print_page / .flow_cell /
+* .cell_content DOM is reused for editing and for printing (see tool_print.less
+* @media print and the beforeprint hook in render_tool_print.js).
 *
 * No core helper does absolute-mm drag/resize, so the move/resize handlers here
 * adopt the offset-drag pattern of core/common/js/dd-modal.js (capture a cursor

@@ -304,7 +304,7 @@ const get_content_data = async function(self, ar_section_record) {
 					// section record append
 						fragment.appendChild(section_record_node)
 				}
-			}//end if (ar_section_record_length===0)
+			}//end if (ar_section_record_length>0)
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -549,7 +549,7 @@ const render_hover_view = async function(self, ar_section_record, hover_body) {
 				// section record append
 					fragment.appendChild(section_record_node)
 			}
-		}//end if (ar_section_record_length===0)
+		}//end if (ar_section_record_length>0)
 
 	return fragment
 }//end render_hover_view

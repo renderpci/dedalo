@@ -77,7 +77,7 @@ export const tool_lang_multi = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-}//end page
+}//end tool_lang_multi
 
 
 

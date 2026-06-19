@@ -150,7 +150,7 @@ tool_pdf_extractor.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-}//end build_custom
+}//end build
 
 
 
@@ -311,7 +311,7 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 	switch (method) {
 		// if the engine is text the server will provide the final version.
 		// it ensure coherent process with the process of uploaded file or regenerate
-		// Don't add any process here, change the buil_pdf_transcription method into the componnet_pdf class.
+		// Don't add any process here, change the build_pdf_transcription method into the component_pdf class.
 		case 'text':
 			final_text = original_text
 			break

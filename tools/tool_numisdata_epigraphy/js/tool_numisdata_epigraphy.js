@@ -277,8 +277,7 @@ tool_numisdata_epigraphy.prototype.get_component = async function(options) {
 * The SQO uses `filter_by_locators` pointing at the coin's own section_tipo/section_id,
 * which resolves all relation types in a single request.
 *
-* `retries: 5` is labelled "one try only" in the original comment — this appears to be a
-* stale label left from an earlier default; the actual value is 5.
+* `retries: 5` means the request is retried up to 5 times before giving up.
 *
 * @param {Object} options - Options bag.
 * @param {Object} options.data - Coin-record locator: `{ section_tipo, section_id }`.
@@ -325,7 +324,7 @@ tool_numisdata_epigraphy.prototype.get_relations = async function(options) {
 			: 'read',
 		source	: source,
 		sqo		: sqo,
-		retries : 5, // one try only
+		retries : 5, // retry up to 5 times
 		timeout : 20 * 1000 // 20 secs waiting response
 	}
 

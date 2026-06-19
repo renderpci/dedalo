@@ -71,7 +71,7 @@ export const tool_update_cache = function () {
 	this.components_list = []
 
 	return true
-}//end page
+}//end tool_update_cache
 
 
 

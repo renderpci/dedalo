@@ -68,7 +68,7 @@ export const tool_posterframe = function () {
 	]
 
 	return true
-}//end page
+}//end tool_posterframe
 
 
 
