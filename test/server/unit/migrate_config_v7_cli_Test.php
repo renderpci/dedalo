@@ -39,20 +39,20 @@ final class migrate_config_v7_cli_Test extends TestCase {
 		$this->assertSame(0, $code, $out);
 		$this->assertStringContainsString('DEDALO_PATATA', $out);
 		$this->assertFileDoesNotExist($this->sandbox . '/private/.env');
-		$this->assertFileDoesNotExist($this->sandbox . '/config/local/passthrough.php');
+		$this->assertFileDoesNotExist($this->sandbox . '/private/passthrough.php');
 	}
 
 	public function test_commit_refused_without_yes() : void {
 		[$out, $code] = $this->run_cli($this->common()); // no --dry-run, no --yes
 		$this->assertSame(1, $code);
 		$this->assertStringContainsString('--yes', $out);
-		$this->assertFileDoesNotExist($this->sandbox . '/config/local/passthrough.php');
+		$this->assertFileDoesNotExist($this->sandbox . '/private/passthrough.php');
 	}
 
 	public function test_yes_commits_artifacts() : void {
 		[$out, $code] = $this->run_cli(array_merge(['--yes'], $this->common()));
 		$this->assertSame(0, $code, $out);
-		$this->assertFileExists($this->sandbox . '/config/local/passthrough.php');
-		$this->assertStringContainsString("define('DEDALO_PATATA', 'potato')", file_get_contents($this->sandbox . '/config/local/passthrough.php'));
+		$this->assertFileExists($this->sandbox . '/private/passthrough.php');
+		$this->assertStringContainsString("define('DEDALO_PATATA', 'potato')", file_get_contents($this->sandbox . '/private/passthrough.php'));
 	}
 }

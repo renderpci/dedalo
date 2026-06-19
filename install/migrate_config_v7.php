@@ -83,15 +83,15 @@ $backup_dir = $paths['backup-base'] . '/' . $host . '.' . $entity . '/' . $stamp
 $targets = [
 	'env_php'     => $paths['private-dir'] . '/.env',
 	'env_bun'     => $paths['bun-env'],
-	'config'      => $paths['target-config-dir'] . '/local/config.php',
-	'state'       => $paths['target-config-dir'] . '/state.php',
-	'passthrough' => $paths['target-config-dir'] . '/local/passthrough.php',
+	'config'      => $paths['private-dir'] . '/config.local.php',  // outside the web-served tree (with .env)
+	'state'       => $paths['private-dir'] . '/state.php',
+	'passthrough' => $paths['private-dir'] . '/passthrough.php',
 ];
 
 $report = migration_committer::commit($plan['artifacts'], $targets, $backup_dir);
 
 // marker for schema version + key
-$marker = $paths['target-config-dir'] . '/local/.migration.json';
+$marker = $paths['private-dir'] . '/.migration.json';
 @mkdir(dirname($marker), 0755, true);
 @file_put_contents($marker, json_encode([
 	'schema_version' => migration_runner::SCHEMA_VERSION,

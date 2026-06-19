@@ -29,7 +29,7 @@ final class boot_web_profile {
 	* @param string $sapi php_sapi_name()
 	* @return boot_phase[]
 	*/
-	public static function phases(array $catalog, array $base_overrides, ?string $env_path, array $local_override, ?string $state_file, string $repo, array $server, string $sapi, ?callable $definer = null) : array {
+	public static function phases(array $catalog, array $base_overrides, ?string $env_path, array $local_override, ?string $state_file, ?string $passthrough_file, string $repo, array $server, string $sapi, ?callable $definer = null) : array {
 		$paths_override = boot_paths::resolve($repo . '/config', $server, $sapi);
 		$layers = $base_overrides;
 		$layers[] = $paths_override;
@@ -49,10 +49,10 @@ final class boot_web_profile {
 		// P6.5 SECRET/STATE live emission
 		$phases[] = boot_secret_state_phases::emit_phase($catalog, $state_file, $definer);
 		// P6.6 per-install passthrough defines (verbatim: DEDALO_CONFIG/CORE/... + SESSION_SAVE_PATH);
-		// after compat_shim so const-refs (e.g. DEDALO_SESSIONS_PATH) are already defined.
-		$passthrough = $repo . '/config/local/passthrough.php';
-		if (is_file($passthrough)) {
-			$phases[] = boot_subsystem_phases::include_phase('passthrough', $passthrough);
+		// after compat_shim so const-refs (e.g. DEDALO_SESSIONS_PATH) are already defined. Path is
+		// caller-provided (the shim points it outside the web root, alongside .env).
+		if ($passthrough_file !== null && is_file($passthrough_file)) {
+			$phases[] = boot_subsystem_phases::include_phase('passthrough', $passthrough_file);
 		}
 		// P7–P10 subsystem includes
 		$phases[] = boot_subsystem_phases::include_phase('core_functions', $repo . '/shared/core_functions.php');

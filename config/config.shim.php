@@ -25,9 +25,11 @@ require_once $repo . '/core/base/boot/class.boot_web_profile.php';
 
 $catalog = require $repo . '/core/base/config/catalog/catalog.php';
 
-$env_path     = $repo . '/../private/.env';
-$local_cfg    = $repo . '/config/local/config.php';
-$state_file   = $repo . '/config/state.php';
+// All per-install config + secrets live OUTSIDE the web-served tree, in ../private/.
+$env_path         = $repo . '/../private/.env';
+$local_cfg        = $repo . '/../private/config.local.php';
+$state_file       = $repo . '/../private/state.php';
+$passthrough_file = $repo . '/../private/passthrough.php';
 $local_override = is_file($local_cfg) ? (require $local_cfg) : [];
 if (!is_array($local_override)) { $local_override = []; }
 
@@ -41,6 +43,7 @@ boot::run($profile, boot_web_profile::phases(
 	is_file($env_path) ? $env_path : null,
 	$local_override,
 	is_file($state_file) ? $state_file : null,
+	is_file($passthrough_file) ? $passthrough_file : null,
 	$repo,
 	$_SERVER,
 	php_sapi_name()

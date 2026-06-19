@@ -28,7 +28,7 @@ final class boot_web_profile_Test extends TestCase {
 
 	public function test_assembles_full_ordered_phase_list() : void {
 		$phases = boot_web_profile::phases(
-			$this->catalog(), [], '/no/such/.env', [], '/no/such/state.php',
+			$this->catalog(), [], '/no/such/.env', [], '/no/such/state.php', null,
 			'/srv/dedalo', ['HTTP_HOST' => 'x', 'REQUEST_URI' => '/d/x'], 'fpm-fcgi'
 		);
 		$names = array_map(static fn(boot_phase $p) : string => $p->name, $phases);
@@ -41,25 +41,23 @@ final class boot_web_profile_Test extends TestCase {
 	}
 
 	public function test_passthrough_phase_included_when_file_present() : void {
-		$repo = sys_get_temp_dir() . '/wp_pt_' . getmypid();
-		@mkdir($repo . '/config/local', 0755, true);
-		file_put_contents($repo . '/config/local/passthrough.php', "<?php\n");
+		$pt = sys_get_temp_dir() . '/wp_pt_' . getmypid() . '.php';
+		file_put_contents($pt, "<?php\n");
 		try {
 			$phases = boot_web_profile::phases(
-				$this->catalog(), [], null, [], null,
-				$repo, ['HTTP_HOST' => 'x', 'REQUEST_URI' => '/d/x'], 'fpm-fcgi'
+				$this->catalog(), [], null, [], null, $pt,
+				'/srv/dedalo', ['HTTP_HOST' => 'x', 'REQUEST_URI' => '/d/x'], 'fpm-fcgi'
 			);
 			$names = array_map(static fn(boot_phase $p) : string => $p->name, $phases);
 			$this->assertContains('passthrough', $names);
 		} finally {
-			@unlink($repo . '/config/local/passthrough.php');
-			@rmdir($repo . '/config/local'); @rmdir($repo . '/config'); @rmdir($repo);
+			@unlink($pt);
 		}
 	}
 
 	public function test_web_only_phases_carry_skip_in() : void {
 		$phases = boot_web_profile::phases(
-			$this->catalog(), [], null, [], null,
+			$this->catalog(), [], null, [], null, null,
 			'/srv/dedalo', ['HTTP_HOST' => 'x', 'REQUEST_URI' => '/d/x'], 'fpm-fcgi'
 		);
 		$by = [];
@@ -71,7 +69,7 @@ final class boot_web_profile_Test extends TestCase {
 
 	public function test_env_load_omitted_when_no_env_path() : void {
 		$phases = boot_web_profile::phases(
-			$this->catalog(), [], null, [], null,
+			$this->catalog(), [], null, [], null, null,
 			'/srv/dedalo', ['HTTP_HOST' => 'x', 'REQUEST_URI' => '/d/x'], 'fpm-fcgi'
 		);
 		$names = array_map(static fn(boot_phase $p) : string => $p->name, $phases);
