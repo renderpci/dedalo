@@ -16,11 +16,11 @@
 * on printable pages and save reusable layout templates per section_tipo.
 */
 
-	import {data_manager} from '../../../core/common/js/data_manager.js'
-	import {common, create_source} from '../../../core/common/js/common.js'
-	import {tool_common, wire_tool} from '../../tool_common/js/tool_common.js'
-	import {render_tool_print} from './render_tool_print.js'
-	import {on_dragstart} from '../../tool_export/js/drag_tool_export.js'
+import {data_manager} from '../../../core/common/js/data_manager.js'
+import {common, create_source} from '../../../core/common/js/common.js'
+import {tool_common, wire_tool} from '../../tool_common/js/tool_common.js'
+import {render_tool_print} from './render_tool_print.js'
+import {on_dragstart} from '../../tool_export/js/drag_tool_export.js'
 
 
 
@@ -56,7 +56,6 @@ export const tool_print = function () {
 	this.layout				= null			// the in-memory layout blob
 	this.zoom				= 1
 	this.id_counter			= 0
-	this.selected_box_id	= null
 	this.print_root			= null
 	this.canvas_container	= null
 	this.current_template_id= null			// section_id of the loaded template (null = unsaved)
@@ -72,13 +71,13 @@ export const tool_print = function () {
 * COMMON FUNCTIONS
 * wire_tool assigns render/destroy/refresh and edit (from render_tool_print).
 */
-	wire_tool(tool_print, render_tool_print)
+wire_tool(tool_print, render_tool_print)
 
-	// extra prototypes
-	tool_print.prototype.get_section_elements_context	= common.prototype.get_section_elements_context
-	tool_print.prototype.calculate_component_path		= common.prototype.calculate_component_path
-	// palette drag (reuse tool_export's payload {drag_type:'add', path, ddo})
-	tool_print.prototype.on_dragstart					= on_dragstart
+// extra prototypes
+tool_print.prototype.get_section_elements_context	= common.prototype.get_section_elements_context
+tool_print.prototype.calculate_component_path		= common.prototype.calculate_component_path
+// palette drag (reuse tool_export's payload {drag_type:'add', path, ddo})
+tool_print.prototype.on_dragstart					= on_dragstart
 
 
 
@@ -263,14 +262,10 @@ tool_print.prototype.on_close_actions = async function(open_as) {
 
 	const self = this
 
-	// destroy any component instances rendered into boxes
-		if (Array.isArray(self.ar_instances)) {
-			for (let i = self.ar_instances.length - 1; i >= 0; i--) {
-				const inst = self.ar_instances[i]
-				if (inst && typeof inst.destroy==='function') {
-					try { inst.destroy() } catch (e) { /* noop */ }
-				}
-			}
+	// remove the global flow keydown listener wired by wire_flow_keys
+		if (self._flow_key_handler) {
+			document.removeEventListener('keydown', self._flow_key_handler)
+			self._flow_key_handler = null
 		}
 
 	if (open_as==='modal') {
