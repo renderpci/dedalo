@@ -2,18 +2,37 @@
 /**
  * CLASS TOOL_COMMON
  *
- * Base class for all Dédalo tools.
- * It provides common functionality for tool initialization, configuration
- * management, context parsing, and registration logic.
+ * Base class for every Dédalo tool — the shared foundation that concrete tool
+ * classes (tool_lang, tool_export, tool_print, …) extend.
  *
- * All specialized tools should extend this class to ensure consistency
- * across the application.
+ * Responsibilities:
+ * - Instantiate a tool with its section context ($section_tipo / $section_id).
+ * - Build and return the tool's dd_object context (get_json / get_structure_context)
+ *   which the browser JS uses to render the tool button, icon, labels, and config.
+ * - Manage the three-layer static + file cache for the tool registry:
+ *     all_registered_tools (entity-level) and user_tools (user-level).
+ * - Resolve tool configuration with a two-tier fallback:
+ *     user/install record (section dd996) → registry default (section dd1324).
+ * - Provide utility helpers: read_files(), read_csv_file_as_array().
  *
- * Key features:
- * - Common tool structure and context creation
- * - Active tool registry management
- * - Tool configuration and permission handling
- * - Utility methods for file and data processing
+ * Data shapes this class manages:
+ * - simple_tool_object  — the parsed JSON stored in component_json dd1353,
+ *   keyed by tool name in all_registered_tools_cache. Shape:
+ *   { name, label, developer, version, ontology, properties, section_id,
+ *     section_tipo, always_active, affected_tipos, affected_models,
+ *     show_in_component, show_in_inspector, description }
+ * - dd_object context   — a stdClass extending dd_object sent to the browser,
+ *   produced by get_structure_context() / create_tool_simple_context().
+ * - tool config array   — stored as ['config' => object] in dd996/dd1324.
+ *
+ * Relationships:
+ * - Extended by every concrete tool class (tool_lang, tool_export, etc.).
+ * - Delegates registry storage to tools_register.
+ * - Uses tool_paths for multi-root filesystem/URL resolution (DEDALO_ADDITIONAL_TOOLS).
+ * - Uses tool_ontology_map for tipo constants (dd1324 = registry, dd996 = config).
+ * - Uses tool_security for API_ACTIONS enforcement (not directly here, see tool_security.php).
+ * - Cache invalidation entry point: reset_static_caches() is called by
+ *   tools_register::invalidate_all_tool_caches() after any registry write.
  *
  * @package    Dédalo
  * @subpackage Tools
@@ -26,57 +45,70 @@ class tool_common {
 	* CLASS VARS
 	*/
 		/**
-		 * Tool identifier name (same as class name).
-		 * Set automatically from the called class name during instantiation.
+		 * Tool identifier name — always identical to the concrete class name
+		 * (e.g. 'tool_lang', 'tool_export'). Set via get_called_class() in __construct
+		 * so subclasses get their own name automatically.
 		 * @var string $name
 		 */
 		public string $name;
 
 		/**
-		 * Tool configuration object loaded from register.json.
-		 * Contains tool-specific settings, properties, and behavior definitions.
+		 * Runtime configuration object for this tool instance, populated by
+		 * concrete subclasses from their register.json or section dd996 record.
+		 * May be null when the tool has no stored configuration.
 		 * @var ?object $config
 		 */
 		public ?object $config;
 
 		/**
-		 * Section tipo (ontology identifier) where the tool is being invoked.
-		 * Defines the context section for tool operations.
+		 * Ontology tipo of the section in whose context this tool operates
+		 * (e.g. 'rsc167' for an interview section). Used when resolving the
+		 * tool's simple_tool_object and when building ddo_map entries.
 		 * @var string $section_tipo
 		 */
 		public string $section_tipo;
 
 		/**
-		 * Section ID of the record being processed by the tool.
-		 * Null when tool is invoked in list mode without specific record context.
+		 * Record ID within $section_tipo on which the tool is being invoked.
+		 * Null when the tool is triggered from a list view (no single record context).
+		 * The union type (string|int) reflects legacy numeric IDs arriving as strings
+		 * from HTTP request parameters.
 		 * @var string|int|null $section_id
 		 */
 		public string|int|null $section_id;
 
 		/**
-		 * Static cache for all registered tools from the database.
-		 * Stores the complete tools registry to avoid repeated DB queries.
+		 * Request-scoped cache for the complete registered-tools map.
+		 * Shape: [ tool_name => simple_tool_object, … ]. Populated by
+		 * get_all_registered_tools() from the entity-level file cache or
+		 * from a live DB query when the file cache is absent/empty.
+		 * Reset by reset_static_caches() on every registry write.
 		 * @var ?array $all_registered_tools_cache
 		 */
 		protected static $all_registered_tools_cache;
 
 		/**
-		 * Static cache for active tools database query result.
-		 * Stores the raw db_result for active tools to avoid repeated filtering queries.
+		 * Request-scoped cache for the raw db_result returned by get_active_tools().
+		 * Avoids re-running the active-tool SQO search for the same request.
+		 * Reset by reset_static_caches() on registry writes.
 		 * @var db_result|false $active_tools_cache
 		 */
 		protected static $active_tools_cache;
 
 		/**
-		 * Static cache for individual tool configurations.
-		 * Maps tool names to their parsed configuration objects.
+		 * Per-tool configuration cache for the current request.
+		 * Shape: [ tool_name => ['config' => object|null] | null ].
+		 * Populated lazily by get_config(); null entries mark a confirmed
+		 * "no config found" result to prevent repeated look-ups.
 		 * @var array $cache_config_tool
 		 */
 		protected static $cache_config_tool = [];
 
 		/**
-		 * Static cache for user-specific tool availability lists.
-		 * Maps user IDs to their accessible tools based on permissions.
+		 * Per-user tool list cache for the current request.
+		 * Shape: [ user_id => simple_tool_object[] ].
+		 * Declared public so the persistent-worker state-bleed audit
+		 * can verify it is cleared between requests via reset_static_caches().
 		 * @var array $user_tools_cache
 		 */
 		public static $user_tools_cache = [];
@@ -147,8 +179,12 @@ class tool_common {
 
 	/**
 	* __CONSTRUCT
+	* Initialises the tool with its invocation context.
+	* get_called_class() is used instead of a hard-coded name so every
+	* subclass (tool_lang, tool_export, …) gets its own class name without
+	* overriding this constructor, which keeps the hierarchy shallow.
 	* @param string|int|null $section_id Section ID of the record being processed. Null in list mode.
-	* @param string $section_tipo Section tipo (ontology identifier) where the tool is invoked
+	* @param string $section_tipo Ontology tipo of the section where the tool is invoked (e.g. 'rsc167').
 	* @return void
 	*/
 	public function __construct(string|int|null $section_id, string $section_tipo) {
@@ -165,13 +201,21 @@ class tool_common {
 
 	/**
 	* GET_JSON
+	* Returns the tool's JSON envelope in the standard Dédalo API shape:
+	*   { context: [dd_object] }
 	*
-	* Gets tool context in JSON-compatible format.
-	* This function preserves compatibility with Dédalo architecture
-	* but is primarily used for structure context, not data.
+	* Follows the same contract as component_common::get_json() so the browser
+	* JS can load a tool through the same pipeline as a component. Only the
+	* context slice is currently produced here; the data slice ($get_data) is
+	* declared for future expansion but is not populated by this base class.
 	*
-	* @param object|null $options Configuration options (get_context, get_data)
-	* @return object JSON object containing the tool context
+	* Note: $get_data defaults to false and is intentionally unused at this
+	* level — tools carry their data through API_ACTIONS, not through this envelope.
+	*
+	* @param object|null $options Options object. Recognised keys:
+	*   - get_context (bool, default true)  — include the context array
+	*   - get_data    (bool, default false) — include data (currently no-op)
+	* @return object stdClass with optional 'context' key.
 	*/
 	public function get_json( ?object $options=null ) : object {
 
@@ -193,14 +237,32 @@ class tool_common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
+	* Builds and returns the full dd_object context for this tool instance.
 	*
-	* Parses and retrieves the full structural context of the tool.
-	* This context is essential when tools are loaded in isolated environments (e.g., popups, time machine).
-	* The data is derived from the 'Registered tools' section (dd1324) and the pre-parsed JSON structure
-	* in component_json (dd1353).
+	* The context is the authoritative description of the tool that the browser
+	* receives: label, icon, CSS URL, properties, labels (multilingual UI strings),
+	* description, inspector/component visibility flags, and config. It is used
+	* when the tool is loaded in any isolated context (popup, time machine,
+	* component inspector) where the full tool class may not yet be available.
 	*
-	* @return dd_object The complete Dédalo object representing the tool context
-	* @throws Exception If the class name is strictly 'tool_common' (must be instantiated by a subclass)
+	* Resolution order for the simple_tool_object:
+	*   1. all_registered_tools file/static cache (keyed by tool name) — fast path.
+	*   2. tools_register::create_simple_tool_object() — on-the-fly fallback used
+	*      during development or when the cache has not yet been built.
+	*
+	* Label resolution: iterates the lang-wrapped label array and selects the entry
+	* matching DEDALO_APPLICATION_LANG; falls back to ar_labels[0] if no match.
+	*
+	* Config resolution: user/install config (dd996) wins; falls back to the
+	* registry default config (dd1324). The resolved 'config' key is a plain
+	* object ready for the browser.
+	*
+	* CSS/icon URLs are computed at request time via tool_paths::get_tool_url()
+	* to support DEDALO_ADDITIONAL_TOOLS roots without stale cache entries.
+	*
+	* @return dd_object The complete Dédalo context object for this tool.
+	* @throws Exception If $this->name is literally 'tool_common' (base class was
+	*   instantiated directly instead of through a concrete subclass).
 	*/
 	public function get_structure_context() : dd_object {
 
@@ -285,7 +347,12 @@ class tool_common {
 				);
 			}
 
-		// label. (JSON list) Try match current lang else use the first lang value
+		// label — lang-wrapped array [{lang, value}, …]
+		// Prefer the entry matching DEDALO_APPLICATION_LANG; fall back to
+		// ar_labels[0] for installs where the current language has no translation.
+		// If the resolved value is still not a string (e.g. null, array from a
+		// malformed register.json), fall back to the tool's class name so the
+		// browser always receives a usable string.
 			$ar_labels = $tool_object->label ?? [];
 			$tool_label_object = array_find($ar_labels, function($el){
 				return $el->lang===DEDALO_APPLICATION_LANG;
@@ -321,7 +388,15 @@ class tool_common {
 					? $ar_description[0]->value
 					: null);
 
-		// labels. take care of empty objects like '{}' casting array on check.
+		// labels — multilingual UI-string map stored in component_json dd1372.
+		// Shape on the simple_tool_object: flat array of {lang, name, value}.
+		// The 'name' key acts as a logical label slot (e.g. 'babel_transcriber').
+		// Multiple entries with the same name but different langs coexist in the array.
+		// This block deduplicates by 'name', picking the entry for $current_lang,
+		// or falling back to the first available translation when the current lang
+		// has no entry. The (array) cast on $tool_object->labels guards against
+		// register.json files where 'labels' was serialised as an empty JSON object
+		// ('{}') rather than an empty array ('[]').
 			$labels = [];
 			if(!empty((array)$tool_object->labels)) {
 
@@ -378,7 +453,11 @@ class tool_common {
 				? null
 				: $tool_object->properties; // object|array
 
-		// config. Add if exists config data for current tool
+		// config — two-tier resolution for the browser-facing config object.
+		// Tier 1: user/install config from section dd996 (get_all_config_tool_client).
+		// Tier 2: factory default from section dd1324 (get_all_default_config_tool_client).
+		// Only the inner 'config' key of the config_data array is sent to the browser;
+		// the wrapping array also carries the tool name and other registry metadata.
 			$ar_config		= tools_register::get_all_config_tool_client();
 			$config_data	= $ar_config[$name] ?? null;
 			// fallback to default config
@@ -432,15 +511,30 @@ class tool_common {
 
 	/**
 	* CREATE_TOOL_SIMPLE_CONTEXT
+	* Generates a lightweight dd_object context from a simple_tool_object, without
+	* instantiating the concrete tool class. This is the path used by common::get_tools()
+	* when populating tool buttons and menus for a component or section.
 	*
-	* Generates a lightweight tool context object from a simple_tool_object definition.
-	* This is used to build the tool's representation in lists and menus without loading the full class.
+	* Compared to get_structure_context() (which runs on an instantiated tool),
+	* this static method skips: multilingual labels deduplication, description
+	* resolution, and the full config two-tier look-up. Those fields are left out
+	* (see the commented-out 'new way' block below) pending a planned unification.
 	*
-	* @param object $tool_object The simple_tool_object (usually from JSON component dd1353)
-	* @param object|null $tool_config Optional tool configuration object (e.g., from properties)
-	* @param string|null $tipo Component type identifier
-	* @param string|null $section_tipo Section type identifier
-	* @return dd_object The simplified tool context
+	* When $tool_config is provided and contains a ddo_map, every entry with
+	* tipo==='self' or section_tipo==='self' is resolved to the supplied $tipo and
+	* $section_tipo values. The model, translatable flag, and label for each ddo_map
+	* entry are also resolved here so the browser JS does not need a round-trip.
+	*
+	* (!) The 'new way' block below (currently commented out) represents the planned
+	* unification where context is generated by instantiating the tool and calling
+	* get_json(). It is kept as reference for a future refactor.
+	*
+	* @param object $tool_object The simple_tool_object (from component_json dd1353).
+	* @param object|null $tool_config Optional resolved tool_config object (e.g. from properties).
+	*   When provided, its ddo_map entries are resolved against $tipo/$section_tipo.
+	* @param string|null $tipo The invoking component tipo — used to resolve 'self' ddo_map entries.
+	* @param string|null $section_tipo The invoking section tipo — used to resolve 'self' ddo_map entries.
+	* @return dd_object The simplified tool context ready for browser consumption.
 	*/
 	public static function create_tool_simple_context( object $tool_object, ?object $tool_config=null, ?string $tipo=null, ?string $section_tipo=null ) : dd_object {
 
@@ -517,6 +611,11 @@ class tool_common {
 
 
 		// tool_config add
+		// When a tool_config object is provided (e.g. from properties->tool_config in
+		// the register record or the user config), resolve any ddo_map entries that use
+		// the sentinel value 'self'. 'self' means "the component/section that triggered
+		// this tool", so it must be replaced with the runtime $tipo/$section_tipo before
+		// the context is sent to the browser JS, which cannot perform this substitution.
 			if (!empty($tool_config)) {
 				// parse and resolve ddo_map self
 					if (isset($tool_config->ddo_map)) {
@@ -561,10 +660,15 @@ class tool_common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT_SIMPLE
-	* Alias of $this->get_structure_context method for compatibility.
-	* @param int $permissions = 0 User permissions level for the tool
-	* @param bool $add_request_config = false Whether to append request_config to the context
-	* @return dd_object The complete Dédalo object representing the tool context
+	* Thin compatibility alias for get_structure_context().
+	* Older callers (and some generic rendering loops) call this signature
+	* with $permissions / $add_request_config arguments matching the component
+	* convention. Tool contexts do not vary by permission level or carry a
+	* request_config at this layer, so both parameters are accepted but unused —
+	* the full context is always returned. Kept to avoid breaking callers.
+	* @param int $permissions [= 0] User permissions level (accepted but ignored at this layer).
+	* @param bool $add_request_config [= false] Whether to append request_config (accepted but ignored).
+	* @return dd_object The complete Dédalo context object for this tool.
 	*/
 	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : dd_object {
 
@@ -579,8 +683,11 @@ class tool_common {
 
 	/**
 	* GET_ALL_REGISTERED_TOOLS_CACHE_NAME
-	* Returns the filename used for file-based caching.
-	* @return string The cache filename
+	* Returns the entity-scoped filename used for the shared file-based tool registry cache.
+	* The DEDALO_ENTITY prefix ensures multi-entity installs do not share the same cache file.
+	* The '.php' extension places the file under PHP include protection (the file begins
+	* with a PHP die() guard written by dd_cache::cache_to_file).
+	* @return string The cache filename (no directory component — dd_cache resolves the path).
 	*/
 	public static function get_all_registered_tools_cache_name() : string {
 		return DEDALO_ENTITY . '_cache_tools_all_registered_tools.php';
@@ -590,12 +697,26 @@ class tool_common {
 
 	/**
 	* GET_ALL_REGISTERED_TOOLS
+	* Returns the complete map of registered tools keyed by tool name.
 	*
-	* Retrieves the full list of tools registered in the database.
-	* This method constructs a simplified tool object for each registered tool,
-	* including its name, label, and client configuration.
+	* Shape: [ 'tool_lang' => simple_tool_object, 'tool_export' => simple_tool_object, … ]
 	*
-	* @return array $registered_tools - List of simple_tool_objects
+	* Cache layers (hit order):
+	*   1. Static in-memory  — self::$all_registered_tools_cache  (per-request, fastest).
+	*   2. File cache        — entity-level .php file written by dd_cache::cache_to_file.
+	*      An empty array read from file is treated as a MISS (see note in code) so that
+	*      a poisoned/transient empty file self-heals on the next request.
+	*   3. Live DB query     — get_active_tools() SQO + create_simple_tool_object() per record.
+	*      Results are written to static and file caches only when $db_result !== false
+	*      and $registered_tools is non-empty (prevents persisting a failed search result).
+	*
+	* Config is merged into each simple_tool_object->config from:
+	*   - tools_register::get_all_config_tool_client() (dd996 user config)
+	*   - tools_register::get_all_default_config_tool_client() (dd1324 default)
+	* Tools that have no valid config array at all are skipped (logged as ERROR).
+	*
+	* @return array Map of simple_tool_objects keyed by tool name; empty array when
+	*   no tools are registered or the DB is unreachable.
 	*/
 	public static function get_all_registered_tools() : array {
 
@@ -698,9 +819,19 @@ class tool_common {
 
 	/**
 	* GET_ACTIVE_TOOLS
-	* Search all active tools in registered tools section
-	* @param bool $use_cache = true Whether to use static cache for the query result
-	* @return db_result|false Database result containing active tools, or false on failure
+	* Queries section dd1324 ('Registered Tools') for all records whose ACTIVE
+	* radio-button component (tool_ontology_map::ACTIVE = 'dd1354') is set to
+	* value '1' in section dd64 (the radio-button value section).
+	*
+	* Returns a raw db_result iterable over rows with {section_id, section_tipo}.
+	* Callers typically pass each row to tools_register::create_simple_tool_object()
+	* to build the full simple_tool_object.
+	*
+	* The result is stored in self::$active_tools_cache for the duration of the
+	* request ($use_cache=false bypasses the cache for testing or forced refresh).
+	*
+	* @param bool $use_cache [= true] Whether to serve from / store in static cache.
+	* @return db_result|false Iterable result of active tool rows, or false on search failure.
 	*/
 	public static function get_active_tools( bool $use_cache=true ) : db_result|false {
 
@@ -763,9 +894,16 @@ class tool_common {
 
 	/**
 	* GET_ACTIVE_TOOL_NAMES
-	* Get active tools in tool section and return only the names as: ["tool_lang", "tool_time_machine"]
-	* Used in update code to get the tool list from the master
-	* @return array $tool_names
+	* Returns the plain-text class-name list of all active registered tools,
+	* e.g. ['tool_lang', 'tool_time_machine', 'tool_export'].
+	*
+	* Used by the update subsystem to compare the master's installed tool set
+	* with a remote instance. Unlike get_all_registered_tools() (which returns
+	* full objects), this method reads the tool name component (tool_ontology_map::TOOL_NAME
+	* = dd1326) directly from each active record — bypassing the cache — so it
+	* always reflects the live database state.
+	*
+	* @return array<string> Ordered list of active tool names; empty when none are active.
 	*/
 	public static function get_active_tool_names() : array {
 
@@ -809,9 +947,23 @@ class tool_common {
 
 	/**
 	* GET_CONFIG
-	* Get given tool config if isset
-	* @param string $tool_name The name of the tool (same as class name)
-	* @return array|null The tool configuration array, or null if not found
+	* Returns the full configuration array for a tool, with a two-tier fallback:
+	*   1. User/install config from section dd996 (tools_register::get_all_config).
+	*   2. Factory default config from section dd1324 (tools_register::get_all_default_config).
+	*
+	* Fallback is wholesale: if a dd996 config array exists for the tool it is
+	* returned as-is, even if it sets only some keys. For per-key inheritance
+	* (where dd996 sets one key and the rest come from dd1324 defaults) use
+	* get_config_value() instead.
+	*
+	* Shape of the returned array: ['config' => object, …] where 'config' is the
+	* parsed JSON object from the tool's configuration component (dd999/dd1633).
+	*
+	* Results are cached in self::$cache_config_tool per tool per request.
+	* A null cache entry records that no config was found, preventing repeated look-ups.
+	*
+	* @param string $tool_name Tool class name (e.g. 'tool_lang').
+	* @return array|null Configuration array, or null when no config exists in either tier.
 	*/
 	public static function get_config(string $tool_name) : ?array {
 
@@ -915,13 +1067,17 @@ class tool_common {
 
 	/**
 	* READ_FILES
+	* Returns the filenames inside $dir whose extension is in $valid_extensions.
+	* Results are sorted in natural order (so 'file10.csv' sorts after 'file9.csv').
+	* Directories and files with non-matching extensions are silently skipped
+	* (DEBUG log entry written for each skipped file). Scandir errors are caught
+	* and logged; an empty array is returned on any failure.
+	* Note: recursive scanning is prepared in the commented-out block below but
+	* is not currently activated.
 	*
-	* Reads files from a directory and returns an array of filenames,
-	* filtered by the specified valid extensions.
-	*
-	* @param string $dir The directory path to scan
-	* @param array $valid_extensions List of allowed file extensions (lowercase)
-	* @return array List of matching filenames
+	* @param string $dir Absolute path to the directory to scan.
+	* @param array $valid_extensions [= ['csv']] Lowercase extension strings to include.
+	* @return array<string> Filenames (basename only, no directory prefix) in natural order.
 	*/
 	public static function read_files(string $dir, array $valid_extensions=['csv']) : array {
 
@@ -979,18 +1135,28 @@ class tool_common {
 
 	/**
 	* READ_CSV_FILE_AS_ARRAY
+	* Parses a CSV file into a two-dimensional array (rows × columns).
 	*
-	* Reads a CSV file and converts it into a multi-dimensional array.
-	* Handles BOM removal for UTF-8 files and attempts encoding conversion
-	* for non-UTF-8 files.
+	* Encoding handling:
+	* - A UTF-8 BOM at the start of the first cell is stripped transparently.
+	* - Non-UTF-8 input is detected via mb_check_encoding() on each row.
+	*   When detected, mb_convert_encoding() with mb_list_encodings() is used to
+	*   convert every cell; subsequent rows are converted without re-checking
+	*   (the $convert_to_utf8 flag is latched true after the first detection).
 	*
-	* @param string $file Absolute path to the CSV file
-	* @param bool $skip_header Whether to skip the first row
-	* @param string $csv_delimiter Character used as field delimiter
-	* @param string $enclosure Character used as field enclosure
-	* @param string $escape Character used for escaping
+	* PHP 8.1 compatibility: auto_detect_line_endings (ini) was removed in PHP 8.1;
+	* the ini_set calls are guarded by a version check and skipped on 8.1+.
 	*
-	* @return array The CSV data as an array. Returns empty array if file is missing.
+	* (!) fopen() is checked for false (TOCTOU / permission failure) before the
+	* read loop to avoid passing false to fgetcsv() which would be a TypeError.
+	*
+	* @param string $file Absolute path to the CSV file.
+	* @param bool $skip_header [= false] When true, the first row is skipped.
+	* @param string $csv_delimiter [= ';'] Field separator character.
+	* @param string $enclosure [= '"'] Field enclosure character.
+	* @param string $escape [= '"'] Escape character within enclosed fields.
+	* @return array<array<string>> Two-dimensional array of trimmed cell strings;
+	*   empty array when the file is absent or cannot be opened.
 	*/
 	public static function read_csv_file_as_array(string $file, bool $skip_header=false, string $csv_delimiter=';', string $enclosure='"', string $escape='"') : array {
 
@@ -1079,10 +1245,21 @@ class tool_common {
 
 	/**
 	* CALL_COMPONENT_METHOD (NOT USED AT THE MOMENT)
-	* Call component method
-	* @param object $options Options containing tipo, section_id, section_tipo, method, method_arguments
-	* @return object Response object with result and msg properties
-	* @throws Exception If the request cannot be processed
+	* Placeholder for a generic component-method dispatcher that would let tools
+	* invoke arbitrary component methods through a unified API action.
+	* The implementation is currently stubs out with an unconditional throw;
+	* the commented-out body below shows the intended logic:
+	*   instantiate the component via component_common::get_instance(),
+	*   call $method($method_arguments), and return a {result, msg} response.
+	*
+	* (!) DO NOT call this method — it always throws. It is kept here so the
+	* planned implementation has a home and the commented design is preserved.
+	*
+	* @param object $options Options object. Intended keys:
+	*   tipo (string), section_id (string|int), section_tipo (string),
+	*   method (string), method_arguments (mixed).
+	* @return object stdClass with result and msg properties (never actually returns).
+	* @throws Exception Always, with code 1 ("Error Processing Request").
 	*/
 	public static function call_component_method(object $options) : object {
 
@@ -1303,24 +1480,33 @@ class tool_common {
 
 	/**
 	* GET_TOOL_CONFIGURATION
-	* 	Get the specific tool config in registered tools or tool configuration
-	*	when the tool has a specific properties in the register or in his configuration records
-	*	overwrite the ontology properties with them
-	*	flow of overwrite: the most specific overwrite the most generic
-	*		configuration -> configuration register -> ontology
-	*	1 if the configuration isset use it
-	*	2 else get the configuration in register, if isset use it
-	*	3 else get the ontology properties
+	* Resolves the per-tipo/per-section tool configuration object from the tool's
+	* configuration record, applying the precedence chain:
 	*
-	* @param object $options Options object with properties:
-	* {
-	* 	tool_name: string as 'tool_lang'
-	* 	tipo: string as 'dd47'
-	* 	section_tipo: string as 'rsc167'
-	* }
-	* @param array|null $tool_config = null
-	* 	Normally, is get from tools cache file, else will be calculated
-	* @return object|null The matching tool configuration object, or null if not found
+	*   user/install config (dd996)  →  registry default (dd1324)  →  null
+	*
+	* The resolved config is expected to contain:
+	*   config->properties->tool_config: array of {section_tipo, tipo, …} entries
+	* This method finds the entry whose section_tipo and tipo match $options->section_tipo
+	* and $options->tipo respectively, and returns it.
+	*
+	* When $tool_config is provided by the caller (e.g. from user_tools cache) it is
+	* used directly, avoiding a redundant get_config() call. Pass null to force
+	* resolution from get_config().
+	*
+	* Returns null when: no config exists, the config has no properties->tool_config,
+	* or no entry in tool_config matches the given tipo+section_tipo pair.
+	*
+	* Note: the closing comment reads '//end get_tool_config' but the method is named
+	* 'get_tool_configuration'. This is a stale end-label (doc-only flag — not changed).
+	*
+	* @param object $options Options with keys:
+	*   - tool_name (string) — e.g. 'tool_lang'
+	*   - tipo (string) — component tipo e.g. 'dd47'
+	*   - section_tipo (string) — section tipo e.g. 'rsc167'
+	* @param array|null $tool_config [= null] Pre-resolved config array ['config' => object, …].
+	*   When null, get_config($tool_name) is called.
+	* @return object|null The matching tool_config entry object, or null.
 	*/
 	public static function get_tool_configuration( object $options, ?array $tool_config=null ) : ?object {
 
@@ -1356,13 +1542,27 @@ class tool_common {
 
 	/**
 	* HYDRATE_TOOLS_INFO
+	* Enriches a relation-datalist (component_relation data) with tool metadata
+	* (tool_name, always_active) by joining against the registered-tools map.
 	*
-	* Enriches a list of tool references with additional metadata (name, activation status).
-	* Typically used by security components (dd1353) rendered as 'view_tools'.
+	* Called by security components rendered in 'view_tools' mode — specifically
+	* the component that lists which tools are assigned to a user profile (dd1067).
+	* Each item in $datalist carries a value->section_id referencing a tool registry
+	* record (section dd1324). This method resolves that section_id to the tool's
+	* class name and always_active flag so the view can render them without another
+	* DB query.
 	*
-	* @param array  $datalist Array of objects containing tool references ($item->value->section_id).
-	* @param string $lang     Application language.
-	* @return array The enriched list.
+	* The lookup uses a pre-built section_id→tool O(1) map over the cached
+	* registered-tools list, making the total cost O(N registry) + O(M datalist).
+	*
+	* Note: $lang is accepted for interface uniformity with other hydrate helpers
+	* but is not used here — tool names and always_active flags are not translated.
+	*
+	* @param array $datalist Array of relation-value objects; each is expected to have
+	*   a value->section_id property pointing to a dd1324 record.
+	* @param string $lang Application language code (accepted but unused in this method).
+	* @return array The same array with tool_name (string) and always_active (bool)
+	*   injected into each item. Items with no matching tool get 'Unknown'/false.
 	*/
 	public static function hydrate_tools_info( array $datalist, string $lang ) : array {
 
