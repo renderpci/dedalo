@@ -338,7 +338,7 @@ class tool_tr_print extends tool_common {
 
 		#$text = subtitles::clean_text_for_subtitles($text);
 
-		# CONVERT ENCODING (Traducciones mal formadas provinientes de Babel)
+		# CONVERT ENCODING (malformed translations coming from Babel)
 		$text = html_entity_decode($text);
 
 		$text	= strip_tags($text, '<br><strong><em>');

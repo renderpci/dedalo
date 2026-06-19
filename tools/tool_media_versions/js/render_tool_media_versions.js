@@ -1044,10 +1044,6 @@ const render_file_versions = function(quality, self) {
 * (!) This function reads self.caller.context.features.default_quality (same pattern as
 * render_file_versions), while most other renderers use self.main_element.context.
 *
-* (!) The variable holding the delete button is named button_file_download — this is
-* a naming error in the original code (should be button_file_delete). Do not rename:
-* doc-only rule applies.
-*
 * @param {string} quality - quality level key (e.g. 'original', '404', 'thumb')
 * @param {Object} self - the tool_media_versions instance
 * @returns {HTMLElement} file_info_node containing the delete button (or empty if file absent)
@@ -1072,13 +1068,12 @@ const render_file_delete = function(quality, self) {
 
 		if (file_info && file_info.file_exist===true) {
 
-			// (!) variable is misnamed 'button_file_download' but is actually the delete button
-			const button_file_download = ui.create_dom_element({
+			const button_file_delete = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button delete',
 				parent			: file_info_node
 			})
-			button_file_download.addEventListener('click', async function(){
+			button_file_delete.addEventListener('click', async function(){
 				self.node.classList.add('loading')
 				// exec delete_quality: confirmation is handled inside self.delete_quality
 				const response = await self.delete_quality(quality)
@@ -1249,9 +1244,6 @@ const render_specific_actions = {
 	* transcoded externally and has a non-standard header layout that causes streaming
 	* issues. Skipped for 'original' quality since the raw upload should not be modified.
 	*
-	* (!) The button variable is named button_build_version — naming inherited from
-	* a copy of render_build_version. Do not rename: doc-only rule.
-	*
 	* @param {string} quality - quality level key (e.g. '404', 'audio'); 'original' is skipped
 	* @param {Object} self - the tool_media_versions instance
 	* @returns {HTMLElement} file_info_node with conform button, or empty node if not applicable
@@ -1272,14 +1264,13 @@ const render_specific_actions = {
 		// only show the button when the file exists and quality is not 'original'
 		if (file_info && quality!=='original' && file_info.file_exist===true) {
 
-			// (!) variable named button_build_version but represents the conform_headers button
-			const button_build_version = ui.create_dom_element({
+			const button_conform_headers = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button repair',
 				title			: (get_label.conform_headers || 'Conform headers'),
 				parent			: file_info_node
 			})
-			button_build_version.addEventListener('click', async function(){
+			button_conform_headers.addEventListener('click', async function(){
 				self.node.classList.add('loading')
 				// exec conform_headers
 				const result = await self.conform_headers(quality)

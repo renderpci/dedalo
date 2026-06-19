@@ -22,7 +22,7 @@
  *                          button trigger config, and creates the live section instance.
  *
  * Configuration is driven by a `tool_config.ddo_map` JSON blob stored on the
- * triggering button's properties (key `button_triger`). Each entry in `ddo_map`
+ * triggering button's properties (key `button_trigger`). Each entry in `ddo_map`
  * carries a `role` field (`"image"` or `"label"`) to tell the renderer which
  * component tipos to use for the card's thumbnail and text.
  *
@@ -190,7 +190,7 @@ tool_qr.prototype.build = async function(autoload=false) {
 * section instance whose data drives the QR sheet.
 *
 * Data-source strategy (`ddo_map_source`):
-*   - `'button_triger'` (current default) — reads `self.tool_config.ddo_map` that
+*   - `'button_trigger'` (current default) — reads `self.tool_config.ddo_map` that
 *     was stored on the activating button's properties. This is the preferred path
 *     because each button can be scoped to a specific user group.
 *   - Section-list properties path (commented fallback) — would read the ddo_map
@@ -236,8 +236,8 @@ tool_qr.prototype.load_section = async function() {
 		// The tool allows to get the tool_config from the section list or from a button
 		// Button way has the possibility of control user access by section. At now this
 		// will be the default source
-		const ddo_map_source = 'button_triger'
-		const ddo_map = ddo_map_source==='button_triger'
+		const ddo_map_source = 'button_trigger'
+		const ddo_map = ddo_map_source==='button_trigger'
 			? self.tool_config.ddo_map || [] // from button properties
 			: element_context.properties?.tool_config?.tool_qr?.ddo_map || [] // from section_list properties
 

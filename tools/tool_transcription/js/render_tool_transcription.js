@@ -94,7 +94,7 @@ render_tool_transcription.prototype.edit = async function(options={}) {
 		const promises = []
 		// transcription_options are the buttons to get access to other tools (buttons in the header)
 		promises.push(
-			render_tanscription_options(self)
+			render_transcription_options(self)
 		)
 		// process status, render the status components for users and admins to control the process of the tool
 		promises.push(
@@ -255,8 +255,7 @@ const get_content_data_edit = function(self) {
 							const av_playpause_key_value		= localStorage.getItem('av_playpause_key')
 							// Fall back to 'Escape' when no stored preference exists
 							const av_playpause_keyboard_code	= av_playpause_key_value ? av_playpause_key_value : 'Escape' // Default 'Escape'
-							// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
-							// (!) Note: the import path comment contains a typo ("keyborad") — it refers to keyboard.js
+							// get the user friendly name of the key code based in specific object imported from /common/utils/js/keyboard.js
 							const av_playpause_keyboard_key										= keyboard_codes[av_playpause_keyboard_code]
 							component_text_area.context.features.av_player.av_play_pause_code	= av_playpause_keyboard_code
 							playpause_key_input.value											= av_playpause_keyboard_key
@@ -265,12 +264,12 @@ const get_content_data_edit = function(self) {
 							// and display the human-readable key name. The code is persisted to localStorage
 							// so the text-area's AV player logic can intercept the correct key next render.
 							playpause_key_input.addEventListener('keyup', function(event){
-								const keyborard_code	= event.code
-								const keyborard_key		= event.key
+								const keyboard_code	= event.code
+								const keyboard_key		= event.key
 								// set the cookie of the key
-								localStorage.setItem('av_playpause_key', keyborard_code);
-								playpause_key_input.value											= keyborard_key
-								component_text_area.context.features.av_player.av_play_pause_code	= keyborard_code
+								localStorage.setItem('av_playpause_key', keyboard_code);
+								playpause_key_input.value											= keyboard_key
+								component_text_area.context.features.av_player.av_play_pause_code	= keyboard_code
 							})
 						// rewind value is the time that the av rewind when is paused by the play/pause key
 						// it change the text_area default rewind time to the user has specify
@@ -340,19 +339,18 @@ const get_content_data_edit = function(self) {
 
 							// Default 'F2' maps to the standard function key for inserting timecode tags
 							const tag_insert_keyboard_code			= tag_insert_key_value ? tag_insert_key_value : 'F2' // Default 'F2'
-							// get the user friendly name of the key code based in specific object imported form /common/utils/js/keyborad.js
-							// (!) Note: the import path comment contains a typo ("keyborad") — it refers to keyboard.js
+							// get the user friendly name of the key code based in specific object imported from /common/utils/js/keyboard.js
 							const tag_insert_keyboard_key			= keyboard_codes[tag_insert_keyboard_code]
 							tag_insert_key_input.value				= tag_insert_keyboard_key
 							component_text_area.context.features.av_player.av_insert_tc_code	= tag_insert_keyboard_code
 
 							tag_insert_key_input.addEventListener('keyup', function(event){
-								const keyborard_code					= event.code
-								const keyborard_key						= event.key
+								const keyboard_code					= event.code
+								const keyboard_key						= event.key
 								// set the cookie of the key
-								localStorage.setItem('tag_insert_key', keyborard_code);
-								tag_insert_key_input.value				= keyborard_key
-								component_text_area.context.features.av_player.av_insert_tc_code	= keyborard_code
+								localStorage.setItem('tag_insert_key', keyboard_code);
+								tag_insert_key_input.value				= keyboard_key
+								component_text_area.context.features.av_player.av_insert_tc_code	= keyboard_code
 							})
 
 				// subtitles_block
@@ -595,14 +593,11 @@ const render_related_list = function(self) {
 * component is refreshed with `render_level: 'full'` so that the lang label in the
 * text-area header also updates.
 *
-* (!) The function name contains a typo ('tanscription' instead of 'transcription')
-* that is preserved to maintain backward compatibility with any call sites.
-*
 * @param {Object} self - The tool_transcription instance.
 * @returns {Promise<DocumentFragment>} Resolved fragment with the selector, lang
 *   switcher, and any accessible tool buttons.
 */
-const render_tanscription_options = async function(self) {
+const render_transcription_options = async function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -691,7 +686,7 @@ const render_tanscription_options = async function(self) {
 		}
 
 	return fragment
-}//end render_tanscription_options
+}//end render_transcription_options
 
 
 

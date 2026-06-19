@@ -131,9 +131,9 @@ class babel {
 			debug_log(__METHOD__." babel:translate ----> raw_result ".PHP_EOL.to_string($raw_result), logger::DEBUG);
 
 		// check invalild response or error
-			$ar_invalid_respone = array('Error: Mode','Error. You need authorization');
-			foreach ($ar_invalid_respone as $invalid_respone) {
-				if( strpos($result, $invalid_respone)!==false ) {
+			$ar_invalid_response = array('Error: Mode','Error. You need authorization');
+			foreach ($ar_invalid_response as $invalid_response) {
+				if( strpos($result, $invalid_response)!==false ) {
 					$response->msg = 'Trigger Error: ['.__FUNCTION__.'] '.$result;
 					return $response;
 				}

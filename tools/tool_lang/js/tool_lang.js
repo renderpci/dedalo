@@ -264,7 +264,7 @@ tool_lang.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-}//end build_custom
+}//end build
 
 
 
