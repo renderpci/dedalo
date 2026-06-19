@@ -1,23 +1,59 @@
 <?php declare(strict_types=1);
 /**
- * TOOLS_REGISTER
- * Manages tools registration process, from /tools directory elements to the
- * database, in section 'Registered Tools' (dd1324) where are parsed and saved
- * That section is not editable, is only for read, and is re-created on each
- * import tools action from management area.
- * Tools configuration section (dd996) is used to store the custom local configuration of the tools
- */
+* CLASS TOOLS_REGISTER
+* Orchestrates the full tool registration lifecycle: filesystem scan → database upsert → cache invalidation.
+*
+* Responsibilities:
+* - Scanning all tool roots (DEDALO_TOOLS_PATH + DEDALO_ADDITIONAL_TOOLS via tool_paths::get_roots())
+*   for directories that follow the 'tool_*' naming convention.
+* - Parsing and format-detecting each tool's register.json (v6 matrix-dump, v7 authoring flat-key,
+*   or already column-keyed pass-through) and normalising it to the column-keyed section data object
+*   expected by section_record.
+* - Running a layered validation gate (validate_register) covering structure, name/version/label
+*   presence, class contract, and minimum Dédalo version.
+* - Upserting records into section dd1324 ('Registered Tools'), the read-only system registry that
+*   drives tool resolution at runtime.
+* - Renumerating tool ontology nodes (renumerate_term_id) and writing them into dd_ontology.
+* - Deleting dd1324 records for tools that have been removed from disk.
+* - Providing read accessors for tool configuration (dd996 'Tools Configuration') and the factory
+*   default configuration stored in dd1324 alongside the registry record.
+* - Maintaining a three-level, lazily-populated, per-request in-memory cache backed by per-entity
+*   file caches. The single invalidation entry point is invalidate_all_tool_caches().
+*
+* Key relationships:
+* - Extended/called by: tool_common (delegates cache invalidation and get_tool_data_by_name).
+* - Calls into: tool_paths, tool_ontology_map, ontology_utils, section_record, section, search,
+*   search_query_object, component_common, section_record_data, ontology_node, dd_cache, v6_to_v7.
+* - Managed data shapes:
+*   - dd1324 ('Registered Tools'): system-managed, re-created on every import.
+*   - dd996 ('Tools Configuration'): operator-editable; created via create_tool_config(),
+*     deleted via remove_tool_configuration().
+*   - $simple_tool_object (SIMPLE_TOOL_OBJECT / dd1353): computed cache value written back to dd1324
+*     after import; stripped from any incoming register.json before the record is saved.
+*
+* Cache hierarchy (invalidated together by invalidate_all_tool_caches()):
+*   1. Class-static in-memory arrays ($all_config_cache, etc.) — fastest; reset per-request.
+*   2. Entity-scoped .php file caches written by dd_cache::cache_to_file().
+*   3. Per-user authorization file caches ({entity}_{user_id}_cache_user_tools.php).
+*
+* @package Dédalo
+* @subpackage Tools
+*/
 class tools_register {
 
 
-	/**
-	* CLASS VARS - Tool registration ontology tipos
-	*/
+	// -------------------------------------------------------------------------
+	// Class properties — ontology tipos used throughout the registration flow.
+	// All component tipos delegate to tool_ontology_map constants so that the
+	// strings live in exactly one authoritative place.
+	// -------------------------------------------------------------------------
+
 		/**
-		 * Section tipo for the 'Registered Tools' section (dd1324).
-		 * Stores parsed tool metadata, re-created on each import from management area.
-		 * @var string $section_registered_tools_tipo
-		 */
+		* Section tipo for the 'Registered Tools' section (dd1324).
+		* Records in this section are system-owned: they are fully re-created on
+		* every import and must never be edited by hand.
+		* @var string $section_registered_tools_tipo
+		*/
 		public static string $section_registered_tools_tipo = DEDALO_REGISTER_TOOLS_SECTION_TIPO;
 
 		/**
@@ -111,13 +147,34 @@ class tools_register {
 		public static string $tipo_active = tool_ontology_map::ACTIVE;
 
 		/**
-		 * In-memory caches for the config list getters.
-		 * Class properties (instead of function-local statics) so
-		 * invalidate_all_tool_caches() can reset them.
-		 */
+		* Per-request in-memory cache for get_all_config().
+		* Keyed by tool name; each value is ['config' => mixed].
+		* Null = not yet populated (first call triggers database read + file-cache lookup).
+		* (!) Must be a class property — never a function-local static — so that
+		* invalidate_all_tool_caches() / reset_static_caches() can clear it.
+		* @var ?array $all_config_cache
+		*/
 		protected static ?array $all_config_cache = null;
+
+		/**
+		* Per-request in-memory cache for get_all_default_config().
+		* Mirrors $all_config_cache but reads from dd1324 (factory defaults) instead of dd996.
+		* @var ?array $all_default_config_cache
+		*/
 		protected static ?array $all_default_config_cache = null;
+
+		/**
+		* Per-request in-memory cache for get_all_config_tool_client().
+		* Derived from $all_config_cache: only entries whose properties carry "client": true.
+		* @var ?array $all_config_tool_client_cache
+		*/
 		protected static ?array $all_config_tool_client_cache = null;
+
+		/**
+		* Per-request in-memory cache for get_all_default_config_tool_client().
+		* Derived from $all_default_config_cache: only client-visible default properties.
+		* @var ?array $all_default_config_tool_client_cache
+		*/
 		protected static ?array $all_default_config_tool_client_cache = null;
 
 
@@ -492,6 +549,7 @@ class tools_register {
 	 * (Note: Implementation placeholder) Updates the tool-related ontology terms in database.
 	 *
 	 * @param array $ar_ontologies List of renumerated ontology structures.
+	 * @return void
 	 */
 	private static function update_ontology_structure(array $ar_ontologies) : void {
 		// Remove existing tool structure nodes
@@ -509,7 +567,8 @@ class tools_register {
 	 * Persists tool registration data to the database tools registry section (dd1324).
 	 *
 	 * @param array $info_objects_parsed  Processed tool objects.
-	 * @param array $info_file_processed  Reference to import report array for updating status.
+	 * @param array &$info_file_processed Reference to import report array; entries updated with import status.
+	 * @return void
 	 */
 	private static function update_tool_registry_sections(array $info_objects_parsed, array &$info_file_processed) : void {
 
@@ -630,6 +689,7 @@ class tools_register {
 	 * Deletes registry records for tools that are no longer present on the filesystem.
 	 *
 	 * @param array $info_file_processed Currently present tools from disk.
+	 * @return void
 	 */
 	private static function cleanup_removed_tools(array $info_file_processed) : void {
 
@@ -816,9 +876,22 @@ class tools_register {
 
 
 	/**
-	 * Private helper to extract component data or values from a section record.
-	 * Used to DRY create_simple_tool_object.
-	 */
+	* GET_VAL
+	* Private helper: instantiates a component and returns either its scalar value
+	* or its full data array. Centralises the get_instance → get_value/get_data
+	* call pattern used throughout create_simple_tool_object and create_tool_config.
+	*
+	* When $full_data is false (default) the return is whatever get_value() yields
+	* (typically a scalar or null). When true, returns the full data array as
+	* returned by get_data() — useful for translatable text and relation locators.
+	*
+	* @param int|string $section_id   Section record identifier.
+	* @param string     $section_tipo Section ontology tipo.
+	* @param string     $tipo         Component ontology tipo to read.
+	* @param string     $lang         Language code; defaults to DEDALO_DATA_NOLAN (language-agnostic).
+	* @param bool       $full_data    = false — when true returns get_data(); otherwise get_value().
+	* @return mixed - Raw value or data array depending on $full_data.
+	*/
 	private static function get_val(int|string $section_id, string $section_tipo, string $tipo, string $lang = DEDALO_DATA_NOLAN, bool $full_data = false) : mixed {
 		$model = ontology_node::get_model_by_tipo($tipo, true);
 		$comp  = component_common::get_instance($model, $tipo, $section_id, 'list', $lang, $section_tipo);
@@ -832,8 +905,8 @@ class tools_register {
 	 * Gathers all relevant data from a registered tool's section record and returns a simplified object.
 	 * This object is used by the frontend and other modules to understand tool capabilities and properties.
 	 *
-	 * @param string      $section_tipo
-	 * @param int|string  $section_id
+	 * @param string      $section_tipo Section tipo of the tools registry (dd1324).
+	 * @param int|string  $section_id   Section record identifier for the tool.
 	 * @return object Simplified tool information object.
 	 */
 	public static function create_simple_tool_object(string $section_tipo, int|string $section_id) : object {
@@ -1045,8 +1118,30 @@ class tools_register {
 
 
 	/**
-	 * Private helper to fetch and parse configuration records from a specific section.
-	 */
+	* GET_CONFIG_LIST
+	* Fetches and parses configuration records from a specific section, returning a
+	* name-keyed array of ['config' => mixed] entries.
+	*
+	* Implements a two-level cache: file cache (dd_cache::cache_from_file) checked
+	* first, then a full section search if the file is absent.
+	*
+	* Called by:
+	* - get_all_config()         → $section_tipo = dd996 (user install config),
+	*                               $config_tipo  = tool_ontology_map::CONFIG (dd999)
+	* - get_all_default_config() → $section_tipo = dd1324 (registry),
+	*                               $config_tipo  = tool_ontology_map::DEFAULT_CONFIG (dd1633)
+	*
+	* An empty result array [] is a legitimate hit (e.g. no dd996 records yet) and
+	* IS cached, because cache_from_file returns null only on a missing/unreadable
+	* file — never on a cached [].
+	*
+	* On search failure the result is NOT cached so that a transient database error
+	* does not permanently poison the cache.
+	*
+	* @param string $section_tipo Section to query (dd996 or dd1324).
+	* @param string $config_tipo  Component tipo holding the JSON config blob.
+	* @return array Name-keyed map of ['config' => mixed]; empty on failure.
+	*/
 	private static function get_config_list(string $section_tipo, string $config_tipo) : array {
 
 		// cache
@@ -1140,8 +1235,22 @@ class tools_register {
 
 
 	/**
-	 * Helper to filter config objects for properties visible to the client.
-	 */
+	* FILTER_CLIENT_CONFIG
+	* Filters a name-keyed config map to include only those property keys whose
+	* descriptor carries "client": true.
+	*
+	* Every tool configuration property is a stdClass with at least a 'value' and
+	* an optional 'client' boolean. This gate ensures that sensitive server-side
+	* properties (API keys, paths, etc.) are never transmitted to the browser.
+	* Only properties explicitly opt-in with "client": true are passed through.
+	*
+	* The output preserves the same name-keyed shape as the input so that callers
+	* (get_all_config_tool_client, get_all_default_config_tool_client) can use the
+	* result transparently as a partial config map.
+	*
+	* @param array $configs Name-keyed map as returned by get_config_list().
+	* @return array Filtered name-keyed map; tools with no client properties get config=null.
+	*/
 	private static function filter_client_config(array $configs) : array {
 		$result = [];
 		foreach ($configs as $name => $item) {
