@@ -200,9 +200,7 @@ const get_content_data_edit = async function(self) {
 				parent			: file_container
 			})
 
-			// input radio button
-			// (!) Despite the comment, this is a checkbox, not a radio — multiple files
-			// can be selected simultaneously. The comment is a remnant; do NOT change it.
+			// input checkbox — multiple files can be selected simultaneously
 			const input = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'checkbox',

@@ -582,7 +582,7 @@ const get_buttons = function(self) {
 		const button_remove_background_click_handler = async function(e){
 			e.stopPropagation()
 
-			// Get the most quality image, mainly the origianl quality
+			// Get the most quality image, mainly the original quality
 			const image_file = ( self.main_element.get_quality_file_info('original') )
 				? self.main_element.get_quality_file_info('original')
 				: (self.main_element.get_quality_file_info('modified'))

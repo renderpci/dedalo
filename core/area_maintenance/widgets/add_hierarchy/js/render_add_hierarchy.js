@@ -55,7 +55,7 @@ export const render_add_hierarchy = function() {
 * 	Sample:
 * 	{
 *		render_level : "full"
-		render_mode : "list"
+*		render_mode : "list"
 *   }
 * @returns {HTMLElement} wrapper
 * 	To append to the widget body node (area_maintenance)

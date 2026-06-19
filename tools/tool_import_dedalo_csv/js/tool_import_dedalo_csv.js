@@ -55,7 +55,7 @@ export const tool_import_dedalo_csv = function () {
 
 	// Tool-specific fields.
 	this.csv_files_list	= null // {Array} fetched by load_csv_files_list; each entry is a file descriptor object
-}//end page
+}//end tool_import_dedalo_csv
 
 
 
@@ -181,7 +181,7 @@ tool_import_dedalo_csv.prototype.build = async function(autoload=false) {
 
 
 	return common_build
-}//end build_custom
+}//end build
 
 
 

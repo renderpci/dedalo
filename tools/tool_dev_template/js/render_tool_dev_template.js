@@ -58,7 +58,7 @@ export const render_tool_dev_template = function() {
 /**
 * EDIT
 * Render tool DOM nodes
-* This function is called by render common attached in 'tool_dummy.js'
+* This function is wired onto the tool prototype by wire_tool() in 'tool_dev_template.js'
 *
 * Entry point for the edit-mode render pipeline.  Delegates body construction to
 * the module-private `get_content_data` helper and then wraps the result in a

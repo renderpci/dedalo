@@ -183,9 +183,7 @@ const get_content_data_edit = async function(self) {
 				parent			: file_container
 			})
 
-			// input radio button
-			// (!) Despite the "radio button" label, the element type is
-			// 'checkbox', allowing multiple files to be selected at once.
+			// input checkbox — allows multiple files to be selected at once.
 			// The change handler below toggles the 'selected' highlight only on
 			// the affected label, so sibling selections keep their highlight.
 			const input = ui.create_dom_element({

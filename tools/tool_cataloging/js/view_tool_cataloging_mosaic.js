@@ -610,7 +610,7 @@ const render_column_drag = function(options) {
 		? data.value.filter(node => node.type==='hierarchy')
 		: []
 
-	// get inverser_realatins data
+	// get inverse_relations data
 		const inverse_relations_tipo = DD_TIPOS.DEDALO_SECTION_INFO_INVERSE_RELATIONS
 		const relation_data = section_record.datum.data.find(el => el.tipo === inverse_relations_tipo
 			&& el.section_tipo === locator.section_tipo

@@ -109,7 +109,7 @@ const get_content_data_edit = async function(self) {
 			element_type : 'div'
 		})
 
-	// version
+	// php user name
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: '',

@@ -478,7 +478,7 @@ area_graph.prototype.navigate = async function(options) {
 
 
 	return true
-}//end get_sections_selector_data
+}//end navigate
 
 
 

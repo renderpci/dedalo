@@ -291,7 +291,7 @@ tool_cataloging.prototype.build = async function(autoload=false) {
 
 
 /**
-* ASSIGN_ELEMENT
+* LOAD_SECTION
 * Instantiates the "section to cataloging" and registers it in `ar_instances`.
 *
 * Despite the function name (inherited from the original scaffolding), the actual role of this
@@ -303,9 +303,6 @@ tool_cataloging.prototype.build = async function(autoload=false) {
 * Option resolution precedence: values from the `section_to_cataloging` ddo entry take priority;
 * missing values fall back to the caller's corresponding properties. `type` is always forced to
 * `"section"`; `section_id` uses the ddo value when present and falls back to `null`.
-*
-* (!): The function name in the source is `load_section` but the closing label reads
-* `//end assign_element`; this mismatch is pre-existing and is not corrected here.
 *
 * @param {Object} section_to_cataloging          - The ddo entry (from `tool_config.ddo_map`) whose
 *                                                  role is `"section_to_cataloging"`.
@@ -343,7 +340,7 @@ tool_cataloging.prototype.load_section = async function(section_to_cataloging) {
 
 
 	return true
-}//end assign_element
+}//end load_section
 
 
 

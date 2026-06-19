@@ -169,9 +169,7 @@ const get_content_data_edit = async function(self) {
 				parent			: file_container
 			})
 
-			// input radio button
-			// (!) Despite the comment "radio button", the input type is
-			//     'checkbox', allowing multiple files to be selected at once.
+			// input checkbox — allows multiple files to be selected at once.
 			//     The visual 'selected' highlight is reset on every change event
 			//     and re-applied only to checked labels, which means unchecking
 			//     a file removes its highlight while keeping other selections intact.

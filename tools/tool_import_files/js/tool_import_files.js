@@ -69,8 +69,6 @@
 *
 * All instance properties are initialised to null / empty here; they are populated
 * by `init()` (tool_common base) and `build()` (overridden below).
-* The `//end page` comment below is intentional — it is a legacy end-label carried
-* over from the code generator; it has no functional meaning.
 */
 export const tool_import_files = function () {
 
@@ -162,7 +160,7 @@ export const tool_import_files = function () {
 	*   Created in build().
 	*/
 	this.service_tmp_section	= null
-}//end page
+}//end tool_import_files
 
 
 
