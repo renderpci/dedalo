@@ -295,9 +295,9 @@ class database_info {
 	* @return object $response - stdClass with:
 	*   result (object): per-phase result values (extensions, constraints, functions,
 	*                    indexes, maintenance) from the db_tasks sub-calls
-	*   msg (string): 'Error. Request failed' (no explicit OK set; relies on caller inspection)
+	*   msg (string): OK / warning message reflecting whether any phase reported errors
 	*   errors (array): merged error array from all five rebuild phases
-	*   success (int): always 0 (not updated; callers should inspect errors instead)
+	*   success (int): 1 on full success, 0 when any phase reported errors
 	*/
 	public static function recreate_db_assets( object $options ) : object {
 
@@ -331,6 +331,12 @@ class database_info {
 		$response_maintenance	= db_tasks::exec_maintenance();
 			$response->result->maintenance	= $response_maintenance->result;
 			$response->errors				= array_merge($response->errors, $response_maintenance->errors);
+
+		// response OK
+		$response->success	= count($response->errors)>0 ? 0 : 1;
+		$response->msg		= count($response->errors)>0
+			? 'Warning. Request done with errors'
+			: 'OK. Request done successfully';
 
 
 		return $response;
@@ -556,8 +562,7 @@ class database_info {
 	*   users (array): list of user id values (int-coercible) to rebuild stats for
 	* @return object $response - stdClass with:
 	*   result (bool): false on validation failure or unrecoverable sub-error;
-	*                  left as false (not set to true on success — callers should
-	*                  inspect errors/updated_days instead)
+	*                  true when all users were processed without errors
 	*   msg (string): 'OK. Request done.' or 'Warning! Request done with errors'
 	*   errors (array): per-user error messages (delete failure or update sub-errors)
 	*   updated_days (array): accumulated result values from successful update calls
@@ -609,7 +614,8 @@ class database_info {
 			}
 
 		// response OK
-			$response->msg = empty($response->errors)
+			$response->result	= empty($response->errors);
+			$response->msg		= empty($response->errors)
 				? 'OK. Request done.'
 				: 'Warning! Request done with errors';
 
