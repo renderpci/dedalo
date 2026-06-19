@@ -1,12 +1,12 @@
 <?php declare(strict_types=1);
 
 /**
-* CONFIG.SHIM.PHP — the v7 thin shim that REPLACES config.php at cutover (spec §5.1).
-* INERT until the flip: nothing includes this file yet. At flip-time it is moved to
-* config.php (after the migration has populated ../private/.env + config/local/config.php
-* + config/state.php, with a backup) so existing `include config/config.php` sites boot
-* the v7 pipeline. Do NOT enable without: a faithful validate_migration run, the migration
-* committed, a backup, and a live verify.
+* CONFIG.PHP — the v7 application config ENTRY POINT (spec §5.1).
+* The ONLY config file in this web-served directory. It is the thin loader: it boots the
+* catalog-driven pipeline (boot_web_profile), reading every per-install value + secret from
+* OUTSIDE the web root, in ../private/ (.env, config.local.php, state.php, passthrough.php).
+* No editable values or secrets live here. Existing `include config/config.php` sites boot
+* the v7 pipeline unchanged.
 */
 
 $repo = dirname(__DIR__);

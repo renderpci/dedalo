@@ -13,7 +13,7 @@ require_once __DIR__ . '/class.boot_web_phases.php';
 * Assembles the full WEB boot phase list (spec §5.7 P0–P14), composing the surface phases
 * (config_build/compat_shim, secret/state emit, subsystem includes, apply_locale) with the
 * functioning phases (error handlers, core_functions, logger, autoloader, session,
-* request-state). The thin shim config/config.shim.php calls boot::run(WEB, phases(...)).
+* request-state). The config entry config/config.php calls boot::run(profile, phases(...)).
 * The warn-only secret-gate (P5) is a deferred polish (not assembled here).
 */
 final class boot_web_profile {

@@ -211,8 +211,8 @@ class area extends area_common {
 	*/
 	public static function get_config_areas() : object {
 
-		// non existing config_areas.php file case
-			if( !include DEDALO_CONFIG_PATH . '/config_areas.php' ) {
+		// config_areas.php now lives outside the web-served tree, in ../private/
+			if( !include dirname(DEDALO_CONFIG_PATH, 2) . '/private/config_areas.php' ) {
 
 				debug_log(__METHOD__
 					." ERROR ON LOAD FILE config4_areas . Using empty values as default "

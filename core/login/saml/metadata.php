@@ -3,7 +3,7 @@
 // Load the $saml_settings array from the deployment-specific SAML configuration.
 // The file also defines any SAML-related constants consumed by the OneLogin library.
 // Path walks four levels up from this file's directory to reach the shared config/.
-	include dirname(dirname(dirname(dirname(__FILE__)))) . '/config/config_saml.php';
+	include dirname(__FILE__, 5) . '/private/config_saml.php';
 
 /**
 * METADATA.PHP — SAML Service Provider (SP) Metadata endpoint

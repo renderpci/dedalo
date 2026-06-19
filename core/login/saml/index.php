@@ -43,7 +43,7 @@
 
 // A. Login Initiator
 // config include file
-	include dirname(__FILE__, 4) . '/config/config_saml.php';
+	include dirname(__FILE__, 5) . '/private/config_saml.php';
 
 /**
  * SAML Authorization. Initiate a SAML Authorization request
