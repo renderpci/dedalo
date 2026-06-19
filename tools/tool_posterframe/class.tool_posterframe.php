@@ -258,10 +258,7 @@ class tool_posterframe extends tool_common {
 				}
 
 			// Get source AV file path
-			// (!) get_quality_original() is called here but component_av defines the
-			// method as get_original_quality(). This will throw a fatal error at runtime.
-			// The correct call should be $component_av->get_original_quality().
-				$quality = $component_av->get_quality_original();
+				$quality = $component_av->get_original_quality();
 				$src_file = $component_av->get_media_filepath($quality);
 
 				if (!file_exists($src_file)) {

@@ -168,32 +168,6 @@ tool_posterframe.prototype.build = async function(autoload=false) {
 
 
 /**
-* GET_AR_IDENTIFYING_IMAGE (stub — overridden below)
-*
-* (!) WARNING: This prototype assignment is immediately overridden by a second
-* assignment to `tool_posterframe.prototype.get_ar_identifying_image` at line ~190.
-* As a result this version is dead code — it is never reachable at runtime.
-*
-* Additionally, the body references `self` without declaring it (missing
-* `const self = this`), causing a ReferenceError if it were ever called, and
-* calls `self.get_ar_identifying_image()` recursively with no base case, which
-* would produce infinite recursion / stack overflow.
-*
-* Do NOT remove this block (doc-only rule); remove or replace it in a
-* dedicated code-cleanup commit.
-*
-* @returns {Promise<Array>} (never reached) Would return self.ar_identifying_image
-*/
-tool_posterframe.prototype.get_ar_identifying_image = async function() {
-
-	self.ar_identifying_image = self.ar_identifying_image || await self.get_ar_identifying_image();
-
-	return self.ar_identifying_image
-}//end get_ar_identifying_image
-
-
-
-/**
 * CREATE_POSTERFRAME
 * Delegate posterframe creation to the main_element component (component_av or
 * component_3d) and optionally refresh the component if it had no prior posterframe.
