@@ -359,9 +359,10 @@ export const mcp_client = class mcp_client {
 	 * _WRITE_SESSION_ID
 	 * Persists the MCP session ID to sessionStorage for cross-navigation reuse.
 	 *
-	 * Passing `null` effectively clears the stored value (sessionStorage stores
-	 * the string `'null'`). (!) Callers in the stale-session recovery path pass
-	 * `null` explicitly to invalidate the cached ID before re-initializing.
+	 * Passing `null` removes the stored value entirely (via removeItem) so a later
+	 * `_read_session_id` returns null rather than the string `'null'`. (!) Callers
+	 * in the stale-session recovery path pass `null` explicitly to invalidate the
+	 * cached ID before re-initializing.
 	 *
 	 * Errors are silently ignored (same rationale as `_read_session_id`).
 	 *
@@ -371,7 +372,11 @@ export const mcp_client = class mcp_client {
 	_write_session_id(session_id) {
 
 		try {
-			window.sessionStorage.setItem('dedalo_mcp_session_id', session_id)
+			if (session_id === null || session_id === undefined) {
+				window.sessionStorage.removeItem('dedalo_mcp_session_id')
+			} else {
+				window.sessionStorage.setItem('dedalo_mcp_session_id', session_id)
+			}
 		} catch(e) {}
 	}//end _write_session_id
 
