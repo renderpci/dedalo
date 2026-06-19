@@ -186,13 +186,8 @@ const get_content_data_edit = async function(self) {
 			// input radio button
 			// (!) Despite the "radio button" label, the element type is
 			// 'checkbox', allowing multiple files to be selected at once.
-			// (flag) The change handler below resets ALL .selected classes on
-			// every change event before re-applying them. With checkboxes this
-			// causes already-checked siblings to lose their 'selected' highlight
-			// unless their checkbox state is re-evaluated in the same pass.
-			// This appears to be a visual-only bug (files_selected array stays
-			// correct); do not fix here — it mirrors the sibling widget
-			// render_move_locator.js exactly.
+			// The change handler below toggles the 'selected' highlight only on
+			// the affected label, so sibling selections keep their highlight.
 			const input = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'checkbox',
@@ -201,10 +196,6 @@ const get_content_data_edit = async function(self) {
 			})
 			input_label.prepend(input)
 			input.addEventListener('change', function(e) {
-				// reset selected style
-				[...files_list.querySelectorAll('.label')].map(el => {
-					el.classList.remove('selected')
-				})
 				// set as selected
 				if (input.checked) {
 					files_selected.push(item.file_name)
@@ -276,10 +267,9 @@ const get_content_data_edit = async function(self) {
 		// a submit button into body_info (content_data).
 		// on_submit overrides the default API trigger so we can validate the
 		// selection and funnel the response into update_process_status.
-		// (flag) self.caller is accessed without optional chaining here, unlike
-		// the sibling render_move_locator.js which uses `self.caller?.init_form`.
-		// If caller is undefined this will throw. Not fixed — mirrors original.
-		self.caller.init_form({
+		// Optional chaining guards against an undefined caller, matching the
+		// sibling render_move_locator.js.
+		self.caller?.init_form({
 			submit_label	: 'Move data to new section and portal it',
 			// confirm_text	: confirm_text,
 			body_info		: content_data,
