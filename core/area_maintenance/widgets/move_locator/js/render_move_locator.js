@@ -221,18 +221,8 @@ const get_content_data_edit = async function(self) {
 			})
 			input_label.prepend(input)
 			input.addEventListener('change', function(e) {
-				// reset selected style
-				// Remove the 'selected' highlight from ALL labels first, then
-				// re-apply only to those whose checkbox is currently checked.
-				// (!) This resets highlighting on ALL rows on every change event,
-				// even when checking a new box without unchecking another. The
-				// net effect is that only the most-recently interacted label
-				// retains the 'selected' class, not every checked item. This
-				// is pre-existing behaviour.
-				[...files_list.querySelectorAll('.label')].map(el => {
-					el.classList.remove('selected')
-				})
-				// set as selected
+				// Toggle only the affected label so every checked row keeps its
+				// 'selected' highlight (do not clear the highlight on sibling rows).
 				if (input.checked) {
 					// Push the file name into the accumulator and highlight the label.
 					files_selected.push(item.file_name)

@@ -211,15 +211,6 @@ const get_content_data_edit = async function(self) {
 			})
 			input_label.prepend(input)
 			input.addEventListener('change', function(e) {
-				// reset selected style — remove the visual highlight from ALL labels
-				// before re-applying to only the currently checked ones.
-				// (!) This resets ALL labels on every change event, not just the
-				// toggled one. With multiple checkboxes, previously-checked labels
-				// lose the 'selected' class until their own change event fires again.
-				// Do NOT fix this — document only.
-				[...files_list.querySelectorAll('.label')].map(el => {
-					el.classList.remove('selected')
-				})
 				// set as selected
 				if (input.checked) {
 					// add to selection and highlight
