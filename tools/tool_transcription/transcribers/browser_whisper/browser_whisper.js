@@ -20,7 +20,7 @@
 *
 * Message protocol (worker → caller):
 *   { status: 'init',              data: { progress, status, device } }
-*   { status: 'on_chunk_start:',   data: '' }
+*   { status: 'on_chunk_start',    data: '' }
 *   { status: 'callback_function', data: <partial transcript string> }
 *   { status: 'end',               data: <Array of transcript segment objects> }
 *
@@ -156,7 +156,7 @@ self.transcribe = async function( options ) {
 			})
 
 			self.postMessage({
-				status: 'on_chunk_start:',
+				status: 'on_chunk_start',
 				data: ''
 			});
 		},
@@ -218,9 +218,9 @@ self.transcribe = async function( options ) {
 	// understands: '[TC_HH:MM:SS.mmm_TC]text'.
 		const timed_chunks = chunks.map(segment => ({
 			text		: segment.text,
-			start		: seconds_to_tc (segment.timestamp[0]),
-			end			: seconds_to_tc (segment.timestamp[1]),
-			dd_format	: `[TC_${seconds_to_tc(segment.timestamp[0])}_TC]${segment.text}`
+			start		: self.seconds_to_tc (segment.timestamp[0]),
+			end			: self.seconds_to_tc (segment.timestamp[1]),
+			dd_format	: `[TC_${self.seconds_to_tc(segment.timestamp[0])}_TC]${segment.text}`
 		}));
 
 	// Insert the chunk with correct time code into the transcripts
