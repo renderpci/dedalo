@@ -316,13 +316,11 @@ tool_propagate_component_data.prototype.get_component_to_propagate = async funct
 * (!) SHOW_DEVELOPER is referenced in the `.then` callback but is NOT in the
 *     /*global*\/ directive — this is a pre-existing bug; do not change the code.
 * (!) alert() is used for error feedback instead of a UI notification — pre-existing.
-* (!) Returns undefined (not a rejected Promise) when sqo or total is invalid;
-*     callers must guard against an undefined return value.
 *
 * @param {string} action - Propagation mode: 'replace' | 'add' | 'delete'.
 * @returns {Promise<Object>} Resolves with the raw API response object containing at
 *   minimum `{ pid, pfile }` — the identifiers used to poll process status via SSE.
-*   Returns undefined (early-return) when precondition checks fail.
+*   Rejects when precondition checks (sqo / total) fail, after alerting the user.
 */
 tool_propagate_component_data.prototype.propagate_component_data = function(action) {
 
@@ -351,13 +349,13 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 		if (!sqo) {
 			console.error('Invalid SQO from section:', section);
 			alert("Error. Invalid SQO");
-			return
+			return Promise.reject(new Error('Invalid SQO'))
 		}
 
 		if (!self.total) {
 			console.error('Invalid total from section:', section);
 			alert("Error. Invalid total");
-			return
+			return Promise.reject(new Error('Invalid total'))
 		}
 
 		// clean sqo
