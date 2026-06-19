@@ -42,6 +42,13 @@
 		serif	: 'Georgia, "Times New Roman", Times, serif',
 		mono	: 'Menlo, Consolas, "Courier New", monospace'
 	}
+	/**
+	* FONT_STACK
+	* Resolves a FONT_STACKS key to its CSS font-family string. Unknown keys
+	* default to the sans-serif stack (Helvetica/Arial).
+	* @param {string} key - one of 'sans' | 'serif' | 'mono'
+	* @returns {string} CSS font-family value
+	*/
 	export const font_stack = function(key) {
 		return FONT_STACKS[key] || FONT_STACKS.sans
 	}//end font_stack
@@ -56,9 +63,15 @@ export const SCHEMA_VERSION = 2
 * NEW_LAYOUT
 * Builds a fresh layout blob (v2 document-flow model) for the target section,
 * seeded with one empty single-cell row.
-* @param object self - The tool_print instance
-* @param object opts - { name }
-* @return object layout blob (schema_version 2)
+*
+* The returned object is the canonical in-memory layout shape. Every key name
+* is significant: `uid` (not `id`) avoids collision with component_json's
+* integer entry-counter (see inline NOTE). `page_defaults` seeds every page
+* unless a `page_overrides` block is present. `flow.rows` starts with a single
+* empty cell so the editor always has something to drop onto.
+* @param {Object} self - The tool_print instance
+* @param {Object} opts - Optional overrides: { name }
+* @returns {Object} layout blob at schema_version 2
 */
 export const new_layout = function(self, opts={}) {
 
@@ -103,9 +116,12 @@ export const new_layout = function(self, opts={}) {
 /**
 * NEW_ROW
 * A flow row: a horizontal grid of cells (1..N, fractional widths summing ~1).
-* @param object self
-* @param object[] cells - optional initial cells (defaults to one empty cell)
-* @return object row
+*
+* `space_after_mm` adds bottom whitespace below the row before the next row
+* starts; it is serialized and honoured by the flow engine during pagination.
+* @param {Object} self - tool_print instance (used only for id generation)
+* @param {Array} [cells] - optional initial cells; defaults to one empty cell
+* @returns {Object} row descriptor
 */
 export const new_row = function(self, cells) {
 	return {
@@ -123,10 +139,15 @@ export const new_row = function(self, cells) {
 * NEW_CELL
 * One cell of a flow row. width = fraction of the content column. block = the
 * cell's content (a component, free text, or empty).
-* @param object self
-* @param object block - optional block (defaults to empty)
-* @param number width - optional fraction (default 1)
-* @return object cell
+*
+* Width is stored as a fraction (0..1) of the row's content column.  Adjacent
+* cells share the row width: {width:0.5, width:0.5} gives two equal columns.
+* The flow engine does NOT enforce that widths sum to 1, but the editor's
+* `equalize_widths` and `resize_cells` keep the invariant for normal use.
+* @param {Object} self - tool_print instance (used for id generation)
+* @param {Object} [block] - content descriptor; defaults to {type:'empty'}
+* @param {number} [width] - fractional width (0..1); defaults to 1
+* @returns {Object} cell descriptor
 */
 export const new_cell = function(self, block, width) {
 	return {
@@ -140,10 +161,12 @@ export const new_cell = function(self, block, width) {
 
 /**
 * NEW_SPACER_ROW
-* A whitespace row of fixed mm height (no cells).
-* @param object self
-* @param number height_mm
-* @return object spacer row
+* A whitespace row of fixed mm height (no cells). Spacer rows are purely
+* vertical gaps in the flow; they carry no block content and are not selectable
+* for block editing (only the resize handle interacts with them).
+* @param {Object} self - tool_print instance (used for id generation)
+* @param {number} [height_mm] - gap height in mm; defaults to 8
+* @returns {Object} spacer row descriptor (kind:'spacer')
 */
 export const new_spacer_row = function(self, height_mm) {
 	return {
@@ -157,9 +180,15 @@ export const new_spacer_row = function(self, height_mm) {
 
 /**
 * COMPONENT_BLOCK
-* Builds a cell block for a component (from a palette ddo drop payload).
-* @param object parsed - { ddo, path } drop payload
-* @return object block
+* Builds a cell block descriptor for a component from a palette drag-and-drop
+* payload. The resulting block is stored in `cell.block` and drives both the
+* editor placeholder and the live render_box_content call.
+*
+* `component_ref.label_snapshot` captures the label at drop-time so the editor
+* can display a readable name even before the template is saved/reloaded.
+* `render.lang:'inherit'` defers language resolution to the outer render context.
+* @param {Object} parsed - drop payload: { ddo, path? }; ddo must have .tipo and .section_tipo
+* @returns {Object} component block descriptor
 */
 export const component_block = function(parsed) {
 	const ddo = parsed.ddo
@@ -184,9 +213,11 @@ export const component_block = function(parsed) {
 /**
 * GEN_ID
 * Deterministic-enough unique id within the session (no Math.random needed).
-* @param object self
-* @param string prefix
-* @return string
+* Ids only need uniqueness within a single editing session; cross-session
+* uniqueness is ensured by `reseat_ids` on template load.
+* @param {Object} self - tool_print instance; `.id_counter` is mutated in place
+* @param {string} prefix - short prefix: 'row', 'cell', or 'tpl'
+* @returns {string} prefixed integer id (e.g. 'cell_7')
 */
 const gen_id = function(self, prefix) {
 	self.id_counter = (self.id_counter || 0) + 1
@@ -202,8 +233,12 @@ const gen_id = function(self, prefix) {
 * session (e.g. row_8/cell_9); without reseating, the session counter starts low
 * and gen_id() collides with them, so two rows share an id and select_cell() picks
 * the wrong (first-matching) one. Run on load to de-duplicate and keep new ids unique.
-* @param object self
-* @return void
+*
+* Side-effect: mutates row.id and cell.id in-place. Must be called before any
+* render or edit interaction so DOM data-row-id / data-cell-id attributes are
+* consistent with the in-memory model.
+* @param {Object} self - tool_print instance; `.id_counter` is updated
+* @returns {void}
 */
 export const reseat_ids = function(self) {
 	const rows = self && self.layout && self.layout.flow && self.layout.flow.rows
@@ -228,9 +263,14 @@ export const reseat_ids = function(self) {
 	* PAGE_DIMS
 	* Resolves a page's width/height in mm honouring orientation and any
 	* per-page override, falling back to layout.page_defaults.
-	* @param object self
-	* @param object page
-	* @return object { width_mm, height_mm }
+	*
+	* Resolution order: page.page_overrides → layout.page_defaults → PAGE_FORMATS
+	* lookup. The 'custom' size bypasses the lookup and reads ov.width_mm /
+	* ov.height_mm directly. Landscape swaps w and h after all other resolution.
+	* @param {Object} self - tool_print instance (provides self.layout.page_defaults)
+	* @param {Object} page - page descriptor from the flow engine (may be null to
+	*   use defaults only)
+	* @returns {Object} { width_mm: {number}, height_mm: {number} }
 	*/
 	export const page_dims = function(self, page) {
 
@@ -248,15 +288,34 @@ export const reseat_ids = function(self) {
 			: { width_mm: w, height_mm: h }
 	}//end page_dims
 
+	/**
+	* MM_TO_PX
+	* Converts a millimetre measurement to whole CSS pixels, accounting for the
+	* current zoom level (self.zoom defaults to 1 = 100%).
+	* @param {Object} self - tool_print instance; reads self.zoom
+	* @param {number} mm - measurement in millimetres
+	* @returns {number} rounded pixel value
+	*/
 	export const mm_to_px = (self, mm) => Math.round(mm * PX_PER_MM * (self.zoom || 1))
+
+	/**
+	* PX_TO_MM
+	* Inverse of mm_to_px: converts CSS pixels back to millimetres. Used when
+	* reading DOM measurements (e.g. getBoundingClientRect) to persist geometry.
+	* @param {Object} self - tool_print instance; reads self.zoom
+	* @param {number} px - pixel measurement from the DOM
+	* @returns {number} millimetre value (float, not rounded)
+	*/
 	export const px_to_mm = (self, px) => px / (PX_PER_MM * (self.zoom || 1))
 
 	/**
 	* SNAP_MM
-	* Snaps a mm value to the grid when snapping is enabled.
-	* @param object self
-	* @param number mm
-	* @return number
+	* Snaps a mm value to the nearest grid increment when grid.snap is enabled.
+	* Falls back to 0.1 mm resolution (round to one decimal) when the grid is
+	* absent or snapping is off.
+	* @param {Object} self - tool_print instance; reads self.layout.grid
+	* @param {number} mm - raw mm value to snap
+	* @returns {number} snapped mm value
 	*/
 	export const snap_mm = function(self, mm) {
 		const grid = self.layout.grid
@@ -272,10 +331,22 @@ export const reseat_ids = function(self) {
 
 /**
 * RENDER_CANVAS
-* (Re)builds the whole print surface (.print_root) inside the given container.
-* @param object self
-* @param HTMLElement container
-* @return HTMLElement print_root
+* (Re)builds the entire print surface (.print_root) inside the given container.
+* Clears the container, creates .print_root, then asynchronously runs the v2
+* flow engine (layout_flow) and decorates the result with editor chrome once it
+* resolves.
+*
+* A _render_gen counter guards against stale decorate_editor calls: if a
+* second render_canvas call arrives while the first layout_flow is still
+* running (e.g. rapid template switches), only the last generation's callback
+* decorates. Earlier callbacks silently discard their work.
+*
+* This function is synchronous up to the layout_flow().then() call; callers
+* receive print_root immediately and must NOT assume its interior is populated
+* until the microtask queue drains.
+* @param {Object} self - tool_print instance
+* @param {HTMLElement} container - wrapping DOM element to render into
+* @returns {HTMLElement} the newly created .print_root element
 */
 export const render_canvas = function(self, container) {
 
@@ -309,9 +380,21 @@ export const render_canvas = function(self, container) {
 
 /**
 * APPLY_BOX_STYLE
-* Applies the box content styling (font, alignment, overflow) to its content node.
-* @param object self
-* @param object box
+* Applies the box's content styling (font, alignment, overflow, border, vertical
+* alignment) to its content node (box.content_node). Called by the flow engine
+* after inserting a box into the DOM.
+*
+* Precedence: per-box `style` overrides take priority over `layout.style_defaults`.
+* The CSS custom property `--tp_border_color` is used so that nested table cells
+* inherit the same border colour without requiring per-element overrides.
+*
+* overflow.mode values and their effect on height:
+*   'clip'  → content_node height:'100%', overflow:'hidden' (clips to row height)
+*   'grow'  → content_node height:'auto' (row expands to fit content)
+*   'flow'  → content_node height:'auto' (content overflows; flow engine re-paginates)
+* @param {Object} self - tool_print instance (provides style_defaults)
+* @param {Object} box - box descriptor; must have .content_node (HTMLElement)
+* @returns {void}
 */
 export const apply_box_style = function(self, box) {
 	const c = box.content_node
@@ -345,8 +428,10 @@ export const apply_box_style = function(self, box) {
 /**
 * PARSE_DROP_DATA
 * Reads + validates the palette drag payload from a drop event.
-* @param event event
-* @return object|null parsed payload ({drag_type:'add', ddo, path?}) or null
+* Returns null on malformed JSON, missing ddo, or wrong drag_type so callers
+* can safely bail out without side effects.
+* @param {Event} event - native DOM drop event; reads event.dataTransfer
+* @returns {Object|null} parsed payload ({drag_type:'add', ddo, path?}) or null
 */
 const parse_drop_data = function(event) {
 	let parsed
@@ -365,9 +450,11 @@ const parse_drop_data = function(event) {
 
 /**
 * SET_ZOOM
-* Updates the zoom factor and recomputes every page/box px from mm.
-* @param object self
-* @param number zoom
+* Updates self.zoom and triggers a full canvas re-render so every page and box
+* is recomputed from mm using the new zoom factor.
+* @param {Object} self - tool_print instance
+* @param {number} zoom - zoom multiplier (1 = 100%; 0.75 = 75%; etc.)
+* @returns {void}
 */
 export const set_zoom = function(self, zoom) {
 	self.zoom = zoom
@@ -382,10 +469,15 @@ export const set_zoom = function(self, zoom) {
 
 /**
 * CURRENT_COLUMNS
-* The box's current column descriptors (its table_columns, or the resolved
-* defaults when not yet customized).
-* @param object box
-* @return object[]
+* Returns the box's active column descriptors. Uses `box.table_columns` when it
+* has been explicitly set (user customization); falls back to a copy of
+* `box.available_columns` (the default columns populated by the renderer when
+* the block was first rendered for a portal/relation component).
+*
+* Returns an empty array when neither property exists (box not yet rendered or
+* not a relation-type block).
+* @param {Object} box - cell block descriptor (type:'component', relation model)
+* @returns {Array} column descriptor array (never null)
 */
 const current_columns = function(box) {
 	return Array.isArray(box.table_columns)
@@ -397,11 +489,13 @@ const current_columns = function(box) {
 
 /**
 * APPLY_COLUMNS
-* Sets the box columns and re-renders the canvas (a column change can alter
-* pagination), then reselects the edited cell so the inspector stays on it.
-* @param object self
-* @param object box
-* @param object[] cols
+* Sets box.table_columns to `cols`, marks the layout dirty, triggers a full
+* canvas re-render (a column change may alter table height and pagination), and
+* reselects the previously-selected cell so the inspector panel stays in sync.
+* @param {Object} self - tool_print instance
+* @param {Object} box - cell block descriptor to update
+* @param {Array} cols - new column descriptor array
+* @returns {void}
 */
 const apply_columns = function(self, box, cols) {
 	box.table_columns = cols
@@ -414,12 +508,14 @@ const apply_columns = function(self, box, cols) {
 
 /**
 * ADD_TABLE_COLUMN
-* Adds a dragged related component as a new table column (when it belongs to the
-* portal's related section). Ignores duplicates and non-matching sections.
-* @param object self
-* @param object box
-* @param object ddo - dragged component ddo {tipo, section_tipo, model, label}
-* @return bool added
+* Adds a dragged related-section component as a new table column on a portal /
+* relation box. Silently ignores drops on non-relation boxes, on the wrong
+* related section, and on already-present columns (idempotent for duplicates,
+* returns true to signal "handled" without re-adding).
+* @param {Object} self - tool_print instance
+* @param {Object} box - cell block descriptor (must be type:'component' with a relation model)
+* @param {Object} ddo - dragged component descriptor: { tipo, section_tipo, model, label }
+* @returns {boolean} true if the column was added or was already present; false if ignored
 */
 export const add_table_column = function(self, box, ddo) {
 
@@ -444,10 +540,12 @@ export const add_table_column = function(self, box, ddo) {
 
 /**
 * REMOVE_TABLE_COLUMN
-* Removes a column (by key) from the box table.
-* @param object self
-* @param object box
-* @param string key - column_key
+* Removes a column by its column_key from the box's active columns and applies
+* the result. A no-op if the key is not found.
+* @param {Object} self - tool_print instance
+* @param {Object} box - cell block descriptor (relation model)
+* @param {string} key - column_key of the column to remove
+* @returns {void}
 */
 export const remove_table_column = function(self, box, key) {
 	apply_columns(self, box, current_columns(box).filter(c => column_key(c)!==key))
@@ -457,11 +555,13 @@ export const remove_table_column = function(self, box, key) {
 
 /**
 * SET_COLUMN_WIDTH
-* Sets (or clears) a column's fixed width in mm.
-* @param object self
-* @param object box
-* @param string key - column_key
-* @param number|null width - mm, or null/0 for auto
+* Sets (or clears) a column's fixed width in millimetres. Passing null or 0
+* reverts the column to auto-width (flex proportional fill).
+* @param {Object} self - tool_print instance
+* @param {Object} box - cell block descriptor (relation model)
+* @param {string} key - column_key of the column to resize
+* @param {number|null} width - fixed width in mm, or null/0 for auto
+* @returns {void}
 */
 export const set_column_width = function(self, box, key, width) {
 	const w		= (width && width>0) ? width : null
@@ -473,12 +573,14 @@ export const set_column_width = function(self, box, key, width) {
 
 /**
 * SET_COLUMN_HEADER
-* Overrides (or clears) a column's header text. Empty/blank → revert to the
-* component's own label.
-* @param object self
-* @param object box
-* @param string key - column_key
-* @param string|null header - custom header text, or null to use the default label
+* Overrides (or clears) a column's header text. An empty or whitespace-only
+* string reverts the column to the component's own label (the `header` key is
+* deleted from the column descriptor so the renderer falls back to the default).
+* @param {Object} self - tool_print instance
+* @param {Object} box - cell block descriptor (relation model)
+* @param {string} key - column_key of the column to update
+* @param {string|null} header - custom header text, or null/blank to revert to default
+* @returns {void}
 */
 export const set_column_header = function(self, box, key, header) {
 	const h		= (header!=null && header.trim()!=='') ? header : undefined
@@ -495,11 +597,13 @@ export const set_column_header = function(self, box, key, header) {
 
 /**
 * MOVE_TABLE_COLUMN
-* Reorders a table column one step left (dir -1) or right (dir +1).
-* @param object self
-* @param object box
-* @param string key - column_key
-* @param number dir - -1 | +1
+* Reorders a table column one step left (dir -1) or right (dir +1). A no-op
+* if the key is not found or the move would go out of bounds.
+* @param {Object} self - tool_print instance
+* @param {Object} box - cell block descriptor (relation model)
+* @param {string} key - column_key of the column to move
+* @param {number} dir - -1 (left) or +1 (right)
+* @returns {void}
 */
 export const move_table_column = function(self, box, key, dir) {
 	const cols	= current_columns(box).slice()
@@ -517,11 +621,13 @@ export const move_table_column = function(self, box, key, dir) {
 /**
 * REORDER_TABLE_COLUMN
 * Moves the dragged column (from_key) to the position of the drop target column
-* (to_key). Used by the inspector drag-and-drop reorder.
-* @param object self
-* @param object box
-* @param string from_key - column_key of the dragged column
-* @param string to_key - column_key of the drop target column
+* (to_key). Used by the inspector drag-and-drop column reorder widget.
+* A no-op when from_key === to_key or either key is not found.
+* @param {Object} self - tool_print instance
+* @param {Object} box - cell block descriptor (relation model)
+* @param {string} from_key - column_key of the column being dragged
+* @param {string} to_key - column_key of the column at the drop position
+* @returns {void}
 */
 export const reorder_table_column = function(self, box, from_key, to_key) {
 	if (from_key===to_key) return
@@ -538,10 +644,14 @@ export const reorder_table_column = function(self, box, from_key, to_key) {
 
 /**
 * ADD_DEFAULT_COLUMN
-* Re-adds a default column (by key) that was previously removed.
-* @param object self
-* @param object box
-* @param string key - column_key
+* Re-adds a default column (by key) that was previously removed. Looks up the
+* column descriptor in box.available_columns (the original server-populated
+* defaults) and appends it to the tail of the active columns. A no-op when the
+* key is not in available_columns or is already present.
+* @param {Object} self - tool_print instance
+* @param {Object} box - cell block descriptor (relation model)
+* @param {string} key - column_key of the column to restore
+* @returns {void}
 */
 export const add_default_column = function(self, box, key) {
 	const avail = Array.isArray(box.available_columns) ? box.available_columns : []
@@ -558,19 +668,59 @@ export const add_default_column = function(self, box, key) {
 // v2 DOCUMENT-FLOW EDITOR — model mutations, selection, drop, decorate
 // ============================================================================
 
+/**
+* FLOW_ROWS
+* Safe accessor for the layout's row array. Returns an empty array when the
+* flow or rows property is absent (e.g. during construction before first save).
+* @param {Object} self - tool_print instance
+* @returns {Array} layout.flow.rows (live reference, NOT a copy)
+*/
 const flow_rows = (self) => (self.layout.flow && Array.isArray(self.layout.flow.rows)) ? self.layout.flow.rows : []
 
+/**
+* FIND_ROW
+* Finds a row descriptor by id. Returns null when not found.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - row.id to look up
+* @returns {Object|null} row descriptor or null
+*/
 export const find_row = function(self, row_id) { return flow_rows(self).find(r => r.id===row_id) || null }
+
+/**
+* FIND_CELL
+* Finds a cell descriptor by row id and cell id. Returns null when either is
+* not found or the row has no cells array.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - parent row id
+* @param {string} cell_id - cell id to look up
+* @returns {Object|null} cell descriptor or null
+*/
 export const find_cell = function(self, row_id, cell_id) {
 	const row = find_row(self, row_id)
 	return (row && Array.isArray(row.cells)) ? (row.cells.find(c => c.id===cell_id) || null) : null
 }//end find_cell
 
+/**
+* EQUALIZE_WIDTHS
+* Resets all cells in a row to equal fractional widths (1/n). Called after
+* adding or removing a cell so the row always fills 100% of its column.
+* Mutates the cell descriptors in place.
+* @param {Object} row - row descriptor; row.cells is mutated
+* @returns {void}
+*/
 const equalize_widths = function(row) {
 	const n = row.cells.length || 1
 	row.cells.forEach(c => { c.width = 1 / n })
 }//end equalize_widths
 
+/**
+* RERENDER
+* Convenience: marks the layout dirty and triggers a full canvas re-render.
+* Used by all row/cell mutation functions that do not need to pass additional
+* arguments to render_canvas.
+* @param {Object} self - tool_print instance
+* @returns {void}
+*/
 const rerender = function(self) {
 	self.mark_dirty?.()
 	render_canvas(self, self.canvas_container)
@@ -581,7 +731,13 @@ const rerender = function(self) {
 /**
 * SELECT_CELL
 * Selects a cell (or a whole row when cell_id is null), highlights it and syncs
-* the inspector with { row, cell }.
+* the inspector panel with { row, cell }. Passing null for row_id clears the
+* selection entirely. The inspector is driven via the self.sync_inspector hook
+* (set by the tool_print UI layer).
+* @param {Object} self - tool_print instance
+* @param {string|null} row_id - row to select, or null to clear selection
+* @param {string|null} [cell_id] - cell to select within the row, or null for row-level
+* @returns {void}
 */
 export const select_cell = function(self, row_id, cell_id) {
 	self.sel = row_id ? { row_id, cell_id: cell_id || null } : null
@@ -593,6 +749,17 @@ export const select_cell = function(self, row_id, cell_id) {
 	}
 }//end select_cell
 
+/**
+* HIGHLIGHT_SELECTION
+* Adds the CSS 'selected' class to the DOM elements corresponding to the current
+* self.sel state. Clears any previous selection first. Handles three cases:
+*   - Cell selected: highlights the .flow_cell and all .flow_continued segments
+*     with matching data-master-cell-id (the table or text split across pages).
+*   - Row selected (cell_id null): highlights all .flow_row segments with that row id.
+*   - No selection (sel null): no highlights.
+* @param {Object} self - tool_print instance; reads self.sel and self.print_root
+* @returns {void}
+*/
 const highlight_selection = function(self) {
 	if (!self.print_root) return
 	self.print_root.querySelectorAll('.flow_row.selected, .flow_cell.selected, .flow_continued.selected').forEach(n => n.classList.remove('selected'))
@@ -612,6 +779,15 @@ const highlight_selection = function(self) {
 
 // --- row / cell mutations ---------------------------------------------------
 
+/**
+* ADD_ROW
+* Appends a new row at the end of the flow and immediately selects its first cell.
+* If a block is provided, the new row starts with that block pre-filled; otherwise
+* the first cell is empty (ready for a drop).
+* @param {Object} self - tool_print instance
+* @param {Object} [block] - optional initial block for the new row's first cell
+* @returns {Object} the newly created row descriptor
+*/
 export const add_row = function(self, block) {
 	const row = new_row(self, block ? [ new_cell(self, block, 1) ] : undefined)
 	flow_rows(self).push(row)
@@ -620,11 +796,26 @@ export const add_row = function(self, block) {
 	return row
 }//end add_row
 
+/**
+* ADD_SPACER
+* Appends a new spacer row (default 8 mm height) at the end of the flow.
+* @param {Object} self - tool_print instance
+* @returns {void}
+*/
 export const add_spacer = function(self) {
 	flow_rows(self).push(new_spacer_row(self, 8))
 	rerender(self)
 }//end add_spacer
 
+/**
+* REMOVE_ROW
+* Removes a row by id. Clears self.sel if the removed row was selected, and
+* calls self.sync_inspector(null) to reset the inspector. A no-op when the id
+* is not found.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - id of the row to remove
+* @returns {void}
+*/
 export const remove_row = function(self, row_id) {
 	const rows = flow_rows(self)
 	const i = rows.findIndex(r => r.id===row_id)
@@ -635,6 +826,16 @@ export const remove_row = function(self, row_id) {
 	self.sync_inspector?.(null)
 }//end remove_row
 
+/**
+* MOVE_ROW
+* Moves a row (from_id) to the index currently occupied by to_id (splice insert
+* before). Used by the row drag-and-drop reorder handler. A no-op when either id
+* is not found or they are the same row.
+* @param {Object} self - tool_print instance
+* @param {string} from_id - id of the row to move
+* @param {string} to_id - id of the destination row (the moved row inserts before it)
+* @returns {void}
+*/
 export const move_row = function(self, from_id, to_id) {
 	const rows = flow_rows(self)
 	const fi = rows.findIndex(r => r.id===from_id)
@@ -645,6 +846,15 @@ export const move_row = function(self, from_id, to_id) {
 	rerender(self)
 }//end move_row
 
+/**
+* MOVE_ROW_DIR
+* Moves a row one step up (dir -1) or down (dir +1) in the flow. A no-op when
+* the row is not found or the move would exceed the array bounds.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - id of the row to move
+* @param {number} dir - -1 (up) or +1 (down)
+* @returns {void}
+*/
 export const move_row_dir = function(self, row_id, dir) {
 	const rows = flow_rows(self)
 	const i = rows.findIndex(r => r.id===row_id)
@@ -655,6 +865,16 @@ export const move_row_dir = function(self, row_id, dir) {
 	rerender(self)
 }//end move_row_dir
 
+/**
+* INSERT_ROW_AFTER
+* Inserts a new row immediately after the row identified by row_id. When row_id
+* is not found the new row is appended. Immediately selects the new row's first
+* cell after the render completes.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - reference row; new row is inserted after it
+* @param {Object} [block] - optional block for the new row's first cell
+* @returns {Object} the newly created row descriptor
+*/
 export const insert_row_after = function(self, row_id, block) {
 	const rows = flow_rows(self)
 	const i = rows.findIndex(r => r.id===row_id)
@@ -665,6 +885,14 @@ export const insert_row_after = function(self, row_id, block) {
 	return row
 }//end insert_row_after
 
+/**
+* INSERT_SPACER_AFTER
+* Inserts a spacer row (default 8 mm) immediately after the row identified by
+* row_id. When row_id is not found the spacer is appended at the tail.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - reference row; spacer is inserted after it
+* @returns {void}
+*/
 export const insert_spacer_after = function(self, row_id) {
 	const rows = flow_rows(self)
 	const i = rows.findIndex(r => r.id===row_id)
@@ -674,8 +902,11 @@ export const insert_spacer_after = function(self, row_id) {
 
 /**
 * DELETE_SELECTION
-* Removes the selected cell (or the whole row if no cell / last cell). Wired to
-* the Delete key.
+* Removes the selected cell (or the whole row when no cell is selected or it is
+* the last cell). Wired to the Delete/Backspace keydown handler installed by
+* wire_flow_keys. A no-op when nothing is selected (self.sel is null).
+* @param {Object} self - tool_print instance
+* @returns {void}
 */
 export const delete_selection = function(self) {
 	const sel = self.sel
@@ -686,8 +917,16 @@ export const delete_selection = function(self) {
 
 /**
 * RESIZE_CELLS
-* Adjusts two adjacent cells' widths by a fraction delta (from a divider drag),
-* keeping the row's total width constant. Re-renders.
+* Adjusts two adjacent cells' widths by a fractional delta (from a divider
+* drag), keeping the row's total width constant. Enforces a minimum of 5% per
+* cell. Called by start_divider_drag on mouseup to commit the live-preview
+* geometry back into the layout model.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - id of the row containing the cells
+* @param {string} left_cell_id - id of the left cell being resized
+* @param {number} delta_frac - signed fractional width delta (+/-); applied to
+*   the left cell and subtracted from the right cell
+* @returns {void}
 */
 export const resize_cells = function(self, row_id, left_cell_id, delta_frac) {
 	const row = find_row(self, row_id)
@@ -706,6 +945,14 @@ export const resize_cells = function(self, row_id, left_cell_id, delta_frac) {
 	requestAnimationFrame(() => { if (self.sel) select_cell(self, self.sel.row_id, self.sel.cell_id) })
 }//end resize_cells
 
+/**
+* ADD_CELL
+* Appends an empty cell to a row and equalizes all cell widths. A no-op when
+* the row is not found or is a spacer.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - id of the row to extend
+* @returns {void}
+*/
 export const add_cell = function(self, row_id) {
 	const row = find_row(self, row_id)
 	if (!row || row.kind!=='row') return
@@ -714,6 +961,15 @@ export const add_cell = function(self, row_id) {
 	rerender(self)
 }//end add_cell
 
+/**
+* REMOVE_CELL
+* Removes a cell by id. When it is the last cell in its row, the entire row is
+* removed instead (delegates to remove_row). Remaining cells are equalized.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - parent row id
+* @param {string} cell_id - id of the cell to remove
+* @returns {void}
+*/
 export const remove_cell = function(self, row_id, cell_id) {
 	const row = find_row(self, row_id)
 	if (!row || !Array.isArray(row.cells)) return
@@ -725,6 +981,16 @@ export const remove_cell = function(self, row_id, cell_id) {
 	rerender(self)
 }//end remove_cell
 
+/**
+* SET_CELL_WIDTH
+* Sets a cell's fractional width, clamped to [0.05, 1]. Used by the inspector
+* input; does NOT equalize siblings (the caller is responsible for coherence).
+* @param {Object} self - tool_print instance
+* @param {string} row_id - parent row id
+* @param {string} cell_id - cell id to resize
+* @param {number} frac - desired fractional width (0..1)
+* @returns {void}
+*/
 export const set_cell_width = function(self, row_id, cell_id, frac) {
 	const cell = find_cell(self, row_id, cell_id)
 	if (!cell) return
@@ -732,6 +998,16 @@ export const set_cell_width = function(self, row_id, cell_id, frac) {
 	rerender(self)
 }//end set_cell_width
 
+/**
+* SET_CELL_BLOCK
+* Replaces a cell's block with the given descriptor and re-renders. The cell is
+* reselected after the render frame so the inspector reflects the new block.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - parent row id
+* @param {string} cell_id - cell id to update
+* @param {Object} block - new block descriptor (component / static_text / empty)
+* @returns {void}
+*/
 export const set_cell_block = function(self, row_id, cell_id, block) {
 	const cell = find_cell(self, row_id, cell_id)
 	if (!cell) return
@@ -740,6 +1016,15 @@ export const set_cell_block = function(self, row_id, cell_id, block) {
 	requestAnimationFrame(() => select_cell(self, row_id, cell_id))
 }//end set_cell_block
 
+/**
+* SET_ROW_SPACE_AFTER
+* Sets the bottom-margin gap (in mm) that the flow engine inserts after this row
+* before the next row begins. Zero disables the gap.
+* @param {Object} self - tool_print instance
+* @param {string} row_id - row id to update
+* @param {number} mm - gap in mm (clamped to >= 0)
+* @returns {void}
+*/
 export const set_row_space_after = function(self, row_id, mm) {
 	const row = find_row(self, row_id)
 	if (!row) return
@@ -753,9 +1038,22 @@ export const set_row_space_after = function(self, row_id, mm) {
 
 /**
 * DECORATE_EDITOR
-* Adds selection / drag-reorder / drop chrome to the rendered flow rows + cells.
-* Run after layout_flow resolves (continuation segments are left read-only).
-* @param object self
+* Adds interactive editor chrome to the already-rendered flow DOM: row drag
+* handles (reorder), per-row up/down buttons, row/spacer remove buttons,
+* insert-row/spacer bars, cell dividers (resize drag), cell click-to-select,
+* palette-drop targets on cells and the page column, and click-through handlers
+* on split-block continuations.
+*
+* Called once per render cycle, after layout_flow resolves. Continuation
+* segments (.flow_continued) are intentionally left structurally read-only —
+* only their master-cell click-through is wired. The 'no_print' CSS class is
+* applied to all chrome elements so they disappear in @media print.
+*
+* Drop logic on cells: if a dragged component belongs to the same related
+* section as an existing portal/relation box, it is added as a TABLE COLUMN
+* (add_table_column); otherwise it replaces the cell's block entirely.
+* @param {Object} self - tool_print instance
+* @returns {void}
 */
 export const decorate_editor = function(self) {
 	if (!self.print_root) return
@@ -890,7 +1188,21 @@ export const decorate_editor = function(self) {
 
 /**
 * START_DIVIDER_DRAG
-* Live cell-resize drag: previews widths during the drag, commits on mouseup.
+* Initiates a live cell-width resize drag. While the mouse moves, the two
+* adjacent cells are re-sized via inline flex styles (visual preview only —
+* the layout model is NOT mutated during the drag). On mouseup the final pixel
+* widths are converted to a fractional delta and committed via resize_cells.
+*
+* Body class 'tp_col_resizing' is added during the drag to suppress text
+* selection and pointer cursor changes in the rest of the UI.
+* @param {Object} self - tool_print instance
+* @param {MouseEvent} e - initiating mousedown event
+* @param {HTMLElement} row_node - the .flow_row DOM node
+* @param {HTMLElement} a_node - left cell DOM node
+* @param {HTMLElement} b_node - right cell DOM node
+* @param {string} row_id - model row id
+* @param {string} left_cell_id - model id of the left cell (passed to resize_cells)
+* @returns {void}
 */
 const start_divider_drag = function(self, e, row_node, a_node, b_node, row_id, left_cell_id) {
 	e.preventDefault(); e.stopPropagation()
@@ -924,7 +1236,19 @@ const start_divider_drag = function(self, e, row_node, a_node, b_node, row_id, l
 
 /**
 * START_SPACER_DRAG
-* Live spacer-height drag: previews on mousemove, commits row.height_mm on mouseup.
+* Initiates a live spacer-height drag from the spacer row's resize handle.
+* Previews the new height via an inline style on the row node during the drag;
+* commits to row.height_mm (rounded to 0.1 mm, minimum 1 mm) on mouseup.
+*
+* px_per_mm is read from the flow context (self._flow_ctx) so the drag matches
+* the current zoom level; falls back to the 96 dpi constant when the context is
+* absent. Body class 'tp_row_resizing' suppresses interference from other
+* mouse handlers while dragging.
+* @param {Object} self - tool_print instance
+* @param {MouseEvent} e - initiating mousedown event
+* @param {HTMLElement} row_node - the spacer .flow_row DOM node
+* @param {string} row_id - model row id
+* @returns {void}
 */
 const start_spacer_drag = function(self, e, row_node, row_id) {
 	e.preventDefault(); e.stopPropagation()
@@ -959,9 +1283,17 @@ const start_spacer_drag = function(self, e, row_node, row_id) {
 
 /**
 * WIRE_FLOW_KEYS
-* Global keydown: Delete/Backspace removes the selected cell/row (unless typing
-* in a field). Wired once; the listener is stored on self._flow_key_handler so
-* on_close_actions can remove it.
+* Installs a global keydown listener for Delete / Backspace that removes the
+* selected cell or row. The listener is registered on `document` (not the canvas)
+* so it fires even when focus is on a non-interactive element. It is guarded
+* against INPUT / TEXTAREA / SELECT / contenteditable targets so normal text
+* editing is never interrupted.
+*
+* Idempotent: the handler is only attached once per tool_print instance (guarded
+* by self._flow_key_handler). Callers that close the tool MUST call
+* document.removeEventListener('keydown', self._flow_key_handler) to avoid leaks.
+* @param {Object} self - tool_print instance; self._flow_key_handler is set
+* @returns {void}
 */
 const wire_flow_keys = function(self) {
 	if (self._flow_key_handler) return
@@ -981,10 +1313,15 @@ const wire_flow_keys = function(self) {
 
 /**
 * SERIALIZE_LAYOUT
-* Produces a clean, DOM-free copy of the layout blob for persistence.
-* Strips transient node/instance pointers attached during rendering.
-* @param object self
-* @return object blob
+* Produces a clean, DOM-free copy of the layout blob ready for persistence
+* (storing to component_json via the dd25/dd625 API action). Strips all
+* transient node/instance pointers that the flow engine attaches to block
+* objects during rendering.
+*
+* The output shape is the canonical schema_version 2 blob; callers MUST NOT
+* write self.layout directly (it may carry live node references).
+* @param {Object} self - tool_print instance
+* @returns {Object} serializable layout blob (schema_version 2)
 */
 export const serialize_layout = function(self) {
 
@@ -1011,8 +1348,11 @@ export const serialize_layout = function(self) {
 
 /**
 * SERIALIZE_ROW
-* @param object row
-* @return object plain row (DOM-free)
+* Serializes one row to a plain, DOM-free object. Spacer rows only carry
+* {id, kind:'spacer', height_mm}; normal rows carry cells mapped through
+* serialize_cell. Space_after_mm defaults to 0 when absent.
+* @param {Object} row - row descriptor (possibly with live render state)
+* @returns {Object} plain serializable row object
 */
 const serialize_row = function(row) {
 	if (row.kind==='spacer') {
@@ -1031,8 +1371,10 @@ const serialize_row = function(row) {
 
 /**
 * SERIALIZE_CELL
-* @param object cell
-* @return object plain cell (DOM-free)
+* Serializes one cell to a plain object. The block is recursively serialized
+* through serialize_block. Width defaults to 1 when missing.
+* @param {Object} cell - cell descriptor (possibly with live render state)
+* @returns {Object} plain serializable cell object {id, width, block}
 */
 const serialize_cell = function(cell) {
 	return {
@@ -1046,10 +1388,17 @@ const serialize_cell = function(cell) {
 
 /**
 * SERIALIZE_BLOCK
-* A cell's content (component / static text / empty). Strips transient render
-* state (the _table_render cache, node pointers).
-* @param object block
-* @return object plain block
+* Serializes a cell block to a plain object, stripping any transient render
+* state (e.g. _table_render cache, DOM node pointers) attached by the flow
+* engine. Handles all three block types:
+*   'empty'       → { type:'empty' }
+*   'static_text' → { type, static, style }
+*   'component'   → full component descriptor with null-safe defaults
+*
+* table_columns is preserved as null (not undefined) when absent so that
+* JSON serialization is deterministic.
+* @param {Object} block - block descriptor (may have live render-only fields)
+* @returns {Object} plain serializable block object
 */
 const serialize_block = function(block) {
 	if (!block || block.type==='empty') return { type: 'empty' }

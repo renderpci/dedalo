@@ -7,11 +7,43 @@
 /**
 * RENDER_TOOL_PRINT
 *
-* Builds the print-layout editor: a top toolbar (template picker + actions),
-* a draggable component palette (left), the page canvas (centre, the printable
-* surface), and a selected-box inspector (right). The canvas surface
-* (.print_root) is the ONLY non-chrome subtree — everything else carries
-* .no_print so it disappears at print time.
+* Top-level view layer for the tool_print visual report designer.
+*
+* Responsibilities
+* ─────────────────
+* 1. Build the four-panel editor shell (toolbar, palette, canvas, inspector)
+*    and wire the initial template auto-load.
+* 2. Drive all template CRUD (New / Save / Save as… / Delete / load picker)
+*    by delegating persistence to print_layout_presets.js.
+* 3. Manage the inspector panel: two-way sync between the selected {row, cell}
+*    and the numeric/style inputs; render the per-box column manager for
+*    relation/portal cells.
+* 4. Manage the palette panel: drill-down navigation through related sections
+*    (replacing the core Miller-column side-by-side with a single-column
+*    breadcrumb drill-down so the palette stays narrow).
+* 5. Own the complete PRINT path: gather record ids → render_print_document
+*    (layout_flow in mm via make_print_ctx) → set @page size → window.print()
+*    → restore editor.
+*
+* Depends on
+* ───────────
+* - canvas_tool_print.js   model mutations, render_canvas, serialisation
+* - flow_engine.js         layout_flow / make_print_ctx (shared engine)
+* - render_box_tool_print.js  component value rendering + relation-table helpers
+* - print_layout_presets.js   dd25/dd625 CRUD
+*
+* Panel layout (CSS class handles placement)
+* ────────────────────────────────────────────
+*  .print_layout_editor
+*  ├─ .print_toolbar   (.no_print)   – template picker + CRUD + zoom/snap/fill
+*  ├─ .palette_panel   (.no_print)   – component drag-source list (left)
+*  ├─ .pages_viewport               – editable canvas (centre, IS printed)
+*  └─ .inspector_panel (.no_print)  – geometry + style + column manager (right)
+*
+* The only subtree WITHOUT .no_print is the canvas (.pages_viewport / .print_root).
+* Everything else disappears at window.print() time.
+*
+* @module render_tool_print
 */
 
 	import {ui} from '../../../core/common/js/ui.js'
@@ -53,7 +85,23 @@
 
 // helpers -------------------------------------------------------------------
 
+	/**
+	* round1
+	* Rounds a number to one decimal place.
+	* Used to avoid floating-point noise in inspector display values (mm).
+	* @param {number} n - value to round
+	* @returns {number} value rounded to 1 decimal place
+	*/
 	const round1 = (n) => Math.round(n * 10) / 10
+
+	/**
+	* to_num
+	* Parses a value as a finite float, falling back to `fallback` on failure.
+	* Handles empty strings and non-numeric inspector input values safely.
+	* @param {*} v - raw value from an input element's .value
+	* @param {number} fallback - returned when v is not a finite number
+	* @returns {number} parsed finite float or fallback
+	*/
 	const to_num = (v, fallback) => {
 		const n = parseFloat(v)
 		return Number.isFinite(n) ? n : fallback
@@ -72,9 +120,15 @@ export const render_tool_print = function() {
 
 /**
 * EDIT
-* Builds and returns the tool wrapper.
-* @param object options - { render_level }
-* @return promise HTMLElement wrapper
+* Entry point called by the tool framework. Builds the full editor UI or
+* returns just the content_data node for embedded ('content') render levels.
+*
+* render_level === 'content' skips the outer ui.tool.build_wrapper_edit chrome,
+* returning the raw content_data node (used when the tool is inlined rather than
+* opened as a floating panel).
+* @param {Object} options - render options; currently { render_level }
+* @param {string} [options.render_level='full'] - 'full' | 'content'
+* @returns {Promise<HTMLElement>} wrapper or content_data node
 */
 render_tool_print.prototype.edit = async function(options) {
 
@@ -102,8 +156,23 @@ render_tool_print.prototype.edit = async function(options) {
 * GET_CONTENT_DATA_EDIT
 * Assembles the toolbar + palette + canvas + inspector grid and initialises the
 * working layout (default template, or the default-flagged one when available).
-* @param object self
-* @return promise HTMLElement content_data
+*
+* State initialised on `self`
+* ───────────────────────────
+* self.layout               – active v2 flow blob (new_layout default or loaded)
+* self.current_template_id  – dd25 section_id of the loaded template, or null
+* self.dirty                – true when layout has unsaved changes
+* self.zoom                 – canvas zoom factor (preserved across re-renders)
+* self.fill_mode            – true to render real record data in the canvas
+* self.sync_inspector       – hook called by canvas_tool_print after drag/drop
+* self.palette_stack        – drill-down stack; empty = root section
+* self.canvas_container     – the .pages_viewport element
+*
+* The template picker auto-load is intentionally fire-and-forget (Promise .then
+* without await) so the panel renders immediately and the async fetch populates
+* the picker in the background.
+* @param {Object} self - tool_print instance
+* @returns {Promise<HTMLElement>} content_data node
 */
 const get_content_data_edit = async function(self) {
 
@@ -210,7 +279,16 @@ const get_content_data_edit = async function(self) {
 * Renders the current drill-down level into the palette scroll area, replacing
 * whatever was there. Level 0 = the target section; deeper levels = related
 * sections pushed onto self.palette_stack by clicking a relation component.
-* @param object self
+*
+* The async section element fetch is done BEFORE swapping the DOM so the panel
+* never flashes visibly empty mid-load — the old list stays visible until the
+* new one is ready, then a single replaceChildren() replaces it atomically.
+*
+* Error handling: if get_section_elements_context fails (e.g. network or
+* permission error), section_elements falls back to [] so render_components_list
+* renders an empty container rather than throwing.
+* @param {Object} self - tool_print instance (reads self.palette_stack, self.palette_scroll)
+* @returns {Promise<void>}
 */
 const render_palette = async function(self) {
 
@@ -261,7 +339,14 @@ const render_palette = async function(self) {
 * RENDER_PALETTE_BREADCRUMB
 * Back button + clickable crumb trail for the relation drill-down. Hidden at the
 * root level. Clicking a crumb truncates the stack to that depth.
-* @param object self
+*
+* Stack depth 0 = root section → breadcrumb hidden.
+* Stack depth N > 0 → shows "‹ Back" + root crumb + N-1 intermediate crumbs +
+* the current (non-clickable) leaf crumb.
+*
+* The root label is taken from the section element with model==='section' in
+* self.section_elements; if none exists the generic 'Components' label is used.
+* @param {Object} self - tool_print instance (reads self.palette_stack, self.palette_breadcrumb)
 */
 const render_palette_breadcrumb = function(self) {
 
@@ -288,6 +373,13 @@ const render_palette_breadcrumb = function(self) {
 		? (self.section_elements.find(e => e && e.model==='section')?.label)
 		: null) || (get_label.components || 'Components')
 
+	/**
+	* make_crumb
+	* Appends a single breadcrumb segment. Crumbs at depth < stack.length are
+	* clickable (they navigate up); the last crumb is the current level (not clickable).
+	* @param {string} label - display text
+	* @param {number} depth - stack depth this crumb represents (0 = root)
+	*/
 	const make_crumb = (label, depth) => {
 		const c = ui.create_dom_element({ element_type:'span', class_name:'crumb', inner_html:(label || '…'), parent:trail })
 		if (depth < stack.length) {
@@ -306,10 +398,21 @@ const render_palette_breadcrumb = function(self) {
 
 /**
 * RENDER_TOOLBAR
-* Template picker + New/Save/Save as/Delete + page/zoom/snap/fill/print controls.
-* @param object self
-* @param HTMLElement container
-* @return promise void
+* Builds the top .print_toolbar with four groups:
+*
+* 1. Template picker  – <select> of saved templates + inline name <input>
+*    (inline field because native prompt() is silently blocked in the tool
+*    window on some browsers; see save-bug pattern in the skill docs).
+* 2. Actions         – New / Save / Save as… / Delete buttons.
+* 3. Layout          – Add row / Add text / Add spacer / Snap checkbox /
+*                      Preview-with-record checkbox / Zoom <select>.
+* 4. Print           – Print button.
+*
+* The `fill_check` is disabled when self.preview_section_id is falsy (nothing
+* to preview), so preview toggling is only available in a record context.
+* @param {Object} self - tool_print instance
+* @param {HTMLElement} container - the .print_toolbar element to populate
+* @returns {Promise<void>}
 */
 const render_toolbar = async function(self, container) {
 
@@ -438,11 +541,14 @@ const render_toolbar = async function(self, container) {
 
 /**
 * MAKE_BUTTON
-* @param HTMLElement parent
-* @param string label
-* @param string extra_class
-* @param function on_click
-* @return HTMLElement
+* Creates a <button class="tool_button …"> with a click handler, appends it to
+* parent, and returns it. e.preventDefault() is called on every click so the
+* button does not accidentally submit a parent <form>.
+* @param {HTMLElement} parent - element to append the button to
+* @param {string} label - button text (innerHTML)
+* @param {string} extra_class - additional CSS classes appended after 'tool_button'
+* @param {Function} on_click - called with no arguments on click
+* @returns {HTMLElement} the created <button> element
 */
 const make_button = function(parent, label, extra_class, on_click) {
 	const btn = ui.create_dom_element({
@@ -460,9 +566,18 @@ const make_button = function(parent, label, extra_class, on_click) {
 /**
 * ADD_COLLAPSE_TOGGLE
 * Adds a collapse/expand chevron button to a panel header.
-* @param HTMLElement panel
-* @param HTMLElement container
-* @param string side - 'palette' or 'inspector'
+*
+* The toggle button is prepended to (or wraps) the existing .panel_title child.
+* Toggling adds/removes `${side}_collapsed` on the grid container, which CSS
+* uses to collapse the panel column to a narrow strip.
+*
+* The chevron direction flips to give a consistent "push towards the panel"
+* affordance: palette (left side) points left when open (◀) and right when
+* collapsed (▶); inspector (right side) is the mirror image.
+* @param {HTMLElement} panel - the panel <aside> element
+* @param {HTMLElement} container - the .print_layout_editor grid container
+* @param {string} side - 'palette' or 'inspector'
+* @returns {HTMLElement} the created .panel_header_row element
 */
 const add_collapse_toggle = function(panel, container, side) {
 	const header_row = ui.create_dom_element({
@@ -493,11 +608,33 @@ const add_collapse_toggle = function(panel, container, side) {
 
 /**
 * RENDER_INSPECTOR
-* Numeric position/size fields + style controls for the selected box, plus page
-* settings. Two-way bound: editing a field updates the box; dragging updates the
-* fields (via sync_inspector).
-* @param object self
-* @param HTMLElement container
+* Builds the static inspector panel DOM: geometry inputs, style inputs,
+* row/cell action buttons, table column manager placeholder, and page settings.
+*
+* The inspector is two-way bound:
+* - canvas → inspector: sync_inspector() is called by canvas_tool_print after
+*   any drag/selection change; it pushes the selected box's current values
+*   into the inputs.
+* - inspector → canvas: on_inspector_change() reads the inputs back and
+*   applies them to the model, then triggers a full canvas re-render.
+*
+* Inputs that only make sense for certain box types are shown/hidden by
+* sync_inspector:
+* - .show_label_row        visible only for component cells
+* - .table_header_row      visible only for relation/portal cells
+* - .inspector_columns     visible only for relation/portal cells with columns
+*
+* Stored references on self
+* ──────────────────────────
+* self.inspector_body         – the .inspector_body container
+* self.inspector_box_fields   – the collapsible group (hidden until selection)
+* self.inspector_inputs       – map of key → input element
+*   Keys: cell_width, space_after, font_size_pt, align, font_family,
+*         text_color, border_show, border_color, show_label, show_table_header
+* self.inspector_columns      – the .inspector_columns column manager div
+* self.inspector_hint         – the "select an element" placeholder <p>
+* @param {Object} self - tool_print instance
+* @param {HTMLElement} container - the .inspector_panel <aside> element
 */
 const render_inspector = function(self, container) {
 
@@ -537,6 +674,15 @@ const render_inspector = function(self, container) {
 		})
 
 		self.inspector_inputs = {}
+		/**
+		* num
+		* Creates a numeric <input> row labelled `label` and registers it in
+		* self.inspector_inputs under `key`. Fires on_inspector_change on every
+		* `change` event (not `input` — avoids continuous re-renders while typing).
+		* @param {string} key - self.inspector_inputs key
+		* @param {string} label - display label text
+		* @returns {HTMLInputElement} the created number input
+		*/
 		const num = (key, label) => {
 			const row = ui.create_dom_element({
 				element_type	: 'label',
@@ -749,9 +895,26 @@ const render_inspector = function(self, container) {
 /**
 * SYNC_INSPECTOR
 * Pushes the selected {row, cell}'s current values into the inspector inputs
-* (or hides them when nothing is selected).
-* @param object self
-* @param object|null sel - {row, cell} or null
+* (or hides the box fields and shows the hint when nothing is selected).
+*
+* Called by canvas_tool_print after every selection change (drag, drop, click)
+* via self.sync_inspector = (box) => sync_inspector(self, box).
+*
+* The `sel` object shape is { row, cell } where:
+*   row  – the row descriptor from layout.flow.rows
+*   cell – the cell descriptor from row.cells (may be null for a spacer row
+*          that has no individual cells)
+*
+* Cell-width display: fractional width (0…1) is converted to percent (0…100).
+* Row-gap display: for spacer rows the field shows the spacer height; for
+* regular rows it shows the gap below the row — the label text is swapped
+* accordingly via replaceChildren on the <span>.
+*
+* Style resolution: block.style overrides self.layout.style_defaults overrides
+* hard-coded fallbacks. Inputs always reflect the resolved value so the user
+* sees what will be printed, not just what is explicitly set on this block.
+* @param {Object} self - tool_print instance
+* @param {Object|null} sel - { row, cell } or null when deselecting
 */
 const sync_inspector = function(self, sel) {
 
@@ -782,6 +945,7 @@ const sync_inspector = function(self, sel) {
 	I.cell_width.value		= cell ? Math.round((cell.width || 1) * 100) : ''
 	I.cell_width.disabled	= !cell
 	I.space_after.value		= round1(is_spacer ? (row.height_mm || 8) : (row.space_after_mm || 0))
+	// relabel the mm field depending on whether this is a spacer height or a row gap
 	I.space_after.closest('.inspector_row')?.querySelector('span')?.replaceChildren(document.createTextNode(is_spacer ? 'Spacer height (mm)' : 'Row gap (mm)'))
 
 	// component typography/border (target the selected cell's block)
@@ -816,8 +980,31 @@ const sync_inspector = function(self, sel) {
 * columns (each removable), the default columns not currently shown (re-addable),
 * and a hint to drag a related component onto the table to add a column. Hidden
 * until the columns are resolved (after the first render).
-* @param object self
-* @param object box
+*
+* Column data shape on block
+* ───────────────────────────
+* block.available_columns   {Array}  – full column list resolved during first
+*                                       render_relation_table call (set by
+*                                       render_box_tool_print). Null/absent until
+*                                       that first render; the UI stays hidden.
+* block.table_columns       {Array}  – currently active ordered subset (may be
+*                                       a full copy of available_columns).
+*
+* Each column descriptor: { tipo, path, label, header, width }
+*   tipo    – component tipo (e.g. 'dd123')
+*   label   – default header text from the component definition
+*   header  – user-overridden header text (null → fall back to label)
+*   width   – explicit column width in mm (null → auto)
+*
+* Active column rows are draggable to reorder. Drag is blocked on input elements
+* (stopPropagation on mousedown) so typing in header/width fields does not start
+* a drag. The drag protocol uses text/plain 'col:<key>' to identify columns.
+*
+* (!) available_columns is only populated AFTER the first paint of a relation
+* cell. Before that the UI renders nothing (hidden). Trigger a canvas re-render
+* if you need the columns to be available immediately.
+* @param {Object} self - tool_print instance
+* @param {Object} box - the cell's block descriptor (type === 'component')
 */
 const render_table_columns_ui = function(self, box) {
 
@@ -863,6 +1050,7 @@ const render_table_columns_ui = function(self, box) {
 		hdr_input.placeholder = current[i].label || ''
 		hdr_input.title = 'Header label (blank = default name)'
 		hdr_input.draggable = false
+		// (!) prevent typing in header input from triggering drag on the parent row
 		hdr_input.addEventListener('mousedown', (e) => e.stopPropagation())
 		hdr_input.addEventListener('change', () => set_column_header(self, box, key, hdr_input.value))
 
@@ -872,6 +1060,7 @@ const render_table_columns_ui = function(self, box) {
 		w_input.type = 'number'; w_input.min = '0'; w_input.placeholder = 'mm'; w_input.draggable = false
 		w_input.value = current[i].width != null ? current[i].width : ''
 		w_input.title = 'Column width (mm)'
+		// (!) prevent clicking/dragging in the width input from starting a column reorder drag
 		w_input.addEventListener('mousedown', (e) => e.stopPropagation())
 		w_input.addEventListener('change', () => {
 			const v = parseFloat(w_input.value)
@@ -942,8 +1131,19 @@ const render_table_columns_ui = function(self, box) {
 /**
 * ON_INSPECTOR_CHANGE
 * Reads the inspector inputs back into the selected box and re-applies geometry
-* and style.
-* @param object self
+* and style, then triggers a full canvas re-render and re-selects the cell.
+*
+* Write path:
+*   cell.width      ← cell_width % input / 100, clamped to [0.05, 1]
+*   row.height_mm   ← space_after for spacer rows, min 1
+*   row.space_after_mm ← space_after for regular rows, min 0
+*   block.style.*   ← font/color/border inputs (if a block is selected)
+*   block.show_label / block.show_table_header ← checkbox inputs
+*
+* After writing, select_cell is called in a requestAnimationFrame so it runs
+* after the synchronous render_canvas has redrawn the DOM — without that delay
+* the selection highlight would be applied to old nodes that get discarded.
+* @param {Object} self - tool_print instance
 */
 const on_inspector_change = function(self) {
 
@@ -992,7 +1192,11 @@ const on_inspector_change = function(self) {
 /**
 * DO_NEW
 * Starts a fresh unsaved layout (warns on unsaved changes).
-* @param object self
+*
+* Resets the layout model, clears the template picker selection and name field,
+* redraws the canvas with the empty new layout, and deselects any inspector
+* selection. Does nothing if the user cancels the discard-changes confirmation.
+* @param {Object} self - tool_print instance
 */
 const do_new = function(self) {
 	if (self.dirty && !confirm(get_label.sure || 'Discard unsaved changes?')) return
@@ -1011,7 +1215,16 @@ const do_new = function(self) {
 /**
 * DO_SAVE
 * Saves to the loaded template, or falls back to Save as… when unsaved.
-* @param object self
+*
+* The template name is always taken from the inline name field (self.name_input)
+* rather than a native prompt(), because prompt() is silently blocked in the
+* tool window context on some browsers.
+*
+* Save result detection: the core API response shape varies slightly — success
+* is inferred by the absence of non-empty errors rather than a strict .result
+* check (mirrors how tool_export presets detect success).
+* @param {Object} self - tool_print instance
+* @returns {Promise<void>}
 */
 const do_save = async function(self) {
 
@@ -1045,7 +1258,15 @@ const do_save = async function(self) {
 /**
 * DO_SAVE_AS
 * Forks the current layout into a NEW template record (new name, no prompt).
-* @param object self
+*
+* The new name is derived by appending ' copy' to the current name field value.
+* After the new record is created, self.current_template_id is updated and the
+* template picker is refreshed and pointed to the new entry.
+*
+* (!) Does NOT ask for confirmation — it always creates a new record. If the
+* user saves a fork they did not intend, they can Delete it immediately.
+* @param {Object} self - tool_print instance
+* @returns {Promise<void>}
 */
 const do_save_as = async function(self) {
 	const base = (self.name_input && self.name_input.value.trim()) || self.layout.name || 'Untitled'
@@ -1068,8 +1289,13 @@ const do_save_as = async function(self) {
 /**
 * FLASH_SAVED
 * Brief visible feedback on the Save button (ui.notify is unavailable).
-* @param object self
-* @param bool failed
+*
+* Temporarily replaces the button text with '✓ Saved' or '✕ Error', adds the
+* corresponding CSS class, then restores the original text after 1.4 s.
+* Using the button itself as the feedback target avoids a floating notification
+* which would require ui.notify (not available in the tool context).
+* @param {Object} self - tool_print instance
+* @param {boolean} [failed] - true for error state; omit or false for success
 */
 const flash_saved = function(self, failed) {
 	const btn = self.button_save
@@ -1089,7 +1315,13 @@ const flash_saved = function(self, failed) {
 /**
 * DO_DELETE
 * Deletes the loaded template (owner only), then resets to a new layout.
-* @param object self
+*
+* On success, clears self.current_template_id, replaces the layout with a
+* fresh blank, refreshes the picker, and resets the canvas and inspector.
+* On failure (delete_layout returns falsy), does nothing silently — the
+* template picker retains its previous state.
+* @param {Object} self - tool_print instance
+* @returns {Promise<void>}
 */
 const do_delete = async function(self) {
 	if (!self.current_template_id) return
@@ -1110,8 +1342,22 @@ const do_delete = async function(self) {
 /**
 * LOAD_TEMPLATE
 * Loads a saved template blob into the canvas.
-* @param object self
-* @param string section_id
+*
+* On confirmation (if dirty), fetches the blob by section_id from
+* print_layout_presets, normalises it to v2 via normalize_blob, reseats all
+* row/cell ids via reseat_ids (prevents id collisions between templates loaded
+* in different sessions), and repaints the canvas + inspector.
+*
+* If the user declines to discard changes, the template picker is reset to
+* the previously loaded template so the UI is not left pointing at an unloaded
+* entry.
+*
+* (!) reseat_ids is mandatory after load: a saved template carries ids from the
+* session in which it was saved. Loading without reseating would collide with
+* the current session's id counter and cause select_cell to pick the wrong row.
+* @param {Object} self - tool_print instance
+* @param {string|number} section_id - dd25 section id of the template to load
+* @returns {Promise<void>}
 */
 const load_template = async function(self, section_id) {
 
@@ -1153,9 +1399,18 @@ const load_template = async function(self, section_id) {
 * NORMALIZE_BLOB
 * Fills missing top-level fields of a loaded blob with sane defaults so the
 * editor/renderer never hit undefined.
-* @param object self
-* @param object blob
-* @return object
+*
+* v2 detection: blob.schema_version === 2 AND blob.flow.rows is a real Array.
+* v1 blobs (absolute-position pages/boxes from the original prototype — now test
+* data only) are NOT migrated; the flow is replaced with an empty row set so
+* the editor opens without crashing. The user will see an empty canvas.
+*
+* The spread merge is intentionally shallow for the top-level keys, but deep
+* for page_defaults, grid, style_defaults, and flow — those sub-objects are
+* always fully merged against their defaults so optional keys are never missing.
+* @param {Object} self - tool_print instance (used to build the defaults via new_layout)
+* @param {Object} blob - raw blob loaded from dd625 storage
+* @returns {Object} normalised layout blob at schema_version 2
 */
 const normalize_blob = function(self, blob) {
 	const def = new_layout(self)
@@ -1178,9 +1433,16 @@ const normalize_blob = function(self, blob) {
 /**
 * REFRESH_TEMPLATE_PICKER
 * Re-queries the available templates and rebuilds the picker options. Records
-* the default template id (first one) for auto-load.
-* @param object self
-* @return promise void
+* the default template id (first one in the list) in self.default_template_id
+* for the auto-load on initial open.
+*
+* The query may fail (network, permission) — errors are caught and logged,
+* falling back to an empty list so the picker shows only the placeholder option.
+*
+* If self.current_template_id is already set (e.g. after a save), the picker
+* is scrolled to that entry so the active template remains highlighted.
+* @param {Object} self - tool_print instance
+* @returns {Promise<void>}
 */
 const refresh_template_picker = async function(self) {
 
@@ -1221,8 +1483,12 @@ const refresh_template_picker = async function(self) {
 /**
 * TOGGLE_FILL_MODE
 * Switches between placeholder and record-filled rendering and repaints boxes.
-* @param object self
-* @param bool checked
+*
+* fill_mode = false: each box displays a visual placeholder (component name +
+* tipo), no server fetch. fill_mode = true: each box fetches and renders the
+* component's actual value for self.preview_section_id.
+* @param {Object} self - tool_print instance
+* @param {boolean} checked - true to enable record data fill; false for placeholders
 */
 const toggle_fill_mode = function(self, checked) {
 	self.fill_mode = checked
@@ -1234,7 +1500,16 @@ const toggle_fill_mode = function(self, checked) {
 /**
 * REFRESH_ALL_BOX_CONTENT
 * Re-renders every box's content (placeholder or filled).
-* @param object self
+*
+* Iterates the v2 document-flow model: rows → cells → cell.block. Only
+* blocks that already have a content_node (attached by the flow engine during
+* layout_flow) are re-rendered; blocks whose nodes have been destroyed (e.g.
+* after a full canvas re-render) are silently skipped.
+*
+* This is a lightweight re-fill that does NOT trigger a full canvas layout
+* pass — it replaces cell content in-place. Call render_canvas instead if
+* geometry or pagination may change.
+* @param {Object} self - tool_print instance
 */
 const refresh_all_box_content = function(self) {
 	// v2 document-flow model: rows of cells, the cell.block is the "box" and
@@ -1259,7 +1534,24 @@ const refresh_all_box_content = function(self) {
 * millimetres (zoom-independent), one page-sequence per record (edit = 1 record,
 * list = every record of the filter). Prints the document and restores the
 * editor.
-* @param object self
+*
+* Record id resolution
+* ─────────────────────
+* 1. self.get_record_ids() — async method supplied by the tool framework; in
+*    edit mode returns a 1-element array, in list mode all filtered record ids.
+* 2. Falls back to [self.preview_section_id] when get_record_ids is absent or
+*    returns nothing.
+* 3. Falls back to window.print() on the bare canvas when no ids are available
+*    at all (template-only context with no active record).
+*
+* Print / restore cycle
+* ──────────────────────
+* The rendered .print_document is appended to self.canvas_container alongside
+* the editor's .print_root (which is hidden). After window.print() the document
+* is removed either on the `afterprint` event or after a 2.5 s safety timeout
+* (some browsers fire afterprint late or not at all).
+* @param {Object} self - tool_print instance
+* @returns {Promise<void>}
 */
 const do_print = async function(self) {
 
@@ -1306,8 +1598,14 @@ const do_print = async function(self) {
 
 /**
 * SET_PAGE_STYLE
-* Injects the @page size for the current page format.
-* @param object self
+* Injects a <style id="tool_print_page_style"> @page rule with the current
+* page format's physical dimensions so the browser prints at the correct size.
+*
+* Uses page_dims(self, null) which reads self.layout.page_defaults and
+* applies the current orientation to swap width/height as needed. Creating the
+* style element once and reusing it (via getElementById) avoids accumulating
+* stale rules in <head> across multiple print calls.
+* @param {Object} self - tool_print instance
 */
 const set_page_style = function(self) {
 	const dims = page_dims(self, null)
@@ -1327,34 +1625,47 @@ const set_page_style = function(self) {
 * Builds a detached .print_root with the chosen template rendered once per
 * record id, in millimetres (zoom-independent, print-ready). Read-only: no
 * editor chrome, no handles.
-* @param object self
-* @param array record_ids
-* @return promise HTMLElement print_root
-*/
-
-
-
-/**
-* RENDER_PRINT_DOCUMENT
-* Builds a .print_root with the chosen template rendered once per record id, in
-* millimetres (zoom-independent, print-ready). Read-only: no editor chrome, no
-* handles.
 *
 * The root is temporarily attached off-screen during the layout pass so the flow
 * engine can measure row heights (offsetHeight returns 0 on detached nodes —
 * without this, every row appears 0px tall, everything "fits" on one page, and
 * the PDF has only the first page).
-* @param object self
-* @param array record_ids
-* @return promise HTMLElement print_root (detached)
+*
+* Off-screen attachment strategy
+* ────────────────────────────────
+* The root is attached inside self.node (the .wrapper_tool.tool_print element)
+* at position: absolute; left: -99999px; visibility: hidden (not display:none
+* — hidden keeps layout geometry accessible). Attaching inside self.node is
+* critical: tool_print.css scopes its height-overriding rules
+* (.cell_content .wrapper_component { display:block; height:auto; max-height:none })
+* to .tool_print descendants. Attaching to document.body instead would leave
+* components rendered at their default max-heights (e.g. CKEditor ~180px
+* scrollable), causing the flow engine to measure rows too short and split them
+* at the wrong positions — producing too few pages.
+*
+* Per-record pass
+* ─────────────────
+* self.preview_section_id is temporarily overridden for each record_id so
+* render_box_content fetches that record's data. The per-block table cache
+* auto-invalidates because its key includes the record id. A CSS .print_page
+* boundary between records is handled by the .print_page CSS (page-break-before).
+*
+* State saved/restored via try/finally (preview_section_id, fill_mode), so an
+* error in layout_flow cannot leave the tool in fill mode on the wrong record.
+*
+* (!) Exported: also called by the list-print button or external print triggers
+* that bypass do_print and want the fully-laid-out DOM directly.
+* @param {Object} self - tool_print instance
+* @param {Array} record_ids - array of section_id values to render
+* @returns {Promise<HTMLElement>} the detached .print_root element, ready to attach
 */
 export const render_print_document = async function(self, record_ids) {
- 
+
     const root = ui.create_dom_element({
         element_type    : 'div',
         class_name        : 'print_root print_document'
     })
- 
+
     // Attach off-screen so offsetHeight/getBoundingClientRect work during layout.
     // visibility:hidden (not display:none) keeps layout geometry intact.
     // CRITICAL: attach inside self.node (the .wrapper_tool.tool_print element) so
@@ -1369,7 +1680,7 @@ export const render_print_document = async function(self, record_ids) {
         root.style.top            = '0'
         root.style.visibility    = 'hidden'
         ;(self.node || document.body).appendChild(root)
- 
+
     // v2: run the SAME flow engine as the editor, but in physical mm (zoom-
     // independent). One pass per record; cells render that record's data
     // (render_box_content reads self.preview_section_id; the per-block table
@@ -1378,7 +1689,7 @@ export const render_print_document = async function(self, record_ids) {
     const saved_preview    = self.preview_section_id
     const saved_fill    = self.fill_mode
     self.fill_mode = true
- 
+
     try {
         for (let r = 0; r < record_ids.length; r++) {
             self.preview_section_id = record_ids[r]
@@ -1395,11 +1706,10 @@ export const render_print_document = async function(self, record_ids) {
             root.style.top            = ''
             root.style.visibility    = ''
     }
- 
- 
+
+
     return root
 }//end render_print_document
-
 
 
 

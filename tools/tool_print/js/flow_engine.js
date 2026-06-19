@@ -20,6 +20,32 @@
 * Cell content reuses render_box_tool_print.render_box_content by treating the
 * cell's block as a "box" (component_ref / render / style / table_columns …),
 * so the literal/relation-table/cache rendering is shared with v1.
+*
+* Layout data shape (schema_version 2):
+*   layout.flow.rows[]            — ordered array of row descriptors
+*   row  { id, kind, cells[], space_after_mm, style }
+*         kind === 'spacer'  → fixed-height gap (height_mm), no cells
+*         kind === 'row'     → horizontal grid of 1…N cells
+*   cell { id, width, block }
+*         width: fractional share of column width (0…1); omit → equal share
+*   block { type, component_tipo, render, style, table_columns[], … }
+*         type === 'empty'           → placeholder (no render)
+*         type === 'component'       → renders a live component value
+*         type === 'static_text'     → renders a plain text label
+*
+* Context object (ctx) contract — callers MUST supply all of these:
+*   root         {HTMLElement}  — container to append .print_page nodes into
+*   page_w_mm    {number}       — physical page width in mm
+*   page_h_mm    {number}       — physical page height in mm
+*   margins      {Object}       — { top, right, bottom, left } all in mm
+*   to_css(mm)   {Function}     — converts mm to a CSS string (px for editor, mm for print)
+*   to_px(mm)    {Function}     — converts mm to a numeric pixel value used for comparison
+*   measure(node){Function}     — returns the rendered height of a DOM node in px
+*   pages        {Array}        — empty array; populated by layout_flow
+*   current_page {Object|null}  — the active page descriptor { node, column }
+*   print        {boolean}      — present and true only in make_print_ctx (omitted in editor)
+*
+* Exports: make_editor_ctx, make_print_ctx, layout_flow
 */
 
 	import {ui} from '../../../core/common/js/ui.js'
@@ -30,10 +56,15 @@
 
 /**
 * MAKE_EDITOR_CTX
-* Layout context for the on-screen editor (zoom-dependent px).
-* @param object self
-* @param HTMLElement root
-* @return object ctx
+* Builds the layout context for the on-screen editor preview.
+* All geometry is expressed in zoom-dependent CSS pixels: distances measured via
+* getBoundingClientRect() match the values produced by to_px(), so the
+* pagination arithmetic stays correct regardless of the current zoom level.
+* The `print` property is intentionally absent so callers can detect the mode
+* with `!!ctx.print`.
+* @param {Object} self - The tool_print instance; must have layout.page_defaults and zoom
+* @param {HTMLElement} root - Container that will receive the generated .print_page nodes
+* @returns {Object} ctx - Layout context satisfying the ctx contract (see module header)
 */
 export const make_editor_ctx = function(self, root) {
 	const dims = page_dims(self, null)
@@ -54,10 +85,17 @@ export const make_editor_ctx = function(self, root) {
 
 /**
 * MAKE_PRINT_CTX
-* Layout context for print: physical mm units, zoom-independent.
-* @param object self
-* @param HTMLElement root
-* @return object ctx
+* Builds the layout context for the physical print path (render_tool_print.do_print).
+* Units are physical millimetres: to_css() emits "Nmm" strings consumed by
+* @media print CSS, and to_px() uses the fixed PX_PER_MM constant (96 dpi/25.4)
+* rather than zoom, so column widths and page-break thresholds match the paper.
+* offsetHeight is used instead of getBoundingClientRect().height because the
+* print document is rendered in a hidden iframe/overlay where layout is static.
+* The `print: true` flag lets callers detect the print path (e.g. to skip
+* editor-only decorations in canvas_tool_print.decorate_editor).
+* @param {Object} self - The tool_print instance; must have layout.page_defaults
+* @param {HTMLElement} root - Container that will receive the generated .print_page nodes
+* @returns {Object} ctx - Layout context satisfying the ctx contract (see module header)
 */
 export const make_print_ctx = function(self, root) {
 	const dims = page_dims(self, null)
@@ -79,18 +117,40 @@ export const make_print_ctx = function(self, root) {
 
 /**
 * LAYOUT_FLOW
-* Renders the layout's flow into generated pages inside ctx.root, paginating.
-* @param object self
-* @param object ctx - from make_editor_ctx / make_print_ctx
-* @return promise object[] - the generated page descriptors [{node, column}]
+* Main entry-point. Renders layout.flow.rows into paginated .print_page DOM
+* nodes inside ctx.root and returns the page descriptor array.
+*
+* Algorithm (sequential, async because render_row_node awaits component renders):
+*   1. Create the first page node and set `used = 0` (px consumed on the current page).
+*   2. For each row in layout.flow.rows:
+*      a. Spacer rows: add fixed-height gap; overflow to a new page if needed.
+*      b. Content rows: render the full row, measure it, then:
+*         - If it fits in the remaining space → append and advance `used`.
+*         - Else if it is a 1-cell splittable container (table or rich text) →
+*           split at unit boundaries (split_long_row), spreading overflow units
+*           across as many new pages as required; `used` becomes the fill on the
+*           last continuation page.
+*         - Else (multi-cell row or non-splittable single-cell) → move the
+*           already-appended node to a fresh page whole (no mid-row split).
+*   3. Return ctx.pages (array populated in place by make_page_node).
+*
+* Side effects: modifies ctx.pages and ctx.current_page in place; appends DOM
+* nodes to ctx.root. Each call must use a freshly constructed ctx (pages:[]).
+*
+* @param {Object} self - The tool_print instance; layout must be a valid v2 blob
+* @param {Object} ctx - Layout context from make_editor_ctx or make_print_ctx
+* @returns {Promise<Array>} Resolves to ctx.pages: [{node: HTMLElement, column: HTMLElement}, …]
 */
 export const layout_flow = async function(self, ctx) {
 
+	// guard: tolerate a layout blob that has no flow object yet (e.g. freshly created)
 	const rows		= (self.layout.flow && Array.isArray(self.layout.flow.rows)) ? self.layout.flow.rows : []
+
+	// total usable height of a page's content column in pixels (used for all comparisons)
 	const usable_px	= ctx.to_px(ctx.page_h_mm - ctx.margins.top - ctx.margins.bottom)
 
 	make_page_node(ctx)        // first page
-	let used = 0               // px used in the current page's column
+	let used = 0               // px consumed on the current page's column so far
 
 	for (let i = 0; i < rows.length; i++) {
 		const row = rows[i]
@@ -98,6 +158,8 @@ export const layout_flow = async function(self, ctx) {
 		// spacer row ----------------------------------------------------------
 		if (row.kind==='spacer') {
 			const h = ctx.to_px(row.height_mm || 8)
+			// if the spacer itself overflows, open a new page (guard: used > 0 avoids
+			// a blank page when a spacer is the very first element)
 			if (used + h > usable_px && used > 0) { make_page_node(ctx); used = 0 }
 			// a flow_row (with data-row-id) so the editor can select/move/remove it
 			const sp = ui.create_dom_element({ element_type:'div', class_name:'flow_row flow_spacer', parent: ctx.current_page.column })
@@ -108,20 +170,30 @@ export const layout_flow = async function(self, ctx) {
 		}
 
 		// content row ---------------------------------------------------------
+		// render the full row into a detached fragment first, then append so that
+		// ctx.measure() can read its natural height after layout is complete
 		const row_node = await render_row_node(self, row, ctx)
 		ctx.current_page.column.appendChild(row_node)
 		let h			= ctx.measure(row_node)
 		const remaining	= usable_px - used
 		const gap		= ctx.to_px(row.space_after_mm || 0)
 
-		if (h <= remaining) { used += h + gap; continue }   // fits
+		if (h <= remaining) { used += h + gap; continue }   // fits — fast path
 
-		// doesn't fit: split if the row is a single full-width block of repeatable
-		// units (table rows or text paragraphs), else move it whole to a fresh page
+		// row doesn't fit: decide whether to split it or move it whole
+		// split only when the row is a 1-cell full-width container of repeatable
+		// block units (table <tr>s or rich-text paragraphs) — multi-cell rows with
+		// heterogeneous heights cannot be split at shared boundaries
 		const info = splittable_container(row, row_node)
 		if (info) {
+			// split_long_row removes overflow units from row_node in-place and builds
+			// continuation segments on fresh pages; returns used px on the last page
 			used = split_long_row(self, ctx, row_node, used, usable_px, info)
 		} else {
+			// unsplittable row: if there is already content on the page, pull the
+			// row off, start a fresh page, and re-append it there; if the page is
+			// already blank (used === 0) leave it in place to avoid an infinite loop
+			// where a row taller than a full page keeps triggering new empty pages
 			if (used > 0) {
 				ctx.current_page.column.removeChild(row_node)
 				make_page_node(ctx)
@@ -141,9 +213,22 @@ export const layout_flow = async function(self, ctx) {
 /**
 * MAKE_PAGE_NODE
 * Creates a .print_page with an absolutely-positioned .flow_column content area,
-* appends it to ctx.root, and sets it as the current page.
-* @param object ctx
-* @return object page { node, column }
+* appends it to ctx.root, and advances ctx.current_page to the new page.
+*
+* The .print_page receives explicit width/height (in the ctx unit: px or mm) so
+* both the on-screen editor and the @media print path see the correct paper size.
+* The data-wmm/data-hmm attributes let decorate_editor read dimensions without
+* re-querying the layout object. data-page-index is zero-based and matches the
+* index into ctx.pages.
+*
+* The .flow_column is positioned absolutely within the page using the four margin
+* values; its width is page_width − left_margin − right_margin so that flex cells
+* fill the available text area precisely. Height is intentionally unconstrained
+* (content drives it) — the pagination loop in layout_flow enforces the limit
+* through `used` / `usable_px` arithmetic.
+*
+* @param {Object} ctx - The active layout context (mutated: pages[] appended, current_page set)
+* @returns {Object} page - { node: HTMLElement (.print_page), column: HTMLElement (.flow_column) }
 */
 const make_page_node = function(ctx) {
 
@@ -170,17 +255,34 @@ const make_page_node = function(ctx) {
 
 /**
 * RENDER_ROW_NODE
-* Builds a flow row (flex of cells), rendering each cell's component value via
-* the shared render_box_content (the cell's block acts as the "box").
-* @param object self
-* @param object row
-* @param object ctx
-* @return promise HTMLElement row node
+* Builds a .flow_row DOM node (a flex container of .flow_cell nodes) and renders
+* each cell's component value by delegating to the shared render_box_content.
+*
+* Cell width: the `cell.width` property is a fractional share of the column (0…1).
+* For a single-cell row the fraction is always 1 (100%). For multi-cell rows it
+* falls back to equal shares (1/n) when the stored width is absent or zero, so a
+* layout round-tripped through an older serialiser still displays correctly.
+*
+* Block-as-box adaptation: render_box_content was written for the v1 absolute-box
+* model. We mutate the cell's block in place to satisfy its interface:
+*   block.id           — required by render_box_content for cache keying
+*   block.content_node — the .box_content/.cell_content div to fill
+*   block.overflow     — { mode:'grow' } tells it NOT to clip; the engine paginates
+*
+* Empty blocks (type === 'empty') skip the render entirely; the cell gets the
+* `flow_cell_empty` class so CSS can give it a visual placeholder in the editor.
+*
+* @param {Object} self - The tool_print instance
+* @param {Object} row - Row descriptor from layout.flow.rows[] (kind === 'row')
+* @param {Object} ctx - The active layout context (provides to_css for spacing)
+* @returns {Promise<HTMLElement>} The completed .flow_row node (NOT yet appended to the DOM)
 */
 const render_row_node = async function(self, row, ctx) {
 
 	const row_node = ui.create_dom_element({ element_type:'div', class_name:'flow_row' })
 	row_node.dataset.rowId = row.id
+	// space_after_mm becomes a bottom margin on the row node so gap is preserved
+	// between consecutive content rows (the pagination loop accounts for it via `gap`)
 	if (row.space_after_mm) row_node.style.marginBottom = ctx.to_css(row.space_after_mm)
 
 	const cells	= Array.isArray(row.cells) ? row.cells : []
@@ -192,7 +294,12 @@ const render_row_node = async function(self, row, ctx) {
 		const frac		= (n===1) ? 1 : ((typeof cell.width==='number' && cell.width>0) ? cell.width : (1 / n))
 		const cell_node	= ui.create_dom_element({ element_type:'div', class_name:'flow_cell', parent: row_node })
 		cell_node.dataset.cellId = cell.id
+		// rowId is duplicated on the cell so that click handlers in canvas_tool_print
+		// can identify the parent row without walking the DOM
 		cell_node.dataset.rowId	= row.id
+		// flex: 0 0 N% + maxWidth pins the cell to its exact fraction without
+		// growing or shrinking — critical so splittable_container can detect the
+		// single-cell case by checking cells.length === 1
 		cell_node.style.flex	= '0 0 ' + (frac * 100) + '%'
 		cell_node.style.maxWidth= (frac * 100) + '%'
 
@@ -217,10 +324,30 @@ const render_row_node = async function(self, row, ctx) {
 
 /**
 * SPLITTABLE_CONTAINER
-* A 1-cell full-width row can be split across pages when its content has a
-* container of repeatable block units: a portal table's <tbody> (>1 <tr>), OR a
-* rich-text block container (>1 paragraphs — e.g. a long text_area transcription).
-* @return object|null { kind:'table'|'text', content, container, table? }
+* Determines whether a rendered row node can be split across page boundaries and,
+* if so, returns a descriptor of the splittable container within it.
+*
+* A row is splittable when ALL of the following hold:
+*   1. It has exactly one cell (multi-cell rows can't be split at shared row boundaries).
+*   2. That cell contains either:
+*      a. A .portal_table with a <tbody> holding more than one <tr>
+*         (relation/portal component tables rendered by render_box_tool_print).
+*      b. A rich-text container (CKEditor .ck-content, .value_container, or
+*         .editor_container) holding more than one block-level child paragraph
+*         (a long component_text_area transcription is the primary use-case).
+*   3. In the text case, find_text_container descends past single-child wrapper
+*      divs to find the element that actually owns the paragraphs.
+*
+* Tables take precedence: if both a table and text content exist (unlikely but
+* possible), the table path is returned.
+*
+* @param {Object} row - Row descriptor from layout.flow.rows[]
+* @param {HTMLElement} row_node - The rendered .flow_row DOM node
+* @returns {Object|null} info - null if unsplittable; otherwise:
+*   { kind: 'table'|'text', content: HTMLElement, container: HTMLElement, table?: HTMLElement }
+*   content   — the .cell_content div (style source for continuation nodes)
+*   container — the <tbody> or text block parent whose children are the split units
+*   table     — (table only) the full <table> element (colgroup/thead source)
 */
 const splittable_container = function(row, row_node) {
 	if (!row || row.kind==='spacer') return null
@@ -235,23 +362,51 @@ const splittable_container = function(row, row_node) {
 	return null
 }//end splittable_container
 
+/**
+* IS_SPLITTABLE_ROW
+* Boolean predicate wrapping splittable_container. Used by callers that only need
+* to know whether splitting is possible, without needing the container descriptor.
+* @param {Object} row - Row descriptor from layout.flow.rows[]
+* @param {HTMLElement} row_node - The rendered .flow_row DOM node
+* @returns {boolean} true if the row can be split across page boundaries
+*/
 const is_splittable_row = (row, row_node) => !!splittable_container(row, row_node)
 
 /**
 * FIND_TEXT_CONTAINER
-* The element holding the paragraphs of a rendered text value (CKEditor content),
-* descending past single-child wrappers to the element with the actual blocks.
+* Locates the DOM element that directly contains the paragraph-level block children
+* of a rendered CKEditor text value, so that individual paragraphs can be measured
+* and moved as split units.
+*
+* Strategy (two-pass):
+*   Pass 1 — named container heuristic: look for a well-known CKEditor/Dédalo class
+*   (.ck-content, .value_container, .editor_container). If found, unwrap single-child
+*   intermediary divs (up to 8 levels, guard-protected) to reach the element that
+*   directly owns multiple block children.
+*   Pass 2 — fallback: if no named container is found (or pass-1 element has ≤1 child),
+*   walk every descendant and return the one with the most direct children. This handles
+*   future component renders that do not use the expected class names.
+*
+* Returns null / single-child container when no multi-child element is found — the
+* caller in splittable_container guards `tc.children.length > 1` before using it.
+*
+* @param {HTMLElement} content - The .cell_content div of the rendered cell
+* @returns {HTMLElement|null} The element whose direct children are the split units, or null
 */
 const find_text_container = function(content) {
 	let c = content.querySelector('.ck-content, .value_container, .editor_container')
 	if (c) {
 		let guard = 0
+		// descend past single-child wrapper elements (e.g. the CKEditor scrollable
+		// viewport div) until we reach an element whose children ARE the paragraphs
+		// (children.length > 1). The guard prevents infinite descent on malformed HTML.
 		while (c && c.children.length===1 && c.firstElementChild && c.firstElementChild.children.length>1 && guard++<8) {
 			c = c.firstElementChild
 		}
 		if (c && c.children.length>1) return c
 	}
 	// fallback: the deepest element with the most block children
+	// bestN starts at 1 so that single-child wrappers are never returned as a container
 	let best = null, bestN = 1
 	content.querySelectorAll('*').forEach(el => { if (el.children.length>bestN) { bestN = el.children.length; best = el } })
 	return best
@@ -261,29 +416,64 @@ const find_text_container = function(content) {
 
 /**
 * SPLIT_LONG_ROW
-* Splits a 1-cell row (table or text) across pages at its unit boundaries (<tr>
-* or paragraphs): units that fit below the current fill stay; the rest move onto
-* fresh pages. Returns the px used on the LAST page.
-* @return number used px on the final page
+* Splits a 1-cell row (table or text) across page boundaries at its unit
+* boundaries (<tr> rows for tables, block children for rich text). Units that
+* fit in the remaining space on the current page stay in the original row_node;
+* the rest are moved onto fresh continuation pages.
+*
+* Algorithm:
+*   1. Snapshot all unit nodes and their individual heights (getBoundingClientRect /
+*      offsetHeight depending on ctx.measure).
+*   2. Measure the overhead above the units (title header, table wrapper, etc.) to
+*      compute avail_first — the px available for units on the current page.
+*   3. Greedily pack units onto the current page (k = first overflow index).
+*      If everything fits (k >= units.length), return early without splitting.
+*   4. Remove overflow units from the DOM (row_node stays in place with the
+*      remaining units above the cut).
+*   5. Loop: for each continuation page, call make_page_node, greedily pack the
+*      next slice, build a continuation node, and append it to the new page.
+*      Tables repeat the <thead> on each continuation page; text continues
+*      paragraphs without any repeated header.
+*   6. The guard (< 5000 iterations) prevents an infinite loop if a single unit
+*      is taller than a full page — that unit is placed alone and the loop advances.
+*
+* Side effects: modifies the DOM of row_node in place (overflow units removed);
+* creates new page nodes via make_page_node (mutates ctx.pages, ctx.current_page).
+*
+* @param {Object} self - The tool_print instance
+* @param {Object} ctx - The active layout context
+* @param {HTMLElement} row_node - The already-appended .flow_row node to split
+* @param {number} used - Px already consumed on the current page before this row
+* @param {number} usable_px - Total usable column height in px (constant per layout)
+* @param {Object} info - Splittable container descriptor from splittable_container()
+* @returns {number} Px consumed on the final continuation page (used value for the next row)
 */
 const split_long_row = function(self, ctx, row_node, used, usable_px, info) {
 
 	const content	= info.content
+	// snapshot children NOW: removing nodes later would change .children live
 	const units		= [...info.container.children]
+	// a container with only one unit cannot be split — treat as unsplittable
 	if (units.length < 2) return used + ctx.measure(row_node)
 
 	// identify the master cell so continuation segments can re-select it on click
+	// in the editor; master_ids are stamped as data attributes on every cont_row
 	const master_cell	= row_node.querySelector('.flow_cell[data-cell-id]')
 	const master_ids	= { row: row_node.dataset.rowId || '', cell: master_cell ? master_cell.dataset.cellId : '' }
 
-	// height consumed above the units within the cell content
+	// height consumed above the units within the cell content:
+	// c_top is the top of .cell_content; head_h is the gap between cell_content
+	// top and the container (e.g. a table caption or a wrapper div above <tbody>)
 	const c_top		= content.getBoundingClientRect().top
 	const head_h	= Math.max(0, info.container.getBoundingClientRect().top - c_top)
+	// thead_h is the height of the repeated table header on continuation pages
 	const thead		= (info.kind==='table') ? info.table.querySelector('thead') : null
 	const thead_h	= thead ? ctx.measure(thead) : 0
+	// pre-measure all unit heights while they are still in the DOM
 	const unit_h	= units.map(u => ctx.measure(u))
 
-	// how many units fit below the current fill on this page
+	// greedy-pack pass: find k = the first unit that does NOT fit on the current page
+	// k > 0 guard: always place at least one unit even if it overflows (avoids loops)
 	const avail_first = usable_px - used - head_h
 	let u = 0, k = 0
 	for (; k < units.length; k++) {
@@ -292,15 +482,19 @@ const split_long_row = function(self, ctx, row_node, used, usable_px, info) {
 	}
 	if (k >= units.length) return used + head_h + u   // everything fit after all
 
+	// remove the overflow units from the DOM (units[0..k-1] stay in the original row_node)
 	const overflow		= units.slice(k)
 	const overflow_h	= unit_h.slice(k)
 	overflow.forEach(n => n.remove())
 
-	// continuation pages: tables repeat the header; text continues the paragraphs
+	// continuation pages: tables repeat the <thead> on every page; text has no repeated header
 	const cont_head = (info.kind==='table') ? thead_h : 0
 	let idx = 0, guard = 0
 	while (idx < overflow.length && guard++ < 5000) {
 		make_page_node(ctx)
+		// greedy-pack the next slice of overflow units onto this continuation page
+		// m > idx guard: always advance by at least one unit to prevent an infinite loop
+		// when a single unit is taller than a full page
 		let v = 0, m = idx
 		for (; m < overflow.length; m++) {
 			if (v + overflow_h[m] > (usable_px - cont_head) && m > idx) break
@@ -315,6 +509,7 @@ const split_long_row = function(self, ctx, row_node, used, usable_px, info) {
 		cont_row.dataset.masterRowId	= master_ids.row
 		cont_row.dataset.masterCellId	= master_ids.cell
 		ctx.current_page.column.appendChild(cont_row)
+		// track used on the last page for the caller to resume from
 		used = cont_head + v
 	}
 
@@ -325,9 +520,30 @@ const split_long_row = function(self, ctx, row_node, used, usable_px, info) {
 
 /**
 * BUILD_CONTINUATION_TEXT_NODE
-* A full-width flow row continuing a text block: copies the master cell content's
-* inline style (color/font) and re-wraps the moved paragraphs so the auto-height
-* CSS applies.
+* Builds a full-width .flow_row.flow_continued node for a slice of rich-text
+* paragraphs that overflowed onto a continuation page.
+*
+* Structure mirrors a normal single-cell row (flow_row > flow_cell > box_content +
+* cell_content > wrapper_component > paragraphs) so that the same CSS rules that
+* control spacing, borders, and font in the master row apply to the continuation.
+*
+* The master cell content's inline style (cssText) is copied verbatim so that
+* color, font-family, font-size and text-align set by the inspector are preserved
+* across page breaks without querying the layout blob again.
+*
+* The `holder` element inherits the master container's className (e.g. `ck-content`)
+* so that CKEditor typography styles (headings, lists, blockquotes) continue to
+* apply on continuation pages.
+*
+* seg_nodes are MOVED (appendChild), not cloned — they are already disconnected
+* from the original container by the caller (split_long_row → n.remove()).
+*
+* @param {HTMLElement} master_content   - The .cell_content div of the master row (style source)
+* @param {HTMLElement} master_container - The text container (className source for holder)
+* @param {Array} seg_nodes             - Paragraph nodes to place on this continuation page
+* @param {Object} ctx                  - The active layout context (not used directly here;
+*                                        reserved for future to_css calls, e.g. thead height)
+* @returns {HTMLElement} A .flow_row.flow_continued node ready to append to a .flow_column
 */
 const build_continuation_text_node = function(master_content, master_container, seg_nodes, ctx) {
 	const row_node	= ui.create_dom_element({ element_type:'div', class_name:'flow_row flow_continued' })
@@ -345,14 +561,31 @@ const build_continuation_text_node = function(master_content, master_container, 
 
 /**
 * BUILD_CONTINUATION_TABLE_NODE
-* A full-width flow row holding a table segment (cloned colgroup + header +
-* the given moved <tr>), for a continuation page. Copies the master cell
-* content's inline style (color/font/align) so the segment matches the master.
-* @param HTMLElement table - the master table (colgroup/header source)
-* @param HTMLElement[] seg_rows - <tr> nodes to place (moved)
-* @param object ctx
-* @param HTMLElement master_content - the master .cell_content (style source)
-* @return HTMLElement row node
+* Builds a full-width .flow_row.flow_continued node for a slice of table <tr>
+* nodes that overflowed onto a continuation page.
+*
+* The continuation table is structurally complete: it gets a cloned <colgroup>
+* (so column widths match the master), a cloned <thead> (repeated header row),
+* and a fresh <tbody> containing the moved <tr> nodes. This means each
+* continuation page is self-contained and will print correctly even if the
+* browser splits it at the wrong boundary.
+*
+* Cloning colgroup/thead with cloneNode(true) is intentional — the originals must
+* remain in the master table for the first page. The <tr> nodes are MOVED
+* (appendChild, not cloneNode) because they were already removed from the original
+* <tbody> by split_long_row → n.remove().
+*
+* The portal_table className + tableLayout inline style are copied so the
+* continuation table inherits any fixed-layout column sizing set by the renderer.
+*
+* master_content may be null in edge cases where the cell was rendered but its
+* content node was not yet in the DOM when split_long_row ran (null-guarded inline).
+*
+* @param {HTMLElement} table          - The master <table> element (colgroup/thead source)
+* @param {Array} seg_rows             - <tr> nodes to place in the continuation <tbody> (moved)
+* @param {Object} ctx                 - The active layout context (reserved for future use)
+* @param {HTMLElement} master_content - The master .cell_content div (inline style source); may be null
+* @returns {HTMLElement} A .flow_row.flow_continued node ready to append to a .flow_column
 */
 const build_continuation_table_node = function(table, seg_rows, ctx, master_content) {
 
