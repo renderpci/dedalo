@@ -11,24 +11,73 @@
 
 /**
 * RENDER_TOOL_IMAGE_CROP
-* Manages the component's logic and appearance in client side
+* Interactive crop-selection overlay for the image-rotation tool.
+*
+* All state and methods live directly on the constructor function (static
+* singleton pattern) — there is no instance created via `new`. The caller
+* (render_tool_image_rotation.js) invokes `render_tool_image_crop.build()`
+* once per editing session and `render_tool_image_crop.destroy()` when done.
+*
+* Interaction model:
+*  - Clicking the image or its container begins a new rubber-band selection.
+*  - Clicking in the shadow area outside an existing selection resets it.
+*  - Eight resize handles (nw, n, ne, w, e, sw, s, se) allow resizing the box.
+*  - Dragging anywhere else inside the selection moves the box.
+*
+* After every interactive change, `self.crop_area` is updated to the pixel
+* rectangle in *natural image coordinates* (i.e. relative to the original
+* file resolution, not the displayed size). This value is read directly by
+* `tool_image_rotation.prototype.apply_rotation` as `render_tool_image_crop.crop_area`.
+*
+* State properties set by `build()` and used across methods:
+*  - {boolean} is_selecting    — rubber-band draw is in progress
+*  - {boolean} is_dragging     — whole-box drag is in progress
+*  - {boolean} is_resizing     — handle-driven resize is in progress
+*  - {number}  start_x         — interaction anchor X (viewport pixels)
+*  - {number}  start_y         — interaction anchor Y (viewport pixels)
+*  - {string|null} current_handle — CSS class name of the active resize handle
+*  - {number}  natural_width   — source image naturalWidth (for coordinate scaling)
+*  - {number}  natural_height  — source image naturalHeight (for coordinate scaling)
+*  - {Object}  nodes           — map of DOM element references built by build()
+*  - {Object|null} crop_area   — last computed crop in natural pixels
+*                                 { x, y, width, height } or null when cleared
 */
 export const render_tool_image_crop = function() {
 
 	return this
-}//end render_tool_image_CROP
+}//end render_tool_image_crop
 
 
 
 /**
 * BUILD
-* create the crop instance and DOM nodes
-* @param object options
-* {
-* 	container 			: HTMLElement image container node, the work area
-* 	image 				: HTMLElement image node
-* 	status_container 	: HTMLElement text node, prompt to user
-* }
+* Creates the crop overlay DOM nodes, wires all mouse event listeners, and
+* initialises the interaction state on the singleton.
+*
+* Eight resize handles are injected as children of the `crop_selection` div;
+* their CSS classes follow the compass-point naming convention (nw, n, ne, w,
+* e, sw, s, se) which is later read by `start_drag_or_resize` via
+* `classList[1]` to identify the active handle.
+*
+* Bound references to the three primary handlers are stored on `self` so that
+* `destroy()` can call `removeEventListener` with the exact same function
+* objects (anonymous arrow functions cannot be removed later).
+*
+* (!) The `mouseup` handler is registered with an inline anonymous function.
+*     It cannot be removed by reference in `destroy()` — see the flag in
+*     `destroy()`. This is a pre-existing condition; do not change the code.
+*
+* @param {Object} options
+* @param {HTMLElement} options.container        - Wrapper div that acts as the
+*                                                 interactive canvas (positions
+*                                                 the overlay and clips it).
+* @param {HTMLElement} options.image            - The `<img>` element being
+*                                                 cropped; used to read
+*                                                 naturalWidth/naturalHeight for
+*                                                 coordinate scaling.
+* @param {HTMLElement} options.status_container - Inline status `<div>` updated
+*                                                 with live crop coordinates.
+* @returns {undefined}
 */
 render_tool_image_crop.build = async function(options) {
 
@@ -49,14 +98,18 @@ render_tool_image_crop.build = async function(options) {
 	const image					= options.image
 	const status_container		= options.status_container
 
+	// Capture source resolution for coordinate-scaling in update_crop_area().
 	self.natural_width	= image.naturalWidth;
 	self.natural_height	= image.naturalHeight;
 
+	// crop_selection: the visible rubber-band rectangle drawn over the image.
 	const crop_selection = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'crop_selection',
 		parent			: container
 	});
+		// Eight compass-point resize handles. The second CSS class (classList[1])
+		// encodes the handle name read in start_drag_or_resize().
 		const nw_handle = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'resize_handle nw',
@@ -110,9 +163,13 @@ render_tool_image_crop.build = async function(options) {
 	self.nodes.sw_handle		= sw_handle
 	self.nodes.s_handle			= s_handle
 	self.nodes.status_container = status_container
+	// (!) se_handle is created above but is not stored in self.nodes.
+	//     This is a pre-existing omission; do not change the code.
 
 
 	 // Store references to bound methods
+	// Bound versions are required so destroy() can pass the same function
+	// reference to removeEventListener().
 	self.bound_start_selection = self.start_selection.bind(self);
 	self.bound_start_drag_or_resize = self.start_drag_or_resize.bind(self);
 	self.bound_handle_mouse_move = self.handle_mouse_move.bind(self)
@@ -125,6 +182,10 @@ render_tool_image_crop.build = async function(options) {
 	self.nodes.container.addEventListener('mousemove', self.bound_handle_mouse_move );
 
 	// Mouse up handler
+	// (!) Anonymous function — cannot be removed by reference in destroy().
+	//     All interaction flags are reset on every mouseup regardless of which
+	//     sub-operation was in progress, so the residual listener is harmless
+	//     for the tool's lifetime but represents a minor leak.
 	self.nodes.container.addEventListener('mouseup', function() {
 		self.is_selecting	= false;
 		self.is_dragging	= false;
@@ -138,7 +199,20 @@ render_tool_image_crop.build = async function(options) {
 
 /**
 * DESTROY
-* Destroy the DOM nodes and its events
+* Removes the crop overlay from the DOM and detaches all named event listeners.
+*
+* Clears the current selection state first via `reset_selection()`, then walks
+* the child nodes of `crop_selection` and removes them before detaching the
+* element itself. The three named handlers (bound_start_selection,
+* bound_start_drag_or_resize, bound_handle_mouse_move) are removed by the same
+* bound references stored during `build()`.
+*
+* (!) The `mouseup` listener was registered with an anonymous function and
+*     cannot be removed here by reference. It will persist on the container
+*     node until it is garbage-collected with the container. This is a
+*     pre-existing condition; do not change the code.
+*
+* @returns {undefined}
 */
 render_tool_image_crop.destroy = function() {
 
@@ -162,6 +236,9 @@ render_tool_image_crop.destroy = function() {
 	// Mouse move handler
 	self.nodes.container.removeEventListener('mousemove', self.bound_handle_mouse_move );
 	// Mouse up handler
+	// (!) This removeEventListener call has no effect because the handler was
+	//     registered as an anonymous inline function in build(). A named/bound
+	//     reference would be required for removal to succeed.
 	self.nodes.container.removeEventListener('mouseup', function() {
 		self.is_selecting	= false;
 		self.is_dragging	= false;
@@ -175,8 +252,23 @@ render_tool_image_crop.destroy = function() {
 
 /**
 * START_SELECTION
-* Create the new crop selection area, or reset it when user click outside
-* @param e mouse down event
+* Handles `mousedown` on the container when no crop handle or box is involved.
+*
+* Guards:
+* - If the event target is neither the bare image nor the container (e.g. it
+*   lands on a resize handle), the function returns early so that
+*   `start_drag_or_resize` takes precedence.
+* - If a crop area already exists (`crop_area.width > 0`), a click in the
+*   surrounding shadow region resets the selection and returns without starting
+*   a new one. This prevents overlapping selections.
+*
+* When both guards pass, the click position is converted from viewport
+* coordinates to container-local coordinates (via `getBoundingClientRect`),
+* stored as `self.start_x / start_y`, and the crop_selection element is
+* positioned and shown at zero size, ready for the mousemove handler to expand.
+*
+* @param {MouseEvent} e - The native mousedown event.
+* @returns {undefined}
 */
 render_tool_image_crop.start_selection = function(e) {
 
@@ -214,9 +306,25 @@ render_tool_image_crop.start_selection = function(e) {
 
 /**
 * START_DRAG_OR_RESIZE
-* when user mouse down in the crop_selection
-* Set what is user has doing a resize or drag action?
-* @param e mouse down event
+* Handles `mousedown` on the crop_selection element to start either a
+* whole-box drag or a single-handle resize.
+*
+* Detection:
+* - If `e.target.closest('.resize_handle')` returns a node, resize mode is
+*   activated. The handle's compass-point name is read from `classList[1]`
+*   (the second CSS class, e.g. 'nw', 'se') and stored in `self.current_handle`.
+*   The interaction anchor is the absolute viewport position of the mouse.
+* - Otherwise, drag mode is activated. The anchor is computed as the offset
+*   of the mouse relative to the top-left corner of the crop_selection box so
+*   that dragging does not snap the box origin to the cursor position.
+*
+* (!) In resize mode, a `rect` variable is declared and assigned but never
+*     read. This is a pre-existing condition; do not change the code.
+*
+* `e.preventDefault()` suppresses text-selection during drag/resize.
+*
+* @param {MouseEvent} e - The native mousedown event on crop_selection.
+* @returns {undefined}
 */
 render_tool_image_crop.start_drag_or_resize = function(e) {
 
@@ -248,9 +356,15 @@ render_tool_image_crop.start_drag_or_resize = function(e) {
 
 /**
 * HANDLE_MOUSE_MOVE
-* when user mouse move in the container
-* perform the correct action based in the start_drag_or_resize() check
-* @param e mouse down event
+* Dispatches `mousemove` events on the container to the correct sub-handler
+* depending on the current interaction mode.
+*
+* Exactly one of the three state flags (`is_selecting`, `is_dragging`,
+* `is_resizing`) should be true during an active interaction; the first
+* matching branch wins.
+*
+* @param {MouseEvent} e - The native mousemove event fired on the container.
+* @returns {undefined}
 */
 render_tool_image_crop.handle_mouse_move = function(e) {
 
@@ -269,9 +383,19 @@ render_tool_image_crop.handle_mouse_move = function(e) {
 
 /**
 * UPDATE_SELECTION_SIZE
-* when user mouse move in the container
-* and is selecting a new area
-* @param e mouse down event
+* Expands or contracts the crop_selection box during rubber-band drawing.
+*
+* Both width and height are computed as the delta from the fixed anchor
+* (`self.start_x/y`) to the current cursor position. Negative deltas
+* (user drags left or up) are handled by using `Math.abs` for size and
+* switching the origin to `current_x/y` instead of the anchor, keeping
+* the box visually correct regardless of drag direction.
+*
+* Calls `update_crop_area()` after every move to keep `self.crop_area` in
+* sync with the displayed box.
+*
+* @param {MouseEvent} e - The native mousemove event from `handle_mouse_move`.
+* @returns {undefined}
 */
 render_tool_image_crop.update_selection_size = function(e) {
 
@@ -296,9 +420,21 @@ render_tool_image_crop.update_selection_size = function(e) {
 
 /**
 * UPDATE_SELECTION_POSITION
-* when user mouse move in the container
-* and is dragging the crop selection area
-* @param e mouse down event
+* Moves the whole crop_selection box during a drag operation.
+*
+* The target position is the current cursor position minus the drag offset
+* captured in `start_drag_or_resize` (`self.start_x/y`), so the box
+* follows the cursor from the point where the drag started rather than
+* snapping its origin to the cursor.
+*
+* The position is clamped so the box cannot be dragged outside the container:
+*  - left  : [0, container.width  - box.width]
+*  - top   : [0, container.height - box.height]
+*
+* Calls `update_crop_area()` after every move to keep `self.crop_area` in sync.
+*
+* @param {MouseEvent} e - The native mousemove event from `handle_mouse_move`.
+* @returns {undefined}
 */
 render_tool_image_crop.update_selection_position = function(e) {
 
@@ -320,10 +456,25 @@ render_tool_image_crop.update_selection_position = function(e) {
 
 
 /**
-* UPDATE_SELECTION_POSITION
-* when user mouse move in the container
-* and is resizing the crop selection area, user are dragging a handle
-* @param e mouse down event
+* UPDATE_SELECTION_RESIZE
+* Adjusts the crop_selection box geometry when the user drags one of the
+* eight compass-point resize handles.
+*
+* For each handle the geometry update is:
+*  - Corner handles (nw, ne, sw, se): both width/height and one or two
+*    origin axes change.
+*  - Edge handles (n, s, w, e): only the relevant dimension and, if the
+*    leading edge, its corresponding origin axis change.
+*
+* After computing the new geometry, position and size are clamped so the box
+* stays within the container. A minimum size of 10×10 px is enforced to
+* prevent collapsing the selection to zero.
+*
+* Calls `update_crop_area()` to keep `self.crop_area` in natural-pixel
+* coordinates in sync after every mousemove.
+*
+* @param {MouseEvent} e - The native mousemove event from `handle_mouse_move`.
+* @returns {undefined}
 */
 render_tool_image_crop.update_selection_resize = function(e) {
 
@@ -403,8 +554,32 @@ render_tool_image_crop.update_selection_resize = function(e) {
 
 /**
 * UPDATE_CROP_AREA
-* Calculate the crop are relative to the image
-* It will be used to crop the image in the server
+* Converts the current CSS position and size of the crop_selection box from
+* display pixels to natural (original-resolution) image pixels and stores the
+* result in `self.crop_area`.
+*
+* The display-to-natural scale factors are computed as:
+*   scale_x = image.naturalWidth  / image.clientWidth
+*   scale_y = image.naturalHeight / image.clientHeight
+*
+* These factors correct for any CSS scaling applied to the `<img>` element.
+* All four coordinates are rounded to integer pixels before being stored.
+*
+* `self.crop_area` shape:
+* {
+*   x      : {number} left edge in natural pixels
+*   y      : {number} top  edge in natural pixels
+*   width  : {number} width  in natural pixels
+*   height : {number} height in natural pixels
+* }
+*
+* The status_container is updated with a human-readable summary after each
+* recalculation, giving the user live coordinate feedback.
+*
+* This value is read by `tool_image_rotation.prototype.apply_rotation` via
+* `render_tool_image_crop.crop_area` and sent to the PHP server API.
+*
+* @returns {undefined}
 */
 render_tool_image_crop.update_crop_area = function() {
 
@@ -435,8 +610,16 @@ render_tool_image_crop.update_crop_area = function() {
 
 /**
 * RESET_SELECTION
-* Reset the crop area
-* Empty crop_selection node and the status_container node
+* Hides the crop_selection overlay and clears the stored crop_area.
+*
+* Uses optional chaining (`?.`) on `self.nodes` so this method is safe to
+* call before `build()` has completed or after partial initialisation.
+*
+* Sets `self.crop_area` to `null` (not an empty object) to signal "no active
+* selection" — callers such as `apply_rotation` check for null before
+* including crop coordinates in the API request.
+*
+* @returns {undefined}
 */
 render_tool_image_crop.reset_selection = function() {
 
@@ -452,7 +635,6 @@ render_tool_image_crop.reset_selection = function() {
 	self.crop_area = null
 
 }// end reset_selection
-
 
 
 
