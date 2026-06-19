@@ -221,15 +221,7 @@ export const render_export_hierarchy_node = function (options) {
 					form_container.classList.remove('lock')
 					spinner.remove()
 
-					const json_node =ui.create_dom_element({
-						element_type	: 'pre',
-						inner_html		: JSON.stringify(response, null, 2),
-						parent			: body_response
-					})
-					const dblclick_handler = (e) => {
-						json_node.remove()
-					}
-					json_node.addEventListener('dblclick', dblclick_handler)
+					render_export_response(response, body_response)
 				})
 			}
 		})
@@ -240,6 +232,86 @@ export const render_export_hierarchy_node = function (options) {
 
 	return fragment
 }//end render_export_hierarchy_node
+
+
+
+/**
+* RENDER_EXPORT_RESPONSE
+* Renders the data-oriented export_hierarchy API response into the body_response node.
+* The response carries no HTML; this function builds the DOM from its fields:
+*   { result:bool, msg:string, errors:string[], files:[{section_tipo,table,file_name,bytes,url}], import_hint:string }
+* @param object response
+* @param HTMLElement body_response
+* @return void
+*/
+const render_export_response = function(response, body_response) {
+
+	// clean previous content
+		while (body_response.firstChild) {
+			body_response.removeChild(body_response.firstChild)
+		}
+
+	// summary line (result + msg)
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: response.result===true ? 'response_ok' : 'response_error',
+			inner_html		: response.msg || (response.result===true ? 'OK' : 'Error'),
+			parent			: body_response
+		})
+
+	// produced files as real download links
+		const files = Array.isArray(response.files) ? response.files : []
+		if (files.length>0) {
+			const list = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'export_files',
+				parent			: body_response
+			})
+			files.forEach(file => {
+				const item = ui.create_dom_element({
+					element_type	: 'li',
+					parent			: list
+				})
+				const link = ui.create_dom_element({
+					element_type	: 'a',
+					// text_content (not inner_html) keeps the value as data, never markup
+					text_content	: file.file_name || file.url,
+					parent			: item
+				})
+				link.href	= file.url
+				link.target	= '_blank'
+				link.rel	= 'noopener noreferrer'
+			})
+		}
+
+	// errors
+		const errors = Array.isArray(response.errors) ? response.errors : []
+		if (errors.length>0) {
+			const error_list = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'export_errors',
+				parent			: body_response
+			})
+			errors.forEach(error => {
+				ui.create_dom_element({
+					element_type	: 'li',
+					class_name		: 'response_error',
+					text_content	: error,
+					parent			: error_list
+				})
+			})
+		}
+
+	// import hint (plain text, selectable for copy-paste)
+		if (response.import_hint) {
+			ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'import_hint',
+				text_content	: response.import_hint,
+				parent			: body_response
+			})
+		}
+}//end render_export_response
 
 
 

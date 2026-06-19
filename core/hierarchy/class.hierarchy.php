@@ -1105,9 +1105,12 @@ class hierarchy extends ontology {
 	* Dumps one or more thesaurus matrix tables to gzip-compressed psql COPY files
 	* on the filesystem at EXPORT_HIERARCHY_PATH.
 	*
-	* The export is performed via a shell call to `psql … \copy … TO <file> ; gzip`.
-	* After all files are written the method scans EXPORT_HIERARCHY_PATH for .gz files
-	* and includes download links in the response message.
+	* Each export runs as a single atomic psql command:
+	*   psql … -c "\copy (SELECT … FROM <table> WHERE …) TO PROGRAM 'gzip -c > <file> && sync'"
+	* so the compressed file is written in one pass (no intermediate uncompressed
+	* .copy file, no reliance on the shell `cd`). After each command the resulting
+	* file is verified to exist; only files actually produced in this run are listed
+	* as download links and counted towards success.
 	*
 	* $section_tipo accepts three forms:
 	*   '*'         — export all currently active hierarchies (one file per section_tipo)
@@ -1120,19 +1123,25 @@ class hierarchy extends ontology {
 	*   anything else → 'matrix_hierarchy'
 	*
 	* Requires:
-	*   - EXPORT_HIERARCHY_PATH constant defined (absolute filesystem path).
+	*   - EXPORT_HIERARCHY_PATH constant defined and pointing to a writable directory.
 	*   - DB_BIN_PATH and DEDALO_DATABASE_CONN constants for the psql invocation.
-	*   - The web server user must have write access to EXPORT_HIERARCHY_PATH.
 	*
-	* (!) This method calls shell_exec() directly. EXPORT_HIERARCHY_PATH must
-	* point to a directory the web server process can write to. All section tipo
-	* values are passed through safe_tipo() before shell interpolation.
+	* (!) This method calls shell_exec() directly. All section tipo values are passed
+	* through safe_tipo() (regex ^[a-z]{2,}[0-9]+$) before shell interpolation, and the
+	* output path is built from the trusted EXPORT_HIERARCHY_PATH constant, so no
+	* user-controlled value reaches the shell unvalidated.
+	*
+	* The response is data-oriented (no HTML); the client is responsible for
+	* presentation and for escaping any field it renders into the DOM.
 	*
 	* @param string $section_tipo - Export scope: '*', 'all', or comma-separated tipo list.
 	* @return object $response
-	*   - result  bool    true when export commands complete without PHP-level errors.
-	*   - msg     string  Human-readable summary including download links for .gz files.
-	*   - errors  array   Per-section error strings for skipped or invalid tipos.
+	*   - result      bool    true when at least one export file was produced.
+	*   - msg         string  Plain-text one-line summary (e.g. 'OK. 3 hierarchy file(s) exported').
+	*   - errors      array   Per-section error strings for skipped, invalid or failed tipos.
+	*   - files       array   One stdClass per produced file, each with:
+	*                           { section_tipo, table, file_name, bytes, url }.
+	*   - import_hint string  Plain-text psql command template to re-import a .copy.gz file.
 	*/
 	public static function export_hierarchy( string $section_tipo ) : object {
 
@@ -1141,9 +1150,14 @@ class hierarchy extends ontology {
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 			$response->errors	= [];
 
-		// EXPORT_HIERARCHY_PATH check
+		// EXPORT_HIERARCHY_PATH check. Must be defined and writable before shelling out.
 			if (!defined('EXPORT_HIERARCHY_PATH')) {
 				$response->errors[] = 'var EXPORT_HIERARCHY_PATH is not defined';
+				return $response;
+			}
+			$export_path = rtrim(EXPORT_HIERARCHY_PATH, '/');
+			if (!is_dir($export_path) || !is_writable($export_path)) {
+				$response->errors[] = 'EXPORT_HIERARCHY_PATH is not a writable directory: '.$export_path;
 				return $response;
 			}
 
@@ -1162,96 +1176,107 @@ class hierarchy extends ontology {
 
 			}else{
 
-				$ar_section_tipo = explode(',', $section_tipo);
-				foreach ($ar_section_tipo as $key => $current_section_tipo) {
-					$ar_section_tipo[$key] = trim($current_section_tipo);
-				}
+				$ar_section_tipo = array_map('trim', explode(',', $section_tipo));
 			}
 
-		$msg = [];
-		foreach ($ar_section_tipo as $key => $current_section_tipo) {
+		// columns. Like 'section_id,section_tipo,data,relation,...'
+		// (!) matrix_db_manager::$columns is an associative allowlist map
+		// ('section_id' => true, ...); implode() on it would yield '1,1,1,...'.
+		// Use get_columns_name() to obtain the real column names (array_keys).
+		// Computed once: it is identical for every section in this run.
+			$columns = implode(',', matrix_db_manager::get_columns_name());
 
-			// safe tipo. Must be as 'es1', not only the tld
-			$safe_tipo = safe_tipo($current_section_tipo);
-			if ($safe_tipo===false) {
-				debug_log(__METHOD__
-					. " Ignored invalid section tipo " . PHP_EOL
-					. ' section_tipo: ' . to_string($current_section_tipo)
-					, logger::ERROR
-				);
-				$response->errors[]	= 'Ignored invalid section tipo: ' . $current_section_tipo. ' . Use format like "es1"';
-				continue;
-			}
+		// command base (binary + dbname + host/port/user). Built once and reused.
+			$command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN.' '.DBi::get_connection_string();
 
-			$matrix_table = $safe_tipo==='lg1' || $safe_tipo==='lg2'
-				? 'matrix_langs'
-				: 'matrix_hierarchy';
+		$files			= [];				// structured records of files actually written in this run
+		$matrix_table	= 'matrix_hierarchy';	// default for the import hint (overwritten per section)
+		foreach ($ar_section_tipo as $current_section_tipo) {
 
-			$columns = implode(',', matrix_db_manager::$columns);
-
-			$command  = '';
-			$command .= 'cd "'.EXPORT_HIERARCHY_PATH.'" ; ';
-			$command  .= DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
-			$command .= ' -c "\copy (SELECT '. $columns .'  FROM '.$matrix_table.' WHERE ';
+			// Resolve target table, WHERE/ORDER clause and output file name per scope.
 			if ($current_section_tipo==='all') {
 
-				$command .= 'section_tipo IS NOT NULL ORDER BY section_tipo, section_id ASC) ';
-				$date 	  = date('Y-m-d_His');
-				$command .= 'TO '.$current_section_tipo.'_'.$date.'.copy " ; ';
-				$command .= 'gzip -f '.$current_section_tipo.'_'.$date.'.copy';
+				// export every row regardless of section_tipo into one timestamped file
+				$matrix_table	= 'matrix_hierarchy';
+				$where			= 'section_tipo IS NOT NULL';
+				$order			= 'section_tipo, section_id ASC';
+				$file_name		= 'all_'.date('Y-m-d_His').'.copy.gz';
 
 			}else{
-				$command .= 'section_tipo = \''.$safe_tipo.'\' ORDER BY section_id ASC) ';
-				$command .= 'TO '.$safe_tipo.'.copy " ; ';
-				$command .= 'gzip -f '.$safe_tipo.'.copy';
+
+				// safe tipo. Must be as 'es1', not only the tld
+				$safe_tipo = safe_tipo($current_section_tipo);
+				if ($safe_tipo===false) {
+					debug_log(__METHOD__
+						. " Ignored invalid section tipo " . PHP_EOL
+						. ' section_tipo: ' . to_string($current_section_tipo)
+						, logger::ERROR
+					);
+					$response->errors[]	= 'Ignored invalid section tipo: ' . $current_section_tipo. ' . Use format like "es1"';
+					continue;
+				}
+
+				$matrix_table	= ($safe_tipo==='lg1' || $safe_tipo==='lg2')
+					? 'matrix_langs'
+					: 'matrix_hierarchy';
+				$where			= "section_tipo = '".$safe_tipo."'";
+				$order			= 'section_id ASC';
+				$file_name		= $safe_tipo.'.copy.gz';
 			}
-			debug_log(__METHOD__
-				.' Exec command (export_hierarchy) '.PHP_EOL
-				.to_string($command)
-				, logger::WARNING
-			);
+
+			$file_path = $export_path.'/'.$file_name;
+
+			// Atomic export: stream the COPY result straight through gzip to the final
+			// .copy.gz file. && sync flushes it to disk before psql returns.
+			$command = $command_base
+				.' -c "\copy (SELECT '.$columns.' FROM '.$matrix_table
+				.' WHERE '.$where.' ORDER BY '.$order.')'
+				." TO PROGRAM 'gzip -c > ".$file_path." && sync';\"";
+
+			if (SHOW_DEBUG===true) {
+				debug_log(__METHOD__
+					.' Exec command (export_hierarchy) '.PHP_EOL
+					.to_string($command)
+					, logger::WARNING
+				);
+			}
 
 			$command_res = shell_exec($command);
-			debug_log(__METHOD__
-				.' Exec response (shell_exec) ' . PHP_EOL
-				.to_string($command_res)
-				, logger::DEBUG
-			);
 
-			$msg[] = trim('section_tipo: '.$current_section_tipo.' = '.to_string($command_res));
-		}//end foreach ($ar_section_tipo as $key => $current_section_tipo)
-
-		// response OK
-		// (!) $command_res holds the last value set inside the foreach loop. If the loop
-		// ran zero iterations (empty $ar_section_tipo), $command_res is undefined here.
-		// The undefined-variable warning is a pre-existing condition; do not change code.
-			$response->result	= true;
-			$response->msg	= 'OK. All data is exported successfully'; // Override first message
-			$response->msg	.= "<br>".implode('<br>', $msg);
-			$response->msg	.= '<br>' . 'command_res: ' .$command_res;
-			$response->msg	.= '<br>' . 'To import, use a command like this: ';
-			$response->msg	.= '<br>' . 'SECTION_TIPO=\'us1\' ; gunzip ${SECTION_TIPO}.copy.gz | psql dedalo_myentity -U mydbuser -h localhost -c "\copy matrix_hierarchy('. $columns .') from ${SECTION_TIPO}.copy"';
-
-		// files links
-			$dir_path	= EXPORT_HIERARCHY_PATH; // like '../httpdocs/dedalo/install/import/hierarchy'
-			$files		= glob( $dir_path . '/*' ); // get all file names
-			$ar_link	= [];
-			foreach($files as $file){ // iterate files
-				if(is_file($file)) {
-					$extension = pathinfo($file,PATHINFO_EXTENSION);
-					if ($extension==='gz') {
-						$file_name = pathinfo($file,PATHINFO_BASENAME);
-						$url	= DEDALO_ROOT_WEB . '/install/import/hierarchy/' . $file_name;
-						// SEC-033: rel=noopener and htmlspecialchars on URL/label.
-						$safe_url = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
-						$a		= '<a href="'.$safe_url.'" target="_blank" rel="noopener noreferrer">'.$safe_url.'</a>';
-						$ar_link[] = $a;
-					}
-				}
+			// Verify the file was actually produced; shell_exec gives no usable status.
+			if (is_file($file_path)) {
+				// structured success record (consumed as data by the client; no HTML).
+				$file = new stdClass();
+					$file->section_tipo	= $current_section_tipo;
+					$file->table		= $matrix_table;
+					$file->file_name	= $file_name;
+					$file->bytes		= filesize($file_path) ?: null;
+					$file->url			= DEDALO_ROOT_WEB . '/install/import/hierarchy/' . $file_name;
+				$files[] = $file;
+			}else{
+				debug_log(__METHOD__
+					.' Export failed (file not created) '.PHP_EOL
+					.' file: '.to_string($file_path).PHP_EOL
+					.' command_res: '.to_string($command_res)
+					, logger::ERROR
+				);
+				$response->errors[]	= 'Export failed for section_tipo: '.$current_section_tipo
+					.($command_res ? ' ('.trim($command_res).')' : '');
 			}
-			if (!empty($ar_link)) {
-				$response->msg	.= '<br>Available files for download: ' . '<br>' . implode('<br>', $ar_link);
-			}
+		}//end foreach ($ar_section_tipo as $current_section_tipo)
+
+		// response (data-oriented; the client renders these fields, no HTML in msg).
+		// result: true when at least one file was produced. Skipped/failed sections
+		// are reported through $response->errors; produced files through $response->files.
+			$response->result	= !empty($files);
+			$response->msg		= $response->result
+				? 'OK. '.count($files).' hierarchy file(s) exported'
+				: 'Error. No hierarchy files were exported';
+			$response->files	= $files;
+			// import_hint: plain-text command template the operator can copy-paste.
+			$response->import_hint = 'SECTION_TIPO=\'us1\' ; gunzip -c ${SECTION_TIPO}.copy.gz'
+				.' | psql dedalo_myentity -U mydbuser -h localhost'
+				.' -c "\copy '.$matrix_table.'('.$columns.') from STDIN"';
 
 
 		return $response;
