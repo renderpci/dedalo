@@ -1,10 +1,42 @@
 <?php declare(strict_types=1);
 /**
- * AREA_MAINTENANCE
- * System administrator's area with useful methods to
- * backup, review data, update Ontology, etc.
- * @see API entry point dd_area_maintenance_api.class
- */
+* AREA_MAINTENANCE
+* System administrator's maintenance area: widget catalogue, ontology management,
+* config-core overrides, data-version migrations, and integrity tooling.
+*
+* This class is the business-logic layer of the Maintenance area in Dédalo's
+* admin dashboard. It is never instantiated directly by HTTP handlers; instead,
+* `dd_area_maintenance_api::class_request()` and `::widget_request()` route
+* validated, permission-checked calls here.
+*
+* Responsibilities:
+* - Widget catalogue: `get_ar_widgets()` builds the full ordered list of dashboard
+*   widgets (backup, config, ontology, migration, diffusion, integrity, system, dev).
+*   Each widget object carries the metadata the JS canvas needs to render the panel.
+* - Config-core overrides: `set_config_core()` is the single write-gate for runtime
+*   flags persisted in `config_core.php` (maintenance mode, recovery mode, media
+*   access mode, notification banner). The allowlist is hard-coded to a fixed set of
+*   constant names; unknown names are rejected immediately.
+* - Ontology pipeline: `update_ontology()` downloads remote `.copy.gz` dumps,
+*   imports them into PostgreSQL, syncs `dd_ontology`, rebuilds lang files, flushes
+*   hierarchy caches, and saves a schema-diff file for the security-access audit trail.
+* - Data-version migration: `update_data_version()` delegates to `update::update_version()`
+*   (loaded on demand) and is restricted to DEDALO_SUPERUSER + maintenance mode.
+* - Tool registration: `register_tools()` wraps `tools_register::import_tools()` with
+*   error aggregation, giving the UI a single call to refresh all registered tools.
+* - Integrity helpers: `create_test_record()` provisions a known row in `matrix_test`
+*   for unit tests; `get_definitions_files()` serves transform-definition JSON files
+*   for the migration widgets.
+* - Security posture: two explicit allowlists (`BACKGROUND_RUNNABLE`, `API_ACTIONS`)
+*   prevent accidental exposure of helpers; `get_file_constants()` and
+*   `get_definitions_files()` both enforce realpath confinement (SEC-069).
+*
+* Extends: area_common (core/area_common/class.area_common.php)
+* API entry point: dd_area_maintenance_api (core/api/v1/common/class.dd_area_maintenance_api.php)
+*
+* @package Dédalo
+* @subpackage Core
+*/
 class area_maintenance extends area_common {
 
 
@@ -63,12 +95,37 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * GET_AR_WIDGETS
-	 * Definition of all visible widgets in the area
-	 * Every widget has the client side code in JavaScript
-	 * @return array $ar_widgets Widget objects. Each widget has a unique ID, name (string), code snippet in JavaScript.
-	 *	Array of widget objects
-	 */
+	* GET_AR_WIDGETS
+	* Builds and returns the ordered list of all maintenance-area dashboard widgets.
+	*
+	* Each widget is constructed as a plain stdClass and normalised through
+	* `widget_factory()`. The resulting array is serialised into the area JSON
+	* payload and consumed by the JS canvas which renders one collapsible panel per
+	* widget. The ordering here controls the display order in the UI.
+	*
+	* Widget categories group panels in the sidebar navigation:
+	*   'data'       — backup, versioning, hierarchy management
+	*   'config'     — configuration checks, ontology, code updates, tool registration
+	*   'migration'  — bulk-move operations (TLD, locator, portal, table, lang)
+	*   'diffusion'  — publication API status, diffusion server process control
+	*   'integrity'  — lock/sequence/counter/dataframe/media integrity checks
+	*   'system'     — PHP runtime, database, environment, server diagnostics
+	*   'dev'        — API and SQO test harnesses, unit-test runner
+	*
+	* Side effects: Several widgets eagerly fetch live data at build time:
+	*   - `publication_api`     calls `diffusion_utils::get_diffusion_map()` (network probe)
+	*   - `sequences_status`    calls `db_tasks::check_sequences()` (DB query)
+	*   - `php_user`            calls `system::get_php_user_info()` + `system::get_error_log_path()`
+	*   - Migration widgets     call `area_maintenance::get_definitions_files()` (filesystem scan)
+	* Widgets with `background: true` (update_data_version, diffusion_server_control,
+	* system_info) are loaded asynchronously on the JS side so their eager calls do
+	* not block the initial page render.
+	*
+	* (!) Keep this method in sync with `get_ar_widget_ids()`. The drift guard in
+	* test/server/area/area_maintenance_Test.php will fail if they diverge.
+	*
+	* @return array<object> Array of normalised widget stdClass objects.
+	*/
 	public function get_ar_widgets(): array {
 
 		$ar_widgets = [];
@@ -450,11 +507,34 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * WIDGET_FACTORY
-	 * Unified way to create an area-development widget.
-	 * @param object $item
-	 * @return object $widget
-	 */
+	* WIDGET_FACTORY
+	* Normalises a partially-specified widget descriptor into a complete widget object.
+	*
+	* Callers (all inside `get_ar_widgets()`) construct a minimal stdClass with only
+	* the fields they care about and pass it here. This factory fills every expected
+	* field with a sensible default so the JS canvas can always rely on a consistent
+	* shape without null-checking every property.
+	*
+	* Output shape (all fields always present):
+	* {
+	*   id:         string   — widget identifier, matches the widget directory name
+	*   class:      ?string  — optional CSS modifier class(es) for the panel element
+	*   category:   string   — sidebar group key (default 'general')
+	*   type:       'widget' — always 'widget'
+	*   tipo:       string   — ontology tipo of the parent area (or item override)
+	*   parent:     string   — tipo of the containing area (used for context routing)
+	*   label:      string   — localised display name shown in the panel header
+	*   info:       ?string  — optional secondary info text
+	*   body:       ?string  — optional HTML body pre-injected into the panel
+	*   run:        array    — list of JS action descriptors; empty by default
+	*   trigger:    ?mixed   — client-side trigger descriptor; null by default
+	*   value:      ?mixed   — pre-loaded payload surfaced to JS without an extra fetch
+	*   background: bool     — when true JS loads the widget value lazily at idle time
+	* }
+	*
+	* @param object $item - Partial widget descriptor; only set fields override defaults.
+	* @return object - Fully-populated widget stdClass.
+	*/
 	public function widget_factory(object $item): object {
 
 		$widget = new stdClass();
@@ -479,12 +559,26 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * GET_FILE_CONSTANTS
-	 * Get all config file constants using a regex
-	 * @param string $file
-	 * 	full file path like DEDALO_CONFIG_PATH . '/sample.config.php'
-	 * @return array $constants_list
-	 */
+	* GET_FILE_CONSTANTS
+	* Parses a PHP config file and returns the names of all `define()` calls found in it.
+	*
+	* The method is used by the `check_config` widget to enumerate the constants declared
+	* in a given config file so the UI can display which runtime flags are in effect.
+	*
+	* Security (SEC-069): the argument is resolved through `realpath()` and then checked
+	* against a hard-coded set of allowed roots (`DEDALO_CONFIG_PATH`, `DEDALO_CORE_PATH`).
+	* Any path that resolves outside those roots — or fails to resolve at all — returns an
+	* empty array and logs an ERROR. This guards against future API_ACTIONS entries or
+	* dispatcher refactors inadvertently forwarding user-controlled paths here.
+	*
+	* The regex pattern `[^\/\/ #]define\('(\S*)',.*` intentionally skips lines
+	* that are commented out with `//` or `#`. Only the constant name (capture group 1) is
+	* returned; values are not extracted.
+	*
+	* @param string $file - Absolute path to the PHP config file to parse
+	*                       (e.g. DEDALO_CONFIG_PATH . '/config.php').
+	* @return array<string> - List of constant names defined in the file; empty on failure.
+	*/
 	public static function get_file_constants(string $file): array {
 
 		// SEC-069: realpath containment. Every current caller passes a path
@@ -532,10 +626,17 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * CREATE_DB_EXTENSIONS
-	 * Force to create the PostgreSQL main extensions
-	 * @return object $response
-	 */
+	* CREATE_DB_EXTENSIONS
+	* Ensures that the required PostgreSQL extensions (e.g. `uuid-ossp`, `pg_trgm`)
+	* are installed in the current database.
+	*
+	* Delegates entirely to `db_tasks::create_extensions()`. Exposed here so the
+	* maintenance UI can trigger extension creation without direct DB shell access.
+	* Idempotent: running it on a database that already has the extensions is safe.
+	*
+	* @return object - Response object from db_tasks::create_extensions()
+	*                  {result: bool, msg: string, errors?: array}.
+	*/
 	public static function create_db_extensions(): object {
 
 		$response = db_tasks::create_extensions();
@@ -546,10 +647,17 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * EXEC_DB_MAINTENANCE
-	 * Force to perform a basic PostgreSQL maintenance for indexing
-	 * @return object $response
-	 */
+	* EXEC_DB_MAINTENANCE
+	* Runs basic PostgreSQL maintenance operations (VACUUM, ANALYZE, REINDEX) to
+	* reclaim storage and refresh query-planner statistics.
+	*
+	* Delegates to `db_tasks::exec_maintenance()`. Intended to be called after bulk
+	* data imports or schema migrations where index bloat or stale statistics could
+	* affect query performance. This can be a long-running operation on large databases.
+	*
+	* @return object - Response object from db_tasks::exec_maintenance()
+	*                  {result: bool, msg: string, errors?: array}.
+	*/
 	public static function exec_db_maintenance(): object {
 
 		$response = db_tasks::exec_maintenance();
@@ -560,16 +668,40 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * LONG_PROCESS_STREAM
-	 * Print a sequential number every 1000 milliseconds
-	 * Used to test long processes and timeouts issues
-	 * @param object $options
-	 * {
-	 * 	iterations: int,
-	 * 	update_rate: int
-	 * }
-	 * @return object Returns object in CLI mode
-	 */
+	* LONG_PROCESS_STREAM
+	* Developer diagnostic: emits a timed sequence of progress events to exercise
+	* the long-running background-process infrastructure and surface timeout issues.
+	*
+	* The method has two execution branches depending on `running_in_cli()`:
+	*
+	* CLI branch (spawned by `process_runner.php` via `exec_::request_cli()`):
+	*   Loops `$iterations` times, sleeping `$update_rate` ms between each tick.
+	*   Each iteration calls `print_cli()` which writes a JSON progress object to
+	*   stdout; `process_runner` relays this to the JS poller via the status file.
+	*   Also triggers a PHP `E_USER_NOTICE` via `trigger_error()` each iteration so
+	*   the ini_get error_log path can be verified in the server error log.
+	*   Returns a summary object when the loop finishes.
+	*
+	* HTTP/SSE branch (direct AJAX call, no background_running flag):
+	*   Emits an `text/event-stream` (Server-Sent Events) response. The session is
+	*   closed before the loop starts to prevent blocking other requests on the same
+	*   session. Each tick writes a JSON line followed by `\n\n` and flushes all
+	*   output buffers. Apache HTTP/1.1 requires chunks ≥ 4096 bytes to avoid
+	*   buffering; undersized payloads are padded with a `fill_buffer` field.
+	*   The loop exits when `connection_aborted()` returns true (client disconnected).
+	*   The `return` at the end of the HTTP branch is unreachable at runtime but
+	*   satisfies PHP's strict `object` return type declaration.
+	*
+	* This method is listed in `BACKGROUND_RUNNABLE` (process_runner gate) and
+	* `API_ACTIONS` (class_request gate).
+	*
+	* @param object $options - {
+	*   iterations:  int [= 10]   — number of ticks before the CLI loop exits
+	*   update_rate: int [= 1000] — milliseconds between ticks in both branches
+	* }
+	* @return object - CLI: summary {msg, iterations, update_rate, memory};
+	*                  HTTP: unreachable stub {result: false, msg: 'Stream ended'}.
+	*/
 	public static function long_process_stream(object $options): object {
 
 		// options
@@ -697,11 +829,28 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * CREATE_TEST_RECORD
-	 * This record it's necessary to run unit_test checks
-	 * Table 'matrix_test' must to exists
-	 * @return object $response
-	 */
+	* CREATE_TEST_RECORD
+	* Provisions a known fixture record in `matrix_test` so that unit tests have
+	* a deterministic starting state.
+	*
+	* The operation runs three sequential SQL statements:
+	*   1. TRUNCATE matrix_test       — removes any leftover rows from prior runs.
+	*   2. ALTER SEQUENCE … RESTART   — resets the id auto-increment to 1 so test
+	*                                   assertions on section_id are stable.
+	*   3. INSERT INTO matrix_test    — inserts a single row whose `datos` column is
+	*                                   populated from the bundled `test_data.json`
+	*                                   file next to this class file.
+	*
+	* Precondition: the `matrix_test` table and its sequence `matrix_test_id_seq`
+	* must already exist in PostgreSQL (created by the DB install scripts). If the
+	* table is absent all three statements will fail with a pg_last_error() message.
+	*
+	* This method is listed in `API_ACTIONS` and is callable from the `unit_test`
+	* widget in the maintenance dashboard.
+	*
+	* @return object - {result: bool, msg: string}; result is false if any SQL step
+	*                  fails, with msg containing the pg_last_error() details.
+	*/
 	public static function create_test_record(): object {
 
 		$response = new stdClass();
@@ -775,15 +924,25 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * REGISTER_TOOLS
-	 * Alias of tools_register::import_tools
-	 * @return object $response
-	 * {
-	 *	result: array|false (on success, list of imported tools objects)
-	 * 	msg: string
-	 * 	errors: array
-	 * }
-	 */
+	* REGISTER_TOOLS
+	* Scans all tool directories, reads their `register.json` files, and persists
+	* the tool metadata into the Dédalo ontology/database (via `tools_register::import_tools()`).
+	*
+	* This is the server-side handler for the `register_tools` widget button. It must
+	* be re-run whenever a new tool is added or an existing tool's `register.json` is
+	* updated (e.g. after a code deploy).
+	*
+	* Error aggregation: each imported tool object may carry an `errors` array; this
+	* method merges all of them into a single flat errors list on the response so the UI
+	* can display a consolidated warning without having to dig into per-tool results.
+	*
+	* @return object - {
+	*   result: array<object>|false — on success the list of imported tool result objects;
+	*                                 false only if import_tools() itself fails entirely,
+	*   msg:    string              — 'OK. Request done successfully' or a warning,
+	*   errors: array               — merged list of per-tool error strings.
+	* }
+	*/
 	public static function register_tools(): object {
 
 		$response = new stdClass();
@@ -815,25 +974,38 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * UPDATE_DATA_VERSION
-	 * Updates Dédalo data version.
-	 * Allow change components data format or add new tables or index
-	 * Triggered by Area Development button 'UPDATE DATA'
-	 * Sample: Current data version: 5.8.2 -----> 6.0.0
-	 * @param object $options
-	 * {
-	 *	"updates_checked": {
-	 *		"SQL_update_1": true,
-	 *		"components_update_1": true,
-	 *		"components_update_2": true,
-	 *		"components_update_3": true,
-	 *		"components_update_4": true,
-	 *		"run_scripts_1": true,
-	 *		"run_scripts_2": true
-	 *	}
-	 * }
-	 * @return object $response
-	 */
+	* UPDATE_DATA_VERSION
+	* Runs the pending data-version migration scripts against the live database.
+	*
+	* Migrations can alter component data formats, add or rename tables, create or
+	* drop indexes, and run arbitrary PHP scripts. They are versioned (e.g. 5.8.2 →
+	* 6.0.0) and each migration step is gated by the corresponding key in
+	* `$options->updates_checked`. Only steps whose key maps to `true` are executed;
+	* unchecked steps are skipped.
+	*
+	* Hard preconditions (enforced before delegating to `update::update_version()`):
+	*   1. The currently logged-in user must be DEDALO_SUPERUSER.
+	*   2. The instance must be in maintenance mode (DEDALO_MAINTENANCE_MODE_CUSTOM or
+	*      DEDALO_MAINTENANCE_MODE must be `true`). This prevents running migrations
+	*      while normal users are editing data.
+	*
+	* The update class is loaded on demand (`include_once`) because it is only needed
+	* during migrations and should not be part of the normal request bootstrap.
+	*
+	* Exceptions thrown inside `update::update_version()` are caught, logged, and
+	* appended to the update log at DEDALO_CONFIG_PATH/update.log.
+	*
+	* This method is listed in both `BACKGROUND_RUNNABLE` and (implicitly, through
+	* `class_request`) the gated action set. The `update_data_version` widget sets
+	* `background_running: true` so the call is spawned as a detached CLI process.
+	* Time limit is set to 3 days (259200 s) to accommodate large-dataset migrations.
+	*
+	* @param object $options - {
+	*   updates_checked: object — map of migration-step keys to bool; only true steps run.
+	*                             e.g. {"SQL_update_1": true, "components_update_1": false}
+	* }
+	* @return object - {result: bool, msg: string, errors: array}.
+	*/
 	public static function update_data_version(object $options): object {
 
 		// options
@@ -902,12 +1074,44 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * SET_CONFIG_CORE
-	 * This function set a custom maintenance mode. Useful when the root user
-	 * do not have access to the config file to edit
-	 * @param object $options
-	 * @return object $response
-	 */
+	* SET_CONFIG_CORE
+	* Single write-gate for persisting runtime-override constants into `config_core.php`.
+	*
+	* This is the only place in Dédalo that may write to the config_core file. All
+	* public set_* methods (`set_maintenance_mode`, `set_recovery_mode`,
+	* `set_media_access_mode`, `set_notification`) delegate here rather than writing
+	* the file directly, ensuring that access control and value validation are applied
+	* consistently.
+	*
+	* Behaviour depends on whether the constant already exists in the file:
+	*   - Not present: appends `define('NAME', value);` via `FILE_APPEND | LOCK_EX`.
+	*   - Already present: replaces the existing `define(…)` line via regex + full
+	*     file rewrite with `LOCK_EX`.
+	*
+	* Access control:
+	*   - The logged-in user must be DEDALO_SUPERUSER for all constants except
+	*     `DEDALO_RECOVERY_MODE`. The recovery-mode exception allows the system to
+	*     set this flag during an API boot-failure scenario where the ontology is
+	*     unavailable (see `dd_core_api->start`).
+	*
+	* Allowlisted constant names and their permitted value types:
+	*   DEDALO_MAINTENANCE_MODE_CUSTOM   — bool (serialised via json_encode)
+	*   DEDALO_RECOVERY_MODE             — bool (serialised via json_encode)
+	*   DEDALO_MEDIA_ACCESS_MODE_CUSTOM  — null | false | 'private' | 'publication'
+	*   DEDALO_NOTIFICATION_CUSTOM       — bool | string (XSS-sanitised via safe_xss)
+	*
+	* Any name not in the switch is rejected with an 'Error. Invalid name' response.
+	* Any value of a wrong type for the matched name is also rejected.
+	*
+	* The `config_core_file_path` is resolved through `install::get_config()` rather
+	* than a hardcoded path so that install overrides are respected.
+	*
+	* @param object $options - {
+	*   name:  string — constant name (must be one of the allowlisted names above)
+	*   value: mixed  — new value; type constraints depend on the constant (see above)
+	* }
+	* @return object - {result: bool, msg: string, errors: array}.
+	*/
 	protected static function set_config_core(object $options): object {
 
 		// response
@@ -1083,17 +1287,25 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * SET_MAINTENANCE_MODE
-	 * Changes Dédalo maintenance mode from true to false or vice-versa
-	 * Uses area_maintenance:: set_config_core to overwrite the core_config files
-	 * The constant name will be checked in the set_config_core() to allow it, define the constant in this method
-	 * Input and output are normalized objects to allow use it from area_maintenance API
-	 * @param object $options
-	 * {
-	 * 	value : bool
-	 * }
-	 * @return object $response
-	 */
+	* SET_MAINTENANCE_MODE
+	* Enables or disables Dédalo maintenance mode by writing
+	* `DEDALO_MAINTENANCE_MODE_CUSTOM` to `config_core.php`.
+	*
+	* When maintenance mode is active (`true`):
+	*   - Normal users cannot log in or make data changes.
+	*   - `update_data_version()` is allowed to run migrations.
+	*   - A maintenance-mode banner is displayed in the UI.
+	*
+	* This method validates that `$options->value` is a boolean before delegating to
+	* `set_config_core()`. Non-boolean values are rejected immediately without touching
+	* the config file.
+	*
+	* Called from the `set_maintenance_mode` action via `dd_area_maintenance_api::class_request`.
+	* Listed in `API_ACTIONS`.
+	*
+	* @param object $options - { value: bool — true to enable, false to disable }
+	* @return object - {result: bool, msg: string, errors: array}.
+	*/
 	public static function set_maintenance_mode(object $options): object {
 
 		// options
@@ -1120,17 +1332,28 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * SET_MEDIA_ACCESS_MODE
-	 * Changes the media access control mode override
-	 * (DEDALO_MEDIA_ACCESS_MODE_CUSTOM in config_core.php) consumed by
-	 * media_protection::get_mode(). Root-user gated by set_config_core.
-	 * Called from the area_maintenance 'media_control' widget.
-	 * @param object $options
-	 * {
-	 * 	value : null|false|'private'|'publication'
-	 * }
-	 * @return object $response
-	 */
+	* SET_MEDIA_ACCESS_MODE
+	* Writes a runtime override for the media access control mode into `config_core.php`
+	* as `DEDALO_MEDIA_ACCESS_MODE_CUSTOM`, which is consumed by
+	* `media_protection::get_mode()` on every media request.
+	*
+	* Permitted values and their effect:
+	*   null          — remove the override; fall back to DEDALO_MEDIA_ACCESS_MODE in config.php
+	*   false         — force media protection off (public open access)
+	*   'private'     — only logged-in users may access media files
+	*   'publication' — logged-in users access all media; anonymous users access only
+	*                   files marked as published
+	*
+	* Value validation and the root-user access check are both enforced inside
+	* `set_config_core()`; this method is a thin routing wrapper.
+	*
+	* Called from the `media_control` widget in the maintenance dashboard.
+	* Not listed in `API_ACTIONS` (the widget dispatches through `widget_request`,
+	* not `class_request`).
+	*
+	* @param object $options - { value: null|false|'private'|'publication' }
+	* @return object - {result: bool, msg: string, errors: array}.
+	*/
 	public static function set_media_access_mode(object $options): object {
 
 		$value = $options->value ?? null;
@@ -1147,20 +1370,34 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * SET_RECOVERY_MODE
-	 * Changes Dédalo recovery mode from true to false or vice-versa
-	 * Uses area_recovery::set_config_core to overwrite the core_config files
-	 * The constant name will be checked in the set_config_core() to allow it, define the constant in this method
-	 * Input and output are normalized objects to allow use it from area_recovery API
-	 * Could be changed from area_maintenance check_config widget
-	 * or automatically from API start
-	 * @see dd_core_api->start
-	 * @param object $options
-	 * {
-	 * 	value : bool
-	 * }
-	 * @return object $response
-	 */
+	* SET_RECOVERY_MODE
+	* Enables or disables Dédalo recovery mode by writing `DEDALO_RECOVERY_MODE`
+	* to `config_core.php`, and immediately mirrors the new value into `$_ENV`.
+	*
+	* Recovery mode is a degraded-operation state used when the ontology tables are
+	* corrupt or unavailable. In recovery mode:
+	*   - The normal authenticated session requirement is relaxed for superuser.
+	*   - Ontology-dependent features are disabled.
+	*   - The root user can still access the maintenance area to restore the ontology
+	*     from the recovery SQL file (`restore_dd_ontology_recovery_from_file`).
+	*
+	* Unlike other set_* methods, `set_config_core()` allows DEDALO_RECOVERY_MODE to
+	* be written even when the caller is not DEDALO_SUPERUSER — so that `dd_core_api->start`
+	* can set it automatically during boot failure before any user is authenticated.
+	*
+	* After a successful config-core write, `$_ENV['DEDALO_RECOVERY_MODE']` is also
+	* set so that in-process code (within the same PHP request lifecycle) sees the
+	* updated value without needing to re-read the file or restart the server.
+	*
+	* Can be triggered from:
+	*   - The `check_config` widget in the maintenance dashboard (manual toggle).
+	*   - `dd_core_api->start` automatically on boot failure.
+	*
+	* @see dd_core_api::start
+	*
+	* @param object $options - { value: bool — true to enter recovery mode, false to exit }
+	* @return object - {result: bool, msg: string, errors: array}.
+	*/
 	public static function set_recovery_mode(object $options): object {
 
 		// options
@@ -1201,17 +1438,32 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * SET_NOTIFICATION
-	 * Writes the given notification text to config_core
-	 * Note that this custom notifications are stored in core_config file
-	 * and read from API update_lock_components_state on every component activation/deactivation
-	 * The constant name will be checked in the set_config_core() to allow it, define the constant in this method
-	 * @param object $options
-	 * {
-	 * 	value : string
-	 * }
-	 * @return object $response
-	 */
+	* SET_NOTIFICATION
+	* Writes a system-wide notification banner message (or clears it) in `config_core.php`
+	* as `DEDALO_NOTIFICATION_CUSTOM`.
+	*
+	* The stored value is read by `dd_core_api::update_lock_components_state` on every
+	* component lock/unlock cycle, so the banner text appears to all active users without
+	* requiring a page reload. Passing `false` as the value clears the notification.
+	*
+	* The string value is XSS-sanitised inside `set_config_core()` via `safe_xss()`
+	* before being written to the file; the resulting PHP literal is:
+	*   `["msg" => "sanitised text", "class_name" => "warning"]`
+	*
+	* Only DEDALO_SUPERUSER can set notifications (enforced inside `set_config_core()`
+	* for the `DEDALO_NOTIFICATION_CUSTOM` case).
+	*
+	* (!) The response object is always rebuilt as `result: true` after calling
+	* `set_config_core()`, regardless of whether set_config_core returned an error.
+	* This means a file-write failure is silently swallowed. Flagged as a
+	* pre-existing behaviour — do not fix here.
+	*
+	* Listed in `API_ACTIONS`; called from the `set_notification` action via
+	* `dd_area_maintenance_api::class_request`.
+	*
+	* @param object $options - { value: string|bool — notification text, or false to clear }
+	* @return object - {result: bool, msg: string, errors: array}.
+	*/
 	public static function set_notification(object $options): object {
 
 		// options
@@ -1244,11 +1496,34 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * GET_DEFINITIONS_FILES
-	 * Get the list of JSON files in the directory:
-	 * 	/dedalo/core/base/transform_definition_files
-	 * @return array
-	 */
+	* GET_DEFINITIONS_FILES
+	* Returns a parsed list of JSON transform-definition files for the given migration
+	* category directory under `core/base/transform_definition_files/`.
+	*
+	* Transform-definition files are JSON documents that describe bulk-move or
+	* bulk-conversion operations for migration widgets (move_tld, move_locator, etc.).
+	* Each file specifies the source and target tipos, mappings, and any special rules
+	* for the migration engine. The UI lists available definition files so the operator
+	* can select which migration to run.
+	*
+	* Security (SEC-069): two-layer defence-in-depth is applied before touching the
+	* filesystem:
+	*   1. Allowlist check — `$directory` must be one of the five known category names
+	*      (move_tld | move_locator | move_to_portal | move_to_table | move_lang).
+	*      Unknown or empty strings are rejected immediately.
+	*   2. Realpath confinement — the resolved path of the target directory must start
+	*      with the resolved `transform_definition_files` root. This prevents `..`
+	*      traversal even if the allowlist were somehow bypassed.
+	*
+	* Each file object in the returned array has shape:
+	*   { file_name: string, content: object|null }
+	* where `content` is the JSON-decoded definition or null if the file is empty.
+	*
+	* @param string $directory - Category name: 'move_tld' | 'move_locator' |
+	*                            'move_to_portal' | 'move_to_table' | 'move_lang'.
+	* @return array<object> - List of {file_name, content} objects; empty on error or
+	*                         if no .json files are found in the directory.
+	*/
 	public static function get_definitions_files(string $directory): array {
 
 		// SEC-069: defence-in-depth. All callers pass literal strings from
@@ -1318,34 +1593,52 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * UPDATE_ONTOLOGY
-	 * Is called from area_maintenance widget 'update_ontology' across dd_area_maintenance::class_request
-	 * Connect with master server, download ontology files and update local DB and lang files
-	 * @param object $options
-	 * {
-	 *	"server": {
-	 *		"name": "Official Dédalo Ontology server",
-	 * 		..
-	 * 	},
-	 * 	"files" : [{
-	 *		"section_tipo": "ontology56",
-	 *		"tld": "numisdata",
-	 *		"url": "http://localhost:8080/dedalo/install/import/ontology/6.4/ontology56_numisdata.copy.gz"
-	 *	}],
-	 * 	"info": {
-	 * 		"date": "2024-12-20T20:54:36+01:00",
-	 * 		"host": "localhost:8080",
-	 * 		"entity": "monedaiberica",
-	 * 		..
-	 * 	}
-	 * }
-	 * @return object $response
-	 * {
-	 * 	result: bool,
-	 * 	msg: string,
-	 * 	errors: array
-	 * }
-	 */
+	* UPDATE_ONTOLOGY
+	* Full ontology update pipeline: downloads remote dump files, imports them into
+	* PostgreSQL, rebuilds `dd_ontology` nodes, regenerates lang files, flushes
+	* caches, and saves a schema-diff file for the security-access audit trail.
+	*
+	* Called from the `update_ontology` widget via `dd_area_maintenance_api::class_request`.
+	* Not declared in `API_ACTIONS` (it is dispatched through widget_request) — the
+	* widget class routes the final call to this static method.
+	*
+	* Pipeline steps (in order):
+	*   1. Pgpass check — `system::check_pgpass_file()` must return true; the `pg_restore`
+	*      subprocess invoked by `ontology_data_io::import_from_file()` needs a valid
+	*      .pgpass entry to authenticate without an interactive password prompt.
+	*   2. Download — each file URL is fetched via `ontology_data_io::download_remote_ontology_file()`.
+	*      Only successfully downloaded files proceed to import.
+	*   3. Import — dispatches differently by `tld`:
+	*        tld === 'matrix_dd'  → `ontology_data_io::import_private_lists_from_file()` (private lists)
+	*        other tlds           → `ontology::add_main_section()` + create ontology node +
+	*                               `ontology_data_io::import_from_file()` (regular ontology table)
+	*   4. Sync dd_ontology — for each non-private-list file, runs a limitless SQO over
+	*      the imported section_tipo and calls `ontology::set_records_in_dd_ontology()` to
+	*      keep the fast-lookup `dd_ontology` table in sync with the imported matrix data.
+	*   5. Post-processing — `db_tasks::optimize_tables()` on the four ontology tables.
+	*   6. Session cleanup — all session keys except 'auth' are cleared so the next
+	*      request fetches fresh ontology data rather than stale cached values.
+	*   7. Lang file rebuild — `backup::write_lang_file()` is called for every language
+	*      defined in DEDALO_APPLICATION_LANGS. Errors are accumulated but do not abort.
+	*   8. Activity log — records a 'SAVE' event via `logger::$obj['activity']->log_message`.
+	*   9. Schema diff — `hierarchy::save_simple_schema_file()` compares the old and new
+	*      section schemas and persists any differences for the security-access change UI.
+	*  10. Cache flush — `dd_cache::delete_cache_files()` clears the hierarchy cache so
+	*      the next request rebuilds it from the freshly imported ontology.
+	*
+	* @param object $options - {
+	*   server: object    — remote server descriptor (name, host, etc.; informational only)
+	*   files:  array     — list of file descriptors to import:
+	*                        [{ section_tipo: string, tld: string, url: string }]
+	*   info:   object    — metadata about the ontology release (date, host, entity, …)
+	* }
+	* @return object - {
+	*   result:    bool,
+	*   msg:       string,
+	*   errors:    array<string>,
+	*   root_info: object — {term: string, properties: object} from the updated ontology root
+	* }
+	*/
 	public static function update_ontology(object $options): object {
 
 		// response
@@ -1539,12 +1832,30 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * REBUILD_LANG_FILES
-	 * Re-write label lang JS files and deletes the existing lang cache files
-	 * It is called from 'Update Ontology' widget
-	 * @param object $options
-	 * @return object $response
-	 */
+	* REBUILD_LANG_FILES
+	* Regenerates the JavaScript label/translation files for every application language.
+	*
+	* Calls `backup::write_lang_file()` for each language code in DEDALO_APPLICATION_LANGS.
+	* These files are static JS bundles served to the browser so the client-side UI
+	* can display localised labels without an API round-trip. They must be rebuilt
+	* whenever ontology labels change (typically after `update_ontology`).
+	*
+	* The `$options` parameter is accepted for API contract consistency but is
+	* currently unused; callers may pass an empty stdClass.
+	*
+	* Errors from individual language writes are collected and returned; the response
+	* `result` is only set to `true` when all languages succeed without error.
+	*
+	* Listed in `API_ACTIONS`; also called internally by `update_ontology()` as step 7.
+	*
+	* @param object $options - Unused; present for API contract uniformity.
+	* @return object - {
+	*   result:  bool,
+	*   msg:     string,
+	*   errors:  array<string>,
+	*   updated: array|null — the DEDALO_APPLICATION_LANGS array on success, absent on failure
+	* }
+	*/
 	public static function rebuild_lang_files(object $options): object {
 
 		// response
@@ -1576,11 +1887,19 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * BUILD_RECOVERY_VERSION_FILE
-	 * Alias of install::build_recovery_version_file
-	 * Creates the recovery file 'dd_ontology_recovery.sql' from current 'dd_ontology' table
-	 * @return object $response
-	 */
+	* BUILD_RECOVERY_VERSION_FILE
+	* Snapshots the current `dd_ontology` table into the recovery SQL file
+	* (`dedalo/install/db/dd_ontology_recovery.sql`).
+	*
+	* This file is the fallback source used by `restore_dd_ontology_recovery_from_file()`
+	* if the live `dd_ontology` table becomes corrupt or empty. It should be rebuilt
+	* after every successful ontology update so the recovery snapshot stays current.
+	*
+	* Delegates entirely to `install::build_recovery_version_file()`.
+	*
+	* @return object - Response from install::build_recovery_version_file()
+	*                  {result: bool, msg: string, errors?: array}.
+	*/
 	public static function build_recovery_version_file(): object {
 
 		return install::build_recovery_version_file();
@@ -1589,11 +1908,24 @@ class area_maintenance extends area_common {
 
 
 	/**
-	 * RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
-	 * Alias of install::restore_dd_ontology_recovery_from_file
-	 * Source file is a SQL string file located at /dedalo/install/db/dd_ontology_recovery.sql
-	 * @return object $response
-	 */
+	* RESTORE_DD_ONTOLOGY_RECOVERY_FROM_FILE
+	* Restores the `dd_ontology` table from the recovery SQL snapshot file
+	* (`dedalo/install/db/dd_ontology_recovery.sql`).
+	*
+	* This is a last-resort recovery operation for situations where `dd_ontology` is
+	* corrupt, missing, or empty and the system is in recovery mode. The snapshot
+	* loaded here was built by `build_recovery_version_file()` during a previous
+	* healthy state.
+	*
+	* Typically invoked from the `check_config` widget when the system is in recovery
+	* mode and the operator wants to restore the ontology without shell access.
+	* Listed in `API_ACTIONS`.
+	*
+	* Delegates entirely to `install::restore_dd_ontology_recovery_from_file()`.
+	*
+	* @return object - Response from install::restore_dd_ontology_recovery_from_file()
+	*                  {result: bool, msg: string, errors?: array}.
+	*/
 	public static function restore_dd_ontology_recovery_from_file(): object {
 
 		return install::restore_dd_ontology_recovery_from_file();

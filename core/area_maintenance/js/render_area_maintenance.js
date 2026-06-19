@@ -4,6 +4,56 @@
 
 
 
+/**
+* RENDER_AREA_MAINTENANCE
+* Client-side rendering layer for the Dédalo maintenance area (area_maintenance).
+*
+* This module is responsible for the visual shell of the administrator dashboard.
+* It is paired with `area_maintenance.js` (which owns the lifecycle: init / build /
+* render / refresh / destroy) and with the server-side `class.area_maintenance.php`
+* (which produces the widget datalist consumed here).
+*
+* Architecture overview
+* ---------------------
+* The server delivers a flat `datalist` array of widget descriptor objects via the
+* standard Dédalo JSON API.  Each descriptor carries:
+*   - `id`       {string}  widget identifier — also the ES-module filename and
+*                          exported constructor name (e.g. `"make_backup"`).
+*   - `label`    {string}  HTML display label supplied by `class.area_maintenance.php`.
+*   - `category` {string}  bucket key matching one of the entries in `get_category_defs()`
+*                          (e.g. `"data"`, `"migration"`, `"config"`, …).
+*   - `class`    {string}  optional extra CSS class on the card (e.g. `"success"`).
+*   - `background` {boolean} optional flag; when true the widget loads at idle priority
+*                          even before the user opens the card accordion.
+*   - `value`    {*}       optional widget-specific payload forwarded to `widget.init()`.
+*
+* Dashboard layout (introduced in maintenance_v2)
+* -----------------------------------------------
+* `get_content_data()` builds a two-level layout:
+*   1. Sticky toolbar — live text search + category chip filters.
+*   2. Category groups — one `<div class="maintenance_group">` per non-empty category,
+*      each containing a labelled header and a grid of collapsible widget cards.
+*
+* Widget cards are individually lazy-loaded via `render_widget()`, which:
+*   - Dynamically imports the widget ES module from `../widgets/<id>/js/<id>.js`.
+*   - Runs the standard init → build → render lifecycle.
+*   - Defers the `load()` call (data fetch) until the user opens the accordion,
+*     except for "background" widgets which load at idle priority immediately.
+*   - Persists the open/closed state of each card via `ui.collapse_toggle_track`.
+*
+* Public exports
+* --------------
+*   render_area_maintenance  — prototype constructor; `edit` and `list` prototypes
+*                              are assigned onto `area_maintenance` in area_maintenance.js.
+*   print_response           — formats and injects an API response object into a DOM node.
+*   build_form               — generic widget form builder (inputs + submit + API call).
+*   set_widget_label_style   — adds/removes a CSS class on the outer widget card.
+*
+* Server peer:  core/area_maintenance/class.area_maintenance.php
+* Lifecycle:    area_maintenance.js (init / build / render / refresh / destroy)
+* API:          dd_area_maintenance_api (action `get_data` → datalist)
+*/
+
 // imports
 	import {when_in_dom, dd_request_idle_callback} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -15,7 +65,19 @@
 
 /**
 * RENDER_AREA_MAINTENANCE
-* Manages the area appearance in client side
+* Prototype constructor for the maintenance-area render module.
+*
+* This constructor is intentionally a no-op; all rendering logic lives in the
+* prototype methods `edit` and `list` below.  The constructor exists so that
+* `area_maintenance.js` can assign these prototype methods onto the
+* `area_maintenance` prototype using the standard Dédalo prototype-assignment
+* pattern:
+*
+*   area_maintenance.prototype.edit = render_area_maintenance.prototype.edit
+*   area_maintenance.prototype.list = render_area_maintenance.prototype.list
+*
+* Never instantiate `render_area_maintenance` directly; always call through
+* an `area_maintenance` instance.
 */
 export const render_area_maintenance = function() {
 
@@ -26,9 +88,23 @@ export const render_area_maintenance = function() {
 
 /**
 * EDIT
-* Render node for use in edit
-* @param object options
-* @return HTMLElement wrapper
+* Builds the main DOM tree for the maintenance area in edit mode.
+*
+* Delegates the actual widget-grid construction to `get_content_data()` and
+* then wraps the result in the standard area wrapper produced by `ui.area.build_wrapper_edit`.
+* The wrapper exposes `wrapper.content_data` as a direct reference so that
+* subsequent refresh cycles can surgically replace just the inner grid without
+* rebuilding the full shell.
+*
+* When `options.render_level === 'content'` only the raw `content_data` element
+* is returned (no wrapper), which is the pattern used by `common.prototype.refresh`
+* to efficiently swap content in place.
+*
+* @param {Object} options - Render options bag forwarded by the lifecycle caller
+* @param {string} [options.render_level='full'] - 'full' returns the complete wrapper;
+*   'content' returns the inner content_data element only (used by refresh)
+* @returns {Promise<HTMLElement>} The area wrapper element (render_level='full') or
+*   the raw content_data element (render_level='content')
 */
 render_area_maintenance.prototype.edit = async function(options) {
 
@@ -57,9 +133,11 @@ render_area_maintenance.prototype.edit = async function(options) {
 
 /**
 * LIST
-* Alias of edit
-* @param object options
-* @return HTMLElement
+* Alias of `edit`. The maintenance area has no dedicated list view; the full
+* widget dashboard is rendered in both edit and list contexts.
+*
+* @param {Object} options - Forwarded verbatim to `this.edit(options)`
+* @returns {Promise<HTMLElement>} Result of `this.edit(options)`
 */
 render_area_maintenance.prototype.list = async function(options) {
 
@@ -69,12 +147,23 @@ render_area_maintenance.prototype.list = async function(options) {
 
 
 /**
-* CATEGORY_DEFS
-* Presentation order and labels for the maintenance widget categories.
-* The category key is set server-side on every widget (see class.area_maintenance.php
-* widget_factory). Labels fall back to the literal English string when no translation
-* exists, matching the pattern used in get_ar_widgets().
-* @return array
+* GET_CATEGORY_DEFS
+* Returns the canonical ordered list of maintenance widget category definitions.
+*
+* Each entry drives two things in `get_content_data()`:
+*   1. The order in which category sections appear in the dashboard grid.
+*   2. The human-readable label rendered in the group header and in the
+*      category chip filter button.
+*
+* The `key` value must match the `category` property that `class.area_maintenance.php`
+* assigns to each widget descriptor in `get_ar_widgets()` / `widget_factory()`.
+* Widgets whose descriptor lacks a `category` property fall into the `'general'` bucket.
+*
+* Labels are sourced from `get_label` (the application's i18n dictionary).  The
+* `|| 'fallback'` ensures the UI still renders meaningfully when a label key is
+* missing from the active language file.
+*
+* @returns {Array<{key: string, label: string}>} Ordered category definition objects
 */
 const get_category_defs = function() {
 
@@ -93,12 +182,49 @@ const get_category_defs = function() {
 
 
 /**
-* CONTENT_DATA
-* Builds the maintenance dashboard: a sticky toolbar (live search + category chips)
-* over widgets grouped into category sections. Each widget card is still lazy-loaded
-* via render_widget exactly as before; only the surrounding layout/chrome changed.
-* @param object self
-* @return HTMLElement content_data
+* GET_CONTENT_DATA
+* Builds the complete maintenance dashboard DOM tree.
+*
+* The dashboard consists of three layers:
+*
+*   1. Sticky toolbar (`<div class="maintenance_toolbar">`)
+*        - A text search input whose `input` event is debounced through
+*          `dd_request_idle_callback` to avoid layout thrashing during fast typing.
+*        - Category chip buttons (one "All" chip plus one per non-empty category),
+*          rendered in the order defined by `get_category_defs()`.
+*
+*   2. Category groups (`<div class="maintenance_groups">`)
+*        - One `<div class="maintenance_group">` per category that has at least one
+*          widget in the `self.widgets` datalist.
+*        - Each group has a header (icon placeholder + label + widget count) and a
+*          CSS grid of widget cards (`<div class="group_grid">`).
+*        - Cards are loaded asynchronously via `ui.load_item_with_spinner`, which
+*          shows a spinner while `render_widget()` resolves.
+*
+*   3. Empty state (`<div class="maintenance_empty">`)
+*        - Hidden by default; toggled visible by `apply_filters()` whenever no card
+*          matches the current search + category combination.
+*
+* Filter model
+* ------------
+* Two mutable closure variables drive visibility:
+*   - `active_category` — set by chip clicks; empty string means "show all".
+*   - `search_term`     — lowercase trimmed value of the search input.
+*
+* `apply_filters()` is the single point of truth: it iterates `group_nodes` and
+* each group's `.widget_container` cards, applying `classList.toggle('filtered_out', !show)`
+* to hide non-matching cards, and `classList.toggle('hide', …)` to collapse entire
+* groups when all their cards are hidden.
+*
+* Widget card data attributes
+* ---------------------------
+* Each `.widget_container` element carries `data-category` and `data-label` (lowercase)
+* so that `apply_filters()` can match without touching the widget instances themselves.
+*
+* @param {Object} self - The `area_maintenance` instance; must have `self.widgets`
+*   (the `datalist` array from the API response) and `self.type` (for CSS class)
+* @returns {HTMLElement} The fully constructed `content_data` div, ready to be
+*   appended to the area wrapper by `edit()`
 */
 const get_content_data = function(self) {
 
@@ -313,12 +439,64 @@ const get_content_data = function(self) {
 
 /**
 * RENDER_WIDGET
-* Renders widget DOM nodes
-* @param object item
-* 	Widget object definitions
-* @param object self
-* 	Instance of current area
-* @return DocumentFragment fragment
+* Builds the accordion-style DOM fragment for a single maintenance widget card
+* and runs the full widget lifecycle (init → build → render → deferred load).
+*
+* Structure of the returned fragment
+* ------------------------------------
+*   <DocumentFragment>
+*     <div class="widget_label icon_arrow">…label HTML…</div>   ← accordion toggler
+*     <div class="widget_body hide">                             ← accordion body (initially closed)
+*       <div class="body_info">…widget.render() output…</div>
+*     </div>
+*   </DocumentFragment>
+*
+* The fragment is inserted directly into the `.widget_container` card by
+* `ui.load_item_with_spinner` in `get_content_data()`.
+*
+* Widget module resolution
+* ------------------------
+* The widget ES module is located at `../widgets/<item.id>/js/<item.id>.js` relative
+* to this file. The module **must** export a constructor whose name exactly matches
+* `item.id` (e.g. `export const make_backup = function() {…}`). If the export does
+* not exist, or if the import fails (404, network error), an error is logged and an
+* empty fragment is returned — the card accordion shell is still rendered so the
+* user sees the label but no body content.
+*
+* Lazy-load strategy
+* ------------------
+* `widget.build()` runs the shell construction without fetching data from the server.
+* Data is fetched only when the accordion opens, via `trigger_load()` → `widget.load()`.
+* Two exceptions:
+*   - "Background" widgets (those in `background_widget_ids` OR with `item.background===true`)
+*     call `trigger_load()` at idle priority via `dd_request_idle_callback` even while
+*     closed, so that status information is visible as soon as the admin opens the area.
+*   - Widgets whose accordion was left open in a previous session (open state persisted
+*     by `ui.collapse_toggle_track`) have their body visible immediately; in this case
+*     `expose_callback` fires before `widget_instance` is assigned, so an explicit
+*     `trigger_load()` call after `widget_instance = widget` fills the gap.
+*
+* Alt-click shortcut
+* ------------------
+* Clicking the widget body while holding Alt triggers `widget_instance.refresh()`,
+* which re-runs the full build → render → load cycle. This is a developer affordance
+* and is not surfaced in the UI.
+*
+* Collapse persistence
+* --------------------
+* `ui.collapse_toggle_track` persists the open/closed state under the key
+* `'collapsed_' + item.id` in the local IndexedDB store so the state survives page
+* refreshes.
+*
+* @param {Object} item - Widget descriptor from the server datalist
+* @param {string} item.id       - Widget identifier; used as module name and key
+* @param {string} [item.label]  - Display label (may contain HTML)
+* @param {string} [item.category] - Category bucket key
+* @param {boolean} [item.background] - When true, load at idle priority before open
+* @param {*} [item.value]       - Optional widget-specific payload forwarded to `widget.init()`
+* @param {Object} self - The `area_maintenance` instance (provides section_tipo, lang, mode, etc.)
+* @returns {Promise<DocumentFragment>} Fragment containing the accordion label + body;
+*   body content is empty when the widget module fails to load
 */
 const render_widget = async (item, self) => {
 
@@ -463,11 +641,33 @@ const render_widget = async (item, self) => {
 
 /**
 * PRINT_RESPONSE
-* Render API response result message and result
-* Note that api_response is returned by the delegated worker
-* @param DOM node container
-* @param object api_response
-* @return DON node container
+* Clears a result container and injects a formatted view of an API response.
+*
+* Called after any maintenance widget action completes (form submit, background worker
+* finish, etc.) to display the outcome to the administrator.
+*
+* The container is first emptied; then three optional sections are inserted in order:
+*   1. An "eraser" button (class `button reset eraser`) that clears the container again
+*      on mouseup, allowing the admin to dismiss the result without re-running the action.
+*   2. Error block — rendered only when `api_response.errors` is a non-empty array;
+*      each error string is joined with `<br>` and rendered as inner HTML.
+*   3. Message block — rendered from `api_response.msg`. Accepts either a string (with
+*      `\\n` replaced by `<br>`) or an array of strings joined with `<br>`.
+*      Falls back to `'Unknown API response error'` when `msg` is absent or falsy.
+*   4. Tree view — the full `api_response` object rendered by `render_tree_data` into
+*      a `<div class="pre">` for structured inspection.
+*
+* (!) `api_response` comes from the Dédalo worker bridge: its shape is:
+*   `{ result, msg, errors, … }` where `errors` is always an array (possibly empty).
+*   The function does not guard against a null `api_response`; callers must ensure
+*   the argument is a valid object.
+*
+* @param {HTMLElement} container - The DOM node to populate; its existing children
+*   are removed before rendering
+* @param {Object} api_response - The API response object from `data_manager.request()`
+* @param {string|string[]} [api_response.msg] - Human-readable result message(s)
+* @param {string[]} [api_response.errors]     - Array of error message strings
+* @returns {HTMLElement} The same `container` element, now populated
 */
 export const print_response = (container, api_response) => {
 
@@ -529,9 +729,72 @@ export const print_response = (container, api_response) => {
 
 /**
 * BUILD_FORM
-* Render a form for given widget_object
-* @param object widget_object
-* @return HTMLElement form_container
+* Builds a generic submission form for a maintenance widget and appends it to
+* `widget_object.body_info`.
+*
+* This is the standard way for maintenance widgets to create a parameterised
+* admin action form. The form is also accessible as `area_maintenance.prototype.init_form`
+* (an alias wired in `area_maintenance.js`).
+*
+* `widget_object` shape
+* ----------------------
+*   body_info    {HTMLElement}  — Container where the form element is appended.
+*   body_response {HTMLElement} — Container where `print_response()` renders results.
+*   confirm_text  {string}      — Confirmation dialog message. Defaults to
+*                                 `get_label.sure || 'Sure?'`.
+*   inputs        {Array}       — Array of input descriptor objects (see below).
+*   submit_label  {string}      — Button label. Defaults to `'OK'`.
+*   trigger       {Object}      — API dispatch descriptor:
+*     dd_api   {string}  — API endpoint name (e.g. `'dd_area_maintenance_api'`).
+*     action   {string}  — Action name dispatched to the endpoint.
+*     source   {Object}  — Optional source locator forwarded to the API.
+*     options  {Object}  — Optional extra options merged with the collected input values.
+*   on_submit     {Function}    — Optional: replaces the default API dispatch. Receives
+*                                 `(event, values)` where `values` is an array of
+*                                 `{ name, value }` objects from the input fields.
+*                                 If provided, `trigger` is ignored entirely.
+*   on_done       {Function}    — Optional: called with `(api_response)` after the
+*                                 default API dispatch completes (not called when
+*                                 `on_submit` overrides the dispatch).
+*   on_render     {Function}    — Optional: called with `({ form_container, input_nodes })`
+*                                 immediately after the form is fully constructed,
+*                                 allowing callers to inject extra nodes or wire events.
+*
+* Input descriptor shape
+* ----------------------
+*   type      {string}   — HTML input type (`'text'`, `'number'`, `'select'`, …).
+*   name      {string}   — Field name; also used as the `{ name, value }` key in `values`.
+*   label     {string}   — Placeholder text and title tooltip. For `select`, used as
+*                          the disabled placeholder `<option>`.
+*   mandatory {boolean}  — When true, the field must be non-empty before submit;
+*                          empty mandatory fields receive the `'empty'` class and
+*                          grab focus, preventing the API call.
+*   value     {string}   — Pre-filled value. For `select`, marks the matching option
+*                          as `selected`.
+*   options   {Array<string>} — (select only) Values to render as `<option>` elements.
+*
+* Submit lifecycle
+* ----------------
+*   1. `form_container` gets class `lock` (prevents double-submit).
+*   2. A spinner is prepended to `body_response`.
+*   3. `data_manager.request()` is awaited with a 1-hour timeout (long-running
+*      maintenance tasks may take many minutes).
+*   4. `print_response()` replaces the spinner content with the formatted result.
+*   5. `lock` class is removed; spinner is removed.
+*   6. `on_done(api_response)` is called if provided.
+*
+* (!) The form uses `window.confirm()` as a confirmation gate. In some browser
+* environments (iframes, certain CSPs) `confirm()` may return `true` without
+* user interaction or be silently blocked. This is pre-existing behaviour.
+*
+* (!) `Object.assign(trigger.options, values)` mutates the original `trigger.options`
+* object if it is a reference type. Callers should not rely on `trigger.options`
+* being unchanged after the first submit.
+*
+* @param {Object} widget_object - Form configuration object (see shape above)
+* @returns {HTMLElement} The constructed `<form class="form_container">` element,
+*   already appended to `widget_object.body_info`. The element also exposes a
+*   `form_container.button_submit` reference to the submit button node.
 */
 export const build_form = function(widget_object) {
 
@@ -712,13 +975,44 @@ export const build_form = function(widget_object) {
 
 /**
 * SET_WIDGET_LABEL_STYLE
-* Locate widget_container and set (add/remove) the given style
-* If the node is not ready, wait until is available in the DOM
-* @param object self
-* @param string style (as 'danger')
-* @param mode string add|remove
-* @param HTMLElement ref_node (to observe node)
-* @return void
+* Adds or removes a CSS class on the outer `.widget_container` card element that
+* wraps the current widget instance.
+*
+* Widgets call this to signal their overall health status from inside the accordion
+* body, for example adding `'danger'` when a check fails or `'success'` when all
+* checks pass. The class lands on the `.widget_container` (the card), not on the
+* widget body node, so the label row changes colour even while the accordion is
+* collapsed.
+*
+* DOM traversal
+* -------------
+* The widget's rendered node (`self.node`) sits inside:
+*   .widget_container        ← target (parentNode.parentNode of self.node)
+*     .widget_body
+*       .body_info
+*         self.node          ← widget render root
+*
+* Deferred execution
+* ------------------
+* When `self.node` is not yet mounted (e.g. called during early `build()` before
+* `render()` has attached the node), the function defers via `when_in_dom(ref_node, …)`
+* and retries once the reference node is inserted into the live document.
+* `ref_node` should be a node that will definitely be in the DOM by the time the
+* widget is visible (e.g. the widget body container).
+*
+* The actual class mutation is wrapped in `requestAnimationFrame` to ensure it
+* happens after the current layout pass and does not cause a forced reflow.
+*
+* (!) If `self.node` is null and `ref_node` is also not provided (or never enters the
+* DOM), this function will never execute the class mutation. Ensure `ref_node` is a
+* node that the browser will eventually insert.
+*
+* @param {Object} self       - Widget instance; must expose `self.node` (HTMLElement|null)
+* @param {string} style      - CSS class name to add or remove (e.g. `'danger'`, `'success'`)
+* @param {string} mode       - `'add'` to add the class; any other value removes it
+* @param {HTMLElement} ref_node - Reference node passed to `when_in_dom` when `self.node`
+*   is not yet available; typically the widget's outer container
+* @returns {void}
 */
 export const set_widget_label_style = function (self, style, mode, ref_node) {
 
