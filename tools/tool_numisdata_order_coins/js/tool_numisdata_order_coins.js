@@ -196,7 +196,7 @@ tool_numisdata_order_coins.prototype.build = async function(autoload=false) {
 			if(role === 'ordered_coins'){
 				// add events to assign drop event when the portal change or external window close
 				self.ordered_coins.events_tokens.push(
-					event_manager.subscribe('window_bur_'+ self.ordered_coins.id, assing_drop)
+					event_manager.subscribe('window_blur_'+ self.ordered_coins.id, assing_drop)
 				)
 				self.ordered_coins.events_tokens.push(
 					event_manager.subscribe('add_row_'+ self.ordered_coins.id, assing_drop)

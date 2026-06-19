@@ -276,7 +276,7 @@ const render_header_options = async function(self, content_data) {
 		order_by(order_active)
 	}
 	self.events_tokens.push(
-		event_manager.subscribe('window_bur_'+self.coins.id, fn_reorder)
+		event_manager.subscribe('window_blur_'+self.coins.id, fn_reorder)
 	)
 
 	// order_by, get data and order by components or by section_id
