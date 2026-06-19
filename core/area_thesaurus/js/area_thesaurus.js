@@ -2,6 +2,48 @@
 /*eslint no-undef: "error"*/
 
 
+/**
+* AREA_THESAURUS
+* Client-side controller for the Thesaurus area and its Ontology sibling (area_ontology).
+*
+* Responsibilities:
+*  - Bootstraps a thesaurus area page: fetches context + data via the dedalo API,
+*    resolves hierarchy/tree configuration from context, wires a search (filter) panel,
+*    and delegates DOM rendering to render_area_thesaurus.prototype.list.
+*  - Handles two distinct area models sharing this constructor:
+*      • area_thesaurus  — browse/edit thesaurus term trees (dd100 section type).
+*      • area_ontology   — browse/edit Dédalo's internal ontology term tree (dd5).
+*    The `self.model` property distinguishes them at runtime.
+*  - Supports a URL-initiated deep-link mode (`search_tipos` parameter) that pre-filters
+*    the tree to highlight specific term tipos passed from Ontology node buttons.
+*  - Manages the `show_models` toggle (Ctrl+M) that shows/hides `.model_value` elements
+*    in the tree, persisting the state to the local IndexedDB 'status' table.
+*
+* Data shape after build():
+*  - self.datum   {Object}  Full raw API response (context[] + data[]).
+*  - self.context {Object}  Single context entry for self.tipo.
+*  - self.data    {Array}   Data entries for self.tipo (ts_search / typologies / value).
+*  - self.filter  {Object}  Keyed `search` instance that drives the collapsible search panel.
+*  - self.rqo     {Object}  Request query object forwarded to the API; augmented in build()
+*                           with hierarchy_sections, hierarchy_terms, thesaurus_mode, and
+*                           an optional SQO filter when search_tipos is active.
+*
+* Prototype chain:
+*  Constructor             → area_thesaurus (this file)
+*  Lifecycle / utilities   → common (common.prototype.refresh / destroy / build_rqo_show)
+*  Initialization          → area_common.prototype.init (id, mode, lang, events_tokens setup)
+*  Rendering               → render_area_thesaurus.prototype.list (assigned to both .edit and .list)
+*
+* Key event contracts:
+*  - Subscribes to  'toggle_search_panel_<id>'  (search button in the inspector toolbar).
+*  - Subscribes to  'render_<id>'               (restores search-panel open state on re-render).
+*  - Publishes      'render_instance'            after each render() call.
+*  - Registers a global 'keydown' listener (Ctrl+M) via dd_request_idle_callback so it
+*    runs only after the initial paint. (!) The listener is never removed — callers that
+*    destroy the area should be aware of this persistent handler.
+*/
+
+
 // imports
 	import {
 		common,
@@ -27,41 +69,72 @@
 
 /**
 * AREA_THESAURUS
+* Constructor for the thesaurus/ontology area controller.
+*
+* Declares all instance properties with their default values (or undefined where
+* the value is always supplied by init() / build()). Concrete initialization of
+* these properties happens in area_common.prototype.init (identity + event tokens)
+* and area_thesaurus.prototype.build (context, data, rqo, filter).
 */
 export const area_thesaurus = function() {
 
+	/** @var {string} id - Unique instance identifier assigned by the instance registry. */
 	this.id
 
 	// element properties declare
+	/** @var {string} model - Area model name: 'area_thesaurus' or 'area_ontology'. */
 	this.model
+	/** @var {string} type - Generic element type (e.g. 'area'). */
 	this.type
+	/** @var {string} tipo - Ontology tipo for this area (e.g. 'dd100' for thesaurus, 'dd5' for ontology). */
 	this.tipo
+	/** @var {string} section_tipo - Section tipo derived from context (e.g. 'dd100'). Set in build(). */
 	this.section_tipo
+	/** @var {string} mode - Interaction mode, always 'list' for areas. */
 	this.mode
+	/** @var {string} lang - Active language code (e.g. 'lg-spa'). */
 	this.lang
 
+	/** @var {Object} datum - Raw API response; contains context[] and data[] arrays after build(). */
 	this.datum
+	/** @var {Object} context - Single context entry for self.tipo, extracted from datum.context. */
 	this.context
+	/** @var {Array} data - Data entries for self.tipo, extracted from datum.data. */
 	this.data
 
+	/** @var {Array} widgets - Child context entries of self.tipo that have typo==='widget'. */
 	this.widgets
 
+	/** @var {Object} node - Map of key DOM node references (e.g. node.content_data, node.search_container). */
 	this.node
+	/** @var {string} status - Lifecycle status: 'building' | 'built'. */
 	this.status
 
+	/** @var {Object|null} filter - Keyed `search` instance that powers the collapsible search panel. Null until build(). */
 	this.filter = null
 
+	/** @var {Object} request_config_object - The 'main' entry from context.request_config used to construct rqo. */
 	this.request_config_object
+	/** @var {Object} rqo - Request query object forwarded to the API. Augmented in build() with hierarchy, thesaurus_mode, and optional SQO filter. */
 	this.rqo
 
+	/**
+	* @var {Object} build_options
+	* Options influencing how ts_object nodes are rendered.
+	*   terms_are_model {boolean} false → render as descriptor terms; true → render as ontology model context.
+	* (!) This property is kept for backward compatibility; at runtime the rqo.source.build_options
+	* object drives the actual behavior, not this property.
+	*/
 	this.build_options = {
 		terms_are_model : false //false = the terms are descriptors terms // true = the terms are models (context model of the terms)
 	}
 
 	// display mode: string 'default|relation'
+	/** @var {string} thesaurus_mode - Tree display mode sourced from context: 'default' or 'relation'. Forwarded to rqo.source.thesaurus_mode. */
 	this.thesaurus_mode
 
 	// thesaurus_view_mode: string 'default|model'. Used to allow manage models
+	/** @var {string|null} thesaurus_view_mode - View mode controlling whether model nodes are editable: 'model' | 'default' | null. Sourced from options.config or URL param. */
 	this.thesaurus_view_mode
 
 	// // model_value_is_hide : bool default false. Used to store the Ontology model_value hidden status
@@ -71,6 +144,7 @@ export const area_thesaurus = function() {
 
 	// search_tipos. Array of tipos to search in the request from URL
 	// Usually is added to the URL by Ontology node open in tree button
+	/** @var {Array|undefined} search_tipos - Optional array of tipo strings from the 'search_tipos' URL param. When present (area_ontology only), build() constructs a SQO filter to highlight those nodes. */
 	this.search_tipos
 }//end area_thesaurus
 
@@ -78,7 +152,13 @@ export const area_thesaurus = function() {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Prototype assignments that wire shared lifecycle and render methods onto area_thesaurus.
+*
+* refresh / destroy / build_rqo_show  — delegated to common so all areas share the same
+*   implementation (session handling, dependency teardown, rqo construction).
+* edit / list — both point to render_area_thesaurus.prototype.list because the thesaurus
+*   area only has a single view mode (the paginated tree list); there is no separate 'edit'
+*   layout distinct from 'list'.
 */
 // prototypes assign
 	area_thesaurus.prototype.refresh		= common.prototype.refresh
@@ -91,8 +171,35 @@ export const area_thesaurus = function() {
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Lifecycle phase 1: initialize the area instance before any API call.
+*
+* Delegates to area_common.prototype.init for identity (id, tipo, mode, lang),
+* event-token array setup, and URL-param parsing shared by all areas.
+* Then wires area_thesaurus-specific subscriptions and parses its own URL params.
+*
+* Event subscriptions registered here:
+*  - 'toggle_search_panel_<id>'  Fired by the inspector toolbar "search" button.
+*    Lazily builds+renders the filter instance the first time the panel opens, then
+*    delegates to toggle_search_panel() for show/hide animation.
+*  - 'render_<id>'  Fired after each render() call.
+*    Reads the persisted 'open_search_panel' status from the local DB and, if the
+*    panel was open before a refresh, rebuilds and re-opens it.
+*
+* Keyboard shortcut (Ctrl+M) registered in a dd_request_idle_callback:
+*  - Reads/migrates the 'show_models' preference (localStorage → local DB).
+*  - Installs a global 'keydown' listener that toggles '.model_value' visibility
+*    and persists the change to the local DB 'status' table.
+*  - (!) The keydown listener is attached to document and is never removed on
+*    instance destroy. Multiple area instantiations on the same page will
+*    accumulate listeners.
+*
+* URL params consumed (via url_vars_to_object):
+*  - initiator      {string} JSON-encoded caller id. Sets self.linker for DS (DataService) deep-links.
+*  - thesaurus_view_mode  {string} 'model'|'default'|null.
+*  - search_tipos   {string} Comma-separated tipo list (area_ontology only).
+*
+* @param {Object} options - Initialization options forwarded from the area page bootstrap.
+* @returns {Promise<boolean>} Resolves to the result of area_common.prototype.init.
 */
 area_thesaurus.prototype.init = async function(options) {
 
@@ -106,6 +213,7 @@ area_thesaurus.prototype.init = async function(options) {
 		// toggle_search_panel. Triggered by button 'search' placed into section inspector buttons
 			const toggle_search_panel_handler = async () => {
 
+				// Lazy-load: only build+render the filter the first time the panel opens.
 				if (self.search_container.children.length===0) {
 					// await add_to_container(self.search_container, self.filter)
 					await ui.load_item_with_spinner({
@@ -125,7 +233,8 @@ area_thesaurus.prototype.init = async function(options) {
 
 		// render event
 			const render_handler = () => {
-				// open_search_panel. local DDBB table status
+				// Restore the search panel open/closed state after a re-render.
+				// The status key is 'open_search_panel_<tipo>_<mode>' in the local DB 'status' table.
 				const status_id			= `open_search_panel_${self.tipo}_${self.mode}`
 				const collapsed_table	= 'status'
 				data_manager.get_local_db_data(status_id, collapsed_table, true)
@@ -167,6 +276,7 @@ area_thesaurus.prototype.init = async function(options) {
 						localStorage.removeItem('show_models')
 					}
 					const show_models_status = await data_manager.get_local_db_data('show_models', 'status')
+					// Fall back to the in-memory flag if the DB has no entry yet (first load).
 					window.page_globals.show_models = show_models_status?.value===true
 						? true
 						: (window.page_globals.show_models || false)
@@ -215,6 +325,7 @@ area_thesaurus.prototype.init = async function(options) {
 		}
 
 	// thesaurus_view_mode: model|default|null
+		// Priority: programmatic options (e.g. tool open) → URL param (page reload) → null.
 		self.thesaurus_view_mode = options.config?.thesaurus_view_mode // init options case
 			|| url_vars.thesaurus_view_mode // page reload case
 			|| null
@@ -237,10 +348,23 @@ area_thesaurus.prototype.init = async function(options) {
 
 /**
 * PARSE_SEARCH_TIPOS_FILTER
-* Ontology function to create a SQO filter with given search_tipos
-* @param array search_tipos
-* 	e.g. ['rsc22',rsc89]
-* @return object|null filter
+* Converts an array of ontology tipo strings into a SQO filter object that the API
+* can use to restrict the tree to nodes matching those tipos.
+*
+* Each tipo (e.g. 'oh26', 'rs14') is split into its TLD prefix (e.g. 'oh', 'rs')
+* and its numeric section_id ('26', '14') using get_tld_from_tipo / get_section_id_from_tipo.
+* Those two pieces map to the ontology section fields:
+*  - ontology7 (component_input_text 'tld')   — the namespace / top-level-domain.
+*  - ontology2 (component_section_id 'Id')    — the numeric record id within that namespace.
+*
+* A single tipo produces a plain $and clause.
+* Multiple tipos are wrapped in a $or so any match returns the section record.
+* Tipos that fail the tld/section_id extraction are skipped with a console.error.
+*
+* Used only in build() when self.model === 'area_ontology' and self.search_tipos is set.
+*
+* @param {Array} search_tipos - Array of tipo strings, e.g. ['rsc22', 'rsc89'].
+* @returns {Object|null} SQO filter object, or null if the input is invalid / all tipos are bad.
 */
 const parse_search_tipos_filter = function (search_tipos) {
 
@@ -254,6 +378,7 @@ const parse_search_tipos_filter = function (search_tipos) {
 	for (let i = 0; i < search_tipos_length; i++) {
 		const tipo = search_tipos[i]
 
+		// Decompose the tipo into (namespace TLD, numeric id) for the two ontology fields.
 		const tld			= get_tld_from_tipo(tipo)
 		const section_id	= get_section_id_from_tipo(tipo);
 
@@ -262,6 +387,7 @@ const parse_search_tipos_filter = function (search_tipos) {
 			continue;
 		}
 
+		// Build a per-tipo $and clause: both the TLD and the section id must match.
 		const filter_item = {
 			"$and": [
 				{
@@ -306,7 +432,7 @@ const parse_search_tipos_filter = function (search_tipos) {
 		return null;
 	}
 
-	// filter
+	// Collapse multiple per-tipo clauses under a single $or so any matching tipo passes.
 	const filter = filter_items.length === 1
 		? filter_items[0]
 		: {
@@ -321,8 +447,36 @@ const parse_search_tipos_filter = function (search_tipos) {
 
 /**
 * BUILD
-* @param bool autoload = true
-* @return bool
+* Lifecycle phase 2: fetch context + data from the API and prepare the instance
+* for rendering.
+*
+* Two-pass rqo construction:
+*  1. generate_rqo() is called before the API fetch so the request is ready.
+*     At this point context may not yet be loaded, so request_config_object falls
+*     back to an empty object and build_rqo_show creates a minimal rqo.
+*  2. After api_response is processed and context is available, generate_rqo() is
+*     called again so that hierarchy_sections / hierarchy_terms / thesaurus_mode —
+*     values that live in context — are correctly folded into rqo.source.
+*
+* Search-action optimization:
+*  When rqo.source.search_action === 'search' the existing ts_object tree instances
+*  must survive the build so build_search_instances can find them via get_instance_by_id.
+*  In all other cases (initial load, show_all) destroy() is called first to clean up
+*  the previous tree and prevent memory leaks.
+*
+* search_tipos deep-link (area_ontology only):
+*  When self.search_tipos is set (from the URL) the rqo is augmented with:
+*   - sqo.filter     — $and/$or filter targeting the specific ontology section records.
+*   - sqo.section_tipo — the namespace root tipos (TLD + '0') extracted from each tipo.
+*   - source.search_action = 'search'  — so the server treats it as a filtered query.
+*
+* show_models initialization:
+*  area_ontology defaults to show_models=true; area_thesaurus defaults to false.
+*  The local DB 'status' row 'show_models' overrides the default. A legacy
+*  localStorage key is still checked as a one-release fallback (migration runs in init).
+*
+* @param {boolean} [autoload=true] - When false, skips the API call (used for dry-run / unit-test scenarios).
+* @returns {Promise<boolean>} true on success; false if the API returned no response or an empty context.
 */
 area_thesaurus.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
@@ -342,6 +496,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 	// rqo
 		const generate_rqo = async function(){
 			// request_config_object. get the request_config_object from context
+			// Falls back to {} when context is not yet loaded (first pass before the API call).
 			self.request_config_object	= (self.context && self.context.request_config)
 				? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
 				: {}
@@ -349,6 +504,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			// rqo build
 			const action	= 'get_data'
 			const add_show	= false
+			// Preserve the existing rqo across refreshes — only build once per instance.
 			self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, action, add_show)
 
 			// self.search_tipos. Used in area_ontology to auto-search the given tipos from URL
@@ -357,12 +513,13 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				const filter = parse_search_tipos_filter(self.search_tipos);
 				if (filter) {
 					self.rqo.sqo.filter = filter
+					// Restrict the search to the namespace root sections for each tipo (TLD + '0').
 					self.rqo.sqo.section_tipo = self.search_tipos.map(el => get_tld_from_tipo(el) + '0')
 					self.rqo.source.search_action = 'search'
 				}
 			}
 
-			// self.thesaurus_view_mode
+			// Propagate the view mode to the server so it returns model-context items when needed.
 			self.rqo.source.build_options = {
 				terms_are_model : (self.thesaurus_view_mode==='model')
 			}
@@ -418,6 +575,8 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 						self.context = context
 					}
 				}
+				// Filter data to this instance's tipo only; the response may include data for
+				// child components and widgets that will be consumed by other instances.
 				self.data		= self.datum.data.filter(element => element.tipo===self.tipo)
 				self.widgets	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
 
@@ -429,6 +588,8 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				// 	self.request_config_object	= self.context.request_config.find(el => el.api_engine==='dedalo')
 
 			// rqo config
+			// Augment rqo with tree-structure params from context so the server
+			// knows which sections form the hierarchy and which display mode to use.
 				if(self.context.hierarchy_sections){
 					self.rqo.source.hierarchy_sections = self.context.hierarchy_sections
 				}
@@ -438,10 +599,12 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 				if(self.context.thesaurus_mode){
 					self.rqo.source.thesaurus_mode = self.context.thesaurus_mode
 				}
-				// limit
+				// Apply a conservative default limit; context may raise it for large thesauri.
 				self.rqo.sqo.limit = self.rqo.sqo.limit ?? 30
 
 			// rqo regenerate
+			// Second pass: context is now available so request_config_object and
+			// build_options are re-applied with the correct values.
 				await generate_rqo()
 				if(SHOW_DEBUG===true) {
 					console.log("AREA self.rqo after load:", clone(self.rqo));
@@ -489,6 +652,8 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 	// Persisted in the local db 'status' table (localStorage read kept one
 	// release as legacy fallback; see init migration)
 		const show_models_status = await data_manager.get_local_db_data('show_models', 'status')
+		// (!) Legacy localStorage.getItem('show_models') check is intentionally kept
+		// for one-release backward compatibility; it is cleaned up in init()'s migration.
 		window.page_globals.show_models = (self.model==='area_ontology'
 			|| show_models_status?.value===true
 			|| localStorage.getItem('show_models'))
@@ -512,10 +677,16 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 
 /**
 * RENDER
-* @param object options
-*	render_level : level of deep that is rendered (full | content)
-* @return promise
-*	node first DOM node stored in instance 'node' array
+* Lifecycle phase 3: paint the DOM from the loaded context and data.
+*
+* Delegates the actual DOM construction to common.prototype.render, which
+* dispatches to self.list() (= render_area_thesaurus.prototype.list) based on
+* self.mode. After the node is in the DOM, publishes 'render_instance' so the
+* page menu and any other listeners can update their section labels.
+*
+* @param {Object} [options={}] - Render options forwarded to common.prototype.render.
+*   render_level {string} 'full' (rebuild wrapper + content) | 'content' (update content only).
+* @returns {Promise<HTMLElement>} The first DOM node stored in self.node.
 */
 area_thesaurus.prototype.render = async function(options={}) {
 
@@ -535,8 +706,15 @@ area_thesaurus.prototype.render = async function(options={}) {
 
 /**
 * GET_SECTIONS_SELECTOR_DATA
-* Used by search 'sections_selector_data' to draw the typologies and sections list
-* @return object|null sections_selector_value
+* Returns the data entry for self.tipo that the search widget's sections_selector
+* uses to populate its typologies and sections list.
+*
+* The search component calls this method on its caller (this area) to retrieve
+* the structured data it needs to render filter choices scoped to the area's
+* section type (e.g. 'dd100' for thesaurus, 'dd5' for ontology).
+*
+* @returns {Object|undefined} The single self.data item whose tipo matches self.tipo,
+*   or undefined if self.data is empty or no match exists.
 */
 area_thesaurus.prototype.get_sections_selector_data = function() {
 
@@ -551,8 +729,23 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 
 /**
 * NAVIGATE
-* @param object options
-* @return bool
+* Applies a navigation action (e.g. page change, hierarchy level change) and
+* re-renders the content area without rebuilding the full wrapper.
+*
+* Workflow:
+*  1. Adds the 'loading' CSS class to self.node.content_data for a visual spinner.
+*  2. Executes the optional options.callback (e.g. to update pagination state).
+*  3. Calls self.refresh() with render_level:'content' and build_autoload:true so
+*     only the tree list is redrawn — the wrapper node and search panel are preserved.
+*  4. Removes 'loading' in the finally block regardless of success or failure.
+*
+* (!) navigation_history is extracted from options but never used; it is kept
+* for forward-compatibility with the common navigation contract.
+*
+* @param {Object} options - Navigation options.
+*   @param {Function} [options.callback] - Optional async function to execute before refreshing (e.g. update rqo.sqo.offset).
+*   @param {boolean}  [options.navigation_history=false] - Reserved; currently unused by this implementation.
+* @returns {Promise<boolean>} Always true after the refresh completes.
 */
 area_thesaurus.prototype.navigate = async function(options) {
 
@@ -600,8 +793,15 @@ area_thesaurus.prototype.navigate = async function(options) {
 
 /**
 * GET_TOTAL
-* Return the number of results in the current search data
-* @return int - count of found items (0 if no data)
+* Returns the number of term records found by the last search or initial load.
+*
+* Reads the ts_search.found array from the first entry of self.data.
+* ts_search is only present after a filtered search response; on a plain
+* tree load the property is absent and the method returns 0.
+*
+* Used by the search panel and pagination widgets to display result counts.
+*
+* @returns {number} Count of found term records, or 0 when no search result data is available.
 */
 area_thesaurus.prototype.get_total = function() {
 
@@ -609,6 +809,7 @@ area_thesaurus.prototype.get_total = function() {
 
 	const data = self.data || []
 
+	// ts_search is present only in search-result data frames, not in plain tree responses.
 	const ts_search = data[0]?.ts_search || {}
 
 	const found = ts_search.found || []
