@@ -21,11 +21,9 @@
 		new_layout,
 		render_canvas,
 		set_zoom,
-		apply_box_style,
 		serialize_layout,
 		page_dims,
 		PAGE_FORMATS,
-		PX_PER_MM,
 		remove_table_column,
 		add_default_column,
 		reorder_table_column,
@@ -50,6 +48,16 @@
 		save_layout,
 		delete_layout
 	} from './print_layout_presets.js'
+
+
+
+// helpers -------------------------------------------------------------------
+
+	const round1 = (n) => Math.round(n * 10) / 10
+	const to_num = (v, fallback) => {
+		const n = parseFloat(v)
+		return Number.isFinite(n) ? n : fallback
+	}
 
 
 
@@ -83,9 +91,6 @@ render_tool_print.prototype.edit = async function(options) {
 	// wrapper
 		const wrapper = ui.tool.build_wrapper_edit(self, { content_data })
 		wrapper.content_data = content_data
-
-	// print hooks (mm fidelity on paper)
-		setup_print(self)
 
 
 	return wrapper
@@ -743,10 +748,10 @@ const render_inspector = function(self, container) {
 
 /**
 * SYNC_INSPECTOR
-* Pushes a box's current values into the inspector inputs (or hides them when
-* no box is selected).
+* Pushes the selected {row, cell}'s current values into the inspector inputs
+* (or hides them when nothing is selected).
 * @param object self
-* @param object|null box
+* @param object|null sel - {row, cell} or null
 */
 const sync_inspector = function(self, sel) {
 
@@ -1232,11 +1237,15 @@ const toggle_fill_mode = function(self, checked) {
 * @param object self
 */
 const refresh_all_box_content = function(self) {
-	for (let p = 0; p < self.layout.pages.length; p++) {
-		const boxes = self.layout.pages[p].boxes
-		for (let b = 0; b < boxes.length; b++) {
-			if (boxes[b].content_node) {
-				render_box_content(self, boxes[b])
+	// v2 document-flow model: rows of cells, the cell.block is the "box" and
+	// content_node is attached during render_row_node. Layout has no `pages`.
+	const rows = (self.layout.flow && Array.isArray(self.layout.flow.rows)) ? self.layout.flow.rows : []
+	for (let r = 0; r < rows.length; r++) {
+		const cells = Array.isArray(rows[r].cells) ? rows[r].cells : []
+		for (let c = 0; c < cells.length; c++) {
+			const block = cells[c].block
+			if (block && block.content_node) {
+				render_box_content(self, block)
 			}
 		}
 	}
@@ -1245,33 +1254,11 @@ const refresh_all_box_content = function(self) {
 
 
 /**
-* SETUP_PRINT
-* Registers beforeprint/afterprint hooks so the printed output is driven by the
-* canonical millimetre model (not the zoom-dependent px), and injects the
-* @page size for the current page format.
-* @param object self
-*/
-const setup_print = function(self) {
-
-	if (self._print_hooked) return
-	self._print_hooked = true
-
-	self._before_print = () => apply_print_units(self)
-	self._after_print  = () => restore_screen_units(self)
-
-	window.addEventListener('beforeprint', self._before_print)
-	window.addEventListener('afterprint', self._after_print)
-}//end setup_print
-
-
-
-/**
 * DO_PRINT
 * The solid print path: always builds a fresh print document laid out in
 * millimetres (zoom-independent), one page-sequence per record (edit = 1 record,
-* list = every record of the filter), then paginates flow tables in physical
-* units so the page breaks match paper exactly. Prints the document and restores
-* the editor.
+* list = every record of the filter). Prints the document and restores the
+* editor.
 * @param object self
 */
 const do_print = async function(self) {
@@ -1287,30 +1274,28 @@ const do_print = async function(self) {
 	}
 	if (!ids.length) { window.print(); return } // nothing to fill; print as-is
 
-	const temp_instances = []
-	const doc = await render_print_document(self, ids, temp_instances)
+	let doc
+	try {
+		doc = await render_print_document(self, ids)
 
-	// @page size from the first page
-		set_page_style(self)
+		// @page size from the first page
+			set_page_style(self)
 
-	// attach the document (already paginated by the flow engine, in mm) + hide editor
-		if (self.print_root) self.print_root.style.display = 'none'
-		self.canvas_container.appendChild(doc)
+		// attach the document (already paginated by the flow engine, in mm) + hide editor
+			if (self.print_root) self.print_root.style.display = 'none'
+			self.canvas_container.appendChild(doc)
 
-	window.print()
+		window.print()
+	} catch (error) {
+		console.error('tool_print do_print error:', error)
+		if (self.print_root) self.print_root.style.display = ''
+		return
+	}
 
-	// restore
+	// restore the editor after printing
 		const cleanup = () => {
-			if (doc.parentNode) doc.remove()
+			if (doc && doc.parentNode) doc.remove()
 			if (self.print_root) self.print_root.style.display = ''
-			for (let i = temp_instances.length - 1; i >= 0; i--) {
-				const inst = temp_instances[i]
-				if (inst && typeof inst.destroy==='function') {
-					try { inst.destroy() } catch (e) { /* noop */ }
-					const idx = self.ar_instances.indexOf(inst)
-					if (idx!==-1) self.ar_instances.splice(idx, 1)
-				}
-			}
 		}
 		const on_after = () => { window.removeEventListener('afterprint', on_after); cleanup() }
 		window.addEventListener('afterprint', on_after)
@@ -1338,336 +1323,86 @@ const set_page_style = function(self) {
 
 
 /**
-* PAGINATE_PRINT_DOCUMENT_FLOW
-* Splits each flow-table across pages within the print document. Measures in the
-* mm-laid-out document (96dpi), so the result is independent of the editor zoom
-* and matches paper. Overflow rows move onto continuation pages (header optionally
-* repeated) inserted after the master page.
+* RENDER_PRINT_DOCUMENT
+* Builds a detached .print_root with the chosen template rendered once per
+* record id, in millimetres (zoom-independent, print-ready). Read-only: no
+* editor chrome, no handles.
 * @param object self
-* @param HTMLElement doc - the print document (.print_root, attached to the DOM)
-* @param object margins - {top,right,bottom,left} mm
+* @param array record_ids
+* @return promise HTMLElement print_root
 */
-export const paginate_print_document_flow = function(self, doc, margins) {
-	const masters = [...doc.querySelectorAll('.box.flow_master')]
-	for (let i = 0; i < masters.length; i++) {
-		paginate_doc_flow_box(self, masters[i], margins)
-	}
-}//end paginate_print_document_flow
-
-
-
-/**
-* PAGINATE_DOC_FLOW_BOX
-* @param object self
-* @param HTMLElement box_node - a .flow_master box in the print document
-* @param object margins
-*/
-const paginate_doc_flow_box = function(self, box_node, margins) {
-
-	const page_node = box_node.parentNode
-	if (!page_node) return
-	const table = box_node.querySelector('.box_content table.portal_table')
-	if (!table) return
-	const tbody = table.querySelector('tbody')
-	const rows = tbody ? [...tbody.children] : []
-	if (rows.length < 2) return
-
-	const row_h	= rows.map(r => r.offsetHeight)
-	const thead	= table.querySelector('thead')
-	const thead_h	= thead ? thead.offsetHeight : 0
-	const label	= box_node.querySelector('.print_label')
-	const label_h	= label ? label.offsetHeight : 0
-
-	const page_h	= parseFloat(page_node.dataset.hmm)
-	const page_w	= parseFloat(page_node.dataset.wmm)
-	const x			= parseFloat(box_node.dataset.xmm)
-	const y			= parseFloat(box_node.dataset.ymm)
-	const w			= parseFloat(box_node.dataset.wmm)
-	const font_pt	= box_node.dataset.font_pt
-	const repeat	= box_node.dataset.repeat_header !== '0'
-
-	const avail_master	= (page_h - margins.bottom - y) * PX_PER_MM - label_h - thead_h
-	const avail_cont	= (page_h - margins.top - margins.bottom) * PX_PER_MM - (repeat ? thead_h : 0)
-	if (avail_master <= row_h[0]) return
-
-	let used = 0, k = 0
-	for (; k < rows.length; k++) {
-		if (used + row_h[k] > avail_master && k > 0) break
-		used += row_h[k]
-	}
-	if (k >= rows.length) return
-
-	const overflow		= rows.slice(k)
-	const overflow_h	= row_h.slice(k)
-	overflow.forEach(r => r.remove())
-
-	let idx = 0, after_node = page_node, guard = 0
-	while (idx < overflow.length && guard++ < 1000) {
-		let u = 0, m = idx
-		for (; m < overflow.length; m++) {
-			if (u + overflow_h[m] > avail_cont && m > idx) break
-			u += overflow_h[m]
-		}
-		const seg = overflow.slice(idx, m)
-		idx = m
-		const cp = build_doc_continuation_page(table, seg, { x, w, mt: margins.top, font_pt, repeat, wmm: page_w, hmm: page_h })
-		after_node.after(cp)
-		after_node = cp
-	}
-}//end paginate_doc_flow_box
-
-
-
-/**
-* BUILD_DOC_CONTINUATION_PAGE
-* @param HTMLElement table - master table (header/colgroup source)
-* @param HTMLElement[] seg_rows
-* @param object o - {x, w, mt, font_pt, repeat, wmm, hmm}
-* @return HTMLElement continuation page node
-*/
-const build_doc_continuation_page = function(table, seg_rows, o) {
-
-	const cp = ui.create_dom_element({ element_type:'div', class_name:'print_page flow_continuation' })
-	cp.style.position	= 'relative'
-	cp.style.width		= o.wmm + 'mm'
-	cp.style.height		= o.hmm + 'mm'
-
-	const cbox = ui.create_dom_element({ element_type:'div', class_name:'box flow_continuation_box', parent: cp })
-	cbox.style.position	= 'absolute'
-	cbox.style.left		= o.x + 'mm'
-	cbox.style.top		= o.mt + 'mm'
-	cbox.style.width	= o.w + 'mm'
-
-	const content = ui.create_dom_element({ element_type:'div', class_name:'box_content', parent: cbox })
-	content.style.fontSize = o.font_pt + 'pt'
-
-	const t2 = document.createElement('table')
-	t2.className = 'portal_table'
-	if (table.style.tableLayout) t2.style.tableLayout = table.style.tableLayout
-	const cg = table.querySelector('colgroup')
-	if (cg) t2.appendChild(cg.cloneNode(true))
-	if (o.repeat) {
-		const th = table.querySelector('thead')
-		if (th) t2.appendChild(th.cloneNode(true))
-	}
-	const tb = document.createElement('tbody')
-	for (let i = 0; i < seg_rows.length; i++) tb.appendChild(seg_rows[i])
-	t2.appendChild(tb)
-	content.appendChild(t2)
-
-
-	return cp
-}//end build_doc_continuation_page
 
 
 
 /**
 * RENDER_PRINT_DOCUMENT
-* Builds a detached .print_root with the chosen template rendered once per
-* record id, in millimetres (zoom-independent, print-ready). Read-only: no
-* editor chrome, no handles. Component instances are collected so the caller
-* can destroy them after printing.
+* Builds a .print_root with the chosen template rendered once per record id, in
+* millimetres (zoom-independent, print-ready). Read-only: no editor chrome, no
+* handles.
+*
+* The root is temporarily attached off-screen during the layout pass so the flow
+* engine can measure row heights (offsetHeight returns 0 on detached nodes —
+* without this, every row appears 0px tall, everything "fits" on one page, and
+* the PDF has only the first page).
 * @param object self
 * @param array record_ids
-* @param array out_instances - collector for created component instances
-* @return promise HTMLElement print_root
+* @return promise HTMLElement print_root (detached)
 */
-export const render_print_document = async function(self, record_ids, out_instances) {
-
-	const root = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'print_root print_document'
-	})
-
-	// v2: run the SAME flow engine as the editor, but in physical mm (zoom-
-	// independent). One pass per record; cells render that record's data
-	// (render_box_content reads self.preview_section_id; the per-block table
-	// cache auto-invalidates because its key includes the record id). A page
-	// break between records is handled by the .print_page CSS.
-	const saved_preview	= self.preview_section_id
-	const saved_fill	= self.fill_mode
-	self.fill_mode = true
-
-	for (let r = 0; r < record_ids.length; r++) {
-		self.preview_section_id = record_ids[r]
-		const ctx = make_print_ctx(self, root)
-		await layout_flow(self, ctx)
-	}
-
-	self.preview_section_id	= saved_preview
-	self.fill_mode			= saved_fill
-
-
-	return root
+export const render_print_document = async function(self, record_ids) {
+ 
+    const root = ui.create_dom_element({
+        element_type    : 'div',
+        class_name        : 'print_root print_document'
+    })
+ 
+    // Attach off-screen so offsetHeight/getBoundingClientRect work during layout.
+    // visibility:hidden (not display:none) keeps layout geometry intact.
+    // CRITICAL: attach inside self.node (the .wrapper_tool.tool_print element) so
+    // the tool_print CSS rules that force component wrappers to natural height
+    // (max-height:none, overflow:visible) apply during the measurement pass.
+    // Attaching to document.body instead leaves those rules unscoped and
+    // components render with their default max-heights/scrollable containers,
+    // causing the flow engine to measure them as too short and produce too few
+    // pages (only first and last).
+        root.style.position        = 'absolute'
+        root.style.left            = '-99999px'
+        root.style.top            = '0'
+        root.style.visibility    = 'hidden'
+        ;(self.node || document.body).appendChild(root)
+ 
+    // v2: run the SAME flow engine as the editor, but in physical mm (zoom-
+    // independent). One pass per record; cells render that record's data
+    // (render_box_content reads self.preview_section_id; the per-block table
+    // cache auto-invalidates because its key includes the record id). A page
+    // break between records is handled by the .print_page CSS.
+    const saved_preview    = self.preview_section_id
+    const saved_fill    = self.fill_mode
+    self.fill_mode = true
+ 
+    try {
+        for (let r = 0; r < record_ids.length; r++) {
+            self.preview_section_id = record_ids[r]
+            const ctx = make_print_ctx(self, root)
+            await layout_flow(self, ctx)
+        }
+    } finally {
+        self.preview_section_id    = saved_preview
+        self.fill_mode            = saved_fill
+        // detach the off-screen root so do_print can reattach it in the canvas
+            root.remove()
+            root.style.position        = ''
+            root.style.left            = ''
+            root.style.top            = ''
+            root.style.visibility    = ''
+    }
+ 
+ 
+    return root
 }//end render_print_document
 
 
 
-/**
-* FILL_PRINT_BOX
-* Renders the read-only value of a box's component for a given record into the
-* target content node.
-* @param object self
-* @param HTMLElement content
-* @param object box
-* @param string|int record_id
-* @param array out_instances
-* @return promise void
-*/
-const fill_print_box = async function(self, content, box, record_id, out_instances) {
 
-	// static free-text box
-		if (box.type==='static_text') {
-			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'static_text_print',
-				inner_html		: (box.static && box.static.text) || '',
-				parent			: content
-			})
-			return
-		}
-
-	if (box.type!=='component' || !box.component_ref) return
-
-	// optional field label
-		if (box.show_label===false) content.classList.add('hide_label')
-
-	try {
-		const ref	= box.component_ref
-		const lang	= (box.render && box.render.lang && box.render.lang!=='inherit')
-			? box.render.lang
-			: page_globals.dedalo_data_lang
-
-		let component = await get_instance({
-			model			: ref.model,
-			tipo			: ref.tipo,
-			section_tipo	: ref.section_tipo,
-			section_id		: record_id,
-			lang			: lang,
-			mode			: is_relation_model(ref.model) ? 'edit' : full_value_mode(ref.model),
-			permissions		: 1,
-			view			: ref.view || 'default',
-			id_variant		: 'tp_doc_' + box.id + '_' + record_id, // unique per box+record
-			caller			: self
-		})
-		await component.build(true)
-		if (is_relation_model(ref.model)) {
-			component = await load_all_entries(self, component, {
-				model: ref.model, tipo: ref.tipo, section_tipo: ref.section_tipo,
-				section_id: record_id, lang, view: ref.view, box_id: box.id + '_' + record_id
-			})
-		}
-		const node = await render_component_value(component, ref.model, { columns: box.table_columns, self, lang, show_header: box.show_table_header !== false })
-
-		// totally inert static clone; destroy the live instance (and its children)
-		const static_node = node ? node.cloneNode(true) : null
-		try { component.destroy(true, true, true) } catch (e) { /* noop */ }
-
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'print_label',
-			inner_html		: ref.label_snapshot || '',
-			parent			: content
-		})
-		if (static_node) content.appendChild(static_node)
-
-	} catch (error) {
-		console.error('tool_print fill_print_box error for box', box.id, error)
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'box_unavailable',
-			inner_html		: '⚠ ' + (box.component_ref?.label_snapshot || ''),
-			parent			: content
-		})
-	}
-}//end fill_print_box
-
-
-
-/**
-* APPLY_PRINT_UNITS
-* Writes every page/box inline style in millimetres and injects @page size, so
-* paper output ignores the editor zoom entirely.
-* @param object self
-*/
-const apply_print_units = function(self) {
-
-	if (!self.layout) return
-
-	// @page size from the first page format
-		const dims0 = page_dims(self, self.layout.pages[0])
-		let style_el = document.getElementById('tool_print_page_style')
-		if (!style_el) {
-			style_el = document.createElement('style')
-			style_el.id = 'tool_print_page_style'
-			document.head.appendChild(style_el)
-		}
-		style_el.textContent = `@media print { @page { size: ${dims0.width_mm}mm ${dims0.height_mm}mm; margin: 0; } }`
-
-	// pages + boxes in mm
-		for (let p = 0; p < self.layout.pages.length; p++) {
-			const page = self.layout.pages[p]
-			const dims = page_dims(self, page)
-			if (page.node) {
-				page.node.style.width  = dims.width_mm + 'mm'
-				page.node.style.height = dims.height_mm + 'mm'
-			}
-			for (let b = 0; b < page.boxes.length; b++) {
-				const box = page.boxes[b]
-				if (!box.node) continue
-				box.node.style.left	= box.rect.x + 'mm'
-				box.node.style.top		= box.rect.y + 'mm'
-				box.node.style.width	= box.rect.w + 'mm'
-				// grow/flow boxes keep auto height (tall tables); others fix to rect.h
-				if (box.overflow && (box.overflow.mode==='grow' || box.overflow.mode==='flow')) {
-					box.node.style.height		= 'auto'
-					box.node.style.minHeight	= box.rect.h + 'mm'
-				} else {
-					box.node.style.height		= box.rect.h + 'mm'
-				}
-			}
-		}
-
-	// transient flow continuation pages/boxes → millimetres (from their dataset)
-		if (self.print_root) {
-			const cont_pages = self.print_root.querySelectorAll('.print_page.flow_continuation')
-			for (let i = 0; i < cont_pages.length; i++) {
-				const pn = cont_pages[i]
-				pn.style.width  = pn.dataset.wmm + 'mm'
-				pn.style.height = pn.dataset.hmm + 'mm'
-				const cbs = pn.querySelectorAll('.flow_continuation_box')
-				for (let j = 0; j < cbs.length; j++) {
-					const bn = cbs[j]
-					bn.style.left	= bn.dataset.xmm + 'mm'
-					bn.style.top	= bn.dataset.ymm + 'mm'
-					bn.style.width	= bn.dataset.wmm + 'mm'
-				}
-			}
-		}
-}//end apply_print_units
-
-
-
-/**
-* RESTORE_SCREEN_UNITS
-* Re-derives px geometry from mm after printing.
-* @param object self
-*/
-const restore_screen_units = function(self) {
-	if (!self.layout || !self.canvas_container) return
-	render_canvas(self, self.canvas_container)
-	refresh_all_box_content(self)
-}//end restore_screen_units
-
-
-
-// helpers -------------------------------------------------------------------
-
-	const round1 = (n) => Math.round(n * 10) / 10
-	const to_num = (v, fallback) => {
-		const n = parseFloat(v)
-		return Number.isFinite(n) ? n : fallback
-	}
 
 
 
