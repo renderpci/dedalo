@@ -3,6 +3,34 @@
 /*eslint no-undef: "error"*/
 
 
+
+/**
+* AREA_GRAPH
+*
+* Top-level area controller for the thesaurus graph/tree UI.
+* An "area" in Dédalo is a full-page workspace (as opposed to a section
+* inside a portal). area_graph owns the hierarchical thesaurus tree view
+* powered by ts_object nodes and exposes a search filter panel.
+*
+* Lifecycle (standard Dédalo area pattern):
+*   get_instance(options) → init() → build([autoload]) → render()
+*
+* Prototype chain:
+*   area_graph inherits shared helpers from common.prototype:
+*     refresh, destroy, build_rqo_show, render
+*   View rendering is delegated to render_area_graph.prototype.list,
+*   assigned to both area_graph.prototype.edit and area_graph.prototype.list.
+*
+* Key state:
+*   - self.ts_object   {ts_object}  singleton-like thesaurus tree controller
+*   - self.filter      {search}     search-panel instance; lazy-built on first open
+*   - self.linker      {Object}     DS (Digital System) caller identity; read from URL
+*   - self.rqo         {Object}     active request query object sent to the API
+*
+* @module area_graph
+*/
+
+
 // imports
 	import {
 		common,
@@ -21,7 +49,9 @@
 
 
 /**
-* area_graph
+* AREA_GRAPH
+* Constructor. Declares all instance properties with their expected types;
+* actual values are set during init() / build().
 */
 export const area_graph = function() {
 
@@ -74,8 +104,23 @@ export const area_graph = function() {
 
 /**
 * INIT
-* @pram object options
-* @return bool
+* Bootstraps the area_graph instance by delegating to area_common.prototype.init
+* and then wiring up event subscriptions specific to this area.
+*
+* Event subscriptions registered here:
+*   - 'toggle_search_panel_<id>'  Fired by the toolbar Search button; lazily
+*     builds and renders the filter (search) panel the first time it is opened,
+*     then toggles its collapsed/expanded state.
+*   - 'render_<id>'               Fired after the area's DOM is mounted; re-opens
+*     the search panel if it was open in the previous session (state persisted in
+*     IndexedDB via data_manager.get_local_db_data).
+*
+* Side effects:
+*   - Parses the URL's `initiator` parameter (JSON) and stores it in self.linker
+*     so that DS (Digital System) callers can be identified during term linking.
+*
+* @param {Object} options - Standard area init options (model, tipo, mode, lang, …)
+* @returns {boolean} Result of area_common.prototype.init (true on success)
 */
 area_graph.prototype.init = async function(options) {
 
@@ -154,8 +199,30 @@ area_graph.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param bool autoload = true
-* @return bool
+* Loads context and data from the API, initialises the ts_object thesaurus
+* controller, and wires up the search filter instance.
+*
+* Flow when autoload=true:
+*   1. Call generate_rqo() to build the initial request query object (rqo)
+*      from the pre-existing context.request_config if available.
+*   2. Call build_autoload(self) — issues a combined context+data API request
+*      and stores the result in self.datum.
+*   3. Destroy previous child instances (dependency cleanup, DOM kept).
+*   4. Extract self.context, self.data, and self.widgets from self.datum.
+*   5. Propagate hierarchy/thesaurus options from context into rqo.source,
+*      then call generate_rqo() again to rebuild rqo with the enriched context.
+*   6. Lazily create the keyed 'search' instance for the filter panel.
+*
+* When autoload=false the caller is responsible for supplying self.datum,
+* self.context, and self.data before calling render().
+*
+* Side effects:
+*   - self.ts_object    new ts_object() bound to this area's mode
+*   - self.filter       get_instance('search') singleton, keyed by id_variant=model
+*   - self.status       updated to 'building' → 'built'
+*
+* @param {boolean} [autoload=true] - When true, fetches context+data from API
+* @returns {boolean} true on success, false if the API response is invalid
 */
 area_graph.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
@@ -231,6 +298,7 @@ area_graph.prototype.build = async function(autoload=true) {
 					}
 				}
 				self.data		= self.datum.data.filter(element => element.tipo===self.tipo)
+				// (!) Note: context filter uses 'typo' (not 'type') — this matches the server-side shape
 				self.widgets	= self.datum.context.filter(element => element.parent===self.tipo && element.typo==='widget')
 
 			// dd_request
@@ -311,10 +379,13 @@ area_graph.prototype.build = async function(autoload=true) {
 
 /**
 * RENDER
-* @param object options
-*	render_level : level of deep that is rendered (full | content)
-* @return promise
-*	node first DOM node stored in instance 'node' array
+* Delegates to common.prototype.render (which calls this.edit/this.list
+* according to self.mode) and then publishes the 'render_instance' event
+* so that the menu and other observers can update their state.
+*
+* @param {Object} [options={}] - Render options passed through to common.prototype.render
+*   @param {string} [options.render_level] - 'full' | 'content' (default: 'full')
+* @returns {Promise<HTMLElement>} The root DOM node stored in self.node
 */
 area_graph.prototype.render = async function(options={}) {
 
@@ -334,7 +405,14 @@ area_graph.prototype.render = async function(options={}) {
 
 /**
 * GET_SECTIONS_SELECTOR_DATA
-* @return array of objects sections_selector_data
+* Returns the value of the data item matching self.tipo from self.data.
+* Used by the section selector widget to determine which sections are
+* currently displayed in the graph view.
+*
+* Returns null when no matching data item exists (e.g. on first build
+* before data has been loaded).
+*
+* @returns {*} The value property of the matching data item, or null
 */
 area_graph.prototype.get_sections_selector_data = function() {
 
@@ -352,8 +430,19 @@ area_graph.prototype.get_sections_selector_data = function() {
 
 /**
 * NAVIGATE
-* @param object options
-* @return bool
+* Executes an optional callback (e.g. a pagination or filter change) and
+* then refreshes the area content without a full rebuild.
+*
+* The 'loading' CSS class is applied to content_data before navigation and
+* removed afterward to provide visual feedback to the user.
+*
+* refresh() is always called with render_level='content' so only the inner
+* thesaurus tree is re-rendered — the toolbar and search panel are kept intact.
+*
+* @param {Object} options - Navigation options
+*   @param {Function} [options.callback] - Async function to execute before refresh
+*   @param {boolean} [options.navigation_history=false] - Whether to push a browser history entry
+* @returns {boolean} true when navigation and refresh have completed
 */
 area_graph.prototype.navigate = async function(options) {
 
