@@ -409,6 +409,8 @@ const proces_ar_data = function(self) {
 */
 tool_subtitles.prototype.get_user_tools = async function(ar_requested_tools){
 
+	const self = this
+
 	// source. Note that second argument is the name of the function is the action that not has utility here
 		const source = create_source(self, 'user_tools')
 
