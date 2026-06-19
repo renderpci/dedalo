@@ -84,7 +84,7 @@ export const tool_dd_label = function () {
 	this.last_value
 
 	return true
-}//end page
+}//end tool_dd_label
 
 
 
@@ -208,25 +208,25 @@ tool_dd_label.prototype.update_data = function() {
 
 	const self = this
 
-	// inmutable_value. JSON editor prefers immutable
-		const inmutable_value = JSON.parse(JSON.stringify(self.ar_data))
+	// immutable_value. JSON editor prefers immutable
+		const immutable_value = JSON.parse(JSON.stringify(self.ar_data))
 
 	// not changed value case
-		if (self.last_value===JSON.stringify(inmutable_value)) {
+		if (self.last_value===JSON.stringify(immutable_value)) {
 			return
 		}
 
 	// editor
 		const editor = self.caller.editors[0]
 		editor.set({
-			json : inmutable_value
+			json : immutable_value
 		})
 
 	// update caller (component_json) value
-		self.caller.set_value(inmutable_value, 0)
+		self.caller.set_value(immutable_value, 0)
 
 	// last value. Set to compare with new calls
-		self.last_value = JSON.stringify(inmutable_value)
+		self.last_value = JSON.stringify(immutable_value)
 
 
 	return true

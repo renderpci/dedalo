@@ -852,8 +852,8 @@ const render_columns_mapper = async function(self, item) {
 					: column_name.split('_')
 				// in any case use the first element in the array, it could be specific name or the component_tipo
 				const column_component_tipo	= ar_identifier[0]
-				const ar_components_lenght	= ar_components.length
-				for (let k = 0; k < ar_components_lenght; k++) {
+				const ar_components_length	= ar_components.length
+				for (let k = 0; k < ar_components_length; k++) {
 
 					const option = ui.create_dom_element({
 						element_type	: 'option',
@@ -1137,9 +1137,9 @@ const render_final_report = function(options){
 	const result_len = api_response.result.length
 	for (let i = result_len - 1; i >= 0; i--) {
 
-		const current_rensponse	= api_response.result[i]
+		const current_response	= api_response.result[i]
 		const current_file		= selected_files.find(el =>
-			el.name === current_rensponse.file && el.section_tipo === current_rensponse.section_tipo
+			el.name === current_response.file && el.section_tipo === current_response.section_tipo
 		)
 
 		const result_container = current_file?.result_container || null
@@ -1151,8 +1151,8 @@ const render_final_report = function(options){
 				}
 
 			// response_msg. OK/Error message
-				const message_class	= current_rensponse.result ? 'success' : 'danger'
-				const message_label	= current_rensponse.result
+				const message_class	= current_response.result ? 'success' : 'danger'
+				const message_label	= current_response.result
 					? self.get_tool_label('ok') || 'OK'
 					: self.get_tool_label('error') || 'Error'
 				const response_msg = ui.create_dom_element({
@@ -1166,7 +1166,7 @@ const render_final_report = function(options){
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'user_msg_container',
-					inner_html		: current_rensponse.msg,
+					inner_html		: current_response.msg,
 					parent			: result_container
 				})
 
@@ -1198,12 +1198,12 @@ const render_final_report = function(options){
 				})
 
 
-			if(current_rensponse.result) {
+			if(current_response.result) {
 
 				// failed_rows info
-					if(current_rensponse.failed_rows.length>0) {
+					if(current_response.failed_rows.length>0) {
 
-						const failed_rows = current_rensponse.failed_rows
+						const failed_rows = current_response.failed_rows
 
 						const header = ui.create_dom_element({
 							element_type	: 'div',
@@ -1228,7 +1228,7 @@ const render_final_report = function(options){
 							copy_to_find_button.addEventListener( 'click', (e) => {
 								e.stopPropagation()
 
-								const failed_section_id = current_rensponse.failed_rows.map(el => el.section_id)
+								const failed_section_id = current_response.failed_rows.map(el => el.section_id)
 
 								if(!navigator.clipboard){
 									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
@@ -1256,7 +1256,7 @@ const render_final_report = function(options){
 							copy_as_column_button.addEventListener( 'click', (e) => {
 								e.stopPropagation()
 
-								const failed_section_id = current_rensponse.failed_rows.map(el => el.section_id)
+								const failed_section_id = current_response.failed_rows.map(el => el.section_id)
 								if(!navigator.clipboard){
 									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
 									alert(insecure_label);
@@ -1292,10 +1292,10 @@ const render_final_report = function(options){
 								parent			: result_info_container
 							})
 						}
-					}//end if(current_rensponse.failed_rows.length>0)
+					}//end if(current_response.failed_rows.length>0)
 
 				// warning_rows info. Non fatal: data was imported but needs user attention
-					const warning_rows = current_rensponse.warning_rows || []
+					const warning_rows = current_response.warning_rows || []
 					if(warning_rows.length>0) {
 
 						const header = ui.create_dom_element({
@@ -1333,7 +1333,7 @@ const render_final_report = function(options){
 					}//end if(warning_rows.length>0)
 
 				// created_rows info
-					if(current_rensponse.created_rows.length>0) {
+					if(current_response.created_rows.length>0) {
 
 						// header
 							const header = ui.create_dom_element({
@@ -1364,7 +1364,7 @@ const render_final_report = function(options){
 									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
 									alert(insecure_label);
 								}else{
-									navigator.clipboard.writeText(current_rensponse.created_rows.join(','))
+									navigator.clipboard.writeText(current_response.created_rows.join(','))
 									.then(() => {
 										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
 										alert(text_copied);
@@ -1390,7 +1390,7 @@ const render_final_report = function(options){
 									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
 									alert(insecure_label);
 								}else{
-									navigator.clipboard.writeText(current_rensponse.created_rows.join('\n'))
+									navigator.clipboard.writeText(current_response.created_rows.join('\n'))
 									.then(() => {
 										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
 										alert(text_copied);
@@ -1406,13 +1406,13 @@ const render_final_report = function(options){
 							const created_rows = ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'section_id_container',
-								inner_html		: current_rensponse.created_rows.join('<br>'),
+								inner_html		: current_response.created_rows.join('<br>'),
 								parent			: result_info_container
 							})
-					}//end if(current_rensponse.created_rows.length>0)
+					}//end if(current_response.created_rows.length>0)
 
 				// updated_rows info
-					if(current_rensponse.updated_rows.length>0) {
+					if(current_response.updated_rows.length>0) {
 
 						// header
 							const header = ui.create_dom_element({
@@ -1439,7 +1439,7 @@ const render_final_report = function(options){
 							copy_to_find_button.addEventListener('click', (e) => {
 								e.stopPropagation()
 
-								const clipboard_data = current_rensponse.updated_rows.join(',')
+								const clipboard_data = current_response.updated_rows.join(',')
 								if(!navigator.clipboard){
 									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
 									alert(insecure_label);
@@ -1471,7 +1471,7 @@ const render_final_report = function(options){
 									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
 									alert(insecure_label);
 								}else{
-									const clipboard_data = current_rensponse.updated_rows.join('\n')
+									const clipboard_data = current_response.updated_rows.join('\n')
 									navigator.clipboard.writeText(clipboard_data)
 									.then(() => {
 										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
@@ -1488,11 +1488,11 @@ const render_final_report = function(options){
 							const updated_rows = ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'section_id_container',
-								inner_html		: current_rensponse.updated_rows.join('<br>'),
+								inner_html		: current_response.updated_rows.join('<br>'),
 								parent			: result_info_container
 							})
-					}//end if(current_rensponse.updated_rows.length>0)
-			}//end if(current_rensponse.result)
+					}//end if(current_response.updated_rows.length>0)
+			}//end if(current_response.result)
 		}//end if(result_container)
 	}//end for (let i = result_len - 1; i >= 0; i--)
 }//end render_final_report

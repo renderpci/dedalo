@@ -185,7 +185,7 @@ const get_content_data = async function(self) {
 *   1. Action cell (leftmost, 2em column):
 *      - Header row → "add" button; clicking it appends a new blank data row.
 *        The new row's key is computed as the current live count of `.label_data`
-*        rows (`safe_leght`) rather than `self.ar_names.length`, to stay accurate
+*        rows (`safe_length`) rather than `self.ar_names.length`, to stay accurate
 *        even if names were removed without re-rendering.
 *      - Data row   → "remove" button; clicking it:
 *          a. Prompts the user for confirmation via `confirm()`.
@@ -239,18 +239,17 @@ const render_row = async function(self, ar_langs, header, name, key) {
 			add_button.addEventListener('click', async (e) =>{
 				e.stopPropagation()
 
-				// safe_leght
+				// safe_length
 				// (!) Re-count live DOM rows so the key stays accurate after add/remove cycles.
-				// Note: variable name "safe_leght" is a typo for "safe_length" — do not rename.
 					const rows_list = li.parentNode.querySelectorAll('.label_data')
-					const safe_leght = [...rows_list].length
+					const safe_length = [...rows_list].length
 
 				const row = await render_row(
 					self,
 					ar_langs, // array ar_langs
 					false, // bool is header
 					'', // string name
-					safe_leght // self.ar_names.length // int key
+					safe_length // self.ar_names.length // int key
 				)
 				self.label_matix.appendChild(row)
 			})
@@ -396,12 +395,11 @@ const render_row = async function(self, ar_langs, header, name, key) {
 const render_language_label = async function(self, current_lang, header, name, key) {
 
 	// get the current data for the node
-	// (!) Variable name "curernt_data" is a typo for "current_data" — do not rename.
-		const curernt_data = self.ar_data.find(item => item.name===name && item.lang===current_lang.value )
+		const current_data = self.ar_data.find(item => item.name===name && item.lang===current_lang.value )
 
 	// label
-		const label_value = typeof curernt_data!=='undefined'
-			? curernt_data.value || null
+		const label_value = typeof current_data!=='undefined'
+			? current_data.value || null
 			: null
 		const placeholder = name || ''
 

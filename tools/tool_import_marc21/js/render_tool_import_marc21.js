@@ -95,7 +95,7 @@ render_tool_import_marc21.prototype.edit = async function(options) {
 
 
 	return wrapper
-}//end render_tool_import_marc21
+}//end edit
 
 
 

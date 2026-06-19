@@ -288,7 +288,7 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 *
 * @param {Object} options - Diffuse call options.
 * @param {Object}  [options.item]                  - Diffusion target descriptor (from section_diffusion_nodes).
-* @param {string}  [options.diffusion_elemento_tipo] - Overrides item.element_tipo when provided.
+* @param {string}  [options.diffusion_element_tipo] - Overrides item.element_tipo when provided.
 * @param {string}  [options.diffusion_tipo]         - Overrides item.diffusion_tipo when provided.
 * @param {number}  [options.resolve_levels]         - Overrides self.resolve_levels.
 * @param {string}  [options.process_id]             - Bun process tracking ID.
