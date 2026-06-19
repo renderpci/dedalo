@@ -1,8 +1,49 @@
 <?php declare(strict_types=1);
 /**
 * CLASS TOOL_TIME_MACHINE
+* Server-side controller for the Time Machine tool — restores historical component
+* and section snapshots from the `matrix_time_machine` audit table.
 *
+* Responsibilities:
+* - apply_value: overwrites the live data of a single component or an entire section
+*   with a historical snapshot identified by its `matrix_time_machine.id` (matrix_id).
+*   Handles the dataframe side-car data independently so that dataframe frames are
+*   restored before the main component is saved (ensuring a consistent TM entry is
+*   created for the main component that also covers the restored frames).
+* - bulk_revert_process: finds every component changed by a given bulk process
+*   (identified by bulk_process_id), determines the pre-bulk state of each component
+*   from the TM history, and writes a revert save for each — registering all revert
+*   saves under a new bulk_process_id so the revert itself can later be undone.
+* - is_available: lifecycle hook suppressing the tool button on
+*   component_relation_children (which carries no TM data).
 *
+* Data shapes:
+* - The `matrix_time_machine` table is a flat table with columns:
+*   id, section_id, section_tipo, tipo, lang, timestamp, user_id, bulk_process_id, data.
+*   The `data` column stores the raw component datum array (JSONB).
+* - TM data for a component that has a dataframe contains both main locators and
+*   frame objects in the same flat array; they are distinguished via
+*   `component_common::is_dataframe_entry()` (dual-read: unified DEDALO_RELATION_TYPE_DATAFRAME
+*   marker first, legacy pairing-key shape as fallback).
+* - For component_iri, `data` contains objects with an `iri` property instead of locators.
+*
+* Security model (SEC-024):
+* - API_ACTIONS enforces schema-level permission gates before dispatch.
+* - apply_value and bulk_revert_process additionally assert per-record scope
+*   (filter_by_projects) because tm_record::search does not filter by project.
+*
+* Relationships:
+* - Extends tool_common (tool registration, context helpers).
+* - Calls tm_record::get_instance() / tm_record::search() for TM row access.
+* - Calls section_record::get_instance() for whole-section restores.
+* - Calls component_common::get_instance() for per-component restores.
+* - Calls component_dataframe::set_time_machine_data() for dataframe frame restores.
+* - Calls section_record::restore_deleted_section_media_files() after section restores.
+* - Calls security::assert_section_permission() / assert_tipo_permission() /
+*   assert_record_in_user_scope() for write-access enforcement.
+*
+* @package Dédalo
+* @subpackage Tools
 */
 class tool_time_machine extends tool_common {
 
@@ -43,9 +84,39 @@ class tool_time_machine extends tool_common {
 
 	/**
 	* APPLY_VALUE
-	* Set user selected value from time machine to current element data
-	* @param object $request_options
-	* @return object $response
+	* Restores a single historical snapshot — identified by its `matrix_time_machine.id`
+	* (`matrix_id`) — back into the live record. The operation branches on the model:
+	*
+	* - section model: a full section_record is overwritten and any media files that
+	*   were deleted between the snapshot and now are re-linked via
+	*   restore_deleted_section_media_files(). The stale SQO cache entry is cleared so
+	*   the next search reflects the restored state. The TM row itself is deleted after a
+	*   successful save (restoring to a section snapshot is a destructive act; keeping the
+	*   snapshot would create a confusing circular history).
+	* - component_* model: the component's live data is overwritten. If the component
+	*   carries a dataframe (get_dataframe_ddo returns non-empty), each dataframe tipo is
+	*   restored first via component_dataframe::set_time_machine_data() BEFORE the main
+	*   component save. This ordering is deliberate: the main component's save will
+	*   create a new TM entry that implicitly covers the updated frames, giving a single
+	*   coherent snapshot for any future revert.
+	*
+	* Data extraction:
+	* - `tm_record::get_element_data()` returns the raw `data` column value from the TM
+	*   row, which may be a mixed array containing both main-component locators/values
+	*   and dataframe frame objects.
+	* - For relation and IRI components, main data is separated from frame data before
+	*   the save: `is_dataframe_entry()` strips frames from the main array; for
+	*   component_iri, objects carrying an `iri` property are kept (frames lack it).
+	*
+	* Security:
+	* - Requires write permission (>=2) on the schema (tipo or section) gate (SEC-024 §9.2).
+	* - Requires the target record to fall within the caller's filter_by_projects scope
+	*   (SEC-024 §9.4), since this gate is NOT applied by tm_record::get_instance().
+	*
+	* @param object $request_options - shape: {section_tipo, section_id, tipo, lang,
+	*                                   matrix_id (int), caller_dataframe?}
+	* @return object $response       - shape: {result:bool, msg:string, errors:array,
+	*                                   restore_deleted_section_media_files?:?array, debug?:object}
 	*/
 	public static function apply_value(object $request_options) : object {
 		$start_time = start_time();
@@ -101,7 +172,9 @@ class tool_time_machine extends tool_common {
 				);
 			}
 
-		// data. extract data from matrix_time_machine table
+		// TM record lookup
+		// matrix_id is the PK of matrix_time_machine (NOT section_id of the source record).
+		// tm_record::get_instance() loads the flat-row by its own `id` column.
 			$tm_record	= tm_record::get_instance( (int)$matrix_id );
 
 		// get time machine data with the matrix_id
@@ -126,10 +199,17 @@ class tool_time_machine extends tool_common {
 					// Save the element (section) with a new updated data from time machine
 						$result = $element->save();
 
-					// section->Save returns int $section_id on success or null on failure
+					// section->Save returns int $section_id on success or null on failure.
+					// Loose == comparison: $result may be a string-typed int from the DB
+					// while $section_id is a string supplied by the caller; strict ===
+					// would fail for the common case where both are numeric strings.
 						if ($result==$section_id) {
 
 							// reset section session sqo
+							// After overwriting a section's data the cached SQO (search query
+							// object) stored in the session may reference stale pager/filter
+							// state. Clearing it forces a fresh SQO the next time the user
+							// opens that section's search UI.
 								$sqo_id	= section::build_sqo_id($section_tipo);
 								if (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 									unset($_SESSION['dedalo']['config']['sqo'][$sqo_id]);
@@ -164,6 +244,11 @@ class tool_time_machine extends tool_common {
 								);
 
 							// Delete time machine record
+						// (!) Section restores are intentionally destructive: the TM snapshot
+						// is consumed by the restore and removed to prevent misleading
+						// "earlier than restored" entries appearing in the section's TM list.
+						// Component restores do NOT delete the TM row — the new save
+						// immediately creates a fresh TM entry for the component.
 							$tm_record->delete();
 						}
 					break;
@@ -172,6 +257,9 @@ class tool_time_machine extends tool_common {
 					// recovering component case
 
 					// component. Inject tm data to the component
+					// (!) Mode 'list' is required here. Using 'edit' would trigger
+					// set_data_default() on instantiation, which would overwrite the
+					// component's current live data before the TM data can be set.
 						$element = component_common::get_instance(
 							$model,
 							$tipo,
@@ -198,6 +286,11 @@ class tool_time_machine extends tool_common {
 								// here only use the main_component_tipo
 								// the dataframe will save all time machine data independent of section_id_key or section_tipo_key
 								// and it don't save the revert in Time Machine, as main component does.
+								// (!) $caller_dataframe is intentionally re-assigned here, shadowing the
+								// outer variable (from $options->caller_dataframe). The dataframe component
+								// needs a caller_dataframe that names the main component tipo (not the
+								// original request's caller context). The outer $caller_dataframe, if any,
+								// is applied to the main $element after the dataframe loop (see below).
 								$caller_dataframe = new stdClass();
 									$caller_dataframe->main_component_tipo	= $tipo;
 
@@ -248,7 +341,10 @@ class tool_time_machine extends tool_common {
 						if($model==='component_iri'){
 							$data_time_machine = array_values( array_filter( $data_time_machine, function($el) {
 								// return only the objects with iri property
-								return property_exists($el, 'iri');;
+								// IRI entries have an 'iri' property; dataframe frames do not,
+								// so this test cleanly separates main data from frame data without
+								// relying on is_dataframe_entry (frames don't carry 'iri').
+								return property_exists($el, 'iri');; // (!) double semicolon — harmless but a typo
 							}));
 						}else{
 							// Main component: keep its own locators, exclude dataframe frames.
@@ -325,13 +421,35 @@ class tool_time_machine extends tool_common {
 
 	/**
 	* BULK_REVERT_PROCESS
-	* Revert a bulk process done previously
-	* Use the bulk_process_id to get all changes done by this process in all sections.
-	* Get all changes done in the component affected by the bulk process
-	* Revert the component to the previous data of the bulk process.
-	* If the component has not previous data, set a empty data.
-	* @param object $request_options
-	* @return object $response
+	* Reverts every component change that was made by a previous bulk operation,
+	* identified by `bulk_process_id`. The algorithm:
+	*
+	* 1. Create a new process record in the bulk-process section (DEDALO_BULK_PROCESS_SECTION_TIPO,
+	*    dd800). Its auto-assigned section_id becomes the `new_bulk_process_id` that tags
+	*    each revert save, making this revert itself reversible.
+	* 2. Fetch all TM rows that share the given `bulk_process_id` (ordered `id DESC`).
+	* 3. For each such row, fetch the full TM history of the same (section_tipo, section_id,
+	*    tipo) triplet (again `id DESC`, so the most recent change comes first).
+	* 4. Walk that per-component history until the row whose `bulk_process_id` matches
+	*    the one being reverted; the *next* (older) row is the pre-bulk state to restore.
+	*    Edge case: if the component has only one TM row (the bulk change was its first ever
+	*    change), `$time_machine_data` is set to `[]` (empty array), effectively blanking
+	*    the component's data back to its default.
+	* 5. Instantiate the component, assign the new bulk_process_id (so the revert save is
+	*    itself tracked), set the data, and save.
+	*
+	* Per-row security:
+	* - Each (section_tipo, tipo) pair is checked for write (>=2) permission (SEC-024 §9.2).
+	* - Each record is checked against the caller's filter_by_projects scope (SEC-024 §9.4).
+	*   Rows that fail either check are skipped with an error appended to `$response->errors`
+	*   rather than aborting the whole operation.
+	*
+	* Note: only component-level reverts are supported here; section-level restores are
+	* covered by apply_value (model==='section' branch).
+	*
+	* @param object $request_options - shape: {section_tipo, section_id, tipo, lang,
+	*                                   bulk_process_id (int), bulk_revert_process_label (string)}
+	* @return object $response       - shape: {result:bool, msg:string, errors:array, debug?:object}
 	*/
 	public static function bulk_revert_process(object $request_options) : object {
 		$start_time = start_time();
@@ -357,6 +475,12 @@ class tool_time_machine extends tool_common {
 			$lang						= $options->lang;
 			$bulk_process_id			= $options->bulk_process_id;
 			$bulk_revert_process_label	= $options->bulk_revert_process_label;
+			// (!) $model is derived here from the caller's $tipo, but $tipo, $section_tipo,
+			// and $section_id are all overwritten inside the $db_result foreach loop with
+			// values from each TM row. This means $model (and $lang) remain fixed to the
+			// original caller's component for the entire revert loop, which is correct for
+			// homogeneous bulk processes (all rows affect the same model). If a bulk process
+			// spans multiple component models, $model will be incorrect for non-matching rows.
 			$model						= ontology_node::get_model_by_tipo($tipo,true);
 
 		// get all changes saved in time_machine with the same bulk_process_id
@@ -474,6 +598,9 @@ class tool_time_machine extends tool_common {
 					}
 					// process the row (after the row of the bulk_process_id)
 					// component. Inject tm data to the component
+					// Mode 'list' prevents set_data_default() from firing and overwriting
+					// the component data before the TM snapshot is applied (same rationale
+					// as in apply_value's component branch above).
 						$element = component_common::get_instance(
 							$model,
 							$tipo,
@@ -515,6 +642,8 @@ class tool_time_machine extends tool_common {
 							logged_user_id() // int
 						);
 
+					// Stop after restoring the single pre-bulk snapshot. The outer foreach
+					// will move on to the next bulk-process TM row (next component).
 					break;
 				}
 			}// end foreach
