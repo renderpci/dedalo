@@ -167,7 +167,7 @@ class move_locator {
 			}, $json_files)
 		);
 
-		// process changes_in_tipos
+		// process changes_in_locators
 		// Exhaustive list of all matrix tables that may store locator strings.
 		// If a new matrix table is introduced it must be added here as well.
 		$ar_tables = [

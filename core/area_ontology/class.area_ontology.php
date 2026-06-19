@@ -44,7 +44,6 @@ class area_ontology extends area_thesaurus {
 	* No additional properties are declared here; all state is inherited from
 	* area_thesaurus (typology/hierarchy name caches, thesaurus_mode, model_view)
 	* and from area_common / common (tipo, mode, lang, etc.).
-	* @var
 	*/
 
 

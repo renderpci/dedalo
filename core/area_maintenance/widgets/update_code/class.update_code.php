@@ -1128,10 +1128,8 @@ class update_code {
 			$target_path = update_code::set_code_path();
 
 		// build code target
-		// (!) Note the variable name 'file_verion' is a typo for 'file_version' in
-		// the original code. It is preserved here without modification.
-			$file_verion	= update_code::get_file_version();
-			$target			= $target_path .'/'.$file_verion.'.zip';
+			$file_version	= update_code::get_file_version();
+			$target			= $target_path .'/'.$file_version.'.zip';
 
 		// developer branch case
 		// The logical branch name 'developer' maps to the Git branch 'v<major>_developer'

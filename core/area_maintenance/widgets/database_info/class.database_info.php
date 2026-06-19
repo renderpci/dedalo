@@ -554,10 +554,6 @@ class database_info {
 	* $response->updated_days accumulates the `result` property of each successful
 	* `update_user_activity_stats` call, which describes the days regenerated.
 	*
-	* (!) The inner label '// write_lang_file' is a stale copy-paste label that does not
-	* describe the actual operation (user stats rebuild). It is preserved as-is per the
-	* doc-only policy.
-	*
 	* @param object $options - Widget request options; must carry:
 	*   users (array): list of user id values (int-coercible) to rebuild stats for
 	* @return object $response - stdClass with:
@@ -586,7 +582,7 @@ class database_info {
 				return $response;
 			}
 
-		// write_lang_file
+		// rebuild stats per user
 			foreach ($users as $user_id) {
 
 				// delete_user_activity_stats

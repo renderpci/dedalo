@@ -286,7 +286,7 @@ function crop_50( object $request_options ) : object {
 			$add_file_options->size			= $file_crop_data['file_size'];
 			$add_file_options->extension	= $file_crop_data['extension'];
 
-		// Save file and verions
+		// Save file and versions
 		// Moves the cropped file from the upload temp dir to permanent media storage
 		// and triggers derivative generation (thumbnails, web previews, etc.).
 		tool_import_files::set_media_file(

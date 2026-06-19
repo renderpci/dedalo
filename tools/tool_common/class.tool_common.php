@@ -1497,9 +1497,6 @@ class tool_common {
 	* Returns null when: no config exists, the config has no properties->tool_config,
 	* or no entry in tool_config matches the given tipo+section_tipo pair.
 	*
-	* Note: the closing comment reads '//end get_tool_config' but the method is named
-	* 'get_tool_configuration'. This is a stale end-label (doc-only flag — not changed).
-	*
 	* @param object $options Options with keys:
 	*   - tool_name (string) — e.g. 'tool_lang'
 	*   - tipo (string) — component tipo e.g. 'dd47'
@@ -1536,7 +1533,7 @@ class tool_common {
 
 
 		return null;
-	}//end get_tool_config
+	}//end get_tool_configuration
 
 
 

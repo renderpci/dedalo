@@ -103,7 +103,7 @@ class make_backup {
 			'dedalo_db_management'	=> DEDALO_DB_MANAGEMENT,
 			'backup_path'			=> DEDALO_BACKUP_PATH_DB,
 			'file_name'				=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. logged_user_id() .'_forced_dbv' . implode('-', get_current_data_version()).'.custom.backup',
-			'mysql_db'				=> $mysql_db, // first 10 items
+			'mysql_db'				=> $mysql_db, // raw API_WEB_USER_CODE_MULTIPLE config array
 		];
 
 		// response
