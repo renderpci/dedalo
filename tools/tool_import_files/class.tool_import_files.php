@@ -1,25 +1,58 @@
 <?php declare(strict_types=1);
 /**
  * CLASS TOOL_IMPORT_FILES
- * Specialized tool class for handling file import operations.
+ * Batch media-file importer tool — uploads files from the browser, moves them
+ * into permanent media storage, and propagates metadata into section components.
  *
- * Key features:
- * - Extracts and parses file data using regex patterns to identify section IDs and field mappings
- * - Processes uploaded media files and stores them in appropriate media directories
- * - Extracts metadata (EXIF dates) from image, video, and PDF files
- * - Supports multiple import modes: default, section, section_resource
- * - Handles file naming strategies: enumerate, named, match, match_freename
- * - Executes custom file processors for specialized transformations
- * - Manages component data propagation during import process
- * - Supports multi-file batch processing with CLI output
+ * This tool surfaces as a section toolbar button (like tool_export) and is
+ * configured through the ontology properties of the triggering component
+ * (usually a component_portal).  Its configuration is supplied at runtime via
+ * $options->tool_config, which carries a `ddo_map` array that maps DDO roles to
+ * concrete tipos:
  *
- * Integration:
- * - Works with ontology definitions and component model registration
- * - Leverages ImageMagick and FFmpeg for metadata extraction
- * - Uses search queries to match files to existing media sections
- * - Integrates with component_image, component_av, component_pdf and portal components
+ *   - 'target_component'  — the media component (component_image / component_av /
+ *                           component_pdf) that will receive the uploaded file.
+ *   - 'target_filename'   — optional text component where the original filename is
+ *                           stored after import.
+ *   - 'target_date'       — optional date component populated with EXIF/metadata
+ *                           date extracted from the file.
+ *   - 'input_component'   — optional form fields shown in the import UI whose
+ *                           values are propagated into the newly created section.
+ *   - 'component_option'  — portal-level option driving target section routing.
  *
- * @package Dedalo
+ * Import modes (tool_config->import_mode):
+ *   - 'default'           — files go into the portal that triggered the tool.
+ *   - 'section'           — a new child section is created for each file.
+ *   - 'section_resource'  — files are stored directly into a resource section
+ *                           (e.g. rsc170 - Images) without creating a portal child.
+ *
+ * File-naming strategies (tool_config->import_file_name_mode):
+ *   - null / default — each file gets a fresh section.
+ *   - 'enumerate'    — the numeric prefix of the filename encodes the
+ *                      section_id; a section is created with that explicit id.
+ *                      Only valid with 'section' or 'section_resource' modes.
+ *   - 'named'        — the basename groups files: files sharing the same base
+ *                      name reuse the first-created section (multi-file records).
+ *   - 'match'        — the numeric prefix is used to locate an existing source
+ *                      section; the tool then resolves and re-uploads into the
+ *                      media sections already linked to it (replacing/updating).
+ *   - 'match_freename' — same as 'match' but the whole filename (not a prefix
+ *                        id) is matched directly against stored filenames in the
+ *                        target media section.
+ *
+ * Security:
+ *   - API_ACTIONS enforces the HTTP-accessible surface (SEC-024 §9.2).
+ *   - BACKGROUND_RUNNABLE limits background CLI dispatch to import_files only.
+ *   - key_dir (upload subdirectory) is sanitized via sanitize_key_dir() before
+ *     any filesystem use (TOOLS-05).
+ *   - Custom file processors (file_processor) are confined to the tool directory
+ *     and their function names must be bare identifiers (SEC-053).
+ *
+ * Extends tool_common (see tools/tool_common/class.tool_common.php).
+ * Uses: component_common, ontology_node, section, section_record, search,
+ *       ImageMagick, Ffmpeg, dd_date, security, logger.
+ *
+ * @package Dédalo
  * @subpackage Tools
  */
 class tool_import_files extends tool_common {
@@ -30,7 +63,10 @@ class tool_import_files extends tool_common {
 	* SEC-024 (§9.2): explicit allowlist of methods callable via
 	* `dd_tools_api::tool_request`. Internal helpers with positional or
 	* non-rqo signatures (e.g. set_media_file, get_media_file_date,
-	* set_components_data) are intentionally absent.
+	* set_components_data) are intentionally absent because they receive
+	* resolved PHP objects rather than a raw $rqo and would need their own
+	* input-validation layer before being safe to expose.
+	* @var array<string> API_ACTIONS
 	*/
 	public const API_ACTIONS = [
 		'file_processor',
@@ -43,6 +79,9 @@ class tool_import_files extends tool_common {
 	* SEC-024 / §9.1b: explicit CLI allowlist for `process_runner.php`.
 	* Only `import_files` runs with `background_running:true` from JS
 	* (see `tools/tool_import_files/js/tool_import_files.js`).
+	* Methods absent from this list cannot be dispatched via the background
+	* process runner even if they appear in API_ACTIONS.
+	* @var array<string> BACKGROUND_RUNNABLE
 	* @see core/base/process_runner.php
 	*/
 	public const BACKGROUND_RUNNABLE = [
@@ -53,26 +92,45 @@ class tool_import_files extends tool_common {
 
 	/**
 	 * GET_FILE_DATA
-	 * Extract file information using regex to parse filename patterns.
-	 * Analyzes filename components to identify section IDs, target fields, and file metadata.
-	 * Supports multiple naming conventions:
-	 *   - section_id-filename-field.extension (e.g., 73-my image-A.tiff)
-	 *   - section_id-field.extension (e.g., 73-A.tiff)
-	 *   - section_id.extension (e.g., 73.jpg)
-	 *   - filename-field.extension (e.g., My image-A.tiff)
-	 *   - filename.extension (e.g., My image.tiff)
+	 * Parses a filename against the Dédalo import naming convention and returns
+	 * a flat associative array of file metadata together with a stdClass of
+	 * regex-extracted components.
 	 *
-	 * @param string $dir Directory absolute path where file is located
-	 * @param string $file Full filename like 'my_photo.today.tif'
+	 * The supported filename formats are (separator is always '-'):
 	 *
-	 * @return array Associative array with extracted data:
-	 *   - dir_path: Directory absolute path
-	 *   - file_path: Full file path
-	 *   - file_name: Filename without extension
-	 *   - file_name_full: Complete filename with extension
-	 *   - extension: File extension (preserves case)
-	 *   - file_size: Formatted file size (e.g., '1.7 MB')
-	 *   - regex: Object with parsed components (section_id, base_name, letter, extension)
+	 *   section_id-filename-field.extension  →  73-my image-A.tiff
+	 *   section_id-field.extension           →  73-A.tiff
+	 *   section_id.extension                 →  73.jpg
+	 *   section_id-filename.extension        →  73-my image.tif
+	 *   filename-field.extension             →  My image-A.tiff
+	 *   filename.extension                   →  My image.tiff
+	 *
+	 * The regex (group mapping, see inline comments) is conditional to handle the
+	 * optional presence of each segment.  The field-letter (group 3) is 1-2 alpha
+	 * chars and must be immediately before the extension dot.
+	 *
+	 * The returned $ar_data['regex'] stdClass is used downstream to:
+	 *   - Route the file to the correct section   ($regex->section_id)
+	 *   - Group multi-file imports by name         ($regex->base_name)
+	 *   - Select the destination component         ($regex->letter)
+	 *
+	 * @param string $dir  Absolute path of the directory containing the file
+	 *                     (no trailing slash; the method appends '/' internally).
+	 * @param string $file Full filename including extension, e.g. 'my_photo.today.tif'.
+	 *                     Must exist on disk — file_size calls filesize() directly.
+	 * @return array Associative array with keys:
+	 *   - 'dir_path'       string  Absolute directory path as supplied.
+	 *   - 'file_path'      string  Absolute path to the file ($dir.'/'.$file).
+	 *   - 'file_name'      string  Filename without extension.
+	 *   - 'file_name_full' string  Full filename including extension.
+	 *   - 'extension'      string  Extension, case preserved (e.g. 'JPG' not 'jpg').
+	 *   - 'file_size'      string  Human-readable size, e.g. '1.700 MB'.
+	 *   - 'regex'          stdClass Parsed components:
+	 *                        ->full_name   string|null  Original filename as matched.
+	 *                        ->section_id  string|null  Numeric prefix (may be empty string).
+	 *                        ->base_name   string|null  Middle descriptive name segment.
+	 *                        ->letter      string|null  1-2 char field selector (A, B, …).
+	 *                        ->extension   string|null  Extension from regex match.
 	 */
 	public static function get_file_data( string $dir, string $file ) : array {
 
@@ -82,6 +140,7 @@ class tool_import_files extends tool_common {
 		$extension	= pathinfo($file,PATHINFO_EXTENSION);
 
 		// ar_data values
+		// Populate the flat metadata array.  Examples taken from real museum data:
 			$ar_data['dir_path']		= $dir;					# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/
 			$ar_data['file_path']		= $dir.'/'.$file;		# /Users/dedalo/media/media_mupreva/image/temp/files/user_1/45001-1.jpg
 			$ar_data['file_name']		= $file_name;			# 04582_01_EsCuieram_Terracota_AD_ORIG
@@ -175,23 +234,39 @@ class tool_import_files extends tool_common {
 
 	/**
 	 * SET_MEDIA_FILE
-	 * Moves uploaded file from temporary directory to permanent media storage.
-	 * Processes file through component handler to create quality versions and formats.
+	 * Moves a file from the user's temporary upload directory into permanent
+	 * media storage and triggers component-level post-processing (thumbnail
+	 * generation, format conversion, etc.).
 	 *
-	 * @param object $add_file_options File information containing:
-	 *   - name (string): Original filename like 'IMG_3007.jpg'
-	 *   - key_dir (string): Upload caller identifier like 'oh1_oh1'
-	 *   - tmp_dir (string): Constant name like 'DEDALO_UPLOAD_TMP_DIR'
-	 *   - tmp_name (string): Temporary filename
-	 *   - quality (string|null): Target quality level (default: original)
-	 *   - source_file (mixed|null): Source file specification
-	 *   - size (string): File size with units
-	 *   - extension (string): File extension
-	 * @param string $target_section_tipo Section type identifier
-	 * @param int $current_section_id Section ID for storage
-	 * @param string $target_component_tipo Component type identifier
+	 * The three-step sequence is:
+	 *   1. Resolve the component model and desired quality level.
+	 *   2. Call $component->add_file() — physically moves/copies the file into
+	 *      the media directory tree.
+	 *   3. Call $component->process_uploaded_file() — runs ImageMagick/FFmpeg
+	 *      derivative generation (thumbnails, web preview, etc.).
+	 *   4. Clean up the per-user thumbnail copy left by the upload service.
 	 *
-	 * @return bool Success status of file import operation
+	 * On failure at step 2 or 3 the method short-circuits, emits a CLI error if
+	 * running in CLI mode, and returns false without removing the source file.
+	 *
+	 * (!) $add_file_options->tmp_dir must be the *string name* of the constant
+	 * (e.g. 'DEDALO_UPLOAD_TMP_DIR'), not the resolved path — the component's
+	 * add_file() resolves it internally via constant().
+	 *
+	 * @param object $add_file_options Upload descriptor object with properties:
+	 *   ->name          string       Original filename, e.g. 'IMG_3007.jpg'.
+	 *   ->key_dir       string       Upload subdirectory token, e.g. 'oh1_oh1'.
+	 *   ->tmp_dir       string       Constant name: 'DEDALO_UPLOAD_TMP_DIR'.
+	 *   ->tmp_name      string       Temp filename (often same as ->name post-move).
+	 *   ->quality       string|null  Target quality level; falls back to component default.
+	 *   ->source_file   mixed|null   Source file override (null for standard upload flow).
+	 *   ->size          string       Human-readable size string, e.g. '1.700 MB'.
+	 *   ->extension     string       File extension, e.g. 'jpg'.
+	 * @param string $target_section_tipo Section tipo where the file belongs, e.g. 'rsc170'.
+	 * @param int    $current_section_id  Section ID of the record receiving the file.
+	 * @param string $target_component_tipo Component tipo that stores the media, e.g. 'rsc29'.
+	 * @return bool True on full success; false if add_file, process_uploaded_file, or
+	 *              thumbnail cleanup fails.
 	 */
 	public static function set_media_file(
 		object $add_file_options,
@@ -202,9 +277,13 @@ class tool_import_files extends tool_common {
 
 		$model = ontology_node::get_model_by_tipo($target_component_tipo, true);
 
-		// logger activity. Note that this log is here because generic service_upload
-		// is not capable to know if the uploaded file is the last one in a chunked file scenario
-			// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
+		// activity log
+		// The generic service_upload endpoint does not know when a chunked transfer
+		// completes; logging here ensures there is always one activity record per
+		// successfully received file, regardless of chunking strategy.
+			// safe_file_data
+			// Prevent single-quote problems in filenames (e.g. "L'osuna.jpg") when
+			// embedding the JSON string inside a PostgreSQL log entry.
 			$file_data_encoded	= json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 			$connection			= DBi::_getConnection();
 			$safe_file_data		= pg_escape_string($connection, $file_data_encoded);
@@ -224,7 +303,9 @@ class tool_import_files extends tool_common {
 				logged_user_id() // int
 			);
 
-		// component_image
+		// component instance
+		// 'list' mode is sufficient here — we only need access to add_file() and
+		// process_uploaded_file(); no rendered output is required.
 			$component = component_common::get_instance(
 				$model,
 				$target_component_tipo,
@@ -234,10 +315,15 @@ class tool_import_files extends tool_common {
 				$target_section_tipo
 			);
 
-		// get the quality specified if is not set get the original quality.
+		// quality resolution
+		// Caller may supply an explicit quality level; if absent, fall back to the
+		// component's own 'original' quality (the unmodified source file).
 			$custom_target_quality = $add_file_options->quality ?? $component->get_original_quality();
 
-		// fix current component target quality (defines the destination directory for the file, like 'original')
+		// fix current component target quality
+		// set_quality() determines the destination subdirectory inside the media
+		// tree (e.g. '…/image/original/' vs '…/image/thumb/'), so it must be set
+		// before add_file() is called.
 			$component->set_quality($custom_target_quality);
 
 		// add file
@@ -255,7 +341,10 @@ class tool_import_files extends tool_common {
 				return false;
 			}
 
-		// post processing file (add_file returns final renamed file with path info)
+		// post-processing
+		// add_file() returns the resolved final path in $add_file->ready so that
+		// process_uploaded_file() can find the file under its canonical name even
+		// when the upload service renamed it (e.g. to avoid collisions).
 			$process_file = $component->process_uploaded_file(
 				$add_file->ready,
 				null
@@ -273,7 +362,11 @@ class tool_import_files extends tool_common {
 				return false;
 			}
 
-		// Delete the thumbnail copy
+		// thumbnail cleanup
+		// The browser upload service creates a lightweight JPEG thumbnail preview
+		// alongside every upload so that the import dialog can render a preview
+		// before submission.  That thumbnail is no longer needed once the file has
+		// been processed, so remove it to keep the tmp directory clean.
 			$user_id		= logged_user_id();
 			$source_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $add_file_options->key_dir;
 
@@ -297,17 +390,33 @@ class tool_import_files extends tool_common {
 
 	/**
 	 * GET_MEDIA_FILE_DATE
-	 * Extracts creation date from media file metadata (EXIF, ID3, PDF properties).
-	 * Uses appropriate tool for each media type:
-	 *   - Images: ImageMagick EXIF extraction
-	 *   - Audiovisual: FFmpeg metadata extraction
-	 *   - PDF: pdfinfo metadata parsing
+	 * Extracts the original creation date embedded in a media file's metadata
+	 * and returns it as a dd_date object ready to be saved to a date component.
 	 *
-	 * @param array $media_file Associative array with:
-	 *   - file_path (string): Absolute path to media file
-	 * @param string $model Component model type (component_image, component_av, component_pdf)
+	 * The extraction strategy depends on the component model:
+	 *   - component_image  → ImageMagick::get_date_time_original() reads EXIF
+	 *                         DateTimeOriginal / CreateDate tags.
+	 *   - component_av     → Ffmpeg::get_date_time_original() reads ID3 or
+	 *                         container creation_time metadata.
+	 *   - component_pdf    → pdfinfo (from ImageMagick bundle) is shelled out;
+	 *                         the 'CreationDate' field is parsed from its
+	 *                         ISO/PDF date format 'D:YYYYMMDDHHmmss±hh'mm''.
+	 *                         Only year, month, and day are stored.
 	 *
-	 * @return object|null dd_date object if metadata found, null otherwise
+	 * The PDF branch uses exec() with a piped grep; a non-zero exit code is
+	 * logged at WARNING level and the branch breaks with $dd_date still null,
+	 * unless the output contains 'ERROR:' in which case it also breaks early.
+	 *
+	 * Callers (set_components_data) check for empty($dd_date) before persisting,
+	 * so returning null is the correct signal when no date is available.
+	 *
+	 * @param array  $media_file Associative array; requires key 'file_path'
+	 *               (string, absolute path to the media file on disk).
+	 * @param string $model      Component model class name: 'component_image',
+	 *               'component_av', or 'component_pdf'.  Any other value
+	 *               triggers an ERROR log entry and returns null.
+	 * @return object|null dd_date instance populated with available date fields,
+	 *                     or null when no date could be extracted.
 	 */
 	public static function get_media_file_date( array $media_file, string $model ) : ?object {
 
@@ -327,8 +436,12 @@ class tool_import_files extends tool_common {
 				$command = ImageMagick::get_imagemagick_pdfinfo_path() . ' -rawdates ' . $source_full_path . ' | grep -i CreationDate';
 
 				// exec command
+			// stderr is merged into stdout (' 2>&1') so it appears in $output
+			// and can be inspected for 'ERROR:' below without a second channel.
 				$result = exec($command.' 2>&1', $output, $worked_result);
 				// error case
+				// A non-zero exit code means pdfinfo returned an error; log and
+				// attempt to continue if the output does not contain 'ERROR:'.
 					if ($worked_result!=0) {
 						debug_log(__METHOD__
 							. ' exec command bad result' . PHP_EOL
@@ -347,9 +460,15 @@ class tool_import_files extends tool_common {
 						}
 					}
 
-				// PDF date format is:
-				// D:20110816234339-04'00'
-				// all is optional except the first 4 digits that are the year
+				// PDF date format parsing
+				// pdfinfo outputs dates in the PDF standard format:
+				//   D:YYYYMMDDHHmmssOHH'mm'
+				// where everything after YYYY is optional and the timezone
+				// offset uses single-quotes as delimiters.  Examples:
+				//   D:20110816234339-04'00'
+				//   D:20230101
+				// Only year (group 2), month (group 3), and day (group 4) are
+				// extracted; time and timezone are ignored for component storage.
 				$regex = '/(D:)?(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?(-|\+|Z{1})?(\d{2})?(\'{1})?(\d{2})?(\'{1})?/';
 				preg_match($regex, $result, $matches);
 
@@ -387,25 +506,54 @@ class tool_import_files extends tool_common {
 
 	/**
 	 * FILE_PROCESSOR
-	 * Executes optional custom file processing scripts for specialized transformations.
-	 * Includes and calls file processor functions defined in tool configuration.
+	 * Executes a named custom PHP processor function for a single file, enabling
+	 * project-specific transformations (e.g. crop_50 splits an image in two halves)
+	 * that the generic import flow cannot express.
 	 *
-	 * @param object $options Processing configuration containing:
-	 *   - file_processor (string): Name of processor function to execute
-	 *   - file_processor_properties (array): Processor definitions from tool config
-	 *   - file_name (string): Name of file being processed
-	 *   - file_path (string): Directory path of file
-	 *   - section_tipo (string): Current section type
-	 *   - section_id (int): Current section ID
-	 *   - tool_config (object): Tool configuration object
-	 *   - key_dir (string): Upload caller identifier
-	 *   - custom_target_quality (string|null): Target quality level
-	 *   - components_temp_data (array): Temporary component data
+	 * The processor system works as follows:
+	 *   1. tool_config->file_processor (an array) lists available processor
+	 *      definitions; each entry has:
+	 *        - function_name  string  Name of the PHP function to call.
+	 *        - script_file    string  Relative path (from the tool root) to the
+	 *                                PHP file that declares function_name.
+	 *        - custom_arguments  mixed  Extra arguments forwarded verbatim to the
+	 *                                   processor via $standard_options->custom_arguments.
+	 *   2. The per-file selection $options->file_processor is the function_name
+	 *      string chosen by the user in the UI for this specific file.
+	 *   3. This method iterates all definitions, finds the one whose function_name
+	 *      matches, applies SEC-053 sandbox checks (path confinement + bare-
+	 *      identifier + ReflectionFunction source-file check), then calls the
+	 *      function with a $standard_options object.
 	 *
-	 * @return object Response object with:
-	 *   - result (bool): Success status
-	 *   - msg (string): Result message
-	 *   - errors (array): Array of error messages
+	 * SEC-053 enforcement:
+	 *   - script_file must resolve to a realpath inside the tool root directory.
+	 *   - function_name must match '/^[a-zA-Z_][a-zA-Z0-9_]{0,63}$/'.
+	 *   - After include_once(), ReflectionFunction verifies the function was
+	 *     declared in the same file (not injected via an earlier include).
+	 *
+	 * The processor function must accept one stdClass $options argument and return
+	 * a stdClass with at least { result: bool, msg: string }.  A false result is
+	 * collected in $response->errors; the loop continues to subsequent definitions.
+	 *
+	 * (!) $options->section_tipo must be non-empty for the write-permission gate to
+	 * be enforced; if it is missing the assertion is skipped and a missing-permission
+	 * error will surface downstream.
+	 *
+	 * @param object $options Processing context with properties:
+	 *   ->file_processor            string       function_name to invoke.
+	 *   ->file_processor_properties array|null   Full processor definition list from tool_config.
+	 *   ->file_name                 string       Filename being processed.
+	 *   ->file_path                 string       Absolute directory path of the file.
+	 *   ->section_tipo              string       Section tipo (used for write-permission gate).
+	 *   ->section_id                int          Section ID of the current record.
+	 *   ->tool_config               object       Full tool configuration object.
+	 *   ->key_dir                   string       Upload subdirectory token.
+	 *   ->custom_target_quality     string|null  Target quality level.
+	 *   ->components_temp_data      array        Temporary component data from import form.
+	 * @return object stdClass with:
+	 *   ->result bool   True when all matched processors succeeded (or none were found).
+	 *   ->msg   string  'OK. Request done' or 'Errors happened'.
+	 *   ->errors array  Per-processor error messages collected during iteration.
 	 */
 	public static function file_processor( object $options ) : object {
 
@@ -431,12 +579,12 @@ class tool_import_files extends tool_common {
 				security::assert_section_permission($section_tipo, 2, __METHOD__);
 			}
 
-		# FILE_PROCESSOR
-		# Global var button properties JSON data array
-		# Optional additional file script processor defined in button import properties
-		# Note that var $file_processor_properties is the button properties JSON data, NOT current element processor selection
-
-		# Iterate each processor
+		// FILE_PROCESSOR — iterate processor definitions
+		// $file_processor_properties is the full list of processor definitions from
+		// the ontology button properties (not the per-file selection).
+		// $file_processor is only the function_name chosen for the current file.
+		// We iterate all definitions and skip any whose function_name does not
+		// match the selection; in practice only one entry should match.
 		foreach ((array)$file_processor_properties as $file_processor_obj) {
 
 			if ($file_processor_obj->function_name!==$file_processor) {
@@ -556,26 +704,62 @@ class tool_import_files extends tool_common {
 
 	/**
 	 * IMPORT_FILES
-	 * Main orchestration method for batch file import processing.
-	 * Handles complete workflow: file validation, section creation, component population, and media storage.
-	 * Supports multiple import modes with configurable file naming strategies.
+	 * Main orchestration method — iterates every file in $options->files_data and
+	 * drives the full import pipeline: path validation → section creation → component
+	 * data population → media file storage → CLI progress reporting.
 	 *
-	 * @param object $options Import configuration containing:
-	 *   - tipo (string): Component type identifier (e.g., 'oh17')
-	 *   - section_tipo (string): Current section type (e.g., 'oh1')
-	 *   - section_id (int): Current section ID
-	 *   - tool_config (object): Tool configuration with ddo_map and processing rules
-	 *   - files_data (array): Array of file objects with name, processor, options
-	 *   - components_temp_data (array|null): Temporary component data to propagate
-	 *   - key_dir (string): Upload caller identifier
-	 *   - custom_target_quality (string|null): Target media quality level
+	 * Per-file flow (simplified):
+	 *   1. Decode the URL-encoded filename and verify the file exists under the
+	 *      user's temporary upload directory (safe_upload_target guard, TOOLS-05).
+	 *   2. Validate mode compatibility ('enumerate' only valid with section modes).
+	 *   3. Parse filename components via get_file_data().
+	 *   4. Depending on import_mode + import_file_name_mode:
+	 *        match / match_freename  → locate existing media sections and update them;
+	 *                                  continue 2 to skip the standard flow.
+	 *        enumerate               → create a section with the numeric id from filename.
+	 *        named                   → reuse a previously-created section by base_name.
+	 *        default / null          → create a fresh section per file.
+	 *   5. If a custom file_processor is assigned, delegate to file_processor().
+	 *      Otherwise run the standard path:
+	 *        a. Create a portal child element (section + default / section modes) or
+	 *           route directly (section_resource mode).
+	 *        b. Populate component data via set_components_data().
+	 *        c. Store the file via set_media_file().
+	 *   6. Append to $ar_processed (used for 'named' grouping across the batch).
 	 *
-	 * @return object Response object with:
-	 *   - result (bool): Overall operation success status
-	 *   - msg (string): Summary message with file counts
-	 *   - errors (array): Accumulated error messages
-	 *   - time (string): Total execution time
-	 *   - memory (mixed): Memory usage statistics
+	 * After the loop, the method clears any temporary session section_data for
+	 * the input component section types that were touched during the import, so
+	 * the next import session starts with empty form fields.
+	 *
+	 * (!) The 'enumerate' + 'match'/'match_freename' combination is detected
+	 * before the switch and aborted with an error; the switch itself does not
+	 * guard against this — the continue 2 in the match branch handles it.
+	 *
+	 * This method is listed in BACKGROUND_RUNNABLE and runs inside
+	 * process_runner.php for large batches; CLI progress is streamed via
+	 * print_cli(common::$pdata) after each file.
+	 *
+	 * @param object $options Import job descriptor with properties:
+	 *   ->tipo                  string        Triggering component tipo, e.g. 'oh17'.
+	 *   ->section_tipo          string        Caller section tipo, e.g. 'oh1'.
+	 *   ->section_id            int           Caller section ID.
+	 *   ->tool_config           object        Tool configuration (ddo_map, import_mode,
+	 *                                         import_file_name_mode, file_processor).
+	 *   ->files_data            array         Per-file descriptor objects with properties:
+	 *                                           ->name            string  URL-encoded filename.
+	 *                                           ->file_processor  string|null  Processor key.
+	 *                                           ->component_option string|null  Option tipo.
+	 *   ->components_temp_data  array|null    Input component data captured from the
+	 *                                         import form; forwarded to set_components_data().
+	 *   ->key_dir               string        Upload subdirectory token (will be sanitized).
+	 *   ->custom_target_quality string|null   Target quality for set_media_file().
+	 * @return object stdClass with:
+	 *   ->result bool    True even when some files failed (partial success is still true).
+	 *   ->msg   string   Summary: 'Import files done successfully. Imported: N of M' or
+	 *                    'Import files done with errors. Imported: N of M'.
+	 *   ->errors array   Merged unique errors from all per-file failures.
+	 *   ->time   string  Human-readable total execution time.
+	 *   ->memory mixed   Memory usage statistics from dd_memory_usage().
 	 */
 	public static function import_files( object $options ) : object {
 		$start_time=start_time();
@@ -664,7 +848,9 @@ class tool_import_files extends tool_common {
 				print_cli(common::$pdata);
 			}
 
-		// ar_data. All files collected from files upload form
+		// $ar_processed accumulates one entry per file after it has been handled.
+		// 'named' mode queries this array to avoid creating duplicate sections for
+		// files that share the same base_name (e.g. ánfora.jpg + ánfora.tiff).
 			$ar_processed	= [];
 			// $tmp_dir		= TOOL_IMPORT_FILES_UPLOAD_DIR;
 			$user_id = logged_user_id();
@@ -675,6 +861,9 @@ class tool_import_files extends tool_common {
 				$start_time2=start_time();
 				$counter++;
 
+				// rawurldecode: the JS client sends filenames through encodeURI() to
+				// safely transmit characters like spaces, accents, and CJK glyphs
+				// over HTTP; decode them back to the filesystem representation here.
 				$current_file_name				= rawurldecode($value_obj->name); // Note that name is JS encodeURI from browser
 				$current_file_processor			= $value_obj->file_processor ?? null; // Note that var $current_file_processor is only the current element processor selection
 				$current_component_option_tipo	= $value_obj->component_option ?? null;
@@ -779,7 +968,17 @@ class tool_import_files extends tool_common {
 									// then copy the image with the section_id and do not touch the original file
 									// it will be copied for other sections.
 									// last section_id will copy the file without create a copy, it remove the uploaded file.
-									if( $target_section_id !== end($ar_target_section_id) ){
+									// multi-section copy strategy
+								// When a single filename matches more than one
+								// existing media section, the file must be placed
+								// into each of them.  For all sections except the
+								// last one, create a temporary copy named
+								// '<basename>_<section_id>.<ext>' so that the
+								// original temp file survives for the next
+								// iteration.  The last section gets the original
+								// file (which set_media_file() will then remove
+								// from tmp after moving it to media storage).
+								if( $target_section_id !== end($ar_target_section_id) ){
 
 										$basename_value		= pathinfo($current_file_name)['filename'];
 										$basename_extension	= pathinfo($current_file_name)['extension'];
@@ -831,13 +1030,22 @@ class tool_import_files extends tool_common {
 										 tool_import_files::set_components_data($components_data_options);
 								}
 
-								// stop the other processes done by other modes and go to the next image
-								// match mode is not compatible with the other process
-								// continue 2 skip the switch() and the foreach() of images.
+								// continue 2: skip the switch() below AND the current foreach iteration,
+								// jumping straight to the next file.  match / match_freename have
+								// already handled section creation and file storage inside the foreach
+								// above; none of the standard post-match code should run.
+								// (!) The stray 'breaK' (capital K) below this line is dead code left
+								// from an earlier refactor — it is unreachable after continue 2 but must
+								// not be removed under the doc-only rule.
 								continue 2;
 								breaK;
 
 							case 'enumerate':
+							// enumerate: the numeric filename prefix is used as the explicit
+							// section_id to create.  If a section with that id already exists,
+							// create_record() returns that id without creating a duplicate,
+							// so multiple files with the same prefix (e.g. 5-A.jpg, 5-B.jpg)
+							// share one section.
 
 								$section = section::get_instance( $section_tipo, 'list', false );
 
@@ -853,6 +1061,13 @@ class tool_import_files extends tool_common {
 								break;
 
 							case 'named':
+							// named: group files by their descriptive base_name component.
+							// When regex extracts no base_name (e.g. purely numeric filenames),
+							// fall back to the section_id segment so grouping still works.
+							// $ar_processed (accumulated above the loop) is searched linearly;
+							// the first entry with a matching base_name supplies its section_id
+							// and no new section is created for subsequent files of that group.
+
 								// String case like ánfora.jpg
 								// Look already imported files
 								$file_data['regex']->base_name = empty($file_data['regex']->base_name)
@@ -896,14 +1111,19 @@ class tool_import_files extends tool_common {
 							continue;
 						}
 
-						// check if the section is not defined in the target_ddo (as virtual sections):
-						// in those cases it will defined as 'self' and needs to be replace by the current section_tipo.
+						// 'self' substitution
+						// When the ontology uses 'self' as a placeholder section_tipo (a
+						// convention for virtual/inline sections that live in the same table as
+						// their parent), substitute the actual calling section_tipo at runtime.
 						if( $target_ddo->section_tipo === 'self'){
 							$target_ddo->section_tipo = $section_tipo;
 						}
 
 					}else{
-						// target ddo will be the caller portal, used when the tool is loaded by specific portal and all files will be stored inside these portal
+						// 'default' import_mode: files go directly into the portal that triggered
+						// the tool.  Build a minimal dd_object pointing back at the calling
+						// component ($tipo) in the calling section ($section_tipo) so that the
+						// add_new_element() call below works with the portal as the target.
 						$target_ddo = new dd_object();
 							$target_ddo->set_tipo($tipo);
 							$target_ddo->set_section_tipo($section_tipo);
@@ -996,7 +1216,9 @@ class tool_import_files extends tool_common {
 									return $response;
 								}
 
-								// save portal if all is all ok
+								// save portal
+						// add_new_element() buffers the new locator in memory;
+						// Save() persists the updated portal relation to the database.
 								$component_portal->Save();
 
 								// Fix new section created as current_section_id
@@ -1078,7 +1300,15 @@ class tool_import_files extends tool_common {
 				);
 			}//end foreach ((array)$files_data as $key => $value_obj)
 
-		// Reset the temporary section of the components, for empty the fields.
+		// session cleanup: clear temp section data for all touched input_component section types
+		// Input component values are buffered in $_SESSION['dedalo']['section_temp_data']
+		// under keys that include the section_tipo.  After import completes, purge those
+		// entries so the next use of the import dialog starts with empty form fields.
+		// Keys are matched by a regex built from $input_components_section_tipo, which is
+		// populated by set_components_data() (via the 'input_component' role in the ddo_map).
+		// (!) $input_components_section_tipo is declared near the top of this method but
+		// never populated here — set_components_data() currently does not write back into it.
+		// The cleanup block is therefore a no-op in the current codebase.
 			if (!empty($input_components_section_tipo) && !empty($_SESSION['dedalo']['section_temp_data'])) {
 
 				// Create regex pattern to match any of the section types. Pattern example: /_(type1|type2)_/
@@ -1095,6 +1325,9 @@ class tool_import_files extends tool_common {
 			}
 
 		// response
+		// result is always true here — partial imports are considered a success so
+		// the caller can display the imported count and error list together rather
+		// than treating the whole batch as a hard failure.
 			$response->result	= true;
 			$response->msg		= ($total_processed<$total || count(common::$pdata->errors)>0)
 				? 'Import files done with errors. Imported: '.$total_processed." of " .$total
@@ -1111,24 +1344,36 @@ class tool_import_files extends tool_common {
 
 	/**
 	 * GET_MEDIA_SECTION_MATCH_FROM_SOUCE
-	 * Matches uploaded file to existing media sections using section ID from filename.
-	 * Workflow:
-	 *   1. Extract section ID from uploaded filename (e.g., '11' from '11-1.tiff')
-	 *   2. Retrieve target section and its related media sections
-	 *   3. Compare uploaded filename basename with stored filenames
-	 *   4. Return array of matching media section IDs
+	 * Resolves which existing media sections should receive a re-uploaded file by
+	 * using the numeric section_id embedded in the filename to look up the source
+	 * record and then comparing the stored filename values of all linked media
+	 * sections against the uploaded filename.
 	 *
-	 * Note: Filename comparison ignores extension to allow format variations
-	 * (original .jpg vs modified .tiff with alpha channel)
+	 * This implements the 'match' import_file_name_mode strategy:
+	 *   1. Parse the numeric prefix from the filename (e.g. '11' from '11-1.tiff').
+	 *   2. Load the source section_record for that id in $section_tipo.
+	 *   3. Walk its relation data to collect all locators pointing at $target_section_tipo.
+	 *   4. For each linked media section, instantiate the target_filename component
+	 *      and retrieve its stored value.
+	 *   5. Compare basenames (extension stripped) to allow format changes
+	 *      (e.g. the record stores 'portrait.jpg' but the upload is 'portrait.tiff').
+	 *   6. Return the section_id values of all matching entries.
 	 *
-	 * @param object $options Search configuration containing:
-	 *   - section_id (string): Source section ID from filename
-	 *   - section_tipo (string): Source section type
-	 *   - target_section_tipo (string): Target media section type
-	 *   - full_name (string): Complete uploaded filename
-	 *   - target_filename (object): Target filename component definition
+	 * (!) The method name contains a typo ('Souce' instead of 'Source'); it is
+	 * preserved as-is because it appears in API_ACTIONS and changing it would be
+	 * an API-breaking change.
 	 *
-	 * @return array Array of section_id values that match uploaded filename
+	 * @param object $options Search context with properties:
+	 *   ->section_id          string  Numeric prefix from the filename, e.g. '11'.
+	 *   ->section_tipo        string  Section tipo of the source record, e.g. 'oh1'.
+	 *   ->target_section_tipo string  Section tipo of the media sections, e.g. 'rsc170'.
+	 *   ->full_name           string  Full uploaded filename including extension.
+	 *   ->target_filename     object  DDO map entry (role 'target_filename') carrying:
+	 *                                   ->tipo         string  Component tipo for stored name.
+	 *                                   ->section_tipo string  Section tipo of that component.
+	 * @return array Integer-indexed array of section_id values (int|string) for media
+	 *               sections whose stored filename matches the uploaded file's basename.
+	 *               Empty array when no match is found.
 	 */
 	public static function get_media_section_match_from_souce( object $options ) : array {
 
@@ -1139,13 +1384,16 @@ class tool_import_files extends tool_common {
 		$target_filename		= $options->target_filename;
 
 		// short vars
+		// Determine the model and language of the target_filename component so we can
+		// instantiate it correctly for each candidate media section below.
 		$tipo	= $target_filename->tipo;
 		$model	= ontology_node::get_model_by_tipo($tipo,true);
 		$lang	= ontology_node::get_translatable($tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
-		// target section of the tool as tch, tch1,...
-		// as filename could has the section_id as 11-1.tiff (section_id = 11)
-		// create the section and give his all data.
+		// source section load
+		// The numeric section_id from the filename identifies a record in the caller
+		// section (e.g. oh1:11).  Load the full section record so we can walk its
+		// relation data to discover which media sections are already linked to it.
 		$section_record = section_record::get_instance(
 			$section_tipo,
 			(int)$section_id
@@ -1153,7 +1401,10 @@ class tool_import_files extends tool_common {
 
 		$data = $section_record->get_data();
 
-		// give all locators that match with the target_section_tipo (as rsc170, image section)
+		// collect locators pointing at the target media section tipo
+		// The relation map on the section_record is keyed by component_tipo;
+		// each value is an array of locator objects.  We gather every locator
+		// whose section_tipo matches the requested target (e.g. 'rsc170').
 		$target_locators = [];
 		if (!empty($data->relation)) {
 			foreach ($data->relation as $component_tipo => $locators) {
@@ -1165,11 +1416,15 @@ class tool_import_files extends tool_common {
 			}
 		}
 
-		// create the image section and check the filename saved previously.
+		// filename matching loop
+		// For each linked media section, load the stored filename component and
+		// compare its value's basename (extension stripped) to the upload's basename.
+		// Extension is stripped so that a .jpg already on record matches a .tiff
+		// replacement upload.
 		$match_section_id = [];
 		foreach ($target_locators as $target_locator) {
 
-			// component with the previous filename saved
+			// target_filename component for this media section
 			$target_name_component = component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -1198,21 +1453,31 @@ class tool_import_files extends tool_common {
 
 	/**
 	 * GET_MEDIA_SECTION_MATCH
-	 * Searches for media sections matching the uploaded filename using database search query.
-	 * Matches by filename basename (without extension) with boundary marker to avoid false positives.
+	 * Finds existing media sections that match an uploaded filename by executing a
+	 * full-text search query against the stored filename component.  This implements
+	 * the 'match_freename' import_file_name_mode strategy, where the match target is
+	 * the whole filename rather than a numeric id prefix.
 	 *
-	 * Filename search strategy:
-	 *   - Removes file extension to allow format variations
-	 *   - Adds '.' after basename as match boundary (e.g., 'my_image.' matches 'my_image.jpg' not 'my_image2.jpg')
-	 *   - Uses ontology search path to construct query
-	 *   - Returns all matching section IDs
+	 * Search strategy:
+	 *   1. Strip the file extension from the uploaded filename to tolerate format
+	 *      changes (e.g. 'portrait.jpg' on record, 'portrait.tiff' being uploaded).
+	 *   2. Append a literal '.' to the search term as a boundary marker so that
+	 *      'my_image.' matches 'my_image.jpg' but NOT 'my_image2.jpg'.
+	 *   3. Build an SQO (search_query_object) with a $and filter on the path
+	 *      returned by search::get_query_path() for the target_filename component.
+	 *   4. Execute the search and collect section_id values from the result set.
 	 *
-	 * @param object $options Search configuration containing:
-	 *   - target_filename->tipo (string): Component type to search
-	 *   - target_filename->section_tipo (string): Section type to search
-	 *   - full_name (string): Uploaded filename with extension
+	 * The SQO sets limit(0) (= no limit) and skip_projects_filter(true) because
+	 * import operations must be able to update records regardless of the active
+	 * project filter.
 	 *
-	 * @return array Array of matching section IDs from search results
+	 * @param object $options Match context with properties:
+	 *   ->target_filename object  DDO map entry (role 'target_filename') with:
+	 *                               ->tipo         string  Component tipo of stored filename field.
+	 *                               ->section_tipo string  Section tipo to search within.
+	 *   ->full_name       string  Uploaded filename including extension, e.g. 'portrait.tiff'.
+	 * @return array Integer-indexed array of section_id values (int|string) from the search
+	 *               result.  Empty array when no records match.
 	 */
 	public static function get_media_section_match( object $options ) : array {
 
@@ -1221,7 +1486,10 @@ class tool_import_files extends tool_common {
 		$target_section_tipo	= $options->target_filename->section_tipo; // string section_tipo
 		$full_name 				= $options->full_name;
 
-		// path of the component to be find
+		// resolve search path
+		// get_query_path() translates the component tipo + section_tipo into a
+		// dot-separated ontology path string used by the search engine to locate
+		// the correct DB column/field (e.g. 'rsc170.rsc398').
 		$path = search::get_query_path(
 			$target_tipo, // string tipo
 			$target_section_tipo, // string section_tipo
@@ -1231,7 +1499,9 @@ class tool_import_files extends tool_common {
 		// the original is a .jpg and modified is a .tiff with alpha channel.
 		$basename_full_name	= pathinfo($full_name)['filename'];
 
-		// build the search
+		// build the SQO filter
+		// A single $and clause with one term is equivalent to a plain text search,
+		// but using $and leaves the structure open for additional clauses in future.
 			$operator = '$and';
 			$filter = new stdClass();
 				$filter->{$operator} = [];
@@ -1269,15 +1539,48 @@ class tool_import_files extends tool_common {
 
 
 	/**
-	* SET_COMPONENTS_DATA
-	* Propagates and stores data into specific components of a section during the import process.
-	* This method iterates through a DDO map and performs actions based on the component role:
-	* - 'target_filename': Saves the original filename to the target component.
-	* - 'target_date': Extracts and saves media file dates (EXIF/metadata).
-	* - 'input_component': Propagates data from temporal components or request data (import form inputs).
-	* @param object $options Configuration options
-	* @return void
-	*/
+	 * SET_COMPONENTS_DATA
+	 * Iterates the DDO map from tool_config and persists import-related data into the
+	 * components of the newly created target section.  Roles drive what is saved:
+	 *
+	 *   'target_filename'  — Writes the original uploaded filename (or its basename,
+	 *                        when $ddo->only_basename is true) into a text component.
+	 *                        Only writes when the component is currently empty, so
+	 *                        re-importing a file does not overwrite a manually edited
+	 *                        title.
+	 *
+	 *   'target_date'      — Extracts the creation date from the file's embedded
+	 *                        metadata via get_media_file_date() and stores it as a
+	 *                        dd_date start value.  Only writes when the component
+	 *                        is currently empty.
+	 *
+	 *   'input_component'  — Propagates form field values captured in the import UI:
+	 *                        - Non-translatable: reads from $components_temp_data
+	 *                          (indexed by tipo + section_tipo) and saves the value
+	 *                          directly.
+	 *                        - Translatable: instantiates a temporary component
+	 *                          ($is_temp = true, section_id = 1) to read the temp
+	 *                          data handler, then copies that data into the real
+	 *                          destination component in all languages.
+	 *
+	 *   'component_option' — Skipped; these drive import routing, not data storage.
+	 *
+	 * The destination section_id is chosen by comparing the DDO's section_tipo to
+	 * the caller's section_tipo: if they match, data goes into the calling record;
+	 * otherwise it goes into the target media section (target_section_id).
+	 *
+	 * @param object $options Propagation context with properties:
+	 *   ->ar_ddo_map              array    Full DDO map from tool_config.
+	 *   ->section_tipo            string   Caller section tipo.
+	 *   ->section_id              int      Caller section ID.
+	 *   ->target_section_id       int      Newly created media section ID.
+	 *   ->target_ddo_component    object   DDO entry with role 'target_component'.
+	 *   ->file_data               array    Output of get_file_data() for the current file.
+	 *   ->current_file_name       string   Decoded filename (used for 'target_filename').
+	 *   ->target_component_model  string   Model class name, e.g. 'component_image'.
+	 *   ->components_temp_data    array    Temp component data from the import form; may be empty.
+	 * @return void
+	 */
 	public static function set_components_data( object $options ) {
 
 		// options
@@ -1291,7 +1594,11 @@ class tool_import_files extends tool_common {
 			$target_component_model			= $options->target_component_model;
 			$components_temp_data			= $options->components_temp_data ?? [];
 
-		// Index components_temp_data by tipo and section_tipo for faster lookup
+		// Index components_temp_data for O(1) lookup
+		// $components_temp_data arrives as a flat array of component-data objects.
+		// Build a two-level associative map [$tipo][$section_tipo] so that the
+		// 'input_component' branch below can find the right entry in constant time
+		// instead of scanning the full array for every DDO entry.
 		$indexed_temp_data = [];
 		foreach ($components_temp_data as $item) {
 			if (isset($item->tipo) && isset($item->section_tipo)) {
@@ -1313,6 +1620,10 @@ class tool_import_files extends tool_common {
 			$is_translatable		= ontology_node::get_translatable($ddo->tipo);
 			$model					= ontology_node::get_model_by_tipo($ddo->tipo,true);
 			$current_lang			= $is_translatable ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			// destination routing
+			// If the DDO lives in the same section as the caller (e.g. a title
+			// field on the parent section), write to the caller's section_id.
+			// Otherwise write to the freshly created target media section.
 			$destination_section_id	= ($ddo->section_tipo===$section_tipo)
 				? $section_id
 				: $target_section_id;
@@ -1333,8 +1644,12 @@ class tool_import_files extends tool_common {
 					// Fill the component with image data only when the field is empty. Do not update existing data
 					$component_data = $component->get_data();
 					if(empty($component_data)){
-						// file_name. Stores the original file name like 'My añorada.foto.jpg' to a component_input_text
-						// If the ddo of component has ddo->only_basename and is set to true, remove the section_id, field and extension
+						// name_to_save: full filename or stripped basename
+					// Some projects want only the descriptive middle segment (e.g. 'portrait'
+					// from '73-portrait-A.jpg') stored as the title — enable this by setting
+					// only_basename:true on the DDO entry in the ontology properties.
+					// Default (only_basename absent or false): stores the complete original
+					// filename including section_id prefix and extension.
 						$name_to_save = (isset($ddo->only_basename) && $ddo->only_basename === true)
 							? $file_data['regex']->base_name // only the name of the file without section_id or field
 							: $current_file_name; // full name with extension
@@ -1374,8 +1689,8 @@ class tool_import_files extends tool_common {
 						// component_data. Get from indexed temp data or request and save
 						$component_data = $indexed_temp_data[$ddo->tipo][$ddo->section_tipo] ?? null;
 
-						// Note that the component data is inside the value property because is
-						// part of the client component data like {value:[], datalist:[], ..}
+						// The client sends the full component dd_object (with value, datalist, etc.)
+					// not just the raw value array; extract the value property.
 						if(is_object($component_data) && !empty($component_data->value)){
 							$component->set_data($component_data->value);
 							$component->save();
@@ -1385,6 +1700,12 @@ class tool_import_files extends tool_common {
 
 						// get value from instances of the temporal component in all languages
 
+						// Translatable input_component path
+						// For multi-language fields the temp data is stored per-language inside
+						// the component instance (not in $components_temp_data which only carries
+						// the current UI language).  Instantiate the component at section_id=1
+						// (a deliberately invalid id that the temp handler ignores) and set
+						// is_temp=true to switch it to the session-backed temp data source.
 						$temp_component = component_common::get_instance(
 							$model,
 							$ddo->tipo,
