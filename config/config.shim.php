@@ -31,7 +31,11 @@ $state_file   = $repo . '/config/state.php';
 $local_override = is_file($local_cfg) ? (require $local_cfg) : [];
 if (!is_array($local_override)) { $local_override = []; }
 
-boot::run(entrypoint_profile::WEB, boot_web_profile::phases(
+// CLI entrypoints (crons, tools) must NOT start a web session: pick the profile by SAPI so
+// the WEB-only phases (session_start, request_state) skip under CLI.
+$profile = (php_sapi_name() === 'cli') ? entrypoint_profile::CLI : entrypoint_profile::WEB;
+
+boot::run($profile, boot_web_profile::phases(
 	$catalog,
 	[],
 	is_file($env_path) ? $env_path : null,
