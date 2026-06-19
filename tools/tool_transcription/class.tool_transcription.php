@@ -193,8 +193,8 @@ class tool_transcription extends tool_common {
 		// empty in the source view, the separator byte may have been stripped by an
 		// editor or encoding issue — verify with `xxd` on this file. Without it,
 		// str_replace() is a no-op and explode() raises a ValueError (empty delimiter).
-		$original_text = str_replace("", "", $pdf_text);
-		$pages = explode("", $pdf_text);
+		$original_text = str_replace("\f", "", $pdf_text);
+		$pages = explode("\f", $pdf_text);
 		$i = (int)$options->first_page;
 		$pdf_text = '';
 		foreach ($pages as $current_page) {
