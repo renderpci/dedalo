@@ -487,7 +487,7 @@ const render_recreate_db_assets = (self) => {
 	ui.create_dom_element({
 		element_type	: 'h3',
 		class_name		: 'group_label',
-		inner_html		: get_label.recreate_db_assests || 'Recreate database assets',
+		inner_html		: get_label.recreate_db_assets || 'Recreate database assets',
 		parent			: recreate_db_assets_container
 	})
 

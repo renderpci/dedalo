@@ -146,7 +146,7 @@ const get_content_data = function(self) {
 		const button_fix = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning',
-			text_content	: get_label.delete + ' orphans' || 'Remove orphans',
+			text_content	: get_label.delete ? (get_label.delete + ' orphans') : 'Remove orphans',
 			parent			: content_data
 		})
 		button_fix.addEventListener('click', async function(e) {
