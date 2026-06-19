@@ -168,7 +168,6 @@ export const tool_indexation = function () {
 *   render_indexation_note — parses a tag's stored locator and renders the note.
 *   render_empty_note      — renders a "create note" button when a tag has no note.
 *   render_note            — builds the title + description component nodes for a note.
-*   new_tag_note           — creates a new indexation-note section record via the API.
 */
 // prototypes assign
 	tool_indexation.prototype.render					= tool_common.prototype.render
@@ -179,7 +178,6 @@ export const tool_indexation = function () {
 	tool_indexation.prototype.render_indexation_note	= tag_note.prototype.render_indexation_note
 	tool_indexation.prototype.render_empty_note			= tag_note.prototype.render_empty_note
 	tool_indexation.prototype.render_note				= tag_note.prototype.render_note
-	tool_indexation.prototype.new_tag_note				= tag_note.prototype.new_tag_note
 
 
 
@@ -395,11 +393,6 @@ tool_indexation.prototype.init = async function(options) {
 *     than re-throwing.  The tool returns `common_build` regardless of the error so that
 *     the generic render path can still display an error node.
 *
-* (!) `options` is referenced in the first error path (`console.error(…, 'options:', options)`)
-*     but is NOT a parameter of this function — that variable is not in scope here.
-*     This appears to be a copy-paste bug inherited from other build methods.
-*     Documented only; do not change (doc-only policy).
-*
 * @param {boolean} [autoload=false] - When true, forces a data re-fetch inside
 *   `tool_common.prototype.build` (passed through unchanged).
 * @returns {Promise<boolean>} Resolves to the return value of `tool_common.prototype.build`.
@@ -417,7 +410,7 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			const transcription_component_ddo = self.tool_config.ddo_map.find(el => el.role==='transcription_component')
 			if (!transcription_component_ddo) {
 				self.error = "Invalid transcription_component_ddo"
-				console.error('error:', self.error, 'options:', options);
+				console.error('error:', self.error);
 				return true
 			}
 			self.transcription_component = self.ar_instances.find(el => el.tipo===transcription_component_ddo.tipo)
