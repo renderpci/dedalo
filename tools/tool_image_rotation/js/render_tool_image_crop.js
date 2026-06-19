@@ -59,13 +59,9 @@ export const render_tool_image_crop = function() {
 * e, sw, s, se) which is later read by `start_drag_or_resize` via
 * `classList[1]` to identify the active handle.
 *
-* Bound references to the three primary handlers are stored on `self` so that
-* `destroy()` can call `removeEventListener` with the exact same function
-* objects (anonymous arrow functions cannot be removed later).
-*
-* (!) The `mouseup` handler is registered with an inline anonymous function.
-*     It cannot be removed by reference in `destroy()` — see the flag in
-*     `destroy()`. This is a pre-existing condition; do not change the code.
+* Bound references to all handlers (including the `mouseup` handler) are stored
+* on `self` so that `destroy()` can call `removeEventListener` with the exact
+* same function objects (anonymous functions cannot be removed later).
 *
 * @param {Object} options
 * @param {HTMLElement} options.container        - Wrapper div that acts as the
@@ -173,6 +169,12 @@ render_tool_image_crop.build = async function(options) {
 	self.bound_start_selection = self.start_selection.bind(self);
 	self.bound_start_drag_or_resize = self.start_drag_or_resize.bind(self);
 	self.bound_handle_mouse_move = self.handle_mouse_move.bind(self)
+	self.bound_handle_mouse_up = function() {
+		self.is_selecting	= false;
+		self.is_dragging	= false;
+		self.is_resizing	= false;
+		self.current_handle	= null;
+	};
 
     // Mouse down handlers
 	self.nodes.container.addEventListener('mousedown', self.bound_start_selection );
@@ -182,16 +184,8 @@ render_tool_image_crop.build = async function(options) {
 	self.nodes.container.addEventListener('mousemove', self.bound_handle_mouse_move );
 
 	// Mouse up handler
-	// (!) Anonymous function — cannot be removed by reference in destroy().
-	//     All interaction flags are reset on every mouseup regardless of which
-	//     sub-operation was in progress, so the residual listener is harmless
-	//     for the tool's lifetime but represents a minor leak.
-	self.nodes.container.addEventListener('mouseup', function() {
-		self.is_selecting	= false;
-		self.is_dragging	= false;
-		self.is_resizing	= false;
-		self.current_handle	= null;
-	});
+	// Bound reference is stored on self so destroy() can remove it.
+	self.nodes.container.addEventListener('mouseup', self.bound_handle_mouse_up);
 
 }// end build
 
@@ -204,13 +198,8 @@ render_tool_image_crop.build = async function(options) {
 * Clears the current selection state first via `reset_selection()`, then walks
 * the child nodes of `crop_selection` and removes them before detaching the
 * element itself. The three named handlers (bound_start_selection,
-* bound_start_drag_or_resize, bound_handle_mouse_move) are removed by the same
-* bound references stored during `build()`.
-*
-* (!) The `mouseup` listener was registered with an anonymous function and
-*     cannot be removed here by reference. It will persist on the container
-*     node until it is garbage-collected with the container. This is a
-*     pre-existing condition; do not change the code.
+* bound_start_drag_or_resize, bound_handle_mouse_move, bound_handle_mouse_up)
+* are removed by the same bound references stored during `build()`.
 *
 * @returns {undefined}
 */
@@ -236,15 +225,7 @@ render_tool_image_crop.destroy = function() {
 	// Mouse move handler
 	self.nodes.container.removeEventListener('mousemove', self.bound_handle_mouse_move );
 	// Mouse up handler
-	// (!) This removeEventListener call has no effect because the handler was
-	//     registered as an anonymous inline function in build(). A named/bound
-	//     reference would be required for removal to succeed.
-	self.nodes.container.removeEventListener('mouseup', function() {
-		self.is_selecting	= false;
-		self.is_dragging	= false;
-		self.is_resizing	= false;
-		self.current_handle	= null;
-	});
+	self.nodes.container.removeEventListener('mouseup', self.bound_handle_mouse_up);
 
 }// end destroy
 
