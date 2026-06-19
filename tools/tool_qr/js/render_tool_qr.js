@@ -173,10 +173,8 @@ const get_content_data = async function(self) {
 *
 * Builds a DocumentFragment containing:
 *   - A <span class="section_label"> with the section's human-readable label.
-*   - A <span> showing total record count pulled from self.section.total.
-*     Note: the class_name of this span is incorrectly set to the translated
-*     label string (get_label.active_elements) rather than a CSS class —
-*     this is a pre-existing issue; do not change the code. (!)
+*   - A <span class="qr_totals"> showing total record count pulled from
+*     self.section.total.
 *   - A <div class="canvas_direction"> containing a <select class="canvas_selector">
 *     with 'portrait' and 'landscape' options. Changing the selection toggles
 *     the CSS class on self.qr_canvas so that the print stylesheet applies the
@@ -202,7 +200,7 @@ const render_info_container = (self) => {
 		const totals_value = (get_label.total_records || 'Total records') + `: ${self.section.total}`
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: get_label.active_elements || 'Active elements',
+			class_name		: 'qr_totals',
 			inner_html		: totals_value,
 			parent			: fragment
 		})
