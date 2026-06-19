@@ -12,7 +12,30 @@
 
 /**
 * RENDER_DATABASE_INFO
-* Manages the component's logic and appearance in client side
+* Client-side render module for the database_info maintenance widget.
+*
+* Builds the full widget UI: a PostgreSQL connection summary block, a collapsible
+* index viewer, and a set of administrative action panels (analyze, recreate assets,
+* optimize tables, consolidate sequences, rebuild user stats). Each action panel
+* calls the corresponding method on the `database_info` widget instance via the
+* shared `handle_submit` helper, which manages the lock/spinner/response lifecycle.
+*
+* This file only produces DOM — all API calls live in database_info.js.
+* Consumed by: database_info.prototype.edit / database_info.prototype.list
+*   (both aliased to render_database_info.prototype.list in database_info.js).
+*
+* Main exports:
+*   render_database_info  — empty constructor (prototype carrier)
+*   render_database_info.prototype.list — async entry point called by the widget
+*/
+
+
+
+/**
+* RENDER_DATABASE_INFO
+* Empty constructor used solely as a prototype carrier for the list() render method.
+* The real widget instance (database_info) is always passed in as `self` so this
+* constructor is never called directly with `new`.
 */
 export const render_database_info = function() {
 
@@ -25,13 +48,13 @@ export const render_database_info = function() {
 * LIST
 * Creates the nodes of current widget.
 * The created wrapper will be append to the widget body in area_maintenance
-* @param object options
+* @param {Object} options
 * 	Sample:
 * 	{
 *		render_level : "full"
 		render_mode : "list"
 *   }
-* @return HTMLElement wrapper
+* @returns {HTMLElement} wrapper
 * 	To append to the widget body node (area_maintenance)
 */
 render_database_info.prototype.list = async function(options) {
@@ -61,8 +84,21 @@ render_database_info.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Assembles the full widget body from the value loaded by the PHP get_value() method.
+* The value object shape is:
+*   {
+*     info    : Object  — pg_version() output plus a 'host' key (PostgreSQL connection info)
+*     tables  : Array   — list of table names in the Dédalo schema
+*     indexes : Object  — table name → array of index descriptor objects
+*   }
+*
+* The action panels (analyze, recreate assets, etc.) are only rendered when
+* self.caller?.init_form is available, i.e. when the widget is running in a context
+* that can display a submit form (the normal area_maintenance edit view). In read-only
+* or partial-render contexts the panels are omitted.
+*
+* @param {Object} self - The database_info widget instance
+* @returns {HTMLElement} content_data - Root div containing the complete widget body
 */
 const get_content_data_edit = async function(self) {
 
@@ -80,6 +116,8 @@ const get_content_data_edit = async function(self) {
 	})
 
 	// Database info
+	// (!) info.IntervalStyle is used as the database identifier — it reflects the PG session
+	// interval formatting style (e.g. "postgres"), which doubles as a connection check value.
 	ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: '',
@@ -88,6 +126,7 @@ const get_content_data_edit = async function(self) {
 	})
 
 	// version_info
+	// Full pg_version() object pretty-printed so operators can see all PG build details.
 	ui.create_dom_element({
 		element_type	: 'pre',
 		class_name		: 'version_info',
@@ -131,9 +170,19 @@ const get_content_data_edit = async function(self) {
 
 /**
 * RENDER_INDEXES_TABLE
-* Creates a formatted table to display database indexes
-* @param object indexes - Object with table names as keys and arrays of index objects as values
-* @return HTMLElement indexes_container
+* Builds a collapsible section that lists all database indexes grouped by table.
+* The section header acts as a toggle; clicking it shows or hides the table list.
+*
+* Each table produces an <h4> heading followed by a <table> with three columns:
+*   - Index Name  (index.indexname)
+*   - Size        (index.index_size — human-readable string from PostgreSQL)
+*   - Definition  (index.indexdef  — the full CREATE INDEX DDL statement)
+*
+* Tables with no indexes are skipped silently.
+*
+* @param {Object} indexes - Map of table_name → Array<{indexname, index_size, indexdef}>
+*   Produced by class.database_info.php::get_value() via db_tasks::get_table_indexes().
+* @returns {HTMLElement} indexes_container - Collapsible div ready to append to content_data
 */
 const render_indexes_table = (indexes) => {
 
@@ -152,6 +201,7 @@ const render_indexes_table = (indexes) => {
 	})
 
 	// indexes content container
+	// Starts hidden; revealed by the toggle handler below.
 	const indexes_content = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'indexes_content hide',
@@ -159,6 +209,7 @@ const render_indexes_table = (indexes) => {
 	})
 
 	// mouse up event - toggle visibility
+	// The 'up' CSS class flips the arrow icon direction to indicate the open state.
 	const toggle_handler = (e) => {
 		indexes_content.classList.toggle('hide')
 		if (indexes_content.classList.contains('hide')) {
@@ -254,10 +305,27 @@ const render_indexes_table = (indexes) => {
 
 /**
 * HANDLE_SUBMIT
-* @param HTMLElement body_response - Target div for the API response messages
-* @param HTMLElement target_lock - DIV to lock until execution
-* @param callable api_call - API call function
-* @return HTMLElement rebuild_indexes_container
+* Shared submit lifecycle handler used by all action panels in this widget.
+* Manages the lock/spinner/response pattern:
+*   1. Validates arguments (all three are mandatory).
+*   2. Clears any previous response content from body_response.
+*   3. Adds a CSS 'lock' class to target_lock and prepends a spinner to body_response
+*      to give visual feedback during long-running PostgreSQL operations.
+*   4. Calls api_call() and waits for the promise.
+*   5. Renders the JSON response (or an error node) into body_response.
+*   6. Removes the spinner and the lock.
+*
+* Double-clicking body_response clears its content (wired by each panel's own dblclick handler).
+*
+* (!) Some operations (e.g. rebuild_db_indexes) can take several hours. The spinner
+* remains visible for the full duration of the API call.
+*
+* @param {HTMLElement} body_response - Target div where the JSON API response is displayed
+* @param {HTMLElement} target_lock   - Element that receives the 'lock' CSS class during execution;
+*                                      typically the submit button (e.target from on_submit)
+* @param {Function}    api_call      - Zero-argument async function that returns the API response
+*                                      object; must be an async function or return a Promise
+* @returns {Promise<void>}
 */
 const handle_submit = async (body_response, target_lock, api_call) => {
 
@@ -318,8 +386,17 @@ const handle_submit = async (body_response, target_lock, api_call) => {
 
 /**
 * RENDER_ANALYZE
-* @param object self widget instance
-* @return HTMLElement rebuild_indexes_container
+* Builds the "Analyze database" action panel.
+* Running PostgreSQL ANALYZE updates the query planner's statistics, which is useful
+* after bulk imports or when query performance degrades. The operation is fast and
+* non-destructive.
+*
+* The panel uses self.caller.init_form() to inject a confirm-before-submit form.
+* On submit, self.analyze_db() is called via handle_submit.
+* Double-clicking the response area clears the response content.
+*
+* @param {Object} self - The database_info widget instance (must expose analyze_db())
+* @returns {HTMLElement} analyze_container - Section div ready to append to content_data
 */
 const render_analyze = (self) => {
 
@@ -383,8 +460,21 @@ const render_analyze = (self) => {
 
 /**
 * RENDER_RECREATE_DB_ASSETS
-* @param object self widget instance
-* @return HTMLElement rebuild_indexes_container
+* Builds the "Recreate database assets" action panel.
+* Calling recreate_db_assets triggers a full PostgreSQL maintenance pass:
+* extensions → constraints → functions → indexes → maintenance tasks.
+* This is a long-running, high-impact operation (up to 1 hour timeout).
+*
+* The panel exposes a collapsible "Options" sub-section containing three
+* individual sub-panels that target narrower scopes of the same operation:
+*   - render_rebuild_indexes   — re-index only
+*   - render_rebuild_functions — PL/pgSQL functions only
+*   - render_rebuild_constraints — constraints only
+* All three sub-panels share the same body_response element so their output
+* appears in the same response area as the top-level action.
+*
+* @param {Object} self - The database_info widget instance
+* @returns {HTMLElement} recreate_db_assets_container - Section div ready to append
 */
 const render_recreate_db_assets = (self) => {
 
@@ -438,6 +528,7 @@ const render_recreate_db_assets = (self) => {
 	})
 
 	// specific options
+	// The options label is a collapsible toggle for the sub-operation panels.
 	const recreate_db_options_label = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'recreate_db_options_label icon_arrow ',
@@ -445,6 +536,7 @@ const render_recreate_db_assets = (self) => {
 		parent			: recreate_db_assets_container
 	})
 	// mouse up event
+	// Mirrors the indexes toggle pattern: 'up' class flips the arrow icon.
 	const options_mouse_up = (e) => {
 		recreate_db_options_container.classList.toggle('hide');
 		if( recreate_db_options_container.classList.contains('hide') ){
@@ -486,9 +578,20 @@ const render_recreate_db_assets = (self) => {
 
 /**
 * RENDER_REBUILD_INDEXES
-* @param object self widget instance
-* @param HTMLElement body_response - API response node
-* @return HTMLElement rebuild_indexes_container
+* Builds the "Rebuild indexes" sub-panel inside the "Recreate database assets" options section.
+* Issues a REINDEX command for all PostgreSQL indexes in the Dédalo schema, or for a
+* single table when the user selects one from the dropdown.
+*
+* The available table list comes from self.value.tables (populated by get_value on the PHP side).
+* An empty selection rebuilds indexes on all tables (the PHP side interprets an empty tables
+* array as "all").
+*
+* This sub-panel shares body_response with its parent render_recreate_db_assets panel so
+* output is always visible even if the options section is collapsed.
+*
+* @param {Object}      self          - The database_info widget instance (exposes rebuild_db_indexes())
+* @param {HTMLElement} body_response - Shared response area from the parent panel
+* @returns {HTMLElement} rebuild_indexes_container
 */
 const render_rebuild_indexes = (self, body_response) => {
 
@@ -530,6 +633,7 @@ const render_rebuild_indexes = (self, body_response) => {
 		on_submit		: async (e, values) => {
 
 			// get table value
+			// values is an array of {name, value} descriptors from init_form inputs.
 			const table = values.find(el => el.name === 'table')?.value;
 
 			await handle_submit(
@@ -550,9 +654,15 @@ const render_rebuild_indexes = (self, body_response) => {
 
 /**
 * RENDER_REBUILD_FUNCTIONS
-* @param object self widget instance
-* @param HTMLElement body_response - API response node
-* @return HTMLElement rebuild_functions_container
+* Builds the "Rebuild functions" sub-panel inside the "Recreate database assets" options section.
+* Issues a CREATE OR REPLACE for all Dédalo PL/pgSQL stored functions.
+* Useful after a schema migration or when a function upgrade was interrupted.
+*
+* Shares body_response with the parent panel (see render_recreate_db_assets).
+*
+* @param {Object}      self          - The database_info widget instance (exposes rebuild_db_functions())
+* @param {HTMLElement} body_response - Shared response area from the parent panel
+* @returns {HTMLElement} rebuild_functions_container
 */
 const render_rebuild_functions = (self, body_response) => {
 
@@ -600,9 +710,15 @@ const render_rebuild_functions = (self, body_response) => {
 
 /**
 * RENDER_REBUILD_CONSTRAINTS
-* @param object self widget instance
-* @param HTMLElement body_response - API response node
-* @return HTMLElement rebuild_constraits_container
+* Builds the "Rebuild constraints" sub-panel inside the "Recreate database assets" options section.
+* Re-applies all PostgreSQL CHECK / FOREIGN KEY / UNIQUE / PRIMARY KEY constraints to the
+* Dédalo schema. Useful after bulk data loads that temporarily dropped constraints for speed.
+*
+* Shares body_response with the parent panel (see render_recreate_db_assets).
+*
+* @param {Object}      self          - The database_info widget instance (exposes rebuild_db_constraints())
+* @param {HTMLElement} body_response - Shared response area from the parent panel
+* @returns {HTMLElement} rebuild_constraits_container
 */
 const render_rebuild_constraints = (self, body_response) => {
 
@@ -650,8 +766,23 @@ const render_rebuild_constraints = (self, body_response) => {
 
 /**
 * RENDER_OPTIMIZE_TABLES
-* @param object self widget instance
-* @return HTMLElement rebuild_indexes_container
+* Builds the "Optimize tables" action panel.
+* Runs REINDEX + VACUUM ANALYZE on the selected tables. The user provides a
+* comma-separated list of table names; the field is pre-populated with all known
+* tables from self.value.tables.
+*
+* Guard: when the user submits the full list of tables (all tables selected), a
+* native confirm() dialog is shown as an extra safety check because the operation
+* locks each table exclusively during REINDEX.
+*
+* (!) Uses `spinner` inside the async callback closure but `spinner` is defined in
+* handle_submit's local scope, not accessible here. The `spinner.remove()` and
+* `e.target.classList.remove('lock')` calls inside the on_submit callback will throw
+* a ReferenceError if the early-exit branches are reached (tables empty). This is a
+* pre-existing code issue; do not change it.
+*
+* @param {Object} self - The database_info widget instance (exposes optimize_tables())
+* @returns {HTMLElement} optimize_tables_container
 */
 const render_optimize_tables = (self) => {
 
@@ -711,6 +842,7 @@ const render_optimize_tables = (self) => {
 				e.target,
 				async () => {
 					// value
+					// Parse the comma-separated input string into a trimmed array of table names.
 					const tables = values.filter(el => el.name==='tables')
 						.map(el => el.value)[0]
 						.split(',')
@@ -724,6 +856,8 @@ const render_optimize_tables = (self) => {
 					}
 
 					if (tables.length === source_tables.length) {
+						// Extra safety confirm when every known table is included —
+						// the operation will take a long time and lock all tables.
 						const label = (get_label.all || 'All') + ' ?';
 						if (!confirm(label)) {
 							return
@@ -748,8 +882,23 @@ const render_optimize_tables = (self) => {
 
 /**
 * RENDER_CONSOLIDATE_TABLE_SEQUENCES
-* @param object self widget instance
-* @return HTMLElement consolidate_table_sequences_container
+* Builds the "Consolidate table sequences" action panel.
+* Renumbers the `id` column of the selected tables to close gaps introduced by
+* deletions, resetting the PostgreSQL sequence so that the next auto-increment id
+* follows immediately after the highest existing id.
+*
+* Allowed tables (enforced on the PHP side as well):
+*   dd_ontology, matrix_ontology, matrix_ontology_main, matrix_dd
+*
+* The user input is pre-populated with all four tables. A full-list confirm() is
+* shown when all four are submitted, because renumbering changes existing ids and
+* any stale cached references will become invalid.
+*
+* (!) Same `spinner` ReferenceError caveat as render_optimize_tables applies here
+* for the early-exit branches. Pre-existing issue; do not change.
+*
+* @param {Object} self - The database_info widget instance (exposes consolidate_tables())
+* @returns {HTMLElement} consolidate_table_sequences_container
 */
 const render_consolidate_table_sequences = (self) => {
 
@@ -788,6 +937,7 @@ const render_consolidate_table_sequences = (self) => {
 	body_response.addEventListener('dblclick', dblclick_handler)
 
 	// tables
+	// Hard-coded allowlist matching the PHP-side enforcement in class.database_info.php::consolidate_tables().
 	const source_tables = ['dd_ontology','matrix_ontology','matrix_ontology_main','matrix_dd']
 
 	self.caller?.init_form({
@@ -809,6 +959,7 @@ const render_consolidate_table_sequences = (self) => {
 				e.target,
 				async () => {
 					// value
+					// Parse the comma-separated input string into a trimmed array of table names.
 					const tables = values.filter(el => el.name==='tables')
 						.map(el => el.value)[0]
 						.split(',')
@@ -822,6 +973,8 @@ const render_consolidate_table_sequences = (self) => {
 					}
 
 					if (tables.length === source_tables.length) {
+						// Extra safety confirm when all four allowed tables are included —
+						// renumbering ids invalidates any cached references to those records.
 						const label = (get_label.all || 'All') + ' ?';
 						if (!confirm(label)) {
 							return
@@ -846,8 +999,19 @@ const render_consolidate_table_sequences = (self) => {
 
 /**
 * RENDER_REBUILD_USER_STATS
-* @param object self widget instance
-* @return HTMLElement rebuild_user_stats_container
+* Builds the "Rebuild user stats" action panel.
+* Deletes all dd1521 (User activity) records for the specified users and regenerates
+* them by aggregating data from the matrix_activity table into daily summaries.
+* This is needed after activity data corrections or when stats become inconsistent.
+*
+* The user provides a comma-separated list of section_id values identifying which
+* users to process. At least one id is required (mandatory input).
+*
+* (!) Same `spinner` ReferenceError caveat as render_optimize_tables applies here
+* for the early-exit branches. Pre-existing issue; do not change.
+*
+* @param {Object} self - The database_info widget instance (exposes rebuild_user_stats())
+* @returns {HTMLElement} rebuild_user_stats_container
 */
 const render_rebuild_user_stats = (self) => {
 
@@ -903,6 +1067,8 @@ const render_rebuild_user_stats = (self) => {
 				e.target,
 				async () => {
 					// value
+					// Parse the comma-separated section_id input into a trimmed string array.
+					// Integer casting is performed on the PHP side inside rebuild_user_stats().
 					const users = values.filter(el => el.name==='users')
 						.map(el => el.value)[0]
 						.split(',')
