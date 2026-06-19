@@ -831,7 +831,17 @@ class tool_import_files extends tool_common {
 
 		// init vars
 			$ar_msg							= [];	// messages for response info
-			$input_components_section_tipo	= [];	// all different used section tipo in section_temp
+			// input_components_section_tipo. all different section tipo used by the
+				// 'input_component' DDO entries; the post-loop session cleanup below
+				// purges section_temp_data keyed by these section types. Collected here
+				// from the ddo_map because set_components_data() receives a value-copy
+				// $options object and cannot write back into this array.
+				$input_components_section_tipo	= array_values(array_unique(array_map(
+					function($ddo){ return $ddo->section_tipo; },
+					array_filter((array)$ar_ddo_map, function($ddo){
+						return ($ddo->role ?? null)==='input_component' && !empty($ddo->section_tipo);
+					})
+				)));
 			$total_processed				= 0;
 			$total							= count($files_data);	// n of files
 			$counter						= 0;
@@ -1305,10 +1315,8 @@ class tool_import_files extends tool_common {
 		// under keys that include the section_tipo.  After import completes, purge those
 		// entries so the next use of the import dialog starts with empty form fields.
 		// Keys are matched by a regex built from $input_components_section_tipo, which is
-		// populated by set_components_data() (via the 'input_component' role in the ddo_map).
-		// (!) $input_components_section_tipo is declared near the top of this method but
-		// never populated here — set_components_data() currently does not write back into it.
-		// The cleanup block is therefore a no-op in the current codebase.
+		// populated near the top of this method from the ddo_map 'input_component' entries
+		// (set_components_data() cannot write back into it as it receives a value-copy $options).
 			if (!empty($input_components_section_tipo) && !empty($_SESSION['dedalo']['section_temp_data'])) {
 
 				// Create regex pattern to match any of the section types. Pattern example: /_(type1|type2)_/

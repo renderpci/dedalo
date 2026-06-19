@@ -1098,7 +1098,6 @@ class tool_import_rdf extends tool_common {
 		if($count>1) {
 
 			// more than one exists with same value
-				dump('', ' SQO +++++++++++++++++ '.to_string($sqo));
 				debug_log(__METHOD__
 					." Error Processing Request [get_solved_select_value]. Search on section_tipo: $section_tipo gets more than one result. Only one is expected ! ($count) " . PHP_EOL
 					.' section_tipo: ' . $section_tipo . PHP_EOL

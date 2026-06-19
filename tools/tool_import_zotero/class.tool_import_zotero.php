@@ -542,16 +542,10 @@ class tool_import_zotero extends tool_common {
 											$section_tipo
 										);
 
-										// (!) BUG: $ar_name is not defined in this scope (it belongs to
-										// the 'author' case). The foreach body always uses $data, so the
-										// loop count is wrong — it iterates 0 times unless $ar_name
-										// happens to be set from a previous loop iteration. This means
-										// the typology locator is never saved for the first record if
-										// 'author' was not previously processed for this same object.
 										$component_data = [];
-										foreach((array)$ar_name as $current_data) {
+										foreach((array)$data as $current_data) {
 											$component_data[] = (object)[
-												'value' => $data ?? null,
+												'value' => (string)$current_data,
 												'lang' => $component->get_lang()
 											];
 										}
@@ -586,13 +580,6 @@ class tool_import_zotero extends tool_common {
 									default:
 										// Generic handler: respects the component's translatability flag
 										// to choose between DEDALO_DATA_LANG and DEDALO_DATA_NOLAN.
-										// (!) BUG: '$zotero_obj->$nam' (line below) is a typo — the
-										// variable '$nam' is undefined; it should be '$zotero_obj->$name'.
-										// $current_value is therefore always null here and the title
-										// branch below (if $name==='title') logs the correct value via
-										// $zotero_obj->$name, but the component is saved with null.
-										// (!) BUG: '$data' is also referenced in the component_data
-										// array instead of '$current_value', compounding the null save.
 										$current_model	= ontology_node::get_model_by_tipo($ddo->tipo,true);
 										$component		= component_common::get_instance(
 											$current_model,
@@ -602,10 +589,10 @@ class tool_import_zotero extends tool_common {
 											(ontology_node::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN),
 											$ddo->section_tipo
 										);
-										$current_value = $zotero_obj->$nam ?? null;
+										$current_value = $zotero_obj->$name ?? null;
 
 										$component_data = [(object)[
-											'value' => $data ?? null,
+											'value' => $current_value ?? null,
 											'lang' => $component->get_lang()
 										]];
 

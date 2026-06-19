@@ -556,11 +556,10 @@ class tool_import_marc21 extends tool_common {
 		$element_fields = $record->getFields($element_vars->field);
 		foreach ($element_fields as $portal_row_obj) {
 
-			// (!) getSubfield() returns false when the subfield does not exist.
-			//     If $sub_field is false, the ->getData() call on the next line
-			//     will trigger a fatal error.  No null guard is present here.
+			// getSubfield() returns false when the subfield does not exist;
+			// skip this occurrence to avoid a fatal ->getData() call on false.
 			$sub_field = $portal_row_obj->getSubfield($marc21_conditional->subfield);
-			if ($sub_field->getData() == $marc21_conditional->value) {
+			if ($sub_field !== false && $sub_field->getData() == $marc21_conditional->value) {
 
 				$element = $portal_row_obj->getSubfield($element_vars->subfield);
 				return ($element === false) ? '' : $element->getData();
