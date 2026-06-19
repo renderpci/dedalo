@@ -14,7 +14,52 @@
 
 /**
 * RENDER_TOOL_IMPORT_DEDALO_CSV
-* Manages the component's logic and appearance in client side
+* Client-side render controller for the CSV import tool.
+*
+* This module provides the DOM-building layer for tool_import_dedalo_csv. Its
+* prototype methods are mixed into the tool class in tool_import_dedalo_csv.js
+* via direct prototype assignment, following the Dédalo render-file pattern.
+*
+* Exported functions:
+* - render_tool_import_dedalo_csv  (constructor, mixed into the tool class)
+* - render_tool_import_dedalo_csv.prototype.edit        – builds the full edit wrapper
+* - render_tool_import_dedalo_csv.prototype.upload_done – called when a file upload finishes
+*
+* Private helpers (module-scoped, not exported):
+* - render_service_upload    – (re-)renders the drag-and-drop upload zone
+* - get_content_data         – builds the main tool body (file list + submit controls)
+* - render_file_info         – renders one CSV file card with column mapper
+* - render_columns_mapper    – async; fetches component list and renders column-mapping UI
+* - render_final_report      – renders per-file import outcome (created / updated / failed rows)
+* - update_process_status    – polls the background process via SSE and streams progress
+* - check_process_data       – resumes an in-progress import on page reload via IndexedDB
+*
+* Data shapes consumed by this module:
+*
+* csv_files_list item (one entry per uploaded CSV file, returned by load_csv_files_list):
+* {
+*   name              : string   – filename, e.g. 'exported_oral-history_-1-oh1.csv'
+*   dir               : string   – server-side directory path
+*   n_records         : number   – number of data rows (excluding header)
+*   n_columns         : number   – number of columns
+*   file_info         : string[] – column names (first row of the CSV)
+*   sample_data       : Array[]  – a few parsed rows for preview (each an array of cell values)
+*   sample_data_errors: Object[] – JSON parse errors found in sample rows (empty if OK)
+*   ar_columns_map    : Object[] – per-column map: { tipo, model, label, checked, map_to, decimal? }
+*   section_tipo      : string   – auto-detected or user-supplied target section tipo (e.g. 'oh1')
+*   section_label     : string   – resolved section label (set by render_columns_mapper)
+*   bulk_process_label: string   – editable title for the bulk-process tracking record
+*   checked           : boolean  – whether the file checkbox is selected for import
+*   result_container  : HTMLElement – injected by render_file_info; render_final_report writes here
+* }
+*
+* import_files API response (api_response inside fn_import .then):
+* {
+*   result : boolean | Array  – true when the background job was queued successfully;
+*                               Array of per-file results when the job is complete
+*   pid    : string           – process ID used to poll status via dd_utils_api::get_process_status
+*   pfile  : string           – path to the process status file
+* }
 */
 export const render_tool_import_dedalo_csv = function() {
 
@@ -27,8 +72,10 @@ export const render_tool_import_dedalo_csv = function() {
 * EDIT
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_import_dedalo_csv.js'
-* @param object options
-* @return HTMLElement wrapper
+* @param {Object} options
+* @param {string} [options.render_level='full'] - 'full' builds the entire wrapper;
+*   'content' rebuilds only the body (content_data) and re-attaches service_upload.
+* @returns {HTMLElement} wrapper (full render) or content_data node (content render)
 */
 render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 
@@ -87,8 +134,8 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 * destroys and rebuilds the service_upload dependency but edit() returns early
 * for 'content' renders, so without re-rendering here the drop zone would stay
 * visible yet dead (its drag & drop listeners removed on destroy).
-* @param object self
-* @return void
+* @param {Object} self - tool_import_dedalo_csv instance
+* @returns {void}
 */
 const render_service_upload = function(self) {
 
@@ -124,9 +171,20 @@ const render_service_upload = function(self) {
 
 /**
 * GET_CONTENT_DATA
-* Render tool body or 'content_data'
-* @param object self
-* @return HTMLElement content_data
+* Builds and returns the main tool body as a content_data wrapper element.
+*
+* The content_data node contains:
+*   - process_file    – transient upload-progress indicator (spinner + status text)
+*   - user_msg_container – reserved for user-facing messages
+*   - files_list      – one render_file_info card per uploaded CSV file
+*   - submit_container – import button + time-machine checkbox
+*   - process_info_container – SSE progress display (hidden until import starts)
+*
+* Also triggers check_process_data so that a previously-started import that was
+* interrupted (e.g. page reload) is automatically resumed.
+*
+* @param {Object} self - tool_import_dedalo_csv instance
+* @returns {Promise<HTMLElement>} content_data wrapper element
 */
 const get_content_data = async function(self) {
 
@@ -170,12 +228,16 @@ const get_content_data = async function(self) {
 		})
 
 	// fn_import
+		// Arrow function (not a method) capturing submit_container DOM references.
+		// Validates that at least one file is checked, builds the files payload, and
+		// calls self.import_files(). On success it starts the SSE progress poll.
 		const fn_import = (e) => {
 			e.stopPropagation()
 
 			// selected files
 				const selected_files = self.csv_files_list.filter(el => el.checked===true)
 				if (selected_files.length<1) {
+					// (!) alert() is intentional UI feedback here; not an error dialog.
 					alert( self.get_tool_label('select_a_file') || 'Select a file');
 					return
 				}
@@ -195,6 +257,8 @@ const get_content_data = async function(self) {
 				document.activeElement.blur()
 
 			// array of file names
+				// Build the stripped-down file descriptor that the server expects.
+				// ar_columns_map objects follow the shape: { tipo, model, label, checked, map_to, decimal? }
 				const files = selected_files.map(el => {
 					return {
 						file				: el.name, // string like 'exported_oral-history_-1-oh1.csv'
@@ -236,6 +300,8 @@ const get_content_data = async function(self) {
 		import_button.addEventListener('click', fn_import)
 
 	// checkbox_time_machine_save
+		// Wrapping label + prepended checkbox — toggling saves a TM snapshot per imported row.
+		// Defaults to checked so the import is always reversible unless the user opts out.
 		const checkbox_label = ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: 'checkbox_label',
@@ -251,6 +317,7 @@ const get_content_data = async function(self) {
 		checkbox_label.prepend(checkbox_time_machine_save)
 
 	// process_info_container
+		// Hidden until import_files returns a running pid; shown by update_process_status.
 		const process_info_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'process_info_container hide',
@@ -277,9 +344,26 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_FILE_INFO
-* @param object self
-* @param object item
-* @return HTMLElement item_wrapper
+* Renders a single file card for one uploaded CSV file.
+*
+* Each card contains:
+*   - A checkbox to select the file for import (toggles item.checked)
+*   - An editable section_tipo input with live validation via update_section_warn()
+*   - A delete button (calls self.remove_file + self.refresh)
+*   - Record/column summary info text
+*   - An editable bulk_process_label field
+*   - A preview toggle showing raw sample_data or parse errors as <pre>
+*   - A columns_mapper div populated asynchronously by render_columns_mapper()
+*   - A result_container div written into later by render_final_report()
+*
+* The nested update_section_warn() is called immediately on construction and on
+* every keyup in the section_tipo input. It validates the tipo, clears and
+* rebuilds the columns_mapper, and updates section_label. On invalid input it
+* shows a warning and focuses the input after a short delay.
+*
+* @param {Object} self - tool_import_dedalo_csv instance
+* @param {Object} item - one entry from self.csv_files_list (shape documented in module header)
+* @returns {HTMLElement} item_wrapper – the assembled card node
 */
 const render_file_info = function(self, item) {
 
@@ -327,6 +411,10 @@ const render_file_info = function(self, item) {
 			})
 
 		// section_tipo
+			// Auto-detect the section tipo from the filename suffix pattern:
+			//   exported_<description>_<section_id>-<section_tipo>.csv
+			// e.g. 'exported_oral-history_-1-oh1.csv' → section_tipo 'oh1'
+			// Falls back to the caller's own tipo when the regex yields nothing.
 			const regex			= /.*-([a-z0-9]{3,}) ?.*\.csv/g;
 			const res			= regex.exec(item.name)
 			let section_tipo	= (res && res[1]) ? res[1] : null
@@ -546,9 +634,31 @@ const render_file_info = function(self, item) {
 
 /**
 * RENDER_COLUMNS_MAPPER
-* @param object self
-* @param object item
-* @return DocumentFragment
+* Async; fetches the importable component list for the given section tipo from
+* the server and renders a column-mapping table row for every column in the CSV.
+*
+* Each row shows:
+*   - The original column name from the CSV header
+*   - Server-detected model (e.g. 'component_text_area') and label
+*   - A checked checkbox (auto-ticked when column name matches a component tipo)
+*   - A <select> of available target components — auto-selects the matching entry
+*   - (optional) A decimal-separator selector when the mapped component is component_number
+*   - A sample data cell with the first non-empty value from item.sample_data
+*
+* The function writes back into item.ar_columns_map[i] and item.section_label.
+*
+* Special column names that bypass the tipo-split heuristic and are matched directly:
+*   'section_id', 'created_date', 'modified_date', 'created_by_user', 'modified_by_user'
+*
+* For all other columns the column name is split on '_' and the first token is used
+* as the candidate component tipo.
+*
+* A collapsible toggle is attached to the header via ui.collapse_toggle_track so
+* the mapper body can be expanded/collapsed by the user.
+*
+* @param {Object} self - tool_import_dedalo_csv instance
+* @param {Object} item - one entry from self.csv_files_list (shape documented in module header)
+* @returns {Promise<DocumentFragment>} fragment containing the full columns-mapper UI
 */
 const render_columns_mapper = async function(self, item) {
 
@@ -814,6 +924,8 @@ const render_columns_mapper = async function(self, item) {
 				}
 
 			// sample_data (search non empty values)
+				// Walk sample rows to find the first non-empty value for this column position,
+				// giving the user a concrete example of what the CSV contains.
 				let sample_data = ''
 				const item_sample_data_length = item.sample_data.length
 				for (let j = 0; j < item_sample_data_length; j++) {
@@ -832,6 +944,8 @@ const render_columns_mapper = async function(self, item) {
 		}//end for (let i = 0; i < file_info_length; i++)
 
 	// collapse_toggle_track
+		// Attaches expand/collapse behaviour to the mapper header; state is persisted
+		// under the key 'collapsed_<section_tipo>' so the user's preference survives refreshes.
 		ui.collapse_toggle_track({
 			toggler				: header,
 			container			: body,
@@ -847,6 +961,8 @@ const render_columns_mapper = async function(self, item) {
 		}
 
 	// render the decimal node selector
+		// Inline helper: builds a point/comma decimal-separator select inside `container`
+		// and keeps ar_columns_map[i].decimal in sync.
 		function render_decimal_selector(options){
 
 			const i			= options.i
@@ -900,8 +1016,17 @@ const render_columns_mapper = async function(self, item) {
 * UPLOAD_DONE
 * Called on service_upload has finished of upload file using a event
 * @see event subscription at 'init' function
-* @param object options
-* @return bool
+*
+* Triggered by the 'upload_file_done_<id>' event that service_upload fires after
+* the file has been sent to the server. This method:
+*   1. Clears the process_file area and shows a spinner.
+*   2. Calls self.process_uploaded_file() to move the temp file to its permanent path.
+*   3. On success calls self.refresh() to reload the file list; on failure shows the error.
+*
+* @param {Object} options
+* @param {Object} options.file_data - upload metadata from service_upload:
+*   { error, extension, name, size, tmp_name, type }
+* @returns {Promise<boolean>} resolves true once the processing request is sent
 */
 render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 
@@ -956,8 +1081,46 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 /**
 * RENDER_FINAL_REPORT
 * Called on import process has finished to render the final report
-* @param object options
-* @return void
+*
+* Iterates api_response.result in reverse order (newest file first) and, for
+* each result entry, locates the matching result_container set on the item by
+* render_file_info. Inside it renders:
+*   - An OK/Error alert badge
+*   - A human-readable message from the server
+*   - (debug only) dedalo_last_error if the server logged PHP errors
+*   - Sections for failed_rows, warning_rows, created_rows, and updated_rows,
+*     each with "Copy as comma separated" and "Copy as column" clipboard buttons.
+*
+* Failed rows contain: { section_id, component_tipo, msg, data }
+* Warning rows contain: { section_id, component_tipo, msg, data }
+* Created rows: section_id[] (plain integers)
+* Updated rows: section_id[] (plain integers)
+*
+* (!) navigator.clipboard is only available in secure contexts (HTTPS); the
+* updated_rows copy buttons guard for this via !navigator.clipboard. Earlier
+* copy buttons in failed/created row blocks do NOT guard for this, which may
+* cause silent failures on HTTP deployments.
+*
+* @param {Object} options
+* @param {Object} options.self - tool_import_dedalo_csv instance
+* @param {Object} options.api_response - final process data:
+*   {
+*     result              : Array of per-file result objects,
+*     dedalo_last_error   : string|null
+*   }
+*   Each per-file result object:
+*   {
+*     result        : boolean,
+*     file          : string,
+*     section_tipo  : string,
+*     msg           : string,
+*     failed_rows   : { section_id, component_tipo, msg, data }[],
+*     warning_rows  : { section_id, component_tipo, msg, data }[],
+*     created_rows  : number[],
+*     updated_rows  : number[]
+*   }
+* @param {HTMLElement} options.process_info_container - the SSE progress container
+* @returns {void}
 */
 const render_final_report = function(options){
 
@@ -1310,8 +1473,34 @@ const render_final_report = function(options){
 
 /**
 * UPDATE_PROCESS_STATUS
-* @param object options
-* @return void
+* Opens an SSE stream to dd_utils_api::get_process_status and streams live
+* progress into process_info_container until the background import finishes.
+*
+* Flow:
+*   1. Locks the submit button (adds 'loading' class) and reveals process_info_container.
+*   2. Calls data_manager.request_stream() with the pid/pfile pair from the
+*      import_files API response to start the SSE feed.
+*   3. For each SSE chunk (on_read): builds/updates a msg_node inside info_node
+*      showing current file, section_id, component label, and elapsed time.
+*      When is_running===false the final chunk carries the complete per-file
+*      results, which are handed to render_final_report().
+*   4. When the stream closes (on_done): unlocks the submit button.
+*
+* The PID and pfile are also persisted in IndexedDB (by render_stream /
+* data_manager.set_local_db_data) so that check_process_data can resume
+* polling after a page reload.
+*
+* (!) get_label is used directly (not self.get_tool_label) for 'proceso_completado'
+* — this is the global page label map, not the tool label map. Ensure the key
+* exists in the active locale.
+*
+* @param {Object} options
+* @param {Object} options.self - tool_import_dedalo_csv instance
+* @param {string} options.pid - process ID from the import_files API response
+* @param {string} options.pfile - process file path from the import_files API response
+* @param {HTMLElement} options.button_submit - the import button (locked during processing)
+* @param {HTMLElement} options.process_info_container - SSE progress display node
+* @returns {void}
 */
 const update_process_status = (options) => {
 
@@ -1407,6 +1596,8 @@ const update_process_status = (options) => {
 				}
 
 				// msg
+					// Assemble a pipe-separated progress line from whatever the server included
+					// in this chunk. Not all fields are present on every tick.
 					const ar_msg = []
 
 					if(data.current_file && data.current_file.length){
@@ -1444,8 +1635,24 @@ const update_process_status = (options) => {
 
 /**
 * CHECK_PROCESS_DATA
-* @param object options
-* @return void
+* Checks IndexedDB for a previously-started import process and resumes
+* status polling if one is found.
+*
+* Called once during get_content_data() construction. If a 'status' record
+* exists under 'process_import_dedalo_csv' in the local DB (written by
+* render_stream when the previous import was started), update_process_status
+* is called with the stored pid and pfile so the user sees live progress
+* without having to manually re-trigger the import.
+*
+* This handles the common case of a page reload while an import is running
+* in the background — the background process continues on the server, and
+* the UI reconnects to its SSE feed transparently.
+*
+* @param {Object} options
+* @param {Object} options.self - tool_import_dedalo_csv instance
+* @param {HTMLElement} options.button_submit - import button (will be locked while polling)
+* @param {HTMLElement} options.process_info_container - SSE progress display node
+* @returns {void}
 */
 const check_process_data = (options) => {
 
