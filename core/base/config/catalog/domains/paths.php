@@ -202,6 +202,15 @@ return [
 	),
 
 	new config_key(
+		path:    'paths.cache_path',
+		const:   'DEDALO_CACHE_PATH',
+		type:    'string',
+		scope:   config_scope::DERIVED,
+		derived: static fn(array $r): string => dirname($r['paths.root'], 1) . '/cache',
+		doc:     'cache/ directory (one level above the install root, outside httpdocs).',
+	),
+
+	new config_key(
 		path:    'paths.binary_base',
 		const:   null, // internal: media tool-binary base; the *_PATH consts derive from it
 		type:    'string',
