@@ -1030,13 +1030,20 @@ const render_automatic_transcription = function (options) {
 
 							const pid = response.result.pid
 
+							// derive the same stable status key used by get_server_status()
+							const server_process_id = 'transcriber_process_'+self.media_component.section_tipo+'_'+self.media_component.section_id
+
 							// set the server pid to the local database
 							data_manager.set_local_db_data({
 								id	: server_process_id,
 								pid	: pid
 							}, 'status')
 
-							check_current_server_status()
+							// fire the status poll (get_server_status owns check_current_server_status)
+							get_server_status({
+								self : self,
+								nodes: nodes
+							})
 						}
 					})
 					break;
