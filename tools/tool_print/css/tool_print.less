@@ -746,7 +746,7 @@
 			box-shadow: none !important;
 			break-after: page;
 			page-break-after: always;
-			overflow: hidden;
+			overflow: visible;
 		}
 		.print_page:last-of-type {
 			break-after: auto;
@@ -954,8 +954,13 @@ body.tp_col_resizing * { cursor: col-resize !important; user-select: none !impor
 // with a ~180px scrollable .value_container, and .wrapper_component is a grid),
 // which clips the row. On paper everything flows: force natural height + visible
 // overflow, and flatten the grid wrapper to block so it grows with its content.
+// Also strip the component's own chrome (dark-theme box-shadow on the wrapper,
+// CKEditor padding/margin on .value_container) so only the cell frame border
+// (driven by the inspector Border control) is visible and text sits flush.
 .wrapper_tool.tool_print .print_root .cell_content .wrapper_component {
 	display: block !important;
+	box-shadow: none !important;
+	border: none !important;
 }
 .wrapper_tool.tool_print .print_root .cell_content .wrapper_component,
 .wrapper_tool.tool_print .print_root .cell_content .wrapper_component *,
@@ -966,6 +971,12 @@ body.tp_col_resizing * { cursor: col-resize !important; user-select: none !impor
 	min-height: 0 !important;
 	max-height: none !important;
 	overflow: visible !important;
+}
+.wrapper_tool.tool_print .print_root .cell_content .value_container,
+.wrapper_tool.tool_print .print_root .cell_content .editor_container,
+.wrapper_tool.tool_print .print_root .cell_content [class*="ck-"] {
+	padding: 0 !important;
+	margin: 0 !important;
 }
 
 
@@ -1048,6 +1059,12 @@ body.tp_col_resizing * { cursor: col-resize !important; user-select: none !impor
 // styling is nested under the dead `.box .box_content` ancestor (v2 cells are
 // `.flow_cell > .cell_content`, no `.box`). Re-apply it here.
 .wrapper_tool.tool_print .print_root .cell_content {
+
+	// cell frame — color/visibility driven by the inspector Border control
+	// (apply_box_style sets --tp_border_color, transparent = off; no_border
+	// class is a hard override for the editor + print)
+	border: 1px solid var(--tp_border_color, transparent);
+	&.no_border { border-color: transparent !important; }
 
 	.print_label {
 		display: block;
