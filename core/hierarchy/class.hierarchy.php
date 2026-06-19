@@ -1606,11 +1606,12 @@ class hierarchy extends ontology {
 	*/
 	public static function get_typology_locator_from_tld( string $tld ) : ?object {
 
+		// get_hierarchy_by_tld() returns ?object; guard against null before deref.
 		$hierarchy_row	= hierarchy::get_hierarchy_by_tld( $tld );
-		$section_id		= $hierarchy_row->section_id;
-		if( empty($section_id) ){
+		if( empty($hierarchy_row) || empty($hierarchy_row->section_id) ){
 			return null;
 		}
+		$section_id		= $hierarchy_row->section_id;
 
 		$model = ontology_node::get_model_by_tipo( DEDALO_HIERARCHY_TYPOLOGY_TIPO );
 		$typology_component = component_common::get_instance(
@@ -1662,7 +1663,8 @@ class hierarchy extends ontology {
 			$search	= search::get_instance($sqo);
 			$db_result = $search->search();
 
-		$ar_records = $db_result->fetch_all();
+		// search() returns db_result|false; avoid a fatal method call on false.
+		$ar_records = $db_result ? $db_result->fetch_all() : [];
 
 		if (empty($ar_records)) {
 			debug_log(__METHOD__
@@ -1749,9 +1751,12 @@ class hierarchy extends ontology {
 		$db_result = $search->search();
 
 		// active_elements
+		// search() returns db_result|false; skip iteration on a failed search.
 		$active_elements = [];
-		foreach ($db_result as $row) {
-			$active_elements[] = ontology::row_to_element($row);
+		if ($db_result!==false) {
+			foreach ($db_result as $row) {
+				$active_elements[] = ontology::row_to_element($row);
+			}
 		}
 
 		// cache
