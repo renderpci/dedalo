@@ -15,7 +15,46 @@
 
 /**
 * RENDER_TOOL_MEDIA_VERSIONS
-* Manages the component's logic and appearance in client side
+* Client-side render module for the tool_media_versions tool.
+*
+* This module provides the edit-mode DOM rendering for the media-versions tool,
+* which displays a per-quality grid of all physical media files associated with a
+* media component (component_image, component_av, etc.).
+*
+* Architecture:
+*  - `render_tool_media_versions` is a plain constructor whose `prototype.edit` is
+*    mixed into `tool_media_versions` (see tool_media_versions.js).
+*  - The edit UI is composed of:
+*      1. A read-only inline preview of the main_element component (the media itself).
+*      2. A sync_data bar that compares DB-stored files_info against real disk state
+*         and exposes a "Regenerate" action when they diverge.
+*      3. A versions_grid — a CSS grid where columns are quality levels and rows are
+*         action categories (File preview, Size, Upload, Versions, Delete, Build,
+*         and any model-specific actions such as rotate or conform_headers).
+*
+* Data flow (set by tool_media_versions.build before render is called):
+*  - self.files_info_disk    — live disk scan (array of file_info objects).
+*  - self.files_info_safe    — disk entries whose extension matches main_extension.
+*  - self.files_info_alternative — disk entries with a non-main extension.
+*  - self.files_info_original — disk entries with quality === 'original'.
+*  - self.ar_quality         — ordered list of quality names from caller context.
+*  - self.regenerate_options — user-chosen flags passed to the sync_files API call.
+*
+* File-info object shape (returned by get_files_info / stored in build):
+*  {
+*    quality    : {string}          — e.g. 'original', '404', 'audio', 'thumb'
+*    file_exist : {boolean}         — false when the file is missing on disk
+*    file_name  : {string|null}
+*    file_path  : {string|null}     — server-relative path prepended with DEDALO_MEDIA_URL
+*    file_url   : {string|null}
+*    file_size  : {number|null}     — bytes
+*    file_time  : {Object|null}
+*    extension  : {string|null}
+*  }
+*
+* (!) DEDALO_MEDIA_URL is consumed in this module but is NOT listed in the
+* /*global*\/ directive above — it will trigger an eslint no-undef warning.
+* It is injected into the page as a browser global by the PHP template layer.
 */
 export const render_tool_media_versions = function() {
 
@@ -26,10 +65,16 @@ export const render_tool_media_versions = function() {
 
 /**
 * EDIT
-* Render tool DOM nodes
-* This function is called by render common attached in 'tool_media_versions.js'
-* @param object options
-* @return HTMLElement wrapper
+* Builds and returns the full edit-mode DOM wrapper for the media-versions tool.
+*
+* Called by the tool_common render pipeline (mixed into tool_media_versions.prototype.edit).
+* When render_level === 'content', skips the outer wrapper and returns only the
+* content_data node (used for partial refreshes). Otherwise returns a complete
+* ui.tool wrapper with content_data attached as a property for later reference.
+*
+* @param {Object} options - render options forwarded from tool_common
+* @param {string} [options.render_level='full'] - 'full' builds wrapper; 'content' returns content_data only
+* @returns {Promise<HTMLElement>} wrapper (full) or content_data (content-only)
 */
 render_tool_media_versions.prototype.edit = async function(options) {
 
@@ -59,9 +104,21 @@ render_tool_media_versions.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* Render tool body or 'content_data'
-* @param instance self
-* @return HTMLElement content_data
+* Builds the inner content_data node that forms the body of the tool UI.
+*
+* The content_data contains three logical sections, appended in order:
+*  1. main_element_container — a read-only, no-toolbar render of the media
+*     component itself (so the editor can see the current media inline).
+*  2. sync_data bar — file/DB comparison strip (only when render_sync_data
+*     returns a non-null node).
+*  3. versions_grid — the full quality × action matrix.
+*
+* The main_element render is kicked off asynchronously (non-blocking); the
+* resolved component_node is appended when ready, so the rest of the UI
+* paints immediately.
+*
+* @param {Object} self - the tool_media_versions instance
+* @returns {Promise<HTMLElement>} content_data node ready to insert into the DOM
 */
 const get_content_data = async function(self) {
 
@@ -74,7 +131,8 @@ const get_content_data = async function(self) {
 			class_name		: 'main_element_container',
 			parent			: fragment
 		})
-		// show_interface
+		// show_interface: disable toolbar and force read-only so the embedded
+		// component is a pure preview — the tool manages edits, not the component itself
 		self.main_element.show_interface.tools = false
 		self.main_element.show_interface.read_only = true
 		// render
@@ -82,7 +140,7 @@ const get_content_data = async function(self) {
 		.then(function(component_node){
 			main_element_container.appendChild(component_node)
 		})
-		// fix
+		// fix: keep a reference so other methods can locate the container later
 		self.main_element_container = main_element_container
 
 	// render_sync_data
@@ -110,10 +168,29 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_SYNC_DATA
-* Render 'Show data' button and container to display
-* the current files and DB data comparison
-* @param object self
-* @return HTMLElement|null
+* Builds a diagnostic / control strip that compares DB-stored file metadata against
+* real disk state, and lets the user trigger a full media regeneration.
+*
+* The strip contains:
+*  - A toggle icon button ('eye' when in sync, 'exclamation' when not) and a label
+*    that reveal/hide the raw JSON comparison panel (pre_data).
+*  - A "Regenerate component" button that calls self.sync_files() after confirmation,
+*    then refreshes the tool on success or shows an alert on failure.
+*  - A "Delete normalized files" checkbox that sets self.regenerate_options before
+*    the sync_files call, directing the server to also delete derived files.
+*  - A hidden <pre> panel with the JSON diff between DB and disk for debugging.
+*
+* Sync check: is_sync is a coarse length comparison only — it does not compare
+* individual file names or paths. A length match is a necessary but not sufficient
+* condition for true synchrony.
+*
+* (!) pre_data is declared after button_icon_show_data's click listener, which
+* references it via closure. The forward reference works because JS closures
+* capture the binding, not the value — pre_data is defined by the time any click
+* fires.  The eslint no-use-before-define rule would warn here if enabled.
+*
+* @param {Object} self - the tool_media_versions instance
+* @returns {HTMLElement} sync_data_wrapper node containing the control strip
 */
 const render_sync_data = function(self) {
 
@@ -129,7 +206,7 @@ const render_sync_data = function(self) {
 	// original_normalized_name
 		const original_normalized_name = self.original_normalized_name
 
-	// is_sync
+	// is_sync: coarse check — equal entry counts implies DB and disk are in sync
 		const is_sync = files_info_db.length === files_info_disk.length
 
 	// debug
@@ -144,14 +221,14 @@ const render_sync_data = function(self) {
 			class_name		: 'sync_data_wrapper'
 		})
 
-		// versions_container
+		// versions_container: inner bar that holds controls side by side
 			const versions_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'sync_data_container',
 				parent			: sync_data_wrapper
 			})
 
-		// button_icon_show_data
+		// button_icon_show_data: toggles the pre_data JSON panel visibility
 			const button_icon_show_data = ui.create_dom_element({
 				element_type	: 'span',
 				title			: 'Display component files_info',
@@ -160,9 +237,10 @@ const render_sync_data = function(self) {
 			})
 			button_icon_show_data.addEventListener('click', function(e) {
 				e.stopPropagation()
+				// (!) pre_data is declared below; closure forward reference is safe here
 				pre_data.classList.toggle('hide')
 			})
-			// label
+			// label: text varies depending on sync state
 			const label_string = !is_sync
 				? self.get_tool_label('files_info_is_unsync') || 'Files info data is unsync'
 				: self.get_tool_label('show_data') || 'Show data'
@@ -172,11 +250,12 @@ const render_sync_data = function(self) {
 				inner_html		: label_string,
 				parent			: versions_container
 			})
+			// clicking the label delegates to the icon button so the toggle is shared
 			label_node.addEventListener('click', (e)=> {
 				button_icon_show_data.click(e)
 			})
 
-		// button_sync
+		// button_sync: triggers full media regeneration with optional file cleanup
 			const button_sync = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'gear button_sync_data ' + (is_sync ? 'light' : 'warning'),
@@ -209,8 +288,9 @@ const render_sync_data = function(self) {
 			})
 
 		// delete_normalized_files check box
-			// Check for activate the delete of all images created by the upload process and recreate all of them
-			// if will delete original, modified, default generated images, keeping the uploaded file (.tiff, .psd, etc)
+			// When checked, the server will delete all derived images produced by the
+			// upload process (original, modified, default generated) before regenerating,
+			// keeping only the uploaded source file (e.g. .tiff, .psd).
 			// label
 			const delete_normalized_files_label = ui.create_dom_element({
 				element_type	: 'label',
@@ -230,7 +310,7 @@ const render_sync_data = function(self) {
 					self.regenerate_options.delete_normalized_files = delete_normalized_files_checkbox.checked
 				})
 
-		// pre_data JSON data
+		// pre_data: hidden JSON panel showing the raw DB vs disk file metadata for debugging
 			const pre_data = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'pre hide',
@@ -251,8 +331,30 @@ const render_sync_data = function(self) {
 
 /**
 * RENDER_VERSIONS_GRID
-* @param object self
-* @return HTMLElement
+* Builds the full quality × action CSS grid that is the core of the tool UI.
+*
+* Layout: a CSS grid with explicit column/row sizing set inline via style:
+*  - Column 0   : row-label sidebar (action names).
+*  - Columns 1…N: one column per quality level (original, 404, audio, thumb, …).
+*  - Row 0      : quality-name header labels.
+*  - Rows 1…M   : one row per entry in ar_rows (file preview, size, upload, …).
+*
+* 'thumb' is always appended to ar_quality when absent because thumbnails need
+* their own management column even if not part of the component's normal quality list.
+*
+* ar_rows defines the ordered set of row renderers. Each entry is:
+*  { renderer: {Function}(quality, self) → HTMLElement, label: {string} }
+*
+* Specific actions (e.g. rotate for component_image, conform_headers for component_av)
+* are read from self.context.properties.specific_actions and mapped to handlers in
+* the render_specific_actions object. Unknown action names are silently skipped with
+* a console warning.
+*
+* The grid uses inline grid-column / grid-row placement on each cell to achieve a
+* true two-dimensional layout without requiring CSS classes per cell.
+*
+* @param {Object} self - the tool_media_versions instance
+* @returns {DocumentFragment} fragment containing the populated versions_container grid
 */
 const render_versions_grid = function(self) {
 
@@ -265,12 +367,13 @@ const render_versions_grid = function(self) {
 			return fragment
 		}
 
-	// thumb
+	// thumb: always ensure the thumb column exists, even if the caller's ar_quality omits it
 		const thumb = ar_quality.find(el => el === 'thumb')
 		if(!thumb){
 			ar_quality.push('thumb')
 		}
 
+	// ar_rows: ordered list of row descriptors; each renderer receives (quality, self)
 	const ar_rows = [
 		{
 			renderer	: render_file,
@@ -300,8 +403,8 @@ const render_versions_grid = function(self) {
 		}
 	]
 
-	// specific_actions. Special features based on main_element model. They are defined in tool properties.
-		// sample:
+	// specific_actions: model-specific extra rows declared in tool properties.
+		// Expected shape in context.properties:
 		// {
 		//   "specific_actions": {
 		//     "rotate": [
@@ -312,15 +415,15 @@ const render_versions_grid = function(self) {
 		//     ]
 		//   }
 		// }
+		// Each key maps to an array of model names for which the action should appear.
 		const specific_actions = self.context.properties.specific_actions || {}
-		// functions mapper. Maps action name with handler function
-		// Define here the list of available specific tool functions
+		// functions mapper: maps action name to the corresponding render_specific_actions handler
 		for(const action_name in specific_actions) {
 
 			const ar_models = specific_actions[action_name]
 			if (ar_models.includes(self.main_element.model)) {
 
-				// check valid function call
+				// guard: only add rows for actions that have a defined renderer
 					if(typeof render_specific_actions[action_name]!=='function') {
 						console.warn("Ignored invalid function name:", action_name);
 						continue;
@@ -334,12 +437,13 @@ const render_versions_grid = function(self) {
 		}
 
 
-	// versions_container
+	// versions_container: the CSS grid element; column/row sizing set inline
 		const versions_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'versions_container',
 			parent			: fragment
 		})
+		// first column is the label sidebar (minmax), then one equal column per quality
 		Object.assign(
 			versions_container.style,
 			{
@@ -348,7 +452,7 @@ const render_versions_grid = function(self) {
 			}
 		)
 
-	// line_labels
+	// line_labels: the leftmost column — "Quality" header + one row-name label per ar_row entry
 		const colum_labels_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'column labels_container',
@@ -369,7 +473,7 @@ const render_versions_grid = function(self) {
 			}
 		)
 
-	// quality labels
+	// quality labels: one row-name label per action row, placed in column 1
 		const ar_rows_length = ar_rows.length
 		for (let i = 0; i < ar_rows_length; i++) {
 			const current_row = ar_rows[i]
@@ -384,12 +488,13 @@ const render_versions_grid = function(self) {
 				label.style,
 				{
 					'grid-column': `1`,
+					// row 1 is the quality-name header; action rows start at row 2
 					'grid-row': `${i+2}`
 				}
 			)
 		}
 
-	// contents by quality
+	// contents by quality: for each quality level, build a full column of action cells
 		const ar_quality_length = ar_quality.length
 		for (let i = 0; i < ar_quality_length; i++) {
 
@@ -400,7 +505,7 @@ const render_versions_grid = function(self) {
 				class_name		: 'column quality_container',
 				parent			: versions_container
 			})
-			// quality label
+			// quality label header cell: gets 'default' CSS class if this is the default quality
 				const quality_label_node = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'file_info' + (current_quality===self.main_element.context.features.default_quality ? ' default' : ''),
@@ -427,6 +532,7 @@ const render_versions_grid = function(self) {
 				const row_node = current_row.renderer(current_quality, self)
 
 				quality_container.appendChild( row_node )
+				// explicit grid placement: column i+2 (0 is sidebar), row j+2 (0 is header)
 				Object.assign(
 					row_node.style,
 					{
@@ -445,10 +551,26 @@ const render_versions_grid = function(self) {
 
 /**
 * RENDER_FILE
-*  Renders file_info_node whit one icon to display the selected quality preview
-* @param string quality
-* @param object self
-* @return HTMLElement file_info_node
+* Renders the file-preview cell for a given quality level.
+*
+* When the file exists and has a path, renders a media icon button:
+*  - For 'thumb': opens the thumbnail in a new window (thumbnails use a different
+*    extension and are not renderable by the embedded media component).
+*  - For other qualities: switches the main_element to the selected quality and
+*    refreshes the inline preview in place.
+* When the file exists but has no path, renders a dash placeholder.
+* When the file does not exist (file_exist !== true), renders nothing.
+*
+* Source selection: thumb files live in files_info_disk (unfiltered) because
+* they may have a different extension than the component's primary extension
+* and would be excluded by the files_info_safe filter.
+*
+* (!) DEDALO_MEDIA_URL is a browser global injected by the PHP template; it is
+* not in the /*global*\/ directive and will produce an eslint warning.
+*
+* @param {string} quality - quality level key (e.g. 'original', '404', 'thumb')
+* @param {Object} self - the tool_media_versions instance
+* @returns {HTMLElement} file_info_node for this quality's file preview cell
 */
 const render_file = function(quality, self) {
 
@@ -458,7 +580,8 @@ const render_file = function(quality, self) {
 			class_name		: 'file_info render_file' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 		})
 
-		// file_info
+		// file_info: thumb uses the unfiltered disk list; other qualities use the
+		// extension-filtered safe list to avoid showing alternate-format entries here
 		const files_info = (quality==='thumb')
 			? self.files_info_disk // thumb is not in files_info_safe (different extension case)
 			: self.files_info_safe
@@ -512,9 +635,12 @@ const render_file = function(quality, self) {
 
 /**
 * RENDER_FILE_EXTENSION
-* @param string quality
-* @param object self
-* @return HTMLElement file_info_node
+* (Dead code — commented out. Was intended to render the file extension string for
+* a given quality cell. Disabled in favour of showing extensions inline inside the
+* render_file_versions row. Do not remove without a deliberate cleanup decision.)
+* @param {string} quality - quality level key
+* @param {Object} self - the tool_media_versions instance
+* @returns {HTMLElement} file_info_node
 */
 	// const render_file_extension = function(quality, self) {
 
@@ -550,12 +676,20 @@ const render_file = function(quality, self) {
 
 /**
 * RENDER_FILE_SIZE
-* @param string quality
-* @param object self
-* @return HTMLElement file_info_node
+* Renders the file-size cell for a given quality level.
+*
+* Combines files_info_safe (primary-extension files) with files_info_alternative
+* (alternate-extension variants) to find a size entry for the requested quality.
+* The size is formatted via bytes_format for human readability (e.g. "13.3 MB").
+* Renders nothing when the file does not exist on disk.
+*
+* @param {string} quality - quality level key (e.g. 'original', '404', 'thumb')
+* @param {Object} self - the tool_media_versions instance
+* @returns {HTMLElement} file_info_node containing the formatted size string
 */
 const render_file_size = function(quality, self) {
 
+	// merge safe and alternative lists to cover all possible formats for this quality
 	const custom_files_info	= self.files_info_safe.concat(self.files_info_alternative)
 
 	// file_info
@@ -588,9 +722,13 @@ const render_file_size = function(quality, self) {
 
 /**
 * RENDER_ALTERNATIVE_EXTENSIONS
-* @param string quality
-* @param object self
-* @return HTMLElement file_info_node
+* (Dead code — commented out. Was intended to render download buttons for each
+* alternative-extension variant of a quality (e.g. .webm alongside .mp4).
+* The feature is now partially served by render_file_versions which iterates all
+* custom_files_info entries. Do not remove without a deliberate cleanup decision.)
+* @param {string} quality - quality level key
+* @param {Object} self - the tool_media_versions instance
+* @returns {HTMLElement} file_info_node
 */
 	// const render_alternative_extensions = function(quality, self) {
 
@@ -654,9 +792,22 @@ const render_file_size = function(quality, self) {
 
 /**
 * RENDER_FILE_UPLOAD
-* @param string quality
-* @param object self
-* @return HTMLElement file_info_node
+* Renders the upload action cell for a given quality level.
+*
+* 'thumb' quality has no upload button — thumbnails are always generated
+* automatically by the server side, never uploaded directly.
+*
+* For other qualities, clicking the upload button opens tool_upload with the
+* main_element as caller, and sets target_quality on the caller's context so
+* the uploader knows which quality slot to fill.
+*
+* After tool_upload closes and the main_element re-renders, the one-shot
+* event_manager subscription (stored in self.events_tokens for cleanup) fires
+* to refresh the whole tool and show the newly uploaded file.
+*
+* @param {string} quality - quality level key (e.g. 'original', '404', 'thumb')
+* @param {Object} self - the tool_media_versions instance
+* @returns {HTMLElement} file_info_node containing the upload button (or empty for thumb)
 */
 const render_file_upload = function(quality, self) {
 
@@ -666,6 +817,7 @@ const render_file_upload = function(quality, self) {
 			class_name		: 'file_info render_file_upload' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 		})
 
+		// thumb cannot be manually uploaded; it is derived from the original
 		if(quality==='thumb'){
 			return file_info_node
 		}
@@ -680,7 +832,7 @@ const render_file_upload = function(quality, self) {
 			e.stopPropagation()
 
 			// open tool_upload
-				// tool context minimum
+				// tool context minimum: only required fields for open_tool
 					const tool_context = {
 						model	: 'tool_upload',
 						name	: 'tool_upload',
@@ -689,7 +841,7 @@ const render_file_upload = function(quality, self) {
 
 				const caller = self.main_element
 
-				// update caller context quality
+				// update caller context quality so tool_upload targets the right quality slot
 					caller.context.target_quality = quality
 
 				// open_tool (tool_common)
@@ -698,7 +850,8 @@ const render_file_upload = function(quality, self) {
 						caller			: caller
 					})
 
-			// event on refresh caller
+			// event on refresh caller: listen for the main_element render event (fired after upload),
+			// then refresh the tool once; unsubscribe immediately to avoid repeat triggers
 				let token
 				const render_handler = () => {
 					event_manager.unsubscribe(token)
@@ -706,6 +859,7 @@ const render_file_upload = function(quality, self) {
 					self.refresh()
 				}
 				token = event_manager.subscribe('render_'+self.main_element.id, render_handler)
+				// store token so tool destroy can clean up if the user closes before uploading
 				self.events_tokens.push(token)
 		})
 
@@ -717,17 +871,36 @@ const render_file_upload = function(quality, self) {
 
 /**
 * RENDER_FILE_VERSIONS
-* Render all file versions of current quality as:
-*	Search | Download | Extension
-* @param string quality
-* @param object self
-* @return HTMLElement file_info_node
+* Renders the versions cell for a given quality, listing every physical file variant
+* (primary extension + alternative extensions) as a row of action buttons:
+*   Open (find icon) | Download | Extension label | Delete
+*
+* The deduplication step is necessary because files_info_safe and files_info_alternative
+* can overlap when the same path appears in both arrays — the composite key
+* 'quality_extension' ensures each unique (quality, extension) pair appears once.
+*
+* The "Open" button appends a cache-busting timestamp query parameter so the browser
+* does not serve a stale cached version of the file.
+*
+* The "Download" button uses download_file() (which triggers a forced-download response)
+* rather than open_window(), so the browser saves the file instead of trying to render it.
+*
+* (!) This function reads self.caller.context.features.default_quality to mark the default
+* column, whereas most other renderers use self.main_element.context.features.default_quality.
+* These may refer to the same context or to different ones depending on tool setup — verify
+* if visual inconsistencies appear in the 'default' highlight.
+*
+* (!) DEDALO_MEDIA_URL is a browser global; it is not in the /*global*\/ directive.
+*
+* @param {string} quality - quality level key (e.g. 'original', '404', 'audio')
+* @param {Object} self - the tool_media_versions instance
+* @returns {HTMLElement} file_info_node containing one cell_node per existing file variant
 */
 const render_file_versions = function(quality, self) {
 
-	// custom_files_info. Include non original and files_info_alternative quality
+	// custom_files_info: combine primary-extension and alternative-extension disk entries
 		const raw_custom_files_info	= self.files_info_safe.concat(self.files_info_alternative)
-		// remove duplicates
+		// deduplicate by composite key 'quality_extension' — same file might appear in both arrays
 		const object_files_info = {}
 		const raw_custom_files_info_length = raw_custom_files_info.length
 		for (let i = 0; i < raw_custom_files_info_length; i++) {
@@ -739,10 +912,11 @@ const render_file_versions = function(quality, self) {
 	// file_info_node
 		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
+			// (!) uses self.caller.context, not self.main_element.context — see doc-block note above
 			class_name		: 'file_info render_file_versions' + (quality===self.caller.context.features.default_quality ? ' default' : '')
 		})
 
-	// iterate files_info
+	// iterate files_info: render one cell_node per existing (quality, extension) pair
 		const files_info		= custom_files_info.filter(el => el.quality===quality)
 		const files_info_length	= files_info.length
 		for (let k = 0; k < files_info_length; k++) {
@@ -754,10 +928,10 @@ const render_file_versions = function(quality, self) {
 					continue;
 				}
 
-			// size
+			// size: human-readable string for the download button tooltip
 				const size = bytes_format(file_info.file_size)
 
-			// extension
+			// extension: extracted from file_path as the last dot-separated segment
 				const extension	= file_info && file_info.file_path
 					? file_info.file_path.split('.').pop()
 					: null;
@@ -765,14 +939,14 @@ const render_file_versions = function(quality, self) {
 			// file_url
 				const file_url = DEDALO_MEDIA_URL + file_info.file_path
 
-			// cell_node
+			// cell_node: one per (quality, extension) pair
 				const cell_node = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'cell_node',
 					parent			: file_info_node
 				})
 
-			// button_link
+			// button_link: opens the file in a new window; timestamp prevents browser caching
 				const button_link = ui.create_dom_element({
 					element_type	: 'a',
 					class_name		: 'button find',
@@ -787,7 +961,7 @@ const render_file_versions = function(quality, self) {
 					})
 				})
 
-			// button_file_download
+			// button_file_download: triggers a forced file download (not browser rendering)
 				const button_file_download = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button download',
@@ -798,6 +972,8 @@ const render_file_versions = function(quality, self) {
 					e.stopPropagation()
 
 					const url		= DEDALO_MEDIA_URL + file_info.file_path
+					// prefix file_name with quality to avoid collision when downloading
+					// multiple versions of the same media
 					const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
 
 					download_file({
@@ -806,7 +982,7 @@ const render_file_versions = function(quality, self) {
 					})
 				})
 
-			// file_info_extension
+			// file_info_extension: label badge showing the extension (e.g. 'mp4', 'webm')
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button file_info_extension',
@@ -815,7 +991,7 @@ const render_file_versions = function(quality, self) {
 					parent			: cell_node
 				})
 
-			// button_file_delete
+			// button_file_delete: deletes this specific (quality, extension) file version
 				const button_file_delete = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button delete',
@@ -853,18 +1029,38 @@ const render_file_versions = function(quality, self) {
 
 /**
 * RENDER_FILE_DELETE
-* @param string quality
-* @param object self
-* @return HTMLElement file_info_node
+* Renders the delete-quality cell for a given quality level.
+*
+* This deletes the entire quality slot (all files for that quality), unlike
+* render_file_versions' per-extension delete which removes a single file variant.
+*
+* Combines files_info_safe with files_info_original (not files_info_alternative)
+* so that 'original' quality entries are reachable even though they are excluded
+* from files_info_safe (which uses the component's primary extension filter).
+*
+* The confirmation dialog is handled inside self.delete_quality (in tool_media_versions.js),
+* so no extra confirm() call is needed here.
+*
+* (!) This function reads self.caller.context.features.default_quality (same pattern as
+* render_file_versions), while most other renderers use self.main_element.context.
+*
+* (!) The variable holding the delete button is named button_file_download — this is
+* a naming error in the original code (should be button_file_delete). Do not rename:
+* doc-only rule applies.
+*
+* @param {string} quality - quality level key (e.g. 'original', '404', 'thumb')
+* @param {Object} self - the tool_media_versions instance
+* @returns {HTMLElement} file_info_node containing the delete button (or empty if file absent)
 */
 const render_file_delete = function(quality, self) {
 
-	// custom_files_info. Include non original and original quality
+	// custom_files_info: include original quality entries alongside safe (primary-extension) ones
 		const custom_files_info = self.files_info_safe.concat(self.files_info_original)
 
 	// info columns
 	const file_info_node = ui.create_dom_element({
 		element_type	: 'div',
+		// (!) uses self.caller.context, not self.main_element.context — see doc-block note above
 		class_name		: 'file_info render_file_delete' + (quality===self.caller.context.features.default_quality ? ' default' : '')
 	})
 
@@ -876,6 +1072,7 @@ const render_file_delete = function(quality, self) {
 
 		if (file_info && file_info.file_exist===true) {
 
+			// (!) variable is misnamed 'button_file_download' but is actually the delete button
 			const button_file_download = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button delete',
@@ -883,7 +1080,7 @@ const render_file_delete = function(quality, self) {
 			})
 			button_file_download.addEventListener('click', async function(){
 				self.node.classList.add('loading')
-				// exec delete_quality
+				// exec delete_quality: confirmation is handled inside self.delete_quality
 				const response = await self.delete_quality(quality)
 				if (response===true) {
 					// self.main_element_quality = quality
@@ -903,9 +1100,30 @@ const render_file_delete = function(quality, self) {
 
 /**
 * RENDER_BUILD_VERSION
-* @param string quality
-* @param object self
-* @return HTMLElement file_info_node
+* Renders the "Build version" action cell for a given quality level.
+*
+* Clicking triggers self.build_version(quality) on the server, which derives a
+* new quality-encoded file from the 'original'. The button is removed on success
+* and replaced with a blinking "Processing" label while the background job runs.
+*
+* Two post-build polling strategies, based on component model:
+*
+*  component_av (except thumb):
+*    AV transcoding is asynchronous and may take minutes. After the API call,
+*    check_file polls self.get_files_info() every 2 seconds (via self.timer) until
+*    the output file appears on disk. When found, it triggers a force_save on the
+*    component (to persist the updated files_info in the DB) and refreshes the tool.
+*    self.timer is stored on the instance so destroy() can clearTimeout it.
+*
+*  All other models (images, etc.):
+*    Processing is fast enough that a single dd_request_idle_callback refresh
+*    after the build call is sufficient.
+*
+* 'original' quality is excluded: you cannot build the original from itself.
+*
+* @param {string} quality - quality level key (e.g. '404', 'audio', 'thumb')
+* @param {Object} self - the tool_media_versions instance
+* @returns {HTMLElement} file_info_node containing the build button (empty for 'original')
 */
 const render_build_version = function(quality, self) {
 
@@ -915,7 +1133,7 @@ const render_build_version = function(quality, self) {
 			class_name		: 'file_info render_build_version' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 		})
 
-	// exclude original quality button from list
+	// exclude original quality: nothing to "build" — original is the source, not a derivative
 		if (quality==='original') {
 			return file_info_node
 		}
@@ -932,11 +1150,11 @@ const render_build_version = function(quality, self) {
 
 			self.node.classList.add('loading')
 
-			// exec build_version
+			// exec build_version: API call returns true when server accepted the job
 			const result = await self.build_version(quality)
 			if (result===true) {
 
-				// building
+				// replace button with a blinking "Processing" indicator
 				button_build_version.remove()
 
 				ui.create_dom_element({
@@ -947,6 +1165,7 @@ const render_build_version = function(quality, self) {
 				})
 
 				if (self.main_element.model === 'component_av' && quality !== 'thumb') {
+					// AV transcoding is asynchronous: poll disk every 2s until the file appears
 					const check_file = async function() {
 
 						if (self.timer) {
@@ -960,9 +1179,9 @@ const render_build_version = function(quality, self) {
 							// button_build_version.classList.remove('hide')
 							self.main_element_quality = quality
 
-							// force save component to update dato files_info
-							// Note that action 'force_save' do not save data really and do not need more
-							// properties, is only to allow API exec component save transparently
+							// force_save does not persist data changes; it only triggers the component
+							// save pipeline so that the server updates files_info in the DB record
+							// (the component would otherwise only save on user-initiated edits)
 								await self.main_element.save([{
 									action : 'force_save'
 								}])
@@ -971,7 +1190,7 @@ const render_build_version = function(quality, self) {
 								build_autoload : false
 							})
 						}else{
-							// check again after 2 sec
+							// file not yet ready — check again after 2 seconds
 							self.timer = setTimeout(async function(){
 								check_file()
 							}, 2000)
@@ -979,6 +1198,7 @@ const render_build_version = function(quality, self) {
 					}
 					check_file()
 				}else{
+					// non-AV builds complete synchronously; refresh on the next idle frame
 					dd_request_idle_callback(
 						() => {
 							self.refresh({
@@ -1000,16 +1220,41 @@ const render_build_version = function(quality, self) {
 
 /**
 * RENDER_SPECIFIC_ACTIONS
-*  Special render functions based on context.properties definitions
+* Namespace object holding model-specific row renderers that are dynamically
+* inserted into the versions grid based on tool context.properties.specific_actions.
+*
+* Each method has the same signature as other row renderers:
+*   (quality: string, self: tool_media_versions) → HTMLElement
+*
+* Action names must match exactly between context.properties and this object's keys.
+* render_versions_grid guards against unknown names with typeof check + console.warn.
+*
+* Current actions:
+*  - conform_headers : component_av only — re-writes container headers of a derived file
+*  - rotate          : component_image only — destructive in-place image rotation
+*
+* To add a new model-specific action:
+*  1. Implement it as a method here.
+*  2. Add an entry to specific_actions in the tool's register.json / tool properties.
+*  3. Implement the matching server-side method in class.tool_media_versions.php.
 */
 const render_specific_actions = {
 
 	/**
-	* GET_LINE_CONFORM_HEADERS
-	*  Specific component_av feature
-	* @param string quality
-	* @param object self
-	* @return HTMLElement file_info_node
+	* CONFORM_HEADERS
+	* Renders the "conform headers" action cell for component_av files.
+	*
+	* Conform-headers rewrites the container metadata (e.g. moov atom placement)
+	* of an existing derived AV file without re-transcoding. Useful when a file was
+	* transcoded externally and has a non-standard header layout that causes streaming
+	* issues. Skipped for 'original' quality since the raw upload should not be modified.
+	*
+	* (!) The button variable is named button_build_version — naming inherited from
+	* a copy of render_build_version. Do not rename: doc-only rule.
+	*
+	* @param {string} quality - quality level key (e.g. '404', 'audio'); 'original' is skipped
+	* @param {Object} self - the tool_media_versions instance
+	* @returns {HTMLElement} file_info_node with conform button, or empty node if not applicable
 	*/
 	conform_headers(quality, self) {
 
@@ -1024,8 +1269,10 @@ const render_specific_actions = {
 		// file_info
 		const file_info = self.files_info_safe.find(el => el.quality===quality)
 
+		// only show the button when the file exists and quality is not 'original'
 		if (file_info && quality!=='original' && file_info.file_exist===true) {
 
+			// (!) variable named button_build_version but represents the conform_headers button
 			const button_build_version = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button repair',
@@ -1050,10 +1297,19 @@ const render_specific_actions = {
 
 	/**
 	* ROTATE
-	*  Specific component_image feature
-	* @param string quality
-	* @param object self
-	* @return HTMLElement file_info_node
+	* Renders left/right rotation buttons for component_image files.
+	*
+	* Rotation is destructive — it overwrites the existing file on disk. The
+	* button titles explicitly label the action as "(destructive)" to warn users.
+	* Degrees: -90 for left (counter-clockwise), +90 for right (clockwise).
+	*
+	* After a successful rotate, only the main_element is refreshed (not the full
+	* tool) because only the visual preview needs to update — file metadata does
+	* not change.
+	*
+	* @param {string} quality - quality level key (e.g. 'original', '404', 'thumb')
+	* @param {Object} self - the tool_media_versions instance
+	* @returns {HTMLElement} file_info_node with rotate-left and rotate-right buttons
 	*/
 	rotate(quality, self) {
 
@@ -1067,7 +1323,7 @@ const render_specific_actions = {
 			const file_info = self.files_info_safe.find(el => el.quality===quality)
 			if (file_info && file_info.file_exist===true) {
 
-				// button_rotate_left
+				// button_rotate_left: counter-clockwise (-90 degrees)
 					const button_rotate_left = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button rotate',
@@ -1087,7 +1343,7 @@ const render_specific_actions = {
 						self.node.classList.remove('loading')
 					})
 
-				// button_rotate_right
+				// button_rotate_right: clockwise (+90 degrees)
 					const button_rotate_right = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button rotate right',
