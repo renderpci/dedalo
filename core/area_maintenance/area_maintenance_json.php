@@ -24,8 +24,8 @@
 *   - Return the standard envelope via common::build_element_json_output($context, $data).
 *
 * Invocation path:
-*   dd_area_maintenance_api → area_maintenance::get_json() (inherits common::get_json())
-*   → include(area_maintenance_json.php)
+*   dd_area_maintenance_api → area_maintenance::get_json() (resolves to area_common::get_json()
+*   → parent::get_json() (common::get_json())) → include(area_maintenance_json.php)
 *
 * Data shape returned:
 *   {
@@ -122,8 +122,9 @@ if (!isset($this)) { http_response_code(404); exit; }
 		// datalist (list of widgets)
 		// get_ar_widgets() returns the full ordered list of maintenance widget
 		// definitions. Each widget carries the metadata the client needs to load
-		// and render the widget panel: id, category, label, and JS/CSS file paths
-		// (or an iframe src for sandboxed widgets like php_info).
+		// and render the widget panel: id, category, label, and the pre-loaded
+		// value descriptor (which may carry an iframe src for sandboxed widgets
+		// like php_info).
 			$item->datalist	= $this->get_ar_widgets();
 
 		// data add

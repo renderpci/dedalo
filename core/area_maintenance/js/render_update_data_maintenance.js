@@ -58,14 +58,14 @@ export const render_update_data_maintenance = async function () {
 		// login instance add
 		// (!) The login component (dd229) appends its own wrapper to document.body,
 		//     not into recovery_container — the caller must still return recovery_container.
-		const login_instace = await get_instance({
+		const login_instance = await get_instance({
 			model	: 'login',
 			tipo	: 'dd229',
 			mode	: 'edit',
 			lang	: page_globals.dedalo_application_lang
 		})
-		await login_instace.build(true);
-		const wrapper = await login_instace.render()
+		await login_instance.build(true);
+		const wrapper = await login_instance.render()
 		document.body.appendChild(wrapper)
 	}else{
 		// User is authenticated: render the scoped maintenance area with only the

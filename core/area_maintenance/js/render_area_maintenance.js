@@ -876,7 +876,7 @@ export const build_form = function(widget_object) {
 						form_container.classList.remove('lock')
 						spinner.remove()
 
-					// on_submit. Execute function after request
+					// on_done. Execute function after request
 						if (on_done) {
 							return on_done(api_response)
 						}
