@@ -258,6 +258,11 @@
 
 
 
+// SHOW_DEBUG_PROFILER. Display the API end point report about memory usage.
+	define('SHOW_DEBUG_PROFILER', false);
+
+
+
 // is_developer
 	// Logged user is developer value. Depends of user config 'is_developer' value from database (user section)
 	define('SHOW_DEVELOPER', (logged_user_is_developer()===true)
@@ -407,6 +412,9 @@
 	// media_base paths
 	define('DEDALO_MEDIA_PATH',	DEDALO_ROOT_PATH	. '/media');
 	define('DEDALO_MEDIA_URL',	DEDALO_ROOT_WEB		. '/media');
+
+	// binary_base_path
+	$binary_base_path = get_base_binary_path();
 
 	// thumb common
 		// this part is used by all components to create and show thumbs images

@@ -107,4 +107,11 @@ return [
 		],
 		doc:     'IP geolocation API endpoint. $ip is replaced by the real IP value.',
 	),
+	new config_key(
+		path:    'features.show_debug_profiler',
+		const:   'SHOW_DEBUG_PROFILER',
+		type:    'bool',
+		default: false,
+		doc:     'Display the API end point report about memory usage.',
+	),
 ];
