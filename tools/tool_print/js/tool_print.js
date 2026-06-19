@@ -25,9 +25,9 @@
 */
 
 import {data_manager} from '../../../core/common/js/data_manager.js'
-import {common, create_source} from '../../../core/common/js/common.js'
+import {common} from '../../../core/common/js/common.js'
 import {tool_common, wire_tool} from '../../tool_common/js/tool_common.js'
-import {render_tool_print} from './render_tool_print.js'
+import {render_tool_print, PRINT_MAX} from './render_tool_print.js'
 import {on_dragstart} from '../../tool_export/js/drag_tool_export.js'
 
 
@@ -214,6 +214,7 @@ tool_print.prototype.init = async function(options) {
 				|| self.caller.section_id
 				|| locator_id
 				|| (Array.isArray(self.caller.ar_section_id) ? self.caller.ar_section_id[0] : null)
+				|| extract_section_ids(self.caller.datum)[0]   // list mode: first loaded record
 				|| null
 
 	} catch (error) {
@@ -348,28 +349,68 @@ tool_print.prototype.get_record_ids = async function(options={}) {
 				.filter(id => id!==null && id!==undefined)
 		}
 
-	// list mode: run the caller sqo to get the matching record ids
-		const sqo = {...(self.sqo || {})}
-		sqo.limit	= options.limit ?? (self.sqo?.limit ?? 50)
-		sqo.offset	= self.sqo?.offset ?? 0
+	// list mode: reuse the CALLER section's OWN read request (the working query
+	// that loaded the list — action 'read', source.model 'section'). Earlier this
+	// used action 'search', which dd_core_api does not implement, so it always
+	// returned nothing. IMPORTANT: never mutate the caller's rqo/sqo — clone it, so
+	// the user returns to their list with the exact filter intact.
+		const want = options.limit ?? (PRINT_MAX + 1)
 
-		const rqo = {
-			action			: 'search',
-			prevent_lock	: true,
-			source			: create_source(self, 'get_record_ids'),
-			sqo				: sqo
+		// cheap path: the caller already loaded the filtered page; if it covers what
+		// we need (e.g. the limit:1 preview probe), use it with no extra request.
+		const loaded = extract_section_ids(self.caller && self.caller.datum)
+		if (loaded.length >= want) {
+			return loaded.slice(0, want)
 		}
-		try {
-			const api_response = await data_manager.request({ body: rqo })
-			const rows = api_response?.result?.data || api_response?.result?.ar_records || []
-			return rows
-				.map(r => (r.section_id ?? r.id ?? r))
-				.filter(id => id!==null && id!==undefined)
-		} catch (error) {
-			console.error('tool_print get_record_ids error:', error)
-			return self.preview_section_id ? [ self.preview_section_id ] : []
+
+		const base = self.caller && self.caller.rqo
+		if (base) {
+			try {
+				const rqo = {
+					action			: base.action || 'read',
+					prevent_lock	: true,
+					source			: structuredClone(base.source || {}),
+					sqo				: structuredClone(base.sqo || self.sqo || {})
+				}
+				// fetch all matches up to the cap; don't persist this as the user's search
+				rqo.sqo.limit		= want
+				rqo.sqo.offset		= 0
+				if (rqo.source) rqo.source.session_save = false
+				const api_response = await data_manager.request({ body: rqo })
+				self._last_record_total = api_response?.result?.total ?? api_response?.result?.pagination?.total ?? null
+				const ids = extract_section_ids(api_response?.result)
+				if (ids.length) return ids.slice(0, want)
+			} catch (error) {
+				console.error('tool_print get_record_ids error:', error)
+			}
 		}
+
+		// last resort: whatever the caller had already loaded
+		return loaded.slice(0, want)
 }//end get_record_ids
+
+
+
+/**
+* EXTRACT_SECTION_IDS
+* Pulls the matched record ids out of a section read response / loaded datum.
+* The read returns a `sections` container element whose `entries` are the record
+* locators ({section_tipo, section_id, …}); fall back to rows that directly carry
+* section_id. De-duplicates while preserving order.
+* @param {Object} datum - a read response (.result), its .data array, or .datum
+* @returns {Array<number|string>} ordered, unique section_id values
+*/
+const extract_section_ids = function(datum) {
+	const data = (datum && (datum.data || (datum.result && datum.result.data)))
+		|| (Array.isArray(datum) ? datum : null)
+	if (!Array.isArray(data)) return []
+	const container = data.find(el => el && el.typo==='sections' && Array.isArray(el.entries))
+		|| data.find(el => el && Array.isArray(el.entries) && el.entries[0] && el.entries[0].section_id!==undefined)
+	const ids = container
+		? container.entries.map(e => e && e.section_id)
+		: data.map(r => r && (r.section_id ?? r.id))
+	return [...new Set(ids.filter(id => id!==null && id!==undefined))]
+}//end extract_section_ids
 
 
 
