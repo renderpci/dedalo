@@ -1230,13 +1230,20 @@ const render_final_report = function(options){
 
 								const failed_section_id = current_rensponse.failed_rows.map(el => el.section_id)
 
-								navigator.clipboard.writeText(failed_section_id.join(','))
-								.then(() => {
-									alert('Text copied to clipboard');
-								})
-								.catch(err => {
-									alert('Error in copying text: ', err);
-								});
+								if(!navigator.clipboard){
+									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
+									alert(insecure_label);
+								}else{
+									navigator.clipboard.writeText(failed_section_id.join(','))
+									.then(() => {
+										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
+										alert(text_copied);
+									})
+									.catch(err => {
+										const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
+										alert(error_coping_text, err);
+									});
+								}
 							})
 
 						// copy_as_column_button
@@ -1250,13 +1257,20 @@ const render_final_report = function(options){
 								e.stopPropagation()
 
 								const failed_section_id = current_rensponse.failed_rows.map(el => el.section_id)
-								navigator.clipboard.writeText(failed_section_id.join('\n'))
-								.then(() => {
-									alert('Text copied to clipboard');
-								})
-								.catch(err => {
-									alert('Error in copying text: ', err);
-								});
+								if(!navigator.clipboard){
+									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
+									alert(insecure_label);
+								}else{
+									navigator.clipboard.writeText(failed_section_id.join('\n'))
+									.then(() => {
+										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
+										alert(text_copied);
+									})
+									.catch(err => {
+										const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
+										alert(error_coping_text, err);
+									});
+								}
 							})
 
 						const failed_rows_len = failed_rows.length
@@ -1346,13 +1360,20 @@ const render_final_report = function(options){
 							copy_to_find_button.addEventListener('click', (e) => {
 								e.stopPropagation()
 
-								navigator.clipboard.writeText(current_rensponse.created_rows.join(','))
-								.then(() => {
-									alert('Text copied to clipboard');
-								})
-								.catch(err => {
-									alert('Error in copying text: ', err);
-								});
+								if(!navigator.clipboard){
+									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
+									alert(insecure_label);
+								}else{
+									navigator.clipboard.writeText(current_rensponse.created_rows.join(','))
+									.then(() => {
+										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
+										alert(text_copied);
+									})
+									.catch(err => {
+										const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
+										alert(error_coping_text, err);
+									});
+								}
 							})
 
 						// copy_as_column_button
@@ -1365,13 +1386,20 @@ const render_final_report = function(options){
 							copy_as_column_button.addEventListener( 'click', (e) => {
 								e.stopPropagation()
 
-								navigator.clipboard.writeText(current_rensponse.created_rows.join('\n'))
-								.then(() => {
-									alert('Text copied to clipboard');
-								})
-								.catch(err => {
-									alert('Error in copying text: ', err);
-								});
+								if(!navigator.clipboard){
+									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
+									alert(insecure_label);
+								}else{
+									navigator.clipboard.writeText(current_rensponse.created_rows.join('\n'))
+									.then(() => {
+										const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
+										alert(text_copied);
+									})
+									.catch(err => {
+										const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
+										alert(error_coping_text, err);
+									});
+								}
 							})
 
 						// created_rows
