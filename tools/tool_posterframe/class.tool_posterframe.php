@@ -1,39 +1,59 @@
 <?php declare(strict_types=1);
 /**
- * CLASS TOOL_POSTERFRAME
- * Tool for managing posterframe (thumbnail) extraction from audiovisual media files
- *
- * Processes video files to generate identifying images (posterframes) that are automatically
- * assigned to target portal records through inverse reference relationships. Leverages FFmpeg
- * for video processing and integrates with component_av, component_image, and component_portal.
- *
- * Key features:
- * - Extract posterframe from AV files at specified timecode
- * - Generate images in original quality with automatic downsampling
- * - Create new portal section records automatically
- * - Attach posterframe images to target portals via component_image
- * - Retrieve identifying images from section inverse references
- * - Property-driven image assignment through ontology configuration
- *
- * External dependencies:
- * - FFmpeg: Video processing and frame extraction
- * - Ffmpeg class: PHP wrapper for FFmpeg operations
- * - component_av: AV file management and path resolution
- * - component_image: Image file handling and format conversion
- * - component_portal: Portal record and element management
- *
- * Ported from Dédalo v5 with v7 adaptations.
- *
- * @package Dedalo
- * @subpackage Media
- */
+* CLASS TOOL_POSTERFRAME
+* Tool for managing posterframe (thumbnail) extraction from audiovisual media files.
+*
+* Provides a two-operation API callable via dd_tools_api::tool_request:
+*
+* 1. create_identifying_image — full end-to-end workflow:
+*    - Creates a new portal record element in the target component_portal,
+*    - Instantiates a component_image inside that portal record to receive the image,
+*    - Resolves the original AV file path through component_av (falling back to
+*      default quality if the original-quality file is missing),
+*    - Invokes Ffmpeg::create_posterframe() to extract a single frame at the given
+*      timecode, and
+*    - Calls component_image::process_uploaded_file() to generate all derivative
+*      sizes (thumb, standard, etc.) from the extracted frame.
+*
+* 2. get_ar_identifying_image — read path:
+*    - Loads the inverse references of a section (all records that link to it),
+*    - Walks each referring section looking for portal components whose ontology
+*      node carries an `identifying_image` property, and
+*    - Returns the metadata needed by the client to render or trigger a posterframe
+*      creation.
+*
+* The identifying_image property on a portal component's ontology node (ontology_node
+* → get_properties() → identifying_image) stores the tipo of the component_image
+* component that will hold the posterframe inside that portal's target section.
+*
+* Access control follows the SEC-024 pattern: every public action checks tipo-level
+* permission and per-record scope before touching data.
+*
+* Extends tool_common for tool registration, security, and lifecycle integration.
+* Ported from Dédalo v5 with v7 adaptations.
+*
+* External dependencies:
+* - FFmpeg / Ffmpeg class: video processing and frame extraction
+* - component_av: AV file management, quality resolution, and filepath lookup
+* - component_image: image file handling and derivative-format generation
+* - component_portal: portal record creation and element management
+* - ontology_node: component property and term lookups
+* - section_record::get_inverse_references(): inverse locator resolution
+*
+* @package Dédalo
+* @subpackage Tools
+*/
 class tool_posterframe extends tool_common {
 
 
 
 	/**
-	* SEC-024 (§9.2): explicit allowlist of methods callable via
-	* `dd_tools_api::tool_request`.
+	* Explicit allowlist of methods callable via dd_tools_api::tool_request.
+	*
+	* SEC-024 (§9.2): any action name absent from this list is refused by the
+	* API dispatcher before reaching business logic.
+	*
+	* @var array<string> $API_ACTIONS
 	*/
 	public const API_ACTIONS = [
 		'create_identifying_image',
@@ -43,33 +63,43 @@ class tool_posterframe extends tool_common {
 
 
 	/**
-	 * CREATE_IDENTIFYING_IMAGE
-	 * Extract posterframe from audiovisual file and create identifying image in portal
-	 *
-	 * Complete workflow:
-	 * 1. Instantiate portal component and validate target section types
-	 * 2. Create new portal record element for identifying image
-	 * 3. Add component_image to new portal record for posterframe storage
-	 * 4. Extract source AV file path (preferring original quality)
-	 * 5. Execute FFmpeg posterframe extraction at specified timecode
-	 * 6. Process extracted image through component_image (create formats, sizes)
-	 * 7. Generate thumbnails and default quality versions
-	 *
-	 * @param object $options Options containing:
-	 *                         - tipo (required): AV component type
-	 *                         - section_tipo (required): Source section type
-	 *                         - section_id (required): Source section ID
-	 *                         - item_value (required): Object with component_portal, component_image, section_id, section_tipo
-	 *                         - current_time (required): Timecode for posterframe extraction (e.g., "00:00:05.000")
-	 * @return object $response Response object with:
-	 *                           - result: true on success, false on error
-	 *                           - msg: operation status message
-	 *                           - errors: array of error messages (optional)
-	 * @throws Exception If component instantiation fails or FFmpeg processing fails
-	 *
-	 * @package Dedalo
-	 * @subpackage Media
-	 */
+	* CREATE_IDENTIFYING_IMAGE
+	* Extract a posterframe from an audiovisual file and store it as an identifying
+	* image on a newly created portal record.
+	*
+	* Full workflow:
+	* 1. Validate all required parameters from $options.
+	* 2. Enforce SEC-024 tipo-level and per-record read permission on the source AV
+	*    component and write permission on the target portal component.
+	* 3. Resolve component_portal by tipo/section and call add_new_element() to
+	*    create a new linked record in the portal's target section.
+	* 4. Instantiate component_image in the new portal record to determine the
+	*    filesystem path where the posterframe will be written.
+	* 5. Instantiate component_av and obtain the source file path, preferring the
+	*    original-quality file and falling back to the default quality.
+	* 6. Call Ffmpeg::create_posterframe() to extract the frame at $current_time.
+	* 7. Call component_image::process_uploaded_file() to register the file and
+	*    generate all configured derivative sizes (thumb, standard, …).
+	*
+	* All steps after parameter validation run inside a try/catch; any Exception
+	* sets result=false, populates $response->errors, and logs at ERROR level.
+	*
+	* @param object $options Options object with the following required properties:
+	*   - string   $tipo           Tipo of the source AV component (e.g. 'dd123')
+	*   - string   $section_tipo   Section type that hosts the AV component
+	*   - string   $section_id     Section record ID of the AV source
+	*   - object   $item_value     Sub-object with:
+	*       - string component_portal  Tipo of the portal that receives the new record
+	*       - string component_image   Tipo of the image component inside that portal
+	*       - string section_id        Section record ID of the portal host record
+	*       - string section_tipo      Section type of the portal host record
+	*   - string   $current_time   FFmpeg-compatible timecode for frame extraction
+	*                              (e.g. "00:00:05.000" or a float in seconds)
+	* @return object Response with:
+	*   - bool         result   true on success, false on any error
+	*   - string       msg      Human-readable status message
+	*   - array<string> errors  Populated on failure; empty on success
+	*/
 	public static function create_identifying_image(object $options) : object {
 
 		// response
@@ -153,6 +183,8 @@ class tool_posterframe extends tool_common {
 				}
 
 				// portal_section_target_tipo
+				// The portal may link to multiple target section types; the first is used
+				// as the section type for the new record created by add_new_element().
 					$ar_portal_section_target_tipo = $component_portal->get_ar_target_section_tipo();
 					if (empty($ar_portal_section_target_tipo)) {
 						throw new Exception('portal_section_target_tipo not found');
@@ -160,6 +192,9 @@ class tool_posterframe extends tool_common {
 					$portal_section_target_tipo = reset($ar_portal_section_target_tipo);
 
 				// add_new_element
+				// Creates a new record in the portal's target section and appends a locator
+				// to the portal's relation list. $new_element_response->section_id holds
+				// the freshly created record's ID, used below to anchor component_image.
 					$new_element_response = $component_portal->add_new_element((object)[
 						'target_section_tipo' => $portal_section_target_tipo
 					]);
@@ -177,6 +212,8 @@ class tool_posterframe extends tool_common {
 					}
 
 			// component_image. Gets the proper path and filename where to save the posterframe file
+			// Instantiated at 'original' quality so get_media_filepath() returns the full-resolution
+			// destination path. process_uploaded_file() will derive smaller sizes afterwards.
 				$component_image_model = ontology_node::get_model_by_tipo(
 					$item_value->component_image,
 					true
@@ -221,11 +258,16 @@ class tool_posterframe extends tool_common {
 				}
 
 			// Get source AV file path
+			// (!) get_quality_original() is called here but component_av defines the
+			// method as get_original_quality(). This will throw a fatal error at runtime.
+			// The correct call should be $component_av->get_original_quality().
 				$quality = $component_av->get_quality_original();
 				$src_file = $component_av->get_media_filepath($quality);
 
 				if (!file_exists($src_file)) {
 					// try with default quality
+					// The original-quality file may not yet exist (e.g. upload in progress
+					// or only a transcoded version is available). Fall back to default.
 					$quality = $component_av->get_default_quality();
 					$src_file = $component_av->get_media_filepath($quality);
 				}
@@ -238,6 +280,8 @@ class tool_posterframe extends tool_common {
 				$posterframe_filepath = $component_image->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
 
 			// FFmpeg create_posterframe
+			// Runs FFmpeg synchronously via shell_exec to extract a single frame.
+			// The resulting file is written directly to $posterframe_filepath.
 				Ffmpeg::create_posterframe((object)[
 					'timecode'				=> $current_time,
 					'src_file'				=> $src_file, // av file
@@ -246,6 +290,9 @@ class tool_posterframe extends tool_common {
 				]);
 
 			// component_image process_uploaded_file
+			// Registers the extracted file with the component and generates all configured
+			// derivative sizes (thumb, default, …). The second argument (process_options)
+			// is null because no special override options are required here.
 				$original_file_name = pathinfo($posterframe_filepath, PATHINFO_BASENAME);
 				$process_response = $component_image->process_uploaded_file(
 					(object)[
@@ -272,7 +319,7 @@ class tool_posterframe extends tool_common {
 			$response->result = false;
 			$response->msg = 'Error. ' . $e->getMessage();
 			$response->errors[] = $e->getMessage();
-			
+
 			debug_log(__METHOD__
 				. ' Exception: ' . $e->getMessage() . PHP_EOL
 				. ' tipo: ' . (string)$tipo . PHP_EOL
@@ -287,25 +334,36 @@ class tool_posterframe extends tool_common {
 
 
 	/**
-	 * GET_AR_IDENTIFYING_IMAGE
-	 * Retrieve all identifying image elements from section inverse reference relationships
-	 *
-	 * Processes inverse references (incoming relationships) to find all sections that
-	 * link to current section. For each inverse reference, checks if the source section
-	 * contains portal components with identifying_image property defined in ontology.
-	 *
-	 * @param object $request_options Options containing:
-	 *                                 - section_tipo (required): Section type to query
-	 *                                 - section_id (required): Section ID to query
-	 * @return object $response Response object with:
-	 *                           - result: array of identifying image objects or false on error
-	 *                           - msg: operation status message
-	 *                           - errors: array of error messages (optional)
-	 * @throws Exception If section loading fails
-	 *
-	 * @package Dedalo
-	 * @subpackage Media
-	 */
+	* GET_AR_IDENTIFYING_IMAGE
+	* Retrieve all identifying image descriptors reachable from the given section
+	* through its inverse reference relationships.
+	*
+	* An "identifying image" is a posterframe stored in a component_image that lives
+	* inside a portal record linked back to this section. The portal component type
+	* is recognised by an `identifying_image` property on its ontology node.
+	*
+	* Algorithm:
+	* 1. Load the target section via section::get_instance().
+	* 2. Collect all inverse locators (records that reference this section) via
+	*    section_record::get_inverse_references().
+	* 3. For each inverse locator, delegate to get_identifying_image_from_section()
+	*    to check whether that referring section hosts a qualifying portal component.
+	* 4. Aggregate non-null results into the response array.
+	*
+	* Permission checks run outside the try/catch so that a permission_exception
+	* propagates to dd_manager rather than being silently swallowed as an error.
+	*
+	* @param object $request_options Options object with:
+	*   - string $section_tipo  Type of the section to query (required)
+	*   - string $section_id    ID of the section record to query (required)
+	* @return object Response with:
+	*   - array<object>|false result   Array of identifying image descriptors on success;
+	*                                  false on error. Each descriptor contains:
+	*                                  section_id, section_tipo, component_portal,
+	*                                  component_image, label.
+	*   - string              msg      Human-readable status message
+	*   - array<string>       errors   Populated on failure; empty on success
+	*/
 	public static function get_ar_identifying_image(object $request_options) : object {
 
 		$response = new stdClass();
@@ -338,6 +396,8 @@ class tool_posterframe extends tool_common {
 				$inverse_locators = $section->get_inverse_references();
 
 			// ar_identifying_image
+			// Walk every incoming reference and collect those whose hosting section
+			// has a portal component marked with an identifying_image ontology property.
 				$ar_identifying_image = [];
 				foreach ($inverse_locators as $locator) {
 					$identifying_image = self::get_identifying_image_from_section(
@@ -357,7 +417,7 @@ class tool_posterframe extends tool_common {
 			$response->result = false;
 			$response->msg = 'Error. ' . $e->getMessage();
 			$response->errors[] = $e->getMessage();
-			
+
 			debug_log(__METHOD__
 				. ' Exception: ' . $e->getMessage()
 				, logger::ERROR
@@ -369,28 +429,39 @@ class tool_posterframe extends tool_common {
 
 
 	/**
-	 * GET_IDENTIFYING_IMAGE_FROM_SECTION
-	 * Extract identifying image configuration from section portal components
-	 *
-	 * Searches portal components in the given section for those with
-	 * identifying_image property defined in ontology. Returns the first match
-	 * with all necessary metadata for posterframe creation.
-	 *
-	 * @param string $section_tipo Section type to search
-	 * @param int $section_id Section ID to search
-	 * @return ?object Identifying image object containing section_id, section_tipo,
-	 *                 component_portal, component_image, and label; null if not found
-	 * @throws Exception If ontology lookups fail
-	 *
-	 * @package Dedalo
-	 * @subpackage Media
-	 */
+	* GET_IDENTIFYING_IMAGE_FROM_SECTION
+	* Search a section's portal components for one that declares an identifying_image
+	* property in its ontology node, and return its full descriptor.
+	*
+	* The identifying_image property is defined per-portal in the ontology and holds
+	* the tipo string of the component_image component that stores the posterframe
+	* inside that portal's target section. Only the first matching portal is returned.
+	*
+	* Returns null (not throws) when no qualifying portal is found or when an ontology
+	* lookup fails, so the caller's loop can continue safely across multiple sections.
+	*
+	* Returned descriptor shape (on match):
+	*   {
+	*     section_id      : int,    // the section_id passed in
+	*     section_tipo    : string, // the section_tipo passed in
+	*     component_portal: string, // tipo of the matching portal component
+	*     component_image : string, // tipo from identifying_image ontology property
+	*     label           : string  // display label of the section in DEDALO_APPLICATION_LANG
+	*   }
+	*
+	* @param string $section_tipo Section type to inspect
+	* @param int    $section_id   Section record ID (used only to populate the descriptor)
+	* @return object|null Descriptor object on match; null if no identifying_image portal found
+	*                     or if an exception occurs during ontology resolution
+	*/
 	private static function get_identifying_image_from_section(string $section_tipo, int $section_id) : ?object {
 
 		try {
 			$result = null;
 
 			// portals_tipo in section
+			// Retrieves all portal component tipos defined for this section type.
+			// resolve_virtual=true ensures tipos inherited through virtual nodes are included.
 				$ar_portals_tipo = section::get_ar_children_tipo_by_model_name_in_section(
 					$section_tipo,
 					['component_portal'],
@@ -403,6 +474,7 @@ class tool_posterframe extends tool_common {
 				}
 
 			// section label
+			// Fetched once outside the portal loop since all portals share the same section label.
 				$label = ontology_node::get_term_by_tipo(
 					$section_tipo,
 					DEDALO_APPLICATION_LANG,
@@ -411,6 +483,8 @@ class tool_posterframe extends tool_common {
 				);
 
 			// match properties->identifying_image with portal_tipo
+			// Only portals whose ontology node has an explicit `identifying_image` property
+			// are used for posterframe workflows. Other portals are silently skipped.
 				foreach ($ar_portals_tipo as $portal_tipo) {
 					$ontology_node = ontology_node::get_instance($portal_tipo);
 					if ($ontology_node === null) {
