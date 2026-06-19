@@ -776,7 +776,7 @@ const get_content_data_edit = async function(self) {
 					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
+					link.setAttribute('href', 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv_string));
 					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
@@ -802,7 +802,7 @@ const get_content_data_edit = async function(self) {
 					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/tsv;charset=utf-8,' + encodeURIComponent(tsv_string));
+					link.setAttribute('href', 'data:text/tsv;charset=utf-8,' + encodeURIComponent(tsv_string));
 					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
@@ -876,17 +876,15 @@ const get_content_data_edit = async function(self) {
 					html.appendChild(head);
 					head.appendChild(meta);
 					head.appendChild(body);
-					// (!) appendChild moves export_data_container out of the live page DOM
-					// into the detached 'html' element. The live preview disappears from
-					// the tool after this click. This is a known side effect: a subsequent
-					// Export run re-creates the node, but it is unexpected on first glance.
-					body.appendChild(export_data_container);
+					// Clone (not move) the live preview node so it stays mounted in the
+					// tool DOM after the download; appendChild would detach the live node.
+					body.appendChild(export_data_container.cloneNode(true));
 
 					// Download it
 					const link	= document.createElement('a');
 					link.style.display = 'none';
 					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/text;charset=utf-8,' + html.outerHTML);
+					link.setAttribute('href', 'data:text/text;charset=utf-8,' + html.outerHTML);
 					link.setAttribute('download', file);
 					document.body.appendChild(link);
 					link.click();
