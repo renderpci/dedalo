@@ -475,13 +475,10 @@ class tool_time_machine extends tool_common {
 			$lang						= $options->lang;
 			$bulk_process_id			= $options->bulk_process_id;
 			$bulk_revert_process_label	= $options->bulk_revert_process_label;
-			// (!) $model is derived here from the caller's $tipo, but $tipo, $section_tipo,
-			// and $section_id are all overwritten inside the $db_result foreach loop with
-			// values from each TM row. This means $model (and $lang) remain fixed to the
-			// original caller's component for the entire revert loop, which is correct for
-			// homogeneous bulk processes (all rows affect the same model). If a bulk process
-			// spans multiple component models, $model will be incorrect for non-matching rows.
-			$model						= ontology_node::get_model_by_tipo($tipo,true);
+			// (!) $tipo, $section_tipo and $section_id are all overwritten inside the
+			// $db_result foreach loop with the values from each TM row, so $model is
+			// resolved per row from each row's $tipo (see the loop below). This keeps
+			// $model correct even for bulk processes that span multiple component models.
 
 		// get all changes saved in time_machine with the same bulk_process_id
 			$search_values = (object)['bulk_process_id' => $bulk_process_id];
@@ -531,6 +528,11 @@ class tool_time_machine extends tool_common {
 				$tipo			= $row->tipo;
 				$section_tipo	= $row->section_tipo;
 				$section_id		= $row->section_id;
+
+				// resolve the model from this row's tipo so heterogeneous bulk
+				// processes (rows affecting several component models) are reverted
+				// with the correct model for each component.
+				$model			= ontology_node::get_model_by_tipo($tipo, true);
 
 				// SEC-024 (§9.2): permission gate per row. The bulk process may
 				// span sections the caller has no write access on (e.g. it was
