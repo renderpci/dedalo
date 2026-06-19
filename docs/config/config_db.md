@@ -1,5 +1,7 @@
 # Changing parameters of Dédalo database config file
 
+> **⚠️ Dédalo v7 — database settings moved to `../private/.env`.** There is no longer a `config/config_db.php`. The connection values now live in **`../private/.env`** by the same `DEDALO_*` / `MYSQL_*` constant names — **passwords (`DEDALO_PASSWORD_CONN`, `MYSQL_DEDALO_PASSWORD_CONN`) are secrets** in the top section; host/database/user/port are general config below it. A socket connection with no TCP port is written as `DEDALO_DB_PORT_CONN=null`. See the **[Configuration Administrator Guide](administration.md)**. The reference below still explains each setting's meaning.
+
 ./dedalo/config/config_db.php
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/

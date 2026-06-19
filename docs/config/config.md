@@ -1,5 +1,9 @@
 # Changing parameters of global Dédalo config file
 
+> **⚠️ Dédalo v7 — the *way* you set these changed.** This page is still an accurate reference for *what each setting does and its default*, but you **no longer edit `config/config.php`** — it is now only a thin loader. In v7 you set values in **`../private/.env`** (outside the web root) using the same `DEDALO_*` constant name. See the **[Configuration Administrator Guide](administration.md)** for the complete flow, the `.env` syntax, per-host configs, secrets, fallbacks and migration. The `define('NAME', …)` snippets below show each setting's meaning and default; to change one, write `NAME=value` in `.env` (e.g. `DEDALO_TIMEZONE='Europe/Madrid'`).
+>
+> _The instructions below describe the legacy v6 file-editing workflow, kept for reference._
+
 ./dedalo/config/config.php
 
 1. Locate the file into the directory: ../httpdocs/dedalo/config/

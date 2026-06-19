@@ -1,5 +1,11 @@
 # Configuration
 
+> **⚠️ Dédalo v7 changed the configuration model.** Configuration and secrets now live **outside the web root** in `../private/` (`.env`, plus an optional per-host `.env.<host>`), and `config/config.php` is only a loader — there are no `config_*.php` files to rename or edit in place.
+>
+> **▶ Start here: [Configuration Administrator Guide](administration.md)** — the complete v7 flow, `.env` syntax, fallback chain, per-host configs, secrets, and migrating a v6 install.
+>
+> _The page below describes the legacy v6 file-based setup, kept for reference (and for sites still on v6)._
+
 Dédalo has four different config files in the ../dedalo/config/ directory:
 
 * config.php
