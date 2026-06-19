@@ -11,15 +11,11 @@
 * the read-only value of the referenced component for the current preview
 * record (fill mode). List mode is inherently read-only, so the printed/preview
 * output shows values, never editable widgets.
-*
-* Component instances are tracked in self.ar_instances and on box.component_instance
-* so they can be destroyed on box removal / tool close (bounded memory; avoids
-* instance-id collisions via id_variant:'tool_print').
 */
 
-	import {get_instance} from '../../../core/common/js/instances.js'
-	import {ui} from '../../../core/common/js/ui.js'
-	import {clone} from '../../../core/common/js/utils/index.js'
+import {get_instance} from '../../../core/common/js/instances.js'
+import {ui} from '../../../core/common/js/ui.js'
+import {clone} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -319,11 +315,6 @@ const render_relation_table = async function(self, box, ref, lang, preview_id) {
 		try { component.destroy(true, true, true) } catch (e) { /* noop */ }
 
 		box._table_render = { key: cache_key, entries, matrix: {} }
-
-		// refresh the inspector now that available columns are known
-		if (self.selected_box_id===box.id && typeof self.sync_inspector==='function') {
-			self.sync_inspector(box)
-		}
 	}
 
 	const entries	= box._table_render.entries
@@ -640,12 +631,6 @@ export const render_box_content = async function(self, box) {
 				parent			: content
 			})
 			if (value_node) content.appendChild(value_node)
-
-			// cross-page flow: split a tall table onto continuation pages
-			if (box.overflow && box.overflow.mode==='flow' && typeof self._paginate_flow==='function') {
-				// next frame so the table has laid out and can be measured
-				requestAnimationFrame(() => self._paginate_flow(box))
-			}
 
 		} catch (error) {
 			console.error('tool_print render_box_content error for box', box.id, error)
