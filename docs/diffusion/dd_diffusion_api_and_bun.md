@@ -1003,6 +1003,27 @@ Legacy timestamped files migrate with
 The Bun engine consolidates XML downloads with a generic `merge_xml_parts`
 (the RDF merger is rdf:RDF-specific).
 
+### Markdown diffusion
+
+Markdown publishes one human/AI-readable `.md` per record. Unlike RDF/XML it is
+**not** an early dispatch: `diffuse()` runs the normal datum path
+(`process_datum` + the levels drain) and then calls `render_markdown_response()`,
+which renders each resolved `self::$datum` record to:
+
+```
+DEDALO_MEDIA_PATH/markdown/{service_name}/{section_tipo}_{section_id}.md
+```
+
+Reusing the datum path gives curated `ddo_map` resolution, the publication gate
+and levels-based relation recursion for free: related records are published as
+their own `.md` and relation fields link to them. Each document leads with
+`# {section_name}` plus YAML frontmatter. Like XML it requires
+`properties->diffusion->service_name`; unpublishable records get their file
+removed; deletion propagates via `diffusion_markdown::delete_record_file`. The
+datum carries the `file_url` only, so the Bun engine **skips the merge** (markdown
+is self-contained) and just zips the per-record files. See
+[Markdown diffusion](diffusion_markdown.md) for the full rules.
+
 ### RDF deterministic filenames
 
 Each record publishes to ONE canonical file, overwritten on re-publish:

@@ -20,7 +20,7 @@ if (php_sapi_name()!=='cli') {
 
 require_once __DIR__ . '/../../config/config.php';
 
-$dry_run = in_array('--dry-run', $argv);
+$dry_run = in_array('--dry-run', (array)($_SERVER['argv'] ?? []));
 $xml_dir = DEDALO_MEDIA_PATH . '/xml';
 
 if (!is_dir($xml_dir)) {

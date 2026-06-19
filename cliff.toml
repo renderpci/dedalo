@@ -69,7 +69,10 @@ protect_breaking_commits = false
 # filter out the commits that are not matched by commit parsers
 filter_commits = false
 # regex for matching git tags
-tag_pattern = "v[0-9].*"
+# Anchored to v7 only: the unanchored "v[0-9].*" also matched the v6.x release
+# tags (on the divergent v6_developer line) and any tag name containing "v6",
+# so git-cliff paired v7 releases with a v6 tag and collapsed the commit range.
+tag_pattern = "^v7\\."
 
 # regex for skipping tags
 skip_tags = "v0.1.0-beta.1"

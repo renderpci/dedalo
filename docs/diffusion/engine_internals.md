@@ -168,7 +168,10 @@ into the SQO. One failing chunk is logged and **skipped**, never aborting the ru
    returns the locator list.
 7. **Dispatch by type** read from `properties->diffusion->type` of the element:
    `'rdf'`/`'xml'` short-circuit to `diffuse_rdf()` / `diffuse_xml()` (file
-   formats); `'sql'`/`'socrata'` continue to the datum builder.
+   formats); `'sql'`/`'socrata'`/`'markdown'` continue to the datum builder.
+   `'markdown'` is then post-processed into one `.md` file per record by
+   `render_markdown_response()` (it reuses the datum path rather than
+   short-circuiting — see [Markdown](diffusion_markdown.md)).
 8. Build `langs` (`build_langs()` from `DEDALO_DIFFUSION_LANGS`) and `main`
    (`build_main_hierarchy()` — the ordered domain→…→target breadcrumb Bun needs
    to find the database name and element properties).
@@ -465,6 +468,26 @@ Row grouping uses `resolve_row_key()` (related-record section scoping); lang
 splitting flattens chain wrappers to inner items via `flatten_to_inner_items()`
 (never read `->lang`/`->key` on a wrapper). Public statics
 `get_record_file_path()` / `delete_record_file()` mirror RDF's.
+
+### Markdown — `diffusion_markdown`
+
+Unlike RDF/XML, markdown is **not** an early dispatch: it runs the normal datum
+path (`process_datum` + the levels drain) and is rendered afterwards by
+`render_markdown_response()` in `dd_diffusion_api`, which walks `self::$datum` and
+writes one **deterministic** file per record:
+
+```text
+DEDALO_MEDIA_PATH/markdown/{service_name}/{section_tipo}_{section_id}.md
+```
+
+`diffusion_markdown` is a pure renderer + file IO (no parser loading, no chain
+resolution): it consumes the resolved `context` + grouped `fields`. Each document
+leads with `# {section_name}` plus YAML frontmatter; relation fields show the
+flattened value **and** a link to the related record's `.md` (published through the
+same `levels` budget). The datum carries the **`file_url`** only (`entry.value`
+left null), so Bun zips the per-record files and **skips the merge** (markdown is
+self-contained). Public statics `get_record_file_path()` / `delete_record_file()`
+mirror RDF/XML's. Full details: [Markdown diffusion](diffusion_markdown.md).
 
 ### Socrata — `diffusion_socrata`
 

@@ -452,6 +452,11 @@ function curl_request(object $options) : object {
 		$proxy			= $options->proxy ?? false;
 		$httpheader		= $options->httpheader ?? null; // array('Content-Type:application/json')
 		$unix_socket	= $options->unix_socket ?? null; // string path like '/tmp/diffusion.sock'
+		// When true, downgrade ERROR-level result logs to DEBUG. For callers where
+		// a failed/unreachable response is an expected, handled state (e.g. a
+		// health probe polling a service that may be intentionally stopped) and
+		// should not pollute the error log on every call.
+		$quiet			= $options->quiet ?? false;
 
 	// response
 		$response = new stdClass();
@@ -539,6 +544,10 @@ function curl_request(object $options) : object {
 					$msg .= "Error. check_remote_server problem found";
 					$response->errors[] = 'Server error code: ['.$httpcode.']';
 					break;
+			}
+			// quiet callers: an expected/handled failure should not log at ERROR
+			if ($quiet===true && $debug_level===logger::ERROR) {
+				$debug_level = logger::DEBUG;
 			}
 			debug_log(__METHOD__
 				. ' httpcode: ' . $httpcode . PHP_EOL

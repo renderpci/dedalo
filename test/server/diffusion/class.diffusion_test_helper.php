@@ -140,6 +140,52 @@ class diffusion_test_helper {
 
 
 	/**
+	* REQUIRE_MARKDOWN_ONTOLOGY
+	* Skips the running test unless a fully-configured Markdown diffusion element
+	* exists (service_name resolvable into a file path).
+	* @param PHPUnit\Framework\TestCase $test
+	* @return object {element_tipo: string, section_tipo: string}
+	*/
+	public static function require_markdown_ontology( PHPUnit\Framework\TestCase $test ) : object {
+
+		require_once DEDALO_DIFFUSION_PATH . '/class.diffusion_markdown.php';
+
+		$ar_elements = diffusion_utils::get_ar_diffusion_map_elements();
+
+		foreach ($ar_elements as $element) {
+
+			if (($element->type ?? null)!=='markdown') {
+				continue;
+			}
+
+			$ar_sections = diffusion_utils::get_diffusion_sections_from_diffusion_element($element->element_tipo);
+			if (empty($ar_sections)) {
+				continue;
+			}
+
+			// the element must be fully configured (service_name): unconfigured
+			// elements resolve no file path (run the 'validate' API action to find them)
+			foreach ($ar_sections as $section_tipo) {
+				$file_info = diffusion_markdown::get_record_file_path($element->element_tipo, $section_tipo, 0);
+				if ($file_info!==null) {
+					return (object)[
+						'element_tipo'	=> $element->element_tipo,
+						'section_tipo'	=> $section_tipo
+					];
+				}
+			}
+		}
+
+		$test->markTestSkipped(
+			'Diffusion ontology prerequisite missing: no fully-configured Markdown diffusion element '
+			. '(service_name) found in this database. '
+			. "Run the 'validate' API action to locate the configuration gaps."
+		);
+	}//end require_markdown_ontology
+
+
+
+	/**
 	* REQUIRE_ACTIVITY_ACTION_ONTOLOGY
 	* Skips the running test unless the dd1758 activity action component
 	* (dd1767 → value list dd1774) exists in the ontology.

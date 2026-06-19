@@ -109,7 +109,7 @@ Every documentation area, with a one-line description and an entry link. The **[
 | RQO field mapping | Field-level mapping used when issuing API requests | [api/RQO_FIELD_MAPPING.md](./api/RQO_FIELD_MAPPING.md) |
 | Diffusion API (Bun/PHP) | Public diffusion engine: architecture, endpoints, data model | [api/diffusion/README.md](./api/diffusion/README.md) |
 | Diffusion API (PHP) | The raw PHP resolution engine and SQO structure | [api/diffusion_api_documentation.md](./api/diffusion_api_documentation.md) |
-| Diffusion (work side) | Data flow, config properties, multiple databases and engine internals | [diffusion/diffusion_data_flow.md](./diffusion/diffusion_data_flow.md) |
+| Diffusion (work side) | Data flow, config properties, multiple databases, engine internals and output formats (SQL/RDF/XML, [Markdown](./diffusion/diffusion_markdown.md)) | [diffusion/diffusion_data_flow.md](./diffusion/diffusion_data_flow.md) |
 | Publication API | Serving published data to the web — v2 (Bun/TypeScript, recommended) and legacy v1 | [diffusion/publication_api/index.md](./diffusion/publication_api/index.md) |
 | Development | Ecosystem, code style, commit/test conventions, breaking-change detection | [development/index.md](./development/index.md) |
 | Extending Dédalo | The ontology-first cookbooks: add a component, section, area, service or widget | [development/extending/index.md](./development/extending/index.md) |
