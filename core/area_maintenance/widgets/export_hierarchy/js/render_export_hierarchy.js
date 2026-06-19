@@ -12,7 +12,39 @@
 
 /**
 * RENDER_EXPORT_HIERARCHY
-* Manages the component's logic and appearance in client side
+* Client-side render module for the export_hierarchy maintenance widget.
+*
+* This module provides the visual layer for two independent maintenance
+* operations exposed in area_maintenance:
+*
+*   1. Export hierarchies — serialises one or more thesaurus matrix tables to
+*      gzip-compressed COPY files on the server filesystem under
+*      EXPORT_HIERARCHY_PATH (e.g. /install/import/hierarchy/es1.copy.gz).
+*      The user supplies a section_tipo string ('*' for all active hierarchies,
+*      or a comma-separated list such as 'es1,ts1').
+*
+*   2. Sync Hierarchy status — reconciles the 'Active' flag on hierarchy nodes
+*      with the 'Active in thesaurus' flag so both are always consistent.
+*
+* Both operations trigger long-running server-side jobs (up to one hour) via
+* `export_hierarchy.prototype.exec_export_hierarchy` /
+* `export_hierarchy.prototype.sync_hierarchy_active_status`, which are defined
+* in export_hierarchy.js and are exposed on the widget instance (self).
+*
+* The entry point wired by export_hierarchy.js is:
+*   export_hierarchy.prototype.edit = render_export_hierarchy.prototype.list
+*   export_hierarchy.prototype.list = render_export_hierarchy.prototype.list
+*
+* Each form section delegates submission and response rendering to the shared
+* `area_maintenance.prototype.init_form` helper (self.caller.init_form) when
+* the on_submit override is NOT needed, or overrides it with a custom
+* on_submit callback that directly calls the API method and renders the
+* JSON response inline.
+*
+* Exports:
+*   render_export_hierarchy             — constructor (prototype-based class)
+*   render_export_hierarchy_node        — named export; also used by render_area_maintenance
+*   render_sync_hierarchy_active_status_node — named export
 */
 export const render_export_hierarchy = function() {
 
@@ -25,13 +57,13 @@ export const render_export_hierarchy = function() {
 * LIST
 * Creates the nodes of current widget.
 * The created wrapper will be append to the widget body in area_maintenance
-* @param object options
+* @param {Object} options
 * 	Sample:
 * 	{
 *		render_level : "full"
 		render_mode : "list"
 *   }
-* @return HTMLElement wrapper
+* @returns {HTMLElement} wrapper
 * 	To append to the widget body node (area_maintenance)
 */
 render_export_hierarchy.prototype.list = async function(options) {
@@ -61,8 +93,18 @@ render_export_hierarchy.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Assembles the full content area for the widget's edit/list view.
+*
+* Reads `self.value` (populated by `get_value` on the server) to obtain
+* `export_hierarchy_path`. Then builds and appends two independent
+* DocumentFragment sections:
+*   - render_export_hierarchy_node  — hierarchy export form
+*   - render_sync_hierarchy_active_status_node — active-status sync form
+*
+* @param {Object} self - Widget instance (export_hierarchy). Must expose:
+*   - self.value {Object}          — widget value with `export_hierarchy_path`
+*   - self.caller {Object}         — area_maintenance instance owning init_form
+* @returns {HTMLElement} content_data - <div> containing both form sections
 */
 const get_content_data_edit = async function(self) {
 
@@ -96,13 +138,41 @@ const get_content_data_edit = async function(self) {
 
 /**
 * RENDER_EXPORT_HIERARCHY_NODE
-* Generates de DOM nodes about Export hierarchies
-* @param object options
-* {
-* 	self : object - Widget instance
-* 	export_hierarchy_path: string|null
-* }
-* @return DocumentFragment
+* Builds the DOM section that lets a maintenance user trigger a hierarchy
+* export job on the server.
+*
+* Rendering is guarded by two early-return checks:
+*   1. If `export_hierarchy_path` is falsy (constant EXPORT_HIERARCHY_PATH not
+*      defined in config), displays a configuration hint and exits — no form
+*      is rendered until the administrator sets the path.
+*   2. If `self.caller` is absent (widget rendered standalone, outside
+*      area_maintenance), displays a diagnostic message and exits — init_form
+*      is not available.
+*
+* When both guards pass the function:
+*   - Renders a config_grid showing the resolved export_hierarchy_path value.
+*   - Calls `self.caller.init_form()` to build a submission form with a single
+*     text input for section_tipo.
+*
+* The on_submit callback:
+*   - Extracts section_tipo from the submitted values array.
+*   - Clears body_response, shows a spinner, locks the form.
+*   - Awaits `self.exec_export_hierarchy(section_tipo)` (1-hour timeout).
+*   - On resolution: removes spinner, unlocks form, renders the raw JSON
+*     response in a <pre> block. Double-clicking the <pre> removes it.
+*
+* section_tipo accepts:
+*   '*'         — all active hierarchies (one .gz file per section_tipo)
+*   'all'       — entire matrix_hierarchy table in one file
+*   'es1,ts1'   — explicit comma-separated list
+*
+* @param {Object} options
+* @param {Object} options.self - Widget instance exposing self.caller and
+*   self.exec_export_hierarchy
+* @param {string|null} options.export_hierarchy_path - Value of the server-side
+*   EXPORT_HIERARCHY_PATH constant, or null if undefined
+* @returns {DocumentFragment} Fragment containing title, info, config grid,
+*   submission form, and response container
 */
 export const render_export_hierarchy_node = function (options) {
 
@@ -163,6 +233,7 @@ export const render_export_hierarchy_node = function (options) {
 				class_name		: 'config_grid',
 				parent			: fragment
 			})
+			// Helper: appends a label/value row pair to config_grid.
 			const add_to_grid = (label, value) => {
 				ui.create_dom_element({
 					element_type	: 'div',
@@ -226,6 +297,8 @@ export const render_export_hierarchy_node = function (options) {
 						inner_html		: JSON.stringify(response, null, 2),
 						parent			: body_response
 					})
+					// Double-clicking the response node removes it from the DOM,
+					// allowing the user to clear the result after reviewing it.
 					const dblclick_handler = (e) => {
 						json_node.remove()
 					}
@@ -245,13 +318,35 @@ export const render_export_hierarchy_node = function (options) {
 
 /**
 * RENDER_SYNC_HIERARCHY_ACTIVE_STATUS_NODE
-* Generates de DOM nodes about Export hierarchies
-* @param object options
-* {
-* 	self : object - Widget instance
-* 	export_hierarchy_path: string|null
-* }
-* @return DocumentFragment
+* Builds the DOM section that lets a maintenance user trigger a hierarchy
+* active-status synchronisation job on the server.
+*
+* Syncing reconciles each hierarchy node's 'Active' flag with its
+* 'Active in thesaurus' flag so they are always consistent. This can diverge
+* when thesaurus entries are activated/deactivated without the corresponding
+* hierarchy update running.
+*
+* Rendering is guarded by an early-return check:
+*   - If `self.caller` is absent (widget rendered outside area_maintenance),
+*     displays a diagnostic message and returns early — init_form is not
+*     available without a caller.
+*
+* The on_submit callback:
+*   - Clears body_response, shows a spinner, locks the form.
+*   - Awaits `self.sync_hierarchy_active_status()` (no options needed; the
+*     server operation applies globally to all active hierarchies).
+*   - On resolution: removes spinner, unlocks form, renders the raw JSON
+*     response in a <pre> block. Double-clicking the <pre> removes it.
+*
+* Note: the @param JSDoc block on the original comment incorrectly listed
+* `export_hierarchy_path` as a parameter; this function does not use it.
+* The options object only destructures `self`.
+*
+* @param {Object} options
+* @param {Object} options.self - Widget instance exposing self.caller and
+*   self.sync_hierarchy_active_status
+* @returns {DocumentFragment} Fragment containing title, info text,
+*   submission form, and response container
 */
 export const render_sync_hierarchy_active_status_node = function (options) {
 
@@ -330,6 +425,8 @@ export const render_sync_hierarchy_active_status_node = function (options) {
 						inner_html		: JSON.stringify(response, null, 2),
 						parent			: body_response
 					})
+					// Double-clicking the response node removes it from the DOM,
+					// allowing the user to clear the result after reviewing it.
 					const dblclick_handler = (e) => {
 						json_node.remove()
 					}
