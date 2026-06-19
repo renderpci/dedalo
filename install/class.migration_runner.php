@@ -27,10 +27,12 @@ final class migration_runner {
 		$records = migration_extractor::extract($source_files);
 		$cls = migration_classifier::classify($records, $catalog);
 
+		// .env is the single config place: secrets + general config (overrides) go into ../private/.env.
+		// config.local.php is NOT written by the migration — it stays an optional admin-only file the
+		// shim still loads if present (config_writer is kept for that opt-in, just not used by default).
 		$artifacts = [
-			'env_php'     => env_writer::render_php($cls),
+			'env_php'     => env_writer::render_php($cls) . env_writer::render_config($cls, $catalog),
 			'env_bun'     => env_writer::render_bun($cls),
-			'config'      => config_writer::render($cls, $catalog),
 			'state'       => state_writer::render($cls, $catalog),
 			'passthrough' => passthrough_writer::render($cls),
 		];
@@ -61,7 +63,9 @@ final class migration_runner {
 			$lines[] = strtoupper($destination) . ' (' . count($names) . '): ' . implode(', ', $names);
 		}
 		$lines[] = '';
-		$lines[] = 'Review especially PASSTHROUGH (preserved verbatim) and ENV (routed as secrets).';
+		$lines[] = 'Targets: ENV (secrets) + CONFIG (general overrides) → ../private/.env; STATE → state.php;';
+		$lines[] = 'PASSTHROUGH (verbatim) → passthrough.php. config.local.php is NOT written (optional admin file).';
+		$lines[] = 'Review especially PASSTHROUGH and the ENV secrets.';
 		return implode("\n", $lines) . "\n";
 	}//end dry_run_report
 }

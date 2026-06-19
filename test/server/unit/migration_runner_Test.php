@@ -51,9 +51,10 @@ final class migration_runner_Test extends TestCase {
 		$plan = migration_runner::plan([$this->fixture()], $this->catalog());
 
 		$this->assertSame('acme', $plan['entity']);
-		$this->assertStringContainsString('DEDALO_PASSWORD_CONN=', $plan['artifacts']['env_php']);
-		$this->assertStringContainsString("'identity.entity' => 'acme'", $plan['artifacts']['config']);   // entity differs from default
-		$this->assertStringContainsString("'db.host' => 'pg.acme.org'", $plan['artifacts']['config']);
+		$this->assertStringContainsString('DEDALO_PASSWORD_CONN=', $plan['artifacts']['env_php']);          // secret → .env
+		$this->assertArrayNotHasKey('config', $plan['artifacts']);                                          // config.local.php not written — config folds into .env
+		$this->assertStringContainsString('DEDALO_ENTITY=acme', $plan['artifacts']['env_php']);             // entity differs from default → .env config line
+		$this->assertStringContainsString('DEDALO_HOSTNAME_CONN=pg.acme.org', $plan['artifacts']['env_php']);
 		$this->assertStringContainsString("'state.info' => 'acme'", $plan['artifacts']['state']);
 		$this->assertStringContainsString("define('DEDALO_PATATA', 'potato')", $plan['artifacts']['passthrough']);
 	}

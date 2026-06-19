@@ -6,6 +6,9 @@ require_once dirname(__DIR__, 3) . '/core/base/boot/class.env_loader.php';
 require_once dirname(__DIR__, 3) . '/core/base/boot/class.env_sync.php';
 require_once dirname(__DIR__, 3) . '/install/class.migration_destination.php';
 require_once dirname(__DIR__, 3) . '/install/class.env_writer.php';
+require_once dirname(__DIR__, 3) . '/core/base/config/class.config_scope.php';
+require_once dirname(__DIR__, 3) . '/core/base/config/class.config_merge.php';
+require_once dirname(__DIR__, 3) . '/core/base/config/class.config_key.php';
 
 final class env_writer_Test extends TestCase {
 
@@ -62,5 +65,38 @@ final class env_writer_Test extends TestCase {
 		$parsed = env_loader::parse(env_writer::render_php($classification));
 		$this->assertArrayHasKey('API_WEB_USER_CODE_MULTIPLE', $parsed);
 		$this->assertSame(['srv' => 'tok123', 'srv2' => 'tok456'], json_decode($parsed['API_WEB_USER_CODE_MULTIPLE'], true));
+	}
+
+	public function test_json_secret_emits_readable_single_quoted_not_escaped() : void {
+		$classification = [
+			'API_WEB_USER_CODE_MULTIPLE' => $this->entry(migration_destination::ENV, [['db_name' => '', 'code' => '', 'api_ui' => null]]),
+		];
+		$content = env_writer::render_php($classification);
+		// readable single-quoted JSON, NOT escaped double-quotes
+		$this->assertStringContainsString("API_WEB_USER_CODE_MULTIPLE='[{", $content);
+		$this->assertStringNotContainsString('\\"', $content);
+		// and it still round-trips through env_loader
+		$parsed = env_loader::parse($content);
+		$this->assertSame([['db_name' => '', 'code' => '', 'api_ui' => null]], json_decode($parsed['API_WEB_USER_CODE_MULTIPLE'], true));
+	}
+
+	public function test_render_config_emits_non_default_overrides_typed() : void {
+		$catalog = [
+			new config_key('db.host', 'DD_C_HOST', 'string', 'localhost', config_scope::STATIC),
+			new config_key('feat.x',  'DD_C_FLAG', 'bool',   false,       config_scope::STATIC),
+			new config_key('lim.n',   'DD_C_N',    'int',    10,          config_scope::STATIC),
+			new config_key('db.port', 'DD_C_PORT', 'string', '5432',      config_scope::STATIC),
+		];
+		$cls = [
+			'DD_C_HOST' => $this->entry(migration_destination::CONFIG, 'pg.example.org'), // != default
+			'DD_C_FLAG' => $this->entry(migration_destination::CONFIG, true),             // != default
+			'DD_C_N'    => $this->entry(migration_destination::CONFIG, 10),               // == default → skipped
+			'DD_C_PORT' => $this->entry(migration_destination::CONFIG, null),             // null override
+		];
+		$out = env_writer::render_config($cls, $catalog);
+		$this->assertStringContainsString('DD_C_HOST=pg.example.org', $out);
+		$this->assertStringContainsString('DD_C_FLAG=true', $out);   // readable bool
+		$this->assertStringContainsString('DD_C_PORT=null', $out);   // null literal
+		$this->assertStringNotContainsString('DD_C_N=', $out);       // equals default → omitted
 	}
 }

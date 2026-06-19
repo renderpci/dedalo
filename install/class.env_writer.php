@@ -44,6 +44,63 @@ final class env_writer {
 		return implode("\n", $lines) . "\n";
 	}//end render_bun
 
+	/**
+	* Render the per-install CONFIG overrides as readable .env lines (CONSTANT=value): each
+	* CONFIG-destination constant whose migrated LITERAL value differs from the catalog default,
+	* by constant name and readable type — bool→true/false, null→null, list/map→single-quoted
+	* JSON, scalars quoted. Values equal to the default, runtime values, and non-CONFIG
+	* destinations are omitted (the catalog seeds defaults). Returns '' when there are no
+	* overrides. The migration folds this into ../private/.env, so .env is the single config place.
+	* @param array<string,array> $classification
+	* @param config_key[] $catalog
+	*/
+	public static function render_config(array $classification, array $catalog) : string {
+		$default_of = [];
+		foreach ($catalog as $key) {
+			if ($key->const !== null) { $default_of[$key->const] = $key->default; }
+		}
+		$lines = [];
+		foreach ($classification as $name => $info) {
+			if ($info['destination'] !== migration_destination::CONFIG) {
+				continue;
+			}
+			if (($info['record']['kind'] ?? null) !== 'literal') {
+				continue; // runtime/derived → the catalog computes it
+			}
+			if (!array_key_exists($name, $default_of)) {
+				continue; // CONFIG implies a catalog key; defensive
+			}
+			$value = $info['record']['value'];
+			if ($value === $default_of[$name]) {
+				continue; // matches the shipped default — no override needed
+			}
+			$lines[] = $name . '=' . self::format_value($value);
+		}
+		sort($lines);
+		if ($lines === []) {
+			return '';
+		}
+		return "\n# --- general config (per-install overrides; or edit ../private/config.local.php) ---\n"
+			. implode("\n", $lines) . "\n";
+	}//end render_config
+
+	/** A typed config value → a readable .env value (bool/null as literals; arrays as JSON; scalars quoted). */
+	private static function format_value(mixed $value) : string {
+		if ($value === null) {
+			return 'null';
+		}
+		if (is_bool($value)) {
+			return $value ? 'true' : 'false';
+		}
+		if (is_int($value) || is_float($value)) {
+			return (string) $value;
+		}
+		if (is_array($value)) {
+			return self::quote((string) json_encode($value));
+		}
+		return self::quote((string) $value);
+	}//end format_value
+
 	/** value → string for an env line: bools as 1/'' ; list/map as JSON; scalars as-is. */
 	private static function stringify(mixed $value) : string {
 		if (is_bool($value)) {
@@ -56,12 +113,20 @@ final class env_writer {
 	}//end stringify
 
 	/**
-	* Quote an env value so env_loader::parse reads it back identically. Unquoted when the
-	* value is "plain"; otherwise double-quoted with backslash + double-quote escaped.
+	* Quote an env value so env_loader::parse reads it back identically:
+	*  - plain tokens → unquoted;
+	*  - otherwise SINGLE-quoted (literal, no escaping) when the value carries no single-quote
+	*    or newline — keeps JSON readable, e.g. API_X='[{"code":"","api_ui":null}]' instead of
+	*    "[{\"code\":\"\",\"api_ui\":null}]";
+	*  - values containing a single-quote (or newline) → double-quoted with \ and " escaped,
+	*    since a literal ' can't live inside a single-quoted value in this minimal .env subset.
 	*/
 	private static function quote(string $value) : string {
 		if ($value !== '' && preg_match('/^[A-Za-z0-9_\/.:@+-]+$/', $value) === 1) {
 			return $value;
+		}
+		if (strpbrk($value, "'\n\r") === false) {
+			return "'" . $value . "'";
 		}
 		return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';
 	}//end quote

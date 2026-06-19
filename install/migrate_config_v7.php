@@ -80,10 +80,11 @@ $entity = $plan['entity'] ?? 'entity';
 $stamp = date('Ymd_His');
 $backup_dir = $paths['backup-base'] . '/' . $host . '.' . $entity . '/' . $stamp;
 
+// Config goes into .env (secrets + general config). config.local.php is NOT written — it's an
+// optional admin-only file the shim still loads if present.
 $targets = [
 	'env_php'     => $paths['private-dir'] . '/.env',
 	'env_bun'     => $paths['bun-env'],
-	'config'      => $paths['private-dir'] . '/config.local.php',  // outside the web-served tree (with .env)
 	'state'       => $paths['private-dir'] . '/state.php',
 	'passthrough' => $paths['private-dir'] . '/passthrough.php',
 ];
