@@ -744,9 +744,16 @@
 		}
 		.print_page {
 			box-shadow: none !important;
+			box-sizing: border-box;
 			break-after: page;
 			page-break-after: always;
-			overflow: visible;
+			// clip the page box to its own mm size so a sub-pixel overflow can't
+			// spill onto an extra blank sheet. Content is laid out inside the page
+			// margins (default 15mm), so nothing real is clipped. NOTE: requires the
+			// print dialog at Scale 100% / no "fit to page" for the mm math to hold.
+			overflow: hidden;
+			break-inside: avoid;
+			page-break-inside: avoid;
 		}
 		.print_page:last-of-type {
 			break-after: auto;
@@ -1117,4 +1124,38 @@ body.tp_col_resizing * { cursor: col-resize !important; user-select: none !impor
 
 	.box_placeholder { color: #999; font-style: italic; font-size: .75rem; }
 	.box_unavailable { color: #c0392b; }
+}
+
+
+// multi-record print progress overlay (shown while the document renders
+// off-screen, before the print dialog). Carries .no_print so it never prints.
+.wrapper_tool.tool_print .print_progress {
+	position: fixed;
+	z-index: 1000;
+	left: 50%;
+	top: 1.2rem;
+	transform: translateX(-50%);
+	display: flex;
+	align-items: center;
+	gap: .75rem;
+	padding: .5rem .9rem;
+	background: var(--bg_surface, #fff);
+	color: var(--fg_default, #222);
+	border: 1px solid var(--border_default, #cfd3d7);
+	border-radius: 6px;
+	box-shadow: 0 4px 16px rgba(0,0,0,.25);
+	font-size: .85rem;
+
+	.print_progress_label { white-space: nowrap; }
+	.print_progress_cancel {
+		cursor: pointer;
+		font-size: .8rem;
+		padding: .2rem .6rem;
+		color: var(--color_danger, #c0392b);
+		background: var(--bg_input, #fff);
+		border: 1px solid var(--border_default, #cfd3d7);
+		border-radius: 4px;
+		&:hover { border-color: var(--color_danger, #c0392b); }
+		&:disabled { opacity: .5; cursor: default; }
+	}
 }
