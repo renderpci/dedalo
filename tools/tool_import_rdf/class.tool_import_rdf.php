@@ -626,6 +626,10 @@ class tool_import_rdf extends tool_common {
 					$ar_parts = explode($split_by , $source_data);
 
 					$get_element = $properties->process->split->get;
+					// Initialise before the branch so $procesed_data is never assigned an
+					// undefined variable when $get_element is anything other than 'end'
+					// (only 'end' is implemented; other selectors fall back to null).
+					$element_got = null;
 					if($get_element==='end'){
 						$element_got = end($ar_parts);
 					}
