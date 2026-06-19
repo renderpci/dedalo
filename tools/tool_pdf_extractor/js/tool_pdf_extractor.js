@@ -14,6 +14,45 @@
 
 
 /**
+* TOOL_PDF_EXTRACTOR (module)
+* Client-side controller for the PDF content extractor tool.
+*
+* This tool is invoked from a component_pdf instance (the "caller") and lets the
+* editor extract the text content of a linked PDF file into a target text-area
+* component.  It communicates with the PHP back-end action `get_pdf_data` via
+* dd_tools_api and broadcasts the extracted text to component_text_area through
+* the event_manager channel `set_pdf_data_<id_base>`.
+*
+* Extraction modes supported:
+*   - 'text' : plain-text extraction via pdftotext (XPDF). The server applies all
+*              page-marker logic (build_pdf_transcription); the browser receives the
+*              final string without further processing.
+*   - 'html' : HTML extraction via pdftohtml (XPDF). The browser parses the returned
+*              HTML, locates anchor tags with a `name` attribute (which XPDF inserts at
+*              each page boundary), replaces them with Dédalo page tags of the form
+*              `[page-n-{N}-{key}-data:[{N}]:data]`, and serialises the result back to
+*              a plain HTML string.
+*
+* The tool reads an optional `offset` from the caller component's stored value
+* (`caller.data.value[0].offset`). This offset is added to the physical page number
+* to produce the logical key used inside page tags (e.g. a document whose first page
+* is page 5 in the book would have offset = 4 so key = page_number + offset - 1).
+*
+* Tool config shape (held in `self.config`):
+*   {
+*     method   : {string}          'text' | 'html' (default 'text')
+*     page_in  : {number|false}    first page to extract (1-indexed), false = page 1
+*     page_out : {number|false}    last page to extract (inclusive), false = all pages
+*     offset   : {number}          logical page-number offset; default 0
+*   }
+*
+* Exported symbols:
+*   tool_pdf_extractor — constructor; prototype extended below
+*/
+
+
+
+/**
 * TOOL_PDF_EXTRACTOR
 * Tool to convert PDF file content to an continuous string like transcription
 */
@@ -48,8 +87,15 @@ export const tool_pdf_extractor = function () {
 
 /**
 * INIT
-* @param object options
-* @return bool
+* Initialises the tool instance by delegating to tool_common.prototype.init and then
+* seeding the tool-specific `config` object.
+*
+* The `offset` is read from the caller component's persisted value so that page tags
+* use the correct logical page number (physical page + offset).  If no offset is
+* stored the value defaults to 0.
+*
+* @param {Object} options - Standard tool init options forwarded to tool_common.
+* @returns {Promise<boolean>} Resolves to the result of tool_common.prototype.init.
 */
 tool_pdf_extractor.prototype.init = async function(options) {
 
@@ -83,8 +129,12 @@ tool_pdf_extractor.prototype.init = async function(options) {
 
 /**
 * BUILD
-* @param bool autoload = false
-* @return bool
+* Finalises tool construction by delegating to tool_common.prototype.build.
+* Ensures `self.config` exists (guards against init being skipped in unusual paths).
+*
+* @param {boolean} [autoload=false] - When true, tool_common automatically fetches
+*   tool context from the API during the build phase.
+* @returns {Promise<boolean>} Resolves to the result of tool_common.prototype.build.
 */
 tool_pdf_extractor.prototype.build = async function(autoload=false) {
 
@@ -107,7 +157,41 @@ tool_pdf_extractor.prototype.build = async function(autoload=false) {
 /**
 * GET_PDF_DATA
 * Obtain useful system PDF file info from API
-* @return object api_response
+*
+* Issues a `tool_request` RQO to `dd_tools_api` which invokes the server-side
+* `tool_pdf_extractor::get_pdf_data()` action.  The source object is built with
+* `create_source(self, 'get_pdf_data')` so the PHP layer can route the call back
+* through this tool's API_ACTIONS allowlist.
+*
+* RQO structure sent to the API:
+*   {
+*     dd_api  : 'dd_tools_api',
+*     action  : 'tool_request',
+*     source  : { …create_source fields…, action: 'get_pdf_data' },
+*     options : {
+*       lang           : {string}        caller's language code
+*       component_tipo : {string}        ontology tipo of the PDF component (caller)
+*       section_tipo   : {string}        ontology tipo of the parent section
+*       section_id     : {string|number} record ID
+*       method         : {string}        'text' | 'html'
+*       page_in        : {number|false}  first page (false → page 1)
+*       page_out       : {number|false}  last page (false → all pages)
+*     }
+*   }
+*
+* The request is made with a generous 180-second timeout and a single retry
+* because PDF extraction (especially pdftohtml) can be slow on large files.
+*
+* (!) `SHOW_DEVELOPER` is referenced inside this function but is not declared in
+*     the file-level /*global* / directive — this will trigger an eslint no-undef
+*     warning at runtime. The reference is pre-existing and must not be changed.
+*
+* @returns {Promise<Object>} Resolves to the raw API response object:
+*   {
+*     result : {string|false} HTML-encoded extracted text, or false on failure
+*     msg    : {string}       human-readable status/error message
+*     errors : {Array}        accumulated error strings
+*   }
 */
 tool_pdf_extractor.prototype.get_pdf_data = async function() {
 
@@ -166,8 +250,36 @@ tool_pdf_extractor.prototype.get_pdf_data = async function() {
 * PROCESS_PDF_DATA
 * Parse the PDF extracted text or html to put the page tags
 * and clean the parts that it will don't used
-* @param string original_text
-* @return string final_text
+*
+* Applies client-side post-processing to the raw string returned by the server:
+*
+* - For method 'text': the server already produces the final string
+*   (build_pdf_transcription in component_pdf handles page markers).  The browser
+*   only HTML-decodes the string via DOMParser and returns it unchanged.
+*
+* - For method 'html': the server returns pdftohtml output that has been
+*   HTML-encoded by the PHP layer (htmlentities).  The browser:
+*     1. Decodes it back to HTML via DOMParser.
+*     2. Queries all `<a name="N">` anchor elements that XPDF inserts at page
+*        boundaries (one anchor per page, where N is the 1-indexed page number).
+*     3. Replaces each anchor with a `<p>` containing a Dédalo page tag:
+*          `[page-n-{N}-{key}-data:[{N}]:data]`
+*        where key = page_number - 1 + offset (offset comes from self.config.offset).
+*     4. Returns `body.innerHTML` of the resulting document as the final string.
+*
+* Page tag format detail:
+*   [page-n-{physical_page_number}-{logical_key}-data:[{physical_page_number}]:data]
+*   The logical key is used by component_text_area to map tagged pages back to
+*   the original document's page numbering (e.g. a book starting at physical page
+*   5 with offset=4 produces key=physical_page-1+4).
+*
+* (!) The `page_in` variable is declared but the loop does not use it to skip
+*     anchors before the requested first page — this is pre-existing behaviour; do
+*     not change. The page_in filtering is handled server-side by pdftohtml itself.
+*
+* @param {string} original_text - The raw (HTML-encoded) string from the API response.
+* @returns {Promise<string>} Resolves to the processed final text/HTML string ready
+*   to be broadcast to component_text_area via the `set_pdf_data_*` event.
 */
 tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 

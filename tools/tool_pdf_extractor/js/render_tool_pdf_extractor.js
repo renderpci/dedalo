@@ -13,7 +13,25 @@
 
 /**
 * RENDER_TOOL_PDF_EXTRACTOR
-* Manages the component's logic and appearance in client side
+* Client-side render module for the PDF Extractor tool.
+*
+* Exports the `render_tool_pdf_extractor` constructor whose `edit` prototype
+* method is borrowed by `tool_pdf_extractor` (via prototype assignment in
+* tool_pdf_extractor.js) to build the tool's interactive UI panel.
+*
+* The panel lets the user:
+*  - Choose an optional page range (page_in / page_out) to restrict extraction.
+*  - Select the extraction method: 'text' (plain) or 'html' (structured).
+*  - Trigger server-side PDF text extraction via `self.get_pdf_data()`.
+*  - Preview the extracted content inline, then confirm or discard it.
+*
+* After a successful extraction the processed text is published on the
+* `event_manager` channel `set_pdf_data_<id_base>` so that the target
+* `component_text_area` instance can pick it up and store it as its value.
+*
+* Main exports:
+*  - `render_tool_pdf_extractor` — constructor (prototype only; no state of its own)
+*  - `render_tool_pdf_extractor.prototype.edit` — async render entry-point
 */
 export const render_tool_pdf_extractor = function() {
 
@@ -24,9 +42,25 @@ export const render_tool_pdf_extractor = function() {
 
 /**
 * EDIT
-* Render node
-* @param object options
-* @return HTMLElement wrapper
+* Builds and returns the fully interactive tool panel DOM node.
+*
+* When `options.render_level` is `'content'`, returns only the inner
+* `content_data` element (used when composing tool panels inside an existing
+* wrapper). For any other render level the content is placed inside a standard
+* tool wrapper produced by `ui.tool.build_wrapper_edit`.
+*
+* Side effects:
+*  - Writes `self.config.method`, `self.config.page_in`, and
+*    `self.config.page_out` as the user interacts with the form controls.
+*  - Publishes an `event_manager` event (`set_pdf_data_<id_base>`) when the
+*    user confirms the extracted text, causing the target component_text_area
+*    to update its stored value.
+*
+* @param {Object} options - Render options forwarded from tool_common.prototype.render.
+* @param {string} [options.render_level='full'] - `'content'` to return the inner
+*   content div only; any other value returns the full tool wrapper.
+* @returns {Promise<HTMLElement>} The wrapper node (full render) or the
+*   content_data div (content render).
 */
 render_tool_pdf_extractor.prototype.edit = async function (options) {
 
@@ -54,8 +88,43 @@ render_tool_pdf_extractor.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA
-* @param object self
-* @return HTMLElement content_data
+* Builds the complete interactive content area for the PDF extractor tool.
+*
+* Creates the following UI sections inside a DocumentFragment, then wraps
+* them in the standard `content_data` div produced by
+* `ui.tool.build_content_data`:
+*
+*  1. `options_container` — a row of form controls:
+*     - page_in / page_out number inputs that update `self.config.page_in` and
+*       `self.config.page_out` on `change`.
+*     - A radio pair ('txt' / 'html') that updates `self.config.method` on
+*       `change`. The 'txt' radio is checked by default and `self.config.method`
+*       is initialised to `'text'` here.
+*  2. `button_submit` — triggers PDF extraction on `mouseup`:
+*     a. Calls `self.get_pdf_data()` (async, up to 180 s timeout).
+*     b. On failure, displays the API error message in `response_msg`.
+*     c. On success, passes the raw string to `self.process_pdf_data()` and:
+*        - Publishes the result on `event_manager` so the target
+*          `component_text_area` (`set_pdf_data_<id_base>`) updates its value.
+*        - Renders the result in the inline `preview` div.
+*        - Reveals the `button_select` helper.
+*  3. `response_container` — holds `response_msg` (API status text or error)
+*     and `preview` (hidden until extraction succeeds).
+*  4. `button_select` — selects all content of the preview div via
+*     `window.getSelection().selectAllChildren(preview)` for easy copy/paste.
+*  5. Commented-out `info` block — left intentionally for future use.
+*  6. `footer_node` — standard tool footer (icon + developer attribution).
+*
+* The `id_base` used for the event channel is constructed as
+* `<caller.section_tipo>_<caller.section_id>_<caller.tipo>`, matching the
+* convention expected by `component_text_area`'s init listener.
+*
+* @param {Object} self - The `tool_pdf_extractor` instance. Must have:
+*   `self.config` (initialised by tool_pdf_extractor.prototype.init),
+*   `self.caller` (the parent PDF component providing section/tipo context),
+*   `self.get_pdf_data()`, `self.process_pdf_data()`, and `self.get_tool_label()`.
+* @returns {Promise<HTMLElement>} The populated `content_data` div ready for
+*   insertion into the tool wrapper.
 */
 const get_content_data = async function(self) {
 
@@ -83,6 +152,8 @@ const get_content_data = async function(self) {
 				class_name		: 'options_input page_in',
 				parent 			: options_container
 			})
+			// Store the chosen start page in config; a blank or empty value is treated
+			// as "no restriction" (false) so the server extracts from the first page.
 			const change_page_handler = (e) => {
 				self.config.page_in = (!e.target.value || e.target.value==='')
 					? false
@@ -103,6 +174,8 @@ const get_content_data = async function(self) {
 				class_name		: 'options_input page_out',
 				parent 			: options_container
 			})
+			// Store the chosen end page in config; blank/empty means "extract to the
+			// last page". Stored as a string; parseInt is applied server-side.
 			const change_number_handler = (e) => {
 				self.config.page_out = (!e.target.value || e.target.value==='')
 					? false
@@ -127,6 +200,7 @@ const get_content_data = async function(self) {
 				})
 
 			// change_handler
+				// Both radio inputs share this handler; `e.target.value` is 'text' or 'html'.
 				const change_handler = (e) => {
 					// fix config.method
 					const method = e.target.value // html | text
@@ -179,6 +253,8 @@ const get_content_data = async function(self) {
 			inner_html		: self.get_tool_label('do_process'),
 			parent			: fragment
 		})
+		// mouseup_handler runs the full extraction pipeline when the user clicks the submit button.
+		// Uses mouseup (not click) to match the Dédalo button interaction convention.
 		const mouseup_handler = async (e) => {
 			e.stopPropagation()
 
@@ -279,6 +355,8 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 		// click_handler
+		// Selects all rendered preview content so the user can copy it to the clipboard
+		// without manually highlighting. Uses the native Selection API.
 		const click_handler = (e) => {
 			e.stopPropagation()
 
