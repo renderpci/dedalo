@@ -245,7 +245,7 @@ class tool_tr_print extends tool_common {
 			$next_tc 	= isset($ar_tc_base[$key+1]) ? $ar_tc_base[$key+1]->tc : $duration;
 			$text 		= tool_tr_print::clean_vtt_text($obj_value->fragment);
 
-			$ar_lines[] =  $key+1 .PHP_EOL . $current_tc . htmlentities(' --> ') . $next_tc . PHP_EOL . $text . PHP_EOL;
+			$ar_lines[] =  $key+1 .PHP_EOL . $current_tc . ' --> ' . $next_tc . PHP_EOL . $text . PHP_EOL;
 		}
 
 		$vtt_text = 'WEBVTT' . PHP_EOL . PHP_EOL . implode(PHP_EOL, $ar_lines);

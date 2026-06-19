@@ -755,17 +755,14 @@ const render_text_process_options = function(self, content_data) {
 					}
 
 				const node_len 	= self.ar_raw_data.length
+				const ar_raw_text = []
 				for (let i = 0; i < node_len; i++) {
 					const raw_data = self.ar_raw_data[i].value || ''
-					// const text_node = self.tags_to_html(raw_data)
-					// add the new one
-					// (!) innerText assignment inside a loop overwrites on every
-					// iteration — if ar_raw_data has more than one item, only the
-					// last item's raw text is visible. In practice component_text_area
-					// typically has a single value item, but this is a latent bug
-					// for multi-item text areas.
-					content_data.right_container_text.innerText = raw_data;
+					ar_raw_text.push(raw_data)
 				}
+				// assign once so every ar_raw_data item is shown (avoid overwriting
+				// on each iteration, which previously left only the last item visible)
+				content_data.right_container_text.innerText = ar_raw_text.join('\n');
 			}
 		})
 

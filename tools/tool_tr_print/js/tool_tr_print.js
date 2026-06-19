@@ -326,6 +326,8 @@ tool_tr_print.prototype.tags_to_html = function(value) {
 */
 tool_tr_print.prototype.build_subtitles = async function() {
 
+	const self = this
+
 	const component_text_area = self.transcription_component || await self.get_component(self.lang)
 
 	// get instance and init
