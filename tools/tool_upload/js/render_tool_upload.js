@@ -261,10 +261,8 @@ render_tool_upload.prototype.upload_done = async function (options) {
 			process_file_info.textContent = response.msg || 'Error on processing file!'
 			process_file_info.classList.add('failed')
 
-			// (!) BUG: `api_response` is not in scope here; the correct variable is `response`.
-			// Do not change — flag only. This will throw a ReferenceError at runtime on failure.
-			if (api_response.errors?.length) {
-				alert(api_response.errors.join(' | '));
+			if (response.errors?.length) {
+				alert(response.errors.join(' | '));
 			}
 
 			return false
