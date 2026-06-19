@@ -1,14 +1,22 @@
 <?php declare(strict_types=1);
 /**
 * EXPORT_TABULATOR
-*
-* Converts the atoms based component export contract (export_value /
-* export_atom, see core/dd_grid/) into a flat table: a column manifest
-* plus rows of scalar cells, emitted as NDJSON-ready line objects.
+* Stateful accumulator that converts per-record export atoms into the
+* flat-table NDJSON wire protocol consumed by flat_table.js.
 *
 * The tabulator is pure: atoms in, line objects out. No DB access and no
 * output side effects (ontology label lookups are injected as a resolver
 * callable so unit tests run without a database).
+*
+* Caller contract (tool_export::get_export_grid):
+*   1. Construct once per export run with the chosen options.
+*   2. Emit meta_line() as the first NDJSON line.
+*   3. For each record call record_lines(), which returns zero or more 'col'
+*      lines (newly discovered columns) followed by one or more 'row' lines.
+*      Stream every line to the client as NDJSON immediately.
+*   4. After all records call end_line() and stream it as the final line.
+* The single-pass design means 'col' lines can arrive mid-stream; the
+* authoritative display order is the 'columns' array in the 'end' line.
 *
 * Wire protocol (one JSON object per NDJSON line, discriminated by 't'):
 * - {"t":"meta", v, data_format, breakdown, fill_the_gaps, section_tipo, total}
@@ -18,7 +26,8 @@
 *   reference; 'after' is a live-insert hint; the authoritative display
 *   order arrives in the 'end' line.
 * - {"t":"row",  rec, sub, c:{ordinal: scalar, ...}}
-*   Sparse ordinal-keyed cells: misalignment is structurally impossible.
+*   Sparse ordinal-keyed cells: misalignment is structurally impossible
+*   because every cell references a column by its stable ordinal integer.
 * - {"t":"end",  columns:[ordinals in display order], rows, records}
 * Unknown 't' values are reserved (clients must ignore them).
 *
@@ -43,66 +52,135 @@
 * index vector lexicographic, atom arrival order). Replaces the legacy
 * group-splice loops of tool_export / component_relation_common (and
 * fixes the position-0 falsy splice bug instead of porting it).
+*
+* Relationships:
+* - Instantiated by tool_export::get_export_grid() (tools/tool_export/class.tool_export.php).
+* - Consumes export_value / export_atom / export_path_segment (core/dd_grid/).
+* - Consumed by flat_table.js (tools/tool_export/js/flat_table.js).
+* - Tested by test/server/tools/export_tabulator_Test.php.
+*
+* @package Dédalo
+* @subpackage tool_export
 */
 class export_tabulator {
 
 
 
 	/**
-	 * @var string $data_format  'value' | 'grid_value' | 'dedalo_raw'
+	 * Active export format, validated against the allowlist in __construct.
+	 * Drives column minting strategy and cell serialisation:
+	 * - 'value'      — one flat-joined string cell per top ddo.
+	 * - 'grid_value' — relation items exploded by $breakdown mode.
+	 * - 'dedalo_raw' — verbatim {"dedalo_data":…} pass-through per ddo.
+	 * @var string $data_format
 	 */
 	private string $data_format;
 
 	/**
-	 * @var string $breakdown  'default' | 'rows' | 'columns'
+	 * Explosion strategy for 'grid_value' format; no effect on 'value'/'dedalo_raw'.
+	 * - 'default' — first relation level → rows, deeper levels → '|n' columns.
+	 * - 'rows'    — every level → rows (max-aligned siblings, no cartesian product).
+	 * - 'columns' — every level → '|n' suffixed columns; always one row per record.
+	 * @var string $breakdown
 	 */
 	private string $breakdown;
 
 	/**
-	 * @var bool $fill_the_gaps  repeat spanning values on every exploded row
+	 * When true, a spanning (parent) value is repeated on every exploded sub-row
+	 * it logically covers. Only meaningful for 'grid_value' + 'rows'/'default'.
+	 * Mirrors the legacy tool_export "fill the gaps" checkbox.
+	 * @var bool $fill_the_gaps
 	 */
 	private bool $fill_the_gaps;
 
 	/**
-	 * Label resolver: fn(string $tipo): ?string
-	 * Injected so the tabulator stays DB-free in unit tests.
+	 * Ontology label resolver injected at construction time.
+	 * Signature: fn(string $tipo): ?string
+	 * The default implementation calls ontology_node::get_term_by_tipo() with the
+	 * application language; tests inject a stub to avoid a live DB connection.
+	 * Stored as untyped property because PHP does not allow `callable` as a
+	 * declared property type.
 	 * @var callable $label_resolver
 	 */
 	private $label_resolver;
 
 	/**
-	 * Column registry: key => column object
-	 * {i, key, group, path, label, ar_labels, cell_type, model, sort_key, seq}
+	 * Primary column registry, keyed by the column's stable string key.
+	 * Each value is a column object with shape:
+	 *   { i: int (ordinal), key: string, group: string,
+	 *     path: export_path_segment[]|null,
+	 *     label: string, ar_labels: string[],
+	 *     cell_type: string, model: ?string,
+	 *     sort_key: array, seq: int }
+	 * Columns are registered on first encounter and never removed.
 	 * @var array $columns
 	 */
 	private array $columns = [];
 
 	/**
-	 * Display order: list of column keys, maintained sorted
+	 * Ordered list of column keys maintained in deterministic display order
+	 * by register_column(). The authoritative display order emitted in the
+	 * 'end' line is derived from this array by mapping keys to ordinals.
 	 * @var array $order
 	 */
 	private array $order = [];
 
 	/**
-	 * Ordinal => column object fast lookup
+	 * Secondary index: ordinal (int) => column object for O(1) lookup during
+	 * row building. Populated in lockstep with $columns; never modified after
+	 * registration. Access via column_by_ordinal() which throws on unknown ordinals.
 	 * @var array $columns_by_ordinal
 	 */
 	private array $columns_by_ordinal = [];
 
+	/**
+	 * Monotonically increasing ordinal assigned to each new column.
+	 * Ordinals are compact (0, 1, 2, …) within one tabulator instance and
+	 * serve as the stable integer column identifier on the wire ('i' field
+	 * of 'col' lines; key of 'c' cell objects in 'row' lines).
+	 * @var int $next_ordinal
+	 */
 	private int $next_ordinal	= 0;
+
+	/**
+	 * Arrival-order counter used as a tiebreaker in compare_columns() when two
+	 * columns share the same (ddo_index, index_vector) sort key. Ensures that
+	 * columns encountered first in atom order always sort before later ones,
+	 * giving a deterministic display order even for atoms with equal sort keys.
+	 * @var int $next_seq
+	 */
 	private int $next_seq		= 0;
+
+	/**
+	 * Running count of 'row' protocol lines emitted so far, incremented once
+	 * per row in record_lines(). Reported in the 'end' line so the client can
+	 * display a total-rows count without re-counting from the stream.
+	 * @var int $rows_emitted
+	 */
 	private int $rows_emitted	= 0;
+
+	/**
+	 * Running count of records processed via record_lines(). One record can
+	 * expand into multiple rows (breakdown explosion), so rows_emitted >= records_count.
+	 * Reported in the 'end' line as the authoritative record count.
+	 * @var int $records_count
+	 */
 	private int $records_count	= 0;
 
 
 
 	/**
 	* __CONSTRUCT
-	* @param object $options
-	* 	- data_format: string 'value'|'grid_value'|'dedalo_raw' (default 'value')
-	* 	- breakdown: string 'default'|'rows'|'columns' (default 'default')
-	* 	- fill_the_gaps: bool (default true)
-	* 	- label_resolver: callable fn(string $tipo): ?string (default ontology lookup)
+	* Initialise the tabulator with the chosen export options.
+	* Unknown values for data_format and breakdown are rejected with an error
+	* log and silently replaced by safe defaults so the export can still run.
+	* @param ?object $options = null - export configuration; all keys optional:
+	*   - data_format    string 'value'|'grid_value'|'dedalo_raw' (default 'value')
+	*   - breakdown      string 'default'|'rows'|'columns' (default 'default')
+	*   - fill_the_gaps  bool   repeat spanning values on exploded rows (default true)
+	*   - label_resolver callable fn(string $tipo): ?string
+	*                    injected label resolver; default uses the live ontology DB
+	* @return void
 	*/
 	public function __construct( ?object $options=null ) {
 
@@ -131,11 +209,15 @@ class export_tabulator {
 
 	/**
 	* META_LINE
-	* First protocol line
-	* @param string $section_tipo
-	* @param int|null $total = null
-	* 	total records expected (when known)
-	* @return object
+	* Build the 'meta' protocol line that must be the first line emitted in the
+	* NDJSON stream. The client uses this line to configure the flat_table renderer
+	* before any column or row data arrives; unknown 'v' values must be rejected.
+	* Wire shape: {"t":"meta", "v":1, "data_format":…, "breakdown":…,
+	*              "fill_the_gaps":…, "section_tipo":…, "total":…}
+	* @param string $section_tipo - ontology tipo of the exported section (e.g. "oh1")
+	* @param ?int $total = null   - total record count when known from the SQO result,
+	*   or null when not yet known (streaming starts before the count is available)
+	* @return object - the line object, ready for json_encode()
 	*/
 	public function meta_line( string $section_tipo, ?int $total=null ) : object {
 
@@ -154,16 +236,23 @@ class export_tabulator {
 
 	/**
 	* RECORD_LINES
-	* Tabulate one record. Returns the protocol lines for the record:
-	* the 'col' lines of any newly discovered columns followed by the
-	* record 'row' line(s).
-	* @param array $ar_entries
-	* 	One entry per top-level export ddo, in ddo order:
-	* 	{value: export_value, section_tipo: string, component_tipo: string}
-	* @param int|string $rec_id
-	* 	record identifier (section_id, or TM row id)
-	* @return array
-	* 	list of line objects
+	* Tabulate one record and return all protocol lines it generates.
+	* The returned array contains, in order:
+	*   1. Zero or more 'col' lines for columns seen for the first time in this record.
+	*      These are prepended so clients can register the column before encountering
+	*      its cells; in breakdown mode new '|n' columns can appear on any record.
+	*   2. One or more 'row' lines (one per exploded sub-row; always at least one).
+	* Callers must stream each returned line as a single NDJSON line immediately.
+	*
+	* Side effects: increments $records_count and $rows_emitted; may expand
+	* $columns, $order, and $columns_by_ordinal via register_column().
+	* @param array $ar_entries - one entry object per top-level export ddo, in ddo
+	*   (user-selected column) order; each entry has shape:
+	*   { value: export_value, section_tipo: string, component_tipo: string,
+	*     path?: export_path_segment[] }
+	* @param int|string $rec_id - record identifier: section_id (int) for normal
+	*   records, or a TM row identifier (string) for time-machine rows
+	* @return array - ordered list of protocol line objects (col* then row*)
 	*/
 	public function record_lines( array $ar_entries, int|string $rec_id ) : array {
 
@@ -251,6 +340,8 @@ class export_tabulator {
 		}//end foreach ($ar_entries as $ddo_index => $entry)
 
 		// build row lines
+		// New col lines are prepended so the client can register a column
+		// before it sees cell values referencing its ordinal.
 			$lines = $new_col_lines;
 
 			if ($this->data_format==='value' || $this->data_format==='dedalo_raw') {
@@ -290,8 +381,14 @@ class export_tabulator {
 
 	/**
 	* END_LINE
-	* Last protocol line: authoritative column display order
-	* @return object
+	* Build the 'end' protocol line that must be the last line in the NDJSON stream.
+	* The 'columns' array is the AUTHORITATIVE display order for the client: it
+	* contains every column ordinal in the deterministic sort order computed by
+	* register_column() / compare_columns(). Although 'col' lines carry an 'after'
+	* live-insert hint, clients must re-sort on 'end' because mid-stream inserts
+	* may shift positions. flat_table.js re-renders the table header on receipt.
+	* Wire shape: {"t":"end", "columns":[int,…], "rows":int, "records":int}
+	* @return object - the line object, ready for json_encode()
 	*/
 	public function end_line() : object {
 
@@ -311,17 +408,36 @@ class export_tabulator {
 
 	/**
 	* PLACE_ATOM
-	* Resolve the column and the output row indexes of one atom according
-	* to the breakdown mode.
-	* @param export_atom $atom
-	* @param int $ddo_index
-	* @param object|null $item_tree
-	* @param array &$new_col_lines
-	* @return object {column: object, rows: array}
+	* Resolve the target column and the set of output row indexes for a single
+	* export atom, according to the active breakdown mode. This is the central
+	* dispatch point that translates the atom's index vector into either a
+	* column suffix ('|n'), a row expansion, or both.
+	*
+	* The method does NOT write anything to $cell_groups; that is the caller's
+	* responsibility. It only returns the resolved column object and the row
+	* indexes. If the column is new, a 'col' line is appended to $new_col_lines.
+	*
+	* Column key construction: identity keys of each path segment joined with '.';
+	* when a segment contributes to the column dimension (suffix_map), its key
+	* gets a '|n' suffix for n > 0 (n=0 is omitted — item 0 shares the base column
+	* with no suffix, keeping legacy column-header parity).
+	* @param export_atom $atom          - the atom to place; must have at least one path segment
+	* @param int $ddo_index             - 0-based position of the top ddo in ar_entries;
+	*   used as the primary sort key so columns appear in user-selected ddo order
+	* @param ?object $item_tree         - pre-built item tree from build_item_tree(), or null
+	*   when the breakdown mode does not need vertical expansion (columns mode / value format)
+	* @param array &$new_col_lines      - accumulator for newly registered 'col' protocol
+	*   lines; appended in-place so the caller can prepend them before the 'row' lines
+	* @return object - {column: object, rows: int[]} where 'rows' is the list of
+	*   output row indexes this atom's value should be written into
 	*/
 	private function place_atom( export_atom $atom, int $ddo_index, ?object $item_tree, array &$new_col_lines ) : object {
 
 		// indexed positions: [{pos: segment position, axis_chain_key, index}]
+		// Walk the atom path once to collect every segment that carries an item_index
+		// (i.e. every hop that was reached by traversing a relation locator).
+		// axis_key captures the identity chain BEFORE this segment so that the
+		// item tree can look up the right node (axis is identified by the parent chain).
 			$indexed = [];
 			$identity_chain = [];
 			foreach ($atom->path as $pos => $segment) {
@@ -336,6 +452,10 @@ class export_tabulator {
 			}
 
 		// column suffixes and row dimension per mode
+		// $suffix_map  maps segment position => index for the column dimension.
+		// $row_chain   accumulates (axis_key, index) pairs for the row dimension.
+		// The two are mutually exclusive per segment: each indexed segment goes
+		// to one dimension only, decided by the active breakdown mode.
 			$suffix_map	= []; // segment position => index (column dimension)
 			$row_chain	= []; // list of (axis_key, index) pairs (row dimension)
 			switch ($this->breakdown) {
@@ -376,9 +496,10 @@ class export_tabulator {
 			$column_key	= implode('.', $ar_key_parts);
 			$group		= $atom->path[0]->get_identity_key();
 
-		// sort vector: index vector with column-dimension semantics
-		// (rows-mode columns have no index dimension; suffix indexes order
-		// the exploded sets after their base set)
+		// sort vector: index vector with column-dimension semantics only.
+		// Suffix indexes order the exploded column sets after their base column
+		// (|0 first, then |1, |2, …); rows-mode columns have no column-dimension
+		// indexes and therefore sort by arrival order (seq) only.
 			$sort_tail = [];
 			foreach ($indexed as $ix) {
 				if (isset($suffix_map[$ix->pos])) {
@@ -399,6 +520,10 @@ class export_tabulator {
 		);
 
 		// output rows
+		// When no row_chain exists, the atom is a static (non-exploded) value
+		// that belongs to the first row. With fill_the_gaps it is written to
+		// every row so spanning values (e.g. a parent field) appear on all
+		// sub-rows of the record, matching the legacy "fill the gaps" checkbox.
 			if (empty($row_chain)) {
 				// record-level value: first row, or the whole record span when filling
 				$rows = ($this->fill_the_gaps && $item_tree!==null && $item_tree->height > 1 && $this->breakdown!=='columns')
@@ -418,11 +543,21 @@ class export_tabulator {
 
 	/**
 	* RESOLVE_ITEM_ROWS
-	* Map an atom row chain ((axis,index) pairs) to output row indexes
-	* using the record item tree offsets/heights.
-	* @param array $row_chain
-	* @param object|null $item_tree
-	* @return array
+	* Translate an atom's row_chain — a sequence of (axis_key, index) pairs
+	* built by place_atom — into the concrete output row indexes where the atom's
+	* value should be written.
+	*
+	* The item tree is walked depth-first using the axis_key / index pairs:
+	* each step adds the item's pre-computed offset (the number of rows occupied
+	* by sibling items that precede it within its axis) to the running total.
+	* The final node's 'height' is the span of rows the item occupies; when
+	* fill_the_gaps is true the value is copied to every row in that span, so
+	* parent-level fields appear repeated beside every child sub-row.
+	* @param array $row_chain  - list of (object){axis_key: string, index: int} pairs,
+	*   root first; produced by the place_atom() breakdown switch
+	* @param ?object $item_tree - root item tree node from build_item_tree(), or null
+	*   (treated as a trivially flat single-row record)
+	* @return array - list of 0-based output row indexes; always at least [0]
 	*/
 	private function resolve_item_rows( array $row_chain, ?object $item_tree ) : array {
 
@@ -454,16 +589,27 @@ class export_tabulator {
 
 	/**
 	* BUILD_ITEM_TREE
-	* Build the record relation item tree from all atom index vectors.
-	* Nodes: {height, offset, axes: {axis_key: {index: node}}}
-	* Sibling axes inside one node are max-aligned: height(node) =
-	* max over axes of sum(child item heights), min 1 (legacy
-	* row_count = max(...) semantics, no cartesian product).
-	* @param array $ar_entries
-	* @param bool $first_only = false
-	* 	register only the first indexed level per atom (default mode:
-	* 	deeper levels become columns, every row item has height 1)
-	* @return object root node
+	* Build the record-level relation item tree by scanning the index vectors
+	* of all atoms across all entries for the current record. The resulting
+	* tree drives vertical row expansion in 'rows' and 'default' breakdown modes.
+	*
+	* Tree node shape:
+	*   { height: int, offset: int, axes: { axis_key: { index: node } } }
+	* - 'height': total row span of this subtree; equals max over axes of the sum
+	*   of child item heights (max-alignment, NOT cartesian product). This mirrors
+	*   the legacy tool_export row_count = max(count of items per field) rule.
+	* - 'offset': row offset of this item within its parent axis (computed by
+	*   compute_node_layout after the tree is fully built).
+	* - 'axes': child axes indexed by axis_key (the identity chain of segments
+	*   ABOVE this level, joined with '.'); each axis maps item_index => child node.
+	*
+	* The tree must be built before placing atoms so that all item heights and
+	* offsets are known when resolve_item_rows() is called.
+	* @param array $ar_entries  - same ar_entries passed to record_lines()
+	* @param bool $first_only = false  - when true, only the FIRST indexed level per
+	*   atom path is registered; used in 'default' breakdown mode where deeper levels
+	*   become columns and do not contribute to the row tree
+	* @return object - root tree node with height = total rows for this record
 	*/
 	private function build_item_tree( array $ar_entries, bool $first_only=false ) : object {
 
@@ -506,7 +652,19 @@ class export_tabulator {
 
 	/**
 	* COMPUTE_NODE_LAYOUT
-	* @param object $node
+	* Recursively compute the 'height' and 'offset' of every node in the item tree
+	* using a post-order (bottom-up) depth-first traversal.
+	*
+	* Within each axis, items are sorted by their item_index (ksort) and stacked
+	* sequentially: item N's offset equals the sum of heights of items 0…N-1.
+	* The axis height is the sum of all its items' heights (they stack, not overlap).
+	*
+	* The parent node's height is the MAXIMUM across all its axes rather than their
+	* sum, because axes are independent parallel fields that all share the same row
+	* span (max-alignment). This is the "row_count = max(...)" rule from the legacy
+	* grid: if one portal has 3 items and a sibling portal has 2, the record spans
+	* 3 rows and the shorter portal's last row is blank (or filled via fill_the_gaps).
+	* @param object $node - tree node to process in-place (children are recursed first)
 	* @return void
 	*/
 	private static function compute_node_layout( object $node ) : void {
@@ -536,9 +694,42 @@ class export_tabulator {
 
 	/**
 	* REGISTER_COLUMN
-	* Get or create a column in the registry. New columns compute their
-	* deterministic display position and append a 'col' protocol line.
-	* @return object the column
+	* Get an existing column from the registry by key, or create, position, and
+	* return a new one. This is the single point of column creation: every
+	* code path that needs a column calls this method.
+	*
+	* When a new column is created:
+	* - Labels are resolved via resolve_labels().
+	* - The model is taken from the leaf path segment when not supplied explicitly.
+	* - The column is assigned the next available ordinal (stable across the run).
+	* - It is inserted into $this->order at the position determined by
+	*   compare_columns() so the display order remains deterministic.
+	* - A 'col' protocol line is appended to $new_col_lines so the caller can
+	*   stream it before the first 'row' line that references this column.
+	* - The 'after' field on the 'col' line is the ordinal of the column that
+	*   immediately precedes the new one in display order (null when first), giving
+	*   the client a live-insert hint for progressive rendering without waiting for
+	*   the authoritative 'end' order.
+	*
+	* (!) The $key parameter must be identical across atoms that share the same
+	* structural column. Inconsistent key construction would mint duplicate columns.
+	* @param string $key         - stable unique column key (see place_atom key construction)
+	* @param string $group       - identity key of the top path segment; groups
+	*   all sub-columns of the same top ddo under one header in the preview table
+	* @param ?array $path        - ordered list of export_path_segment, root first;
+	*   null only for synthetic columns with no ontology path
+	* @param array $suffix_map   - segment position => item_index for the column
+	*   dimension; used by resolve_labels() to append ' N+1' label suffixes
+	* @param int $ddo_index      - 0-based index of the top ddo in ar_ddo_to_export,
+	*   used as the primary sort key to preserve user-selected column order
+	* @param array $sort_tail    - secondary sort vector (column-dimension indexes),
+	*   appended after ddo_index in the sort_key; empty for non-exploded columns
+	* @param string $cell_type   - rendering hint from the atom: 'text'|'img'|'av'|
+	*   'iri'|'section_id'|'json'
+	* @param ?string $model      - PHP class name of the component; when null,
+	*   resolved from the leaf path segment's model property
+	* @param array &$new_col_lines - accumulator for new 'col' protocol lines
+	* @return object - the column object (existing or newly created)
 	*/
 	private function register_column( string $key, string $group, ?array $path, array $suffix_map, int $ddo_index, array $sort_tail, string $cell_type, ?string $model, array &$new_col_lines ) : object {
 
@@ -572,6 +763,7 @@ class export_tabulator {
 			$this->columns_by_ordinal[$column->i] = $column;
 
 		// ordered insert (deterministic rule, see class doc)
+		// Linear scan is acceptable: column counts are in the hundreds at most.
 			$insert_pos = sizeof($this->order);
 			for ($i = 0; $i < sizeof($this->order); $i++) {
 				$other = $this->columns[$this->order[$i]];
@@ -583,6 +775,7 @@ class export_tabulator {
 			array_splice($this->order, $insert_pos, 0, [$key]);
 
 		// after: live-insert hint for the client
+		// Null when the column is the very first (no predecessor in display order).
 			$after = ($insert_pos > 0)
 				? $this->columns[$this->order[$insert_pos-1]]->i
 				: null;
@@ -608,11 +801,22 @@ class export_tabulator {
 
 	/**
 	* COMPARE_COLUMNS
-	* Deterministic display order: (ddo position, index vector
-	* lexicographic with shorter-first on tie prefix, arrival order)
-	* @param object $a
-	* @param object $b
-	* @return int
+	* Three-tier deterministic comparator used by register_column() to maintain
+	* the display order of $this->order.
+	*
+	* Sort tiers (earlier tiers take priority):
+	*   1. sort_key lexicographic comparison (element by element): the first
+	*      element is always ddo_index (user-selected column order); subsequent
+	*      elements are the column-dimension item_indexes (|n suffix sequence).
+	*   2. Shorter sort_key first on a common-prefix tie: a base column (no suffix,
+	*      shorter key) always sorts before its exploded siblings (|1, |2, …),
+	*      so the base column header appears to the left of its variants.
+	*   3. Arrival order (seq) as final tiebreaker: two atoms that map to different
+	*      columns but share the same (ddo_index, index_vector) retain the order
+	*      they were first seen during the record scan.
+	* @param object $a - column object with sort_key: array and seq: int
+	* @param object $b - column object with sort_key: array and seq: int
+	* @return int - negative when $a sorts before $b, positive when after, 0 when equal
 	*/
 	private static function compare_columns( object $a, object $b ) : int {
 
@@ -636,16 +840,37 @@ class export_tabulator {
 
 	/**
 	* RESOLVE_LABELS
-	* Build label / ar_labels from the structured path.
-	* - standard formats: ontology component labels joined ' | ', with
-	*   ' N+1' appended on column-suffixed segments (legacy parity:
-	*   'Profession 2'); sub_id segments use the sub_id verbatim.
-	* - dedalo_raw: 'section_id' for component_section_id, else the tipo
-	*   (byte-compatible with the tool_import_dedalo_csv header grammar).
-	* @param array|null $path
-	* @param array $suffix_map segment position => index
-	* @param string $fallback_key used when no path is available
-	* @return object {label: string, ar_labels: array}
+	* Build the display label and the flat ar_labels array for a column from
+	* its structured path and suffix map. Called once per new column at
+	* registration time.
+	*
+	* Label construction per data_format:
+	* - 'value' / 'grid_value':
+	*     Each path segment contributes a section label and a component label,
+	*     resolved via $this->label_resolver (ontology term lookup by default).
+	*     Sub_id segments bypass the resolver and use the sub_id string verbatim
+	*     (e.g. 'dates', 'duration' for component_info widget outputs).
+	*     A '|n' column-suffix on a segment appends ' N+1' to the component label
+	*     for legacy parity ('Profession 2' for the second Profession column);
+	*     suffix 0 is omitted ('Profession' not 'Profession 1').
+	*     The composite label is the component labels joined with ' | '
+	*     ('Informants | Name').
+	* - 'dedalo_raw':
+	*     Section tipo and component tipo are emitted raw (no ontology lookup)
+	*     to stay byte-compatible with the tool_import_dedalo_csv header grammar.
+	*     component_section_id is aliased to 'section_id' because that is what
+	*     the import tool expects as the record key column header.
+	*
+	* ar_labels keeps the full [section_label, component_label, …] alternation
+	* that the legacy dd_grid exposed, used by the flat_table.js preview and the
+	* 'show_tipo_in_label' decoration option.
+	* @param ?array $path          - ordered list of export_path_segment, root first;
+	*   null or empty when no path is available (synthetic columns)
+	* @param array $suffix_map     - segment position => item_index for column-dimension
+	*   segments; used to append ' N+1' label suffixes
+	* @param string $fallback_key  - raw column key to use when path is unavailable,
+	*   ensuring the column still gets a non-empty header
+	* @return object - {label: string, ar_labels: string[]}
 	*/
 	private function resolve_labels( ?array $path, array $suffix_map, string $fallback_key ) : object {
 
@@ -693,11 +918,24 @@ class export_tabulator {
 
 	/**
 	* JOIN_CELL
-	* Join the atoms that land in one output cell into the final scalar.
-	* section_id single values stay int (spreadsheet/import friendliness)
-	* @param array|null $cell_atoms
-	* @param object $column
-	* @return string|int|null
+	* Reduce the list of atoms that have been assigned to one output cell into
+	* the final scalar value stored in the 'row' line's 'c' map.
+	*
+	* A cell can receive multiple atoms when fill_the_gaps causes the same atom
+	* to be written to multiple rows, or when a multi-value leaf component
+	* produces several atoms for the same structural column and row. The static
+	* export_value::join() handles the multi-atom case with the same separator
+	* semantics as the flat 'value' format.
+	*
+	* Special case: a single section_id atom whose value is already an int is
+	* returned as-is (not cast to string). Spreadsheet applications and the
+	* import round-trip both benefit from a native integer type for the record
+	* key column rather than a string-encoded number.
+	* @param ?array $cell_atoms - list of export_atom that landed in this cell;
+	*   null or empty returns null (empty cell, omitted from the sparse 'c' map)
+	* @param object $column     - the column this cell belongs to (unused in the
+	*   current implementation but kept in the signature for future cell-type dispatch)
+	* @return string|int|null   - the cell scalar, or null for an empty cell
 	*/
 	private function join_cell( ?array $cell_atoms, object $column ) : string|int|null {
 
@@ -721,8 +959,14 @@ class export_tabulator {
 
 	/**
 	* COLUMN_BY_ORDINAL
-	* @param int $ordinal
-	* @return object
+	* Look up a column object by its stable integer ordinal using the
+	* $columns_by_ordinal secondary index for O(1) access.
+	* Called during row building to retrieve the column needed for join_cell().
+	* @param int $ordinal - the column's 'i' value as assigned in register_column()
+	* @return object      - the column object
+	* @throws RuntimeException if the ordinal is not found, which indicates a logic
+	*   error in place_atom (an ordinal was stored in cell_groups without
+	*   being registered in columns_by_ordinal)
 	*/
 	private function column_by_ordinal( int $ordinal ) : object {
 
@@ -737,12 +981,28 @@ class export_tabulator {
 
 	/**
 	* CLEAN_TEXT_VALUE
-	* Server-side text cleanup, single chokepoint replacing the legacy
-	* client logic (view_csv_dd_grid get_text_column): paragraphs become
-	* newlines and basic HTML entities are decoded, so CSV/TSV/HTML/XLSX
-	* all receive the same WYSIWYG text.
-	* @param string $value
-	* @return string
+	* Server-side text normalisation: convert paragraph HTML markup to newlines
+	* and decode a fixed set of HTML entities, producing plain WYSIWYG text.
+	*
+	* This is the single chokepoint that replaces the legacy client-side logic
+	* in view_csv_dd_grid::get_text_column(). Moving it server-side ensures that
+	* CSV, TSV, ODS, XLSX, and HTML downloads all receive identical cell text
+	* without each download renderer duplicating the transformation.
+	*
+	* Transformation steps:
+	* 1. Early-return if the string contains neither '<' nor '&' — the strpos
+	*    short-circuit avoids both regex and strtr overhead on plain-text values.
+	* 2. Paragraph joins: '</p><p>' → '\n', then strip the outer <p>…</p> wrapper
+	*    (the first opening <p> and the last closing </p> only) so the exported
+	*    text reads like the visible content without surrounding empty lines.
+	* 3. Entity decode: a fixed strtr map covering the seven common XML entities
+	*    plus their numeric equivalents (&amp;/&#38;, &lt;/&#60;, etc.).
+	*    (!) html_entity_decode() is NOT used because it would also decode named
+	*    entities that the legacy client intentionally preserved. This map
+	*    reproduces the exact legacy client set — do not extend it without
+	*    checking parity test export_value_parity_Test.php.
+	* @param string $value - raw joined string that may contain HTML markup
+	* @return string       - cleaned plain-text string
 	*/
 	public static function clean_text_value( string $value ) : string {
 
