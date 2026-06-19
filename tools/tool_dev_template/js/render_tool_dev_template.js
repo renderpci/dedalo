@@ -503,7 +503,7 @@ export const add_component_sample = async (self, component_container, lang) => {
 		}
 
 	const component = await self.load_component_sample({
-		lang	: self,
+		lang	: lang,
 		ddo		: self.main_element
 	})
 	const node 		= await component.render()
