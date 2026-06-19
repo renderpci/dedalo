@@ -1,6 +1,8 @@
 <?php declare(strict_types=1);
 
 require_once __DIR__ . '/class.boot_phase.php';
+require_once __DIR__ . '/class.env_loader.php';
+require_once __DIR__ . '/../config/class.config_scope.php';
 require_once __DIR__ . '/../config/class.config_compiler.php';
 require_once __DIR__ . '/../config/class.config.php';
 require_once __DIR__ . '/../config/class.compat_shim.php';
@@ -35,4 +37,44 @@ final class boot_config_phases {
 
 		return [$build, $emit];
 	}//end phases
+
+	/**
+	* Build a config-override layer from the values already loaded into env_loader (i.e. from
+	* ../private/.env then ../private/.env.<host>, host-last so it wins). Every STATIC catalog
+	* key whose constant has an .env value becomes {dot.path => typed value}, so .env can
+	* override ANY general setting — not just secrets. SECRET keys are emitted by the
+	* secret/state phase; DERIVED keys are computed; so only STATIC keys are mapped here.
+	* The caller layers this ABOVE config.local.php (env wins). No-op (returns []) when .env
+	* defines no STATIC settings, so existing secrets-only .env files change nothing.
+	*
+	* @param config_key[] $catalog
+	* @return array<string,mixed> dot.path => value (a high-precedence override layer)
+	*/
+	public static function env_overrides(array $catalog) : array {
+		$out = [];
+		foreach ($catalog as $key) {
+			if ($key->const === null || $key->scope !== config_scope::STATIC) {
+				continue;
+			}
+			$v = env_loader::get($key->const);
+			if ($v === null) {
+				continue;
+			}
+			$out[$key->path] = self::cast_to($v, $key->type);
+		}
+		return $out;
+	}//end env_overrides
+
+	/** Cast a .env STRING to the catalog key's declared type (.env is text-only). */
+	private static function cast_to(string $value, string $type) : mixed {
+		if (strtolower(trim($value)) === 'null') {
+			return null; // explicit null marker — .env can't carry a real null (e.g. a socket DB port)
+		}
+		return match ($type) {
+			'int'         => (int) $value,
+			'bool'        => in_array(strtolower(trim($value)), ['1', 'true', 'yes', 'on'], true),
+			'list', 'map' => is_array($decoded = json_decode($value, true)) ? $decoded : [],
+			default       => $value, // string
+		};
+	}//end cast_to
 }
