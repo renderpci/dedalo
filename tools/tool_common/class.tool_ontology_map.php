@@ -172,7 +172,7 @@ final class tool_ontology_map {
 		* Tool UI / behaviour properties (component_json).
 		* Arbitrary key-value bag used by the tool's own PHP/JS code; shape is
 		* tool-specific. Stored lang-wrapped in legacy (v6) registry dumps;
-		* tools_register::unwrap_lang_value() normalises on import.
+		* normalised on import (see tools_register::create_simple_tool_object()).
 		* @var string PROPERTIES
 		*/
 		public const PROPERTIES = 'dd1335';
