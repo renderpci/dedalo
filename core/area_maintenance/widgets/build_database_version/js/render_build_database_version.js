@@ -207,6 +207,7 @@ const render_build_install_version = function (self, value) {
 			.then(function(local_data){
 				if (local_data && local_data.value) {
 					update_process_status(
+						'build_install_version',
 						local_data.value.pid,
 						local_data.value.pfile,
 						process_response
