@@ -25,11 +25,13 @@ final class boot_web_phases_Test extends TestCase {
 		$this->assertFalse($p->should_run(entrypoint_profile::TEST));
 	}
 
-	public function test_request_state_phase_is_web_only() : void {
+	public function test_request_state_phase_runs_except_worker_and_test() : void {
 		$p = boot_web_phases::request_state_phase();
 		$this->assertSame('request_state', $p->name);
 		$this->assertTrue($p->should_run(entrypoint_profile::WEB));
-		$this->assertFalse($p->should_run(entrypoint_profile::CLI));
+		$this->assertTrue($p->should_run(entrypoint_profile::CLI));   // defines SHOW_DEBUG/langs in CLI/cron, like v6
+		$this->assertTrue($p->should_run(entrypoint_profile::CRON));
+		$this->assertFalse($p->should_run(entrypoint_profile::WORKER_INIT)); // long-lived worker uses per-request accessor (Phase 5b)
 		$this->assertFalse($p->should_run(entrypoint_profile::TEST));
 	}
 }

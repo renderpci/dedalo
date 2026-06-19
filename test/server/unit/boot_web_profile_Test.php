@@ -64,9 +64,9 @@ final class boot_web_profile_Test extends TestCase {
 		);
 		$by = [];
 		foreach ($phases as $p) { $by[$p->name] = $p; }
-		$this->assertFalse($by['session_start']->should_run(entrypoint_profile::CLI));
-		$this->assertFalse($by['request_state']->should_run(entrypoint_profile::CLI));
-		$this->assertTrue($by['compat_shim']->should_run(entrypoint_profile::CLI)); // surface phases run everywhere
+		$this->assertFalse($by['session_start']->should_run(entrypoint_profile::CLI)); // session_start is web-only
+		$this->assertTrue($by['request_state']->should_run(entrypoint_profile::CLI));  // request-state runs in CLI/cron too (defines consts), like v6
+		$this->assertTrue($by['compat_shim']->should_run(entrypoint_profile::CLI));    // surface phases run everywhere
 	}
 
 	public function test_env_load_omitted_when_no_env_path() : void {

@@ -74,6 +74,6 @@ final class boot_web_phases {
 				if (class_exists('dd_error')) {
 					dd_error::apply_reporting();
 				}
-		}, ['cli', 'cron', 'worker_init', 'test']);
+		}, ['worker_init', 'test']);
 	}//end request_state_phase
 }
