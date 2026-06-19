@@ -13,8 +13,60 @@
 
 /**
 * TOOL_DD_LABEL
-* Tool to easy create labels in different languages for tools
-* (!) It's only used in section 'dd1340' component 'dd1372' (Tool labels)
+* Visual editor for tool i18n label tables stored as JSON in component_json (dd1372).
+*
+* Purpose and scope
+* -----------------
+* Dédalo tools can expose a JSON array of label objects — one per logical label key ×
+* language combination — so that UI strings are editable through the normal Dédalo
+* interface rather than being hard-coded.  This tool renders that array as an
+* interactive matrix:
+*
+*   rows    = unique label keys (the `name` property of each datum object)
+*   columns = one column per project language from `page_globals.dedalo_projects_default_langs`
+*
+* Each cell is a `contenteditable` div.  Changes are written back into the caller's
+* JSON editor (component_json) immediately via `update_data`, but not persisted to the
+* server until the user explicitly clicks the save button on the caller component.
+*
+* Activation context
+* ------------------
+* The tool is activated exclusively from section `dd1340` (tool registry), component
+* `dd1372` (Tool labels field).  It reads the editor's *current in-memory value* — not
+* the last-saved value — so unsaved edits are preserved across label-editing sessions.
+*
+* Data shape — `ar_data` (the label array)
+* -----------------------------------------
+* Each element is a plain object:
+*   {
+*     lang  : {string}  — IETF-style lang code, e.g. 'lg-eng', 'lg-spa'
+*     name  : {string}  — machine-readable label key, e.g. 'save', 'cancel'
+*     value : {string}  — the translated string for this key × language pair
+*   }
+* Multiple entries share the same `name` but differ in `lang`.  Entries are
+* added/removed individually; there is no fixed schema of required names.
+*
+* Instance properties
+* -------------------
+* @property {string}           id            — Unique instance identifier (set by tool_common.init).
+* @property {Object}           model         — Resolved tool model from context/API (tool_common).
+* @property {string}           mode          — Current render mode (e.g. 'edit').
+* @property {HTMLElement}      node          — Root DOM node of the rendered tool.
+* @property {Array}            ar_instances  — Child component instances managed by this tool.
+* @property {string}           status        — Lifecycle status string (e.g. 'active', 'destroyed').
+* @property {Array}            events_tokens — Registered event subscription tokens for cleanup.
+* @property {string}           type          — Tool type identifier ('tool_dd_label').
+* @property {Object}           caller        — The component_json instance that opened this tool.
+* @property {string}           last_value    — Stringified JSON snapshot of `ar_data` at the
+*                                              last `update_data` call; used to skip redundant writes.
+* @property {Array<Object>}    ar_data       — The live label array (see data shape above).
+* @property {Array<string>}    ar_names      — Ordered, deduplicated list of `name` values derived
+*                                              from `ar_data`; drives the row order in the matrix.
+* @property {Array<Object>}    loaded_langs  — Language objects `{value, label}` from
+*                                              `page_globals.dedalo_projects_default_langs`; one
+*                                              column per entry in the matrix header.
+* @property {Error|undefined}  error         — Set when `init` fails; causes `render` to fall back
+*                                              to the error renderer supplied by tool_common.
 */
 export const tool_dd_label = function () {
 
@@ -51,8 +103,27 @@ export const tool_dd_label = function () {
 
 /**
 * INIT
-* @param object options
-* @return bool common_init
+* Initialises the tool instance after the generic tool_common.init completes.
+*
+* Steps performed here (in addition to the base init):
+*  1. Loads the project language list from `page_globals.dedalo_projects_default_langs`
+*     into `self.loaded_langs` — these become the matrix columns.
+*  2. Resolves the caller's first editor (`caller.editors[0]`) — the JSON editor
+*     widget that owns the raw label data.
+*  3. Reads the editor's *current in-memory value* (not the server-saved value), so
+*     that unsaved changes the user may have made to the JSON field are preserved.
+*     The editor may return either `{json: <Object>}` or `{text: <string>}` depending
+*     on its internal parse state; both forms are normalised to a plain JS object.
+*  4. Coerces the result to an array (`ar_data`), handling null and single-object cases.
+*  5. Extracts the unique ordered list of `name` values into `self.ar_names` using a
+*     Set to drive the matrix rows in render.
+*
+* If the caller has no editor, an Error is caught, stored in `self.error`, and logged;
+* the base `common_init` return value is still returned so tool_common can display the
+* error renderer.
+*
+* @param {Object} options - Initialisation options forwarded to tool_common.prototype.init.
+* @returns {Promise<boolean>} common_init — The return value from tool_common.prototype.init.
 */
 tool_dd_label.prototype.init = async function(options) {
 
@@ -114,8 +185,24 @@ tool_dd_label.prototype.init = async function(options) {
 
 /**
 * UPDATE_DATA
-* Set new JSON data to JSON editor
-* @return bool
+* Writes the current `ar_data` state back into the JSON editor and the caller component.
+*
+* Guards against redundant writes by comparing the serialised `ar_data` against
+* `self.last_value` (the snapshot from the previous call).  If nothing has changed the
+* function returns `undefined` early, avoiding spurious editor updates and "dirty" flags.
+*
+* When a change is detected:
+*  1. A deep clone of `ar_data` is produced via `JSON.parse(JSON.stringify(...))` so
+*     the editor receives an immutable value and cannot mutate the live array.
+*  2. The clone is pushed into the editor via `editor.set({json: ...})`.
+*  3. The caller component (component_json) is notified via `set_value(value, index)`;
+*     index `0` targets the first (and only) data row of the component.
+*  4. `last_value` is updated to prevent the next identical call from re-writing.
+*
+* (!) This function does NOT save to the server.  Persistence requires the user to
+*     click the save button on the caller component_json.
+*
+* @returns {boolean|undefined} true when data was written; undefined when skipped (no change).
 */
 tool_dd_label.prototype.update_data = function() {
 
@@ -150,9 +237,8 @@ tool_dd_label.prototype.update_data = function() {
 /**
 * ON_CLOSE_ACTIONS
 * Executes specific action on close the tool
-* @param string open_as
-* 	modal|window
-* @return bool
+* @param {string} open_as - Open mode: 'modal' or 'window'.
+* @returns {Promise<boolean>}
 */
 tool_dd_label.prototype.on_close_actions = async function(open_as) {
 
@@ -170,14 +256,34 @@ tool_dd_label.prototype.on_close_actions = async function(open_as) {
 
 /**
 * SAVE_LABEL_LANG_SEQUENCE
-* Manages the update and save values process en every content editable change
-* @param string value
-* 	as 'Hello'
-* @param int key
-* 	as 0
-* @param string lang
-* 	as 'lg-spa'
-* @return void
+* Persists a single label cell edit into `ar_data`, then flushes via `update_data`.
+*
+* Called on every `blur` and Enter-keydown event from the `contenteditable` cells
+* rendered by `render_tool_dd_label`.  Handles three distinct cases:
+*
+*  1. Empty value AND no existing record  →  no-op (early return).
+*     Avoids creating dangling `{name, lang, value: ''}` entries.
+*
+*  2. Empty value WITH an existing record  →  the entry is removed from `ar_data`
+*     (splice by index) and `update_data` is called.  This mirrors deletion semantics:
+*     clearing a cell removes the label for that language.
+*
+*  3. Non-empty value:
+*     a. If an existing record for (name × lang) is found, its `value` property is
+*        updated in-place.
+*     b. If no record exists yet, a new `{lang, name, value}` object is pushed into
+*        `ar_data`.
+*     In both sub-cases `update_data` is called to flush.
+*
+* The `key` parameter is a positional row index into `self.ar_names`, not a primary
+* key.  The actual label key (`name`) is resolved via `self.ar_names[key]` so that
+* the function remains correct even when rows have been dynamically reordered or
+* removed in the same session.
+*
+* @param {string} value - The text entered by the user; empty string means "delete".
+* @param {number} key   - Zero-based index of the row in `self.ar_names`.
+* @param {string} lang  - Language code (e.g. 'lg-eng') identifying the column.
+* @returns {void}
 */
 tool_dd_label.prototype.save_label_lang_sequence = function (value, key, lang) {
 
