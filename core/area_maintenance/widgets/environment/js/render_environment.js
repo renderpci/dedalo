@@ -10,8 +10,43 @@
 
 
 /**
-* RENDER_environment
-* Manages the component's logic and appearance in client side
+* RENDER_ENVIRONMENT
+* Client-side render module for the `environment` maintenance widget.
+*
+* The environment widget is a diagnostic tool in `area_maintenance` that gives
+* administrators two things:
+*   1. A button to open the raw `environment.js.php` bootstrap file in a new
+*      browser tab, letting them inspect the live server-side configuration that
+*      is served to every page load (constants, `page_globals` values, etc.).
+*   2. A pretty-printed dump of the current `page_globals` object so the admin
+*      can verify runtime state without leaving the maintenance area.
+*
+* This module exports one constructor (`render_environment`) whose `list`
+* prototype method is wired to both `environment.prototype.edit` and
+* `environment.prototype.list` by the host widget (`environment.js`).
+* The actual DOM construction is delegated to the private helper
+* `get_content_data_edit`.
+*
+* Widget data flow:
+*   widget_common.load() → self.value is populated (may be empty for this widget)
+*   → widget_common.render() → render_environment.prototype.list(options)
+*   → get_content_data_edit(self) → returns content_data <div>
+*   → ui.widget.build_wrapper_edit wraps content_data into the final wrapper
+*
+* The `value` property is not meaningfully used by this widget — all output is
+* derived from the already-available global `page_globals` object.
+*
+* @module render_environment
+*/
+
+
+
+/**
+* RENDER_ENVIRONMENT
+* Constructor function (empty shell). Dédalo prototype-assign pattern: the real
+* render methods are attached to `render_environment.prototype` below and then
+* copied onto the host `environment.prototype` in `environment.js`.
+* @returns {boolean} Always true — nothing to initialise in the constructor.
 */
 export const render_environment = function() {
 
@@ -24,13 +59,13 @@ export const render_environment = function() {
 * LIST
 * Creates the nodes of current widget.
 * The created wrapper will be append to the widget body in area_maintenance
-* @param object options
+* @param {Object} options
 * 	Sample:
 * 	{
 *		render_level : "full"
 		render_mode : "list"
 *   }
-* @return HTMLElement wrapper
+* @returns {HTMLElement} wrapper
 * 	To append to the widget body node (area_maintenance)
 */
 render_environment.prototype.list = async function(options) {
@@ -60,8 +95,24 @@ render_environment.prototype.list = async function(options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @param object self
-* @return HTMLElement content_data
+* Builds the inner content DOM for the environment widget.
+*
+* Produces a <div> containing:
+*   - A "Open environment file" button that opens `../common/js/environment.js.php`
+*     in a new browser tab, allowing admins to inspect the raw PHP-generated JS
+*     bootstrap (page_globals, DEDALO_CORE_URL, get_label, etc.) at runtime.
+*   - A <pre> block showing a formatted JSON dump of the current `page_globals`
+*     global object (injected into every page by environment.js.php).
+*
+* Note: the URL `../common/js/environment.js.php` is relative to the current
+* page's location, not to this JS module. This relies on the browser resolving
+* it from `window.location`; if the maintenance area is ever served from a
+* different path depth the URL will break.
+*
+* @param {Object} self - The `environment` widget instance. `self.value` is
+*   read but is unused in practice; all output comes from `page_globals`.
+* @returns {HTMLElement} content_data - A <div> containing the button and the
+*   page_globals dump; intended to be passed to `ui.widget.build_wrapper_edit`.
 */
 const get_content_data_edit = async function(self) {
 
