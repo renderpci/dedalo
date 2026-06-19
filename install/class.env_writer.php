@@ -2,6 +2,7 @@
 
 require_once __DIR__ . '/class.migration_destination.php';
 require_once dirname(__DIR__) . '/core/base/boot/class.env_sync.php';
+require_once dirname(__DIR__) . '/core/base/boot/class.env_value.php';
 
 /**
 * ENV_WRITER
@@ -122,12 +123,6 @@ final class env_writer {
 	*    since a literal ' can't live inside a single-quoted value in this minimal .env subset.
 	*/
 	private static function quote(string $value) : string {
-		if ($value !== '' && preg_match('/^[A-Za-z0-9_\/.:@+-]+$/', $value) === 1) {
-			return $value;
-		}
-		if (strpbrk($value, "'\n\r") === false) {
-			return "'" . $value . "'";
-		}
-		return '"' . str_replace(['\\', '"'], ['\\\\', '\\"'], $value) . '"';
+		return env_value::quote($value); // single source of truth (shared with the runtime installer)
 	}//end quote
 }

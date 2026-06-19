@@ -6965,6 +6965,135 @@ dd-modal .footer.distribute {
   padding: 1.25rem;
   justify-content: center;
 }
+.install.wrapper .install_field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin: 0.65rem 0;
+}
+.install.wrapper .install_field .install_field_label {
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color_grey_8);
+  font-weight: 600;
+}
+.install.wrapper .install_field .install_field_input {
+  height: 2.4rem;
+  max-width: 28rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.4rem;
+  color: var(--color_white);
+  padding: 0 0.75rem;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+.install.wrapper .install_field .install_field_input:focus {
+  outline: none;
+  border-color: var(--color_orange_dedalo);
+}
+.install.wrapper .install_field .install_field_help {
+  font-size: 0.78rem;
+  color: var(--color_grey_7);
+  line-height: 1.35;
+}
+.install.wrapper .install_toggle_label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0;
+  cursor: pointer;
+  color: var(--color_grey_13);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.install.wrapper .install_toggle_label > .install_toggle {
+  accent-color: var(--color_orange_dedalo);
+  height: 1.05rem;
+  width: 1.05rem;
+}
+.install.wrapper .diffusion_fields {
+  border-left: 2px solid rgba(247, 138, 28, 0.25);
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+}
+.install.wrapper .generated_secrets {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(247, 138, 28, 0.08);
+  border: 1px solid rgba(247, 138, 28, 0.3);
+  border-radius: 0.5rem;
+}
+.install.wrapper .generated_secrets .generated_secrets_title {
+  color: var(--color_orange);
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 0.65rem;
+}
+.install.wrapper .generated_secrets .generated_secret_row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.35rem 0;
+}
+.install.wrapper .generated_secrets .generated_secret_row .generated_secret_key {
+  font-size: 0.78rem;
+  color: var(--color_grey_8);
+  min-width: 16rem;
+  font-family: monospace;
+}
+.install.wrapper .generated_secrets .generated_secret_row .generated_secret_val {
+  flex: 1;
+  height: 2rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.35rem;
+  color: var(--color_grey_14);
+  padding: 0 0.6rem;
+  font-family: monospace;
+  font-size: 0.82rem;
+}
+.install.wrapper .directories_list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.75rem 0;
+}
+.install.wrapper .directories_list .directory_row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.4rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.85rem;
+}
+.install.wrapper .directories_list .directory_row .directory_icon {
+  font-weight: 700;
+}
+.install.wrapper .directories_list .directory_row .directory_label {
+  font-weight: 600;
+  color: var(--color_grey_13);
+  min-width: 12rem;
+}
+.install.wrapper .directories_list .directory_row .directory_path {
+  color: var(--color_grey_7);
+  font-family: monospace;
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.install.wrapper .directories_list .directory_row.ok .directory_icon {
+  color: var(--color_green_success);
+}
+.install.wrapper .directories_list .directory_row.error {
+  border-color: rgba(220, 53, 69, 0.25);
+}
+.install.wrapper .directories_list .directory_row.error .directory_icon {
+  color: var(--color_danger);
+}
 .install.wrapper .spinner {
   display: inline-block;
   width: 1.25rem;

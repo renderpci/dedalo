@@ -364,6 +364,81 @@ class system {
 
 
 	/**
+	* GET_PG_BIN_PATH
+	* Resolve the directory (with trailing slash) that actually contains the PostgreSQL client
+	* binaries (psql, pg_dump). Order: the configured DB_BIN_PATH if psql is really there → the
+	* platform base from get_base_binary_path() (macOS /opt/homebrew/bin, Linux /usr/bin, or
+	* DEDALO_BINARY_BASE_PATH) → a PATH lookup (`command -v psql`) → finally the configured path.
+	* This lets a fresh install (whose DB_BIN_PATH is still the '/usr/bin/' default) find psql on
+	* a Homebrew Mac or any non-standard layout WITHOUT the administrator editing a config file.
+	* @return string e.g. '/opt/homebrew/bin/'
+	*/
+	public static function get_pg_bin_path() : string {
+
+		// 1) explicit config wins — but only if psql is actually there
+		if (defined('DB_BIN_PATH') && DB_BIN_PATH !== '') {
+			$configured = rtrim(DB_BIN_PATH, '/') . '/';
+			if (is_file($configured . 'psql')) {
+				return $configured;
+			}
+		}
+
+		// 2) platform base (the same resolver get_postgresql_version uses)
+		$base = rtrim(get_base_binary_path(), '/') . '/';
+		if (is_file($base . 'psql')) {
+			return $base;
+		}
+
+		// 3) PATH lookup
+		$found = @shell_exec('command -v psql 2>/dev/null');
+		if (is_string($found) && trim($found) !== '') {
+			return rtrim(dirname(trim($found)), '/') . '/';
+		}
+
+		// 4) fall back to the configured path (or platform base) so a command can still be built
+		return (defined('DB_BIN_PATH') && DB_BIN_PATH !== '') ? rtrim(DB_BIN_PATH, '/') . '/' : $base;
+	}//end get_pg_bin_path
+
+
+
+	/**
+	* GET_PHP_BIN
+	* Resolve the PHP CLI binary (full path) used to spawn worker/cache processes. Order: the
+	* configured PHP_BIN_PATH if it points at a real file → the platform base
+	* (get_base_binary_path()) + '/php' → a PATH lookup (`command -v php`) → finally the configured
+	* value. Lets a fresh install find php on a Homebrew Mac or any non-standard layout WITHOUT the
+	* administrator editing a config file (mirrors get_pg_bin_path).
+	* @return string e.g. '/opt/homebrew/bin/php'
+	*/
+	public static function get_php_bin() : string {
+
+		// 1) explicit config wins, if it points at a real binary
+		if (defined('PHP_BIN_PATH') && PHP_BIN_PATH !== '' && is_file(PHP_BIN_PATH)) {
+			return PHP_BIN_PATH;
+		}
+
+		// 2) platform base
+		$candidate = rtrim(get_base_binary_path(), '/') . '/php';
+		if (is_file($candidate)) {
+			return $candidate;
+		}
+
+		// 3) PATH lookup
+		$found = @shell_exec('command -v php 2>/dev/null');
+		if (is_string($found) && trim($found) !== '') {
+			return trim($found);
+		}
+
+		// 4) fall back to the configured value (or the PHP_BINARY running this process)
+		if (defined('PHP_BIN_PATH') && PHP_BIN_PATH !== '') {
+			return PHP_BIN_PATH;
+		}
+		return defined('PHP_BINARY') && PHP_BINARY !== '' ? PHP_BINARY : 'php';
+	}//end get_php_bin
+
+
+
+	/**
 	* GET_MYSQL_SERVER
 	* Get the MariaDB/MySQL daemon version
 	* Usually, MariaDB is used, but sometimes a MySQL database could be

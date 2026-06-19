@@ -367,6 +367,12 @@ abstract class dd_ontology_db_manager {
 
 
 		$conn = DBi::_getConnection();
+		// No database yet (e.g. a fresh install before the DB is configured): degrade gracefully
+		// instead of passing a false connection into pg_prepare (which fatals with a TypeError).
+		// The installer must build its context with no DB; callers already handle a false read.
+		if ($conn === false) {
+			return false;
+		}
 		$table = self::$table;
 
 		// With prepared statement

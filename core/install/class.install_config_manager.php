@@ -287,12 +287,16 @@ final class install_config_manager {
 	*/
 	public static function get_db_status() : object {
 
-		// check config db vars
-			$db_name		= DEDALO_DATABASE_CONN;
-			$user_name		= DEDALO_USERNAME_CONN;
-			$pw				= DEDALO_PASSWORD_CONN;
-			$information	= DEDALO_INFORMATION;
-			$info_key		= DEDALO_INFO_KEY;
+		// check config db vars.
+		// On a FRESH v7 install (no ../private/.env, no state.php) the SECRET constant
+		// DEDALO_PASSWORD_CONN and the STATE constants DEDALO_INFORMATION / DEDALO_INFO_KEY are
+		// NOT defined (they are emitted only from .env/state.php). Read them defensively so this
+		// status check returns "not configured" instead of fataling before the installer renders.
+			$db_name		= defined('DEDALO_DATABASE_CONN') ? DEDALO_DATABASE_CONN : '';
+			$user_name		= defined('DEDALO_USERNAME_CONN') ? DEDALO_USERNAME_CONN : '';
+			$pw				= defined('DEDALO_PASSWORD_CONN') ? DEDALO_PASSWORD_CONN : '';
+			$information	= defined('DEDALO_INFORMATION') ? DEDALO_INFORMATION : '';
+			$info_key		= defined('DEDALO_INFO_KEY') ? DEDALO_INFO_KEY : '';
 
 			$config_check = true;
 
@@ -322,15 +326,26 @@ final class install_config_manager {
 				$info_key_check = false;
 			}
 
-		// check db connection
-			$db_connection = DBi::_getNewConnection(
-				DEDALO_HOSTNAME_CONN,
-				DEDALO_USERNAME_CONN,
-				DEDALO_PASSWORD_CONN,
-				DEDALO_DATABASE_CONN,
-				DEDALO_DB_PORT_CONN,
-				DEDALO_SOCKET_CONN
-			);
+		// check db connection.
+		// Wrapped so a failed/placeholder connection on a fresh install can never escape as a
+		// fatal (pg_connect emits a warning that Dédalo's error handler may promote to an
+		// exception); here a failure simply means db_connection_check = false.
+			$db_connection = false;
+			try {
+				set_error_handler(static function() : bool { return true; });
+				$db_connection = DBi::_getNewConnection(
+					defined('DEDALO_HOSTNAME_CONN') ? DEDALO_HOSTNAME_CONN : 'localhost',
+					$user_name,
+					$pw,
+					$db_name,
+					defined('DEDALO_DB_PORT_CONN') ? DEDALO_DB_PORT_CONN : null,
+					defined('DEDALO_SOCKET_CONN') ? DEDALO_SOCKET_CONN : null
+				);
+				restore_error_handler();
+			} catch (\Throwable $e) {
+				restore_error_handler();
+				$db_connection = false;
+			}
 
 			$db_connection_check = $db_connection !== false
 				? true
@@ -637,80 +652,49 @@ final class install_config_manager {
 	*/
 	public static function set_install_status(string $status) : object {
 
+		require_once __DIR__ . '/class.install_config_persistor.php';
+		require_once DEDALO_ROOT_PATH . '/install/class.migration_committer.php';
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 
-		// config_core write install status (config_core.php)
-			$config	= self::get_config();
-			$file	= $config->config_core_file_path;
-
-		// set file content
+		// already set: no-op
 			if (defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS===$status) {
-
 				$response->result	= true;
 				$response->msg		= 'OK. Dédalo status is already: '.$status;
 				return $response;
+			}
 
-			}else{
+		// v7 install state lives OUTSIDE the web root, in ../private/state.php (STATE scope),
+		// NOT in a web-served config file. Merge state.install_status over the existing state so
+		// info_key/information/maintenance written earlier survive. The boot emits the raw value,
+		// so the string 'installed' becomes DEDALO_INSTALL_STATUS === 'installed' (the gate value).
+			$private	= dirname(DEDALO_ROOT_PATH) . '/private';
+			$state_path	= $private . '/state.php';
+			$existing	= is_file($state_path) ? (array)(require $state_path) : [];
 
-				if(!file_exists($file)) {
+			$content = install_config_persistor::render_state($existing, ['state.install_status' => $status]);
 
-					if(!file_put_contents($file, '')) {
-						$response->msg = 'Error (1). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: ' . $file;
-						debug_log(__METHOD__." ".$response->msg, logger::ERROR);
-						return $response;
-					}
-				}
-
-				$content = file_get_contents($file);
-
-				// add vars
-				if (strpos($content, 'DEDALO_INSTALL_STATUS')===false) {
-
-					// line
-					$line = PHP_EOL . 'define(\'DEDALO_INSTALL_STATUS\', \''.$status.'\');';
-					// Write the contents to the file,
-					// using the FILE_APPEND flag to append the content to the end of the file
-					// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
-					if(!file_put_contents($file, $line, FILE_APPEND | LOCK_EX)) {
-
-						$response->msg = 'Error (2). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: '.$file;
-						debug_log(__METHOD__
-							. ' ' . $response->msg .PHP_EOL
-							. 'file: '.$file
-							, logger::ERROR
-						);
-						return $response;
-					}
-
-					$response->result	= true;
-					$response->msg		= 'All ready';
-
-					debug_log(__METHOD__." Added config_auto line with constant: DEDALO_INSTALL_STATUS  ", logger::DEBUG);
-
-
-				}elseif (strpos($content, 'DEDALO_INSTALL_STATUS')!==false && strpos($content, '\'DEDALO_INSTALL_STATUS\', \''.$status.'\'')===false) {
-
-					// replace line to updated value
-					$content = preg_replace('/define\(\'DEDALO_INSTALL_STATUS\',.+\);/', 'define(\'DEDALO_INSTALL_STATUS\', \''.$status.'\');', $content);
-					// Write the contents to the file,
-					// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
-					if(!file_put_contents($file, $content, LOCK_EX)) {
-						$response->msg = 'Error (3). It\'s not possible set the install status, review the PHP permissions to write in Dédalo directory: ' . $file;
-						debug_log(__METHOD__." ".$response->msg, logger::ERROR);
-						return $response;
-					}
-
-					$response->result	= true;
-					$response->msg		= 'All ready';
-
-					debug_log(__METHOD__." Changed config_auto content with constant: DEDALO_INSTALL_STATUS = ''.$status.'' ".to_string(), logger::DEBUG);
-				}
+			try {
+				migration_committer::commit(
+					['state' => $content],
+					['state' => $state_path],
+					$private . '/.install_backups',
+					[] // state.php is not a secret-only env file; default perms
+				);
+			} catch (Throwable $e) {
+				$response->msg = 'Error. Could not write the install status to ' . $state_path . ': ' . $e->getMessage()
+					. '. Review the PHP write permissions on the private directory.';
+				debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+				return $response;
 			}
 
 		// refresh session cached data. Delete all session data
 			unset($_SESSION['dedalo']);
+
+			$response->result	= true;
+			$response->msg		= 'OK. Install status set to: '.$status;
 
 		return $response;
 	}//end set_install_status

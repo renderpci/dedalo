@@ -1201,8 +1201,11 @@ function dedalo_assert_secrets_initialised() : array {
 
 	// production = NOT an explicit development server
 	$is_production = !(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER === true);
-	// install carve-out: the installer legitimately runs before secrets exist
-	$is_installing = defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS === false;
+	// install carve-out: the installer legitimately runs before secrets exist. "Installing" is
+	// anything that is NOT the completed install (mirrors the dd_core_api install-detection): a
+	// fresh download has DEDALO_INSTALL_STATUS UNDEFINED (no ../private/state.php yet), and an
+	// in-progress install may have it === false; only the literal 'installed' means done.
+	$is_installing = !(defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS === 'installed');
 
 	// collect the values the sentinels care about (only those that are defined)
 	$names = [

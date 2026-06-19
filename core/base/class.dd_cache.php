@@ -236,7 +236,11 @@ class dd_cache {
 				debug_log(__METHOD__." Error: PHP_BIN_PATH constant is not defined", logger::ERROR);
 				return false;
 			}
-			$command = escapeshellcmd(PHP_BIN_PATH) .' '.escapeshellarg($process_file).' '.escapeshellarg($server_vars).' '.$output;
+			// Resolve the php binary robustly (configured → platform base → PATH) so the cache
+			// worker spawns correctly on a non-standard layout (e.g. a Homebrew Mac) without the
+			// administrator hand-editing PHP_BIN_PATH.
+			$php_bin = class_exists('system') ? system::get_php_bin() : PHP_BIN_PATH;
+			$command = escapeshellcmd($php_bin) .' '.escapeshellarg($process_file).' '.escapeshellarg($server_vars).' '.$output;
 
 		// debug
 			debug_log(__METHOD__

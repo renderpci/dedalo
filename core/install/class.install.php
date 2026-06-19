@@ -6,6 +6,7 @@ include_once __DIR__ . '/class.install_database_manager.php';
 include_once __DIR__ . '/class.install_ontology_manager.php';
 include_once __DIR__ . '/class.install_hierarchy_manager.php';
 include_once __DIR__ . '/class.install_data_seeder.php';
+include_once __DIR__ . '/class.install_setup_manager.php';
 
 /**
 * INSTALL
@@ -211,6 +212,11 @@ class install extends common {
 		// errors found on init test (Don't stop execution here)
 			if ($init_test_response->result===false) {
 
+				// A not-installed system with failed diagnostics still needs configuration; flag it
+				// so the modernized wizard renders the diagnostics view (and the prerequisites to fix)
+				// rather than the legacy "could not get db status" path.
+				$properties->needs_config = true;
+
 				// failed. Stop here
 				$dd_object->set_properties($properties);
 
@@ -230,17 +236,17 @@ class install extends common {
 		// check db_status (config_db.php and DB connection)
 			$db_status				= install_config_manager::get_db_status();
 			$properties->db_status	= $db_status;
+			// On a FRESH install the config is still placeholder/unreachable. The modernized
+			// wizard COLLECTS, validates and persists the config itself (../private/.env), so we
+			// must NOT stop here — flag needs_config and continue, providing the prefill + file /
+			// hierarchy properties the wizard needs (none of which require a DB connection). The
+			// legacy "validate hand-edited config" path is taken only when global_status is true.
+			$properties->needs_config = ($db_status->global_status===false);
 			if($db_status->global_status===false) {
-
-				// failed. Stop here
-				$dd_object->set_properties($properties);
-
 				debug_log(__METHOD__
-					." Error: DDBB connection (get_db_status) is not reachable "
-					, logger::ERROR
+					." Install needs configuration (db_status not yet valid); serving the config wizard."
+					, logger::DEBUG
 				);
-
-				return $dd_object;
 			}
 
 		// DB (from config)
@@ -253,7 +259,12 @@ class install extends common {
 				$properties->db_config->socket		= DEDALO_SOCKET_CONN;
 
 		// get_db_data_version. Version of DDBB data ( 5.8.2 expected ). array|null
-			$properties->db_data_version =	install_config_manager::get_db_data_version();
+		// Only meaningful when the database is actually reachable. On a FRESH install there is no
+		// DB yet, and the data-version reader would pass a false connection to pg_* and fatal — so
+		// skip it unless the live connection check passed.
+			$properties->db_data_version = ($db_status->db_connection_check===true)
+				? install_config_manager::get_db_data_version()
+				: null;
 
 		// dedalo version
 			$properties->version = DEDALO_VERSION . ' - Build ' . DEDALO_BUILD;
@@ -892,6 +903,56 @@ class install extends common {
 	public static function set_root_pw(object $options) : object {
 		return install_config_manager::set_root_pw($options);
 	}//end set_root_pw
+
+
+	/**
+	* TEST_DB_CONNECTION
+	* Interactive PostgreSQL check with the values typed in the wizard (delegates to
+	* install_setup_manager). @see install_setup_manager::test_db_connection
+	*/
+	public static function test_db_connection(object $options) : object {
+		return install_setup_manager::test_db_connection($options);
+	}//end test_db_connection
+
+
+	/**
+	* TEST_DIFFUSION_CONNECTION
+	* Interactive MariaDB/MySQL check for the optional diffusion engine.
+	* @see install_setup_manager::test_diffusion_connection
+	*/
+	public static function test_diffusion_connection(object $options) : object {
+		return install_setup_manager::test_diffusion_connection($options);
+	}//end test_diffusion_connection
+
+
+	/**
+	* CHECK_DIRECTORIES
+	* Verify (and optionally create) the main writable directories.
+	* @see install_setup_manager::check_directories
+	*/
+	public static function check_directories(object $options) : object {
+		return install_setup_manager::check_directories($options);
+	}//end check_directories
+
+
+	/**
+	* PERSIST_CONFIG
+	* Write the collected configuration to ../private/.env (+ Bun .env) and state.php.
+	* @see install_setup_manager::persist_config
+	*/
+	public static function persist_config(object $options) : object {
+		return install_setup_manager::persist_config($options);
+	}//end persist_config
+
+
+	/**
+	* VERIFY_ACTIVE_CONFIG
+	* Activation gate: confirm the saved config is live in this process.
+	* @see install_setup_manager::verify_active_config
+	*/
+	public static function verify_active_config(object $options) : object {
+		return install_setup_manager::verify_active_config($options);
+	}//end verify_active_config
 
 	/**
 	* SET_INSTALL_STATUS

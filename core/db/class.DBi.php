@@ -178,7 +178,13 @@ abstract class DBi {
 			: pg_connect($str_connect); // default
 
 		if ($pg_conn_real === false) {
-			$errorMessage = pg_last_error() ?: "Unknown PostgreSQL connection error.";
+			// NB: pg_last_error() with no argument requires an already-open connection and THROWS
+			// ("No PostgreSQL connection opened yet") when the very first connect fails — exactly the
+			// fresh-install / DB-down case. Use the PHP warning emitted by pg_connect instead.
+			$last_php_error = error_get_last();
+			$errorMessage   = (is_array($last_php_error) && !empty($last_php_error['message']))
+				? $last_php_error['message']
+				: 'Unknown PostgreSQL connection error.';
 			debug_log(
 				__METHOD__ . ' Error. Could not connect to database (52) for ' . to_string($database) . '. Details: ' . $errorMessage,
 				logger::ERROR
@@ -736,6 +742,13 @@ abstract class DBi {
 	public static function check_table_exists( string $table ) : bool {
 
 		$conn = DBi::_getConnection();
+
+		// No database connection (e.g. a fresh install before the DB is configured): the table
+		// cannot exist, and pg_escape_literal()/pg_query() would fatal on a false connection.
+		// Degrade gracefully — return false, consistent with the documented "does not exist".
+		if ($conn === false) {
+			return false;
+		}
 
 		$safe_table = pg_escape_literal($conn, $table);
 

@@ -157,7 +157,7 @@ final class install_database_manager {
 			// SEC-041: shell-quote all interpolated values. Constants come from
 			// `config/config.php` (deployer-controlled, not HTTP-reachable);
 			// `$config->host_line`/`port_line` are pre-quoted in `get_config()`.
-			$command = DB_BIN_PATH.'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors --file '.escapeshellarg($uncompressed_file);
+			$command = system::get_pg_bin_path().'psql -d '.escapeshellarg(DEDALO_DATABASE_CONN).' -U '.escapeshellarg(DEDALO_USERNAME_CONN).' '.$config->host_line.' '.$config->port_line.' --echo-errors --file '.escapeshellarg($uncompressed_file);
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 
@@ -669,7 +669,7 @@ final class install_database_manager {
 		// terminate other sessions on the source database.  The output is piped
 		// directly into psql connected to the newly-created target database.
 		// SEC-041 defence-in-depth: shell-quote every interpolated value.
-			$pg_dump_cmd = DB_BIN_PATH
+			$pg_dump_cmd = system::get_pg_bin_path()
 				. 'pg_dump '
 				. $config->host_line . ' ' . $config->port_line
 				. ' -U ' . escapeshellarg(DEDALO_USERNAME_CONN)
@@ -677,7 +677,7 @@ final class install_database_manager {
 				. ' --role=' . escapeshellarg(DEDALO_USERNAME_CONN)
 				. ' ' . escapeshellarg(DEDALO_DATABASE_CONN);
 
-			$psql_cmd = DB_BIN_PATH
+			$psql_cmd = system::get_pg_bin_path()
 				. 'psql '
 				. $config->host_line . ' ' . $config->port_line
 				. ' -U ' . escapeshellarg(DEDALO_USERNAME_CONN)

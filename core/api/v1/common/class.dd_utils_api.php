@@ -687,6 +687,36 @@ final class dd_utils_api {
 
 				break;
 
+			case 'test_db_connection':
+
+				//exec
+					$response = (object)install::test_db_connection($options);
+				break;
+
+			case 'test_diffusion_connection':
+
+				//exec
+					$response = (object)install::test_diffusion_connection($options);
+				break;
+
+			case 'check_directories':
+
+				//exec
+					$response = (object)install::check_directories($options);
+				break;
+
+			case 'persist_config':
+
+				//exec
+					$response = (object)install::persist_config($options);
+				break;
+
+			case 'verify_active_config':
+
+				//exec
+					$response = (object)install::verify_active_config($options);
+				break;
+
 			case 'set_root_pw':
 
 				//exec

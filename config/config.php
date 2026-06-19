@@ -67,3 +67,30 @@ boot::run($profile, boot_web_profile::phases(
 	$_SERVER,
 	php_sapi_name()
 ));
+
+// FRESH-INSTALL SAFETY NET.
+// A brand-new download has NO ../private/.env and NO state.php, so the SECRET and STATE
+// constants are emitted by nothing and remain UNDEFINED. v6 always define()'d these, and a lot
+// of legacy code still reads them unconditionally — e.g. DBi's default parameters
+// (`$password = DEDALO_PASSWORD_CONN`) and dedalo_encrypt (DEDALO_INFORMATION / DEDALO_INFO_KEY) —
+// so an unconfigured install would FATAL before the API could even return the installer context.
+// Guarantee every legacy SECRET/STATE constant EXISTS with a type-appropriate empty default; real
+// values from .env / state.php were emitted earlier in the boot and always win (define() is no-op
+// once a constant exists). This is what makes the installer self-bootstrapping on a fresh server.
+foreach ($catalog as $cfg_key) {
+	if ($cfg_key->const === null) {
+		continue;
+	}
+	if ($cfg_key->scope !== config_scope::SECRET && $cfg_key->scope !== config_scope::STATE) {
+		continue;
+	}
+	if (defined($cfg_key->const)) {
+		continue; // real value already emitted from .env / state.php
+	}
+	define($cfg_key->const, match ($cfg_key->type) {
+		'int'         => 0,
+		'bool'        => false,
+		'list', 'map' => [],
+		default       => '',
+	});
+}

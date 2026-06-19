@@ -576,8 +576,10 @@
 	if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
 		// Nothing to do
 	}else{
-		$path	= DB_BIN_PATH . 'psql';
-		$res	= shell_exec('command -v '. $path);
+		// Resolve psql robustly (configured DB_BIN_PATH → platform base → PATH) so a fresh install
+		// on a non-standard layout (e.g. a Homebrew Mac) passes without hand-editing config.
+		$path	= system::get_pg_bin_path() . 'psql';
+		$res	= shell_exec('command -v '. escapeshellarg($path));
 		// trim() is safe on null as of PHP 8.x but $res is cast to string first to satisfy
 		// strict-types; the ternary keeps the null branch visible for future type-strictness.
 		$psql	= is_string($res)
@@ -992,9 +994,14 @@
 // snapshot is re-imported from the on-disk JSON file via install::restore_dd_ontology_recovery_from_file(),
 // which delegates to install_ontology_manager::restore_dd_ontology_recovery_from_file().
 // This is a silent self-healing step — no error is raised and boot continues normally.
-	$dd_ontology_recovery_exists	= DBi::check_table_exists('dd_ontology_recovery');
-	if (!$dd_ontology_recovery_exists) {
-		install::restore_dd_ontology_recovery_from_file();
+	// Only self-heal on an INSTALLED system. On a fresh install there is no database yet, so
+	// check_table_exists returns false and a restore attempt would just gunzip→psql against a
+	// missing DB (harmless but noisy). The recovery table is seeded by the normal install import.
+	if (defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
+		$dd_ontology_recovery_exists	= DBi::check_table_exists('dd_ontology_recovery');
+		if (!$dd_ontology_recovery_exists) {
+			install::restore_dd_ontology_recovery_from_file();
+		}
 	}
 
 
