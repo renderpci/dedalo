@@ -3,19 +3,66 @@
 /*eslint no-undef: "error"*/
 
 
+/**
+* BROWSER_WHISPER
+* Web Worker module that runs an in-browser automatic speech recognition (ASR)
+* pipeline using Hugging Face Transformers.js and a Whisper ONNX model.
+*
+* This file is always loaded as a Web Worker (never as a plain ES module in the
+* main thread) because:
+*   - AudioContext / audio decoding is done on the caller side and the resulting
+*     raw Float32Array is transferred via postMessage.
+*   - Long-running WASM/WebGPU inference blocks the main thread; isolating it in
+*     a Worker keeps the UI responsive.
+*
+* Message protocol (caller → worker):
+*   postMessage({ options: { model, audio_file, language, device } })
+*
+* Message protocol (worker → caller):
+*   { status: 'init',              data: { progress, status, device } }
+*   { status: 'on_chunk_start:',   data: '' }
+*   { status: 'callback_function', data: <partial transcript string> }
+*   { status: 'end',               data: <Array of transcript segment objects> }
+*
+* Transcript segment shape (element of the returned array):
+*   {
+*     text     : string,    // raw recognised text for the segment
+*     start    : string,    // timecode 'HH:MM:SS.mmm'
+*     end      : string,    // timecode 'HH:MM:SS.mmm'
+*     dd_format: string     // Dédalo TC-tagged string '[TC_HH:MM:SS.mmm_TC]text'
+*   }
+*
+* Exports (on self):
+*   self.onmessage       — entry point; dispatches to self.transcribe
+*   self.transcribe      — ASR pipeline runner
+*   self.seconds_to_tc   — seconds→timecode formatter
+*/
+
 // imports
 import { pipeline, WhisperTextStreamer } from 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2';
 
 
 /**
 * ONMESSAGE
-* Init the worker process the e.data contains the options:
+* Entry-point handler for messages sent by the caller (main thread).
+* Reads `e.data.options`, delegates to `self.transcribe`, then posts the
+* final result back as `{ status: 'end', data: <transcripts array> }`.
+*
+* `e.data` shape:
 * {
-* 	audio_file	: float32Array or string with the URI (don't use the URI in worker!)
-*	language	: string | tld2 format of the language of the audiovisual
-*	model		: string | model file to load into the pipeline (Whisper model) compatible with transformers.js
-*	device		: string | 'wasm' : 'webgpu'
+*   options: {
+*     audio_file : {Float32Array} — raw 16 kHz mono PCM (decoded on the caller side)
+*     language   : {string}       — BCP-47 / tld2 code, e.g. 'en', 'es', 'fr'
+*     model      : {string}       — HuggingFace model ID compatible with Transformers.js
+*     device     : {string}       — 'webgpu' (default) or 'wasm'
+*   }
 * }
+*
+* (!) The caller must decode the audio file to a Float32Array BEFORE posting it
+* to the worker because AudioContext is not available inside a Worker scope.
+*
+* @param {MessageEvent} e - Worker message event
+* @returns {Promise<void>}
 */
 self.onmessage = async (e) => {
 	// const t1 = performance.now()
@@ -36,18 +83,26 @@ self.onmessage = async (e) => {
 
 /**
 * TRANSCRIBE
-* Use the transformers.js library to create a pipeline with Whisper
-* Create a chunk files of 30 seg with stride of 5 to improve the cuts.
-* Final chunks are processed to create set the seconds provide by Whisper to tc
-* Return the final transcription with correct format to be saved into the component_text_area
-* @param object options
-* {
-* 	model		: string | model file to load into the pipeline (Whisper model) compatible with transformers.js
-* 	audio_file	: string | as worker Float32Array and module URI of the audio_file to be processed
-* 	language	: string | tld2 format of the language of the audiovisual
-* 	device		: string | 'webgpu' or 'wasm' by default 'webgpu'
-* }
-* @return array data
+* Builds a Transformers.js Whisper ASR pipeline, runs it over the supplied
+* Float32Array audio, and returns a fully annotated transcript array.
+*
+* Pipeline configuration:
+*   - dtype: large/medium models use fp16 encoder + q4 merged decoder (memory
+*     saving); smaller models use fp32 throughout for accuracy.
+*   - Sliding-window chunking: 30-second chunks with 5-second stride overlap
+*     so words cut at chunk boundaries are recovered from the overlapping region.
+*   - Greedy decoding (top_k=0, do_sample=false) for deterministic output.
+*   - return_timestamps:true forces Whisper to emit per-segment start/end times.
+*
+* During processing the function streams intermediate results back via
+* postMessage so the UI can show live progress (see `streamer` callbacks).
+*
+* @param {Object} options
+* @param {string} options.model       - HuggingFace model ID (e.g. 'onnx-community/whisper-large-v3-ONNX')
+* @param {Float32Array} options.audio_file - 16 kHz mono PCM audio samples
+* @param {string} [options.language='en'] - tld2 language code for the audio
+* @param {string} [options.device='webgpu'] - inference backend; 'webgpu' or 'wasm'
+* @returns {Promise<Array<{text:string, start:string, end:string, dd_format:string}>>}
 */
 self.transcribe = async function( options ) {
 
@@ -91,6 +146,8 @@ self.transcribe = async function( options ) {
 	// every chunk is a object with the text
 	const ar_chunks = [];
 	// create the Text processor for Whisper (streamer)
+	// WhisperTextStreamer emits decoded token strings incrementally so the UI can
+	// display partial results while inference is still running.
 	const streamer = new WhisperTextStreamer(transcriber.tokenizer, {
 		// when the chunk start empty its text
 		on_chunk_start: (chunkIndex) => {
@@ -156,6 +213,9 @@ self.transcribe = async function( options ) {
 	});
 
 	// Add global time offset to each segment
+	// segment.timestamp is [startSeconds, endSeconds] as returned by Whisper.
+	// Each segment is mapped to the Dédalo dd_format string that component_text_area
+	// understands: '[TC_HH:MM:SS.mmm_TC]text'.
 		const timed_chunks = chunks.map(segment => ({
 			text		: segment.text,
 			start		: seconds_to_tc (segment.timestamp[0]),
@@ -173,11 +233,19 @@ self.transcribe = async function( options ) {
 
 /**
 * SECONDS_TO_TC
-* Transform a float seconds number to time code
-* from: 5.6
-* to: 00:00:05.600
-* @param float total_seconds
-* @return striing tc
+* Converts a floating-point seconds value (as returned by Whisper's timestamp
+* output) into a Dédalo timecode string with millisecond precision.
+*
+* Example:
+*   seconds_to_tc(5.6)    → '00:00:05.600'
+*   seconds_to_tc(3661.5) → '01:01:01.500'
+*
+* (!) `total_seconds` may be null/undefined for the last chunk's end timestamp
+* when Whisper cannot determine the end of audio; callers should guard for that
+* case if they need a strict string.
+*
+* @param {number} total_seconds - Duration in seconds (may include fractional part)
+* @returns {string} Timecode string in 'HH:MM:SS.mmm' format
 */
 self.seconds_to_tc = function( total_seconds ) {
 
@@ -194,8 +262,6 @@ self.seconds_to_tc = function( total_seconds ) {
 
 	return tc;
 }//end seconds_to_tc
-
-
 
 
 
