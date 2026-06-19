@@ -15,7 +15,50 @@
 
 /**
 * RENDER_TOOL_SUBTITLES
-* Manages the component's logic and appearance in client side
+* DOM-rendering layer for the tool_subtitles subtitle editor.
+*
+* This module is the visual half of the tool_subtitles pair (the other half is
+* tool_subtitles.js, which carries the constructor, prototype chain, and API
+* calls).  Every exported or module-level function here is concerned exclusively
+* with building and wiring browser DOM — no network requests and no data
+* mutations happen in this file.
+*
+* Layout produced by edit():
+*
+*   ┌─ tool wrapper (ui.tool.build_wrapper_edit) ───────────────────────────┐
+*   │  header: [lang selector] [tool_tm button]  [activity-info panel]      │
+*   │  ┌──────────────────────┬────────────────────────────────────────────┐ │
+*   │  │  left_container      │  right_container                           │ │
+*   │  │  (subtitle list)     │  media player (component_av / other)       │ │
+*   │  │  ↳ render_subtitles  │  [component_av only:]                      │ │
+*   │  │    ↳ per-item        │    playback-speed slider                   │ │
+*   │  │      CKEditor        │    keyboard-shortcut controls              │ │
+*   │  │      instances       │    subtitle-build block                    │ │
+*   │  └──────────────────────┴────────────────────────────────────────────┘ │
+*   └───────────────────────────────────────────────────────────────────────┘
+*
+* Subtitle data model (self.ar_value):
+*   Each entry is an object with at least { type, value }. Two types exist:
+*     'tc'   — a timecode marker (e.g. "00:01:23.456"); rendered as a
+*              contenteditable <div class="tc">.
+*     'text' — a rich-text subtitle segment; rendered inside a CKEditor
+*              instance (service_ckeditor) so the user can apply bold /
+*              italic / underline inline markup.
+*
+* User preferences (keyboard shortcut keys and numeric durations) are persisted
+* in localStorage under the keys 'av_playpause_key', 'av_rewind_secs',
+* 'tag_insert_key', and 'subtitles_characters_per_line'.  These are read on
+* each edit() call and written back by change/keyup listeners.
+*
+* Exported symbols:
+*   render_tool_subtitles — constructor (empty shell; methods added on its
+*                           prototype so tool_subtitles.js can mixin via
+*                           `tool_subtitles.prototype.edit = render_tool_subtitles.prototype.edit`)
+*
+* Related files:
+*   tool_subtitles.js          — constructor + data/API methods
+*   index.js                   — barrel re-export
+*   css/tool_subtitles.less    — visual styles for this layout
 */
 export const render_tool_subtitles = function() {
 
@@ -26,8 +69,26 @@ export const render_tool_subtitles = function() {
 
 /**
 * EDIT
-* Render node
-* @return HTMLElement wrapper
+* Builds and returns the full edit-mode DOM wrapper for the subtitles tool.
+*
+* Delegates heavy lifting to the private helpers:
+*   • get_content_data_edit  — builds left (subtitle list) and right (player)
+*                              columns; wires CKEditor per subtitle segment.
+*   • render_subtitles_options — builds the language selector and optional
+*                               tool_time_machine button placed in the header.
+*   • render_activity_info   — builds the save-status notification strip in
+*                              the header activity slot.
+*
+* When options.render_level === 'content' the function returns the raw
+* content_data node without the outer wrapper shell.  This allows partial
+* refresh of just the subtitle list (e.g. after a lang change) without
+* re-building the entire tool frame.
+*
+* @param {Object} [options={}] - Render options.
+* @param {string} [options.render_level='full'] - 'full' returns the complete
+*   wrapper; 'content' returns only the inner content_data node.
+* @returns {Promise<HTMLElement>} The tool wrapper element (render_level 'full')
+*   or the inner content_data element (render_level 'content').
 */
 render_tool_subtitles.prototype.edit = async function(options={render_level:'full'}) {
 
@@ -63,7 +124,43 @@ render_tool_subtitles.prototype.edit = async function(options={render_level:'ful
 
 /**
 * GET_CONTENT_DATA_EDIT
-* @return HTMLElement content_data
+* Constructs the two-column content area that is the body of the edit view.
+*
+* Left column (left_container):
+*   Populated asynchronously by render_subtitles(), which iterates self.ar_value
+*   and emits either a contenteditable 'tc' node or a CKEditor-backed
+*   'text' container per subtitle segment.  The reference is stored on
+*   content_data.left_container so the lang-selector action in
+*   render_subtitles_options() can clear and re-populate it without touching
+*   the right column.
+*
+* Right column (right_container):
+*   Always contains the rendered media_component (component_av or another
+*   supported model) in player mode.
+*
+*   For component_av specifically, three additional UI blocks are appended:
+*     1. Playback-speed slider (range 0–2, step 0.1; calls
+*        media_component.set_playback_rate() on change).
+*     2. Keyboard-shortcut control panel — lets the user configure:
+*          • Play/pause key: any keyboard key, persisted in localStorage as
+*            'av_playpause_key'; pushed into
+*            component_text_area.features.context.av_player.av_play_pause_code.
+*          • Auto-rewind duration in seconds, persisted as 'av_rewind_secs';
+*            pushed into
+*            component_text_area.features.context.av_player.av_rewind_seconds.
+*          • Tag-insert key: persisted as 'tag_insert_key'; pushed into
+*            component_text_area.features.context.av_player.av_insert_tc_code.
+*     3. Subtitle-build block — contains the "Build subtitles" button and a
+*        "characters per line" input (persisted as
+*        'subtitles_characters_per_line'; default 90).
+*
+* The function does NOT await the render_subtitles Promise; the subtitle list
+* is appended asynchronously via .then().  This means left_container may be
+* temporarily empty while media player setup proceeds.
+*
+* @param {Object} self - The tool_subtitles instance.
+* @returns {Promise<HTMLElement>} The content_data wrapper node, enriched with
+*   two custom properties: .left_container and .right_container.
 */
 const get_content_data_edit = async function(self) {
 
@@ -327,8 +424,33 @@ const get_content_data_edit = async function(self) {
 
 /**
 * RENDER_SUBTITLES_OPTIONS
-* This is used to build a optional buttons inside the header
-* @return HTMLElement fragment
+* Builds the optional header controls placed in the tool's tool_buttons_container.
+*
+* Two widgets are produced:
+*
+*   1. Language selector (<div class="lang_selector">):
+*      Built with ui.build_select_lang().  When the user picks a new lang the
+*      action callback:
+*        a. calls self.get_subtitles_data(newLang) to reload self.ar_value for
+*           the chosen language,
+*        b. sets self.lang,
+*        c. calls render_subtitles(self) and replaces all children of
+*           content_data.left_container with the new subtitle list.
+*      The content_data reference is captured via closure; this is why the caller
+*      (edit()) must pass it here — the lang selector and the subtitle list share
+*      a DOM pointer so the swap is surgical and does not touch the right column.
+*
+*   2. Tool Time Machine button (conditional):
+*      Present only when the user has access to tool_time_machine (queried via
+*      self.get_user_tools()).  On click, delegates to open_tool() from
+*      tool_common, passing the caller (the transcription component) as context.
+*
+* @param {Object} self - The tool_subtitles instance.
+* @param {HTMLElement} content_data - The content_data node returned by
+*   get_content_data_edit(), used by the lang selector action to target
+*   content_data.left_container for subtitle list swaps.
+* @returns {Promise<DocumentFragment>} Fragment containing the lang selector
+*   (always) and the tool_tm button (when accessible).
 */
 const render_subtitles_options = async function(self, content_data) {
 
@@ -404,10 +526,18 @@ const render_subtitles_options = async function(self, content_data) {
 
 /**
 * RENDER_ACTIVITY_INFO
-* This is used to build a optional buttons inside the header
-* @param object self
-* 	instance of current tool
-* @return HTMLElement fragment
+* Builds a notification strip that reflects save-event outcomes in the header.
+*
+* Subscribes to the 'save' event published by event_manager.  Each time a save
+* completes, fn_saved() renders a info node (via render_node_info) and prepends
+* it to activity_info_body so the most-recent notification appears at the top.
+*
+* The event subscription token is pushed onto self.events_tokens so the common
+* destroy() lifecycle can unsubscribe it when the tool is torn down.
+*
+* @param {Object} self - The tool_subtitles instance; self.events_tokens must
+*   be an Array (initialised in the tool_subtitles constructor).
+* @returns {DocumentFragment} Fragment containing the activity_info_body element.
 */
 const render_activity_info = function(self) {
 
@@ -436,8 +566,37 @@ const render_activity_info = function(self) {
 
 /**
 * RENDER_SUBTITLES
-* This is used to build a optional buttons inside the header
-* @return HTMLElement fragment
+* Iterates self.ar_value and produces one DOM node per subtitle item.
+*
+* Each element of self.ar_value is dispatched by its .type property:
+*
+*   'tc'   — Emits a contenteditable <div class="tc"> showing the raw timecode
+*            string.  The user can edit the timecode directly in the browser.
+*
+*   'text' (default) — Emits a two-child container:
+*              .toolbar_container  (hidden by default, class 'hide')
+*              .value_container    (holds the raw HTML subtitle text)
+*            and then calls init_current_service_text_editor() synchronously
+*            (awaited) to mount a service_ckeditor instance on value_container.
+*            Note: An IntersectionObserver-based lazy-init strategy is present
+*            in commented-out code; it was replaced with immediate await init.
+*
+* The function returns a DocumentFragment containing all emitted nodes.
+* After resolution, render_subtitles_options() and the lang-selector action
+* both append/replace this fragment inside left_container.
+*
+* (!) self.ar_value must already be populated (by tool_subtitles.get_subtitles_data)
+* before this function is called; an empty array produces an empty fragment
+* without error.
+*
+* @param {Object} self - The tool_subtitles instance.  Required properties:
+*   @param {Array}  self.ar_value              - Subtitle data items.
+*   @param {string} self.lang                  - Current editing language code.
+*   @param {Array}  self.service_text_editor_instance - Pre-sized array; entries
+*     are set to the created service_ckeditor instance by index.
+*   @param {Array}  self.text_editor            - Final resolved CKEditor keyed
+*     by item index; set inside init_current_service_text_editor.
+* @returns {Promise<DocumentFragment>} Fragment with all subtitle nodes appended.
 */
 const render_subtitles = async function(self) {
 
@@ -531,6 +690,39 @@ const render_subtitles = async function(self) {
 
 
 
+/**
+* INIT_CURRENT_SERVICE_TEXT_EDITOR
+* Instantiates and initialises a service_ckeditor for one subtitle text segment.
+*
+* This function is the bridge between the DOM node built by render_subtitles()
+* and the CKEditor-based rich-text service.  It is called once per 'text'-typed
+* item in self.ar_value, with i as the item's array index.
+*
+* Steps:
+*   1. Creates a new service_ckeditor instance (new self.service_text_editor()).
+*   2. Registers it in self.service_text_editor_instance[i] so it can be
+*      referenced before init completes.
+*   3. Builds the toolbar array and editor_config, wiring custom buttons
+*      (get_custom_buttons) and custom events (get_custom_events) — both keyed
+*      by i so save/event handlers can reach the right segment.
+*   4. Calls service_ckeditor.init() and, after resolution, stores the
+*      fully-initialised instance in self.text_editor[i].
+*
+* (!) The editor is mounted directly into value_container and toolbar_container,
+* which must already be in the DocumentFragment (or the live DOM) before this is
+* called; CKEditor requires a real DOM node to attach to.
+*
+* @param {Object}      self             - The tool_subtitles instance.
+* @param {number}      i                - Zero-based index of the subtitle item
+*   in self.ar_value; used as the CKEditor key and as the index into
+*   self.text_editor[] and self.service_text_editor_instance[].
+* @param {Object}      options          - Container references for the editor.
+* @param {HTMLElement} options.value_container   - Node where CKEditor renders
+*   editable content.
+* @param {HTMLElement} options.toolbar_container - Node where the custom Dédalo
+*   toolbar is rendered.
+* @returns {Promise<Object>} The initialised service_ckeditor instance.
+*/
 // init_current_service_text_editor
 const init_current_service_text_editor = async function(self, i, options) {
 
@@ -576,10 +768,32 @@ const init_current_service_text_editor = async function(self, i, options) {
 
 /**
 * GET_CUSTOM_BUTTONS
-* @param instance self
-* @param int i
-*	self data element from array of values
-* @return array custom_buttons
+* Builds the custom toolbar button descriptors for a single subtitle CKEditor.
+*
+* Each descriptor is a plain object consumed by service_ckeditor.build_toolbar():
+*   {
+*     name           {string}  — button identifier; '|' is a separator sentinel.
+*     manager_editor {boolean} — when true, service_ckeditor wires the button
+*                                to the CKEditor command of the same name
+*                                (bold/italic/underline/undo/redo); when false,
+*                                the onclick handler in options drives behaviour.
+*     options        {Object}  — tooltip, image path, class_name, onclick, text.
+*   }
+*
+* Buttons produced (in order): separator, bold, italic, underline, undo, redo,
+* button_save.  The save button's onclick calls text_editor.save() which in turn
+* triggers the component's save_value() on the enclosing tool instance.
+*
+* The get_label.save string may contain HTML tags (e.g. tooltip markup); they are
+* stripped with a regex before being used as the button label text.
+*
+* @param {Object}   self        - The tool_subtitles instance (not directly used
+*   here but passed for forward-compatibility with per-button permission checks).
+* @param {Object}   text_editor - The service_ckeditor instance for this segment;
+*   captured in the save button's onclick closure.
+* @param {number}   i           - Zero-based index of the subtitle item; available
+*   for keying if per-segment button overrides are added in the future.
+* @returns {Array} Array of button descriptor objects for service_ckeditor.
 */
 const get_custom_buttons = (self, text_editor, i) => {
 
@@ -670,16 +884,24 @@ const get_custom_buttons = (self, text_editor, i) => {
 
 
 
-
-
 /**
 * GET_CUSTOM_EVENTS
-* @param instance self
-* @param int i
-*	self data element from array of values
-* @param function text_editor
-*	select and return current text_editor
-* @return object custom_events
+* Builds the custom event handler map for a single subtitle CKEditor.
+*
+* service_ckeditor accepts a custom_events plain object whose keys are CKEditor
+* event names and whose values are handler functions.  Currently this returns an
+* empty object (no custom events are wired), but the function exists as an
+* extension point: add entries here when per-segment events are needed (e.g.
+* 'change:data' to sync the subtitle model on every keystroke, or a focus event
+* to highlight the matching timecode node in the left column).
+*
+* @param {Object}   self        - The tool_subtitles instance; available for
+*   closures that need to mutate self.ar_value or trigger re-renders.
+* @param {number}   i           - Zero-based index of the subtitle item; use to
+*   target the correct self.ar_value[i] entry inside event handlers.
+* @param {Object}   text_editor - The service_ckeditor instance for this segment.
+* @returns {Object} Plain object of CKEditor event name → handler mappings.
+*   Currently always returns {}.
 */
 const get_custom_events = (self, i, text_editor) => {
 
@@ -689,34 +911,14 @@ const get_custom_events = (self, i, text_editor) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// (!) The large block of commented-out code below (GET_CONTENTEDITABLE_BUTTONS,
+// DO_COMMAND, wrap_text, unwrap_text, find_tag, findParentTag, expandToTag) is
+// a prototype for a fully custom contenteditable inline formatting system that
+// predates the current service_ckeditor approach.  It was replaced because
+// direct execCommand / Selection manipulation is unreliable across browsers and
+// the tag-boundary edge-cases (do_command, find_tag) were never fully resolved.
+// Retained for reference — do not restore without a test plan for nested-tag
+// cases (see the start_parent_tag / end_parent_tag split logic in do_command).
 
 
 /**
