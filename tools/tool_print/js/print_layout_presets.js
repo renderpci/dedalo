@@ -8,21 +8,13 @@
 * PRINT_LAYOUT_PRESETS
 *
 * Persistence layer for tool_print layout templates. A template is an ordinary
-* section record (LAYOUTS_SECTION_TIPO) holding:
-*   - the layout blob          (component_json,        LAYOUT_COMPONENT_JSON_TIPO)
-*   - the template name         (component_input_text,  LAYOUT_NAME_TIPO)
-*   - the target section_tipo   (component_input_text,  LAYOUT_SECTION_VALUE_TIPO)  <- SQO filter key
-*   - the owning user           (component_select,      LAYOUT_USER_TIPO)
-*   - the public/shared flag     (component_radio_button, LAYOUT_PUBLIC_TIPO)
-*   - the default flag           (component_radio_button, LAYOUT_DEFAULT_TIPO)
+* section record (LAYOUTS_SECTION_TIPO) holding a single component_json blob
+* (LAYOUT_COMPONENT_JSON_TIPO) that carries the whole layout payload plus its
+* metadata (name, target_section_tipo, owner_user_id, visibility).
 *
 * All writes go through the generic core data API (create / save / delete), each
 * already permission- and scope-checked server-side — no bespoke tool endpoint.
 * Directly adapted from tools/tool_export/js/export_user_presets.js.
-*
-* (!) ONTOLOGY CONSTANTS — provided by the project lead. The section is dd25 and
-* it reuses the same shared component tipos as the export/search presets. If dd25
-* turns out to define its own equivalent components, change them here only.
 */
 
 	import {data_manager} from '../../../core/common/js/data_manager.js'
@@ -39,24 +31,14 @@
 	export const LAYOUTS_SECTION_TIPO			= 'dd25'
 	// LAYOUT_COMPONENT_JSON_TIPO. Where the layout blob is stored (component_json).
 	const LAYOUT_COMPONENT_JSON_TIPO			= 'dd625'
-	// LAYOUT_NAME_TIPO. Where the template name is stored (component_input_text).
-	const LAYOUT_NAME_TIPO						= 'dd624'
-	// LAYOUT_SECTION_VALUE_TIPO. Where the target section_tipo is stored (component_input_text). SQO filter key.
-	const LAYOUT_SECTION_VALUE_TIPO				= 'dd642'
-	// LAYOUT_USER_TIPO. Where the owning user_id locator is stored (component_select).
-	const LAYOUT_USER_TIPO						= 'dd654'
-	// LAYOUT_PUBLIC_TIPO. Where the public/shared flag is stored (component_radio_button).
-	const LAYOUT_PUBLIC_TIPO					= 'dd640'
-	// LAYOUT_DEFAULT_TIPO. Where the default flag is stored (component_radio_button).
-	const LAYOUT_DEFAULT_TIPO					= 'dd641'
 
 
 
 /**
 * GET_TARGET_SECTION_TIPO
 * Normalizes the tool's target_section_tipo (which can be an array) to the
-* scalar value used as the template scope (stored in LAYOUT_SECTION_VALUE_TIPO
-* and filtered on).
+* scalar value used as the template scope (stored inside the layout blob and
+* filtered on by query_layouts).
 * @param object self - The tool_print instance
 * @return string
 */
@@ -69,120 +51,14 @@ const get_target_section_tipo = function(self) {
 
 
 /**
-* LIST_USER_LAYOUTS
-* Fetches the saved layout templates available to the current user for the
-* current target section (own templates + public ones), returning a built
-* section instance rendered with the generic list ddo (template name).
-* @param object self - The tool_print instance
-* @return promise object - The section instance containing the templates list
-*/
-export const list_user_layouts = async function(self) {
-
-	// target_section_tipo. template scope
-		const target_section_tipo = get_target_section_tipo(self)
-
-	// sqo. target section AND (public OR owned by current user)
-		const locator_user = {
-			section_id		: '' + page_globals.user_id,
-			section_tipo	: 'dd128'
-		}
-		const locator_public_true = {
-			section_id			: '1',
-			section_tipo		: 'dd64',
-			from_component_tipo	: LAYOUT_PUBLIC_TIPO
-		}
-		const filter = {
-			"$and": [
-				{
-					q		: target_section_tipo,
-					path	: [{
-						component_tipo	: LAYOUT_SECTION_VALUE_TIPO,
-						section_tipo	: LAYOUTS_SECTION_TIPO,
-						model			: 'component_input_text',
-						name			: 'Section tipo'
-					}],
-					type: 'jsonb'
-				},
-				{
-					"$or": [
-						{
-							q		: locator_public_true,
-							path	: [{
-								component_tipo	: LAYOUT_PUBLIC_TIPO,
-								section_tipo	: LAYOUTS_SECTION_TIPO,
-								model			: 'component_radio_button',
-								name			: 'Public'
-							}],
-							type: 'jsonb'
-						},
-						{
-							q		: locator_user,
-							path	: [{
-								component_tipo	: LAYOUT_USER_TIPO,
-								section_tipo	: LAYOUTS_SECTION_TIPO,
-								model			: 'component_select',
-								name			: 'User'
-							}],
-							type: 'jsonb'
-						}
-					]
-				}
-			]
-		}
-		const sqo = {
-			select			: [],
-			section_tipo	: [{
-				tipo : LAYOUTS_SECTION_TIPO
-			}],
-			filter			: filter,
-			limit			: 50,
-			offset			: 0
-		}
-
-	// request_config. show the template name in the list
-		const request_config = [{
-			sqo			: sqo,
-			api_engine	: 'dedalo',
-			type		: 'main',
-			show 		: {
-				ddo_map : [{
-					tipo			: LAYOUT_NAME_TIPO,
-					section_tipo	: LAYOUTS_SECTION_TIPO,
-					parent			: LAYOUTS_SECTION_TIPO
-				}]
-			}
-		}]
-
-	// section (list mode)
-		const instance_options = {
-			model			: 'section',
-			tipo			: LAYOUTS_SECTION_TIPO,
-			section_tipo	: LAYOUTS_SECTION_TIPO,
-			section_id		: null,
-			mode			: 'list',
-			lang			: page_globals.dedalo_data_lang,
-			request_config	: request_config,
-			add_show		: true,
-			id_variant		: target_section_tipo + '_print_layouts',
-			inspector		: false,
-			filter			: false,
-			session_save	: true,
-			caller			: self
-		}
-		const section = await get_instance(instance_options)
-		await section.build(true)
-
-
-	return section
-}//end list_user_layouts
-
-
-
-/**
 * QUERY_LAYOUTS
 * Lists the templates available for the current target section, for the picker.
 * dd25 only persists the dd625 blob, so we read every dd25 record's blob and
 * filter client-side: same target_section_tipo AND (public OR owned by the user).
+*
+* The section list-mode datum already carries each dd625 component's full
+* `entries` array, so the blobs are extracted directly from the single datum
+* fetch — no per-record load_layout round-trip (N+1 → 1).
 * @param object self - The tool_print instance
 * @return promise array of { section_id, name }
 */
@@ -191,8 +67,7 @@ export const query_layouts = async function(self) {
 	const target	= get_target_section_tipo(self)
 	const user_id	= '' + page_globals.user_id
 
-	// resolve every dd25 record id (read the blob component so datum carries the
-	// section_ids of the existing records)
+	// fetch every dd25 record with its dd625 blob in a single section read
 		const section = await get_instance({
 			model			: 'section',
 			tipo			: LAYOUTS_SECTION_TIPO,
@@ -216,19 +91,33 @@ export const query_layouts = async function(self) {
 		})
 		await section.build(true)
 
-		const data	= (section.datum && Array.isArray(section.datum.data)) ? section.datum.data : []
-		const ids	= [...new Set(
-			data.filter(el => el && el.section_tipo===LAYOUTS_SECTION_TIPO && el.section_id!==undefined)
-				.map(el => '' + el.section_id)
-		)]
+		const data = (section.datum && Array.isArray(section.datum.data)) ? section.datum.data : []
 
 		try { section.destroy() } catch (e) { /* noop */ }
 
-	// load each blob and filter (target + owner/public)
+	// extract blobs from the datum (one item per dd625 record, each carrying
+	// entries:[{id, value:<blob>}]). Group by section_id so we can iterate once.
+		const blob_by_id = {}
+		for (let i = 0; i < data.length; i++) {
+			const el = data[i]
+			if (!el || el.tipo!==LAYOUT_COMPONENT_JSON_TIPO || el.section_tipo!==LAYOUTS_SECTION_TIPO) continue
+			const sid = '' + el.section_id
+			if (blob_by_id[sid]) continue // first item wins
+			const entries = el.entries
+			let blob = (entries && entries[0]) ? entries[0] : null
+			// unwrap {id, value:<payload>} → payload (same logic as load_layout)
+			if (blob && typeof blob==='object' && !Array.isArray(blob) && !('pages' in blob) && blob.value && typeof blob.value==='object') {
+				blob = blob.value
+			}
+			if (blob && typeof blob==='object') blob_by_id[sid] = blob
+		}
+
+	// filter (target + owner/public) and build the picker list
 		const list = []
+		const ids = Object.keys(blob_by_id)
 		for (let i = 0; i < ids.length; i++) {
 			const id	= ids[i]
-			const blob	= await load_layout({ section_id: id })
+			const blob	= blob_by_id[id]
 			if (!blob || typeof blob!=='object') continue
 			if (blob.target_section_tipo && blob.target_section_tipo!==target) continue
 			const is_public	= blob.visibility==='public'
@@ -410,45 +299,6 @@ export const save_layout = async function(options) {
 
 	return api_response
 }//end save_layout
-
-
-
-/**
-* UPDATE_LAYOUT_NAME
-* Renames an existing template (component_input_text, set_data).
-* @param object options
-* @param string options.section_id
-* @param string options.name
-* @return promise object|bool
-*/
-export const update_layout_name = async function(options) {
-
-	const section_id	= options.section_id
-	const name			= options.name
-
-	if (!section_id) {
-		console.error('update_layout_name: invalid section_id:', section_id);
-		return false
-	}
-
-	const rqo = {
-		action	: 'save',
-		source	: {
-			tipo			: LAYOUT_NAME_TIPO,
-			section_tipo	: LAYOUTS_SECTION_TIPO,
-			section_id		: section_id,
-			lang			: page_globals.dedalo_data_lang,
-			type			: 'component'
-		},
-		data	: {
-			changed_data : [
-				{ action:'set_data', id:null, value:[ { value : name } ] }
-			]
-		}
-	}
-
-	return await data_manager.request({ body: rqo, use_worker: true })
-}//end update_layout_name
 
 
 
