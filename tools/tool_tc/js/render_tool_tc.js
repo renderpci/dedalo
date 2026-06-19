@@ -146,7 +146,7 @@ render_tool_tc.prototype.edit = async function (options) {
 *     2. Validates that the offset field is non-empty and non-zero; if invalid
 *        shows a native alert and aborts.  (!) alert() is intentional UX here —
 *        the tool is a simple modal workflow; no toast infrastructure is available.
-*     3. Calls self.change_all_time_codes(offset_seconds, true) and then
+*     3. Calls self.change_all_time_codes(offset_seconds) and then
 *        self.main_element.refresh() to show the updated timecodes inline.
 *     4. Removes the 'loading' class on completion.
 *
@@ -244,7 +244,7 @@ const content_data_edit = async function(self) {
 				}
 
 			// change_all_time_codes
-				self.change_all_time_codes(offset_seconds, true)
+				self.change_all_time_codes(offset_seconds)
 				.then(function() {
 					// refresh target
 					self.main_element.refresh()
