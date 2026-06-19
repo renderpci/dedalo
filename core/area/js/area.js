@@ -15,6 +15,25 @@
 
 /**
 * AREA
+* Top-level container instance that represents a full navigable area within the
+* Dédalo application shell (e.g. a thesaurus area, an ontology management area,
+* a records area). An area wraps one logical section type and is mounted directly
+* inside a page slot.
+*
+* Lifecycle (inherited from common + area_common):
+*   init (area_common) → build (own) → render (own + common) → refresh (common) → destroy (common)
+*
+* Prototype methods mixed in from shared base classes:
+*   - init           ← area_common.prototype.init
+*   - refresh        ← common.prototype.refresh
+*   - destroy        ← common.prototype.destroy
+*   - build_rqo_show ← common.prototype.build_rqo_show
+*   - edit           ← render_area.prototype.edit
+*   - list           ← render_area.prototype.list
+*
+* Own methods defined here:
+*   - build   : fetches context + data from the API and wires instance properties
+*   - render  : delegates to common.render, then fires 'render_instance' event
 */
 export const area = function() {
 
@@ -55,9 +74,52 @@ export const area = function() {
 
 /**
 * BUILD
-* Load and parse necessary data to create a full ready instance
-* @param bool autoload = false
-* @return bool
+* Load and parse necessary data to create a full ready instance.
+*
+* When `autoload` is true (the default), this method:
+*   1. Builds the request query object (rqo) from the instance's request_config or
+*      from a previously injected context.  The rqo drives the single API round-trip
+*      that returns both context and data for this area's section tipo.
+*   2. Calls `build_autoload(self)` — the shared helper in common.js — which dispatches
+*      the rqo via `data_manager.request()`, handles auth errors (not_logged → waits for
+*      login_successful event), and returns the raw API response or `false` on failure.
+*   3. Tears down any previously rendered child instances (`destroy(false, true, false)`)
+*      before wiring the fresh server response into the instance.
+*   4. Resolves `self.context` (area-level context object from `datum.context`).
+*      Preserves any existing context already on the instance — this is intentional:
+*      a caller (e.g. section_record.js) may have injected a context that carries a
+*      custom ddo_map override (e.g. oh27 defines a specific view for rsc368).
+*      Overwriting it here would silently revert those overrides to server defaults.
+*   5. Resolves `self.data` — the section's own data record from `datum.data`.
+*      Identified by `el.tipo === el.section_tipo` (the record where tipo matches
+*      the section tipo, i.e. the area's root record).
+*   6. Resolves `self.widgets` — context items that are direct children of this area's
+*      tipo and flagged with `typo === 'widget'`.
+*      (!) Note: the field is `typo`, not `type` — this appears to be a legacy spelling
+*      in context objects; do not "correct" it.
+*   7. Rebuilds the final rqo from the resolved context.request_config.
+*   8. Updates `document.title` via `self.caller.set_document_title()`.
+*
+* The rqo construction logic:
+*   - Priority: use an existing `self.rqo` if already set (avoids duplicate builds
+*     across refresh cycles).
+*   - `add_show` is forced true when `self.mode === 'tm'` (time-machine mode) so that
+*     the request includes the show definition needed for TM rendering.
+*   - When `self.context` already exists (re-build after first render), the
+*     request_config_object is sourced from `self.context.request_config` rather than
+*     `self.request_config` to stay consistent with any ddo_map overrides.
+*
+* `api_response.result` shape:
+*   {
+*     context : Array<Object>,  // flat list of context descriptors for this section
+*     data    : Array<Object>   // flat list of data records for this section
+*   }
+*
+* @param {boolean} [autoload=true] - When true, fetches fresh data from the server.
+*   Pass false only when the caller has pre-populated `self.datum` and a server call
+*   is not needed (rare; used by pre-loaded portal paths).
+* @returns {Promise<boolean>} true on success, false if the server returned an empty
+*   or invalid response (error is logged to console).
 */
 area.prototype.build = async function(autoload=true) {
 	const t0 = performance.now()
@@ -183,10 +245,22 @@ area.prototype.build = async function(autoload=true) {
 /**
 * RENDER
 * Handles DOM render nodes.
-* @param object options
-*	render_level : level of deep that is rendered (full | content)
-* @return result_node
-*	first DOM node stored in instance 'node' array (wrapper)
+*
+* Delegates entirely to `common.prototype.render`, which:
+*   - Guards against duplicate concurrent renders (serialises via a waiter Promise)
+*   - Dispatches to `self.edit()` or `self.list()` depending on `self.mode`
+*     (both are mixed in from render_area.prototype above)
+*   - Sets `self.status = 'rendering'` → `'rendered'`
+*   - Stores the produced HTMLElement in `self.node`
+*
+* After the common render returns, publishes the 'render_instance' event with the
+* area instance as its payload.  The page layer subscribes to this event to restore
+* section-level UI state (e.g. active row selection after pagination navigation).
+*
+* @param {Object} [options={}] - Render options passed through to common.render
+* @param {string} [options.render_level] - Depth of render: 'full' (default, entire
+*   wrapper including chrome) or 'content' (inner content nodes only, used by refresh).
+* @returns {Promise<HTMLElement>} The first DOM node stored in `self.node` (the wrapper).
 */
 area.prototype.render = async function(options={}) {
 

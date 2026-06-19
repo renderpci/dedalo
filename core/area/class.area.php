@@ -1,23 +1,63 @@
 <?php declare(strict_types=1);
 /**
-* AREA
+* CLASS AREA
+* Concrete area node: the standard navigable area that appears in the main menu
+* and acts as a container for sections and nested child areas.
 *
+* Responsibilities:
+* - Compose a flat, ordered list of all top-level area tipos from the ontology
+*   (area_root, area_resource, area_admin, etc.) and their descendant children,
+*   filtered by the per-installation config_areas.php allow/deny lists.
+* - Walk the ontology tree recursively to collect child area/section tipos while
+*   excluding structural nodes that must never surface in the menu (login, tools,
+*   section_list, filter).
+* - Expose a per-installation access-control filter (`get_config_areas`) that maps
+*   the $areas_deny and $areas_allow arrays from config/config_areas.php into a
+*   plain stdClass for consumption by `get_areas` and the security layer.
+*
+* Extends area_common, which provides the dashboard, metrics, and JSON fallback
+* behaviour. All concrete area subclasses (area_resource, area_admin,
+* area_thesaurus, etc.) ultimately inherit both this class and area_common.
+*
+* @package Dédalo
+* @subpackage Core
 */
 class area extends area_common {
 
 
 
-	// CHILDREN AREAS CRITERION
+	/**
+	* Models whose tipos are collected when recursing the ontology tree.
+	* Only nodes whose model appears in this list can become children in the
+	* area navigation hierarchy built by get_ar_children_areas_recursive().
+	* @var array<string> $ar_children_include_model_name
+	*/
 	public static array $ar_children_include_model_name = ['area','section','section_tool'];
+
+	/**
+	* Models explicitly excluded from the recursive child-area walk even when
+	* they would otherwise match $ar_children_include_model_name.
+	* Structural nodes (login, tools, section_list, filter) must never appear as
+	* navigable children in the menu.
+	* Note: the property name contains a typo ('modelo' vs 'model') inherited from
+	* the original codebase — not fixed here to avoid breaking callers.
+	* @var array<string> $ar_children_exclude_modelo_name
+	*/
 	public static array $ar_children_exclude_modelo_name = ['login','tools','section_list','filter'];
 
 
 
 	/**
 	* GET_IDENTIFIER
-	* Compound a chained plain flat identifier string for use as media component name, etc..
-	* @return string $identifier
-	*  like 'dd42_dd207_1'
+	* Returns the flat string identifier for this area, used as a unique key for
+	* naming purposes (e.g. media component name, cache keys).
+	*
+	* For areas, the identifier is simply the tipo (e.g. 'dd14'). The doc-block
+	* example 'dd42_dd207_1' is inherited from component_common and does not apply
+	* here — area identifiers are never compound.
+	*
+	* @return string $identifier - the area tipo, e.g. 'dd14'
+	* @throws Exception when the tipo is empty (programming error / uninitialised instance)
 	*/
 	public function get_identifier() : string {
 
@@ -33,12 +73,32 @@ class area extends area_common {
 
 
 	/**
-	* GET AREAS RECURSIVE IN JSON FORMAT OF ALL MAJOR AREAS
-	* Iterate all major existing area types (area_root,area_resource,area_admin, ...)
-	* and get all tipos of every one mixed in one full ontology JSON array
-	* Used in menu (excluding config_areas->areas_deny) and security access (full view)
-	* @see menu, component_security_access
-	* @return array $areas
+	* GET_AREAS
+	* Builds and returns the full flat list of area/section ontology nodes that are
+	* visible in the main menu and used by the security-access layer.
+	*
+	* Walk order:
+	*  1. Resolve the tipo of each known top-level area model (area_root, area_activity,
+	*     area_resource, area_tool, area_thesaurus, area_graph, area_admin,
+	*     area_maintenance, area_development, area_ontology) from the ontology.
+	*  2. Filter out any tipo present in config_areas->areas_deny.
+	*  3. For each surviving root-area tipo, emit one object and then recursively
+	*     collect all child area/section tipos via get_ar_children_areas_recursive(),
+	*     again filtering against areas_deny.
+	*
+	* Each emitted element is a plain object:
+	*   { tipo, model, parent, properties, label }
+	* where label is resolved for DEDALO_APPLICATION_LANG.
+	*
+	* area_graph and area_ontology are guarded: if the ontology has not been updated
+	* to define those models a WARNING is logged but execution continues — the missing
+	* area is simply omitted from the result.
+	* area_maintenance has an additional hard-coded fallback to tipo 'dd88' and a
+	* define() guard so older installations do not break.
+	*
+	* @see menu
+	* @see component_security_access
+	* @return array<object> $areas - flat ordered list of visible area/section nodes
 	*/
 	public static function get_areas() : array {
 
@@ -153,14 +213,24 @@ class area extends area_common {
 
 	/**
 	* GET_AR_CHILDREN_AREAS_RECURSIVE
-	* Get all children areas (and sections) of current area (example: area_root)
-	* Look structure thesaurus for find children with valid model name
-	* @see get_ar_ts_children_areas
+	* Recursively collects all descendant area/section tipos under the given $tipo
+	* by walking the ontology tree, filtering nodes against the include/exclude
+	* model lists defined on this class.
 	*
-	* @param $tipo
-	*	tipo (First tipo is null in recursion)
-	* @return array $ar_ts_children_areas
-	*	array recursive of thesaurus structure children filtered by accepted model name
+	* Only nodes whose model is in $ar_children_include_model_name AND NOT in
+	* $ar_children_exclude_modelo_name are accepted. This double-filter ensures that
+	* a model like 'section_tool' which appears in include but not exclude passes,
+	* while 'filter' and 'section_list' (which are not in include) never appear.
+	*
+	* The result preserves depth-first, pre-order ontology ordering: the current
+	* child is appended before its own descendants, matching the tree traversal
+	* order expected by the menu renderer.
+	*
+	* Note: The for-loop form (instead of foreach) is an optimisation carried over
+	* from earlier code; both are functionally equivalent here.
+	*
+	* @param string $tipo - ontology tipo to recurse from (e.g. 'dd14')
+	* @return array<string> $ar_children_areas_recursive - flat ordered list of descendant tipos
 	*/
 	protected static function get_ar_children_areas_recursive( string $tipo ) : array {
 
@@ -183,6 +253,7 @@ class area extends area_common {
 				$model			= ontology_node::get_model_by_tipo($children_tipo,true);
 
 				// Test if model is accepted or not (more restrictive)
+				// Both conditions must be met: model in include list AND not in exclude list.
 				if( 	in_array($model, area::$ar_children_include_model_name)
 					&& !in_array($model, area::$ar_children_exclude_modelo_name)
 				) {
@@ -191,6 +262,8 @@ class area extends area_common {
 					$ar_children_areas_recursive[] = $children_tipo;
 
 					// calculate recursive
+					// Spread-merge is used to append the entire sub-tree at once,
+					// preserving depth-first pre-order without intermediate array_merge calls.
 					$ar_temp = self::get_ar_children_areas_recursive($children_tipo);
 					$ar_children_areas_recursive = [...$ar_children_areas_recursive, ...$ar_temp];
 				}
@@ -205,9 +278,31 @@ class area extends area_common {
 
 	/**
 	* GET_CONFIG_AREAS
-	* Read file 'config_areas.php' from config and set
-	* areas_deny and areas_allow array values
-	* @return object $config_areas
+	* Loads the per-installation area access-control configuration from
+	* DEDALO_CONFIG_PATH/config_areas.php and returns it as a plain object.
+	*
+	* The included file is expected to define two PHP variables in its scope:
+	*   $areas_deny  — array of tipos that must never appear in the menu/access check
+	*   $areas_allow — array of tipos that override deny (currently informational only)
+	*
+	* See config/sample.config_areas.php for the canonical format:
+	*   $areas_deny[]  = 'dd137'; // Private list of values
+	*   $areas_allow   = [];
+	*
+	* Failure handling:
+	*   If the file cannot be included (returns false), empty arrays are used and an
+	*   ERROR is logged. In SHOW_DEBUG mode an exception is thrown immediately so
+	*   misconfigured installs fail loudly during development.
+	*
+	* (!) The included file runs in this method's local scope, so $areas_deny and
+	*   $areas_allow are populated as local variables by the include. If the file only
+	*   defines them via include (config_areas.php → private/config_areas.inc) the
+	*   inner include must also execute in the same scope — this works because PHP
+	*   include shares the calling scope.
+	*
+	* @return object $config_areas - stdClass with properties:
+	*   ->areas_deny  : array<string>  tipos to exclude from navigation/access
+	*   ->areas_allow : array<string>  tipos that override the deny list
 	*/
 	public static function get_config_areas() : object {
 
@@ -228,6 +323,8 @@ class area extends area_common {
 			}
 
 		// config_areas object
+		// Wrap the two loose variables populated by the include into a value object
+		// so callers receive a typed, named structure rather than checking globals.
 			$config_areas = new stdClass();
 				$config_areas->areas_deny	= $areas_deny;
 				$config_areas->areas_allow	= $areas_allow;
