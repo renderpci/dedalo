@@ -34,7 +34,8 @@ final class boot_web_phases {
 				return;
 			}
 			$handler   = defined('DEDALO_SESSION_HANDLER') ? DEDALO_SESSION_HANDLER : 'files';
-			$save_path = match ($handler) {
+			// Honor an explicit DEDALO_SESSION_SAVE_PATH (e.g. a redis unix socket) as v6 did; else map by handler.
+			$save_path = defined('DEDALO_SESSION_SAVE_PATH') ? DEDALO_SESSION_SAVE_PATH : match ($handler) {
 				'redis'     => 'tcp://127.0.0.1:6379',
 				'memcached' => '127.0.0.1:11211',
 				default     => DEDALO_SESSIONS_PATH,
