@@ -4,6 +4,41 @@
 
 
 
+/**
+* TOOL_USER_ADMIN (module)
+* Self-service user-profile editor tool.
+*
+* Allows the currently-authenticated user to update their own editable profile
+* fields (full name, password, email, avatar image) without requiring admin access.
+* Read-only fields (section id, username, profile role) are shown for context but
+* cannot be modified through this tool.
+*
+* Architecture:
+*   - Builds a live `section` instance targeting `dd128` (the users ontology section)
+*     restricted to the current user's `page_globals.user_id`.
+*   - Defines a hard-coded `ddo_map` that overrides the section's default request
+*     config, mixing read-only entries (permissions:1) with fully editable ones.
+*   - Each component is retrieved via `get_component()` and rendered independently
+*     inside the tool wrapper produced by `render_tool_user_admin`.
+*   - Demo installations (dedalo_entity==='dedalo_demo', username==='dedalo') are
+*     blocked at the JS level; the server independently enforces the same restriction.
+*
+* Key ontology tipos used:
+*   dd128  — users section
+*   dd330  — section_id component (read-only)
+*   dd132  — username component (read-only)
+*   dd1725 — user profile/role component (read-only)
+*   dd452  — full name component (editable)
+*   dd133  — password component (editable)
+*   dd134  — email component (editable)
+*   dd522  — user avatar image component (editable)
+*
+* Exported symbols:
+*   tool_user_admin — constructor; prototype methods assigned below.
+*/
+
+
+
 // import needed modules
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
@@ -14,7 +49,15 @@
 
 /**
 * TOOL_USER_ADMIN
-* Tool to manage user auto change values like email or password
+* Self-service user-profile editor tool constructor.
+*
+* Allows the authenticated user to view and update their own profile fields
+* (full name, password, email, avatar image) within the dd128 users section.
+* Inherits its lifecycle (init/build/render/destroy/refresh) from tool_common
+* and common via prototype assignment below.
+*
+* Instance properties follow the standard Dédalo tool contract; all are seeded
+* to null here and populated during init/build.
 */
 export const tool_user_admin = function () {
 
@@ -37,7 +80,14 @@ export const tool_user_admin = function () {
 
 /**
 * COMMON FUNCTIONS
-* extend component functions from component common
+* Extend tool_user_admin with shared prototype methods from tool_common, common,
+* and render_tool_user_admin.
+*
+* render/destroy/refresh/build_rqo_show come from the generic tool and component
+* bases; edit/list are provided by render_tool_user_admin so the render layer
+* can be maintained separately from the controller logic.
+* Both 'edit' and 'list' modes delegate to the same render_tool_user_admin.edit
+* implementation because this tool has a single display mode regardless of context.
 */
 // prototypes assign
 	tool_user_admin.prototype.render			= tool_common.prototype.render
@@ -53,9 +103,18 @@ export const tool_user_admin = function () {
 
 /**
 * INIT
-* Custom tool init
-* @param object options
-* @return bool
+* Initialises the tool_user_admin instance.
+*
+* Delegates to tool_common.prototype.init, which seeds all standard tool
+* properties (id, model, mode, caller, etc.) from the supplied options object.
+* The placeholder comment below marks the intended location for any future
+* tool-specific property overrides that tool_common does not cover.
+*
+* @param {Object} options - Standard tool init options (tipo, section_tipo,
+*   section_id, mode, lang, caller, properties, …) as produced by the tool
+*   launcher in tool_common.
+* @returns {Promise<boolean>} Resolves to the result of tool_common.prototype.init
+*   (true on success, false when a critical property is missing).
 */
 tool_user_admin.prototype.init = async function(options) {
 
@@ -73,9 +132,24 @@ tool_user_admin.prototype.init = async function(options) {
 
 /**
 * BUILD
-* Custom tool build
-* @param bool autoload = false
-* @return bool
+* Builds the tool_user_admin instance after init.
+*
+* Delegates the bulk of the work to tool_common.prototype.build (which loads
+* tool CSS, resolves ddo_map items into live instances, and optionally fetches
+* tool context from the API). After that, applies a demo-installation guard:
+* if the current session belongs to the 'dedalo_demo' entity with the reserved
+* 'dedalo' username, the tool is blocked by storing the error on `self.error`.
+* The render layer (tool_common.prototype.render) detects a truthy `self.error`
+* and displays an error view instead of the normal UI.
+*
+* (!) The server enforces the same demo guard independently; this client-side
+* check is a UX layer only and must not be relied upon as the sole security
+* control.
+*
+* @param {boolean} [autoload=false] - When true, tool_common.build immediately
+*   triggers a data fetch; when false the caller controls when data is loaded.
+* @returns {Promise<boolean>} Resolves to the return value of
+*   tool_common.prototype.build (true on success).
 */
 tool_user_admin.prototype.build = async function(autoload=false) {
 
@@ -107,8 +181,24 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 
 /**
 * GET_COMPONENT
-* @param object component_ddo
-* @return object component_instance
+* Instantiates, inits, and builds a single component for the user-profile form.
+*
+* Called by render_tool_user_admin.get_content_data for each entry in the ddo_map
+* returned by get_ddo_map(). Each component is wired to:
+*   - section_tipo 'dd128' (the users section, hardcoded)
+*   - section_id from page_globals.user_id (the current authenticated user)
+*   - data lang from page_globals.dedalo_data_lang
+*   - caller set to `self` (this tool instance), which signals to the component
+*     that it is running inside a tool rather than a normal section render, allowing
+*     the component to suppress UI elements that only make sense in full section views
+*
+* The component is built with autoload=true so its data is fetched immediately
+* and the returned instance is render-ready.
+*
+* @param {Object} ddo - A single ddo entry from get_ddo_map(); must contain at
+*   minimum: tipo {string}, model {string}, mode {string}, properties {Object}.
+* @returns {Promise<Object>} A fully built Dédalo component instance ready to call
+*   render() on.
 */
 tool_user_admin.prototype.get_component = async function(ddo) {
 
@@ -149,8 +239,42 @@ tool_user_admin.prototype.get_component = async function(ddo) {
 
 /**
 * GET_DDO_MAP
-* Builds the default ddo_map of users section to use in this tool
-* @return array ddo_map
+* Returns the static ddo_map that defines which user-profile components are
+* shown in this tool and whether each is editable or read-only.
+*
+* The ddo_map is intentionally defined here (rather than fetched from the server
+* request_config) so the tool has full control over which fields are exposed and
+* their permissions, regardless of any server-side section configuration.
+*
+* Each entry follows the standard Dédalo ddo shape:
+*   tipo         {string}  - ontology tipo identifying the component
+*   type         {string}  - always 'component' here
+*   typo         {string}  - always 'ddo' here
+*   model        {string}  - JS component constructor name
+*   section_tipo {string}  - always 'dd128' (users section)
+*   parent       {string}  - always 'dd128' (direct child of users section)
+*   mode         {string}  - always 'edit' (render in edit context)
+*   properties   {Object}  - css override + show_interface flags (tools:false
+*                            hides the component's own tool buttons, tools:true
+*                            enables them — needed for the image upload tool)
+*   permissions  {number}  - 1 = read-only override; omit = use normal ACL
+*
+* Read-only entries (permissions:1):
+*   dd330  section id        (component_section_id)
+*   dd132  username          (component_input_text)
+*   dd1725 user profile/role (component_select)
+*
+* Editable entries (no permissions override, normal ACL applies):
+*   dd452  full name         (component_input_text)
+*   dd133  password          (component_password)
+*   dd134  email             (component_email)
+*   dd522  user avatar image (component_image — tools:true allows the upload tool)
+*
+* Commented-out entry:
+*   dd170  projects/filter_master — disabled; kept for reference in case project
+*          assignment display is needed in future iterations.
+*
+* @returns {Array} Array of ddo descriptor objects, one per component to render.
 */
 tool_user_admin.prototype.get_ddo_map = function() {
 
@@ -306,9 +430,30 @@ tool_user_admin.prototype.get_ddo_map = function() {
 
 /**
 * BUILD_USER_SECTION
-* Initiate a new custom section (dd128)
-* Note that, for speed, is built only when render is called
-* @return object section
+* Creates and returns a live `section` instance targeting the current user's
+* record in the dd128 (users) section.
+*
+* This method is intentionally deferred — it is called only when the tool is
+* rendered, not during init/build — so the section instance is not created
+* until the UI is actually requested, improving startup performance.
+*
+* The section is constructed with a custom request_config that injects the
+* ddo_map from get_ddo_map(), overriding the server-side section show config.
+* This ensures only the tool-defined subset of user fields is fetched and rendered.
+*
+* Key construction details:
+*   - section_id is coerced to string ('' + page_globals.user_id) because the
+*     instances registry and API layer expect string ids.
+*   - lang is page_globals.dedalo_data_nolan (language-neutral / no-language) so
+*     that non-translatable fields like username and password render correctly.
+*   - id_variant combines section_tipo + section_id + a stable suffix to ensure
+*     the instance cache key is unique and does not collide with other usages of
+*     dd128 that may exist in the session.
+*   - filter and inspector are explicitly set to false on the returned section so
+*     the tool UI does not expose section-level search or inspector controls.
+*
+* @returns {Promise<Object>} A fully initialised (but not yet built/rendered)
+*   Dédalo section instance for the current user's dd128 record.
 */
 tool_user_admin.prototype.build_user_section = async function() {
 
@@ -365,10 +510,20 @@ tool_user_admin.prototype.build_user_section = async function() {
 
 /**
 * ON_CLOSE_ACTIONS
-* Executes specific action on close the tool
-* @param string open_as
-* 	modal | window
-* @return promise: bool
+* Executes cleanup when the tool is closed by the user.
+*
+* Called by the tool_common close handler with the display context that was
+* used to open the tool. When the tool was opened as a modal overlay, the
+* instance is destroyed (remove DOM, clear event listeners, unregister
+* instances). When opened as a standalone window the window itself handles
+* teardown, so this method does nothing beyond returning true.
+*
+* The commented-out `self.caller.refresh()` is deliberately disabled: calling
+* refresh on the caller component_json would trigger an unnecessary server
+* round-trip since user profile changes do not affect the calling context.
+*
+* @param {string} open_as - Display mode used when opening: 'modal' or 'window'.
+* @returns {Promise<boolean>} Always resolves to true.
 */
 tool_user_admin.prototype.on_close_actions = async function(open_as) {
 
