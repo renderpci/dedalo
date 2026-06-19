@@ -183,7 +183,7 @@ final class area_maintenance_test extends BaseTestCase {
 			'move_to_portal',
 			'move_to_table',
 			'php_info',
-			'php_user',
+			'php_runtime',
 			'publication_api',
 			'regenerate_relations',
 			'register_tools',

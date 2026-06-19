@@ -286,19 +286,25 @@ class area_maintenance extends area_common {
 		];
 		$ar_widgets[] = $this->widget_factory($item);
 
-		// php_user *
+		// php_runtime *
 		$php_user_info = system::get_php_user_info();
 		$php_error_log_path = system::get_error_log_path();
+		// Widget classes are not autoloaded (they are require_once'd on demand by
+		// dd_area_maintenance_api); load it here to reuse its opcache status reader.
+		require_once DEDALO_CORE_PATH . '/area_maintenance/widgets/php_runtime/class.php_runtime.php';
 		$item = new stdClass();
-		$item->id = 'php_user';
+		$item->id = 'php_runtime';
 		$item->category = 'system';
 		$item->type = 'widget';
 		$item->tipo = $this->tipo;
-		$item->label = 'PHP USER';
+		$item->label = 'PHP RUNTIME';
 		$item->value = (object) [
 			'info' => $php_user_info,
 			'php_error_log_path' => $php_error_log_path,
-			'php_session_path' => session_save_path()
+			'php_session_path' => session_save_path(),
+			'environment' => php_runtime::get_environment(),
+			'opcache' => php_runtime::get_opcache_status(),
+			'directories' => php_runtime::get_directories_status()
 		];
 		$ar_widgets[] = $this->widget_factory($item);
 
@@ -434,7 +440,7 @@ class area_maintenance extends area_common {
 			'dedalo_api_test_environment',
 			'sqo_test_environment',
 			'lock_components',
-			'php_user',
+			'php_runtime',
 			'database_info',
 			'environment',
 			'unit_test',
